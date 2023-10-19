@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+        "noImplicitAny": true,
+        "target": "es6",
+        "lib": ["es2019", "dom"],
+        "allowSyntheticDefaultImports": true,
+        "sourceMap": true,
+        "inlineSources": true
+        // "strictNullChecks": true
+    },
+    "include": ["./src/*.ts"]
+}

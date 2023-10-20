@@ -18,24 +18,27 @@ const HREF       = process.env.BASE_HREF || '';
 const BUILD_TYPE = process.env.BUILD_TYPE || 'release';
 const ENGINE_DIR = process.env.ENGINE_PATH || './node_modules/playcanvas';
 const EXTRAS_DIR = path.resolve(ENGINE_DIR, 'build', 'playcanvas-extras.mjs');
+const PCUI_DIR = path.resolve(process.env.PCUI_PATH || 'node_modules/@playcanvas/pcui');
 
 const ENGINE_NAME = BUILD_TYPE === 'debug' ? 'playcanvas.dbg.mjs' : 'playcanvas.mjs';
 const ENGINE_PATH = path.resolve(ENGINE_DIR, 'build', ENGINE_NAME);
 
 const aliasEntries = {
     playcanvas: ENGINE_PATH,
-    'playcanvas-extras': EXTRAS_DIR
+    'playcanvas-extras': EXTRAS_DIR,
+    'pcui': PCUI_DIR
 };
 
 const tsCompilerOptions = {
     baseUrl: '.',
     paths: {
         playcanvas: [ENGINE_DIR],
-        'playcanvas-extras': [EXTRAS_DIR]
+        'playcanvas-extras': [EXTRAS_DIR],
+        'pcui': [PCUI_DIR]
     }
 };
 
-const pipeline = input => {
+const pipeline = (input) => {
     return {
         input: input,
         output: {
@@ -44,19 +47,18 @@ const pipeline = input => {
             sourcemap: true
         },
         plugins: [
-            input === 'src/bootstrap.ts' &&
-                copyAndWatch({
-                    targets: [
-                        {
-                            src: 'src/index.html',
-                            transform: (contents, filename) => {
-                                return contents.toString().replace('__BASE_HREF__', HREF);
-                            }
-                        },
-                        {src: 'static/lib/draco_decoder.wasm', dest: 'static/lib'},
-                        {src: 'static/env/VertebraeHDRI_v1_512.png', dest: 'static/env'}
-                    ]
-                }),
+            copyAndWatch({
+                targets: [
+                    {
+                        src: 'src/index.html',
+                        transform: (contents, filename) => {
+                            return contents.toString().replace('__BASE_HREF__', HREF);
+                        }
+                    },
+                    {src: 'static/lib/draco_decoder.wasm', dest: 'static/lib'},
+                    {src: 'static/env/VertebraeHDRI_v1_512.png', dest: 'static/env'}
+                ]
+            }),
             image({dom: true}),
             alias({entries: aliasEntries}),
             resolve(),
@@ -90,6 +92,5 @@ export default [
             })
         ]
     },
-    pipeline('src/bootstrap.ts'),
-    pipeline('src/main.ts')
+    pipeline('src/index.ts'),
 ];

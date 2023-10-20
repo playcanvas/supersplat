@@ -195,16 +195,20 @@ class Scene extends EventHandler {
         const modelStartTime = Date.now();
 
         // load scene assets
-        const promises: Promise<any>[] = [
-            this.assetLoader.loadModel({
+        const promises: Promise<any>[] = [];
+
+        // load model
+        if (config.model.url) {
+            promises.push(this.assetLoader.loadModel({
                 url: config.model.url,
                 filename: config.model.filename
             }).then((model: Model) => {
                 this.modelLoadCallback(Date.now() - modelStartTime);
                 return model;
-            })
-        ];
+            }));
+        };
 
+        // load env
         if (config.env) {
             promises.push(this.assetLoader.loadEnv({url: config.env.url}));
         }
@@ -226,6 +230,13 @@ class Scene extends EventHandler {
 
         // start the app
         this.app.start();
+    }
+
+    async loadModel(url: string, filename: string) {
+        const model = await this.assetLoader.loadModel({ url, filename });
+        this.add(model);
+        this.updateBound();
+        this.camera.focus();
     }
 
     clear() {

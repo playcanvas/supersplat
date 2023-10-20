@@ -12,4 +12,4 @@ interface GlobalState {
     modelLoadComplete: (timing: number) => void;
 }
 
-export {GlobalState};
+export { GlobalState };

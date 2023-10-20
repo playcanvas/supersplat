@@ -1,6 +1,6 @@
 import {GlobalState} from './types';
 import {Debug} from './debug';
-import {startHandPrompt, startSpinner, stopSpinner} from './spinner';
+import {startSpinner, stopSpinner} from './spinner';
 import {CreateDropHandler} from './drop-handler';
 
 // BOOTSTRAP
@@ -126,7 +126,6 @@ window.snap = {
                     modelLoadComplete: (timing: number) => {
                         
                     },
-                    startHandPrompt: startHandPrompt,
                     inputEventHandlers: {
                         onCameraAutoRotate: () => {
                         },
@@ -155,7 +154,6 @@ Debug.exec(() => {
     // aresSdkConfig object
     const start = (url: string) => {
         window.snap.ar.experience.onLoad({
-            hasBlockingConsent: () => true,
             eventService: {
                 postEngagementEvent: () => {},
                 postCTAEvent: () => {},
@@ -227,7 +225,8 @@ Debug.exec(() => {
 
         // also support user dragging and dropping a local glb file onto the canvas
         CreateDropHandler(canvas, urls => {
-            const model = urls.find(url => url.filename.endsWith('.gltf') || url.filename.endsWith('.glb'));
+            const modelExtensions = ['.glb', '.gltf', '.ply']
+            const model = urls.find(url => modelExtensions.some(extension => url.filename.endsWith(extension)));
             if (model) {
                 document.body.removeChild(selector);
                 load(model.url);

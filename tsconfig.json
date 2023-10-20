@@ -5,8 +5,14 @@
         "lib": ["es2019", "dom"],
         "allowSyntheticDefaultImports": true,
         "sourceMap": true,
-        "inlineSources": true
-        // "strictNullChecks": true
+        "inlineSources": true,
+        "noEmit": true,
+        "baseUrl": ".",
+        "paths": {
+            "pcui": ["node_modules/@playcanvas/pcui"],
+            "playcanvas-extras": ["node_modules/playcanvas/build/playcanvas-extras.mjs"]
+        }
     },
-    "include": ["./src/*.ts"]
+    "include": ["./src/*.ts","./submodules/model-viewer/src/splat/*.ts"],
+    "exclude": ["node_modules", "**/*.js", "dist"]
 }

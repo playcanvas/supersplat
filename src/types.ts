@@ -15,7 +15,6 @@ interface GlobalState {
     dracoWasm: Promise<string>;
     loadComplete: () => void;
     modelLoadComplete: (timing: number) => void;
-    startHandPrompt: () => void;
     inputEventHandlers: InputEventHandlers;
 }
 

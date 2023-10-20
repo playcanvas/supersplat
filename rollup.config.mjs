@@ -8,6 +8,11 @@ import strip from '@rollup/plugin-strip';
 import typescript from '@rollup/plugin-typescript';
 // import { visualizer } from 'rollup-plugin-visualizer';
 
+// prod is release build
+if (process.env.BUILD_TYPE === 'prod') {
+    process.env.BUILD_TYPE = 'release';
+}
+
 // debug, profile, release
 const BUILD_TYPE = process.env.BUILD_TYPE || 'release';
 const ENGINE_DIR = process.env.ENGINE_PATH || './node_modules/playcanvas';

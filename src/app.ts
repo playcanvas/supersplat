@@ -75,8 +75,6 @@ window.viewerBootstrap.then(async (globalState: GlobalState) => {
         globalState.canvas,
         globalState.gl,
         globalState.modelLoadComplete,
-        globalState.aresSdkConfig.hasBlockingConsent,
-        globalState.startHandPrompt
     );
 
     // load async models

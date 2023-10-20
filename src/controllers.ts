@@ -111,91 +111,83 @@ class MouseController {
     }
 
     onMouseDown(event: MouseEvent) {
-        if (this.camera.hasBlockingConsent()) {
-            this.xMouse = event.x;
-            this.yMouse = event.y;
-            switch (event.button) {
-                case MOUSEBUTTON_LEFT:
-                    this.leftButton = true;
-                    this.camera.notify('mouseStart');
-                    break;
-                case MOUSEBUTTON_MIDDLE:
-                    this.middleButton = true;
-                    this.camera.notify('mouseStart');
-                    break;
-                case MOUSEBUTTON_RIGHT:
-                    this.rightButton = true;
-                    this.camera.notify('mouseStart');
-                    break;
-            }
+        this.xMouse = event.x;
+        this.yMouse = event.y;
+        switch (event.button) {
+            case MOUSEBUTTON_LEFT:
+                this.leftButton = true;
+                this.camera.notify('mouseStart');
+                break;
+            case MOUSEBUTTON_MIDDLE:
+                this.middleButton = true;
+                this.camera.notify('mouseStart');
+                break;
+            case MOUSEBUTTON_RIGHT:
+                this.rightButton = true;
+                this.camera.notify('mouseStart');
+                break;
         }
     }
 
     onMouseUp(event: MouseEvent) {
-        if (this.camera.hasBlockingConsent()) {
-            switch (event.button) {
-                case MOUSEBUTTON_LEFT:
-                    this.leftButton = false;
-                    this.camera.notify('mouseEnd');
-                    const eventTarget = event.event.target as Node,
-                        snapLogo = document.querySelector('.snap-logo'),
-                        privacyPolicyTooltip = document.querySelector('#privacy-text');
-                    if (
-                        !this.hasDragged(event) &&
-                        !snapLogo?.contains(eventTarget) &&
-                        !privacyPolicyTooltip?.contains(eventTarget)
-                    ) {
-                        this.camera.scene.inputEventHandlers.onModelClicked();
-                    }
+        switch (event.button) {
+            case MOUSEBUTTON_LEFT:
+                this.leftButton = false;
+                this.camera.notify('mouseEnd');
+                const eventTarget = event.event.target as Node,
+                    snapLogo = document.querySelector('.snap-logo'),
+                    privacyPolicyTooltip = document.querySelector('#privacy-text');
+                if (
+                    !this.hasDragged(event) &&
+                    !snapLogo?.contains(eventTarget) &&
+                    !privacyPolicyTooltip?.contains(eventTarget)
+                ) {
+                    this.camera.scene.inputEventHandlers.onModelClicked();
+                }
 
-                    break;
-                case MOUSEBUTTON_MIDDLE:
-                    this.middleButton = false;
-                    this.camera.notify('mouseEnd');
-                    break;
-                case MOUSEBUTTON_RIGHT:
-                    this.rightButton = false;
-                    this.camera.notify('mouseEnd');
-                    break;
-            }
+                break;
+            case MOUSEBUTTON_MIDDLE:
+                this.middleButton = false;
+                this.camera.notify('mouseEnd');
+                break;
+            case MOUSEBUTTON_RIGHT:
+                this.rightButton = false;
+                this.camera.notify('mouseEnd');
+                break;
+        }
 
-            if (this.hasDragged(event)) {
-                this.camera.scene.inputEventHandlers.onModelDragged();
-                this.xMouse = event.x;
-                this.yMouse = event.y;
-            }
+        if (this.hasDragged(event)) {
+            this.camera.scene.inputEventHandlers.onModelDragged();
+            this.xMouse = event.x;
+            this.yMouse = event.y;
         }
     }
 
     onMouseMove(event: MouseEvent) {
-        if (this.camera.hasBlockingConsent()) {
-            if (this.leftButton) {
-                if (event.ctrlKey) {
-                    this.zoom(event.dx * -0.02);
-                } else if (event.shiftKey) {
-                    this.pan(event.x, event.y);
-                } else {
-                    this.orbit(event.dx, event.dy);
-                }
-            } else if (this.rightButton) {
-                this.pan(event.x, event.y);
-            } else if (this.middleButton) {
+        if (this.leftButton) {
+            if (event.ctrlKey) {
                 this.zoom(event.dx * -0.02);
+            } else if (event.shiftKey) {
+                this.pan(event.x, event.y);
+            } else {
+                this.orbit(event.dx, event.dy);
             }
-
-            this.lastPoint.set(event.x, event.y);
+        } else if (this.rightButton) {
+            this.pan(event.x, event.y);
+        } else if (this.middleButton) {
+            this.zoom(event.dx * -0.02);
         }
+
+        this.lastPoint.set(event.x, event.y);
     }
 
     onMouseWheel(event: MouseEvent) {
-        if (this.camera.hasBlockingConsent()) {
-            this.zoom(event.wheelDelta * -0.2 * this.camera.scene.config.controls.zoomSensitivity);
-            this.camera.notify('mouseZoom');
-            event.event.preventDefault();
-            if (event.wheelDelta !== this.zoomedIn) {
-                this.camera.scene.inputEventHandlers.onModelZoomed();
-                this.zoomedIn = event.wheelDelta;
-            }
+        this.zoom(event.wheelDelta * -0.2 * this.camera.scene.config.controls.zoomSensitivity);
+        this.camera.notify('mouseZoom');
+        event.event.preventDefault();
+        if (event.wheelDelta !== this.zoomedIn) {
+            this.camera.scene.inputEventHandlers.onModelZoomed();
+            this.zoomedIn = event.wheelDelta;
         }
     }
 

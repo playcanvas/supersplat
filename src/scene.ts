@@ -27,6 +27,8 @@ import {HotSpots} from './hotspots';
 import {InputEventHandlers} from './types';
 import {XRMode} from './xr-mode';
 
+import { registerPlyParser } from '../submodules/model-viewer/src/splat/ply-parser';
+
 const bound = new BoundingBox();
 
 class Scene extends EventHandler {
@@ -58,17 +60,12 @@ class Scene extends EventHandler {
     contentRoot: Entity;
     cameraRoot: Entity;
 
-    hasBlockingConsent: () => boolean;
-    startHandPrompt: () => void;
-
     constructor(
         config: SceneConfig,
         inputEventHandlers: InputEventHandlers,
         canvas: HTMLCanvasElement,
         gl: any,
-        modelLoadCallback: (timer: number) => void,
-        hasBlockingConsent: () => boolean,
-        startHandPrompt: () => void
+        modelLoadCallback: (timer: number) => void
     ) {
         super();
 
@@ -76,8 +73,6 @@ class Scene extends EventHandler {
         this.inputEventHandlers = inputEventHandlers;
         this.canvas = canvas;
         this.modelLoadCallback = modelLoadCallback;
-        this.hasBlockingConsent = hasBlockingConsent;
-        this.startHandPrompt = startHandPrompt;
 
         // configure the playcanvas application. we render to an offscreen buffer so require
         // only the simplest of backbuffers.
@@ -86,6 +81,9 @@ class Scene extends EventHandler {
             touch: new TouchDevice(canvas),
             graphicsDeviceOptions: {gl: gl}
         });
+
+        // register splat
+        registerPlyParser(this.app);
 
         // hack: disable lightmapper first bake until we expose option for this
         // @ts-ignore
@@ -166,7 +164,7 @@ class Scene extends EventHandler {
         this.app.root.addChild(this.cameraRoot);
 
         // create elements
-        this.camera = new Camera(this.hasBlockingConsent, this.startHandPrompt);
+        this.camera = new Camera();
         this.add(this.camera);
 
         this.shadow = new Shadow();

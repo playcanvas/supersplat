@@ -60,11 +60,8 @@ class Camera extends Element {
     autoRotateTimer = 0;
     autoRotateDelayValue = 0;
     focusDistance: number;
-    hasBlockingConsent: () => boolean;
-    startHandPrompt: () => void;
-    handPromptShown = false;
 
-    constructor(hasBlockingConsent: () => boolean, startHandPrompt: () => void) {
+    constructor() {
         super(ElementType.camera);
         // create the camera entity
         this.entity = new Entity('Camera');
@@ -77,9 +74,6 @@ class Camera extends Element {
         // NOTE: this call is needed for refraction effect to work correctly, but
         // it slows rendering and should only be made when required.
         // this.entity.camera.requestSceneColorMap(true);
-
-        this.hasBlockingConsent = hasBlockingConsent;
-        this.startHandPrompt = startHandPrompt;
     }
 
     // near clip
@@ -277,12 +271,6 @@ class Camera extends Element {
 
     onUpdate(deltaTime: number) {
         const config = this.scene.config;
-
-        // show the hand prompt only once user has blocking consent
-        if (!this.handPromptShown && this.hasBlockingConsent()) {
-            this.startHandPrompt();
-            this.handPromptShown = true;
-        }
 
         // auto rotate
         if (config.controls.autoRotate) {

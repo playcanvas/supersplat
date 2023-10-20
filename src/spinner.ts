@@ -1,6 +1,3 @@
-// @ts-ignore
-import dragPrompt from './svg/drag-prompt.png';
-
 const css = `
 .static-spinner::before,
 .static-spinner::after {
@@ -102,17 +99,8 @@ const css = `
 }
 `;
 
-let prompt: HTMLImageElement;
 let container: HTMLElement;
 let spinner: HTMLElement;
-
-const startHandPrompt = () => {
-    prompt = document.createElement('img');
-    prompt.className = 'hand-prompt';
-    prompt.src = dragPrompt.src;
-    container.appendChild(prompt);
-    setTimeout(() => container.removeChild(prompt), 3000);
-};
 
 const startSpinner = () => {
     container = document.createElement('div');
@@ -131,4 +119,4 @@ const stopSpinner = () => {
     }
 };
 
-export {startHandPrompt, startSpinner, stopSpinner};
+export {startSpinner, stopSpinner};

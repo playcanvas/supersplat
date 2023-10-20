@@ -14,10 +14,6 @@ import {Serializer} from './serializer';
 import {Gem} from './gem';
 import {Debug} from './debug';
 
-// regex for detecting a left and a right shoe node, taken from vertebrae:
-// https://github.sc-corp.net/Snapchat/arbiz-asset-service/blob/main/internal/app/arbizassetservice/utils/constants/default_model_spec.go#L34
-const leftRegex = /left|_L$/i;
-const rightRegex = /right|_R$/i;
 const vec = new Vec3();
 const mat = new Mat4();
 const bound = new BoundingBox();
@@ -34,32 +30,14 @@ class Model extends Element {
     root: any;
     animTracks: string[] = [];
     gemNodes: Entity[] = [];
+    changedCounter = 0;
 
     constructor(asset: Asset, gemMaterials: Set<StandardMaterial>) {
         super(ElementType.model);
 
         this.asset = asset;
         this.gemMaterials = gemMaterials;
-        this.root = asset.resource.instantiateRenderEntity();
         this.entity = new Entity('modelRoot');
-        this.entity.addChild(this.root);
-
-        // initialize animations
-        if (asset.resource.animations?.length > 0) {
-            const anim = this.root.addComponent('anim', {
-                activate: false,
-                speed: 1.0
-            });
-
-            anim.rootBone = this.root;
-            asset.resource.animations.forEach((animTrack: any, i: number) => {
-                anim.assignAnimation(`track_${i}`, animTrack.resource);
-                this.animTracks.push(animTrack.resource.name);
-            });
-
-            // automatically play the first animation
-            this.play(0);
-        }
     }
 
     calcBound(result: BoundingBox) {
@@ -108,18 +86,28 @@ class Model extends Element {
     add() {
         const config = this.scene.config;
 
-        // TEMP: if this model is detected to contain a shoe, hide the left one
-        const children = this.root.children;
-        if (config.model.hideLeftShoe && children.length === 2) {
-            const leftIndex =
-                leftRegex.test(children[0].name) && rightRegex.test(children[1].name)
-                    ? 0
-                    : leftRegex.test(children[1].name) && rightRegex.test(children[0].name)
-                    ? 1
-                    : -1;
-            if (leftIndex === 0 || leftIndex === 1) {
-                children[leftIndex].enabled = false;
-            }
+        this.root = this.asset.resource.instantiateRenderEntity({
+            app: this.scene.app,
+            camera: this.scene.camera.entity,
+            onChanged: () => { this.changedCounter++; }
+        });
+        this.entity.addChild(this.root);
+
+        // initialize animations
+        if (this.asset.resource.animations?.length > 0) {
+            const anim = this.root.addComponent('anim', {
+                activate: false,
+                speed: 1.0
+            });
+
+            anim.rootBone = this.root;
+            this.asset.resource.animations.forEach((animTrack: any, i: number) => {
+                anim.assignAnimation(`track_${i}`, animTrack.resource);
+                this.animTracks.push(animTrack.resource.name);
+            });
+
+            // automatically play the first animation
+            this.play(0);
         }
 
         this.initializeGems();
@@ -222,6 +210,7 @@ class Model extends Element {
     serialize(serializer: Serializer) {
         serializer.packa(this.entity.getWorldTransform().data);
         serializer.pack(this.root?.anim?.baseLayer?.activeStateCurrentTime);
+        serializer.pack(this.changedCounter);
     }
 
     onUpdate(/* deltaTime: number */) {

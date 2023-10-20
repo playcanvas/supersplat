@@ -38,7 +38,7 @@ const pipeline = input => {
     return {
         input: input,
         output: {
-            dir: 'build',
+            dir: 'dist',
             format: 'esm',
             sourcemap: true
         },
@@ -74,7 +74,7 @@ export default [
     {
         input: 'static/lib/draco_decoder.js',
         output: {
-            file: 'build/static/lib/draco_decoder.js'
+            file: 'dist/static/lib/draco_decoder.js'
         },
         plugins: [
             terser({

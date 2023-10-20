@@ -4,8 +4,7 @@ import { getSceneConfig } from './scene-config';
 import { startSpinner, stopSpinner } from './spinner';
 import { CreateDropHandler } from './drop-handler';
 import { initMaterials } from './material';
-import { initUI } from './ui';
-import './style.scss';
+import { Editor } from './editor';
 
 declare global {
     interface Window {
@@ -146,10 +145,6 @@ const main = async () => {
 
     // monkey-patch materials for premul alpha rendering
     initMaterials();
-    initUI();
-
-    // construct the canvas and gl context
-    const { canvas, gl } = createCanvas();
 
     // wait for async loads to complete
     const [dracoJsURL, dracoWasmURL, envImageURL] = await Promise.all([dracoJs,dracoWasm,envImage]);
@@ -160,6 +155,11 @@ const main = async () => {
         wasmUrl: dracoWasmURL,
         numWorkers: 2
     });
+
+    const editor = new Editor();
+
+    // construct the canvas and gl context
+    const { canvas, gl } = createCanvas();
 
     // handle load param and ready promise for visual testing harness
     const url = new URL(window.location.href);

@@ -6,6 +6,9 @@
         "allowSyntheticDefaultImports": true,
         "sourceMap": true,
         "inlineSources": true,
+        "module": "es6",
+        "moduleResolution": "node",
+        "resolveJsonModule": true,
         "baseUrl": ".",
         "paths": {
             "pcui": ["node_modules/@playcanvas/pcui"],

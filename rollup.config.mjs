@@ -6,6 +6,8 @@ import terser from '@rollup/plugin-terser';
 import resolve from '@rollup/plugin-node-resolve';
 import strip from '@rollup/plugin-strip';
 import typescript from '@rollup/plugin-typescript';
+import json from '@rollup/plugin-json';
+import sass from 'rollup-plugin-sass';
 // import { visualizer } from 'rollup-plugin-visualizer';
 
 // prod is release build
@@ -59,9 +61,15 @@ const pipeline = (input) => {
                     {src: 'static/env/VertebraeHDRI_v1_512.png', dest: 'static/env'}
                 ]
             }),
-            image({dom: true}),
             alias({entries: aliasEntries}),
             resolve(),
+            image({dom: true}),
+            sass({
+                insert: false,
+                output: 'dist/style.css',
+                outputStyle: 'compressed'
+            }),
+            json(),
             typescript({
                 compilerOptions: tsCompilerOptions
             }),

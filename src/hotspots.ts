@@ -1,6 +1,5 @@
 import {Vec3, math} from 'playcanvas';
 import {Element, ElementType} from './element';
-import {Camera} from './camera';
 // @ts-ignore
 import hotspotImage from './svg/hotspot.svg';
 
@@ -106,11 +105,11 @@ class HotSpots extends Element {
     }
 
     add() {
-        document.getElementById('app').appendChild(this.parentDom);
+        document.getElementById('app-container').appendChild(this.parentDom);
     }
 
     remove() {
-        document.getElementById('app').removeChild(this.parentDom);
+        document.getElementById('app-container').removeChild(this.parentDom);
     }
 
     onPreRender() {

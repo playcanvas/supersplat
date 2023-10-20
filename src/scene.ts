@@ -120,7 +120,7 @@ class Scene extends EventHandler {
             }
         });
 
-        observer.observe(window.document.getElementById('app'));
+        observer.observe(window.document.getElementById('canvas-container'));
 
         // configure depth layers to handle dynamic refraction
         const depthLayer = this.app.scene.layers.getLayerById(LAYERID_DEPTH);

@@ -110,7 +110,7 @@ const startSpinner = () => {
     spinner = document.createElement('div');
     spinner.className = 'static-spinner';
     container.appendChild(spinner);
-    document.getElementById('app').appendChild(container);
+    document.getElementById('app-container').appendChild(container);
 };
 
 const stopSpinner = () => {

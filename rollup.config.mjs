@@ -44,7 +44,7 @@ const pipeline = input => {
             sourcemap: true
         },
         plugins: [
-            input === 'src/main.ts' &&
+            input === 'src/bootstrap.ts' &&
                 copyAndWatch({
                     targets: [
                         {
@@ -90,6 +90,6 @@ export default [
             })
         ]
     },
-    pipeline('src/main.ts'),
-    pipeline('src/app.ts')
+    pipeline('src/bootstrap.ts'),
+    pipeline('src/main.ts')
 ];

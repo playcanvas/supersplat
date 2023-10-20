@@ -13,7 +13,6 @@ import {MiniStats} from 'playcanvas-extras';
 import {PCApp} from './pc-app';
 import {Element, ElementType, ElementTypeList} from './element';
 import {SceneState} from './scene-state';
-import {Debug} from './debug';
 import {SceneConfig, XRModeConfig} from './scene-config';
 import {AssetLoader} from './asset-loader';
 import {Model} from './model';
@@ -24,7 +23,6 @@ import {CustomShadow as Shadow} from './custom-shadow';
 // import {VsmShadow as Shadow} from './vsm-shadow';
 // import {BakedShadow as Shadow} from './baked-shadow';
 import {HotSpots} from './hotspots';
-import {InputEventHandlers} from './types';
 import {XRMode} from './xr-mode';
 
 import { registerPlyParser } from '../submodules/model-viewer/src/splat/ply-parser';
@@ -33,7 +31,6 @@ const bound = new BoundingBox();
 
 class Scene extends EventHandler {
     config: SceneConfig;
-    inputEventHandlers: InputEventHandlers;
     canvas: HTMLCanvasElement;
     modelLoadCallback: (timer: number) => void;
     app: PCApp;
@@ -62,7 +59,6 @@ class Scene extends EventHandler {
 
     constructor(
         config: SceneConfig,
-        inputEventHandlers: InputEventHandlers,
         canvas: HTMLCanvasElement,
         gl: any,
         modelLoadCallback: (timer: number) => void
@@ -70,7 +66,6 @@ class Scene extends EventHandler {
         super();
 
         this.config = config;
-        this.inputEventHandlers = inputEventHandlers;
         this.canvas = canvas;
         this.modelLoadCallback = modelLoadCallback;
 
@@ -197,19 +192,16 @@ class Scene extends EventHandler {
     async load() {
         const config = this.config;
 
+        const modelStartTime = Date.now();
+
         // load scene assets
         const promises: Promise<any>[] = [
-            config.model.contents.then((contents: ArrayBuffer) => {
-                const modelStartTime = Date.now();
-                return this.assetLoader
-                    .loadModel({
-                        url: config.model.url,
-                        contents: contents
-                    })
-                    .then((model: Model) => {
-                        this.modelLoadCallback(Date.now() - modelStartTime);
-                        return model;
-                    });
+            this.assetLoader.loadModel({
+                url: config.model.url,
+                filename: config.model.filename
+            }).then((model: Model) => {
+                this.modelLoadCallback(Date.now() - modelStartTime);
+                return model;
             })
         ];
 

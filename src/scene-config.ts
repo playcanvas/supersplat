@@ -15,6 +15,7 @@ const hotSpots: HotSpot[] = [];
 const sceneConfig = {
     model: {
         url: '',
+        filename: '',
         contents: contentsPromise,
         position: {x: 0, y: 0, z: 0},
         rotation: {x: 0, y: 0, z: 0},
@@ -145,12 +146,7 @@ class Params {
     }
 }
 
-const getSceneConfig = (
-    modelUrl: string,
-    gltfContents: Promise<ArrayBuffer>,
-    envImageUrl: string,
-    overrides: any[]
-) => {
+const getSceneConfig = (overrides: any[]) => {
     const params = new Params(overrides);
 
     // recurse the object and replace concrete leaf values with overrides
@@ -175,13 +171,9 @@ const getSceneConfig = (
         }
     };
 
-    const result = sceneConfig;
-    sceneConfig.model.url = modelUrl;
-    sceneConfig.model.contents = gltfContents;
-    sceneConfig.env.url = envImageUrl;
     rec(sceneConfig, '');
 
-    return result;
+    return sceneConfig;
 };
 
 export {SceneConfig, getSceneConfig, XRModeConfig};

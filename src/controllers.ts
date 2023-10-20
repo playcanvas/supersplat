@@ -134,17 +134,6 @@ class MouseController {
             case MOUSEBUTTON_LEFT:
                 this.leftButton = false;
                 this.camera.notify('mouseEnd');
-                const eventTarget = event.event.target as Node,
-                    snapLogo = document.querySelector('.snap-logo'),
-                    privacyPolicyTooltip = document.querySelector('#privacy-text');
-                if (
-                    !this.hasDragged(event) &&
-                    !snapLogo?.contains(eventTarget) &&
-                    !privacyPolicyTooltip?.contains(eventTarget)
-                ) {
-                    this.camera.scene.inputEventHandlers.onModelClicked();
-                }
-
                 break;
             case MOUSEBUTTON_MIDDLE:
                 this.middleButton = false;
@@ -157,7 +146,6 @@ class MouseController {
         }
 
         if (this.hasDragged(event)) {
-            this.camera.scene.inputEventHandlers.onModelDragged();
             this.xMouse = event.x;
             this.yMouse = event.y;
         }
@@ -186,7 +174,6 @@ class MouseController {
         this.camera.notify('mouseZoom');
         event.event.preventDefault();
         if (event.wheelDelta !== this.zoomedIn) {
-            this.camera.scene.inputEventHandlers.onModelZoomed();
             this.zoomedIn = event.wheelDelta;
         }
     }
@@ -256,10 +243,6 @@ class TouchController {
             this.camera.notify('touchStart');
             this.xTouch = touches[0].x;
             this.yTouch = touches[0].y;
-            // check if user just ended a zoom manoeuvre
-            if (event.event.type === 'touchend' && this.enableZoom) {
-                this.camera.scene.inputEventHandlers.onModelZoomed();
-            }
         } else if (touches.length === 2) {
             // If there are 2 touches on the screen, then set the pinch distance
             this.lastPinchDistance = this.getPinchDistance(touches[0], touches[1]);
@@ -267,12 +250,6 @@ class TouchController {
             this.camera.notify('touchStart');
         } else {
             this.camera.notify('touchEnd');
-            if (
-                (this.enableOrbit && Math.abs(this.lastTouchPoint.x - this.xTouch) >= 10) ||
-                Math.abs(this.lastTouchPoint.y - this.yTouch) >= 10
-            ) {
-                this.camera.scene.inputEventHandlers.onModelDragged();
-            }
         }
     }
 

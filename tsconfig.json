@@ -6,7 +6,6 @@
         "allowSyntheticDefaultImports": true,
         "sourceMap": true,
         "inlineSources": true,
-        "noEmit": true,
         "baseUrl": ".",
         "paths": {
             "pcui": ["node_modules/@playcanvas/pcui"],

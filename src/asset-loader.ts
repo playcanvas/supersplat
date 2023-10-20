@@ -35,6 +35,7 @@ class AssetLoader {
                 'container',
                 {
                     url: loadRequest.url,
+                    filename: loadRequest.filename,
                     contents: loadRequest.contents
                 },
                 null,

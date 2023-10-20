@@ -278,9 +278,6 @@ class Camera extends Element {
                 this.autoRotateDelayValue = Math.max(0, this.autoRotateDelayValue - deltaTime);
                 this.autoRotateTimer = 0;
             } else {
-                if (this.autoRotateTimer === 0 && deltaTime > 0) {
-                    this.scene.inputEventHandlers.onCameraAutoRotate();
-                }
                 this.autoRotateTimer += deltaTime;
                 const rotateSpeed = Math.min(1, Math.pow(this.autoRotateTimer * 0.5 - 1, 5) + 1); // soften the initial rotation speedup
                 this.setAzimElev(

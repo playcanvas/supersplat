@@ -1,223 +1,89 @@
+import {dracoInitialize} from 'playcanvas';
+import {Scene} from './scene';
+import {initMaterials} from './material';
 import {GlobalState} from './types';
-import {Debug} from './debug';
-import {startSpinner, stopSpinner} from './spinner';
-import {CreateDropHandler} from './drop-handler';
-
-// BOOTSTRAP
+import {getSceneConfig} from './scene-config';
 
 declare global {
     interface Window {
         snap: any;
         viewerBootstrap: Promise<GlobalState>;
-        ready: Promise<number>;
-    }
-
-    interface Navigator {
-        xr: any;
+        scene: Scene;
     }
 }
 
-// create the target canvas and gl context
-const createCanvas = () => {
-    const canvas: HTMLCanvasElement = document.createElement('canvas');
-    canvas.setAttribute('id', 'canvas');
-    document.getElementById('app').appendChild(canvas);
+const getURLArgs = () => {
+    // extract settings from command line in non-prod builds only
+    const config = {};
 
-    // fit the window with it
-    const ratio = window.devicePixelRatio;
-    const width = document.body.clientWidth;
-    const height = document.body.clientHeight;
-    const w = Math.ceil(width * ratio);
-    const h = Math.ceil(height * ratio);
-
-    canvas.width = w;
-    canvas.height = h;
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
-
-    // create gl context
-    const deviceOptions = {
-        alpha: true,
-        antialias: false,
-        depth: false,
-        preserveDrawingBuffer: true,
-        powerPreference: 'high-performance',
-        // create xrCompatible context if xr is available since we're not
-        // sure whether xr mode will be requested or not at this point.
-        xrCompatible: !!navigator.xr
+    const apply = (key: string, value: string) => {
+        let obj: any = config;
+        key.split('.').forEach((k, i, a) => {
+            if (i === a.length - 1) {
+                obj[k] = value;
+            } else {
+                if (!obj.hasOwnProperty(k)) {
+                    obj[k] = {};
+                }
+                obj = obj[k];
+            }
+        });
     };
 
-    const names = ['webgl2', 'webgl', 'experimental-webgl'];
-    let gl: RenderingContext;
-    for (let i = 0; i < names.length; ++i) {
-        gl = canvas.getContext(names[i], deviceOptions);
-        if (gl) {
-            break;
-        }
-    }
-
-    return {
-        canvas: canvas,
-        gl: gl
-    };
-};
-
-// takes a relative URL and returns the absolute version
-const url = (() => {
-    const scripts = Array.from(document.getElementsByTagName('script')).filter(s => s.src);
-    const urlBase = scripts[scripts.length - 1].src.split('/').slice(0, -1).join('/');
-
-    return (url: string) => {
-        return `${urlBase}/${url}`;
-    };
-})();
-
-Debug.time('load');
-
-startSpinner();
-
-// load the main application
-const app = document.createElement('script');
-app.src = url('app.js');
-app.type = 'module';
-document.body.appendChild(app);
-
-// prefetch static assets
-const envImage = fetch(url('static/env/VertebraeHDRI_v1_512.png'))
-    .then(r => r.arrayBuffer())
-    .then(arrayBuffer => URL.createObjectURL(new File([arrayBuffer], 'env.png', {type: 'image/png'})));
-
-const dracoJs = fetch(url('static/lib/draco_decoder.js'))
-    .then(r => r.text())
-    .then(text => URL.createObjectURL(new File([text], 'draco.js', {type: 'application/javascript'})));
-
-const dracoWasm = fetch(url('static/lib/draco_decoder.wasm'))
-    .then(r => r.arrayBuffer())
-    .then(arrayBuffer => URL.createObjectURL(new File([arrayBuffer], 'draco.wasm', {type: 'application/wasm'})));
-
-// construct the canvas and gl context
-const {canvas, gl} = createCanvas();
-
-// application listens for this promise to resolve
-let resolver: (globalState: GlobalState) => void;
-window.viewerBootstrap = new Promise<GlobalState>(resolve => {
-    resolver = resolve;
-});
-
-window.snap = {
-    ar: {
-        experience: {
-            onLoad: (config: any) => {
-                resolver({
-                    aresSdkConfig: config,
-                    canvas: canvas,
-                    gl: gl,
-                    gltfContents: fetch(config.productVisualizationUrl).then(r => r.arrayBuffer()),
-                    envImage: envImage,
-                    dracoJs: dracoJs,
-                    dracoWasm: dracoWasm,
-                    loadComplete: () => {
-                        stopSpinner();
-                        Debug.timeEnd('load');
-                    },
-                    modelLoadComplete: (timing: number) => {
-                        
-                    },
-                    inputEventHandlers: {
-                        onCameraAutoRotate: () => {
-                        },
-                        onModelClicked: () => {
-                        },
-                        onModelDragged: () => {
-                        },
-                        onModelZoomed: () => {
-                        }
-                    }
-                });
-            },
-            getEngagementContext: () => 'ARES_CONTEXT_VISUALIZATION'
-        }
-    }
-};
-
-const main = () => {
-    // this block is removed from prod builds
-    let readyResolver: (loadTime: number) => void;
-    window.ready = new Promise(resolve => {
-        readyResolver = resolve;
+    const params = new URLSearchParams(window.location.search.slice(1));
+    params.forEach((value: string, key: string) => {
+        apply(key, value);
     });
 
-    // manually invoke the object viewer onLoad function using a mockup'd
-    // aresSdkConfig object
-    const start = (url: string) => {
-        window.snap.ar.experience.onLoad({
-            // scene config overrides
-            camera: {
-                pixelScale: 1,
-                toneMapping: 'aces2'
+    return config;
+};
+
+window.viewerBootstrap.then(async (globalState: GlobalState) => {
+    // monkey-patch materials for premul alpha rendering
+    initMaterials();
+
+    // wait for async loads to complete
+    const [dracoJsURL, dracoWasmURL, envImageURL] = await Promise.all([
+        globalState.dracoJs,
+        globalState.dracoWasm,
+        globalState.envImage
+    ]);
+
+    // initialize draco
+    dracoInitialize({
+        jsUrl: dracoJsURL,
+        wasmUrl: dracoWasmURL,
+        numWorkers: 2
+    });
+
+    const overrides = [
+        {
+            model: {
+                url: globalState.modelUrl,
+                filename: globalState.modelFilename
             },
-            controls: {
-                autoRotate: true
-            },
-            shadow: {
-                fade: true
-            },
-
-            productVisualizationUrl: url,
-
-            onViewReady: () => {
-                readyResolver(0);
+            env: {
+                url: envImageURL
             }
-        });
-    };
+        },
+        getURLArgs(),
+        globalState.config
+    ];
 
-    // handle load param and ready promise for visual testing harness
-    const url = new URL(window.location.href);
+    // resolve scene config
+    const sceneConfig = getSceneConfig(overrides);
 
-    // handle load model (used in visual testing and debugging)
-    const loadUrl = url.searchParams.get('load');
-    if (loadUrl) {
-        const getModelUrl = (key: string) => {
-            const isHash = /^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$/;
-            return isHash.test(key)
-                ? `https://api.vertebrae-axis.com/assets/models/${key}/objectViewerHash/model.gltf`
-                : key;
-        };
+    // construct the manager
+    const scene = new Scene(
+        sceneConfig,
+        globalState.canvas,
+        globalState.gl,
+        globalState.modelLoadComplete,
+    );
 
-        start(getModelUrl(decodeURIComponent(loadUrl)));
-    } else {
-        let loaded = false;
-        const load = (url: string) => {
-            if (!loaded) {
-                loaded = true;
-                start(url);
-            }
-        };
+    // load async models
+    await scene.load();
 
-        // add a 'choose file' button
-        const selector = document.createElement('input');
-        selector.setAttribute('id', 'file-selector');
-        selector.setAttribute('type', 'file');
-        selector.setAttribute('accept', '.gltf,.glb');
-        selector.onchange = () => {
-            const files = selector.files;
-            if (files.length > 0) {
-                document.body.removeChild(selector);
-                load(URL.createObjectURL(selector.files[0]));
-            }
-        };
-        document.body.appendChild(selector);
-
-        // also support user dragging and dropping a local glb file onto the canvas
-        CreateDropHandler(canvas, urls => {
-            const modelExtensions = ['.glb', '.gltf', '.ply']
-            const model = urls.find(url => modelExtensions.some(extension => url.filename.endsWith(extension)));
-            if (model) {
-                document.body.removeChild(selector);
-                load(model.url);
-            }
-        });
-    }
-}
-
-main();
+    window.scene = scene;
+    globalState.loadComplete();
+});

@@ -14,6 +14,7 @@ if (process.env.BUILD_TYPE === 'prod') {
 }
 
 // debug, profile, release
+const HREF       = process.env.BASE_HREF || '';
 const BUILD_TYPE = process.env.BUILD_TYPE || 'release';
 const ENGINE_DIR = process.env.ENGINE_PATH || './node_modules/playcanvas';
 const EXTRAS_DIR = path.resolve(ENGINE_DIR, 'build', 'playcanvas-extras.mjs');
@@ -46,7 +47,12 @@ const pipeline = input => {
             input === 'src/main.ts' &&
                 copyAndWatch({
                     targets: [
-                        {src: 'src/index.html'},
+                        {
+                            src: 'src/index.html',
+                            transform: (contents, filename) => {
+                                return contents.toString().replace('__BASE_HREF__', HREF);
+                            }
+                        },
                         {src: 'static/lib/draco_decoder.wasm', dest: 'static/lib'},
                         {src: 'static/env/VertebraeHDRI_v1_512.png', dest: 'static/env'}
                     ]

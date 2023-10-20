@@ -188,12 +188,10 @@ class Scene extends EventHandler {
             this.add(this.xrMode);
         }
 
-        Debug.exec(() => {
-            if (config.debug?.ministats) {
-                /* eslint-disable no-new */
-                new MiniStats(this.app, null);
-            }
-        });
+        if (config.debug?.ministats) {
+            /* eslint-disable no-new */
+            new MiniStats(this.app, null);
+        }
     }
 
     async load() {

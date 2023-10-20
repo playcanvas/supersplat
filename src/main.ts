@@ -72,7 +72,6 @@ const url = (() => {
     };
 })();
 
-const startTime = Date.now();
 Debug.time('load');
 
 startSpinner();
@@ -104,8 +103,6 @@ let resolver: (globalState: GlobalState) => void;
 window.viewerBootstrap = new Promise<GlobalState>(resolve => {
     resolver = resolve;
 });
-
-let modelZoomTimeout: number;
 
 window.snap = {
     ar: {
@@ -143,8 +140,8 @@ window.snap = {
     }
 };
 
-// this block is removed from prod builds
-Debug.exec(() => {
+const main = () => {
+    // this block is removed from prod builds
     let readyResolver: (loadTime: number) => void;
     window.ready = new Promise(resolve => {
         readyResolver = resolve;
@@ -154,18 +151,6 @@ Debug.exec(() => {
     // aresSdkConfig object
     const start = (url: string) => {
         window.snap.ar.experience.onLoad({
-            eventService: {
-                postEngagementEvent: () => {},
-                postCTAEvent: () => {},
-                postFeatureEntry: () => {},
-                postError: () => {},
-                postGrapheneMetrics: {
-                    increment: () => {},
-                    histogram: () => {},
-                    timer: () => {}
-                }
-            },
-
             // scene config overrides
             camera: {
                 pixelScale: 1,
@@ -233,4 +218,6 @@ Debug.exec(() => {
             }
         });
     }
-});
+}
+
+main();

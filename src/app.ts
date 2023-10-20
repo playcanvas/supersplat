@@ -13,6 +13,34 @@ declare global {
     }
 }
 
+const getURLArgs = () => {
+    // extract settings from command line in non-prod builds only
+    const config = {};
+
+    const apply = (key: string, value: string) => {
+        let obj: any = config;
+        key.split('.').forEach((k, i, a) => {
+            if (i === a.length - 1) {
+                obj[k] = value;
+            } else {
+                if (!obj.hasOwnProperty(k)) {
+                    obj[k] = {};
+                }
+                obj = obj[k];
+            }
+        });
+    };
+
+    const params = new URLSearchParams(window.location.search.slice(1));
+    params.forEach((value: string, key: string) => {
+        if (key.startsWith('sc_pc_')) {
+            apply(key.slice(6), value);
+        }
+    });
+
+    return config;
+};
+
 window.viewerBootstrap.then(async (globalState: GlobalState) => {
     // monkey-patch materials for premul alpha rendering
     initMaterials();
@@ -31,34 +59,7 @@ window.viewerBootstrap.then(async (globalState: GlobalState) => {
         numWorkers: 2
     });
 
-    const overrides = [globalState.aresSdkConfig];
-
-    // extract settings from command line in non-prod builds only
-    Debug.exec(() => {
-        const config = {};
-
-        const apply = (key: string, value: string) => {
-            let obj: any = config;
-            key.split('.').forEach((k, i, a) => {
-                if (i === a.length - 1) {
-                    obj[k] = value;
-                } else {
-                    if (!obj.hasOwnProperty(k)) {
-                        obj[k] = {};
-                    }
-                    obj = obj[k];
-                }
-            });
-        };
-
-        const params = new URLSearchParams(window.location.search.slice(1));
-        params.forEach((value: string, key: string) => {
-            if (key.startsWith('sc_pc_')) {
-                apply(key.slice(6), value);
-            }
-        });
-        overrides.unshift(config);
-    });
+    const overrides = [getURLArgs(), globalState.aresSdkConfig];
 
     // resolve scene config
     const sceneConfig = getSceneConfig(

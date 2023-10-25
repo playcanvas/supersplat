@@ -223,6 +223,10 @@ class Model extends Element {
             matrixData.set(mat.data);
         });
     }
+
+    focalPoint() {
+        return this.asset.resource?.getFocalPoint?.();
+    }
 }
 
 export {Model};

@@ -7,7 +7,8 @@ import {
     Layer,
     Mouse,
     TouchDevice,
-    WebglGraphicsDevice
+    WebglGraphicsDevice,
+    GraphicsDevice
 } from 'playcanvas';
 import {MiniStats} from 'playcanvas-extras';
 import {PCApp} from './pc-app';
@@ -60,7 +61,7 @@ class Scene extends EventHandler {
     constructor(
         config: SceneConfig,
         canvas: HTMLCanvasElement,
-        gl: any,
+        graphicsDevice: GraphicsDevice,
         modelLoadCallback: (timer: number) => void
     ) {
         super();
@@ -74,7 +75,7 @@ class Scene extends EventHandler {
         this.app = new PCApp(canvas, {
             mouse: new Mouse(canvas),
             touch: new TouchDevice(canvas),
-            graphicsDeviceOptions: {gl: gl}
+            graphicsDevice: graphicsDevice
         });
 
         // register splat
@@ -257,12 +258,18 @@ class Scene extends EventHandler {
 
             // notify all elements of scene addition
             this.forEachElement(e => e !== element && e.onAdded(element));
+
+            // notify listeners
+            this.fire('element:added', element);
         }
     }
 
     // remove an element from the scene
     remove(element: Element) {
         if (element.scene === this) {
+            // notify listeners
+            this.fire('element:removed', element);
+
             // notify all elements of scene removal
             this.forEachElement(e => e !== element && e.onRemoved(element));
 

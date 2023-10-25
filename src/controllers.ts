@@ -88,7 +88,7 @@ class MouseController {
         // For panning to work at any zoom level, we use screen point to world projection
         // to work out how far we need to pan the pivotEntity in world space
         const camera = this.camera.entity.camera;
-        const distance = this.camera.focusDistance;
+        const distance = this.camera.focusDistance * this.camera.distanceTween.value.distance;
 
         camera.screenToWorld(x, y, distance, fromWorldPoint);
         camera.screenToWorld(this.lastPoint.x, this.lastPoint.y, distance, toWorldPoint);

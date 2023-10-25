@@ -352,6 +352,13 @@ class Camera extends Element {
     }
 
     focus() {
+        let focalPoint: Vec3;
+        this.scene.elements.forEach((element: any) => {
+            if (!focalPoint && element.type === ElementType.model) {
+                focalPoint = element.focalPoint && element.focalPoint();
+            }
+        });
+
         const config = this.scene.config;
 
         const bound = this.scene.bound;
@@ -359,7 +366,7 @@ class Camera extends Element {
         const distance = radius / Math.sin(config.camera.fov * math.DEG_TO_RAD * 0.5);
 
         this.setDistance(1.0, 0);
-        this.setFocalPoint(bound.center, 0);
+        this.setFocalPoint(focalPoint ?? bound.center, 0);
 
         this.sceneRadius = radius;
         this.focusDistance = 1.1 * distance;

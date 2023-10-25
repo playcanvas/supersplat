@@ -15,6 +15,6 @@
             "playcanvas-extras": ["node_modules/playcanvas/build/playcanvas-extras.mjs"]
         }
     },
-    "include": ["./src/*.ts","./submodules/model-viewer/src/splat/*.ts"],
+    "include": ["./src/*.ts","./submodules/model-viewer/src/splat/*.ts", "src/ui/control-panel.ts"],
     "exclude": ["node_modules", "**/*.js", "dist"]
 }

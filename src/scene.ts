@@ -10,21 +10,22 @@ import {
     WebglGraphicsDevice,
     GraphicsDevice
 } from 'playcanvas';
-import {MiniStats} from 'playcanvas-extras';
-import {PCApp} from './pc-app';
-import {Element, ElementType, ElementTypeList} from './element';
-import {SceneState} from './scene-state';
-import {SceneConfig, XRModeConfig} from './scene-config';
-import {AssetLoader} from './asset-loader';
-import {Model} from './model';
-import {Camera} from './camera';
-import {Multiframe} from './multiframe';
-import {Oit} from './oit';
-import {CustomShadow as Shadow} from './custom-shadow';
-// import {VsmShadow as Shadow} from './vsm-shadow';
-// import {BakedShadow as Shadow} from './baked-shadow';
-import {HotSpots} from './hotspots';
-import {XRMode} from './xr-mode';
+import { MiniStats } from 'playcanvas-extras';
+import { PCApp } from './pc-app';
+import { Element, ElementType, ElementTypeList } from './element';
+import { SceneState } from './scene-state';
+import { SceneConfig, XRModeConfig } from './scene-config';
+import { AssetLoader } from './asset-loader';
+import { Model } from './model';
+import { Splat } from './splat';
+import { Camera } from './camera';
+import { Multiframe } from './multiframe';
+import { Oit } from './oit';
+import { CustomShadow as Shadow } from './custom-shadow';
+// import { VsmShadow as Shadow } from './vsm-shadow';
+// import { BakedShadow as Shadow } from './baked-shadow';
+import { HotSpots } from './hotspots';
+import { XRMode } from './xr-mode';
 
 import { registerPlyParser } from '../submodules/model-viewer/src/splat/ply-parser';
 
@@ -33,7 +34,6 @@ const bound = new BoundingBox();
 class Scene extends EventHandler {
     config: SceneConfig;
     canvas: HTMLCanvasElement;
-    modelLoadCallback: (timer: number) => void;
     app: PCApp;
     shadowLayer: Layer;
     sceneState = [new SceneState(), new SceneState()];
@@ -61,14 +61,12 @@ class Scene extends EventHandler {
     constructor(
         config: SceneConfig,
         canvas: HTMLCanvasElement,
-        graphicsDevice: GraphicsDevice,
-        modelLoadCallback: (timer: number) => void
+        graphicsDevice: GraphicsDevice
     ) {
         super();
 
         this.config = config;
         this.canvas = canvas;
-        this.modelLoadCallback = modelLoadCallback;
 
         // configure the playcanvas application. we render to an offscreen buffer so require
         // only the simplest of backbuffers.
@@ -163,8 +161,8 @@ class Scene extends EventHandler {
         this.camera = new Camera();
         this.add(this.camera);
 
-        this.shadow = new Shadow();
-        this.add(this.shadow);
+        // this.shadow = new Shadow();
+        // this.add(this.shadow);
 
         this.hotSpots = new HotSpots();
         this.add(this.hotSpots);
@@ -203,9 +201,6 @@ class Scene extends EventHandler {
             promises.push(this.assetLoader.loadModel({
                 url: config.model.url,
                 filename: config.model.filename
-            }).then((model: Model) => {
-                this.modelLoadCallback(Date.now() - modelStartTime);
-                return model;
             }));
         };
 
@@ -242,9 +237,15 @@ class Scene extends EventHandler {
 
     clear() {
         const models = this.getElementsByType(ElementType.model);
-        models.forEach(model => {
+        models.forEach((model) => {
             this.remove(model);
             (model as Model).destroy();
+        });
+
+        const splats = this.getElementsByType(ElementType.splat);
+        splats.forEach((splat) => {
+            this.remove(splat);
+            (splat as Splat).destroy();
         });
     }
 
@@ -358,6 +359,8 @@ class Scene extends EventHandler {
         this.targetSize.height = Math.ceil(this.app.graphicsDevice.height / this.config.camera.pixelScale);
 
         this.forEachElement(e => e.onPreRender());
+
+        this.fire('prerender');
 
         // debug - display scene bound
         if (this.config.debug.showBound) {

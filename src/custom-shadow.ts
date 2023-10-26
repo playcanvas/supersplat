@@ -329,7 +329,7 @@ class CustomShadow extends Element {
     }
 
     onAdded(element: Element): void {
-        if (element.type === ElementType.model) {
+        if (element.type === ElementType.model || element.type === ElementType.splat) {
             const seen = new Set();
 
             const modelElement = element as Model;

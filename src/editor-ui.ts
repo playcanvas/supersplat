@@ -1,7 +1,7 @@
 import { Container } from 'pcui';
 import { ControlPanel } from './ui/control-panel';
 
-class Editor {
+class EditorUI {
     appContainer: Container;
     leftContainer: Container;
     controlPanel: ControlPanel;
@@ -26,7 +26,7 @@ class Editor {
 
         const canvasContainer = new Container({
             id: 'canvas-container'
-        })
+        });
 
         const canvas = document.createElement('canvas');
         canvas.id = 'canvas';
@@ -43,4 +43,4 @@ class Editor {
     }
 }
 
-export { Editor };
+export { EditorUI };

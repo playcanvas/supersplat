@@ -30,8 +30,8 @@ const sceneConfig = {
     backgroundColor: {r: 0, g: 0, b: 0, a: 0},
     camera: {
         pixelScale: 1,
-        multisample: true,
-        multiframe: true,
+        multisample: false,
+        multiframe: false,
         oit: false,
         fov: 36,
         dollyZoom: true,

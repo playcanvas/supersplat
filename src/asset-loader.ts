@@ -1,6 +1,7 @@
-import {Asset, AssetRegistry, StandardMaterial, TEXTURETYPE_RGBP} from 'playcanvas';
-import {Model} from './model';
-import {Env} from './env';
+import { Asset, AssetRegistry, StandardMaterial, TEXTURETYPE_RGBP } from 'playcanvas';
+import { Model } from './model';
+import { Splat } from './splat';
+import { Env } from './env';
 
 interface ModelLoadRequest {
     url?: string;
@@ -27,7 +28,7 @@ class AssetLoader {
     loadModel(loadRequest: ModelLoadRequest) {
         const registry = this.registry;
 
-        return new Promise<Model>((resolve, reject) => {
+        return new Promise<Model|Splat>((resolve, reject) => {
             const gemMaterials = new Set<StandardMaterial>();
 
             const containerAsset = new Asset(
@@ -56,7 +57,11 @@ class AssetLoader {
                 } as any
             );
             containerAsset.on('load', () => {
-                resolve(new Model(containerAsset, gemMaterials));
+                if (loadRequest.filename.endsWith('.ply')) {
+                    resolve(new Splat(containerAsset));
+                } else {
+                    resolve(new Model(containerAsset, gemMaterials));
+                }
             });
             containerAsset.on('error', (err: string) => {
                 reject(err);

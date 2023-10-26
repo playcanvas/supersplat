@@ -5,6 +5,7 @@ import {Scene} from './scene';
 enum ElementType {
     camera = 'camera',
     model = 'model',
+    splat = 'splat',
     shadow = 'shadow',
     hotspots = 'hotspots',
     other = 'other'
@@ -13,6 +14,7 @@ enum ElementType {
 const ElementTypeList = [
     ElementType.camera,
     ElementType.model,
+    ElementType.splat,
     ElementType.shadow,
     ElementType.hotspots,
     ElementType.other

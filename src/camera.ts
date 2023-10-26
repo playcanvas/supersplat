@@ -340,21 +340,14 @@ class Camera extends Element {
             const device = this.scene.graphicsDevice as WebglGraphicsDevice;
 
             // copy render target
-            // device.copyRenderTarget(renderTarget, undefined, true, false);
-            drawTexture(device, renderTarget.colorBuffer);
-
-            // activate the back buffer
-            device.setRenderTarget(null);
-            device.updateBegin();
-            device.setViewport(0, 0, device.width, device.height);
-            device.setScissor(0, 0, device.width, device.height);
+            drawTexture(this.scene.graphicsDevice, renderTarget.colorBuffer, null);
         }
     }
 
     focus() {
         let focalPoint: Vec3;
         this.scene.elements.forEach((element: any) => {
-            if (!focalPoint && element.type === ElementType.model) {
+            if (!focalPoint && element.type === ElementType.splat) {
                 focalPoint = element.focalPoint && element.focalPoint();
             }
         });

@@ -139,7 +139,7 @@ class ControlPanel extends Panel {
 
         const exportButton = new Button({
             class: 'control-element',
-            text: 'ply file'
+            text: 'Ply file'
         });
 
         // append

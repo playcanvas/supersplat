@@ -6,6 +6,7 @@ import {
     Mesh,
     MeshInstance,
     PRIMITIVE_POINTS,
+    Quat,
     SEMANTIC_POSITION,
     createShaderFromCode,
     Vec3
@@ -148,6 +149,48 @@ const convertPly = (splatData: SplatData) => {
                 }
             }
         });
+    }
+
+    // FIXME
+    // we must undo the transform we apply at load time to output data
+    const mat = new Mat4();
+    mat.setScale(-1, -1, 1);
+    mat.invert();
+
+    const quat = new Quat();
+    quat.setFromMat4(mat);
+
+    const v = new Vec3();
+    const q = new Quat();
+
+    const x_off = props.indexOf('x') * 4;
+    const y_off = props.indexOf('y') * 4;
+    const z_off = props.indexOf('z') * 4;
+    const r0_off = props.indexOf('rot_0') * 4;
+    const r1_off = props.indexOf('rot_1') * 4;
+    const r2_off = props.indexOf('rot_2') * 4;
+    const r3_off = props.indexOf('rot_3') * 4;
+    for (let i = 0; i < numSplats; ++i) {
+        const off = header.byteLength + i * props.length * 4;
+        const x = dataView.getFloat32(off + x_off, true);
+        const y = dataView.getFloat32(off + y_off, true);
+        const z = dataView.getFloat32(off + z_off, true);
+        const rot_0 = dataView.getFloat32(off + r0_off, true);
+        const rot_1 = dataView.getFloat32(off + r1_off, true);
+        const rot_2 = dataView.getFloat32(off + r2_off, true);
+        const rot_3 = dataView.getFloat32(off + r3_off, true);
+
+        v.set(x, y, z);
+        mat.transformPoint(v, v);
+        dataView.setFloat32(off + x_off, v.x, true);
+        dataView.setFloat32(off + y_off, v.y, true);
+        dataView.setFloat32(off + z_off, v.z, true);
+
+        q.set(rot_1, rot_2, rot_3, rot_0).mul2(quat, q);
+        dataView.setFloat32(off + r0_off, q.w, true);
+        dataView.setFloat32(off + r1_off, q.x, true);
+        dataView.setFloat32(off + r2_off, q.y, true);
+        dataView.setFloat32(off + r3_off, q.z, true);
     }
 
     return result;

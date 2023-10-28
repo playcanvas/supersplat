@@ -67,11 +67,11 @@ class Splat extends Element {
         this.calcBound(bound);
 
         // center the object to the world origin
-        if (bound) {
-            vec.set(-bound.center.x, -bound.getMin().y, -bound.center.z);
-        } else {
-            vec.copy(Vec3.ZERO);
-        }
+        // if (bound) {
+        //     vec.set(-bound.center.x, -bound.getMin().y, -bound.center.z);
+        // } else {
+        //     vec.copy(Vec3.ZERO);
+        // }
 
         // apply model settings
         const p = config.model.position;

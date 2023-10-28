@@ -3,6 +3,8 @@ import { Model } from './model';
 import { Splat } from './splat';
 import { Env } from './env';
 
+import { startSpinner, stopSpinner } from './spinner';
+
 interface ModelLoadRequest {
     url?: string;
     contents?: ArrayBuffer;
@@ -27,6 +29,8 @@ class AssetLoader {
 
     loadModel(loadRequest: ModelLoadRequest) {
         const registry = this.registry;
+
+        startSpinner();
 
         return new Promise<Model|Splat>((resolve, reject) => {
             const gemMaterials = new Set<StandardMaterial>();
@@ -62,6 +66,8 @@ class AssetLoader {
                 } else {
                     resolve(new Model(containerAsset, gemMaterials));
                 }
+
+                stopSpinner();
             });
             containerAsset.on('error', (err: string) => {
                 reject(err);

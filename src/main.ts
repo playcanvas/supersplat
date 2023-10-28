@@ -1,7 +1,6 @@
 import { dracoInitialize, createGraphicsDevice, WebglGraphicsDevice } from 'playcanvas';
 import { Scene } from './scene';
 import { getSceneConfig } from './scene-config';
-import { startSpinner, stopSpinner } from './spinner';
 import { CreateDropHandler } from './drop-handler';
 import { initMaterials } from './material';
 import { EditorUI } from './editor-ui';
@@ -95,8 +94,6 @@ const initDropHandler = (canvas: HTMLCanvasElement, scene: Scene) => {
 };
 
 const main = async () => {
-    startSpinner();
-
     const url = new URL(window.location.href);
 
     const editorUI = new EditorUI();
@@ -163,8 +160,6 @@ const main = async () => {
     await scene.load();
 
     window.scene = scene;
-
-    stopSpinner();
 }
 
 export { main };

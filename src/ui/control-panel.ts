@@ -137,6 +137,26 @@ class ControlPanel extends Panel {
             text: 'Reset Focus'
         });
 
+        const splatSizeParent = new Container({
+            class: 'control-parent'
+        });
+
+        const splatSizeLabel = new Label({
+            class: 'control-label',
+            text: 'Splat Size'
+        });
+
+        const splatSizeSlider = new SliderInput({
+            class: 'control-element-expand',
+            precision: 1,
+            min: 0,
+            max: 10,
+            value: 1
+        });
+
+        splatSizeParent.append(splatSizeLabel);
+        splatSizeParent.append(splatSizeSlider);
+
         // selection heading
         const selectionHeading = new Label({
             class: 'control-heading',
@@ -364,6 +384,7 @@ class ControlPanel extends Panel {
         // append
         controls.append(cameraHeading);
         controls.append(focusButton);
+        controls.append(splatSizeParent);
         controls.append(selectionHeading);
         controls.append(selectBySizeParent);
         controls.append(selectByOpacityParent);
@@ -463,6 +484,10 @@ class ControlPanel extends Panel {
             this.events.fire('focusCamera');
         });
 
+        splatSizeSlider.on('change', (value: number) => {
+            this.events.fire('splatSize', value);
+        });
+
         selectAllButton.on('click', () => {
             this.events.fire('selectAll');
         });
@@ -506,6 +531,16 @@ class ControlPanel extends Panel {
         this.events.on('splat:count', (count: number) => {
             selectionHeading.text = `Selection${count === 0 ? '' : ' (' + count.toString() + ')'}`;
         });
+
+        // keyboard handler
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Delete') {
+                this.events.fire('deleteSelection');
+            } else if (e.key === 'Escape') {
+                selection.deactivate();
+            }
+        });
+
     }
 }
 

@@ -27,11 +27,13 @@ uniform mat4 matrix_view;
 uniform mat4 matrix_projection;
 uniform mat4 matrix_viewProjection;
 
+uniform float splatSize;
+
 varying vec4 color;
 
 void main(void) {
     gl_Position = matrix_viewProjection * matrix_model * vec4(vertex_position.xyz, 1.0);
-    gl_PointSize = 2.0;
+    gl_PointSize = splatSize;
     float opacity = vertex_position.w;
     color = (opacity == -1.0) ? vec4(0) : mix(vec4(0, 0, 1.0, 0.5), vec4(1.0, 1.0, 0.0, 0.5), opacity);
 }
@@ -60,6 +62,7 @@ class SplatDebug {
         material.name = 'splatDebugMaterial';
         material.blendType = BLEND_NORMAL;
         material.shader = shader;
+        material.setParameter('splatSize', 1.0);
         material.update();
 
         const x = splatData.getProp('x');
@@ -102,6 +105,14 @@ class SplatDebug {
         vb.unlock();
 
         return count;
+    }
+
+    set splatSize(splatSize: number) {
+        this.meshInstance.material.setParameter('splatSize', splatSize);
+    }
+
+    get splatSize() {
+        return this.meshInstance.material.getParameter('splatSize').data;
     }
 }
 
@@ -242,7 +253,9 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
         const app = scene.app;
 
         debugs.forEach((debug) => {
-            app.drawMeshInstance(debug.meshInstance);
+            if (debug.splatSize > 0) {
+                app.drawMeshInstance(debug.meshInstance);
+            }
 
             if (debugSphereRadius > 0) {
                 app.drawWireSphere(debugSphereCenter, debugSphereRadius, Color.RED, 40);
@@ -274,6 +287,14 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
 
     events.on('focusCamera', () => {
         scene.camera.focus();
+    });
+
+    events.on('splatSize', (value: number) => {
+        debugs.forEach((debug) => {
+            debug.splatSize = value;
+        });
+
+        scene.forceRender = true;
     });
 
     const updateSelection = (splatData: SplatData) => {

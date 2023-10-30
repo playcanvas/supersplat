@@ -105,6 +105,14 @@ class Selection {
         this.events.fire('deactivated');
         this.root.style.display = 'none';
     }
+
+    toggle() {
+        if (this.root.style.display === 'block') {
+            this.deactivate();
+        } else {
+            this.activate();
+        }
+    }
 }
 
 class ControlPanel extends Panel {
@@ -538,9 +546,10 @@ class ControlPanel extends Panel {
                 this.events.fire('deleteSelection');
             } else if (e.key === 'Escape') {
                 selection.deactivate();
+            } else if (e.key === 'R' || e.key === 'r') {
+                selection.toggle();
             }
         });
-
     }
 }
 

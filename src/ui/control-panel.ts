@@ -1,6 +1,112 @@
 import { EventHandler } from 'playcanvas';
 import { Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, VectorInput } from 'pcui';
 
+class Selection {
+    root: HTMLElement;
+    svg: SVGElement;
+    rect: SVGRectElement;
+    dragging = false;
+    start = { x: 0, y: 0 };
+    end = { x: 0, y: 0 };
+
+    events = new EventHandler();
+
+    constructor(parent: HTMLElement) {
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.id = 'select-svg';
+
+        // create rect element
+        const rect = document.createElementNS(svg.namespaceURI, 'rect');
+        rect.setAttribute('fill', 'none');
+        rect.setAttribute('stroke', '#f60');
+        rect.setAttribute('stroke-width', '1');
+        rect.setAttribute('stroke-dasharray', '5, 5');
+
+        // create input dom
+        const root = document.createElement('div');
+        root.id = 'select-root';
+
+        const updateRect = () => {
+            if (this.dragging) {
+                const x = Math.min(this.start.x, this.end.x);
+                const y = Math.min(this.start.y, this.end.y);
+                const width = Math.abs(this.start.x - this.end.x);
+                const height = Math.abs(this.start.y - this.end.y);
+
+                rect.setAttribute('x', x.toString());
+                rect.setAttribute('y', y.toString());
+                rect.setAttribute('width', width.toString());
+                rect.setAttribute('height', height.toString());
+            }
+
+            this.svg.style.display = this.dragging ? 'inline' : 'none';
+        };
+
+        root.oncontextmenu = (e) => {
+            e.preventDefault();
+        };
+
+        root.onmousedown = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (e.button === 0) {
+                this.dragging = true;
+                this.start.x = this.end.x = e.offsetX;
+                this.start.y = this.end.y = e.offsetY;
+                updateRect();
+            }
+        };
+
+        root.onmousemove = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (e.button === 0 && this.dragging) {
+                this.end.x = e.offsetX;
+                this.end.y = e.offsetY;
+                updateRect();
+            }
+        };
+
+        root.onmouseup = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (e.button === 0) {
+                const w = root.clientWidth;
+                const h = root.clientHeight;
+
+                this.dragging = false;
+                updateRect();
+
+                this.events.fire('selectRect', e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'), {
+                    start: { x: Math.min(this.start.x, this.end.x) / w, y: Math.min(this.start.y, this.end.y) / h },
+                    end: { x: Math.max(this.start.x, this.end.x) / w, y: Math.max(this.start.y, this.end.y) / h },
+                });
+            }
+        };
+
+        parent.appendChild(root);
+        root.appendChild(svg);
+        svg.appendChild(rect);
+
+        this.root = root;
+        this.svg = svg;
+        this.rect = rect;
+    }
+
+    activate() {
+        this.root.style.display = 'block';
+        this.events.fire('activated');
+    }
+
+    deactivate() {
+        this.events.fire('deactivated');
+        this.root.style.display = 'none';
+    }
+}
+
 class ControlPanel extends Panel {
     events = new EventHandler;
 
@@ -170,9 +276,16 @@ class ControlPanel extends Panel {
             enabled: false
         });
 
+        const rectSelectButton = new Button({
+            class: 'control-element-expand',
+            text: 'Rect',
+            enabled: true
+        });
+
         addRemoveParent.append(setButton);
         addRemoveParent.append(addButton);
         addRemoveParent.append(removeButton);
+        addRemoveParent.append(rectSelectButton);
 
         // selection button parent
         const selectionButtonParent = new Container({
@@ -209,12 +322,12 @@ class ControlPanel extends Panel {
 
         const deleteSelectionButton = new Button({
             class: 'control-element',
-            text: 'Delete Selection'
+            text: 'Delete Selected Splats'
         });
 
         const resetButton = new Button({
             class: 'control-element',
-            text: 'Reset'
+            text: 'Reset Scene'
         });
 
         // orientation
@@ -224,7 +337,7 @@ class ControlPanel extends Panel {
 
         const sceneOrientationLabel = new Label({
             class: 'control-label',
-            text: 'Orientation'
+            text: 'Scene Orientation'
         });
 
         const sceneOrientation = new VectorInput({
@@ -259,12 +372,28 @@ class ControlPanel extends Panel {
         controls.append(addRemoveParent);
         controls.append(selectionButtonParent);
         controls.append(sceneHeading);
-        controls.append(sceneOrientationParent);
         controls.append(deleteSelectionButton);
         controls.append(resetButton);
+        controls.append(sceneOrientationParent);
         controls.append(exportHeading);
         controls.append(exportButton);
         this.append(controls);
+
+        const selection = new Selection(document.getElementById('canvas-container'));
+
+        selection.events.on('activated', () => rectSelectButton.class.add('active'));
+        selection.events.on('deactivated', () => rectSelectButton.class.remove('active'));
+        selection.events.on('selectRect', (op: string, rect: any) => {
+            this.events.fire('selectRect', op, rect);
+        });
+
+        rectSelectButton.on('click', () => {
+            if (rectSelectButton.class.contains('active')) {
+                selection.deactivate();
+            } else {
+                selection.activate();
+            }
+        });
 
         // radio logic
         const radioGroup = [selectBySizeRadio, selectByOpacityRadio, selectBySphereRadio, selectByPlaneRadio];

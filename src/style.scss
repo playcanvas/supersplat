@@ -72,6 +72,24 @@ body {
     flex-grow: 1;
 }
 
+.active {
+    color: white;
+    background-color: #f60 !important;
+}
+
+#select-root {
+    display: none;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+#select-svg {
+    display: none;
+    width: 100%;
+    height: 100%;
+}
+
 #canvas-container {
     width: 100%;
     background-color: #666666;

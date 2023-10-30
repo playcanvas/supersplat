@@ -21,9 +21,6 @@ class EditorUI {
             flexDirection: 'column'
         });
 
-        const controlPanel = new ControlPanel();
-        leftContainer.append(controlPanel);
-
         const canvasContainer = new Container({
             id: 'canvas-container'
         });
@@ -34,6 +31,9 @@ class EditorUI {
         appContainer.append(leftContainer);
         appContainer.append(canvasContainer);
         canvasContainer.dom.appendChild(canvas);
+
+        const controlPanel = new ControlPanel();
+        leftContainer.append(controlPanel);
 
         this.appContainer = appContainer;
         this.leftContainer = leftContainer;

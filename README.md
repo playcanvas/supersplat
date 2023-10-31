@@ -1,5 +1,7 @@
 # Super Splat
 
+![](https://github.com/playcanvas/super-splat/assets/697563/b68bfc02-c651-4488-8ad7-80868decfdee)
+
 The PlayCanvas Super Splat tool is for editing gaussian splat PLY files.
 
 See https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/ for more information on gaussian splats.

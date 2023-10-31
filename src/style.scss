@@ -25,7 +25,7 @@ body {
 }
 
 #left-container {
-    width: 300px;
+    width: 340px;
     height: 100%;
     border-right: 1px solid #20292b;
     display: flex;
@@ -33,7 +33,7 @@ body {
 }
 
 #control-panel {
-
+    overflow-y: scroll;
 }
 
 .control-container {
@@ -109,6 +109,10 @@ body {
     position: absolute;
     left: 0;
     bottom: 0;
+}
+
+#keyboard-heading {
+    margin: 120px 0px 0px 0px;
 }
 
 /* scrollbar styling */

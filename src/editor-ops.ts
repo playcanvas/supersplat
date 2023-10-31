@@ -1,11 +1,11 @@
 import {
     BLEND_NORMAL,
+    BoundingBox,
     Color,
     Mat4,
     Material,
     Mesh,
     MeshInstance,
-    Plane,
     PRIMITIVE_POINTS,
     Quat,
     SEMANTIC_POSITION,
@@ -223,6 +223,7 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
     const vec2 = new Vec3();
     const vec4 = new Vec4();
     const mat = new Mat4();
+    const aabb = new BoundingBox();
 
     // make a copy of the opacity channel because that's what we'll be modifying
     scene.on('element:added', (element: Element) => {
@@ -241,6 +242,8 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
             }
         }
     });
+
+    let selectedSplats = 0;
 
     const debugSphereCenter = new Vec3();
     let debugSphereRadius = 0;
@@ -285,23 +288,11 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
 
     const events = editorUI.controlPanel.events;
 
-    events.on('focusCamera', () => {
-        scene.camera.focus();
-    });
-
-    events.on('splatSize', (value: number) => {
-        debugs.forEach((debug) => {
-            debug.splatSize = value;
-        });
-
-        scene.forceRender = true;
-    });
-
     const updateSelection = (splatData: SplatData) => {
         const splatDebug = debugs.get(splatData);
         if (splatDebug) {
-            const numSplats = splatDebug.update();
-            events.fire('splat:count', numSplats);
+            selectedSplats = splatDebug.update();
+            events.fire('splat:count', selectedSplats);
         }
 
         scene.forceRender = true;
@@ -354,6 +345,32 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
             }
         }
     };
+
+    events.on('focusCamera', () => {
+        const splat = scene.getElementsByType(ElementType.splat)[0] as Splat;
+        if (splat) {
+            const splatData = splat.asset.resource.splatData;
+            const selection = splatData.getProp('selection');
+            const opacity = splatData.getProp('opacity');
+            const opacityPred = (i: number) => opacity[i] !== deletedOpacity;
+            const selectionPred = (i: number) => selection[i] === 1;
+            splatData.calcAabb(aabb, selectedSplats ? selectionPred : opacityPred);
+            splatData.calcFocalPoint(vec, selectedSplats ? selectionPred : opacityPred);
+
+            splat.root.getWorldTransform().transformPoint(vec, vec);
+
+            scene.camera.setFocalPoint(vec);
+            scene.camera.setDistance(aabb.halfExtents.length() / scene.bound.halfExtents.length());
+        }
+    });
+
+    events.on('splatSize', (value: number) => {
+        debugs.forEach((debug) => {
+            debug.splatSize = value;
+        });
+
+        scene.forceRender = true;
+    });
 
     events.on('selectAll', () => {
         forEachSplat((splatData: SplatData, resource: any) => {
@@ -528,6 +545,8 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
 
             updateSelection(splatData);
         });
+
+        scene.updateBound();
     });
 
     events.on('deleteSelection', () => {

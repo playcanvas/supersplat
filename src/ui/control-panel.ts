@@ -123,9 +123,7 @@ class ControlPanel extends Panel {
             id: 'control-panel',
             headerText: 'Controls',
             collapsible: false,
-            collapsed: false,
-            flex: true,
-            flexDirection: 'row'
+            collapsed: false
         });
 
         super(args);
@@ -389,6 +387,26 @@ class ControlPanel extends Panel {
             text: 'Ply file'
         });
 
+        // keyboard
+        const keyboardHeading = new Label({
+            id: 'keyboard-heading',
+            class: 'control-heading',
+            text: 'Keyboard'
+        });
+
+        const shortcutsLabel = new Label({
+            class: 'control-element-expand',
+            text: [
+                'F - Focus camera',
+                'R - Toggle rect selection',
+                'Shift - Add to selection',
+                'Ctrl - Remove from selection',
+                'Delete - Delete selected splats',
+                'Esc - Cancel rect selection',
+            ].join('<br>'),
+            unsafe: true
+        });
+
         // append
         controls.append(cameraHeading);
         controls.append(focusButton);
@@ -406,6 +424,9 @@ class ControlPanel extends Panel {
         controls.append(sceneOrientationParent);
         controls.append(exportHeading);
         controls.append(exportButton);
+        controls.append(keyboardHeading);
+        controls.append(shortcutsLabel);
+
         this.append(controls);
 
         const selection = new Selection(document.getElementById('canvas-container'));
@@ -548,6 +569,8 @@ class ControlPanel extends Panel {
                 selection.deactivate();
             } else if (e.key === 'R' || e.key === 'r') {
                 selection.toggle();
+            } else if (e.key === 'F' || e.key === 'f') {
+                this.events.fire('focusCamera');
             }
         });
     }

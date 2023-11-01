@@ -1,7 +1,8 @@
 import { EventHandler } from 'playcanvas';
 import { Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, VectorInput } from 'pcui';
+import logo from './playcanvas-logo.png';
 
-class Selection {
+class BoxSelection {
     root: HTMLElement;
     svg: SVGElement;
     rect: SVGRectElement;
@@ -97,45 +98,211 @@ class Selection {
     }
 
     activate() {
-        this.root.style.display = 'block';
-        this.events.fire('activated');
+        if (!this.active) {
+            this.root.style.display = 'block';
+            this.events.fire('activated');
+        }
     }
 
     deactivate() {
-        this.events.fire('deactivated');
-        this.root.style.display = 'none';
+        if (this.active) {
+            this.events.fire('deactivated');
+            this.root.style.display = 'none';
+        }
     }
 
-    toggle() {
-        if (this.root.style.display === 'block') {
-            this.deactivate();
-        } else {
-            this.activate();
-        }
+    get active() {
+        return this.root.style.display === 'block';
     }
 }
 
-class ControlPanel extends Panel {
+class BrushSelection {
+    root: HTMLElement;
+    canvas: HTMLCanvasElement;
+    context: CanvasRenderingContext2D;
+    svg: SVGElement;
+    circle: SVGCircleElement;
+    dragging = false;
+    radius = 40;
+    prev = { x: 0, y: 0 };
+
+    events = new EventHandler();
+
+    constructor(parent: HTMLElement) {
+        // create input dom
+        const root = document.createElement('div');
+        root.id = 'select-root';
+
+        // create svg
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.id = 'select-svg';
+        svg.style.display = 'inline';
+
+        // create circle element
+        const circle = document.createElementNS(svg.namespaceURI, 'circle');
+        circle.setAttribute('r', this.radius.toString());
+        circle.setAttribute('fill', 'rgba(255, 102, 0, 0.2)');
+        circle.setAttribute('stroke', '#f60');
+        circle.setAttribute('stroke-width', '1');
+        circle.setAttribute('stroke-dasharray', '5, 5');
+
+        // create canvas
+        const canvas = document.createElement('canvas');
+        canvas.id = 'select-canvas';
+
+        const context = canvas.getContext('2d');
+        context.globalCompositeOperation = 'copy';
+
+        const update = (e: MouseEvent) => {
+            const x = e.offsetX;
+            const y = e.offsetY;
+
+            circle.setAttribute('cx', x.toString());
+            circle.setAttribute('cy', y.toString());
+
+            if (this.dragging) {
+                context.beginPath();
+                context.strokeStyle = '#f60';
+                context.lineCap = 'round';
+                context.lineWidth = this.radius * 2;
+                context.moveTo(this.prev.x, this.prev.y);
+                context.lineTo(x, y);
+                context.stroke();
+
+                this.prev.x = x;
+                this.prev.y = y;
+            }
+        };
+
+        root.oncontextmenu = (e) => {
+            e.preventDefault();
+        };
+
+        root.onmousedown = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            this.prev.x = e.offsetX;
+            this.prev.y = e.offsetY;
+
+            update(e);
+
+            if (e.button === 0) {
+                this.dragging = true;
+
+                if (canvas.width !== parent.clientWidth || canvas.height !== parent.clientHeight) {
+                    canvas.width = parent.clientWidth;
+                    canvas.height = parent.clientHeight;
+                }
+
+                // clear canvas
+                context.clearRect(0, 0, canvas.width, canvas.height);
+
+                // display it
+                canvas.style.display = 'inline';
+            }
+        };
+
+        root.onmousemove = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            update(e);
+        };
+
+        root.onmouseup = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            update(e);
+
+            if (e.button === 0) {
+                this.dragging = false;
+                canvas.style.display = 'none';
+
+                this.events.fire(
+                    'selectByMask',
+                    e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
+                    context.getImageData(0, 0, canvas.width, canvas.height)
+                );
+            }
+        };
+
+        parent.appendChild(root);
+        root.appendChild(svg);
+        svg.appendChild(circle);
+        root.appendChild(canvas);
+
+        this.root = root;
+        this.svg = svg;
+        this.circle = circle;
+        this.canvas = canvas;
+        this.context = context;
+
+        canvas.width = parent.clientWidth;
+        canvas.height = parent.clientHeight;
+    }
+
+    activate() {
+        if (!this.active) {
+            this.root.style.display = 'block';
+            this.events.fire('activated');
+        }
+    }
+
+    deactivate() {
+        if (this.active) {
+            this.events.fire('deactivated');
+            this.root.style.display = 'none';
+        }
+    }
+
+    get active() {
+        return this.root.style.display === 'block';
+    }
+
+    smaller() {
+        this.radius = Math.max(1, this.radius / 1.05);
+        this.circle.setAttribute('r', this.radius.toString());
+    }
+
+    bigger() {
+        this.radius = Math.min(500, this.radius * 1.05);
+        this.circle.setAttribute('r', this.radius.toString());
+    }
+}
+
+
+class ControlPanel extends Container {
     events = new EventHandler;
 
     constructor(args = { }) {
         Object.assign(args, {
-            id: 'control-panel',
-            headerText: 'Controls',
-            collapsible: false,
-            collapsed: false
+            id: 'control-container'
         });
 
         super(args);
 
-        const controls = new Container({
-            class: 'control-container'
+        // header
+        const title = new Container({
+            class: 'control-parent'
         });
 
-        // camera heading
-        const cameraHeading = new Label({
-            class: 'control-heading',
-            text: 'Camera'
+        const titleLogo = document.createElement('img');
+        titleLogo.src = logo.src;
+        titleLogo.width = 40;
+        titleLogo.height = 40;
+
+        const titleText = new Label({
+            id: 'control-logo-text',
+            text: 'SUPER SPLAT'
+        });
+
+        title.dom.appendChild(titleLogo);
+        title.append(titleText);
+
+        // camera panel
+        const cameraPanel = new Panel({
+            class: 'control-panel',
+            headerText: 'Camera'
         });
 
         const focusButton = new Button({
@@ -143,7 +310,8 @@ class ControlPanel extends Panel {
             text: 'Reset Focus'
         });
 
-        const splatSizeParent = new Container({
+        // splat size
+        const splatSize = new Container({
             class: 'control-parent'
         });
 
@@ -160,17 +328,20 @@ class ControlPanel extends Panel {
             value: 1
         });
 
-        splatSizeParent.append(splatSizeLabel);
-        splatSizeParent.append(splatSizeSlider);
+        splatSize.append(splatSizeLabel);
+        splatSize.append(splatSizeSlider);
 
-        // selection heading
-        const selectionHeading = new Label({
-            class: 'control-heading',
-            text: 'Selection'
+        cameraPanel.append(focusButton);
+        cameraPanel.append(splatSize);
+
+        // selection panel
+        const selectionPanel = new Panel({
+            class: 'control-panel',
+            headerText: 'Selection'
         });
 
         // select by size
-        const selectBySizeParent = new Container({
+        const selectBySize = new Container({
             class: 'control-parent'
         });
 
@@ -189,12 +360,12 @@ class ControlPanel extends Panel {
             enabled: false
         });
 
-        selectBySizeParent.append(selectBySizeRadio);
-        selectBySizeParent.append(selectBySizeLabel);
-        selectBySizeParent.append(selectBySizeSlider);
+        selectBySize.append(selectBySizeRadio);
+        selectBySize.append(selectBySizeLabel);
+        selectBySize.append(selectBySizeSlider);
 
         // select by opacity
-        const selectByOpacityParent = new Container({
+        const selectByOpacity = new Container({
             class: 'control-parent'
         });
 
@@ -213,12 +384,12 @@ class ControlPanel extends Panel {
             enabled: false
         });
 
-        selectByOpacityParent.append(selectByOpacityRadio);
-        selectByOpacityParent.append(selectByOpacityLabel);
-        selectByOpacityParent.append(selectByOpacitySlider);
+        selectByOpacity.append(selectByOpacityRadio);
+        selectByOpacity.append(selectByOpacityLabel);
+        selectByOpacity.append(selectByOpacitySlider);
 
         // select by sphere
-        const selectBySphereParent = new Container({
+        const selectBySphere = new Container({
             class: 'control-parent'
         });
 
@@ -239,12 +410,12 @@ class ControlPanel extends Panel {
             enabled: false
         });
 
-        selectBySphereParent.append(selectBySphereRadio);
-        selectBySphereParent.append(selectBySphereLabel);
-        selectBySphereParent.append(selectBySphereCenter);
+        selectBySphere.append(selectBySphereRadio);
+        selectBySphere.append(selectBySphereLabel);
+        selectBySphere.append(selectBySphereCenter);
 
         // select by plane
-        const selectByPlaneParent = new Container({
+        const selectByPlane = new Container({
             class: 'control-parent'
         });
 
@@ -274,13 +445,13 @@ class ControlPanel extends Panel {
             enabled: false
         });
 
-        selectByPlaneParent.append(selectByPlaneRadio);
-        selectByPlaneParent.append(selectByPlaneLabel);
-        selectByPlaneParent.append(selectByPlaneAxis);
-        selectByPlaneParent.append(selectByPlaneOffset);
+        selectByPlane.append(selectByPlaneRadio);
+        selectByPlane.append(selectByPlaneLabel);
+        selectByPlane.append(selectByPlaneAxis);
+        selectByPlane.append(selectByPlaneOffset);
 
         // set/add/remove
-        const addRemoveParent = new Container({
+        const setAddRemove = new Container({
             class: 'control-parent'
         });
 
@@ -302,19 +473,32 @@ class ControlPanel extends Panel {
             enabled: false
         });
 
-        const rectSelectButton = new Button({
+        setAddRemove.append(setButton);
+        setAddRemove.append(addButton);
+        setAddRemove.append(removeButton);
+
+        // selection parent
+        const selectTools = new Container({
+            class: 'control-parent'
+        });
+
+        const boxSelectButton = new Button({
             class: 'control-element-expand',
             text: 'Rect',
             enabled: true
         });
 
-        addRemoveParent.append(setButton);
-        addRemoveParent.append(addButton);
-        addRemoveParent.append(removeButton);
-        addRemoveParent.append(rectSelectButton);
+        const brushSelectButton = new Button({
+            class: 'control-element-expand',
+            text: 'Brush',
+            enabled: true
+        });
+
+        selectTools.append(boxSelectButton);
+        selectTools.append(brushSelectButton);
 
         // selection button parent
-        const selectionButtonParent = new Container({
+        const selectGlobal = new Container({
             class: 'control-parent'
         });
 
@@ -336,14 +520,22 @@ class ControlPanel extends Panel {
             text: 'Invert' 
         });
 
-        selectionButtonParent.append(selectAllButton);
-        selectionButtonParent.append(selectNoneButton);
-        selectionButtonParent.append(invertSelectionButton);
+        selectGlobal.append(selectAllButton);
+        selectGlobal.append(selectNoneButton);
+        selectGlobal.append(invertSelectionButton);
+
+        selectionPanel.append(selectBySize);
+        selectionPanel.append(selectByOpacity);
+        selectionPanel.append(selectBySphere);
+        selectionPanel.append(selectByPlane);
+        selectionPanel.append(setAddRemove);
+        selectionPanel.append(selectTools);
+        selectionPanel.append(selectGlobal);
 
         // scene
-        const sceneHeading = new Label({
-            class: 'control-heading',
-            text: 'Scene'
+        const scenePanel = new Panel({
+            class: 'control-panel',
+            headerText: 'Scene'
         });
 
         const deleteSelectionButton = new Button({
@@ -357,7 +549,7 @@ class ControlPanel extends Panel {
         });
 
         // orientation
-        const sceneOrientationParent = new Container({
+        const sceneOrientation = new Container({
             class: 'control-parent'
         });
 
@@ -366,20 +558,24 @@ class ControlPanel extends Panel {
             text: 'Scene Orientation'
         });
 
-        const sceneOrientation = new VectorInput({
+        const sceneOrientationVector = new VectorInput({
             class: 'control-element-expand',
             precision: 4,
             dimensions: 3,
             value: [0, 0, 0]
         });
 
-        sceneOrientationParent.append(sceneOrientationLabel);
-        sceneOrientationParent.append(sceneOrientation);
+        sceneOrientation.append(sceneOrientationLabel);
+        sceneOrientation.append(sceneOrientationVector);
+
+        scenePanel.append(deleteSelectionButton);
+        scenePanel.append(resetButton);
+        scenePanel.append(sceneOrientation);
 
         // export
-        const exportHeading = new Label({
-            class: 'control-heading',
-            text: 'Export to'
+        const exportPanel = new Panel({
+            class: 'control-panel',
+            headerText: 'Export to'
         });
 
         const exportButton = new Button({
@@ -387,11 +583,13 @@ class ControlPanel extends Panel {
             text: 'Ply file'
         });
 
+        exportPanel.append(exportButton);
+
         // keyboard
-        const keyboardHeading = new Label({
+        const keyboardPanel = new Panel({
             id: 'keyboard-heading',
-            class: 'control-heading',
-            text: 'Keyboard'
+            class: 'control-panel',
+            headerText: 'Keyboard'
         });
 
         const shortcutsLabel = new Label({
@@ -399,6 +597,8 @@ class ControlPanel extends Panel {
             text: [
                 'F - Focus camera',
                 'R - Toggle rect selection',
+                'B - Toggle brush selection',
+                '[ ] - Decrease/Increase brush size',
                 'Shift - Add to selection',
                 'Ctrl - Remove from selection',
                 'Delete - Delete selected splats',
@@ -407,43 +607,50 @@ class ControlPanel extends Panel {
             unsafe: true
         });
 
+        keyboardPanel.append(shortcutsLabel);
+
         // append
-        controls.append(cameraHeading);
-        controls.append(focusButton);
-        controls.append(splatSizeParent);
-        controls.append(selectionHeading);
-        controls.append(selectBySizeParent);
-        controls.append(selectByOpacityParent);
-        controls.append(selectBySphereParent);
-        controls.append(selectByPlaneParent);
-        controls.append(addRemoveParent);
-        controls.append(selectionButtonParent);
-        controls.append(sceneHeading);
-        controls.append(deleteSelectionButton);
-        controls.append(resetButton);
-        controls.append(sceneOrientationParent);
-        controls.append(exportHeading);
-        controls.append(exportButton);
-        controls.append(keyboardHeading);
-        controls.append(shortcutsLabel);
+        this.append(title);
+        this.append(cameraPanel);
+        this.append(selectionPanel);
+        this.append(scenePanel);
+        this.append(exportPanel);
+        this.append(keyboardPanel);
 
-        this.append(controls);
-
-        const selection = new Selection(document.getElementById('canvas-container'));
-
-        selection.events.on('activated', () => rectSelectButton.class.add('active'));
-        selection.events.on('deactivated', () => rectSelectButton.class.remove('active'));
-        selection.events.on('selectRect', (op: string, rect: any) => {
+        const boxSelection = new BoxSelection(document.getElementById('canvas-container'));
+        boxSelection.events.on('activated', () => boxSelectButton.class.add('active'));
+        boxSelection.events.on('deactivated', () => boxSelectButton.class.remove('active'));
+        boxSelection.events.on('selectRect', (op: string, rect: any) => {
             this.events.fire('selectRect', op, rect);
         });
 
-        rectSelectButton.on('click', () => {
-            if (rectSelectButton.class.contains('active')) {
-                selection.deactivate();
-            } else {
-                selection.activate();
-            }
+        const brushSelection = new BrushSelection(document.getElementById('canvas-container'));
+        brushSelection.events.on('activated', () => brushSelectButton.class.add('active'));
+        brushSelection.events.on('deactivated', () => brushSelectButton.class.remove('active'));
+        brushSelection.events.on('selectByMask', (op: string, mask: ImageData) => {
+            this.events.fire('selectByMask', op, mask);
         });
+
+        const tools = [
+            boxSelection,
+            brushSelection
+        ];
+
+        const deactivate = () => {
+            tools.forEach(tool => tool.deactivate());
+        };
+
+        const toggle = (tool: any) => {
+            if (tool.active) {
+                tool.deactivate();
+            } else {
+                deactivate();
+                tool.activate();
+            }
+        };
+
+        boxSelectButton.on('click', () => toggle(boxSelection));
+        brushSelectButton.on('click', () => toggle(brushSelection));
 
         // radio logic
         const radioGroup = [selectBySizeRadio, selectByOpacityRadio, selectBySphereRadio, selectByPlaneRadio];
@@ -541,8 +748,8 @@ class ControlPanel extends Panel {
             this.events.fire('selectByPlanePlacement', axes[selectByPlaneAxis.value], selectByPlaneOffset.value);
         });
 
-        sceneOrientation.on('change', () => {
-            this.events.fire('sceneOrientation', sceneOrientation.value);
+        sceneOrientationVector.on('change', () => {
+            this.events.fire('sceneOrientation', sceneOrientationVector.value);
         });
 
         deleteSelectionButton.on('click', () => {
@@ -558,7 +765,7 @@ class ControlPanel extends Panel {
         });
 
         this.events.on('splat:count', (count: number) => {
-            selectionHeading.text = `Selection${count === 0 ? '' : ' (' + count.toString() + ')'}`;
+            selectionPanel.headerText = `Selection${count === 0 ? '' : ' (' + count.toString() + ')'}`;
         });
 
         // keyboard handler
@@ -566,11 +773,17 @@ class ControlPanel extends Panel {
             if (e.key === 'Delete') {
                 this.events.fire('deleteSelection');
             } else if (e.key === 'Escape') {
-                selection.deactivate();
+                deactivate();
             } else if (e.key === 'R' || e.key === 'r') {
-                selection.toggle();
+                toggle(boxSelection);
             } else if (e.key === 'F' || e.key === 'f') {
                 this.events.fire('focusCamera');
+            } else if (e.key === 'B' || e.key === 'b') {
+                toggle(brushSelection);
+            } else if (e.key === '[') {
+                brushSelection.smaller();
+            } else if (e.key === ']') {
+                brushSelection.bigger();
             }
         });
     }

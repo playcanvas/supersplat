@@ -537,6 +537,34 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
         });
     });
 
+    events.on('selectByMask', (op: string, mask: ImageData) => {
+        forEachSplat((splatData: SplatData, resource: any) => {
+            const selection = splatData.getProp('selection');
+            const opacity = splatData.getProp('opacity');
+            const x = splatData.getProp('x');
+            const y = splatData.getProp('y');
+            const z = splatData.getProp('z');
+
+            // convert screen rect to camera space
+            const camera = scene.camera.entity.camera;
+
+            // calculate final matrix
+            mat.mul2(camera.camera._viewProjMat, resource.instances[0].entity.getWorldTransform());
+
+            processSelection(selection, opacity, op, (i) => {
+                vec4.set(x[i], y[i], z[i], 1.0);
+                mat.transformVec4(vec4, vec4);
+                vec4.x = vec4.x / vec4.w * 0.5 + 0.5;
+                vec4.y = -vec4.y / vec4.w * 0.5 + 0.5;
+
+                const mx = Math.floor(vec4.x * mask.width);
+                const my = Math.floor(vec4.y * mask.height);
+                return mask.data[(my * mask.width + mx) * 4] === 255;
+            });
+            updateSelection(splatData);
+        });
+    });
+
     events.on('sceneOrientation', (value: number[]) => {
         forEachSplat((splatData: SplatData, resource: any) => {
             resource.instances.forEach((instance: any) => {

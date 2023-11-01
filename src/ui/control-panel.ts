@@ -470,17 +470,6 @@ class ControlPanel extends Panel {
         addRemoveParent.append(boxSelectButton);
         addRemoveParent.append(brushSelectButton);
 
-        // select by cluster
-        // const selectByCluster = new Button({
-        //     class: 'control-element-expand',
-        //     text: 'Cluster',
-        //     enabled: true
-        // });
-
-        // selectByCluster.on('click', () => {
-        //     this.events.fire('selectByCluster', 'set', 0.01, 1);
-        // });
-
         // selection button parent
         const selectionButtonParent = new Container({
             class: 'control-parent'
@@ -587,7 +576,6 @@ class ControlPanel extends Panel {
         controls.append(selectBySphereParent);
         controls.append(selectByPlaneParent);
         controls.append(addRemoveParent);
-        // controls.append(selectByCluster);
         controls.append(selectionButtonParent);
         controls.append(sceneHeading);
         controls.append(deleteSelectionButton);

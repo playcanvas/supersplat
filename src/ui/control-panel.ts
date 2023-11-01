@@ -190,6 +190,11 @@ class BrushSelection {
             if (e.button === 0) {
                 this.dragging = true;
 
+                if (canvas.width !== parent.clientWidth || canvas.height !== parent.clientHeight) {
+                    canvas.width = parent.clientWidth;
+                    canvas.height = parent.clientHeight;
+                }
+
                 // clear canvas
                 context.clearRect(0, 0, canvas.width, canvas.height);
 

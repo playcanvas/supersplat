@@ -18,6 +18,7 @@ import { EditorUI } from './editor-ui';
 import { Element, ElementType } from './element';
 import { Splat } from './splat';
 import { SplatData } from '../submodules/model-viewer/src/splat/splat-data';
+import { DBSCAN } from './dbscan';
 
 const vs = /* glsl */ `
 attribute vec4 vertex_position;
@@ -532,6 +533,74 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
                     return false;
                 }
                 return true;
+            });
+            updateSelection(splatData);
+        });
+    });
+
+    events.on('selectByMask', (op: string, mask: ImageData) => {
+        forEachSplat((splatData: SplatData, resource: any) => {
+            const selection = splatData.getProp('selection');
+            const opacity = splatData.getProp('opacity');
+            const x = splatData.getProp('x');
+            const y = splatData.getProp('y');
+            const z = splatData.getProp('z');
+
+            // convert screen rect to camera space
+            const camera = scene.camera.entity.camera;
+
+            // calculate final matrix
+            mat.mul2(camera.camera._viewProjMat, resource.instances[0].entity.getWorldTransform());
+
+            processSelection(selection, opacity, op, (i) => {
+                vec4.set(x[i], y[i], z[i], 1.0);
+                mat.transformVec4(vec4, vec4);
+                vec4.x = vec4.x / vec4.w * 0.5 + 0.5;
+                vec4.y = -vec4.y / vec4.w * 0.5 + 0.5;
+
+                const mx = Math.floor(vec4.x * mask.width);
+                const my = Math.floor(vec4.y * mask.height);
+                return mask.data[(my * mask.width + mx) * 4] === 255;
+            });
+            updateSelection(splatData);
+        });
+    });
+
+    events.on('selectByCluster', (op: string, epsilon: number, minPoints: number) => {
+        forEachSplat((splatData: SplatData, resource: any) => {
+            const selection = splatData.getProp('selection');
+            const opacity = splatData.getProp('opacity');
+            const x = splatData.getProp('x');
+            const y = splatData.getProp('y');
+            const z = splatData.getProp('z');
+
+            // make a list of indices of valid (not-deleted) splats
+            const indices: number[] = [];
+            for (let i = 0; i < splatData.numSplats; ++i) {
+                if (opacity[i] !== deletedOpacity) {
+                    indices.push(i);
+                }
+            }
+
+            const dbScan = new DBSCAN();
+            const clusters = dbScan.run(indices, epsilon, minPoints, (a: any, b: any) => {
+                const xd = x[a] - x[b];
+                const yd = y[a] - y[b];
+                const zd = z[a] - z[b];
+                return xd * xd + yd * yd + zd * zd;
+            });
+
+            const singles = new Set();
+            clusters.forEach((cluster: number[]) => {
+                if (cluster.length <= 2) {
+                    cluster.forEach((i) => {
+                        singles.add(indices[i]);
+                    });
+                }
+            });
+
+            processSelection(selection, opacity, op, (i) => {
+                return singles.has(i);
             });
             updateSelection(splatData);
         });

@@ -11,7 +11,7 @@ https://playcanvas.com/super-splat
 
 # Editing Scenes
 
-To load a gaussian splat PLY file, drag & drop it onto the application page. Alternatively you can click the "Choose file" button bottom right.
+To load a gaussian splat PLY file, drag & drop it onto the application page. Alternatively you can click the "Choose file" button bottom left.
 
 Once a PLY file is loaded you can use the selection tools to modify splat selection and then delete splats from the scene.
 

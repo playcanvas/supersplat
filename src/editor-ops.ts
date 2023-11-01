@@ -557,6 +557,10 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
                 vec4.x = vec4.x / vec4.w * 0.5 + 0.5;
                 vec4.y = -vec4.y / vec4.w * 0.5 + 0.5;
 
+                if (vec4.x < 0 || vec4.x > 1 || vec4.y < 0 || vec4.y > 1) {
+                    return false;
+                }
+
                 const mx = Math.floor(vec4.x * mask.width);
                 const my = Math.floor(vec4.y * mask.height);
                 return mask.data[(my * mask.width + mx) * 4] === 255;

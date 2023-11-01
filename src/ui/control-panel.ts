@@ -1,5 +1,6 @@
 import { EventHandler } from 'playcanvas';
 import { Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, VectorInput } from 'pcui';
+import logo from './playcanvas-logo.png';
 
 class BoxSelection {
     root: HTMLElement;
@@ -265,27 +266,38 @@ class BrushSelection {
 }
 
 
-class ControlPanel extends Panel {
+class ControlPanel extends Container {
     events = new EventHandler;
 
     constructor(args = { }) {
         Object.assign(args, {
-            id: 'control-panel',
-            headerText: 'Controls',
-            collapsible: false,
-            collapsed: false
+            id: 'control-container'
         });
 
         super(args);
 
-        const controls = new Container({
-            class: 'control-container'
+        // header
+        const title = new Container({
+            class: 'control-parent'
         });
 
-        // camera heading
-        const cameraHeading = new Label({
-            class: 'control-heading',
-            text: 'Camera'
+        const titleLogo = document.createElement('img');
+        titleLogo.src = logo.src;
+        titleLogo.width = 40;
+        titleLogo.height = 40;
+
+        const titleText = new Label({
+            id: 'control-logo-text',
+            text: 'SUPER SPLAT'
+        });
+
+        title.dom.appendChild(titleLogo);
+        title.append(titleText);
+
+        // camera panel
+        const cameraPanel = new Panel({
+            class: 'control-panel',
+            headerText: 'Camera'
         });
 
         const focusButton = new Button({
@@ -293,7 +305,8 @@ class ControlPanel extends Panel {
             text: 'Reset Focus'
         });
 
-        const splatSizeParent = new Container({
+        // splat size
+        const splatSize = new Container({
             class: 'control-parent'
         });
 
@@ -310,17 +323,20 @@ class ControlPanel extends Panel {
             value: 1
         });
 
-        splatSizeParent.append(splatSizeLabel);
-        splatSizeParent.append(splatSizeSlider);
+        splatSize.append(splatSizeLabel);
+        splatSize.append(splatSizeSlider);
 
-        // selection heading
-        const selectionHeading = new Label({
-            class: 'control-heading',
-            text: 'Selection'
+        cameraPanel.append(focusButton);
+        cameraPanel.append(splatSize);
+
+        // selection panel
+        const selectionPanel = new Panel({
+            class: 'control-panel',
+            headerText: 'Selection'
         });
 
         // select by size
-        const selectBySizeParent = new Container({
+        const selectBySize = new Container({
             class: 'control-parent'
         });
 
@@ -339,12 +355,12 @@ class ControlPanel extends Panel {
             enabled: false
         });
 
-        selectBySizeParent.append(selectBySizeRadio);
-        selectBySizeParent.append(selectBySizeLabel);
-        selectBySizeParent.append(selectBySizeSlider);
+        selectBySize.append(selectBySizeRadio);
+        selectBySize.append(selectBySizeLabel);
+        selectBySize.append(selectBySizeSlider);
 
         // select by opacity
-        const selectByOpacityParent = new Container({
+        const selectByOpacity = new Container({
             class: 'control-parent'
         });
 
@@ -363,12 +379,12 @@ class ControlPanel extends Panel {
             enabled: false
         });
 
-        selectByOpacityParent.append(selectByOpacityRadio);
-        selectByOpacityParent.append(selectByOpacityLabel);
-        selectByOpacityParent.append(selectByOpacitySlider);
+        selectByOpacity.append(selectByOpacityRadio);
+        selectByOpacity.append(selectByOpacityLabel);
+        selectByOpacity.append(selectByOpacitySlider);
 
         // select by sphere
-        const selectBySphereParent = new Container({
+        const selectBySphere = new Container({
             class: 'control-parent'
         });
 
@@ -389,12 +405,12 @@ class ControlPanel extends Panel {
             enabled: false
         });
 
-        selectBySphereParent.append(selectBySphereRadio);
-        selectBySphereParent.append(selectBySphereLabel);
-        selectBySphereParent.append(selectBySphereCenter);
+        selectBySphere.append(selectBySphereRadio);
+        selectBySphere.append(selectBySphereLabel);
+        selectBySphere.append(selectBySphereCenter);
 
         // select by plane
-        const selectByPlaneParent = new Container({
+        const selectByPlane = new Container({
             class: 'control-parent'
         });
 
@@ -424,13 +440,13 @@ class ControlPanel extends Panel {
             enabled: false
         });
 
-        selectByPlaneParent.append(selectByPlaneRadio);
-        selectByPlaneParent.append(selectByPlaneLabel);
-        selectByPlaneParent.append(selectByPlaneAxis);
-        selectByPlaneParent.append(selectByPlaneOffset);
+        selectByPlane.append(selectByPlaneRadio);
+        selectByPlane.append(selectByPlaneLabel);
+        selectByPlane.append(selectByPlaneAxis);
+        selectByPlane.append(selectByPlaneOffset);
 
         // set/add/remove
-        const addRemoveParent = new Container({
+        const setAddRemove = new Container({
             class: 'control-parent'
         });
 
@@ -452,6 +468,15 @@ class ControlPanel extends Panel {
             enabled: false
         });
 
+        setAddRemove.append(setButton);
+        setAddRemove.append(addButton);
+        setAddRemove.append(removeButton);
+
+        // selection parent
+        const selectTools = new Container({
+            class: 'control-parent'
+        });
+
         const boxSelectButton = new Button({
             class: 'control-element-expand',
             text: 'Rect',
@@ -464,14 +489,11 @@ class ControlPanel extends Panel {
             enabled: true
         });
 
-        addRemoveParent.append(setButton);
-        addRemoveParent.append(addButton);
-        addRemoveParent.append(removeButton);
-        addRemoveParent.append(boxSelectButton);
-        addRemoveParent.append(brushSelectButton);
+        selectTools.append(boxSelectButton);
+        selectTools.append(brushSelectButton);
 
         // selection button parent
-        const selectionButtonParent = new Container({
+        const selectGlobal = new Container({
             class: 'control-parent'
         });
 
@@ -493,14 +515,22 @@ class ControlPanel extends Panel {
             text: 'Invert' 
         });
 
-        selectionButtonParent.append(selectAllButton);
-        selectionButtonParent.append(selectNoneButton);
-        selectionButtonParent.append(invertSelectionButton);
+        selectGlobal.append(selectAllButton);
+        selectGlobal.append(selectNoneButton);
+        selectGlobal.append(invertSelectionButton);
+
+        selectionPanel.append(selectBySize);
+        selectionPanel.append(selectByOpacity);
+        selectionPanel.append(selectBySphere);
+        selectionPanel.append(selectByPlane);
+        selectionPanel.append(setAddRemove);
+        selectionPanel.append(selectTools);
+        selectionPanel.append(selectGlobal);
 
         // scene
-        const sceneHeading = new Label({
-            class: 'control-heading',
-            text: 'Scene'
+        const scenePanel = new Panel({
+            class: 'control-panel',
+            headerText: 'Scene'
         });
 
         const deleteSelectionButton = new Button({
@@ -514,7 +544,7 @@ class ControlPanel extends Panel {
         });
 
         // orientation
-        const sceneOrientationParent = new Container({
+        const sceneOrientation = new Container({
             class: 'control-parent'
         });
 
@@ -523,20 +553,24 @@ class ControlPanel extends Panel {
             text: 'Scene Orientation'
         });
 
-        const sceneOrientation = new VectorInput({
+        const sceneOrientationVector = new VectorInput({
             class: 'control-element-expand',
             precision: 4,
             dimensions: 3,
             value: [0, 0, 0]
         });
 
-        sceneOrientationParent.append(sceneOrientationLabel);
-        sceneOrientationParent.append(sceneOrientation);
+        sceneOrientation.append(sceneOrientationLabel);
+        sceneOrientation.append(sceneOrientationVector);
+
+        scenePanel.append(deleteSelectionButton);
+        scenePanel.append(resetButton);
+        scenePanel.append(sceneOrientation);
 
         // export
-        const exportHeading = new Label({
-            class: 'control-heading',
-            text: 'Export to'
+        const exportPanel = new Panel({
+            class: 'control-panel',
+            headerText: 'Export to'
         });
 
         const exportButton = new Button({
@@ -544,11 +578,13 @@ class ControlPanel extends Panel {
             text: 'Ply file'
         });
 
+        exportPanel.append(exportButton);
+
         // keyboard
-        const keyboardHeading = new Label({
+        const keyboardPanel = new Panel({
             id: 'keyboard-heading',
-            class: 'control-heading',
-            text: 'Keyboard'
+            class: 'control-panel',
+            headerText: 'Keyboard'
         });
 
         const shortcutsLabel = new Label({
@@ -566,27 +602,15 @@ class ControlPanel extends Panel {
             unsafe: true
         });
 
-        // append
-        controls.append(cameraHeading);
-        controls.append(focusButton);
-        controls.append(splatSizeParent);
-        controls.append(selectionHeading);
-        controls.append(selectBySizeParent);
-        controls.append(selectByOpacityParent);
-        controls.append(selectBySphereParent);
-        controls.append(selectByPlaneParent);
-        controls.append(addRemoveParent);
-        controls.append(selectionButtonParent);
-        controls.append(sceneHeading);
-        controls.append(deleteSelectionButton);
-        controls.append(resetButton);
-        controls.append(sceneOrientationParent);
-        controls.append(exportHeading);
-        controls.append(exportButton);
-        controls.append(keyboardHeading);
-        controls.append(shortcutsLabel);
+        keyboardPanel.append(shortcutsLabel);
 
-        this.append(controls);
+        // append
+        this.append(title);
+        this.append(cameraPanel);
+        this.append(selectionPanel);
+        this.append(scenePanel);
+        this.append(exportPanel);
+        this.append(keyboardPanel);
 
         const boxSelection = new BoxSelection(document.getElementById('canvas-container'));
         boxSelection.events.on('activated', () => boxSelectButton.class.add('active'));
@@ -719,8 +743,8 @@ class ControlPanel extends Panel {
             this.events.fire('selectByPlanePlacement', axes[selectByPlaneAxis.value], selectByPlaneOffset.value);
         });
 
-        sceneOrientation.on('change', () => {
-            this.events.fire('sceneOrientation', sceneOrientation.value);
+        sceneOrientationVector.on('change', () => {
+            this.events.fire('sceneOrientation', sceneOrientationVector.value);
         });
 
         deleteSelectionButton.on('click', () => {
@@ -736,7 +760,7 @@ class ControlPanel extends Panel {
         });
 
         this.events.on('splat:count', (count: number) => {
-            selectionHeading.text = `Selection${count === 0 ? '' : ' (' + count.toString() + ')'}`;
+            selectionPanel.headerText = `Selection${count === 0 ? '' : ' (' + count.toString() + ')'}`;
         });
 
         // keyboard handler

@@ -603,6 +603,8 @@ class ControlPanel extends Container {
                 'Ctrl - Remove from selection',
                 'Delete - Delete selected splats',
                 'Esc - Cancel rect selection',
+                'Ctrl + Z - Undo',
+                'Ctrl + Shift + Z - Redo'
             ].join('<br>'),
             unsafe: true
         });
@@ -784,6 +786,10 @@ class ControlPanel extends Container {
                 brushSelection.smaller();
             } else if (e.key === ']') {
                 brushSelection.bigger();
+            } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') {
+                this.events.fire('undo');
+            } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
+                this.events.fire('redo');
             }
         });
     }

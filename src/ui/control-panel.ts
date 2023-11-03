@@ -599,6 +599,7 @@ class ControlPanel extends Container {
             class: 'control-element-expand',
             text: [
                 'F - Focus camera',
+                'I - Invert selection',
                 'R - Toggle rect selection',
                 'B - Toggle brush selection',
                 '[ ] - Decrease/Increase brush size',
@@ -607,7 +608,8 @@ class ControlPanel extends Container {
                 'Delete - Delete selected splats',
                 'Esc - Cancel rect selection',
                 'Ctrl + Z - Undo',
-                'Ctrl + Shift + Z - Redo'
+                'Ctrl + Shift + Z - Redo',
+                'Space - toggle splat size'
             ].join('<br>'),
             unsafe: true
         });
@@ -773,6 +775,8 @@ class ControlPanel extends Container {
             selectionPanel.headerText = `Selection${count === 0 ? '' : ' (' + count.toString() + ')'}`;
         });
 
+        let splatSizeSave = 1;
+
         // keyboard handler
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -785,6 +789,8 @@ class ControlPanel extends Container {
                 this.events.fire('focusCamera');
             } else if (e.key === 'B' || e.key === 'b') {
                 toggle(brushSelection);
+            } else if (e.key === 'I' || e.key === 'i') {
+                this.events.fire('invertSelection');
             } else if (e.key === '[') {
                 brushSelection.smaller();
             } else if (e.key === ']') {
@@ -793,6 +799,13 @@ class ControlPanel extends Container {
                 this.events.fire('undo');
             } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
                 this.events.fire('redo');
+            } else if (e.code === 'Space') {
+                if (splatSizeSlider.value !== 0) {
+                    splatSizeSave = splatSizeSlider.value;
+                    splatSizeSlider.value = 0;
+                } else {
+                    splatSizeSlider.value = splatSizeSave;
+                }
             }
         });
     }

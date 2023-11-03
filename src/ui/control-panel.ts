@@ -1,5 +1,6 @@
 import { EventHandler } from 'playcanvas';
 import { Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, VectorInput } from 'pcui';
+import { version as supersplatVersion } from '../../package.json';
 import logo from './playcanvas-logo.png';
 
 class BoxSelection {
@@ -286,18 +287,20 @@ class ControlPanel extends Container {
             class: 'control-parent'
         });
 
-        const titleLogo = document.createElement('img');
-        titleLogo.src = logo.src;
-        titleLogo.width = 40;
-        titleLogo.height = 40;
-
-        const titleText = new Label({
-            id: 'control-logo-text',
-            text: 'SUPER SPLAT'
+        title.dom.addEventListener('click', () => {
+            window.open('https://github.com/playcanvas/super-splat');
         });
 
+        const titleLogo = document.createElement('img');
+        titleLogo.id = 'title-logo';
+        titleLogo.src = logo.src;
+
+        const titleText = document.createElement('a');
+        titleText.id = 'title-text';
+        titleText.text =  `SUPER SPLAT v${supersplatVersion}`;
+
         title.dom.appendChild(titleLogo);
-        title.append(titleText);
+        title.dom.appendChild(titleText);
 
         // camera panel
         const cameraPanel = new Panel({
@@ -596,6 +599,7 @@ class ControlPanel extends Container {
             class: 'control-element-expand',
             text: [
                 'F - Focus camera',
+                'I - Invert selection',
                 'R - Toggle rect selection',
                 'B - Toggle brush selection',
                 '[ ] - Decrease/Increase brush size',
@@ -604,7 +608,8 @@ class ControlPanel extends Container {
                 'Delete - Delete selected splats',
                 'Esc - Cancel rect selection',
                 'Ctrl + Z - Undo',
-                'Ctrl + Shift + Z - Redo'
+                'Ctrl + Shift + Z - Redo',
+                'Space - toggle splat size'
             ].join('<br>'),
             unsafe: true
         });
@@ -770,9 +775,11 @@ class ControlPanel extends Container {
             selectionPanel.headerText = `Selection${count === 0 ? '' : ' (' + count.toString() + ')'}`;
         });
 
+        let splatSizeSave = 1;
+
         // keyboard handler
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Delete') {
+            if (e.key === 'Delete' || e.key === 'Backspace') {
                 this.events.fire('deleteSelection');
             } else if (e.key === 'Escape') {
                 deactivate();
@@ -782,6 +789,8 @@ class ControlPanel extends Container {
                 this.events.fire('focusCamera');
             } else if (e.key === 'B' || e.key === 'b') {
                 toggle(brushSelection);
+            } else if (e.key === 'I' || e.key === 'i') {
+                this.events.fire('invertSelection');
             } else if (e.key === '[') {
                 brushSelection.smaller();
             } else if (e.key === ']') {
@@ -790,6 +799,13 @@ class ControlPanel extends Container {
                 this.events.fire('undo');
             } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
                 this.events.fire('redo');
+            } else if (e.code === 'Space') {
+                if (splatSizeSlider.value !== 0) {
+                    splatSizeSave = splatSizeSlider.value;
+                    splatSizeSlider.value = 0;
+                } else {
+                    splatSizeSlider.value = splatSizeSave;
+                }
             }
         });
     }

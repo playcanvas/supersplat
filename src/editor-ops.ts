@@ -18,6 +18,8 @@ import { EditorUI } from './editor-ui';
 import { Element, ElementType } from './element';
 import { Splat } from './splat';
 import { SplatData } from '../submodules/model-viewer/src/splat/splat-data';
+import { EditHistory } from './edit-history';
+import { deletedOpacity, DeleteSelectionEditOp, ResetEditOp } from './edit-ops';
 
 const vs = /* glsl */ `
 attribute vec4 vertex_position;
@@ -32,10 +34,14 @@ uniform float splatSize;
 varying vec4 color;
 
 void main(void) {
-    gl_Position = matrix_viewProjection * matrix_model * vec4(vertex_position.xyz, 1.0);
-    gl_PointSize = splatSize;
-    float opacity = vertex_position.w;
-    color = (opacity == -1.0) ? vec4(0) : mix(vec4(0, 0, 1.0, 0.5), vec4(1.0, 1.0, 0.0, 0.5), opacity);
+    if (vertex_position.w == -1.0) {
+        gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
+    } else {
+        gl_Position = matrix_viewProjection * matrix_model * vec4(vertex_position.xyz, 1.0);
+        gl_PointSize = splatSize;
+        float opacity = vertex_position.w;
+        color = (opacity == -1.0) ? vec4(0) : mix(vec4(0, 0, 1.0, 0.5), vec4(1.0, 1.0, 0.0, 0.5), opacity);
+    }
 }
 `;
 
@@ -138,8 +144,6 @@ const download = (filename: string, data: ArrayBuffer) => {
 
     window.URL.revokeObjectURL(url);
 };
-
-const deletedOpacity = -1000;
 
 const convertPly = (splatData: SplatData, modelMat: Mat4) => {
     // count the number of non-deleted splats
@@ -285,6 +289,8 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
             }
         });
     });
+
+    const editHistory = new EditHistory();
 
     const events = editorUI.controlPanel.events;
 
@@ -583,26 +589,14 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
 
     events.on('deleteSelection', () => {
         forEachSplat((splatData: SplatData, resource: any) => {
-            const selection = splatData.getProp('selection');
-            const opacity = splatData.getProp('opacity');
-
-            for (let i = 0; i < splatData.numSplats; ++i) {
-                opacity[i] = selection[i] > 0 ? deletedOpacity : opacity[i];
-            }
-
+            editHistory.add(new DeleteSelectionEditOp(splatData));
             updateColorData(resource);
         });
     });
 
     events.on('reset', () => {
         forEachSplat((splatData: SplatData, resource: any) => {
-            const opacity = splatData.getProp('opacity');
-            const opacityOrig = splatData.getProp('opacityOrig');
-
-            for (let i = 0; i < splatData.numSplats; ++i) {
-                opacity[i] = opacityOrig[i];
-            }
-
+            editHistory.add(new ResetEditOp(splatData));
             updateColorData(resource);
         });
     });
@@ -612,6 +606,24 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
             const data = convertPly(splatData, resource.instances[0].entity.getWorldTransform());
             download(resource.name + '.ply', data);
         });
+    });
+
+    events.on('undo', () => {
+        if (editHistory.canUndo()) {
+            editHistory.undo();
+            forEachSplat((splatData: SplatData, resource: any) => {
+                updateColorData(resource);
+            });
+        }
+    });
+
+    events.on('redo', () => {
+        if (editHistory.canRedo()) {
+            editHistory.redo();
+            forEachSplat((splatData: SplatData, resource: any) => {
+                updateColorData(resource);
+            });
+        }
     });
 }
 

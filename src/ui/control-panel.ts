@@ -581,12 +581,18 @@ class ControlPanel extends Container {
             headerText: 'Export to'
         });
 
-        const exportButton = new Button({
+        const exportPlyButton = new Button({
             class: 'control-element',
             text: 'Ply file'
         });
 
-        exportPanel.append(exportButton);
+        const exportSplatButton = new Button({
+            class: 'control-element',
+            text: 'Splat file'
+        });
+
+        exportPanel.append(exportPlyButton);
+        exportPanel.append(exportSplatButton);
 
         // keyboard
         const keyboardPanel = new Panel({
@@ -767,8 +773,12 @@ class ControlPanel extends Container {
             this.events.fire('reset');
         });
 
-        exportButton.on('click', () => {
-            this.events.fire('export');
+        exportPlyButton.on('click', () => {
+            this.events.fire('export', 'ply');
+        });
+
+        exportSplatButton.on('click', () => {
+            this.events.fire('export', 'splat');
         });
 
         this.events.on('splat:count', (count: number) => {

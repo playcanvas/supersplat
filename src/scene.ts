@@ -27,7 +27,7 @@ import { CustomShadow as Shadow } from './custom-shadow';
 import { HotSpots } from './hotspots';
 import { XRMode } from './xr-mode';
 
-import { registerPlyParser } from '../submodules/model-viewer/src/splat/ply-parser';
+import { registerPlyParser } from 'playcanvas-extras';
 
 const bound = new BoundingBox();
 

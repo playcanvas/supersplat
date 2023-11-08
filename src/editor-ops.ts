@@ -6,6 +6,7 @@ import {
     Material,
     Mesh,
     MeshInstance,
+    path,
     PRIMITIVE_POINTS,
     Quat,
     SEMANTIC_POSITION,
@@ -13,11 +14,11 @@ import {
     Vec3,
     Vec4
 } from 'playcanvas';
+import { Splat as SplatRender, SplatData, SplatInstance } from 'playcanvas-extras';
 import { Scene } from './scene';
 import { EditorUI } from './editor-ui';
 import { Element, ElementType } from './element';
 import { Splat } from './splat';
-import { SplatData } from '../submodules/model-viewer/src/splat/splat-data';
 import { EditHistory } from './edit-history';
 import { deletedOpacity, DeleteSelectionEditOp, ResetEditOp } from './edit-ops';
 
@@ -118,6 +119,7 @@ class SplatDebug {
     }
 
     get splatSize() {
+        // @ts-ignore
         return this.meshInstance.material.getParameter('splatSize').data;
     }
 }
@@ -138,8 +140,9 @@ const download = (filename: string, data: ArrayBuffer) => {
                          0, 0, 0, 0, 0, false, false, false,
                          false, 0, null);
         lnk.dispatchEvent(e);
-    } else if (lnk.fireEvent) {
-        lnk.fireEvent("onclick");
+    } else {
+        // @ts-ignore
+        lnk.fireEvent?.("onclick");
     }
 
     window.URL.revokeObjectURL(url);
@@ -293,29 +296,46 @@ const convertSplat = (splatData: SplatData, modelMat: Mat4) => {
     return result;
 };
 
+interface SplatDef {
+    element: Splat,
+    data: SplatData,
+    render: SplatRender,
+    instance: SplatInstance,
+    debug: SplatDebug
+};
+
 // register for editor and scene events
 const registerEvents = (scene: Scene, editorUI: EditorUI) => {
-    const debugs = new Map<SplatData, SplatDebug>();
     const vec = new Vec3();
     const vec2 = new Vec3();
     const vec4 = new Vec4();
     const mat = new Mat4();
     const aabb = new BoundingBox();
+    const splatDefs: SplatDef[] = [];
 
     // make a copy of the opacity channel because that's what we'll be modifying
     scene.on('element:added', (element: Element) => {
         if (element.type === ElementType.splat) {
             const splatElement = element as Splat;
             const resource = splatElement.asset.resource;
-            const splatData = resource?.splatData;
-            if (splatData) {
+            const splatData = resource.splatData;
+            const splatRender = resource.splat;
+
+            if (splatData && splatRender) {
                 // make a copy of the opacity channel because that's what we'll be modifying with edits
                 splatData.addProp('opacityOrig', splatData.getProp('opacity').slice());
 
                 // add a selection channel
                 splatData.addProp('selection', new Float32Array(splatData.numSplats));
 
-                debugs.set(splatData, new SplatDebug(scene, splatElement, splatData));
+                // store splat info
+                splatDefs.push({
+                    element: splatElement,
+                    data: splatData,
+                    render: splatRender,
+                    instance: splatElement.root.render.meshInstances[0].splatInstance,
+                    debug: new SplatDebug(scene, splatElement, splatData)
+                });
             }
         }
     });
@@ -334,7 +354,9 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
     scene.on('prerender', () => {
         const app = scene.app;
 
-        debugs.forEach((debug) => {
+        splatDefs.forEach((splatDef) => {
+            const debug = splatDef.debug;
+
             if (debug.splatSize > 0) {
                 app.drawMeshInstance(debug.meshInstance);
             }
@@ -383,41 +405,29 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
 
     const events = editorUI.controlPanel.events;
 
-    const updateSelection = (splatData: SplatData) => {
-        const splatDebug = debugs.get(splatData);
-        if (splatDebug) {
-            selectedSplats = splatDebug.update();
-            events.fire('splat:count', selectedSplats);
-        }
-
+    const updateSelection = () => {
+        selectedSplats = 0;
+        splatDefs.forEach((splatDef) => {
+            selectedSplats += splatDef.debug.update();
+        });
+        events.fire('splat:count', selectedSplats);
         scene.forceRender = true;
     };
 
-    const updateColorData = (resource: any) => {
-        const splatData = resource?.splatData;
-        resource?.instances.forEach((instance: any) => {
-            instance.splat.updateColorData(
-                splatData.getProp('f_dc_0'),
-                splatData.getProp('f_dc_1'),
-                splatData.getProp('f_dc_2'),
-                splatData.getProp('opacity')
+    const updateColorData = () => {
+        splatDefs.forEach((splatDef) => {
+            const data = splatDef.data;
+            const render = splatDef.render;
+
+            render.updateColorData(
+                data.getProp('f_dc_0'),
+                data.getProp('f_dc_1'),
+                data.getProp('f_dc_2'),
+                data.getProp('opacity')
             );
         });
 
-        updateSelection(splatData);
-    };
-
-    const forEachSplat = (callback: (splatData: SplatData, resource: any) => void) => {
-        scene.elements.forEach((element: Element) => {
-            if (element.type === ElementType.splat) {
-                const splatElement = element as Splat;
-                const resource = splatElement.asset.resource;
-                const splatData = resource?.splatData;
-                if (splatData) {
-                    callback(splatData, resource);
-                }
-            }
-        });
+        updateSelection();
     };
 
     const processSelection = (selection: Float32Array, opacity: Float32Array, op: string, pred: (i: number) => boolean) => {
@@ -442,9 +452,9 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
     };
 
     events.on('focusCamera', () => {
-        const splat = scene.getElementsByType(ElementType.splat)[0] as Splat;
-        if (splat) {
-            const splatData = splat.asset.resource.splatData;
+        const splatDef = splatDefs[0];
+        if (splatDef) {
+            const splatData = splatDef.data;
             const selection = splatData.getProp('selection');
             const opacity = splatData.getProp('opacity');
             const opacityPred = (i: number) => opacity[i] !== deletedOpacity;
@@ -452,7 +462,7 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
             splatData.calcAabb(aabb, selectedSplats ? selectionPred : opacityPred);
             splatData.calcFocalPoint(vec, selectedSplats ? selectionPred : opacityPred);
 
-            splat.root.getWorldTransform().transformPoint(vec, vec);
+            splatDef.element.entity.getWorldTransform().transformPoint(vec, vec);
 
             scene.camera.setFocalPoint(vec);
             scene.camera.setDistance(aabb.halfExtents.length() / scene.bound.halfExtents.length());
@@ -460,42 +470,45 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
     });
 
     events.on('splatSize', (value: number) => {
-        debugs.forEach((debug) => {
-            debug.splatSize = value;
+        splatDefs.forEach((splatDef) => {
+            splatDef.debug.splatSize = value;
         });
-
         scene.forceRender = true;
     });
 
     events.on('selectAll', () => {
-        forEachSplat((splatData: SplatData, resource: any) => {
+        splatDefs.forEach((splatDef) => {
+            const splatData = splatDef.data;
             const selection = splatData.getProp('selection');
             const opacity = splatData.getProp('opacity');
             processSelection(selection, opacity, 'set', (i) => true);
-            updateSelection(splatData);
         });
+        updateSelection();
     });
 
     events.on('selectNone', () => {
-        forEachSplat((splatData: SplatData, resource: any) => {
+        splatDefs.forEach((splatDef) => {
+            const splatData = splatDef.data;
             const selection = splatData.getProp('selection');
             const opacity = splatData.getProp('opacity');
             processSelection(selection, opacity, 'set', (i) => false);
-            updateSelection(splatData);
         });
+        updateSelection();
     });
 
     events.on('invertSelection', () => {
-        forEachSplat((splatData: SplatData, resource: any) => {
+        splatDefs.forEach((splatDef) => {
+            const splatData = splatDef.data;
             const selection = splatData.getProp('selection');
             const opacity = splatData.getProp('opacity');
             processSelection(selection, opacity, 'set', (i) => !selection[i]);
-            updateSelection(splatData);
         });
+        updateSelection();
     });
 
     events.on('selectBySize', (op: string, value: number) => {
-        forEachSplat((splatData: SplatData, resource: any) => {
+        splatDefs.forEach((splatDef) => {
+            const splatData = splatDef.data;
             const opacity = splatData.getProp('opacity');
             const selection = splatData.getProp('selection');
             const scale_0 = splatData.getProp('scale_0');
@@ -521,12 +534,13 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
             const maxScale = Math.log(Math.exp(scaleMin) + value * (Math.exp(scaleMax) - Math.exp(scaleMin)));
 
             processSelection(selection, opacity, op, (i) => scale_0[i] > maxScale || scale_1[i] > maxScale || scale_2[i] > maxScale);
-            updateSelection(splatData);
         });
+        updateSelection();
     });
 
     events.on('selectByOpacity', (op: string, value: number) => {
-        forEachSplat((splatData: SplatData, resource: any) => {
+        splatDefs.forEach((splatDef) => {
+            const splatData = splatDef.data;
             const selection = splatData.getProp('selection');
             const opacity = splatData.getProp('opacity');
 
@@ -534,8 +548,8 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
                 const t = Math.exp(opacity[i]);
                 return ((1 / (1 + t)) < value);
             });
-            updateSelection(splatData);
         });
+        updateSelection();
     });
 
     events.on('selectBySpherePlacement', (sphere: number[]) => {
@@ -553,7 +567,8 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
     });
 
     events.on('selectBySphere', (op: string, sphere: number[]) => {
-        forEachSplat((splatData: SplatData, resource: any) => {
+        splatDefs.forEach((splatDef) => {
+            const splatData = splatDef.data;
             const selection = splatData.getProp('selection');
             const opacity = splatData.getProp('opacity');
             const x = splatData.getProp('x');
@@ -563,19 +578,20 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
             const radius2 = sphere[3] * sphere[3];
             vec.set(sphere[0], sphere[1], sphere[2]);
 
-            mat.invert(resource.instances[0].entity.getWorldTransform());
+            mat.invert(splatDef.element.entity.getWorldTransform());
             mat.transformPoint(vec, vec);
 
             processSelection(selection, opacity, op, (i) => {
                 vec2.set(x[i], y[i], z[i]);
                 return vec2.sub(vec).lengthSq() < radius2;
             });
-            updateSelection(splatData);
         });
+        updateSelection();
     });
 
     events.on('selectByPlane', (op: string, axis: number[], distance: number) => {
-        forEachSplat((splatData: SplatData, resource: any) => {
+        splatDefs.forEach((splatDef) => {
+            const splatData = splatDef.data;
             const selection = splatData.getProp('selection');
             const opacity = splatData.getProp('opacity');
             const x = splatData.getProp('x');
@@ -586,7 +602,7 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
             vec2.set(axis[0] * distance, axis[1] * distance, axis[2] * distance);
 
             // transform the plane to local space
-            mat.invert(resource.instances[0].entity.getWorldTransform());
+            mat.invert(splatDef.element.entity.getWorldTransform());
             mat.transformVector(vec, vec);
             mat.transformPoint(vec2, vec2);
 
@@ -596,12 +612,13 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
                 vec2.set(x[i], y[i], z[i]);
                 return vec.dot(vec2) - localDistance > 0;
             });
-            updateSelection(splatData);
         });
+        updateSelection();
     });
 
     events.on('selectRect', (op: string, rect: any) => {
-        forEachSplat((splatData: SplatData, resource: any) => {
+        splatDefs.forEach((splatDef) => {
+            const splatData = splatDef.data;
             const selection = splatData.getProp('selection');
             const opacity = splatData.getProp('opacity');
             const x = splatData.getProp('x');
@@ -612,7 +629,7 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
             const camera = scene.camera.entity.camera;
 
             // calculate final matrix
-            mat.mul2(camera.camera._viewProjMat, resource.instances[0].entity.getWorldTransform());
+            mat.mul2(camera.camera._viewProjMat, splatDef.element.entity.getWorldTransform());
             const sx = rect.start.x * 2 - 1;
             const sy = rect.start.y * 2 - 1;
             const ex = rect.end.x * 2 - 1;
@@ -628,12 +645,13 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
                 }
                 return true;
             });
-            updateSelection(splatData);
         });
+        updateSelection();
     });
 
     events.on('selectByMask', (op: string, mask: ImageData) => {
-        forEachSplat((splatData: SplatData, resource: any) => {
+        splatDefs.forEach((splatDef) => {
+            const splatData = splatDef.data;
             const selection = splatData.getProp('selection');
             const opacity = splatData.getProp('opacity');
             const x = splatData.getProp('x');
@@ -644,7 +662,7 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
             const camera = scene.camera.entity.camera;
 
             // calculate final matrix
-            mat.mul2(camera.camera._viewProjMat, resource.instances[0].entity.getWorldTransform());
+            mat.mul2(camera.camera._viewProjMat, splatDef.element.entity.getWorldTransform());
 
             processSelection(selection, opacity, op, (i) => {
                 vec4.set(x[i], y[i], z[i], 1.0);
@@ -660,8 +678,8 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
                 const my = Math.floor(vec4.y * mask.height);
                 return mask.data[(my * mask.width + mx) * 4] === 255;
             });
-            updateSelection(splatData);
         });
+        updateSelection();
     });
 
     events.on('showOrigin', (value: boolean) => {
@@ -670,55 +688,53 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
     });
 
     events.on('scenePosition', (value: number[]) => {
-        forEachSplat((splatData: SplatData, resource: any) => {
-            resource.instances.forEach((instance: any) => {
-                instance.entity.setLocalPosition(value[0], value[1], value[2]);
-            });
-
-            updateSelection(splatData);
+        splatDefs.forEach((splatDef) => {
+            splatDef.element.entity.setLocalPosition(value[0], value[1], value[2]);
         });
 
         scene.updateBound();
     });
 
     events.on('sceneOrientation', (value: number[]) => {
-        forEachSplat((splatData: SplatData, resource: any) => {
-            resource.instances.forEach((instance: any) => {
-                instance.entity.setLocalEulerAngles(value[0], value[1], value[2]);
-            });
-
-            updateSelection(splatData);
+        splatDefs.forEach((splatDef) => {
+            splatDef.element.entity.setLocalEulerAngles(value[0], value[1], value[2]);
         });
 
         scene.updateBound();
     });
 
     events.on('deleteSelection', () => {
-        forEachSplat((splatData: SplatData, resource: any) => {
+        splatDefs.forEach((splatDef) => {
+            const splatData = splatDef.data;
             editHistory.add(new DeleteSelectionEditOp(splatData));
-            updateColorData(resource);
         });
+        updateColorData();
     });
 
     events.on('reset', () => {
-        forEachSplat((splatData: SplatData, resource: any) => {
+        splatDefs.forEach((splatDef) => {
+            const splatData = splatDef.data;
             editHistory.add(new ResetEditOp(splatData));
-            updateColorData(resource);
         });
+        updateColorData();
     });
+
+    const removeExtension = (filename: string) => {
+        return filename.substring(0, filename.length - path.getExtension(filename).length);
+    };
 
     events.on('export', (format: string) => {
         switch (format) {
             case 'ply':
-                forEachSplat((splatData: SplatData, resource: any) => {
-                    const data = convertPly(splatData, resource.instances[0].entity.getWorldTransform());
-                    download(resource.name + '.ply', data);
+                splatDefs.forEach((splatDef) => {
+                    const data = convertPly(splatDef.data, splatDef.element.entity.getWorldTransform());
+                    download(removeExtension(splatDef.element.asset.file.filename) + '.cleaned.ply', data);
                 });
                 break;
             case 'splat':
-                forEachSplat((splatData: SplatData, resource: any) => {
-                    const data = convertSplat(splatData, resource.instances[0].entity.getWorldTransform());
-                    download(resource.name + '.splat', data);
+                splatDefs.forEach((splatDef) => {
+                    const data = convertSplat(splatDef.data, splatDef.element.entity.getWorldTransform());
+                    download(removeExtension(splatDef.element.asset.file.filename) + '.cleaned.splat', data);
                 });
                 break;
         }
@@ -727,18 +743,14 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
     events.on('undo', () => {
         if (editHistory.canUndo()) {
             editHistory.undo();
-            forEachSplat((splatData: SplatData, resource: any) => {
-                updateColorData(resource);
-            });
+            updateColorData();
         }
     });
 
     events.on('redo', () => {
         if (editHistory.canRedo()) {
             editHistory.redo();
-            forEachSplat((splatData: SplatData, resource: any) => {
-                updateColorData(resource);
-            });
+            updateColorData();
         }
     });
 }

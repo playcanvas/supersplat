@@ -41,10 +41,14 @@ class Splat extends Element {
         const config = this.scene.config;
 
         this.root = this.asset.resource.instantiateRenderEntity({
-            app: this.scene.app,
-            camera: this.scene.camera.entity,
-            onChanged: () => { this.changedCounter++; }
+            cameraEntity: this.scene.camera.entity
         });
+
+        // when sort changes, re-render the scene
+        this.root.render.meshInstances[0].splatInstance.sorter.on('updated', () => {
+            this.changedCounter++;
+        });
+
         this.entity.addChild(this.root);
 
         // add the entity to the scene

@@ -328,6 +328,8 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
     const debugPlane = new Vec3();
     let debugPlaneDistance = 0;
 
+    let showOrigin = false;
+
     // draw debug mesh instances
     scene.on('prerender', () => {
         const app = scene.app;
@@ -361,6 +363,20 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
                 app.drawLines(lines, Color.RED);
             }
         });
+
+        if (showOrigin) {
+            const lines = [
+                0, 0, 0, 1, 0, 0,
+                0, 0, 0, 0, 1, 0,
+                0, 0, 0, 0, 0, 1
+            ];
+            const colors = [
+                1, 0, 0, 1, 1, 0, 0, 1,
+                0, 1, 0, 1, 0, 1, 0, 1,
+                0, 0, 1, 1, 0, 0, 1, 1
+            ];
+            app.drawLineArrays(lines, colors);
+        }
     });
 
     const editHistory = new EditHistory();
@@ -646,6 +662,23 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
             });
             updateSelection(splatData);
         });
+    });
+
+    events.on('showOrigin', (value: boolean) => {
+        showOrigin = value;
+        scene.forceRender = true;
+    });
+
+    events.on('scenePosition', (value: number[]) => {
+        forEachSplat((splatData: SplatData, resource: any) => {
+            resource.instances.forEach((instance: any) => {
+                instance.entity.setLocalPosition(value[0], value[1], value[2]);
+            });
+
+            updateSelection(splatData);
+        });
+
+        scene.updateBound();
     });
 
     events.on('sceneOrientation', (value: number[]) => {

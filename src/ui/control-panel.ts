@@ -1,5 +1,5 @@
 import { EventHandler } from 'playcanvas';
-import { Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, VectorInput } from 'pcui';
+import { BooleanInput, Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, VectorInput } from 'pcui';
 import { version as supersplatVersion } from '../../package.json';
 import logo from './playcanvas-logo.png';
 
@@ -535,10 +535,10 @@ class ControlPanel extends Container {
         selectionPanel.append(selectTools);
         selectionPanel.append(selectGlobal);
 
-        // scene
-        const scenePanel = new Panel({
+        // modify
+        const modifyPanel = new Panel({
             class: 'control-panel',
-            headerText: 'Scene'
+            headerText: 'Modify'
         });
 
         const deleteSelectionButton = new Button({
@@ -551,29 +551,75 @@ class ControlPanel extends Container {
             text: 'Reset Scene'
         });
 
-        // orientation
-        const sceneOrientation = new Container({
+        modifyPanel.append(deleteSelectionButton);
+        modifyPanel.append(resetButton);
+
+        // scene
+        const scenePanel = new Panel({
+            class: 'control-panel',
+            headerText: 'Scene'
+        });
+
+        const origin = new Container({
             class: 'control-parent'
         });
 
-        const sceneOrientationLabel = new Label({
+        const originLabel = new Label({
             class: 'control-label',
-            text: 'Scene Orientation'
+            text: 'Show Origin'
         });
 
-        const sceneOrientationVector = new VectorInput({
+        const originToggle = new BooleanInput({
+            class: 'control-element',
+            value: false
+        });
+
+        origin.append(originLabel);
+        origin.append(originToggle);
+
+        // position
+        const position = new Container({
+            class: 'control-parent'
+        });
+
+        const positionLabel = new Label({
+            class: 'control-label',
+            text: 'Position'
+        });
+
+        const positionVector = new VectorInput({
+            class: 'control-element-expand',
+            precision: 4,
+            dimensions: 3,
+            value: [0, 0, 0]
+        });
+        
+        position.append(positionLabel);
+        position.append(positionVector);
+
+        // orientation
+        const rotation = new Container({
+            class: 'control-parent'
+        });
+
+        const rotationLabel = new Label({
+            class: 'control-label',
+            text: 'Rotation'
+        });
+
+        const rotationVector = new VectorInput({
             class: 'control-element-expand',
             precision: 4,
             dimensions: 3,
             value: [0, 0, 0]
         });
 
-        sceneOrientation.append(sceneOrientationLabel);
-        sceneOrientation.append(sceneOrientationVector);
+        rotation.append(rotationLabel);
+        rotation.append(rotationVector);
 
-        scenePanel.append(deleteSelectionButton);
-        scenePanel.append(resetButton);
-        scenePanel.append(sceneOrientation);
+        scenePanel.append(origin);
+        scenePanel.append(position);
+        scenePanel.append(rotation);
 
         // export
         const exportPanel = new Panel({
@@ -626,6 +672,7 @@ class ControlPanel extends Container {
         this.append(title);
         this.append(cameraPanel);
         this.append(selectionPanel);
+        this.append(modifyPanel);
         this.append(scenePanel);
         this.append(exportPanel);
         this.append(keyboardPanel);
@@ -761,8 +808,16 @@ class ControlPanel extends Container {
             this.events.fire('selectByPlanePlacement', axes[selectByPlaneAxis.value], selectByPlaneOffset.value);
         });
 
-        sceneOrientationVector.on('change', () => {
-            this.events.fire('sceneOrientation', sceneOrientationVector.value);
+        originToggle.on('change', (enabled: boolean) => {
+            this.events.fire('showOrigin', enabled);
+        });
+
+        positionVector.on('change', () => {
+            this.events.fire('scenePosition', positionVector.value);
+        });
+
+        rotationVector.on('change', () => {
+            this.events.fire('sceneOrientation', rotationVector.value);
         });
 
         deleteSelectionButton.on('click', () => {

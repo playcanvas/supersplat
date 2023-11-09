@@ -156,7 +156,8 @@ const convertPly = (splatData: SplatData, modelMat: Mat4) => {
         numSplats += opacity[i] !== deletedOpacity ? 1 : 0;
     }
 
-    const props = splatData.vertexElement.properties.filter(p => p.storage).map(p => p.name);
+    const internalProps = ['selection', 'opacityOrig'];
+    const props = splatData.vertexElement.properties.filter(p => p.storage && !internalProps.includes(p.name)).map(p => p.name);
     const header = (new TextEncoder()).encode(`ply\nformat binary_little_endian 1.0\nelement vertex ${numSplats}\n` + props.map(p => `property float ${p}`).join('\n') + `\nend_header\n`);
     const result = new Uint8Array(header.byteLength + numSplats * props.length * 4);
 

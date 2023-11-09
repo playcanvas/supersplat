@@ -18,13 +18,6 @@ interface EnvLoadRequest {
     filename?: string;
 }
 
-function* shDataElementsGen(max: number) {
-    let val = 0;
-    while (val < max) {
-        yield `f_rest_${val++}`;
-    }
-};
-
 // handles loading gltf container assets
 class AssetLoader {
     registry: AssetRegistry;
@@ -55,7 +48,7 @@ class AssetLoader {
                     contents: loadRequest.contents
                 },
                 isPly ? { 
-                    elements: this.loadSHData ? getDefaultPlyElements().concat([...shDataElementsGen(45)]) : null
+                    elementFilter: this.loadSHData ? (name => true) : null
                 } : null,
                 {
                     image: {

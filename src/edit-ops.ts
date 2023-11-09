@@ -1,4 +1,4 @@
-import { SplatData } from '../submodules/model-viewer/src/splat/splat-data';
+import { SplatData } from 'playcanvas-extras';
 
 const deletedOpacity = -1000;
 

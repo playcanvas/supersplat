@@ -11,10 +11,11 @@
         "resolveJsonModule": true,
         "baseUrl": ".",
         "paths": {
-            "pcui": ["node_modules/@playcanvas/pcui"],
-            "playcanvas-extras": ["node_modules/playcanvas/build/playcanvas-extras.mjs"]
+            "playcanvas": ["./submodules/engine/build/playcanvas.mjs"],
+            "playcanvas-extras": ["./submodules/engine/build/playcanvas-extras.mjs"],
+            "pcui": ["node_modules/@playcanvas/pcui"]
         }
     },
-    "include": ["./src/*.ts","./submodules/model-viewer/src/splat/*.ts", "src/ui/control-panel.ts"],
+    "include": ["./src/*.ts","./submodules/engine/extras/*/*.ts", "src/ui/control-panel.ts"],
     "exclude": ["node_modules", "**/*.js", "dist"]
 }

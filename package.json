@@ -1,6 +1,6 @@
 {
     "name": "super-splat",
-    "version": "0.9.6",
+    "version": "0.10.0",
     "author": "PlayCanvas<support@playcanvas.com>",
     "homepage": "https://playcanvas.com",
     "description": "All the splat things",
@@ -67,7 +67,6 @@
         "cross-env": "^7.0.3",
         "eslint": "^8.43.0",
         "jest": "^29.5.0",
-        "playcanvas": "1.66.1",
         "rollup": "^3.25.1",
         "rollup-plugin-sass": "^1.12.21",
         "rollup-plugin-visualizer": "^5.9.2",

@@ -156,7 +156,7 @@ const convertPly = (splatData: SplatData, modelMat: Mat4) => {
         numSplats += opacity[i] !== deletedOpacity ? 1 : 0;
     }
 
-    const props = ['x', 'y', 'z', 'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity', 'scale_0', 'scale_1', 'scale_2', 'rot_0', 'rot_1', 'rot_2', 'rot_3'];
+    const props = splatData.vertexElement.properties.filter(p => p.storage).map(p => p.name);
     const header = (new TextEncoder()).encode(`ply\nformat binary_little_endian 1.0\nelement vertex ${numSplats}\n` + props.map(p => `property float ${p}`).join('\n') + `\nend_header\n`);
     const result = new Uint8Array(header.byteLength + numSplats * props.length * 4);
 
@@ -717,6 +717,10 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
             editHistory.add(new ResetEditOp(splatData));
         });
         updateColorData();
+    });
+
+    events.on('shData', (value: boolean) => {
+        scene.assetLoader.loadSHData = value;
     });
 
     const removeExtension = (filename: string) => {

@@ -621,6 +621,31 @@ class ControlPanel extends Container {
         scenePanel.append(position);
         scenePanel.append(rotation);
 
+        // import
+        const importPanel = new Panel({
+            class: 'control-panel',
+            headerText: 'Import'
+        });
+
+        const shData = new Container({
+            class: 'control-parent'
+        });
+
+        const shDataLabel = new Label({
+            class: 'control-label',
+            text: 'SH data'
+        });
+
+        const shDataToggle = new BooleanInput({
+            class: 'control-element',
+            value: false
+        });
+
+        shData.append(shDataLabel);
+        shData.append(shDataToggle);
+
+        importPanel.append(shData);
+
         // export
         const exportPanel = new Panel({
             class: 'control-panel',
@@ -674,6 +699,7 @@ class ControlPanel extends Container {
         this.append(selectionPanel);
         this.append(modifyPanel);
         this.append(scenePanel);
+        this.append(importPanel);
         this.append(exportPanel);
         this.append(keyboardPanel);
 
@@ -826,6 +852,10 @@ class ControlPanel extends Container {
 
         resetButton.on('click', () => {
             this.events.fire('reset');
+        });
+
+        shDataToggle.on('change', (enabled: boolean) => {
+            this.events.fire('shData', enabled);
         });
 
         exportPlyButton.on('click', () => {

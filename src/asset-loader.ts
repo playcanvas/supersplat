@@ -1,4 +1,5 @@
 import { Asset, AssetRegistry, StandardMaterial, TEXTURETYPE_RGBP } from 'playcanvas';
+import { getDefaultPlyElements } from 'playcanvas-extras';
 import { Model } from './model';
 import { Splat } from './splat';
 import { Env } from './env';
@@ -17,10 +18,18 @@ interface EnvLoadRequest {
     filename?: string;
 }
 
+function* shDataElementsGen(max: number) {
+    let val = 0;
+    while (val < max) {
+        yield `f_rest_${val++}`;
+    }
+};
+
 // handles loading gltf container assets
 class AssetLoader {
     registry: AssetRegistry;
     defaultAnisotropy: number;
+    loadSHData = false;
 
     constructor(registry: AssetRegistry, defaultAnisotropy?: number) {
         this.registry = registry;
@@ -35,6 +44,8 @@ class AssetLoader {
         return new Promise<Model|Splat>((resolve, reject) => {
             const gemMaterials = new Set<StandardMaterial>();
 
+            const isPly = loadRequest.filename?.endsWith('.ply');
+
             const containerAsset = new Asset(
                 loadRequest.filename || loadRequest.url,
                 'container',
@@ -43,7 +54,9 @@ class AssetLoader {
                     filename: loadRequest.filename,
                     contents: loadRequest.contents
                 },
-                null,
+                isPly ? { 
+                    elements: this.loadSHData ? getDefaultPlyElements().concat([...shDataElementsGen(45)]) : null
+                } : null,
                 {
                     image: {
                         postprocess: (gltfImage: any, textureAsset: Asset) => {
@@ -61,7 +74,7 @@ class AssetLoader {
                 } as any
             );
             containerAsset.on('load', () => {
-                if (loadRequest.filename.endsWith('.ply')) {
+                if (isPly) {
                     resolve(new Splat(containerAsset));
                 } else {
                     resolve(new Model(containerAsset, gemMaterials));

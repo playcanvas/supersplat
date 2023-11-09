@@ -85,6 +85,10 @@ body {
     flex-grow: 1;
 }
 
+.control-element.pcui-boolean-input {
+    margin-top: 10px;
+}
+
 .active {
     color: white;
     background-color: #f60 !important;

@@ -4,14 +4,16 @@
     font-size: 12px;
 }
 
-html, body {
+html {
     height: 100%;
-    margin: 0;
-    padding: 0;
-    background-color: $bcg-primary;
 }
 
 body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    max-height: 100%;
+    background-color: $bcg-primary;
     overflow: hidden;
 }
 
@@ -29,12 +31,24 @@ body {
     height: 100%;
     border-right: 1px solid #20292b;
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
+}
+
+#title-container {
+    flex-shrink: 0;
+    flex-grow: 0;
+    display: flex;
 }
 
 #control-container {
-    width: 100%;
+    flex-grow: 1;
     overflow-y: auto;
+}
+
+#file-selector-container {
+    flex-shrink: 0;
+    flex-grow: 0;
+    margin: 5px;
 }
 
 #title-logo {
@@ -132,14 +146,15 @@ body {
     image-rendering: pixelated;
 }
 
-#file-selector {
-    position: absolute;
-    left: 0;
-    bottom: 0;
+#keyboard-heading {
+    margin: 40px 0px 0px 0px;
 }
 
-#keyboard-heading {
-    margin: 120px 0px 0px 0px;
+// placeholder
+.pcui-input-element[placeholder] {
+    &::after {
+        color: $text-darkest;
+    }
 }
 
 /* scrollbar styling */

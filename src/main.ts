@@ -81,7 +81,7 @@ const initDropHandler = (canvas: HTMLCanvasElement, scene: Scene) => {
             scene.loadModel(URL.createObjectURL(file), file.name);
         }
     };
-    document.body.appendChild(selector);
+    document.getElementById('file-selector-container')?.appendChild(selector);
 
     // also support user dragging and dropping a local glb file onto the canvas
     CreateDropHandler(canvas, urls => {

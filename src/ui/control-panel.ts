@@ -1,7 +1,5 @@
 import { EventHandler } from 'playcanvas';
 import { BooleanInput, Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, VectorInput } from 'pcui';
-import { version as supersplatVersion } from '../../package.json';
-import logo from './playcanvas-logo.png';
 
 class BoxSelection {
     root: HTMLElement;
@@ -271,7 +269,6 @@ class BrushSelection {
     }
 }
 
-
 class ControlPanel extends Container {
     events = new EventHandler;
 
@@ -282,30 +279,10 @@ class ControlPanel extends Container {
 
         super(args);
 
-        // header
-        const title = new Container({
-            class: 'control-parent'
-        });
-
-        title.dom.addEventListener('click', () => {
-            window.open('https://github.com/playcanvas/super-splat');
-        });
-
-        const titleLogo = document.createElement('img');
-        titleLogo.id = 'title-logo';
-        titleLogo.src = logo.src;
-
-        const titleText = document.createElement('a');
-        titleText.id = 'title-text';
-        titleText.text =  `SUPER SPLAT v${supersplatVersion}`;
-
-        title.dom.appendChild(titleLogo);
-        title.dom.appendChild(titleText);
-
         // camera panel
         const cameraPanel = new Panel({
             class: 'control-panel',
-            headerText: 'Camera'
+            headerText: 'CAMERA'
         });
 
         const focusButton = new Button({
@@ -340,7 +317,7 @@ class ControlPanel extends Container {
         // selection panel
         const selectionPanel = new Panel({
             class: 'control-panel',
-            headerText: 'Selection'
+            headerText: 'SELECTION'
         });
 
         // select by size
@@ -410,6 +387,7 @@ class ControlPanel extends Container {
             precision: 4,
             dimensions: 4,
             value: [0, 0, 0, 0.5],
+            placeholder: ['X', 'Y', 'Z', 'R'],
             enabled: false
         });
 
@@ -538,7 +516,7 @@ class ControlPanel extends Container {
         // modify
         const modifyPanel = new Panel({
             class: 'control-panel',
-            headerText: 'Modify'
+            headerText: 'MODIFY'
         });
 
         const deleteSelectionButton = new Button({
@@ -557,7 +535,7 @@ class ControlPanel extends Container {
         // scene
         const scenePanel = new Panel({
             class: 'control-panel',
-            headerText: 'Scene'
+            headerText: 'SCENE'
         });
 
         const origin = new Container({
@@ -591,7 +569,8 @@ class ControlPanel extends Container {
             class: 'control-element-expand',
             precision: 4,
             dimensions: 3,
-            value: [0, 0, 0]
+            value: [0, 0, 0],
+            placeholder: ['X', 'Y', 'Z']
         });
         
         position.append(positionLabel);
@@ -611,7 +590,8 @@ class ControlPanel extends Container {
             class: 'control-element-expand',
             precision: 4,
             dimensions: 3,
-            value: [0, 0, 0]
+            value: [0, 0, 0],
+            placeholder: ['X', 'Y', 'Z']
         });
 
         rotation.append(rotationLabel);
@@ -624,7 +604,7 @@ class ControlPanel extends Container {
         // import
         const importPanel = new Panel({
             class: 'control-panel',
-            headerText: 'Import'
+            headerText: 'IMPORT'
         });
 
         const shData = new Container({
@@ -649,7 +629,7 @@ class ControlPanel extends Container {
         // export
         const exportPanel = new Panel({
             class: 'control-panel',
-            headerText: 'Export to'
+            headerText: 'EXPORT TO'
         });
 
         const exportPlyButton = new Button({
@@ -669,7 +649,7 @@ class ControlPanel extends Container {
         const keyboardPanel = new Panel({
             id: 'keyboard-heading',
             class: 'control-panel',
-            headerText: 'Keyboard'
+            headerText: 'KEYBOARD'
         });
 
         const shortcutsLabel = new Label({
@@ -694,7 +674,6 @@ class ControlPanel extends Container {
         keyboardPanel.append(shortcutsLabel);
 
         // append
-        this.append(title);
         this.append(cameraPanel);
         this.append(selectionPanel);
         this.append(modifyPanel);
@@ -867,7 +846,7 @@ class ControlPanel extends Container {
         });
 
         this.events.on('splat:count', (count: number) => {
-            selectionPanel.headerText = `Selection${count === 0 ? '' : ' (' + count.toString() + ')'}`;
+            selectionPanel.headerText = `SELECTION${count === 0 ? '' : ' (' + count.toString() + ')'}`;
         });
 
         let splatSizeSave = 1;

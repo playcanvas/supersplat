@@ -1,4 +1,6 @@
 import { Container } from 'pcui';
+import { version as supersplatVersion } from '../package.json';
+import logo from './ui/playcanvas-logo.png';
 import { ControlPanel } from './ui/control-panel';
 
 class EditorUI {
@@ -16,9 +18,7 @@ class EditorUI {
         const leftContainer = new Container({
             id: 'left-container',
             resizable: 'right',
-            resizeMax: 1000,
-            flex: true,
-            flexDirection: 'column'
+            resizeMax: 1000
         });
 
         const canvasContainer = new Container({
@@ -32,8 +32,37 @@ class EditorUI {
         appContainer.append(canvasContainer);
         canvasContainer.dom.appendChild(canvas);
 
+        // title
+        const title = new Container({
+            id: 'title-container'
+        });
+
+        title.dom.addEventListener('click', () => {
+            window.open('https://github.com/playcanvas/super-splat');
+        });
+
+        const titleLogo = document.createElement('img');
+        titleLogo.id = 'title-logo';
+        titleLogo.src = logo.src;
+
+        const titleText = document.createElement('a');
+        titleText.id = 'title-text';
+        titleText.text =  `SUPER SPLAT v${supersplatVersion}`;
+
+        title.dom.appendChild(titleLogo);
+        title.dom.appendChild(titleText);
+    
+        // control panel
         const controlPanel = new ControlPanel();
-        leftContainer.append(controlPanel);
+
+        // file select
+        const fileSelect = new Container({
+            id: 'file-selector-container'
+        });
+
+        leftContainer.append(title);
+        leftContainer.append(controlPanel); // Parent);
+        leftContainer.append(fileSelect);
 
         this.appContainer = appContainer;
         this.leftContainer = leftContainer;

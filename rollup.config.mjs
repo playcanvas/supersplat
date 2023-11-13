@@ -56,7 +56,7 @@ const pipeline = (input) => {
                             return contents.toString().replace('__BASE_HREF__', HREF);
                         }
                     },
-                    {src: 'static/lib/draco_decoder.wasm', dest: 'static/lib'},
+                    {src: 'static/lib/segmentation', dest: 'static/lib'},
                     {src: 'static/env/VertebraeHDRI_v1_512.png', dest: 'static/env'}
                 ]
             }),

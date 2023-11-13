@@ -2,6 +2,12 @@ import { EventHandler } from 'playcanvas';
 import { BooleanInput, Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, VectorInput } from 'pcui';
 import { version as supersplatVersion } from '../../package.json';
 import logo from './playcanvas-logo.png';
+import { throttle } from 'throttle-debounce';
+import {
+    InteractiveSegmenter,
+    FilesetResolver,
+    MPMask
+  } from "@mediapipe/tasks-vision";
 
 class BoxSelection {
     root: HTMLElement;
@@ -96,6 +102,207 @@ class BoxSelection {
         this.root = root;
         this.svg = svg;
         this.rect = rect;
+    }
+
+    activate() {
+        if (!this.active) {
+            this.root.style.display = 'block';
+            this.events.fire('activated');
+        }
+    }
+
+    deactivate() {
+        if (this.active) {
+            this.events.fire('deactivated');
+            this.root.style.display = 'none';
+        }
+    }
+
+    get active() {
+        return this.root.style.display === 'block';
+    }
+}
+
+interface Point {
+    x: number,
+    y: number
+}
+
+class SegmentationSelection {
+
+    root: HTMLElement;
+    canvas: HTMLCanvasElement;
+    context: CanvasRenderingContext2D;
+    svg: SVGElement;
+    rect: SVGRectElement;
+    radius: number
+    dragging: boolean
+    scribble: Point[]
+    interactiveSegmenter: InteractiveSegmenter
+
+    events = new EventHandler();
+
+    constructor(parent: HTMLElement) {
+
+        this.radius = 20;
+        this.dragging = false;
+        this.scribble = [];
+
+        // create input dom
+        const root = document.createElement('div');
+        root.id = 'select-root';
+
+        // create svg
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.id = 'select-svg';
+        svg.style.display = 'inline';
+
+        // create circle element
+        const circle = document.createElementNS(svg.namespaceURI, 'circle');
+        circle.setAttribute('r', this.radius.toString());
+        circle.setAttribute('fill', 'rgba(255, 102, 0, 0.2)');
+        circle.setAttribute('stroke', '#f60');
+        circle.setAttribute('stroke-width', '1');
+        circle.setAttribute('stroke-dasharray', '5, 5');
+
+        // create canvas
+        const canvas = document.createElement('canvas');
+        canvas.id = 'select-canvas';
+
+        const context = canvas.getContext('2d', { willReadFrequently: true });
+        context.globalCompositeOperation = 'copy';
+
+        this.interactiveSegmenter = null
+        const createSegmenter = async () => {
+            const filesetResolver = await FilesetResolver.forVisionTasks(
+                "/static/lib/segmentation"
+            );
+            this.interactiveSegmenter = await InteractiveSegmenter.createFromOptions(
+                filesetResolver,
+                {
+                baseOptions: {
+                    // modelAssetPath: `https://storage.googleapis.com/mediapipe-models/interactive_segmenter/magic_touch/float32/1/magic_touch.tflite`,
+                    modelAssetPath: `/static/lib/segmentation/ptm_512_hdt_ptm_woid.tflite`,
+                    
+                    delegate: "GPU"
+                },
+                outputCategoryMask: true,
+                outputConfidenceMasks: false,
+                runningMode: 'IMAGE'
+                }
+            );
+        };    
+        createSegmenter();
+
+        const update = throttle(1000/120, (e: MouseEvent) => {
+            const x = e.offsetX;
+            const y = e.offsetY;
+            circle.setAttribute('cx', x.toString());
+            circle.setAttribute('cy', y.toString());
+
+            if (this.dragging) {
+                context.beginPath();
+                context.strokeStyle = '#f60';
+                context.lineCap = 'round';
+                context.lineWidth = this.radius * 2;
+                // context.moveTo(this.prev.x, /this.prev.y);
+                context.lineTo(x, y);
+                context.stroke();
+
+                this.scribble.push({ 
+                    x: e.offsetX / canvas.width,
+                    y: e.offsetY / canvas.height
+                })
+
+                // this.prev.x = x;
+                // this.prev.y = y;
+            }
+        });
+
+        root.oncontextmenu = (e) => {
+            e.preventDefault();
+        };
+
+        root.onmousedown = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // display it
+            canvas.style.display = 'inline';
+
+            if (canvas.width !== parent.clientWidth || canvas.height !== parent.clientHeight) {
+                canvas.width = parent.clientWidth;
+                canvas.height = parent.clientHeight;
+            }
+
+            this.dragging = true;
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.moveTo(e.offsetX, e.offsetY);
+            this.scribble = []
+            update(e)
+        }
+
+        root.onmousemove = (e) => {
+            update(e);
+        }
+
+        root.onmouseup = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            this.dragging = false;
+
+            // clear canvas
+            context.clearRect(0, 0, canvas.width, canvas.height);
+
+            // display it
+            canvas.style.display = 'inline';
+
+            const sourceCanvas = document.querySelector('#canvas');
+
+            //   keypoint: { x: e.offsetX / canvas.width, y: e.offsetY / canvas.height }
+            this.interactiveSegmenter.segment(
+                sourceCanvas,
+                { scribble: this.scribble },
+                (result: MPMask) => {
+                    const mask = result.categoryMask
+                    const width = mask.width;
+                    const height = mask.height;
+                    canvas.width = width;
+                    canvas.height = height;
+                    context.fillStyle = '#f60';
+                    const maskData = mask.getAsFloat32Array();
+                    maskData.map((category: number, index: number) => {
+                        if (Math.round(category * 255.0) === 1) {
+                          const x = (index + 1) % width;
+                          const y = (index + 1 - x) / width;
+                          context.fillRect(x, y, 1, 1);
+                        }
+                    });
+
+                    this.events.fire(
+                        'selectByMask',
+                        e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
+                        context.getImageData(0, 0, canvas.width, canvas.height)
+                    );
+
+                    // clear canvas
+                    context.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            );
+        };
+
+        parent.appendChild(root);
+        root.appendChild(canvas);
+        root.appendChild(svg);
+        svg.appendChild(circle);
+
+        this.root = root;
+        this.canvas = canvas;
+        this.context = context;
+
+        canvas.width = parent.clientWidth;
+        canvas.height = parent.clientHeight;
     }
 
     activate() {
@@ -497,8 +704,15 @@ class ControlPanel extends Container {
             enabled: true
         });
 
+        const segmentationSelectButton = new Button({
+            class: 'control-element-expand',
+            text: 'Segment',
+            enabled: true
+        });
+
         selectTools.append(boxSelectButton);
         selectTools.append(brushSelectButton);
+        selectTools.append(segmentationSelectButton);
 
         // selection button parent
         const selectGlobal = new Container({
@@ -717,9 +931,17 @@ class ControlPanel extends Container {
             this.events.fire('selectByMask', op, mask);
         });
 
+        const segmentationSelection = new SegmentationSelection(document.getElementById('canvas-container'));
+        segmentationSelection.events.on('activated', () => segmentationSelectButton.class.add('active'));
+        segmentationSelection.events.on('deactivated', () => segmentationSelectButton.class.remove('active'));
+        segmentationSelection.events.on('selectByMask', (op: string, mask: ImageData) => {
+            this.events.fire('selectByMask', op, mask);
+        });
+
         const tools = [
             boxSelection,
-            brushSelection
+            brushSelection,
+            segmentationSelection
         ];
 
         const deactivate = () => {
@@ -737,6 +959,7 @@ class ControlPanel extends Container {
 
         boxSelectButton.on('click', () => toggle(boxSelection));
         brushSelectButton.on('click', () => toggle(brushSelection));
+        segmentationSelectButton.on('click', () => toggle(segmentationSelection));
 
         // radio logic
         const radioGroup = [selectBySizeRadio, selectByOpacityRadio, selectBySphereRadio, selectByPlaneRadio];
@@ -880,6 +1103,8 @@ class ControlPanel extends Container {
                 deactivate();
             } else if (e.key === 'R' || e.key === 'r') {
                 toggle(boxSelection);
+            } else if (e.key === 'S' || e.key === 's') {
+                toggle(segmentationSelection);
             } else if (e.key === 'F' || e.key === 'f') {
                 this.events.fire('focusCamera');
             } else if (e.key === 'B' || e.key === 'b') {

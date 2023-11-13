@@ -72,5 +72,9 @@
         "rollup-plugin-visualizer": "^5.9.2",
         "serve": "^14.2.0",
         "tslib": "^2.5.3"
+    },
+    "dependencies": {
+        "@mediapipe/tasks-vision": "^0.10.8",
+        "throttle-debounce": "^5.0.0"
     }
 }

@@ -567,7 +567,7 @@ class ControlPanel extends Container {
 
         const positionVector = new VectorInput({
             class: 'control-element-expand',
-            precision: 4,
+            precision: 2,
             dimensions: 3,
             value: [0, 0, 0],
             placeholder: ['X', 'Y', 'Z']
@@ -588,7 +588,7 @@ class ControlPanel extends Container {
 
         const rotationVector = new VectorInput({
             class: 'control-element-expand',
-            precision: 4,
+            precision: 2,
             dimensions: 3,
             value: [0, 0, 0],
             placeholder: ['X', 'Y', 'Z']
@@ -609,7 +609,7 @@ class ControlPanel extends Container {
 
         const scaleInput = new NumericInput({
             class: 'control-element-expand',
-            precision: 4,
+            precision: 2,
             value: 1
         });
 
@@ -627,24 +627,24 @@ class ControlPanel extends Container {
             headerText: 'IMPORT'
         });
 
-        const shData = new Container({
+        const allData = new Container({
             class: 'control-parent'
         });
 
-        const shDataLabel = new Label({
+        const allDataLabel = new Label({
             class: 'control-label',
-            text: 'SH data'
+            text: 'Load all PLY data'
         });
 
-        const shDataToggle = new BooleanInput({
+        const allDataToggle = new BooleanInput({
             class: 'control-element',
-            value: false
+            value: true
         });
 
-        shData.append(shDataLabel);
-        shData.append(shDataToggle);
+        allData.append(allDataLabel);
+        allData.append(allDataToggle);
 
-        importPanel.append(shData);
+        importPanel.append(allData);
 
         // export
         const exportPanel = new Panel({
@@ -857,8 +857,8 @@ class ControlPanel extends Container {
             this.events.fire('reset');
         });
 
-        shDataToggle.on('change', (enabled: boolean) => {
-            this.events.fire('shData', enabled);
+        allDataToggle.on('change', (enabled: boolean) => {
+            this.events.fire('allData', enabled);
         });
 
         exportPlyButton.on('click', () => {

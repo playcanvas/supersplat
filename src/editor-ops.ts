@@ -750,8 +750,8 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
         updateColorData();
     });
 
-    events.on('shData', (value: boolean) => {
-        scene.assetLoader.loadSHData = value;
+    events.on('allData', (value: boolean) => {
+        scene.assetLoader.loadAllData = value;
     });
 
     const removeExtension = (filename: string) => {

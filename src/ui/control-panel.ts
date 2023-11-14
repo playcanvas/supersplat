@@ -567,7 +567,7 @@ class ControlPanel extends Container {
 
         const positionVector = new VectorInput({
             class: 'control-element-expand',
-            precision: 4,
+            precision: 2,
             dimensions: 3,
             value: [0, 0, 0],
             placeholder: ['X', 'Y', 'Z']
@@ -588,7 +588,7 @@ class ControlPanel extends Container {
 
         const rotationVector = new VectorInput({
             class: 'control-element-expand',
-            precision: 4,
+            precision: 2,
             dimensions: 3,
             value: [0, 0, 0],
             placeholder: ['X', 'Y', 'Z']
@@ -609,7 +609,7 @@ class ControlPanel extends Container {
 
         const scaleInput = new NumericInput({
             class: 'control-element-expand',
-            precision: 4,
+            precision: 2,
             value: 1
         });
 

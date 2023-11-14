@@ -463,10 +463,14 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
             splatData.calcAabb(aabb, selectedSplats ? selectionPred : opacityPred);
             splatData.calcFocalPoint(vec, selectedSplats ? selectionPred : opacityPred);
 
-            splatDef.element.entity.getWorldTransform().transformPoint(vec, vec);
+            const worldTransform = splatDef.element.entity.getWorldTransform();
+            worldTransform.transformPoint(vec, vec);
+            worldTransform.getScale(vec2);
 
-            scene.camera.setFocalPoint(vec);
-            scene.camera.setDistance(aabb.halfExtents.length() / scene.bound.halfExtents.length());
+            scene.camera.focus({
+                focalPoint: vec,
+                distance: aabb.halfExtents.length() * vec2.x / scene.bound.halfExtents.length()
+            });
         }
     });
 
@@ -696,9 +700,17 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
         scene.updateBound();
     });
 
-    events.on('sceneOrientation', (value: number[]) => {
+    events.on('sceneRotation', (value: number[]) => {
         splatDefs.forEach((splatDef) => {
             splatDef.element.entity.setLocalEulerAngles(value[0], value[1], value[2]);
+        });
+
+        scene.updateBound();
+    });
+
+    events.on('sceneScale', (value: number) => {
+        splatDefs.forEach((splatDef) => {
+            splatDef.element.entity.setLocalScale(value, value, value);
         });
 
         scene.updateBound();

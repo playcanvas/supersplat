@@ -50,7 +50,6 @@ class Camera extends Element {
     focalPointTween = new TweenValue({x: 0, y: 0.5, z: 0});
     azimElevTween = new TweenValue({azim: 30, elev: -15});
     distanceTween = new TweenValue({distance: 2});
-    sceneRadius = 0;
 
     minElev = -90;
     maxElev = 90;
@@ -344,24 +343,23 @@ class Camera extends Element {
         }
     }
 
-    focus() {
-        let focalPoint: Vec3;
-        this.scene.elements.forEach((element: any) => {
-            if (!focalPoint && element.type === ElementType.splat) {
-                focalPoint = element.focalPoint && element.focalPoint();
-            }
-        });
-
+    focus(options?: { sceneRadius?: number, distance?: number, focalPoint?: Vec3}) {
         const config = this.scene.config;
 
-        const bound = this.scene.bound;
-        const radius = bound.halfExtents.length();
-        const distance = radius / Math.sin(config.camera.fov * math.DEG_TO_RAD * 0.5);
+        let focalPoint: Vec3 = options?.focalPoint;
+        if (!focalPoint) {
+            this.scene.elements.forEach((element: any) => {
+                if (!focalPoint && element.type === ElementType.splat) {
+                    focalPoint = element.focalPoint && element.focalPoint();
+                }
+            });
+        }
 
-        this.setDistance(1.0, 0);
-        this.setFocalPoint(focalPoint ?? bound.center, 0);
+        const sceneRadius = options?.sceneRadius ?? this.scene.bound.halfExtents.length();
+        const distance = sceneRadius / Math.sin(config.camera.fov * math.DEG_TO_RAD * 0.5);
 
-        this.sceneRadius = radius;
+        this.setDistance(options?.distance ?? 1.0, 0);
+        this.setFocalPoint(focalPoint ?? this.scene.bound.center, 0);
         this.focusDistance = 1.1 * distance;
     }
 

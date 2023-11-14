@@ -188,6 +188,9 @@ const convertPly = (splatData: SplatData, modelMat: Mat4) => {
     const quat = new Quat();
     quat.setFromMat4(mat);
 
+    const scale = new Vec3();
+    mat.getScale(scale);
+
     const v = new Vec3();
     const q = new Quat();
 
@@ -198,6 +201,10 @@ const convertPly = (splatData: SplatData, modelMat: Mat4) => {
     const r1_off = props.indexOf('rot_1') * 4;
     const r2_off = props.indexOf('rot_2') * 4;
     const r3_off = props.indexOf('rot_3') * 4;
+    const scale0_off = props.indexOf('scale_0') * 4;
+    const scale1_off = props.indexOf('scale_1') * 4;
+    const scale2_off = props.indexOf('scale_2') * 4;
+
     for (let i = 0; i < numSplats; ++i) {
         const off = header.byteLength + i * props.length * 4;
         const x = dataView.getFloat32(off + x_off, true);
@@ -207,6 +214,9 @@ const convertPly = (splatData: SplatData, modelMat: Mat4) => {
         const rot_1 = dataView.getFloat32(off + r1_off, true);
         const rot_2 = dataView.getFloat32(off + r2_off, true);
         const rot_3 = dataView.getFloat32(off + r3_off, true);
+        const scale_0 = dataView.getFloat32(off + scale0_off, true);
+        const scale_1 = dataView.getFloat32(off + scale1_off, true);
+        const scale_2 = dataView.getFloat32(off + scale2_off, true);
 
         v.set(x, y, z);
         mat.transformPoint(v, v);
@@ -219,6 +229,10 @@ const convertPly = (splatData: SplatData, modelMat: Mat4) => {
         dataView.setFloat32(off + r1_off, q.x, true);
         dataView.setFloat32(off + r2_off, q.y, true);
         dataView.setFloat32(off + r3_off, q.z, true);
+
+        dataView.setFloat32(off + scale0_off, Math.log(Math.exp(scale_0) * scale.x), true);
+        dataView.setFloat32(off + scale1_off, Math.log(Math.exp(scale_1) * scale.x), true);
+        dataView.setFloat32(off + scale2_off, Math.log(Math.exp(scale_2) * scale.x), true);
     }
 
     return result;
@@ -263,6 +277,9 @@ const convertSplat = (splatData: SplatData, modelMat: Mat4) => {
     const v = new Vec3();
     const q = new Quat();
 
+    const scale = new Vec3();
+    mat.getScale(scale);
+
     const clamp = (x: number) => Math.max(0, Math.min(255, x));
     let idx = 0;
 
@@ -277,9 +294,9 @@ const convertSplat = (splatData: SplatData, modelMat: Mat4) => {
         dataView.setFloat32(off + 4, v.y, true);
         dataView.setFloat32(off + 8, v.z, true);
 
-        dataView.setFloat32(off + 12, Math.exp(scale_0[i]), true);
-        dataView.setFloat32(off + 16, Math.exp(scale_1[i]), true);
-        dataView.setFloat32(off + 20, Math.exp(scale_2[i]), true);
+        dataView.setFloat32(off + 12, Math.exp(scale_0[i]) * scale.x, true);
+        dataView.setFloat32(off + 16, Math.exp(scale_1[i]) * scale.x, true);
+        dataView.setFloat32(off + 20, Math.exp(scale_2[i]) * scale.x, true);
 
         const SH_C0 = 0.28209479177387814;
         dataView.setUint8(off + 24, clamp((0.5 + SH_C0 * f_dc_0[i]) * 255));
@@ -463,10 +480,14 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
             splatData.calcAabb(aabb, selectedSplats ? selectionPred : opacityPred);
             splatData.calcFocalPoint(vec, selectedSplats ? selectionPred : opacityPred);
 
-            splatDef.element.entity.getWorldTransform().transformPoint(vec, vec);
+            const worldTransform = splatDef.element.entity.getWorldTransform();
+            worldTransform.transformPoint(vec, vec);
+            worldTransform.getScale(vec2);
 
-            scene.camera.setFocalPoint(vec);
-            scene.camera.setDistance(aabb.halfExtents.length() / scene.bound.halfExtents.length());
+            scene.camera.focus({
+                focalPoint: vec,
+                distance: aabb.halfExtents.length() * vec2.x / scene.bound.halfExtents.length()
+            });
         }
     });
 
@@ -670,8 +691,9 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
                 mat.transformVec4(vec4, vec4);
                 vec4.x = vec4.x / vec4.w * 0.5 + 0.5;
                 vec4.y = -vec4.y / vec4.w * 0.5 + 0.5;
+                vec4.z = vec4.z / vec4.w * 0.5 + 0.5;
 
-                if (vec4.x < 0 || vec4.x > 1 || vec4.y < 0 || vec4.y > 1) {
+                if (vec4.x < 0 || vec4.x > 1 || vec4.y < 0 || vec4.y > 1 || vec4.z < 0 || vec4.z > 1) {
                     return false;
                 }
 
@@ -696,9 +718,17 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
         scene.updateBound();
     });
 
-    events.on('sceneOrientation', (value: number[]) => {
+    events.on('sceneRotation', (value: number[]) => {
         splatDefs.forEach((splatDef) => {
             splatDef.element.entity.setLocalEulerAngles(value[0], value[1], value[2]);
+        });
+
+        scene.updateBound();
+    });
+
+    events.on('sceneScale', (value: number) => {
+        splatDefs.forEach((splatDef) => {
+            splatDef.element.entity.setLocalScale(value, value, value);
         });
 
         scene.updateBound();

@@ -576,7 +576,7 @@ class ControlPanel extends Container {
         position.append(positionLabel);
         position.append(positionVector);
 
-        // orientation
+        // rotation
         const rotation = new Container({
             class: 'control-parent'
         });
@@ -597,9 +597,29 @@ class ControlPanel extends Container {
         rotation.append(rotationLabel);
         rotation.append(rotationVector);
 
+        // scale
+        const scale = new Container({
+            class: 'control-parent'
+        });
+
+        const scaleLabel = new Label({
+            class: 'control-label',
+            text: 'Scale'
+        });
+
+        const scaleInput = new NumericInput({
+            class: 'control-element-expand',
+            precision: 4,
+            value: 1
+        });
+
+        scale.append(scaleLabel);
+        scale.append(scaleInput);
+
         scenePanel.append(origin);
         scenePanel.append(position);
         scenePanel.append(rotation);
+        scenePanel.append(scale);
 
         // import
         const importPanel = new Panel({
@@ -822,7 +842,11 @@ class ControlPanel extends Container {
         });
 
         rotationVector.on('change', () => {
-            this.events.fire('sceneOrientation', rotationVector.value);
+            this.events.fire('sceneRotation', rotationVector.value);
+        });
+
+        scaleInput.on('change', () => {
+            this.events.fire('sceneScale', scaleInput.value);
         });
 
         deleteSelectionButton.on('click', () => {

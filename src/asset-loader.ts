@@ -22,7 +22,7 @@ interface EnvLoadRequest {
 class AssetLoader {
     registry: AssetRegistry;
     defaultAnisotropy: number;
-    loadSHData = false;
+    loadAllData = true;
 
     constructor(registry: AssetRegistry, defaultAnisotropy?: number) {
         this.registry = registry;
@@ -48,7 +48,7 @@ class AssetLoader {
                     contents: loadRequest.contents
                 },
                 isPly ? { 
-                    elementFilter: this.loadSHData ? (name => true) : null
+                    elementFilter: this.loadAllData ? (() => true) : null
                 } : null,
                 {
                     image: {

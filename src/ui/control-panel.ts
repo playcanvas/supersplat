@@ -1,7 +1,5 @@
 import { EventHandler } from 'playcanvas';
 import { BooleanInput, Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, VectorInput } from 'pcui';
-import { version as supersplatVersion } from '../../package.json';
-import logo from './playcanvas-logo.png';
 import { throttle } from 'throttle-debounce';
 import {
     InteractiveSegmenter,

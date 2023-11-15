@@ -610,7 +610,9 @@ class ControlPanel extends Container {
         const scaleInput = new NumericInput({
             class: 'control-element-expand',
             precision: 2,
-            value: 1
+            value: 1,
+            min: 0.01,
+            max: 10000
         });
 
         scale.append(scaleLabel);

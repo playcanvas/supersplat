@@ -475,8 +475,15 @@ class ControlPanel extends Container {
             enabled: true
         });
 
+        const fillSelectButton = new Button({
+            class: 'control-element-expand',
+            text: 'Fill',
+            enabled: true
+        });
+
         selectTools.append(boxSelectButton);
         selectTools.append(brushSelectButton);
+        selectTools.append(fillSelectButton);
 
         // selection button parent
         const selectGlobal = new Container({
@@ -738,6 +745,7 @@ class ControlPanel extends Container {
 
         boxSelectButton.on('click', () => toggle(boxSelection));
         brushSelectButton.on('click', () => toggle(brushSelection));
+        fillSelectButton.on('click', () => this.events.fire('selectFill', 'set'));
 
         // radio logic
         const radioGroup = [selectBySizeRadio, selectByOpacityRadio, selectBySphereRadio, selectByPlaneRadio];

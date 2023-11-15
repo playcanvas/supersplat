@@ -22,6 +22,8 @@ import { Splat } from './splat';
 import { EditHistory } from './edit-history';
 import { deletedOpacity, DeleteSelectionEditOp, ResetEditOp } from './edit-ops';
 
+import { KdTree } from './kd-tree';
+
 const vs = /* glsl */ `
 attribute vec4 vertex_position;
 
@@ -319,7 +321,8 @@ interface SplatDef {
     data: SplatData,
     render: SplatRender,
     instance: SplatInstance,
-    debug: SplatDebug
+    debug: SplatDebug,
+    kdTree: KdTree
 };
 
 // register for editor and scene events
@@ -352,7 +355,8 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
                     data: splatData,
                     render: splatRender,
                     instance: splatElement.root.render.meshInstances[0].splatInstance,
-                    debug: new SplatDebug(scene, splatElement, splatData)
+                    debug: new SplatDebug(scene, splatElement, splatData),
+                    kdTree: new KdTree(splatData.getProp('x'), splatData.getProp('y'), splatData.getProp('z'))
                 });
             }
         }
@@ -402,6 +406,18 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
 
                 app.drawLines(lines, Color.RED);
             }
+
+            // get camera position in local space
+            mat.invert(splatDef.element.entity.getWorldTransform());
+            mat.transformPoint(scene.camera.entity.position, vec);
+
+            const opacity = splatDef.data.getProp('opacity');
+
+            const result = splatDef.kdTree.findNearest(vec.x, vec.y, vec.z, (index) => opacity[index] !== deletedOpacity);
+            const x = splatDef.data.getProp('x');
+            const y = splatDef.data.getProp('y');
+            const z = splatDef.data.getProp('z');
+            app.drawWireSphere(new Vec3(x[result.index], y[result.index], z[result.index]), 0.1, Color.GREEN, 40);
         });
 
         if (showOrigin) {
@@ -702,6 +718,37 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
                 return mask.data[(my * mask.width + mx) * 4] === 255;
             });
         });
+        updateSelection();
+    });
+
+    events.on('selectFill', (op: string) => {
+        splatDefs.forEach((splatDef) => {
+            const splatData = splatDef.data;
+            const x = splatData.getProp('x');
+            const y = splatData.getProp('y');
+            const z = splatData.getProp('z');
+            const selection = splatData.getProp('selection');
+            const opacity = splatData.getProp('opacity');
+
+            const distances = new Float32Array(selection.length);
+            const indices = [];
+
+            // make list of selected splats
+            for (let i = 0; i < selection.length; ++i) {
+                if (opacity[i] !== deletedOpacity) {
+                    distances[i] = splatDef.kdTree.findNearest(x[i], y[i], z[i], (idx) => idx !== i && opacity[idx] !== deletedOpacity).distanceSqr;
+                    indices.push(i);
+                }
+            }
+
+            indices.sort((a, b) => distances[b] - distances[a]);
+
+            // select the first 10%
+            for (let i = 0; i < indices.length * 0.05; ++i) {
+                selection[indices[i]] = 1;
+            }
+        });
+
         updateSelection();
     });
 

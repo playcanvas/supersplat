@@ -11,6 +11,13 @@ class EditorUI {
     canvas: HTMLCanvasElement;
 
     constructor() {
+        // favicon
+        const link = document.createElement('link');
+        link.rel = 'icon';
+        link.href = logo.src;
+        document.head.appendChild(link);
+
+        // app
         const appContainer = new Container({
             dom: document.getElementById('app-container')
         });

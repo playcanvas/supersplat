@@ -1,6 +1,6 @@
-# Super Splat
+# SuperSplat
 
-The PlayCanvas super-splat tool is used to edit gaussian splat PLY files.
+The PlayCanvas SuperSplat tool is used to edit gaussian splat PLY files.
 
 <img width="1696" alt="super-splat" src="https://github.com/playcanvas/super-splat/assets/11276292/f86cb5a2-649c-49db-9ea2-aa85b5b40b27">
 

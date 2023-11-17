@@ -4,7 +4,7 @@ import { Model } from './model';
 import { Splat } from './splat';
 import { Env } from './env';
 
-import { startSpinner, stopSpinner } from './spinner';
+import { startSpinner, stopSpinner } from './ui/spinner';
 
 interface ModelLoadRequest {
     url?: string;

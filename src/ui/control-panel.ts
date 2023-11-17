@@ -659,12 +659,18 @@ class ControlPanel extends Container {
             text: 'Ply file'
         });
 
+        const exportCompressedPlyButton = new Button({
+            class: 'control-element',
+            text: 'Compressed Ply file'
+        });
+
         const exportSplatButton = new Button({
             class: 'control-element',
             text: 'Splat file'
         });
 
         exportPanel.append(exportPlyButton);
+        exportPanel.append(exportCompressedPlyButton);
         exportPanel.append(exportSplatButton);
 
         // keyboard
@@ -865,6 +871,10 @@ class ControlPanel extends Container {
 
         exportPlyButton.on('click', () => {
             this.events.fire('export', 'ply');
+        });
+
+        exportCompressedPlyButton.on('click', () => {
+            this.events.fire('export', 'ply-compressed');
         });
 
         exportSplatButton.on('click', () => {

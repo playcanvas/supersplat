@@ -3,7 +3,7 @@ import { Scene } from './scene';
 import { getSceneConfig } from './scene-config';
 import { CreateDropHandler } from './drop-handler';
 import { initMaterials } from './material';
-import { EditorUI } from './editor-ui';
+import { EditorUI } from './ui/editor';
 import { registerEvents } from './editor-ops';
 
 declare global {

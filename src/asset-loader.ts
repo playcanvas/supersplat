@@ -67,15 +67,15 @@ class AssetLoader {
                 } as any
             );
             containerAsset.on('load', () => {
+                stopSpinner();
                 if (isPly) {
                     resolve(new Splat(containerAsset));
                 } else {
                     resolve(new Model(containerAsset, gemMaterials));
                 }
-
-                stopSpinner();
             });
             containerAsset.on('error', (err: string) => {
+                stopSpinner();
                 reject(err);
             });
 

@@ -15,6 +15,7 @@ import { EditHistory } from './edit-history';
 import { deletedOpacity, DeleteSelectionEditOp, ResetEditOp } from './edit-ops';
 import { SplatDebug } from './splat-debug';
 import { convertPly, convertPlyCompressed, convertSplat } from './splat-convert';
+import { startSpinner, stopSpinner } from './ui/spinner';
 
 // download the data uri
 const download = (filename: string, data: ArrayBuffer) => {
@@ -57,6 +58,10 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
     const mat = new Mat4();
     const aabb = new BoundingBox();
     const splatDefs: SplatDef[] = [];
+
+    scene.on('error', (err: any) => {
+        editorUI.showError(err);
+    });
 
     // make a copy of the opacity channel because that's what we'll be modifying
     scene.on('element:added', (element: Element) => {
@@ -486,24 +491,33 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
             return filename.substring(0, filename.length - path.getExtension(filename).length);
         };
 
-        splatDefs.forEach((splatDef) => {
-            let data;
-            let extension;
-            switch (format) {
-                case 'ply':
-                    data = convertPly(splatDef.data, splatDef.element.entity.getWorldTransform());
-                    extension = '.cleaned.ply';
-                    break;
-                case 'ply-compressed':
-                    data = convertPlyCompressed(splatDef.data, splatDef.element.entity.getWorldTransform());
-                    extension = '.compressed.ply';
-                    break;
-                case 'splat':
-                    data = convertSplat(splatDef.data, splatDef.element.entity.getWorldTransform());
-                    extension = '.splat';
-                    break;
-            }
-            download(`${removeExtension(splatDef.element.asset.file.filename)}${extension}`, data);
+        startSpinner();
+        editorUI.showInfo('Exporting...');
+
+        // setTimeout so spinner has a chance to activate
+        setTimeout(() => {
+            splatDefs.forEach((splatDef) => {
+                let data;
+                let extension;
+                switch (format) {
+                    case 'ply':
+                        data = convertPly(splatDef.data, splatDef.element.entity.getWorldTransform());
+                        extension = '.cleaned.ply';
+                        break;
+                    case 'ply-compressed':
+                        data = convertPlyCompressed(splatDef.data, splatDef.element.entity.getWorldTransform());
+                        extension = '.compressed.ply';
+                        break;
+                    case 'splat':
+                        data = convertSplat(splatDef.data, splatDef.element.entity.getWorldTransform());
+                        extension = '.splat';
+                        break;
+                }
+                download(`${removeExtension(splatDef.element.asset.file.filename)}${extension}`, data);
+            });
+
+            stopSpinner();
+            editorUI.showInfo(null);
         });
     });
 

@@ -162,6 +162,27 @@ body {
     margin-right: 6px;
 }
 
+.error-popup {
+    position: absolute;
+    left: 0;
+    right: 0;
+    margin-left: auto;
+    margin-right: auto;
+    width: 400px;
+    top: 50%;
+    color: red;
+}
+
+.info-popup {
+    position: absolute;
+    left: 0;
+    right: 0;
+    margin-left: auto;
+    margin-right: auto;
+    width: 400px;
+    top: 50%;
+}
+
 /* scrollbar styling */
 ::-webkit-scrollbar {
     width: 8px;

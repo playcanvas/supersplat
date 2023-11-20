@@ -1,128 +1,21 @@
 import {
-    BLEND_NORMAL,
     BoundingBox,
     Color,
     Mat4,
-    Material,
-    Mesh,
-    MeshInstance,
     path,
-    PRIMITIVE_POINTS,
-    Quat,
-    SEMANTIC_POSITION,
-    createShaderFromCode,
     Vec3,
     Vec4
 } from 'playcanvas';
 import { Splat as SplatRender, SplatData, SplatInstance } from 'playcanvas-extras';
 import { Scene } from './scene';
-import { EditorUI } from './editor-ui';
+import { EditorUI } from './ui/editor';
 import { Element, ElementType } from './element';
 import { Splat } from './splat';
 import { EditHistory } from './edit-history';
 import { deletedOpacity, DeleteSelectionEditOp, ResetEditOp } from './edit-ops';
-
-const vs = /* glsl */ `
-attribute vec4 vertex_position;
-
-uniform mat4 matrix_model;
-uniform mat4 matrix_view;
-uniform mat4 matrix_projection;
-uniform mat4 matrix_viewProjection;
-
-uniform float splatSize;
-
-varying vec4 color;
-
-void main(void) {
-    if (vertex_position.w == -1.0) {
-        gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
-    } else {
-        gl_Position = matrix_viewProjection * matrix_model * vec4(vertex_position.xyz, 1.0);
-        gl_PointSize = splatSize;
-        float opacity = vertex_position.w;
-        color = (opacity == -1.0) ? vec4(0) : mix(vec4(0, 0, 1.0, 0.5), vec4(1.0, 1.0, 0.0, 0.5), opacity);
-    }
-}
-`;
-
-const fs = /* glsl */ `
-varying vec4 color;
-void main(void)
-{
-    gl_FragColor = color;
-}
-`;
-
-class SplatDebug {
-    splatData: SplatData;
-    meshInstance: MeshInstance;
-
-    constructor(scene: Scene, splat: Splat, splatData: SplatData) {
-        const device = scene.graphicsDevice;
-
-        const shader = createShaderFromCode(device, vs, fs, `splatDebugShader`, {
-            vertex_position: SEMANTIC_POSITION
-        });
-
-        const material = new Material();
-        material.name = 'splatDebugMaterial';
-        material.blendType = BLEND_NORMAL;
-        material.shader = shader;
-        material.setParameter('splatSize', 1.0);
-        material.update();
-
-        const x = splatData.getProp('x');
-        const y = splatData.getProp('y');
-        const z = splatData.getProp('z');
-        const s = splatData.getProp('selection');
-
-        const vertexData = new Float32Array(splatData.numSplats * 4);
-        for (let i = 0; i < splatData.numSplats; ++i) {
-            vertexData[i * 4 + 0] = x[i];
-            vertexData[i * 4 + 1] = y[i];
-            vertexData[i * 4 + 2] = z[i];
-            vertexData[i * 4 + 3] = s[i];
-        }
-
-        const mesh = new Mesh(device);
-        mesh.setPositions(vertexData, 4);
-        mesh.update(PRIMITIVE_POINTS, true);
-
-        this.splatData = splatData;
-        this.meshInstance = new MeshInstance(mesh, material, splat.root);
-    }
-
-    update() {
-        const splatData = this.splatData;
-        const s = splatData.getProp('selection');
-        const o = splatData.getProp('opacity');
-
-        const vb = this.meshInstance.mesh.vertexBuffer;
-        const vertexData = new Float32Array(vb.lock());
-
-        let count = 0;
-
-        for (let i = 0; i < splatData.numSplats; ++i) {
-            const selection = o[i] === deletedOpacity ? -1 : s[i];
-            vertexData[i * 4 + 3] = selection;
-            count += selection === 1 ? 1 : 0;
-        }
-
-        vb.unlock();
-
-        return count;
-    }
-
-    set splatSize(splatSize: number) {
-        this.meshInstance.material.setParameter('splatSize', splatSize);
-    }
-
-    get splatSize() {
-        // @ts-ignore
-        return this.meshInstance.material.getParameter('splatSize').data;
-    }
-}
+import { SplatDebug } from './splat-debug';
+import { convertPly, convertPlyCompressed, convertSplat } from './splat-convert';
+import { startSpinner, stopSpinner } from './ui/spinner';
 
 // download the data uri
 const download = (filename: string, data: ArrayBuffer) => {
@@ -148,171 +41,6 @@ const download = (filename: string, data: ArrayBuffer) => {
     window.URL.revokeObjectURL(url);
 };
 
-const convertPly = (splatData: SplatData, modelMat: Mat4) => {
-    // count the number of non-deleted splats
-    const opacity = splatData.getProp('opacity');
-    let numSplats = 0;
-    for (let i = 0; i < splatData.numSplats; ++i) {
-        numSplats += opacity[i] !== deletedOpacity ? 1 : 0;
-    }
-
-    const internalProps = ['selection', 'opacityOrig'];
-    const props = splatData.vertexElement.properties.filter(p => p.storage && !internalProps.includes(p.name)).map(p => p.name);
-    const header = (new TextEncoder()).encode(`ply\nformat binary_little_endian 1.0\nelement vertex ${numSplats}\n` + props.map(p => `property float ${p}`).join('\n') + `\nend_header\n`);
-    const result = new Uint8Array(header.byteLength + numSplats * props.length * 4);
-
-    result.set(header);
-
-    const dataView = new DataView(result.buffer);
-    let offset = header.byteLength;
-
-    for (let i = 0; i < splatData.numSplats; ++i) {
-        props.forEach((prop) => {
-            const p = splatData.getProp(prop);
-            if (p) {
-                if (opacity[i] !== deletedOpacity) {
-                    dataView.setFloat32(offset, p[i], true);
-                    offset += 4;
-                }
-            }
-        });
-    }
-
-    // FIXME
-    // we must undo the transform we apply at load time to output data
-    const mat = new Mat4();
-    mat.setScale(-1, -1, 1);
-    mat.invert();
-    mat.mul2(mat, modelMat);
-
-    const quat = new Quat();
-    quat.setFromMat4(mat);
-
-    const scale = new Vec3();
-    mat.getScale(scale);
-
-    const v = new Vec3();
-    const q = new Quat();
-
-    const x_off = props.indexOf('x') * 4;
-    const y_off = props.indexOf('y') * 4;
-    const z_off = props.indexOf('z') * 4;
-    const r0_off = props.indexOf('rot_0') * 4;
-    const r1_off = props.indexOf('rot_1') * 4;
-    const r2_off = props.indexOf('rot_2') * 4;
-    const r3_off = props.indexOf('rot_3') * 4;
-    const scale0_off = props.indexOf('scale_0') * 4;
-    const scale1_off = props.indexOf('scale_1') * 4;
-    const scale2_off = props.indexOf('scale_2') * 4;
-
-    for (let i = 0; i < numSplats; ++i) {
-        const off = header.byteLength + i * props.length * 4;
-        const x = dataView.getFloat32(off + x_off, true);
-        const y = dataView.getFloat32(off + y_off, true);
-        const z = dataView.getFloat32(off + z_off, true);
-        const rot_0 = dataView.getFloat32(off + r0_off, true);
-        const rot_1 = dataView.getFloat32(off + r1_off, true);
-        const rot_2 = dataView.getFloat32(off + r2_off, true);
-        const rot_3 = dataView.getFloat32(off + r3_off, true);
-        const scale_0 = dataView.getFloat32(off + scale0_off, true);
-        const scale_1 = dataView.getFloat32(off + scale1_off, true);
-        const scale_2 = dataView.getFloat32(off + scale2_off, true);
-
-        v.set(x, y, z);
-        mat.transformPoint(v, v);
-        dataView.setFloat32(off + x_off, v.x, true);
-        dataView.setFloat32(off + y_off, v.y, true);
-        dataView.setFloat32(off + z_off, v.z, true);
-
-        q.set(rot_1, rot_2, rot_3, rot_0).mul2(quat, q);
-        dataView.setFloat32(off + r0_off, q.w, true);
-        dataView.setFloat32(off + r1_off, q.x, true);
-        dataView.setFloat32(off + r2_off, q.y, true);
-        dataView.setFloat32(off + r3_off, q.z, true);
-
-        dataView.setFloat32(off + scale0_off, Math.log(Math.exp(scale_0) * scale.x), true);
-        dataView.setFloat32(off + scale1_off, Math.log(Math.exp(scale_1) * scale.x), true);
-        dataView.setFloat32(off + scale2_off, Math.log(Math.exp(scale_2) * scale.x), true);
-    }
-
-    return result;
-};
-
-const convertSplat = (splatData: SplatData, modelMat: Mat4) => {
-    // count the number of non-deleted splats
-    const x = splatData.getProp('x');
-    const y = splatData.getProp('y');
-    const z = splatData.getProp('z');
-    const opacity = splatData.getProp('opacity');
-    const rot_0 = splatData.getProp('rot_0');
-    const rot_1 = splatData.getProp('rot_1');
-    const rot_2 = splatData.getProp('rot_2');
-    const rot_3 = splatData.getProp('rot_3');
-    const f_dc_0 = splatData.getProp('f_dc_0');
-    const f_dc_1 = splatData.getProp('f_dc_1');
-    const f_dc_2 = splatData.getProp('f_dc_2');
-    const scale_0 = splatData.getProp('scale_0');
-    const scale_1 = splatData.getProp('scale_1');
-    const scale_2 = splatData.getProp('scale_2');
-
-    // count number of non-deleted splats
-    let numSplats = 0;
-    for (let i = 0; i < splatData.numSplats; ++i) {
-        numSplats += opacity[i] !== deletedOpacity ? 1 : 0;
-    }
-
-    // position.xyz: float32, scale.xyz: float32, color.rgba: uint8, quaternion.ijkl: uint8
-    const result = new Uint8Array(numSplats * 32);
-    const dataView = new DataView(result.buffer);
-
-    // we must undo the transform we apply at load time to output data
-    const mat = new Mat4();
-    mat.setScale(-1, -1, 1);
-    mat.invert();
-    mat.mul2(mat, modelMat);
-
-    const quat = new Quat();
-    quat.setFromMat4(mat);
-
-    const v = new Vec3();
-    const q = new Quat();
-
-    const scale = new Vec3();
-    mat.getScale(scale);
-
-    const clamp = (x: number) => Math.max(0, Math.min(255, x));
-    let idx = 0;
-
-    for (let i = 0; i < splatData.numSplats; ++i) {
-        if (opacity[i] === deletedOpacity) continue;
-
-        const off = idx++ * 32;
-
-        v.set(x[i], y[i], z[i]);
-        mat.transformPoint(v, v);
-        dataView.setFloat32(off + 0, v.x, true);
-        dataView.setFloat32(off + 4, v.y, true);
-        dataView.setFloat32(off + 8, v.z, true);
-
-        dataView.setFloat32(off + 12, Math.exp(scale_0[i]) * scale.x, true);
-        dataView.setFloat32(off + 16, Math.exp(scale_1[i]) * scale.x, true);
-        dataView.setFloat32(off + 20, Math.exp(scale_2[i]) * scale.x, true);
-
-        const SH_C0 = 0.28209479177387814;
-        dataView.setUint8(off + 24, clamp((0.5 + SH_C0 * f_dc_0[i]) * 255));
-        dataView.setUint8(off + 25, clamp((0.5 + SH_C0 * f_dc_1[i]) * 255));
-        dataView.setUint8(off + 26, clamp((0.5 + SH_C0 * f_dc_2[i]) * 255));
-        dataView.setUint8(off + 27, clamp((1 / (1 + Math.exp(-opacity[i]))) * 255));
-
-        q.set(rot_1[i], rot_2[i], rot_3[i], rot_0[i]).mul2(quat, q).normalize();
-        dataView.setUint8(off + 28, clamp(q.w * 128 + 128));
-        dataView.setUint8(off + 29, clamp(q.x * 128 + 128));
-        dataView.setUint8(off + 30, clamp(q.y * 128 + 128));
-        dataView.setUint8(off + 31, clamp(q.z * 128 + 128));
-    }
-
-    return result;
-};
 
 interface SplatDef {
     element: Splat,
@@ -330,6 +58,10 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
     const mat = new Mat4();
     const aabb = new BoundingBox();
     const splatDefs: SplatDef[] = [];
+
+    scene.on('error', (err: any) => {
+        editorUI.showError(err);
+    });
 
     // make a copy of the opacity channel because that's what we'll be modifying
     scene.on('element:added', (element: Element) => {
@@ -754,25 +486,39 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
         scene.assetLoader.loadAllData = value;
     });
 
-    const removeExtension = (filename: string) => {
-        return filename.substring(0, filename.length - path.getExtension(filename).length);
-    };
-
     events.on('export', (format: string) => {
-        switch (format) {
-            case 'ply':
-                splatDefs.forEach((splatDef) => {
-                    const data = convertPly(splatDef.data, splatDef.element.entity.getWorldTransform());
-                    download(removeExtension(splatDef.element.asset.file.filename) + '.cleaned.ply', data);
-                });
-                break;
-            case 'splat':
-                splatDefs.forEach((splatDef) => {
-                    const data = convertSplat(splatDef.data, splatDef.element.entity.getWorldTransform());
-                    download(removeExtension(splatDef.element.asset.file.filename) + '.cleaned.splat', data);
-                });
-                break;
-        }
+        const removeExtension = (filename: string) => {
+            return filename.substring(0, filename.length - path.getExtension(filename).length);
+        };
+
+        startSpinner();
+        editorUI.showInfo('Exporting...');
+
+        // setTimeout so spinner has a chance to activate
+        setTimeout(() => {
+            splatDefs.forEach((splatDef) => {
+                let data;
+                let extension;
+                switch (format) {
+                    case 'ply':
+                        data = convertPly(splatDef.data, splatDef.element.entity.getWorldTransform());
+                        extension = '.cleaned.ply';
+                        break;
+                    case 'ply-compressed':
+                        data = convertPlyCompressed(splatDef.data, splatDef.element.entity.getWorldTransform());
+                        extension = '.compressed.ply';
+                        break;
+                    case 'splat':
+                        data = convertSplat(splatDef.data, splatDef.element.entity.getWorldTransform());
+                        extension = '.splat';
+                        break;
+                }
+                download(`${removeExtension(splatDef.element.asset.file.filename)}${extension}`, data);
+            });
+
+            stopSpinner();
+            editorUI.showInfo(null);
+        });
     });
 
     events.on('undo', () => {

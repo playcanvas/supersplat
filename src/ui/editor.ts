@@ -1,7 +1,7 @@
-import { Container } from 'pcui';
-import { version as supersplatVersion } from '../package.json';
-import logo from './ui/playcanvas-logo.png';
-import { ControlPanel } from './ui/control-panel';
+import { Container, InfoBox } from 'pcui';
+import { version as supersplatVersion } from '../../package.json';
+import { ControlPanel } from './control-panel';
+import logo from './playcanvas-logo.png';
 
 class EditorUI {
     appContainer: Container;
@@ -9,6 +9,8 @@ class EditorUI {
     controlPanel: ControlPanel;
     canvasContainer: Container;
     canvas: HTMLCanvasElement;
+    errorPopup: InfoBox;
+    infoPopup: InfoBox;
 
     constructor() {
         // favicon
@@ -35,9 +37,28 @@ class EditorUI {
         const canvas = document.createElement('canvas');
         canvas.id = 'canvas';
 
+        canvasContainer.dom.appendChild(canvas);
+
+        // error box 
+        const errorPopup = new InfoBox({
+            class: 'error-popup',
+            icon: 'E218',
+            title: 'Error',
+            hidden: true
+        });
+
+        // info box
+        const infoPopup = new InfoBox({
+            class: 'info-popup',
+            icon: 'E400',
+            title: 'Info',
+            hidden: true
+        });
+
         appContainer.append(leftContainer);
         appContainer.append(canvasContainer);
-        canvasContainer.dom.appendChild(canvas);
+        appContainer.append(errorPopup);
+        appContainer.append(infoPopup);
 
         // title
         const title = new Container({
@@ -76,6 +97,26 @@ class EditorUI {
         this.controlPanel = controlPanel;
         this.canvasContainer = canvasContainer;
         this.canvas = canvas;
+        this.errorPopup = errorPopup;
+        this.infoPopup = infoPopup;
+    }
+
+    showError(err: string) {
+        if (err) {
+            this.errorPopup.text = err;
+            this.errorPopup.hidden = false;
+        } else {
+            this.errorPopup.hidden = true;
+        }
+    }
+
+    showInfo(info: string) {
+        if (info) {
+            this.infoPopup.text = info;
+            this.infoPopup.hidden = false;
+        } else {
+            this.infoPopup.hidden = true;
+        }
     }
 }
 

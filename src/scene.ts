@@ -229,10 +229,17 @@ class Scene extends EventHandler {
     }
 
     async loadModel(url: string, filename: string) {
-        const model = await this.assetLoader.loadModel({ url, filename });
-        this.add(model);
-        this.updateBound();
-        this.camera.focus();
+        // clear error
+        this.fire('error', null);
+
+        try {
+            const model = await this.assetLoader.loadModel({ url, filename });
+            this.add(model);
+            this.updateBound();
+            this.camera.focus();
+        } catch (err) {
+            this.fire('error', err);
+        }
     }
 
     clear() {

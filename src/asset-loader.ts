@@ -4,7 +4,7 @@ import { Model } from './model';
 import { Splat } from './splat';
 import { Env } from './env';
 
-import { startSpinner, stopSpinner } from './spinner';
+import { startSpinner, stopSpinner } from './ui/spinner';
 
 interface ModelLoadRequest {
     url?: string;
@@ -67,15 +67,15 @@ class AssetLoader {
                 } as any
             );
             containerAsset.on('load', () => {
+                stopSpinner();
                 if (isPly) {
                     resolve(new Splat(containerAsset));
                 } else {
                     resolve(new Model(containerAsset, gemMaterials));
                 }
-
-                stopSpinner();
             });
             containerAsset.on('error', (err: string) => {
+                stopSpinner();
                 reject(err);
             });
 

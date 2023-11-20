@@ -114,7 +114,7 @@ const calcMinMax = (data: Float32Array, indices?: number[]) => {
             max = Math.max(max, v);
         }
     }
-    return { min, size: max - min };
+    return { min, max };
 };
 
 const quat = new Quat();
@@ -122,6 +122,7 @@ const scale = new Vec3();
 const v = new Vec3();
 const q = new Quat();
 
+// process and compress a chunk of 256 splats
 class Chunk {
     static members = [
         'x', 'y', 'z', 'scale_0', 'scale_1', 'scale_2', 'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity', 'rot_0', 'rot_1', 'rot_2', 'rot_3'
@@ -240,12 +241,28 @@ class Chunk {
                    packUnorm(w, 8);
         };
 
+        // pack quaternion into 2,10,10,10
         const packRot = (x: number, y: number, z: number, w: number) => {
             q.set(x, y, z, w).normalize();
-            if (q.w < 0) {
-                q.conjugate();
+            const a = [q.x, q.y, q.z, q.w];
+            const largest = a.reduce((curr, v, i) => Math.abs(v) > Math.abs(a[curr]) ? i : curr, 0);
+
+            if (a[largest] < 0) {
+                a[0] = -a[0];
+                a[1] = -a[1];
+                a[2] = -a[2];
+                a[3] = -a[3];
             }
-            return pack111011(q.x * 0.5 + 0.5, q.y * 0.5 + 0.5, q.z * 0.5 + 0.5);
+
+            const norm = Math.sqrt(2) * 0.5;
+            let result = largest;
+            for (let i = 0; i < 4; ++i) {
+                if (i !== largest) {
+                    result = (result << 10) | packUnorm(a[i] * norm + 0.5, 10);
+                }
+            }
+
+            return result;
         };
 
         const packColor = (r: number, g: number, b: number, a: number) => {
@@ -261,17 +278,17 @@ class Chunk {
         // pack
         for (let i = 0; i < this.size; ++i) {
             this.position[i] = pack111011(
-                (x[i] - px.min) / px.size,
-                (y[i] - py.min) / py.size,
-                (z[i] - pz.min) / pz.size
+                (x[i] - px.min) / (px.max - px.min),
+                (y[i] - py.min) / (py.max - py.min),
+                (z[i] - pz.min) / (pz.max - pz.min)
             );
 
             this.rotation[i] = packRot(rot_0[i], rot_1[i], rot_2[i], rot_3[i]);
 
             this.scale[i] = pack111011(
-                (scale_0[i] - sx.min) / sx.size,
-                (scale_1[i] - sy.min) / sy.size,
-                (scale_2[i] - sz.min) / sz.size
+                (scale_0[i] - sx.min) / (sx.max - sx.min),
+                (scale_1[i] - sy.min) / (sy.max - sy.min),
+                (scale_2[i] - sz.min) / (sz.max - sz.min)
             );
 
             this.color[i] = packColor(f_dc_0[i], f_dc_1[i], f_dc_2[i], opacity[i]);
@@ -307,9 +324,9 @@ const convertPlyCompressed = (splatData: SplatData, modelMat: Mat4) => {
 
         // generate morton codes
         const morton = indices.map((i) => {
-            const ix = Math.floor(1024 * (x[i] - bx.min) / bx.size);
-            const iy = Math.floor(1024 * (y[i] - by.min) / by.size);
-            const iz = Math.floor(1024 * (z[i] - bz.min) / bz.size);
+            const ix = Math.floor(1024 * (x[i] - bx.min) / (bx.max - bx.min));
+            const iy = Math.floor(1024 * (y[i] - by.min) / (by.max - by.min));
+            const iz = Math.floor(1024 * (z[i] - bz.min) / (bz.max - bz.min));
             return encodeMorton3(ix, iy, iz);
         });
 
@@ -334,8 +351,8 @@ const convertPlyCompressed = (splatData: SplatData, modelMat: Mat4) => {
     const numSplats = indices.length;
     const numChunks = Math.ceil(numSplats / 256);
 
-    const chunkProps = ['min_x', 'min_y', 'min_z', 'size_x', 'size_y', 'size_z', 'scale_min_x', 'scale_min_y', 'scale_min_z', 'scale_size_x', 'scale_size_y', 'scale_size_z'];
-    const vertexProps = ['compressed_position', 'compressed_rotation', 'compressed_scale', 'compressed_color'];
+    const chunkProps = ['min_x', 'min_y', 'min_z', 'max_x', 'max_y', 'max_z', 'min_scale_x', 'min_scale_y', 'min_scale_z', 'max_scale_x', 'max_scale_y', 'max_scale_z'];
+    const vertexProps = ['packed_position', 'packed_rotation', 'packed_scale', 'packed_color'];
     const headerText = [
         [
             `ply`,
@@ -360,7 +377,7 @@ const convertPlyCompressed = (splatData: SplatData, modelMat: Mat4) => {
     result.set(header);
 
     const chunkOffset = header.byteLength;
-    const vertexOffset = chunkOffset + numChunks * 12 * 4 ;
+    const vertexOffset = chunkOffset + numChunks * 12 * 4;
 
     const chunk = new Chunk();
 
@@ -377,16 +394,16 @@ const convertPlyCompressed = (splatData: SplatData, modelMat: Mat4) => {
         dataView.setFloat32(chunkOffset + i * 12 * 4 + 0, result.px.min, true);
         dataView.setFloat32(chunkOffset + i * 12 * 4 + 4, result.py.min, true);
         dataView.setFloat32(chunkOffset + i * 12 * 4 + 8, result.pz.min, true);
-        dataView.setFloat32(chunkOffset + i * 12 * 4 + 12, result.px.size, true);
-        dataView.setFloat32(chunkOffset + i * 12 * 4 + 16, result.py.size, true);
-        dataView.setFloat32(chunkOffset + i * 12 * 4 + 20, result.pz.size, true);
+        dataView.setFloat32(chunkOffset + i * 12 * 4 + 12, result.px.max, true);
+        dataView.setFloat32(chunkOffset + i * 12 * 4 + 16, result.py.max, true);
+        dataView.setFloat32(chunkOffset + i * 12 * 4 + 20, result.pz.max, true);
 
         dataView.setFloat32(chunkOffset + i * 12 * 4 + 24, result.sx.min, true);
         dataView.setFloat32(chunkOffset + i * 12 * 4 + 28, result.sy.min, true);
         dataView.setFloat32(chunkOffset + i * 12 * 4 + 32, result.sz.min, true);
-        dataView.setFloat32(chunkOffset + i * 12 * 4 + 36, result.sx.size, true);
-        dataView.setFloat32(chunkOffset + i * 12 * 4 + 40, result.sy.size, true);
-        dataView.setFloat32(chunkOffset + i * 12 * 4 + 44, result.sz.size, true);
+        dataView.setFloat32(chunkOffset + i * 12 * 4 + 36, result.sx.max, true);
+        dataView.setFloat32(chunkOffset + i * 12 * 4 + 40, result.sy.max, true);
+        dataView.setFloat32(chunkOffset + i * 12 * 4 + 44, result.sz.max, true);
 
         // write splat data
         let offset = vertexOffset + i * 256 * 4 * 4;

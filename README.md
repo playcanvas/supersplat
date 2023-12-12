@@ -33,15 +33,10 @@ This editor is in beta and so currently has a number of limitations:
 
 ## Local Development
 
-The engine's splat rendering code is in a state of flux so we currently reference it by git submodule.
-
 The steps required to clone the repo and run a local development server are as follows:
 ```
 git clone https://github.com/playcanvas/super-splat.git
 cd super-splat
-git submodule update --init
-npm i --prefix submodules/engine
-npm run build --prefix submodules/engine
 npm i
 npm run develop
 ```

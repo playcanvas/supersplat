@@ -1,3 +1,0 @@
-[submodule "submodules/engine"]
-	path = submodules/engine
-	url = https://github.com/playcanvas/engine.git

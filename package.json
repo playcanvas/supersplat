@@ -67,6 +67,7 @@
         "cross-env": "^7.0.3",
         "eslint": "^8.43.0",
         "jest": "^29.5.0",
+        "playcanvas": "^1.67.3",
         "rollup": "^3.25.1",
         "rollup-plugin-sass": "^1.12.21",
         "rollup-plugin-visualizer": "^5.9.2",

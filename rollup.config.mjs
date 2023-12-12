@@ -28,7 +28,7 @@ const ENGINE_PATH = path.resolve(ENGINE_DIR, 'build', ENGINE_NAME);
 const aliasEntries = {
     playcanvas: ENGINE_PATH,
     'playcanvas-extras': EXTRAS_DIR,
-    'pcui': PCUI_DIR
+    pcui: PCUI_DIR
 };
 
 const tsCompilerOptions = {
@@ -36,7 +36,7 @@ const tsCompilerOptions = {
     paths: {
         playcanvas: [ENGINE_DIR],
         'playcanvas-extras': [EXTRAS_DIR],
-        'pcui': [PCUI_DIR]
+        pcui: [PCUI_DIR]
     }
 };
 

@@ -117,6 +117,10 @@ const calcMinMax = (data: Float32Array, indices?: number[]) => {
     return { min, max };
 };
 
+const normalize = (x: number, min: number, max: number) => {
+    return (max - min < 0.00001) ? 0 : (x - min) / (max - min);
+};
+
 const quat = new Quat();
 const scale = new Vec3();
 const v = new Vec3();
@@ -278,17 +282,17 @@ class Chunk {
         // pack
         for (let i = 0; i < this.size; ++i) {
             this.position[i] = pack111011(
-                (x[i] - px.min) / (px.max - px.min),
-                (y[i] - py.min) / (py.max - py.min),
-                (z[i] - pz.min) / (pz.max - pz.min)
+                normalize(x[i], px.min, px.max),
+                normalize(y[i], py.min, py.max),
+                normalize(z[i], pz.min, pz.max)
             );
 
             this.rotation[i] = packRot(rot_0[i], rot_1[i], rot_2[i], rot_3[i]);
 
             this.scale[i] = pack111011(
-                (scale_0[i] - sx.min) / (sx.max - sx.min),
-                (scale_1[i] - sy.min) / (sy.max - sy.min),
-                (scale_2[i] - sz.min) / (sz.max - sz.min)
+                normalize(scale_0[i], sx.min, sx.max),
+                normalize(scale_1[i], sy.min, sy.max),
+                normalize(scale_2[i], sz.min, sz.max)
             );
 
             this.color[i] = packColor(f_dc_0[i], f_dc_1[i], f_dc_2[i], opacity[i]);

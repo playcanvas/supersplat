@@ -61,9 +61,13 @@ const captureImages = async () => {
     document.body.append(cancel);
 
     const res = document.createElement('div');
-    res.textContent = `${video.videoWidth} x ${video.videoHeight}`;
     res.setAttribute('style', 'position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); color: white; font-size: 24px; text-shadow: 0 0 10px black; font-family: monospace;');
     document.body.append(res);
+
+    // video dimensions are only valid after play event
+    video.addEventListener('play', () => {
+        res.textContent = `${video.videoWidth} x ${video.videoHeight}`;
+    });
 
     // handle user interaction
     const result = await new Promise((resolve) => {

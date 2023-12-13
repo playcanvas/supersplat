@@ -16,6 +16,7 @@ import { deletedOpacity, DeleteSelectionEditOp, ResetEditOp } from './edit-ops';
 import { SplatDebug } from './splat-debug';
 import { convertPly, convertPlyCompressed, convertSplat } from './splat-convert';
 import { startSpinner, stopSpinner } from './ui/spinner';
+import { captureImages } from './capture';
 
 // download the data uri
 const download = (filename: string, data: ArrayBuffer) => {
@@ -200,6 +201,22 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
             }
         }
     };
+
+    events.on('capture', () => {
+        // hide editor UI before kicking off user capture
+        editorUI.appContainer.dom.style.visibility = 'hidden';
+
+        // launch capture
+        captureImages().then((images: string[]) => {
+            // restore editor UI
+            editorUI.appContainer.dom.style.visibility = '';
+
+            // process images
+            if (images.length) {
+
+            }
+        });
+    });
 
     events.on('focusCamera', () => {
         const splatDef = splatDefs[0];

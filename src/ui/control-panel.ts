@@ -279,6 +279,19 @@ class ControlPanel extends Container {
 
         super(args);
 
+        // capture panel
+        const capturePanel = new Panel({
+            class: 'control-panel',
+            headerText: 'CAPTURE'
+        });
+
+        const captureButton = new Button({
+            class: 'control-element',
+            text: 'Capture'
+        });
+
+        capturePanel.append(captureButton);
+
         // camera panel
         const cameraPanel = new Panel({
             class: 'control-panel',
@@ -702,6 +715,7 @@ class ControlPanel extends Container {
         keyboardPanel.append(shortcutsLabel);
 
         // append
+        this.append(capturePanel);
         this.append(cameraPanel);
         this.append(selectionPanel);
         this.append(modifyPanel);
@@ -808,6 +822,10 @@ class ControlPanel extends Container {
         setButton.on('click', () => performSelect('set'));
         addButton.on('click', () => performSelect('add'));
         removeButton.on('click', () => performSelect('remove'));
+
+        captureButton.on('click', () => {
+            this.events.fire('capture');
+        });
 
         focusButton.on('click', () => {
             this.events.fire('focusCamera');

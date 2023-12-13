@@ -17,6 +17,7 @@ import { SplatDebug } from './splat-debug';
 import { convertPly, convertPlyCompressed, convertSplat } from './splat-convert';
 import { startSpinner, stopSpinner } from './ui/spinner';
 import { captureImages } from './capture';
+import * as JSZip from 'jszip/dist/jszip';
 
 // download the data uri
 const download = (filename: string, data: ArrayBuffer) => {
@@ -213,7 +214,14 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
 
             // process images
             if (images.length) {
-
+                const zip = new window.JSZip() || new JSZip();
+                images.forEach((image, index) => {
+                    zip.file(`image_${index}.png`, image.slice(21), { base64: true });
+                });
+                zip.generateAsync({ type: "uint8array" }).then((data: Uint8Array) => {
+                    // download the capture zip
+                    download('capture.zip', data);
+                });
             }
         });
     });

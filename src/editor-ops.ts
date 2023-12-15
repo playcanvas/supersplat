@@ -17,6 +17,7 @@ import { SplatDebug } from './splat-debug';
 import { convertPly, convertPlyCompressed, convertSplat } from './splat-convert';
 import { startSpinner, stopSpinner } from './ui/spinner';
 import { captureImages } from './capture';
+import { reviewCapture } from './capture-review';
 import * as JSZip from 'jszip/dist/jszip';
 
 // download the data uri
@@ -203,27 +204,35 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
         }
     };
 
-    events.on('capture', () => {
+    events.on('capture', async () => {
         // hide editor UI before kicking off user capture
         editorUI.appContainer.dom.style.visibility = 'hidden';
 
         // launch capture
-        captureImages().then((images: string[]) => {
-            // restore editor UI
-            editorUI.appContainer.dom.style.visibility = '';
+        const images: HTMLCanvasElement[] = await captureImages();
 
-            // process images
-            if (images.length) {
+        // process images
+        if (images.length) {
+            if (await reviewCapture(images)) {
+
+                // let index = 0;
+                // const next = () => {
+                //     if (index < )
+                // };
+
                 const zip = new window.JSZip() || new JSZip();
                 images.forEach((image, index) => {
-                    zip.file(`image_${index}.png`, image.slice(21), { base64: true });
+                    zip.file(`image_${index}.png`, image.toBlob('image/png'), { base64: true });
                 });
                 zip.generateAsync({ type: "uint8array" }).then((data: Uint8Array) => {
                     // download the capture zip
                     download('capture.zip', data);
                 });
             }
-        });
+        }
+
+        // restore editor UI
+        // editorUI.appContainer.dom.style.visibility = '';
     });
 
     events.on('focusCamera', () => {

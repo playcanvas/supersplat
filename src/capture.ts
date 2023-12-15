@@ -1,3 +1,4 @@
+import closeImage from './svg/ar-close.svg';
 
 // request video feed
 const startVideoFeed = async (video: HTMLVideoElement) => {
@@ -35,7 +36,8 @@ const captureImage = (video: HTMLVideoElement) => {
     const context = canvas.getContext('2d');
     console.log(`capturing image ${canvas.width}x${canvas.height}`);
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL('image/png');
+    return canvas;
+    // return canvas.toDataURL('image/png');
 };
 
 const captureImages = async () => {
@@ -47,51 +49,54 @@ const captureImages = async () => {
 
     const stream = await startVideoFeed(video);
 
-    const buttonStyle = 'position: absolute; bottom: 10px; width: 40px; height: 40px; font-size: 24px; background-color: rgba(0, 0, 0, 0.25); text-align: center; line-height: 40px; vertical-align: middle;';
-
-    // create UI
-    const done = document.createElement('div');
-    done.textContent = '✅';
-    done.setAttribute('style', `${buttonStyle} left: 10px;`);
-    document.body.append(done);
-
-    const cancel = document.createElement('div');
-    cancel.textContent = '❌';
-    cancel.setAttribute('style', `${buttonStyle} right: 10px;`);
-    document.body.append(cancel);
-
     const res = document.createElement('div');
     res.setAttribute('style', 'position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); color: white; font-size: 24px; text-shadow: 0 0 10px black; font-family: monospace;');
     document.body.append(res);
+
+    const close = document.createElement('img');
+    close.src = closeImage.src;
+    close.setAttribute('style', 'position: absolute; bottom: 20px; left: 20px; width: 40px; height: 40px; color: white;');
+    document.body.appendChild(close);
 
     // video dimensions are only valid after play event
     video.addEventListener('play', () => {
         res.textContent = `${video.videoWidth} x ${video.videoHeight}`;
     });
 
+    // push capture state
+    window.history.pushState('capture', undefined, '#Capture');
+
     // handle user interaction
-    const result = await new Promise((resolve) => {
-        const images: string[] = [];
+    const result = await new Promise<HTMLCanvasElement[]>((resolve) => {
+        const images: HTMLCanvasElement[] = [];
 
         video.addEventListener('pointerdown', (event) => {
-            navigator?.vibrate(10);
-            images.push(captureImage(video));
+            if (event.pointerType === 'mouse') {
+                navigator?.vibrate(200);
+                images.push(captureImage(video));
+            }
         });
 
-        done.addEventListener('click', () => {
+        video.addEventListener('pointerup', (event) => {
+            if (event.pointerType !== 'mouse') {
+                navigator?.vibrate(200);
+                images.push(captureImage(video));
+            }
+        });
+
+        close.addEventListener('click', () => {
+            history.back();
+        });
+
+        window.addEventListener('popstate', (event) => {
             resolve(images);
-        });
-
-        cancel.addEventListener('click', () => {
-            resolve([]);
-        });
+        }, false);
     });
 
     // cleanup
     video.srcObject.getVideoTracks().forEach((track) => track.stop());
     document.body.removeChild(video);
-    document.body.removeChild(done);
-    document.body.removeChild(cancel);
+    document.body.removeChild(close);
     document.body.removeChild(res);
 
     return result;

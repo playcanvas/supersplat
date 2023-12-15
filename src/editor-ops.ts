@@ -216,10 +216,15 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
         const uploadImagePack = async (data: Uint8Array) => {
             // get signed url
             const urlResponse = await fetch('https://dev.playcanvas.com/api/projects/upload/signed-url');
+            if (!urlResponse.ok) {
+                console.log(`failed to get signed url (${urlResponse.statusText})`);
+                return;
+            }
+
             const json = await urlResponse.json();
 
             console.log(JSON.stringify(json, null, 2));
-    
+
             // upload the file to S3
             const uploadResponse = await fetch(json.signedUrl, {
                 method: 'PUT',
@@ -230,7 +235,7 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
             });
 
             if (!uploadResponse.ok) {
-                console.log(`upload failed (${uploadResponse.statusText})`);
+                console.log(`failed to upload file (${uploadResponse.statusText})`);
                 return;
             }
 
@@ -246,7 +251,7 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
             });
 
             if (!jobResponse.ok) {
-                console.log(`job failed (${jobResponse.statusText})`);
+                console.log(`failed to start job (${jobResponse.statusText})`);
                 return;
             }
 
@@ -265,7 +270,7 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
 
             for (let i = 0; i < images.length; ++i) {
                 const blob = await toBlob(images[i]);
-                zip.file(`images/image_${i}.png`, blob);
+                zip.file(`project/input/image_${String(i).padStart(4, '0')}.png`, blob);
             }
 
             const data: Uint8Array = await zip.generateAsync({ type: "uint8array" });

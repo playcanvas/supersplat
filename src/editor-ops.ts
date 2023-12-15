@@ -204,48 +204,55 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
         }
     };
 
-    const toBlob = (canvas: HTMLCanvasElement) => {
-        return new Promise<Blob>((resolve) => {
-            canvas.toBlob((blob) => {
-                resolve(blob);
-            }, 'image/png');
-        });
-    };
-
-    const submitImagePack = async (data: Uint8Array) => {
-        // get signed url
-        fetch('https://dev.playcanvas.com/api/projects/upload/signed-url')
-            .then(response => response.json())
-            .then((json) => {
-                console.log(JSON.stringify(json, null, 2));
-
-                // upload the file to S3
-                fetch(json.signedUrl, {
-                    method: 'POST',
-                    body: data.buffer,
-                    headers: {
-                        'Content-Type': 'application/octet-stream'
-                    }
-                })
-                .then((response) => {
-                    // kick off processing
-                    fetch('https://dev.playcanvas.com/api/splats', {
-                        method: 'POST',
-                        body: JSON.stringify({
-                            s3Key: json.s3Key
-                        }),
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    })
-                    .then((response) => {
-                        console.log('done');
-                    });
-                });
-            });
-    };
-
     events.on('capture', async () => {
+        const toBlob = (canvas: HTMLCanvasElement) => {
+            return new Promise<Blob>((resolve) => {
+                canvas.toBlob((blob) => {
+                    resolve(blob);
+                }, 'image/png');
+            });
+        };
+    
+        const uploadImagePack = async (data: Uint8Array) => {
+            // get signed url
+            const urlResponse = await fetch('https://dev.playcanvas.com/api/projects/upload/signed-url');
+            const json = await urlResponse.json();
+
+            console.log(JSON.stringify(json, null, 2));
+    
+            // upload the file to S3
+            const uploadResponse = await fetch(json.signedUrl, {
+                method: 'PUT',
+                body: data.buffer,
+                headers: {
+                    'Content-Type': 'binary/octet-stream'
+                }
+            });
+
+            if (!uploadResponse.ok) {
+                console.log(`upload failed (${uploadResponse.statusText})`);
+                return;
+            }
+
+            // kick off processing
+            const jobResponse = await fetch('https://dev.playcanvas.com/api/splats', {
+                method: 'POST',
+                body: JSON.stringify({
+                    s3Key: json.s3Key
+                }),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!jobResponse.ok) {
+                console.log(`job failed (${jobResponse.statusText})`);
+                return;
+            }
+
+            console.log('done');
+        };
+
         // hide editor UI before kicking off user capture
         editorUI.appContainer.dom.style.visibility = 'hidden';
 
@@ -258,16 +265,16 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
 
             for (let i = 0; i < images.length; ++i) {
                 const blob = await toBlob(images[i]);
-                zip.file(`image_${i}.png`, blob);
+                zip.file(`images/image_${i}.png`, blob);
             }
 
-            zip.generateAsync({ type: "uint8array" }).then((data: Uint8Array) => {
-                // download the capture zip
-                download('capture.zip', data);
+            const data: Uint8Array = await zip.generateAsync({ type: "uint8array" });
 
-                // submit image pack
-                submitImagePack(data);
-            });
+            // (TEMP) download the capture zip
+            download('capture.zip', data);
+
+            // submit image pack
+            await uploadImagePack(data);
         }
 
         // restore editor UI

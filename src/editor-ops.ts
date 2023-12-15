@@ -204,6 +204,47 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
         }
     };
 
+    const toBlob = (canvas: HTMLCanvasElement) => {
+        return new Promise<Blob>((resolve) => {
+            canvas.toBlob((blob) => {
+                resolve(blob);
+            }, 'image/png');
+        });
+    };
+
+    const submitImagePack = async (data: Uint8Array) => {
+        // get signed url
+        fetch('https://dev.playcanvas.com/api/projects/upload/signed-url')
+            .then(response => response.json())
+            .then((json) => {
+                console.log(JSON.stringify(json, null, 2));
+
+                // upload the file to S3
+                fetch(json.signedUrl, {
+                    method: 'POST',
+                    body: data.buffer,
+                    headers: {
+                        'Content-Type': 'application/octet-stream'
+                    }
+                })
+                .then((response) => {
+                    // kick off processing
+                    fetch('https://dev.playcanvas.com/api/splats', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            s3Key: json.s3Key
+                        }),
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then((response) => {
+                        console.log('done');
+                    });
+                });
+            });
+    };
+
     events.on('capture', async () => {
         // hide editor UI before kicking off user capture
         editorUI.appContainer.dom.style.visibility = 'hidden';
@@ -212,27 +253,25 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
         const images: HTMLCanvasElement[] = await captureImages();
 
         // process images
-        if (images.length) {
-            if (await reviewCapture(images)) {
+        if (images.length && await reviewCapture(images)) {
+            const zip = new window.JSZip() || new JSZip();
 
-                // let index = 0;
-                // const next = () => {
-                //     if (index < )
-                // };
-
-                const zip = new window.JSZip() || new JSZip();
-                images.forEach((image, index) => {
-                    zip.file(`image_${index}.png`, image.toBlob('image/png'), { base64: true });
-                });
-                zip.generateAsync({ type: "uint8array" }).then((data: Uint8Array) => {
-                    // download the capture zip
-                    download('capture.zip', data);
-                });
+            for (let i = 0; i < images.length; ++i) {
+                const blob = await toBlob(images[i]);
+                zip.file(`image_${i}.png`, blob);
             }
+
+            zip.generateAsync({ type: "uint8array" }).then((data: Uint8Array) => {
+                // download the capture zip
+                download('capture.zip', data);
+
+                // submit image pack
+                submitImagePack(data);
+            });
         }
 
         // restore editor UI
-        // editorUI.appContainer.dom.style.visibility = '';
+        editorUI.appContainer.dom.style.visibility = '';
     });
 
     events.on('focusCamera', () => {

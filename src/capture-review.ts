@@ -25,9 +25,30 @@ const reviewCapture = async (images: HTMLCanvasElement[]) => {
         parent.appendChild(createImageDom(image, index));
     });
 
+    const upload = document.createElement('button');
+    upload.textContent = 'Upload';
+
+    const cancel = document.createElement('button');
+    cancel.textContent = 'Cancel';
+
+    parent.appendChild(upload);
+    parent.appendChild(cancel);
+
     document.body.append(parent);
 
-    return false;
+    const result = await new Promise<boolean>((resolve) => {
+        upload.addEventListener('click', () => {
+            resolve(true);
+        });
+
+        cancel.addEventListener('click', () => {
+            resolve(false);
+        });
+    });
+
+    document.body.removeChild(parent);
+
+    return result;
 };
 
 export {

@@ -41,7 +41,6 @@ const download = (filename: string, data: ArrayBuffer) => {
     window.URL.revokeObjectURL(url);
 };
 
-
 interface SplatDef {
     element: Splat,
     data: SplatData,

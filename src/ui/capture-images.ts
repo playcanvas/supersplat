@@ -1,5 +1,7 @@
 import closeImage from '../svg/ar-close.svg';
 import { startSpinner, stopSpinner } from './spinner';
+import { reviewCapture } from './capture-review';
+import * as zip from "@zip.js/zip.js";
 
 // request video feed
 const startVideoFeed = async (video: HTMLVideoElement) => {
@@ -54,9 +56,9 @@ const captureImages = async () => {
 
     stopSpinner();
 
-    const res = document.createElement('div');
-    res.setAttribute('style', 'position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); color: white; font-size: 24px; text-shadow: 0 0 10px black; font-family: monospace;');
-    document.body.append(res);
+    const infoText = document.createElement('div');
+    infoText.classList.add('capture-info-text');
+    document.body.append(infoText);
 
     const close = document.createElement('img');
     close.src = closeImage.src;
@@ -64,8 +66,10 @@ const captureImages = async () => {
     document.body.appendChild(close);
 
     // video dimensions are only valid after play event
+    let videoWidth, videoHeight;
     video.addEventListener('play', () => {
-        res.textContent = `${video.videoWidth} x ${video.videoHeight}`;
+        videoWidth = video.videoWidth;
+        videoHeight = video.videoHeight;
     });
 
     // push capture state
@@ -75,10 +79,17 @@ const captureImages = async () => {
     const result = await new Promise<HTMLCanvasElement[]>((resolve) => {
         const images: HTMLCanvasElement[] = [];
 
+        const updateInfoText = () => {
+            infoText.textContent = `Capturing image ${images.length}`;
+        };
+
+        updateInfoText();
+
         video.addEventListener('pointerdown', (event) => {
             if (event.pointerType === 'mouse') {
                 navigator?.vibrate(200);
                 images.push(captureImage(video));
+                updateInfoText();
             }
         });
 
@@ -86,6 +97,7 @@ const captureImages = async () => {
             if (event.pointerType !== 'mouse') {
                 navigator?.vibrate(200);
                 images.push(captureImage(video));
+                updateInfoText();
             }
         });
 
@@ -102,11 +114,131 @@ const captureImages = async () => {
     (video.srcObject as MediaStream).getVideoTracks().forEach((track) => track.stop());
     document.body.removeChild(video);
     document.body.removeChild(close);
-    document.body.removeChild(res);
+    document.body.removeChild(infoText);
 
     return result;
 };
 
+const captureReviewUploadImages = async () => {
+    const toBlob = (canvas: HTMLCanvasElement) => {
+        return new Promise<Blob>((resolve) => {
+            canvas.toBlob((blob) => {
+                resolve(blob);
+            }, 'image/png');
+        });
+    };
+
+    const uploadImagePack = async (data: Blob) => {
+        const origin = location.origin;
+
+        // get signed url
+        const urlResponse = await fetch(`${origin}/api/projects/upload/signed-url`);
+        if (!urlResponse.ok) {
+            console.log(`failed to get signed url (${urlResponse.statusText})`);
+            return;
+        }
+
+        const json = await urlResponse.json();
+
+        console.log(JSON.stringify(json, null, 2));
+
+        // upload the file to S3
+        const uploadResponse = await fetch(json.signedUrl, {
+            method: 'PUT',
+            body: data,
+            headers: {
+                'Content-Type': 'binary/octet-stream'
+            }
+        });
+
+        if (!uploadResponse.ok) {
+            console.log(`failed to upload file (${uploadResponse.statusText})`);
+            return;
+        }
+
+        // kick off processing
+        const jobResponse = await fetch(`${origin}/api/splats`, {
+            method: 'POST',
+            body: JSON.stringify({
+                s3Key: json.s3Key
+            }),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!jobResponse.ok) {
+            console.log(`failed to start job (${jobResponse.statusText})`);
+            return;
+        }
+
+        console.log('done');
+    };
+
+    // download the data uri
+    const download = (filename: string, blob: Blob) => {
+        const url = window.URL.createObjectURL(blob);
+
+        const lnk = document.createElement('a');
+        lnk.download = filename;
+        lnk.href = url;
+
+        // create a "fake" click-event to trigger the download
+        if (document.createEvent) {
+            const e = document.createEvent("MouseEvents");
+            e.initMouseEvent("click", true, true, window,
+                            0, 0, 0, 0, 0, false, false, false,
+                            false, 0, null);
+            lnk.dispatchEvent(e);
+        } else {
+            // @ts-ignore
+            lnk.fireEvent?.("onclick");
+        }
+
+        window.URL.revokeObjectURL(url);
+    };
+
+
+    // launch capture
+    const images: HTMLCanvasElement[] = await captureImages();
+
+    // process images
+    if (images.length) {
+        const captureName = await reviewCapture(images);
+        if (captureName) {
+            const zipFileWriter = new zip.BlobWriter();
+            const zipWriter = new zip.ZipWriter(zipFileWriter);
+
+            const infoText = document.createElement('div');
+            infoText.classList.add('capture-info-text');
+            infoText.textContent = 'Generating zip...';
+            document.body.append(infoText);
+            startSpinner();
+
+            for (let i = 0; i < images.length; ++i) {
+                const blob = await toBlob(images[i]);
+                await zipWriter.add(`project/input/image_${String(i).padStart(4, '0')}.png`, new zip.BlobReader(blob), {
+                    useWebWorkers: false        // web workers don't seem to work
+                });
+            }
+
+            await zipWriter.close();
+            const data = await zipFileWriter.getData();
+
+            infoText.textContent = 'Uploading...';
+
+            // submit image pack
+            await uploadImagePack(data);
+
+            // (TEMP) download the capture zip
+            download('capture.zip', data);
+
+            document.body.removeChild(infoText);
+            stopSpinner();
+        }
+    }
+};
+
 export {
-    captureImages
+    captureReviewUploadImages
 };

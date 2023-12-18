@@ -210,6 +210,61 @@ body {
     border: 1px solid black;
 }
 
+#review-name-container {
+    flex-grow: 0;
+}
+
+#review-name-label {
+    line-height: 24px;
+}
+
+#review-name {
+    flex-grow: 1;
+}
+
+// capture list panel
+
+#capture-list-panel {
+    position: absolute;
+    top: 40px;
+    bottom: 40px;
+    left: 50%;
+    width: 400px;
+    transform: translateX(-50%);
+}
+
+#capture-list {
+    flex-grow: 1;
+}
+
+#capture-list-buttons {
+    flex-grow: 0;
+    justify-content: space-between;
+}
+
+.capture-list-button {
+    width: 120px;
+}
+
+.capture-list-item > .pcui-treeview-item-contents {
+    margin-top: 10px;
+}
+
+.capture-list-item, .pcui-treeview-item-text {
+    font-size: 18px;
+}
+
+.capture-info-text {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    font-size: 18px;
+    text-shadow: 0 0 10px black;
+    font-family: monospace;
+}
+
 /* scrollbar styling */
 ::-webkit-scrollbar {
     width: 8px;

@@ -1,4 +1,4 @@
-import { Button, Container, Element, GridView, GridViewItem, Panel } from "@playcanvas/pcui";
+import { Button, Container, Element, GridView, GridViewItem, Label, Panel, TextInput } from "@playcanvas/pcui";
 
 const createImage = (canvas: HTMLCanvasElement, index: number) => {
     canvas.setAttribute('style', 'max-width: 100px; max-height: 100px;');
@@ -25,6 +25,25 @@ const reviewCapture = async (images: HTMLCanvasElement[]) => {
     });
     reviewGridContainer.append(reviewGrid);
 
+    const nameLabel = new Label({
+        id: 'review-name-label',
+        text: 'Capture Name'
+    });
+
+    const name = new TextInput({
+        id: 'review-name',
+        value: 'Capture'
+    });
+
+    const nameContainer = new Container({
+        id: 'review-name-container',
+        flex: true,
+        flexDirection: 'row'
+    });
+
+    nameContainer.append(nameLabel);
+    nameContainer.append(name);
+
     const upload = new Button({
         class: 'review-button',
         text: 'UPLOAD'
@@ -49,6 +68,7 @@ const reviewCapture = async (images: HTMLCanvasElement[]) => {
         flexDirection: 'column'
     });
     reviewPanel.content.append(reviewGridContainer);
+    reviewPanel.content.append(nameContainer);
     reviewPanel.content.append(buttons);
 
     // add images
@@ -58,13 +78,13 @@ const reviewCapture = async (images: HTMLCanvasElement[]) => {
 
     document.body.appendChild(reviewPanel.dom);
 
-    const result = await new Promise<boolean>((resolve) => {
+    const result = await new Promise<string>((resolve) => {
         upload.on('click', () => {
-            resolve(true);
+            resolve(name.value);
         });
 
         cancel.on('click', () => {
-            resolve(false);
+            resolve('');
         });
     });
 

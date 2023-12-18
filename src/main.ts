@@ -9,7 +9,6 @@ import { registerEvents } from './editor-ops';
 declare global {
     interface Window {
         scene: Scene;
-        JSZip: any;
     }
 }
 

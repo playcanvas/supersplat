@@ -1,4 +1,5 @@
-import closeImage from './svg/ar-close.svg';
+import closeImage from '../svg/ar-close.svg';
+import { startSpinner, stopSpinner } from './spinner';
 
 // request video feed
 const startVideoFeed = async (video: HTMLVideoElement) => {
@@ -47,7 +48,11 @@ const captureImages = async () => {
     video.setAttribute('style', 'display: block; position: absolute; top: 0; left: 0; width: 100%; height: 100%;');
     document.body.append(video);
 
+    startSpinner();
+
     const stream = await startVideoFeed(video);
+
+    stopSpinner();
 
     const res = document.createElement('div');
     res.setAttribute('style', 'position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); color: white; font-size: 24px; text-shadow: 0 0 10px black; font-family: monospace;');

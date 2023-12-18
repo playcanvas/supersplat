@@ -1,5 +1,8 @@
 import { EventHandler } from 'playcanvas';
 import { BooleanInput, Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, VectorInput } from 'pcui';
+import { captureImages } from './capture-images';
+import { reviewCapture } from './capture-review';
+import * as JSZip from 'jszip/dist/jszip';
 
 class BoxSelection {
     root: HTMLElement;
@@ -506,13 +509,13 @@ class ControlPanel extends Container {
         // none
         const selectNoneButton = new Button({
             class: 'control-element-expand',
-            text: 'None' 
+            text: 'None'
         });
 
         // invert
         const invertSelectionButton = new Button({
             class: 'control-element-expand',
-            text: 'Invert' 
+            text: 'Invert'
         });
 
         selectGlobal.append(selectAllButton);
@@ -587,7 +590,7 @@ class ControlPanel extends Container {
             // @ts-ignore
             placeholder: ['X', 'Y', 'Z']
         });
-        
+
         position.append(positionLabel);
         position.append(positionVector);
 
@@ -802,7 +805,7 @@ class ControlPanel extends Container {
                 [selectBySphereCenter],
                 [selectByPlaneAxis, selectByPlaneOffset]
             ];
-            
+
             controlSet.forEach((controls, controlsIndex) => {
                 controls.forEach((control) => {
                     control.enabled = index === controlsIndex;
@@ -826,8 +829,88 @@ class ControlPanel extends Container {
         addButton.on('click', () => performSelect('add'));
         removeButton.on('click', () => performSelect('remove'));
 
-        captureButton.on('click', () => {
-            this.events.fire('capture');
+        captureButton.on('click', async () => {
+            const toBlob = (canvas: HTMLCanvasElement) => {
+                return new Promise<Blob>((resolve) => {
+                    canvas.toBlob((blob) => {
+                        resolve(blob);
+                    }, 'image/png');
+                });
+            };
+
+            const uploadImagePack = async (data: Uint8Array) => {
+                const origin = location.origin;
+
+                // get signed url
+                const urlResponse = await fetch(`${origin}/api/projects/upload/signed-url`);
+                if (!urlResponse.ok) {
+                    console.log(`failed to get signed url (${urlResponse.statusText})`);
+                    return;
+                }
+
+                const json = await urlResponse.json();
+
+                console.log(JSON.stringify(json, null, 2));
+
+                // upload the file to S3
+                const uploadResponse = await fetch(json.signedUrl, {
+                    method: 'PUT',
+                    body: data.buffer,
+                    headers: {
+                        'Content-Type': 'binary/octet-stream'
+                    }
+                });
+
+                if (!uploadResponse.ok) {
+                    console.log(`failed to upload file (${uploadResponse.statusText})`);
+                    return;
+                }
+
+                // kick off processing
+                const jobResponse = await fetch(`${origin}/api/splats`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        s3Key: json.s3Key
+                    }),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!jobResponse.ok) {
+                    console.log(`failed to start job (${jobResponse.statusText})`);
+                    return;
+                }
+
+                console.log('done');
+            };
+
+            // hide editor UI before kicking off user capture
+            this.events.fire('captureStart');
+
+            // launch capture
+            const images: HTMLCanvasElement[] = await captureImages();
+
+            // process images
+            if (images.length && await reviewCapture(images)) {
+                const zip = new window.JSZip() || new JSZip();
+
+                for (let i = 0; i < images.length; ++i) {
+                    const blob = await toBlob(images[i]);
+                    zip.file(`project/input/image_${String(i).padStart(4, '0')}.png`, blob);
+                }
+
+                const data: Uint8Array = await zip.generateAsync({ type: "uint8array" });
+
+                // (TEMP) download the capture zip
+                // download('capture.zip', data);
+
+                // submit image pack
+                await uploadImagePack(data);
+            }
+
+            // restore editor UI
+            this.events.fire('captureEnd');
         });
 
         focusButton.on('click', () => {

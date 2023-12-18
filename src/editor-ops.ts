@@ -16,9 +16,6 @@ import { deletedOpacity, DeleteSelectionEditOp, ResetEditOp } from './edit-ops';
 import { SplatDebug } from './splat-debug';
 import { convertPly, convertPlyCompressed, convertSplat } from './splat-convert';
 import { startSpinner, stopSpinner } from './ui/spinner';
-import { captureImages } from './capture';
-import { reviewCapture } from './capture-review';
-import * as JSZip from 'jszip/dist/jszip';
 
 // download the data uri
 const download = (filename: string, data: ArrayBuffer) => {
@@ -203,90 +200,6 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
             }
         }
     };
-
-    events.on('capture', async () => {
-        const toBlob = (canvas: HTMLCanvasElement) => {
-            return new Promise<Blob>((resolve) => {
-                canvas.toBlob((blob) => {
-                    resolve(blob);
-                }, 'image/png');
-            });
-        };
-
-        const uploadImagePack = async (data: Uint8Array) => {
-            const origin = location.origin;
-
-            // get signed url
-            const urlResponse = await fetch(`${origin}/api/projects/upload/signed-url`);
-            if (!urlResponse.ok) {
-                console.log(`failed to get signed url (${urlResponse.statusText})`);
-                return;
-            }
-
-            const json = await urlResponse.json();
-
-            console.log(JSON.stringify(json, null, 2));
-
-            // upload the file to S3
-            const uploadResponse = await fetch(json.signedUrl, {
-                method: 'PUT',
-                body: data.buffer,
-                headers: {
-                    'Content-Type': 'binary/octet-stream'
-                }
-            });
-
-            if (!uploadResponse.ok) {
-                console.log(`failed to upload file (${uploadResponse.statusText})`);
-                return;
-            }
-
-            // kick off processing
-            const jobResponse = await fetch(`${origin}/api/splats`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    s3Key: json.s3Key
-                }),
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (!jobResponse.ok) {
-                console.log(`failed to start job (${jobResponse.statusText})`);
-                return;
-            }
-
-            console.log('done');
-        };
-
-        // hide editor UI before kicking off user capture
-        editorUI.appContainer.dom.style.visibility = 'hidden';
-
-        // launch capture
-        const images: HTMLCanvasElement[] = await captureImages();
-
-        // process images
-        if (images.length && await reviewCapture(images)) {
-            const zip = new window.JSZip() || new JSZip();
-
-            for (let i = 0; i < images.length; ++i) {
-                const blob = await toBlob(images[i]);
-                zip.file(`project/input/image_${String(i).padStart(4, '0')}.png`, blob);
-            }
-
-            const data: Uint8Array = await zip.generateAsync({ type: "uint8array" });
-
-            // (TEMP) download the capture zip
-            download('capture.zip', data);
-
-            // submit image pack
-            await uploadImagePack(data);
-        }
-
-        // restore editor UI
-        editorUI.appContainer.dom.style.visibility = '';
-    });
 
     events.on('focusCamera', () => {
         const splatDef = splatDefs[0];

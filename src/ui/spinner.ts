@@ -58,23 +58,27 @@ const css = `
 `;
 
 let container: HTMLElement;
-let spinner: HTMLElement;
 
 const startSpinner = () => {
-    container = document.createElement('div');
-    const style = document.createElement('style');
-    style.innerText = css;
-    container.appendChild(style);
-    spinner = document.createElement('div');
-    spinner.className = 'static-spinner';
-    container.appendChild(spinner);
-    document.getElementById('canvas-container')?.appendChild(container);
+    if (!container) {
+        const style = document.createElement('style');
+        style.innerText = css;
+        container = document.createElement('div');
+        container.appendChild(style);
+        const spinner = document.createElement('div');
+        spinner.className = 'static-spinner';
+        container.appendChild(spinner);
+    }
+    document.body.appendChild(container);
 };
 
 const stopSpinner = () => {
-    if (spinner) {
-        container.removeChild(spinner);
+    if (container) {
+        document.body.removeChild(container);
     }
 };
 
-export {startSpinner, stopSpinner};
+export {
+    startSpinner,
+    stopSpinner
+};

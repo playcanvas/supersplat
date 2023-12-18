@@ -288,7 +288,7 @@ class Scene extends EventHandler {
     }
 
     // get scene bounds
-    private updateBound() {
+    updateBound() {
         let valid = false;
         this.forEachElement(e => {
             if (e.calcBound(bound)) {

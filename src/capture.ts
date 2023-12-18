@@ -94,7 +94,7 @@ const captureImages = async () => {
     });
 
     // cleanup
-    video.srcObject.getVideoTracks().forEach((track) => track.stop());
+    (video.srcObject as MediaStream).getVideoTracks().forEach((track) => track.stop());
     document.body.removeChild(video);
     document.body.removeChild(close);
     document.body.removeChild(res);

@@ -318,9 +318,9 @@ const convertPlyCompressed = (splatData: SplatData, modelMat: Mat4) => {
             return (Part1By2(z) << 2) + (Part1By2(y) << 1) + Part1By2(x);
         };
 
-        const x = splatData.getProp('x');
-        const y = splatData.getProp('y');
-        const z = splatData.getProp('z');
+        const x = splatData.getProp('x') as Float32Array;
+        const y = splatData.getProp('y') as Float32Array;
+        const z = splatData.getProp('z') as Float32Array;
 
         const bx = calcMinMax(x, indices);
         const by = calcMinMax(y, indices);

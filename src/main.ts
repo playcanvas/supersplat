@@ -9,10 +9,7 @@ import { registerEvents } from './editor-ops';
 declare global {
     interface Window {
         scene: Scene;
-    }
-
-    interface Navigator {
-        xr: any;
+        JSZip: any;
     }
 }
 

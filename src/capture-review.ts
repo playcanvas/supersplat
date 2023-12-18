@@ -1,52 +1,74 @@
-const createImageDom = (canvas: HTMLCanvasElement, index: number) => {
-    const div = document.createElement('div');
-    div.setAttribute('style', 'display: flex; flex-direction: column; width: 100px; height: 120px; border: 8px solid black; background-color: white;');
+import { Button, Container, Element, GridView, GridViewItem, Panel } from "@playcanvas/pcui";
 
-    canvas.setAttribute('style', 'max-width: 100px; max-height: 100px;')
+const createImage = (canvas: HTMLCanvasElement, index: number) => {
+    canvas.setAttribute('style', 'max-width: 100px; max-height: 100px;');
 
-    const text = document.createElement('div');
-    text.textContent = `${index}`;
-    text.setAttribute('style', 'text-align: center;');
+    const thumbnail = new Element({
+        class: 'review-thumbnail',
+        dom: 'span'
+    });
+    thumbnail.dom.appendChild(canvas);
 
-    div.appendChild(canvas);
-    div.appendChild(text);
+    const item = new GridViewItem();
+    item.prepend(thumbnail);
 
-    // canvas.setAttribute('style', 'width: 100px; height: 100px; border: 8px solid black;');
-    // parent.appendChild(image);
-
-    return div;
+    return thumbnail;
 };
 
 const reviewCapture = async (images: HTMLCanvasElement[]) => {
-    const parent = document.createElement('div');
-    parent.setAttribute('style', 'position: absolute; top: 80px; left: 80px; right: 80px; bottom: 80px;');
-
-    images.forEach((image, index) => {
-        parent.appendChild(createImageDom(image, index));
+    const reviewGrid = new GridView({
+        id: 'review-grid'
     });
 
-    const upload = document.createElement('button');
-    upload.textContent = 'Upload';
+    const reviewGridContainer = new Container({
+        id: 'review-grid-container'
+    });
+    reviewGridContainer.append(reviewGrid);
 
-    const cancel = document.createElement('button');
-    cancel.textContent = 'Cancel';
+    const upload = new Button({
+        class: 'review-button',
+        text: 'UPLOAD'
+    });
+    const cancel = new Button({
+        class: 'review-button',
+        text: 'CANCEL'
+    });
 
-    parent.appendChild(upload);
-    parent.appendChild(cancel);
+    const buttons = new Container({
+        id: 'review-buttons',
+        flex: true,
+        flexDirection: 'row'
+    });
+    buttons.append(upload);
+    buttons.append(cancel);
 
-    document.body.append(parent);
+    const reviewPanel = new Panel({
+        id: 'review-panel',
+        headerText: 'CAPTURE REVIEW',
+        flex: true,
+        flexDirection: 'column'
+    });
+    reviewPanel.content.append(reviewGridContainer);
+    reviewPanel.content.append(buttons);
+
+    // add images
+    images.forEach((image, i) => {
+        reviewGrid.append(createImage(image, i));
+    });
+
+    document.body.appendChild(reviewPanel.dom);
 
     const result = await new Promise<boolean>((resolve) => {
-        upload.addEventListener('click', () => {
+        upload.on('click', () => {
             resolve(true);
         });
 
-        cancel.addEventListener('click', () => {
+        cancel.on('click', () => {
             resolve(false);
         });
     });
 
-    document.body.removeChild(parent);
+    document.body.removeChild(reviewPanel.dom);
 
     return result;
 };

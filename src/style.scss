@@ -183,6 +183,33 @@ body {
     top: 50%;
 }
 
+#review-panel {
+    position: absolute;
+    left: 20px;
+    top: 20px;
+    bottom: 20px;
+    right: 20px;
+}
+
+#review-grid-container {
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+#review-buttons {
+    flex-grow: 0;
+    justify-content: space-between;
+}
+
+.review-button {
+    width: 120px;
+}
+
+.review-thumbnail {
+    margin: 6px;
+    border: 1px solid black;
+}
+
 /* scrollbar styling */
 ::-webkit-scrollbar {
     width: 8px;

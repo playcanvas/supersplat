@@ -107,6 +107,8 @@ class EditorUI {
         this.canvas = canvas;
         this.errorPopup = errorPopup;
         this.infoPopup = infoPopup;
+
+        window.showError = (err: string) => this.showError(err);
     }
 
     showError(err: string) {

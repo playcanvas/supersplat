@@ -23,6 +23,11 @@ const showCaptureList = async () => {
         allowRenaming: false
     });
 
+    const captureListContainer = new Container({
+        id: 'capture-list-container'
+    });
+    captureListContainer.append(captureList);
+
     const load = new Button({
         class: 'capture-list-button',
         text: 'LOAD',
@@ -48,7 +53,7 @@ const showCaptureList = async () => {
         flex: true,
         flexDirection: 'column'
     });
-    captureListPanel.append(captureList);
+    captureListPanel.append(captureListContainer);
     captureListPanel.append(buttons);
 
     document.body.appendChild(captureListPanel.dom);
@@ -58,20 +63,26 @@ const showCaptureList = async () => {
 
         const map = new Map<TreeViewItem, any>();
 
-        dataPromise.then((data) => {
+        dataPromise.then((data: any) => {
             stopSpinner();
 
             if (data === undefined) {
-                resolve(false);
-                return;
+                data = [{
+                    name: 'Failed to retrieve capture list. (Make sure you are logged in).',
+                    task: ''
+                }];
             }
 
             // fill tree view
             data.forEach((capture: any) => {
+                const states = {
+                    running: 'Processing: ',
+                    failed: 'Failed: '
+                };
                 const item = new TreeViewItem({
                     class: 'capture-list-item',
-                    open: false,
-                    text: `${capture.file?.filename ? '' : 'Processing: '}${capture.name}`,
+                    // @ts-ignore
+                    text: `${states[capture.task] ?? ''}${capture.name}`,
                     icon: '',
                     enabled: !!capture.file?.filename
                 });

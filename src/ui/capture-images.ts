@@ -17,7 +17,7 @@ const startVideoFeed = async (video: HTMLVideoElement) => {
     const promises: Promise<any>[] = [];
 
     stream.getVideoTracks().forEach((track: MediaStreamTrack) => {
-        console.log(`caps: ${JSON.stringify(track.getCapabilities(), null, 2)} constraints: ${JSON.stringify(track.getConstraints(), null, 2)} settings: ${JSON.stringify(track.getSettings(), null, 2)}}`);
+        // console.log(`caps: ${JSON.stringify(track.getCapabilities(), null, 2)} constraints: ${JSON.stringify(track.getConstraints(), null, 2)} settings: ${JSON.stringify(track.getSettings(), null, 2)}}`);
 
         // attempt resizing the video to max reported resolution
         promises.push(track.applyConstraints({
@@ -158,7 +158,7 @@ const captureReviewUploadImages = async () => {
         // get signed url
         const urlResponse = await fetch(`${origin}/api/projects/upload/signed-url`);
         if (!urlResponse.ok) {
-            console.log(`failed to get signed url (${urlResponse.statusText})`);
+            window.showError(`Failed to get signed url (${urlResponse.statusText})`);
             return;
         }
 
@@ -222,7 +222,6 @@ const captureReviewUploadImages = async () => {
 
         window.URL.revokeObjectURL(url);
     };
-
 
     // launch capture
     const images: HTMLCanvasElement[] = await captureImages();

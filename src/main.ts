@@ -9,6 +9,7 @@ import { registerEvents } from './editor-ops';
 declare global {
     interface Window {
         scene: Scene;
+        showError: (err: string) => void;
     }
 }
 

@@ -10,8 +10,6 @@ const getCaptureList = async () => {
 
     const captureListJson = await captureListResponse.json();
 
-    console.log(JSON.stringify(captureListJson, null, 2));
-
     return captureListJson.result;
 };
 
@@ -63,12 +61,17 @@ const showCaptureList = async () => {
         dataPromise.then((data) => {
             stopSpinner();
 
+            if (data === undefined) {
+                resolve(false);
+                return;
+            }
+
             // fill tree view
             data.forEach((capture: any) => {
                 const item = new TreeViewItem({
                     class: 'capture-list-item',
                     open: false,
-                    text: `${capture.name}${capture.file?.filename ?? " (busy...)"}`,
+                    text: `${capture.file?.filename ? '' : 'Processing: '}${capture.name}`,
                     icon: '',
                     enabled: !!capture.file?.filename
                 });
@@ -87,7 +90,6 @@ const showCaptureList = async () => {
             const url = new URL(location.href);
             url.searchParams.set('load', `/api/assets/${capture.id}/file/${capture.file.filename}`);
             location.href = url.toString();
-            // resolve(true);
         });
 
         cancel.on('click', () => {

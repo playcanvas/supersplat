@@ -98,9 +98,9 @@ const showCaptureList = async () => {
 
         load.on('click', () => {
             const capture = map.get(captureList.selected[0]);
-            const url = new URL(location.href);
-            url.searchParams.set('load', `/api/assets/${capture.id}/file/${capture.file.filename}`);
-            location.href = url.toString();
+            const loadUrl = `/api/assets/${capture.id}/file/${capture.file.filename}`;
+            window.scene.loadModel(loadUrl, capture.name);
+            resolve(true);
         });
 
         cancel.on('click', () => {

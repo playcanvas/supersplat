@@ -27,7 +27,8 @@ const showCaptureList = async () => {
 
     const load = new Button({
         class: 'capture-list-button',
-        text: 'LOAD'
+        text: 'LOAD',
+        enabled: false
     });
 
     const cancel = new Button({
@@ -57,6 +58,8 @@ const showCaptureList = async () => {
     const result = await new Promise<boolean>((resolve) => {
         startSpinner();
 
+        const map = new Map<TreeViewItem, any>();
+
         dataPromise.then((data) => {
             stopSpinner();
 
@@ -65,15 +68,26 @@ const showCaptureList = async () => {
                 const item = new TreeViewItem({
                     class: 'capture-list-item',
                     open: false,
-                    text: capture.file.filename,
-                    icon: ''
+                    text: `${capture.name}${capture.file?.filename ?? " (busy...)"}`,
+                    icon: '',
+                    enabled: !!capture.file?.filename
                 });
                 captureList.append(item);
+
+                map.set(item, capture);
             });
         });
 
+        captureList.on('select', (item: TreeViewItem) => {
+            load.enabled = item.enabled;
+        });
+
         load.on('click', () => {
-            resolve(true);
+            const capture = map.get(captureList.selected[0]);
+            const url = new URL(location.href);
+            url.searchParams.set('load', `/api/assets/${capture.id}/file/${capture.file.filename}`);
+            location.href = url.toString();
+            // resolve(true);
         });
 
         cancel.on('click', () => {

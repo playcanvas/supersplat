@@ -1,7 +1,8 @@
-import closeImage from '../svg/ar-close.svg';
 import { startSpinner, stopSpinner } from './spinner';
 import { reviewCapture } from './capture-review';
 import * as zip from "@zip.js/zip.js";
+import closeImage from '../svg/ar-close.svg';
+import shutterImage from '../svg/shutter.svg';
 
 // request video feed
 const startVideoFeed = async (video: HTMLVideoElement) => {
@@ -60,9 +61,14 @@ const captureImages = async () => {
     infoText.classList.add('capture-info-text');
     document.body.append(infoText);
 
+    const shutter = document.createElement('img');
+    shutter.src = shutterImage.src;
+    shutter.setAttribute('style', 'position: absolute; bottom: 40px; left: 50%; transform: translate(-50%);');
+    document.body.appendChild(shutter);
+
     const close = document.createElement('img');
     close.src = closeImage.src;
-    close.setAttribute('style', 'position: absolute; bottom: 20px; left: 20px; width: 40px; height: 40px; color: white;');
+    close.setAttribute('style', 'position: absolute; bottom: 40px; left: 20px; width: 40px; height: 40px; color: white; background-color: rgba(0, 0, 0, 0.5);');
     document.body.appendChild(close);
 
     // video dimensions are only valid after play event
@@ -72,15 +78,23 @@ const captureImages = async () => {
         videoHeight = video.videoHeight;
     });
 
+    const url = new URL(window.location.href);
+    url.hash = '#Capture';
+
     // push capture state
-    window.history.pushState('capture', undefined, '#Capture');
+    window.history.pushState('capture', undefined, url.toString());
 
     // handle user interaction
     const result = await new Promise<HTMLCanvasElement[]>((resolve) => {
         const images: HTMLCanvasElement[] = [];
 
         const updateInfoText = () => {
-            infoText.textContent = `Capturing image ${images.length}`;
+            infoText.textContent = `Capturing image ${images.length + 1}`;
+        };
+
+        const doCapture = () => {
+            images.push(captureImage(video));
+            updateInfoText();
         };
 
         updateInfoText();
@@ -88,17 +102,26 @@ const captureImages = async () => {
         video.addEventListener('pointerdown', (event) => {
             if (event.pointerType === 'mouse') {
                 navigator?.vibrate(200);
-                images.push(captureImage(video));
-                updateInfoText();
+                doCapture();
             }
         });
 
         video.addEventListener('pointerup', (event) => {
             if (event.pointerType !== 'mouse') {
                 navigator?.vibrate(200);
-                images.push(captureImage(video));
-                updateInfoText();
+                doCapture();
             }
+        });
+
+        shutter.addEventListener('click', () => {
+            shutter.classList.add('fadeinout');
+            navigator?.vibrate(200);
+            doCapture();
+        });
+
+        shutter.addEventListener("animationend", () => {
+            console.log('animationend');
+            shutter.classList.remove('fadeinout');
         });
 
         close.addEventListener('click', () => {
@@ -115,6 +138,7 @@ const captureImages = async () => {
     document.body.removeChild(video);
     document.body.removeChild(close);
     document.body.removeChild(infoText);
+    document.body.removeChild(shutter);
 
     return result;
 };
@@ -128,7 +152,7 @@ const captureReviewUploadImages = async () => {
         });
     };
 
-    const uploadImagePack = async (data: Blob) => {
+    const uploadImagePack = async (captureName: string, data: Blob) => {
         const origin = location.origin;
 
         // get signed url
@@ -160,6 +184,7 @@ const captureReviewUploadImages = async () => {
         const jobResponse = await fetch(`${origin}/api/splats`, {
             method: 'POST',
             body: JSON.stringify({
+                filename: `${captureName}.ply`,
                 s3Key: json.s3Key
             }),
             headers: {
@@ -206,8 +231,8 @@ const captureReviewUploadImages = async () => {
     if (images.length) {
         const captureName = await reviewCapture(images);
         if (captureName) {
-            const zipFileWriter = new zip.BlobWriter();
-            const zipWriter = new zip.ZipWriter(zipFileWriter);
+            const blobWriter = new zip.BlobWriter();
+            const writer = new zip.ZipWriter(blobWriter);
 
             const infoText = document.createElement('div');
             infoText.classList.add('capture-info-text');
@@ -217,21 +242,22 @@ const captureReviewUploadImages = async () => {
 
             for (let i = 0; i < images.length; ++i) {
                 const blob = await toBlob(images[i]);
-                await zipWriter.add(`project/input/image_${String(i).padStart(4, '0')}.png`, new zip.BlobReader(blob), {
-                    useWebWorkers: false        // web workers don't seem to work
+                await writer.add(`data/input/image_${String(i).padStart(4, '0')}.png`, new zip.BlobReader(blob), {
+                    // web workers don't seem to work
+                    useWebWorkers: false
                 });
             }
 
-            await zipWriter.close();
-            const data = await zipFileWriter.getData();
+            await writer.close();
+            const data = await blobWriter.getData();
 
             infoText.textContent = 'Uploading...';
 
             // submit image pack
-            await uploadImagePack(data);
+            await uploadImagePack(captureName, data);
 
             // (TEMP) download the capture zip
-            download('capture.zip', data);
+            // download('capture.zip', data);
 
             document.body.removeChild(infoText);
             stopSpinner();

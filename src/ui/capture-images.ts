@@ -101,21 +101,21 @@ const captureImages = async () => {
 
         video.addEventListener('pointerdown', (event) => {
             if (event.pointerType === 'mouse') {
-                navigator?.vibrate(200);
+                // navigator?.vibrate?.(200);
                 doCapture();
             }
         });
 
         video.addEventListener('pointerup', (event) => {
             if (event.pointerType !== 'mouse') {
-                navigator?.vibrate(200);
+                // navigator?.vibrate?.(200);
                 doCapture();
             }
         });
 
         shutter.addEventListener('click', () => {
             shutter.classList.add('fadeinout');
-            navigator?.vibrate(200);
+            // navigator?.vibrate?.(200);
             doCapture();
         });
 

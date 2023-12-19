@@ -156,7 +156,7 @@ const captureReviewUploadImages = async () => {
         const origin = location.origin;
 
         // get signed url
-        const urlResponse = await fetch(`${origin}/api/upload/signed-url`, method: 'POST');
+        const urlResponse = await fetch(`${origin}/api/upload/signed-url`, { method: 'POST' });
         if (!urlResponse.ok) {
             window.showError(`Failed to get signed url (${urlResponse.statusText})`);
             return;

@@ -2,20 +2,37 @@ import { Button, Container, Panel, TreeView, TreeViewItem } from "@playcanvas/pc
 import { startSpinner, stopSpinner } from "./spinner";
 
 const getCaptureList = async () => {
-    const origin = location.origin;
+    try {
+        const captureListResponse = await fetch(`${location.origin}/api/splats`, {
+            method: 'GET'
+        });
 
-    const captureListResponse = await fetch(`${origin}/api/splats`, {
-        method: 'GET'
-    });
+        if (!captureListResponse.ok) {
+            return [{
+                name: captureListResponse.statusText,
+                task: ''
+            }];
+        }
 
-    const captureListJson = await captureListResponse.json();
+        const captureListJson = await captureListResponse.json();
 
-    return captureListJson.result;
+        if (captureListJson.result === undefined) {
+            return [{
+                name: 'Failed to retrieve capture list. (Make sure you are logged in).',
+                task: ''
+            }];
+        }
+
+        return captureListJson.result;
+    } catch (error) {
+        return [{
+            name: error.toString(),
+            task: ''
+        }];
+    }
 };
 
 const showCaptureList = async () => {
-    const dataPromise = getCaptureList();
-
     const captureList = new TreeView({
         id: 'capture-list',
         allowDrag: false,
@@ -63,17 +80,9 @@ const showCaptureList = async () => {
 
         const map = new Map<TreeViewItem, any>();
 
-        dataPromise.then((data: any) => {
+        getCaptureList().then((data: any) => {
             stopSpinner();
 
-            if (data === undefined) {
-                data = [{
-                    name: 'Failed to retrieve capture list. (Make sure you are logged in).',
-                    task: ''
-                }];
-            }
-
-            // fill tree view
             data.forEach((capture: any) => {
                 const states = {
                     running: 'Processing: ',
@@ -87,7 +96,7 @@ const showCaptureList = async () => {
                     enabled: !!capture.file?.filename
                 });
                 captureList.append(item);
-
+    
                 map.set(item, capture);
             });
         });
@@ -106,9 +115,20 @@ const showCaptureList = async () => {
         cancel.on('click', () => {
             resolve(false);
         });
+
+        // setTimeout required here otherwise the click event that launched this panel triggers the
+        // onclick handler.
+        setTimeout(() => {
+            document.body.onclick = (event: MouseEvent) => {
+                if (!captureListPanel.dom.contains(event.target as Node)) {
+                    resolve(false);
+                }
+            }
+        });
     });
 
     document.body.removeChild(captureListPanel.dom);
+    document.body.onclick = null;
 
     return result;
 };

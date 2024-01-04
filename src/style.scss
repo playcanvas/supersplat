@@ -266,6 +266,30 @@ body {
     font-family: monospace;
 }
 
+@keyframes shutterAnim0 {
+    0% { scale: 1.0; }
+    20% { scale: 1.1; }
+    100% { scale: 1.0; }
+}
+
+@keyframes shutterAnim1 {
+    0% { scale: 1.0; }
+    20% { scale: 1.1; }
+    100% { scale: 1.0; }
+}
+
+@keyframes videoAnim0 {
+    0% { opacity: 1.0; }
+    10% { opacity: 0.2; }
+    100% { opacity: 1.0; }
+}
+
+@keyframes videoAnim1 {
+    0% { opacity: 1.0; }
+    10% { opacity: 0.2; }
+    100% { opacity: 1.0; }
+}
+
 /* scrollbar styling */
 ::-webkit-scrollbar {
     width: 8px;

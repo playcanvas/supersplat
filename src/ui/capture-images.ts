@@ -33,16 +33,92 @@ const startVideoFeed = async (video: HTMLVideoElement) => {
     return stream;
 };
 
-const captureImage = (video: HTMLVideoElement) => {
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const context = canvas.getContext('2d');
-    console.log(`capturing image ${canvas.width}x${canvas.height}`);
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-    return canvas;
-    // return canvas.toDataURL('image/png');
-};
+function ImageProcessorWorker() {
+    const getOutputDim = (imageBitmap: ImageBitmap | ImageData, outputMax: number) => {
+        const inputMax = Math.max(imageBitmap.width, imageBitmap.height);
+        const outputDim = Math.min(outputMax, inputMax);
+        return {
+            w: Math.ceil((imageBitmap.width / inputMax) * outputDim),
+            h: Math.ceil((imageBitmap.height / inputMax) * outputDim)
+        };
+    };
+
+    const processImage = async (data: any) => {
+        const { id, imageBitmap, outputMax } = data;
+        const outputDim = getOutputDim(imageBitmap, outputMax);
+
+        const sizedBitmap = await createImageBitmap(imageBitmap, {
+            premultiplyAlpha: 'none',
+            resizeWidth: outputDim.w,
+            resizeHeight: outputDim.h,
+            resizeQuality: 'high'
+        });
+
+        const previewDim = getOutputDim(sizedBitmap, 100);
+
+        const previewBitmap = await createImageBitmap(sizedBitmap, {
+            premultiplyAlpha: 'none',
+            resizeWidth: previewDim.w,
+            resizeHeight: previewDim.h,
+            resizeQuality: 'high'
+        });
+
+        const toCanvas = (imageBitmap: ImageBitmap) => {
+            const canvas = new OffscreenCanvas(imageBitmap.width, imageBitmap.height);
+            const context = canvas.getContext('bitmaprenderer');
+            context.transferFromImageBitmap(imageBitmap);
+            return canvas;
+        };
+
+        const toBlob = async (imageBitmap: ImageBitmap) => {
+            const canvas = toCanvas(imageBitmap);
+            return await canvas.convertToBlob({ quality: 1 });
+        };
+
+        return {
+            id,
+            result: {
+                blob: await toBlob(sizedBitmap),
+                preview: previewBitmap
+            }
+        };
+    };
+
+    self.onmessage = (message) => {
+        processImage(message.data).then((result) => {
+            postMessage(result, [result.result.preview]);
+        });
+    };
+}
+
+class ImageProcessor {
+    worker: Worker;
+    nextId = 0;
+    jobs = new Map<number, (result: any) => void>();
+
+    constructor() {
+        this.worker = new Worker(URL.createObjectURL(new Blob([`(${ImageProcessorWorker.toString()})()`])));
+        this.worker.onmessage = (message) => {
+            this.jobs.get(message.data.id)(message.data.result);
+            this.jobs.delete(message.data.id);
+        };
+    }
+
+    destroy() {
+        this.worker.terminate();
+    }
+
+    captureImage(video: HTMLVideoElement, outputMax = 1600) {
+        const id = this.nextId++;
+        return new Promise<{ blob: Blob, preview: ImageBitmap }>((resolve) => {
+            this.jobs.set(id, resolve);
+            createImageBitmap(video, { premultiplyAlpha: 'none' })
+            .then((imageBitmap: ImageBitmap) => {
+                this.worker.postMessage({ id, imageBitmap, outputMax }, [imageBitmap]);
+            });
+        });
+    }
+}
 
 const captureImages = async () => {
     const video = document.createElement('video');
@@ -63,7 +139,7 @@ const captureImages = async () => {
 
     const shutter = document.createElement('img');
     shutter.src = shutterImage.src;
-    shutter.setAttribute('style', 'position: absolute; bottom: 40px; left: 50%; transform: translate(-50%);');
+    shutter.setAttribute('style', 'position: absolute; bottom: 40px; left: 50%; transform-origin: left; transform: translateX(-50%);');
     document.body.appendChild(shutter);
 
     const close = document.createElement('img');
@@ -84,44 +160,33 @@ const captureImages = async () => {
     // push capture state
     window.history.pushState('capture', undefined, url.toString());
 
+    const imageProcessor = new ImageProcessor();
+
     // handle user interaction
-    const result = await new Promise<HTMLCanvasElement[]>((resolve) => {
-        const images: HTMLCanvasElement[] = [];
+    const result = await new Promise<{ blob: Blob, preview: ImageBitmap }[]>((resolve) => {
+        const images: Promise<{ blob: Blob, preview: ImageBitmap }>[] = [];
 
         const updateInfoText = () => {
             infoText.textContent = `Capturing image ${images.length + 1}`;
         };
 
         const doCapture = () => {
-            images.push(captureImage(video));
+            images.push(imageProcessor.captureImage(video));
             updateInfoText();
+
+            shutter.style.animation = `shutterAnim${images.length % 2} 0.2s ease-in-out`;
+            video.style.animation = `videoAnim${images.length % 2} 0.2s ease-in-out`;
+            navigator?.vibrate?.(20);
         };
 
         updateInfoText();
 
         video.addEventListener('pointerdown', (event) => {
-            if (event.pointerType === 'mouse') {
-                // navigator?.vibrate?.(200);
-                doCapture();
-            }
-        });
-
-        video.addEventListener('pointerup', (event) => {
-            if (event.pointerType !== 'mouse') {
-                // navigator?.vibrate?.(200);
-                doCapture();
-            }
-        });
-
-        shutter.addEventListener('click', () => {
-            shutter.classList.add('fadeinout');
-            // navigator?.vibrate?.(200);
             doCapture();
         });
 
-        shutter.addEventListener("animationend", () => {
-            console.log('animationend');
-            shutter.classList.remove('fadeinout');
+        shutter.addEventListener('pointerdown', () => {
+            doCapture();
         });
 
         close.addEventListener('click', () => {
@@ -129,7 +194,9 @@ const captureImages = async () => {
         });
 
         window.addEventListener('popstate', (event) => {
-            resolve(images);
+            Promise.all(images).then((images) => {
+                resolve(images);
+            });
         }, false);
     });
 
@@ -140,18 +207,12 @@ const captureImages = async () => {
     document.body.removeChild(infoText);
     document.body.removeChild(shutter);
 
+    imageProcessor.destroy();
+
     return result;
 };
 
 const captureReviewUploadImages = async () => {
-    const toBlob = (canvas: HTMLCanvasElement) => {
-        return new Promise<Blob>((resolve) => {
-            canvas.toBlob((blob) => {
-                resolve(blob);
-            }, 'image/png');
-        });
-    };
-
     const uploadImagePack = async (captureName: string, data: Blob) => {
         const origin = location.origin;
 
@@ -163,8 +224,6 @@ const captureReviewUploadImages = async () => {
         }
 
         const json = await urlResponse.json();
-
-        console.log(JSON.stringify(json, null, 2));
 
         // upload the file to S3
         const uploadResponse = await fetch(json.signedUrl, {
@@ -224,7 +283,7 @@ const captureReviewUploadImages = async () => {
     };
 
     // launch capture
-    const images: HTMLCanvasElement[] = await captureImages();
+    const images: { blob: Blob, preview: ImageBitmap }[] = await captureImages();
 
     // process images
     if (images.length) {
@@ -240,10 +299,9 @@ const captureReviewUploadImages = async () => {
             startSpinner();
 
             for (let i = 0; i < images.length; ++i) {
-                const blob = await toBlob(images[i]);
-                await writer.add(`data/input/image_${String(i).padStart(4, '0')}.png`, new zip.BlobReader(blob), {
-                    // web workers don't seem to work
-                    useWebWorkers: false
+                await writer.add(`data/input/image_${String(i).padStart(4, '0')}.png`, new zip.BlobReader(images[i].blob), {
+                    useWebWorkers: false,       // web workers don't seem to work
+                    level: 0                    // no need to spend time compressing png/jpeg/webp
                 });
             }
 

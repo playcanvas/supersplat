@@ -1,13 +1,17 @@
 import { Button, Container, Element, GridView, GridViewItem, Label, Panel, TextInput } from "@playcanvas/pcui";
 
-const createImage = (canvas: HTMLCanvasElement, index: number) => {
-    canvas.setAttribute('style', 'max-width: 100px; max-height: 100px;');
+const createImage = (preview: ImageBitmap, index: number) => {
+    const image = document.createElement('canvas');
+    image.width = preview.width;
+    image.height = preview.height;
+    image.getContext('2d').drawImage(preview, 0, 0);
+    image.setAttribute('style', 'max-width: 100px; max-height: 100px;');
 
     const thumbnail = new Element({
         class: 'review-thumbnail',
         dom: 'span'
     });
-    thumbnail.dom.appendChild(canvas);
+    thumbnail.dom.appendChild(image);
 
     const item = new GridViewItem();
     item.prepend(thumbnail);
@@ -15,7 +19,7 @@ const createImage = (canvas: HTMLCanvasElement, index: number) => {
     return thumbnail;
 };
 
-const reviewCapture = async (images: HTMLCanvasElement[]) => {
+const reviewCapture = async (images: { blob: Blob, preview: ImageBitmap }[]) => {
     const reviewGrid = new GridView({
         id: 'review-grid'
     });
@@ -73,7 +77,7 @@ const reviewCapture = async (images: HTMLCanvasElement[]) => {
 
     // add images
     images.forEach((image, i) => {
-        reviewGrid.append(createImage(image, i));
+        reviewGrid.append(createImage(image.preview, i));
     });
 
     document.body.appendChild(reviewPanel.dom);

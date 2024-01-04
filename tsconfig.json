@@ -1,8 +1,8 @@
 {
     "compilerOptions": {
         "noImplicitAny": true,
-        "target": "es6",
-        "lib": ["es2019", "dom"],
+        "target": "es2017",
+        "lib": ["es2019", "dom", "WebWorker"],
         "allowSyntheticDefaultImports": true,
         "sourceMap": true,
         "inlineSources": true,

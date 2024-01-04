@@ -198,6 +198,7 @@ body {
 
 #review-buttons {
     flex-grow: 0;
+    flex-shrink: 0;
     justify-content: space-between;
 }
 
@@ -212,6 +213,7 @@ body {
 
 #review-name-container {
     flex-grow: 0;
+    flex-shrink: 0;
 }
 
 #review-name-label {

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no" ?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="68" height="68" viewBox="-34 -34 68 68" xml:space="preserve">
-<circle id="Circle1" cx="0" cy="0" r="30" stroke-width="8" fill="rgb(200, 200, 200, 0.6)" stroke="rgb(0, 0, 0, 0.8)" />
+<circle id="circle1" cx="0" cy="0" r="24" fill="rgb(200, 200, 200)" />
+<circle id="circle2" cx="0" cy="0" r="30" fill="none" stroke="white" stroke-width="4" />
 </svg>

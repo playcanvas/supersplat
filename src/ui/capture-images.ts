@@ -121,31 +121,46 @@ class ImageProcessor {
 }
 
 const captureImages = async () => {
-    const video = document.createElement('video');
-    video.autoplay = true;
-    video.playsInline = true;
-    video.setAttribute('style', 'display: block; position: absolute; top: 0; left: 0; width: 100%; height: 100%;');
-    document.body.append(video);
+    const createElement = (type: string, id: string) => {
+        const result = document.createElement(type);
+        result.setAttribute('id', id);
+        return result;
+    };
 
     startSpinner();
 
+    const video = createElement('video', 'capture-images-video') as HTMLVideoElement;
+    video.autoplay = true;
+    video.playsInline = true;
+
     const stream = await startVideoFeed(video);
 
-    stopSpinner();
+    const infoText = createElement('div', 'capture-images-text');
 
-    const infoText = document.createElement('div');
-    infoText.classList.add('capture-info-text');
-    document.body.append(infoText);
-
-    const shutter = document.createElement('img');
-    shutter.src = shutterImage.src;
-    shutter.setAttribute('style', 'position: absolute; bottom: 40px; left: 50%; transform-origin: left; transform: translateX(-50%);');
-    document.body.appendChild(shutter);
-
-    const close = document.createElement('img');
+    const close = createElement('img', 'capture-images-close') as HTMLImageElement;
     close.src = closeImage.src;
-    close.setAttribute('style', 'position: absolute; bottom: 40px; left: 20px; width: 40px; height: 40px; color: white; background-color: rgba(0, 0, 0, 0.5);');
-    document.body.appendChild(close);
+    close.addEventListener('contextmenu', (event) => {
+        event.preventDefault();
+    });
+
+    const shutter = createElement('img', 'capture-images-shutter') as HTMLImageElement;
+    shutter.src = shutterImage.src;
+    shutter.addEventListener('contextmenu', (event) => {
+        event.preventDefault();
+    });
+
+    const controlBar = createElement('div', 'capture-images-control-bar');
+    controlBar.appendChild(close);
+    controlBar.appendChild(shutter);
+
+    const container = createElement('div', 'capture-images-container');
+    container.appendChild(video);
+    container.appendChild(infoText);
+    container.appendChild(controlBar);
+
+    document.body.append(container);
+
+    stopSpinner();
 
     // video dimensions are only valid after play event
     let videoWidth, videoHeight;
@@ -202,11 +217,7 @@ const captureImages = async () => {
 
     // cleanup
     (video.srcObject as MediaStream).getVideoTracks().forEach((track) => track.stop());
-    document.body.removeChild(video);
-    document.body.removeChild(close);
-    document.body.removeChild(infoText);
-    document.body.removeChild(shutter);
-
+    document.body.removeChild(container);
     imageProcessor.destroy();
 
     return result;

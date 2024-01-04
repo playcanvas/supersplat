@@ -255,7 +255,19 @@ body {
     font-size: 18px;
 }
 
-.capture-info-text {
+// capture images panel
+
+#capture-images-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+#capture-images-text {
     position: absolute;
     top: 10px;
     left: 50%;
@@ -265,6 +277,39 @@ body {
     text-shadow: 0 0 10px black;
     font-family: monospace;
 }
+
+#capture-images-video {
+    height: calc(100% - 80px);
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+#capture-images-control-bar {
+    width: 100%;
+    height: 80px;
+    flex-grow: 0;
+    flex-shrink: 0;
+    background-color: black;
+}
+
+#capture-images-close {
+    position: absolute;
+    left: 40px;
+    bottom: 40px;
+    transform: translate(-50%, 50%);
+    width: 40px;
+    height: 40px;
+}
+
+#capture-images-shutter {
+    position: absolute;
+    left: 50%;
+    bottom: 40px;
+    transform-origin: bottom left;
+    transform: translate(-50%, 50%);
+}
+
+// capture animations
 
 @keyframes shutterAnim0 {
     0% { scale: 1.0; }

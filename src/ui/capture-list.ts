@@ -9,7 +9,7 @@ const getCaptureList = async () => {
 
         if (!captureListResponse.ok) {
             return [{
-                name: captureListResponse.statusText,
+                name: `Failed to download list (${captureListResponse.statusText})`,
                 task: ''
             }];
         }

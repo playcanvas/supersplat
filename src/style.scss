@@ -211,16 +211,18 @@ body {
     border: 1px solid black;
 }
 
-#review-name-container {
+.review-entry {
+    display: flex;
+    flex-direction: row;
     flex-grow: 0;
     flex-shrink: 0;
 }
 
-#review-name-label {
+.review-label {
     line-height: 24px;
 }
 
-#review-name {
+.review-value {
     flex-grow: 1;
 }
 

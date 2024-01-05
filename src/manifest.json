@@ -16,16 +16,16 @@
     ],
     "background_color": "#ffffff",
     "display": "fullscreen",
-    "start_url": "/",
+    "start_url": ".",
     "screenshots": [
         {
-            "src": "/static/images/screenshot-narrow.jpg",
+            "src": "static/images/screenshot-narrow.jpg",
             "type": "image/jpeg",
             "sizes": "2160x3840",
             "form_factor": "narrow"
         },
         {
-            "src": "/static/images/screenshot-wide.jpg",
+            "src": "static/images/screenshot-wide.jpg",
             "type": "image/jpeg",
             "sizes": "3840x2160",
             "form_factor": "wide"

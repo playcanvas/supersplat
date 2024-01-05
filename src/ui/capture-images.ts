@@ -224,7 +224,7 @@ const captureImages = async () => {
 };
 
 const captureReviewUploadImages = async () => {
-    const uploadImagePack = async (captureName: string, data: Blob) => {
+    const uploadImagePack = async (captureName: string, resolution: number, iterations: number, data: Blob) => {
         const origin = location.origin;
 
         // get signed url
@@ -255,7 +255,9 @@ const captureReviewUploadImages = async () => {
             method: 'POST',
             body: JSON.stringify({
                 filename: `${captureName}.ply`,
-                s3Key: json.s3Key
+                s3Key: json.s3Key,
+                resolution,
+                iterations
             }),
             headers: {
                 'Content-Type': 'application/json'
@@ -298,8 +300,8 @@ const captureReviewUploadImages = async () => {
 
     // process images
     if (images.length) {
-        const captureName = await reviewCapture(images);
-        if (captureName) {
+        const reviewResult = await reviewCapture(images);
+        if (reviewResult) {
             const blobWriter = new zip.BlobWriter();
             const writer = new zip.ZipWriter(blobWriter);
 
@@ -322,7 +324,7 @@ const captureReviewUploadImages = async () => {
             infoText.textContent = 'Uploading...';
 
             // submit image pack
-            await uploadImagePack(captureName, data);
+            await uploadImagePack(reviewResult.name, reviewResult.resolution, reviewResult.iterations, data);
 
             // (TEMP) download the capture zip
             // download('capture.zip', data);

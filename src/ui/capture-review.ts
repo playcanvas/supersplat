@@ -1,4 +1,4 @@
-import { Button, Container, Element, GridView, GridViewItem, Label, Panel, TextInput } from "@playcanvas/pcui";
+import { Button, Container, Element, GridView, GridViewItem, Label, Panel, SelectInput, TextInput } from "@playcanvas/pcui";
 
 const createImage = (preview: ImageBitmap, index: number) => {
     const image = document.createElement('canvas');
@@ -29,24 +29,70 @@ const reviewCapture = async (images: { blob: Blob, preview: ImageBitmap }[]) => 
     });
     reviewGridContainer.append(reviewGrid);
 
+    // name
+
     const nameLabel = new Label({
-        id: 'review-name-label',
+        class: 'review-label',
         text: 'Capture Name'
     });
 
     const name = new TextInput({
-        id: 'review-name',
+        class: 'review-value',
         value: 'Capture'
     });
 
     const nameContainer = new Container({
-        id: 'review-name-container',
-        flex: true,
-        flexDirection: 'row'
+        class: 'review-entry'
     });
 
     nameContainer.append(nameLabel);
     nameContainer.append(name);
+
+    // resolution
+
+    const resolutionLabel = new Label({
+        class: 'review-label',
+        text: 'Resolution'
+    });
+
+    const resolution = new SelectInput({
+        class: 'review-value',
+        defaultValue: '1600',
+        options: [ 800, 1024, 1600, 1920, 3200 ].map((v) => {
+            return { v: v.toString(), t: v.toString() };
+        })
+    });
+
+    const resolutionContainer = new Container({
+        class: 'review-entry'
+    });
+
+    resolutionContainer.append(resolutionLabel);
+    resolutionContainer.append(resolution);
+
+    // iterations
+
+    const iterationsLabel = new Label({
+        class: 'review-label',
+        text: 'Iterations'
+    });
+
+    const iterations = new SelectInput({
+        class: 'review-value',
+        defaultValue: '7000',
+        options: [ 1000, 7000, 30000, 100000 ].map((v) => {
+            return { v: v.toString(), t: v.toString() };
+        })
+    });
+
+    const iterationsContainer = new Container({
+        class: 'review-entry'
+    });
+
+    iterationsContainer.append(iterationsLabel);
+    iterationsContainer.append(iterations);
+
+    // buttons
 
     const upload = new Button({
         class: 'review-button',
@@ -73,6 +119,8 @@ const reviewCapture = async (images: { blob: Blob, preview: ImageBitmap }[]) => 
     });
     reviewPanel.content.append(reviewGridContainer);
     reviewPanel.content.append(nameContainer);
+    reviewPanel.content.append(resolutionContainer);
+    reviewPanel.content.append(iterationsContainer);
     reviewPanel.content.append(buttons);
 
     // add images
@@ -82,13 +130,17 @@ const reviewCapture = async (images: { blob: Blob, preview: ImageBitmap }[]) => 
 
     document.body.appendChild(reviewPanel.dom);
 
-    const result = await new Promise<string>((resolve) => {
+    const result = await new Promise<{ name: string, resolution: number, iterations: number } | null>((resolve) => {
         upload.on('click', () => {
-            resolve(name.value);
+            resolve({
+                name: name.value,
+                resolution: parseInt(resolution.value, 10),
+                iterations: parseInt(iterations.value, 10)
+            });
         });
 
         cancel.on('click', () => {
-            resolve('');
+            resolve(null);
         });
     });
 

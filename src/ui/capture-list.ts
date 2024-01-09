@@ -1,5 +1,6 @@
-import { Button, Container, Panel, TreeView, TreeViewItem } from "@playcanvas/pcui";
+import { Button, Container, Panel } from "@playcanvas/pcui";
 import { startSpinner, stopSpinner } from "./spinner";
+import { TableView } from "./table-view";
 
 const getCaptureList = async () => {
     try {
@@ -10,7 +11,7 @@ const getCaptureList = async () => {
         if (!captureListResponse.ok) {
             return [{
                 name: `Failed to download list (${captureListResponse.statusText})`,
-                task: ''
+                status: ''
             }];
         }
 
@@ -19,7 +20,7 @@ const getCaptureList = async () => {
         if (captureListJson.result === undefined) {
             return [{
                 name: 'Failed to retrieve capture list. (Make sure you are logged in).',
-                task: ''
+                status: ''
             }];
         }
 
@@ -27,17 +28,24 @@ const getCaptureList = async () => {
     } catch (error) {
         return [{
             name: error.toString(),
-            task: ''
+            status: ''
         }];
     }
 };
 
 const showCaptureList = async () => {
-    const captureList = new TreeView({
+    const captureList = new TableView({
         id: 'capture-list',
-        allowDrag: false,
-        allowReordering: false,
-        allowRenaming: false
+        columns: [{
+            header: 'Name',
+            width: 300
+        }, {
+            header: 'Status'
+        }, {
+            header: 'Age'
+        }, {
+            header: 'MB'
+        }]
     });
 
     const captureListContainer = new Container({
@@ -66,7 +74,7 @@ const showCaptureList = async () => {
 
     const captureListPanel = new Panel({
         id: 'capture-list-panel',
-        headerText: 'CAPTURE LIST',
+        headerText: 'CAPTURES',
         flex: true,
         flexDirection: 'column'
     });
@@ -75,45 +83,62 @@ const showCaptureList = async () => {
 
     document.body.appendChild(captureListPanel.dom);
 
+    const statusString = (captureEntry: any) => {
+        return captureEntry.state ? captureEntry.state : (captureEntry.file?.filename ? 'complete' : 'queued');
+    };
+
+    const dateString = (captureEntry: any) => {
+        const date = Date.parse(captureEntry.createdAt);
+        const curr = (new Date()).getTime();
+
+        const groupings = [
+            { unit: 'y', time: 1000 * 60 * 60 * 24 * 365 },
+            { unit: 'w', time: 1000 * 60 * 60 * 24 * 7 },
+            { unit: 'd', time: 1000 * 60 * 60 * 24 },
+            { unit: 'h', time: 1000 * 60 * 60 },
+            { unit: 'm', time: 1000 * 60 },
+            { unit: 's', time: 1000 },
+            { unit: 'ms', time: 1 }
+        ];
+
+        for (let i = 0; i < groupings.length; ++i) {
+            const value = Math.floor((curr - date) / groupings[i].time);
+            if (value > 0) {
+                return `${value}${groupings[i].unit}`;
+            }
+        }
+
+        return '';
+    };
+
+    const sizeString = (captureEntry: any) => {
+        return captureEntry.file?.size ? `${(captureEntry.file.size / 1024 / 1024).toFixed(2)}` : '';
+    };
+
     const result = await new Promise<boolean>((resolve) => {
         startSpinner();
-
-        const map = new Map<TreeViewItem, any>();
 
         getCaptureList().then((data: any) => {
             stopSpinner();
 
-            data.forEach((capture: any) => {
-                const states = {
-                    running: 'Processing: ',
-                    failed: 'Failed: '
-                };
-                const item = new TreeViewItem({
-                    class: 'capture-list-item',
-                    // @ts-ignore
-                    text: `${states[capture.task] ?? ''}${capture.name}`,
-                    icon: '',
-                    enabled: !!capture.file?.filename
-                });
-                captureList.append(item);
-    
-                map.set(item, capture);
+            captureList.rows = data.map((c: any) => {
+                return [c.name, statusString(c), dateString(c), sizeString(c)];
             });
-        });
 
-        captureList.on('select', (item: TreeViewItem) => {
-            load.enabled = item.enabled;
-        });
-
-        load.on('click', () => {
-            const capture = map.get(captureList.selected[0]);
-            const loadUrl = `/api/assets/${capture.id}/file/${capture.file.filename}`;
-            window.scene.loadModel(loadUrl, capture.name);
-            resolve(true);
-        });
-
-        cancel.on('click', () => {
-            resolve(false);
+            captureList.on('select', (index: number) => {
+                load.enabled = data[captureList.selection].file?.filename ? true : false;
+            });
+    
+            load.on('click', () => {
+                const capture = data[captureList.selection];
+                const loadUrl = `/api/assets/${capture.id}/file/${capture.file.filename}`;
+                window.scene.loadModel(loadUrl, capture.name);
+                resolve(true);
+            });
+    
+            cancel.on('click', () => {
+                resolve(false);
+            });    
         });
 
         // setTimeout required here otherwise the click event that launched this panel triggers the

@@ -33,6 +33,38 @@ const getCaptureList = async () => {
     }
 };
 
+const statusString = (captureEntry: any) => {
+    return captureEntry.state ? captureEntry.state : (captureEntry.file?.filename ? 'complete' : 'queued');
+};
+
+const dateString = (captureEntry: any) => {
+    const date = Date.parse(captureEntry.createdAt);
+    const curr = (new Date()).getTime();
+
+    const groupings = [
+        { unit: 'y', time: 1000 * 60 * 60 * 24 * 365 },
+        { unit: 'w', time: 1000 * 60 * 60 * 24 * 7 },
+        { unit: 'd', time: 1000 * 60 * 60 * 24 },
+        { unit: 'h', time: 1000 * 60 * 60 },
+        { unit: 'm', time: 1000 * 60 },
+        { unit: 's', time: 1000 },
+        { unit: 'ms', time: 1 }
+    ];
+
+    for (let i = 0; i < groupings.length; ++i) {
+        const value = Math.floor((curr - date) / groupings[i].time);
+        if (value > 0) {
+            return `${value}${groupings[i].unit}`;
+        }
+    }
+
+    return '';
+};
+
+const sizeString = (captureEntry: any) => {
+    return captureEntry.file?.size ? `${(captureEntry.file.size / 1024 / 1024).toFixed(2)}` : '';
+};
+
 const showCaptureList = async () => {
     const captureList = new TableView({
         id: 'capture-list',
@@ -82,38 +114,6 @@ const showCaptureList = async () => {
     captureListPanel.append(buttons);
 
     document.body.appendChild(captureListPanel.dom);
-
-    const statusString = (captureEntry: any) => {
-        return captureEntry.state ? captureEntry.state : (captureEntry.file?.filename ? 'complete' : 'queued');
-    };
-
-    const dateString = (captureEntry: any) => {
-        const date = Date.parse(captureEntry.createdAt);
-        const curr = (new Date()).getTime();
-
-        const groupings = [
-            { unit: 'y', time: 1000 * 60 * 60 * 24 * 365 },
-            { unit: 'w', time: 1000 * 60 * 60 * 24 * 7 },
-            { unit: 'd', time: 1000 * 60 * 60 * 24 },
-            { unit: 'h', time: 1000 * 60 * 60 },
-            { unit: 'm', time: 1000 * 60 },
-            { unit: 's', time: 1000 },
-            { unit: 'ms', time: 1 }
-        ];
-
-        for (let i = 0; i < groupings.length; ++i) {
-            const value = Math.floor((curr - date) / groupings[i].time);
-            if (value > 0) {
-                return `${value}${groupings[i].unit}`;
-            }
-        }
-
-        return '';
-    };
-
-    const sizeString = (captureEntry: any) => {
-        return captureEntry.file?.size ? `${(captureEntry.file.size / 1024 / 1024).toFixed(2)}` : '';
-    };
 
     const result = await new Promise<boolean>((resolve) => {
         startSpinner();

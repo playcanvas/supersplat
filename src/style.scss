@@ -183,6 +183,8 @@ body {
     top: 50%;
 }
 
+// review panel
+
 #review-panel {
     position: absolute;
     left: 20px;
@@ -219,10 +221,11 @@ body {
 }
 
 .review-label {
+    width: 120px;
     line-height: 24px;
 }
 
-.review-value {
+.review-value-expand {
     flex-grow: 1;
 }
 
@@ -258,6 +261,48 @@ body {
 
 .capture-list-item, .pcui-treeview-item-text {
     font-size: 18px;
+}
+
+// capture settings panel
+
+#capture-settings-panel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 400px;
+    transform: translate(-50%, -50%);
+}
+
+#capture-settings-container {
+    flex-grow: 1;
+}
+
+#capture-settings-buttons {
+    flex-shrink: 0;
+    flex-grow: 0;
+    justify-content: space-between;
+    display: flex;
+    flex-direction: row;
+}
+
+.capture-settings-button {
+    width: 120px;
+}
+
+.capture-settings-entry {
+    display: flex;
+    flex-direction: row;
+    flex-grow: 0;
+    flex-shrink: 0;
+}
+
+.capture-settings-label {
+    width: 100px;
+    line-height: 24px;
+}
+
+.capture-settings-value {
+    flex-grow: 1;
 }
 
 // capture images panel

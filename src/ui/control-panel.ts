@@ -2,6 +2,7 @@ import { EventHandler } from 'playcanvas';
 import { BooleanInput, Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, VectorInput } from 'pcui';
 import { captureReviewUploadImages } from './capture-images';
 import { showCaptureList } from './capture-list';
+import { showCaptureSettings } from './capture-settings';
 
 class BoxSelection {
     root: HTMLElement;
@@ -281,6 +282,12 @@ class ControlPanel extends Container {
 
         super(args);
 
+        // TODO: load settings from somewhere
+        const captureSettings = {
+            resolution: 1600,
+            iterations: 7000
+        };
+
         // capture panel
         const capturePanel = new Panel({
             class: 'control-panel',
@@ -301,8 +308,16 @@ class ControlPanel extends Container {
             text: 'List'
         });
 
+        const captureSettingsButton = new Button({
+            class: 'control-element',
+            text: '',
+            icon: 'E134',
+            width: 40
+        });
+
         captureButtons.append(captureButton);
         captureButtons.append(captureListButton);
+        captureButtons.append(captureSettingsButton);
         capturePanel.append(captureButtons);
 
         // camera panel
@@ -843,15 +858,22 @@ class ControlPanel extends Container {
             // hide editor UI before kicking off user capture
             this.events.fire('captureStart');
 
-            await captureReviewUploadImages();
+            await captureReviewUploadImages(captureSettings);
 
             // restore editor UI
             this.events.fire('captureEnd');
         });
 
         // display capture list
-        captureListButton.on('click', async () => {
+        captureListButton.on('click', () => {
             showCaptureList();
+        });
+
+
+        captureSettingsButton.on('click', async () => {
+            if (await showCaptureSettings(captureSettings)) {
+                // TODO: store settings somewhere
+            }
         });
 
         focusButton.on('click', () => {

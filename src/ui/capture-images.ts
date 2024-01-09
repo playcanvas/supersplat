@@ -3,6 +3,7 @@ import { reviewCapture } from './capture-review';
 import * as zip from "@zip.js/zip.js";
 import closeImage from '../svg/ar-close.svg';
 import shutterImage from '../svg/shutter.svg';
+import { CaptureSettings } from './capture-settings';
 
 // request video feed
 const startVideoFeed = async (video: HTMLVideoElement) => {
@@ -108,19 +109,19 @@ class ImageProcessor {
         this.worker.terminate();
     }
 
-    captureImage(video: HTMLVideoElement, outputMax = 1600) {
+    captureImage(video: HTMLVideoElement, imageMax: number) {
         const id = this.nextId++;
         return new Promise<{ blob: Blob, preview: ImageBitmap }>((resolve) => {
             this.jobs.set(id, resolve);
             createImageBitmap(video, { premultiplyAlpha: 'none' })
             .then((imageBitmap: ImageBitmap) => {
-                this.worker.postMessage({ id, imageBitmap, outputMax }, [imageBitmap]);
+                this.worker.postMessage({ id, imageBitmap, imageMax }, [imageBitmap]);
             });
         });
     }
 }
 
-const captureImages = async () => {
+const captureImages = async (imageMax: number) => {
     const createElement = (type: string, id: string) => {
         const result = document.createElement(type);
         result.setAttribute('id', id);
@@ -186,7 +187,7 @@ const captureImages = async () => {
         };
 
         const doCapture = () => {
-            images.push(imageProcessor.captureImage(video));
+            images.push(imageProcessor.captureImage(video, imageMax));
             updateInfoText();
 
             shutter.style.animation = `shutterAnim${images.length % 2} 0.2s ease-in-out`;
@@ -223,7 +224,7 @@ const captureImages = async () => {
     return result;
 };
 
-const captureReviewUploadImages = async () => {
+const captureReviewUploadImages = async (captureSettings: CaptureSettings) => {
     const uploadImagePack = async (captureName: string, resolution: number, iterations: number, data: Blob) => {
         const origin = location.origin;
 
@@ -296,7 +297,7 @@ const captureReviewUploadImages = async () => {
     };
 
     // launch capture
-    const images: { blob: Blob, preview: ImageBitmap }[] = await captureImages();
+    const images: { blob: Blob, preview: ImageBitmap }[] = await captureImages(captureSettings.resolution);
 
     // process images
     if (images.length) {
@@ -321,13 +322,16 @@ const captureReviewUploadImages = async () => {
             await writer.close();
             const data = await blobWriter.getData();
 
-            infoText.textContent = 'Uploading...';
+            if (reviewResult.upload) {
+                infoText.textContent = 'Uploading...';
 
-            // submit image pack
-            await uploadImagePack(reviewResult.name, reviewResult.resolution, reviewResult.iterations, data);
+                // submit image pack
+                await uploadImagePack(reviewResult.name, captureSettings.resolution, captureSettings.iterations, data);
+            }
 
-            // (TEMP) download the capture zip
-            // download('capture.zip', data);
+            if (reviewResult.download) {
+                download(`${reviewResult.name}.zip`, data);
+            }
 
             document.body.removeChild(infoText);
             stopSpinner();

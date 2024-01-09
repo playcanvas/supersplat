@@ -1,4 +1,4 @@
-import { Button, Container, Element, GridView, GridViewItem, Label, Panel, SelectInput, TextInput } from "@playcanvas/pcui";
+import { BooleanInput, Button, Container, Element, GridView, GridViewItem, Label, Panel, SelectInput, TextInput } from "@playcanvas/pcui";
 
 const createImage = (preview: ImageBitmap, index: number) => {
     const image = document.createElement('canvas');
@@ -37,7 +37,7 @@ const reviewCapture = async (images: { blob: Blob, preview: ImageBitmap }[]) => 
     });
 
     const name = new TextInput({
-        class: 'review-value',
+        class: 'review-value-expand',
         value: 'Capture'
     });
 
@@ -48,55 +48,51 @@ const reviewCapture = async (images: { blob: Blob, preview: ImageBitmap }[]) => 
     nameContainer.append(nameLabel);
     nameContainer.append(name);
 
-    // resolution
+    // upload
 
-    const resolutionLabel = new Label({
+    const uploadLabel = new Label({
         class: 'review-label',
-        text: 'Resolution'
+        text: 'Generate Scene'
     });
 
-    const resolution = new SelectInput({
+    const upload = new BooleanInput({
         class: 'review-value',
-        defaultValue: '1600',
-        options: [ 800, 1024, 1600, 1920, 3200 ].map((v) => {
-            return { v: v.toString(), t: v.toString() };
-        })
+        value: true,
+        width: 16
     });
 
-    const resolutionContainer = new Container({
+    const uploadContainer = new Container({
         class: 'review-entry'
     });
 
-    resolutionContainer.append(resolutionLabel);
-    resolutionContainer.append(resolution);
+    uploadContainer.append(uploadLabel);
+    uploadContainer.append(upload);
 
-    // iterations
+    // download
 
-    const iterationsLabel = new Label({
+    const downloadLabel = new Label({
         class: 'review-label',
-        text: 'Iterations'
+        text: 'Download images'
     });
 
-    const iterations = new SelectInput({
+    const download = new BooleanInput({
         class: 'review-value',
-        defaultValue: '7000',
-        options: [ 1000, 7000, 30000, 100000 ].map((v) => {
-            return { v: v.toString(), t: v.toString() };
-        })
+        value: false,
+        width: 16
     });
 
-    const iterationsContainer = new Container({
+    const downloadContainer = new Container({
         class: 'review-entry'
     });
 
-    iterationsContainer.append(iterationsLabel);
-    iterationsContainer.append(iterations);
+    downloadContainer.append(downloadLabel);
+    downloadContainer.append(download);
 
     // buttons
 
-    const upload = new Button({
+    const apply = new Button({
         class: 'review-button',
-        text: 'UPLOAD'
+        text: 'APPLY'
     });
     const cancel = new Button({
         class: 'review-button',
@@ -108,7 +104,7 @@ const reviewCapture = async (images: { blob: Blob, preview: ImageBitmap }[]) => 
         flex: true,
         flexDirection: 'row'
     });
-    buttons.append(upload);
+    buttons.append(apply);
     buttons.append(cancel);
 
     const reviewPanel = new Panel({
@@ -119,8 +115,8 @@ const reviewCapture = async (images: { blob: Blob, preview: ImageBitmap }[]) => 
     });
     reviewPanel.content.append(reviewGridContainer);
     reviewPanel.content.append(nameContainer);
-    reviewPanel.content.append(resolutionContainer);
-    reviewPanel.content.append(iterationsContainer);
+    reviewPanel.content.append(uploadContainer);
+    reviewPanel.content.append(downloadContainer);
     reviewPanel.content.append(buttons);
 
     // add images
@@ -130,12 +126,12 @@ const reviewCapture = async (images: { blob: Blob, preview: ImageBitmap }[]) => 
 
     document.body.appendChild(reviewPanel.dom);
 
-    const result = await new Promise<{ name: string, resolution: number, iterations: number } | null>((resolve) => {
-        upload.on('click', () => {
+    const result = await new Promise<{ name: string, upload: boolean, download: boolean } | null>((resolve) => {
+        apply.on('click', () => {
             resolve({
                 name: name.value,
-                resolution: parseInt(resolution.value, 10),
-                iterations: parseInt(iterations.value, 10)
+                upload: upload.value,
+                download: download.value
             });
         });
 

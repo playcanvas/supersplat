@@ -237,6 +237,7 @@ class Scene extends EventHandler {
             this.add(model);
             this.updateBound();
             this.camera.focus();
+            this.fire('loaded', filename);
         } catch (err) {
             this.fire('error', err);
         }

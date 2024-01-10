@@ -1,4 +1,4 @@
-import { Container, ContainerArgs } from '@playcanvas/pcui';
+import { Container, ContainerArgs } from 'pcui';
 
 interface TableViewColumn {
     header: string;

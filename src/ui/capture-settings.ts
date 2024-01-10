@@ -1,4 +1,4 @@
-import { Button, Container, Label, Panel, SelectInput } from '@playcanvas/pcui';
+import { Button, Container, Label, Panel, SelectInput } from 'pcui';
 
 interface CaptureSettings {
     resolution: number;

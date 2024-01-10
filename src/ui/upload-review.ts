@@ -1,4 +1,4 @@
-import { Button, Container, Label, Panel, SelectInput, TextInput } from "@playcanvas/pcui";
+import { Button, Container, Label, Panel, SelectInput, TextInput } from "pcui";
 import { uploadImagePack } from "./capture-images";
 import { startSpinner, stopSpinner } from "./spinner";
 

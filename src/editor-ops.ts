@@ -62,6 +62,10 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
         editorUI.showError(err);
     });
 
+    scene.on('loaded', (filename: string) => {
+        editorUI.setFilename(filename);
+    });
+
     // make a copy of the opacity channel because that's what we'll be modifying
     scene.on('element:added', (element: Element) => {
         if (element.type === ElementType.splat) {

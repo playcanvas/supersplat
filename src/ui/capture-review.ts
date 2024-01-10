@@ -1,4 +1,4 @@
-import { BooleanInput, Button, Container, Element, GridView, GridViewItem, Label, Panel, SelectInput, TextInput } from "@playcanvas/pcui";
+import { BooleanInput, Button, Container, Element, GridView, GridViewItem, Label, Panel, TextInput } from "pcui";
 
 const createImage = (preview: ImageBitmap, index: number) => {
     const image = document.createElement('canvas');

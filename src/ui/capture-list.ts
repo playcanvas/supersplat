@@ -1,4 +1,4 @@
-import { Button, Container, Panel } from "@playcanvas/pcui";
+import { Button, Container, Panel } from "pcui";
 import { startSpinner, stopSpinner } from "./spinner";
 import { TableView } from "./table-view";
 

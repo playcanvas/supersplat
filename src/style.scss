@@ -71,6 +71,14 @@ body {
     user-select: none;
 }
 
+#filename-label {
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+    color: $text-primary;
+    text-shadow: 0 0 4px black;
+}
+
 .control-panel > .pcui-panel-content {
     display: flex;
     flex-direction: column;
@@ -261,9 +269,6 @@ body {
     line-height: 24px;
 }
 
-.upload-review-value {
-    flex-grow: 1;
-}
 .upload-review-value-expand {
     flex-grow: 1;
 }

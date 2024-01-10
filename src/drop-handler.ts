@@ -131,4 +131,4 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
     );
 };
 
-export {CreateDropHandler};
+export { CreateDropHandler };

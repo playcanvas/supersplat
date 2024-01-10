@@ -229,6 +229,45 @@ body {
     flex-grow: 1;
 }
 
+// upload review panel
+
+#upload-review-panel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 400px;
+    transform: translate(-50%, -50%);
+}
+
+#upload-review-buttons {
+    flex-grow: 0;
+    flex-shrink: 0;
+    justify-content: space-between;
+}
+
+.upload-review-button {
+    width: 120px;
+}
+
+.upload-review-entry {
+    display: flex;
+    flex-direction: row;
+    flex-grow: 0;
+    flex-shrink: 0;
+}
+
+.upload-review-label {
+    width: 120px;
+    line-height: 24px;
+}
+
+.upload-review-value {
+    flex-grow: 1;
+}
+.upload-review-value-expand {
+    flex-grow: 1;
+}
+
 // capture list panel
 
 #capture-list-panel {

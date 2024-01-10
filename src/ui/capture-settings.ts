@@ -114,8 +114,8 @@ const showCaptureSettings = async (captureSettings: CaptureSettings) => {
         });
     });
 
-    document.body.removeChild(captureSettingsPanel.dom);
     document.body.onclick = null;
+    document.body.removeChild(captureSettingsPanel.dom);
 
     return result;
 };

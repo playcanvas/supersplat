@@ -224,55 +224,55 @@ const captureImages = async (imageMax: number) => {
     return result;
 };
 
+const uploadImagePack = async (captureName: string, resolution: number, iterations: number, data: Blob) => {
+    const origin = location.origin;
+
+    // get signed url
+    const urlResponse = await fetch(`${origin}/api/upload/signed-url`, { method: 'POST' });
+    if (!urlResponse.ok) {
+        window.showError(`Failed to get signed url (${urlResponse.statusText})`);
+        return;
+    }
+
+    const json = await urlResponse.json();
+
+    // upload the file to S3
+    const uploadResponse = await fetch(json.signedUrl, {
+        method: 'PUT',
+        body: data,
+        headers: {
+            'Content-Type': 'binary/octet-stream'
+        }
+    });
+
+    if (!uploadResponse.ok) {
+        console.log(`failed to upload file (${uploadResponse.statusText})`);
+        return;
+    }
+
+    // kick off processing
+    const jobResponse = await fetch(`${origin}/api/splats`, {
+        method: 'POST',
+        body: JSON.stringify({
+            filename: `${captureName}.ply`,
+            s3Key: json.s3Key,
+            resolution,
+            iterations
+        }),
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    });
+
+    if (!jobResponse.ok) {
+        console.log(`failed to start job (${jobResponse.statusText})`);
+        return;
+    }
+
+    console.log('done');
+};
+
 const captureReviewUploadImages = async (captureSettings: CaptureSettings) => {
-    const uploadImagePack = async (captureName: string, resolution: number, iterations: number, data: Blob) => {
-        const origin = location.origin;
-
-        // get signed url
-        const urlResponse = await fetch(`${origin}/api/upload/signed-url`, { method: 'POST' });
-        if (!urlResponse.ok) {
-            window.showError(`Failed to get signed url (${urlResponse.statusText})`);
-            return;
-        }
-
-        const json = await urlResponse.json();
-
-        // upload the file to S3
-        const uploadResponse = await fetch(json.signedUrl, {
-            method: 'PUT',
-            body: data,
-            headers: {
-                'Content-Type': 'binary/octet-stream'
-            }
-        });
-
-        if (!uploadResponse.ok) {
-            console.log(`failed to upload file (${uploadResponse.statusText})`);
-            return;
-        }
-
-        // kick off processing
-        const jobResponse = await fetch(`${origin}/api/splats`, {
-            method: 'POST',
-            body: JSON.stringify({
-                filename: `${captureName}.ply`,
-                s3Key: json.s3Key,
-                resolution,
-                iterations
-            }),
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (!jobResponse.ok) {
-            console.log(`failed to start job (${jobResponse.statusText})`);
-            return;
-        }
-
-        console.log('done');
-    };
-
     // download the data uri
     const download = (filename: string, blob: Blob) => {
         const url = window.URL.createObjectURL(blob);
@@ -339,6 +339,8 @@ const captureReviewUploadImages = async (captureSettings: CaptureSettings) => {
     }
 };
 
+
 export {
+    uploadImagePack,
     captureReviewUploadImages
 };

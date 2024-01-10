@@ -45,8 +45,8 @@ function ImageProcessorWorker() {
     };
 
     const processImage = async (data: any) => {
-        const { id, imageBitmap, outputMax } = data;
-        const outputDim = getOutputDim(imageBitmap, outputMax);
+        const { id, imageBitmap, imageMax } = data;
+        const outputDim = getOutputDim(imageBitmap, imageMax);
 
         const sizedBitmap = await createImageBitmap(imageBitmap, {
             premultiplyAlpha: 'none',

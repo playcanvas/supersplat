@@ -32,7 +32,7 @@ const reviewAndUpload = async (data: Blob) => {
         const resolution = new SelectInput({
             class: 'upload-review-value-expand',
             defaultValue: '1600',
-            options: [ 800, 1024, 1600, 1920, 3200 ].map((v) => {
+            options: [ 1, 2, 4, 8, 800, 1024, 1600, 1920, 3200 ].map((v) => {
                 return { v: v.toString(), t: v.toString() };
             })
         });
@@ -44,6 +44,28 @@ const reviewAndUpload = async (data: Blob) => {
         resolutionContainer.append(resolutionLabel);
         resolutionContainer.append(resolution);
 
+        // sh_degree
+
+        const shDegreeLabel = new Label({
+            class: 'upload-review-label',
+            text: 'SH Degree'
+        });
+
+        const shDegree = new SelectInput({
+            class: 'upload-review-value-expand',
+            defaultValue: '3',
+            options: [ 0, 1, 2, 3 ].map((v) => {
+                return { v: v.toString(), t: v.toString() };
+            })
+        });
+
+        const shDegreeContainer = new Container({
+            class: 'upload-review-entry'
+        });
+
+        shDegreeContainer.append(shDegreeLabel);
+        shDegreeContainer.append(shDegree);
+
         // iterations
 
         const iterationsLabel = new Label({
@@ -54,7 +76,7 @@ const reviewAndUpload = async (data: Blob) => {
         const iterations = new SelectInput({
             class: 'upload-review-value-expand',
             defaultValue: '7000',
-            options: [ 1000, 7000, 30000, 100000 ].map((v) => {
+            options: [ 1000, 7000, 30000, 50000, 100000 ].map((v) => {
                 return { v: v.toString(), t: v.toString() };
             })
         });
@@ -96,6 +118,7 @@ const reviewAndUpload = async (data: Blob) => {
         reviewPanel.content.append(nameContainer);
         reviewPanel.content.append(resolutionContainer);
         reviewPanel.content.append(iterationsContainer);
+        reviewPanel.content.append(shDegreeContainer);
         reviewPanel.content.append(buttons);
 
         document.body.appendChild(reviewPanel.dom);
@@ -105,9 +128,12 @@ const reviewAndUpload = async (data: Blob) => {
                 startSpinner();
                 uploadImagePack(
                     name.value,
-                    parseInt(resolution.value, 10),
-                    parseInt(iterations.value, 10),
-                    data)
+                    data,
+                    {
+                        resolution: parseInt(resolution.value, 10),
+                        iterations: parseInt(iterations.value, 10),
+                        sh_degree: parseInt(shDegree.value, 10)
+                    })
                 .then(() => resolve(null))
                 .finally(() => stopSpinner());
             });

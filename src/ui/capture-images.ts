@@ -224,7 +224,13 @@ const captureImages = async (imageMax: number) => {
     return result;
 };
 
-const uploadImagePack = async (captureName: string, resolution: number, iterations: number, data: Blob) => {
+interface GenerationParameters {
+    resolution?: number;
+    iterations?: number;
+    sh_degree?: number;
+};
+
+const uploadImagePack = async (captureName: string, data: Blob, parameters: GenerationParameters) => {
     const origin = location.origin;
 
     // get signed url
@@ -256,8 +262,7 @@ const uploadImagePack = async (captureName: string, resolution: number, iteratio
         body: JSON.stringify({
             filename: `${captureName}.ply`,
             s3Key: json.s3Key,
-            resolution,
-            iterations
+            options: parameters ?? {}
         }),
         headers: {
             'Content-Type': 'application/json'
@@ -326,7 +331,7 @@ const captureReviewUploadImages = async (captureSettings: CaptureSettings) => {
                 infoText.textContent = 'Uploading...';
 
                 // submit image pack
-                await uploadImagePack(reviewResult.name, captureSettings.resolution, captureSettings.iterations, data);
+                await uploadImagePack(reviewResult.name, data, captureSettings);
             }
 
             if (reviewResult.download) {

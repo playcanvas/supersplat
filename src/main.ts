@@ -128,10 +128,6 @@ const main = async () => {
 
     const overrides = [
         {
-            model: {
-                url: decodedUrl,
-                filename: decodedUrl
-            },
             env: {
                 url: envImageURL
             }
@@ -155,6 +151,7 @@ const main = async () => {
 
     // load async models
     await scene.load();
+    await scene.loadModel(decodedUrl, decodedUrl);
 
     window.scene = scene;
 }

@@ -191,8 +191,6 @@ class Scene extends EventHandler {
     async load() {
         const config = this.config;
 
-        const modelStartTime = Date.now();
-
         // load scene assets
         const promises: Promise<any>[] = [];
 

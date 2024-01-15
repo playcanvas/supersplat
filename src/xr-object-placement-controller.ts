@@ -271,6 +271,7 @@ const createModelHandler = (controller: XRObjectPlacementController) => {
     xr.on('update', (frame: any) => {
         const xr = controller.options.xr;
 
+        // @ts-ignore
         if (!xr.views.list.length) {
             return;
         }

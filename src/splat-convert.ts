@@ -15,8 +15,8 @@ const convertPly = (splatData: SplatData, modelMat: Mat4) => {
     }
 
     const internalProps = ['selection', 'opacityOrig'];
-    const props = splatData.vertexElement.properties.filter(p => p.storage && !internalProps.includes(p.name)).map(p => p.name);
-    const header = (new TextEncoder()).encode(`ply\nformat binary_little_endian 1.0\nelement vertex ${numSplats}\n` + props.map(p => `property float ${p}`).join('\n') + `\nend_header\n`);
+    const props = splatData.vertexElement.properties.filter((p: any) => p.storage && !internalProps.includes(p.name)).map((p: any) => p.name);
+    const header = (new TextEncoder()).encode(`ply\nformat binary_little_endian 1.0\nelement vertex ${numSplats}\n` + props.map((p: any) => `property float ${p}`).join('\n') + `\nend_header\n`);
     const result = new Uint8Array(header.byteLength + numSplats * props.length * 4);
 
     result.set(header);
@@ -25,7 +25,7 @@ const convertPly = (splatData: SplatData, modelMat: Mat4) => {
     let offset = header.byteLength;
 
     for (let i = 0; i < splatData.numSplats; ++i) {
-        props.forEach((prop) => {
+        props.forEach((prop: any) => {
             const p = splatData.getProp(prop);
             if (p) {
                 if (opacity[i] !== deletedOpacity) {

@@ -83,15 +83,10 @@ const initDropHandler = (canvas: HTMLCanvasElement, scene: Scene) => {
 
     // also support user dragging and dropping a local glb file onto the canvas
     CreateDropHandler(canvas, urls => {
-        if (urls.length === 1 &&
-            (urls[0].filename.endsWith('.zip') || urls[0].filename.endsWith('.mov'))) {
-            reviewAndUpload(urls[0].file);
-        } else {
-            const modelExtensions = ['.glb', '.gltf', '.ply']
-            const model = urls.find(url => modelExtensions.some(extension => url.filename.endsWith(extension)));
-            if (model) {
-                scene.loadModel(model.url, model.filename);
-            }
+        const modelExtensions = ['.ply'];
+        const model = urls.find(url => modelExtensions.some(extension => url.filename.endsWith(extension)));
+        if (model) {
+            scene.loadModel(model.url, model.filename);
         }
     });
 };

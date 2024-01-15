@@ -90,14 +90,6 @@ class EditorUI {
         // control panel
         const controlPanel = new ControlPanel();
 
-        controlPanel.events.on('captureStart', () => {
-            appContainer.dom.style.visibility = 'hidden';
-        });
-
-        controlPanel.events.on('captureEnd', () => {
-            appContainer.dom.style.visibility = '';
-        });
-
         // file select
         const fileSelect = new Container({
             id: 'file-selector-container'

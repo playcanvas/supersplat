@@ -1,8 +1,5 @@
 import { EventHandler } from 'playcanvas';
 import { BooleanInput, Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, VectorInput } from 'pcui';
-import { captureReviewUploadImages } from './capture-images';
-import { showCaptureList } from './capture-list';
-import { showCaptureSettings } from './capture-settings';
 
 class BoxSelection {
     root: HTMLElement;
@@ -281,44 +278,6 @@ class ControlPanel extends Container {
         });
 
         super(args);
-
-        // TODO: load settings from somewhere
-        const captureSettings = {
-            resolution: 1600,
-            iterations: 7000
-        };
-
-        // capture panel
-        const capturePanel = new Panel({
-            class: 'control-panel',
-            headerText: 'CAPTURE'
-        });
-
-        const captureButtons = new Container({
-            class: 'control-parent'
-        });
-
-        const captureButton = new Button({
-            class: 'control-element-expand',
-            text: 'Capture'
-        });
-
-        const captureListButton = new Button({
-            class: 'control-element-expand',
-            text: 'List'
-        });
-
-        const captureSettingsButton = new Button({
-            class: 'control-element',
-            text: '',
-            icon: 'E134',
-            width: 40
-        });
-
-        captureButtons.append(captureButton);
-        captureButtons.append(captureListButton);
-        captureButtons.append(captureSettingsButton);
-        capturePanel.append(captureButtons);
 
         // camera panel
         const cameraPanel = new Panel({
@@ -746,7 +705,6 @@ class ControlPanel extends Container {
         keyboardPanel.append(shortcutsLabel);
 
         // append
-        this.append(capturePanel);
         this.append(cameraPanel);
         this.append(selectionPanel);
         this.append(modifyPanel);
@@ -853,28 +811,6 @@ class ControlPanel extends Container {
         setButton.on('click', () => performSelect('set'));
         addButton.on('click', () => performSelect('add'));
         removeButton.on('click', () => performSelect('remove'));
-
-        captureButton.on('click', async () => {
-            // hide editor UI before kicking off user capture
-            this.events.fire('captureStart');
-
-            await captureReviewUploadImages(captureSettings);
-
-            // restore editor UI
-            this.events.fire('captureEnd');
-        });
-
-        // display capture list
-        captureListButton.on('click', () => {
-            showCaptureList();
-        });
-
-
-        captureSettingsButton.on('click', async () => {
-            if (await showCaptureSettings(captureSettings)) {
-                // TODO: store settings somewhere
-            }
-        });
 
         focusButton.on('click', () => {
             this.events.fire('focusCamera');

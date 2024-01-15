@@ -41,7 +41,6 @@ const download = (filename: string, data: ArrayBuffer) => {
     window.URL.revokeObjectURL(url);
 };
 
-
 interface SplatDef {
     element: Splat,
     data: SplatData,
@@ -61,6 +60,10 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
 
     scene.on('error', (err: any) => {
         editorUI.showError(err);
+    });
+
+    scene.on('loaded', (filename: string) => {
+        editorUI.setFilename(filename);
     });
 
     // make a copy of the opacity channel because that's what we'll be modifying
@@ -170,10 +173,10 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
             const render = splatDef.render;
 
             render.updateColorData(
-                data.getProp('f_dc_0'),
-                data.getProp('f_dc_1'),
-                data.getProp('f_dc_2'),
-                data.getProp('opacity')
+                data.getProp('f_dc_0') as Float32Array,
+                data.getProp('f_dc_1') as Float32Array,
+                data.getProp('f_dc_2') as Float32Array,
+                data.getProp('opacity') as Float32Array
             );
         });
 
@@ -233,8 +236,8 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
     events.on('selectAll', () => {
         splatDefs.forEach((splatDef) => {
             const splatData = splatDef.data;
-            const selection = splatData.getProp('selection');
-            const opacity = splatData.getProp('opacity');
+            const selection = splatData.getProp('selection') as Float32Array;
+            const opacity = splatData.getProp('opacity') as Float32Array;
             processSelection(selection, opacity, 'set', (i) => true);
         });
         updateSelection();
@@ -243,8 +246,8 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
     events.on('selectNone', () => {
         splatDefs.forEach((splatDef) => {
             const splatData = splatDef.data;
-            const selection = splatData.getProp('selection');
-            const opacity = splatData.getProp('opacity');
+            const selection = splatData.getProp('selection') as Float32Array;
+            const opacity = splatData.getProp('opacity') as Float32Array;
             processSelection(selection, opacity, 'set', (i) => false);
         });
         updateSelection();
@@ -253,8 +256,8 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
     events.on('invertSelection', () => {
         splatDefs.forEach((splatDef) => {
             const splatData = splatDef.data;
-            const selection = splatData.getProp('selection');
-            const opacity = splatData.getProp('opacity');
+            const selection = splatData.getProp('selection') as Float32Array;
+            const opacity = splatData.getProp('opacity') as Float32Array;
             processSelection(selection, opacity, 'set', (i) => !selection[i]);
         });
         updateSelection();
@@ -263,8 +266,8 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
     events.on('selectBySize', (op: string, value: number) => {
         splatDefs.forEach((splatDef) => {
             const splatData = splatDef.data;
-            const opacity = splatData.getProp('opacity');
-            const selection = splatData.getProp('selection');
+            const selection = splatData.getProp('selection') as Float32Array;
+            const opacity = splatData.getProp('opacity') as Float32Array;
             const scale_0 = splatData.getProp('scale_0');
             const scale_1 = splatData.getProp('scale_1');
             const scale_2 = splatData.getProp('scale_2');
@@ -295,8 +298,8 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
     events.on('selectByOpacity', (op: string, value: number) => {
         splatDefs.forEach((splatDef) => {
             const splatData = splatDef.data;
-            const selection = splatData.getProp('selection');
-            const opacity = splatData.getProp('opacity');
+            const selection = splatData.getProp('selection') as Float32Array;
+            const opacity = splatData.getProp('opacity') as Float32Array;
 
             processSelection(selection, opacity, op, (i) => {
                 const t = Math.exp(opacity[i]);
@@ -323,8 +326,8 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
     events.on('selectBySphere', (op: string, sphere: number[]) => {
         splatDefs.forEach((splatDef) => {
             const splatData = splatDef.data;
-            const selection = splatData.getProp('selection');
-            const opacity = splatData.getProp('opacity');
+            const selection = splatData.getProp('selection') as Float32Array;
+            const opacity = splatData.getProp('opacity') as Float32Array;
             const x = splatData.getProp('x');
             const y = splatData.getProp('y');
             const z = splatData.getProp('z');
@@ -346,8 +349,8 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
     events.on('selectByPlane', (op: string, axis: number[], distance: number) => {
         splatDefs.forEach((splatDef) => {
             const splatData = splatDef.data;
-            const selection = splatData.getProp('selection');
-            const opacity = splatData.getProp('opacity');
+            const selection = splatData.getProp('selection') as Float32Array;
+            const opacity = splatData.getProp('opacity') as Float32Array;
             const x = splatData.getProp('x');
             const y = splatData.getProp('y');
             const z = splatData.getProp('z');
@@ -373,8 +376,8 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
     events.on('selectRect', (op: string, rect: any) => {
         splatDefs.forEach((splatDef) => {
             const splatData = splatDef.data;
-            const selection = splatData.getProp('selection');
-            const opacity = splatData.getProp('opacity');
+            const selection = splatData.getProp('selection') as Float32Array;
+            const opacity = splatData.getProp('opacity') as Float32Array;
             const x = splatData.getProp('x');
             const y = splatData.getProp('y');
             const z = splatData.getProp('z');
@@ -406,8 +409,8 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
     events.on('selectByMask', (op: string, mask: ImageData) => {
         splatDefs.forEach((splatDef) => {
             const splatData = splatDef.data;
-            const selection = splatData.getProp('selection');
-            const opacity = splatData.getProp('opacity');
+            const selection = splatData.getProp('selection') as Float32Array;
+            const opacity = splatData.getProp('opacity') as Float32Array;
             const x = splatData.getProp('x');
             const y = splatData.getProp('y');
             const z = splatData.getProp('z');

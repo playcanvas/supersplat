@@ -1,8 +1,8 @@
 {
     "name": "super-splat",
-    "version": "0.11.0",
+    "version": "0.12.0",
     "author": "PlayCanvas<support@playcanvas.com>",
-    "homepage": "https://playcanvas.com",
+    "homepage": "https://playcanvas.com/super-splat",
     "description": "All the splat things",
     "keywords": [
         "playcanvas",
@@ -42,7 +42,7 @@
     "scripts": {
         "build": "rollup -c",
         "watch": "rollup -c -w",
-        "serve": "serve dist",
+        "serve": "serve dist -C",
         "develop": "concurrently --kill-others \"npm run watch\" \"npm run serve\"",
         "develop:local": "cross-env ENGINE_PATH=../engine npm run develop",
         "build:local": "cross-env ENGINE_PATH=../engine npm run build",

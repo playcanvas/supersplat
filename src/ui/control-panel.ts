@@ -16,7 +16,7 @@ class BoxSelection {
         svg.id = 'select-svg';
 
         // create rect element
-        const rect = document.createElementNS(svg.namespaceURI, 'rect');
+        const rect = document.createElementNS(svg.namespaceURI, 'rect') as SVGRectElement;
         rect.setAttribute('fill', 'none');
         rect.setAttribute('stroke', '#f60');
         rect.setAttribute('stroke-width', '1');
@@ -138,7 +138,7 @@ class BrushSelection {
         svg.style.display = 'inline';
 
         // create circle element
-        const circle = document.createElementNS(svg.namespaceURI, 'circle');
+        const circle = document.createElementNS(svg.namespaceURI, 'circle') as SVGCircleElement;
         circle.setAttribute('r', this.radius.toString());
         circle.setAttribute('fill', 'rgba(255, 102, 0, 0.2)');
         circle.setAttribute('stroke', '#f60');
@@ -387,6 +387,7 @@ class ControlPanel extends Container {
             precision: 4,
             dimensions: 4,
             value: [0, 0, 0, 0.5],
+            // @ts-ignore
             placeholder: ['X', 'Y', 'Z', 'R'],
             enabled: false
         });
@@ -492,13 +493,13 @@ class ControlPanel extends Container {
         // none
         const selectNoneButton = new Button({
             class: 'control-element-expand',
-            text: 'None' 
+            text: 'None'
         });
 
         // invert
         const invertSelectionButton = new Button({
             class: 'control-element-expand',
-            text: 'Invert' 
+            text: 'Invert'
         });
 
         selectGlobal.append(selectAllButton);
@@ -570,9 +571,10 @@ class ControlPanel extends Container {
             precision: 2,
             dimensions: 3,
             value: [0, 0, 0],
+            // @ts-ignore
             placeholder: ['X', 'Y', 'Z']
         });
-        
+
         position.append(positionLabel);
         position.append(positionVector);
 
@@ -591,6 +593,7 @@ class ControlPanel extends Container {
             precision: 2,
             dimensions: 3,
             value: [0, 0, 0],
+            // @ts-ignore
             placeholder: ['X', 'Y', 'Z']
         });
 
@@ -785,7 +788,7 @@ class ControlPanel extends Container {
                 [selectBySphereCenter],
                 [selectByPlaneAxis, selectByPlaneOffset]
             ];
-            
+
             controlSet.forEach((controls, controlsIndex) => {
                 controls.forEach((control) => {
                     control.enabled = index === controlsIndex;

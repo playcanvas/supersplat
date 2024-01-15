@@ -9,10 +9,7 @@ import { registerEvents } from './editor-ops';
 declare global {
     interface Window {
         scene: Scene;
-    }
-
-    interface Navigator {
-        xr: any;
+        showError: (err: string) => void;
     }
 }
 
@@ -85,7 +82,7 @@ const initDropHandler = (canvas: HTMLCanvasElement, scene: Scene) => {
 
     // also support user dragging and dropping a local glb file onto the canvas
     CreateDropHandler(canvas, urls => {
-        const modelExtensions = ['.glb', '.gltf', '.ply']
+        const modelExtensions = ['.ply'];
         const model = urls.find(url => modelExtensions.some(extension => url.filename.endsWith(extension)));
         if (model) {
             scene.loadModel(model.url, model.filename);
@@ -131,10 +128,6 @@ const main = async () => {
 
     const overrides = [
         {
-            model: {
-                url: decodedUrl,
-                filename: decodedUrl
-            },
             env: {
                 url: envImageURL
             }
@@ -158,6 +151,9 @@ const main = async () => {
 
     // load async models
     await scene.load();
+    if (decodedUrl) {
+        await scene.loadModel(decodedUrl, decodedUrl);
+    }
 
     window.scene = scene;
 }

@@ -68,9 +68,8 @@ const pipeline = (input) => {
             resolve(),
             image({dom: true}),
             sass({
-                insert: false,
-                output: 'dist/style.css',
-                outputStyle: 'compressed'
+                output: false,
+                insert: true
             }),
             json(),
             typescript({

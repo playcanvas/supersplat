@@ -71,6 +71,14 @@ body {
     user-select: none;
 }
 
+#filename-label {
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+    color: $text-primary;
+    text-shadow: 0 0 4px black;
+}
+
 .control-panel > .pcui-panel-content {
     display: flex;
     flex-direction: column;
@@ -184,6 +192,7 @@ body {
 }
 
 /* scrollbar styling */
+
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;

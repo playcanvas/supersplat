@@ -1,4 +1,4 @@
-import { Container, InfoBox } from 'pcui';
+import { Container, InfoBox, Label } from 'pcui';
 import { version as supersplatVersion } from '../../package.json';
 import { ControlPanel } from './control-panel';
 import logo from './playcanvas-logo.png';
@@ -9,6 +9,7 @@ class EditorUI {
     controlPanel: ControlPanel;
     canvasContainer: Container;
     canvas: HTMLCanvasElement;
+    filenameLabel: Label;
     errorPopup: InfoBox;
     infoPopup: InfoBox;
 
@@ -30,14 +31,20 @@ class EditorUI {
             resizeMax: 1000
         });
 
-        const canvasContainer = new Container({
-            id: 'canvas-container'
-        });
-
+        // canvas
         const canvas = document.createElement('canvas');
         canvas.id = 'canvas';
 
+        // filename label
+        const filenameLabel = new Label({
+            id: 'filename-label'
+        });
+
+        const canvasContainer = new Container({
+            id: 'canvas-container'
+        });
         canvasContainer.dom.appendChild(canvas);
+        canvasContainer.append(filenameLabel);
 
         // error box 
         const errorPopup = new InfoBox({
@@ -97,8 +104,11 @@ class EditorUI {
         this.controlPanel = controlPanel;
         this.canvasContainer = canvasContainer;
         this.canvas = canvas;
+        this.filenameLabel = filenameLabel;
         this.errorPopup = errorPopup;
         this.infoPopup = infoPopup;
+
+        window.showError = (err: string) => this.showError(err);
     }
 
     showError(err: string) {
@@ -117,6 +127,10 @@ class EditorUI {
         } else {
             this.infoPopup.hidden = true;
         }
+    }
+
+    setFilename(filename: string) {
+        this.filenameLabel.text = filename;
     }
 }
 

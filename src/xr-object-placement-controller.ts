@@ -8,7 +8,6 @@ import {
     BoundingBox,
     Entity,
     EventHandler,
-    Quat,
     Vec3,
     XrHitTestSource,
     XrManager
@@ -233,7 +232,8 @@ const createModelHandler = (controller: XRObjectPlacementController) => {
     });
 
     events.on('xr:initial-place', (position: Vec3) => {
-        const mat = xr.views[0].viewInvMat;
+        // @ts-ignore
+        const mat = xr.views.list[0]._viewInvMat;
         mat.transformPoint(hoverPos, vec);
         mat.getEulerAngles(vec2);
         pos.goto({x: vec.x, y: vec.y, z: vec.z}, 0);
@@ -271,11 +271,13 @@ const createModelHandler = (controller: XRObjectPlacementController) => {
     xr.on('update', (frame: any) => {
         const xr = controller.options.xr;
 
-        if (!xr.views.length) {
+        // @ts-ignore
+        if (!xr.views.list.length) {
             return;
         }
 
-        const mat = xr.views[0].viewInvMat;
+        // @ts-ignore
+        const mat = xr.views.list[0]._viewInvMat;
         const contentRoot = controller.options.content;
 
         if (hovering) {

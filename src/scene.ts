@@ -191,8 +191,6 @@ class Scene extends EventHandler {
     async load() {
         const config = this.config;
 
-        const modelStartTime = Date.now();
-
         // load scene assets
         const promises: Promise<any>[] = [];
 
@@ -237,6 +235,7 @@ class Scene extends EventHandler {
             this.add(model);
             this.updateBound();
             this.camera.focus();
+            this.fire('loaded', filename);
         } catch (err) {
             this.fire('error', err);
         }
@@ -288,7 +287,7 @@ class Scene extends EventHandler {
     }
 
     // get scene bounds
-    private updateBound() {
+    updateBound() {
         let valid = false;
         this.forEachElement(e => {
             if (e.calcBound(bound)) {

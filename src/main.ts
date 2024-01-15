@@ -151,7 +151,9 @@ const main = async () => {
 
     // load async models
     await scene.load();
-    await scene.loadModel(decodedUrl, decodedUrl);
+    if (decodedUrl) {
+        await scene.loadModel(decodedUrl, decodedUrl);
+    }
 
     window.scene = scene;
 }

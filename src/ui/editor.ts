@@ -13,7 +13,7 @@ class EditorUI {
     errorPopup: InfoBox;
     infoPopup: InfoBox;
 
-    constructor() {
+    constructor(remoteStorageMode: boolean) {
         // favicon
         const link = document.createElement('link');
         link.rel = 'icon';
@@ -88,7 +88,7 @@ class EditorUI {
         title.dom.appendChild(titleText);
     
         // control panel
-        const controlPanel = new ControlPanel();
+        const controlPanel = new ControlPanel(remoteStorageMode);
 
         // file select
         const fileSelect = new Container({

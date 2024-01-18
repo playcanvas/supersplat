@@ -272,7 +272,7 @@ class BrushSelection {
 class ControlPanel extends Container {
     events = new EventHandler;
 
-    constructor(args = { }) {
+    constructor(remoteStorageMode: boolean, args = { }) {
         Object.assign(args, {
             id: 'control-container'
         });
@@ -657,19 +657,24 @@ class ControlPanel extends Container {
             headerText: 'EXPORT TO'
         });
 
+        const storageIcon = remoteStorageMode ? 'E222' : 'E245';
+
         const exportPlyButton = new Button({
             class: 'control-element',
-            text: 'Ply file'
+            text: 'Ply file',
+            icon: storageIcon
         });
 
         const exportCompressedPlyButton = new Button({
             class: 'control-element',
-            text: 'Compressed Ply file'
+            text: 'Compressed Ply file',
+            icon: storageIcon
         });
 
         const exportSplatButton = new Button({
             class: 'control-element',
-            text: 'Splat file'
+            text: 'Splat file',
+            icon: storageIcon
         });
 
         exportPanel.append(exportPlyButton);

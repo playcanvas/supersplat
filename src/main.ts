@@ -105,8 +105,6 @@ const main = async () => {
 
     }
 
-    window.history.replaceState({}, undefined, url.toString());
-
     const editorUI = new EditorUI(!!remoteStorageDetails);
 
     const { envImage, dracoJs, dracoWasm } = fetchStaticAssets();

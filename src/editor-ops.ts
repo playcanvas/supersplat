@@ -219,6 +219,17 @@ const registerEvents = (scene: Scene, editorUI: EditorUI, remoteStorageDetails: 
         }
     };
 
+    // add unsaved changes warning message.
+    window.addEventListener("beforeunload", function (e) {
+        if (!editHistory.canUndo()) {
+            return undefined;
+        }
+
+        const msg = 'You have unsaved changes. Are you sure you want to leave?';
+        e.returnValue = msg;
+        return msg;
+    });
+
     events.on('focusCamera', () => {
         const splatDef = splatDefs[0];
         if (splatDef) {

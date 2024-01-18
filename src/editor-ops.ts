@@ -219,9 +219,12 @@ const registerEvents = (scene: Scene, editorUI: EditorUI, remoteStorageDetails: 
         }
     };
 
+    let lastExportCursor = 0;
+
     // add unsaved changes warning message.
     window.addEventListener("beforeunload", function (e) {
-        if (!editHistory.canUndo()) {
+        if (editHistory.cursor === lastExportCursor) {
+            // if the undo cursor matches last export, then we have no unsaved changes
             return undefined;
         }
 
@@ -561,6 +564,7 @@ const registerEvents = (scene: Scene, editorUI: EditorUI, remoteStorageDetails: 
 
             stopSpinner();
             editorUI.showInfo(null);
+            lastExportCursor = editHistory.cursor;
         });
     });
 

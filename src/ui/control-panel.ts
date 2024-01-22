@@ -1,5 +1,6 @@
 import { EventHandler } from 'playcanvas';
 import { BooleanInput, Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, VectorInput } from 'pcui';
+import { version as supersplatVersion } from '../../package.json';
 
 class BoxSelection {
     root: HTMLElement;
@@ -269,18 +270,24 @@ class BrushSelection {
     }
 }
 
-class ControlPanel extends Container {
+class ControlPanel extends Panel {
     events = new EventHandler;
 
-    constructor(remoteStorageMode: boolean, args = { }) {
+    constructor(canvasContainer: HTMLElement, remoteStorageMode: boolean, args = { }) {
         Object.assign(args, {
-            id: 'control-container'
+            headerText: `SUPER SPLAT v${supersplatVersion}`,
+            id: 'control-panel',
+            resizable: 'right',
+            resizeMax: 1000,
+            collapsible: true,
+            collapseHorizontally: true
         });
 
         super(args);
 
         // camera panel
         const cameraPanel = new Panel({
+            id: 'camera-panel',
             class: 'control-panel',
             headerText: 'CAMERA'
         });
@@ -710,22 +717,22 @@ class ControlPanel extends Container {
         keyboardPanel.append(shortcutsLabel);
 
         // append
-        this.append(cameraPanel);
-        this.append(selectionPanel);
-        this.append(modifyPanel);
-        this.append(scenePanel);
-        this.append(importPanel);
-        this.append(exportPanel);
-        this.append(keyboardPanel);
+        this.content.append(cameraPanel);
+        this.content.append(selectionPanel);
+        this.content.append(modifyPanel);
+        this.content.append(scenePanel);
+        this.content.append(importPanel);
+        this.content.append(exportPanel);
+        this.content.append(keyboardPanel);
 
-        const boxSelection = new BoxSelection(document.getElementById('canvas-container'));
+        const boxSelection = new BoxSelection(canvasContainer);
         boxSelection.events.on('activated', () => boxSelectButton.class.add('active'));
         boxSelection.events.on('deactivated', () => boxSelectButton.class.remove('active'));
         boxSelection.events.on('selectRect', (op: string, rect: any) => {
             this.events.fire('selectRect', op, rect);
         });
 
-        const brushSelection = new BrushSelection(document.getElementById('canvas-container'));
+        const brushSelection = new BrushSelection(canvasContainer);
         brushSelection.events.on('activated', () => brushSelectButton.class.add('active'));
         brushSelection.events.on('deactivated', () => brushSelectButton.class.remove('active'));
         brushSelection.events.on('selectByMask', (op: string, mask: ImageData) => {

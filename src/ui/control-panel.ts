@@ -272,7 +272,7 @@ class BrushSelection {
 class ControlPanel extends Container {
     events = new EventHandler;
 
-    constructor(args = { }) {
+    constructor(remoteStorageMode: boolean, args = { }) {
         Object.assign(args, {
             id: 'control-container'
         });
@@ -657,19 +657,24 @@ class ControlPanel extends Container {
             headerText: 'EXPORT TO'
         });
 
+        const storageIcon = remoteStorageMode ? 'E222' : 'E245';
+
         const exportPlyButton = new Button({
             class: 'control-element',
-            text: 'Ply file'
+            text: 'Ply file',
+            icon: storageIcon
         });
 
         const exportCompressedPlyButton = new Button({
             class: 'control-element',
-            text: 'Compressed Ply file'
+            text: 'Compressed Ply file',
+            icon: storageIcon
         });
 
         const exportSplatButton = new Button({
             class: 'control-element',
-            text: 'Splat file'
+            text: 'Splat file',
+            icon: storageIcon
         });
 
         exportPanel.append(exportPlyButton);
@@ -892,32 +897,38 @@ class ControlPanel extends Container {
 
         // keyboard handler
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Delete' || e.key === 'Backspace') {
-                this.events.fire('deleteSelection');
-            } else if (e.key === 'Escape') {
-                deactivate();
-            } else if (e.key === 'R' || e.key === 'r') {
-                toggle(boxSelection);
-            } else if (e.key === 'F' || e.key === 'f') {
-                this.events.fire('focusCamera');
-            } else if (e.key === 'B' || e.key === 'b') {
-                toggle(brushSelection);
-            } else if (e.key === 'I' || e.key === 'i') {
-                this.events.fire('invertSelection');
-            } else if (e.key === '[') {
-                brushSelection.smaller();
-            } else if (e.key === ']') {
-                brushSelection.bigger();
-            } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') {
-                this.events.fire('undo');
-            } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
-                this.events.fire('redo');
-            } else if (e.code === 'Space') {
-                if (splatSizeSlider.value !== 0) {
-                    splatSizeSave = splatSizeSlider.value;
-                    splatSizeSlider.value = 0;
-                } else {
-                    splatSizeSlider.value = splatSizeSave;
+            if (e.ctrlKey || e.metaKey) {
+                // handle meta/ctrl keys
+                if (!e.shiftKey && e.key === 'z') {
+                    this.events.fire('undo');
+                } else if (e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
+                    this.events.fire('redo');
+                }
+            } else {
+                // handle non-meta/ctrl keys
+                if (e.key === 'Delete' || e.key === 'Backspace') {
+                    this.events.fire('deleteSelection');
+                } else if (e.key === 'Escape') {
+                    deactivate();
+                } else if (e.key === 'R' || e.key === 'r') {
+                    toggle(boxSelection);
+                } else if (e.key === 'F' || e.key === 'f') {
+                    this.events.fire('focusCamera');
+                } else if (e.key === 'B' || e.key === 'b') {
+                    toggle(brushSelection);
+                } else if (e.key === 'I' || e.key === 'i') {
+                    this.events.fire('invertSelection');
+                } else if (e.key === '[') {
+                    brushSelection.smaller();
+                } else if (e.key === ']') {
+                    brushSelection.bigger();
+                } else if (e.code === 'Space') {
+                    if (splatSizeSlider.value !== 0) {
+                        splatSizeSave = splatSizeSlider.value;
+                        splatSizeSlider.value = 0;
+                    } else {
+                        splatSizeSlider.value = splatSizeSave;
+                    }
                 }
             }
         });

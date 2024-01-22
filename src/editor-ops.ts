@@ -41,6 +41,16 @@ const download = (filename: string, data: ArrayBuffer) => {
     window.URL.revokeObjectURL(url);
 };
 
+// upload the file to the remote storage
+const sendToRemoteStorage = async (filename: string, data: ArrayBuffer, remoteStorageDetails: RemoteStorageDetails) => {
+    const formData = new FormData();
+    formData.append('file', new Blob([data], { type: "octet/stream" }), filename);
+    await fetch(remoteStorageDetails.url, {
+        method: remoteStorageDetails.method,
+        body: formData
+    });
+};
+
 interface SplatDef {
     element: Splat,
     data: SplatData,
@@ -49,8 +59,13 @@ interface SplatDef {
     debug: SplatDebug
 };
 
+interface RemoteStorageDetails {
+    method: string;
+    url: string;
+};
+
 // register for editor and scene events
-const registerEvents = (scene: Scene, editorUI: EditorUI) => {
+const registerEvents = (scene: Scene, editorUI: EditorUI, remoteStorageDetails: RemoteStorageDetails) => {
     const vec = new Vec3();
     const vec2 = new Vec3();
     const vec4 = new Vec4();
@@ -203,6 +218,20 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
             }
         }
     };
+
+    let lastExportCursor = 0;
+
+    // add unsaved changes warning message.
+    window.addEventListener("beforeunload", function (e) {
+        if (editHistory.cursor === lastExportCursor) {
+            // if the undo cursor matches last export, then we have no unsaved changes
+            return undefined;
+        }
+
+        const msg = 'You have unsaved changes. Are you sure you want to leave?';
+        e.returnValue = msg;
+        return msg;
+    });
 
     events.on('focusCamera', () => {
         const splatDef = splatDefs[0];
@@ -494,33 +523,48 @@ const registerEvents = (scene: Scene, editorUI: EditorUI) => {
             return filename.substring(0, filename.length - path.getExtension(filename).length);
         };
 
-        startSpinner();
+        if (splatDefs.length === 0) {
+            return;
+        }
+
         editorUI.showInfo('Exporting...');
 
+        startSpinner();
+
         // setTimeout so spinner has a chance to activate
-        setTimeout(() => {
-            splatDefs.forEach((splatDef) => {
-                let data;
-                let extension;
-                switch (format) {
-                    case 'ply':
-                        data = convertPly(splatDef.data, splatDef.element.entity.getWorldTransform());
-                        extension = '.cleaned.ply';
-                        break;
-                    case 'ply-compressed':
-                        data = convertPlyCompressed(splatDef.data, splatDef.element.entity.getWorldTransform());
-                        extension = '.compressed.ply';
-                        break;
-                    case 'splat':
-                        data = convertSplat(splatDef.data, splatDef.element.entity.getWorldTransform());
-                        extension = '.splat';
-                        break;
-                }
-                download(`${removeExtension(splatDef.element.asset.file.filename)}${extension}`, data);
-            });
+        setTimeout(async () => {
+            const splatDef = splatDefs[0];
+
+            let data;
+            let extension;
+            switch (format) {
+                case 'ply':
+                    data = convertPly(splatDef.data, splatDef.element.entity.getWorldTransform());
+                    extension = '.cleaned.ply';
+                    break;
+                case 'ply-compressed':
+                    data = convertPlyCompressed(splatDef.data, splatDef.element.entity.getWorldTransform());
+                    extension = '.compressed.ply';
+                    break;
+                case 'splat':
+                    data = convertSplat(splatDef.data, splatDef.element.entity.getWorldTransform());
+                    extension = '.splat';
+                    break;
+            }
+
+            const filename = `${removeExtension(splatDef.element.asset.file.filename)}${extension}`;
+
+            if (remoteStorageDetails) {
+                // write data to remote storage
+                await sendToRemoteStorage(filename, data, remoteStorageDetails);
+            } else {
+                // download file to local machine
+                download(filename, data);
+            }
 
             stopSpinner();
             editorUI.showInfo(null);
+            lastExportCursor = editHistory.cursor;
         });
     });
 

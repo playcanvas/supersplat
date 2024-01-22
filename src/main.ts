@@ -93,7 +93,19 @@ const initDropHandler = (canvas: HTMLCanvasElement, scene: Scene) => {
 const main = async () => {
     const url = new URL(window.location.href);
 
-    const editorUI = new EditorUI();
+    // handle load param and ready promise for visual testing harness
+    const loadParam = url.searchParams.get('load');
+    const loadUrl = loadParam && decodeURIComponent(loadParam);
+
+    // decode remote storage details
+    let remoteStorageDetails;
+    try {
+        remoteStorageDetails = JSON.parse(decodeURIComponent(url.searchParams.get('remoteStorage')));
+    } catch (e) {
+
+    }
+
+    const editorUI = new EditorUI(!!remoteStorageDetails);
 
     const { envImage, dracoJs, dracoWasm } = fetchStaticAssets();
 
@@ -122,10 +134,6 @@ const main = async () => {
         numWorkers: 2
     });
 
-    // handle load param and ready promise for visual testing harness
-    const loadUrl = url.searchParams.get('load');
-    const decodedUrl = loadUrl && decodeURIComponent(loadUrl);
-
     const overrides = [
         {
             env: {
@@ -145,14 +153,14 @@ const main = async () => {
         graphicsDevice
     );
 
-    registerEvents(scene, editorUI);
+    registerEvents(scene, editorUI, remoteStorageDetails);
 
     initDropHandler(editorUI.canvas, scene);
 
     // load async models
     await scene.load();
-    if (decodedUrl) {
-        await scene.loadModel(decodedUrl, decodedUrl);
+    if (loadUrl) {
+        await scene.loadModel(loadUrl, loadUrl);
     }
 
     window.scene = scene;

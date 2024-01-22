@@ -47,6 +47,7 @@ void main(void)
 class SplatDebug {
     splatData: SplatData;
     meshInstance: MeshInstance;
+    size = 2;
 
     constructor(scene: Scene, splat: Splat, splatData: SplatData) {
         const device = scene.graphicsDevice;
@@ -59,7 +60,6 @@ class SplatDebug {
         material.name = 'splatDebugMaterial';
         material.blendType = BLEND_NORMAL;
         material.shader = shader;
-        material.setParameter('splatSize', 1.0);
         material.update();
 
         const x = splatData.getProp('x');
@@ -81,6 +81,8 @@ class SplatDebug {
 
         this.splatData = splatData;
         this.meshInstance = new MeshInstance(mesh, material, splat.root);
+
+        this.splatSize = this.size;
     }
 
     update() {
@@ -105,12 +107,12 @@ class SplatDebug {
     }
 
     set splatSize(splatSize: number) {
-        this.meshInstance.material.setParameter('splatSize', splatSize);
+        this.size = splatSize;
+        this.meshInstance.material.setParameter('splatSize', splatSize * window.devicePixelRatio);
     }
 
     get splatSize() {
-        // @ts-ignore
-        return this.meshInstance.material.getParameter('splatSize').data;
+        return this.size;
     }
 }
 

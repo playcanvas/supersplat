@@ -36,7 +36,7 @@ body {
     flex-shrink: 0;
     flex-grow: 0;
     display: flex;
-    background-color: $bcg-dark;
+    flex-direction: column;
     border-right: 1px solid $bcg-darker;
 }
 
@@ -48,16 +48,18 @@ body {
     flex-direction: column;
 }
 
-#control-panel > .pcui-panel-content {
-    overflow-y: auto;
-}
+.pcui-panel-header-title::before {
+    font-family: pc-icon;
+    margin-right: 10px;
+    color: $text-secondary;
 
-#control-panel.collapsed {
-    display: none;
-}
-
-#camera-panel > .pcui-panel-header > .pcui-panel-header-title::before {
-    content: '\E212';
+    #camera-panel & { content: '\E212'; };
+    #selection-panel & { content: '\E398'; };
+    #modify-panel & { content: '\E130'; };
+    #scene-panel & { content: '\E142'; };
+    #options-panel & { content: '\E134'; };
+    #export-panel & { content: '\E226'; };
+    #keyboard-panel & { content: '\E136'};
 }
 
 #file-selector-container {
@@ -66,10 +68,42 @@ body {
     margin: 5px;
 }
 
-#app-logo {
+#toolbar-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.toolbar-button {
     width: 40px;
     height: 40px;
+    margin: 0;
     cursor: pointer;
+}
+
+.toolbar-button::before {
+    font-size: 18px !important;
+    line-height: 100%;
+}
+
+#toolbar-tools-container, #toolbar-help-container {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 0;
+    flex-shrink: 0;
+}
+
+#shortcuts-panel {
+    background-color: $bcg-dark;
+}
+
+#shortcuts-container {
+    margin: 10px;
+}
+
+.shortcut-key {
+    width: 80px;
+    text-align: right;
 }
 
 #filename-label {
@@ -160,10 +194,6 @@ body {
     image-rendering: pixelated;
 }
 
-#keyboard-heading {
-    margin: 40px 0px 0px 0px;
-}
-
 // placeholder
 .pcui-input-element[placeholder] {
     &::after {
@@ -174,10 +204,6 @@ body {
 .pcui-vector-input {
     margin-left: 6px;
     margin-right: 6px;
-}
-
-#control-panel > .pcui-panel-header {
-    background-color: $bcg-darkest;
 }
 
 .error-popup {

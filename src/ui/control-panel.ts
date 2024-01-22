@@ -280,7 +280,8 @@ class ControlPanel extends Panel {
             resizable: 'right',
             resizeMax: 1000,
             collapsible: true,
-            collapseHorizontally: true
+            collapseHorizontally: true,
+            scrollable: true
         });
 
         super(args);
@@ -323,6 +324,7 @@ class ControlPanel extends Panel {
 
         // selection panel
         const selectionPanel = new Panel({
+            id: 'selection-panel',
             class: 'control-panel',
             headerText: 'SELECTION'
         });
@@ -523,6 +525,7 @@ class ControlPanel extends Panel {
 
         // modify
         const modifyPanel = new Panel({
+            id: 'modify-panel',
             class: 'control-panel',
             headerText: 'MODIFY'
         });
@@ -542,6 +545,7 @@ class ControlPanel extends Panel {
 
         // scene
         const scenePanel = new Panel({
+            id: 'scene-panel',
             class: 'control-panel',
             headerText: 'SCENE'
         });
@@ -633,33 +637,9 @@ class ControlPanel extends Panel {
         scenePanel.append(rotation);
         scenePanel.append(scale);
 
-        // import
-        const importPanel = new Panel({
-            class: 'control-panel',
-            headerText: 'IMPORT'
-        });
-
-        const allData = new Container({
-            class: 'control-parent'
-        });
-
-        const allDataLabel = new Label({
-            class: 'control-label',
-            text: 'Load all PLY data'
-        });
-
-        const allDataToggle = new BooleanInput({
-            class: 'control-element',
-            value: true
-        });
-
-        allData.append(allDataLabel);
-        allData.append(allDataToggle);
-
-        importPanel.append(allData);
-
         // export
         const exportPanel = new Panel({
+            id: 'export-panel',
             class: 'control-panel',
             headerText: 'EXPORT TO'
         });
@@ -688,42 +668,39 @@ class ControlPanel extends Panel {
         exportPanel.append(exportCompressedPlyButton);
         exportPanel.append(exportSplatButton);
 
-        // keyboard
-        const keyboardPanel = new Panel({
-            id: 'keyboard-heading',
+        // options
+        const optionsPanel = new Panel({
+            id: 'options-panel',
             class: 'control-panel',
-            headerText: 'KEYBOARD'
+            headerText: 'OPTIONS'
         });
 
-        const shortcutsLabel = new Label({
-            class: 'control-element-expand',
-            text: [
-                'F - Focus camera',
-                'I - Invert selection',
-                'R - Toggle rect selection',
-                'B - Toggle brush selection',
-                '[ ] - Decrease/Increase brush size',
-                'Shift - Add to selection',
-                'Ctrl - Remove from selection',
-                'Delete - Delete selected splats',
-                'Esc - Cancel rect selection',
-                'Ctrl + Z - Undo',
-                'Ctrl + Shift + Z - Redo',
-                'Space - toggle splat size'
-            ].join('<br>'),
-            unsafe: true
+        const allData = new Container({
+            class: 'control-parent'
         });
 
-        keyboardPanel.append(shortcutsLabel);
+        const allDataLabel = new Label({
+            class: 'control-label',
+            text: 'Load all PLY data'
+        });
+
+        const allDataToggle = new BooleanInput({
+            class: 'control-element',
+            value: true
+        });
+
+        allData.append(allDataLabel);
+        allData.append(allDataToggle);
+
+        optionsPanel.append(allData);
 
         // append
         this.content.append(cameraPanel);
         this.content.append(selectionPanel);
         this.content.append(modifyPanel);
         this.content.append(scenePanel);
-        this.content.append(importPanel);
         this.content.append(exportPanel);
-        this.content.append(keyboardPanel);
+        this.content.append(optionsPanel);
 
         const boxSelection = new BoxSelection(canvasContainer);
         boxSelection.events.on('activated', () => boxSelectButton.class.add('active'));

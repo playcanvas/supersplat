@@ -1,5 +1,6 @@
 import { EventHandler } from 'playcanvas';
 import { BooleanInput, Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, VectorInput } from 'pcui';
+import { version as supersplatVersion } from '../../package.json';
 
 class BoxSelection {
     root: HTMLElement;
@@ -269,18 +270,25 @@ class BrushSelection {
     }
 }
 
-class ControlPanel extends Container {
+class ControlPanel extends Panel {
     events = new EventHandler;
 
-    constructor(remoteStorageMode: boolean, args = { }) {
+    constructor(canvasContainer: HTMLElement, remoteStorageMode: boolean, args = { }) {
         Object.assign(args, {
-            id: 'control-container'
+            headerText: `SUPER SPLAT v${supersplatVersion}`,
+            id: 'control-panel',
+            resizable: 'right',
+            resizeMax: 1000,
+            collapsible: true,
+            collapseHorizontally: true,
+            scrollable: true
         });
 
         super(args);
 
         // camera panel
         const cameraPanel = new Panel({
+            id: 'camera-panel',
             class: 'control-panel',
             headerText: 'CAMERA'
         });
@@ -316,6 +324,7 @@ class ControlPanel extends Container {
 
         // selection panel
         const selectionPanel = new Panel({
+            id: 'selection-panel',
             class: 'control-panel',
             headerText: 'SELECTION'
         });
@@ -516,6 +525,7 @@ class ControlPanel extends Container {
 
         // modify
         const modifyPanel = new Panel({
+            id: 'modify-panel',
             class: 'control-panel',
             headerText: 'MODIFY'
         });
@@ -535,6 +545,7 @@ class ControlPanel extends Container {
 
         // scene
         const scenePanel = new Panel({
+            id: 'scene-panel',
             class: 'control-panel',
             headerText: 'SCENE'
         });
@@ -626,33 +637,9 @@ class ControlPanel extends Container {
         scenePanel.append(rotation);
         scenePanel.append(scale);
 
-        // import
-        const importPanel = new Panel({
-            class: 'control-panel',
-            headerText: 'IMPORT'
-        });
-
-        const allData = new Container({
-            class: 'control-parent'
-        });
-
-        const allDataLabel = new Label({
-            class: 'control-label',
-            text: 'Load all PLY data'
-        });
-
-        const allDataToggle = new BooleanInput({
-            class: 'control-element',
-            value: true
-        });
-
-        allData.append(allDataLabel);
-        allData.append(allDataToggle);
-
-        importPanel.append(allData);
-
         // export
         const exportPanel = new Panel({
+            id: 'export-panel',
             class: 'control-panel',
             headerText: 'EXPORT TO'
         });
@@ -681,51 +668,48 @@ class ControlPanel extends Container {
         exportPanel.append(exportCompressedPlyButton);
         exportPanel.append(exportSplatButton);
 
-        // keyboard
-        const keyboardPanel = new Panel({
-            id: 'keyboard-heading',
+        // options
+        const optionsPanel = new Panel({
+            id: 'options-panel',
             class: 'control-panel',
-            headerText: 'KEYBOARD'
+            headerText: 'OPTIONS'
         });
 
-        const shortcutsLabel = new Label({
-            class: 'control-element-expand',
-            text: [
-                'F - Focus camera',
-                'I - Invert selection',
-                'R - Toggle rect selection',
-                'B - Toggle brush selection',
-                '[ ] - Decrease/Increase brush size',
-                'Shift - Add to selection',
-                'Ctrl - Remove from selection',
-                'Delete - Delete selected splats',
-                'Esc - Cancel rect selection',
-                'Ctrl + Z - Undo',
-                'Ctrl + Shift + Z - Redo',
-                'Space - toggle splat size'
-            ].join('<br>'),
-            unsafe: true
+        const allData = new Container({
+            class: 'control-parent'
         });
 
-        keyboardPanel.append(shortcutsLabel);
+        const allDataLabel = new Label({
+            class: 'control-label',
+            text: 'Load all PLY data'
+        });
+
+        const allDataToggle = new BooleanInput({
+            class: 'control-element',
+            value: true
+        });
+
+        allData.append(allDataLabel);
+        allData.append(allDataToggle);
+
+        optionsPanel.append(allData);
 
         // append
-        this.append(cameraPanel);
-        this.append(selectionPanel);
-        this.append(modifyPanel);
-        this.append(scenePanel);
-        this.append(importPanel);
-        this.append(exportPanel);
-        this.append(keyboardPanel);
+        this.content.append(cameraPanel);
+        this.content.append(selectionPanel);
+        this.content.append(modifyPanel);
+        this.content.append(scenePanel);
+        this.content.append(exportPanel);
+        this.content.append(optionsPanel);
 
-        const boxSelection = new BoxSelection(document.getElementById('canvas-container'));
+        const boxSelection = new BoxSelection(canvasContainer);
         boxSelection.events.on('activated', () => boxSelectButton.class.add('active'));
         boxSelection.events.on('deactivated', () => boxSelectButton.class.remove('active'));
         boxSelection.events.on('selectRect', (op: string, rect: any) => {
             this.events.fire('selectRect', op, rect);
         });
 
-        const brushSelection = new BrushSelection(document.getElementById('canvas-container'));
+        const brushSelection = new BrushSelection(canvasContainer);
         brushSelection.events.on('activated', () => brushSelectButton.class.add('active'));
         brushSelection.events.on('deactivated', () => brushSelectButton.class.remove('active'));
         brushSelection.events.on('selectByMask', (op: string, mask: ImageData) => {

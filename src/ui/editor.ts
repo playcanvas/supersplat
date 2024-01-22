@@ -1,11 +1,24 @@
-import { Container, InfoBox, Label } from 'pcui';
-import { version as supersplatVersion } from '../../package.json';
+import { Button, Container, InfoBox, Label, Overlay, Panel, TreeView, TreeViewItem } from 'pcui';
 import { ControlPanel } from './control-panel';
 import logo from './playcanvas-logo.png';
 
+const shortcutList = [
+    { key: 'F', action: 'Focus camera' },
+    { key: 'I', action: 'Invert selection' },
+    { key: 'R', action: 'Toggle rect selection' },
+    { key: 'B', action: 'Toggle brush selection' },
+    { key: '[ ]', action: 'Decrease/Increase brush size' },
+    { key: 'Shift', action: 'Add to selection' },
+    { key: 'Ctrl', action: 'Remove from selection' },
+    { key: 'Delete', action: 'Delete selected splats' },
+    { key: 'Esc', action: 'Cancel rect selection' },
+    { key: 'Ctrl + Z', action: 'Undo' },
+    { key: 'Ctrl + Shift + Z', action: 'Redo' },
+    { key: 'Space', action: 'Toggle debug splat display' }
+];
+
 class EditorUI {
     appContainer: Container;
-    leftContainer: Container;
     controlPanel: ControlPanel;
     canvasContainer: Container;
     canvas: HTMLCanvasElement;
@@ -25,11 +38,96 @@ class EditorUI {
             dom: document.getElementById('app-container')
         });
 
-        const leftContainer = new Container({
-            id: 'left-container',
-            resizable: 'right',
-            resizeMax: 1000
+        // editor
+        const editorContainer = new Container({
+            id: 'editor-container'
         });
+
+        // toolbar-tools
+        const toolbarToolsContainer = new Container({
+            id: 'toolbar-tools-container'
+        });
+
+        // logo
+        const appLogo = document.createElement('img');
+        appLogo.classList.add('toolbar-button');
+        appLogo.id = 'app-logo';
+        appLogo.src = logo.src;
+
+        toolbarToolsContainer.dom.appendChild(appLogo);
+
+        // toolbar help toolbar
+        const toolbarHelpContainer = new Container({
+            id: 'toolbar-help-container'
+        });
+
+        // github
+        const github = new Button({
+            class: 'toolbar-button',
+            icon: 'E259' 
+        });
+        github.on('click', () => {
+            window.open('https://github.com/playcanvas/model-viewer', '_blank').focus();
+        });
+
+        const shortcutsContainer = new Container({
+            id: 'shortcuts-container'
+        });
+
+        shortcutList.forEach((shortcut) => {
+            const key = new Label({
+                class: 'shortcut-key',
+                text: shortcut.key
+            });
+
+            const action = new Label({
+                class: 'shortcut-action',
+                text: shortcut.action
+            });
+
+            const entry = new Container({
+                class: 'shortcut-entry'
+            });
+
+            entry.append(key);
+            entry.append(action);
+
+            shortcutsContainer.append(entry);
+        });
+
+        const shortcutsPanel = new Panel({
+            id: 'shortcuts-panel',
+            headerText: 'KEYBOARD SHORTCUTS'
+        });
+
+        shortcutsPanel.append(shortcutsContainer);
+
+        const shortcutsPopup = new Overlay({
+            id: 'shortcuts-popup',
+            clickable: true,
+            hidden: true
+        });
+        shortcutsPopup.append(shortcutsPanel);
+        appContainer.append(shortcutsPopup);
+
+        // keyboard shortcuts
+        const shortcuts = new Button({
+            class: 'toolbar-button',
+            icon: 'E136'
+        });
+        shortcuts.on('click', () => {
+            shortcutsPopup.hidden = false;
+        });
+
+        toolbarHelpContainer.append(shortcuts);
+        toolbarHelpContainer.append(github);
+
+        // toolbar
+        const toolbarContainer = new Container({
+            id: 'toolbar-container'
+        });
+        toolbarContainer.append(toolbarToolsContainer);
+        toolbarContainer.append(toolbarHelpContainer);
 
         // canvas
         const canvas = document.createElement('canvas');
@@ -45,6 +143,9 @@ class EditorUI {
         });
         canvasContainer.dom.appendChild(canvas);
         canvasContainer.append(filenameLabel);
+
+        // control panel
+        const controlPanel = new ControlPanel(canvasContainer.dom, remoteStorageMode);
 
         // error box 
         const errorPopup = new InfoBox({
@@ -62,45 +163,19 @@ class EditorUI {
             hidden: true
         });
 
-        appContainer.append(leftContainer);
-        appContainer.append(canvasContainer);
+        editorContainer.append(toolbarContainer);
+        editorContainer.append(controlPanel);
+        editorContainer.append(canvasContainer);
+        appContainer.append(editorContainer);
         appContainer.append(errorPopup);
         appContainer.append(infoPopup);
-
-        // title
-        const title = new Container({
-            id: 'title-container'
-        });
-
-        title.dom.addEventListener('click', () => {
-            window.open('https://github.com/playcanvas/super-splat');
-        });
-
-        const titleLogo = document.createElement('img');
-        titleLogo.id = 'title-logo';
-        titleLogo.src = logo.src;
-
-        const titleText = document.createElement('a');
-        titleText.id = 'title-text';
-        titleText.text =  `SUPER SPLAT v${supersplatVersion}`;
-
-        title.dom.appendChild(titleLogo);
-        title.dom.appendChild(titleText);
-    
-        // control panel
-        const controlPanel = new ControlPanel(remoteStorageMode);
 
         // file select
         const fileSelect = new Container({
             id: 'file-selector-container'
         });
 
-        leftContainer.append(title);
-        leftContainer.append(controlPanel); // Parent);
-        leftContainer.append(fileSelect);
-
         this.appContainer = appContainer;
-        this.leftContainer = leftContainer;
         this.controlPanel = controlPanel;
         this.canvasContainer = canvasContainer;
         this.canvas = canvas;

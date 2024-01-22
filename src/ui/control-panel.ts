@@ -313,7 +313,7 @@ class ControlPanel extends Panel {
             precision: 1,
             min: 0,
             max: 10,
-            value: 1
+            value: 2
         });
 
         splatSize.append(splatSizeLabel);

@@ -163,17 +163,19 @@ class EditorUI {
             hidden: true
         });
 
+        // file select
+        const fileSelect = new Container({
+            id: 'file-selector-container'
+        });
+
+        controlPanel.append(fileSelect);
+
         editorContainer.append(toolbarContainer);
         editorContainer.append(controlPanel);
         editorContainer.append(canvasContainer);
         appContainer.append(editorContainer);
         appContainer.append(errorPopup);
         appContainer.append(infoPopup);
-
-        // file select
-        const fileSelect = new Container({
-            id: 'file-selector-container'
-        });
 
         this.appContainer = appContainer;
         this.controlPanel = controlPanel;

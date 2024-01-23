@@ -20,12 +20,12 @@ class ToolManager {
         this.tools.set(tool.ToolName, tool);
     }
 
-    get(tool: string) {
-        return tool ? this.tools.get(tool) : null;
+    get(toolName: string) {
+        return toolName ? this.tools.get(toolName) : null;
     }
 
-    activate(tool: string) {
-        const newTool = this.get(tool);
+    activate(toolName: string) {
+        const newTool = this.get(toolName);
         if (newTool === this.activeTool || newTool === undefined) {
             return false;
         }

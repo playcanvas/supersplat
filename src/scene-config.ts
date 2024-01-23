@@ -1,15 +1,5 @@
-interface HotSpot {
-    name: string;
-    position: {x: number; y: number; z: number};
-}
-
-enum XRModeConfig {
-    none = 'none',
-    placement = 'placement'
-}
 
 const contentsPromise: Promise<ArrayBuffer> = null;
-const hotSpots: HotSpot[] = [];
 
 // default config
 const sceneConfig = {
@@ -31,8 +21,6 @@ const sceneConfig = {
     camera: {
         pixelScale: 1,
         multisample: false,
-        multiframe: false,
-        oit: false,
         fov: 36,
         dollyZoom: true,
         exposure: 1.0,
@@ -64,11 +52,6 @@ const sceneConfig = {
     },
     animation: {
         autoPlay: false
-    },
-    hotSpots: hotSpots,
-    xr: {
-        mode: XRModeConfig.none,
-        showControls: true
     },
     debug: {
         ministats: false,
@@ -176,4 +159,4 @@ const getSceneConfig = (overrides: any[]) => {
     return sceneConfig;
 };
 
-export {SceneConfig, getSceneConfig, XRModeConfig};
+export {SceneConfig, getSceneConfig };

@@ -39,32 +39,6 @@ const getURLArgs = () => {
     return config;
 };
 
-// take a relative URL and returns the absolute version
-const makeUrl = (() => {
-    const scripts = Array.from(document.getElementsByTagName('script')).filter(s => s.src);
-    const urlBase = scripts[scripts.length - 1].src.split('/').slice(0, -1).join('/');
-    return (url: string) => {
-        return `${urlBase}/${url}`;
-    };
-})();
-
-const fetchStaticAssets = () => {
-    // fetch static assets
-    const envImage = fetch(makeUrl('static/env/VertebraeHDRI_v1_512.png'))
-        .then(r => r.arrayBuffer())
-        .then(arrayBuffer => URL.createObjectURL(new File([arrayBuffer], 'env.png', {type: 'image/png'})));
-
-    const dracoJs = fetch(makeUrl('static/lib/draco_decoder.js'))
-        .then(r => r.text())
-        .then(text => URL.createObjectURL(new File([text], 'draco.js', {type: 'application/javascript'})));
-
-    const dracoWasm = fetch(makeUrl('static/lib/draco_decoder.wasm'))
-        .then(r => r.arrayBuffer())
-        .then(arrayBuffer => URL.createObjectURL(new File([arrayBuffer], 'draco.wasm', {type: 'application/wasm'})));
-
-    return { envImage, dracoJs, dracoWasm };
-};
-
 const initDropHandler = (canvas: HTMLCanvasElement, scene: Scene) => {
     // add a 'choose file' button
     const selector = document.createElement('input');
@@ -93,10 +67,6 @@ const initDropHandler = (canvas: HTMLCanvasElement, scene: Scene) => {
 const main = async () => {
     const url = new URL(window.location.href);
 
-    // handle load param and ready promise for visual testing harness
-    const loadParam = url.searchParams.get('load');
-    const loadUrl = loadParam && decodeURIComponent(loadParam);
-
     // decode remote storage details
     let remoteStorageDetails;
     try {
@@ -107,17 +77,13 @@ const main = async () => {
 
     const editorUI = new EditorUI(!!remoteStorageDetails);
 
-    const { envImage, dracoJs, dracoWasm } = fetchStaticAssets();
-
     // create the graphics device
     const createPromise = createGraphicsDevice(editorUI.canvas, {
-        deviceTypes: (url.searchParams.has('webgpu') ? ['webgpu'] : []).concat(['webgl2']),
-        glslangUrl: makeUrl('lib/glslang/glslang.js'),
-        twgslUrl: makeUrl('lib/twgsl/twgsl.js'),
+        deviceTypes: ['webgl2'],
         antialias: false,
         depth: false,
         stencil: false,
-        xrCompatible: true,
+        xrCompatible: false,
         powerPreference: 'high-performance'
     });
 
@@ -125,21 +91,9 @@ const main = async () => {
     initMaterials();
 
     // wait for async loads to complete
-    const [dracoJsURL, dracoWasmURL, envImageURL, graphicsDevice] = await Promise.all([dracoJs, dracoWasm, envImage, createPromise]);
-
-    // initialize draco
-    dracoInitialize({
-        jsUrl: dracoJsURL,
-        wasmUrl: dracoWasmURL,
-        numWorkers: 2
-    });
+    const graphicsDevice = await createPromise;
 
     const overrides = [
-        {
-            env: {
-                url: envImageURL
-            }
-        },
         getURLArgs()
     ];
 
@@ -159,6 +113,10 @@ const main = async () => {
 
     // load async models
     await scene.load();
+
+    // handle load param and ready promise for visual testing harness
+    const loadParam = url.searchParams.get('load');
+    const loadUrl = loadParam && decodeURIComponent(loadParam);
     if (loadUrl) {
         await scene.loadModel(loadUrl, loadUrl);
     }

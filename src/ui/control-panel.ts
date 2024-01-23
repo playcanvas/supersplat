@@ -1,6 +1,8 @@
 import { EventHandler } from 'playcanvas';
 import { BooleanInput, Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, VectorInput } from 'pcui';
 import { version as supersplatVersion } from '../../package.json';
+import { BoxSelection } from '../tools/box-selection';
+import { BrushSelection } from '../tools/brush-selection';
 
 class ControlPanel extends Panel {
     events = new EventHandler;

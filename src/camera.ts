@@ -254,7 +254,7 @@ class Camera extends Element {
         };
 
         // in with the new
-        const pixelFormat = this.scene.config.camera?.oit ? PIXELFORMAT_RGBA16F : PIXELFORMAT_RGBA8;
+        const pixelFormat = PIXELFORMAT_RGBA8;
         const colorBuffer = createTexture(width, height, pixelFormat);
         const depthBuffer = createTexture(width, height, PIXELFORMAT_DEPTH);
         const renderTarget = new RenderTarget({
@@ -334,13 +334,8 @@ class Camera extends Element {
             renderTarget.resolve(true, false);
         }
 
-        // if multiframe isn't enabled (otherwise multiframe element will handle this)
-        if (!this.scene.config.camera?.multiframe) {
-            const device = this.scene.graphicsDevice as WebglGraphicsDevice;
-
-            // copy render target
-            drawTexture(this.scene.graphicsDevice, renderTarget.colorBuffer, null);
-        }
+        // copy render target
+        drawTexture(this.scene.graphicsDevice, renderTarget.colorBuffer, null);
     }
 
     focus(options?: { sceneRadius?: number, distance?: number, focalPoint?: Vec3}) {

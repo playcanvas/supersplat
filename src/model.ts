@@ -11,7 +11,6 @@ import {
 } from 'playcanvas';
 import {Element, ElementType} from './element';
 import {Serializer} from './serializer';
-import {Gem} from './gem';
 import {Debug} from './debug';
 
 const vec = new Vec3();
@@ -25,18 +24,15 @@ const calculateSortDistance = (drawCall: any, cameraPosition: Vec3, cameraForwar
 
 class Model extends Element {
     asset: Asset;
-    gemMaterials: Set<StandardMaterial>;
     entity: Entity;
     root: any;
     animTracks: string[] = [];
-    gemNodes: Entity[] = [];
     changedCounter = 0;
 
-    constructor(asset: Asset, gemMaterials: Set<StandardMaterial>) {
+    constructor(asset: Asset) {
         super(ElementType.model);
 
         this.asset = asset;
-        this.gemMaterials = gemMaterials;
         this.entity = new Entity('modelRoot');
     }
 
@@ -110,8 +106,6 @@ class Model extends Element {
             this.play(0);
         }
 
-        this.initializeGems();
-
         // add the entity to the scene
         this.scene.contentRoot.addChild(this.entity);
 
@@ -153,49 +147,6 @@ class Model extends Element {
         if (s) this.entity.setLocalScale(s, s, s);
     }
 
-    initializeGems() {
-        if (this.gemMaterials.size === 0) {
-            return;
-        }
-
-        const gems = new Map<Mesh, Gem>();
-
-        // detect and process gem meshes
-        this.root.forEach((node: Entity) => {
-            node?.render?.meshInstances?.forEach((meshInstance: MeshInstance) => {
-                const material = meshInstance.material as StandardMaterial;
-                if (this.gemMaterials.has(material)) {
-                    const mesh = meshInstance.mesh;
-
-                    if (!gems.has(mesh)) {
-                        gems.set(mesh, Gem.createFromMesh(mesh, this.scene.graphicsDevice));
-                    }
-                    const gem = gems.get(mesh);
-
-                    meshInstance.mesh = gem.mesh;
-                    meshInstance.material = gem.material;
-
-                    const transform = node.getWorldTransform().clone().invert();
-                    // @ts-ignore
-                    meshInstance.setParameter('matrix_model_inverse', transform.data);
-                    meshInstance.setParameter('gem_absorption', [
-                        // convert baseColorFactor from sRGB to linear and scale for absorption
-                        (1.0 - Math.pow(material.diffuse.r, 2.2)) * 600,
-                        (1.0 - Math.pow(material.diffuse.g, 2.2)) * 600,
-                        (1.0 - Math.pow(material.diffuse.b, 2.2)) * 600
-                    ]);
-
-                    this.gemNodes.push(node);
-                }
-            });
-        });
-
-        // print stats in debug mode only
-        Debug.exec(() => {
-            console.log(`gem types=${gems.size}, instances=${this.gemNodes.length}`);
-        });
-    }
-
     remove() {
         this.entity.findComponents('render').forEach((component: RenderComponent) => {
             this.scene.shadowLayer.shadowCasters = this.scene.shadowLayer.shadowCasters.filter(
@@ -211,17 +162,6 @@ class Model extends Element {
         serializer.packa(this.entity.getWorldTransform().data);
         serializer.pack(this.root?.anim?.baseLayer?.activeStateCurrentTime);
         serializer.pack(this.changedCounter);
-    }
-
-    onUpdate(/* deltaTime: number */) {
-        this.gemNodes.forEach((gemNode: Entity) => {
-            mat.copy(gemNode.getWorldTransform());
-            mat.invert();
-
-            const param = gemNode.render.meshInstances[0].getParameter('matrix_model_inverse') as any;
-            const matrixData = param.data as Float32Array;
-            matrixData.set(mat.data);
-        });
     }
 }
 

@@ -1,5 +1,4 @@
 import { Asset, AssetRegistry, StandardMaterial, TEXTURETYPE_RGBP } from 'playcanvas';
-import { getDefaultPlyElements } from 'playcanvas-extras';
 import { Model } from './model';
 import { Splat } from './splat';
 import { Env } from './env';
@@ -35,8 +34,6 @@ class AssetLoader {
         startSpinner();
 
         return new Promise<Model|Splat>((resolve, reject) => {
-            const gemMaterials = new Set<StandardMaterial>();
-
             const isPly = loadRequest.filename?.endsWith('.ply');
 
             const containerAsset = new Asset(
@@ -55,14 +52,6 @@ class AssetLoader {
                         postprocess: (gltfImage: any, textureAsset: Asset) => {
                             textureAsset.resource.anisotropy = loadRequest.maxAnisotropy || this.defaultAnisotropy;
                         }
-                    },
-                    material: {
-                        postprocess: (gltfMaterial: any, materialAsset: StandardMaterial) => {
-                            // keep tabs on materials with SNAP gemstone extension
-                            if (gltfMaterial?.extensions?.SNAP_materials_gemstone) {
-                                gemMaterials.add(materialAsset);
-                            }
-                        }
                     }
                 } as any
             );
@@ -71,7 +60,7 @@ class AssetLoader {
                 if (isPly) {
                     resolve(new Splat(containerAsset));
                 } else {
-                    resolve(new Model(containerAsset, gemMaterials));
+                    resolve(new Model(containerAsset));
                 }
             });
             containerAsset.on('error', (err: string) => {

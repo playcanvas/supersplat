@@ -1,6 +1,7 @@
 import { Container, InfoBox, Label } from 'pcui';
 import { Toolbar } from './toolbar';
 import { ControlPanel } from './control-panel';
+import { ToolManager } from '../tools/tool-manager';
 import logo from './playcanvas-logo.png';
 
 class EditorUI {
@@ -19,6 +20,9 @@ class EditorUI {
         link.href = logo.src;
         document.head.appendChild(link);
 
+        // tool manager
+        const toolManager = new ToolManager();
+
         // app
         const appContainer = new Container({
             dom: document.getElementById('app-container')
@@ -29,6 +33,7 @@ class EditorUI {
             id: 'editor-container'
         });
 
+        // toolbar
         const toolbar = new Toolbar(appContainer);
 
         // canvas

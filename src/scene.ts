@@ -14,18 +14,12 @@ import { MiniStats } from 'playcanvas-extras';
 import { PCApp } from './pc-app';
 import { Element, ElementType, ElementTypeList } from './element';
 import { SceneState } from './scene-state';
-import { SceneConfig, XRModeConfig } from './scene-config';
+import { SceneConfig } from './scene-config';
 import { AssetLoader } from './asset-loader';
 import { Model } from './model';
 import { Splat } from './splat';
 import { Camera } from './camera';
-import { Multiframe } from './multiframe';
-import { Oit } from './oit';
 import { CustomShadow as Shadow } from './custom-shadow';
-// import { VsmShadow as Shadow } from './vsm-shadow';
-// import { BakedShadow as Shadow } from './baked-shadow';
-import { HotSpots } from './hotspots';
-import { XRMode } from './xr-mode';
 
 import { registerPlyParser } from 'playcanvas-extras';
 
@@ -49,11 +43,7 @@ class Scene extends EventHandler {
 
     assetLoader: AssetLoader;
     camera: Camera;
-    multiframe: Multiframe;
-    oit: Oit;
     shadow: Shadow;
-    hotSpots: HotSpots;
-    xrMode: XRMode;
 
     contentRoot: Entity;
     cameraRoot: Entity;
@@ -76,6 +66,11 @@ class Scene extends EventHandler {
             graphicsDevice: graphicsDevice
         });
 
+        // only render the scene when instructed
+        this.app.autoRender = false;
+        this.app._allowResize = false;
+        this.app.scene.clusteredLightingEnabled = false;
+
         // register splat
         registerPlyParser(this.app);
 
@@ -85,11 +80,6 @@ class Scene extends EventHandler {
 
         // @ts-ignore
         this.app.loader.getHandler('texture').imgParser.crossOrigin = 'anonymous';
-
-        // only render the scene when instructed
-        this.app.autoRender = false;
-        this.app._allowResize = false;
-        this.app.scene.clusteredLightingEnabled = false;
 
         // this is required to get full res AR mode backbuffer
         this.app.graphicsDevice.maxPixelRatio = window.devicePixelRatio;
@@ -161,26 +151,8 @@ class Scene extends EventHandler {
         this.camera = new Camera();
         this.add(this.camera);
 
-        // this.shadow = new Shadow();
-        // this.add(this.shadow);
-
-        this.hotSpots = new HotSpots();
-        this.add(this.hotSpots);
-
-        if (config.camera?.oit) {
-            this.oit = new Oit();
-            this.add(this.oit);
-        }
-
-        if (config.camera?.multiframe) {
-            this.multiframe = new Multiframe(this.graphicsDevice as WebglGraphicsDevice, this.camera.entity.camera);
-            this.add(this.multiframe);
-        }
-
-        if (config.xr.mode === XRModeConfig.placement && this.app.xr.supported) {
-            this.xrMode = new XRMode();
-            this.add(this.xrMode);
-        }
+        this.shadow = new Shadow();
+        this.add(this.shadow);
 
         if (config.debug?.ministats) {
             /* eslint-disable no-new */
@@ -203,7 +175,7 @@ class Scene extends EventHandler {
         };
 
         // load env
-        if (config.env) {
+        if (config.env.url) {
             promises.push(this.assetLoader.loadEnv({url: config.env.url}));
         }
 
@@ -211,13 +183,6 @@ class Scene extends EventHandler {
 
         // add them to the scene
         elements.forEach(e => this.add(e));
-
-        // add hotspots
-        if (config.hotSpots) {
-            config.hotSpots.forEach(hotSpot => {
-                this.hotSpots.addHotSpot(hotSpot.name, hotSpot.position.x, hotSpot.position.y, hotSpot.position.z);
-            });
-        }
 
         this.updateBound();
         this.camera.focus();

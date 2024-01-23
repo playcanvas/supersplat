@@ -16,6 +16,6 @@
             "pcui": ["node_modules/@playcanvas/pcui"]
         }
     },
-    "include": ["./src/*.ts", "src/ui/*.ts"],
+    "include": ["./src/**/*.ts"],
     "exclude": ["node_modules", "**/*.js", "dist"]
 }

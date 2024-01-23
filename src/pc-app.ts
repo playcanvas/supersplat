@@ -55,7 +55,7 @@ import {
     // TextHandler,
     // TextureAtlasHandler,
     TextureHandler,
-    XrManager
+    // XrManager
 } from 'playcanvas';
 
 class PCApp extends AppBase {
@@ -83,7 +83,7 @@ class PCApp extends AppBase {
         // appOptions.lightmapper = Lightmapper;
         // appOptions.batchManager = BatchManager;
         // @ts-ignore
-        appOptions.xr = XrManager;
+        // appOptions.xr = XrManager;
 
         this.init(appOptions);
     }

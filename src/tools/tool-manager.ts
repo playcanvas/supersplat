@@ -12,11 +12,7 @@ class ToolManager {
     tools = new Map<string, Tool>();
     events = new EventHandler();
 
-    constructor() {
-
-    }
-
-    add(tool: Tool) {
+    register(tool: Tool) {
         this.tools.set(tool.ToolName, tool);
     }
 

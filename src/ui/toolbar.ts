@@ -21,7 +21,47 @@ class Toolbar extends Container {
         appLogo.id = 'app-logo';
         appLogo.src = logo.src;
 
+        // move
+        const moveTool = new Button({
+            id: 'move-tool',
+            class: 'toolbar-button',
+            icon: 'E111'
+        });
+
+        // scale
+        const scaleTool = new Button({
+            id: 'scale-tool',
+            class: 'toolbar-button',
+            icon: 'E112'
+        });
+
+        // rotate
+        const rotateTool = new Button({
+            id: 'rotate-tool',
+            class: 'toolbar-button',
+            icon: 'E113'
+        });
+
+        // brush selection
+        const brushTool = new Button({
+            id: 'brush-tool',
+            class: 'toolbar-button',
+            icon: 'E114'
+        });
+
+        // rect selection
+        const rectTool = new Button({
+            id: 'rect-tool',
+            class: 'toolbar-button',
+            icon: 'E115'
+        });
+
         toolbarToolsContainer.dom.appendChild(appLogo);
+        toolbarToolsContainer.append(moveTool);
+        toolbarToolsContainer.append(scaleTool);
+        toolbarToolsContainer.append(rotateTool);
+        toolbarToolsContainer.append(brushTool);
+        toolbarToolsContainer.append(rectTool);
 
         // toolbar help toolbar
         const toolbarHelpContainer = new Container({

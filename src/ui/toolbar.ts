@@ -21,35 +21,7 @@ class Toolbar extends Container {
         appLogo.id = 'app-logo';
         appLogo.src = logo.src;
 
-        // move
-        const moveTool = new Button({
-            id: 'move-tool',
-            class: 'toolbar-button',
-            icon: 'E111'
-        });
-
-        moveTool.on('click', () => {
-
-        });
-
-        // scale
-        const scaleTool = new Button({
-            id: 'scale-tool',
-            class: 'toolbar-button',
-            icon: 'E112'
-        });
-
-        // rotate
-        const rotateTool = new Button({
-            id: 'rotate-tool',
-            class: 'toolbar-button',
-            icon: 'E113'
-        });
-
         toolbarToolsContainer.dom.appendChild(appLogo);
-        toolbarToolsContainer.append(moveTool);
-        toolbarToolsContainer.append(scaleTool);
-        toolbarToolsContainer.append(rotateTool);
 
         // toolbar help toolbar
         const toolbarHelpContainer = new Container({

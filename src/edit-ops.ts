@@ -1,9 +1,9 @@
-import { SplatData } from 'playcanvas-extras';
+import { GSplatData } from 'playcanvas';
 
 const deletedOpacity = -1000;
 
 // build a splat index based on a boolean predicate
-const buildIndex = (splatData: SplatData, pred: (i: number) => boolean) => {
+const buildIndex = (splatData: GSplatData, pred: (i: number) => boolean) => {
     let numSplats = 0;
     for (let i = 0; i < splatData.numSplats; ++i) {
         if (pred(i)) numSplats++;
@@ -22,11 +22,11 @@ const buildIndex = (splatData: SplatData, pred: (i: number) => boolean) => {
 
 class DeleteSelectionEditOp {
     name = 'deleteSelection';
-    splatData: SplatData;
+    splatData: GSplatData;
     indices: Uint32Array;
     opacity: Float32Array;
 
-    constructor(splatData: SplatData) {
+    constructor(splatData: GSplatData) {
         const selection = splatData.getProp('selection');
         const opacity = splatData.getProp('opacity');
         const indices = buildIndex(splatData, (i) => selection[i] > 0);
@@ -64,11 +64,11 @@ class DeleteSelectionEditOp {
 
 class ResetEditOp {
     name = 'reset';
-    splatData: SplatData;
+    splatData: GSplatData;
     indices: Uint32Array;
     opacity: Float32Array;
 
-    constructor(splatData: SplatData) {
+    constructor(splatData: GSplatData) {
         const opacity = splatData.getProp('opacity');
         const opacityOrig = splatData.getProp('opacityOrig');
         const indices = buildIndex(splatData, (i) => opacity[i] !== opacityOrig[i]);

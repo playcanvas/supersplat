@@ -1,12 +1,14 @@
 import {
     BoundingBox,
     Color,
+    Splat as SplatRender,
+    GSplatData,
+    GSplatInstance,
     Mat4,
     path,
     Vec3,
     Vec4
 } from 'playcanvas';
-import { Splat as SplatRender, SplatData, SplatInstance } from 'playcanvas-extras';
 import { Scene } from './scene';
 import { EditorUI } from './ui/editor';
 import { Element, ElementType } from './element';
@@ -54,9 +56,9 @@ const sendToRemoteStorage = async (filename: string, data: ArrayBuffer, remoteSt
 
 interface SplatDef {
     element: Splat,
-    data: SplatData,
+    data: GSplatData,
     render: SplatRender,
-    instance: SplatInstance,
+    instance: GSplatInstance,
     debug: SplatDebug
 };
 

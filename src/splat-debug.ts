@@ -1,5 +1,6 @@
 import {
     BLEND_NORMAL,
+    GSplatData,
     Material,
     Mesh,
     MeshInstance,
@@ -10,7 +11,6 @@ import {
 import { deletedOpacity } from './edit-ops';
 import { Scene } from './scene';
 import { Splat } from './splat';
-import { SplatData } from 'playcanvas-extras';
 
 const vs = /* glsl */ `
 attribute vec4 vertex_position;
@@ -45,11 +45,11 @@ void main(void)
 `;
 
 class SplatDebug {
-    splatData: SplatData;
+    splatData: GSplatData;
     meshInstance: MeshInstance;
     size = 2;
 
-    constructor(scene: Scene, splat: Splat, splatData: SplatData) {
+    constructor(scene: Scene, splat: Splat, splatData: GSplatData) {
         const device = scene.graphicsDevice;
 
         const shader = createShaderFromCode(device, vs, fs, `splatDebugShader`, {

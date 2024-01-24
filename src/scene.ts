@@ -1,5 +1,6 @@
 import {
     LAYERID_DEPTH,
+    SORTMODE_NONE,
     BoundingBox,
     Color,
     Entity,
@@ -7,7 +8,6 @@ import {
     Layer,
     Mouse,
     TouchDevice,
-    WebglGraphicsDevice,
     GraphicsDevice
 } from 'playcanvas';
 import { MiniStats } from 'playcanvas-extras';
@@ -21,8 +21,6 @@ import { Splat } from './splat';
 import { Camera } from './camera';
 import { CustomShadow as Shadow } from './custom-shadow';
 
-import { registerPlyParser } from 'playcanvas-extras';
-
 const bound = new BoundingBox();
 
 class Scene extends EventHandler {
@@ -30,6 +28,7 @@ class Scene extends EventHandler {
     canvas: HTMLCanvasElement;
     app: PCApp;
     shadowLayer: Layer;
+    gizmoLayer: Layer;
     sceneState = [new SceneState(), new SceneState()];
     elements: Element[] = [];
     bound = new BoundingBox();
@@ -70,9 +69,6 @@ class Scene extends EventHandler {
         this.app.autoRender = false;
         this.app._allowResize = false;
         this.app.scene.clusteredLightingEnabled = false;
-
-        // register splat
-        registerPlyParser(this.app);
 
         // hack: disable lightmapper first bake until we expose option for this
         // @ts-ignore
@@ -126,17 +122,26 @@ class Scene extends EventHandler {
             this.forceRender = true;
         });
 
-        // create a semitrans shadow layer. this layer contains shadow caster
-        // scene mesh instances, shadow-casting virtual light, shadow catching
-        // plane geometry and the main camera.
+        // shadow layer
+        // this layer contains shadow caster scene mesh instances, shadow-casting
+        // virtual light, shadow catching plane geometry and the main camera.
         this.shadowLayer = new Layer({
             name: 'Shadow Layer'
+        });
+
+        // gizmo layer
+        this.gizmoLayer = new Layer({
+            name: 'Gizmo',
+            clearDepthBuffer: true,
+            opaqueSortMode: SORTMODE_NONE,
+            transparentSortMode: SORTMODE_NONE
         });
 
         const layers = this.app.scene.layers;
         const worldLayer = layers.getLayerByName('World');
         const idx = layers.getOpaqueIndex(worldLayer);
         layers.insert(this.shadowLayer, idx + 1);
+        layers.push(this.gizmoLayer);
 
         this.assetLoader = new AssetLoader(this.app.assets, this.app.graphicsDevice.maxAnisotropy);
 

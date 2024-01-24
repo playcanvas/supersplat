@@ -42,6 +42,7 @@ import {
     CubemapHandler,
     // FolderHandler,
     // FontHandler,
+    GSplatHandler,
     // HierarchyHandler,
     // HtmlHandler,
     // JsonHandler,
@@ -163,7 +164,8 @@ class PCApp extends AppBase {
             // SpriteHandler,
             // TemplateHandler,
             // @ts-ignore
-            ContainerHandler
+            ContainerHandler,
+            GSplatHandler
         ];
     }
 }

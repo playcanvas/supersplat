@@ -36,40 +36,64 @@ class AssetLoader {
         return new Promise<Model|Splat>((resolve, reject) => {
             const isPly = loadRequest.filename?.endsWith('.ply');
 
-            const containerAsset = new Asset(
-                loadRequest.filename || loadRequest.url,
-                'container',
-                {
-                    url: loadRequest.url,
-                    filename: loadRequest.filename,
-                    contents: loadRequest.contents
-                },
-                isPly ? { 
-                    elementFilter: this.loadAllData ? (() => true) : null
-                } : null,
-                {
-                    image: {
-                        postprocess: (gltfImage: any, textureAsset: Asset) => {
-                            textureAsset.resource.anisotropy = loadRequest.maxAnisotropy || this.defaultAnisotropy;
-                        }
-                    }
-                } as any
-            );
-            containerAsset.on('load', () => {
-                stopSpinner();
-                if (isPly) {
-                    resolve(new Splat(containerAsset));
-                } else {
-                    resolve(new Model(containerAsset));
-                }
-            });
-            containerAsset.on('error', (err: string) => {
-                stopSpinner();
-                reject(err);
-            });
+            if (isPly) {
+                const asset = new Asset(
+                    loadRequest.filename || loadRequest.url,
+                    'gsplat',
+                    {
+                        url: loadRequest.url,
+                        filename: loadRequest.filename,
+                        contents: loadRequest.contents
+                    },
+                    { elementFilter: this.loadAllData ? (() => true) : null }
+                );
+                asset.on('load', () => {
+                    stopSpinner();
+                    resolve(new Splat(asset));
+                });
+                asset.on('error', (err: string) => {
+                    stopSpinner();
+                    reject(err);
+                });
 
-            registry.add(containerAsset);
-            registry.load(containerAsset);
+                registry.add(asset);
+                registry.load(asset);
+            } else {
+                const containerAsset = new Asset(
+                    loadRequest.filename || loadRequest.url,
+                    'container',
+                    {
+                        url: loadRequest.url,
+                        filename: loadRequest.filename,
+                        contents: loadRequest.contents
+                    },
+                    isPly ? { 
+                        elementFilter: this.loadAllData ? (() => true) : null
+                    } : null,
+                    {
+                        image: {
+                            postprocess: (gltfImage: any, textureAsset: Asset) => {
+                                textureAsset.resource.anisotropy = loadRequest.maxAnisotropy || this.defaultAnisotropy;
+                            }
+                        }
+                    } as any
+                );
+                containerAsset.on('load', () => {
+                    stopSpinner();
+                    if (isPly) {
+                        resolve(new Splat(containerAsset));
+                    } else {
+                        resolve(new Model(containerAsset));
+                    }
+                });
+                containerAsset.on('error', (err: string) => {
+                    stopSpinner();
+                    reject(err);
+                });
+
+                registry.add(containerAsset);
+                registry.load(containerAsset);
+            }
         });
     }
 

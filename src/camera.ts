@@ -160,7 +160,10 @@ class Camera extends Element {
 
     add() {
         this.scene.cameraRoot.addChild(this.entity);
-        this.entity.camera.layers = this.entity.camera.layers.concat([this.scene.shadowLayer.id]);
+        this.entity.camera.layers = this.entity.camera.layers.concat([
+            this.scene.shadowLayer.id,
+            this.scene.gizmoLayer.id
+        ]);
 
         if (this.scene.config.camera.debug_render) {
             this.entity.camera.setShaderPass(`debug_${this.scene.config.camera.debug_render}`);

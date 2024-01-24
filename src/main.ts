@@ -5,6 +5,10 @@ import { CreateDropHandler } from './drop-handler';
 import { initMaterials } from './material';
 import { EditorUI } from './ui/editor';
 import { registerEvents } from './editor-ops';
+import { ToolManager } from './tools/tool-manager';
+import { MoveTool } from './tools/move-tool';
+import { RectSelection } from './tools/rect-selection';
+import { BrushSelection } from './tools/brush-selection';
 import { Events } from './events';
 
 declare global {
@@ -83,7 +87,7 @@ const main = async () => {
     const editorUI = new EditorUI(events, !!remoteStorageDetails);
 
     // create the graphics device
-    const createPromise = createGraphicsDevice(editorUI.canvas, {
+    const graphicsDevice = await createGraphicsDevice(editorUI.canvas, {
         deviceTypes: ['webgl2'],
         antialias: false,
         depth: false,
@@ -94,9 +98,6 @@ const main = async () => {
 
     // monkey-patch materials for premul alpha rendering
     initMaterials();
-
-    // wait for async loads to complete
-    const graphicsDevice = await createPromise;
 
     const overrides = [
         getURLArgs()
@@ -111,6 +112,12 @@ const main = async () => {
         editorUI.canvas,
         graphicsDevice
     );
+
+    // tool manager
+    const toolManager = new ToolManager(events);
+    toolManager.register(new MoveTool(events, scene));
+    toolManager.register(new RectSelection(events, editorUI.canvasContainer.dom));
+    toolManager.register(new BrushSelection(events, editorUI.canvasContainer.dom));
 
     registerEvents(events, scene, editorUI, remoteStorageDetails);
 

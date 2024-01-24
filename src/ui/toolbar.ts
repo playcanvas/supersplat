@@ -1,9 +1,10 @@
 import { Button, Container } from 'pcui';
-import logo from './playcanvas-logo.png';
 import { ShortcutsPopup } from './shortcuts';
+import { Events } from '../events';
+import logo from './playcanvas-logo.png';
 
 class Toolbar extends Container {
-    constructor(appContainer: Container, args = {}) {
+    constructor(events: Events, appContainer: Container, args = {}) {
         args = Object.assign(args, {
             id: 'toolbar-container'
         });
@@ -27,12 +28,8 @@ class Toolbar extends Container {
             class: 'toolbar-button',
             icon: 'E111'
         });
-
-        // scale
-        const scaleTool = new Button({
-            id: 'scale-tool',
-            class: 'toolbar-button',
-            icon: 'E112'
+        moveTool.on('click', () => {
+            events.fire('tool:activate', 'Move');
         });
 
         // rotate
@@ -41,27 +38,54 @@ class Toolbar extends Container {
             class: 'toolbar-button',
             icon: 'E113'
         });
+        rotateTool.on('click', () => {
+            events.fire('tool:activate', 'Rotate');
+        });
 
-        // brush selection
-        const brushTool = new Button({
-            id: 'brush-tool',
+        // scale
+        const scaleTool = new Button({
+            id: 'scale-tool',
             class: 'toolbar-button',
-            icon: 'E114'
+            icon: 'E112'
+        });
+        scaleTool.on('click', () => {
+            events.fire('tool:activate', 'Scale');
         });
 
         // rect selection
         const rectTool = new Button({
             id: 'rect-tool',
             class: 'toolbar-button',
-            icon: 'E115'
+            icon: 'E135'
+        });
+        rectTool.on('click', () => {
+            events.fire('tool:activate', 'RectSelection');
+        });
+
+        // brush selection
+        const brushTool = new Button({
+            id: 'brush-tool',
+            class: 'toolbar-button',
+            icon: 'E195'
+        });
+        brushTool.on('click', () => {
+            events.fire('tool:activate', 'BrushSelection');
+        });
+
+        events.on('tool:activated', (toolName: string) => {
+            moveTool.class[toolName === 'Move' ? 'add' : 'remove']('active');
+            rotateTool.class[toolName === 'Rotate' ? 'add' : 'remove']('active');
+            scaleTool.class[toolName === 'Scale' ? 'add' : 'remove']('active');
+            rectTool.class[toolName === 'RectSelection' ? 'add' : 'remove']('active');
+            brushTool.class[toolName === 'BrushSelection' ? 'add' : 'remove']('active');
         });
 
         toolbarToolsContainer.dom.appendChild(appLogo);
         toolbarToolsContainer.append(moveTool);
-        toolbarToolsContainer.append(scaleTool);
         toolbarToolsContainer.append(rotateTool);
-        toolbarToolsContainer.append(brushTool);
+        toolbarToolsContainer.append(scaleTool);
         toolbarToolsContainer.append(rectTool);
+        toolbarToolsContainer.append(brushTool);
 
         // toolbar help toolbar
         const toolbarHelpContainer = new Container({

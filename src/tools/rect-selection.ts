@@ -1,8 +1,9 @@
-import { EventHandler } from 'playcanvas';
+import { Events } from '../events';
 
-class BoxSelection {
-    ToolName = 'BoxSelection';
+class RectSelection {
+    ToolName = 'RectSelection';
 
+    events: Events;
     root: HTMLElement;
     svg: SVGElement;
     rect: SVGRectElement;
@@ -10,9 +11,7 @@ class BoxSelection {
     start = { x: 0, y: 0 };
     end = { x: 0, y: 0 };
 
-    events = new EventHandler();
-
-    constructor(parent: HTMLElement) {
+    constructor(events: Events, parent: HTMLElement) {
         const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         svg.id = 'select-svg';
 
@@ -92,28 +91,19 @@ class BoxSelection {
         root.appendChild(svg);
         svg.appendChild(rect);
 
+        this.events = events;
         this.root = root;
         this.svg = svg;
         this.rect = rect;
     }
 
     activate() {
-        if (!this.active) {
-            this.root.style.display = 'block';
-            this.events.fire('activated');
-        }
+        this.root.style.display = 'block';
     }
 
     deactivate() {
-        if (this.active) {
-            this.events.fire('deactivated');
-            this.root.style.display = 'none';
-        }
-    }
-
-    get active() {
-        return this.root.style.display === 'block';
+        this.root.style.display = 'none';
     }
 }
 
-export { BoxSelection };
+export { RectSelection };

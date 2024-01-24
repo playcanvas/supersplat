@@ -1,7 +1,11 @@
 import { Container, InfoBox, Label } from 'pcui';
-import { Toolbar } from './toolbar';
 import { ControlPanel } from './control-panel';
+import { Toolbar } from './toolbar';
+import { Events } from '../events';
 import { ToolManager } from '../tools/tool-manager';
+import { MoveTool } from '../tools/move-tool';
+import { RectSelection } from '../tools/rect-selection';
+import { BrushSelection } from '../tools/brush-selection';
 import logo from './playcanvas-logo.png';
 
 class EditorUI {
@@ -13,15 +17,12 @@ class EditorUI {
     errorPopup: InfoBox;
     infoPopup: InfoBox;
 
-    constructor(remoteStorageMode: boolean) {
+    constructor(events: Events, remoteStorageMode: boolean) {
         // favicon
         const link = document.createElement('link');
         link.rel = 'icon';
         link.href = logo.src;
         document.head.appendChild(link);
-
-        // tool manager
-        const toolManager = new ToolManager();
 
         // app
         const appContainer = new Container({
@@ -34,7 +35,7 @@ class EditorUI {
         });
 
         // toolbar
-        const toolbar = new Toolbar(appContainer);
+        const toolbar = new Toolbar(events, appContainer);
 
         // canvas
         const canvas = document.createElement('canvas');
@@ -52,7 +53,13 @@ class EditorUI {
         canvasContainer.append(filenameLabel);
 
         // control panel
-        const controlPanel = new ControlPanel(canvasContainer.dom, remoteStorageMode);
+        const controlPanel = new ControlPanel(events, remoteStorageMode);
+
+        // tool manager
+        const toolManager = new ToolManager(events);
+        toolManager.register(new MoveTool(events, canvasContainer.dom));
+        toolManager.register(new RectSelection(events, canvasContainer.dom));
+        toolManager.register(new BrushSelection(events, canvasContainer.dom));
 
         // error box 
         const errorPopup = new InfoBox({

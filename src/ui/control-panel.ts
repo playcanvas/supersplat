@@ -1,13 +1,9 @@
-import { EventHandler } from 'playcanvas';
 import { BooleanInput, Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, VectorInput } from 'pcui';
+import { Events } from '../events';
 import { version as supersplatVersion } from '../../package.json';
-import { BoxSelection } from '../tools/box-selection';
-import { BrushSelection } from '../tools/brush-selection';
 
 class ControlPanel extends Panel {
-    events = new EventHandler;
-
-    constructor(canvasContainer: HTMLElement, remoteStorageMode: boolean, args = { }) {
+    constructor(events: Events, remoteStorageMode: boolean, args = { }) {
         Object.assign(args, {
             headerText: `SUPER SPLAT v${supersplatVersion}`,
             id: 'control-panel',
@@ -207,7 +203,7 @@ class ControlPanel extends Panel {
             class: 'control-parent'
         });
 
-        const boxSelectButton = new Button({
+        const rectSelectButton = new Button({
             class: 'control-element-expand',
             text: 'Rect',
             enabled: true
@@ -219,7 +215,7 @@ class ControlPanel extends Panel {
             enabled: true
         });
 
-        selectTools.append(boxSelectButton);
+        selectTools.append(rectSelectButton);
         selectTools.append(brushSelectButton);
 
         // selection button parent
@@ -436,40 +432,18 @@ class ControlPanel extends Panel {
         this.content.append(exportPanel);
         this.content.append(optionsPanel);
 
-        const boxSelection = new BoxSelection(canvasContainer);
-        boxSelection.events.on('activated', () => boxSelectButton.class.add('active'));
-        boxSelection.events.on('deactivated', () => boxSelectButton.class.remove('active'));
-        boxSelection.events.on('selectRect', (op: string, rect: any) => {
-            this.events.fire('selectRect', op, rect);
+        rectSelectButton.on('click', () => {
+            events.fire('tool:activate', 'RectSelection');
         });
 
-        const brushSelection = new BrushSelection(canvasContainer);
-        brushSelection.events.on('activated', () => brushSelectButton.class.add('active'));
-        brushSelection.events.on('deactivated', () => brushSelectButton.class.remove('active'));
-        brushSelection.events.on('selectByMask', (op: string, mask: ImageData) => {
-            this.events.fire('selectByMask', op, mask);
+        brushSelectButton.on('click', () => {
+            events.fire('tool:activate', 'BrushSelection');
         });
 
-        const tools = [
-            boxSelection,
-            brushSelection
-        ];
-
-        const deactivate = () => {
-            tools.forEach(tool => tool.deactivate());
-        };
-
-        const toggle = (tool: any) => {
-            if (tool.active) {
-                tool.deactivate();
-            } else {
-                deactivate();
-                tool.activate();
-            }
-        };
-
-        boxSelectButton.on('click', () => toggle(boxSelection));
-        brushSelectButton.on('click', () => toggle(brushSelection));
+        events.on('tool:activated', (toolName: string) => {
+            rectSelectButton.class[toolName === 'RectSelection' ? 'add' : 'remove']('active');
+            brushSelectButton.class[toolName === 'BrushSelection' ? 'add' : 'remove']('active');
+        });
 
         // radio logic
         const radioGroup = [selectBySizeRadio, selectByOpacityRadio, selectBySphereRadio, selectByPlaneRadio];
@@ -483,10 +457,10 @@ class ControlPanel extends Panel {
                     });
 
                     // update select by
-                    this.events.fire('selectBy', index);
+                    events.fire('selectBy', index);
                 } else {
                     // update select by
-                    this.events.fire('selectBy', null);
+                    events.fire('selectBy', null);
                 }
             });
         });
@@ -498,7 +472,7 @@ class ControlPanel extends Panel {
         };
 
         let radioSelection: number | null = null;
-        this.events.on('selectBy', (index: number | null) => {
+        events.on('selectBy', (index: number | null) => {
             radioSelection = index;
 
             setButton.enabled = index !== null;
@@ -518,16 +492,16 @@ class ControlPanel extends Panel {
                 });
             });
 
-            this.events.fire('selectBySpherePlacement', index === 2 ? selectBySphereCenter.value : [0, 0, 0, 0]);
-            this.events.fire('selectByPlanePlacement', index === 3 ? axes[selectByPlaneAxis.value] : [0, 0, 0], selectByPlaneOffset.value);
+            events.fire('selectBySpherePlacement', index === 2 ? selectBySphereCenter.value : [0, 0, 0, 0]);
+            events.fire('selectByPlanePlacement', index === 3 ? axes[selectByPlaneAxis.value] : [0, 0, 0], selectByPlaneOffset.value);
         });
 
         const performSelect = (op: string) => {
             switch (radioSelection) {
-                case 0: this.events.fire('selectBySize', op, selectBySizeSlider.value); break;
-                case 1: this.events.fire('selectByOpacity', op, selectByOpacitySlider.value); break;
-                case 2: this.events.fire('selectBySphere', op, selectBySphereCenter.value); break;
-                case 3: this.events.fire('selectByPlane', op, axes[selectByPlaneAxis.value], selectByPlaneOffset.value); break;
+                case 0: events.fire('selectBySize', op, selectBySizeSlider.value); break;
+                case 1: events.fire('selectByOpacity', op, selectByOpacitySlider.value); break;
+                case 2: events.fire('selectBySphere', op, selectBySphereCenter.value); break;
+                case 3: events.fire('selectByPlane', op, axes[selectByPlaneAxis.value], selectByPlaneOffset.value); break;
             }
         }
 
@@ -536,78 +510,78 @@ class ControlPanel extends Panel {
         removeButton.on('click', () => performSelect('remove'));
 
         focusButton.on('click', () => {
-            this.events.fire('focusCamera');
+            events.fire('focusCamera');
         });
 
         splatSizeSlider.on('change', (value: number) => {
-            this.events.fire('splatSize', value);
+            events.fire('splatSize', value);
         });
 
         selectAllButton.on('click', () => {
-            this.events.fire('selectAll');
+            events.fire('selectAll');
         });
 
         selectNoneButton.on('click', () => {
-            this.events.fire('selectNone');
+            events.fire('selectNone');
         });
 
         invertSelectionButton.on('click', () => {
-            this.events.fire('invertSelection');
+            events.fire('invertSelection');
         });
 
         selectBySphereCenter.on('change', () => {
-            this.events.fire('selectBySpherePlacement', selectBySphereCenter.value);
+            events.fire('selectBySpherePlacement', selectBySphereCenter.value);
         });
 
         selectByPlaneAxis.on('change', () => {
-            this.events.fire('selectByPlanePlacement', axes[selectByPlaneAxis.value], selectByPlaneOffset.value);
+            events.fire('selectByPlanePlacement', axes[selectByPlaneAxis.value], selectByPlaneOffset.value);
         });
 
         selectByPlaneOffset.on('change', () => {
-            this.events.fire('selectByPlanePlacement', axes[selectByPlaneAxis.value], selectByPlaneOffset.value);
+            events.fire('selectByPlanePlacement', axes[selectByPlaneAxis.value], selectByPlaneOffset.value);
         });
 
         originToggle.on('change', (enabled: boolean) => {
-            this.events.fire('showOrigin', enabled);
+            events.fire('showOrigin', enabled);
         });
 
         positionVector.on('change', () => {
-            this.events.fire('scenePosition', positionVector.value);
+            events.fire('scenePosition', positionVector.value);
         });
 
         rotationVector.on('change', () => {
-            this.events.fire('sceneRotation', rotationVector.value);
+            events.fire('sceneRotation', rotationVector.value);
         });
 
         scaleInput.on('change', () => {
-            this.events.fire('sceneScale', scaleInput.value);
+            events.fire('sceneScale', scaleInput.value);
         });
 
         deleteSelectionButton.on('click', () => {
-            this.events.fire('deleteSelection');
+            events.fire('deleteSelection');
         });
 
         resetButton.on('click', () => {
-            this.events.fire('reset');
+            events.fire('reset');
         });
 
         allDataToggle.on('change', (enabled: boolean) => {
-            this.events.fire('allData', enabled);
+            events.fire('allData', enabled);
         });
 
         exportPlyButton.on('click', () => {
-            this.events.fire('export', 'ply');
+            events.fire('export', 'ply');
         });
 
         exportCompressedPlyButton.on('click', () => {
-            this.events.fire('export', 'ply-compressed');
+            events.fire('export', 'ply-compressed');
         });
 
         exportSplatButton.on('click', () => {
-            this.events.fire('export', 'splat');
+            events.fire('export', 'splat');
         });
 
-        this.events.on('splat:count', (count: number) => {
+        events.on('splat:count', (count: number) => {
             selectionPanel.headerText = `SELECTION${count === 0 ? '' : ' (' + count.toString() + ')'}`;
         });
 
@@ -618,28 +592,28 @@ class ControlPanel extends Panel {
             if (e.ctrlKey || e.metaKey) {
                 // handle meta/ctrl keys
                 if (!e.shiftKey && e.key === 'z') {
-                    this.events.fire('undo');
+                    events.fire('undo');
                 } else if (e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
-                    this.events.fire('redo');
+                    events.fire('redo');
                 }
             } else {
                 // handle non-meta/ctrl keys
                 if (e.key === 'Delete' || e.key === 'Backspace') {
-                    this.events.fire('deleteSelection');
+                    events.fire('deleteSelection');
                 } else if (e.key === 'Escape') {
-                    deactivate();
+                    events.fire('tool:activate', '');
                 } else if (e.key === 'R' || e.key === 'r') {
-                    toggle(boxSelection);
+                    events.fire('tool:activate', 'RectSelection');
                 } else if (e.key === 'F' || e.key === 'f') {
-                    this.events.fire('focusCamera');
+                    events.fire('focusCamera');
                 } else if (e.key === 'B' || e.key === 'b') {
-                    toggle(brushSelection);
+                    events.fire('tool:activate', 'BrushSelection');
                 } else if (e.key === 'I' || e.key === 'i') {
-                    this.events.fire('invertSelection');
+                    events.fire('invertSelection');
                 } else if (e.key === '[') {
-                    brushSelection.smaller();
+                    events.fire('BrushSelection:smaller');
                 } else if (e.key === ']') {
-                    brushSelection.bigger();
+                    events.fire('BrushSelection:bigger');
                 } else if (e.code === 'Space') {
                     if (splatSizeSlider.value !== 0) {
                         splatSizeSave = splatSizeSlider.value;

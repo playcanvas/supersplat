@@ -16,6 +16,7 @@ import { deletedOpacity, DeleteSelectionEditOp, ResetEditOp } from './edit-ops';
 import { SplatDebug } from './splat-debug';
 import { convertPly, convertPlyCompressed, convertSplat } from './splat-convert';
 import { startSpinner, stopSpinner } from './ui/spinner';
+import { Events } from './events';
 
 // download the data uri
 const download = (filename: string, data: ArrayBuffer) => {
@@ -65,7 +66,7 @@ interface RemoteStorageDetails {
 };
 
 // register for editor and scene events
-const registerEvents = (scene: Scene, editorUI: EditorUI, remoteStorageDetails: RemoteStorageDetails) => {
+const registerEvents = (events: Events, scene: Scene, editorUI: EditorUI, remoteStorageDetails: RemoteStorageDetails) => {
     const vec = new Vec3();
     const vec2 = new Vec3();
     const vec4 = new Vec4();
@@ -170,8 +171,6 @@ const registerEvents = (scene: Scene, editorUI: EditorUI, remoteStorageDetails: 
     });
 
     const editHistory = new EditHistory();
-
-    const events = editorUI.controlPanel.events;
 
     const updateSelection = () => {
         selectedSplats = 0;

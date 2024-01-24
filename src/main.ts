@@ -1,10 +1,11 @@
-import { dracoInitialize, createGraphicsDevice, WebglGraphicsDevice } from 'playcanvas';
+import { createGraphicsDevice } from 'playcanvas';
 import { Scene } from './scene';
 import { getSceneConfig } from './scene-config';
 import { CreateDropHandler } from './drop-handler';
 import { initMaterials } from './material';
 import { EditorUI } from './ui/editor';
 import { registerEvents } from './editor-ops';
+import { Events } from './events';
 
 declare global {
     interface Window {
@@ -75,7 +76,11 @@ const main = async () => {
 
     }
 
-    const editorUI = new EditorUI(!!remoteStorageDetails);
+    // root events object
+    const events = new Events();
+
+    // editor ui
+    const editorUI = new EditorUI(events, !!remoteStorageDetails);
 
     // create the graphics device
     const createPromise = createGraphicsDevice(editorUI.canvas, {
@@ -107,7 +112,7 @@ const main = async () => {
         graphicsDevice
     );
 
-    registerEvents(scene, editorUI, remoteStorageDetails);
+    registerEvents(events, scene, editorUI, remoteStorageDetails);
 
     initDropHandler(editorUI.canvas, scene);
 

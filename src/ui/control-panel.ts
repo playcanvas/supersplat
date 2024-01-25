@@ -592,9 +592,9 @@ class ControlPanel extends Panel {
             if (e.ctrlKey || e.metaKey) {
                 // handle meta/ctrl keys
                 if (!e.shiftKey && e.key === 'z') {
-                    events.fire('undo');
+                    events.fire('edit:undo');
                 } else if (e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
-                    events.fire('redo');
+                    events.fire('edit:redo');
                 }
             } else {
                 // handle non-meta/ctrl keys
@@ -602,6 +602,12 @@ class ControlPanel extends Panel {
                     events.fire('deleteSelection');
                 } else if (e.key === 'Escape') {
                     events.fire('tool:activate', '');
+                } else if (e.key === '1') {
+                    events.fire('tool:activate', 'Move');
+                } else if (e.key === '2') {
+                    events.fire('tool:activate', 'Rotate');
+                } else if (e.key === '3') {
+                    events.fire('tool:activate', 'Scale');
                 } else if (e.key === 'R' || e.key === 'r') {
                     events.fire('tool:activate', 'RectSelection');
                 } else if (e.key === 'F' || e.key === 'f') {

@@ -1,4 +1,5 @@
-import { GSplatData } from 'playcanvas';
+import { Entity, GSplatData, Quat, Vec3 } from 'playcanvas';
+import { Scene } from './scene';
 
 const deletedOpacity = -1000;
 
@@ -105,8 +106,54 @@ class ResetEditOp {
     }
 }
 
+interface EntityTransform {
+    position: Vec3;
+    rotation: Quat;
+    scale: Vec3;
+};
+
+interface EntityOp {
+    entity: Entity;
+    old: EntityTransform;
+    new: EntityTransform;
+}
+
+class EntityTransformOp {
+    name = 'entityTransform';
+    scene: Scene;
+    entityOps: EntityOp[];
+
+    constructor(scene: Scene, entityOps: EntityOp[]) {
+        this.scene = scene;
+        this.entityOps = entityOps;
+    }
+
+    do() {
+        this.entityOps.forEach((entityOp) => {
+            entityOp.entity.setLocalPosition(entityOp.new.position);
+            entityOp.entity.setLocalRotation(entityOp.new.rotation);
+            entityOp.entity.setLocalScale(entityOp.new.scale);
+        });
+        this.scene.updateBound();
+    }
+
+    undo() {
+        this.entityOps.forEach((entityOp) => {
+            entityOp.entity.setLocalPosition(entityOp.old.position);
+            entityOp.entity.setLocalRotation(entityOp.old.rotation);
+            entityOp.entity.setLocalScale(entityOp.old.scale);
+        });
+        this.scene.updateBound();
+    }
+
+    destroy() {
+        this.entityOps = [];
+    }
+};
+
 export {
     deletedOpacity,
     DeleteSelectionEditOp,
-    ResetEditOp
+    ResetEditOp,
+    EntityTransformOp
 };

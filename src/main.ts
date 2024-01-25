@@ -3,10 +3,13 @@ import { Scene } from './scene';
 import { getSceneConfig } from './scene-config';
 import { CreateDropHandler } from './drop-handler';
 import { initMaterials } from './material';
+import { EditHistory } from './edit-history';
 import { EditorUI } from './ui/editor';
 import { registerEvents } from './editor-ops';
 import { ToolManager } from './tools/tool-manager';
 import { MoveTool } from './tools/move-tool';
+import { RotateTool } from './tools/rotate-tool';
+import { ScaleTool } from './tools/scale-tool';
 import { RectSelection } from './tools/rect-selection';
 import { BrushSelection } from './tools/brush-selection';
 import { Events } from './events';
@@ -83,6 +86,9 @@ const main = async () => {
     // root events object
     const events = new Events();
 
+    // edit history
+    const editHistory = new EditHistory(events);
+
     // editor ui
     const editorUI = new EditorUI(events, !!remoteStorageDetails);
 
@@ -115,11 +121,13 @@ const main = async () => {
 
     // tool manager
     const toolManager = new ToolManager(events);
-    toolManager.register(new MoveTool(events, scene));
+    toolManager.register(new MoveTool(events, editHistory, scene));
+    toolManager.register(new RotateTool(events, editHistory, scene));
+    toolManager.register(new ScaleTool(events, editHistory, scene));
     toolManager.register(new RectSelection(events, editorUI.canvasContainer.dom));
     toolManager.register(new BrushSelection(events, editorUI.canvasContainer.dom));
 
-    registerEvents(events, scene, editorUI, remoteStorageDetails);
+    registerEvents(events, editHistory, scene, editorUI, remoteStorageDetails);
 
     initDropHandler(editorUI.canvas, scene);
 

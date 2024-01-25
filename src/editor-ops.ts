@@ -1,7 +1,7 @@
 import {
     BoundingBox,
     Color,
-    Splat as SplatRender,
+    GSplat as SplatRender,
     GSplatData,
     GSplatInstance,
     Mat4,
@@ -11,9 +11,9 @@ import {
 } from 'playcanvas';
 import { Scene } from './scene';
 import { EditorUI } from './ui/editor';
+import { EditHistory } from './edit-history';
 import { Element, ElementType } from './element';
 import { Splat } from './splat';
-import { EditHistory } from './edit-history';
 import { deletedOpacity, DeleteSelectionEditOp, ResetEditOp } from './edit-ops';
 import { SplatDebug } from './splat-debug';
 import { convertPly, convertPlyCompressed, convertSplat } from './splat-convert';
@@ -68,7 +68,7 @@ interface RemoteStorageDetails {
 };
 
 // register for editor and scene events
-const registerEvents = (events: Events, scene: Scene, editorUI: EditorUI, remoteStorageDetails: RemoteStorageDetails) => {
+const registerEvents = (events: Events, editHistory: EditHistory, scene: Scene, editorUI: EditorUI, remoteStorageDetails: RemoteStorageDetails) => {
     const vec = new Vec3();
     const vec2 = new Vec3();
     const vec4 = new Vec4();
@@ -104,7 +104,7 @@ const registerEvents = (events: Events, scene: Scene, editorUI: EditorUI, remote
                     element: splatElement,
                     data: splatData,
                     render: splatRender,
-                    instance: splatElement.root.render.meshInstances[0].splatInstance,
+                    instance: splatElement.root.instances,
                     debug: new SplatDebug(scene, splatElement, splatData)
                 });
             }
@@ -171,8 +171,6 @@ const registerEvents = (events: Events, scene: Scene, editorUI: EditorUI, remote
             app.drawLineArrays(lines, colors);
         }
     });
-
-    const editHistory = new EditHistory();
 
     const updateSelection = () => {
         selectedSplats = 0;
@@ -569,18 +567,8 @@ const registerEvents = (events: Events, scene: Scene, editorUI: EditorUI, remote
         });
     });
 
-    events.on('undo', () => {
-        if (editHistory.canUndo()) {
-            editHistory.undo();
-            updateColorData();
-        }
-    });
-
-    events.on('redo', () => {
-        if (editHistory.canRedo()) {
-            editHistory.redo();
-            updateColorData();
-        }
+    events.on('edit:changed', () => {
+        updateColorData();
     });
 }
 

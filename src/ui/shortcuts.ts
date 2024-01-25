@@ -3,8 +3,11 @@ import { Container, Label, Overlay, Panel } from 'pcui';
 const shortcutList = [
     { key: 'F', action: 'Focus camera' },
     { key: 'I', action: 'Invert selection' },
-    { key: 'R', action: 'Toggle rect selection' },
-    { key: 'B', action: 'Toggle brush selection' },
+    { key: '1', action: 'Move Tool' },
+    { key: '2', action: 'Rotate Tool' },
+    { key: '3', action: 'Scale Tool' },
+    { key: 'R', action: 'Rect Tool' },
+    { key: 'B', action: 'Brush Tool' },
     { key: '[ ]', action: 'Decrease/Increase brush size' },
     { key: 'Shift', action: 'Add to selection' },
     { key: 'Ctrl', action: 'Remove from selection' },

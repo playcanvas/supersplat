@@ -1,3 +1,5 @@
+import { Events } from './events';
+
 interface EditOp {
     name: string;
     do(): void;
@@ -8,6 +10,22 @@ interface EditOp {
 class EditHistory {
     history: EditOp[] = [];
     cursor = 0;
+
+    constructor(events: Events) {
+        events.on('edit:undo', () => {
+            if (this.canUndo()) {
+                this.undo();
+                events.fire('edit:changed');
+            }
+        });
+
+        events.on('edit:redo', () => {
+            if (this.canRedo()) {
+                this.redo();
+                events.fire('edit:changed');
+            }
+        });
+    }
 
     add(editOp: EditOp) {
         while (this.cursor < this.history.length) {

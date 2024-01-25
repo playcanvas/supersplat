@@ -2,6 +2,7 @@ import {
     Asset,
     BoundingBox,
     Entity,
+    GSplatComponent,
     MeshInstance,
     RenderComponent,
     Vec3
@@ -40,12 +41,10 @@ class Splat extends Element {
     add() {
         const config = this.scene.config;
 
-        this.root = this.asset.resource.instantiateRenderEntity({
-            cameraEntity: this.scene.camera.entity
-        });
+        this.root = this.asset.resource.instantiate();
 
         // when sort changes, re-render the scene
-        this.root.render.meshInstances[0].splatInstance.sorter.on('updated', () => {
+        this.root.gsplat.instance.sorter.on('updated', () => {
             this.changedCounter++;
         });
 
@@ -111,16 +110,14 @@ class Splat extends Element {
 
     calcBound(result: BoundingBox) {
         let valid = false;
-        this.entity.findComponents('render').forEach((r: RenderComponent) => {
+        this.entity.findComponents('gsplat').forEach((r: GSplatComponent) => {
             if (r.entity.enabled) {
-                r.meshInstances.forEach((meshInstance: MeshInstance) => {
-                    if (!valid) {
-                        valid = true;
-                        result.copy(meshInstance.aabb);
-                    } else {
-                        result.add(meshInstance.aabb);
-                    }
-                });
+                if (!valid) {
+                    valid = true;
+                    result.copy(r.instance.meshInstance.aabb);
+                } else {
+                    result.add(r.instance.meshInstance.aabb);
+                }
             }
         });
         return valid;

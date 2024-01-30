@@ -17,6 +17,8 @@ class TransformTool {
         this.scene = scene;
         this.gizmo = gizmo;
 
+        this.gizmo.coordSpace = events.call('tool:coordSpace');
+
         this.gizmo.on('render:update', () => {
             scene.forceRender = true;
         });
@@ -70,6 +72,11 @@ class TransformTool {
             if (this.entities) {
                 this.gizmo.attach(this.entities);
             }
+        });
+
+        events.on('tool:coordSpace', (coordSpace: string) => {
+            this.gizmo.coordSpace = coordSpace;
+            scene.forceRender = true;
         });
     }
 

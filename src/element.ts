@@ -7,7 +7,7 @@ enum ElementType {
     model = 'model',
     splat = 'splat',
     shadow = 'shadow',
-    hotspots = 'hotspots',
+    debug = 'debug',
     other = 'other'
 }
 
@@ -16,7 +16,7 @@ const ElementTypeList = [
     ElementType.model,
     ElementType.splat,
     ElementType.shadow,
-    ElementType.hotspots,
+    ElementType.debug,
     ElementType.other
 ];
 

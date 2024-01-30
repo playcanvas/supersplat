@@ -20,6 +20,7 @@ import { Model } from './model';
 import { Splat } from './splat';
 import { Camera } from './camera';
 import { CustomShadow as Shadow } from './custom-shadow';
+import { Grid } from './grid';
 
 const bound = new BoundingBox();
 
@@ -28,6 +29,7 @@ class Scene extends EventHandler {
     canvas: HTMLCanvasElement;
     app: PCApp;
     shadowLayer: Layer;
+    debugLayer: Layer;
     gizmoLayer: Layer;
     sceneState = [new SceneState(), new SceneState()];
     elements: Element[] = [];
@@ -43,6 +45,7 @@ class Scene extends EventHandler {
     assetLoader: AssetLoader;
     camera: Camera;
     shadow: Shadow;
+    grid: Grid;
 
     contentRoot: Entity;
     cameraRoot: Entity;
@@ -129,6 +132,15 @@ class Scene extends EventHandler {
             name: 'Shadow Layer'
         });
 
+        this.debugLayer = new Layer({
+            enabled: true,
+            name: 'Debug Layer',
+            opaqueSortMode: SORTMODE_NONE,
+            transparentSortMode: SORTMODE_NONE,
+            passThrough: true,
+            overrideClear: true
+        });
+
         // gizmo layer
         this.gizmoLayer = new Layer({
             name: 'Gizmo',
@@ -141,6 +153,7 @@ class Scene extends EventHandler {
         const worldLayer = layers.getLayerByName('World');
         const idx = layers.getOpaqueIndex(worldLayer);
         layers.insert(this.shadowLayer, idx + 1);
+        layers.insert(this.debugLayer, idx + 1);
         layers.push(this.gizmoLayer);
 
         this.assetLoader = new AssetLoader(this.app.assets, this.app.graphicsDevice.maxAnisotropy);
@@ -158,6 +171,9 @@ class Scene extends EventHandler {
 
         this.shadow = new Shadow();
         this.add(this.shadow);
+
+        this.grid = new Grid();
+        this.add(this.grid);
 
         if (config.debug?.ministats) {
             /* eslint-disable no-new */
@@ -340,7 +356,30 @@ class Scene extends EventHandler {
 
         // debug - display scene bound
         if (this.config.debug.showBound) {
-            this.app.drawWireAlignedBox(this.bound.getMin(), this.bound.getMax(), Color.RED);
+            // draw scene bound
+            this.app.drawWireAlignedBox(this.bound.getMin(), this.bound.getMax(), Color.GREEN);
+
+            // draw element bounds
+            this.forEachElement((e: Element) => {
+                if (e.type === ElementType.splat) {
+                    const splat = e as Splat;
+
+                    const local = splat.localBound;
+                    this.app.drawWireAlignedBox(
+                        local.getMin(),
+                        local.getMax(),
+                        Color.BLUE,
+                        true,
+                        this.app.scene.defaultDrawLayer,
+                        e.root.getWorldTransform());
+
+                    const world = splat.worldBound;
+                    this.app.drawWireAlignedBox(
+                        world.getMin(),
+                        world.getMax(),
+                        Color.GRAY);
+                }
+            });
         }
     }
 

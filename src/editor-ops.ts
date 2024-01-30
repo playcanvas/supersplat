@@ -119,8 +119,6 @@ const registerEvents = (events: Events, editHistory: EditHistory, scene: Scene, 
     const debugPlane = new Vec3();
     let debugPlaneDistance = 0;
 
-    let showOrigin = false;
-
     // draw debug mesh instances
     scene.on('prerender', () => {
         const app = scene.app;
@@ -156,20 +154,6 @@ const registerEvents = (events: Events, editHistory: EditHistory, scene: Scene, 
                 app.drawLines(lines, Color.RED);
             }
         });
-
-        if (showOrigin) {
-            const lines = [
-                0, 0, 0, 1, 0, 0,
-                0, 0, 0, 0, 1, 0,
-                0, 0, 0, 0, 0, 1
-            ];
-            const colors = [
-                1, 0, 0, 1, 1, 0, 0, 1,
-                0, 1, 0, 1, 0, 1, 0, 1,
-                0, 0, 1, 1, 0, 0, 1, 1
-            ];
-            app.drawLineArrays(lines, colors);
-        }
     });
 
     const updateSelection = () => {
@@ -243,7 +227,7 @@ const registerEvents = (events: Events, editHistory: EditHistory, scene: Scene, 
             splatData.calcAabb(aabb, selectedSplats ? selectionPred : opacityPred);
             splatData.calcFocalPoint(vec, selectedSplats ? selectionPred : opacityPred);
 
-            const worldTransform = splatDef.element.entity.getWorldTransform();
+            const worldTransform = splatDef.element.worldTransform;
             worldTransform.transformPoint(vec, vec);
             worldTransform.getScale(vec2);
 
@@ -259,6 +243,10 @@ const registerEvents = (events: Events, editHistory: EditHistory, scene: Scene, 
             splatDef.debug.splatSize = value;
         });
         scene.forceRender = true;
+    });
+
+    events.on('showGrid', (value: boolean) => {
+        scene.grid.visible = value;
     });
 
     events.on('selectAll', () => {
@@ -363,7 +351,7 @@ const registerEvents = (events: Events, editHistory: EditHistory, scene: Scene, 
             const radius2 = sphere[3] * sphere[3];
             vec.set(sphere[0], sphere[1], sphere[2]);
 
-            mat.invert(splatDef.element.entity.getWorldTransform());
+            mat.invert(splatDef.element.worldTransform);
             mat.transformPoint(vec, vec);
 
             processSelection(selection, opacity, op, (i) => {
@@ -387,7 +375,7 @@ const registerEvents = (events: Events, editHistory: EditHistory, scene: Scene, 
             vec2.set(axis[0] * distance, axis[1] * distance, axis[2] * distance);
 
             // transform the plane to local space
-            mat.invert(splatDef.element.entity.getWorldTransform());
+            mat.invert(splatDef.element.worldTransform);
             mat.transformVector(vec, vec);
             mat.transformPoint(vec2, vec2);
 
@@ -414,7 +402,7 @@ const registerEvents = (events: Events, editHistory: EditHistory, scene: Scene, 
             const camera = scene.camera.entity.camera;
 
             // calculate final matrix
-            mat.mul2(camera.camera._viewProjMat, splatDef.element.entity.getWorldTransform());
+            mat.mul2(camera.camera._viewProjMat, splatDef.element.worldTransform);
             const sx = rect.start.x * 2 - 1;
             const sy = rect.start.y * 2 - 1;
             const ex = rect.end.x * 2 - 1;
@@ -447,7 +435,7 @@ const registerEvents = (events: Events, editHistory: EditHistory, scene: Scene, 
             const camera = scene.camera.entity.camera;
 
             // calculate final matrix
-            mat.mul2(camera.camera._viewProjMat, splatDef.element.entity.getWorldTransform());
+            mat.mul2(camera.camera._viewProjMat, splatDef.element.worldTransform);
 
             processSelection(selection, opacity, op, (i) => {
                 vec4.set(x[i], y[i], z[i], 1.0);
@@ -466,35 +454,6 @@ const registerEvents = (events: Events, editHistory: EditHistory, scene: Scene, 
             });
         });
         updateSelection();
-    });
-
-    events.on('showOrigin', (value: boolean) => {
-        showOrigin = value;
-        scene.forceRender = true;
-    });
-
-    events.on('scenePosition', (value: number[]) => {
-        splatDefs.forEach((splatDef) => {
-            splatDef.element.entity.setLocalPosition(value[0], value[1], value[2]);
-        });
-
-        scene.updateBound();
-    });
-
-    events.on('sceneRotation', (value: number[]) => {
-        splatDefs.forEach((splatDef) => {
-            splatDef.element.entity.setLocalEulerAngles(value[0], value[1], value[2]);
-        });
-
-        scene.updateBound();
-    });
-
-    events.on('sceneScale', (value: number) => {
-        splatDefs.forEach((splatDef) => {
-            splatDef.element.entity.setLocalScale(value, value, value);
-        });
-
-        scene.updateBound();
     });
 
     events.on('deleteSelection', () => {
@@ -538,15 +497,15 @@ const registerEvents = (events: Events, editHistory: EditHistory, scene: Scene, 
             let extension;
             switch (format) {
                 case 'ply':
-                    data = convertPly(splatDef.data, splatDef.element.entity.getWorldTransform());
+                    data = convertPly(splatDef.data, splatDef.element.worldTransform);
                     extension = '.cleaned.ply';
                     break;
                 case 'ply-compressed':
-                    data = convertPlyCompressed(splatDef.data, splatDef.element.entity.getWorldTransform());
+                    data = convertPlyCompressed(splatDef.data, splatDef.element.worldTransform);
                     extension = '.compressed.ply';
                     break;
                 case 'splat':
-                    data = convertSplat(splatDef.data, splatDef.element.entity.getWorldTransform());
+                    data = convertSplat(splatDef.data, splatDef.element.worldTransform);
                     extension = '.splat';
                     break;
             }

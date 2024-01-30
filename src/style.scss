@@ -41,6 +41,11 @@ body {
     border-right: 1px solid $bcg-darker;
 }
 
+#coord-space-toggle.active {
+    background-color: $bcg-dark !important;
+    color: #f60;
+}
+
 #control-panel {
     width: 340px;
     height: 100%;
@@ -79,6 +84,16 @@ body {
 .toolbar-button::before {
     font-size: 18px !important;
     line-height: 100%;
+}
+
+.tooltip {
+    position: absolute;
+    padding: 6px;
+    background-color: $bcg-darkest;
+}
+
+.tooltip-content {
+    color: $text-primary;
 }
 
 #toolbar-tools-container, #toolbar-help-container {
@@ -187,6 +202,16 @@ body {
     width: 100%;
     height: 100%;
     image-rendering: pixelated;
+}
+
+#top-container {
+    position: fixed;
+    z-index: 10000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
 }
 
 // placeholder

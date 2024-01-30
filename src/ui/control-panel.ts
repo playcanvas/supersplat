@@ -49,8 +49,27 @@ class ControlPanel extends Panel {
         splatSize.append(splatSizeLabel);
         splatSize.append(splatSizeSlider);
 
+        // show grid
+        const showGrid = new Container({
+            class: 'control-parent'
+        });
+
+        const showGridLabel = new Label({
+            class: 'control-label',
+            text: 'Show Grid'
+        });
+
+        const showGridToggle = new BooleanInput({
+            class: 'control-element',
+            value: true
+        });
+
+        showGrid.append(showGridLabel);
+        showGrid.append(showGridToggle);
+
         cameraPanel.append(focusButton);
         cameraPanel.append(splatSize);
+        cameraPanel.append(showGrid);
 
         // selection panel
         const selectionPanel = new Panel({
@@ -262,110 +281,45 @@ class ControlPanel extends Panel {
 
         const deleteSelectionButton = new Button({
             class: 'control-element',
-            text: 'Delete Selected Splats'
+            text: 'Delete Selected Splats',
+            icon: 'E124'
         });
 
         const resetButton = new Button({
             class: 'control-element',
-            text: 'Reset Scene'
+            text: 'Reset Splats'
         });
+
+        const undoRedo = new Container({
+            class: 'control-parent'
+        });
+
+        const undoButton = new Button({
+            class: 'control-element-expand',
+            text: 'Undo',
+            icon: 'E339',
+            enabled: false
+        });
+
+        const redoButton = new Button({
+            class: 'control-element-expand',
+            text: 'Redo',
+            icon: 'E338',
+            enabled: false
+        });
+
+        undoRedo.append(undoButton);
+        undoRedo.append(redoButton);
 
         modifyPanel.append(deleteSelectionButton);
         modifyPanel.append(resetButton);
+        modifyPanel.append(undoRedo);
 
-        // scene
-        const scenePanel = new Panel({
-            id: 'scene-panel',
-            class: 'control-panel',
-            headerText: 'SCENE'
-        });
+        undoButton.on('click', () => { events.fire('edit:undo'); });
+        redoButton.on('click', () => { events.fire('edit:redo'); });
 
-        const origin = new Container({
-            class: 'control-parent'
-        });
-
-        const originLabel = new Label({
-            class: 'control-label',
-            text: 'Show Origin'
-        });
-
-        const originToggle = new BooleanInput({
-            class: 'control-element',
-            value: false
-        });
-
-        origin.append(originLabel);
-        origin.append(originToggle);
-
-        // position
-        const position = new Container({
-            class: 'control-parent'
-        });
-
-        const positionLabel = new Label({
-            class: 'control-label',
-            text: 'Position'
-        });
-
-        const positionVector = new VectorInput({
-            class: 'control-element-expand',
-            precision: 2,
-            dimensions: 3,
-            value: [0, 0, 0],
-            // @ts-ignore
-            placeholder: ['X', 'Y', 'Z']
-        });
-
-        position.append(positionLabel);
-        position.append(positionVector);
-
-        // rotation
-        const rotation = new Container({
-            class: 'control-parent'
-        });
-
-        const rotationLabel = new Label({
-            class: 'control-label',
-            text: 'Rotation'
-        });
-
-        const rotationVector = new VectorInput({
-            class: 'control-element-expand',
-            precision: 2,
-            dimensions: 3,
-            value: [0, 0, 0],
-            // @ts-ignore
-            placeholder: ['X', 'Y', 'Z']
-        });
-
-        rotation.append(rotationLabel);
-        rotation.append(rotationVector);
-
-        // scale
-        const scale = new Container({
-            class: 'control-parent'
-        });
-
-        const scaleLabel = new Label({
-            class: 'control-label',
-            text: 'Scale'
-        });
-
-        const scaleInput = new NumericInput({
-            class: 'control-element-expand',
-            precision: 2,
-            value: 1,
-            min: 0.01,
-            max: 10000
-        });
-
-        scale.append(scaleLabel);
-        scale.append(scaleInput);
-
-        scenePanel.append(origin);
-        scenePanel.append(position);
-        scenePanel.append(rotation);
-        scenePanel.append(scale);
+        events.on('edit:canUndo', (value: boolean) => { undoButton.enabled = value; });
+        events.on('edit:canRedo', (value: boolean) => { redoButton.enabled = value; });
 
         // export
         const exportPanel = new Panel({
@@ -428,7 +382,6 @@ class ControlPanel extends Panel {
         this.content.append(cameraPanel);
         this.content.append(selectionPanel);
         this.content.append(modifyPanel);
-        this.content.append(scenePanel);
         this.content.append(exportPanel);
         this.content.append(optionsPanel);
 
@@ -517,6 +470,10 @@ class ControlPanel extends Panel {
             events.fire('splatSize', value);
         });
 
+        showGridToggle.on('change', (enabled: boolean) => {
+            events.fire('showGrid', enabled);
+        });
+
         selectAllButton.on('click', () => {
             events.fire('selectAll');
         });
@@ -539,22 +496,6 @@ class ControlPanel extends Panel {
 
         selectByPlaneOffset.on('change', () => {
             events.fire('selectByPlanePlacement', axes[selectByPlaneAxis.value], selectByPlaneOffset.value);
-        });
-
-        originToggle.on('change', (enabled: boolean) => {
-            events.fire('showOrigin', enabled);
-        });
-
-        positionVector.on('change', () => {
-            events.fire('scenePosition', positionVector.value);
-        });
-
-        rotationVector.on('change', () => {
-            events.fire('sceneRotation', rotationVector.value);
-        });
-
-        scaleInput.on('change', () => {
-            events.fire('sceneScale', scaleInput.value);
         });
 
         deleteSelectionButton.on('click', () => {

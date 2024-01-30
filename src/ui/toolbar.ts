@@ -1,10 +1,11 @@
 import { Button, Container } from 'pcui';
 import { ShortcutsPopup } from './shortcuts';
+import { Tooltip } from './tooltip';
 import { Events } from '../events';
 import logo from './playcanvas-logo.png';
 
 class Toolbar extends Container {
-    constructor(events: Events, appContainer: Container, args = {}) {
+    constructor(events: Events, appContainer: Container, topContainer: Container, args = {}) {
         args = Object.assign(args, {
             id: 'toolbar-container'
         });
@@ -52,6 +53,41 @@ class Toolbar extends Container {
             events.fire('tool:activate', 'Scale');
         });
 
+        // world/local space toggle
+        const coordSpaceToggle = new Button({
+            id: 'coord-space-toggle',
+            class: 'toolbar-button',
+            icon: 'E118'
+        });
+
+        const coordSpaceTooltip = new Tooltip({
+            target: coordSpaceToggle,
+            text: 'Local Space'
+        });
+        topContainer.append(coordSpaceTooltip);
+
+        const coordSpace = () => {
+            return coordSpaceToggle.dom.classList.contains('active') ? 'world' : 'local';
+        };
+
+        coordSpaceToggle.on('click', () => {
+            coordSpaceToggle.dom.classList.toggle('active');
+            events.fire('tool:coordSpace', coordSpace());
+        });
+
+        events.on('tool:coordSpace', (space: 'local' | 'world') => {
+            const spaces = {
+                local: 'Local',
+                world: 'World'
+            };
+            coordSpaceTooltip.content.text = `${spaces[space]} Space`;
+        });
+
+        events.function('tool:coordSpace', () => {
+            return coordSpace();
+        });
+
+        /* disable rect and brush selection on the toolbar till we have a
         // rect selection
         const rectTool = new Button({
             id: 'rect-tool',
@@ -71,21 +107,23 @@ class Toolbar extends Container {
         brushTool.on('click', () => {
             events.fire('tool:activate', 'BrushSelection');
         });
+        */
 
         events.on('tool:activated', (toolName: string) => {
             moveTool.class[toolName === 'Move' ? 'add' : 'remove']('active');
             rotateTool.class[toolName === 'Rotate' ? 'add' : 'remove']('active');
             scaleTool.class[toolName === 'Scale' ? 'add' : 'remove']('active');
-            rectTool.class[toolName === 'RectSelection' ? 'add' : 'remove']('active');
-            brushTool.class[toolName === 'BrushSelection' ? 'add' : 'remove']('active');
+            // rectTool.class[toolName === 'RectSelection' ? 'add' : 'remove']('active');
+            // brushTool.class[toolName === 'BrushSelection' ? 'add' : 'remove']('active');
         });
 
         toolbarToolsContainer.dom.appendChild(appLogo);
         toolbarToolsContainer.append(moveTool);
         toolbarToolsContainer.append(rotateTool);
         toolbarToolsContainer.append(scaleTool);
-        toolbarToolsContainer.append(rectTool);
-        toolbarToolsContainer.append(brushTool);
+        toolbarToolsContainer.append(coordSpaceToggle);
+        // toolbarToolsContainer.append(rectTool);
+        // toolbarToolsContainer.append(brushTool);
 
         // toolbar help toolbar
         const toolbarHelpContainer = new Container({

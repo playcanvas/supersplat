@@ -10,8 +10,11 @@ interface EditOp {
 class EditHistory {
     history: EditOp[] = [];
     cursor = 0;
+    events: Events;
 
     constructor(events: Events) {
+        this.events = events;
+
         events.on('edit:undo', () => {
             if (this.canUndo()) {
                 this.undo();
@@ -45,10 +48,17 @@ class EditHistory {
 
     undo() {
         this.history[--this.cursor].undo();
+        this.fireEvents();
     }
 
     redo() {
         this.history[this.cursor++].do();
+        this.fireEvents();
+    }
+
+    fireEvents() {
+        this.events.fire('edit:canUndo', this.canUndo());
+        this.events.fire('edit:canRedo', this.canRedo());
     }
 }
 

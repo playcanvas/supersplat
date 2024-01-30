@@ -10,7 +10,10 @@ class ScaleTool extends TransformTool {
     constructor(events: Events, editHistory: EditHistory, scene: Scene) {
         const gizmo = new ScaleGizmo(scene.app, scene.camera.entity.camera, scene.gizmoLayer);
 
-        gizmo.uniform = true;
+        // disable everything except uniform scale
+        ['x', 'y', 'z', 'yz', 'xz', 'xy'].forEach((axis) => {
+            gizmo.enableShape(axis, false);
+        });
 
         super(gizmo, events, editHistory, scene);
     }

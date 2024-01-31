@@ -14,7 +14,7 @@ class Tooltip extends Container {
         super(args);
 
         this.target = args.target;
-        this.align = args.align || 'right';
+        this.align = args.align ?? 'right';
         this.content = new Label({
             class: 'tooltip-content',
             text: args.text

@@ -1,21 +1,24 @@
 import {
     BoundingBox,
     Color,
+    GSplat as SplatRender,
+    GSplatData,
+    GSplatInstance,
     Mat4,
     path,
     Vec3,
     Vec4
 } from 'playcanvas';
-import { Splat as SplatRender, SplatData, SplatInstance } from 'playcanvas-extras';
 import { Scene } from './scene';
 import { EditorUI } from './ui/editor';
+import { EditHistory } from './edit-history';
 import { Element, ElementType } from './element';
 import { Splat } from './splat';
-import { EditHistory } from './edit-history';
 import { deletedOpacity, DeleteSelectionEditOp, ResetEditOp } from './edit-ops';
 import { SplatDebug } from './splat-debug';
 import { convertPly, convertPlyCompressed, convertSplat } from './splat-convert';
 import { startSpinner, stopSpinner } from './ui/spinner';
+import { Events } from './events';
 
 // download the data uri
 const download = (filename: string, data: ArrayBuffer) => {
@@ -53,9 +56,9 @@ const sendToRemoteStorage = async (filename: string, data: ArrayBuffer, remoteSt
 
 interface SplatDef {
     element: Splat,
-    data: SplatData,
+    data: GSplatData,
     render: SplatRender,
-    instance: SplatInstance,
+    instance: GSplatInstance,
     debug: SplatDebug
 };
 
@@ -65,7 +68,7 @@ interface RemoteStorageDetails {
 };
 
 // register for editor and scene events
-const registerEvents = (scene: Scene, editorUI: EditorUI, remoteStorageDetails: RemoteStorageDetails) => {
+const registerEvents = (events: Events, editHistory: EditHistory, scene: Scene, editorUI: EditorUI, remoteStorageDetails: RemoteStorageDetails) => {
     const vec = new Vec3();
     const vec2 = new Vec3();
     const vec4 = new Vec4();
@@ -101,7 +104,7 @@ const registerEvents = (scene: Scene, editorUI: EditorUI, remoteStorageDetails: 
                     element: splatElement,
                     data: splatData,
                     render: splatRender,
-                    instance: splatElement.root.render.meshInstances[0].splatInstance,
+                    instance: splatElement.root.instances,
                     debug: new SplatDebug(scene, splatElement, splatData)
                 });
             }
@@ -115,8 +118,6 @@ const registerEvents = (scene: Scene, editorUI: EditorUI, remoteStorageDetails: 
 
     const debugPlane = new Vec3();
     let debugPlaneDistance = 0;
-
-    let showOrigin = false;
 
     // draw debug mesh instances
     scene.on('prerender', () => {
@@ -153,25 +154,7 @@ const registerEvents = (scene: Scene, editorUI: EditorUI, remoteStorageDetails: 
                 app.drawLines(lines, Color.RED);
             }
         });
-
-        if (showOrigin) {
-            const lines = [
-                0, 0, 0, 1, 0, 0,
-                0, 0, 0, 0, 1, 0,
-                0, 0, 0, 0, 0, 1
-            ];
-            const colors = [
-                1, 0, 0, 1, 1, 0, 0, 1,
-                0, 1, 0, 1, 0, 1, 0, 1,
-                0, 0, 1, 1, 0, 0, 1, 1
-            ];
-            app.drawLineArrays(lines, colors);
-        }
     });
-
-    const editHistory = new EditHistory();
-
-    const events = editorUI.controlPanel.events;
 
     const updateSelection = () => {
         selectedSplats = 0;
@@ -244,7 +227,7 @@ const registerEvents = (scene: Scene, editorUI: EditorUI, remoteStorageDetails: 
             splatData.calcAabb(aabb, selectedSplats ? selectionPred : opacityPred);
             splatData.calcFocalPoint(vec, selectedSplats ? selectionPred : opacityPred);
 
-            const worldTransform = splatDef.element.entity.getWorldTransform();
+            const worldTransform = splatDef.element.worldTransform;
             worldTransform.transformPoint(vec, vec);
             worldTransform.getScale(vec2);
 
@@ -260,6 +243,10 @@ const registerEvents = (scene: Scene, editorUI: EditorUI, remoteStorageDetails: 
             splatDef.debug.splatSize = value;
         });
         scene.forceRender = true;
+    });
+
+    events.on('showGrid', (value: boolean) => {
+        scene.grid.visible = value;
     });
 
     events.on('selectAll', () => {
@@ -364,7 +351,7 @@ const registerEvents = (scene: Scene, editorUI: EditorUI, remoteStorageDetails: 
             const radius2 = sphere[3] * sphere[3];
             vec.set(sphere[0], sphere[1], sphere[2]);
 
-            mat.invert(splatDef.element.entity.getWorldTransform());
+            mat.invert(splatDef.element.worldTransform);
             mat.transformPoint(vec, vec);
 
             processSelection(selection, opacity, op, (i) => {
@@ -388,7 +375,7 @@ const registerEvents = (scene: Scene, editorUI: EditorUI, remoteStorageDetails: 
             vec2.set(axis[0] * distance, axis[1] * distance, axis[2] * distance);
 
             // transform the plane to local space
-            mat.invert(splatDef.element.entity.getWorldTransform());
+            mat.invert(splatDef.element.worldTransform);
             mat.transformVector(vec, vec);
             mat.transformPoint(vec2, vec2);
 
@@ -415,7 +402,7 @@ const registerEvents = (scene: Scene, editorUI: EditorUI, remoteStorageDetails: 
             const camera = scene.camera.entity.camera;
 
             // calculate final matrix
-            mat.mul2(camera.camera._viewProjMat, splatDef.element.entity.getWorldTransform());
+            mat.mul2(camera.camera._viewProjMat, splatDef.element.worldTransform);
             const sx = rect.start.x * 2 - 1;
             const sy = rect.start.y * 2 - 1;
             const ex = rect.end.x * 2 - 1;
@@ -448,7 +435,7 @@ const registerEvents = (scene: Scene, editorUI: EditorUI, remoteStorageDetails: 
             const camera = scene.camera.entity.camera;
 
             // calculate final matrix
-            mat.mul2(camera.camera._viewProjMat, splatDef.element.entity.getWorldTransform());
+            mat.mul2(camera.camera._viewProjMat, splatDef.element.worldTransform);
 
             processSelection(selection, opacity, op, (i) => {
                 vec4.set(x[i], y[i], z[i], 1.0);
@@ -467,35 +454,6 @@ const registerEvents = (scene: Scene, editorUI: EditorUI, remoteStorageDetails: 
             });
         });
         updateSelection();
-    });
-
-    events.on('showOrigin', (value: boolean) => {
-        showOrigin = value;
-        scene.forceRender = true;
-    });
-
-    events.on('scenePosition', (value: number[]) => {
-        splatDefs.forEach((splatDef) => {
-            splatDef.element.entity.setLocalPosition(value[0], value[1], value[2]);
-        });
-
-        scene.updateBound();
-    });
-
-    events.on('sceneRotation', (value: number[]) => {
-        splatDefs.forEach((splatDef) => {
-            splatDef.element.entity.setLocalEulerAngles(value[0], value[1], value[2]);
-        });
-
-        scene.updateBound();
-    });
-
-    events.on('sceneScale', (value: number) => {
-        splatDefs.forEach((splatDef) => {
-            splatDef.element.entity.setLocalScale(value, value, value);
-        });
-
-        scene.updateBound();
     });
 
     events.on('deleteSelection', () => {
@@ -539,15 +497,15 @@ const registerEvents = (scene: Scene, editorUI: EditorUI, remoteStorageDetails: 
             let extension;
             switch (format) {
                 case 'ply':
-                    data = convertPly(splatDef.data, splatDef.element.entity.getWorldTransform());
+                    data = convertPly(splatDef.data, splatDef.element.root.getWorldTransform());
                     extension = '.cleaned.ply';
                     break;
                 case 'ply-compressed':
-                    data = convertPlyCompressed(splatDef.data, splatDef.element.entity.getWorldTransform());
+                    data = convertPlyCompressed(splatDef.data, splatDef.element.root.getWorldTransform());
                     extension = '.compressed.ply';
                     break;
                 case 'splat':
-                    data = convertSplat(splatDef.data, splatDef.element.entity.getWorldTransform());
+                    data = convertSplat(splatDef.data, splatDef.element.worldTransform);
                     extension = '.splat';
                     break;
             }
@@ -568,18 +526,8 @@ const registerEvents = (scene: Scene, editorUI: EditorUI, remoteStorageDetails: 
         });
     });
 
-    events.on('undo', () => {
-        if (editHistory.canUndo()) {
-            editHistory.undo();
-            updateColorData();
-        }
-    });
-
-    events.on('redo', () => {
-        if (editHistory.canRedo()) {
-            editHistory.redo();
-            updateColorData();
-        }
+    events.on('edit:changed', () => {
+        updateColorData();
     });
 }
 

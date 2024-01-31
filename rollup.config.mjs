@@ -60,7 +60,6 @@ const pipeline = (input) => {
                     {src: 'src/manifest.json'},
                     {src: 'static/images', dest: 'static'},
                     {src: 'static/icons', dest: 'static'},
-                    {src: 'static/lib/draco_decoder.wasm', dest: 'static/lib'},
                     {src: 'static/env/VertebraeHDRI_v1_512.png', dest: 'static/env'}
                 ]
             }),
@@ -89,18 +88,5 @@ const pipeline = (input) => {
 };
 
 export default [
-    {
-        input: 'static/lib/draco_decoder.js',
-        output: {
-            file: 'dist/static/lib/draco_decoder.js'
-        },
-        plugins: [
-            terser({
-                mangle: {
-                    reserved: ['DracoDecoderModule']
-                }
-            })
-        ]
-    },
     pipeline('src/index.ts'),
 ];

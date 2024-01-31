@@ -3,15 +3,12 @@ import {
     BoundingBox,
     Entity,
     Mat4,
-    Mesh,
     MeshInstance,
     RenderComponent,
-    StandardMaterial,
     Vec3
 } from 'playcanvas';
-import {Element, ElementType} from './element';
-import {Serializer} from './serializer';
-import {Debug} from './debug';
+import { Element, ElementType } from './element';
+import { Serializer } from './serializer';
 
 const vec = new Vec3();
 const mat = new Mat4();
@@ -165,4 +162,4 @@ class Model extends Element {
     }
 }
 
-export {Model};
+export { Model };

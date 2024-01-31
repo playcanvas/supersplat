@@ -1,12 +1,12 @@
 import {
+    GSplatData,
     Mat4,
     Quat,
     Vec3
 } from 'playcanvas';
-import { SplatData } from 'playcanvas-extras';
 import { deletedOpacity } from './edit-ops';
 
-const convertPly = (splatData: SplatData, modelMat: Mat4) => {
+const convertPly = (splatData: GSplatData, modelMat: Mat4) => {
     // count the number of non-deleted splats
     const opacity = splatData.getProp('opacity');
     let numSplats = 0;
@@ -152,7 +152,7 @@ class Chunk {
         this.color = new Uint32Array(size);
     }
 
-    set(splatData: SplatData, indices: number[]) {
+    set(splatData: GSplatData, indices: number[]) {
         Chunk.members.forEach((name) => {
             const prop = splatData.getProp(name);
             const m = this.data[name];
@@ -302,7 +302,7 @@ class Chunk {
     }
 }
 
-const convertPlyCompressed = (splatData: SplatData, modelMat: Mat4) => {
+const convertPlyCompressed = (splatData: GSplatData, modelMat: Mat4) => {
     const sortSplats = (indices: number[]) => {
         // https://fgiesen.wordpress.com/2009/12/13/decoding-morton-codes/
         const encodeMorton3 = (x: number, y: number, z: number) : number => {
@@ -423,7 +423,7 @@ const convertPlyCompressed = (splatData: SplatData, modelMat: Mat4) => {
     return result;
 };
 
-const convertSplat = (splatData: SplatData, modelMat: Mat4) => {
+const convertSplat = (splatData: GSplatData, modelMat: Mat4) => {
     // count the number of non-deleted splats
     const x = splatData.getProp('x');
     const y = splatData.getProp('y');

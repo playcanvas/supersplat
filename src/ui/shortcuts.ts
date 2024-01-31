@@ -1,18 +1,26 @@
 import { Container, Label, Overlay, Panel } from 'pcui';
 
 const shortcutList = [
-    { key: 'F', action: 'Focus camera' },
-    { key: 'I', action: 'Invert selection' },
-    { key: 'R', action: 'Toggle rect selection' },
-    { key: 'B', action: 'Toggle brush selection' },
+    { header: 'TOOLS' },
+    { key: '1', action: 'Move Tool' },
+    { key: '2', action: 'Rotate Tool' },
+    { key: '3', action: 'Scale Tool' },
+    { key: 'R', action: 'Rect Tool' },
+    { key: 'B', action: 'Brush Tool' },
     { key: '[ ]', action: 'Decrease/Increase brush size' },
-    { key: 'Shift', action: 'Add to selection' },
-    { key: 'Ctrl', action: 'Remove from selection' },
-    { key: 'Delete', action: 'Delete selected splats' },
-    { key: 'Esc', action: 'Cancel rect selection' },
+    { key: 'Esc', action: 'Deactivate Tool' },
+    { header: 'SELECTION' },
+    { key: 'I', action: 'Invert Selection' },
+    { key: 'Shift', action: 'Add to Selection' },
+    { key: 'Ctrl', action: 'Remove from Selection' },
+    { key: 'Delete', action: 'Delete Selected Splats' },
+    { header: 'OTHER' },
     { key: 'Ctrl + Z', action: 'Undo' },
     { key: 'Ctrl + Shift + Z', action: 'Redo' },
-    { key: 'Space', action: 'Toggle debug splat display' }
+    { key: 'Space', action: 'Toggle Debug Splat Display' },
+    { key: 'F', action: 'Focus Camera' },
+    { key: 'G', action: 'Toggle Grid' },
+    { key: 'C', action: 'Toggle Gizmo Coordinate Space' },
 ];
 
 class ShortcutsPopup extends Overlay {
@@ -30,24 +38,39 @@ class ShortcutsPopup extends Overlay {
         });
 
         shortcutList.forEach((shortcut) => {
-            const key = new Label({
-                class: 'shortcut-key',
-                text: shortcut.key
-            });
+            if (shortcut.header) {
+                const label = new Label({
+                    class: 'shortcut-header-label',
+                    text: shortcut.header
+                });
 
-            const action = new Label({
-                class: 'shortcut-action',
-                text: shortcut.action
-            });
+                const entry = new Container({
+                    class: 'shortcut-header'
+                });
 
-            const entry = new Container({
-                class: 'shortcut-entry'
-            });
+                entry.append(label);
 
-            entry.append(key);
-            entry.append(action);
+                shortcutsContainer.append(entry);
+            } else {
+                const key = new Label({
+                    class: 'shortcut-key',
+                    text: shortcut.key
+                });
 
-            shortcutsContainer.append(entry);
+                const action = new Label({
+                    class: 'shortcut-action',
+                    text: shortcut.action
+                });
+
+                const entry = new Container({
+                    class: 'shortcut-entry'
+                });
+
+                entry.append(key);
+                entry.append(action);
+
+                shortcutsContainer.append(entry);
+            }
         });
 
         const shortcutsPanel = new Panel({

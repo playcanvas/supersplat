@@ -1,9 +1,11 @@
-import { Button, Container } from 'pcui';
-import logo from './playcanvas-logo.png';
+import { Button, Container, Element } from 'pcui';
 import { ShortcutsPopup } from './shortcuts';
+import { Tooltip } from './tooltip';
+import { Events } from '../events';
+import logo from './playcanvas-logo.png';
 
 class Toolbar extends Container {
-    constructor(appContainer: Container, args = {}) {
+    constructor(events: Events, appContainer: Container, topContainer: Container, args = {}) {
         args = Object.assign(args, {
             id: 'toolbar-container'
         });
@@ -21,21 +23,106 @@ class Toolbar extends Container {
         appLogo.id = 'app-logo';
         appLogo.src = logo.src;
 
-        toolbarToolsContainer.dom.appendChild(appLogo);
-
-        // toolbar help toolbar
-        const toolbarHelpContainer = new Container({
-            id: 'toolbar-help-container'
-        });
-
-        // github
-        const github = new Button({
+        // move
+        const moveTool = new Button({
+            id: 'move-tool',
             class: 'toolbar-button',
-            icon: 'E259' 
+            icon: 'E111'
         });
-        github.on('click', () => {
-            window.open('https://github.com/playcanvas/super-splat', '_blank').focus();
+        moveTool.on('click', () => {
+            events.fire('tool:activate', 'Move');
         });
+
+        // rotate
+        const rotateTool = new Button({
+            id: 'rotate-tool',
+            class: 'toolbar-button',
+            icon: 'E113'
+        });
+        rotateTool.on('click', () => {
+            events.fire('tool:activate', 'Rotate');
+        });
+
+        // scale
+        const scaleTool = new Button({
+            id: 'scale-tool',
+            class: 'toolbar-button',
+            icon: 'E112'
+        });
+        scaleTool.on('click', () => {
+            events.fire('tool:activate', 'Scale');
+        });
+
+        // world/local space toggle
+        const coordSpaceToggle = new Button({
+            id: 'coord-space-toggle',
+            class: 'toolbar-button',
+            icon: 'E118'
+        });
+
+        const coordSpace = () => {
+            return coordSpaceToggle.dom.classList.contains('active') ? 'world' : 'local';
+        };
+
+        coordSpaceToggle.on('click', () => {
+            coordSpaceToggle.dom.classList.toggle('active');
+            events.fire('tool:coordSpace', coordSpace());
+        });
+
+        events.on('tool:coordSpace:toggle', () => {
+            coordSpaceToggle.dom.classList.toggle('active');
+            events.fire('tool:coordSpace', coordSpace());
+        });
+
+        events.on('tool:coordSpace', (space: 'local' | 'world') => {
+            const spaces = {
+                local: 'Local',
+                world: 'World'
+            };
+            coordSpaceToggle.tooltip.content.text = `${spaces[space]} Space`;
+        });
+
+        events.function('tool:coordSpace', () => {
+            return coordSpace();
+        });
+
+        /* disable rect and brush selection on the toolbar till we have a
+        // rect selection
+        const rectTool = new Button({
+            id: 'rect-tool',
+            class: 'toolbar-button',
+            icon: 'E135'
+        });
+        rectTool.on('click', () => {
+            events.fire('tool:activate', 'RectSelection');
+        });
+
+        // brush selection
+        const brushTool = new Button({
+            id: 'brush-tool',
+            class: 'toolbar-button',
+            icon: 'E195'
+        });
+        brushTool.on('click', () => {
+            events.fire('tool:activate', 'BrushSelection');
+        });
+        */
+
+        events.on('tool:activated', (toolName: string) => {
+            moveTool.class[toolName === 'Move' ? 'add' : 'remove']('active');
+            rotateTool.class[toolName === 'Rotate' ? 'add' : 'remove']('active');
+            scaleTool.class[toolName === 'Scale' ? 'add' : 'remove']('active');
+            // rectTool.class[toolName === 'RectSelection' ? 'add' : 'remove']('active');
+            // brushTool.class[toolName === 'BrushSelection' ? 'add' : 'remove']('active');
+        });
+
+        toolbarToolsContainer.dom.appendChild(appLogo);
+        toolbarToolsContainer.append(moveTool);
+        toolbarToolsContainer.append(rotateTool);
+        toolbarToolsContainer.append(scaleTool);
+        toolbarToolsContainer.append(coordSpaceToggle);
+        // toolbarToolsContainer.append(rectTool);
+        // toolbarToolsContainer.append(brushTool);
 
         // keyboard shortcuts
         const shortcutsPopup = new ShortcutsPopup();
@@ -51,11 +138,39 @@ class Toolbar extends Container {
             shortcutsPopup.hidden = false;
         });
 
+        // github
+        const github = new Button({
+            class: 'toolbar-button',
+            icon: 'E259' 
+        });
+        github.on('click', () => {
+            window.open('https://github.com/playcanvas/super-splat', '_blank').focus();
+        });
+
+        // toolbar help toolbar
+        const toolbarHelpContainer = new Container({
+            id: 'toolbar-help-container'
+        });
         toolbarHelpContainer.append(shortcuts);
         toolbarHelpContainer.append(github);
 
         this.append(toolbarToolsContainer);
         this.append(toolbarHelpContainer);
+
+        const addTooltip = (target: Element, text: string) => {
+            const tooltip = new Tooltip({ target, text });
+            target.tooltip = tooltip;
+            topContainer.append(tooltip);
+        };
+
+        // add tooltips
+        addTooltip(moveTool, 'Move');
+        addTooltip(rotateTool, 'Rotate');
+        addTooltip(scaleTool, 'Scale');
+        addTooltip(coordSpaceToggle, 'Local Space');
+        addTooltip(shortcuts, 'Keyboard Shortcuts');
+        addTooltip(github, 'GitHub Repo');
+
     }
 }
 

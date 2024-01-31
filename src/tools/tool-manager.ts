@@ -1,4 +1,4 @@
-import { EventHandler } from 'playcanvas';
+import { Events } from '../events';
 
 interface Tool {
     ToolName: string;
@@ -8,40 +8,53 @@ interface Tool {
 }
 
 class ToolManager {
-    activeTool: Tool | null = null;
     tools = new Map<string, Tool>();
-    events = new EventHandler();
+    events: Events;
+    active: Tool | null = null;
 
-    constructor() {
+    constructor(events: Events) {
+        this.events = events;
 
+        this.events.on('tool:activate', (toolName: string) => {
+            this.activate(toolName);
+        });
+
+        this.events.function('tool:active', () => {
+            return this.active?.ToolName;
+        });
     }
 
-    add(tool: Tool) {
+    register(tool: Tool) {
         this.tools.set(tool.ToolName, tool);
     }
 
     get(toolName: string) {
-        return toolName ? this.tools.get(toolName) : null;
+        return (toolName && this.tools.get(toolName)) ?? null;
     }
 
-    activate(toolName: string) {
+    activate(toolName: string | null) {
         const newTool = this.get(toolName);
-        if (newTool === this.activeTool || newTool === undefined) {
-            return false;
-        }
 
-        // deactive old tool
-        if (this.activeTool) {
-            this.activeTool.deactivate();
-            this.events.fire('deactivated', this.activeTool);
-        }
+        if (newTool === this.active) {
+            // re-activating the currently active tool deactivates it
+            if (newTool) {
+                this.activate(null);
+            }
+        } else {
+            // deactive old tool
+            if (this.active) {
+                this.active.deactivate();
+                this.events.fire('tool:deactivated', this.active.ToolName);
+            }
 
-        this.activeTool = newTool;
+            this.active = newTool;
 
-        // activate the new
-        if (this.activeTool) {
-            this.activeTool.activate();
-            this.events.fire('activated', this.activeTool);
+            // activate the new
+            if (this.active) {
+                this.active.activate();
+            }
+
+            this.events.fire('tool:activated', this.active?.ToolName ?? null);
         }
     }
 }

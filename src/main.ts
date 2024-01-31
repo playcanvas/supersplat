@@ -1,10 +1,18 @@
-import { dracoInitialize, createGraphicsDevice, WebglGraphicsDevice } from 'playcanvas';
+import { createGraphicsDevice } from 'playcanvas';
 import { Scene } from './scene';
 import { getSceneConfig } from './scene-config';
 import { CreateDropHandler } from './drop-handler';
 import { initMaterials } from './material';
+import { EditHistory } from './edit-history';
 import { EditorUI } from './ui/editor';
 import { registerEvents } from './editor-ops';
+import { ToolManager } from './tools/tool-manager';
+import { MoveTool } from './tools/move-tool';
+import { RotateTool } from './tools/rotate-tool';
+import { ScaleTool } from './tools/scale-tool';
+import { RectSelection } from './tools/rect-selection';
+import { BrushSelection } from './tools/brush-selection';
+import { Events } from './events';
 
 declare global {
     interface Window {
@@ -75,10 +83,17 @@ const main = async () => {
 
     }
 
-    const editorUI = new EditorUI(!!remoteStorageDetails);
+    // root events object
+    const events = new Events();
+
+    // edit history
+    const editHistory = new EditHistory(events);
+
+    // editor ui
+    const editorUI = new EditorUI(events, !!remoteStorageDetails);
 
     // create the graphics device
-    const createPromise = createGraphicsDevice(editorUI.canvas, {
+    const graphicsDevice = await createGraphicsDevice(editorUI.canvas, {
         deviceTypes: ['webgl2'],
         antialias: false,
         depth: false,
@@ -89,9 +104,6 @@ const main = async () => {
 
     // monkey-patch materials for premul alpha rendering
     initMaterials();
-
-    // wait for async loads to complete
-    const graphicsDevice = await createPromise;
 
     const overrides = [
         getURLArgs()
@@ -107,7 +119,15 @@ const main = async () => {
         graphicsDevice
     );
 
-    registerEvents(scene, editorUI, remoteStorageDetails);
+    // tool manager
+    const toolManager = new ToolManager(events);
+    toolManager.register(new MoveTool(events, editHistory, scene));
+    toolManager.register(new RotateTool(events, editHistory, scene));
+    toolManager.register(new ScaleTool(events, editHistory, scene));
+    toolManager.register(new RectSelection(events, editorUI.canvasContainer.dom));
+    toolManager.register(new BrushSelection(events, editorUI.canvasContainer.dom));
+
+    registerEvents(events, editHistory, scene, editorUI, remoteStorageDetails);
 
     initDropHandler(editorUI.canvas, scene);
 

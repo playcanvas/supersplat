@@ -2,6 +2,10 @@ import {
     Asset,
     BoundingBox,
     Entity,
+    GSplatComponent,
+    GSplatData,
+    GSplatInstance,
+    GSplatResource,
     MeshInstance,
     RenderComponent,
     Vec3
@@ -11,23 +15,31 @@ import { Serializer } from "./serializer";
 
 const vec = new Vec3();
 const bound = new BoundingBox();
-
-// calculate mesh sort distance by node origin (instead of the default bounding box origin)
-const calculateSortDistance = (drawCall: any, cameraPosition: Vec3, cameraForward: Vec3) => {
-    return vec.sub2(drawCall.node.getPosition(), cameraPosition).dot(cameraForward);
-};
+const zeroBound = new BoundingBox(new Vec3(0), new Vec3(0));
 
 class Splat extends Element {
     asset: Asset;
+    splatData: GSplatData;
     entity: Entity;
-    root: any;
+    root: Entity;
     changedCounter = 0;
 
     constructor(asset: Asset) {
         super(ElementType.splat);
 
+        const splatResource = asset.resource as GSplatResource;
+
         this.asset = asset;
+        this.splatData = splatResource.splatData;
         this.entity = new Entity('splatRoot');
+        this.root = splatResource.instantiate();
+
+        // when sort changes, re-render the scene
+        this.root.gsplat.instance.sorter.on('updated', () => {
+            this.changedCounter++;
+        });
+
+        this.entity.addChild(this.root);
     }
 
     destroy() {
@@ -37,93 +49,39 @@ class Splat extends Element {
         this.asset.unload();
     }
 
+    get localBound() {
+        return this.root.gsplat.instance.splat.aabb;
+    }
+
+    get worldBound() {
+        return this.root.gsplat.instance.meshInstance.aabb;
+    }
+
+    get worldTransform() {
+        return this.root.getWorldTransform();
+    }
+
     add() {
-        const config = this.scene.config;
-
-        this.root = this.asset.resource.instantiateRenderEntity({
-            cameraEntity: this.scene.camera.entity
-        });
-
-        // when sort changes, re-render the scene
-        this.root.render.meshInstances[0].splatInstance.sorter.on('updated', () => {
-            this.changedCounter++;
-        });
-
-        this.entity.addChild(this.root);
-
         // add the entity to the scene
         this.scene.contentRoot.addChild(this.entity);
 
-        // manually add shadow casters to shadow layer
-        this.entity.findComponents('render').forEach((component: RenderComponent) => {
-            if (component.entity.enabled) {
-                this.scene.shadowLayer.shadowCasters = this.scene.shadowLayer.shadowCasters.concat(
-                    component.meshInstances
-                );
-            }
-
-            // override default sort distance calculation
-            component.meshInstances.forEach((meshInstance: MeshInstance) => {
-                meshInstance.calculateSortDistance = calculateSortDistance;
-            });
-        });
-
-        this.calcBound(bound);
-
-        // center the object to the world origin
-        // if (bound) {
-        //     vec.set(-bound.center.x, -bound.getMin().y, -bound.center.z);
-        // } else {
-        //     vec.copy(Vec3.ZERO);
-        // }
-
-        // apply model settings
-        const p = config.model.position;
-        const r = config.model.rotation;
-        const s = config.model.scale;
-
-        if (p) {
-            vec.x += p.x;
-            vec.y += p.y;
-            vec.z += p.z;
-        }
-        this.entity.setLocalPosition(vec.x, vec.y, vec.z);
-        if (r) this.entity.setLocalEulerAngles(r.x, r.y, r.z);
-        if (s) this.entity.setLocalScale(s, s, s);
+        const localBound = this.localBound;
+        this.entity.setLocalPosition(localBound.center.x, localBound.center.y, localBound.center.z);
+        this.root.setLocalPosition(-localBound.center.x, -localBound.center.y, -localBound.center.z);
     }
 
     remove() {
-        this.entity.findComponents('render').forEach((component: RenderComponent) => {
-            this.scene.shadowLayer.shadowCasters = this.scene.shadowLayer.shadowCasters.filter(
-                (meshInstance: MeshInstance) => {
-                    return component.meshInstances.indexOf(meshInstance) === -1;
-                }
-            );
-        });
         this.scene.contentRoot.removeChild(this.entity);
     }
 
     serialize(serializer: Serializer) {
         serializer.packa(this.entity.getWorldTransform().data);
-        serializer.pack(this.root?.anim?.baseLayer?.activeStateCurrentTime);
         serializer.pack(this.changedCounter);
     }
 
     calcBound(result: BoundingBox) {
-        let valid = false;
-        this.entity.findComponents('render').forEach((r: RenderComponent) => {
-            if (r.entity.enabled) {
-                r.meshInstances.forEach((meshInstance: MeshInstance) => {
-                    if (!valid) {
-                        valid = true;
-                        result.copy(meshInstance.aabb);
-                    } else {
-                        result.add(meshInstance.aabb);
-                    }
-                });
-            }
-        });
-        return valid;
+        result.copy(this.worldBound);
+        return true;
     }
 
     focalPoint() {

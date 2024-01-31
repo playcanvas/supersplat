@@ -1,5 +1,6 @@
 import {
     LAYERID_DEPTH,
+    SORTMODE_NONE,
     BoundingBox,
     Color,
     Entity,
@@ -7,7 +8,6 @@ import {
     Layer,
     Mouse,
     TouchDevice,
-    WebglGraphicsDevice,
     GraphicsDevice
 } from 'playcanvas';
 import { MiniStats } from 'playcanvas-extras';
@@ -20,8 +20,7 @@ import { Model } from './model';
 import { Splat } from './splat';
 import { Camera } from './camera';
 import { CustomShadow as Shadow } from './custom-shadow';
-
-import { registerPlyParser } from 'playcanvas-extras';
+import { Grid } from './grid';
 
 const bound = new BoundingBox();
 
@@ -30,6 +29,8 @@ class Scene extends EventHandler {
     canvas: HTMLCanvasElement;
     app: PCApp;
     shadowLayer: Layer;
+    debugLayer: Layer;
+    gizmoLayer: Layer;
     sceneState = [new SceneState(), new SceneState()];
     elements: Element[] = [];
     bound = new BoundingBox();
@@ -44,6 +45,7 @@ class Scene extends EventHandler {
     assetLoader: AssetLoader;
     camera: Camera;
     shadow: Shadow;
+    grid: Grid;
 
     contentRoot: Entity;
     cameraRoot: Entity;
@@ -70,9 +72,6 @@ class Scene extends EventHandler {
         this.app.autoRender = false;
         this.app._allowResize = false;
         this.app.scene.clusteredLightingEnabled = false;
-
-        // register splat
-        registerPlyParser(this.app);
 
         // hack: disable lightmapper first bake until we expose option for this
         // @ts-ignore
@@ -126,17 +125,36 @@ class Scene extends EventHandler {
             this.forceRender = true;
         });
 
-        // create a semitrans shadow layer. this layer contains shadow caster
-        // scene mesh instances, shadow-casting virtual light, shadow catching
-        // plane geometry and the main camera.
+        // shadow layer
+        // this layer contains shadow caster scene mesh instances, shadow-casting
+        // virtual light, shadow catching plane geometry and the main camera.
         this.shadowLayer = new Layer({
             name: 'Shadow Layer'
+        });
+
+        this.debugLayer = new Layer({
+            enabled: true,
+            name: 'Debug Layer',
+            opaqueSortMode: SORTMODE_NONE,
+            transparentSortMode: SORTMODE_NONE,
+            passThrough: true,
+            overrideClear: true
+        });
+
+        // gizmo layer
+        this.gizmoLayer = new Layer({
+            name: 'Gizmo',
+            clearDepthBuffer: true,
+            opaqueSortMode: SORTMODE_NONE,
+            transparentSortMode: SORTMODE_NONE
         });
 
         const layers = this.app.scene.layers;
         const worldLayer = layers.getLayerByName('World');
         const idx = layers.getOpaqueIndex(worldLayer);
         layers.insert(this.shadowLayer, idx + 1);
+        layers.insert(this.debugLayer, idx + 1);
+        layers.push(this.gizmoLayer);
 
         this.assetLoader = new AssetLoader(this.app.assets, this.app.graphicsDevice.maxAnisotropy);
 
@@ -153,6 +171,9 @@ class Scene extends EventHandler {
 
         this.shadow = new Shadow();
         this.add(this.shadow);
+
+        this.grid = new Grid();
+        this.add(this.grid);
 
         if (config.debug?.ministats) {
             /* eslint-disable no-new */
@@ -335,7 +356,30 @@ class Scene extends EventHandler {
 
         // debug - display scene bound
         if (this.config.debug.showBound) {
-            this.app.drawWireAlignedBox(this.bound.getMin(), this.bound.getMax(), Color.RED);
+            // draw scene bound
+            this.app.drawWireAlignedBox(this.bound.getMin(), this.bound.getMax(), Color.GREEN);
+
+            // draw element bounds
+            this.forEachElement((e: Element) => {
+                if (e.type === ElementType.splat) {
+                    const splat = e as Splat;
+
+                    const local = splat.localBound;
+                    this.app.drawWireAlignedBox(
+                        local.getMin(),
+                        local.getMax(),
+                        Color.BLUE,
+                        true,
+                        this.app.scene.defaultDrawLayer,
+                        e.root.getWorldTransform());
+
+                    const world = splat.worldBound;
+                    this.app.drawWireAlignedBox(
+                        world.getMin(),
+                        world.getMax(),
+                        Color.GRAY);
+                }
+            });
         }
     }
 

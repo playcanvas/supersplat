@@ -30,6 +30,7 @@ import {
     // ZoneComponentSystem,
     CameraComponentSystem,
     LightComponentSystem,
+    GSplatComponentSystem,
     // ScriptComponentSystem,
     RenderHandler,
     // AnimationHandler,
@@ -42,6 +43,7 @@ import {
     CubemapHandler,
     // FolderHandler,
     // FontHandler,
+    GSplatHandler,
     // HierarchyHandler,
     // HtmlHandler,
     // JsonHandler,
@@ -114,7 +116,7 @@ class PCApp extends AppBase {
             // @ts-ignore
             CameraComponentSystem,
             // @ts-ignore
-            LightComponentSystem
+            LightComponentSystem,
             // script.legacy ? ScriptLegacyComponentSystem : ScriptComponentSystem,
             // AudioSourceComponentSystem,
             // SoundComponentSystem,
@@ -128,7 +130,8 @@ class PCApp extends AppBase {
             // SpriteComponentSystem,
             // LayoutGroupComponentSystem,
             // LayoutChildComponentSystem,
-            // ZoneComponentSystem
+            // ZoneComponentSystem,
+            GSplatComponentSystem
         ];
     }
 
@@ -163,7 +166,8 @@ class PCApp extends AppBase {
             // SpriteHandler,
             // TemplateHandler,
             // @ts-ignore
-            ContainerHandler
+            ContainerHandler,
+            GSplatHandler
         ];
     }
 }

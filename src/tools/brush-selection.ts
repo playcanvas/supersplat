@@ -1,6 +1,9 @@
-import { EventHandler } from "playcanvas";
+import { Events } from "../events";
 
 class BrushSelection {
+    ToolName = 'BrushSelection';
+
+    events: Events;
     root: HTMLElement;
     canvas: HTMLCanvasElement;
     context: CanvasRenderingContext2D;
@@ -10,9 +13,7 @@ class BrushSelection {
     radius = 40;
     prev = { x: 0, y: 0 };
 
-    events = new EventHandler();
-
-    constructor(parent: HTMLElement) {
+    constructor(events: Events, parent: HTMLElement) {
         // create input dom
         const root = document.createElement('div');
         root.id = 'select-root';
@@ -115,6 +116,15 @@ class BrushSelection {
         svg.appendChild(circle);
         root.appendChild(canvas);
 
+        events.on('brushSelection:smaller', () => {
+            this.smaller();
+        });
+
+        events.on('brushSelection:bigger', () => {
+            this.bigger();
+        });
+
+        this.events = events;
         this.root = root;
         this.svg = svg;
         this.circle = circle;
@@ -126,21 +136,11 @@ class BrushSelection {
     }
 
     activate() {
-        if (!this.active) {
-            this.root.style.display = 'block';
-            this.events.fire('activated');
-        }
+        this.root.style.display = 'block';
     }
 
     deactivate() {
-        if (this.active) {
-            this.events.fire('deactivated');
-            this.root.style.display = 'none';
-        }
-    }
-
-    get active() {
-        return this.root.style.display === 'block';
+        this.root.style.display = 'none';
     }
 
     smaller() {

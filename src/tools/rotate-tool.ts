@@ -10,8 +10,6 @@ class RotateTool extends TransformTool {
     constructor(events: Events, editHistory: EditHistory, scene: Scene) {
         const gizmo = new RotateGizmo(scene.app, scene.camera.entity.camera, scene.gizmoLayer);
 
-        gizmo.coordSpace = 'local';
-
         super(gizmo, events, editHistory, scene);
     }
 }

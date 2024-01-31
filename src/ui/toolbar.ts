@@ -1,4 +1,4 @@
-import { Button, Container } from 'pcui';
+import { Button, Container, Element } from 'pcui';
 import { ShortcutsPopup } from './shortcuts';
 import { Tooltip } from './tooltip';
 import { Events } from '../events';
@@ -60,12 +60,6 @@ class Toolbar extends Container {
             icon: 'E118'
         });
 
-        const coordSpaceTooltip = new Tooltip({
-            target: coordSpaceToggle,
-            text: 'Local Space'
-        });
-        topContainer.append(coordSpaceTooltip);
-
         const coordSpace = () => {
             return coordSpaceToggle.dom.classList.contains('active') ? 'world' : 'local';
         };
@@ -85,7 +79,7 @@ class Toolbar extends Container {
                 local: 'Local',
                 world: 'World'
             };
-            coordSpaceTooltip.content.text = `${spaces[space]} Space`;
+            coordSpaceToggle.tooltip.content.text = `${spaces[space]} Space`;
         });
 
         events.function('tool:coordSpace', () => {
@@ -130,20 +124,6 @@ class Toolbar extends Container {
         // toolbarToolsContainer.append(rectTool);
         // toolbarToolsContainer.append(brushTool);
 
-        // toolbar help toolbar
-        const toolbarHelpContainer = new Container({
-            id: 'toolbar-help-container'
-        });
-
-        // github
-        const github = new Button({
-            class: 'toolbar-button',
-            icon: 'E259' 
-        });
-        github.on('click', () => {
-            window.open('https://github.com/playcanvas/super-splat', '_blank').focus();
-        });
-
         // keyboard shortcuts
         const shortcutsPopup = new ShortcutsPopup();
 
@@ -158,11 +138,39 @@ class Toolbar extends Container {
             shortcutsPopup.hidden = false;
         });
 
+        // github
+        const github = new Button({
+            class: 'toolbar-button',
+            icon: 'E259' 
+        });
+        github.on('click', () => {
+            window.open('https://github.com/playcanvas/super-splat', '_blank').focus();
+        });
+
+        // toolbar help toolbar
+        const toolbarHelpContainer = new Container({
+            id: 'toolbar-help-container'
+        });
         toolbarHelpContainer.append(shortcuts);
         toolbarHelpContainer.append(github);
 
         this.append(toolbarToolsContainer);
         this.append(toolbarHelpContainer);
+
+        const addTooltip = (target: Element, text: string) => {
+            const tooltip = new Tooltip({ target, text });
+            target.tooltip = tooltip;
+            topContainer.append(tooltip);
+        };
+
+        // add tooltips
+        addTooltip(moveTool, 'Move');
+        addTooltip(rotateTool, 'Rotate');
+        addTooltip(scaleTool, 'Scale');
+        addTooltip(coordSpaceToggle, 'Local Space');
+        addTooltip(shortcuts, 'Keyboard Shortcuts');
+        addTooltip(github, 'GitHub Repo');
+
     }
 }
 

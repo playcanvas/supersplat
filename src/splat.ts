@@ -66,6 +66,7 @@ class Splat extends Element {
         this.scene.contentRoot.addChild(this.entity);
 
         const localBound = this.localBound;
+        this.entity.setLocalPosition(localBound.center.x, localBound.center.y, localBound.center.z);
         this.root.setLocalPosition(-localBound.center.x, -localBound.center.y, -localBound.center.z);
     }
 

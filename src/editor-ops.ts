@@ -497,11 +497,11 @@ const registerEvents = (events: Events, editHistory: EditHistory, scene: Scene, 
             let extension;
             switch (format) {
                 case 'ply':
-                    data = convertPly(splatDef.data, splatDef.element.worldTransform);
+                    data = convertPly(splatDef.data, splatDef.element.root.getWorldTransform());
                     extension = '.cleaned.ply';
                     break;
                 case 'ply-compressed':
-                    data = convertPlyCompressed(splatDef.data, splatDef.element.worldTransform);
+                    data = convertPlyCompressed(splatDef.data, splatDef.element.root.getWorldTransform());
                     extension = '.compressed.ply';
                     break;
                 case 'splat':

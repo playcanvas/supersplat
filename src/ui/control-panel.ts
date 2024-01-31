@@ -390,7 +390,7 @@ class ControlPanel extends Panel {
         });
 
         brushSelectButton.on('click', () => {
-            events.fire('tool:activate', 'BrushSelection');
+            events.fire('tool:activate', 'vrushSelection');
         });
 
         events.on('tool:activated', (toolName: string) => {
@@ -558,9 +558,9 @@ class ControlPanel extends Panel {
                 } else if (e.key === 'I' || e.key === 'i') {
                     events.fire('invertSelection');
                 } else if (e.key === '[') {
-                    events.fire('BrushSelection:smaller');
+                    events.fire('brushSelection:smaller');
                 } else if (e.key === ']') {
-                    events.fire('BrushSelection:bigger');
+                    events.fire('brushSelection:bigger');
                 } else if (e.code === 'Space') {
                     if (splatSizeSlider.value !== 0) {
                         splatSizeSave = splatSizeSlider.value;

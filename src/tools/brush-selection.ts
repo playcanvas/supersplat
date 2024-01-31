@@ -116,11 +116,11 @@ class BrushSelection {
         svg.appendChild(circle);
         root.appendChild(canvas);
 
-        events.on('BrushSelection:smaller', () => {
+        events.on('brushSelection:smaller', () => {
             this.smaller();
         });
 
-        events.on('BrushSelection:bigger', () => {
+        events.on('brushSelection:bigger', () => {
             this.bigger();
         });
 

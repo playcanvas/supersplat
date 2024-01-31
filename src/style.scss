@@ -116,6 +116,10 @@ body {
     text-align: right;
 }
 
+.shortcut-header {
+    background-color: $bcg-darker;
+}
+
 #filename-label {
     position: absolute;
     right: 20px;

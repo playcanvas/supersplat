@@ -551,6 +551,10 @@ class ControlPanel extends Panel {
                     events.fire('tool:activate', 'Scale');
                 } else if (e.key === 'R' || e.key === 'r') {
                     events.fire('tool:activate', 'RectSelection');
+                } else if (e.key === 'G' || e.key === 'g') {
+                    showGridToggle.value = !showGridToggle.value;
+                } else if (e.key === 'C' || e.key === 'c') {
+                    events.fire('tool:coordSpace:toggle');
                 } else if (e.key === 'F' || e.key === 'f') {
                     events.fire('focusCamera');
                 } else if (e.key === 'B' || e.key === 'b') {

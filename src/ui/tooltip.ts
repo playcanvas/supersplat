@@ -6,10 +6,11 @@ class Tooltip extends Container {
     content: Label;
 
     constructor(args: any = {}) {
-        args = Object.assign(args, {
+        args = {
+            ...args,
             class: 'tooltip',
             hidden: true
-        });
+        };
 
         super(args);
 

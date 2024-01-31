@@ -75,6 +75,11 @@ class Toolbar extends Container {
             events.fire('tool:coordSpace', coordSpace());
         });
 
+        events.on('tool:coordSpace:toggle', () => {
+            coordSpaceToggle.dom.classList.toggle('active');
+            events.fire('tool:coordSpace', coordSpace());
+        });
+
         events.on('tool:coordSpace', (space: 'local' | 'world') => {
             const spaces = {
                 local: 'Local',

@@ -1,4 +1,4 @@
-import { Entity } from 'playcanvas';
+import { Entity, StandardMaterial } from 'playcanvas';
 import { TransformGizmo } from 'playcanvas-extras';
 import { ElementType } from '../element';
 import { Scene } from '../scene';
@@ -6,6 +6,27 @@ import { Splat } from '../splat';
 import { Events } from '../events';
 import { EditHistory } from '../edit-history';
 import { EntityTransformOp } from '../edit-ops';
+
+const patchGizmoMaterials = (gizmo: TransformGizmo) => {
+    const patch = (material: StandardMaterial) => {
+        material.opacity = 0.8;
+    };
+
+    // patch opacity
+    const axis = gizmo._materials.axis;
+    patch(axis.x.cullBack);
+    patch(axis.x.cullNone);
+    patch(axis.y.cullBack);
+    patch(axis.y.cullNone);
+    patch(axis.z.cullBack);
+    patch(axis.z.cullNone);
+    patch(axis.face);
+    patch(axis.xyz);
+
+    const disabled = gizmo._materials.disabled;
+    patch(disabled.cullBack);
+    patch(disabled.cullNone);
+};
 
 class TransformTool {
     scene: Scene;
@@ -16,6 +37,9 @@ class TransformTool {
     constructor(gizmo: TransformGizmo, events: Events, editHistory: EditHistory, scene: Scene) {
         this.scene = scene;
         this.gizmo = gizmo;
+
+        // patch gizmo materials (until we have API to do this)
+        patchGizmoMaterials(this.gizmo);
 
         this.gizmo.coordSpace = events.call('tool:coordSpace');
 

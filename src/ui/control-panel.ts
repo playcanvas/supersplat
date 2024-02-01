@@ -390,7 +390,7 @@ class ControlPanel extends Panel {
         });
 
         brushSelectButton.on('click', () => {
-            events.fire('tool:activate', 'brushSelection');
+            events.fire('tool:activate', 'BrushSelection');
         });
 
         events.on('tool:activated', (toolName: string) => {

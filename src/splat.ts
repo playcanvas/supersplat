@@ -2,20 +2,14 @@ import {
     Asset,
     BoundingBox,
     Entity,
-    GSplatComponent,
     GSplatData,
-    GSplatInstance,
     GSplatResource,
-    MeshInstance,
-    RenderComponent,
     Vec3
 } from 'playcanvas';
 import { Element, ElementType } from "./element";
 import { Serializer } from "./serializer";
 
 const vec = new Vec3();
-const bound = new BoundingBox();
-const zeroBound = new BoundingBox(new Vec3(0), new Vec3(0));
 
 class Splat extends Element {
     asset: Asset;
@@ -82,6 +76,31 @@ class Splat extends Element {
     calcBound(result: BoundingBox) {
         result.copy(this.worldBound);
         return true;
+    }
+
+    // recalculate the local space splat aabb and update engine/root transforms so it
+    // remains centered on the splat but doesn't move in world space.
+    recalcBound() {
+        const localBound = this.localBound;
+
+        // update splat data local bound
+        const opacity = this.splatData.getProp('opacity');
+        this.splatData.calcAabb(localBound, (i: number) => {
+            return opacity[i] > -1000;
+        });
+
+        // calculate meshinstance aabb (transformed local bound)
+        const meshInstance = this.root.gsplat.instance.meshInstance;
+        meshInstance._aabb.setFromTransformedAabb(localBound, this.entity.getWorldTransform());
+
+        // calculate movement in local space
+        vec.add2(this.root.getLocalPosition(), localBound.center);
+        this.entity.getWorldTransform().transformVector(vec, vec);
+        vec.add(this.entity.getLocalPosition());
+
+        // update transforms so base entity node is oriented to the center of the mesh
+        this.entity.setLocalPosition(vec);
+        this.root.setLocalPosition(-localBound.center.x, -localBound.center.y, -localBound.center.z);
     }
 
     focalPoint() {

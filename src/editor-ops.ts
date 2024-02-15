@@ -11,7 +11,7 @@ import {
 } from 'playcanvas';
 import { Scene } from './scene';
 import { EditorUI } from './ui/editor';
-import { EditHistory } from './edit-history';
+import { EditHistory, EditOp } from './edit-history';
 import { Element, ElementType } from './element';
 import { Splat } from './splat';
 import { deletedOpacity, DeleteSelectionEditOp, ResetEditOp } from './edit-ops';
@@ -176,10 +176,24 @@ const registerEvents = (events: Events, editHistory: EditHistory, scene: Scene, 
                 data.getProp('f_dc_2') as Float32Array,
                 data.getProp('opacity') as Float32Array
             );
+
+            splatDef.element.recalcBound();
         });
 
         updateSelection();
+
+        // recalculate gsplat and scene bounds
+        scene.updateBound();
+
+        // fire new scene bound
+        events.fire('scene:bound:changed');
     };
+
+    events.on('edit:apply', (editOp: EditOp) => {
+        if (editOp instanceof DeleteSelectionEditOp || editOp instanceof ResetEditOp) {
+            updateColorData();
+        }
+    });
 
     const processSelection = (selection: Float32Array, opacity: Float32Array, op: string, pred: (i: number) => boolean) => {
         for (let i = 0; i < selection.length; ++i) {
@@ -461,7 +475,6 @@ const registerEvents = (events: Events, editHistory: EditHistory, scene: Scene, 
             const splatData = splatDef.data;
             editHistory.add(new DeleteSelectionEditOp(splatData));
         });
-        updateColorData();
     });
 
     events.on('reset', () => {
@@ -469,7 +482,6 @@ const registerEvents = (events: Events, editHistory: EditHistory, scene: Scene, 
             const splatData = splatDef.data;
             editHistory.add(new ResetEditOp(splatData));
         });
-        updateColorData();
     });
 
     events.on('allData', (value: boolean) => {
@@ -524,10 +536,6 @@ const registerEvents = (events: Events, editHistory: EditHistory, scene: Scene, 
             editorUI.showInfo(null);
             lastExportCursor = editHistory.cursor;
         });
-    });
-
-    events.on('edit:changed', () => {
-        updateColorData();
     });
 }
 

@@ -4,7 +4,7 @@ import { ElementType } from '../element';
 import { Scene } from '../scene';
 import { Splat } from '../splat';
 import { Events } from '../events';
-import { EditHistory } from '../edit-history';
+import { EditHistory, EditOp } from '../edit-history';
 import { EntityTransformOp } from '../edit-ops';
 
 const patchGizmoMaterials = (gizmo: TransformGizmo) => {
@@ -42,6 +42,7 @@ class TransformTool {
         patchGizmoMaterials(this.gizmo);
 
         this.gizmo.coordSpace = events.call('tool:coordSpace');
+        this.gizmo.size = 1.5;
 
         this.gizmo.on('render:update', () => {
             scene.forceRender = true;
@@ -92,7 +93,7 @@ class TransformTool {
             }
         });
 
-        events.on('edit:changed', () => {
+        events.on('scene:bound:changed', (editOp: EditOp) => {
             if (this.entities) {
                 this.gizmo.attach(this.entities);
             }

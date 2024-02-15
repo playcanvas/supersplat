@@ -18,14 +18,12 @@ class EditHistory {
         events.on('edit:undo', () => {
             if (this.canUndo()) {
                 this.undo();
-                events.fire('edit:changed');
             }
         });
 
         events.on('edit:redo', () => {
             if (this.canRedo()) {
                 this.redo();
-                events.fire('edit:changed');
             }
         });
     }
@@ -47,12 +45,16 @@ class EditHistory {
     }
 
     undo() {
-        this.history[--this.cursor].undo();
+        const editOp = this.history[--this.cursor];
+        editOp.undo();
+        this.events.fire('edit:apply', editOp);
         this.fireEvents();
     }
 
     redo() {
-        this.history[this.cursor++].do();
+        const editOp = this.history[this.cursor++];
+        editOp.do();
+        this.events.fire('edit:apply', editOp);
         this.fireEvents();
     }
 
@@ -62,4 +64,4 @@ class EditHistory {
     }
 }
 
-export { EditHistory };
+export { EditHistory, EditOp };

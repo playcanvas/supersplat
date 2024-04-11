@@ -24,7 +24,7 @@ const sceneConfig = {
         fov: 36,
         dollyZoom: true,
         exposure: 1.0,
-        toneMapping: 'aces2',
+        toneMapping: 'linear',
         debug_render: ''
     },
     shadow: {
@@ -38,7 +38,7 @@ const sceneConfig = {
         dampingFactor: 0.2,
         minPolarAngle: 0,
         maxPolarAngle: 2.8,
-        minZoom: 0.01,
+        minZoom: 0.001,
         maxZoom: 2.0,
         initialAzim: 0,
         initialElev: -27,

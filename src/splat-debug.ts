@@ -66,13 +66,14 @@ class SplatDebug {
         const y = splatData.getProp('y');
         const z = splatData.getProp('z');
         const s = splatData.getProp('selection');
+        const v = splatData.getProp('visibility');
 
         const vertexData = new Float32Array(splatData.numSplats * 4);
         for (let i = 0; i < splatData.numSplats; ++i) {
             vertexData[i * 4 + 0] = x[i];
             vertexData[i * 4 + 1] = y[i];
             vertexData[i * 4 + 2] = z[i];
-            vertexData[i * 4 + 3] = s[i];
+            vertexData[i * 4 + 3] = v[i] ? s[i];
         }
 
         const mesh = new Mesh(device);

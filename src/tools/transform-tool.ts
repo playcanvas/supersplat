@@ -12,6 +12,8 @@ const patchGizmoMaterials = (gizmo: TransformGizmo) => {
         material.opacity = 0.8;
     };
 
+    return;
+
     // patch opacity
     const axis = gizmo._materials.axis;
     patch(axis.x.cullBack);

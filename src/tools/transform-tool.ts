@@ -1,4 +1,4 @@
-import { Color, Entity } from 'playcanvas';
+import { Entity } from 'playcanvas';
 import { TransformGizmo } from 'playcanvas-extras';
 import { ElementType } from '../element';
 import { Scene } from '../scene';

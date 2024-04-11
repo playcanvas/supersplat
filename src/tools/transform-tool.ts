@@ -1,4 +1,4 @@
-import { Entity, StandardMaterial } from 'playcanvas';
+import { Entity } from 'playcanvas';
 import { TransformGizmo } from 'playcanvas-extras';
 import { ElementType } from '../element';
 import { Scene } from '../scene';
@@ -7,25 +7,10 @@ import { Events } from '../events';
 import { EditHistory, EditOp } from '../edit-history';
 import { EntityTransformOp } from '../edit-ops';
 
+// patch gizmo to be more opaque
 const patchGizmoMaterials = (gizmo: TransformGizmo) => {
-    const patch = (material: StandardMaterial) => {
-        material.opacity = 0.8;
-    };
-
-    // patch opacity
-    const axis = gizmo._materials.axis;
-    patch(axis.x.cullBack);
-    patch(axis.x.cullNone);
-    patch(axis.y.cullBack);
-    patch(axis.y.cullNone);
-    patch(axis.z.cullBack);
-    patch(axis.z.cullNone);
-    patch(axis.face);
-    patch(axis.xyz);
-
-    const disabled = gizmo._materials.disabled;
-    patch(disabled.cullBack);
-    patch(disabled.cullNone);
+    ['x', 'y', 'z', 'xyz', 'face'].forEach(name => { gizmo._meshColors.axis[name].a = 0.8; });
+    gizmo._meshColors.disabled.a = 0.8;
 };
 
 class TransformTool {

@@ -24,7 +24,7 @@ const sceneConfig = {
         fov: 36,
         dollyZoom: true,
         exposure: 1.0,
-        toneMapping: 'aces2',
+        toneMapping: 'linear',
         debug_render: ''
     },
     shadow: {

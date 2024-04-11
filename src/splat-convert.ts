@@ -25,13 +25,12 @@ const convertPly = (splatData: GSplatData, modelMat: Mat4) => {
     let offset = header.byteLength;
 
     for (let i = 0; i < splatData.numSplats; ++i) {
+        if (opacity[i] === deletedOpacity) continue;
         props.forEach((prop: any) => {
             const p = splatData.getProp(prop);
             if (p) {
-                if (opacity[i] !== deletedOpacity) {
-                    dataView.setFloat32(offset, p[i], true);
-                    offset += 4;
-                }
+                dataView.setFloat32(offset, p[i], true);
+                offset += 4;
             }
         });
     }

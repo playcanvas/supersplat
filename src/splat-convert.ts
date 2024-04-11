@@ -15,8 +15,8 @@ const convertPly = (splatData: GSplatData, modelMat: Mat4) => {
     }
 
     const internalProps = ['state'];
-    const props = splatData.vertexElement.properties.filter((p: any) => p.storage && !internalProps.includes(p.name)).map((p: any) => p.name);
-    const header = (new TextEncoder()).encode(`ply\nformat binary_little_endian 1.0\nelement vertex ${numSplats}\n` + props.map((p: any) => `property float ${p}`).join('\n') + `\nend_header\n`);
+    const props = splatData.vertexElement.properties.filter((p: any) => p.storage && !internalProps.includes(p.name));
+    const header = (new TextEncoder()).encode(`ply\nformat binary_little_endian 1.0\nelement vertex ${numSplats}\n` + props.map((p: any) => `property float ${p.name}`).join('\n') + `\nend_header\n`);
     const result = new Uint8Array(header.byteLength + numSplats * props.length * 4);
 
     result.set(header);
@@ -27,11 +27,8 @@ const convertPly = (splatData: GSplatData, modelMat: Mat4) => {
     for (let i = 0; i < splatData.numSplats; ++i) {
         if ((state[i] & State.deleted) === State.deleted) continue;
         props.forEach((prop: any) => {
-            const p = splatData.getProp(prop);
-            if (p) {
-                dataView.setFloat32(offset, p[i], true);
-                offset += 4;
-            }
+            dataView.setFloat32(offset, prop.storage[i], true);
+            offset += 4;
         });
     }
 
@@ -51,16 +48,17 @@ const convertPly = (splatData: GSplatData, modelMat: Mat4) => {
     const v = new Vec3();
     const q = new Quat();
 
-    const x_off = props.indexOf('x') * 4;
-    const y_off = props.indexOf('y') * 4;
-    const z_off = props.indexOf('z') * 4;
-    const r0_off = props.indexOf('rot_0') * 4;
-    const r1_off = props.indexOf('rot_1') * 4;
-    const r2_off = props.indexOf('rot_2') * 4;
-    const r3_off = props.indexOf('rot_3') * 4;
-    const scale0_off = props.indexOf('scale_0') * 4;
-    const scale1_off = props.indexOf('scale_1') * 4;
-    const scale2_off = props.indexOf('scale_2') * 4;
+    const propIndex = (name: string) => props.findIndex((p: any) => p.name === name);
+    const x_off = propIndex('x') * 4;
+    const y_off = propIndex('y') * 4;
+    const z_off = propIndex('z') * 4;
+    const r0_off = propIndex('rot_0') * 4;
+    const r1_off = propIndex('rot_1') * 4;
+    const r2_off = propIndex('rot_2') * 4;
+    const r3_off = propIndex('rot_3') * 4;
+    const scale0_off = propIndex('scale_0') * 4;
+    const scale1_off = propIndex('scale_1') * 4;
+    const scale2_off = propIndex('scale_2') * 4;
 
     for (let i = 0; i < numSplats; ++i) {
         const off = header.byteLength + i * props.length * 4;

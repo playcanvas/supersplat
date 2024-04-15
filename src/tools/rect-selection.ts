@@ -1,8 +1,6 @@
 import { Events } from '../events';
 
 class RectSelection {
-    ToolName = 'RectSelection';
-
     events: Events;
     root: HTMLElement;
     svg: SVGElement;
@@ -80,7 +78,7 @@ class RectSelection {
                 this.dragging = false;
                 updateRect();
 
-                this.events.fire('selectRect', e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'), {
+                this.events.fire('select.rect', e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'), {
                     start: { x: Math.min(this.start.x, this.end.x) / w, y: Math.min(this.start.y, this.end.y) / h },
                     end: { x: Math.max(this.start.x, this.end.x) / w, y: Math.max(this.start.y, this.end.y) / h },
                 });

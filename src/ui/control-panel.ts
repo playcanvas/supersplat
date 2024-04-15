@@ -71,6 +71,26 @@ class ControlPanel extends Panel {
         cameraPanel.append(splatSize);
         cameraPanel.append(showGrid);
 
+        // show panel
+        const showPanel = new Panel({
+            id: 'show-panel',
+            class: 'control-panel',
+            headerText: 'SHOW'
+        });
+
+        // show by size
+        const showBySize = new Container({
+            class: 'control-parent'
+        });
+
+        const showBySizeCheck = new BooleanInput({
+            class: 'control-element'
+        });
+
+        showBySize.append(showBySizeCheck);
+
+        showPanel.append(showBySize);
+
         // selection panel
         const selectionPanel = new Panel({
             id: 'selection-panel',
@@ -315,11 +335,11 @@ class ControlPanel extends Panel {
         modifyPanel.append(resetButton);
         modifyPanel.append(undoRedo);
 
-        undoButton.on('click', () => { events.fire('edit:undo'); });
-        redoButton.on('click', () => { events.fire('edit:redo'); });
+        undoButton.on('click', () => { events.fire('edit.undo'); });
+        redoButton.on('click', () => { events.fire('edit.redo'); });
 
-        events.on('edit:canUndo', (value: boolean) => { undoButton.enabled = value; });
-        events.on('edit:canRedo', (value: boolean) => { redoButton.enabled = value; });
+        events.on('edit.canUndo', (value: boolean) => { undoButton.enabled = value; });
+        events.on('edit.canRedo', (value: boolean) => { redoButton.enabled = value; });
 
         // export
         const exportPanel = new Panel({
@@ -380,22 +400,23 @@ class ControlPanel extends Panel {
 
         // append
         this.content.append(cameraPanel);
+        this.content.append(showPanel);
         this.content.append(selectionPanel);
         this.content.append(modifyPanel);
         this.content.append(exportPanel);
         this.content.append(optionsPanel);
 
         rectSelectButton.on('click', () => {
-            events.fire('tool:activate', 'RectSelection');
+            events.fire('tool.rectSelection');
         });
 
         brushSelectButton.on('click', () => {
-            events.fire('tool:activate', 'BrushSelection');
+            events.fire('tool.brushSelection');
         });
 
-        events.on('tool:activated', (toolName: string) => {
-            rectSelectButton.class[toolName === 'RectSelection' ? 'add' : 'remove']('active');
-            brushSelectButton.class[toolName === 'BrushSelection' ? 'add' : 'remove']('active');
+        events.on('tool.activated', (toolName: string) => {
+            rectSelectButton.class[toolName === 'rectSelection' ? 'add' : 'remove']('active');
+            brushSelectButton.class[toolName === 'brushSelection' ? 'add' : 'remove']('active');
         });
 
         // radio logic
@@ -445,16 +466,16 @@ class ControlPanel extends Panel {
                 });
             });
 
-            events.fire('selectBySpherePlacement', index === 2 ? selectBySphereCenter.value : [0, 0, 0, 0]);
-            events.fire('selectByPlanePlacement', index === 3 ? axes[selectByPlaneAxis.value] : [0, 0, 0], selectByPlaneOffset.value);
+            events.fire('select.bySpherePlacement', index === 2 ? selectBySphereCenter.value : [0, 0, 0, 0]);
+            events.fire('select.byPlanePlacement', index === 3 ? axes[selectByPlaneAxis.value] : [0, 0, 0], selectByPlaneOffset.value);
         });
 
         const performSelect = (op: string) => {
             switch (radioSelection) {
-                case 0: events.fire('selectBySize', op, selectBySizeSlider.value); break;
-                case 1: events.fire('selectByOpacity', op, selectByOpacitySlider.value); break;
-                case 2: events.fire('selectBySphere', op, selectBySphereCenter.value); break;
-                case 3: events.fire('selectByPlane', op, axes[selectByPlaneAxis.value], selectByPlaneOffset.value); break;
+                case 0: events.fire('select.bySize', op, selectBySizeSlider.value); break;
+                case 1: events.fire('select.byOpacity', op, selectByOpacitySlider.value); break;
+                case 2: events.fire('select.bySphere', op, selectBySphereCenter.value); break;
+                case 3: events.fire('select.byPlane', op, axes[selectByPlaneAxis.value], selectByPlaneOffset.value); break;
             }
         }
 
@@ -463,7 +484,7 @@ class ControlPanel extends Panel {
         removeButton.on('click', () => performSelect('remove'));
 
         focusButton.on('click', () => {
-            events.fire('focusCamera');
+            events.fire('camera.focus');
         });
 
         splatSizeSlider.on('change', (value: number) => {
@@ -475,35 +496,35 @@ class ControlPanel extends Panel {
         });
 
         selectAllButton.on('click', () => {
-            events.fire('selectAll');
+            events.fire('select.all');
         });
 
         selectNoneButton.on('click', () => {
-            events.fire('selectNone');
+            events.fire('select.none');
         });
 
         invertSelectionButton.on('click', () => {
-            events.fire('invertSelection');
+            events.fire('select.invert');
         });
 
         selectBySphereCenter.on('change', () => {
-            events.fire('selectBySpherePlacement', selectBySphereCenter.value);
+            events.fire('select.bySpherePlacement', selectBySphereCenter.value);
         });
 
         selectByPlaneAxis.on('change', () => {
-            events.fire('selectByPlanePlacement', axes[selectByPlaneAxis.value], selectByPlaneOffset.value);
+            events.fire('select.byPlanePlacement', axes[selectByPlaneAxis.value], selectByPlaneOffset.value);
         });
 
         selectByPlaneOffset.on('change', () => {
-            events.fire('selectByPlanePlacement', axes[selectByPlaneAxis.value], selectByPlaneOffset.value);
+            events.fire('select.byPlanePlacement', axes[selectByPlaneAxis.value], selectByPlaneOffset.value);
         });
 
         deleteSelectionButton.on('click', () => {
-            events.fire('deleteSelection');
+            events.fire('select.delete');
         });
 
         resetButton.on('click', () => {
-            events.fire('reset');
+            events.fire('scene.reset');
         });
 
         allDataToggle.on('change', (enabled: boolean) => {
@@ -511,67 +532,97 @@ class ControlPanel extends Panel {
         });
 
         exportPlyButton.on('click', () => {
-            events.fire('export', 'ply');
+            events.fire('scene.exportPly');
         });
 
         exportCompressedPlyButton.on('click', () => {
-            events.fire('export', 'ply-compressed');
+            events.fire('scene.exportCompressedPly');
         });
 
         exportSplatButton.on('click', () => {
-            events.fire('export', 'splat');
+            events.fire('scene.exportSplat');
         });
 
-        events.on('splat:count', (count: number) => {
+        events.on('splat.count', (count: number) => {
             selectionPanel.headerText = `SELECTION${count === 0 ? '' : ' (' + count.toString() + ')'}`;
         });
 
         let splatSizeSave = 1;
 
+        // register keyboard shortcuts
+        const shortcuts: { keys: string[], func: () => void, ctrl: boolean, shift: boolean}[] = [];
+        const reg = (keys: string[], func: () => void, ctrl = false, shift = false) => {
+            shortcuts.push({ keys, func, ctrl, shift });
+        };
+
+        reg(['Delete', 'Backspace'], () => {
+            events.fire('select.delete');
+        });
+        reg(['Escape'], () => {
+            events.fire('tool.deactivate');
+        });
+        reg(['1'], () => {
+            events.fire('tool.move');
+        });
+        reg(['2'], () => {
+            events.fire('tool.rotate');
+        });
+        reg(['3'], () => {
+            events.fire('tool.scale');
+        });
+        reg(['R', 'r'], () => {
+            events.fire('tool.rectSelection');
+        });
+        reg(['G', 'g'], () => {
+            showGridToggle.value = !showGridToggle.value;
+        });
+        reg(['C', 'c'], () => {
+            events.fire('tool.toggleCoordSpace');
+        });
+        reg(['F', 'f'], () => {
+            events.fire('camera.focus');
+        });
+        reg(['B', 'b'], () => {
+            events.fire('tool.brushSelection');
+        });
+        reg(['A', 'a'], () => {
+            events.fire('select.all');
+        });
+        reg(['A', 'a'], () => {
+            events.fire('select.none');
+        }, false, true);
+        reg(['I', 'i'], () => {
+            events.fire('select.invert');
+        });
+        reg(['['], () => {
+            events.fire('tool.brushSelection.smaller');
+        });
+        reg([']'], () => {
+            events.fire('tool.brushSelection.bigger');
+        });
+        reg(['Z', 'z'], () => {
+            events.fire('edit.undo');
+        }, true);
+        reg(['Z', 'z'], () => {
+            events.fire('edit.redo');
+        }, true, true);
+        reg([' '], () => {
+            if (splatSizeSlider.value !== 0) {
+                splatSizeSave = splatSizeSlider.value;
+                splatSizeSlider.value = 0;
+            } else {
+                splatSizeSlider.value = splatSizeSave;
+            }
+        });
+
         // keyboard handler
         document.addEventListener('keydown', (e) => {
-            if (e.ctrlKey || e.metaKey) {
-                // handle meta/ctrl keys
-                if (!e.shiftKey && e.key === 'z') {
-                    events.fire('edit:undo');
-                } else if (e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
-                    events.fire('edit:redo');
-                }
-            } else {
-                // handle non-meta/ctrl keys
-                if (e.key === 'Delete' || e.key === 'Backspace') {
-                    events.fire('deleteSelection');
-                } else if (e.key === 'Escape') {
-                    events.fire('tool:activate', '');
-                } else if (e.key === '1') {
-                    events.fire('tool:activate', 'Move');
-                } else if (e.key === '2') {
-                    events.fire('tool:activate', 'Rotate');
-                } else if (e.key === '3') {
-                    events.fire('tool:activate', 'Scale');
-                } else if (e.key === 'R' || e.key === 'r') {
-                    events.fire('tool:activate', 'RectSelection');
-                } else if (e.key === 'G' || e.key === 'g') {
-                    showGridToggle.value = !showGridToggle.value;
-                } else if (e.key === 'C' || e.key === 'c') {
-                    events.fire('tool:coordSpace:toggle');
-                } else if (e.key === 'F' || e.key === 'f') {
-                    events.fire('focusCamera');
-                } else if (e.key === 'B' || e.key === 'b') {
-                    events.fire('tool:activate', 'BrushSelection');
-                } else if (e.key === 'I' || e.key === 'i') {
-                    events.fire('invertSelection');
-                } else if (e.key === '[') {
-                    events.fire('brushSelection:smaller');
-                } else if (e.key === ']') {
-                    events.fire('brushSelection:bigger');
-                } else if (e.code === 'Space') {
-                    if (splatSizeSlider.value !== 0) {
-                        splatSizeSave = splatSizeSlider.value;
-                        splatSizeSlider.value = 0;
-                    } else {
-                        splatSizeSlider.value = splatSizeSave;
-                    }
+            for (let i = 0; i < shortcuts.length; i++) {
+                if (shortcuts[i].keys.includes(e.key) &&
+                    shortcuts[i].ctrl === (e.ctrlKey || e.metaKey) &&
+                    shortcuts[i].shift === e.shiftKey) {
+                    shortcuts[i].func();
+                    break;
                 }
             }
         });

@@ -241,7 +241,7 @@ class CustomShadow extends Element {
         this.scene.app.root.addChild(this.plane);
         this.scene.app.root.addChild(this.camera);
 
-        this.scene.on('bound:updated', this.regenerate, this);
+        this.scene.on('scene.boundUpdated', this.regenerate, this);
         this.scene.graphicsDevice.on('devicerestored', this.regenerate, this);
     }
 

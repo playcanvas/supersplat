@@ -10,6 +10,8 @@ const shortcutList = [
     { key: '[ ]', action: 'Decrease/Increase brush size' },
     { key: 'Esc', action: 'Deactivate Tool' },
     { header: 'SELECTION' },
+    { key: 'A', action: 'Select All' },
+    { key: 'Shift + A', action: 'Deselect All' },
     { key: 'I', action: 'Invert Selection' },
     { key: 'Shift', action: 'Add to Selection' },
     { key: 'Ctrl', action: 'Remove from Selection' },

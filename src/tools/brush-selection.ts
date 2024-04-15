@@ -104,7 +104,7 @@ class BrushSelection {
                 canvas.style.display = 'none';
 
                 this.events.fire(
-                    'selectByMask',
+                    'select.byMask',
                     e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
                     context.getImageData(0, 0, canvas.width, canvas.height)
                 );
@@ -116,11 +116,11 @@ class BrushSelection {
         svg.appendChild(circle);
         root.appendChild(canvas);
 
-        events.on('brushSelection:smaller', () => {
+        events.on('tool.brushSelection.smaller', () => {
             this.smaller();
         });
 
-        events.on('brushSelection:bigger', () => {
+        events.on('tool.brushSelection.bigger', () => {
             this.bigger();
         });
 

@@ -81,13 +81,46 @@ class Splat extends Element {
     // recalculate the local space splat aabb and update engine/root transforms so it
     // remains centered on the splat but doesn't move in world space.
     recalcBound() {
+        // it's faster to calculate bound of splat centers
+        const x = this.splatData.getProp('x');
+        const y = this.splatData.getProp('y');
+        const z = this.splatData.getProp('z');
+        const opacity = this.splatData.getProp('opacity');
+        let first = true;
+        let minx, maxx, miny, maxy, minz, maxz;
+
+        for (let i = 0; i < this.splatData.numSplats; ++i) {
+            if (opacity[i] > -1000) {
+                continue;
+            }
+
+            const xv = x[i];
+            const yv = y[i];
+            const zv = z[i];
+
+            if (first) {
+                minx = maxx = xv;
+                miny = maxy = yv;
+                minz = maxz = zv;
+                first = false;
+            } else {
+                minx = Math.min(minx, xv);
+                maxx = Math.max(maxx, xv);
+                miny = Math.min(miny, yv);
+                maxy = Math.max(maxy, yv);
+                minz = Math.min(minz, zv);
+                maxz = Math.max(maxz, zv);
+            }
+        }
+
         const localBound = this.localBound;
 
-        // update splat data local bound
-        const opacity = this.splatData.getProp('opacity');
-        this.splatData.calcAabb(localBound, (i: number) => {
-            return opacity[i] > -1000;
-        });
+        localBound.center.set((minx + maxx) * 0.5, (miny + maxy) * 0.5, (minz + maxz) * 0.5);
+        localBound.halfExtents.set((maxx - minx) * 0.5, (maxy - miny) * 0.5, (maxz - minz) * 0.5);
+
+        // this.splatData.calcAabb(localBound, (i: number) => {
+        //     return opacity[i] > -1000;
+        // });
 
         // calculate meshinstance aabb (transformed local bound)
         const meshInstance = this.root.gsplat.instance.meshInstance;

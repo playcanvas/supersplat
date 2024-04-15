@@ -26,7 +26,7 @@ class TransformTool {
         // patch gizmo materials (until we have API to do this)
         patchGizmoMaterials(this.gizmo);
 
-        this.gizmo.coordSpace = events.call('tool:coordSpace');
+        this.gizmo.coordSpace = events.invoke('tool.coordSpace');
         this.gizmo.size = 1.5;
 
         this.gizmo.on('render:update', () => {
@@ -78,13 +78,13 @@ class TransformTool {
             }
         });
 
-        events.on('scene:bound:changed', (editOp: EditOp) => {
+        events.on('scene.boundChanged', (editOp: EditOp) => {
             if (this.entities) {
                 this.gizmo.attach(this.entities);
             }
         });
 
-        events.on('tool:coordSpace', (coordSpace: string) => {
+        events.on('tool.coordSpace', (coordSpace: string) => {
             this.gizmo.coordSpace = coordSpace;
             scene.forceRender = true;
         });

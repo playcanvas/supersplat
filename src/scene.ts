@@ -169,8 +169,8 @@ class Scene extends EventHandler {
         this.camera = new Camera();
         this.add(this.camera);
 
-        this.shadow = new Shadow();
-        this.add(this.shadow);
+        // this.shadow = new Shadow();
+        // this.add(this.shadow);
 
         this.grid = new Grid();
         this.add(this.grid);
@@ -253,7 +253,7 @@ class Scene extends EventHandler {
             this.forEachElement(e => e !== element && e.onAdded(element));
 
             // notify listeners
-            this.fire('element:added', element);
+            this.fire('scene.elementAdded', element);
         }
     }
 
@@ -261,7 +261,7 @@ class Scene extends EventHandler {
     remove(element: Element) {
         if (element.scene === this) {
             // notify listeners
-            this.fire('element:removed', element);
+            this.fire('scene.elementRemoved', element);
 
             // notify all elements of scene removal
             this.forEachElement(e => e !== element && e.onRemoved(element));
@@ -325,7 +325,7 @@ class Scene extends EventHandler {
         // update scene bound if models were updated
         if (all.has(ElementType.model)) {
             this.updateBound();
-            this.fire('bound:updated');
+            this.fire('scene.boundUpdated');
         }
 
         // raise per-type update events

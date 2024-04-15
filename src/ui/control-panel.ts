@@ -487,12 +487,16 @@ class ControlPanel extends Panel {
             events.fire('camera.focus');
         });
 
+        events.on('splatSize', (value: number) => {
+            splatSizeSlider.value = value;
+        });
+
         splatSizeSlider.on('change', (value: number) => {
             events.fire('splatSize', value);
         });
 
         showGridToggle.on('change', (enabled: boolean) => {
-            events.fire('showGrid', enabled);
+            events.fire(enabled ? 'show.gridOn' : 'show.gridOff');
         });
 
         selectAllButton.on('click', () => {
@@ -545,86 +549,6 @@ class ControlPanel extends Panel {
 
         events.on('splat.count', (count: number) => {
             selectionPanel.headerText = `SELECTION${count === 0 ? '' : ' (' + count.toString() + ')'}`;
-        });
-
-        let splatSizeSave = 1;
-
-        // register keyboard shortcuts
-        const shortcuts: { keys: string[], func: () => void, ctrl: boolean, shift: boolean}[] = [];
-        const reg = (keys: string[], func: () => void, ctrl = false, shift = false) => {
-            shortcuts.push({ keys, func, ctrl, shift });
-        };
-
-        reg(['Delete', 'Backspace'], () => {
-            events.fire('select.delete');
-        });
-        reg(['Escape'], () => {
-            events.fire('tool.deactivate');
-        });
-        reg(['1'], () => {
-            events.fire('tool.move');
-        });
-        reg(['2'], () => {
-            events.fire('tool.rotate');
-        });
-        reg(['3'], () => {
-            events.fire('tool.scale');
-        });
-        reg(['R', 'r'], () => {
-            events.fire('tool.rectSelection');
-        });
-        reg(['G', 'g'], () => {
-            showGridToggle.value = !showGridToggle.value;
-        });
-        reg(['C', 'c'], () => {
-            events.fire('tool.toggleCoordSpace');
-        });
-        reg(['F', 'f'], () => {
-            events.fire('camera.focus');
-        });
-        reg(['B', 'b'], () => {
-            events.fire('tool.brushSelection');
-        });
-        reg(['A', 'a'], () => {
-            events.fire('select.all');
-        });
-        reg(['A', 'a'], () => {
-            events.fire('select.none');
-        }, false, true);
-        reg(['I', 'i'], () => {
-            events.fire('select.invert');
-        });
-        reg(['['], () => {
-            events.fire('tool.brushSelection.smaller');
-        });
-        reg([']'], () => {
-            events.fire('tool.brushSelection.bigger');
-        });
-        reg(['Z', 'z'], () => {
-            events.fire('edit.undo');
-        }, true);
-        reg(['Z', 'z'], () => {
-            events.fire('edit.redo');
-        }, true, true);
-        reg([' '], () => {
-            if (splatSizeSlider.value !== 0) {
-                splatSizeSave = splatSizeSlider.value;
-                splatSizeSlider.value = 0;
-            } else {
-                splatSizeSlider.value = splatSizeSave;
-            }
-        });
-
-        // keyboard handler
-        document.addEventListener('keydown', (e) => {
-            for (let i = 0; i < shortcuts.length; i++) {
-                if (shortcuts[i].keys.includes(e.key) &&
-                    shortcuts[i].ctrl === (e.ctrlKey || e.metaKey) &&
-                    shortcuts[i].shift === e.shiftKey) {
-                    shortcuts[i].func();
-                    break;
-                }
-            }
         });
     }
 }

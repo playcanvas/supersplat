@@ -12,6 +12,7 @@ import { RotateTool } from './tools/rotate-tool';
 import { ScaleTool } from './tools/scale-tool';
 import { RectSelection } from './tools/rect-selection';
 import { BrushSelection } from './tools/brush-selection';
+import { Shortcuts } from './shortcuts';
 import { Events } from './events';
 
 declare global {
@@ -72,6 +73,57 @@ const initDropHandler = (canvas: HTMLCanvasElement, scene: Scene) => {
     });
 };
 
+const initShortcuts = (events: Events) => {
+    const shortcuts = new Shortcuts(events);
+
+    shortcuts.register(['Delete', 'Backspace'], { event: 'select.delete' });
+    shortcuts.register(['Escape'], { event: 'tool.deactivate' });
+    shortcuts.register(['1'], { event: 'tool.move' });
+    shortcuts.register(['2'], { event: 'tool.rotate' });
+    shortcuts.register(['3'], { event: 'tool.scale' });
+    shortcuts.register(['R', 'r'], { event: 'tool.rectSelection' });
+    shortcuts.register(['G', 'g'], { event: 'show.gridToggle' });
+    shortcuts.register(['C', 'c'], { event: 'tool.toggleCoordSpace' });
+    shortcuts.register(['F', 'f'], { event: 'camera.focus' });
+    shortcuts.register(['B', 'b'], { event: 'tool.brushSelection' });
+    shortcuts.register(['A', 'a'], { event: 'select.all' });
+    shortcuts.register(['A', 'a'], {
+        event: 'select.none',
+        shift: true
+    });
+    shortcuts.register(['I', 'i'], { event: 'select.invert' });
+    shortcuts.register(['['], { event: 'tool.brushSelection.smaller' });
+    shortcuts.register([']'], { event: 'tool.brushSelection.bigger' });
+    shortcuts.register(['Z', 'z'], {
+        event: 'edit.undo',
+        ctrl: true
+    });
+    shortcuts.register(['Z', 'z'], {
+        event: 'edit.redo',
+        ctrl: true,
+        shift: true
+    });
+
+    // keep tabs on splat size changes
+    let splatSize = 1;
+    let splatSizeSave = 1;
+    events.on('splatSize', (size: number) => {
+        splatSize = size;
+        if (size !== 0) {
+            splatSizeSave = size;
+        }
+    });
+
+    // space toggles between 0 and size
+    shortcuts.register([' '], {
+        func: () => {
+            events.fire('splatSize', splatSize === 0 ? splatSizeSave : 0);
+        }
+    });
+
+    return shortcuts;
+};
+
 const main = async () => {
     const url = new URL(window.location.href);
 
@@ -128,8 +180,8 @@ const main = async () => {
     toolManager.register('brushSelection', new BrushSelection(events, editorUI.canvasContainer.dom));
 
     registerEditorEvents(events, editHistory, scene, editorUI, remoteStorageDetails);
-
     initDropHandler(editorUI.canvas, scene);
+    initShortcuts(events);
 
     // load async models
     await scene.load();

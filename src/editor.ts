@@ -180,6 +180,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         selectedSplats = 0;
         splatDefs.forEach((splatDef) => {
             selectedSplats += splatDef.debug.update();
+
+            const state = splatDef.data.getProp('state') as Uint8Array;
+            splatDef.element.updateState(state);
         });
         events.fire('splat.count', selectedSplats);
         scene.forceRender = true;
@@ -205,6 +208,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 data.getProp('opacity') as Float32Array
             );
 
+            splatDef.element.updateState(state);
             splatDef.element.recalcBound();
         });
 
@@ -449,66 +453,116 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     });
 
     events.on('select.rect', (op: string, rect: any) => {
+        const mode = events.invoke('camera.mode');
         splatDefs.forEach((splatDef) => {
             const splatData = splatDef.data;
             const state = splatData.getProp('state') as Uint8Array;
-            const x = splatData.getProp('x');
-            const y = splatData.getProp('y');
-            const z = splatData.getProp('z');
 
-            // convert screen rect to camera space
-            const camera = scene.camera.entity.camera;
+            if (mode === 'centers') {
+                const x = splatData.getProp('x');
+                const y = splatData.getProp('y');
+                const z = splatData.getProp('z');
 
-            // calculate final matrix
-            mat.mul2(camera.camera._viewProjMat, splatDef.element.worldTransform);
-            const sx = rect.start.x * 2 - 1;
-            const sy = rect.start.y * 2 - 1;
-            const ex = rect.end.x * 2 - 1;
-            const ey = rect.end.y * 2 - 1;
+                // convert screen rect to camera space
+                const camera = scene.camera.entity.camera;
 
-            processSelection(state, op, (i) => {
-                vec4.set(x[i], y[i], z[i], 1.0);
-                mat.transformVec4(vec4, vec4);
-                vec4.x /= vec4.w;
-                vec4.y = -vec4.y / vec4.w;
-                if (vec4.x < sx || vec4.x > ex || vec4.y < sy || vec4.y > ey) {
-                    return false;
-                }
-                return true;
-            });
+                // calculate final matrix
+                mat.mul2(camera.camera._viewProjMat, splatDef.element.worldTransform);
+                const sx = rect.start.x * 2 - 1;
+                const sy = rect.start.y * 2 - 1;
+                const ex = rect.end.x * 2 - 1;
+                const ey = rect.end.y * 2 - 1;
+
+                processSelection(state, op, (i) => {
+                    vec4.set(x[i], y[i], z[i], 1.0);
+                    mat.transformVec4(vec4, vec4);
+                    vec4.x /= vec4.w;
+                    vec4.y = -vec4.y / vec4.w;
+                    if (vec4.x < sx || vec4.x > ex || vec4.y < sy || vec4.y > ey) {
+                        return false;
+                    }
+                    return true;
+                });
+            } else if (mode === 'rings') {
+                const { width, height } = scene.targetSize;
+
+                scene.camera.pickPrep();
+                const pick = scene.camera.pickRect(
+                    Math.floor(rect.start.x * width),
+                    Math.floor(rect.start.y * height),
+                    Math.floor((rect.end.x - rect.start.x) * width),
+                    Math.floor((rect.end.y - rect.start.y) * height)
+                );
+                const selected = new Set<number>(pick);
+                processSelection(state, op, (i) => {
+                    return selected.has(i);
+                });
+            }
         });
         updateSelection();
     });
 
     events.on('select.byMask', (op: string, mask: ImageData) => {
+        const mode = events.invoke('camera.mode');
         splatDefs.forEach((splatDef) => {
             const splatData = splatDef.data;
             const state = splatData.getProp('state') as Uint8Array;
-            const x = splatData.getProp('x');
-            const y = splatData.getProp('y');
-            const z = splatData.getProp('z');
 
-            // convert screen rect to camera space
-            const camera = scene.camera.entity.camera;
+            if (mode === 'centers') {
+                const x = splatData.getProp('x');
+                const y = splatData.getProp('y');
+                const z = splatData.getProp('z');
 
-            // calculate final matrix
-            mat.mul2(camera.camera._viewProjMat, splatDef.element.worldTransform);
+                // convert screen rect to camera space
+                const camera = scene.camera.entity.camera;
 
-            processSelection(state, op, (i) => {
-                vec4.set(x[i], y[i], z[i], 1.0);
-                mat.transformVec4(vec4, vec4);
-                vec4.x = vec4.x / vec4.w * 0.5 + 0.5;
-                vec4.y = -vec4.y / vec4.w * 0.5 + 0.5;
-                vec4.z = vec4.z / vec4.w * 0.5 + 0.5;
+                // calculate final matrix
+                mat.mul2(camera.camera._viewProjMat, splatDef.element.worldTransform);
 
-                if (vec4.x < 0 || vec4.x > 1 || vec4.y < 0 || vec4.y > 1 || vec4.z < 0 || vec4.z > 1) {
-                    return false;
+                processSelection(state, op, (i) => {
+                    vec4.set(x[i], y[i], z[i], 1.0);
+                    mat.transformVec4(vec4, vec4);
+                    vec4.x = vec4.x / vec4.w * 0.5 + 0.5;
+                    vec4.y = -vec4.y / vec4.w * 0.5 + 0.5;
+                    vec4.z = vec4.z / vec4.w * 0.5 + 0.5;
+
+                    if (vec4.x < 0 || vec4.x > 1 || vec4.y < 0 || vec4.y > 1 || vec4.z < 0 || vec4.z > 1) {
+                        return false;
+                    }
+
+                    const mx = Math.floor(vec4.x * mask.width);
+                    const my = Math.floor(vec4.y * mask.height);
+                    return mask.data[(my * mask.width + mx) * 4] === 255;
+                });
+            } else if (mode === 'rings') {
+                const { width, height } = scene.targetSize;
+
+                scene.camera.pickPrep();
+                const pick = scene.camera.pickRect(0, 0, width, height);
+
+                const selected = new Set<number>();
+                for (let y = 0; y < mask.height; ++y) {
+                    for (let x = 0; x < mask.width; ++x) {
+                        if (mask.data[(y * mask.width + x) * 4] === 255) {
+
+                            const sx0 = Math.floor(x / mask.width * width);
+                            const sy0 = Math.floor(y / mask.height * height);
+                            const sx1 = Math.floor((x + 1) / mask.width * width);
+                            const sy1 = Math.floor((y + 1) / mask.height * height);
+
+                            for (let sy = sy0; sy < sy1; ++sy) {
+                                for (let sx = sx0; sx < sx1; ++sx) {
+                                    selected.add(pick[(height - sy) * width + sx]);
+                                }
+                            }
+                        }
+                    }
                 }
 
-                const mx = Math.floor(vec4.x * mask.width);
-                const my = Math.floor(vec4.y * mask.height);
-                return mask.data[(my * mask.width + mx) * 4] === 255;
-            });
+                processSelection(state, op, (i) => {
+                    return selected.has(i);
+                });
+            }
         });
         updateSelection();
     });

@@ -1,15 +1,23 @@
 import {
+    ADDRESS_CLAMP_TO_EDGE,
+    FILTER_NEAREST,
+    PIXELFORMAT_L8,
     Asset,
     BoundingBox,
     Entity,
     GSplatData,
     GSplatResource,
+    Texture,
     Vec3
 } from 'playcanvas';
 import { Element, ElementType } from "./element";
 import { Serializer } from "./serializer";
 
 const vertexShader = /*glsl*/`
+
+uniform sampler2D splatState;
+
+flat varying highp uint vertexState;
 
 #ifdef PICK_PASS
 flat varying highp uint vertexId;
@@ -25,6 +33,8 @@ void main(void)
 
     gl_Position = evalSplat(centerWorld);
 
+    vertexState = uint(texelFetch(splatState, dataUV, 0).r * 255.0);
+
     #ifdef PICK_PASS
         vertexId = vertex_id;
     #endif
@@ -36,6 +46,8 @@ const fragmentShader = /*glsl*/`
 #ifdef PICK_PASS
 flat varying highp uint vertexId;
 #endif
+
+flat varying highp uint vertexState;
 
 uniform float ringSize;
 float PI = 3.14159;
@@ -70,7 +82,7 @@ void main(void)
             }
         }
 
-        gl_FragColor = vec4(color.rgb, alpha);
+        gl_FragColor = vec4(((vertexState & uint(1)) == uint(1)) ? vec3(1.0, 1.0, 0.0) : color.rgb, alpha);
     #endif
 }
 `;
@@ -83,6 +95,7 @@ class Splat extends Element {
     entity: Entity;
     root: Entity;
     changedCounter = 0;
+    stateTexture: Texture;
 
     constructor(asset: Asset) {
         super(ElementType.splat);
@@ -97,6 +110,20 @@ class Splat extends Element {
             fragment: fragmentShader
         });
 
+        // create the state texture
+        this.stateTexture = new Texture(splatResource.device, {
+            name: 'splatState',
+            width: this.root.gsplat.instance.splat.colorTexture.width,
+            height: this.root.gsplat.instance.splat.colorTexture.height,
+            format: PIXELFORMAT_L8,
+            mipmaps: false,
+            minFilter: FILTER_NEAREST,
+            magFilter: FILTER_NEAREST,
+            addressU: ADDRESS_CLAMP_TO_EDGE,
+            addressV: ADDRESS_CLAMP_TO_EDGE
+        });
+        splatResource.device.scope.resolve('splatState').setValue(this.stateTexture);
+
         // when sort changes, re-render the scene
         this.root.gsplat.instance.sorter.on('updated', () => {
             this.changedCounter++;
@@ -110,6 +137,12 @@ class Splat extends Element {
         this.entity.destroy();
         this.asset.registry.remove(this.asset);
         this.asset.unload();
+    }
+
+    updateState(state: Uint8Array) {
+        const data = this.stateTexture.lock();
+        data.set(state);
+        this.stateTexture.unlock();
     }
 
     get localBound() {

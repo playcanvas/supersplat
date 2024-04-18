@@ -271,7 +271,7 @@ class Camera extends Element {
     // handle the viewer canvas resizing
     rebuildRenderTargets() {
         const device = this.scene.graphicsDevice as WebglGraphicsDevice;
-        const {width, height} = this.scene.targetSize;
+        const { width, height } = this.scene.targetSize;
 
         const rt = this.entity.camera.renderTarget;
         if (rt && rt.width === width && rt.height === height) {
@@ -473,16 +473,38 @@ class Camera extends Element {
     }
 
     pick(x: number, y: number) {
+        return this.pickRect(x, y, 1, 1)[0];
+    }
+
+    // render picker contents
+    pickPrep() {
+        const { width, height } = this.scene.targetSize;
+        const worldLayer = this.scene.app.scene.layers.getLayerByName('World');
+        this.picker.resize(width, height);
+        this.picker.prepare(this.entity.camera, this.scene.app.scene, [worldLayer]);
+    }
+
+    pickRect(x: number, y: number, width: number, height: number) {
         const device = this.scene.graphicsDevice as WebglGraphicsDevice;
-        const pixels = new Uint8Array(4);
+        const pixels = new Uint8Array(width * height * 4);
 
         // read pixels
         device.setRenderTarget(this.picker.renderTarget);
         device.updateBegin();
-        device.readPixels(x, this.picker.renderTarget.height - y, 1, 1, pixels);
+        device.readPixels(x, this.picker.renderTarget.height - y - height, width, height, pixels);
         device.updateEnd();
 
-        return pixels[0] | (pixels[1] << 8) | (pixels[2] << 16) | (pixels[3] << 24);
+        const result = [];
+        for (let i = 0; i < width * height; i++) {
+            result.push(
+                pixels[i * 4] |
+                (pixels[i * 4 + 1] << 8) |
+                (pixels[i * 4 + 2] << 16) |
+                (pixels[i * 4 + 3] << 24)
+            );
+        }
+
+        return result;
     }
 }
 

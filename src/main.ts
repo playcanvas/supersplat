@@ -14,6 +14,7 @@ import { RectSelection } from './tools/rect-selection';
 import { BrushSelection } from './tools/brush-selection';
 import { Shortcuts } from './shortcuts';
 import { Events } from './events';
+import { PickerSelection } from './tools/picker-selection';
 
 declare global {
     interface Window {
@@ -81,34 +82,23 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['1'], { event: 'tool.move' });
     shortcuts.register(['2'], { event: 'tool.rotate' });
     shortcuts.register(['3'], { event: 'tool.scale' });
-    shortcuts.register(['R', 'r'], { event: 'tool.rectSelection' });
     shortcuts.register(['G', 'g'], { event: 'show.gridToggle' });
     shortcuts.register(['C', 'c'], { event: 'tool.toggleCoordSpace' });
     shortcuts.register(['F', 'f'], { event: 'camera.focus' });
     shortcuts.register(['B', 'b'], { event: 'tool.brushSelection' });
+    shortcuts.register(['R', 'r'], { event: 'tool.rectSelection' });
+    shortcuts.register(['P', 'p'], { event: 'tool.pickerSelection' });
     shortcuts.register(['A', 'a'], { event: 'select.all' });
-    shortcuts.register(['A', 'a'], {
-        event: 'select.none',
-        shift: true
-    });
+    shortcuts.register(['A', 'a'], { event: 'select.none', shift: true });
     shortcuts.register(['I', 'i'], { event: 'select.invert' });
     shortcuts.register(['['], { event: 'tool.brushSelection.smaller' });
     shortcuts.register([']'], { event: 'tool.brushSelection.bigger' });
-    shortcuts.register(['Z', 'z'], {
-        event: 'edit.undo',
-        ctrl: true
-    });
-    shortcuts.register(['Z', 'z'], {
-        event: 'edit.redo',
-        ctrl: true,
-        shift: true
-    });
+    shortcuts.register(['Z', 'z'], { event: 'edit.undo', ctrl: true });
+    shortcuts.register(['Z', 'z'], { event: 'edit.redo', ctrl: true, shift: true });
 
     // keep tabs on splat size changes
-    let splatSize = 1;
-    let splatSizeSave = 1;
+    let splatSizeSave = 2;
     events.on('splatSize', (size: number) => {
-        splatSize = size;
         if (size !== 0) {
             splatSizeSave = size;
         }
@@ -117,7 +107,7 @@ const initShortcuts = (events: Events) => {
     // space toggles between 0 and size
     shortcuts.register([' '], {
         func: () => {
-            events.fire('splatSize', splatSize === 0 ? splatSizeSave : 0);
+            events.fire('splatSize', events.invoke('splatSize') === 0 ? splatSizeSave : 0);
         }
     });
 
@@ -166,6 +156,7 @@ const main = async () => {
 
     // construct the manager
     const scene = new Scene(
+        events,
         sceneConfig,
         editorUI.canvas,
         graphicsDevice
@@ -178,6 +169,7 @@ const main = async () => {
     toolManager.register('scale', new ScaleTool(events, editHistory, scene));
     toolManager.register('rectSelection', new RectSelection(events, editorUI.canvasContainer.dom));
     toolManager.register('brushSelection', new BrushSelection(events, editorUI.canvasContainer.dom));
+    toolManager.register('pickerSelection', new PickerSelection(events, editorUI.canvasContainer.dom));
 
     registerEditorEvents(events, editHistory, scene, editorUI, remoteStorageDetails);
     initDropHandler(editorUI.canvas, scene);
@@ -186,7 +178,7 @@ const main = async () => {
     // load async models
     await scene.load();
 
-    // handle load param and ready promise for visual testing harness
+    // handle load param
     const loadParam = url.searchParams.get('load');
     const loadUrl = loadParam && decodeURIComponent(loadParam);
     if (loadUrl) {

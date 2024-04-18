@@ -1,14 +1,17 @@
 import {
     math,
     ADDRESS_CLAMP_TO_EDGE,
+    BLEND_NONE,
+    CULLFACE_NONE,
     FILTER_NEAREST,
     PIXELFORMAT_RGBA8,
-    PIXELFORMAT_RGBA16F,
     PIXELFORMAT_DEPTH,
     drawTexture,
     Color,
     Entity,
     EventHandler,
+    Material,
+    Picker,
     RenderTarget,
     Texture,
     Vec3,
@@ -59,6 +62,14 @@ class Camera extends Element {
     autoRotateTimer = 0;
     autoRotateDelayValue = 0;
     focusDistance: number;
+
+    picker: Picker;
+
+    pickModeActive = false;
+    pickModeColorBuffer: Texture;
+    pickModeRenderTarget: RenderTarget;
+    pickLayersBackup?: number[];
+    pickMaterial: Material;
 
     constructor() {
         super(ElementType.camera);
@@ -207,6 +218,29 @@ class Camera extends Element {
         // initial camera position and orientation
         this.setAzimElev(controls.initialAzim, controls.initialElev, 0);
         this.setDistance(controls.initialZoom, 0);
+
+        // picker
+        const { width, height } = this.scene.targetSize;
+        this.picker = new Picker(this.scene.app, width, height);
+
+        // pick material
+        this.pickMaterial = new Material();
+        this.pickMaterial.cull = CULLFACE_NONE;
+        this.pickMaterial.blendType = BLEND_NONE;
+        this.pickMaterial.depthWrite = false;
+        this.pickMaterial.shader = this.scene.app.scene.immediate.getTextureShader();
+
+        this.scene.events.on('tool.pickerSelection.activated', () => {
+            this.enterPickMode();
+        });
+
+        this.scene.events.on('tool.pickerSelection.deactivated', () => {
+            this.exitPickMode();
+        });
+
+        this.scene.events.on('tool.pickerSelection.move', (data: {x: number, y: number}) => {
+            this.pickUpdate(data.x, data.y);
+        });
     }
 
     remove() {
@@ -218,6 +252,13 @@ class Camera extends Element {
 
         this.entity.camera.layers = this.entity.camera.layers.filter(layer => layer !== this.scene.shadowLayer.id);
         this.scene.cameraRoot.removeChild(this.entity);
+
+        // destroy doesn't exist on picker?
+        // this.picker.destroy();
+        this.picker = null;
+
+        this.pickMaterial.destroy();
+        this.pickMaterial = null;
     }
 
     serialize(serializer: Serializer) {
@@ -242,6 +283,11 @@ class Camera extends Element {
             rt.colorBuffer.destroy();
             rt.depthBuffer.destroy();
             rt.destroy();
+
+            this.pickModeColorBuffer.destroy();
+            this.pickModeRenderTarget.destroy();
+            this.pickModeColorBuffer = null;
+            this.pickModeRenderTarget = null;
         }
 
         const createTexture = (width: number, height: number, format: number) => {
@@ -259,17 +305,29 @@ class Camera extends Element {
 
         // in with the new
         const pixelFormat = PIXELFORMAT_RGBA8;
+        const samples = this.scene.config.camera.multisample ? device.maxSamples : 1;
+
         const colorBuffer = createTexture(width, height, pixelFormat);
         const depthBuffer = createTexture(width, height, PIXELFORMAT_DEPTH);
         const renderTarget = new RenderTarget({
             colorBuffer: colorBuffer,
             depthBuffer: depthBuffer,
             flipY: false,
-            samples: this.scene.config.camera.multisample ? device.maxSamples : 1,
+            samples: samples,
             autoResolve: false
         });
         this.entity.camera.renderTarget = renderTarget;
         this.entity.camera.camera.horizontalFov = width < height;
+
+        // create pick mode render target
+        this.pickModeColorBuffer = createTexture(width, height, pixelFormat);
+        this.pickModeRenderTarget = new RenderTarget({
+            colorBuffer: this.pickModeColorBuffer,
+            depth: false,
+            flipY: false,
+            samples: samples,
+            autoResolve: false
+        });
     }
 
     onUpdate(deltaTime: number) {
@@ -327,10 +385,20 @@ class Camera extends Element {
 
     onPreRender() {
         this.rebuildRenderTargets();
+
+        if (this.pickModeActive) {
+            this.pickMaterial.setParameter('colorMap', this.pickModeRenderTarget.colorBuffer);
+            this.pickMaterial.update();
+
+            this.scene.app.drawTexture(
+                0, 0, 2, -2,
+                null,
+                this.pickMaterial,
+                this.scene.backgroundLayer);
+        }
     }
 
     onPostRender() {
-        // const device = this.scene.graphicsDevice as WebglGraphicsDevice;
         const renderTarget = this.entity.camera.renderTarget;
 
         // resolve msaa buffer
@@ -368,6 +436,54 @@ class Camera extends Element {
         this.events.fire(event, data);
         this.autoRotateDelayValue = config.controls.autoRotateDelay;
     }
+
+    // pick mode
+
+    enterPickMode() {
+        const { width, height } = this.scene.targetSize;
+
+        // make a copy of the current render target so we don't have to re-render on mouse move
+        this.pickModeRenderTarget.copy(this.entity.camera.renderTarget, true, false);
+
+        const worldLayer = this.scene.app.scene.layers.getLayerByName('World');
+
+        // render picker contents
+        this.picker.resize(width, height);
+        this.picker.prepare(this.entity.camera, this.scene.app.scene, [worldLayer]);
+
+        this.pickLayersBackup = this.entity.camera.layers.slice();
+        this.entity.camera.layers = [this.scene.backgroundLayer.id, worldLayer.id];
+
+        this.pickModeActive = true;
+
+        this.scene.forceRender = true;
+    }
+
+    exitPickMode() {
+        this.pickModeActive = false;
+        this.entity.camera.layers = this.pickLayersBackup;
+
+        this.scene.forceRender = true;
+    }
+
+    pickUpdate(x: number, y: number) {
+        const active = this.pick(x * devicePixelRatio, y * devicePixelRatio);
+        this.scene.events.fire('show.highlight', active);
+        this.scene.forceRender = true;
+    }
+
+    pick(x: number, y: number) {
+        const device = this.scene.graphicsDevice as WebglGraphicsDevice;
+        const pixels = new Uint8Array(4);
+
+        // read pixels
+        device.setRenderTarget(this.picker.renderTarget);
+        device.updateBegin();
+        device.readPixels(x, this.picker.renderTarget.height - y, 1, 1, pixels);
+        device.updateEnd();
+
+        return pixels[0] | (pixels[1] << 8) | (pixels[2] << 16) | (pixels[3] << 24);
+    }
 }
 
-export {Camera};
+export { Camera };

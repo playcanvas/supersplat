@@ -61,7 +61,9 @@ class Grid extends Debug {
         }
 
         const mesh = new Mesh(device);
-        mesh.vertexBuffer = new VertexBuffer(device, vertexFormat, numLines * 4, BUFFER_STATIC, data.buffer);
+        mesh.vertexBuffer = new VertexBuffer(device, vertexFormat, numLines * 4, {
+            data: data.buffer
+        });
         mesh.primitive[0].type = PRIMITIVE_LINES;
         mesh.primitive[0].base = 0;
         mesh.primitive[0].indexed = false;

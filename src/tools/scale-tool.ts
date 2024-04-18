@@ -1,4 +1,4 @@
-import { ScaleGizmo } from 'playcanvas-extras';
+import { ScaleGizmo } from 'playcanvas';
 import { TransformTool } from './transform-tool';
 import { Events } from '../events';
 import { EditHistory } from '../edit-history';

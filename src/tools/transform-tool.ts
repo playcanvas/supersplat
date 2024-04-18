@@ -1,5 +1,4 @@
-import { Entity } from 'playcanvas';
-import { TransformGizmo } from 'playcanvas-extras';
+import { Entity, TransformGizmo } from 'playcanvas';
 import { ElementType } from '../element';
 import { Scene } from '../scene';
 import { Splat } from '../splat';
@@ -9,7 +8,9 @@ import { EntityTransformOp } from '../edit-ops';
 
 // patch gizmo to be more opaque
 const patchGizmoMaterials = (gizmo: TransformGizmo) => {
+    // @ts-ignore
     ['x', 'y', 'z', 'xyz', 'face'].forEach(name => { gizmo._meshColors.axis[name].a = 0.8; });
+    // @ts-ignore
     gizmo._meshColors.disabled.a = 0.8;
 };
 

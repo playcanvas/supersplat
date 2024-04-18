@@ -1,8 +1,6 @@
 import { Events } from "../events";
 
 class BrushSelection {
-    ToolName = 'BrushSelection';
-
     events: Events;
     root: HTMLElement;
     canvas: HTMLCanvasElement;

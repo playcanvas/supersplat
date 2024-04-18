@@ -12,7 +12,6 @@
         "baseUrl": ".",
         "paths": {
             "playcanvas": ["node_modules/playcanvas/build/playcanvas.mjs"],
-            "playcanvas-extras": ["node_modules/playcanvas/build/playcanvas-extras.mjs"],
             "pcui": ["node_modules/@playcanvas/pcui"]
         }
     },

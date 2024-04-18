@@ -1,4 +1,4 @@
-import { TranslateGizmo } from 'playcanvas-extras';
+import { TranslateGizmo } from 'playcanvas';
 import { TransformTool } from './transform-tool';
 import { Events } from '../events';
 import { EditHistory } from '../edit-history';

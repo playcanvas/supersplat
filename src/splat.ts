@@ -9,6 +9,72 @@ import {
 import { Element, ElementType } from "./element";
 import { Serializer } from "./serializer";
 
+const vertexShader = /*glsl*/`
+
+#ifdef PICK_PASS
+flat varying highp uint vertexId;
+#endif
+
+void main(void)
+{
+    // evaluate center of the splat in object space
+    vec3 centerLocal = evalCenter();
+
+    // evaluate the rest of the splat using world space center
+    vec4 centerWorld = matrix_model * vec4(centerLocal, 1.0);
+
+    gl_Position = evalSplat(centerWorld);
+
+    #ifdef PICK_PASS
+        vertexId = vertex_id;
+    #endif
+}
+`;
+
+const fragmentShader = /*glsl*/`
+
+#ifdef PICK_PASS
+flat varying highp uint vertexId;
+#endif
+
+uniform float ringSize;
+float PI = 3.14159;
+
+void main(void)
+{
+    if (color.a == 0.0) {
+        discard;
+    }
+
+    float A = dot(texCoord, texCoord);
+    if (A > 4.0) discard;
+    float B = exp(-A) * color.a;
+
+    #ifdef PICK_PASS
+        // if (B < 0.3) discard;
+        gl_FragColor = vec4(
+            float(vertexId & uint(255)) / 255.0,
+            float((vertexId >> 8) & uint(255)) / 255.0,
+            float((vertexId >> 16) & uint(255)) / 255.0,
+            float((vertexId >> 24) & uint(255)) / 255.0
+        );
+    #else
+        float alpha;
+        if (ringSize == 0.0) {
+            alpha = B;
+        } else {
+            if (A < 4.0 - ringSize * 4.0) {
+                alpha = max(0.05, B);
+            } else {
+                alpha = 0.6;
+            }
+        }
+
+        gl_FragColor = vec4(color.rgb, alpha);
+    #endif
+}
+`;
+
 const vec = new Vec3();
 
 class Splat extends Element {
@@ -26,7 +92,10 @@ class Splat extends Element {
         this.asset = asset;
         this.splatData = splatResource.splatData;
         this.entity = new Entity('splatRoot');
-        this.root = splatResource.instantiate();
+        this.root = splatResource.instantiate({
+            vertex: vertexShader,
+            fragment: fragmentShader
+        });
 
         // when sort changes, re-render the scene
         this.root.gsplat.instance.sorter.on('updated', () => {

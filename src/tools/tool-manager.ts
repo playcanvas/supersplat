@@ -64,6 +64,7 @@ class ToolManager {
             if (this.active) {
                 const tool = this.tools.get(this.active);
                 tool.deactivate();
+                this.events.fire(`tool.${this.active}.deactivated`);
                 this.events.fire('tool.deactivated', this.active);
             }
 
@@ -75,6 +76,7 @@ class ToolManager {
                 tool.activate();
             }
 
+            this.events.fire(`tool.${toolName}.activated`);
             this.events.fire('tool.activated', toolName);
         }
     }

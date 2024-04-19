@@ -82,7 +82,7 @@ void main(void)
         if ((vertexState & uint(2)) == uint(2)) {
             // hidden
             c = vec3(0.0, 0.0, 0.0);
-            alpha = B * 0.1;
+            alpha = B * 0.05;
         } else {
             if ((vertexState & uint(1)) == uint(1)) {
                 // selected

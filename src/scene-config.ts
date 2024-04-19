@@ -54,7 +54,6 @@ const sceneConfig = {
         autoPlay: false
     },
     debug: {
-        ministats: false,
         showBound: false
     }
 };

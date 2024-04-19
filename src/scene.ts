@@ -6,7 +6,6 @@ import {
     Entity,
     EventHandler,
     Layer,
-    MiniStats,
     Mouse,
     TouchDevice,
     GraphicsDevice
@@ -183,11 +182,6 @@ class Scene {
 
         this.grid = new Grid();
         this.add(this.grid);
-
-        if (config.debug?.ministats) {
-            /* eslint-disable no-new */
-            new MiniStats(this.app, null);
-        }
     }
 
     async load() {

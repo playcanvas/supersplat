@@ -82,7 +82,9 @@ void main(void)
             }
         }
 
-        gl_FragColor = vec4(((vertexState & uint(1)) == uint(1)) ? vec3(1.0, 1.0, 0.0) : color.rgb, alpha);
+        vec3 c = ((vertexState & uint(1)) == uint(1)) ? vec3(1.0, 1.0, 0.0) : color.xyz;
+
+        gl_FragColor = vec4(c, alpha);
     #endif
 }
 `;

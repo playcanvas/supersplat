@@ -229,18 +229,6 @@ class Camera extends Element {
         this.pickMaterial.blendType = BLEND_NONE;
         this.pickMaterial.depthWrite = false;
         this.pickMaterial.shader = this.scene.app.scene.immediate.getTextureShader();
-
-        this.scene.events.on('tool.pickerSelection.activated', () => {
-            this.enterPickMode();
-        });
-
-        this.scene.events.on('tool.pickerSelection.deactivated', () => {
-            this.exitPickMode();
-        });
-
-        this.scene.events.on('tool.pickerSelection.move', (data: {x: number, y: number}) => {
-            this.pickUpdate(data.x, data.y);
-        });
     }
 
     remove() {
@@ -439,49 +427,16 @@ class Camera extends Element {
 
     // pick mode
 
-    enterPickMode() {
-        const { width, height } = this.scene.targetSize;
-
-        // make a copy of the current render target so we don't have to re-render on mouse move
-        this.pickModeRenderTarget.copy(this.entity.camera.renderTarget, true, false);
-
-        const worldLayer = this.scene.app.scene.layers.getLayerByName('World');
-
-        // render picker contents
-        this.picker.resize(width, height);
-        this.picker.prepare(this.entity.camera, this.scene.app.scene, [worldLayer]);
-
-        this.pickLayersBackup = this.entity.camera.layers.slice();
-        this.entity.camera.layers = [this.scene.backgroundLayer.id, worldLayer.id];
-
-        this.pickModeActive = true;
-
-        this.scene.forceRender = true;
-    }
-
-    exitPickMode() {
-        this.pickModeActive = false;
-        this.entity.camera.layers = this.pickLayersBackup;
-
-        this.scene.forceRender = true;
-    }
-
-    pickUpdate(x: number, y: number) {
-        const active = this.pick(x * devicePixelRatio, y * devicePixelRatio);
-        this.scene.events.fire('show.highlight', active);
-        this.scene.forceRender = true;
-    }
-
-    pick(x: number, y: number) {
-        return this.pickRect(x, y, 1, 1)[0];
-    }
-
     // render picker contents
     pickPrep() {
         const { width, height } = this.scene.targetSize;
         const worldLayer = this.scene.app.scene.layers.getLayerByName('World');
         this.picker.resize(width, height);
         this.picker.prepare(this.entity.camera, this.scene.app.scene, [worldLayer]);
+    }
+
+    pick(x: number, y: number) {
+        return this.pickRect(x, y, 1, 1)[0];
     }
 
     pickRect(x: number, y: number, width: number, height: number) {

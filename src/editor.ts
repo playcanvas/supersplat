@@ -1,29 +1,13 @@
 import {
-    BUFFER_STATIC,
-    BUFFER_STREAM,
-    INDEXFORMAT_UINT32,
-    PRIMITIVE_TRIANGLES,
-    RENDERSTYLE_SOLID,
-    RENDERSTYLE_WIREFRAME,
-    SEMANTIC_POSITION,
-    TYPE_UINT32,
     BoundingBox,
     Color,
-    Entity,
-    GraphNode,
     GSplat as SplatRender,
     GSplatData,
     GSplatInstance,
-    IndexBuffer,
     Mat4,
-    Material,
-    Mesh,
-    MeshInstance,
     path,
     Vec3,
     Vec4,
-    VertexBuffer,
-    VertexFormat
 } from 'playcanvas';
 import { Scene } from './scene';
 import { EditorUI } from './ui/editor';
@@ -568,13 +552,50 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     });
 
     events.on('select.point', (op: string, point: { x: number, y: number }) => {
-        const splatId = scene.camera.pick(Math.floor(point.x * devicePixelRatio), Math.floor(point.y * devicePixelRatio));
+        const { width, height } = scene.targetSize;
+
+        const mode = events.invoke('camera.mode');
+        if (mode === 'rings') {
+            scene.camera.pickPrep();
+        }
+
         splatDefs.forEach((splatDef) => {
             const splatData = splatDef.data;
             const state = splatData.getProp('state') as Uint8Array;
-            processSelection(state, op, (i) => i === splatId);
+
+            if (mode === 'centers') {
+                const x = splatData.getProp('x');
+                const y = splatData.getProp('y');
+                const z = splatData.getProp('z');
+
+                const splatSize = events.invoke('splatSize');
+                const camera = scene.camera.entity.camera;
+                const sx = point.x * width;
+                const sy = point.y * height;
+
+                // calculate final matrix
+                mat.mul2(camera.camera._viewProjMat, splatDef.element.worldTransform);
+
+                processSelection(state, op, (i) => {
+                    vec4.set(x[i], y[i], z[i], 1.0);
+                    mat.transformVec4(vec4, vec4);
+                    const px = (vec4.x / vec4.w * 0.5 + 0.5) * width;
+                    const py = (-vec4.y / vec4.w * 0.5 + 0.5) * height;
+                    return Math.abs(px - sx) < splatSize && Math.abs(py - sy) < splatSize;
+                });
+            } else if (mode === 'rings') {
+                const pickId = scene.camera.pickRect(
+                    Math.floor(point.x * width),
+                    Math.floor(point.y * height),
+                    1, 1
+                )[0];
+                processSelection(state, op, (i) => {
+                    return i === pickId;
+                });
+            }
         });
         updateSelection();
+
     });
 
     events.on('select.delete', () => {
@@ -593,74 +614,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('allData', (value: boolean) => {
         scene.assetLoader.loadAllData = value;
-    });
-
-    const createPickerMeshInstance = (node: GraphNode, material: Material) => {
-        const device = scene.graphicsDevice;
-
-        const mesh = new Mesh(scene.graphicsDevice);
-
-        const vertexFormat = new VertexFormat(device, [
-            { semantic: SEMANTIC_POSITION, components: 1, type: TYPE_UINT32, asInt: true }
-        ]);
-
-        const vertexData = (new Uint32Array([0, 0, 0, 0])).buffer;
-        mesh.vertexBuffer = new VertexBuffer(device, vertexFormat, 4, {
-            data: vertexData
-        });
-
-        const indexData = (new Uint32Array([0, 1, 2, 0, 2, 3])).buffer;
-        mesh.indexBuffer[0] = new IndexBuffer(device, INDEXFORMAT_UINT32, 6, BUFFER_STATIC, indexData);
-
-        mesh.primitive = [{
-            type: PRIMITIVE_TRIANGLES,
-            base: 0,
-            count: 6,
-            indexed: true
-        }];
-
-        const meshInstance = new MeshInstance(mesh, material);
-        meshInstance.node = node;
-        return meshInstance;
-    };
-
-    const pickerMeshInstances: Map<MeshInstance, MeshInstance> = new Map();
-
-    events.on('tool.pickerSelection.activated', () => {
-        splatDefs.forEach((splatDef) => {
-            const meshInstance = splatDef.instance.meshInstance;
-
-            let pickerMeshInstance;
-            if (pickerMeshInstances.has(meshInstance)) {
-                pickerMeshInstance = pickerMeshInstances.get(meshInstance);
-            } else {
-                pickerMeshInstance = createPickerMeshInstance(meshInstance.node, meshInstance.material);
-                scene.app.scene.layers.getLayerByName('World').addMeshInstances([pickerMeshInstance]);
-                pickerMeshInstances.set(meshInstance, pickerMeshInstance);
-            }
-
-            meshInstance.visible = false;
-            pickerMeshInstance.visible = true;
-        });
-    });
-
-    events.on('tool.pickerSelection.deactivated', () => {
-        pickerMeshInstances.forEach((pickerMeshInstance, meshInstance) => {
-            pickerMeshInstance.visible = false;
-            meshInstance.visible = true;
-        });
-    });
-
-    events.on('show.highlight', (splatId: number) => {
-        const update = (meshInstance: MeshInstance) => {
-            const data = new Uint32Array(meshInstance.mesh.vertexBuffer.lock());
-            data.fill(splatId === -1 ? 0 : splatId);
-            meshInstance.mesh.vertexBuffer.unlock();
-        };
-
-        pickerMeshInstances.forEach((pickerMeshInstance) => {
-            update(pickerMeshInstance);
-        });
     });
 
     const exportScene = (format: string) => {

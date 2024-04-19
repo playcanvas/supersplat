@@ -8,10 +8,6 @@ class PickerSelection {
         this.root = document.createElement('div');
         this.root.id = 'select-root';
 
-        this.root.onmousemove = (e: MouseEvent) => {
-            events.fire('tool.pickerSelection.move', { x: e.offsetX, y: e.offsetY });
-        };
-
         this.root.onmousedown = (e: MouseEvent) => {
             e.preventDefault();
             e.stopPropagation();
@@ -20,7 +16,7 @@ class PickerSelection {
                 events.fire(
                     'select.point',
                     e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
-                    { x: e.offsetX, y: e.offsetY }
+                    { x: e.offsetX / this.root.clientWidth, y: e.offsetY / this.root.clientHeight }
                 );
             }
         };

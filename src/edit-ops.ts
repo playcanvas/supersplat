@@ -1,12 +1,10 @@
 import { Entity, GSplatData, Quat, Vec3 } from 'playcanvas';
 import { Scene } from './scene';
 
-const deletedOpacity = -1000;
-
 enum State {
     selected = 1,
-    deleted = 2,
-    hidden = 4
+    hidden = 2,
+    deleted = 4
 };
 
 // build a splat index based on a boolean predicate
@@ -67,7 +65,7 @@ class ResetEditOp {
 
     constructor(splatData: GSplatData) {
         const state = splatData.getProp('state') as Uint8Array;
-        const indices = buildIndex(splatData, (i) => !!(state[i] & 2));
+        const indices = buildIndex(splatData, (i) => !!(state[i] & State.deleted));
 
         this.splatData = splatData;
         this.indices = indices;
@@ -139,7 +137,6 @@ class EntityTransformOp {
 };
 
 export {
-    deletedOpacity,
     State,
     DeleteSelectionEditOp,
     ResetEditOp,

@@ -105,7 +105,7 @@ class SplatDebug {
                 vertexData[i * 4 + 3] = -1;
             } else if (!!(s[i] & State.hidden)) {
                 // hidden
-                vertexData[i * 4 + 3] = 0;
+                vertexData[i * 4 + 3] = -1;
             } else if (!(s[i] & State.selected)) {
                 // unselected
                 vertexData[i * 4 + 3] = 1;

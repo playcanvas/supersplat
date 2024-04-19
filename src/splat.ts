@@ -12,6 +12,7 @@ import {
 } from 'playcanvas';
 import { Element, ElementType } from "./element";
 import { Serializer } from "./serializer";
+import { State } from './edit-ops';
 
 const vertexShader = /*glsl*/`
 
@@ -54,7 +55,8 @@ float PI = 3.14159;
 
 void main(void)
 {
-    if (color.a == 0.0) {
+    if ((vertexState & uint(4)) == uint(4)) {
+        // deleted
         discard;
     }
 
@@ -63,7 +65,10 @@ void main(void)
     float B = exp(-A) * color.a;
 
     #ifdef PICK_PASS
-        // if (B < 0.3) discard;
+        if ((vertexState & uint(2)) == uint(2)) {
+            // hidden
+            discard;
+        }
         gl_FragColor = vec4(
             float(vertexId & uint(255)) / 255.0,
             float((vertexId >> 8) & uint(255)) / 255.0,
@@ -71,18 +76,32 @@ void main(void)
             float((vertexId >> 24) & uint(255)) / 255.0
         );
     #else
+        vec3 c;
         float alpha;
-        if (ringSize == 0.0) {
-            alpha = B;
-        } else {
-            if (A < 4.0 - ringSize * 4.0) {
-                alpha = max(0.05, B);
-            } else {
-                alpha = 0.6;
-            }
-        }
 
-        vec3 c = ((vertexState & uint(1)) == uint(1)) ? vec3(1.0, 1.0, 0.0) : color.xyz;
+        if ((vertexState & uint(2)) == uint(2)) {
+            // hidden
+            c = vec3(0.0, 0.0, 0.0);
+            alpha = B * 0.1;
+        } else {
+            if ((vertexState & uint(1)) == uint(1)) {
+                // selected
+                c = vec3(1.0, 1.0, 0.0);
+            } else {
+                // normal
+                c = color.xyz;
+            }
+
+            alpha = B;
+
+            if (ringSize > 0.0) {
+                if (A < 4.0 - ringSize * 4.0) {
+                    alpha = max(0.05, B);
+                } else {
+                    alpha = 0.6;
+                }
+            }
+        } 
 
         gl_FragColor = vec4(c, alpha);
     #endif
@@ -189,12 +208,12 @@ class Splat extends Element {
         const x = this.splatData.getProp('x');
         const y = this.splatData.getProp('y');
         const z = this.splatData.getProp('z');
-        const opacity = this.splatData.getProp('opacity');
+        const state = this.splatData.getProp('state') as Uint8Array;
         let first = true;
         let minx, maxx, miny, maxy, minz, maxz;
 
         for (let i = 0; i < this.splatData.numSplats; ++i) {
-            if (opacity[i] > -1000) {
+            if ((state[i] & State.deleted) !== 0) {
                 continue;
             }
 

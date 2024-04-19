@@ -91,10 +91,13 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['A', 'a'], { event: 'select.all' });
     shortcuts.register(['A', 'a'], { event: 'select.none', shift: true });
     shortcuts.register(['I', 'i'], { event: 'select.invert' });
+    shortcuts.register(['H', 'h'], { event: 'select.hide' });
+    shortcuts.register(['U', 'u'], { event: 'select.unhide' });
     shortcuts.register(['['], { event: 'tool.brushSelection.smaller' });
     shortcuts.register([']'], { event: 'tool.brushSelection.bigger' });
     shortcuts.register(['Z', 'z'], { event: 'edit.undo', ctrl: true });
     shortcuts.register(['Z', 'z'], { event: 'edit.redo', ctrl: true, shift: true });
+    shortcuts.register(['M', 'm'], { event: 'camera.toggleMode' });
 
     // keep tabs on splat size changes
     let splatSizeSave = 2;

@@ -309,19 +309,25 @@ class ControlPanel extends Panel {
             headerText: 'SHOW'
         });
 
-        // show by size
-        const showBySize = new Container({
+        const showButtons = new Container({
             class: 'control-parent'
         });
 
-        const showBySizeCheck = new BooleanInput({
-            class: 'control-element'
+        const hideSelection = new Button({
+            class: 'control-element-expand',
+            text: 'Hide Selection'
         });
 
-        showBySize.append(showBySizeCheck);
+        const unhideAll = new Button({
+            class: 'control-element-expand',
+            text: 'Unhide All'
+        });
 
-        showPanel.append(showBySize);
-        
+        showButtons.append(hideSelection);
+        showButtons.append(unhideAll);
+
+        showPanel.append(showButtons);
+
         // modify
         const modifyPanel = new Panel({
             id: 'modify-panel',
@@ -526,6 +532,10 @@ class ControlPanel extends Panel {
             modeSelect.value = mode;
         });
 
+        events.on('camera.toggleMode', () => {
+            modeSelect.value = modeSelect.value === 'centers' ? 'rings' : 'centers';
+        });
+
         modeSelect.on('change', (value: string) => {
             events.fire('camera.mode', value);
         });
@@ -572,6 +582,14 @@ class ControlPanel extends Panel {
 
         selectByPlaneOffset.on('change', () => {
             events.fire('select.byPlanePlacement', axes[selectByPlaneAxis.value], selectByPlaneOffset.value);
+        });
+
+        hideSelection.on('click', () => {
+            events.fire('select.hide');
+        });
+
+        unhideAll.on('click', () => {
+            events.fire('select.unhide');
         });
 
         deleteSelectionButton.on('click', () => {

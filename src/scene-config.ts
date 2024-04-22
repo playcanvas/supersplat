@@ -38,7 +38,7 @@ const sceneConfig = {
         dampingFactor: 0.2,
         minPolarAngle: 0,
         maxPolarAngle: 2.8,
-        minZoom: 0.01,
+        minZoom: 0.001,
         maxZoom: 2.0,
         initialAzim: 0,
         initialElev: -27,
@@ -54,7 +54,6 @@ const sceneConfig = {
         autoPlay: false
     },
     debug: {
-        ministats: false,
         showBound: false
     }
 };

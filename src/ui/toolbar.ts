@@ -1,5 +1,5 @@
 import { Button, Container, Element } from 'pcui';
-import { ShortcutsPopup } from './shortcuts';
+import { ShortcutsPopup } from './shortcuts-popup';
 import { Tooltip } from './tooltip';
 import { Events } from '../events';
 import logo from './playcanvas-logo.png';
@@ -30,7 +30,7 @@ class Toolbar extends Container {
             icon: 'E111'
         });
         moveTool.on('click', () => {
-            events.fire('tool:activate', 'Move');
+            events.fire('tool.move');
         });
 
         // rotate
@@ -40,7 +40,7 @@ class Toolbar extends Container {
             icon: 'E113'
         });
         rotateTool.on('click', () => {
-            events.fire('tool:activate', 'Rotate');
+            events.fire('tool.rotate');
         });
 
         // scale
@@ -50,7 +50,7 @@ class Toolbar extends Container {
             icon: 'E112'
         });
         scaleTool.on('click', () => {
-            events.fire('tool:activate', 'Scale');
+            events.fire('tool.scale');
         });
 
         // world/local space toggle
@@ -60,30 +60,12 @@ class Toolbar extends Container {
             icon: 'E118'
         });
 
-        const coordSpace = () => {
-            return coordSpaceToggle.dom.classList.contains('active') ? 'world' : 'local';
-        };
-
         coordSpaceToggle.on('click', () => {
-            coordSpaceToggle.dom.classList.toggle('active');
-            events.fire('tool:coordSpace', coordSpace());
+            events.fire('tool.toggleCoordSpace');
         });
 
-        events.on('tool:coordSpace:toggle', () => {
-            coordSpaceToggle.dom.classList.toggle('active');
-            events.fire('tool:coordSpace', coordSpace());
-        });
-
-        events.on('tool:coordSpace', (space: 'local' | 'world') => {
-            const spaces = {
-                local: 'Local',
-                world: 'World'
-            };
-            coordSpaceToggle.tooltip.content.text = `${spaces[space]} Space`;
-        });
-
-        events.function('tool:coordSpace', () => {
-            return coordSpace();
+        events.on('tool.coordSpace', (space: 'local' | 'world') => {
+            coordSpaceToggle.dom.classList[space === 'world' ? 'add' : 'remove']('active');
         });
 
         /* disable rect and brush selection on the toolbar till we have a
@@ -108,10 +90,10 @@ class Toolbar extends Container {
         });
         */
 
-        events.on('tool:activated', (toolName: string) => {
-            moveTool.class[toolName === 'Move' ? 'add' : 'remove']('active');
-            rotateTool.class[toolName === 'Rotate' ? 'add' : 'remove']('active');
-            scaleTool.class[toolName === 'Scale' ? 'add' : 'remove']('active');
+        events.on('tool.activated', (toolName: string) => {
+            moveTool.class[toolName === 'move' ? 'add' : 'remove']('active');
+            rotateTool.class[toolName === 'rotate' ? 'add' : 'remove']('active');
+            scaleTool.class[toolName === 'scale' ? 'add' : 'remove']('active');
             // rectTool.class[toolName === 'RectSelection' ? 'add' : 'remove']('active');
             // brushTool.class[toolName === 'BrushSelection' ? 'add' : 'remove']('active');
         });
@@ -159,18 +141,26 @@ class Toolbar extends Container {
 
         const addTooltip = (target: Element, text: string) => {
             const tooltip = new Tooltip({ target, text });
-            target.tooltip = tooltip;
             topContainer.append(tooltip);
+            return tooltip;
         };
 
         // add tooltips
         addTooltip(moveTool, 'Move');
         addTooltip(rotateTool, 'Rotate');
         addTooltip(scaleTool, 'Scale');
-        addTooltip(coordSpaceToggle, 'Local Space');
+        const coordSpaceTooltip = addTooltip(coordSpaceToggle, 'Local Space');
         addTooltip(shortcuts, 'Keyboard Shortcuts');
         addTooltip(github, 'GitHub Repo');
 
+        // update tooltip
+        events.on('tool.coordSpace', (space: 'local' | 'world') => {
+            const spaces = {
+                local: 'Local',
+                world: 'World'
+            };
+            coordSpaceTooltip.content.text = `${spaces[space]} Space`;
+        });
     }
 }
 

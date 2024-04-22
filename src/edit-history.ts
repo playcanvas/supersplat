@@ -15,13 +15,13 @@ class EditHistory {
     constructor(events: Events) {
         this.events = events;
 
-        events.on('edit:undo', () => {
+        events.on('edit.undo', () => {
             if (this.canUndo()) {
                 this.undo();
             }
         });
 
-        events.on('edit:redo', () => {
+        events.on('edit.redo', () => {
             if (this.canRedo()) {
                 this.redo();
             }
@@ -47,20 +47,20 @@ class EditHistory {
     undo() {
         const editOp = this.history[--this.cursor];
         editOp.undo();
-        this.events.fire('edit:apply', editOp);
+        this.events.fire('edit.apply', editOp);
         this.fireEvents();
     }
 
     redo() {
         const editOp = this.history[this.cursor++];
         editOp.do();
-        this.events.fire('edit:apply', editOp);
+        this.events.fire('edit.apply', editOp);
         this.fireEvents();
     }
 
     fireEvents() {
-        this.events.fire('edit:canUndo', this.canUndo());
-        this.events.fire('edit:canRedo', this.canRedo());
+        this.events.fire('edit.canUndo', this.canUndo());
+        this.events.fire('edit.canRedo', this.canRedo());
     }
 }
 

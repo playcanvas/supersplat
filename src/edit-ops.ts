@@ -1,7 +1,11 @@
 import { Entity, GSplatData, Quat, Vec3 } from 'playcanvas';
 import { Scene } from './scene';
 
-const deletedOpacity = -1000;
+enum State {
+    selected = 1,
+    hidden = 2,
+    deleted = 4
+};
 
 // build a splat index based on a boolean predicate
 const buildIndex = (splatData: GSplatData, pred: (i: number) => boolean) => {
@@ -25,41 +29,32 @@ class DeleteSelectionEditOp {
     name = 'deleteSelection';
     splatData: GSplatData;
     indices: Uint32Array;
-    opacity: Float32Array;
 
     constructor(splatData: GSplatData) {
-        const selection = splatData.getProp('selection');
-        const opacity = splatData.getProp('opacity');
-        const indices = buildIndex(splatData, (i) => selection[i] > 0);
+        const state = splatData.getProp('state') as Uint8Array;
+        const indices = buildIndex(splatData, (i) => !!(state[i] & State.selected));
 
         this.splatData = splatData;
         this.indices = indices;
-        this.opacity = new Float32Array(indices.length);
-
-        // backup opacity values
-        for (let i = 0; i < indices.length; ++i) {
-            this.opacity[i] = opacity[indices[i]];
-        }
     }
 
     do() {
-        const opacity = this.splatData.getProp('opacity');
+        const state = this.splatData.getProp('state') as Uint8Array;
         for (let i = 0; i < this.indices.length; ++i) {
-            opacity[this.indices[i]] = deletedOpacity;
+            state[this.indices[i]] |= State.deleted;
         }
     }
 
     undo() {
-        const opacity = this.splatData.getProp('opacity');
+        const state = this.splatData.getProp('state') as Uint8Array;
         for (let i = 0; i < this.indices.length; ++i) {
-            opacity[this.indices[i]] = this.opacity[i];
+            state[this.indices[i]] &= ~State.deleted;
         }
     }
 
     destroy() {
         this.splatData = null;
         this.indices = null;
-        this.opacity = null;
     }
 }
 
@@ -67,42 +62,32 @@ class ResetEditOp {
     name = 'reset';
     splatData: GSplatData;
     indices: Uint32Array;
-    opacity: Float32Array;
 
     constructor(splatData: GSplatData) {
-        const opacity = splatData.getProp('opacity');
-        const opacityOrig = splatData.getProp('opacityOrig');
-        const indices = buildIndex(splatData, (i) => opacity[i] !== opacityOrig[i]);
+        const state = splatData.getProp('state') as Uint8Array;
+        const indices = buildIndex(splatData, (i) => !!(state[i] & State.deleted));
 
         this.splatData = splatData;
         this.indices = indices;
-        this.opacity = new Float32Array(indices.length);
-
-        for (let i = 0; i < indices.length; ++i) {
-            this.opacity[i] = opacity[indices[i]];
-        }
     }
 
     do() {
-        const opacity = this.splatData.getProp('opacity');
-        const opacityOrig = this.splatData.getProp('opacityOrig');
+        const state = this.splatData.getProp('state') as Uint8Array;
         for (let i = 0; i < this.indices.length; ++i) {
-            const idx = this.indices[i];
-            opacity[idx] = opacityOrig[idx];
+            state[this.indices[i]] &= ~State.deleted;
         }
     }
 
     undo() {
-        const opacity = this.splatData.getProp('opacity');
+        const state = this.splatData.getProp('state') as Uint8Array;
         for (let i = 0; i < this.indices.length; ++i) {
-            opacity[this.indices[i]] = this.opacity[i];
+            state[this.indices[i]] |= State.deleted;
         }
     }
 
     destroy() {
         this.splatData = null;
         this.indices = null;
-        this.opacity = null;
     }
 }
 
@@ -152,7 +137,7 @@ class EntityTransformOp {
 };
 
 export {
-    deletedOpacity,
+    State,
     DeleteSelectionEditOp,
     ResetEditOp,
     EntityTransformOp

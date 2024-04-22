@@ -11,15 +11,18 @@ import {
     EVENT_TOUCHEND,
     EVENT_TOUCHCANCEL,
     EVENT_TOUCHMOVE,
-    Vec2,
-    Vec3,
-    Mouse,
     MouseEvent,
+    Plane,
+    Ray,
     Touch,
     TouchDevice,
-    TouchEvent
+    TouchEvent,
+    Vec2,
+    Vec3,
 } from 'playcanvas';
 
+const plane = new Plane();
+const ray = new Ray();
 const vec = new Vec3();
 const fromWorldPoint = new Vec3();
 const toWorldPoint = new Vec3();
@@ -28,7 +31,6 @@ const worldDiff = new Vec3();
 // MouseController
 
 class MouseController {
-    mouse: Mouse;
     camera: Camera;
     leftButton = false;
     middleButton = false;
@@ -46,6 +48,35 @@ class MouseController {
         this.onMouseOut();
     };
 
+    onDblClick = (event: MouseEvent) => {
+        // @ts-ignore
+        const target = this.camera.scene.app.mouse._target;
+        const sx = event.offsetX / target.clientWidth * this.camera.scene.targetSize.width;
+        const sy = event.offsetY / target.clientHeight * this.camera.scene.targetSize.height;
+
+        this.camera.pickPrep(this.camera.scene.events.invoke('camera.mode') === 'rings' ? 0.0 : 0.2);
+        const pickId = this.camera.pick(sx, sy);
+
+        if (pickId !== -1) {
+            const splatPos = this.camera.scene.events.invoke('splat.getWorldPosition', pickId);
+
+            // create a plane at the world position facing perpendicular to the camera
+            plane.setFromPointNormal(splatPos, this.camera.entity.forward);
+
+            // create the pick ray in world space
+            const cameraPos = this.camera.entity.getPosition();
+            const res = this.camera.entity.camera.screenToWorld(event.offsetX, event.offsetY, 1.0, vec);
+            vec.sub2(res, cameraPos);
+            vec.normalize();
+            ray.set(cameraPos, vec);
+
+            // find intersection
+            if (plane.intersectsRay(ray, vec)) {
+                this.camera.setFocalPoint(vec);
+            }
+        }
+    };
+
     constructor(camera: Camera) {
         this.camera = camera;
         const mouse = camera.scene.app.mouse;
@@ -56,6 +87,9 @@ class MouseController {
 
         // Listen to when the mouse travels out of the window
         // window.addEventListener('mouseout', this.onMouseOutFunc, false);
+
+        // @ts-ignore
+        mouse._target.addEventListener('dblclick', this.onDblClick.bind(this));
 
         // Disabling the context menu stops the browser displaying a menu when
         // you right-click the page
@@ -70,6 +104,9 @@ class MouseController {
         mouse.off(EVENT_MOUSEWHEEL, this.onMouseWheel, this);
 
         // window.removeEventListener('mouseout', this.onMouseOutFunc, false);
+
+        // @ts-ignore
+        mouse._target.removeEventListener('dblclick', this.onDblClick);
     }
 
     orbit(dx: number, dy: number) {

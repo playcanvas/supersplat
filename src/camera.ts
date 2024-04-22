@@ -1,14 +1,17 @@
 import {
     math,
     ADDRESS_CLAMP_TO_EDGE,
+    BLEND_NONE,
+    CULLFACE_NONE,
     FILTER_NEAREST,
     PIXELFORMAT_RGBA8,
-    PIXELFORMAT_RGBA16F,
     PIXELFORMAT_DEPTH,
     drawTexture,
     Color,
     Entity,
     EventHandler,
+    Material,
+    Picker,
     RenderTarget,
     Texture,
     Vec3,
@@ -59,6 +62,10 @@ class Camera extends Element {
     autoRotateTimer = 0;
     autoRotateDelayValue = 0;
     focusDistance: number;
+
+    picker: Picker;
+    pickModeColorBuffer: Texture;
+    pickModeRenderTarget: RenderTarget;
 
     constructor() {
         super(ElementType.camera);
@@ -207,6 +214,10 @@ class Camera extends Element {
         // initial camera position and orientation
         this.setAzimElev(controls.initialAzim, controls.initialElev, 0);
         this.setDistance(controls.initialZoom, 0);
+
+        // picker
+        const { width, height } = this.scene.targetSize;
+        this.picker = new Picker(this.scene.app, width, height);
     }
 
     remove() {
@@ -218,6 +229,10 @@ class Camera extends Element {
 
         this.entity.camera.layers = this.entity.camera.layers.filter(layer => layer !== this.scene.shadowLayer.id);
         this.scene.cameraRoot.removeChild(this.entity);
+
+        // destroy doesn't exist on picker?
+        // this.picker.destroy();
+        this.picker = null;
     }
 
     serialize(serializer: Serializer) {
@@ -230,7 +245,7 @@ class Camera extends Element {
     // handle the viewer canvas resizing
     rebuildRenderTargets() {
         const device = this.scene.graphicsDevice as WebglGraphicsDevice;
-        const {width, height} = this.scene.targetSize;
+        const { width, height } = this.scene.targetSize;
 
         const rt = this.entity.camera.renderTarget;
         if (rt && rt.width === width && rt.height === height) {
@@ -242,6 +257,11 @@ class Camera extends Element {
             rt.colorBuffer.destroy();
             rt.depthBuffer.destroy();
             rt.destroy();
+
+            this.pickModeColorBuffer.destroy();
+            this.pickModeRenderTarget.destroy();
+            this.pickModeColorBuffer = null;
+            this.pickModeRenderTarget = null;
         }
 
         const createTexture = (width: number, height: number, format: number) => {
@@ -259,17 +279,29 @@ class Camera extends Element {
 
         // in with the new
         const pixelFormat = PIXELFORMAT_RGBA8;
+        const samples = this.scene.config.camera.multisample ? device.maxSamples : 1;
+
         const colorBuffer = createTexture(width, height, pixelFormat);
         const depthBuffer = createTexture(width, height, PIXELFORMAT_DEPTH);
         const renderTarget = new RenderTarget({
             colorBuffer: colorBuffer,
             depthBuffer: depthBuffer,
             flipY: false,
-            samples: this.scene.config.camera.multisample ? device.maxSamples : 1,
+            samples: samples,
             autoResolve: false
         });
         this.entity.camera.renderTarget = renderTarget;
         this.entity.camera.camera.horizontalFov = width < height;
+
+        // create pick mode render target
+        this.pickModeColorBuffer = createTexture(width, height, pixelFormat);
+        this.pickModeRenderTarget = new RenderTarget({
+            colorBuffer: this.pickModeColorBuffer,
+            depth: false,
+            flipY: false,
+            samples: samples,
+            autoResolve: false
+        });
     }
 
     onUpdate(deltaTime: number) {
@@ -330,7 +362,6 @@ class Camera extends Element {
     }
 
     onPostRender() {
-        // const device = this.scene.graphicsDevice as WebglGraphicsDevice;
         const renderTarget = this.entity.camera.renderTarget;
 
         // resolve msaa buffer
@@ -368,6 +399,47 @@ class Camera extends Element {
         this.events.fire(event, data);
         this.autoRotateDelayValue = config.controls.autoRotateDelay;
     }
+
+    // pick mode
+
+    // render picker contents
+    pickPrep(alpha = 0.0) {
+        const { width, height } = this.scene.targetSize;
+        const worldLayer = this.scene.app.scene.layers.getLayerByName('World');
+
+        const device = this.scene.graphicsDevice as WebglGraphicsDevice;
+
+        device.scope.resolve('pickerAlpha').setValue(alpha);
+        this.picker.resize(width, height);
+        this.picker.prepare(this.entity.camera, this.scene.app.scene, [worldLayer]);
+    }
+
+    pick(x: number, y: number) {
+        return this.pickRect(x, y, 1, 1)[0];
+    }
+
+    pickRect(x: number, y: number, width: number, height: number) {
+        const device = this.scene.graphicsDevice as WebglGraphicsDevice;
+        const pixels = new Uint8Array(width * height * 4);
+
+        // read pixels
+        device.setRenderTarget(this.picker.renderTarget);
+        device.updateBegin();
+        device.readPixels(x, this.picker.renderTarget.height - y - height, width, height, pixels);
+        device.updateEnd();
+
+        const result: number[] = [];
+        for (let i = 0; i < width * height; i++) {
+            result.push(
+                pixels[i * 4] |
+                (pixels[i * 4 + 1] << 8) |
+                (pixels[i * 4 + 2] << 16) |
+                (pixels[i * 4 + 3] << 24)
+            );
+        }
+
+        return result;
+    }
 }
 
-export {Camera};
+export { Camera };

@@ -8,7 +8,7 @@ import {
     SEMANTIC_POSITION,
     createShaderFromCode,
 } from 'playcanvas';
-import { deletedOpacity } from './edit-ops';
+import { State } from './edit-ops';
 import { Scene } from './scene';
 import { Splat } from './splat';
 
@@ -24,14 +24,20 @@ uniform float splatSize;
 
 varying vec4 color;
 
+vec4 colors[3] = vec4[3](
+    vec4(0, 0, 0, 0.25),
+    vec4(0, 0, 1.0, 0.5),
+    vec4(1.0, 1.0, 0.0, 0.5)
+);
+
 void main(void) {
-    if (vertex_position.w == -1.0) {
+    int state = int(vertex_position.w);
+    if (state == -1) {
         gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
     } else {
         gl_Position = matrix_viewProjection * matrix_model * vec4(vertex_position.xyz, 1.0);
         gl_PointSize = splatSize;
-        float opacity = vertex_position.w;
-        color = (opacity == -1.0) ? vec4(0) : mix(vec4(0, 0, 1.0, 0.5), vec4(1.0, 1.0, 0.0, 0.5), opacity);
+        color = colors[state];
     }
 }
 `;
@@ -65,14 +71,13 @@ class SplatDebug {
         const x = splatData.getProp('x');
         const y = splatData.getProp('y');
         const z = splatData.getProp('z');
-        const s = splatData.getProp('selection');
 
         const vertexData = new Float32Array(splatData.numSplats * 4);
         for (let i = 0; i < splatData.numSplats; ++i) {
             vertexData[i * 4 + 0] = x[i];
             vertexData[i * 4 + 1] = y[i];
             vertexData[i * 4 + 2] = z[i];
-            vertexData[i * 4 + 3] = s[i];
+            vertexData[i * 4 + 3] = 1;
         }
 
         const mesh = new Mesh(device);
@@ -87,8 +92,7 @@ class SplatDebug {
 
     update() {
         const splatData = this.splatData;
-        const s = splatData.getProp('selection');
-        const o = splatData.getProp('opacity');
+        const s = splatData.getProp('state') as Uint8Array;
 
         const vb = this.meshInstance.mesh.vertexBuffer;
         const vertexData = new Float32Array(vb.lock());
@@ -96,9 +100,20 @@ class SplatDebug {
         let count = 0;
 
         for (let i = 0; i < splatData.numSplats; ++i) {
-            const selection = o[i] === deletedOpacity ? -1 : s[i];
-            vertexData[i * 4 + 3] = selection;
-            count += selection === 1 ? 1 : 0;
+            if (!!(s[i] & State.deleted)) {
+                // deleted
+                vertexData[i * 4 + 3] = -1;
+            } else if (!!(s[i] & State.hidden)) {
+                // hidden
+                vertexData[i * 4 + 3] = -1;
+            } else if (!(s[i] & State.selected)) {
+                // unselected
+                vertexData[i * 4 + 3] = 1;
+            } else {
+                // selected
+                vertexData[i * 4 + 3] = 2;
+                count++;
+            }
         }
 
         vb.unlock();

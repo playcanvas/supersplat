@@ -60,6 +60,7 @@ body {
     color: $text-secondary;
 
     #camera-panel & { content: '\E212'; };
+    #show-panel & { content: '\E117'; };
     #selection-panel & { content: '\E398'; };
     #modify-panel & { content: '\E130'; };
     #scene-panel & { content: '\E142'; };

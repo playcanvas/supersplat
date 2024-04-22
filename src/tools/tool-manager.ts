@@ -1,8 +1,6 @@
 import { Events } from '../events';
 
 interface Tool {
-    ToolName: string;
-
     activate: () => void;
     deactivate: () => void;
 }
@@ -10,22 +8,45 @@ interface Tool {
 class ToolManager {
     tools = new Map<string, Tool>();
     events: Events;
-    active: Tool | null = null;
+    active: string | null = null;
+    coordSpace: 'local' | 'world' = 'world';
 
     constructor(events: Events) {
         this.events = events;
 
-        this.events.on('tool:activate', (toolName: string) => {
-            this.activate(toolName);
+        this.events.on('tool.deactivate', () => {
+            this.activate(null);
         });
 
-        this.events.function('tool:active', () => {
-            return this.active?.ToolName;
+        this.events.function('tool.active', () => {
+            return this.active;
+        });
+
+        this.events.on('tool.localCoordSpace', () => {
+            this.coordSpace = 'local';
+            events.fire('tool.coordSpace', 'local');
+        });
+
+        this.events.on('tool.worldCoordSpace', () => {
+            this.coordSpace = 'world';
+            events.fire('tool.coordSpace', 'world');
+        });
+
+        this.events.on('tool.toggleCoordSpace', () => {
+            this.events.fire(`tool.${this.coordSpace === 'local' ? 'world' : 'local'}CoordSpace`);
+        });
+
+        this.events.function('tool.coordSpace', () => {
+            return this.coordSpace;
         });
     }
 
-    register(tool: Tool) {
-        this.tools.set(tool.ToolName, tool);
+    register(name: string, tool: Tool) {
+        this.tools.set(name, tool);
+
+        this.events.on(`tool.${name}`, () => {
+            this.activate(name);
+        });
     }
 
     get(toolName: string) {
@@ -33,28 +54,30 @@ class ToolManager {
     }
 
     activate(toolName: string | null) {
-        const newTool = this.get(toolName);
-
-        if (newTool === this.active) {
+        if (toolName === this.active) {
             // re-activating the currently active tool deactivates it
-            if (newTool) {
+            if (toolName) {
                 this.activate(null);
             }
         } else {
             // deactive old tool
             if (this.active) {
-                this.active.deactivate();
-                this.events.fire('tool:deactivated', this.active.ToolName);
+                const tool = this.tools.get(this.active);
+                tool.deactivate();
+                this.events.fire(`tool.${this.active}.deactivated`);
+                this.events.fire('tool.deactivated', this.active);
             }
 
-            this.active = newTool;
+            this.active = toolName;
 
             // activate the new
             if (this.active) {
-                this.active.activate();
+                const tool = this.tools.get(this.active);
+                tool.activate();
             }
 
-            this.events.fire('tool:activated', this.active?.ToolName ?? null);
+            this.events.fire(`tool.${toolName}.activated`);
+            this.events.fire('tool.activated', toolName);
         }
     }
 }

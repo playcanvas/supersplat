@@ -16,7 +16,7 @@ class Events extends EventHandler {
     }
 
     // invoke an editor function
-    call(name: string, ...args: any[]) {
+    invoke(name: string, ...args: any[]) {
         const fn = this.functions.get(name);
         try {
             return fn(...args);

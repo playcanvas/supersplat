@@ -4,14 +4,13 @@ import {
     BoundingBox,
     Color,
     Entity,
-    EventHandler,
     Layer,
     Mouse,
     TouchDevice,
     GraphicsDevice
 } from 'playcanvas';
-import { MiniStats } from 'playcanvas-extras';
 import { PCApp } from './pc-app';
+import { Events } from './events';
 import { Element, ElementType, ElementTypeList } from './element';
 import { SceneState } from './scene-state';
 import { SceneConfig } from './scene-config';
@@ -24,10 +23,12 @@ import { Grid } from './grid';
 
 const bound = new BoundingBox();
 
-class Scene extends EventHandler {
+class Scene {
+    events: Events;
     config: SceneConfig;
     canvas: HTMLCanvasElement;
     app: PCApp;
+    backgroundLayer: Layer;
     shadowLayer: Layer;
     debugLayer: Layer;
     gizmoLayer: Layer;
@@ -51,12 +52,12 @@ class Scene extends EventHandler {
     cameraRoot: Entity;
 
     constructor(
+        events: Events,
         config: SceneConfig,
         canvas: HTMLCanvasElement,
         graphicsDevice: GraphicsDevice
     ) {
-        super();
-
+        this.events = events;
         this.config = config;
         this.canvas = canvas;
 
@@ -125,6 +126,14 @@ class Scene extends EventHandler {
             this.forceRender = true;
         });
 
+        // background layer
+        this.backgroundLayer = new Layer({
+            enabled: true,
+            name: 'Background Layer',
+            opaqueSortMode: SORTMODE_NONE,
+            transparentSortMode: SORTMODE_NONE
+        });
+
         // shadow layer
         // this layer contains shadow caster scene mesh instances, shadow-casting
         // virtual light, shadow catching plane geometry and the main camera.
@@ -136,9 +145,7 @@ class Scene extends EventHandler {
             enabled: true,
             name: 'Debug Layer',
             opaqueSortMode: SORTMODE_NONE,
-            transparentSortMode: SORTMODE_NONE,
-            passThrough: true,
-            overrideClear: true
+            transparentSortMode: SORTMODE_NONE
         });
 
         // gizmo layer
@@ -152,6 +159,7 @@ class Scene extends EventHandler {
         const layers = this.app.scene.layers;
         const worldLayer = layers.getLayerByName('World');
         const idx = layers.getOpaqueIndex(worldLayer);
+        layers.insert(this.backgroundLayer, idx);
         layers.insert(this.shadowLayer, idx + 1);
         layers.insert(this.debugLayer, idx + 1);
         layers.push(this.gizmoLayer);
@@ -169,16 +177,11 @@ class Scene extends EventHandler {
         this.camera = new Camera();
         this.add(this.camera);
 
-        this.shadow = new Shadow();
-        this.add(this.shadow);
+        // this.shadow = new Shadow();
+        // this.add(this.shadow);
 
         this.grid = new Grid();
         this.add(this.grid);
-
-        if (config.debug?.ministats) {
-            /* eslint-disable no-new */
-            new MiniStats(this.app, null);
-        }
     }
 
     async load() {
@@ -214,16 +217,16 @@ class Scene extends EventHandler {
 
     async loadModel(url: string, filename: string) {
         // clear error
-        this.fire('error', null);
+        this.events.fire('error', null);
 
         try {
             const model = await this.assetLoader.loadModel({ url, filename });
             this.add(model);
             this.updateBound();
             this.camera.focus();
-            this.fire('loaded', filename);
+            this.events.fire('loaded', filename);
         } catch (err) {
-            this.fire('error', err);
+            this.events.fire('error', err);
         }
     }
 
@@ -253,7 +256,7 @@ class Scene extends EventHandler {
             this.forEachElement(e => e !== element && e.onAdded(element));
 
             // notify listeners
-            this.fire('element:added', element);
+            this.events.fire('scene.elementAdded', element);
         }
     }
 
@@ -261,7 +264,7 @@ class Scene extends EventHandler {
     remove(element: Element) {
         if (element.scene === this) {
             // notify listeners
-            this.fire('element:removed', element);
+            this.events.fire('scene.elementRemoved', element);
 
             // notify all elements of scene removal
             this.forEachElement(e => e !== element && e.onRemoved(element));
@@ -325,13 +328,13 @@ class Scene extends EventHandler {
         // update scene bound if models were updated
         if (all.has(ElementType.model)) {
             this.updateBound();
-            this.fire('bound:updated');
+            this.events.fire('scene.boundUpdated');
         }
 
         // raise per-type update events
         ElementTypeList.forEach(type => {
             if (all.has(type)) {
-                this.fire(`updated:${type}`);
+                this.events.fire(`updated:${type}`);
             }
         });
 
@@ -352,7 +355,7 @@ class Scene extends EventHandler {
 
         this.forEachElement(e => e.onPreRender());
 
-        this.fire('prerender');
+        this.events.fire('prerender');
 
         // debug - display scene bound
         if (this.config.debug.showBound) {
@@ -370,8 +373,8 @@ class Scene extends EventHandler {
                         local.getMax(),
                         Color.BLUE,
                         true,
-                        this.app.scene.defaultDrawLayer,
-                        e.root.getWorldTransform());
+                        null, // this.app.scene.defaultDrawLayer,
+                        splat.root.getWorldTransform());
 
                     const world = splat.worldBound;
                     this.app.drawWireAlignedBox(

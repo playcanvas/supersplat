@@ -1,5 +1,4 @@
-import { Entity } from 'playcanvas';
-import { TransformGizmo } from 'playcanvas-extras';
+import { Entity, TransformGizmo } from 'playcanvas';
 import { ElementType } from '../element';
 import { Scene } from '../scene';
 import { Splat } from '../splat';
@@ -9,7 +8,9 @@ import { EntityTransformOp } from '../edit-ops';
 
 // patch gizmo to be more opaque
 const patchGizmoMaterials = (gizmo: TransformGizmo) => {
+    // @ts-ignore
     ['x', 'y', 'z', 'xyz', 'face'].forEach(name => { gizmo._meshColors.axis[name].a = 0.8; });
+    // @ts-ignore
     gizmo._meshColors.disabled.a = 0.8;
 };
 
@@ -26,7 +27,7 @@ class TransformTool {
         // patch gizmo materials (until we have API to do this)
         patchGizmoMaterials(this.gizmo);
 
-        this.gizmo.coordSpace = events.call('tool:coordSpace');
+        this.gizmo.coordSpace = events.invoke('tool.coordSpace');
         this.gizmo.size = 1.5;
 
         this.gizmo.on('render:update', () => {
@@ -78,13 +79,13 @@ class TransformTool {
             }
         });
 
-        events.on('scene:bound:changed', (editOp: EditOp) => {
+        events.on('scene.boundChanged', (editOp: EditOp) => {
             if (this.entities) {
                 this.gizmo.attach(this.entities);
             }
         });
 
-        events.on('tool:coordSpace', (coordSpace: string) => {
+        events.on('tool.coordSpace', (coordSpace: string) => {
             this.gizmo.coordSpace = coordSpace;
             scene.forceRender = true;
         });

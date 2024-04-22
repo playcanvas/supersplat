@@ -4,17 +4,17 @@ import {
     Quat,
     Vec3
 } from 'playcanvas';
-import { deletedOpacity } from './edit-ops';
+import { State } from './edit-ops';
 
 const convertPly = (splatData: GSplatData, modelMat: Mat4) => {
     // count the number of non-deleted splats
-    const opacity = splatData.getProp('opacity');
+    const state = splatData.getProp('state') as Uint8Array;
     let numSplats = 0;
     for (let i = 0; i < splatData.numSplats; ++i) {
-        numSplats += opacity[i] !== deletedOpacity ? 1 : 0;
+        numSplats += (state[i] & State.deleted) === State.deleted ? 0 : 1;
     }
 
-    const internalProps = ['selection', 'opacityOrig'];
+    const internalProps = ['state'];
     const props = splatData.vertexElement.properties.filter((p: any) => p.storage && !internalProps.includes(p.name)).map((p: any) => p.name);
     const header = (new TextEncoder()).encode(`ply\nformat binary_little_endian 1.0\nelement vertex ${numSplats}\n` + props.map((p: any) => `property float ${p}`).join('\n') + `\nend_header\n`);
     const result = new Uint8Array(header.byteLength + numSplats * props.length * 4);
@@ -25,7 +25,7 @@ const convertPly = (splatData: GSplatData, modelMat: Mat4) => {
     let offset = header.byteLength;
 
     for (let i = 0; i < splatData.numSplats; ++i) {
-        if (opacity[i] === deletedOpacity) continue;
+        if ((state[i] & State.deleted) === State.deleted) continue;
         props.forEach((prop: any) => {
             const p = splatData.getProp(prop);
             if (p) {
@@ -338,10 +338,10 @@ const convertPlyCompressed = (splatData: GSplatData, modelMat: Mat4) => {
     };
 
     // generate index list of surviving splats
-    const opacity = splatData.getProp('opacity');
+    const state = splatData.getProp('state') as Uint8Array;
     const indices = [];
     for (let i = 0; i < splatData.numSplats; ++i) {
-        if (opacity[i] !== deletedOpacity) {
+        if ((state[i] & State.deleted) === 0) {
             indices.push(i);
         }
     }
@@ -439,10 +439,12 @@ const convertSplat = (splatData: GSplatData, modelMat: Mat4) => {
     const scale_1 = splatData.getProp('scale_1');
     const scale_2 = splatData.getProp('scale_2');
 
+    const state = splatData.getProp('state') as Uint8Array;
+
     // count number of non-deleted splats
     let numSplats = 0;
     for (let i = 0; i < splatData.numSplats; ++i) {
-        numSplats += opacity[i] !== deletedOpacity ? 1 : 0;
+        numSplats += (state[i] & State.deleted) === State.deleted ? 0 : 1;
     }
 
     // position.xyz: float32, scale.xyz: float32, color.rgba: uint8, quaternion.ijkl: uint8
@@ -468,7 +470,7 @@ const convertSplat = (splatData: GSplatData, modelMat: Mat4) => {
     let idx = 0;
 
     for (let i = 0; i < splatData.numSplats; ++i) {
-        if (opacity[i] === deletedOpacity) continue;
+        if ((state[i] & State.deleted) === State.deleted) continue;
 
         const off = idx++ * 32;
 

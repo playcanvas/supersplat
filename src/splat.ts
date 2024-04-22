@@ -240,13 +240,8 @@ class Splat extends Element {
         }
 
         const localBound = this.localBound;
-
         localBound.center.set((minx + maxx) * 0.5, (miny + maxy) * 0.5, (minz + maxz) * 0.5);
         localBound.halfExtents.set((maxx - minx) * 0.5, (maxy - miny) * 0.5, (maxz - minz) * 0.5);
-
-        // this.splatData.calcAabb(localBound, (i: number) => {
-        //     return opacity[i] > -1000;
-        // });
 
         // calculate meshinstance aabb (transformed local bound)
         const meshInstance = this.root.gsplat.instance.meshInstance;

@@ -49,9 +49,10 @@ class MouseController {
     };
 
     onDblClick = (event: MouseEvent) => {
-        const mouse = this.camera.scene.app.mouse;
-        const sx = event.offsetX / mouse._target.clientWidth * this.camera.scene.targetSize.width;
-        const sy = event.offsetY / mouse._target.clientHeight * this.camera.scene.targetSize.height;
+        // @ts-ignore
+        const target = this.camera.scene.app.mouse._target;
+        const sx = event.offsetX / target.clientWidth * this.camera.scene.targetSize.width;
+        const sy = event.offsetY / target.clientHeight * this.camera.scene.targetSize.height;
 
         this.camera.pickPrep(this.camera.scene.events.invoke('camera.mode') === 'rings' ? 0.0 : 0.2);
         const pickId = this.camera.pick(sx, sy);
@@ -63,7 +64,7 @@ class MouseController {
             plane.setFromPointNormal(splatPos, this.camera.entity.forward);
 
             // create the pick ray in world space
-            const cameraPos = this.camera.entity.position;
+            const cameraPos = this.camera.entity.getPosition();
             const res = this.camera.entity.camera.screenToWorld(event.offsetX, event.offsetY, 1.0, vec);
             vec.sub2(res, cameraPos);
             vec.normalize();
@@ -87,6 +88,7 @@ class MouseController {
         // Listen to when the mouse travels out of the window
         // window.addEventListener('mouseout', this.onMouseOutFunc, false);
 
+        // @ts-ignore
         mouse._target.addEventListener('dblclick', this.onDblClick.bind(this));
 
         // Disabling the context menu stops the browser displaying a menu when
@@ -102,6 +104,8 @@ class MouseController {
         mouse.off(EVENT_MOUSEWHEEL, this.onMouseWheel, this);
 
         // window.removeEventListener('mouseout', this.onMouseOutFunc, false);
+
+        // @ts-ignore
         mouse._target.removeEventListener('dblclick', this.onDblClick);
     }
 

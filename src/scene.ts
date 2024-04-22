@@ -4,13 +4,13 @@ import {
     BoundingBox,
     Color,
     Entity,
-    EventHandler,
     Layer,
     Mouse,
     TouchDevice,
     GraphicsDevice
 } from 'playcanvas';
 import { PCApp } from './pc-app';
+import { Events } from './events';
 import { Element, ElementType, ElementTypeList } from './element';
 import { SceneState } from './scene-state';
 import { SceneConfig } from './scene-config';
@@ -24,7 +24,7 @@ import { Grid } from './grid';
 const bound = new BoundingBox();
 
 class Scene {
-    events: EventHandler;
+    events: Events;
     config: SceneConfig;
     canvas: HTMLCanvasElement;
     app: PCApp;
@@ -52,7 +52,7 @@ class Scene {
     cameraRoot: Entity;
 
     constructor(
-        events: EventHandler,
+        events: Events,
         config: SceneConfig,
         canvas: HTMLCanvasElement,
         graphicsDevice: GraphicsDevice

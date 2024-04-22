@@ -617,6 +617,27 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         scene.assetLoader.loadAllData = value;
     });
 
+    events.function('splat.getWorldPosition', (id: number) => {
+        const result = new Vec3();
+        splatDefs.forEach((splatDef) => {
+            const splatData = splatDef.data;
+            if (id >= splatData.numSplats) {
+                return;
+            }
+
+            // get splat position
+            result.set(
+                splatData.getProp('x')[id],
+                splatData.getProp('y')[id],
+                splatData.getProp('z')[id]
+            );
+
+            // transform world space
+            splatDef.element.worldTransform.transformPoint(result, result);
+        });
+        return result;
+    });
+
     const exportScene = (format: string) => {
         const removeExtension = (filename: string) => {
             return filename.substring(0, filename.length - path.getExtension(filename).length);

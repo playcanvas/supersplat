@@ -428,9 +428,13 @@ class Camera extends Element {
     // pick mode
 
     // render picker contents
-    pickPrep() {
+    pickPrep(alpha = 0.0) {
         const { width, height } = this.scene.targetSize;
         const worldLayer = this.scene.app.scene.layers.getLayerByName('World');
+
+        const device = this.scene.graphicsDevice as WebglGraphicsDevice;
+
+        device.scope.resolve('pickerAlpha').setValue(alpha);
         this.picker.resize(width, height);
         this.picker.prepare(this.entity.camera, this.scene.app.scene, [worldLayer]);
     }

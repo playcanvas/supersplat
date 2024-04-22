@@ -50,6 +50,7 @@ flat varying highp uint vertexId;
 
 flat varying highp uint vertexState;
 
+uniform float pickerAlpha;
 uniform float ringSize;
 float PI = 3.14159;
 
@@ -61,12 +62,14 @@ void main(void)
     }
 
     float A = dot(texCoord, texCoord);
-    if (A > 4.0) discard;
+    if (A > 4.0) {
+        discard;
+    }
     float B = exp(-A) * color.a;
-
     #ifdef PICK_PASS
-        if ((vertexState & uint(2)) == uint(2)) {
+        if (B < pickerAlpha ||
             // hidden
+            (vertexState & uint(2)) == uint(2)) {
             discard;
         }
         gl_FragColor = vec4(

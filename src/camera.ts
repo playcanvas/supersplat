@@ -64,12 +64,8 @@ class Camera extends Element {
     focusDistance: number;
 
     picker: Picker;
-
-    pickModeActive = false;
     pickModeColorBuffer: Texture;
     pickModeRenderTarget: RenderTarget;
-    pickLayersBackup?: number[];
-    pickMaterial: Material;
 
     constructor() {
         super(ElementType.camera);
@@ -222,13 +218,6 @@ class Camera extends Element {
         // picker
         const { width, height } = this.scene.targetSize;
         this.picker = new Picker(this.scene.app, width, height);
-
-        // pick material
-        this.pickMaterial = new Material();
-        this.pickMaterial.cull = CULLFACE_NONE;
-        this.pickMaterial.blendType = BLEND_NONE;
-        this.pickMaterial.depthWrite = false;
-        this.pickMaterial.shader = this.scene.app.scene.immediate.getTextureShader();
     }
 
     remove() {
@@ -244,9 +233,6 @@ class Camera extends Element {
         // destroy doesn't exist on picker?
         // this.picker.destroy();
         this.picker = null;
-
-        this.pickMaterial.destroy();
-        this.pickMaterial = null;
     }
 
     serialize(serializer: Serializer) {
@@ -373,17 +359,6 @@ class Camera extends Element {
 
     onPreRender() {
         this.rebuildRenderTargets();
-
-        if (this.pickModeActive) {
-            this.pickMaterial.setParameter('colorMap', this.pickModeRenderTarget.colorBuffer);
-            this.pickMaterial.update();
-
-            this.scene.app.drawTexture(
-                0, 0, 2, -2,
-                null,
-                this.pickMaterial,
-                this.scene.backgroundLayer);
-        }
     }
 
     onPostRender() {
@@ -453,7 +428,7 @@ class Camera extends Element {
         device.readPixels(x, this.picker.renderTarget.height - y - height, width, height, pixels);
         device.updateEnd();
 
-        const result = [];
+        const result: number[] = [];
         for (let i = 0; i < width * height; i++) {
             result.push(
                 pixels[i * 4] |

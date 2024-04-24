@@ -22,6 +22,10 @@ class PickerSelection {
         };
 
         parent.appendChild(this.root);
+
+        this.root.oncontextmenu = (e) => {
+            e.preventDefault();
+        };
     }
 
     activate() {

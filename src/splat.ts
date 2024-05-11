@@ -213,7 +213,7 @@ class Splat extends Element {
         const z = this.splatData.getProp('z');
         const state = this.splatData.getProp('state') as Uint8Array;
         let first = true;
-        let minx, maxx, miny, maxy, minz, maxz;
+        let minx = -0.5, maxx = 0.5, miny = -0.5, maxy = 0.5, minz = -0.5, maxz = 0.5;
 
         for (let i = 0; i < this.splatData.numSplats; ++i) {
             if ((state[i] & State.deleted) !== 0) {

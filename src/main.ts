@@ -17,7 +17,14 @@ import { Events } from './events';
 import { PickerSelection } from './tools/picker-selection';
 
 declare global {
+    interface LaunchParams {
+        readonly files: FileSystemFileHandle[];
+    }
+    
     interface Window {
+        launchQueue: {
+            setConsumer: (callback: (launchParams: LaunchParams) => void) => void;
+        };
         scene: Scene;
         showError: (err: string) => void;
     }
@@ -189,6 +196,16 @@ const main = async () => {
     }
 
     window.scene = scene;
-}
+
+    // handle OS-based file association in PWA mode
+    if ("launchQueue" in window) {
+        window.launchQueue.setConsumer(async (launchParams: LaunchParams) => {
+            for (const file of launchParams.files) {
+                const blob = await file.getFile();
+                scene.loadModel(URL.createObjectURL(blob), file.name);
+            }
+        });
+    }
+};
 
 export { main };

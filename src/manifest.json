@@ -30,5 +30,13 @@
             "sizes": "3840x2160",
             "form_factor": "wide"
         }
-      ]
+    ],
+    "file_handlers": [
+        {
+            "action": "/",
+            "accept": {
+                "application/ply": [".ply"]
+            }
+        }
+    ]
 }

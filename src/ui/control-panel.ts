@@ -5,7 +5,7 @@ import { version as supersplatVersion } from '../../package.json';
 class ControlPanel extends Panel {
     constructor(events: Events, remoteStorageMode: boolean, args = { }) {
         Object.assign(args, {
-            headerText: `SUPER SPLAT v${supersplatVersion}`,
+            headerText: `SUPERSPLAT v${supersplatVersion}`,
             id: 'control-panel',
             resizable: 'right',
             resizeMax: 1000,

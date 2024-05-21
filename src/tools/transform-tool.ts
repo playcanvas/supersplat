@@ -28,7 +28,7 @@ class TransformTool {
         patchGizmoMaterials(this.gizmo);
 
         this.gizmo.coordSpace = events.invoke('tool.coordSpace');
-        this.gizmo.size = 1.5;
+        this.gizmo.size = 0.9;
 
         this.gizmo.on('render:update', () => {
             scene.forceRender = true;

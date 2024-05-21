@@ -48,7 +48,7 @@ class MouseController {
         this.onMouseOut();
     };
 
-    onDblClick = (event: MouseEvent) => {
+    onDblClick = (event: globalThis.MouseEvent) => {
         // @ts-ignore
         const target = this.camera.scene.app.mouse._target;
         const sx = event.offsetX / target.clientWidth * this.camera.scene.targetSize.width;

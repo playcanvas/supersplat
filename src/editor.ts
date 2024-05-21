@@ -48,7 +48,7 @@ const download = (filename: string, data: ArrayBuffer) => {
 const sendToRemoteStorage = async (filename: string, data: ArrayBuffer, remoteStorageDetails: RemoteStorageDetails) => {
     const formData = new FormData();
     formData.append('file', new Blob([data], { type: "octet/stream" }), filename);
-    formData.append('preserveThumbnail', true);
+    formData.append('preserveThumbnail', 'true');
     await fetch(remoteStorageDetails.url, {
         method: remoteStorageDetails.method,
         body: formData

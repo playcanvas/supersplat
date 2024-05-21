@@ -373,7 +373,7 @@ class Scene {
                         local.getMax(),
                         Color.BLUE,
                         true,
-                        null, // this.app.scene.defaultDrawLayer,
+                        undefined,
                         splat.root.getWorldTransform());
 
                     const world = splat.worldBound;

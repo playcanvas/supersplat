@@ -11,7 +11,7 @@
         "resolveJsonModule": true,
         "baseUrl": ".",
         "paths": {
-            "playcanvas": ["node_modules/playcanvas/build/playcanvas.mjs"],
+            "playcanvas": ["node_modules/playcanvas/build/playcanvas"],
             "pcui": ["node_modules/@playcanvas/pcui"]
         }
     },

@@ -45,7 +45,11 @@ class AssetLoader {
                         filename: loadRequest.filename,
                         contents: loadRequest.contents
                     },
-                    { elementFilter: this.loadAllData ? (() => true) : null }
+                    {
+                        elementFilter: this.loadAllData ? (() => true) : null,
+                        // decompress data on load
+                        decompress: true
+                    }
                 );
                 asset.on('load', () => {
                     stopSpinner();

@@ -34,10 +34,10 @@ void main(void)
 
     gl_Position = evalSplat(centerWorld);
 
-    vertexState = uint(texelFetch(splatState, dataUV, 0).r * 255.0);
+    vertexState = uint(texelFetch(splatState, splatUV, 0).r * 255.0);
 
     #ifdef PICK_PASS
-        vertexId = vertex_id;
+        vertexId = splatId;
     #endif
 }
 `;
@@ -208,40 +208,13 @@ class Splat extends Element {
     // remains centered on the splat but doesn't move in world space.
     recalcBound() {
         // it's faster to calculate bound of splat centers
-        const x = this.splatData.getProp('x');
-        const y = this.splatData.getProp('y');
-        const z = this.splatData.getProp('z');
         const state = this.splatData.getProp('state') as Uint8Array;
-        let first = true;
-        let minx = -0.5, maxx = 0.5, miny = -0.5, maxy = 0.5, minz = -0.5, maxz = 0.5;
-
-        for (let i = 0; i < this.splatData.numSplats; ++i) {
-            if ((state[i] & State.deleted) !== 0) {
-                continue;
-            }
-
-            const xv = x[i];
-            const yv = y[i];
-            const zv = z[i];
-
-            if (first) {
-                minx = maxx = xv;
-                miny = maxy = yv;
-                minz = maxz = zv;
-                first = false;
-            } else {
-                minx = Math.min(minx, xv);
-                maxx = Math.max(maxx, xv);
-                miny = Math.min(miny, yv);
-                maxy = Math.max(maxy, yv);
-                minz = Math.min(minz, zv);
-                maxz = Math.max(maxz, zv);
-            }
-        }
 
         const localBound = this.localBound;
-        localBound.center.set((minx + maxx) * 0.5, (miny + maxy) * 0.5, (minz + maxz) * 0.5);
-        localBound.halfExtents.set((maxx - minx) * 0.5, (maxy - miny) * 0.5, (maxz - minz) * 0.5);
+        if (!this.splatData.calcAabb(localBound, (i: number) => (state[i] & State.deleted) === 0)) {
+            localBound.center.set(0, 0, 0);
+            localBound.halfExtents.set(0.5, 0.5, 0.5);
+        }
 
         // calculate meshinstance aabb (transformed local bound)
         const meshInstance = this.root.gsplat.instance.meshInstance;

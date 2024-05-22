@@ -3,8 +3,8 @@
     "short_name": "SuperSplat",
     "description": "SuperSplat is an advanced browser-based editor for manipulating and optimizing 3D Gaussian Splats. It is open source and engine agnostic.",
     "display": "fullscreen",
-    "start_url": "/supersplat/editor/",
-    "scope": "/supersplat/editor/",
+    "start_url": "/",
+    "scope": "/",
     "background_color": "#ffffff",
     "icons": [
         {
@@ -34,7 +34,7 @@
     ],
     "file_handlers": [
         {
-            "action": "/supersplat/editor/",
+            "action": "/",
             "accept": {
                 "application/ply": [".ply"]
             }

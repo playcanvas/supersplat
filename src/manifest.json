@@ -16,7 +16,6 @@
     ],
     "background_color": "#ffffff",
     "display": "fullscreen",
-    "start_url": ".",
     "screenshots": [
         {
             "src": "static/images/screenshot-narrow.jpg",

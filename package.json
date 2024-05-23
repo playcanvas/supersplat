@@ -1,6 +1,6 @@
 {
     "name": "supersplat",
-    "version": "0.17.2",
+    "version": "0.17.3",
     "author": "PlayCanvas<support@playcanvas.com>",
     "homepage": "https://playcanvas.com/supersplat/editor",
     "description": "3D Gaussian Splat Editor",
@@ -67,8 +67,8 @@
         "cross-env": "^7.0.3",
         "eslint": "^8.56.0",
         "jest": "^29.7.0",
-        "playcanvas": "^1.71.1",
-        "rollup": "^4.17.2",
+        "playcanvas": "^1.71.2",
+        "rollup": "^4.18.0",
         "rollup-plugin-sass": "^1.12.22",
         "rollup-plugin-visualizer": "^5.12.0",
         "serve": "^14.2.3",

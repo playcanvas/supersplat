@@ -37,53 +37,71 @@ const tsCompilerOptions = {
     }
 };
 
-const pipeline = (input) => {
-    return {
-        input: input,
-        output: {
-            dir: 'dist',
-            format: 'esm',
-            sourcemap: true
-        },
-        plugins: [
-            copyAndWatch({
-                targets: [
-                    {
-                        src: 'src/index.html',
-                        transform: (contents, filename) => {
-                            return contents.toString().replace('__BASE_HREF__', HREF);
-                        }
-                    },
-                    {src: 'src/manifest.json'},
-                    {src: 'static/images', dest: 'static'},
-                    {src: 'static/icons', dest: 'static'},
-                    {src: 'static/env/VertebraeHDRI_v1_512.png', dest: 'static/env'}
-                ]
+const application = {
+    input: 'src/index.ts',
+    output: {
+        dir: 'dist',
+        format: 'esm',
+        sourcemap: true
+    },
+    plugins: [
+        copyAndWatch({
+            targets: [
+                {
+                    src: 'src/index.html',
+                    transform: (contents, filename) => {
+                        return contents.toString().replace('__BASE_HREF__', HREF);
+                    }
+                },
+                {src: 'src/manifest.json'},
+                {src: 'static/images', dest: 'static'},
+                {src: 'static/icons', dest: 'static'},
+                {src: 'static/env/VertebraeHDRI_v1_512.png', dest: 'static/env'}
+            ]
+        }),
+        alias({entries: aliasEntries}),
+        resolve(),
+        image({dom: true}),
+        sass({
+            output: false,
+            insert: true
+        }),
+        json(),
+        typescript({
+            compilerOptions: tsCompilerOptions
+        }),
+        BUILD_TYPE === 'release' &&
+            strip({
+                include: ['**/*.ts'],
+                functions: ['Debug.exec']
             }),
-            alias({entries: aliasEntries}),
-            resolve(),
-            image({dom: true}),
-            sass({
-                output: false,
-                insert: true
-            }),
-            json(),
-            typescript({
-                compilerOptions: tsCompilerOptions
-            }),
-            BUILD_TYPE === 'release' &&
-                strip({
-                    include: ['**/*.ts'],
-                    functions: ['Debug.exec']
-                }),
-            BUILD_TYPE !== 'debug' && terser()
-            // visualizer()
-        ],
-        treeshake: 'smallest',
-        cache: false
-    };
+        BUILD_TYPE !== 'debug' && terser()
+        // visualizer()
+    ],
+    treeshake: 'smallest',
+    cache: false
+};
+
+const serviceWorker = {
+    input: 'src/sw.ts',
+    output: {
+        dir: 'dist',
+        format: 'esm',
+        sourcemap: true
+    },
+    plugins: [
+        resolve(),
+        json(),
+        typescript({
+            compilerOptions: tsCompilerOptions
+        }),
+        // BUILD_TYPE !== 'debug' && terser()
+    ],
+    treeshake: 'smallest',
+    cache: false
 };
 
 export default [
-    pipeline('src/index.ts'),
+    application,
+    serviceWorker
 ];

@@ -19,7 +19,7 @@ const cacheUrls = [
 self.addEventListener('install', (event) => {
     console.log(`installing v${appVersion}`);
 
-    // cache a cat SVG
+    // create cache for current version
     event.waitUntil(
         caches.open(cacheName)
             .then((cache) => {
@@ -30,6 +30,15 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
     console.log(`activating v${appVersion}`);
+
+    // delete the old caches once this one is activated
+    caches.keys().then((names) => {
+        for (let name of names) {
+            if (name !== cacheName) {
+                caches.delete(name);
+            }
+        }
+    });
 });
 
 self.addEventListener('fetch', (event) => {

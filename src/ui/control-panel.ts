@@ -1,11 +1,11 @@
 import { BooleanInput, Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, VectorInput } from 'pcui';
 import { Events } from '../events';
-import { version as supersplatVersion } from '../../package.json';
+import { version as appVersion } from '../../package.json';
 
 class ControlPanel extends Panel {
     constructor(events: Events, remoteStorageMode: boolean, args = { }) {
         Object.assign(args, {
-            headerText: `SUPERSPLAT v${supersplatVersion}`,
+            headerText: `SUPERSPLAT v${appVersion}`,
             id: 'control-panel',
             resizable: 'right',
             resizeMax: 1000,

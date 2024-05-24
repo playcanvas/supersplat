@@ -23,6 +23,13 @@
         <meta property="twitter:title" content="SuperSplat" />
         <meta property="twitter:description" content="SuperSplat is an advanced browser-based editor for manipulating and optimizing 3D Gaussian Splats. It is open source and engine agnostic." />
         <meta property="twitter:image" content="https://playcanvas.com/super-splat/static/images/header.webp" />
+
+        <!-- Service worker -->
+        <script>
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('service worker registered', reg))
+                .catch(err => console.log('failed to register service worker', err));
+        </script>
     </head>
 
     <body>

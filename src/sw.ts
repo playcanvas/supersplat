@@ -6,14 +6,14 @@ declare let self: ServiceWorkerGlobalScope;
 const cacheName = `superSplat-v${appVersion}`;
 
 const cacheUrls = [
-    '/',
-    '/index.html',
-    '/index.js',
-    '/manifest.json',
-    'static/icons/logo-192.png',
-    'static/icons/logo-512.png',
-    'static/images/screenshot-narrow.jpg',
-    'static/images/screenshot-wide.jpg'
+    './',
+    './index.html',
+    './index.js',
+    './manifest.json',
+    './static/icons/logo-192.png',
+    './static/icons/logo-512.png',
+    './static/images/screenshot-narrow.jpg',
+    './static/images/screenshot-wide.jpg'
 ];
 
 self.addEventListener('install', (event) => {

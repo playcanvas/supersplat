@@ -5,7 +5,7 @@ import { Events } from '../events';
 import logo from './playcanvas-logo.png';
 
 class Toolbar extends Container {
-    constructor(events: Events, appContainer: Container, topContainer: Container, args = {}) {
+    constructor(events: Events, appContainer: Container, tooltipsContainer: Container, args = {}) {
         args = Object.assign(args, {
             id: 'toolbar-container'
         });
@@ -63,12 +63,12 @@ class Toolbar extends Container {
                     class: 'file-menu-item',
                     text: 'Compressed Ply',
                     icon: 'E245',
-                    onSelect: () => events.fire('scene.exportCompressedPly')
+                    onSelect: () => events.invoke('scene.export', 'compressed-ply')
                 }, {
                     class: 'file-menu-item',
                     text: 'Splat file',
                     icon: 'E245',
-                    onSelect: () => events.fire('scene.exportSplat')
+                    onSelect: () => events.invoke('scene.export', 'splat')
                 }]
             }]
         });
@@ -207,7 +207,7 @@ class Toolbar extends Container {
 
         const addTooltip = (target: Element, text: string) => {
             const tooltip = new Tooltip({ target, text });
-            topContainer.append(tooltip);
+            tooltipsContainer.append(tooltip);
             return tooltip;
         };
 

@@ -34,10 +34,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     const aabb = new BoundingBox();
     const splatDefs: SplatDef[] = [];
 
-    events.on('error', (err: any) => {
-        editorUI.showError(err);
-    });
-
     events.on('loaded', (filename: string) => {
         editorUI.setFilename(filename);
     });
@@ -183,6 +179,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         const msg = 'You have unsaved changes. Are you sure you want to leave?';
         e.returnValue = msg;
         return msg;
+    });
+
+    events.on('scene.saved', () => {
+        lastExportCursor = editHistory.cursor;
     });
 
     events.on('camera.mode', (mode: string) => {

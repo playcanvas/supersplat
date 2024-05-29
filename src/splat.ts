@@ -181,6 +181,10 @@ class Splat extends Element {
         return this.root.getWorldTransform();
     }
 
+    get filename() {
+        return this.asset.file.filename;
+    }
+
     add() {
         // add the entity to the scene
         this.scene.contentRoot.addChild(this.entity);

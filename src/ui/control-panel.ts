@@ -377,37 +377,6 @@ class ControlPanel extends Panel {
         events.on('edit.canUndo', (value: boolean) => { undoButton.enabled = value; });
         events.on('edit.canRedo', (value: boolean) => { redoButton.enabled = value; });
 
-        // export
-        const exportPanel = new Panel({
-            id: 'export-panel',
-            class: 'control-panel',
-            headerText: 'EXPORT TO'
-        });
-
-        const storageIcon = remoteStorageMode ? 'E222' : 'E245';
-
-        const exportPlyButton = new Button({
-            class: 'control-element',
-            text: 'Ply file',
-            icon: storageIcon
-        });
-
-        const exportCompressedPlyButton = new Button({
-            class: 'control-element',
-            text: 'Compressed Ply file',
-            icon: storageIcon
-        });
-
-        const exportSplatButton = new Button({
-            class: 'control-element',
-            text: 'Splat file',
-            icon: storageIcon
-        });
-
-        exportPanel.append(exportPlyButton);
-        exportPanel.append(exportCompressedPlyButton);
-        exportPanel.append(exportSplatButton);
-
         // options
         const optionsPanel = new Panel({
             id: 'options-panel',
@@ -439,7 +408,6 @@ class ControlPanel extends Panel {
         this.content.append(selectionPanel);
         this.content.append(showPanel);
         this.content.append(modifyPanel);
-        this.content.append(exportPanel);
         this.content.append(optionsPanel);
 
         rectSelectButton.on('click', () => {
@@ -602,18 +570,6 @@ class ControlPanel extends Panel {
 
         allDataToggle.on('change', (enabled: boolean) => {
             events.fire('allData', enabled);
-        });
-
-        exportPlyButton.on('click', () => {
-            events.fire('scene.exportPly');
-        });
-
-        exportCompressedPlyButton.on('click', () => {
-            events.fire('scene.exportCompressedPly');
-        });
-
-        exportSplatButton.on('click', () => {
-            events.fire('scene.exportSplat');
         });
 
         events.on('splat.count', (count: number) => {

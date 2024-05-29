@@ -18,12 +18,20 @@ class Events extends EventHandler {
     // invoke an editor function
     invoke(name: string, ...args: any[]) {
         const fn = this.functions.get(name);
-        try {
-            return fn(...args);
-        } catch (error) {
-            console.log(`error invoking editor function '${name}': ${error}`);
+        if (!fn) {
+            console.log(`error: function not found '${name}'`);
+            return;
         }
-        return null;
+        return fn(...args);
+    }
+
+    // fire an event or invoke a function
+    fire(name: string, ...args: any[]) {
+        const fn = this.functions.get(name);
+        if (!fn) {
+            return super.fire(name, ...args);
+        }
+        return fn(...args);
     }
 }
 

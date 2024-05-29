@@ -217,9 +217,17 @@ body {
     image-rendering: pixelated;
 }
 
+#tooltips-container {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
 #top-container {
     position: fixed;
-    z-index: 10000;
     left: 0;
     top: 0;
     width: 100%;
@@ -239,37 +247,16 @@ body {
     margin-right: 6px;
 }
 
-.error-popup {
-    position: absolute;
-    left: 0;
-    right: 0;
-    margin-left: auto;
-    margin-right: auto;
-    width: 400px;
-    top: 50%;
-    color: red;
-}
+//-- Popup
 
-.info-popup {
-    position: absolute;
-    left: 0;
-    right: 0;
-    margin-left: auto;
-    margin-right: auto;
-    width: 400px;
-    top: 50%;
-}
-
-//-- Message popup
-
-#message {
+#popup {
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.5);
     pointer-events: all;
 }
 
-#message-background {
+#popup-background {
     display: flex;
     flex-direction: column;
     position: absolute;
@@ -284,13 +271,13 @@ body {
     pointer-events: all;
 }
 
-#message-buttons {
+#popup-buttons {
     display: flex;
     flex-direction: row;
     justify-content: center;
 }
 
-.message-button {
+.popup-button {
     background-color: $bcg-darker;
     color: white;
     // border-radius: 10px;
@@ -298,7 +285,7 @@ body {
     width: 120px
 }
 
-#message-text {
+#popup-text {
     font-size: 18px;
     color: $text-primary;
     text-wrap: wrap;
@@ -306,14 +293,14 @@ body {
     margin: 20px 0px;
 }
 
-#message-text.error::before {
+#popup-text.error::before {
     content: '\E218';
     font-family: 'pc-icon';
     margin: 0px 10px;
     color: $error;
 }
 
-#message-text.info::before {
+#popup-text.info::before {
     content: '\E400';
     font-family: 'pc-icon';
     margin: 0px 10px;

@@ -26,8 +26,6 @@ declare global {
             setConsumer: (callback: (launchParams: LaunchParams) => void) => void;
         };
         scene: Scene;
-        showOpenFilePicker: (options: { id: string, types: { description: string, accept: { 'model/ply': string[] } }[] }) => Promise<FileSystemFileHandle[]>;
-        showSaveFilePicker: (options: { id: string, types: { description: string, accept: { 'model/ply': string[] } }[] }, suggestedName: string) => Promise<FileSystemFileHandle>;
     }
 }
 

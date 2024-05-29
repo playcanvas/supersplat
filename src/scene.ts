@@ -216,9 +216,6 @@ class Scene {
     }
 
     async loadModel(url: string, filename: string) {
-        // clear error
-        this.events.fire('error', null);
-
         try {
             const model = await this.assetLoader.loadModel({ url, filename });
             this.add(model);

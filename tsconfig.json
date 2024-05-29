@@ -13,7 +13,10 @@
         "paths": {
             "playcanvas": ["node_modules/playcanvas/build/playcanvas"],
             "pcui": ["node_modules/@playcanvas/pcui"]
-        }
+        },
+        "types": [
+            "@types/wicg-file-system-access"
+        ]
     },
     "include": ["./src/**/*.ts"],
     "exclude": ["node_modules", "**/*.js", "dist"]

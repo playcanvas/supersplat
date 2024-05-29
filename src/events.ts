@@ -24,15 +24,6 @@ class Events extends EventHandler {
         }
         return fn(...args);
     }
-
-    // fire an event or invoke a function
-    fire(name: string, ...args: any[]) {
-        const fn = this.functions.get(name);
-        if (!fn) {
-            return super.fire(name, ...args);
-        }
-        return fn(...args);
-    }
 }
 
 export { Events };

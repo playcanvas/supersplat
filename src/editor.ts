@@ -5,7 +5,6 @@ import {
     GSplatData,
     GSplatInstance,
     Mat4,
-    path,
     Vec3,
     Vec4,
 } from 'playcanvas';
@@ -16,44 +15,7 @@ import { Element, ElementType } from './element';
 import { Splat } from './splat';
 import { State, DeleteSelectionEditOp, ResetEditOp } from './edit-ops';
 import { SplatDebug } from './splat-debug';
-import { convertPly, convertPlyCompressed, convertSplat } from './splat-convert';
-import { startSpinner, stopSpinner } from './ui/spinner';
 import { Events } from './events';
-
-// download the data uri
-const download = (filename: string, data: ArrayBuffer) => {
-    const blob = new Blob([data], { type: "octet/stream" });
-    const url = window.URL.createObjectURL(blob);
-
-    const lnk = document.createElement('a');
-    lnk.download = filename;
-    lnk.href = url;
-
-    // create a "fake" click-event to trigger the download
-    if (document.createEvent) {
-        const e = document.createEvent("MouseEvents");
-        e.initMouseEvent("click", true, true, window,
-                         0, 0, 0, 0, 0, false, false, false,
-                         false, 0, null);
-        lnk.dispatchEvent(e);
-    } else {
-        // @ts-ignore
-        lnk.fireEvent?.("onclick");
-    }
-
-    window.URL.revokeObjectURL(url);
-};
-
-// upload the file to the remote storage
-const sendToRemoteStorage = async (filename: string, data: ArrayBuffer, remoteStorageDetails: RemoteStorageDetails) => {
-    const formData = new FormData();
-    formData.append('file', new Blob([data], { type: "octet/stream" }), filename);
-    formData.append('preserveThumbnail', 'true');
-    await fetch(remoteStorageDetails.url, {
-        method: remoteStorageDetails.method,
-        body: formData
-    });
-};
 
 interface SplatDef {
     element: Splat,
@@ -63,13 +25,8 @@ interface SplatDef {
     debug: SplatDebug
 };
 
-interface RemoteStorageDetails {
-    method: string;
-    url: string;
-};
-
 // register for editor and scene events
-const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: Scene, editorUI: EditorUI, remoteStorageDetails: RemoteStorageDetails) => {
+const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: Scene, editorUI: EditorUI) => {
     const vec = new Vec3();
     const vec2 = new Vec3();
     const vec4 = new Vec4();
@@ -637,60 +594,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
         return result;
     });
-
-    const exportScene = (format: string) => {
-        const removeExtension = (filename: string) => {
-            return filename.substring(0, filename.length - path.getExtension(filename).length);
-        };
-
-        if (splatDefs.length === 0) {
-            return;
-        }
-
-        editorUI.showInfo('Exporting...');
-
-        startSpinner();
-
-        // setTimeout so spinner has a chance to activate
-        setTimeout(async () => {
-            const splatDef = splatDefs[0];
-
-            let data;
-            let extension;
-            switch (format) {
-                case 'ply':
-                    data = convertPly(splatDef.data, splatDef.element.root.getWorldTransform());
-                    extension = '.cleaned.ply';
-                    break;
-                case 'ply-compressed':
-                    data = convertPlyCompressed(splatDef.data, splatDef.element.root.getWorldTransform());
-                    extension = '.compressed.ply';
-                    break;
-                case 'splat':
-                    data = convertSplat(splatDef.data, splatDef.element.worldTransform);
-                    extension = '.splat';
-                    break;
-            }
-
-            const filename = `${removeExtension(splatDef.element.asset.file.filename)}${extension}`;
-
-            if (remoteStorageDetails) {
-                // write data to remote storage
-                await sendToRemoteStorage(filename, data, remoteStorageDetails);
-            } else {
-                // download file to local machine
-                download(filename, data);
-            }
-
-            stopSpinner();
-            editorUI.showInfo(null);
-            lastExportCursor = editHistory.cursor;
-        });
-    }
-
-    events.on('scene.exportPly', () => exportScene('ply'));
-    events.on('scene.exportCompressedPly', () => exportScene('ply-compressed'));
-    events.on('scene.exportSplat', () => exportScene('splat'));
 }
 
 export { registerEditorEvents };

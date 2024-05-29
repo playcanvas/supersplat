@@ -2,6 +2,7 @@ import { Container, InfoBox, Label } from 'pcui';
 import { ControlPanel } from './control-panel';
 import { Toolbar } from './toolbar';
 import { Events } from '../events';
+import { MessagePopup } from './message-popup';
 import logo from './playcanvas-logo.png';
 
 class EditorUI {
@@ -13,6 +14,7 @@ class EditorUI {
     filenameLabel: Label;
     errorPopup: InfoBox;
     infoPopup: InfoBox;
+    messagePopup: MessagePopup;
 
     constructor(events: Events, remoteStorageMode: boolean) {
         // favicon
@@ -59,11 +61,10 @@ class EditorUI {
         const controlPanel = new ControlPanel(events, remoteStorageMode);
 
         // file select
-        const fileSelect = new Container({
-            id: 'file-selector-container'
-        });
-
-        controlPanel.append(fileSelect);
+        // const fileSelect = new Container({
+        //     id: 'file-selector-container'
+        // });
+        // controlPanel.append(fileSelect);
 
         editorContainer.append(toolbar);
         editorContainer.append(controlPanel);
@@ -88,6 +89,9 @@ class EditorUI {
         topContainer.append(errorPopup);
         topContainer.append(infoPopup);
 
+        // message popup
+        this.messagePopup = new MessagePopup(topContainer);
+
         appContainer.append(editorContainer);
         appContainer.append(topContainer);
 
@@ -103,6 +107,10 @@ class EditorUI {
         document.body.appendChild(appContainer.dom);
 
         window.showError = (err: string) => this.showError(err);
+
+        events.function('showMessage', (options: { type: 'error' | 'info' | 'yesno', message: string }) => {
+            return this.messagePopup.show(options.type, options.message);
+        });
 
         // initialize canvas to correct size before creating graphics device etc
         const pixelRatio = window.devicePixelRatio;
@@ -126,6 +134,10 @@ class EditorUI {
         } else {
             this.infoPopup.hidden = true;
         }
+    }
+
+    showMessage(type: 'error' | 'info' | 'yesno', message: string) {
+        return this.messagePopup.show(type, message);
     }
 
     setFilename(filename: string) {

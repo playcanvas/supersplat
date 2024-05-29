@@ -69,10 +69,18 @@ body {
     #keyboard-panel & { content: '\E136'};
 }
 
-#file-selector-container {
-    flex-shrink: 0;
-    flex-grow: 0;
-    margin: 5px;
+#file-selector {
+    display: none;
+}
+
+#file-menu {
+    position: absolute;
+}
+
+.file-menu-item span {
+    padding: 6px;
+    color: $text-secondary !important;
+    font-size: 14px;
 }
 
 .toolbar-button {
@@ -250,6 +258,66 @@ body {
     margin-right: auto;
     width: 400px;
     top: 50%;
+}
+
+//-- Message popup
+
+#message {
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    pointer-events: all;
+}
+
+#message-background {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 600px;
+    transform: translate(-50%, -50%);
+    background-color: $bcg-primary;
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid $bcg-darker;
+    pointer-events: all;
+}
+
+#message-buttons {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+}
+
+.message-button {
+    background-color: $bcg-darker;
+    color: white;
+    // border-radius: 10px;
+    height: 40px;
+    width: 120px
+}
+
+#message-text {
+    font-size: 18px;
+    color: $text-primary;
+    text-wrap: wrap;
+    text-align: center;
+    margin: 20px 0px;
+}
+
+#message-text.error::before {
+    content: '\E218';
+    font-family: 'pc-icon';
+    margin: 0px 10px;
+    color: $error;
+}
+
+#message-text.info::before {
+    content: '\E400';
+    font-family: 'pc-icon';
+    margin: 0px 10px;
+    color: $text-primary;
 }
 
 /* scrollbar styling */

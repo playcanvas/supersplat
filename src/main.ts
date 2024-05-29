@@ -1,11 +1,11 @@
 import { createGraphicsDevice } from 'playcanvas';
 import { Scene } from './scene';
 import { getSceneConfig } from './scene-config';
-import { CreateDropHandler } from './drop-handler';
 import { initMaterials } from './material';
 import { EditHistory } from './edit-history';
 import { EditorUI } from './ui/editor';
 import { registerEditorEvents } from './editor';
+import { initFileHandler } from './file-handler';
 import { ToolManager } from './tools/tool-manager';
 import { MoveTool } from './tools/move-tool';
 import { RotateTool } from './tools/rotate-tool';
@@ -26,7 +26,8 @@ declare global {
             setConsumer: (callback: (launchParams: LaunchParams) => void) => void;
         };
         scene: Scene;
-        showError: (err: string) => void;
+        showOpenFilePicker: (options: { id: string, types: { description: string, accept: { 'model/ply': string[] } }[] }) => Promise<FileSystemFileHandle[]>;
+        showSaveFilePicker: (options: { id: string, types: { description: string, accept: { 'model/ply': string[] } }[] }, suggestedName: string) => Promise<FileSystemFileHandle>;
     }
 }
 
@@ -54,31 +55,6 @@ const getURLArgs = () => {
     });
 
     return config;
-};
-
-const initDropHandler = (canvas: HTMLCanvasElement, scene: Scene) => {
-    // add a 'choose file' button
-    const selector = document.createElement('input');
-    selector.setAttribute('id', 'file-selector');
-    selector.setAttribute('type', 'file');
-    selector.setAttribute('accept', '.gltf,.glb,.ply');
-    selector.onchange = () => {
-        const files = selector.files;
-        if (files.length > 0) {
-            const file = selector.files[0];
-            scene.loadModel(URL.createObjectURL(file), file.name);
-        }
-    };
-    document.getElementById('file-selector-container')?.appendChild(selector);
-
-    // also support user dragging and dropping a local glb file onto the canvas
-    CreateDropHandler(canvas, urls => {
-        const modelExtensions = ['.ply'];
-        const model = urls.find(url => modelExtensions.some(extension => url.filename.endsWith(extension)));
-        if (model) {
-            scene.loadModel(model.url, model.filename);
-        }
-    });
 };
 
 const initShortcuts = (events: Events) => {
@@ -181,9 +157,11 @@ const main = async () => {
     toolManager.register('brushSelection', new BrushSelection(events, editorUI.canvasContainer.dom));
     toolManager.register('pickerSelection', new PickerSelection(events, editorUI.canvasContainer.dom));
 
-    registerEditorEvents(events, editHistory, scene, editorUI, remoteStorageDetails);
-    initDropHandler(editorUI.canvas, scene);
+    window.scene = scene;
+
+    registerEditorEvents(events, editHistory, scene, editorUI);
     initShortcuts(events);
+    await initFileHandler(scene, events, editorUI.canvas, remoteStorageDetails);
 
     // load async models
     await scene.load();
@@ -194,8 +172,6 @@ const main = async () => {
     if (loadUrl) {
         await scene.loadModel(loadUrl, loadUrl);
     }
-
-    window.scene = scene;
 
     // handle OS-based file association in PWA mode
     if ("launchQueue" in window) {

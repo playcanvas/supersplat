@@ -6,6 +6,7 @@ import { EditHistory } from './edit-history';
 import { EditorUI } from './ui/editor';
 import { registerEditorEvents } from './editor';
 import { initFileHandler } from './file-handler';
+import { initSelection } from './selection';
 import { ToolManager } from './tools/tool-manager';
 import { MoveTool } from './tools/move-tool';
 import { RotateTool } from './tools/rotate-tool';
@@ -158,6 +159,7 @@ const main = async () => {
     window.scene = scene;
 
     registerEditorEvents(events, editHistory, scene, editorUI);
+    initSelection(events, scene);
     initShortcuts(events);
     await initFileHandler(scene, events, editorUI.canvas, remoteStorageDetails);
 

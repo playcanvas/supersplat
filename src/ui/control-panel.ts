@@ -1,5 +1,7 @@
 import { BooleanInput, Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, VectorInput } from 'pcui';
 import { Events } from '../events';
+import { Element, ElementType } from '../element';
+import { Splat } from '../splat';
 import { version as appVersion } from '../../package.json';
 
 class ControlPanel extends Panel {
@@ -15,6 +17,63 @@ class ControlPanel extends Panel {
         });
 
         super(args);
+
+        // scene panel
+        const scenePanel = new Panel({
+            id: 'scene-panel',
+            class: 'control-panel',
+            headerText: 'SCENE'
+        });
+
+        const splat = new Container({
+            class: 'control-parent'
+        });
+
+        const splatLabel = new Label({
+            class: 'control-label',
+            text: 'Splat'
+        });
+
+        const splatSelect = new SelectInput({
+            class: 'control-element-expand',
+            defaultValue: '',
+            options: [],
+            onSelect: (value: string) => {
+                events.fire('active.select', parseInt(value, 10));
+            }
+        });
+
+        splat.append(splatLabel);
+        splat.append(splatSelect);
+
+        scenePanel.content.append(splat);
+
+        // handle selection and scene updates
+
+        events.on('scene.elementAdded', (element: Element) => {
+            if (element.type === ElementType.splat) {
+                const splat = element as Splat;
+                splatSelect.options = splatSelect.options.concat({
+                    v: splat.uid.toString(), t: splat.filename
+                });
+            }
+        });
+
+        events.on('scene.elementRemoved', (element: Element) => {
+            if (element.type === ElementType.splat) {
+                splatSelect.options = splatSelect.options.filter((option: any) => {
+                    return option.v !== element.uid.toString();
+                });
+            }
+        });
+
+        events.on('selection.changed', (selection: Splat) => {
+            splatSelect.value = selection?.uid.toString();
+        });
+
+        splatSelect.on('change', (value: string) => {
+            events.fire('selection.byUid', parseInt(value, 10));
+        });
 
         // camera panel
         const cameraPanel = new Panel({
@@ -404,6 +463,7 @@ class ControlPanel extends Panel {
         optionsPanel.append(allData);
 
         // append
+        this.content.append(scenePanel);
         this.content.append(cameraPanel);
         this.content.append(selectionPanel);
         this.content.append(showPanel);

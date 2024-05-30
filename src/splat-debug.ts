@@ -1,5 +1,6 @@
 import {
     BLEND_NORMAL,
+    Entity,
     GSplatData,
     Material,
     Mesh,
@@ -10,7 +11,6 @@ import {
 } from 'playcanvas';
 import { State } from './edit-ops';
 import { Scene } from './scene';
-import { Splat } from './splat';
 
 const vs = /* glsl */ `
 attribute vec4 vertex_position;
@@ -55,7 +55,7 @@ class SplatDebug {
     meshInstance: MeshInstance;
     size = 2;
 
-    constructor(scene: Scene, splat: Splat, splatData: GSplatData) {
+    constructor(scene: Scene, root: Entity, splatData: GSplatData) {
         const device = scene.graphicsDevice;
 
         const shader = createShaderFromCode(device, vs, fs, `splatDebugShader`, {
@@ -85,9 +85,14 @@ class SplatDebug {
         mesh.update(PRIMITIVE_POINTS, true);
 
         this.splatData = splatData;
-        this.meshInstance = new MeshInstance(mesh, material, splat.root);
+        this.meshInstance = new MeshInstance(mesh, material, root);
 
         this.splatSize = this.size;
+    }
+
+    destroy() {
+        this.meshInstance.material.destroy();
+        this.meshInstance.destroy();
     }
 
     update() {

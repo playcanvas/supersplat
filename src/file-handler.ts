@@ -109,11 +109,13 @@ const initFileHandler = async (scene: Scene, events: Events, canvas: HTMLCanvasE
     }
 
     // create the file drag & drop handler
-    CreateDropHandler(canvas, urls => {
+    CreateDropHandler(canvas, async (entries) => {
         const modelExtensions = ['.ply'];
-        const model = urls.find(url => modelExtensions.some(extension => url.filename.endsWith(extension)));
-        if (model) {
-            scene.loadModel(model.url, model.filename);
+        for (let i = 0; i < entries.length; i++) {
+            const entry = entries[i];
+            if (modelExtensions.some(extension => entry.filename.endsWith(extension))) {
+                await scene.loadModel(entry.url, entry.filename);
+            }
         }
     });
 
@@ -128,7 +130,7 @@ const initFileHandler = async (scene: Scene, events: Events, canvas: HTMLCanvasE
     });
 
     events.on('scene.new', () => {
-        // TODO
+        scene.clear();
     });
 
     events.on('scene.open', async () => {

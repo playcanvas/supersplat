@@ -1,4 +1,6 @@
-import {Camera} from './camera';
+import { Camera } from './camera';
+import { ElementType } from './element';
+import { Splat } from './splat';
 import {
     EVENT_MOUSEDOWN,
     EVENT_MOUSEUP,
@@ -24,6 +26,7 @@ import {
 const plane = new Plane();
 const ray = new Ray();
 const vec = new Vec3();
+const vec2 = new Vec3();
 const fromWorldPoint = new Vec3();
 const toWorldPoint = new Vec3();
 const worldDiff = new Vec3();
@@ -49,31 +52,57 @@ class MouseController {
     };
 
     onDblClick = (event: globalThis.MouseEvent) => {
+        const scene = this.camera.scene;
+        const cameraPos = this.camera.entity.getPosition();
+
         // @ts-ignore
-        const target = this.camera.scene.app.mouse._target;
-        const sx = event.offsetX / target.clientWidth * this.camera.scene.targetSize.width;
-        const sy = event.offsetY / target.clientHeight * this.camera.scene.targetSize.height;
+        const target = scene.app.mouse._target;
+        const sx = event.offsetX / target.clientWidth * scene.targetSize.width;
+        const sy = event.offsetY / target.clientHeight * scene.targetSize.height;
 
-        this.camera.pickPrep(this.camera.scene.events.invoke('camera.mode') === 'rings' ? 0.0 : 0.2);
-        const pickId = this.camera.pick(sx, sy);
+        const splats = scene.getElementsByType(ElementType.splat);
 
-        if (pickId !== -1) {
-            const splatPos = this.camera.scene.events.invoke('splat.getWorldPosition', pickId);
+        const dist = (a: Vec3, b: Vec3) => {
+            return vec2.sub2(a, b).length();
+        };
 
-            // create a plane at the world position facing perpendicular to the camera
-            plane.setFromPointNormal(splatPos, this.camera.entity.forward);
+        let closestP = null;
+        let closestD = 0;
 
-            // create the pick ray in world space
-            const cameraPos = this.camera.entity.getPosition();
-            const res = this.camera.entity.camera.screenToWorld(event.offsetX, event.offsetY, 1.0, vec);
-            vec.sub2(res, cameraPos);
-            vec.normalize();
-            ray.set(cameraPos, vec);
+        for (let i = 0; i < splats.length; ++i) {
+            const splat = splats[i] as Splat;
 
-            // find intersection
-            if (plane.intersectsRay(ray, vec)) {
-                this.camera.setFocalPoint(vec);
+            this.camera.pickPrep(splat);
+            const pickId = this.camera.pick(sx, sy);
+
+            if (pickId !== -1) {
+                splat.getSplatWorldPosition(pickId, vec);
+
+                // create a plane at the world position facing perpendicular to the camera
+                plane.setFromPointNormal(vec, this.camera.entity.forward);
+
+                // create the pick ray in world space
+                const res = this.camera.entity.camera.screenToWorld(event.offsetX, event.offsetY, 1.0, vec);
+                vec.sub2(res, cameraPos);
+                vec.normalize();
+                ray.set(cameraPos, vec);
+
+                // find intersection
+                if (plane.intersectsRay(ray, vec)) {
+                    const distance = dist(vec, cameraPos);
+                    if (!closestP) {
+                        closestP = vec.clone();
+                        closestD = distance;
+                    } else if (distance < closestD) {
+                        closestP.copy(vec);
+                        closestD = distance;
+                    }
+                }
             }
+        }
+
+        if (closestP) {
+            this.camera.setFocalPoint(closestP);
         }
     };
 

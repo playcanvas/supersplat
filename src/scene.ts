@@ -357,9 +357,6 @@ class Scene {
 
         // debug - display scene bound
         if (this.config.debug.showBound) {
-            // draw scene bound
-            this.app.drawWireAlignedBox(this.bound.getMin(), this.bound.getMax(), Color.GREEN);
-
             // draw element bounds
             this.forEachElement((e: Element) => {
                 if (e.type === ElementType.splat) {
@@ -369,7 +366,7 @@ class Scene {
                     this.app.drawWireAlignedBox(
                         local.getMin(),
                         local.getMax(),
-                        Color.BLUE,
+                        Color.RED,
                         true,
                         undefined,
                         splat.root.getWorldTransform());
@@ -378,9 +375,12 @@ class Scene {
                     this.app.drawWireAlignedBox(
                         world.getMin(),
                         world.getMax(),
-                        Color.GRAY);
+                        Color.GREEN);
                 }
             });
+
+            // draw scene bound
+            this.app.drawWireAlignedBox(this.bound.getMin(), this.bound.getMax(), Color.BLUE);
         }
     }
 

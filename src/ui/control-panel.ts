@@ -1,4 +1,4 @@
-import { BooleanInput, Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, VectorInput } from 'pcui';
+import { BooleanInput, Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, TreeView, TreeViewItem, VectorInput } from 'pcui';
 import { Events } from '../events';
 import { Element, ElementType } from '../element';
 import { Splat } from '../splat';
@@ -25,54 +25,67 @@ class ControlPanel extends Panel {
             headerText: 'SCENE'
         });
 
-        const splat = new Container({
-            class: 'control-parent'
+        const splatListContainer = new Container({
+            id: 'scene-panel-splat-list-container'
         });
 
-        const splatLabel = new Label({
-            class: 'control-label',
-            text: 'Splat'
+        const splatList = new TreeView({
+            id: 'scene-panel-splat-list',
+            allowDrag: false,
+            allowReordering: false,
+            allowRenaming: false
         });
 
-        const splatSelect = new SelectInput({
-            class: 'control-element-expand',
-            defaultValue: '',
-            options: [],
-            onSelect: (value: string) => {
-                events.fire('active.select', parseInt(value, 10));
-            }
-        });
-
-        splat.append(splatLabel);
-        splat.append(splatSelect);
-
-        scenePanel.content.append(splat);
+        splatListContainer.append(splatList);
+        scenePanel.content.append(splatListContainer);
 
         // handle selection and scene updates
+
+        const items = new Map<Splat, TreeViewItem>();
 
         events.on('scene.elementAdded', (element: Element) => {
             if (element.type === ElementType.splat) {
                 const splat = element as Splat;
-                splatSelect.options = splatSelect.options.concat({
-                    v: splat.uid.toString(), t: splat.filename
+                const item = new TreeViewItem({
+                    text: splat.filename,
+                    open: false
                 });
+                splatList.append(item);
+                items.set(splat, item);
             }
         });
 
         events.on('scene.elementRemoved', (element: Element) => {
             if (element.type === ElementType.splat) {
-                splatSelect.options = splatSelect.options.filter((option: any) => {
-                    return option.v !== element.uid.toString();
-                });
+                const splat = element as Splat;
+                const item = items.get(splat);
+                if (item) {
+                    splatList.remove(item);
+                    items.delete(splat);
+                }
             }
         });
 
         events.on('selection.changed', (selection: Splat) => {
-            splatSelect.value = selection?.uid.toString();
+            const item = items.get(selection);
+            if (item) {
+                item.selected = true;
+            }
         });
 
-        splatSelect.on('change', (value: string) => {
-            events.fire('selection.byUid', parseInt(value, 10));
+        splatList.on('select', (item: TreeViewItem) => {
+            let splat: Splat = null;
+            items.forEach((value, key) => {
+                if (value === item) {
+                    splat = key;
+                } else {
+                    value.selected = false;
+                }
+            });
+
+            if (splat) {
+                events.fire('selection.byUid', splat.uid);
+            }
         });
 
         // camera panel
@@ -145,7 +158,7 @@ class ControlPanel extends Panel {
 
         const focusButton = new Button({
             class: 'control-element',
-            text: 'Reset Focus'
+            text: 'Frame Selection'
         });
 
         cameraPanel.append(mode);

@@ -135,11 +135,13 @@ class Splat extends Element {
 
         this.asset = asset;
         this.splatData = splatResource.splatData;
-        this.entity = new Entity('splatRoot');
+        this.entity = new Entity('splatParent');
         this.root = splatResource.instantiate({
             vertex: vertexShader,
             fragment: fragmentShader
         });
+
+        const instance = this.root.gsplat.instance;
 
         // added per-splat state channel
         // bit 1: selected
@@ -150,8 +152,8 @@ class Splat extends Element {
         // create the state texture
         this.stateTexture = new Texture(splatResource.device, {
             name: 'splatState',
-            width: this.root.gsplat.instance.splat.colorTexture.width,
-            height: this.root.gsplat.instance.splat.colorTexture.height,
+            width: instance.splat.colorTexture.width,
+            height: instance.splat.colorTexture.height,
             format: PIXELFORMAT_L8,
             mipmaps: false,
             minFilter: FILTER_NEAREST,
@@ -160,10 +162,10 @@ class Splat extends Element {
             addressV: ADDRESS_CLAMP_TO_EDGE
         });
 
-        const instance = this.root.gsplat.instance;
-
         this.localBoundStorage = instance.splat.aabb;
         this.worldBoundStorage = instance.meshInstance._aabb;
+
+        instance.meshInstance._updateAabb = false;
 
         instance.material.setParameter('splatState', this.stateTexture);
 
@@ -307,12 +309,8 @@ class Splat extends Element {
 
     // get world space bound
     get worldBound() {
-        const localBound = this.localBound;
-
         if (this.worldBoundDirty) {
-            // calculate meshinstance aabb (transformed local bound)
-            const aabb = this.root.gsplat.instance.meshInstance._aabb;
-            aabb.setFromTransformedAabb(localBound, this.entity.getWorldTransform());
+            const localBound = this.localBound;
 
             // calculate movement in local space
             vec.add2(this.root.getLocalPosition(), localBound.center);
@@ -322,6 +320,9 @@ class Splat extends Element {
             // update transforms so base entity node is oriented to the center of the mesh
             this.entity.setLocalPosition(vec);
             this.root.setLocalPosition(-localBound.center.x, -localBound.center.y, -localBound.center.z);
+
+            // calculate meshinstance aabb (transformed local bound)
+            this.worldBoundStorage.setFromTransformedAabb(localBound, this.root.getWorldTransform());
 
             // flag scene bound as dirty
             this.worldBoundDirty = false;

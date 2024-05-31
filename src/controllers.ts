@@ -66,8 +66,9 @@ class MouseController {
             return vec2.sub2(a, b).length();
         };
 
-        let closestP = null;
         let closestD = 0;
+        let closestP = new Vec3();
+        let closestSplat = null;
 
         for (let i = 0; i < splats.length; ++i) {
             const splat = splats[i] as Splat;
@@ -90,19 +91,18 @@ class MouseController {
                 // find intersection
                 if (plane.intersectsRay(ray, vec)) {
                     const distance = dist(vec, cameraPos);
-                    if (!closestP) {
-                        closestP = vec.clone();
+                    if (!closestSplat || distance < closestD) {
                         closestD = distance;
-                    } else if (distance < closestD) {
                         closestP.copy(vec);
-                        closestD = distance;
+                        closestSplat = splat;
                     }
                 }
             }
         }
 
-        if (closestP) {
+        if (closestSplat) {
             this.camera.setFocalPoint(closestP);
+            scene.events.fire('selection', closestSplat);
         }
     };
 

@@ -69,6 +69,29 @@ body {
     #keyboard-panel & { content: '\E136'};
 }
 
+#scene-panel-splat-list-container {
+    // padding: 10px;
+    overflow: scroll;
+
+    width: 100%;
+    height: 100px;
+    display: flex;
+    flex-direction: row;
+    flex-grow: 1;
+
+    background-color: $bcg-primary;
+}
+
+#scene-panel-splat-list {
+    width: 100%;
+    height: 100%;
+    padding: 4px;
+}
+
+#scene-panel-splat-list .pcui-treeview-item-contents.pcui-treeview-item-selected {
+    background-color: royalblue;
+}
+
 #file-selector {
     display: none;
 }

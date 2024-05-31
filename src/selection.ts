@@ -36,6 +36,14 @@ const initSelection = (events: Events, scene: Scene) => {
     events.function('selection', () => {
         return selection;
     });
+
+    events.on('selection.next', () => {
+        const splats = scene.getElementsByType(ElementType.splat);
+        if (splats.length > 1) {
+            const idx = splats.indexOf(selection);
+            events.fire('selection', splats[(idx + 1) % splats.length]);
+        }
+    });
 };
 
 export { initSelection };

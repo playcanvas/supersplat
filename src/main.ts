@@ -61,6 +61,7 @@ const initShortcuts = (events: Events) => {
 
     shortcuts.register(['Delete', 'Backspace'], { event: 'select.delete' });
     shortcuts.register(['Escape'], { event: 'tool.deactivate' });
+    shortcuts.register(['Tab'], { event: 'selection.next' });
     shortcuts.register(['1'], { event: 'tool.move' });
     shortcuts.register(['2'], { event: 'tool.rotate' });
     shortcuts.register(['3'], { event: 'tool.scale' });

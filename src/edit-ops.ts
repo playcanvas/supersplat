@@ -110,7 +110,7 @@ interface EntityTransform {
 };
 
 interface EntityOp {
-    element: Element;
+    splat: Splat;
     old: EntityTransform;
     new: EntityTransform;
 }
@@ -127,13 +127,13 @@ class EntityTransformOp {
 
     do() {
         this.entityOps.forEach((entityOp) => {
-            entityOp.element.move(entityOp.new.position, entityOp.new.rotation, entityOp.new.scale);
+            entityOp.splat.move(entityOp.new.position, entityOp.new.rotation, entityOp.new.scale);
         });
     }
 
     undo() {
         this.entityOps.forEach((entityOp) => {
-            entityOp.element.move(entityOp.old.position, entityOp.old.rotation, entityOp.old.scale);
+            entityOp.splat.move(entityOp.old.position, entityOp.old.rotation, entityOp.old.scale);
         });
     }
 

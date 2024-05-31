@@ -137,13 +137,14 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         if (splat) {
             const splatData = splat.splatData;
             const state = splatData.getProp('state') as Uint8Array;
-            const deletedPred = (i: number) => (state[i] & (State.hidden | State.deleted)) === 0;
-            const selectionPred = (i: number) => (state[i] & State.selected) === State.selected;
+
+            const visiblePred = (i: number) => (state[i] & (State.hidden | State.deleted)) === 0;
+            const selectionPred = (i: number) => visiblePred(i) && ((state[i] & State.selected) === State.selected);
 
             if (splatData.calcAabb(aabb, selectionPred)) {
                 splatData.calcFocalPoint(vec, selectionPred);
-            } else if (splatData.calcAabb(aabb, deletedPred)) {
-                splatData.calcFocalPoint(vec, deletedPred);
+            } else if (splatData.calcAabb(aabb, visiblePred)) {
+                splatData.calcFocalPoint(vec, visiblePred);
             } else {
                 return;
             }

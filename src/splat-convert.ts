@@ -6,88 +6,119 @@ import {
 } from 'playcanvas';
 import { State } from './edit-ops';
 
-const convertPly = (splatData: GSplatData, modelMat: Mat4) => {
-    // count the number of non-deleted splats
-    const state = splatData.getProp('state') as Uint8Array;
-    let numSplats = 0;
-    for (let i = 0; i < splatData.numSplats; ++i) {
-        numSplats += (state[i] & State.deleted) === State.deleted ? 0 : 1;
+interface ConvertEntry {
+    splatData: GSplatData;
+    modelMat: Mat4;
+};
+
+const countTotalSplats = (convertData: ConvertEntry[]) => {
+    return convertData.reduce((total, entry) => {
+        const splatData = entry.splatData;
+        const state = splatData.getProp('state') as Uint8Array;
+        for (let i = 0; i < splatData.numSplats; ++i) {
+            total += (state[i] & State.deleted) === State.deleted ? 0 : 1;
+        }
+        return total;
+    }, 0);
+};
+
+const getVertexProperties = (splatData: GSplatData) => {
+    return new Set<string>(
+        splatData.getElement('vertex')
+        .properties.filter((p: any) => p.storage)
+        .map((p: any) => p.name)
+    );
+};
+
+const getCommonPropNames = (convertData: ConvertEntry[]) => {
+    let result: Set<string>;
+
+    for (let i = 0; i < convertData.length; ++i) {
+        const props = getVertexProperties(convertData[i].splatData);
+        result = i == 0 ? props : new Set([...result].filter(i => props.has(i)));
     }
 
-    const internalProps = ['state'];
-    const props = splatData.getElement('vertex').properties.filter((p: any) => p.storage && !internalProps.includes(p.name));
-    const header = (new TextEncoder()).encode(`ply\nformat binary_little_endian 1.0\nelement vertex ${numSplats}\n` + props.map((p: any) => `property float ${p.name}`).join('\n') + `\nend_header\n`);
-    const result = new Uint8Array(header.byteLength + numSplats * props.length * 4);
+    return [...result];
+};
+
+const internalProps = ['state'];
+const mat = new Mat4();
+const quat = new Quat();
+const scale = new Vec3();
+const v = new Vec3();
+const q = new Quat();
+
+const convertPly = (convertData: ConvertEntry[]) => {
+    // count the number of non-deleted splats
+    const totalSplats = countTotalSplats(convertData);
+
+    // get the vertex properties common to all splats
+    const propNames = getCommonPropNames(convertData).filter((p) => !internalProps.includes(p));
+    const hasPosition = ['x', 'y', 'z'].every(v => propNames.includes(v));
+    const hasRotation = ['rot_0', 'rot_1', 'rot_2', 'rot_3'].every(v => propNames.includes(v));
+    const hasScale = ['scale_0', 'scale_1', 'scale_2'].every(v => propNames.includes(v));
+
+    const header = (new TextEncoder()).encode(`ply\nformat binary_little_endian 1.0\nelement vertex ${totalSplats}\n` + propNames.map(p => `property float ${p}`).join('\n') + `\nend_header\n`);
+    const result = new Uint8Array(header.byteLength + totalSplats * propNames.length * 4);
+    const dataView = new DataView(result.buffer);
+
+    // construct an object for holding a single splat's properties
+    const splat = propNames.reduce((acc: any, name) => {
+        acc[name] = 0;
+        return acc;
+    }, {});
 
     result.set(header);
 
-    const dataView = new DataView(result.buffer);
     let offset = header.byteLength;
 
-    for (let i = 0; i < splatData.numSplats; ++i) {
-        if ((state[i] & State.deleted) === State.deleted) continue;
-        props.forEach((prop: any) => {
-            dataView.setFloat32(offset, prop.storage[i], true);
-            offset += 4;
-        });
-    }
+    for (let e = 0; e < convertData.length; ++e) {
+        const entry = convertData[e];
+        const splatData = entry.splatData;
+        const state = splatData.getProp('state') as Uint8Array;
+        const storage = propNames.map((name) => splatData.getProp(name));
 
-    // FIXME
-    // we must undo the transform we apply at load time to output data
-    const mat = new Mat4();
-    mat.setScale(-1, -1, 1);
-    mat.invert();
-    mat.mul2(mat, modelMat);
+        // we must undo the transform we apply at load time to output data
+        mat.setScale(-1, -1, 1);
+        mat.invert();
+        mat.mul2(mat, entry.modelMat);
+        quat.setFromMat4(mat);
+        mat.getScale(scale);
 
-    const quat = new Quat();
-    quat.setFromMat4(mat);
+        for (let i = 0; i < splatData.numSplats; ++i) {
+            if ((state[i] & State.deleted) === State.deleted) continue;
 
-    const scale = new Vec3();
-    mat.getScale(scale);
+            // read splat data
+            for (let j = 0; j < propNames.length; ++j) {
+                splat[propNames[j]] = storage[j][i];
+            }
 
-    const v = new Vec3();
-    const q = new Quat();
+            // transform
+            if (hasPosition) {
+                v.set(splat.x, splat.y, splat.z);
+                mat.transformPoint(v, v);
+                [splat.x, splat.y, splat.z] = [v.x, v.y, v.z];
+            }
 
-    const propIndex = (name: string) => props.findIndex((p: any) => p.name === name);
-    const x_off = propIndex('x') * 4;
-    const y_off = propIndex('y') * 4;
-    const z_off = propIndex('z') * 4;
-    const r0_off = propIndex('rot_0') * 4;
-    const r1_off = propIndex('rot_1') * 4;
-    const r2_off = propIndex('rot_2') * 4;
-    const r3_off = propIndex('rot_3') * 4;
-    const scale0_off = propIndex('scale_0') * 4;
-    const scale1_off = propIndex('scale_1') * 4;
-    const scale2_off = propIndex('scale_2') * 4;
+            if (hasRotation) {
+                q.set(splat.rot_1, splat.rot_2, splat.rot_3, splat.rot_0).mul2(quat, q);
+                [splat.rot_1, splat.rot_2, splat.rot_3, splat.rot_0] = [q.x, q.y, q.z, q.w];
+            }
 
-    for (let i = 0; i < numSplats; ++i) {
-        const off = header.byteLength + i * props.length * 4;
-        const x = dataView.getFloat32(off + x_off, true);
-        const y = dataView.getFloat32(off + y_off, true);
-        const z = dataView.getFloat32(off + z_off, true);
-        const rot_0 = dataView.getFloat32(off + r0_off, true);
-        const rot_1 = dataView.getFloat32(off + r1_off, true);
-        const rot_2 = dataView.getFloat32(off + r2_off, true);
-        const rot_3 = dataView.getFloat32(off + r3_off, true);
-        const scale_0 = dataView.getFloat32(off + scale0_off, true);
-        const scale_1 = dataView.getFloat32(off + scale1_off, true);
-        const scale_2 = dataView.getFloat32(off + scale2_off, true);
+            if (hasScale) {
+                splat.scale_0 = Math.log(Math.exp(splat.scale_0) * scale.x);
+                splat.scale_1 = Math.log(Math.exp(splat.scale_1) * scale.y);
+                splat.scale_2 = Math.log(Math.exp(splat.scale_2) * scale.z);
+            }
 
-        v.set(x, y, z);
-        mat.transformPoint(v, v);
-        dataView.setFloat32(off + x_off, v.x, true);
-        dataView.setFloat32(off + y_off, v.y, true);
-        dataView.setFloat32(off + z_off, v.z, true);
+            // TODO: transform spherical harmonics
 
-        q.set(rot_1, rot_2, rot_3, rot_0).mul2(quat, q);
-        dataView.setFloat32(off + r0_off, q.w, true);
-        dataView.setFloat32(off + r1_off, q.x, true);
-        dataView.setFloat32(off + r2_off, q.y, true);
-        dataView.setFloat32(off + r3_off, q.z, true);
-
-        dataView.setFloat32(off + scale0_off, Math.log(Math.exp(scale_0) * scale.x), true);
-        dataView.setFloat32(off + scale1_off, Math.log(Math.exp(scale_1) * scale.x), true);
-        dataView.setFloat32(off + scale2_off, Math.log(Math.exp(scale_2) * scale.x), true);
+            // write
+            for (let j = 0; j < propNames.length; ++j) {
+                dataView.setFloat32(offset, splat[propNames[j]], true);
+                offset += 4;
+            }
+        }
     }
 
     return result;
@@ -117,11 +148,6 @@ const calcMinMax = (data: Float32Array, indices?: number[]) => {
 const normalize = (x: number, min: number, max: number) => {
     return (max - min < 0.00001) ? 0 : (x - min) / (max - min);
 };
-
-const quat = new Quat();
-const scale = new Vec3();
-const v = new Vec3();
-const q = new Quat();
 
 // process and compress a chunk of 256 splats
 class Chunk {
@@ -299,7 +325,7 @@ class Chunk {
     }
 }
 
-const convertPlyCompressed = (splatData: GSplatData, modelMat: Mat4) => {
+const convertPlyCompressed = (convertData: ConvertEntry[]) => {
     const sortSplats = (indices: number[]) => {
         // https://fgiesen.wordpress.com/2009/12/13/decoding-morton-codes/
         const encodeMorton3 = (x: number, y: number, z: number) : number => {
@@ -420,7 +446,7 @@ const convertPlyCompressed = (splatData: GSplatData, modelMat: Mat4) => {
     return result;
 };
 
-const convertSplat = (splatData: GSplatData, modelMat: Mat4) => {
+const convertSplat = (convertData: ConvertEntry[]) => {
     // count the number of non-deleted splats
     const x = splatData.getProp('x');
     const y = splatData.getProp('y');

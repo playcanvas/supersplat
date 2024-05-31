@@ -120,13 +120,12 @@ const initFileHandler = async (scene: Scene, events: Events, canvas: HTMLCanvasE
     });
 
     // get the active splat
-    const getSplat = () => {
-        const splats = scene.getElementsByType(ElementType.splat) as Splat[];
-        return splats.length > 0 ? splats[0] : null;
+    const getSplats = () => {
+        return scene.getElementsByType(ElementType.splat) as Splat[];
     };
 
     events.function('scene.canSave', () => {
-        return getSplat() !== null;
+        return getSplats().length > 0;
     });
 
     events.on('scene.new', () => {
@@ -175,7 +174,9 @@ const initFileHandler = async (scene: Scene, events: Events, canvas: HTMLCanvasE
     });
 
     events.on('scene.saveAs', async () => {
-        const splat = getSplat();
+        const splats = getSplats();
+        const splat = splats[0];
+
         if (window.showSaveFilePicker) {
             try {
                 const handle = await window.showSaveFilePicker({
@@ -214,7 +215,8 @@ const initFileHandler = async (scene: Scene, events: Events, canvas: HTMLCanvasE
             return `${removeExtension(filename)}${extension}`;
         }
 
-        const splat = getSplat();
+        const splats = getSplats();
+        const splat = splats[0];
         const filename = outputFilename ?? replaceExtension(splat.filename, extensions[type]);
 
         if (window.showSaveFilePicker) {
@@ -249,19 +251,26 @@ const initFileHandler = async (scene: Scene, events: Events, canvas: HTMLCanvasE
         }
     });
 
-    const convertData = (splat: Splat, type: ExportType) => {
+    const convertData = (splats: Splat[], type: ExportType) => {
+        const convertData = splats.map((splat) => {
+            return {
+                splatData: splat.splatData,
+                modelMat: splat.root.getWorldTransform()
+            };
+        });
+
         switch (type) {
             case 'ply':
-                return convertPly(splat.splatData, splat.root.getWorldTransform());
+                return convertPly(convertData);
             case 'compressed-ply':
-                return convertPlyCompressed(splat.splatData, splat.root.getWorldTransform());
+                return convertPlyCompressed(convertData);
             case 'splat':
-                return convertSplat(splat.splatData, splat.root.getWorldTransform());
+                return convertSplat(convertData);
         }
     };
 
     events.function('scene.write', async (options: SceneWriteOptions) => {
-        const splat = getSplat();
+        const splats = getSplats();
 
         startSpinner();
 
@@ -270,7 +279,7 @@ const initFileHandler = async (scene: Scene, events: Events, canvas: HTMLCanvasE
             setTimeout(resolve);
         });
 
-        const data = convertData(splat, options.type);
+        const data = convertData(splats, options.type);
 
         if (options.stream) {
             // write to stream

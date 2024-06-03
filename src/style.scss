@@ -47,7 +47,7 @@ body {
 }
 
 #control-panel {
-    width: 340px;
+    width: 400px;
     height: 100%;
     border-right: 1px solid #20292b;
     display: flex;
@@ -146,7 +146,7 @@ body {
 }
 
 .control-label {
-    width: 100px;
+    width: 140px;
     flex-shrink: 0;
     flex-grow: 0;
     line-height: 24px;
@@ -224,6 +224,12 @@ body {
     &::after {
         color: $text-darkest;
     }
+}
+
+.pcui-input-element > input{
+    width: 100%;
+    padding: 0 4px;
+    font-size: 12px;
 }
 
 .pcui-vector-input {

@@ -21,14 +21,19 @@ uniform mat4 matrix_projection;
 uniform mat4 matrix_viewProjection;
 
 uniform float splatSize;
+uniform vec3 centerPointColor;
+uniform vec3 selectedCenterPointColor;
+uniform float centerPointAlpha;
 
 varying vec4 color;
 
-vec4 colors[3] = vec4[3](
-    vec4(0, 0, 0, 0.25),
-    vec4(0, 0, 1.0, 0.5),
-    vec4(1.0, 1.0, 0.0, 0.5)
-);
+// vec4 colors[3] = vec4[3](
+//     vec4(0, 0, 0, 0.25),
+//     vec4(0, 0, 1.0, 0.5),
+//     vec4(1.0, 1.0, 0.0, 0.5)
+// );
+
+uniform vec4 cccolors[3];
 
 void main(void) {
     int state = int(vertex_position.w);
@@ -37,7 +42,7 @@ void main(void) {
     } else {
         gl_Position = matrix_viewProjection * matrix_model * vec4(vertex_position.xyz, 1.0);
         gl_PointSize = splatSize;
-        color = colors[state];
+        color = vec4(cccolors[state]);
     }
 }
 `;
@@ -54,6 +59,7 @@ class SplatDebug {
     splatData: GSplatData;
     meshInstance: MeshInstance;
     size = 2;
+    // color = [0.0, 0.0, 1.0]
 
     constructor(scene: Scene, splat: Splat, splatData: GSplatData) {
         const device = scene.graphicsDevice;
@@ -88,6 +94,7 @@ class SplatDebug {
         this.meshInstance = new MeshInstance(mesh, material, splat.root);
 
         this.splatSize = this.size;
+        // this.centerPointColor = this.color;
     }
 
     update() {
@@ -129,6 +136,16 @@ class SplatDebug {
     get splatSize() {
         return this.size;
     }
+
+    // set centerPointColor(colorValue: number[]) {
+    //     this.color = colorValue;
+    //     this.meshInstance.material.setParameter('centerPointColor', colorValue);
+    // }
+
+    // get centerPointColor() {
+    //     return this.color;
+    // }
+
 }
 
 export { SplatDebug };

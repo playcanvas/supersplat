@@ -1,6 +1,7 @@
-import { BooleanInput, Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, VectorInput } from 'pcui';
+import { BooleanInput, Button, ColorPicker, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, VectorInput } from 'pcui';
 import { Events } from '../events';
 import { version as appVersion } from '../../package.json';
+import { Color } from 'playcanvas';
 
 class ControlPanel extends Panel {
     constructor(events: Events, remoteStorageMode: boolean, args = { }) {
@@ -66,6 +67,138 @@ class ControlPanel extends Panel {
         splatSize.append(splatSizeLabel);
         splatSize.append(splatSizeSlider);
 
+        // highlighting color of selected splats (splat and ring)
+        const selectedSplatColor = new Container({
+            class: 'control-parent'
+        });
+
+        const selectedSplatColorLabel = new Label({
+            class: 'control-label',
+            text: 'Highlight Splat color'
+        });
+
+        const selectedSplatColorPicker = new ColorPicker({
+            class: 'control-element-expand',
+            value: [1.0,1.0,0.0]
+        });
+
+        selectedSplatColor.append(selectedSplatColorLabel);
+        selectedSplatColor.append(selectedSplatColorPicker);
+
+        // color of center points
+        const centerPointColor = new Container({
+            class: 'control-parent'
+        });
+
+        const centerPointColorLabel = new Label({
+            class: 'control-label',
+            text: 'Center Point Color'
+        });
+
+        const centerPointColorPicker = new ColorPicker({
+            class: 'control-element-expand',
+            value: [0.0,0.0,1.0]
+        });
+
+        centerPointColor.append(centerPointColorLabel);
+        centerPointColor.append(centerPointColorPicker);
+
+        // alpha of center points
+        const centerPointAlpha = new Container({
+            class: 'control-parent'
+        });
+
+        const centerPointAlphaLabel = new Label({
+            class: 'control-label',
+            text: 'Center Point Alpha'
+        });
+
+        const centerPointAlphaSlider = new SliderInput({
+            class: 'control-element-expand',
+            precision: 2,
+            min: 0,
+            max: 1,
+            value: 0.5
+        });
+
+        centerPointAlpha.append(centerPointAlphaLabel);
+        centerPointAlpha.append(centerPointAlphaSlider);
+        
+        // highlight color of center points
+        const selectedCenterPointColor = new Container({
+            class: 'control-parent'
+        });
+
+        const selectedCenterPointColorLabel = new Label({
+            class: 'control-label',
+            text: 'Highlight Point Color'
+        });
+
+        const selectedCenterPointColorPicker = new ColorPicker({
+            class: 'control-element-expand',
+            value: [1.0,1.0,0.0]
+        });
+
+        selectedCenterPointColor.append(selectedCenterPointColorLabel);
+        selectedCenterPointColor.append(selectedCenterPointColorPicker);
+
+        // alpha of highlighted center points
+        const selectedCenterPointAlpha = new Container({
+            class: 'control-parent'
+        });
+
+        const selectedCenterPointAlphaLabel = new Label({
+            class: 'control-label',
+            text: 'Highlight Point Alpha'
+        });
+
+        const selectedCenterPointAlphaSlider = new SliderInput({
+            class: 'control-element-expand',
+            precision: 2,
+            min: 0,
+            max: 1,
+            value: 0.5
+        });
+
+        selectedCenterPointAlpha.append(selectedCenterPointAlphaLabel);
+        selectedCenterPointAlpha.append(selectedCenterPointAlphaSlider);
+
+        const selectedSplatLerpStrenght = new Container({
+            class: 'control-parent'
+        });
+
+        const selectedSplatLerpStrenghtLabel = new Label({
+            class: 'control-label',
+            text: 'Highlight color interpolation'
+        });
+
+        const selectedSplatLerpStrenghtSlider = new SliderInput({
+            class: 'control-element-expand',
+            precision: 2,
+            min: 0,
+            max: 0.5,
+            value: 0.5
+        });
+
+        selectedSplatLerpStrenght.append(selectedSplatLerpStrenghtLabel);
+        selectedSplatLerpStrenght.append(selectedSplatLerpStrenghtSlider);
+
+        const selectedSplatRingsToggle = new Container({
+            class: 'control-parent'
+        });
+
+        const selectedSplatRingsToggleLabel = new Label({
+            class: 'control-label',
+            text: 'Highlight splat rings'
+        });
+
+        const selectedSplatRingsToggleCb = new BooleanInput({
+            class: 'control-element',
+        });
+
+        selectedSplatRingsToggle.append(selectedSplatRingsToggleLabel);
+        selectedSplatRingsToggle.append(selectedSplatRingsToggleCb);
+
         // show grid
         const showGrid = new Container({
             class: 'control-parent'
@@ -91,6 +224,13 @@ class ControlPanel extends Panel {
 
         cameraPanel.append(mode);
         cameraPanel.append(splatSize);
+        cameraPanel.append(centerPointColor);
+        cameraPanel.append(centerPointAlpha);
+        cameraPanel.append(selectedCenterPointColor);
+        cameraPanel.append(selectedCenterPointAlpha);
+        cameraPanel.append(selectedSplatColor);
+        cameraPanel.append(selectedSplatLerpStrenght);
+        cameraPanel.append(selectedSplatRingsToggle);
         cameraPanel.append(showGrid);
         cameraPanel.append(focusButton);
 
@@ -551,6 +691,98 @@ class ControlPanel extends Panel {
         splatSizeSlider.on('change', (value: number) => {
             events.fire('splatSize', value);
         });
+
+
+        events.on('selectedSplatColor', (value: number[]) => {
+            selectedSplatColorPicker.value = value;
+        });
+
+        events.function('selectedSplatColor', () => {
+            return selectedSplatColorPicker.value;
+        });
+
+        selectedSplatColorPicker.on('change', (value: number[]) => {
+            events.fire('selectedSplatColor', value);
+        });
+
+
+        events.on('selectedSplatLerpStrenght', (value: number) => {
+            selectedSplatLerpStrenghtSlider.value = value;
+        });
+
+        events.function('selectedSplatLerpStrenght', () => {
+            return selectedSplatLerpStrenghtSlider.value;
+        });
+
+        selectedSplatLerpStrenghtSlider.on('change', (value: number) => {
+            events.fire('selectedSplatLerpStrenght', value);
+        });
+
+
+        events.on('selectedSplatRingsToggle', (value: boolean) => {
+            selectedSplatRingsToggleCb.value = value;
+        });
+
+        events.function('selectedSplatRingsToggle', () => {
+            return selectedSplatRingsToggleCb.value;
+        });
+
+        selectedSplatRingsToggleCb.on('change', (value: boolean) => {
+            events.fire('selectedSplatRingsToggle', value);
+        });
+
+
+        events.on('centerPointColor', (value: number[]) => {
+            centerPointColorPicker.value = value;
+        });
+
+        events.function('centerPointColor', () => {
+            return centerPointColorPicker.value;
+        });
+
+        centerPointColorPicker.on('change', (value: number[]) => {
+            events.fire('centerPointColor', value);
+        });
+
+
+        events.on('centerPointAlpha', (value: number) => {
+            centerPointAlphaSlider.value = value;
+        });
+
+        events.function('centerPointAlpha', () => {
+            return centerPointAlphaSlider.value;
+        });
+
+        centerPointAlphaSlider.on('change', (value: number) => {
+            events.fire('centerPointAlpha', value);
+        });
+
+
+        events.on('selectedCenterPointColor', (value: number[]) => {
+            selectedCenterPointColorPicker.value = value;
+        });
+
+        events.function('selectedCenterPointColor', () => {
+            return selectedCenterPointColorPicker.value;
+        });
+
+        selectedCenterPointColorPicker.on('change', (value: number[]) => {
+            events.fire('selectedCenterPointColor', value);
+        });
+
+
+        events.on('selectedCenterPointAlpha', (value: number) => {
+            selectedCenterPointAlphaSlider.value = value;
+        });
+
+        events.function('selectedCenterPointAlpha', () => {
+            return selectedCenterPointAlphaSlider.value;
+        });
+
+        selectedCenterPointAlphaSlider.on('change', (value: number) => {
+            events.fire('selectedCenterPointAlpha', value);
+        });
+
 
         focusButton.on('click', () => {
             events.fire('camera.focus');

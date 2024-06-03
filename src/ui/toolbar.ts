@@ -64,11 +64,6 @@ class Toolbar extends Container {
                     text: 'Compressed Ply',
                     icon: 'E245',
                     onSelect: () => events.invoke('scene.export', 'compressed-ply')
-                }, {
-                    class: 'file-menu-item',
-                    text: 'Splat file',
-                    icon: 'E245',
-                    onSelect: () => events.invoke('scene.export', 'splat')
                 }]
             }]
         });
@@ -192,7 +187,7 @@ class Toolbar extends Container {
             icon: 'E259' 
         });
         github.on('click', () => {
-            window.open('https://github.com/playcanvas/super-splat', '_blank').focus();
+            window.open('https://github.com/playcanvas/supersplat', '_blank').focus();
         });
 
         // toolbar help toolbar

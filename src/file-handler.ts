@@ -2,7 +2,7 @@ import { path } from 'playcanvas';
 import { Scene } from './scene';
 import { Events } from './events';
 import { CreateDropHandler } from './drop-handler';
-import { convertPly, convertPlyCompressed, convertSplat } from './splat-convert';
+import { convertPly, convertPlyCompressed } from './splat-convert';
 import { startSpinner, stopSpinner } from './ui/spinner';
 import { ElementType } from './element';
 import { Splat } from './splat';
@@ -12,7 +12,7 @@ interface RemoteStorageDetails {
     url: string;
 };
 
-type ExportType = 'ply' | 'compressed-ply' | 'splat';
+type ExportType = 'ply' | 'compressed-ply';
 
 interface SceneWriteOptions {
     type: ExportType;
@@ -31,12 +31,6 @@ const filePickerTypes = {
         description: 'Compressed Gaussian Splat PLY File',
         accept: {
             'application/ply': ['.ply']
-        }
-    }],
-    'splat': [{
-        description: 'Gaussian Splat File',
-        accept: {
-            'application/octet-stream': ['.splat']
         }
     }]
 };
@@ -204,8 +198,7 @@ const initFileHandler = async (scene: Scene, events: Events, canvas: HTMLCanvasE
     events.function('scene.export', async (type: ExportType, outputFilename: string = null) => {
         const extensions = {
             'ply': '.ply',
-            'compressed-ply': '.compressed.ply',
-            'splat': '.splat'
+            'compressed-ply': '.compressed.ply'
         };
 
         const replaceExtension = (filename: string, extension: string) => {
@@ -264,8 +257,6 @@ const initFileHandler = async (scene: Scene, events: Events, canvas: HTMLCanvasE
                 return convertPly(convertData);
             case 'compressed-ply':
                 return convertPlyCompressed(convertData);
-            case 'splat':
-                return convertSplat(convertData);
         }
     };
 

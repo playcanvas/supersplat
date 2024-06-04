@@ -162,7 +162,24 @@ const initShortcuts = (events: Events) => {
             events.fire('selectedSplatRingsToggle', events.invoke('selectedSplatLerpStrenght') === 0 ? false : true);
         }
     });
+       
+    shortcuts.register(['Q', 'q'], {
+        func: () => {
+            events.fire('selectedSplatRingsToggle', !events.invoke('selectedSplatRingsToggle'));
+        }
+    });
 
+    shortcuts.register(['O', 'o'], {
+        func: () => {
+            events.fire('boundingRingToggle', !events.invoke('boundingRingToggle'));
+        }
+    });
+
+    shortcuts.register(['N', 'n'], {
+        func: () => {
+            events.fire('splatDisplayToggle', !events.invoke('splatDisplayToggle'));
+        }
+    });
 
     return shortcuts;
 };

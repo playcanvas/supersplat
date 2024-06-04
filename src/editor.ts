@@ -241,6 +241,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         scene.forceRender = true;
     });
 
+    events.on('splatDisplayToggle', (splatDisplayToggle: boolean) => {
+        scene.graphicsDevice.scope.resolve('splatDisplayToggle').setValue(!splatDisplayToggle);
+        scene.forceRender = true;
+    });
+
     events.on('boundingRingToggle', (boundingRingToggle: boolean) => {
         scene.graphicsDevice.scope.resolve('boundingRingToggle').setValue(boundingRingToggle);
         scene.forceRender = true;

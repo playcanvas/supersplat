@@ -21,19 +21,9 @@ uniform mat4 matrix_projection;
 uniform mat4 matrix_viewProjection;
 
 uniform float splatSize;
-uniform vec3 centerPointColor;
-uniform vec3 selectedCenterPointColor;
-uniform float centerPointAlpha;
+uniform vec4 cccolors[3];
 
 varying vec4 color;
-
-// vec4 colors[3] = vec4[3](
-//     vec4(0, 0, 0, 0.25),
-//     vec4(0, 0, 1.0, 0.5),
-//     vec4(1.0, 1.0, 0.0, 0.5)
-// );
-
-uniform vec4 cccolors[3];
 
 void main(void) {
     int state = int(vertex_position.w);
@@ -136,16 +126,6 @@ class SplatDebug {
     get splatSize() {
         return this.size;
     }
-
-    // set centerPointColor(colorValue: number[]) {
-    //     this.color = colorValue;
-    //     this.meshInstance.material.setParameter('centerPointColor', colorValue);
-    // }
-
-    // get centerPointColor() {
-    //     return this.color;
-    // }
-
 }
 
 export { SplatDebug };

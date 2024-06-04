@@ -17,6 +17,7 @@ import { State } from './edit-ops';
 const vertexShader = /*glsl*/`
 
 uniform sampler2D splatState;
+uniform bool splatDisplayToggle;
 
 flat varying highp uint vertexState;
 
@@ -26,6 +27,9 @@ flat varying highp uint vertexId;
 
 void main(void)
 {
+    if (splatDisplayToggle){
+        return;
+    }
     // evaluate center of the splat in object space
     vec3 centerLocal = evalCenter();
 
@@ -60,9 +64,13 @@ uniform bool selectedSplatRingsToggle;
 uniform float selectedSplatRingsSize;
 uniform bool boundingRingToggle;
 uniform float boundingRingSize;
+uniform bool splatDisplayToggle;
 
 void main(void)
 {
+    if(splatDisplayToggle){
+        discard;
+    }
     if ((vertexState & uint(4)) == uint(4)) {
         // deleted
         discard;

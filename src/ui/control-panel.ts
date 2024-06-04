@@ -85,6 +85,25 @@ class ControlPanel extends Panel {
         selectedSplatColor.append(selectedSplatColorLabel);
         selectedSplatColor.append(selectedSplatColorPicker);
 
+        // toggle splats
+        const splatDisplayToggle = new Container({
+            class: 'control-parent'
+        });
+
+        const splatDisplayToggleLabel = new Label({
+            class: 'control-label',
+            text: 'Show splats'
+        });
+
+        const splatDisplayToggleCb = new BooleanInput({
+            class: 'control-element',
+            value: true
+        });
+
+        splatDisplayToggle.append(splatDisplayToggleLabel);
+        splatDisplayToggle.append(splatDisplayToggleCb);
+
+
         // color of center points
         const centerPointColor = new Container({
             class: 'control-parent'
@@ -207,7 +226,7 @@ class ControlPanel extends Panel {
 
         const boundingRingSizeLabel = new Label({
             class: 'control-label',
-            text: 'Bounding ring thickness'
+            text: 'Bounding ring size'
         });
 
         const boundingRingSizeSlider = new SliderInput({
@@ -244,7 +263,7 @@ class ControlPanel extends Panel {
 
         const selectedSplatRingsSizeLabel = new Label({
             class: 'control-label',
-            text: 'Highlight bounds thickness'
+            text: 'Highlight ring size'
         });
 
         const selectedSplatRingsSizeSlider = new SliderInput({
@@ -283,6 +302,7 @@ class ControlPanel extends Panel {
 
         cameraPanel.append(mode);
         cameraPanel.append(splatSize);
+        cameraPanel.append(splatDisplayToggle);
         cameraPanel.append(centerPointColor);
         cameraPanel.append(centerPointAlpha);
         cameraPanel.append(selectedCenterPointColor);
@@ -856,6 +876,19 @@ class ControlPanel extends Panel {
 
         centerPointAlphaSlider.on('change', (value: number) => {
             events.fire('centerPointAlpha', value);
+        });
+
+
+        events.on('splatDisplayToggle', (value: boolean) => {
+            splatDisplayToggleCb.value = value;
+        });
+
+        events.function('splatDisplayToggle', () => {
+            return splatDisplayToggleCb.value;
+        });
+
+        splatDisplayToggleCb.on('change', (value: boolean) => {
+            events.fire('splatDisplayToggle', value);
         });
 
 

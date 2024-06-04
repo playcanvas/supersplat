@@ -249,28 +249,24 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('centerPointColor', (colorValue: number[]) => {
         centerPointColors[1] = [colorValue[0],colorValue[1],colorValue[2],centerPointColors[1][3]];
-        console.log(centerPointColors.flat());
         scene.graphicsDevice.scope.resolve('cccolors[0]').setValue(centerPointColors.flat());
         scene.forceRender = true;
     });
 
     events.on('centerPointAlpha', (value: number) => {
         centerPointColors[1] = [centerPointColors[1][0],centerPointColors[1][1],centerPointColors[1][2],value];
-        console.log(centerPointColors.flat());
         scene.graphicsDevice.scope.resolve('cccolors[0]').setValue(centerPointColors.flat());
         scene.forceRender = true;
     });
 
     events.on('selectedCenterPointColor', (colorValue: number[]) => {
         centerPointColors[2] = [colorValue[0],colorValue[1],colorValue[2],centerPointColors[2][3]];
-        console.log(centerPointColors.flat());
         scene.graphicsDevice.scope.resolve('cccolors[0]').setValue(centerPointColors.flat());
         scene.forceRender = true;
     });
 
     events.on('selectedCenterPointAlpha', (value: number) => {
         centerPointColors[2] = [centerPointColors[2][0],centerPointColors[2][1],centerPointColors[2][2],value];
-        console.log(centerPointColors.flat());
         scene.graphicsDevice.scope.resolve('cccolors[0]').setValue(centerPointColors.flat());
         scene.forceRender = true;
     });
@@ -286,7 +282,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     });
 
     events.on('selectedSplatRingsToggle', (selectedSplatRingToggle: boolean) => {
-        console.log(selectedSplatRingToggle);
         scene.graphicsDevice.scope.resolve('selectedSplatRingsToggle').setValue(selectedSplatRingToggle);
         scene.forceRender = true;
     });

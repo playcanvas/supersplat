@@ -117,7 +117,7 @@ class ControlPanel extends Panel {
             class: 'control-element-expand',
             precision: 2,
             min: 0,
-            max: 1,
+            max: 0.5,
             value: 0.5
         });
 
@@ -156,7 +156,7 @@ class ControlPanel extends Panel {
             class: 'control-element-expand',
             precision: 2,
             min: 0,
-            max: 1,
+            max: 0.5,
             value: 0.5
         });
 
@@ -850,7 +850,7 @@ class ControlPanel extends Panel {
 
         events.on('splat.count', (count: number) => {
             selectionPanel.headerText = `SELECTION${count === 0 ? '' : ' (' + count.toString() + ')'}`;
-        });
+        });       
     }
 }
 

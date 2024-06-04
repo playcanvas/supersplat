@@ -102,10 +102,12 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['U', 'u'], { event: 'select.unhide' });
     shortcuts.register(['['], { event: 'tool.brushSelection.smaller' });
     shortcuts.register([']'], { event: 'tool.brushSelection.bigger' });
+    shortcuts.register(['9'], { event: 'tool.brushSelection.smaller' });
+    shortcuts.register(['0'], { event: 'tool.brushSelection.bigger' });
     shortcuts.register(['Z', 'z'], { event: 'edit.undo', ctrl: true });
     shortcuts.register(['Z', 'z'], { event: 'edit.redo', ctrl: true, shift: true });
     shortcuts.register(['M', 'm'], { event: 'camera.toggleMode' });
-
+    
     // keep tabs on splat size changes
     let splatSizeSave = 2;
     events.on('splatSize', (size: number) => {
@@ -113,13 +115,54 @@ const initShortcuts = (events: Events) => {
             splatSizeSave = size;
         }
     });
-
+    
     // space toggles between 0 and size
     shortcuts.register([' '], {
         func: () => {
             events.fire('splatSize', events.invoke('splatSize') === 0 ? splatSizeSave : 0);
         }
     });
+    
+    let centerPointAlphaSave = 0.5;
+    events.on('centerPointAlpha', (value: number) => {
+        if (value !== 0) {
+            centerPointAlphaSave = value;
+        }
+    });
+        
+    shortcuts.register(['J', 'j'], {
+        func: () => {
+            events.fire('centerPointAlpha', events.invoke('centerPointAlpha') === 0 ? centerPointAlphaSave : 0);
+        }
+    });
+
+    let selectedCenterPointAlphaSave = 0.5;
+    events.on('selectedCenterPointAlpha', (value: number) => {
+        if (value !== 0) {
+            selectedCenterPointAlphaSave = value;
+        }
+    });
+        
+    shortcuts.register(['L', 'l'], {
+        func: () => {
+            events.fire('selectedCenterPointAlpha', events.invoke('selectedCenterPointAlpha') === 0 ? selectedCenterPointAlphaSave : 0);
+        }
+    });
+
+    let selectedSplatLerpStrenghtSave = 0.5;
+    events.on('selectedSplatLerpStrenght', (value: number) => {
+        if (value !== 0) {
+            selectedSplatLerpStrenghtSave = value;
+        }
+    });
+        
+    shortcuts.register(['K', 'k'], {
+        func: () => {
+            events.fire('selectedSplatLerpStrenght', events.invoke('selectedSplatLerpStrenght') === 0 ? selectedSplatLerpStrenghtSave : 0);
+            events.fire('selectedSplatRingsToggle', events.invoke('selectedSplatLerpStrenght') === 0 ? false : true);
+        }
+    });
+
 
     return shortcuts;
 };

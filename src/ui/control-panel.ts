@@ -123,7 +123,7 @@ class ControlPanel extends Panel {
 
         centerPointAlpha.append(centerPointAlphaLabel);
         centerPointAlpha.append(centerPointAlphaSlider);
-        
+
         // highlight color of center points
         const selectedCenterPointColor = new Container({
             class: 'control-parent'
@@ -182,6 +182,44 @@ class ControlPanel extends Panel {
 
         selectedSplatLerpStrenght.append(selectedSplatLerpStrenghtLabel);
         selectedSplatLerpStrenght.append(selectedSplatLerpStrenghtSlider);
+        
+        // toggle bounding rings
+        const boundingRingToggle = new Container({
+            class: 'control-parent'
+        });
+
+        const boundingRingToggleLabel = new Label({
+            class: 'control-label',
+            text: 'Bounding rings'
+        });
+
+        const boundingRingToggleCb = new BooleanInput({
+            class: 'control-element',
+        });
+
+        boundingRingToggle.append(boundingRingToggleLabel);
+        boundingRingToggle.append(boundingRingToggleCb);
+
+        // bounding ring thickness
+        const boundingRingSize = new Container({
+            class: 'control-parent'
+        });
+
+        const boundingRingSizeLabel = new Label({
+            class: 'control-label',
+            text: 'Bounding ring thickness'
+        });
+
+        const boundingRingSizeSlider = new SliderInput({
+            class: 'control-element-expand',
+            precision: 2,
+            min: 0,
+            max: 1,
+            value: 0.5
+        });
+
+        boundingRingSize.append(boundingRingSizeLabel);
+        boundingRingSize.append(boundingRingSizeSlider);
 
         const selectedSplatRingsToggle = new Container({
             class: 'control-parent'
@@ -198,6 +236,27 @@ class ControlPanel extends Panel {
 
         selectedSplatRingsToggle.append(selectedSplatRingsToggleLabel);
         selectedSplatRingsToggle.append(selectedSplatRingsToggleCb);
+
+        // bounding ring thickness
+        const selectedSplatRingsSize = new Container({
+            class: 'control-parent'
+        });
+
+        const selectedSplatRingsSizeLabel = new Label({
+            class: 'control-label',
+            text: 'Highlight bounds thickness'
+        });
+
+        const selectedSplatRingsSizeSlider = new SliderInput({
+            class: 'control-element-expand',
+            precision: 2,
+            min: 0,
+            max: 1,
+            value: 0.5
+        });
+
+        selectedSplatRingsSize.append(selectedSplatRingsSizeLabel);
+        selectedSplatRingsSize.append(selectedSplatRingsSizeSlider);
 
         // show grid
         const showGrid = new Container({
@@ -230,7 +289,10 @@ class ControlPanel extends Panel {
         cameraPanel.append(selectedCenterPointAlpha);
         cameraPanel.append(selectedSplatColor);
         cameraPanel.append(selectedSplatLerpStrenght);
+        cameraPanel.append(boundingRingToggle);
+        cameraPanel.append(boundingRingSize);
         cameraPanel.append(selectedSplatRingsToggle);
+        cameraPanel.append(selectedSplatRingsSize);
         cameraPanel.append(showGrid);
         cameraPanel.append(focusButton);
 
@@ -719,6 +781,32 @@ class ControlPanel extends Panel {
         });
 
 
+        events.on('boundingRingToggle', (value: boolean) => {
+            boundingRingToggleCb.value = value;
+        });
+
+        events.function('boundingRingToggle', () => {
+            return boundingRingToggleCb.value;
+        });
+
+        boundingRingToggleCb.on('change', (value: boolean) => {
+            events.fire('boundingRingToggle', value);
+        });
+
+
+        events.on('boundingRingSize', (value: number) => {
+            boundingRingSizeSlider.value = value;
+        });
+
+        events.function('boundingRingSize', () => {
+            return boundingRingSizeSlider.value;
+        });
+
+        boundingRingSizeSlider.on('change', (value: number) => {
+            events.fire('boundingRingSize', value);
+        });
+
+
         events.on('selectedSplatRingsToggle', (value: boolean) => {
             selectedSplatRingsToggleCb.value = value;
         });
@@ -729,6 +817,19 @@ class ControlPanel extends Panel {
 
         selectedSplatRingsToggleCb.on('change', (value: boolean) => {
             events.fire('selectedSplatRingsToggle', value);
+        });
+
+
+        events.on('selectedSplatRingsSize', (value: number) => {
+            selectedSplatRingsSizeSlider.value = value;
+        });
+
+        events.function('selectedSplatRingsSize', () => {
+            return selectedSplatRingsSizeSlider.value;
+        });
+
+        selectedSplatRingsSizeSlider.on('change', (value: number) => {
+            events.fire('selectedSplatRingsSize', value);
         });
 
 

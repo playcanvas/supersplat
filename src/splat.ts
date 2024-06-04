@@ -57,6 +57,9 @@ uniform vec3 centerPointColor;
 uniform vec3 selectedSplatColor;
 uniform float selectedSplatLerpStrenght;
 uniform bool selectedSplatRingsToggle;
+uniform float selectedSplatRingsSize;
+uniform bool boundingRingToggle;
+uniform float boundingRingSize;
 
 void main(void)
 {
@@ -97,20 +100,29 @@ void main(void)
                 //c = selectedSplatColor.xyz;
                 alpha = B;
                 if (selectedSplatRingsToggle){
-                    if (A < 4.0 - 0.04 * 4.0) {
+                    if (A < 4.0 - selectedSplatRingsSize / 3.0) {
                         alpha = max(0.05, B);
                     } else {
                         alpha = 0.6;
+                        c = selectedSplatColor.xyz;
                     }
                 }
             } else {
                 // normal
                 c = color.xyz;
                 alpha = B;
+                if (boundingRingToggle){
+                    if (A < 4.0 - boundingRingSize / 3.0) {
+                        //alpha = max(0.05, B);
+                        alpha = B;
+                    } else {
+                        alpha = 0.6;
+                    }
+                }
             }
 
             if (ringSize > 0.0) {
-                if (A < 4.0 - ringSize * 4.0) {
+                if (A < 4.0 - ringSize / 3.0) {
                     alpha = max(0.05, B);
                 } else {
                     alpha = 0.6;
@@ -122,6 +134,8 @@ void main(void)
     #endif
 }
 `;
+
+// checkbox to disable centers
 
 const vec = new Vec3();
 

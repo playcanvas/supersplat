@@ -229,7 +229,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     });
 
     events.on('camera.mode', (mode: string) => {
-        scene.graphicsDevice.scope.resolve('ringSize').setValue(mode === 'rings' && events.invoke('splatSize') ? 0.04 : 0);
+        scene.graphicsDevice.scope.resolve('ringSize').setValue(mode === 'rings' ? events.invoke('boundingRingSize') : 0.0);
         scene.forceRender = true;
     });
 
@@ -237,7 +237,27 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         splatDefs.forEach((splatDef) => {
             splatDef.debug.splatSize = value;
         });
-        scene.graphicsDevice.scope.resolve('ringSize').setValue(events.invoke('camera.mode') === 'rings' && value ? 0.04 : 0);
+        // scene.graphicsDevice.scope.resolve('ringSize').setValue(events.invoke('camera.mode') === 'rings' && value ? 0.04 : 0);
+        scene.forceRender = true;
+    });
+
+    events.on('boundingRingToggle', (boundingRingToggle: boolean) => {
+        scene.graphicsDevice.scope.resolve('boundingRingToggle').setValue(boundingRingToggle);
+        scene.forceRender = true;
+    });
+
+    events.on('boundingRingSize', (value: number) => {
+        scene.graphicsDevice.scope.resolve('boundingRingSize').setValue(value);
+        scene.forceRender = true;
+    });
+
+    events.on('selectedSplatRingsToggle', (selectedSplatRingToggle: boolean) => {
+        scene.graphicsDevice.scope.resolve('selectedSplatRingsToggle').setValue(selectedSplatRingToggle);
+        scene.forceRender = true;
+    });
+
+    events.on('selectedSplatRingsSize', (value: number) => {
+        scene.graphicsDevice.scope.resolve('selectedSplatRingsSize').setValue(value);
         scene.forceRender = true;
     });
 
@@ -280,12 +300,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         scene.graphicsDevice.scope.resolve('selectedSplatLerpStrenght').setValue(lerpStrenght);
         scene.forceRender = true;
     });
-
-    events.on('selectedSplatRingsToggle', (selectedSplatRingToggle: boolean) => {
-        scene.graphicsDevice.scope.resolve('selectedSplatRingsToggle').setValue(selectedSplatRingToggle);
-        scene.forceRender = true;
-    });
-
 
     events.on('show.gridOn', () => {
         scene.grid.visible = true;

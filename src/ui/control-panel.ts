@@ -195,7 +195,7 @@ class ControlPanel extends Panel {
             class: 'control-element-expand',
             precision: 2,
             min: 0,
-            max: 0.5,
+            max: 1.0,
             value: 0.5
         });
 

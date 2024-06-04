@@ -159,7 +159,6 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['K', 'k'], {
         func: () => {
             events.fire('selectedSplatLerpStrenght', events.invoke('selectedSplatLerpStrenght') === 0 ? selectedSplatLerpStrenghtSave : 0);
-            events.fire('selectedSplatRingsToggle', events.invoke('selectedSplatLerpStrenght') === 0 ? false : true);
         }
     });
        

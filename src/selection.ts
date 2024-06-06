@@ -6,7 +6,7 @@ let selection: Element = null;
 
 const initSelection = (events: Events, scene: Scene) => {
     events.on('scene.elementAdded', (element: Element) => {
-        if (element.type === ElementType.splat && selection === null) {
+        if (element.type === ElementType.splat && !selection) {
             events.fire('selection', element);
         }
     });

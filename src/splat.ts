@@ -143,8 +143,6 @@ void main(void)
 }
 `;
 
-// checkbox to disable centers
-
 const vec = new Vec3();
 
 class Splat extends Element {

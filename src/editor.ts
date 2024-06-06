@@ -237,7 +237,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         splatDefs.forEach((splatDef) => {
             splatDef.debug.splatSize = value;
         });
-        // scene.graphicsDevice.scope.resolve('ringSize').setValue(events.invoke('camera.mode') === 'rings' && value ? 0.04 : 0);
         scene.forceRender = true;
     });
 
@@ -253,6 +252,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('boundingRingSize', (value: number) => {
         scene.graphicsDevice.scope.resolve('boundingRingSize').setValue(value);
+        scene.graphicsDevice.scope.resolve('ringSize').setValue(events.invoke('camera.mode') === 'rings' ? value : 0.0);
         scene.forceRender = true;
     });
 

@@ -106,10 +106,6 @@ class Popup {
                 text.class.remove('info');
             }
 
-            inputValue.hidden = value === undefined;
-            if (value !== undefined) {
-                inputValue.value = value;
-            }
 
             // configure based on message type
             okButton.hidden = type === 'yesno';
@@ -117,6 +113,12 @@ class Popup {
             yesButton.hidden = type !== 'yesno';
             noButton.hidden = type !== 'yesno';
             container.hidden = false;
+
+            inputValue.hidden = value === undefined;
+            if (value !== undefined) {
+                inputValue.value = value;
+                inputValue.focus();
+            }
 
             return new Promise<{action: string, value?: string}>((resolve) => {
                 okFn = () => {

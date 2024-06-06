@@ -316,6 +316,10 @@ body {
     margin: 20px 0px;
 }
 
+#popup-text-input {
+    margin-bottom: 24px;
+}
+
 #popup-text.error::before {
     content: '\E218';
     font-family: 'pc-icon';

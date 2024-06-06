@@ -40,18 +40,18 @@ class Toolbar extends Container {
             }, {
                 class: 'file-menu-item',
                 text: 'Open...',
-                icon: 'E276',
+                icon: 'E226',
                 onSelect: () => events.fire('scene.open')
             }, {
                 class: 'file-menu-item',
                 text: 'Save',
-                icon: 'E276',
+                icon: 'E216',
                 onSelect: () => events.fire('scene.save'),
                 onIsEnabled: () => events.invoke('scene.canSave')
             }, {
                 class: 'file-menu-item',
                 text: 'Save As...',
-                icon: 'E276',
+                icon: 'E216',
                 onSelect: () => events.fire('scene.saveAs'),
                 onIsEnabled: () => events.invoke('scene.canSave')
             }, {

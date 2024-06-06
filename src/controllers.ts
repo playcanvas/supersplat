@@ -26,7 +26,7 @@ import {
 const plane = new Plane();
 const ray = new Ray();
 const vec = new Vec3();
-const vec2 = new Vec3();
+const vecb = new Vec3();
 const fromWorldPoint = new Vec3();
 const toWorldPoint = new Vec3();
 const worldDiff = new Vec3();
@@ -63,7 +63,7 @@ class MouseController {
         const splats = scene.getElementsByType(ElementType.splat);
 
         const dist = (a: Vec3, b: Vec3) => {
-            return vec2.sub2(a, b).length();
+            return vecb.sub2(a, b).length();
         };
 
         let closestD = 0;

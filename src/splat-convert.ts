@@ -513,4 +513,77 @@ const convertPlyCompressed = (convertData: ConvertEntry[]) => {
 
     return result;
 };
-export { convertPly, convertPlyCompressed };
+
+const convertSplat = (convertData: ConvertEntry[]) => {
+    const totalSplats = countTotalSplats(convertData);
+
+    // position.xyz: float32, scale.xyz: float32, color.rgba: uint8, quaternion.ijkl: uint8
+    const result = new Uint8Array(totalSplats * 32);
+    const dataView = new DataView(result.buffer);
+
+    let idx = 0;
+
+    for (let e = 0; e < convertData.length; ++e) {
+        const entry = convertData[e];
+        const splatData = entry.splatData;
+
+        // count the number of non-deleted splats
+        const x = splatData.getProp('x');
+        const y = splatData.getProp('y');
+        const z = splatData.getProp('z');
+        const opacity = splatData.getProp('opacity');
+        const rot_0 = splatData.getProp('rot_0');
+        const rot_1 = splatData.getProp('rot_1');
+        const rot_2 = splatData.getProp('rot_2');
+        const rot_3 = splatData.getProp('rot_3');
+        const f_dc_0 = splatData.getProp('f_dc_0');
+        const f_dc_1 = splatData.getProp('f_dc_1');
+        const f_dc_2 = splatData.getProp('f_dc_2');
+        const scale_0 = splatData.getProp('scale_0');
+        const scale_1 = splatData.getProp('scale_1');
+        const scale_2 = splatData.getProp('scale_2');
+
+        const state = splatData.getProp('state') as Uint8Array;
+
+        // we must undo the transform we apply at load time to output data
+        mat.setScale(-1, -1, 1);
+        mat.invert();
+        mat.mul2(mat, entry.modelMat);
+        quat.setFromMat4(mat);
+        mat.getScale(scale);
+
+        const clamp = (x: number) => Math.max(0, Math.min(255, x));
+
+        for (let i = 0; i < splatData.numSplats; ++i) {
+            if ((state[i] & State.deleted) === State.deleted) continue;
+
+            const off = idx++ * 32;
+
+            v.set(x[i], y[i], z[i]);
+            mat.transformPoint(v, v);
+            dataView.setFloat32(off + 0, v.x, true);
+            dataView.setFloat32(off + 4, v.y, true);
+            dataView.setFloat32(off + 8, v.z, true);
+
+            dataView.setFloat32(off + 12, Math.exp(scale_0[i]) * scale.x, true);
+            dataView.setFloat32(off + 16, Math.exp(scale_1[i]) * scale.x, true);
+            dataView.setFloat32(off + 20, Math.exp(scale_2[i]) * scale.x, true);
+
+            const SH_C0 = 0.28209479177387814;
+            dataView.setUint8(off + 24, clamp((0.5 + SH_C0 * f_dc_0[i]) * 255));
+            dataView.setUint8(off + 25, clamp((0.5 + SH_C0 * f_dc_1[i]) * 255));
+            dataView.setUint8(off + 26, clamp((0.5 + SH_C0 * f_dc_2[i]) * 255));
+            dataView.setUint8(off + 27, clamp((1 / (1 + Math.exp(-opacity[i]))) * 255));
+
+            q.set(rot_1[i], rot_2[i], rot_3[i], rot_0[i]).mul2(quat, q).normalize();
+            dataView.setUint8(off + 28, clamp(q.w * 128 + 128));
+            dataView.setUint8(off + 29, clamp(q.x * 128 + 128));
+            dataView.setUint8(off + 30, clamp(q.y * 128 + 128));
+            dataView.setUint8(off + 31, clamp(q.z * 128 + 128));
+        }
+    }
+
+    return result;
+};
+
+export { convertPly, convertPlyCompressed, convertSplat };

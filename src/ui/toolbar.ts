@@ -64,6 +64,11 @@ class Toolbar extends Container {
                     text: 'Compressed Ply',
                     icon: 'E245',
                     onSelect: () => events.invoke('scene.export', 'compressed-ply')
+                }, {
+                    class: 'file-menu-item',
+                    text: 'Splat file',
+                    icon: 'E245',
+                    onSelect: () => events.invoke('scene.export', 'splat')
                 }]
             }]
         });

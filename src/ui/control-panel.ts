@@ -1,5 +1,7 @@
-import { BooleanInput, Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, VectorInput } from 'pcui';
+import { BooleanInput, Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, TreeView, TreeViewItem, VectorInput } from 'pcui';
 import { Events } from '../events';
+import { Element, ElementType } from '../element';
+import { Splat } from '../splat';
 import { version as appVersion } from '../../package.json';
 
 class ControlPanel extends Panel {
@@ -15,6 +17,76 @@ class ControlPanel extends Panel {
         });
 
         super(args);
+
+        // scene panel
+        const scenePanel = new Panel({
+            id: 'scene-panel',
+            class: 'control-panel',
+            headerText: 'SCENE'
+        });
+
+        const splatListContainer = new Container({
+            id: 'scene-panel-splat-list-container'
+        });
+
+        const splatList = new TreeView({
+            id: 'scene-panel-splat-list',
+            allowDrag: false,
+            allowReordering: false,
+            allowRenaming: false
+        });
+
+        splatListContainer.append(splatList);
+        scenePanel.content.append(splatListContainer);
+
+        // handle selection and scene updates
+
+        const items = new Map<Splat, TreeViewItem>();
+
+        events.on('scene.elementAdded', (element: Element) => {
+            if (element.type === ElementType.splat) {
+                const splat = element as Splat;
+                const item = new TreeViewItem({
+                    text: splat.filename,
+                    open: false
+                });
+                splatList.append(item);
+                items.set(splat, item);
+            }
+        });
+
+        events.on('scene.elementRemoved', (element: Element) => {
+            if (element.type === ElementType.splat) {
+                const splat = element as Splat;
+                const item = items.get(splat);
+                if (item) {
+                    splatList.remove(item);
+                    items.delete(splat);
+                }
+            }
+        });
+
+        events.on('selection.changed', (selection: Splat) => {
+            const item = items.get(selection);
+            if (item) {
+                item.selected = true;
+            }
+        });
+
+        splatList.on('select', (item: TreeViewItem) => {
+            let splat: Splat = null;
+            items.forEach((value, key) => {
+                if (value === item) {
+                    splat = key;
+                } else {
+                    value.selected = false;
+                }
+            });
+
+            if (splat) {
+                events.fire('selection.byUid', splat.uid);
+            }
+        });
 
         // camera panel
         const cameraPanel = new Panel({
@@ -86,7 +158,7 @@ class ControlPanel extends Panel {
 
         const focusButton = new Button({
             class: 'control-element',
-            text: 'Reset Focus'
+            text: 'Frame Selection'
         });
 
         cameraPanel.append(mode);
@@ -377,37 +449,6 @@ class ControlPanel extends Panel {
         events.on('edit.canUndo', (value: boolean) => { undoButton.enabled = value; });
         events.on('edit.canRedo', (value: boolean) => { redoButton.enabled = value; });
 
-        // export
-        const exportPanel = new Panel({
-            id: 'export-panel',
-            class: 'control-panel',
-            headerText: 'EXPORT TO'
-        });
-
-        const storageIcon = remoteStorageMode ? 'E222' : 'E245';
-
-        const exportPlyButton = new Button({
-            class: 'control-element',
-            text: 'Ply file',
-            icon: storageIcon
-        });
-
-        const exportCompressedPlyButton = new Button({
-            class: 'control-element',
-            text: 'Compressed Ply file',
-            icon: storageIcon
-        });
-
-        const exportSplatButton = new Button({
-            class: 'control-element',
-            text: 'Splat file',
-            icon: storageIcon
-        });
-
-        exportPanel.append(exportPlyButton);
-        exportPanel.append(exportCompressedPlyButton);
-        exportPanel.append(exportSplatButton);
-
         // options
         const optionsPanel = new Panel({
             id: 'options-panel',
@@ -435,11 +476,11 @@ class ControlPanel extends Panel {
         optionsPanel.append(allData);
 
         // append
+        this.content.append(scenePanel);
         this.content.append(cameraPanel);
         this.content.append(selectionPanel);
         this.content.append(showPanel);
         this.content.append(modifyPanel);
-        this.content.append(exportPanel);
         this.content.append(optionsPanel);
 
         rectSelectButton.on('click', () => {
@@ -602,18 +643,6 @@ class ControlPanel extends Panel {
 
         allDataToggle.on('change', (enabled: boolean) => {
             events.fire('allData', enabled);
-        });
-
-        exportPlyButton.on('click', () => {
-            events.fire('scene.exportPly');
-        });
-
-        exportCompressedPlyButton.on('click', () => {
-            events.fire('scene.exportCompressedPly');
-        });
-
-        exportSplatButton.on('click', () => {
-            events.fire('scene.exportSplat');
         });
 
         events.on('splat.count', (count: number) => {

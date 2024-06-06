@@ -12,7 +12,7 @@ import { Serializer } from './serializer';
 
 const vec = new Vec3();
 const mat = new Mat4();
-const bound = new BoundingBox();
+// const bound = new BoundingBox();
 
 // calculate mesh sort distance by node origin (instead of the default bounding box origin)
 const calculateSortDistance = (drawCall: any, cameraPosition: Vec3, cameraForward: Vec3) => {
@@ -25,29 +25,13 @@ class Model extends Element {
     root: any;
     animTracks: string[] = [];
     changedCounter = 0;
+    worldBoundStorage = new BoundingBox();
 
     constructor(asset: Asset) {
         super(ElementType.model);
 
         this.asset = asset;
         this.entity = new Entity('modelRoot');
-    }
-
-    calcBound(result: BoundingBox) {
-        let valid = false;
-        this.entity.findComponents('render').forEach((r: RenderComponent) => {
-            if (r.entity.enabled) {
-                r.meshInstances.forEach((meshInstance: MeshInstance) => {
-                    if (!valid) {
-                        valid = true;
-                        result.copy(meshInstance.aabb);
-                    } else {
-                        result.add(meshInstance.aabb);
-                    }
-                });
-            }
-        });
-        return valid;
     }
 
     play(track?: number) {
@@ -120,14 +104,7 @@ class Model extends Element {
             });
         });
 
-        this.calcBound(bound);
-
-        // center the object to the world origin
-        if (bound) {
-            vec.set(-bound.center.x, -bound.getMin().y, -bound.center.z);
-        } else {
-            vec.copy(Vec3.ZERO);
-        }
+        vec.copy(Vec3.ZERO);
 
         // apply model settings
         const p = config.model.position;
@@ -142,6 +119,8 @@ class Model extends Element {
         this.entity.setLocalPosition(vec.x, vec.y, vec.z);
         if (r) this.entity.setLocalEulerAngles(r.x, r.y, r.z);
         if (s) this.entity.setLocalScale(s, s, s);
+
+        this.scene.boundDirty = true;
     }
 
     remove() {
@@ -159,6 +138,26 @@ class Model extends Element {
         serializer.packa(this.entity.getWorldTransform().data);
         serializer.pack(this.root?.anim?.baseLayer?.activeStateCurrentTime);
         serializer.pack(this.changedCounter);
+    }
+
+    get worldBound() {
+        const bound = this.worldBoundStorage;
+
+        let valid = false;
+        this.entity.findComponents('render').forEach((r: RenderComponent) => {
+            if (r.entity.enabled) {
+                r.meshInstances.forEach((meshInstance: MeshInstance) => {
+                    if (!valid) {
+                        valid = true;
+                        bound.copy(meshInstance.aabb);
+                    } else {
+                        bound.add(meshInstance.aabb);
+                    }
+                });
+            }
+        });
+
+        return valid ? bound : null;
     }
 }
 

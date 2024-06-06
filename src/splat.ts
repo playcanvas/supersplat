@@ -7,10 +7,12 @@ import {
     Entity,
     GSplatData,
     GSplatResource,
+    Quat,
     Texture,
     Vec3
 } from 'playcanvas';
 import { Element, ElementType } from "./element";
+import { SplatDebug } from "./splat-debug";
 import { Serializer } from "./serializer";
 import { State } from './edit-ops';
 
@@ -116,10 +118,15 @@ const vec = new Vec3();
 class Splat extends Element {
     asset: Asset;
     splatData: GSplatData;
+    splatDebug: SplatDebug;
     entity: Entity;
     root: Entity;
     changedCounter = 0;
     stateTexture: Texture;
+    localBoundStorage: BoundingBox;
+    worldBoundStorage: BoundingBox;
+    localBoundDirty = true;
+    worldBoundDirty = true;
 
     constructor(asset: Asset) {
         super(ElementType.splat);
@@ -128,17 +135,25 @@ class Splat extends Element {
 
         this.asset = asset;
         this.splatData = splatResource.splatData;
-        this.entity = new Entity('splatRoot');
+        this.entity = new Entity('splatParent');
         this.root = splatResource.instantiate({
             vertex: vertexShader,
             fragment: fragmentShader
         });
 
+        const instance = this.root.gsplat.instance;
+
+        // added per-splat state channel
+        // bit 1: selected
+        // bit 2: deleted
+        // bit 3: hidden
+        this.splatData.addProp('state', new Uint8Array(this.splatData.numSplats));
+
         // create the state texture
         this.stateTexture = new Texture(splatResource.device, {
             name: 'splatState',
-            width: this.root.gsplat.instance.splat.colorTexture.width,
-            height: this.root.gsplat.instance.splat.colorTexture.height,
+            width: instance.splat.colorTexture.width,
+            height: instance.splat.colorTexture.height,
             format: PIXELFORMAT_L8,
             mipmaps: false,
             minFilter: FILTER_NEAREST,
@@ -146,10 +161,16 @@ class Splat extends Element {
             addressU: ADDRESS_CLAMP_TO_EDGE,
             addressV: ADDRESS_CLAMP_TO_EDGE
         });
-        splatResource.device.scope.resolve('splatState').setValue(this.stateTexture);
+
+        this.localBoundStorage = instance.splat.aabb;
+        this.worldBoundStorage = instance.meshInstance._aabb;
+
+        instance.meshInstance._updateAabb = false;
+
+        instance.material.setParameter('splatState', this.stateTexture);
 
         // when sort changes, re-render the scene
-        this.root.gsplat.instance.sorter.on('updated', () => {
+        instance.sorter.on('updated', () => {
             this.changedCounter++;
         });
 
@@ -163,35 +184,68 @@ class Splat extends Element {
         this.asset.unload();
     }
 
-    updateState(state: Uint8Array) {
+    updateState(recalcBound = false) {
+        const state = this.splatData.getProp('state') as Uint8Array;
         const data = this.stateTexture.lock();
         data.set(state);
         this.stateTexture.unlock();
-    }
 
-    get localBound() {
-        return this.root.gsplat.instance.splat.aabb;
-    }
+        this.splatDebug.update();
 
-    get worldBound() {
-        return this.root.gsplat.instance.meshInstance.aabb;
+        if (recalcBound) {
+            this.localBoundDirty = true;
+            this.worldBoundDirty = true;
+            this.scene.boundDirty = true;
+        }
+
+        this.scene.forceRender = true;
     }
 
     get worldTransform() {
         return this.root.getWorldTransform();
     }
 
+    get filename() {
+        return this.asset.file.filename;
+    }
+
+    getSplatWorldPosition(splatId: number, result: Vec3) {
+        if (splatId >= this.splatData.numSplats) {
+            return false;
+        }
+
+        result.set(
+            this.splatData.getProp('x')[splatId],
+            this.splatData.getProp('y')[splatId],
+            this.splatData.getProp('z')[splatId]
+        );
+
+        this.worldTransform.transformPoint(result, result);
+
+        return true;
+    }
+
     add() {
+        this.splatDebug = new SplatDebug(this.scene, this.root, this.splatData);
+
         // add the entity to the scene
         this.scene.contentRoot.addChild(this.entity);
 
-        const localBound = this.localBound;
+        const localBound = this.localBoundStorage;
         this.entity.setLocalPosition(localBound.center.x, localBound.center.y, localBound.center.z);
         this.root.setLocalPosition(-localBound.center.x, -localBound.center.y, -localBound.center.z);
+
+        this.localBoundDirty = true;
+        this.worldBoundDirty = true;
+        this.scene.boundDirty = true;
     }
 
     remove() {
+        this.splatDebug.destroy();
+        this.splatDebug = null;
+
         this.scene.contentRoot.removeChild(this.entity);
+        this.scene.boundDirty = true;
     }
 
     serialize(serializer: Serializer) {
@@ -199,39 +253,82 @@ class Splat extends Element {
         serializer.pack(this.changedCounter);
     }
 
-    calcBound(result: BoundingBox) {
-        result.copy(this.worldBound);
-        return true;
-    }
+    onPreRender() {
+        const events = this.scene.events;
+        const selected = events.invoke('selection') === this;
+        const cameraMode = events.invoke('camera.mode');
+        const splatSize = events.invoke('splatSize');
 
-    // recalculate the local space splat aabb and update engine/root transforms so it
-    // remains centered on the splat but doesn't move in world space.
-    recalcBound() {
-        // it's faster to calculate bound of splat centers
-        const state = this.splatData.getProp('state') as Uint8Array;
+        // configure rings rendering
+        const material = this.root.gsplat.instance.material;
+        material.setParameter('ringSize', (selected && cameraMode === 'rings' && splatSize > 0) ? 0.04 : 0);
 
-        const localBound = this.localBound;
-        if (!this.splatData.calcAabb(localBound, (i: number) => (state[i] & State.deleted) === 0)) {
-            localBound.center.set(0, 0, 0);
-            localBound.halfExtents.set(0.5, 0.5, 0.5);
+        // render splat centers
+        if (selected && cameraMode === 'centers' && splatSize > 0) {
+            this.splatDebug.splatSize = splatSize;
+            this.scene.app.drawMeshInstance(this.splatDebug.meshInstance);
         }
-
-        // calculate meshinstance aabb (transformed local bound)
-        const meshInstance = this.root.gsplat.instance.meshInstance;
-        meshInstance._aabb.setFromTransformedAabb(localBound, this.entity.getWorldTransform());
-
-        // calculate movement in local space
-        vec.add2(this.root.getLocalPosition(), localBound.center);
-        this.entity.getWorldTransform().transformVector(vec, vec);
-        vec.add(this.entity.getLocalPosition());
-
-        // update transforms so base entity node is oriented to the center of the mesh
-        this.entity.setLocalPosition(vec);
-        this.root.setLocalPosition(-localBound.center.x, -localBound.center.y, -localBound.center.z);
     }
 
     focalPoint() {
         return this.asset.resource?.getFocalPoint?.();
+    }
+
+    move(position?: Vec3, rotation?: Quat, scale?: Vec3) {
+        const entity = this.entity;
+        if (position) {
+            entity.setLocalPosition(position);
+        }
+        if (rotation) {
+            entity.setLocalRotation(rotation);
+        }
+        if (scale) {
+            entity.setLocalScale(scale);
+        }
+
+        this.worldBoundDirty = true;
+        this.scene.boundDirty = true;
+    }
+
+    // get local space bound
+    get localBound() {
+        if (this.localBoundDirty) {
+            const state = this.splatData.getProp('state') as Uint8Array;
+            const localBound = this.localBoundStorage;
+
+            if (!this.splatData.calcAabb(localBound, (i: number) => (state[i] & State.deleted) === 0)) {
+                localBound.center.set(0, 0, 0);
+                localBound.halfExtents.set(0.5, 0.5, 0.5);
+            }
+
+            this.localBoundDirty = false;
+        }
+
+        return this.localBoundStorage;
+    }
+
+    // get world space bound
+    get worldBound() {
+        if (this.worldBoundDirty) {
+            const localBound = this.localBound;
+
+            // calculate movement in local space
+            vec.add2(this.root.getLocalPosition(), localBound.center);
+            this.entity.getWorldTransform().transformVector(vec, vec);
+            vec.add(this.entity.getLocalPosition());
+
+            // update transforms so base entity node is oriented to the center of the mesh
+            this.entity.setLocalPosition(vec);
+            this.root.setLocalPosition(-localBound.center.x, -localBound.center.y, -localBound.center.z);
+
+            // calculate meshinstance aabb (transformed local bound)
+            this.worldBoundStorage.setFromTransformedAabb(localBound, this.root.getWorldTransform());
+
+            // flag scene bound as dirty
+            this.worldBoundDirty = false;
+        }
+
+        return this.worldBoundStorage;
     }
 }
 

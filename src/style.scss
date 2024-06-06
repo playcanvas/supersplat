@@ -69,10 +69,41 @@ body {
     #keyboard-panel & { content: '\E136'};
 }
 
-#file-selector-container {
-    flex-shrink: 0;
-    flex-grow: 0;
-    margin: 5px;
+#scene-panel-splat-list-container {
+    // padding: 10px;
+    overflow: scroll;
+
+    width: 100%;
+    height: 100px;
+    display: flex;
+    flex-direction: row;
+    flex-grow: 1;
+
+    background-color: $bcg-primary;
+}
+
+#scene-panel-splat-list {
+    width: 100%;
+    height: 100%;
+    padding: 4px;
+}
+
+#scene-panel-splat-list .pcui-treeview-item-contents.pcui-treeview-item-selected {
+    background-color: royalblue;
+}
+
+#file-selector {
+    display: none;
+}
+
+#file-menu {
+    position: absolute;
+}
+
+.file-menu-item span {
+    padding: 6px;
+    color: $text-secondary !important;
+    font-size: 14px;
 }
 
 .toolbar-button {
@@ -209,9 +240,17 @@ body {
     image-rendering: pixelated;
 }
 
+#tooltips-container {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
 #top-container {
     position: fixed;
-    z-index: 10000;
     left: 0;
     top: 0;
     width: 100%;
@@ -231,25 +270,67 @@ body {
     margin-right: 6px;
 }
 
-.error-popup {
-    position: absolute;
-    left: 0;
-    right: 0;
-    margin-left: auto;
-    margin-right: auto;
-    width: 400px;
-    top: 50%;
-    color: red;
+//-- Popup
+
+#popup {
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    pointer-events: all;
 }
 
-.info-popup {
+#popup-background {
+    display: flex;
+    flex-direction: column;
     position: absolute;
-    left: 0;
-    right: 0;
-    margin-left: auto;
-    margin-right: auto;
-    width: 400px;
+    left: 50%;
     top: 50%;
+    width: 600px;
+    transform: translate(-50%, -50%);
+    background-color: $bcg-primary;
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid $bcg-darker;
+    pointer-events: all;
+}
+
+#popup-buttons {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+}
+
+.popup-button {
+    background-color: $bcg-darker;
+    color: white;
+    height: 40px;
+    width: 120px
+}
+
+#popup-text {
+    font-size: 18px;
+    color: $text-primary;
+    text-wrap: wrap;
+    text-align: center;
+    margin: 20px 0px;
+}
+
+#popup-text-input {
+    margin-bottom: 24px;
+}
+
+#popup-text.error::before {
+    content: '\E218';
+    font-family: 'pc-icon';
+    margin: 0px 10px;
+    color: $error;
+}
+
+#popup-text.info::before {
+    content: '\E400';
+    font-family: 'pc-icon';
+    margin: 0px 10px;
+    color: $text-primary;
 }
 
 /* scrollbar styling */

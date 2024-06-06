@@ -21,8 +21,6 @@ import { Camera } from './camera';
 import { CustomShadow as Shadow } from './custom-shadow';
 import { Grid } from './grid';
 
-const bound = new BoundingBox();
-
 class Scene {
     events: Events;
     config: SceneConfig;
@@ -34,7 +32,8 @@ class Scene {
     gizmoLayer: Layer;
     sceneState = [new SceneState(), new SceneState()];
     elements: Element[] = [];
-    bound = new BoundingBox();
+    boundStorage = new BoundingBox();
+    boundDirty = true;
     forceRender = false;
 
     canvasResize: {width: number; height: number} | null = null;
@@ -208,7 +207,6 @@ class Scene {
         // add them to the scene
         elements.forEach(e => this.add(e));
 
-        this.updateBound();
         this.camera.focus();
 
         // start the app
@@ -216,13 +214,9 @@ class Scene {
     }
 
     async loadModel(url: string, filename: string) {
-        // clear error
-        this.events.fire('error', null);
-
         try {
             const model = await this.assetLoader.loadModel({ url, filename });
             this.add(model);
-            this.updateBound();
             this.camera.focus();
             this.events.fire('loaded', filename);
         } catch (err) {
@@ -263,31 +257,41 @@ class Scene {
     // remove an element from the scene
     remove(element: Element) {
         if (element.scene === this) {
+            // remove from list
+            this.elements.splice(this.elements.indexOf(element), 1);
+
             // notify listeners
             this.events.fire('scene.elementRemoved', element);
 
             // notify all elements of scene removal
-            this.forEachElement(e => e !== element && e.onRemoved(element));
+            this.forEachElement(e => e.onRemoved(element));
 
             element.remove();
             element.scene = null;
-            this.elements.splice(this.elements.indexOf(element), 1);
         }
     }
 
-    // get scene bounds
-    updateBound() {
-        let valid = false;
-        this.forEachElement(e => {
-            if (e.calcBound(bound)) {
-                if (!valid) {
-                    valid = true;
-                    this.bound.copy(bound);
-                } else {
-                    this.bound.add(bound);
+    // get the scene bound
+    get bound() {
+        if (this.boundDirty) {
+            let valid = false;
+            this.forEachElement(e => {
+                const bound = e.worldBound;
+                if (bound) {
+                    if (!valid) {
+                        valid = true;
+                        this.boundStorage.copy(bound);
+                    } else {
+                        this.boundStorage.add(bound);
+                    }
                 }
-            }
-        });
+            });
+
+            this.boundDirty = false;
+            this.events.fire('scene.boundChanged');
+        }
+
+        return this.boundStorage;
     }
 
     getElementsByType(elementType: ElementType) {
@@ -325,12 +329,6 @@ class Scene {
         }
         this.forceRender = false;
 
-        // update scene bound if models were updated
-        if (all.has(ElementType.model)) {
-            this.updateBound();
-            this.events.fire('scene.boundUpdated');
-        }
-
         // raise per-type update events
         ElementTypeList.forEach(type => {
             if (all.has(type)) {
@@ -359,9 +357,6 @@ class Scene {
 
         // debug - display scene bound
         if (this.config.debug.showBound) {
-            // draw scene bound
-            this.app.drawWireAlignedBox(this.bound.getMin(), this.bound.getMax(), Color.GREEN);
-
             // draw element bounds
             this.forEachElement((e: Element) => {
                 if (e.type === ElementType.splat) {
@@ -371,7 +366,7 @@ class Scene {
                     this.app.drawWireAlignedBox(
                         local.getMin(),
                         local.getMax(),
-                        Color.BLUE,
+                        Color.RED,
                         true,
                         undefined,
                         splat.root.getWorldTransform());
@@ -380,9 +375,12 @@ class Scene {
                     this.app.drawWireAlignedBox(
                         world.getMin(),
                         world.getMax(),
-                        Color.GRAY);
+                        Color.GREEN);
                 }
             });
+
+            // draw scene bound
+            this.app.drawWireAlignedBox(this.bound.getMin(), this.bound.getMax(), Color.BLUE);
         }
     }
 

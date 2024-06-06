@@ -1,5 +1,7 @@
-import { Entity, GSplatData, Quat, Vec3 } from 'playcanvas';
+import { GSplatData, Quat, Vec3 } from 'playcanvas';
 import { Scene } from './scene';
+import { Element } from './element';
+import { Splat } from './splat';
 
 enum State {
     selected = 1,
@@ -27,66 +29,76 @@ const buildIndex = (splatData: GSplatData, pred: (i: number) => boolean) => {
 
 class DeleteSelectionEditOp {
     name = 'deleteSelection';
-    splatData: GSplatData;
+    splat: Splat;
     indices: Uint32Array;
 
-    constructor(splatData: GSplatData) {
+    constructor(splat: Splat) {
+        const splatData = splat.splatData;
         const state = splatData.getProp('state') as Uint8Array;
         const indices = buildIndex(splatData, (i) => !!(state[i] & State.selected));
 
-        this.splatData = splatData;
+        this.splat = splat;
         this.indices = indices;
     }
 
     do() {
-        const state = this.splatData.getProp('state') as Uint8Array;
+        const splatData = this.splat.splatData;
+        const state = splatData.getProp('state') as Uint8Array;
         for (let i = 0; i < this.indices.length; ++i) {
             state[this.indices[i]] |= State.deleted;
         }
+        this.splat.updateState(true);
     }
 
     undo() {
-        const state = this.splatData.getProp('state') as Uint8Array;
+        const splatData = this.splat.splatData;
+        const state = splatData.getProp('state') as Uint8Array;
         for (let i = 0; i < this.indices.length; ++i) {
             state[this.indices[i]] &= ~State.deleted;
         }
+        this.splat.updateState(true);
     }
 
     destroy() {
-        this.splatData = null;
+        this.splat = null;
         this.indices = null;
     }
 }
 
 class ResetEditOp {
     name = 'reset';
-    splatData: GSplatData;
+    splat: Splat;
     indices: Uint32Array;
 
-    constructor(splatData: GSplatData) {
+    constructor(splat: Splat) {
+        const splatData = splat.splatData;
         const state = splatData.getProp('state') as Uint8Array;
         const indices = buildIndex(splatData, (i) => !!(state[i] & State.deleted));
 
-        this.splatData = splatData;
+        this.splat = splat;
         this.indices = indices;
     }
 
     do() {
-        const state = this.splatData.getProp('state') as Uint8Array;
+        const splatData = this.splat.splatData;
+        const state = splatData.getProp('state') as Uint8Array;
         for (let i = 0; i < this.indices.length; ++i) {
             state[this.indices[i]] &= ~State.deleted;
         }
+        this.splat.updateState(true);
     }
 
     undo() {
-        const state = this.splatData.getProp('state') as Uint8Array;
+        const splatData = this.splat.splatData;
+        const state = splatData.getProp('state') as Uint8Array;
         for (let i = 0; i < this.indices.length; ++i) {
             state[this.indices[i]] |= State.deleted;
         }
+        this.splat.updateState(true);
     }
 
     destroy() {
-        this.splatData = null;
+        this.splat = null;
         this.indices = null;
     }
 }
@@ -98,7 +110,7 @@ interface EntityTransform {
 };
 
 interface EntityOp {
-    entity: Entity;
+    splat: Splat;
     old: EntityTransform;
     new: EntityTransform;
 }
@@ -115,20 +127,14 @@ class EntityTransformOp {
 
     do() {
         this.entityOps.forEach((entityOp) => {
-            entityOp.entity.setLocalPosition(entityOp.new.position);
-            entityOp.entity.setLocalRotation(entityOp.new.rotation);
-            entityOp.entity.setLocalScale(entityOp.new.scale);
+            entityOp.splat.move(entityOp.new.position, entityOp.new.rotation, entityOp.new.scale);
         });
-        this.scene.updateBound();
     }
 
     undo() {
         this.entityOps.forEach((entityOp) => {
-            entityOp.entity.setLocalPosition(entityOp.old.position);
-            entityOp.entity.setLocalRotation(entityOp.old.rotation);
-            entityOp.entity.setLocalScale(entityOp.old.scale);
+            entityOp.splat.move(entityOp.old.position, entityOp.old.rotation, entityOp.old.scale);
         });
-        this.scene.updateBound();
     }
 
     destroy() {
@@ -140,5 +146,6 @@ export {
     State,
     DeleteSelectionEditOp,
     ResetEditOp,
+    EntityOp,
     EntityTransformOp
 };

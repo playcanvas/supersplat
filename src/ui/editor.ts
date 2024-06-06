@@ -2,17 +2,17 @@ import { Container, InfoBox, Label } from 'pcui';
 import { ControlPanel } from './control-panel';
 import { Toolbar } from './toolbar';
 import { Events } from '../events';
+import { Popup } from './popup';
 import logo from './playcanvas-logo.png';
 
 class EditorUI {
     appContainer: Container;
-    overlaysContainer: Container;
+    topContainer: Container;
     controlPanel: ControlPanel;
     canvasContainer: Container;
     canvas: HTMLCanvasElement;
     filenameLabel: Label;
-    errorPopup: InfoBox;
-    infoPopup: InfoBox;
+    popup: Popup;
 
     constructor(events: Events, remoteStorageMode: boolean) {
         // favicon
@@ -31,13 +31,27 @@ class EditorUI {
             id: 'editor-container'
         });
 
+        // tooltips container
+        const tooltipsContainer = new Container({
+            id: 'tooltips-container'
+        });
+
         // top container
         const topContainer = new Container({
             id: 'top-container'
         });
-        
+
+        const killit = (event: UIEvent) => {
+            event.preventDefault();
+            event.stopPropagation();
+            return false;
+        };
+
+        topContainer.dom.addEventListener('mousemove', (event: MouseEvent) => killit(event));
+        topContainer.on('click', (event: MouseEvent) => killit(event));
+
         // toolbar
-        const toolbar = new Toolbar(events, appContainer, topContainer);
+        const toolbar = new Toolbar(events, appContainer, tooltipsContainer);
 
         // canvas
         const canvas = document.createElement('canvas');
@@ -58,74 +72,42 @@ class EditorUI {
         // control panel
         const controlPanel = new ControlPanel(events, remoteStorageMode);
 
-        // file select
-        const fileSelect = new Container({
-            id: 'file-selector-container'
-        });
-
-        controlPanel.append(fileSelect);
-
         editorContainer.append(toolbar);
         editorContainer.append(controlPanel);
         editorContainer.append(canvasContainer);
 
-        // error box 
-        const errorPopup = new InfoBox({
-            class: 'error-popup',
-            icon: 'E218',
-            title: 'Error',
-            hidden: true
-        });
-
-        // info box
-        const infoPopup = new InfoBox({
-            class: 'info-popup',
-            icon: 'E400',
-            title: 'Info',
-            hidden: true
-        });
-
-        topContainer.append(errorPopup);
-        topContainer.append(infoPopup);
+        // message popup
+        this.popup = new Popup(topContainer);
 
         appContainer.append(editorContainer);
+        appContainer.append(tooltipsContainer);
         appContainer.append(topContainer);
 
         this.appContainer = appContainer;
-        this.overlaysContainer = topContainer;
+        this.topContainer = topContainer;
         this.controlPanel = controlPanel;
         this.canvasContainer = canvasContainer;
         this.canvas = canvas;
         this.filenameLabel = filenameLabel;
-        this.errorPopup = errorPopup;
-        this.infoPopup = infoPopup;
 
         document.body.appendChild(appContainer.dom);
 
-        window.showError = (err: string) => this.showError(err);
+        events.function('showPopup', (options: { type: 'error' | 'info' | 'yesno' | 'okcancel', message: string, value: string}) => {
+            return this.popup.show(options.type, options.message, options.value);
+        });
+
+        events.function('error', (err: any) => {
+            return this.popup.show('error', err);
+        });
+
+        events.function('info', (info: string) => {
+            return this.popup.show('info', info);
+        });
 
         // initialize canvas to correct size before creating graphics device etc
         const pixelRatio = window.devicePixelRatio;
         canvas.width = Math.ceil(canvasContainer.dom.offsetWidth * pixelRatio);
         canvas.height = Math.ceil(canvasContainer.dom.offsetHeight * pixelRatio);
-    }
-
-    showError(err: string) {
-        if (err) {
-            this.errorPopup.text = err;
-            this.errorPopup.hidden = false;
-        } else {
-            this.errorPopup.hidden = true;
-        }
-    }
-
-    showInfo(info: string) {
-        if (info) {
-            this.infoPopup.text = info;
-            this.infoPopup.hidden = false;
-        } else {
-            this.infoPopup.hidden = true;
-        }
     }
 
     setFilename(filename: string) {

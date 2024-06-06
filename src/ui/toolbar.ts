@@ -1,11 +1,11 @@
-import { Button, Container, Element } from 'pcui';
+import { Button, Container, Element, Menu } from 'pcui';
 import { ShortcutsPopup } from './shortcuts-popup';
 import { Tooltip } from './tooltip';
 import { Events } from '../events';
 import logo from './playcanvas-logo.png';
 
 class Toolbar extends Container {
-    constructor(events: Events, appContainer: Container, topContainer: Container, args = {}) {
+    constructor(events: Events, appContainer: Container, tooltipsContainer: Container, args = {}) {
         args = Object.assign(args, {
             id: 'toolbar-container'
         });
@@ -22,6 +22,70 @@ class Toolbar extends Container {
         appLogo.classList.add('toolbar-button');
         appLogo.id = 'app-logo';
         appLogo.src = logo.src;
+
+        // file
+        const fileButton = new Button({
+            id: 'file-menu-button',
+            class: 'toolbar-button',
+            icon: 'E220'
+        });
+
+        const fileMenu = new Menu({
+            id: 'file-menu',
+            items: [{
+                class: 'file-menu-item',
+                text: 'New',
+                icon: 'E208',
+                onSelect: () => events.fire('scene.new')
+            }, {
+                class: 'file-menu-item',
+                text: 'Open...',
+                icon: 'E226',
+                onSelect: () => events.fire('scene.open')
+            }, {
+                class: 'file-menu-item',
+                text: 'Save',
+                icon: 'E216',
+                onSelect: () => events.fire('scene.save'),
+                onIsEnabled: () => events.invoke('scene.canSave')
+            }, {
+                class: 'file-menu-item',
+                text: 'Save As...',
+                icon: 'E216',
+                onSelect: () => events.fire('scene.saveAs'),
+                onIsEnabled: () => events.invoke('scene.canSave')
+            }, {
+                class: 'file-menu-item',
+                text: 'Export',
+                icon: 'E226',
+                onIsEnabled: () => events.invoke('scene.canSave'),
+                items: [{
+                    class: 'file-menu-item',
+                    text: 'Compressed Ply',
+                    icon: 'E245',
+                    onSelect: () => events.invoke('scene.export', 'compressed-ply')
+                }, {
+                    class: 'file-menu-item',
+                    text: 'Splat file',
+                    icon: 'E245',
+                    onSelect: () => events.invoke('scene.export', 'splat')
+                }]
+            }]
+        });
+
+        fileButton.on('click', () => {
+            const r = fileButton.dom.getBoundingClientRect();
+            fileMenu.position(r.right, r.top);
+            fileMenu.hidden = false;
+        });
+
+        window.addEventListener('click', (e: Event) => {
+            if (!fileMenu.hidden &&
+                !fileMenu.dom.contains(e.target as Node) &&
+                e.target !== fileButton.dom) {
+                fileMenu.hidden = true;
+            }
+        });
 
         // move
         const moveTool = new Button({
@@ -99,6 +163,8 @@ class Toolbar extends Container {
         });
 
         toolbarToolsContainer.dom.appendChild(appLogo);
+        toolbarToolsContainer.append(fileButton);
+        toolbarToolsContainer.append(fileMenu);
         toolbarToolsContainer.append(moveTool);
         toolbarToolsContainer.append(rotateTool);
         toolbarToolsContainer.append(scaleTool);
@@ -126,7 +192,7 @@ class Toolbar extends Container {
             icon: 'E259' 
         });
         github.on('click', () => {
-            window.open('https://github.com/playcanvas/super-splat', '_blank').focus();
+            window.open('https://github.com/playcanvas/supersplat', '_blank').focus();
         });
 
         // toolbar help toolbar
@@ -141,7 +207,7 @@ class Toolbar extends Container {
 
         const addTooltip = (target: Element, text: string) => {
             const tooltip = new Tooltip({ target, text });
-            topContainer.append(tooltip);
+            tooltipsContainer.append(tooltip);
             return tooltip;
         };
 

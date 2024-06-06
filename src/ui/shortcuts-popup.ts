@@ -21,6 +21,7 @@ const shortcutList = [
     { key: 'H', action: 'Hide Selected Splats' },
     { key: 'U', action: 'Unhide All Splats' },
     { header: 'OTHER' },
+    { key: 'Tab', action: 'Select Next Splat' },
     { key: 'Ctrl + Z', action: 'Undo' },
     { key: 'Ctrl + Shift + Z', action: 'Redo' },
     { key: 'Space', action: 'Toggle Debug Splat Display' },

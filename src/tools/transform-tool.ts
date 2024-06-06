@@ -1,10 +1,9 @@
-import { Entity, TransformGizmo } from 'playcanvas';
-import { ElementType } from '../element';
+import { TransformGizmo } from 'playcanvas';
 import { Scene } from '../scene';
 import { Splat } from '../splat';
 import { Events } from '../events';
 import { EditHistory, EditOp } from '../edit-history';
-import { EntityTransformOp } from '../edit-ops';
+import { EntityOp, EntityTransformOp } from '../edit-ops';
 
 // patch gizmo to be more opaque
 const patchGizmoMaterials = (gizmo: TransformGizmo) => {
@@ -17,27 +16,32 @@ const patchGizmoMaterials = (gizmo: TransformGizmo) => {
 class TransformTool {
     scene: Scene;
     gizmo: TransformGizmo;
-    entities: Entity[] = [];
-    ops: any[] = [];
+    splats: Splat[] = [];
+    ops: EntityOp[] = [];
+    events: Events;
+    active = false;
 
     constructor(gizmo: TransformGizmo, events: Events, editHistory: EditHistory, scene: Scene) {
         this.scene = scene;
         this.gizmo = gizmo;
+        this.events = events;
 
         // patch gizmo materials (until we have API to do this)
         patchGizmoMaterials(this.gizmo);
 
         this.gizmo.coordSpace = events.invoke('tool.coordSpace');
-        this.gizmo.size = 0.9;
+        this.gizmo.size = 0.8;
 
         this.gizmo.on('render:update', () => {
             scene.forceRender = true;
         });
 
         this.gizmo.on('transform:start', () => {
-            this.ops = this.entities.map((entity) => {
+            this.ops = this.splats.map((splat) => {
+                const entity = splat.entity;
+
                 return {
-                    entity: entity,
+                    splat,
                     old: {
                         position: entity.getLocalPosition().clone(),
                         rotation: entity.getLocalRotation().clone(),
@@ -53,13 +57,16 @@ class TransformTool {
         });
 
         this.gizmo.on('transform:move', () => {
-            scene.updateBound();
+            this.ops.forEach((op) => {
+                op.splat.worldBoundDirty = true;
+            });
+            scene.boundDirty = true;
         });
 
         this.gizmo.on('transform:end', () => {
             // update new transforms
             this.ops.forEach((op) => {
-                const e = op.entity;
+                const e = op.splat.entity;
                 op.new.position.copy(e.getLocalPosition());
                 op.new.rotation.copy(e.getLocalRotation());
                 op.new.scale.copy(e.getLocalScale());
@@ -67,7 +74,7 @@ class TransformTool {
 
             // filter out ops that didn't change
             this.ops = this.ops.filter((op) => {
-                const e = op.entity;
+                const e = op.splat.entity;
                 return !op.old.position.equals(e.getLocalPosition()) ||
                        !op.old.rotation.equals(e.getLocalRotation()) ||
                        !op.old.scale.equals(e.getLocalScale());
@@ -80,8 +87,8 @@ class TransformTool {
         });
 
         events.on('scene.boundChanged', (editOp: EditOp) => {
-            if (this.entities) {
-                this.gizmo.attach(this.entities);
+            if (this.splats) {
+                this.gizmo.attach(this.splats.map((splat) => splat.entity));
             }
         });
 
@@ -89,16 +96,38 @@ class TransformTool {
             this.gizmo.coordSpace = coordSpace;
             scene.forceRender = true;
         });
+
+        events.on('selection.changed', (selection: Splat) => {
+            this.update();
+        });
+    }
+
+    update() {
+        if (!this.active) {
+            this.gizmo.detach();
+            this.splats = [];
+            return;
+        }
+
+        const selection = this.events.invoke('selection') as Splat;
+        if (!selection) {
+            this.gizmo.detach();
+            this.splats = [];
+            return;
+        }
+
+        this.splats = [selection];
+        this.gizmo.attach(this.splats.map((splats) => splats.entity));
     }
 
     activate() {
-        this.entities = this.scene.getElementsByType(ElementType.splat).map((splat: Splat) => splat.entity);
-        this.gizmo.attach(this.entities);
+        this.active = true;
+        this.update();
     }
 
     deactivate() {
-        this.gizmo.detach();
-        this.entities = [];
+        this.active = false;
+        this.update();
     }
 }
 

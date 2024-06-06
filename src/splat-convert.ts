@@ -6,110 +6,193 @@ import {
 } from 'playcanvas';
 import { State } from './edit-ops';
 
-const convertPly = (splatData: GSplatData, modelMat: Mat4) => {
-    // count the number of non-deleted splats
-    const state = splatData.getProp('state') as Uint8Array;
-    let numSplats = 0;
-    for (let i = 0; i < splatData.numSplats; ++i) {
-        numSplats += (state[i] & State.deleted) === State.deleted ? 0 : 1;
+interface ConvertEntry {
+    splatData: GSplatData;
+    modelMat: Mat4;
+};
+
+const countTotalSplats = (convertData: ConvertEntry[]) => {
+    return convertData.reduce((total, entry) => {
+        const splatData = entry.splatData;
+        const state = splatData.getProp('state') as Uint8Array;
+        for (let i = 0; i < splatData.numSplats; ++i) {
+            total += (state[i] & State.deleted) === State.deleted ? 0 : 1;
+        }
+        return total;
+    }, 0);
+};
+
+const getVertexProperties = (splatData: GSplatData) => {
+    return new Set<string>(
+        splatData.getElement('vertex')
+        .properties.filter((p: any) => p.storage)
+        .map((p: any) => p.name)
+    );
+};
+
+const getCommonPropNames = (convertData: ConvertEntry[]) => {
+    let result: Set<string>;
+
+    for (let i = 0; i < convertData.length; ++i) {
+        const props = getVertexProperties(convertData[i].splatData);
+        result = i == 0 ? props : new Set([...result].filter(i => props.has(i)));
     }
 
+    return [...result];
+};
+
+const mat = new Mat4();
+const quat = new Quat();
+const scale = new Vec3();
+const v = new Vec3();
+const q = new Quat();
+
+const convertPly = (convertData: ConvertEntry[]) => {
+    // count the number of non-deleted splats
+    const totalSplats = countTotalSplats(convertData);
+
     const internalProps = ['state'];
-    const props = splatData.getElement('vertex').properties.filter((p: any) => p.storage && !internalProps.includes(p.name));
-    const header = (new TextEncoder()).encode(`ply\nformat binary_little_endian 1.0\nelement vertex ${numSplats}\n` + props.map((p: any) => `property float ${p.name}`).join('\n') + `\nend_header\n`);
-    const result = new Uint8Array(header.byteLength + numSplats * props.length * 4);
+
+    // get the vertex properties common to all splats
+    const propNames = getCommonPropNames(convertData).filter((p) => !internalProps.includes(p));
+    const hasPosition = ['x', 'y', 'z'].every(v => propNames.includes(v));
+    const hasRotation = ['rot_0', 'rot_1', 'rot_2', 'rot_3'].every(v => propNames.includes(v));
+    const hasScale = ['scale_0', 'scale_1', 'scale_2'].every(v => propNames.includes(v));
+
+    const headerText = [
+        `ply`,
+        `format binary_little_endian 1.0`,
+        `element vertex ${totalSplats}`,
+         propNames.map(p => `property float ${p}`),
+         `end_header`,
+         ``
+    ].flat().join('\n');
+
+    const header = (new TextEncoder()).encode(headerText);
+    const result = new Uint8Array(header.byteLength + totalSplats * propNames.length * 4);
+    const dataView = new DataView(result.buffer);
+
+    // construct an object for holding a single splat's properties
+    const splat = propNames.reduce((acc: any, name) => {
+        acc[name] = 0;
+        return acc;
+    }, {});
 
     result.set(header);
 
-    const dataView = new DataView(result.buffer);
     let offset = header.byteLength;
 
-    for (let i = 0; i < splatData.numSplats; ++i) {
-        if ((state[i] & State.deleted) === State.deleted) continue;
-        props.forEach((prop: any) => {
-            dataView.setFloat32(offset, prop.storage[i], true);
-            offset += 4;
-        });
-    }
+    for (let e = 0; e < convertData.length; ++e) {
+        const entry = convertData[e];
+        const splatData = entry.splatData;
+        const state = splatData.getProp('state') as Uint8Array;
+        const storage = propNames.map((name) => splatData.getProp(name));
 
-    // FIXME
-    // we must undo the transform we apply at load time to output data
-    const mat = new Mat4();
-    mat.setScale(-1, -1, 1);
-    mat.invert();
-    mat.mul2(mat, modelMat);
+        // we must undo the transform we apply at load time to output data
+        mat.setScale(-1, -1, 1);
+        mat.invert();
+        mat.mul2(mat, entry.modelMat);
+        quat.setFromMat4(mat);
+        mat.getScale(scale);
 
-    const quat = new Quat();
-    quat.setFromMat4(mat);
+        for (let i = 0; i < splatData.numSplats; ++i) {
+            if ((state[i] & State.deleted) === State.deleted) continue;
 
-    const scale = new Vec3();
-    mat.getScale(scale);
+            // read splat data
+            for (let j = 0; j < propNames.length; ++j) {
+                splat[propNames[j]] = storage[j][i];
+            }
 
-    const v = new Vec3();
-    const q = new Quat();
+            // transform
+            if (hasPosition) {
+                v.set(splat.x, splat.y, splat.z);
+                mat.transformPoint(v, v);
+                [splat.x, splat.y, splat.z] = [v.x, v.y, v.z];
+            }
 
-    const propIndex = (name: string) => props.findIndex((p: any) => p.name === name);
-    const x_off = propIndex('x') * 4;
-    const y_off = propIndex('y') * 4;
-    const z_off = propIndex('z') * 4;
-    const r0_off = propIndex('rot_0') * 4;
-    const r1_off = propIndex('rot_1') * 4;
-    const r2_off = propIndex('rot_2') * 4;
-    const r3_off = propIndex('rot_3') * 4;
-    const scale0_off = propIndex('scale_0') * 4;
-    const scale1_off = propIndex('scale_1') * 4;
-    const scale2_off = propIndex('scale_2') * 4;
+            if (hasRotation) {
+                q.set(splat.rot_1, splat.rot_2, splat.rot_3, splat.rot_0).mul2(quat, q);
+                [splat.rot_1, splat.rot_2, splat.rot_3, splat.rot_0] = [q.x, q.y, q.z, q.w];
+            }
 
-    for (let i = 0; i < numSplats; ++i) {
-        const off = header.byteLength + i * props.length * 4;
-        const x = dataView.getFloat32(off + x_off, true);
-        const y = dataView.getFloat32(off + y_off, true);
-        const z = dataView.getFloat32(off + z_off, true);
-        const rot_0 = dataView.getFloat32(off + r0_off, true);
-        const rot_1 = dataView.getFloat32(off + r1_off, true);
-        const rot_2 = dataView.getFloat32(off + r2_off, true);
-        const rot_3 = dataView.getFloat32(off + r3_off, true);
-        const scale_0 = dataView.getFloat32(off + scale0_off, true);
-        const scale_1 = dataView.getFloat32(off + scale1_off, true);
-        const scale_2 = dataView.getFloat32(off + scale2_off, true);
+            if (hasScale) {
+                splat.scale_0 = Math.log(Math.exp(splat.scale_0) * scale.x);
+                splat.scale_1 = Math.log(Math.exp(splat.scale_1) * scale.y);
+                splat.scale_2 = Math.log(Math.exp(splat.scale_2) * scale.z);
+            }
 
-        v.set(x, y, z);
-        mat.transformPoint(v, v);
-        dataView.setFloat32(off + x_off, v.x, true);
-        dataView.setFloat32(off + y_off, v.y, true);
-        dataView.setFloat32(off + z_off, v.z, true);
+            // TODO: transform spherical harmonics
 
-        q.set(rot_1, rot_2, rot_3, rot_0).mul2(quat, q);
-        dataView.setFloat32(off + r0_off, q.w, true);
-        dataView.setFloat32(off + r1_off, q.x, true);
-        dataView.setFloat32(off + r2_off, q.y, true);
-        dataView.setFloat32(off + r3_off, q.z, true);
-
-        dataView.setFloat32(off + scale0_off, Math.log(Math.exp(scale_0) * scale.x), true);
-        dataView.setFloat32(off + scale1_off, Math.log(Math.exp(scale_1) * scale.x), true);
-        dataView.setFloat32(off + scale2_off, Math.log(Math.exp(scale_2) * scale.x), true);
+            // write
+            for (let j = 0; j < propNames.length; ++j) {
+                dataView.setFloat32(offset, splat[propNames[j]], true);
+                offset += 4;
+            }
+        }
     }
 
     return result;
 };
 
-const calcMinMax = (data: Float32Array, indices?: number[]) => {
-    let min;
-    let max;
-    if (indices) {
-        min = max = data[indices[0]];
-        for (let i = 1; i < indices.length; ++i) {
-            const v = data[indices[i]];
-            min = Math.min(min, v);
-            max = Math.max(max, v);
-        }
-    } else {
-        min = max = data[0];
-        for (let i = 1; i < data.length; ++i) {
-            const v = data[i];
-            min = Math.min(min, v);
-            max = Math.max(max, v);
-        }
+interface CompressedIndex {
+    entry: ConvertEntry;
+    entryIndex: number;
+    i: number;
+    globalIndex: number;
+};
+
+class SingleSplat {
+    x = 0;
+    y = 0;
+    z = 0;
+    scale_0 = 0;
+    scale_1 = 0;
+    scale_2 = 0;
+    f_dc_0 = 0;
+    f_dc_1 = 0;
+    f_dc_2 = 0;
+    opacity = 0;
+    rot_0 = 0;
+    rot_1 = 0;
+    rot_2 = 0;
+    rot_3 = 0;
+
+    read(index: CompressedIndex) {
+        const val = (prop: string) => index.entry.splatData.getProp(prop)[index.i];
+        [this.x, this.y, this.z] = [val('x'), val('y'), val('z')];
+        [this.scale_0, this.scale_1, this.scale_2] = [val('scale_0'), val('scale_1'), val('scale_2')];
+        [this.f_dc_0, this.f_dc_1, this.f_dc_2, this.opacity] = [val('f_dc_0'), val('f_dc_1'), val('f_dc_2'), val('opacity')];
+        [this.rot_0, this.rot_1, this.rot_2, this.rot_3] = [val('rot_0'), val('rot_1'), val('rot_2'), val('rot_3')];
+    }
+
+    transform(mat: Mat4, quat: Quat, scale: Vec3) {
+        // position
+        v.set(this.x, this.y, this.z);
+        mat.transformPoint(v, v);
+        [this.x, this.y, this.z] = [v.x, v.y, v.z];
+
+        // rotation
+        q.set(this.rot_1, this.rot_2, this.rot_3, this.rot_0).mul2(quat, q);
+        [this.rot_1, this.rot_2, this.rot_3, this.rot_0] = [q.x, q.y, q.z, q.w];
+
+        // scale
+        this.scale_0 = Math.log(Math.exp(this.scale_0) * scale.x);
+        this.scale_1 = Math.log(Math.exp(this.scale_1) * scale.y);
+        this.scale_2 = Math.log(Math.exp(this.scale_2) * scale.z);
+    }
+};
+
+const compressedVal = (prop: string, index: CompressedIndex) => {
+    return index.entry.splatData.getProp(prop)[index.i];
+};
+
+const compressedMinMax = (prop: string, indices: CompressedIndex[]) => {
+    let min, max;
+    min = max = compressedVal(prop, indices[0]);
+    for (let i = 1; i < indices.length; ++i) {
+        const v = compressedVal(prop, indices[i]);
+        min = Math.min(min, v);
+        max = Math.max(max, v);
     }
     return { min, max };
 };
@@ -118,15 +201,13 @@ const normalize = (x: number, min: number, max: number) => {
     return (max - min < 0.00001) ? 0 : (x - min) / (max - min);
 };
 
-const quat = new Quat();
-const scale = new Vec3();
-const v = new Vec3();
-const q = new Quat();
-
 // process and compress a chunk of 256 splats
 class Chunk {
     static members = [
-        'x', 'y', 'z', 'scale_0', 'scale_1', 'scale_2', 'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity', 'rot_0', 'rot_1', 'rot_2', 'rot_3'
+        'x', 'y', 'z',
+        'scale_0', 'scale_1', 'scale_2',
+        'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity',
+        'rot_0', 'rot_1', 'rot_2', 'rot_3'
     ];
 
     size: number;
@@ -149,56 +230,25 @@ class Chunk {
         this.color = new Uint32Array(size);
     }
 
-    set(splatData: GSplatData, indices: number[]) {
+    set(index: number, splat: SingleSplat) {
         Chunk.members.forEach((name) => {
-            const prop = splatData.getProp(name);
-            const m = this.data[name];
-            indices.forEach((idx, i) => {
-                m[i] = prop[idx];
-            });
+            this.data[name][index] = (splat as any)[name];
         });
     }
 
-    transform(mat: Mat4) {
-        quat.setFromMat4(mat);
-        mat.getScale(scale);
-
-        const data = this.data;
-
-        const x = data.x;
-        const y = data.y;
-        const z = data.z;
-        const scale_0 = data.scale_0;
-        const scale_1 = data.scale_1;
-        const scale_2 = data.scale_2;
-        const rot_0 = data.rot_0;
-        const rot_1 = data.rot_1;
-        const rot_2 = data.rot_2;
-        const rot_3 = data.rot_3;
-
-        for (let i = 0; i < this.size; ++i) {
-            // position
-            v.set(x[i], y[i], z[i]);
-            mat.transformPoint(v, v);
-            x[i] = v.x;
-            y[i] = v.y;
-            z[i] = v.z;
-
-            // rotation
-            q.set(rot_1[i], rot_2[i], rot_3[i], rot_0[i]).mul2(quat, q);
-            rot_0[i] = q.w;
-            rot_1[i] = q.x;
-            rot_2[i] = q.y;
-            rot_3[i] = q.z;
-
-            // scale
-            scale_0[i] = Math.log(Math.exp(scale_0[i]) * scale.x);
-            scale_1[i] = Math.log(Math.exp(scale_1[i]) * scale.y);
-            scale_2[i] = Math.log(Math.exp(scale_2[i]) * scale.z);
-        }
-    }
-
     pack() {
+        const calcMinMax = (data: Float32Array) => {
+            let min;
+            let max;
+            min = max = data[0];
+            for (let i = 1; i < data.length; ++i) {
+                const v = data[i];
+                min = Math.min(min, v);
+                max = Math.max(max, v);
+            }
+            return { min, max };
+        };
+
         const data = this.data;
 
         const x = data.x;
@@ -299,50 +349,74 @@ class Chunk {
     }
 }
 
-const convertPlyCompressed = (splatData: GSplatData, modelMat: Mat4) => {
-    const sortSplats = (indices: number[]) => {
-        // https://fgiesen.wordpress.com/2009/12/13/decoding-morton-codes/
-        const encodeMorton3 = (x: number, y: number, z: number) : number => {
-            const Part1By2 = (x: number) => {
-                x &= 0x000003ff;
-                x = (x ^ (x << 16)) & 0xff0000ff;
-                x = (x ^ (x <<  8)) & 0x0300f00f;
-                x = (x ^ (x <<  4)) & 0x030c30c3;
-                x = (x ^ (x <<  2)) & 0x09249249;
-                return x;
-            };
-
-            return (Part1By2(z) << 2) + (Part1By2(y) << 1) + Part1By2(x);
+// sort the compressed indices into morton order
+const sortSplats = (indices: CompressedIndex[]) => {
+    // https://fgiesen.wordpress.com/2009/12/13/decoding-morton-codes/
+    const encodeMorton3 = (x: number, y: number, z: number) : number => {
+        const Part1By2 = (x: number) => {
+            x &= 0x000003ff;
+            x = (x ^ (x << 16)) & 0xff0000ff;
+            x = (x ^ (x <<  8)) & 0x0300f00f;
+            x = (x ^ (x <<  4)) & 0x030c30c3;
+            x = (x ^ (x <<  2)) & 0x09249249;
+            return x;
         };
 
-        const x = splatData.getProp('x') as Float32Array;
-        const y = splatData.getProp('y') as Float32Array;
-        const z = splatData.getProp('z') as Float32Array;
-
-        const bx = calcMinMax(x, indices);
-        const by = calcMinMax(y, indices);
-        const bz = calcMinMax(z, indices);
-
-        // generate morton codes
-        const morton = indices.map((i) => {
-            const ix = Math.floor(1024 * (x[i] - bx.min) / (bx.max - bx.min));
-            const iy = Math.floor(1024 * (y[i] - by.min) / (by.max - by.min));
-            const iz = Math.floor(1024 * (z[i] - bz.min) / (bz.max - bz.min));
-            return encodeMorton3(ix, iy, iz);
-        });
-
-        // order splats by morton code
-        indices.sort((a, b) => morton[a] - morton[b]);
+        return (Part1By2(z) << 2) + (Part1By2(y) << 1) + Part1By2(x);
     };
 
-    // generate index list of surviving splats
-    const state = splatData.getProp('state') as Uint8Array;
-    const indices = [];
-    for (let i = 0; i < splatData.numSplats; ++i) {
-        if ((state[i] & State.deleted) === 0) {
-            indices.push(i);
+    const bx = compressedMinMax('x', indices);
+    const by = compressedMinMax('y', indices);
+    const bz = compressedMinMax('z', indices);
+
+    const xlen = bx.max - bx.min;
+    const ylen = by.max - by.min;
+    const zlen = bz.max - bz.min;
+
+    // generate morton codes
+    const morton = indices.map((i) => {
+        const ix = Math.floor(1024 * (compressedVal('x', i) - bx.min) / xlen);
+        const iy = Math.floor(1024 * (compressedVal('y', i) - by.min) / ylen);
+        const iz = Math.floor(1024 * (compressedVal('z', i) - bz.min) / zlen);
+        return encodeMorton3(ix, iy, iz);
+    });
+
+    // order splats by morton code
+    indices.sort((a, b) => morton[a.globalIndex] - morton[b.globalIndex]);
+};
+
+const convertPlyCompressed = (convertData: ConvertEntry[]) => {
+    const chunkProps = [
+        'min_x', 'min_y', 'min_z',
+        'max_x', 'max_y', 'max_z',
+        'min_scale_x', 'min_scale_y',
+        'min_scale_z', 'max_scale_x',
+        'max_scale_y', 'max_scale_z'
+    ];
+
+    const vertexProps = [
+        'packed_position',
+        'packed_rotation',
+        'packed_scale',
+        'packed_color'
+    ];
+
+    // create a list of indices spanning all splats
+    const indices: CompressedIndex[] = convertData.reduce((indices, entry, entryIndex) => {
+        const splatData = entry.splatData;
+        const state = splatData.getProp('state') as Uint8Array;
+        for (let i = 0; i < splatData.numSplats; ++i) {
+            if ((state[i] & State.deleted) === 0) {
+                indices.push({
+                    entry,
+                    entryIndex,
+                    i,
+                    globali: indices.length
+                });
+            }
         }
-    }
+        return indices;
+    }, []);
 
     if (indices.length === 0) {
         console.error('nothing to export');
@@ -352,8 +426,6 @@ const convertPlyCompressed = (splatData: GSplatData, modelMat: Mat4) => {
     const numSplats = indices.length;
     const numChunks = Math.ceil(numSplats / 256);
 
-    const chunkProps = ['min_x', 'min_y', 'min_z', 'max_x', 'max_y', 'max_z', 'min_scale_x', 'min_scale_y', 'min_scale_z', 'max_scale_x', 'max_scale_y', 'max_scale_z'];
-    const vertexProps = ['packed_position', 'packed_rotation', 'packed_scale', 'packed_color'];
     const headerText = [
         [
             `ply`,
@@ -380,14 +452,36 @@ const convertPlyCompressed = (splatData: GSplatData, modelMat: Mat4) => {
     const chunkOffset = header.byteLength;
     const vertexOffset = chunkOffset + numChunks * 12 * 4;
 
-    const chunk = new Chunk();
-
     // sort splats into some kind of order
     sortSplats(indices);
 
+    // generate transforms for each splat model
+    const transforms = convertData.map((entry) => {
+        return {
+            modelMat: entry.modelMat.clone(),
+            quat: new Quat().setFromMat4(entry.modelMat),
+            scale: entry.modelMat.getScale()
+        };
+    });
+
+    const chunk = new Chunk();
+    const singleSplat = new SingleSplat();
+
     for (let i = 0; i < numChunks; ++i) {
-        chunk.set(splatData, indices.slice(i * 256, (i + 1) * 256));
-        chunk.transform(modelMat);
+        const num = Math.min(numSplats, (i + 1) * 256) - i * 256;
+        for (let j = 0; j < num; ++j) {
+            const index = indices[i * 256 + j];
+
+            // read splat
+            singleSplat.read(index);
+
+            // transform
+            const t = transforms[index.entryIndex];
+            singleSplat.transform(t.modelMat, t.quat, t.scale);
+
+            // set
+            chunk.set(j, singleSplat);
+        }
 
         const result = chunk.pack();
 
@@ -420,79 +514,73 @@ const convertPlyCompressed = (splatData: GSplatData, modelMat: Mat4) => {
     return result;
 };
 
-const convertSplat = (splatData: GSplatData, modelMat: Mat4) => {
-    // count the number of non-deleted splats
-    const x = splatData.getProp('x');
-    const y = splatData.getProp('y');
-    const z = splatData.getProp('z');
-    const opacity = splatData.getProp('opacity');
-    const rot_0 = splatData.getProp('rot_0');
-    const rot_1 = splatData.getProp('rot_1');
-    const rot_2 = splatData.getProp('rot_2');
-    const rot_3 = splatData.getProp('rot_3');
-    const f_dc_0 = splatData.getProp('f_dc_0');
-    const f_dc_1 = splatData.getProp('f_dc_1');
-    const f_dc_2 = splatData.getProp('f_dc_2');
-    const scale_0 = splatData.getProp('scale_0');
-    const scale_1 = splatData.getProp('scale_1');
-    const scale_2 = splatData.getProp('scale_2');
-
-    const state = splatData.getProp('state') as Uint8Array;
-
-    // count number of non-deleted splats
-    let numSplats = 0;
-    for (let i = 0; i < splatData.numSplats; ++i) {
-        numSplats += (state[i] & State.deleted) === State.deleted ? 0 : 1;
-    }
+const convertSplat = (convertData: ConvertEntry[]) => {
+    const totalSplats = countTotalSplats(convertData);
 
     // position.xyz: float32, scale.xyz: float32, color.rgba: uint8, quaternion.ijkl: uint8
-    const result = new Uint8Array(numSplats * 32);
+    const result = new Uint8Array(totalSplats * 32);
     const dataView = new DataView(result.buffer);
 
-    // we must undo the transform we apply at load time to output data
-    const mat = new Mat4();
-    mat.setScale(-1, -1, 1);
-    mat.invert();
-    mat.mul2(mat, modelMat);
-
-    const quat = new Quat();
-    quat.setFromMat4(mat);
-
-    const v = new Vec3();
-    const q = new Quat();
-
-    const scale = new Vec3();
-    mat.getScale(scale);
-
-    const clamp = (x: number) => Math.max(0, Math.min(255, x));
     let idx = 0;
 
-    for (let i = 0; i < splatData.numSplats; ++i) {
-        if ((state[i] & State.deleted) === State.deleted) continue;
+    for (let e = 0; e < convertData.length; ++e) {
+        const entry = convertData[e];
+        const splatData = entry.splatData;
 
-        const off = idx++ * 32;
+        // count the number of non-deleted splats
+        const x = splatData.getProp('x');
+        const y = splatData.getProp('y');
+        const z = splatData.getProp('z');
+        const opacity = splatData.getProp('opacity');
+        const rot_0 = splatData.getProp('rot_0');
+        const rot_1 = splatData.getProp('rot_1');
+        const rot_2 = splatData.getProp('rot_2');
+        const rot_3 = splatData.getProp('rot_3');
+        const f_dc_0 = splatData.getProp('f_dc_0');
+        const f_dc_1 = splatData.getProp('f_dc_1');
+        const f_dc_2 = splatData.getProp('f_dc_2');
+        const scale_0 = splatData.getProp('scale_0');
+        const scale_1 = splatData.getProp('scale_1');
+        const scale_2 = splatData.getProp('scale_2');
 
-        v.set(x[i], y[i], z[i]);
-        mat.transformPoint(v, v);
-        dataView.setFloat32(off + 0, v.x, true);
-        dataView.setFloat32(off + 4, v.y, true);
-        dataView.setFloat32(off + 8, v.z, true);
+        const state = splatData.getProp('state') as Uint8Array;
 
-        dataView.setFloat32(off + 12, Math.exp(scale_0[i]) * scale.x, true);
-        dataView.setFloat32(off + 16, Math.exp(scale_1[i]) * scale.x, true);
-        dataView.setFloat32(off + 20, Math.exp(scale_2[i]) * scale.x, true);
+        // we must undo the transform we apply at load time to output data
+        mat.setScale(-1, -1, 1);
+        mat.invert();
+        mat.mul2(mat, entry.modelMat);
+        quat.setFromMat4(mat);
+        mat.getScale(scale);
 
-        const SH_C0 = 0.28209479177387814;
-        dataView.setUint8(off + 24, clamp((0.5 + SH_C0 * f_dc_0[i]) * 255));
-        dataView.setUint8(off + 25, clamp((0.5 + SH_C0 * f_dc_1[i]) * 255));
-        dataView.setUint8(off + 26, clamp((0.5 + SH_C0 * f_dc_2[i]) * 255));
-        dataView.setUint8(off + 27, clamp((1 / (1 + Math.exp(-opacity[i]))) * 255));
+        const clamp = (x: number) => Math.max(0, Math.min(255, x));
 
-        q.set(rot_1[i], rot_2[i], rot_3[i], rot_0[i]).mul2(quat, q).normalize();
-        dataView.setUint8(off + 28, clamp(q.w * 128 + 128));
-        dataView.setUint8(off + 29, clamp(q.x * 128 + 128));
-        dataView.setUint8(off + 30, clamp(q.y * 128 + 128));
-        dataView.setUint8(off + 31, clamp(q.z * 128 + 128));
+        for (let i = 0; i < splatData.numSplats; ++i) {
+            if ((state[i] & State.deleted) === State.deleted) continue;
+
+            const off = idx++ * 32;
+
+            v.set(x[i], y[i], z[i]);
+            mat.transformPoint(v, v);
+            dataView.setFloat32(off + 0, v.x, true);
+            dataView.setFloat32(off + 4, v.y, true);
+            dataView.setFloat32(off + 8, v.z, true);
+
+            dataView.setFloat32(off + 12, Math.exp(scale_0[i]) * scale.x, true);
+            dataView.setFloat32(off + 16, Math.exp(scale_1[i]) * scale.x, true);
+            dataView.setFloat32(off + 20, Math.exp(scale_2[i]) * scale.x, true);
+
+            const SH_C0 = 0.28209479177387814;
+            dataView.setUint8(off + 24, clamp((0.5 + SH_C0 * f_dc_0[i]) * 255));
+            dataView.setUint8(off + 25, clamp((0.5 + SH_C0 * f_dc_1[i]) * 255));
+            dataView.setUint8(off + 26, clamp((0.5 + SH_C0 * f_dc_2[i]) * 255));
+            dataView.setUint8(off + 27, clamp((1 / (1 + Math.exp(-opacity[i]))) * 255));
+
+            q.set(rot_1[i], rot_2[i], rot_3[i], rot_0[i]).mul2(quat, q).normalize();
+            dataView.setUint8(off + 28, clamp(q.w * 128 + 128));
+            dataView.setUint8(off + 29, clamp(q.x * 128 + 128));
+            dataView.setUint8(off + 30, clamp(q.y * 128 + 128));
+            dataView.setUint8(off + 31, clamp(q.z * 128 + 128));
+        }
     }
 
     return result;

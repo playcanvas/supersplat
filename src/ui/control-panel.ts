@@ -74,7 +74,7 @@ class ControlPanel extends Panel {
 
         const selectedSplatColorLabel = new Label({
             class: 'control-label',
-            text: 'Highlight Splat color'
+            text: 'Highlight Splat Color'
         });
 
         const selectedSplatColorPicker = new ColorPicker({
@@ -92,7 +92,7 @@ class ControlPanel extends Panel {
 
         const splatDisplayToggleLabel = new Label({
             class: 'control-label',
-            text: 'Show splats'
+            text: 'Show Splats'
         });
 
         const splatDisplayToggleCb = new BooleanInput({
@@ -188,7 +188,7 @@ class ControlPanel extends Panel {
 
         const selectedSplatLerpStrenghtLabel = new Label({
             class: 'control-label',
-            text: 'Highlight color interpolation'
+            text: 'Highlight Color Interpolation'
         });
 
         const selectedSplatLerpStrenghtSlider = new SliderInput({
@@ -209,7 +209,7 @@ class ControlPanel extends Panel {
 
         const boundingRingToggleLabel = new Label({
             class: 'control-label',
-            text: 'Bounding rings'
+            text: 'Bounding Rings'
         });
 
         const boundingRingToggleCb = new BooleanInput({
@@ -226,7 +226,7 @@ class ControlPanel extends Panel {
 
         const boundingRingSizeLabel = new Label({
             class: 'control-label',
-            text: 'Bounding ring size'
+            text: 'Bounding Ring Size'
         });
 
         const boundingRingSizeSlider = new SliderInput({
@@ -246,7 +246,7 @@ class ControlPanel extends Panel {
 
         const selectedSplatRingsToggleLabel = new Label({
             class: 'control-label',
-            text: 'Highlight splat rings'
+            text: 'Highlight Splat Rings'
         });
 
         const selectedSplatRingsToggleCb = new BooleanInput({
@@ -263,7 +263,7 @@ class ControlPanel extends Panel {
 
         const selectedSplatRingsSizeLabel = new Label({
             class: 'control-label',
-            text: 'Highlight ring size'
+            text: 'Highlight Ring Size'
         });
 
         const selectedSplatRingsSizeSlider = new SliderInput({

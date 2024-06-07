@@ -119,7 +119,7 @@ class TransformTool {
         this.splats = [selection];
         this.gizmo.attach(this.splats.map((splats) => splats.entity));
 
-        // @ts-ignore - temporary workaround for gizmo size bug
+        // @ts-ignore - temporary workaround for gizmo size bug, to be removed once https://github.com/playcanvas/engine/issues/6671 is fixed.
         this.gizmo._deviceStartSize = Math.min(this.gizmo._device.width, this.gizmo._device.height);
     }
 

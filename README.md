@@ -7,11 +7,15 @@ The PlayCanvas SuperSplat tool is used to edit gaussian splat PLY files.
 See https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/ for more information on gaussian splats.
 
 A live version of this tool is available at:
-https://playcanvas.com/super-splat
+https://playcanvas.com/supersplat/editor
 
 ## Loading Scenes
 
-To load a gaussian splat PLY file, drag & drop it onto the application page. Alternatively click the "Choose file" button bottom left.
+To load a gaussian splat PLY file, drag & drop it onto the application page.
+
+Alternatively use the File menu at top left of the screen and choose "Open".
+
+<img width="317" alt="SuperSplatFileMenu" src="https://github.com/playcanvas/supersplat/assets/11276292/9efe950c-d79d-42c9-bbc6-5f6ca82772e7">
 
 If you disable the "Load all PLY data" option before loading the file, then the PLY data not required by the editor is excluded (for example the spherical harmonic data). This can save on browser memory.
 

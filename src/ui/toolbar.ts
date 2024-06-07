@@ -57,7 +57,7 @@ class Toolbar extends Container {
             }, {
                 class: 'file-menu-item',
                 text: 'Export',
-                icon: 'E226',
+                icon: 'E225',
                 onIsEnabled: () => events.invoke('scene.canSave'),
                 items: [{
                     class: 'file-menu-item',

@@ -35,7 +35,7 @@ class PickerSelection {
     deactivate() {
         this.root.style.display = 'none';
     }
-};
+}
 
 export { PickerSelection };
 

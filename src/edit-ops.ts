@@ -1,13 +1,12 @@
 import { GSplatData, Quat, Vec3 } from 'playcanvas';
 import { Scene } from './scene';
-import { Element } from './element';
 import { Splat } from './splat';
 
 enum State {
     selected = 1,
     hidden = 2,
     deleted = 4
-};
+}
 
 // build a splat index based on a boolean predicate
 const buildIndex = (splatData: GSplatData, pred: (i: number) => boolean) => {
@@ -107,7 +106,7 @@ interface EntityTransform {
     position: Vec3;
     rotation: Quat;
     scale: Vec3;
-};
+}
 
 interface EntityOp {
     splat: Splat;
@@ -140,7 +139,7 @@ class EntityTransformOp {
     destroy() {
         this.entityOps = [];
     }
-};
+}
 
 export {
     State,

@@ -195,7 +195,7 @@ class Scene {
                 url: config.model.url,
                 filename: config.model.filename
             }));
-        };
+        }
 
         // load env
         if (config.env.url) {

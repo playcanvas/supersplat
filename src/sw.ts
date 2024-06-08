@@ -28,12 +28,12 @@ self.addEventListener('install', (event) => {
     );
 });
 
-self.addEventListener('activate', (event) => {
+self.addEventListener('activate', () => {
     console.log(`activating v${appVersion}`);
 
     // delete the old caches once this one is activated
     caches.keys().then((names) => {
-        for (let name of names) {
+        for (const name of names) {
             if (name !== cacheName) {
                 caches.delete(name);
             }

@@ -10,7 +10,7 @@ import { Splat } from './splat';
 interface RemoteStorageDetails {
     method: string;
     url: string;
-};
+}
 
 type ExportType = 'ply' | 'compressed-ply' | 'splat';
 
@@ -18,7 +18,7 @@ interface SceneWriteOptions {
     type: ExportType;
     filename?: string;
     stream?: FileSystemWritableFileStream;
-};
+}
 
 const filePickerTypes = {
     'ply': [{

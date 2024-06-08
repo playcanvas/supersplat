@@ -9,7 +9,7 @@ import { State } from './edit-ops';
 interface ConvertEntry {
     splatData: GSplatData;
     modelMat: Mat4;
-};
+}
 
 const countTotalSplats = (convertData: ConvertEntry[]) => {
     return convertData.reduce((total, entry) => {
@@ -139,7 +139,7 @@ interface CompressedIndex {
     entryIndex: number;
     i: number;
     globalIndex: number;
-};
+}
 
 class SingleSplat {
     x = 0;
@@ -180,7 +180,7 @@ class SingleSplat {
         this.scale_1 = Math.log(Math.exp(this.scale_1) * scale.y);
         this.scale_2 = Math.log(Math.exp(this.scale_2) * scale.z);
     }
-};
+}
 
 const compressedVal = (prop: string, index: CompressedIndex) => {
     return index.entry.splatData.getProp(prop)[index.i];
@@ -501,7 +501,7 @@ const convertPlyCompressed = (convertData: ConvertEntry[]) => {
         dataView.setFloat32(chunkOffset + i * 12 * 4 + 44, result.sz.max, true);
 
         // write splat data
-        let offset = vertexOffset + i * 256 * 4 * 4;
+        const offset = vertexOffset + i * 256 * 4 * 4;
         const chunkSplats = Math.min(numSplats, (i + 1) * 256) - i * 256;
         for (let j = 0; j < chunkSplats; ++j) {
             dataView.setUint32(offset + j * 4 * 4 + 0, chunk.position[j], true);

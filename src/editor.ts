@@ -67,7 +67,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     const processSelection = (state: Uint8Array, op: string, pred: (i: number) => boolean) => {
         for (let i = 0; i < state.length; ++i) {
-            if (!!(state[i] & (State.deleted | State.hidden))) {
+            if (state[i] & (State.deleted | State.hidden)) {
                 state[i] &= ~State.selected;
             } else {
                 const result = pred(i);
@@ -108,11 +108,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         lastExportCursor = editHistory.cursor;
     });
 
-    events.on('camera.mode', (mode: string) => {
+    events.on('camera.mode', () => {
         scene.forceRender = true;
     });
 
-    events.on('splatSize', (value: number) => {
+    events.on('splatSize', () => {
         scene.forceRender = true;
     });
 
@@ -164,7 +164,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         selectedSplats().forEach((splat) => {
             const splatData = splat.splatData;
             const state = splatData.getProp('state') as Uint8Array;
-            processSelection(state, 'set', (i) => true);
+            processSelection(state, 'set', () => true);
             splat.updateState();
         });
     });
@@ -173,7 +173,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         selectedSplats().forEach((splat) => {
             const splatData = splat.splatData;
             const state = splatData.getProp('state') as Uint8Array;
-            processSelection(state, 'set', (i) => false);
+            processSelection(state, 'set', () => false);
             splat.updateState();
         });
     });
@@ -200,7 +200,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             let scaleMin;
             let scaleMax;
             for (let i = 0; i < splatData.numSplats; ++i) {
-                if (!!(state[i] & State.deleted)) continue;
+                if (state[i] & State.deleted) continue;
                 if (first) {
                     first = false;
                     scaleMin = Math.min(scale_0[i], scale_1[i], scale_2[i]);

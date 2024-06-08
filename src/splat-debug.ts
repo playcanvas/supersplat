@@ -105,10 +105,10 @@ class SplatDebug {
         let count = 0;
 
         for (let i = 0; i < splatData.numSplats; ++i) {
-            if (!!(s[i] & State.deleted)) {
+            if (s[i] & State.deleted) {
                 // deleted
                 vertexData[i * 4 + 3] = -1;
-            } else if (!!(s[i] & State.hidden)) {
+            } else if (s[i] & State.hidden) {
                 // hidden
                 vertexData[i * 4 + 3] = -1;
             } else if (!(s[i] & State.selected)) {

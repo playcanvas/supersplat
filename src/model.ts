@@ -2,7 +2,6 @@ import {
     Asset,
     BoundingBox,
     Entity,
-    Mat4,
     MeshInstance,
     RenderComponent,
     Vec3
@@ -11,8 +10,6 @@ import { Element, ElementType } from './element';
 import { Serializer } from './serializer';
 
 const vec = new Vec3();
-const mat = new Mat4();
-// const bound = new BoundingBox();
 
 // calculate mesh sort distance by node origin (instead of the default bounding box origin)
 const calculateSortDistance = (drawCall: any, cameraPosition: Vec3, cameraForward: Vec3) => {

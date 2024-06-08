@@ -46,6 +46,6 @@ class Tooltip extends Container {
     hide() {
         this.hidden = true;
     }
-};
+}
 
 export { Tooltip };

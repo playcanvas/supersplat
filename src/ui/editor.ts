@@ -1,4 +1,4 @@
-import { Container, InfoBox, Label } from 'pcui';
+import { Container, Label } from 'pcui';
 import { ControlPanel } from './control-panel';
 import { Toolbar } from './toolbar';
 import { Events } from '../events';

@@ -2,7 +2,7 @@ import { TransformGizmo } from 'playcanvas';
 import { Scene } from '../scene';
 import { Splat } from '../splat';
 import { Events } from '../events';
-import { EditHistory, EditOp } from '../edit-history';
+import { EditHistory } from '../edit-history';
 import { EntityOp, EntityTransformOp } from '../edit-ops';
 
 // patch gizmo to be more opaque
@@ -86,7 +86,7 @@ class TransformTool {
             }
         });
 
-        events.on('scene.boundChanged', (editOp: EditOp) => {
+        events.on('scene.boundChanged', () => {
             if (this.splats) {
                 this.gizmo.attach(this.splats.map((splat) => splat.entity));
             }
@@ -97,7 +97,7 @@ class TransformTool {
             scene.forceRender = true;
         });
 
-        events.on('selection.changed', (selection: Splat) => {
+        events.on('selection.changed', () => {
             this.update();
         });
     }

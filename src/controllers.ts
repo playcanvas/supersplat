@@ -67,7 +67,7 @@ class MouseController {
         };
 
         let closestD = 0;
-        let closestP = new Vec3();
+        const closestP = new Vec3();
         let closestSplat = null;
 
         for (let i = 0; i < splats.length; ++i) {

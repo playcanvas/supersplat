@@ -5,7 +5,7 @@ interface ShortcutOptions {
     shift?: boolean;
     func?: () => void;
     event?: string;
-};
+}
 
 class Shortcuts {
     shortcuts: { keys: string[], options: ShortcutOptions }[] = [];
@@ -35,8 +35,8 @@ class Shortcuts {
 
     register(keys: string[], options: ShortcutOptions) {
         this.shortcuts.push({ keys, options });
-    };
-};
+    }
+}
 
 export {
     Shortcuts

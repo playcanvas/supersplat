@@ -4,8 +4,16 @@
     "extends": [
         "eslint:recommended",
         "plugin:@typescript-eslint/eslint-recommended",
-        "plugin:@typescript-eslint/recommended",
-        "plugin:prettier/recommended"
+        "plugin:@typescript-eslint/recommended"
     ],
-    "plugins": ["@typescript-eslint", "prettier"]
+    "plugins": ["@typescript-eslint"],
+    "rules": {
+        "no-constant-condition": "off",
+        "no-empty": "off",
+        "no-prototype-builtins": "off",
+        "@typescript-eslint/ban-ts-comment": "off",
+        "@typescript-eslint/ban-types": "off",
+        "@typescript-eslint/no-explicit-any": "off",
+        "@typescript-eslint/no-unused-vars": "off"
+    }
 }

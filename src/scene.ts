@@ -226,11 +226,8 @@ class Scene {
             this.camera.focus();
             this.events.fire('loaded', filename);
             this.events.fire('centerPointColor', this.events.invoke('centerPointColor'));
-            this.events.fire('centerPointAlpha', this.events.invoke('centerPointAlpha'));
             this.events.fire('selectedCenterPointColor', this.events.invoke('selectedCenterPointColor'));
-            this.events.fire('selectedCenterPointAlpha', this.events.invoke('selectedCenterPointAlpha'));
             this.events.fire('selectedSplatColor', this.events.invoke('selectedSplatColor'));
-            this.events.fire('selectedSplatLerpStrenght', this.events.invoke('selectedSplatLerpStrenght'));
         } catch (err) {
             this.events.fire('error', err);
         }

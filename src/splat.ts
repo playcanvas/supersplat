@@ -57,9 +57,7 @@ flat varying highp uint vertexState;
 uniform float pickerAlpha;
 uniform float ringSize;
 float PI = 3.14159;
-uniform vec3 centerPointColor;
-uniform vec3 selectedSplatColor;
-uniform float selectedSplatLerpStrenght;
+uniform vec4 selectedSplatColor;
 uniform bool selectedSplatRingsToggle;
 uniform float selectedSplatRingsSize;
 uniform bool boundingRingToggle;
@@ -104,8 +102,7 @@ void main(void)
         } else {
             if ((vertexState & uint(1)) == uint(1)) {
                 // selected
-                c = mix(color.xyz, selectedSplatColor.xyz, selectedSplatLerpStrenght);
-                //c = selectedSplatColor.xyz;
+                c = mix(color.xyz, selectedSplatColor.xyz, selectedSplatColor.w);
                 alpha = B;
                 if (selectedSplatRingsToggle){
                     if (A < 4.0 - selectedSplatRingsSize / 3.0) {
@@ -121,7 +118,6 @@ void main(void)
                 alpha = B;
                 if (boundingRingToggle){
                     if (A < 4.0 - boundingRingSize / 3.0) {
-                        //alpha = max(0.05, B);
                         alpha = B;
                     } else {
                         alpha = 0.6;

@@ -79,7 +79,8 @@ class ControlPanel extends Panel {
 
         const selectedSplatColorPicker = new ColorPicker({
             class: 'control-element-expand',
-            value: [1.0,1.0,0.0]
+            channels: 4,
+            value: [1.0,1.0,0.0,0.5]
         });
 
         selectedSplatColor.append(selectedSplatColorLabel);
@@ -116,32 +117,13 @@ class ControlPanel extends Panel {
 
         const centerPointColorPicker = new ColorPicker({
             class: 'control-element-expand',
-            value: [0.0,0.0,1.0]
+            channels: 4, 
+            value: [0.0,0.0,1.0,0.5]
         });
 
         centerPointColor.append(centerPointColorLabel);
         centerPointColor.append(centerPointColorPicker);
 
-        // alpha of center points
-        const centerPointAlpha = new Container({
-            class: 'control-parent'
-        });
-
-        const centerPointAlphaLabel = new Label({
-            class: 'control-label',
-            text: 'Center Point Alpha'
-        });
-
-        const centerPointAlphaSlider = new SliderInput({
-            class: 'control-element-expand',
-            precision: 2,
-            min: 0,
-            max: 0.5,
-            value: 0.5
-        });
-
-        centerPointAlpha.append(centerPointAlphaLabel);
-        centerPointAlpha.append(centerPointAlphaSlider);
 
         // highlight color of center points
         const selectedCenterPointColor = new Container({
@@ -155,52 +137,12 @@ class ControlPanel extends Panel {
 
         const selectedCenterPointColorPicker = new ColorPicker({
             class: 'control-element-expand',
-            value: [1.0,1.0,0.0]
+            channels: 4,
+            value: [1.0,1.0,0.0,0.5]
         });
 
         selectedCenterPointColor.append(selectedCenterPointColorLabel);
         selectedCenterPointColor.append(selectedCenterPointColorPicker);
-
-        // alpha of highlighted center points
-        const selectedCenterPointAlpha = new Container({
-            class: 'control-parent'
-        });
-
-        const selectedCenterPointAlphaLabel = new Label({
-            class: 'control-label',
-            text: 'Highlight Point Alpha'
-        });
-
-        const selectedCenterPointAlphaSlider = new SliderInput({
-            class: 'control-element-expand',
-            precision: 2,
-            min: 0,
-            max: 0.5,
-            value: 0.5
-        });
-
-        selectedCenterPointAlpha.append(selectedCenterPointAlphaLabel);
-        selectedCenterPointAlpha.append(selectedCenterPointAlphaSlider);
-
-        const selectedSplatLerpStrenght = new Container({
-            class: 'control-parent'
-        });
-
-        const selectedSplatLerpStrenghtLabel = new Label({
-            class: 'control-label',
-            text: 'Highlight Color Interpolation'
-        });
-
-        const selectedSplatLerpStrenghtSlider = new SliderInput({
-            class: 'control-element-expand',
-            precision: 2,
-            min: 0,
-            max: 1.0,
-            value: 0.5
-        });
-
-        selectedSplatLerpStrenght.append(selectedSplatLerpStrenghtLabel);
-        selectedSplatLerpStrenght.append(selectedSplatLerpStrenghtSlider);
         
         // toggle bounding rings
         const boundingRingToggle = new Container({
@@ -304,11 +246,8 @@ class ControlPanel extends Panel {
         cameraPanel.append(splatSize);
         cameraPanel.append(splatDisplayToggle);
         cameraPanel.append(centerPointColor);
-        cameraPanel.append(centerPointAlpha);
         cameraPanel.append(selectedCenterPointColor);
-        cameraPanel.append(selectedCenterPointAlpha);
         cameraPanel.append(selectedSplatColor);
-        cameraPanel.append(selectedSplatLerpStrenght);
         cameraPanel.append(boundingRingToggle);
         cameraPanel.append(boundingRingSize);
         cameraPanel.append(selectedSplatRingsToggle);
@@ -787,20 +726,6 @@ class ControlPanel extends Panel {
             events.fire('selectedSplatColor', value);
         });
 
-
-        events.on('selectedSplatLerpStrenght', (value: number) => {
-            selectedSplatLerpStrenghtSlider.value = value;
-        });
-
-        events.function('selectedSplatLerpStrenght', () => {
-            return selectedSplatLerpStrenghtSlider.value;
-        });
-
-        selectedSplatLerpStrenghtSlider.on('change', (value: number) => {
-            events.fire('selectedSplatLerpStrenght', value);
-        });
-
-
         events.on('boundingRingToggle', (value: boolean) => {
             boundingRingToggleCb.value = value;
         });
@@ -866,19 +791,6 @@ class ControlPanel extends Panel {
         });
 
 
-        events.on('centerPointAlpha', (value: number) => {
-            centerPointAlphaSlider.value = value;
-        });
-
-        events.function('centerPointAlpha', () => {
-            return centerPointAlphaSlider.value;
-        });
-
-        centerPointAlphaSlider.on('change', (value: number) => {
-            events.fire('centerPointAlpha', value);
-        });
-
-
         events.on('splatDisplayToggle', (value: boolean) => {
             splatDisplayToggleCb.value = value;
         });
@@ -902,19 +814,6 @@ class ControlPanel extends Panel {
 
         selectedCenterPointColorPicker.on('change', (value: number[]) => {
             events.fire('selectedCenterPointColor', value);
-        });
-
-
-        events.on('selectedCenterPointAlpha', (value: number) => {
-            selectedCenterPointAlphaSlider.value = value;
-        });
-
-        events.function('selectedCenterPointAlpha', () => {
-            return selectedCenterPointAlphaSlider.value;
-        });
-
-        selectedCenterPointAlphaSlider.on('change', (value: number) => {
-            events.fire('selectedCenterPointAlpha', value);
         });
 
 

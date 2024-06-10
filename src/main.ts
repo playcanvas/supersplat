@@ -124,41 +124,44 @@ const initShortcuts = (events: Events) => {
     });
     
     let centerPointAlphaSave = 0.5;
-    events.on('centerPointAlpha', (value: number) => {
-        if (value !== 0) {
-            centerPointAlphaSave = value;
+    events.on('centerPointColor', (colors: number[]) => {
+        if (colors[3] !== 0) {
+            centerPointAlphaSave = colors[3];
         }
     });
         
     shortcuts.register(['J', 'j'], {
         func: () => {
-            events.fire('centerPointAlpha', events.invoke('centerPointAlpha') === 0 ? centerPointAlphaSave : 0);
+            let currentColorValue = events.invoke('centerPointColor')
+            events.fire('centerPointColor', currentColorValue[3] === 0 ? [currentColorValue[0],currentColorValue[1],currentColorValue[2],centerPointAlphaSave] : [currentColorValue[0],currentColorValue[1],currentColorValue[2],0]);
         }
     });
 
     let selectedCenterPointAlphaSave = 0.5;
-    events.on('selectedCenterPointAlpha', (value: number) => {
-        if (value !== 0) {
-            selectedCenterPointAlphaSave = value;
+    events.on('selectedCenterPointColor', (colors: number[]) => {
+        if (colors[3] !== 0) {
+            selectedCenterPointAlphaSave = colors[3];
         }
     });
         
     shortcuts.register(['L', 'l'], {
         func: () => {
-            events.fire('selectedCenterPointAlpha', events.invoke('selectedCenterPointAlpha') === 0 ? selectedCenterPointAlphaSave : 0);
+            let currentColorValue = events.invoke('selectedCenterPointColor')
+            events.fire('selectedCenterPointColor', currentColorValue[3] === 0 ? [currentColorValue[0],currentColorValue[1],currentColorValue[2],selectedCenterPointAlphaSave] : [currentColorValue[0],currentColorValue[1],currentColorValue[2],0]);
         }
     });
 
     let selectedSplatLerpStrenghtSave = 0.5;
-    events.on('selectedSplatLerpStrenght', (value: number) => {
-        if (value !== 0) {
-            selectedSplatLerpStrenghtSave = value;
+    events.on('selectedSplatColor', (colors: number[]) => {
+        if (colors[3] !== 0) {
+            selectedSplatLerpStrenghtSave = colors[3];
         }
     });
         
     shortcuts.register(['K', 'k'], {
         func: () => {
-            events.fire('selectedSplatLerpStrenght', events.invoke('selectedSplatLerpStrenght') === 0 ? selectedSplatLerpStrenghtSave : 0);
+            let currentColorValue = events.invoke('selectedSplatColor')
+            events.fire('selectedSplatColor', currentColorValue[3] === 0 ? [currentColorValue[0],currentColorValue[1],currentColorValue[2],selectedSplatLerpStrenghtSave] : [currentColorValue[0],currentColorValue[1],currentColorValue[2],0]);
         }
     });
        

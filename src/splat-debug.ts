@@ -21,7 +21,7 @@ uniform mat4 matrix_projection;
 uniform mat4 matrix_viewProjection;
 
 uniform float splatSize;
-uniform vec4 cccolors[3];
+uniform vec4 centerColors[3];
 
 varying vec4 color;
 
@@ -32,7 +32,7 @@ void main(void) {
     } else {
         gl_Position = matrix_viewProjection * matrix_model * vec4(vertex_position.xyz, 1.0);
         gl_PointSize = splatSize;
-        color = vec4(cccolors[state]);
+        color = vec4(centerColors[state]);
     }
 }
 `;

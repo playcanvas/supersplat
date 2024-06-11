@@ -1,5 +1,6 @@
 import {
     BLEND_NORMAL,
+    Entity,
     GSplatData,
     Material,
     Mesh,
@@ -10,7 +11,6 @@ import {
 } from 'playcanvas';
 import { State } from './edit-ops';
 import { Scene } from './scene';
-import { Splat } from './splat';
 
 const vs = /* glsl */ `
 attribute vec4 vertex_position;
@@ -51,7 +51,7 @@ class SplatDebug {
     size = 2;
     // color = [0.0, 0.0, 1.0]
 
-    constructor(scene: Scene, splat: Splat, splatData: GSplatData) {
+    constructor(scene: Scene, root: Entity, splatData: GSplatData) {
         const device = scene.graphicsDevice;
 
         const shader = createShaderFromCode(device, vs, fs, `splatDebugShader`, {
@@ -81,10 +81,15 @@ class SplatDebug {
         mesh.update(PRIMITIVE_POINTS, true);
 
         this.splatData = splatData;
-        this.meshInstance = new MeshInstance(mesh, material, splat.root);
+        this.meshInstance = new MeshInstance(mesh, material, root);
 
         this.splatSize = this.size;
         // this.centerPointColor = this.color;
+    }
+
+    destroy() {
+        this.meshInstance.material.destroy();
+        this.meshInstance.destroy();
     }
 
     update() {
@@ -97,10 +102,10 @@ class SplatDebug {
         let count = 0;
 
         for (let i = 0; i < splatData.numSplats; ++i) {
-            if (!!(s[i] & State.deleted)) {
+            if (s[i] & State.deleted) {
                 // deleted
                 vertexData[i * 4 + 3] = -1;
-            } else if (!!(s[i] & State.hidden)) {
+            } else if (s[i] & State.hidden) {
                 // hidden
                 vertexData[i * 4 + 3] = -1;
             } else if (!(s[i] & State.selected)) {

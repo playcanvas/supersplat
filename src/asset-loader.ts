@@ -1,4 +1,4 @@
-import { Asset, AssetRegistry, StandardMaterial, TEXTURETYPE_RGBP } from 'playcanvas';
+import { Asset, AssetRegistry, TEXTURETYPE_RGBP } from 'playcanvas';
 import { Model } from './model';
 import { Splat } from './splat';
 import { Env } from './env';

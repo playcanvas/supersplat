@@ -1,8 +1,6 @@
 import {
     math,
     ADDRESS_CLAMP_TO_EDGE,
-    BLEND_NONE,
-    CULLFACE_NONE,
     FILTER_NEAREST,
     PIXELFORMAT_RGBA8,
     PIXELFORMAT_DEPTH,
@@ -10,7 +8,6 @@ import {
     Color,
     Entity,
     EventHandler,
-    Material,
     Picker,
     RenderTarget,
     Texture,
@@ -22,10 +19,11 @@ import {
     TONEMAP_ACES,
     TONEMAP_ACES2
 } from 'playcanvas';
-import {Element, ElementType} from './element';
-import {TweenValue} from './tween-value';
-import {Serializer} from './serializer';
-import {MouseController, TouchController} from './controllers';
+import { Element, ElementType } from './element';
+import { TweenValue } from './tween-value';
+import { Serializer } from './serializer';
+import { MouseController, TouchController } from './controllers';
+import { Splat } from './splat';
 
 // calculate the forward vector given azimuth and elevation
 const calcForwardVec = (result: Vec3, azim: number, elev: number) => {
@@ -403,15 +401,28 @@ class Camera extends Element {
     // pick mode
 
     // render picker contents
-    pickPrep(alpha = 0.0) {
+    pickPrep(splat: Splat) {
         const { width, height } = this.scene.targetSize;
         const worldLayer = this.scene.app.scene.layers.getLayerByName('World');
 
         const device = this.scene.graphicsDevice as WebglGraphicsDevice;
+        const events = this.scene.events;
+        const alpha = events.invoke('camera.mode') === 'rings' ? 0.0 : 0.2;
+
+        // hide non-selected elements
+        const splats = this.scene.getElementsByType(ElementType.splat);
+        splats.forEach((s: Splat) => {
+            s.entity.enabled = s === splat;
+        });
 
         device.scope.resolve('pickerAlpha').setValue(alpha);
         this.picker.resize(width, height);
         this.picker.prepare(this.entity.camera, this.scene.app.scene, [worldLayer]);
+
+        // re-enable all splats
+        splats.forEach((splat: Splat) => {
+            splat.entity.enabled = true;
+        });
     }
 
     pick(x: number, y: number) {

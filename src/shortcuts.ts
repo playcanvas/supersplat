@@ -5,7 +5,7 @@ interface ShortcutOptions {
     shift?: boolean;
     func?: () => void;
     event?: string;
-};
+}
 
 class Shortcuts {
     shortcuts: { keys: string[], options: ShortcutOptions }[] = [];
@@ -15,6 +15,9 @@ class Shortcuts {
 
         // register keyboard handler
         document.addEventListener('keydown', (e) => {
+            // skip keys in input fields
+            if (e.target !== document.body) return;
+
             for (let i = 0; i < shortcuts.length; i++) {
                 if (shortcuts[i].keys.includes(e.key) &&
                     !!shortcuts[i].options.ctrl === !!(e.ctrlKey || e.metaKey) &&
@@ -32,8 +35,8 @@ class Shortcuts {
 
     register(keys: string[], options: ShortcutOptions) {
         this.shortcuts.push({ keys, options });
-    };
-};
+    }
+}
 
 export {
     Shortcuts

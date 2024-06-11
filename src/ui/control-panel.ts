@@ -67,158 +67,6 @@ class ControlPanel extends Panel {
         splatSize.append(splatSizeLabel);
         splatSize.append(splatSizeSlider);
 
-        // highlighting color of selected splats (splat and ring)
-        const selectedSplatColor = new Container({
-            class: 'control-parent'
-        });
-
-        const selectedSplatColorLabel = new Label({
-            class: 'control-label',
-            text: 'Highlight Splat Color'
-        });
-
-        const selectedSplatColorPicker = new ColorPicker({
-            class: 'control-element-expand',
-            channels: 4,
-            value: [1.0,1.0,0.0,0.5]
-        });
-
-        selectedSplatColor.append(selectedSplatColorLabel);
-        selectedSplatColor.append(selectedSplatColorPicker);
-
-        // toggle splats
-        const splatDisplayToggle = new Container({
-            class: 'control-parent'
-        });
-
-        const splatDisplayToggleLabel = new Label({
-            class: 'control-label',
-            text: 'Show Splats'
-        });
-
-        const splatDisplayToggleCb = new BooleanInput({
-            class: 'control-element',
-            value: true
-        });
-
-        splatDisplayToggle.append(splatDisplayToggleLabel);
-        splatDisplayToggle.append(splatDisplayToggleCb);
-
-
-        // color of center points
-        const centerPointColor = new Container({
-            class: 'control-parent'
-        });
-
-        const centerPointColorLabel = new Label({
-            class: 'control-label',
-            text: 'Center Point Color'
-        });
-
-        const centerPointColorPicker = new ColorPicker({
-            class: 'control-element-expand',
-            channels: 4, 
-            value: [0.0,0.0,1.0,0.5]
-        });
-
-        centerPointColor.append(centerPointColorLabel);
-        centerPointColor.append(centerPointColorPicker);
-
-
-        // highlight color of center points
-        const selectedCenterPointColor = new Container({
-            class: 'control-parent'
-        });
-
-        const selectedCenterPointColorLabel = new Label({
-            class: 'control-label',
-            text: 'Highlight Point Color'
-        });
-
-        const selectedCenterPointColorPicker = new ColorPicker({
-            class: 'control-element-expand',
-            channels: 4,
-            value: [1.0,1.0,0.0,0.5]
-        });
-
-        selectedCenterPointColor.append(selectedCenterPointColorLabel);
-        selectedCenterPointColor.append(selectedCenterPointColorPicker);
-        
-        // toggle bounding rings
-        const boundingRingToggle = new Container({
-            class: 'control-parent'
-        });
-
-        const boundingRingToggleLabel = new Label({
-            class: 'control-label',
-            text: 'Bounding Rings'
-        });
-
-        const boundingRingToggleCb = new BooleanInput({
-            class: 'control-element',
-        });
-
-        boundingRingToggle.append(boundingRingToggleLabel);
-        boundingRingToggle.append(boundingRingToggleCb);
-
-        // bounding ring thickness
-        const boundingRingSize = new Container({
-            class: 'control-parent'
-        });
-
-        const boundingRingSizeLabel = new Label({
-            class: 'control-label',
-            text: 'Bounding Ring Size'
-        });
-
-        const boundingRingSizeSlider = new SliderInput({
-            class: 'control-element-expand',
-            precision: 2,
-            min: 0,
-            max: 1,
-            value: 0.5
-        });
-
-        boundingRingSize.append(boundingRingSizeLabel);
-        boundingRingSize.append(boundingRingSizeSlider);
-
-        const selectedSplatRingsToggle = new Container({
-            class: 'control-parent'
-        });
-
-        const selectedSplatRingsToggleLabel = new Label({
-            class: 'control-label',
-            text: 'Highlight Splat Rings'
-        });
-
-        const selectedSplatRingsToggleCb = new BooleanInput({
-            class: 'control-element',
-        });
-
-        selectedSplatRingsToggle.append(selectedSplatRingsToggleLabel);
-        selectedSplatRingsToggle.append(selectedSplatRingsToggleCb);
-
-        // bounding ring thickness
-        const selectedSplatRingsSize = new Container({
-            class: 'control-parent'
-        });
-
-        const selectedSplatRingsSizeLabel = new Label({
-            class: 'control-label',
-            text: 'Highlight Ring Size'
-        });
-
-        const selectedSplatRingsSizeSlider = new SliderInput({
-            class: 'control-element-expand',
-            precision: 2,
-            min: 0,
-            max: 1,
-            value: 0.5
-        });
-
-        selectedSplatRingsSize.append(selectedSplatRingsSizeLabel);
-        selectedSplatRingsSize.append(selectedSplatRingsSizeSlider);
-
         // show grid
         const showGrid = new Container({
             class: 'control-parent'
@@ -244,14 +92,6 @@ class ControlPanel extends Panel {
 
         cameraPanel.append(mode);
         cameraPanel.append(splatSize);
-        cameraPanel.append(splatDisplayToggle);
-        cameraPanel.append(centerPointColor);
-        cameraPanel.append(selectedCenterPointColor);
-        cameraPanel.append(selectedSplatColor);
-        cameraPanel.append(boundingRingToggle);
-        cameraPanel.append(boundingRingSize);
-        cameraPanel.append(selectedSplatRingsToggle);
-        cameraPanel.append(selectedSplatRingsSize);
         cameraPanel.append(showGrid);
         cameraPanel.append(focusButton);
 
@@ -593,7 +433,167 @@ class ControlPanel extends Panel {
         allData.append(allDataLabel);
         allData.append(allDataToggle);
 
+         // highlighting color of selected splats (splat and ring)
+         const selectedSplatColor = new Container({
+            class: 'control-parent'
+        });
+
+        const selectedSplatColorLabel = new Label({
+            class: 'control-label',
+            text: 'Highlight Splat Color'
+        });
+
+        const selectedSplatColorPicker = new ColorPicker({
+            class: 'control-element-expand',
+            channels: 4,
+            value: [1.0,1.0,0.0,0.5]
+        });
+
+        selectedSplatColor.append(selectedSplatColorLabel);
+        selectedSplatColor.append(selectedSplatColorPicker);
+
+        // toggle splats
+        const splatDisplayToggle = new Container({
+            class: 'control-parent'
+        });
+
+        const splatDisplayToggleLabel = new Label({
+            class: 'control-label',
+            text: 'Show Splats'
+        });
+
+        const splatDisplayToggleCb = new BooleanInput({
+            class: 'control-element',
+            value: true
+        });
+
+        splatDisplayToggle.append(splatDisplayToggleLabel);
+        splatDisplayToggle.append(splatDisplayToggleCb);
+
+
+        // color of center points
+        const centerPointColor = new Container({
+            class: 'control-parent'
+        });
+
+        const centerPointColorLabel = new Label({
+            class: 'control-label',
+            text: 'Center Point Color'
+        });
+
+        const centerPointColorPicker = new ColorPicker({
+            class: 'control-element-expand',
+            channels: 4, 
+            value: [0.0,0.0,1.0,0.5]
+        });
+
+        centerPointColor.append(centerPointColorLabel);
+        centerPointColor.append(centerPointColorPicker);
+
+
+        // highlight color of center points
+        const selectedCenterPointColor = new Container({
+            class: 'control-parent'
+        });
+
+        const selectedCenterPointColorLabel = new Label({
+            class: 'control-label',
+            text: 'Highlight Point Color'
+        });
+
+        const selectedCenterPointColorPicker = new ColorPicker({
+            class: 'control-element-expand',
+            channels: 4,
+            value: [1.0,1.0,0.0,0.5]
+        });
+
+        selectedCenterPointColor.append(selectedCenterPointColorLabel);
+        selectedCenterPointColor.append(selectedCenterPointColorPicker);
+        
+        // toggle bounding rings
+        const boundingRingToggle = new Container({
+            class: 'control-parent'
+        });
+
+        const boundingRingToggleLabel = new Label({
+            class: 'control-label',
+            text: 'Bounding Rings'
+        });
+
+        const boundingRingToggleCb = new BooleanInput({
+            class: 'control-element',
+        });
+
+        boundingRingToggle.append(boundingRingToggleLabel);
+        boundingRingToggle.append(boundingRingToggleCb);
+
+        // bounding ring thickness
+        const boundingRingSize = new Container({
+            class: 'control-parent'
+        });
+
+        const boundingRingSizeLabel = new Label({
+            class: 'control-label',
+            text: 'Bounding Ring Size'
+        });
+
+        const boundingRingSizeSlider = new SliderInput({
+            class: 'control-element-expand',
+            precision: 2,
+            min: 0,
+            max: 1,
+            value: 0.5
+        });
+
+        boundingRingSize.append(boundingRingSizeLabel);
+        boundingRingSize.append(boundingRingSizeSlider);
+
+        const selectedSplatRingsToggle = new Container({
+            class: 'control-parent'
+        });
+
+        const selectedSplatRingsToggleLabel = new Label({
+            class: 'control-label',
+            text: 'Highlight Splat Rings'
+        });
+
+        const selectedSplatRingsToggleCb = new BooleanInput({
+            class: 'control-element',
+        });
+
+        selectedSplatRingsToggle.append(selectedSplatRingsToggleLabel);
+        selectedSplatRingsToggle.append(selectedSplatRingsToggleCb);
+
+        // bounding ring thickness
+        const selectedSplatRingsSize = new Container({
+            class: 'control-parent'
+        });
+
+        const selectedSplatRingsSizeLabel = new Label({
+            class: 'control-label',
+            text: 'Highlight Ring Size'
+        });
+
+        const selectedSplatRingsSizeSlider = new SliderInput({
+            class: 'control-element-expand',
+            precision: 2,
+            min: 0,
+            max: 1,
+            value: 0.5
+        });
+
+        selectedSplatRingsSize.append(selectedSplatRingsSizeLabel);
+        selectedSplatRingsSize.append(selectedSplatRingsSizeSlider);
+
         optionsPanel.append(allData);
+        optionsPanel.append(splatDisplayToggle);
+        optionsPanel.append(centerPointColor);
+        optionsPanel.append(selectedCenterPointColor);
+        optionsPanel.append(selectedSplatColor);
+        optionsPanel.append(boundingRingToggle);
+        optionsPanel.append(boundingRingSize);
+        optionsPanel.append(selectedSplatRingsToggle);
+        optionsPanel.append(selectedSplatRingsSize);
 
         // append
         this.content.append(cameraPanel);

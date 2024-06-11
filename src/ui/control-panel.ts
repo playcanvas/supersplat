@@ -470,7 +470,6 @@ class ControlPanel extends Panel {
         splatDisplayToggle.append(splatDisplayToggleLabel);
         splatDisplayToggle.append(splatDisplayToggleCb);
 
-
         // color of center points
         const centerPointColor = new Container({
             class: 'control-parent'
@@ -489,7 +488,6 @@ class ControlPanel extends Panel {
 
         centerPointColor.append(centerPointColorLabel);
         centerPointColor.append(centerPointColorPicker);
-
 
         // highlight color of center points
         const selectedCenterPointColor = new Container({
@@ -548,6 +546,7 @@ class ControlPanel extends Panel {
         boundingRingSize.append(boundingRingSizeLabel);
         boundingRingSize.append(boundingRingSizeSlider);
 
+        // toggle bounding rings for selected splats
         const selectedSplatRingsToggle = new Container({
             class: 'control-parent'
         });
@@ -585,7 +584,6 @@ class ControlPanel extends Panel {
         selectedSplatRingsSize.append(selectedSplatRingsSizeLabel);
         selectedSplatRingsSize.append(selectedSplatRingsSizeSlider);
 
-        optionsPanel.append(allData);
         optionsPanel.append(splatDisplayToggle);
         optionsPanel.append(centerPointColor);
         optionsPanel.append(selectedCenterPointColor);
@@ -594,6 +592,7 @@ class ControlPanel extends Panel {
         optionsPanel.append(boundingRingSize);
         optionsPanel.append(selectedSplatRingsToggle);
         optionsPanel.append(selectedSplatRingsSize);
+        optionsPanel.append(allData);
 
         // append
         this.content.append(cameraPanel);

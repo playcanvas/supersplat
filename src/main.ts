@@ -83,7 +83,7 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['Z', 'z'], { event: 'edit.undo', ctrl: true });
     shortcuts.register(['Z', 'z'], { event: 'edit.redo', ctrl: true, shift: true });
     shortcuts.register(['M', 'm'], { event: 'camera.toggleMode' });
-    
+
     // keep tabs on splat size changes
     let splatSizeSave = 2;
     events.on('splatSize', (size: number) => {
@@ -91,21 +91,21 @@ const initShortcuts = (events: Events) => {
             splatSizeSave = size;
         }
     });
-    
+
     // space toggles between 0 and size
     shortcuts.register([' '], {
         func: () => {
             events.fire('splatSize', events.invoke('splatSize') === 0 ? splatSizeSave : 0);
         }
     });
-    
+
     let centerPointColorSave = [0.0,0.0,1.0,0.5];
     events.on('centerPointColor', (colors: number[]) => {
         if (colors[3] !== 0) {
             centerPointColorSave = colors;
         }
     });
-        
+
     shortcuts.register(['J', 'j'], {
         func: () => {
             events.fire('centerPointColor', events.invoke('centerPointColor')[3] === 0 ? centerPointColorSave : [0,0,0,0]);
@@ -118,7 +118,7 @@ const initShortcuts = (events: Events) => {
             selectedCenterPointColorSave = colors;
         }
     });
-        
+
     shortcuts.register(['L', 'l'], {
         func: () => {
             events.fire('selectedCenterPointColor', events.invoke('selectedCenterPointColor')[3] === 0 ? selectedCenterPointColorSave : [0,0,0,0]);
@@ -131,13 +131,13 @@ const initShortcuts = (events: Events) => {
             selectedSplatColorSave = colors;
         }
     });
-        
+
     shortcuts.register(['K', 'k'], {
         func: () => {
             events.fire('selectedSplatColor', events.invoke('selectedSplatColor')[3] === 0 ? selectedSplatColorSave : [0,0,0,0]);
         }
     });
-       
+
     shortcuts.register(['Q', 'q'], {
         func: () => {
             events.fire('selectedSplatRingsToggle', !events.invoke('selectedSplatRingsToggle'));

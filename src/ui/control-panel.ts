@@ -753,7 +753,6 @@ class ControlPanel extends Panel {
             events.fire('splatSize', value);
         });
 
-
         events.on('selectedSplatColor', (value: number[]) => {
             selectedSplatColorPicker.value = value;
         });
@@ -778,7 +777,6 @@ class ControlPanel extends Panel {
             events.fire('boundingRingToggle', value);
         });
 
-
         events.on('boundingRingSize', (value: number) => {
             boundingRingSizeSlider.value = value;
         });
@@ -790,7 +788,6 @@ class ControlPanel extends Panel {
         boundingRingSizeSlider.on('change', (value: number) => {
             events.fire('boundingRingSize', value);
         });
-
 
         events.on('selectedSplatRingsToggle', (value: boolean) => {
             selectedSplatRingsToggleCb.value = value;
@@ -804,7 +801,6 @@ class ControlPanel extends Panel {
             events.fire('selectedSplatRingsToggle', value);
         });
 
-
         events.on('selectedSplatRingsSize', (value: number) => {
             selectedSplatRingsSizeSlider.value = value;
         });
@@ -816,7 +812,6 @@ class ControlPanel extends Panel {
         selectedSplatRingsSizeSlider.on('change', (value: number) => {
             events.fire('selectedSplatRingsSize', value);
         });
-
 
         events.on('centerPointColor', (value: number[]) => {
             centerPointColorPicker.value = value;
@@ -830,7 +825,6 @@ class ControlPanel extends Panel {
             events.fire('centerPointColor', value);
         });
 
-
         events.on('splatDisplayToggle', (value: boolean) => {
             splatDisplayToggleCb.value = value;
         });
@@ -843,7 +837,6 @@ class ControlPanel extends Panel {
             events.fire('splatDisplayToggle', value);
         });
 
-
         events.on('selectedCenterPointColor', (value: number[]) => {
             selectedCenterPointColorPicker.value = value;
         });
@@ -855,7 +848,6 @@ class ControlPanel extends Panel {
         selectedCenterPointColorPicker.on('change', (value: number[]) => {
             events.fire('selectedCenterPointColor', value);
         });
-
 
         focusButton.on('click', () => {
             events.fire('camera.focus');
@@ -911,7 +903,7 @@ class ControlPanel extends Panel {
 
         events.on('splat.count', (count: number) => {
             selectionPanel.headerText = `SELECTION${count === 0 ? '' : ' (' + count.toString() + ')'}`;
-        });       
+        });
     }
 }
 

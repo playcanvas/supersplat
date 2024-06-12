@@ -68,7 +68,7 @@ uniform bool splatDisplayToggle;
 
 void main(void)
 {
-    if(splatDisplayToggle){
+    if (splatDisplayToggle){
         discard;
     }
     if ((vertexState & uint(4)) == uint(4)) {

@@ -49,7 +49,6 @@ class SplatDebug {
     splatData: GSplatData;
     meshInstance: MeshInstance;
     size = 2;
-    // color = [0.0, 0.0, 1.0]
 
     constructor(scene: Scene, root: Entity, splatData: GSplatData) {
         const device = scene.graphicsDevice;
@@ -84,7 +83,6 @@ class SplatDebug {
         this.meshInstance = new MeshInstance(mesh, material, root);
 
         this.splatSize = this.size;
-        // this.centerPointColor = this.color;
     }
 
     destroy() {

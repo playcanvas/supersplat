@@ -108,7 +108,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         lastExportCursor = editHistory.cursor;
     });
 
-    events.on('camera.mode', (mode: string) => {
+    events.on('camera.mode', () => {
         scene.forceRender = true;
     });
 

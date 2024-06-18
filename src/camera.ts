@@ -357,6 +357,8 @@ class Camera extends Element {
 
     onPreRender() {
         this.rebuildRenderTargets();
+        // Update the Camera Position Variable
+        this.scene.graphicsDevice.scope.resolve('cameraPosition').setValue(cameraPosition);
     }
 
     onPostRender() {

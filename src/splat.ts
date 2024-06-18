@@ -9,7 +9,8 @@ import {
     GSplatResource,
     Quat,
     Texture,
-    Vec3
+    Vec3,
+    WebglGraphicsDevice
 } from 'playcanvas';
 import { Element, ElementType } from "./element";
 import { SplatDebug } from "./splat-debug";
@@ -21,6 +22,7 @@ const vertexShader = /*glsl*/`
 uniform sampler2D splatState;
 
 flat varying highp uint vertexState;
+varying highp vec3 v_vertexPosition;
 
 #ifdef PICK_PASS
 flat varying highp uint vertexId;
@@ -35,6 +37,7 @@ void main(void)
     vec4 centerWorld = matrix_model * vec4(centerLocal, 1.0);
 
     gl_Position = evalSplat(centerWorld);
+    v_vertexPosition = gl_Position;
 
     vertexState = uint(texelFetch(splatState, splatUV, 0).r * 255.0);
 
@@ -51,10 +54,38 @@ flat varying highp uint vertexId;
 #endif
 
 flat varying highp uint vertexState;
+varying vec3 vertexPosition;
 
 uniform float pickerAlpha;
 uniform float ringSize;
+uniform float shCoefficients[9];
+uniform vec3 baseColors[3];
+uniform vec3 cameraPosition[3];
+
 float PI = 3.14159;
+
+// Function to calculate the SH color given its level 0 and 1 coeficients (0-8) and the direction of the camera to the vertex
+vec3 sh(const vec3 sph[9], const in vec3 direction) {
+  float x = direction.x;
+  float y = direction.y;
+  float z = direction.z;
+
+  vec3 result = (
+    sph[0] +
+
+    sph[1] * x +
+    sph[2] * y +
+    sph[3] * z +
+
+    sph[4] * z * x +
+    sph[5] * y * z +
+    sph[6] * y * x +
+    sph[7] * (3.0 * z * z - 1.0) +
+    sph[8] * (x*x - y*y)
+  );
+
+  return max(result, vec3(0.0));
+}
 
 void main(void)
 {
@@ -94,7 +125,15 @@ void main(void)
                 c = vec3(1.0, 1.0, 0.0);
             } else {
                 // normal
-                c = color.xyz;
+                // Calculate the direction vector
+                vec3 directionVector = cameraPosition - vertexPosition;
+                vec3 normalizedDirectionVector = normalize(directionVector);
+
+                // Calculate the SH information
+                vec3 shvector = sh(shCoefficients, normalizedDirectionVector)
+
+                // Mix SH information with the base color. Could use the baseColor uniform or the one given by the model
+                c = color.xyz * shvector;
             }
 
             alpha = B;
@@ -136,6 +175,21 @@ class Splat extends Element {
         this.asset = asset;
         this.splatData = splatResource.splatData;
         this.entity = new Entity('splatParent');
+
+        // Filter the corresponding coeficient information
+
+        const splatDataElements = this.splatData.elements[0];
+        if (splatDataElements) {
+            let resultCoeficients = [];
+            let shKeys = ['f_rest_0', 'f_rest_1', 'f_rest_2', 'f_rest_3', 'f_rest_4', 'f_rest_5', 'f_rest_6', 'f_rest_7', 'f_rest_8'];
+            const shFilteredObject = Object.fromEntries(Object.entries(splatDataElements).filter(([k]) => shKeys.includes(k)));
+            let rgbKeys = ['f_dc_0', 'f_dc_1', 'f_dc_2'];
+            const rgbFilteredObject = Object.fromEntries(Object.entries(splatDataElements).filter(([k]) => rgbKeys.includes(k)));
+            //TO DO - Filter only by the index of an element and then use that to set the Uniforms.
+            // this.scene.graphicsDevice.scope.resolve('shCoefficients').setValue(shFilteredObject);
+            // this.scene.graphicsDevice.scope.resolve('baseColors').setValue(rgbFilteredObject);
+        }
+
         this.root = splatResource.instantiate({
             vertex: vertexShader,
             fragment: fragmentShader
@@ -258,10 +312,19 @@ class Splat extends Element {
         const selected = events.invoke('selection') === this;
         const cameraMode = events.invoke('camera.mode');
         const splatSize = events.invoke('splatSize');
-
+        
+        
         // configure rings rendering
         const material = this.root.gsplat.instance.material;
         material.setParameter('ringSize', (selected && cameraMode === 'rings' && splatSize > 0) ? 0.04 : 0);
+        
+        // Add coeficient values to the vertex
+        const splatDataElements = this.splatData.elements[0];
+        if(splatDataElements){
+            let resultCoeficients = [];
+        }
+        material.setParameter('ringSize', (selected && cameraMode === 'rings' && splatSize > 0) ? 0.04 : 0);
+
 
         // render splat centers
         if (selected && cameraMode === 'centers' && splatSize > 0) {

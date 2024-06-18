@@ -19,6 +19,7 @@ import { State } from './edit-ops';
 const vertexShader = /*glsl*/`
 
 uniform sampler2D splatState;
+uniform bool splatDisplayToggle;
 
 flat varying highp uint vertexState;
 
@@ -28,6 +29,9 @@ flat varying highp uint vertexId;
 
 void main(void)
 {
+    if (splatDisplayToggle){
+        return;
+    }
     // evaluate center of the splat in object space
     vec3 centerLocal = evalCenter();
 
@@ -55,9 +59,18 @@ flat varying highp uint vertexState;
 uniform float pickerAlpha;
 uniform float ringSize;
 float PI = 3.14159;
+uniform vec4 selectedSplatColor;
+uniform bool selectedSplatRingsToggle;
+uniform float selectedSplatRingsSize;
+uniform bool boundingRingToggle;
+uniform float boundingRingSize;
+uniform bool splatDisplayToggle;
 
 void main(void)
 {
+    if (splatDisplayToggle){
+        discard;
+    }
     if ((vertexState & uint(4)) == uint(4)) {
         // deleted
         discard;
@@ -91,16 +104,31 @@ void main(void)
         } else {
             if ((vertexState & uint(1)) == uint(1)) {
                 // selected
-                c = vec3(1.0, 1.0, 0.0);
+                c = mix(color.xyz, selectedSplatColor.xyz, selectedSplatColor.w);
+                alpha = B;
+                if (selectedSplatRingsToggle){
+                    if (A < 4.0 - selectedSplatRingsSize / 3.0) {
+                        alpha = max(0.05, B);
+                    } else {
+                        alpha = 0.6;
+                        c = selectedSplatColor.xyz;
+                    }
+                }
             } else {
                 // normal
                 c = color.xyz;
+                alpha = B;
+                if (boundingRingToggle){
+                    if (A < 4.0 - boundingRingSize / 3.0) {
+                        alpha = B;
+                    } else {
+                        alpha = 0.6;
+                    }
+                }
             }
 
-            alpha = B;
-
             if (ringSize > 0.0) {
-                if (A < 4.0 - ringSize * 4.0) {
+                if (A < 4.0 - ringSize / 3.0) {
                     alpha = max(0.05, B);
                 } else {
                     alpha = 0.6;
@@ -258,10 +286,11 @@ class Splat extends Element {
         const selected = events.invoke('selection') === this;
         const cameraMode = events.invoke('camera.mode');
         const splatSize = events.invoke('splatSize');
+        const boundingRingSize = events.invoke('boundingRingSize');
 
         // configure rings rendering
         const material = this.root.gsplat.instance.material;
-        material.setParameter('ringSize', (selected && cameraMode === 'rings' && splatSize > 0) ? 0.04 : 0);
+        material.setParameter('ringSize', (selected && cameraMode === 'rings') ? boundingRingSize : 0);
 
         // render splat centers
         if (selected && cameraMode === 'centers' && splatSize > 0) {

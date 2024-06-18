@@ -78,6 +78,8 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['U', 'u'], { event: 'select.unhide' });
     shortcuts.register(['['], { event: 'tool.brushSelection.smaller' });
     shortcuts.register([']'], { event: 'tool.brushSelection.bigger' });
+    shortcuts.register(['9'], { event: 'tool.brushSelection.smaller' });
+    shortcuts.register(['0'], { event: 'tool.brushSelection.bigger' });
     shortcuts.register(['Z', 'z'], { event: 'edit.undo', ctrl: true });
     shortcuts.register(['Z', 'z'], { event: 'edit.redo', ctrl: true, shift: true });
     shortcuts.register(['M', 'm'], { event: 'camera.toggleMode' });
@@ -94,6 +96,63 @@ const initShortcuts = (events: Events) => {
     shortcuts.register([' '], {
         func: () => {
             events.fire('splatSize', events.invoke('splatSize') === 0 ? splatSizeSave : 0);
+        }
+    });
+
+    let centerPointColorSave = [0.0,0.0,1.0,0.5];
+    events.on('centerPointColor', (colors: number[]) => {
+        if (colors[3] !== 0) {
+            centerPointColorSave = colors;
+        }
+    });
+
+    shortcuts.register(['J', 'j'], {
+        func: () => {
+            events.fire('centerPointColor', events.invoke('centerPointColor')[3] === 0 ? centerPointColorSave : [0,0,0,0]);
+        }
+    });
+
+    let selectedCenterPointColorSave = [1.0,1.0,0,0.5];
+    events.on('selectedCenterPointColor', (colors: number[]) => {
+        if (colors[3] !== 0) {
+            selectedCenterPointColorSave = colors;
+        }
+    });
+
+    shortcuts.register(['L', 'l'], {
+        func: () => {
+            events.fire('selectedCenterPointColor', events.invoke('selectedCenterPointColor')[3] === 0 ? selectedCenterPointColorSave : [0,0,0,0]);
+        }
+    });
+
+    let selectedSplatColorSave = [1.0,1.0,0,0.5];
+    events.on('selectedSplatColor', (colors: number[]) => {
+        if (colors[3] !== 0) {
+            selectedSplatColorSave = colors;
+        }
+    });
+
+    shortcuts.register(['K', 'k'], {
+        func: () => {
+            events.fire('selectedSplatColor', events.invoke('selectedSplatColor')[3] === 0 ? selectedSplatColorSave : [selectedSplatColorSave[0],selectedSplatColorSave[1],selectedSplatColorSave[2],0]);
+        }
+    });
+
+    shortcuts.register(['Q', 'q'], {
+        func: () => {
+            events.fire('selectedSplatRingsToggle', !events.invoke('selectedSplatRingsToggle'));
+        }
+    });
+
+    shortcuts.register(['O', 'o'], {
+        func: () => {
+            events.fire('boundingRingToggle', !events.invoke('boundingRingToggle'));
+        }
+    });
+
+    shortcuts.register(['N', 'n'], {
+        func: () => {
+            events.fire('splatDisplayToggle', !events.invoke('splatDisplayToggle'));
         }
     });
 

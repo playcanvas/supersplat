@@ -1,8 +1,9 @@
-import { BooleanInput, Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, TreeView, TreeViewItem, VectorInput } from 'pcui';
+import { BooleanInput, Button, ColorPicker, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, TreeView, TreeViewItem, VectorInput } from 'pcui';
 import { Events } from '../events';
 import { Element, ElementType } from '../element';
 import { Splat } from '../splat';
 import { version as appVersion } from '../../package.json';
+import { Color } from 'playcanvas';
 
 class ControlPanel extends Panel {
     constructor(events: Events, remoteStorageMode: boolean, args = { }) {
@@ -473,6 +474,165 @@ class ControlPanel extends Panel {
         allData.append(allDataLabel);
         allData.append(allDataToggle);
 
+         // highlighting color of selected splats (splat and ring)
+         const selectedSplatColor = new Container({
+            class: 'control-parent'
+        });
+
+        const selectedSplatColorLabel = new Label({
+            class: 'control-label',
+            text: 'Highlight Splat Color'
+        });
+
+        const selectedSplatColorPicker = new ColorPicker({
+            class: 'control-element-expand',
+            channels: 4,
+            value: [1.0,1.0,0.0,0.5]
+        });
+
+        selectedSplatColor.append(selectedSplatColorLabel);
+        selectedSplatColor.append(selectedSplatColorPicker);
+
+        // toggle splats
+        const splatDisplayToggle = new Container({
+            class: 'control-parent'
+        });
+
+        const splatDisplayToggleLabel = new Label({
+            class: 'control-label',
+            text: 'Show Splats'
+        });
+
+        const splatDisplayToggleCb = new BooleanInput({
+            class: 'control-element',
+            value: true
+        });
+
+        splatDisplayToggle.append(splatDisplayToggleLabel);
+        splatDisplayToggle.append(splatDisplayToggleCb);
+
+        // color of center points
+        const centerPointColor = new Container({
+            class: 'control-parent'
+        });
+
+        const centerPointColorLabel = new Label({
+            class: 'control-label',
+            text: 'Center Point Color'
+        });
+
+        const centerPointColorPicker = new ColorPicker({
+            class: 'control-element-expand',
+            channels: 4, 
+            value: [0.0,0.0,1.0,0.5]
+        });
+
+        centerPointColor.append(centerPointColorLabel);
+        centerPointColor.append(centerPointColorPicker);
+
+        // highlight color of center points
+        const selectedCenterPointColor = new Container({
+            class: 'control-parent'
+        });
+
+        const selectedCenterPointColorLabel = new Label({
+            class: 'control-label',
+            text: 'Highlight Point Color'
+        });
+
+        const selectedCenterPointColorPicker = new ColorPicker({
+            class: 'control-element-expand',
+            channels: 4,
+            value: [1.0,1.0,0.0,0.5]
+        });
+
+        selectedCenterPointColor.append(selectedCenterPointColorLabel);
+        selectedCenterPointColor.append(selectedCenterPointColorPicker);
+        
+        // toggle bounding rings
+        const boundingRingToggle = new Container({
+            class: 'control-parent'
+        });
+
+        const boundingRingToggleLabel = new Label({
+            class: 'control-label',
+            text: 'Bounding Rings'
+        });
+
+        const boundingRingToggleCb = new BooleanInput({
+            class: 'control-element',
+        });
+
+        boundingRingToggle.append(boundingRingToggleLabel);
+        boundingRingToggle.append(boundingRingToggleCb);
+
+        // bounding ring thickness
+        const boundingRingSize = new Container({
+            class: 'control-parent'
+        });
+
+        const boundingRingSizeLabel = new Label({
+            class: 'control-label',
+            text: 'Bounding Ring Size'
+        });
+
+        const boundingRingSizeSlider = new SliderInput({
+            class: 'control-element-expand',
+            precision: 2,
+            min: 0,
+            max: 1,
+            value: 0.5
+        });
+
+        boundingRingSize.append(boundingRingSizeLabel);
+        boundingRingSize.append(boundingRingSizeSlider);
+
+        // toggle bounding rings for selected splats
+        const selectedSplatRingsToggle = new Container({
+            class: 'control-parent'
+        });
+
+        const selectedSplatRingsToggleLabel = new Label({
+            class: 'control-label',
+            text: 'Highlight Splat Rings'
+        });
+
+        const selectedSplatRingsToggleCb = new BooleanInput({
+            class: 'control-element',
+        });
+
+        selectedSplatRingsToggle.append(selectedSplatRingsToggleLabel);
+        selectedSplatRingsToggle.append(selectedSplatRingsToggleCb);
+
+        // bounding ring thickness
+        const selectedSplatRingsSize = new Container({
+            class: 'control-parent'
+        });
+
+        const selectedSplatRingsSizeLabel = new Label({
+            class: 'control-label',
+            text: 'Highlight Ring Size'
+        });
+
+        const selectedSplatRingsSizeSlider = new SliderInput({
+            class: 'control-element-expand',
+            precision: 2,
+            min: 0,
+            max: 1,
+            value: 0.5
+        });
+
+        selectedSplatRingsSize.append(selectedSplatRingsSizeLabel);
+        selectedSplatRingsSize.append(selectedSplatRingsSizeSlider);
+
+        optionsPanel.append(splatDisplayToggle);
+        optionsPanel.append(centerPointColor);
+        optionsPanel.append(selectedCenterPointColor);
+        optionsPanel.append(selectedSplatColor);
+        optionsPanel.append(boundingRingToggle);
+        optionsPanel.append(boundingRingSize);
+        optionsPanel.append(selectedSplatRingsToggle);
+        optionsPanel.append(selectedSplatRingsSize);
         optionsPanel.append(allData);
 
         // append
@@ -591,6 +751,102 @@ class ControlPanel extends Panel {
 
         splatSizeSlider.on('change', (value: number) => {
             events.fire('splatSize', value);
+        });
+
+        events.on('selectedSplatColor', (value: number[]) => {
+            selectedSplatColorPicker.value = value;
+        });
+
+        events.function('selectedSplatColor', () => {
+            return selectedSplatColorPicker.value;
+        });
+
+        selectedSplatColorPicker.on('change', (value: number[]) => {
+            events.fire('selectedSplatColor', value);
+        });
+
+        events.on('boundingRingToggle', (value: boolean) => {
+            boundingRingToggleCb.value = value;
+        });
+
+        events.function('boundingRingToggle', () => {
+            return boundingRingToggleCb.value;
+        });
+
+        boundingRingToggleCb.on('change', (value: boolean) => {
+            events.fire('boundingRingToggle', value);
+        });
+
+        events.on('boundingRingSize', (value: number) => {
+            boundingRingSizeSlider.value = value;
+        });
+
+        events.function('boundingRingSize', () => {
+            return boundingRingSizeSlider.value;
+        });
+
+        boundingRingSizeSlider.on('change', (value: number) => {
+            events.fire('boundingRingSize', value);
+        });
+
+        events.on('selectedSplatRingsToggle', (value: boolean) => {
+            selectedSplatRingsToggleCb.value = value;
+        });
+
+        events.function('selectedSplatRingsToggle', () => {
+            return selectedSplatRingsToggleCb.value;
+        });
+
+        selectedSplatRingsToggleCb.on('change', (value: boolean) => {
+            events.fire('selectedSplatRingsToggle', value);
+        });
+
+        events.on('selectedSplatRingsSize', (value: number) => {
+            selectedSplatRingsSizeSlider.value = value;
+        });
+
+        events.function('selectedSplatRingsSize', () => {
+            return selectedSplatRingsSizeSlider.value;
+        });
+
+        selectedSplatRingsSizeSlider.on('change', (value: number) => {
+            events.fire('selectedSplatRingsSize', value);
+        });
+
+        events.on('centerPointColor', (value: number[]) => {
+            centerPointColorPicker.value = value;
+        });
+
+        events.function('centerPointColor', () => {
+            return centerPointColorPicker.value;
+        });
+
+        centerPointColorPicker.on('change', (value: number[]) => {
+            events.fire('centerPointColor', value);
+        });
+
+        events.on('splatDisplayToggle', (value: boolean) => {
+            splatDisplayToggleCb.value = value;
+        });
+
+        events.function('splatDisplayToggle', () => {
+            return splatDisplayToggleCb.value;
+        });
+
+        splatDisplayToggleCb.on('change', (value: boolean) => {
+            events.fire('splatDisplayToggle', value);
+        });
+
+        events.on('selectedCenterPointColor', (value: number[]) => {
+            selectedCenterPointColorPicker.value = value;
+        });
+
+        events.function('selectedCenterPointColor', () => {
+            return selectedCenterPointColorPicker.value;
+        });
+
+        selectedCenterPointColorPicker.on('change', (value: number[]) => {
+            events.fire('selectedCenterPointColor', value);
         });
 
         focusButton.on('click', () => {

@@ -116,6 +116,57 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         scene.forceRender = true;
     });
 
+    events.on('splatDisplayToggle', (splatDisplayToggle: boolean) => {
+        scene.graphicsDevice.scope.resolve('splatDisplayToggle').setValue(!splatDisplayToggle);
+        scene.forceRender = true;
+    });
+
+    events.on('boundingRingToggle', (boundingRingToggle: boolean) => {
+        scene.graphicsDevice.scope.resolve('boundingRingToggle').setValue(boundingRingToggle);
+        scene.graphicsDevice.scope.resolve('boundingRingSize').setValue(events.invoke('boundingRingSize'));
+        scene.forceRender = true;
+    });
+
+    events.on('boundingRingSize', (value: number) => {
+        scene.graphicsDevice.scope.resolve('boundingRingSize').setValue(value);
+        scene.graphicsDevice.scope.resolve('ringSize').setValue(events.invoke('camera.mode') === 'rings' ? value : 0.0);
+        scene.forceRender = true;
+    });
+
+    events.on('selectedSplatRingsToggle', (selectedSplatRingToggle: boolean) => {
+        scene.graphicsDevice.scope.resolve('selectedSplatRingsToggle').setValue(selectedSplatRingToggle);
+        scene.graphicsDevice.scope.resolve('selectedSplatRingsSize').setValue(events.invoke('selectedSplatRingsSize'));
+        scene.forceRender = true;
+    });
+
+    events.on('selectedSplatRingsSize', (value: number) => {
+        scene.graphicsDevice.scope.resolve('selectedSplatRingsSize').setValue(value);
+        scene.forceRender = true;
+    });
+
+    const centerPointColors = [ 
+        [0, 0, 0, 0.25],
+        [0, 0, 1.0, 0.5],
+        [1.0, 1.0, 0.0, 0.5]
+    ];
+
+    events.on('centerPointColor', (colorValue: number[]) => {
+        centerPointColors[1] = colorValue;
+        scene.graphicsDevice.scope.resolve('centerColors[0]').setValue(centerPointColors.flat());
+        scene.forceRender = true;
+    });
+
+    events.on('selectedCenterPointColor', (colorValue: number[]) => {
+        centerPointColors[2] = colorValue;
+        scene.graphicsDevice.scope.resolve('centerColors[0]').setValue(centerPointColors.flat());
+        scene.forceRender = true;
+    });
+
+    events.on('selectedSplatColor', (colorValue: number[]) => {
+        scene.graphicsDevice.scope.resolve('selectedSplatColor').setValue(colorValue);
+        scene.forceRender = true;
+    });
+
     events.on('show.gridOn', () => {
         scene.grid.visible = true;
     });

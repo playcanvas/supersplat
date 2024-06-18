@@ -134,7 +134,7 @@ const initShortcuts = (events: Events) => {
 
     shortcuts.register(['K', 'k'], {
         func: () => {
-            events.fire('selectedSplatColor', events.invoke('selectedSplatColor')[3] === 0 ? selectedSplatColorSave : [0,0,0,0]);
+            events.fire('selectedSplatColor', events.invoke('selectedSplatColor')[3] === 0 ? selectedSplatColorSave : [selectedSplatColorSave[0],selectedSplatColorSave[1],selectedSplatColorSave[2],0]);
         }
     });
 

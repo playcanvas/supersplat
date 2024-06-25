@@ -15,14 +15,16 @@ if (process.env.BUILD_TYPE === 'prod') {
     process.env.BUILD_TYPE = 'release';
 }
 
-// debug, profile, release
 const HREF       = process.env.BASE_HREF || '';
-const BUILD_TYPE = process.env.BUILD_TYPE || 'release';
-const ENGINE_DIR = process.env.ENGINE_PATH || './node_modules/playcanvas';
-const PCUI_DIR = path.resolve(process.env.PCUI_PATH || 'node_modules/@playcanvas/pcui');
 
-const ENGINE_NAME = BUILD_TYPE === 'debug' ? 'playcanvas.dbg/src/index.js' : 'playcanvas/src/index.js';
+// debug, profile, release
+const BUILD_TYPE = process.env.BUILD_TYPE || 'release';
+
+const ENGINE_DIR = process.env.ENGINE_PATH || './node_modules/playcanvas';
+const ENGINE_NAME = (BUILD_TYPE === 'debug') ? 'playcanvas.dbg/src/index.js' : 'playcanvas/src/index.js';
 const ENGINE_PATH = path.resolve(ENGINE_DIR, 'build', ENGINE_NAME);
+
+const PCUI_DIR = path.resolve(process.env.PCUI_PATH || 'node_modules/@playcanvas/pcui');
 
 const aliasEntries = {
     playcanvas: ENGINE_PATH,

@@ -1,5 +1,6 @@
 import { Container, Label } from 'pcui';
 import { ControlPanel } from './control-panel';
+import { InfoPanel } from './info-panel';
 import { Toolbar } from './toolbar';
 import { Events } from '../events';
 import { Popup } from './popup';
@@ -72,9 +73,19 @@ class EditorUI {
         // control panel
         const controlPanel = new ControlPanel(events, remoteStorageMode);
 
+        // main container
+        const mainContainer = new Container({
+            id: 'main-container'
+        });
+
+        const infoPanel = new InfoPanel(events);
+
+        mainContainer.append(canvasContainer);
+        mainContainer.append(infoPanel);
+
         editorContainer.append(toolbar);
         editorContainer.append(controlPanel);
-        editorContainer.append(canvasContainer);
+        editorContainer.append(mainContainer);
 
         // message popup
         this.popup = new Popup(topContainer);

@@ -363,7 +363,7 @@ class Camera extends Element {
         const renderTarget = this.entity.camera.renderTarget;
 
         // resolve msaa buffer
-        if (renderTarget._samples > 1) {
+        if (renderTarget.samples > 1) {
             renderTarget.resolve(true, false);
         }
 

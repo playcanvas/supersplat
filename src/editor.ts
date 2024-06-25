@@ -225,9 +225,17 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             const state = splatData.getProp('state') as Uint8Array;
             const opacity = splatData.getProp('opacity') as Float32Array;
 
+            const sigmoid = (v: number) => {
+                if (v > 0) {
+                    return 1 / (1 + Math.exp(-v));
+                }
+    
+                const t = Math.exp(v);
+                return t / (1 + t);
+            };
+
             processSelection(state, op, (i) => {
-                const t = Math.exp(opacity[i]);
-                return ((1 / (1 + t)) < value);
+                return sigmoid(opacity[i]) < value;
             });
 
             splat.updateState();

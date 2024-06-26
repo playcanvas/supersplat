@@ -1,6 +1,8 @@
+import { Events } from '../events';
 
 class HistogramData {
     bins: Uint32Array;
+    numValues: number;
     minValue: number;
     maxValue: number;
 
@@ -8,40 +10,65 @@ class HistogramData {
         this.bins = new Uint32Array(numBins);
     }
 
-    calc(data: Float32Array, transform: (v: number) => number) {
-        // calculate min, max
-        let min = transform(data[0]);
-        let max = min;
-        for (let i = 0; i < data.length; i++) {
-            const v = transform(data[i]);
-            if (v < min) min = v; else if (v > max) max = v;
-        }
-
-        // fill bins
+    calc(count: number, value: (v: number) => number | undefined) {
+        // clear bins
         const bins = this.bins;
         for (let i = 0; i < bins.length; ++i) {
             bins[i] = 0;
         }
 
-        for (let i = 0; i < data.length; i++) {
-            const v = transform(data[i]);
-            const bin = Math.min(bins.length - 1, Math.floor((v - min) / (max - min) * bins.length));
-            bins[bin]++;
+        // calculate min, max
+        let min, max, i;
+        for (i = 0; i < count; i++) {
+            const v = value(i);
+            if (v !== undefined) {
+                min = max = v;
+                break;
+            }
         }
 
+        // no data
+        if (i === count) {
+            return;
+        }
+
+        // continue min/max calc
+        for (; i < count; i++) {
+            const v = value(i);
+            if (v !== undefined) {
+                if (v < min) min = v; else if (v > max) max = v;
+            }
+        }
+
+        // fill bins
+        for (let i = 0; i < count; i++) {
+            const v = value(i);
+            if (v !== undefined) {
+                const n = min === max ? 0 : (v - min) / (max - min);
+                const bin = Math.min(bins.length - 1, Math.floor(n * bins.length));
+                bins[bin]++;
+            }
+        }
+        this.numValues = bins.reduce((t, v) => t + v, 0);
         this.minValue = min;
         this.maxValue = max;
+    }
+
+    bucketValue(bucket: number) {
+        return this.minValue + bucket * this.bucketSize;
+    }
+
+    get bucketSize() {
+        return (this.maxValue - this.minValue) / this.bins.length;
     }
 }
 
 class Histogram {
-    root: HTMLElement;
     canvas: HTMLCanvasElement;
     context: CanvasRenderingContext2D;
     histogram: HistogramData;
     pixelData: ImageData;
-    minValue: number;
-    maxValue: number;
+    events = new Events();
 
     constructor(numBins: number, height: number) {
         const canvas = document.createElement('canvas');
@@ -50,9 +77,13 @@ class Histogram {
         canvas.height = height;
         canvas.style.width = `100%`;
         canvas.style.height = `100%`;
+        canvas.style.imageRendering = 'pixelated';
 
         const context = canvas.getContext('2d');
         context.globalCompositeOperation = 'copy';
+
+        context.fillStyle = 'black';
+        context.fillRect(0, 0, canvas.width, canvas.height);
 
         this.canvas = canvas;
         this.context = context;
@@ -63,23 +94,46 @@ class Histogram {
             e.preventDefault();
             e.stopPropagation();
 
-            const rect = this.canvas.getBoundingClientRect();
-            const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
             const h = this.histogram;
-            const bin = Math.min(h.bins.length - 1, Math.floor(x * h.bins.length));
 
-            console.log(`bin: ${bin} value: ${h.bins[bin]}`);
+            if (h.numValues) {
+                const rect = this.canvas.getBoundingClientRect();
+                const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                
+                const bin = Math.min(h.bins.length - 1, Math.floor(x * h.bins.length));
+
+                this.events.fire('mousemove', {
+                    x: e.offsetX,
+                    y: e.offsetY,
+                    value: h.bucketValue(bin),
+                    size: h.bucketSize,
+                    count: h.bins[bin],
+                    total: h.numValues
+                });
+            }
+        });
+
+        this.canvas.addEventListener('mouseenter', (e: MouseEvent) => {
+            this.events.fire('mouseenter');
+        });
+
+        this.canvas.addEventListener('mouseleave', (e: MouseEvent) => {
+            this.events.fire('mouseleave');
         });
     }
 
-    update(data: Float32Array, transform: (v: number) => number) {
-        this.histogram.calc(data, transform);
+    // 
+    // options = {
+    //     logScale: boolean
+    // }
+    update(count: number, value: (v: number) => number | undefined, options: { logScale?: boolean } = {}) {
+        this.histogram.calc(count, value);
 
         // convert bin values to log scale
         const bins = this.histogram.bins;
         const vals = [];
         for (let i = 0; i < bins.length; ++i) {
-            vals[i] = Math.log(bins[i] + 1);
+            vals[i] = options?.logScale ? Math.log(bins[i] + 1) : bins[i];
         }
         const valMax = Math.max(...vals);
 

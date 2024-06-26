@@ -1,6 +1,6 @@
 import { Container, Label } from 'pcui';
 import { ControlPanel } from './control-panel';
-import { InfoPanel } from './info-panel';
+import { DataPanel } from './data-panel';
 import { Toolbar } from './toolbar';
 import { Events } from '../events';
 import { Popup } from './popup';
@@ -78,10 +78,10 @@ class EditorUI {
             id: 'main-container'
         });
 
-        const infoPanel = new InfoPanel(events);
+        const dataPanel = new DataPanel(events);
 
         mainContainer.append(canvasContainer);
-        mainContainer.append(infoPanel);
+        mainContainer.append(dataPanel);
 
         editorContainer.append(toolbar);
         editorContainer.append(controlPanel);

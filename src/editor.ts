@@ -187,6 +187,15 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
     });
 
+    events.on('select.pred', (op, pred: (i: number) => boolean) => {
+        selectedSplats().forEach((splat) => {
+            const splatData = splat.splatData;
+            const state = splatData.getProp('state') as Uint8Array;
+            processSelection(state, op, pred);
+            splat.updateState();
+        });
+    });
+
     events.on('select.bySize', (op: string, value: number) => {
         selectedSplats().forEach((splat) => {
             const splatData = splat.splatData;

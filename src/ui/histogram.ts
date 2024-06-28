@@ -61,6 +61,11 @@ class HistogramData {
     get bucketSize() {
         return (this.maxValue - this.minValue) / this.bins.length;
     }
+
+    valueToBucket(value: number) {
+        const n = this.minValue === this.maxValue ? 0 : (value - this.minValue) / (this.maxValue - this.minValue);
+        return Math.min(this.bins.length - 1, Math.floor(n * this.bins.length));
+    }
 }
 
 class Histogram {
@@ -90,19 +95,77 @@ class Histogram {
         this.histogram = new HistogramData(numBins);
         this.pixelData = context.createImageData(canvas.width, canvas.height);
 
-        this.canvas.addEventListener('mousemove', (e: MouseEvent) => {
+        let dragging = false;
+        let dragStart = 0;
+        let dragEnd = 0;
+
+        const offsetToBucket = (offset: number) => {
+            const rect = this.canvas.getBoundingClientRect();
+            const bins = this.histogram.bins.length;
+            return Math.max(0, Math.min(bins - 1, Math.floor((offset - rect.left) / rect.width * bins)));
+        };
+
+        const bucketToOffset = (bucket: number) => {
+            const rect = this.canvas.getBoundingClientRect();
+            return bucket / this.histogram.bins.length * rect.width;
+        };
+
+        const updateHighlight = () => {
+            const rect = this.canvas.getBoundingClientRect();
+            const start = Math.min(dragStart, dragEnd);
+            const end = Math.max(dragStart, dragEnd);
+            this.events.fire('highlight', {
+                x: bucketToOffset(start),
+                y: 0,
+                width: (end - start + 1) / this.histogram.bins.length * rect.width,
+                height: rect.height
+            });
+        };
+
+        this.canvas.addEventListener('pointerdown', (e: PointerEvent) => {
             e.preventDefault();
             e.stopPropagation();
 
             const h = this.histogram;
 
             if (h.numValues) {
+                this.canvas.setPointerCapture(e.pointerId);
+                dragging = true;
+                dragStart = dragEnd = offsetToBucket(e.clientX);
+                updateHighlight();
+            }
+        });
+
+        this.canvas.addEventListener('pointerup', (e: PointerEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (dragging) {
+                this.canvas.releasePointerCapture(e.pointerId);
+
+                this.events.fire('select', Math.min(dragStart, dragEnd), Math.max(dragStart, dragEnd));
+                dragging = false;
+            }
+        });
+
+        this.canvas.addEventListener('pointermove', (e: PointerEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const h = this.histogram;
+
+            if (h.numValues) {
+                if (dragging) {
+                    dragEnd = offsetToBucket(e.clientX);
+                    updateHighlight();
+                }
+
                 const rect = this.canvas.getBoundingClientRect();
                 const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
                 
                 const bin = Math.min(h.bins.length - 1, Math.floor(x * h.bins.length));
 
-                this.events.fire('mousemove', {
+                this.events.fire('updateOverlay', {
                     x: e.offsetX,
                     y: e.offsetY,
                     value: h.bucketValue(bin),
@@ -113,17 +176,16 @@ class Histogram {
             }
         });
 
-        this.canvas.addEventListener('mouseenter', (e: MouseEvent) => {
-            this.events.fire('mouseenter');
+        this.canvas.addEventListener('pointerenter', (e: PointerEvent) => {
+            this.events.fire('showOverlay');
         });
 
-        this.canvas.addEventListener('mouseleave', (e: MouseEvent) => {
-            this.events.fire('mouseleave');
+        this.canvas.addEventListener('pointerleave', (e: PointerEvent) => {
+            this.events.fire('hideOverlay');
         });
     }
 
-    // 
-    // options = {
+    // options: {
     //     logScale: boolean
     // }
     update(count: number, value: (v: number) => number | undefined, options: { logScale?: boolean } = {}) {
@@ -156,6 +218,8 @@ class Histogram {
 
         context.putImageData(pixelData, 0, 0);
     }
+
+    
 }
 
 export { Histogram };

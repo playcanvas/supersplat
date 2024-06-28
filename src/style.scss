@@ -88,8 +88,28 @@ body {
     width: 100%;
 }
 
+#histogram-container {
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
 #histogram-canvas {
 
+}
+
+#histogram-svg {
+    pointer-events: none;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+}
+
+#histogram-rect {
+    // fill: rgba()
 }
 
 #data-panel-popup-container {

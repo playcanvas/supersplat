@@ -149,12 +149,41 @@ class DataPanel extends Panel {
         controlsContainer.append(controls);
 
         // build histogram
-        const histogram = new Histogram(512, 256);
+        const histogram = new Histogram(256, 256);
 
-        this.content.dom.appendChild(histogram.canvas);
+        const histogramContainer = new Container({
+            id: 'histogram-container'
+        });
+
+        histogramContainer.dom.appendChild(histogram.canvas);
+
+        this.content.append(histogramContainer);
         this.content.append(controlsContainer);
 
+        // current splat
         let splat: Splat;
+
+        // returns a function that calculates the value for the current data selector
+        const getValueFunc = () => {
+            // @ts-ignore
+            const dataFunc = dataFuncs[dataSelector.value];
+            const data = splat.splatData.getProp(dataSelector.value);
+
+            let func: (i: number) => number;
+            if (dataFunc && data) {
+                func = (i) => dataFunc(data[i]);
+            } else if (dataSelector.value === 'volume') {
+                const sx = splat.splatData.getProp('scale_0');
+                const sy = splat.splatData.getProp('scale_1');
+                const sz = splat.splatData.getProp('scale_2');
+                func = (i) => scaleFunc(sx[i]) * scaleFunc(sy[i]) * scaleFunc(sz[i]);
+            } else {
+                func = (i) => undefined;
+            }
+
+            return func;
+        };
+
         const updateHistogram = () => {
             if (!splat || this.collapsed) return;
 
@@ -165,14 +194,12 @@ class DataPanel extends Panel {
                 let hidden = 0;
                 let deleted = 0;
                 for (let i = 0; i < state.length; ++i) {
-                    if (state[i] & State.selected) {
-                        selected++;
-                    }
-                    if (state[i] & State.hidden) {
-                        hidden++;
-                    }
                     if (state[i] & State.deleted) {
                         deleted++;
+                    } else if (state[i] & State.hidden) {
+                        hidden++;
+                    } else if (state[i] & State.selected) {
+                        selected++;
                     }
                 }
 
@@ -182,27 +209,12 @@ class DataPanel extends Panel {
                 deletedValue.text = deleted.toString();
 
                 // update histogram
-                let func: (i: number) => number;
-
-                // @ts-ignore
-                const dataFunc = dataFuncs[dataSelector.value];
-                const data = splat.splatData.getProp(dataSelector.value);
-
-                if (dataFunc && data) {
-                    func = (i) => dataFunc(data[i]);
-                } else if (dataSelector.value === 'volume') {
-                    const sx = splat.splatData.getProp('scale_0');
-                    const sy = splat.splatData.getProp('scale_1');
-                    const sz = splat.splatData.getProp('scale_2');
-                    func = (i) => scaleFunc(sx[i]) * scaleFunc(sy[i]) * scaleFunc(sz[i]);
-                } else {
-                    func = (i) => undefined;
-                }
+                const func = getValueFunc();
 
                 // update histogram
                 histogram.update(
                     state.length,
-                    (i) => (state[i] === State.selected) ? func(i) : undefined,
+                    (i) => (selected === 0 ? state[i] === 0 : state[i] === State.selected) ? func(i) : undefined,
                     {
                         logScale: logScaleValue.value
                     }
@@ -242,18 +254,62 @@ class DataPanel extends Panel {
         popupContainer.append(popupLabel);
         this.content.append(popupContainer);
 
-        histogram.events.on('mouseenter', () => {
+        histogram.events.on('showOverlay', () => {
             popupContainer.hidden = false;
         });
 
-        histogram.events.on('mouseleave', () => {
+        histogram.events.on('hideOverlay', () => {
             popupContainer.hidden = true;
         });
 
-        histogram.events.on('mousemove', (info: any) => {
+        histogram.events.on('updateOverlay', (info: any) => {
             popupContainer.style.left = `${info.x + 14}px`;
             popupContainer.style.top = `${info.y}px`;
-            popupLabel.text = `${info.value.toFixed(2)} - ${info.count} (${(info.total ? info.count / info.total * 100 : 0).toFixed(2)}%)`;
+            popupLabel.text = `value: ${info.value.toFixed(2)} - cnt: ${info.count} (${(info.total ? info.count / info.total * 100 : 0).toFixed(2)}%)`;
+        });
+
+        // highlight
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute('id', 'histogram-svg');
+
+        // create rect element
+        const rect = document.createElementNS(svg.namespaceURI, 'rect') as SVGRectElement;
+        rect.setAttribute('id', 'highlight-rect');
+        rect.setAttribute('fill', 'rgba(255, 0, 0, 0.2)');
+        rect.setAttribute('stroke', '#f60');
+        rect.setAttribute('stroke-width', '1');
+        rect.setAttribute('stroke-dasharray', '5, 5');
+
+        svg.appendChild(rect);
+        histogramContainer.dom.appendChild(svg);
+
+        histogram.events.on('highlight', (info: any) => {
+            rect.setAttribute('x', info.x.toString());
+            rect.setAttribute('y', info.y.toString());
+            rect.setAttribute('width', info.width.toString());
+            rect.setAttribute('height', info.height.toString());
+
+            svg.style.display = 'inline';
+        });
+
+        histogram.events.on('select', (start: number, end: number) => {
+            svg.style.display = 'none';
+
+            const state = splat.splatData.getProp('state') as Uint8Array;
+            const selection = state.some((s) => s === State.selected);
+            const func = getValueFunc();
+
+            // perform selection
+            events.fire('select.pred', 'set', (i: number) => {
+                if (state[i] !== (selection ? State.selected : 0)) {
+                    return false;
+                }
+
+                // select all splats that fall in the given bucket range (inclusive)
+                const value = func(i);
+                const bucket = histogram.histogram.valueToBucket(value);
+                return bucket >= start && bucket <= end;
+            });
         });
     }
 }

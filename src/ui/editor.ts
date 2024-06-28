@@ -56,6 +56,7 @@ class EditorUI {
         // canvas
         const canvas = document.createElement('canvas');
         canvas.id = 'canvas';
+        canvas.style.touchAction = 'none';
 
         // filename label
         const filenameLabel = new Label({

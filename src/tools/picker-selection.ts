@@ -7,6 +7,7 @@ class PickerSelection {
     constructor(events: Events, parent: HTMLElement) {
         this.root = document.createElement('div');
         this.root.id = 'select-root';
+        this.root.style.touchAction = 'none';
 
         this.root.addEventListener('pointerdown', (e) => {
             if (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary) {

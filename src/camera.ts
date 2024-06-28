@@ -9,6 +9,8 @@ import {
     Entity,
     EventHandler,
     Picker,
+    Plane,
+    Ray,
     RenderTarget,
     Texture,
     Vec3,
@@ -22,7 +24,7 @@ import {
 import { Element, ElementType } from './element';
 import { TweenValue } from './tween-value';
 import { Serializer } from './serializer';
-import { MouseController, TouchController } from './controllers';
+import { PointerController } from './controllers';
 import { Splat } from './splat';
 
 // calculate the forward vector given azimuth and elevation
@@ -39,14 +41,16 @@ const calcForwardVec = (result: Vec3, azim: number, elev: number) => {
 // work globals
 const forwardVec = new Vec3();
 const cameraPosition = new Vec3();
+const plane = new Plane();
+const ray = new Ray();
 const vec = new Vec3();
+const vecb = new Vec3();
 
 // modulo dealing with negative numbers
 const mod = (n: number, m: number) => ((n % m) + m) % m;
 
 class Camera extends Element {
-    mouseController: MouseController;
-    touchController: TouchController;
+    controller: PointerController;
     entity: Entity;
     focalPointTween = new TweenValue({x: 0, y: 0.5, z: 0});
     azimElevTween = new TweenValue({azim: 30, elev: -15});
@@ -175,16 +179,11 @@ class Camera extends Element {
             this.entity.camera.setShaderPass(`debug_${this.scene.config.camera.debug_render}`);
         }
 
-        this.mouseController = new MouseController(this);
-        this.touchController = new TouchController(this);
+        this.controller = new PointerController(this, this.scene.canvas);
 
         // apply scene config
         const config = this.scene.config;
         const controls = config.controls;
-
-        this.mouseController.enableOrbit = this.touchController.enableOrbit = controls.enableRotate;
-        this.mouseController.enablePan = this.touchController.enablePan = controls.enablePan;
-        this.mouseController.enableZoom = this.touchController.enableZoom = controls.enableZoom;
 
         // configure background
         const clr = config.backgroundColor;
@@ -219,11 +218,8 @@ class Camera extends Element {
     }
 
     remove() {
-        this.mouseController.destroy();
-        this.mouseController = null;
-
-        this.touchController.destroy();
-        this.touchController = null;
+        this.controller.destroy();
+        this.controller = null;
 
         this.entity.camera.layers = this.entity.camera.layers.filter(layer => layer !== this.scene.shadowLayer.id);
         this.scene.cameraRoot.removeChild(this.entity);
@@ -396,6 +392,62 @@ class Camera extends Element {
 
         this.events.fire(event, data);
         this.autoRotateDelayValue = config.controls.autoRotateDelay;
+    }
+
+    // interesect the scene at the given screen coordinate and focus the camera on this location
+    pickFocalPoint(screenX: number, screenY: number) {
+        const scene = this.scene;
+        const cameraPos = this.entity.getPosition();
+
+        // @ts-ignore
+        const target = scene.canvas;
+        const sx = screenX / target.clientWidth * scene.targetSize.width;
+        const sy = screenY / target.clientHeight * scene.targetSize.height;
+
+        const splats = scene.getElementsByType(ElementType.splat);
+
+        const dist = (a: Vec3, b: Vec3) => {
+            return vecb.sub2(a, b).length();
+        };
+
+        let closestD = 0;
+        const closestP = new Vec3();
+        let closestSplat = null;
+
+        for (let i = 0; i < splats.length; ++i) {
+            const splat = splats[i] as Splat;
+
+            this.pickPrep(splat);
+            const pickId = this.pick(sx, sy);
+
+            if (pickId !== -1) {
+                splat.getSplatWorldPosition(pickId, vec);
+
+                // create a plane at the world position facing perpendicular to the camera
+                plane.setFromPointNormal(vec, this.entity.forward);
+
+                // create the pick ray in world space
+                const res = this.entity.camera.screenToWorld(screenX, screenY, 1.0, vec);
+                vec.sub2(res, cameraPos);
+                vec.normalize();
+                ray.set(cameraPos, vec);
+
+                // find intersection
+                if (plane.intersectsRay(ray, vec)) {
+                    const distance = dist(vec, cameraPos);
+                    if (!closestSplat || distance < closestD) {
+                        closestD = distance;
+                        closestP.copy(vec);
+                        closestSplat = splat;
+                    }
+                }
+            }
+        }
+
+        if (closestSplat) {
+            this.setFocalPoint(closestP);
+            scene.events.fire('selection', closestSplat);
+        }
     }
 
     // pick mode

@@ -22,6 +22,7 @@ class RectSelection {
         // create input dom
         const root = document.createElement('div');
         root.id = 'select-root';
+        root.style.touchAction = 'none';
 
         let dragId: number | undefined;
 

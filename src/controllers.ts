@@ -45,10 +45,16 @@ class PointerController {
 
         const pointerdown = (event: PointerEvent) => {
             if (event.pointerType === 'mouse') {
+                if (buttons.every(b => !b)) {
+                    target.setPointerCapture(event.pointerId);
+                }
                 buttons[event.button] = true;
                 x = event.offsetX;
                 y = event.offsetY;
             } else if (event.pointerType === 'touch') {
+                if (touches.length === 0) {
+                    target.setPointerCapture(event.pointerId);
+                }
                 touches.push({
                     x: event.offsetX,
                     y: event.offsetY,
@@ -61,15 +67,19 @@ class PointerController {
                     midlen = dist(touches[0].x, touches[0].y, touches[1].x, touches[1].y);
                 }
             }
-
-            console.log(event);
         };
 
         const pointerup = (event: PointerEvent) => {
             if (event.pointerType === 'mouse') {
                 buttons[event.button] = false;
+                if (buttons.every(b => !b)) {
+                    target.releasePointerCapture(event.pointerId);
+                }
             } else {
                 touches = touches.filter((touch) => touch.id !== event.pointerId);
+                if (touches.length === 0) {
+                    target.setPointerCapture(event.pointerId);
+                }
             }
         };
 
@@ -117,7 +127,7 @@ class PointerController {
         const wheel = (event: WheelEvent) => {
             event.preventDefault();
             const sign = (v: number) => v > 0 ? 1 : v < 0 ? -1 : 0;
-            zoom(sign(event.deltaY) * 0.2);
+            zoom(sign(event.deltaY) * -0.2);
             orbit(sign(event.deltaX) * 2.0, 0);
         };
 

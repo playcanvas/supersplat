@@ -325,7 +325,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     mat.transformVec4(vec4, vec4);
                     vec4.x /= vec4.w;
                     vec4.y = -vec4.y / vec4.w;
-                    if (vec4.x < sx || vec4.x > ex || vec4.y < sy || vec4.y > ey) {
+                    vec4.z /= vec4.w;
+                    if (vec4.x < sx || vec4.x > ex || vec4.y < sy || vec4.y > ey || vec4.z < -1 || vec4.z > 1) {
                         return false;
                     }
                     return true;

@@ -7,7 +7,6 @@ class BrushSelection {
     context: CanvasRenderingContext2D;
     svg: SVGElement;
     circle: SVGCircleElement;
-    dragging = false;
     radius = 40;
     prev = { x: 0, y: 0 };
 
@@ -36,14 +35,16 @@ class BrushSelection {
         const context = canvas.getContext('2d');
         context.globalCompositeOperation = 'copy';
 
-        const update = (e: MouseEvent) => {
+        let dragId: number | undefined;
+
+        const update = (e: PointerEvent) => {
             const x = e.offsetX;
             const y = e.offsetY;
 
             circle.setAttribute('cx', x.toString());
             circle.setAttribute('cy', y.toString());
 
-            if (this.dragging) {
+            if (dragId !== undefined) {
                 context.beginPath();
                 context.strokeStyle = '#f60';
                 context.lineCap = 'round';
@@ -57,22 +58,19 @@ class BrushSelection {
             }
         };
 
-        root.oncontextmenu = (e) => {
+        root.addEventListener('contextmenu', (e) => {
             e.preventDefault();
-        };
+        });
 
-        root.onmousedown = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+        root.addEventListener('pointerdown', (e) => {
+            if (dragId === undefined && (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary)) {
+                e.preventDefault();
+                e.stopPropagation();
 
-            this.prev.x = e.offsetX;
-            this.prev.y = e.offsetY;
+                dragId = e.pointerId;
+                root.setPointerCapture(dragId);
 
-            update(e);
-
-            if (e.button === 0) {
-                this.dragging = true;
-
+                // initialize canvas
                 if (canvas.width !== parent.clientWidth || canvas.height !== parent.clientHeight) {
                     canvas.width = parent.clientWidth;
                     canvas.height = parent.clientHeight;
@@ -83,22 +81,31 @@ class BrushSelection {
 
                 // display it
                 canvas.style.display = 'inline';
+
+                this.prev.x = e.offsetX;
+                this.prev.y = e.offsetY;
+
+                update(e);
             }
-        };
+        });
 
-        root.onmousemove = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+        root.addEventListener('pointermove', (e) => {
+            if (dragId !== undefined) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
             update(e);
-        };
+        });
 
-        root.onmouseup = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            update(e);
+        root.addEventListener('pointerup', (e) => {
+            if (e.pointerId === dragId) {
+                e.preventDefault();
+                e.stopPropagation();
 
-            if (e.button === 0) {
-                this.dragging = false;
+                root.releasePointerCapture(dragId);
+                dragId = undefined;
+
                 canvas.style.display = 'none';
 
                 this.events.fire(
@@ -107,7 +114,7 @@ class BrushSelection {
                     context.getImageData(0, 0, canvas.width, canvas.height)
                 );
             }
-        };
+        });
 
         parent.appendChild(root);
         root.appendChild(svg);

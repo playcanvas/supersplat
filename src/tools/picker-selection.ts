@@ -8,24 +8,24 @@ class PickerSelection {
         this.root = document.createElement('div');
         this.root.id = 'select-root';
 
-        this.root.onmousedown = (e: MouseEvent) => {
-            e.preventDefault();
-            e.stopPropagation();
+        this.root.addEventListener('pointerdown', (e) => {
+            if (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary) {
+                e.preventDefault();
+                e.stopPropagation();
 
-            if (e.button === 0) {
                 events.fire(
                     'select.point',
                     e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
                     { x: e.offsetX / this.root.clientWidth, y: e.offsetY / this.root.clientHeight }
                 );
             }
-        };
+        });
 
         parent.appendChild(this.root);
 
-        this.root.oncontextmenu = (e) => {
+        this.root.addEventListener('contextmenu', (e) => {
             e.preventDefault();
-        };
+        });
     }
 
     activate() {

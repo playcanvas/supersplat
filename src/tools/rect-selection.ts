@@ -5,7 +5,6 @@ class RectSelection {
     root: HTMLElement;
     svg: SVGElement;
     rect: SVGRectElement;
-    dragging = false;
     start = { x: 0, y: 0 };
     end = { x: 0, y: 0 };
 
@@ -24,66 +23,72 @@ class RectSelection {
         const root = document.createElement('div');
         root.id = 'select-root';
 
+        let dragId: number | undefined;
+
         const updateRect = () => {
-            if (this.dragging) {
-                const x = Math.min(this.start.x, this.end.x);
-                const y = Math.min(this.start.y, this.end.y);
-                const width = Math.abs(this.start.x - this.end.x);
-                const height = Math.abs(this.start.y - this.end.y);
+            const x = Math.min(this.start.x, this.end.x);
+            const y = Math.min(this.start.y, this.end.y);
+            const width = Math.abs(this.start.x - this.end.x);
+            const height = Math.abs(this.start.y - this.end.y);
 
-                rect.setAttribute('x', x.toString());
-                rect.setAttribute('y', y.toString());
-                rect.setAttribute('width', width.toString());
-                rect.setAttribute('height', height.toString());
-            }
-
-            this.svg.style.display = this.dragging ? 'inline' : 'none';
+            rect.setAttribute('x', x.toString());
+            rect.setAttribute('y', y.toString());
+            rect.setAttribute('width', width.toString());
+            rect.setAttribute('height', height.toString());
         };
 
-        root.oncontextmenu = (e) => {
+        root.addEventListener('contextmenu', (e) => {
             e.preventDefault();
-        };
+        });
 
-        root.onmousedown = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+        root.addEventListener('pointerdown', (e) => {
+            if (dragId === undefined && (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary)) {
+                e.preventDefault();
+                e.stopPropagation();
 
-            if (e.button === 0) {
-                this.dragging = true;
+                dragId = e.pointerId;
+                root.setPointerCapture(dragId);
+
                 this.start.x = this.end.x = e.offsetX;
                 this.start.y = this.end.y = e.offsetY;
+
                 updateRect();
+
+                this.svg.style.display = 'inline';
             }
-        };
+        });
 
-        root.onmousemove = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+        root.addEventListener('pointermove', (e) => {
+            if (e.pointerId === dragId) {
+                e.preventDefault();
+                e.stopPropagation();
 
-            if (e.button === 0 && this.dragging) {
                 this.end.x = e.offsetX;
                 this.end.y = e.offsetY;
+
                 updateRect();
             }
-        };
+        });
 
-        root.onmouseup = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+        root.addEventListener('pointerup', (e) => {
+            if (e.pointerId === dragId) {
+                e.preventDefault();
+                e.stopPropagation();
 
-            if (e.button === 0) {
                 const w = root.clientWidth;
                 const h = root.clientHeight;
 
-                this.dragging = false;
-                updateRect();
+                root.releasePointerCapture(dragId);
+                dragId = undefined;
+
+                this.svg.style.display = 'none';
 
                 this.events.fire('select.rect', e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'), {
                     start: { x: Math.min(this.start.x, this.end.x) / w, y: Math.min(this.start.y, this.end.y) / h },
                     end: { x: Math.max(this.start.x, this.end.x) / w, y: Math.max(this.start.y, this.end.y) / h },
                 });
             }
-        };
+        });
 
         parent.appendChild(root);
         root.appendChild(svg);

@@ -5,6 +5,9 @@ const fromWorldPoint = new Vec3();
 const toWorldPoint = new Vec3();
 const worldDiff = new Vec3();
 
+// calculate the distance between two 2d points
+const dist = (x0: number, y0: number, x1: number, y1: number) => Math.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2);
+
 class PointerController {
     destroy: () => void;
 
@@ -35,13 +38,13 @@ class PointerController {
             camera.setDistance(camera.distance * (1 - amount * camera.scene.config.controls.zoomSensitivity), 2);
         };
 
-        let buttons = [false, false, false];
+        // mouse state
+        const buttons = [false, false, false];
         let x: number, y: number;
 
+        // touch state
         let touches: { id: number, x: number, y: number}[] = [];
         let midx: number, midy: number, midlen: number;
-
-        const dist = (x0: number, y0: number, x1: number, y1: number) => Math.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2);
 
         const pointerdown = (event: PointerEvent) => {
             if (event.pointerType === 'mouse') {
@@ -155,7 +158,6 @@ class PointerController {
             target.removeEventListener('contextmenu', contextmenu);
         };
     }
-
 }
 
 export { PointerController };

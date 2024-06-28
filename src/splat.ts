@@ -26,15 +26,27 @@ flat varying highp uint vertexState;
 flat varying highp uint vertexId;
 #endif
 
+vec4 discardVec = vec4(0.0, 0.0, 2.0, 1.0);
 void main(void)
 {
-    // evaluate center of the splat in object space
-    vec3 centerLocal = evalCenter();
-
-    // evaluate the rest of the splat using world space center
-    vec4 centerWorld = matrix_model * vec4(centerLocal, 1.0);
-
-    gl_Position = evalSplat(centerWorld);
+    // calculate splat uv
+    if (!calcSplatUV()) {
+        gl_Position = discardVec;
+        return;
+    }
+    // read data
+    readData();
+    vec4 pos;
+    if (!evalSplat(pos)) {
+        gl_Position = discardVec;
+        return;
+    }
+    gl_Position = pos;
+    texCoord = vertex_position.xy;
+    color = getColor();
+    #ifndef DITHER_NONE
+        id = float(splatId);
+    #endif
 
     vertexState = uint(texelFetch(splatState, splatUV, 0).r * 255.0);
 
@@ -47,7 +59,7 @@ void main(void)
 const fragmentShader = /*glsl*/`
 
 #ifdef PICK_PASS
-flat varying highp uint vertexId;
+    flat varying highp uint vertexId;
 #endif
 
 flat varying highp uint vertexState;

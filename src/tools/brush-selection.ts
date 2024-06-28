@@ -19,6 +19,7 @@ class BrushSelection {
         const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         svg.id = 'select-svg';
         svg.style.display = 'inline';
+        root.style.touchAction = 'none';
 
         // create circle element
         const circle = document.createElementNS(svg.namespaceURI, 'circle') as SVGCircleElement;

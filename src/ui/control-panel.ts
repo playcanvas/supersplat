@@ -70,6 +70,10 @@ class ControlPanel extends Panel {
             const item = items.get(selection);
             if (item) {
                 item.selected = true;
+
+                // Temporary workaround for shortcuts not working after load - remove focus from tree element
+                // @ts-ignore
+                document.activeElement?.blur();
             }
         });
 

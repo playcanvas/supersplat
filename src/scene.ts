@@ -5,8 +5,6 @@ import {
     Color,
     Entity,
     Layer,
-    Mouse,
-    TouchDevice,
     GraphicsDevice
 } from 'playcanvas';
 import { PCApp } from './pc-app';
@@ -62,11 +60,7 @@ class Scene {
 
         // configure the playcanvas application. we render to an offscreen buffer so require
         // only the simplest of backbuffers.
-        this.app = new PCApp(canvas, {
-            mouse: new Mouse(canvas),
-            touch: new TouchDevice(canvas),
-            graphicsDevice: graphicsDevice
-        });
+        this.app = new PCApp(canvas, { graphicsDevice });
 
         // only render the scene when instructed
         this.app.autoRender = false;

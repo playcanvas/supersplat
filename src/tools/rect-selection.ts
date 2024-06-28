@@ -42,7 +42,7 @@ class RectSelection {
         });
 
         root.addEventListener('pointerdown', (e) => {
-            if (dragId === undefined && ((e instanceof MouseEvent) ? e.button === 0 : e.isPrimary)) {
+            if (dragId === undefined && (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary)) {
                 e.preventDefault();
                 e.stopPropagation();
 

@@ -9,7 +9,7 @@ class PickerSelection {
         this.root.id = 'select-root';
 
         this.root.addEventListener('pointerdown', (e) => {
-            if ((e instanceof MouseEvent) ? e.button === 0 : e.isPrimary) {
+            if (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary) {
                 e.preventDefault();
                 e.stopPropagation();
 

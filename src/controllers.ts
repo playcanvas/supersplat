@@ -88,7 +88,6 @@ class PointerController {
         };
 
         const pointermove = (event: PointerEvent) => {
-            let preventDefault = true;
             if (event.pointerType === 'mouse') {
                 const dx = event.offsetX - x;
                 const dy = event.offsetY - y;

@@ -10,6 +10,7 @@ const dist = (x0: number, y0: number, x1: number, y1: number) => Math.sqrt((x1 -
 
 class PointerController {
     destroy: () => void;
+    update: (deltaTime: number) => void;
 
     constructor(camera: Camera, target: HTMLElement) {
 
@@ -30,7 +31,7 @@ class PointerController {
 
             worldDiff.sub2(toWorldPoint, fromWorldPoint);
             worldDiff.add(camera.focalPoint);
-    
+
             camera.setFocalPoint(worldDiff);
         };
 
@@ -142,12 +143,52 @@ class PointerController {
             event.preventDefault();
         };
 
+        // key state
+        const keys: any = {
+            ArrowUp: 0,
+            ArrowDown: 0,
+            ArrowLeft: 0,
+            ArrowRight: 0
+        };
+
+        const keydown = (event: KeyboardEvent) => {
+            if (keys.hasOwnProperty(event.key)) {
+                keys[event.key] = event.shiftKey ? 10 : (event.ctrlKey || event.metaKey || event.altKey ? 0.1 : 1);
+                event.preventDefault();
+                event.stopPropagation();
+            }
+        };
+
+        const keyup = (event: KeyboardEvent) => {
+            if (keys.hasOwnProperty(event.key)) {
+                keys[event.key] = 0;
+                event.preventDefault();
+                event.stopPropagation();
+            }
+        };
+
+        this.update = (deltaTime: number) => {
+            const x = keys.ArrowRight - keys.ArrowLeft;
+            const z = keys.ArrowDown - keys.ArrowUp;
+
+            if (x || z) {
+                const factor = deltaTime * camera.distance * 20;
+                const worldTransform = camera.entity.getWorldTransform();
+                const xAxis = worldTransform.getX().mulScalar(x * factor);
+                const zAxis = worldTransform.getZ().mulScalar(z * factor);
+                const p = camera.focalPoint.add(xAxis).add(zAxis);
+                camera.setFocalPoint(p);
+            }
+        };
+
         target.addEventListener('pointerdown', pointerdown);
         target.addEventListener('pointerup', pointerup);
         target.addEventListener('pointermove', pointermove);
         target.addEventListener('wheel', wheel);
         target.addEventListener('dblclick', dblclick);
         target.addEventListener('contextmenu', contextmenu);
+        document.addEventListener('keydown', keydown);
+        document.addEventListener('keyup', keyup);
 
         this.destroy = () => {
             target.removeEventListener('pointerdown', pointerdown);
@@ -156,6 +197,8 @@ class PointerController {
             target.removeEventListener('wheel', wheel);
             target.removeEventListener('dblclick', dblclick);
             target.removeEventListener('contextmenu', contextmenu);
+            document.removeEventListener('keydown', keydown);
+            document.removeEventListener('keyup', keyup);
         };
     }
 }

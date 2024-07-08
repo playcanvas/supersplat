@@ -317,6 +317,9 @@ class Camera extends Element {
             }
         }
 
+        // controller update
+        this.controller.update(deltaTime);
+
         // update underlying values
         this.focalPointTween.update(deltaTime);
         this.azimElevTween.update(deltaTime);
@@ -445,6 +448,7 @@ class Camera extends Element {
         }
 
         if (closestSplat) {
+            this.setDistance(cameraPos.sub(closestP).length() / this.focusDistance);
             this.setFocalPoint(closestP);
             scene.events.fire('selection', closestSplat);
         }

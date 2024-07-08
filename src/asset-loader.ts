@@ -53,6 +53,18 @@ class AssetLoader {
                 );
                 asset.on('load', () => {
                     stopSpinner();
+
+                    // support loading 2d splats by adding scale_2 property with almost 0 scale
+                    const splatData = asset.resource.splatData;
+                    if (splatData.getProp('scale_0') && splatData.getProp('scale_1') && !splatData.getProp('scale_2')) {
+                        const scale2 = new Float32Array(splatData.numSplats);
+                        const value = Math.log(1e-6);
+                        for (let i = 0; i < splatData.numSplats; i++) {
+                            scale2[i] = value;
+                        }
+                        splatData.addProp('scale_2', scale2);
+                    }
+
                     resolve(new Splat(asset));
                 });
                 asset.on('error', (err: string) => {

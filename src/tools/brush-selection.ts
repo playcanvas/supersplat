@@ -1,41 +1,33 @@
 import { Events } from "../events";
 
 class BrushSelection {
-    events: Events;
-    root: HTMLElement;
-    canvas: HTMLCanvasElement;
-    context: CanvasRenderingContext2D;
-    svg: SVGElement;
-    circle: SVGCircleElement;
-    radius = 40;
-    prev = { x: 0, y: 0 };
+    activate: () => void;
+    deactivate: () => void;
 
-    constructor(events: Events, parent: HTMLElement) {
-        // create input dom
-        const root = document.createElement('div');
-        root.id = 'select-root';
+    constructor(events: Events, parent: HTMLElement, canvas: HTMLCanvasElement) {
+        let radius = 40;
 
         // create svg
         const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        svg.id = 'select-svg';
-        svg.style.display = 'inline';
-        root.style.touchAction = 'none';
+        svg.id = 'brush-select-svg';
+        svg.classList.add('select-svg');
 
         // create circle element
         const circle = document.createElementNS(svg.namespaceURI, 'circle') as SVGCircleElement;
-        circle.setAttribute('r', this.radius.toString());
+        circle.setAttribute('r', radius.toString());
         circle.setAttribute('fill', 'rgba(255, 102, 0, 0.2)');
         circle.setAttribute('stroke', '#f60');
         circle.setAttribute('stroke-width', '1');
         circle.setAttribute('stroke-dasharray', '5, 5');
 
         // create canvas
-        const canvas = document.createElement('canvas');
-        canvas.id = 'select-canvas';
+        const selectCanvas = document.createElement('canvas');
+        selectCanvas.id = 'brush-select-canvas';
 
-        const context = canvas.getContext('2d');
+        const context = selectCanvas.getContext('2d');
         context.globalCompositeOperation = 'copy';
 
+        const prev = { x: 0, y: 0 };
         let dragId: number | undefined;
 
         const update = (e: PointerEvent) => {
@@ -49,114 +41,98 @@ class BrushSelection {
                 context.beginPath();
                 context.strokeStyle = '#f60';
                 context.lineCap = 'round';
-                context.lineWidth = this.radius * 2;
-                context.moveTo(this.prev.x, this.prev.y);
+                context.lineWidth = radius * 2;
+                context.moveTo(prev.x, prev.y);
                 context.lineTo(x, y);
                 context.stroke();
 
-                this.prev.x = x;
-                this.prev.y = y;
+                prev.x = x;
+                prev.y = y;
             }
         };
 
-        root.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-        });
-
-        root.addEventListener('pointerdown', (e) => {
+        const pointerdown = (e: PointerEvent) => {
             if (dragId === undefined && (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary)) {
                 e.preventDefault();
                 e.stopPropagation();
 
                 dragId = e.pointerId;
-                root.setPointerCapture(dragId);
+                canvas.setPointerCapture(dragId);
 
                 // initialize canvas
-                if (canvas.width !== parent.clientWidth || canvas.height !== parent.clientHeight) {
-                    canvas.width = parent.clientWidth;
-                    canvas.height = parent.clientHeight;
+                if (selectCanvas.width !== parent.clientWidth || selectCanvas.height !== parent.clientHeight) {
+                    selectCanvas.width = parent.clientWidth;
+                    selectCanvas.height = parent.clientHeight;
                 }
 
                 // clear canvas
-                context.clearRect(0, 0, canvas.width, canvas.height);
+                context.clearRect(0, 0, selectCanvas.width, selectCanvas.height);
 
                 // display it
-                canvas.style.display = 'inline';
+                selectCanvas.style.display = 'inline';
 
-                this.prev.x = e.offsetX;
-                this.prev.y = e.offsetY;
+                prev.x = e.offsetX;
+                prev.y = e.offsetY;
 
                 update(e);
             }
-        });
+        };
 
-        root.addEventListener('pointermove', (e) => {
+        const pointermove = (e: PointerEvent) => {
             if (dragId !== undefined) {
                 e.preventDefault();
                 e.stopPropagation();
             }
 
             update(e);
-        });
+        };
 
-        root.addEventListener('pointerup', (e) => {
+        const pointerup = (e: PointerEvent) => {
             if (e.pointerId === dragId) {
                 e.preventDefault();
                 e.stopPropagation();
 
-                root.releasePointerCapture(dragId);
+                canvas.releasePointerCapture(dragId);
                 dragId = undefined;
 
-                canvas.style.display = 'none';
+                selectCanvas.style.display = 'none';
 
-                this.events.fire(
+                events.fire(
                     'select.byMask',
                     e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
-                    context.getImageData(0, 0, canvas.width, canvas.height)
+                    context.getImageData(0, 0, selectCanvas.width, selectCanvas.height)
                 );
             }
-        });
+        };
 
-        parent.appendChild(root);
-        root.appendChild(svg);
-        svg.appendChild(circle);
-        root.appendChild(canvas);
+        this.activate = () => {
+            svg.style.display = 'inline';
+            canvas.addEventListener('pointerdown', pointerdown, true);
+            canvas.addEventListener('pointermove', pointermove, true);
+            canvas.addEventListener('pointerup', pointerup, true);
+
+        };
+
+        this.deactivate = () => {
+            svg.style.display = 'none';
+            canvas.removeEventListener('pointerdown', pointerdown, true);
+            canvas.removeEventListener('pointermove', pointermove, true);
+            canvas.removeEventListener('pointerup', pointerup, true);
+        };
 
         events.on('tool.brushSelection.smaller', () => {
-            this.smaller();
+            radius = Math.max(1, radius / 1.05);
+            circle.setAttribute('r', radius.toString());
         });
 
         events.on('tool.brushSelection.bigger', () => {
-            this.bigger();
+            radius = Math.min(500, radius * 1.05);
+            circle.setAttribute('r', radius.toString());
         });
 
-        this.events = events;
-        this.root = root;
-        this.svg = svg;
-        this.circle = circle;
-        this.canvas = canvas;
-        this.context = context;
-
-        canvas.width = parent.clientWidth;
-        canvas.height = parent.clientHeight;
-    }
-
-    activate() {
-        this.root.style.display = 'block';
-    }
-
-    deactivate() {
-        this.root.style.display = 'none';
-    }
-
-    smaller() {
-        this.radius = Math.max(1, this.radius / 1.05);
-        this.circle.setAttribute('r', this.radius.toString());
-    }
-
-    bigger() {
-        this.radius = Math.min(500, this.radius * 1.05);
-        this.circle.setAttribute('r', this.radius.toString());
+        svg.appendChild(circle);
+        parent.appendChild(svg);
+        parent.appendChild(selectCanvas);
     }
 }
 

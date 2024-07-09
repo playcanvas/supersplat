@@ -96,7 +96,7 @@ class PointerController {
 
                 // right button can be used to orbit with ctrl key and to zoom with alt | meta key
                 const mod = buttons[2] ?
-                    (event.shiftKey ? 'orbit' :
+                    (event.shiftKey || event.ctrlKey ? 'orbit' :
                         (event.altKey || event.metaKey ? 'zoom' : null)) :
                             null;
 

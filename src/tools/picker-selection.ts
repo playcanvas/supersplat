@@ -1,15 +1,11 @@
 import { Events } from "../events";
 
 class PickerSelection {
-    events: Events;
-    root: HTMLElement;
+    activate: () => void;
+    deactivate: () => void;
 
-    constructor(events: Events, parent: HTMLElement) {
-        this.root = document.createElement('div');
-        this.root.id = 'select-root';
-        this.root.style.touchAction = 'none';
-
-        this.root.addEventListener('pointerdown', (e) => {
+    constructor(events: Events, parent: HTMLElement, canvas: HTMLCanvasElement) {
+        const pointerdown = (e: PointerEvent) => {
             if (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -17,24 +13,18 @@ class PickerSelection {
                 events.fire(
                     'select.point',
                     e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
-                    { x: e.offsetX / this.root.clientWidth, y: e.offsetY / this.root.clientHeight }
+                    { x: e.offsetX / canvas.clientWidth, y: e.offsetY / canvas.clientHeight }
                 );
             }
-        });
+        };
 
-        parent.appendChild(this.root);
-
-        this.root.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-        });
-    }
-
-    activate() {
-        this.root.style.display = 'block';
-    }
-
-    deactivate() {
-        this.root.style.display = 'none';
+        this.activate = () => {
+            canvas.addEventListener('pointerdown', pointerdown, true);
+        }
+    
+        this.deactivate = () => {
+            canvas.removeEventListener('pointerdown', pointerdown, true);
+        }
     }
 }
 

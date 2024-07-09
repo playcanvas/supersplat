@@ -62,15 +62,15 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['Delete', 'Backspace'], { event: 'select.delete' });
     shortcuts.register(['Escape'], { event: 'tool.deactivate' });
     shortcuts.register(['Tab'], { event: 'selection.next' });
-    shortcuts.register(['1'], { event: 'tool.move' });
-    shortcuts.register(['2'], { event: 'tool.rotate' });
-    shortcuts.register(['3'], { event: 'tool.scale' });
+    shortcuts.register(['1'], { event: 'tool.move', sticky: true });
+    shortcuts.register(['2'], { event: 'tool.rotate', sticky: true });
+    shortcuts.register(['3'], { event: 'tool.scale', sticky: true });
     shortcuts.register(['G', 'g'], { event: 'show.gridToggle' });
     shortcuts.register(['C', 'c'], { event: 'tool.toggleCoordSpace' });
     shortcuts.register(['F', 'f'], { event: 'camera.focus' });
-    shortcuts.register(['B', 'b'], { event: 'tool.brushSelection' });
-    shortcuts.register(['R', 'r'], { event: 'tool.rectSelection' });
-    shortcuts.register(['P', 'p'], { event: 'tool.pickerSelection' });
+    shortcuts.register(['B', 'b'], { event: 'tool.brushSelection', sticky: true });
+    shortcuts.register(['R', 'r'], { event: 'tool.rectSelection', sticky: true });
+    shortcuts.register(['P', 'p'], { event: 'tool.pickerSelection', sticky: true });
     shortcuts.register(['A', 'a'], { event: 'select.all' });
     shortcuts.register(['A', 'a'], { event: 'select.none', shift: true });
     shortcuts.register(['I', 'i'], { event: 'select.invert' });
@@ -153,9 +153,9 @@ const main = async () => {
     toolManager.register('move', new MoveTool(events, editHistory, scene));
     toolManager.register('rotate', new RotateTool(events, editHistory, scene));
     toolManager.register('scale', new ScaleTool(events, editHistory, scene));
-    toolManager.register('rectSelection', new RectSelection(events, editorUI.canvasContainer.dom));
-    toolManager.register('brushSelection', new BrushSelection(events, editorUI.canvasContainer.dom));
-    toolManager.register('pickerSelection', new PickerSelection(events, editorUI.canvasContainer.dom));
+    toolManager.register('rectSelection', new RectSelection(events, editorUI.canvasContainer.dom, editorUI.canvas));
+    toolManager.register('brushSelection', new BrushSelection(events, editorUI.canvasContainer.dom, editorUI.canvas));
+    toolManager.register('pickerSelection', new PickerSelection(events, editorUI.canvasContainer.dom, editorUI.canvas));
 
     window.scene = scene;
 

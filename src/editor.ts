@@ -27,7 +27,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // get the list of selected splats (currently limited to just a single one)
     const selectedSplats = () => {
         const selected = events.invoke('selection') as Splat;
-        return [selected];
+        return selected ? [selected] : [];
     };
 
     const debugSphereCenter = new Vec3();

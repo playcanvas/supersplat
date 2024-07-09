@@ -201,27 +201,19 @@ body {
     background-color: #f60 !important;
 }
 
-#select-root {
+.select-svg {
     display: none;
     position: absolute;
     width: 100%;
     height: 100%;
+    pointer-events: none;
 }
 
-#select-svg {
-    display: none;
-    width: 100%;
-    height: 100%;
-}
-
-#select-canvas {
+#brush-select-canvas {
     display: none;
     position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
     opacity: 0.4;
+    pointer-events: none;
 }
 
 #canvas-container {

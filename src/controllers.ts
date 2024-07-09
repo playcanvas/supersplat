@@ -94,11 +94,17 @@ class PointerController {
                 x = event.offsetX;
                 y = event.offsetY;
 
-                if (buttons[0]) {
+                // right button can be used to orbit with ctrl key and to zoom with alt | meta key
+                const mod = buttons[2] ?
+                    (event.shiftKey || event.ctrlKey ? 'orbit' :
+                        (event.altKey || event.metaKey ? 'zoom' : null)) :
+                            null;
+
+                if (mod === 'orbit' || (mod === null && buttons[0])) {
                     orbit(dx, dy);
-                } else if (buttons[1]) {
+                } else if (mod === 'zoom' || (mod === null && buttons[1])) {
                     zoom(dy * -0.02);
-                } else if (buttons[2]) {
+                } else if (mod === 'pan' || (mod === null && buttons[2])) {
                     pan(x, y, dx, dy);
                 }
             } else {

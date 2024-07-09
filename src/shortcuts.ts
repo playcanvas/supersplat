@@ -3,7 +3,7 @@ import { Events } from "./events";
 interface ShortcutOptions {
     ctrl?: boolean;
     shift?: boolean;
-    toggle?: boolean;
+    sticky?: boolean;
     func?: () => void;
     event?: string;
 }
@@ -26,8 +26,8 @@ class Shortcuts {
                     !!options.ctrl === !!(e.ctrlKey || e.metaKey) &&
                     !!options.shift === !!e.shiftKey) {
 
-                    // handle toggle shortcuts
-                    if (options.toggle) {
+                    // handle sticky shortcuts
+                    if (options.sticky) {
                         if (down) {
                             shortcut.toggled = e.repeat;
                         }
@@ -36,7 +36,7 @@ class Shortcuts {
                             return;
                         }
                     } else {
-                        // ignore up events on non-toggled shortcuts
+                        // ignore up events on non-sticky shortcuts
                         if (!down) return;
                     }
 

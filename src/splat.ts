@@ -139,6 +139,7 @@ class Splat extends Element {
     worldBoundStorage: BoundingBox;
     localBoundDirty = true;
     worldBoundDirty = true;
+    visible_ = true;
 
     constructor(asset: Asset) {
         super(ElementType.splat);
@@ -263,6 +264,7 @@ class Splat extends Element {
     serialize(serializer: Serializer) {
         serializer.packa(this.entity.getWorldTransform().data);
         serializer.pack(this.changedCounter);
+        serializer.pack(this.visible);
     }
 
     onPreRender() {
@@ -276,10 +278,12 @@ class Splat extends Element {
         material.setParameter('ringSize', (selected && cameraMode === 'rings' && splatSize > 0) ? 0.04 : 0);
 
         // render splat centers
-        if (selected && cameraMode === 'centers' && splatSize > 0) {
+        if (this.visible && selected && cameraMode === 'centers' && splatSize > 0) {
             this.splatDebug.splatSize = splatSize;
             this.scene.app.drawMeshInstance(this.splatDebug.meshInstance);
         }
+
+        this.entity.enabled = this.visible;
     }
 
     focalPoint() {
@@ -341,6 +345,17 @@ class Splat extends Element {
         }
 
         return this.worldBoundStorage;
+    }
+
+    get visible() {
+        return this.visible_;
+    }
+
+    set visible(value: boolean) {
+        if (value !== this.visible) {
+            this.visible_ = value;
+            this.scene.events.fire('splat.vis', this);
+        }
     }
 }
 

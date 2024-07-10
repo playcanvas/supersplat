@@ -1,8 +1,133 @@
-import { BooleanInput, Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, TreeView, TreeViewItem, VectorInput } from 'pcui';
+import { BooleanInput, Button, Container, Element as PcuiElement, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, TreeViewItem, VectorInput } from 'pcui';
 import { Events } from '../events';
 import { Element, ElementType } from '../element';
 import { Splat } from '../splat';
 import { version as appVersion } from '../../package.json';
+
+class SplatItem extends Container {
+    getSelected: () => boolean;
+    setSelected: (value: boolean) => void;
+    getVisible: () => boolean;
+    setVisible: (value: boolean) => void;
+    destroy: () => void;
+
+    constructor(name: string, args = {}) {
+        args = Object.assign(args, {
+            class: 'scene-panel-splat-item'
+        });
+
+        super(args);
+
+        const text = new Label({
+            class: 'scene-panel-splat-item-text',
+            text: name
+        });
+
+        const visible = new PcuiElement({
+            class: ['scene-panel-splat-item-visible', 'checked']
+        });
+
+        const remove = new PcuiElement({
+            class: 'scene-panel-splat-item-delete'
+        });
+
+        this.append(text);
+        this.append(visible);
+        this.append(remove);
+
+        this.getSelected = () => {
+            return this.class.contains('selected');
+        };
+
+        this.setSelected = (value: boolean) => {
+            if (value !== this.selected) {
+                if (value) {
+                    this.class.add('selected');
+                    this.emit('select', this);
+                } else {
+                    this.class.remove('selected');
+                    this.emit('unselect', this);
+                }
+            }
+        };
+
+        this.getVisible = () => {
+            return visible.class.contains('checked');
+        };
+
+        this.setVisible = (value: boolean) => {
+            if (value !== this.visible) {
+                if (value) {
+                    visible.class.add('checked');
+                    this.emit('visible', this);
+                } else {
+                    visible.class.remove('checked');
+                    this.emit('invisible', this);
+                }
+            }
+        };
+
+        const toggleVisible = (event: MouseEvent) => {
+            event.stopPropagation();
+            this.visible = !this.visible;
+        };
+
+        const handleRemove = (event: MouseEvent) => {
+            event.stopPropagation();
+            this.emit('removeClicked', this);
+        };
+
+        // handle clicks
+        visible.dom.addEventListener('click', toggleVisible, true);
+        remove.dom.addEventListener('click', handleRemove, true);
+
+        this.destroy = () => {
+            visible.dom.removeEventListener('click', toggleVisible, true);
+            remove.dom.removeEventListener('click', handleRemove, true);
+        }
+    }
+
+    get selected() {
+        return this.getSelected();
+    }
+
+    set selected(value) {
+        this.setSelected(value);
+    }
+
+    get visible() {
+        return this.getVisible();
+    }
+
+    set visible(value) {
+        this.setVisible(value);
+    }
+}
+
+class SplatList extends Container {
+    protected _onAppendChild(element: PcuiElement): void {
+        super._onAppendChild(element);
+
+        if (element instanceof SplatItem) {
+            element.on('click', () => {
+                this.emit('click', element);
+            });
+
+            element.on('removeClicked', () => {
+                this.emit('removeClicked', element);
+            });
+        }
+    }
+
+    protected _onRemoveChild(element: PcuiElement): void {
+        if (element instanceof SplatItem) {
+            element.unbind('click');
+            element.unbind('removeClicked');
+        }
+
+        super._onRemoveChild(element);
+    }
+}
 
 class ControlPanel extends Panel {
     constructor(events: Events, remoteStorageMode: boolean, args = { }) {
@@ -26,14 +151,12 @@ class ControlPanel extends Panel {
         });
 
         const splatListContainer = new Container({
-            id: 'scene-panel-splat-list-container'
+            id: 'scene-panel-splat-list-container',
+            resizable: 'bottom',
         });
 
-        const splatList = new TreeView({
-            id: 'scene-panel-splat-list',
-            allowDrag: false,
-            allowReordering: false,
-            allowRenaming: false
+        const splatList = new SplatList({
+            id: 'scene-panel-splat-list'
         });
 
         splatListContainer.append(splatList);
@@ -41,17 +164,17 @@ class ControlPanel extends Panel {
 
         // handle selection and scene updates
 
-        const items = new Map<Splat, TreeViewItem>();
+        const items = new Map<Splat, SplatItem>();
 
         events.on('scene.elementAdded', (element: Element) => {
             if (element.type === ElementType.splat) {
                 const splat = element as Splat;
-                const item = new TreeViewItem({
-                    text: splat.filename,
-                    open: false
-                });
+                const item = new SplatItem(splat.filename);
                 splatList.append(item);
                 items.set(splat, item);
+
+                item.on('visible', () => splat.visible = true);
+                item.on('invisible', () => splat.visible = false);
             }
         });
 
@@ -67,28 +190,47 @@ class ControlPanel extends Panel {
         });
 
         events.on('selection.changed', (selection: Splat) => {
-            const item = items.get(selection);
-            if (item) {
-                item.selected = true;
+            items.forEach((value, key) => {
+                value.selected = key === selection;
+            });
+        });
 
-                // Temporary workaround for shortcuts not working after load - remove focus from tree element
-                // @ts-ignore
-                document.activeElement?.blur();
+        events.on('splat.vis', (splat: Splat) => {
+            const item = items.get(splat);
+            if (item) {
+                item.visible = splat.visible;
             }
         });
 
-        splatList.on('select', (item: TreeViewItem) => {
-            let splat: Splat = null;
-            items.forEach((value, key) => {
-                if (value === item) {
-                    splat = key;
-                } else {
-                    value.selected = false;
+        splatList.on('click', (item: SplatItem) => {
+            for (const [key, value] of items) {
+                if (item === value) {
+                    events.fire('selection', key);
+                    break;
                 }
+            }            
+        });
+
+        splatList.on('removeClicked', async (item: SplatItem) => {
+            let splat;
+            for (const [key, value] of items) {
+                if (item === value) {
+                    splat = key;
+                    break;
+                }
+            }  
+
+            if (!splat) {
+                return;
+            }
+
+            const result = await events.invoke('showPopup', {
+                type: 'yesno',
+                message: `Would you like to remove '${splat.filename}' from the scene?`
             });
 
-            if (splat) {
-                events.fire('selection.byUid', splat.uid);
+            if (result?.action === 'yes') {
+                splat.destroy();
             }
         });
 

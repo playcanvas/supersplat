@@ -3,6 +3,7 @@ import { Events } from '../events';
 import { Splat } from '../splat';
 import { Histogram } from './histogram';
 import { State } from '../edit-ops';
+import { rgb2hsv } from './color';
 
 const SH_C0 = 0.28209479177387814;
 
@@ -31,6 +32,48 @@ const dataFuncs = {
     opacity: sigmoid
 };
 
+// build a separator label
+const sepLabel = (labelText: string) => {
+    const container = new Container({
+        class: 'control-parent',
+        id: 'sep-container'
+    });
+
+    container.class.add('sep-container');
+
+    const label = new Label({
+        class: 'contol-element-expand',
+        text: labelText
+    });
+
+    container.append(label);
+
+    return container;
+}
+
+// build a data label
+const dataLabel = (parent: Container, labelText: string) => {
+    const container = new Container({
+        class: 'control-parent'
+    });
+
+    const label = new Label({
+        class: 'control-label',
+        text: labelText
+    });
+
+    const value = new Label({
+        class: 'control-element-expand'
+    });
+
+    container.append(label);
+    container.append(value);
+
+    parent.append(container);
+
+    return value;
+};
+
 class DataPanel extends Panel {
     constructor(events: Events, args = { }) {
         args = Object.assign(args, {
@@ -47,50 +90,7 @@ class DataPanel extends Panel {
 
         super(args);
 
-        // create a seperator label
-        const sep = (parent: Container, labelText: string) => {
-            const container = new Container({
-                class: 'control-parent',
-                id: 'sep-container'
-            });
-
-            container.class.add('sep-container');
-
-            const label = new Label({
-                class: 'contol-element-expand',
-                text: labelText
-            });
-
-            container.append(label);
-
-            parent.append(container);
-        }
-
-        // create a new data label
-        const dataLabel = (parent: Container, labelText: string) => {
-            const container = new Container({
-                class: 'control-parent'
-            });
-
-            const label = new Label({
-                class: 'control-label',
-                text: labelText
-            });
-
-            const value = new Label({
-                class: 'control-element-expand'
-            });
-
-            container.append(label);
-            container.append(value);
-
-            parent.append(container);
-
-            return value;
-        };
-
-
-        // create data controls
+        // build the data controls
         const controlsContainer = new Container({
             id: 'data-controls-container'
         });
@@ -99,16 +99,17 @@ class DataPanel extends Panel {
             id: 'data-controls'
         });
 
-        sep(controls, 'Histogram');
+        controls.append(sepLabel('Histogram'));
 
         const dataSelector = new SelectInput({
             class: 'control-element-expand',
-            defaultValue: 'scale_0',
+            defaultValue: 'surface-area',
             options: [
                 { v: 'x', t: 'X' },
                 { v: 'y', t: 'Y' },
                 { v: 'z', t: 'Z' },
                 { v: 'volume', t: 'Volume' },
+                { v: 'surface-area', t: 'Surface Area' },
                 { v: 'scale_0', t: 'Scale X' },
                 { v: 'scale_1', t: 'Scale Y' },
                 { v: 'scale_2', t: 'Scale Z' },
@@ -116,6 +117,9 @@ class DataPanel extends Panel {
                 { v: 'f_dc_1', t: 'Green' },
                 { v: 'f_dc_2', t: 'Blue' },
                 { v: 'opacity', t: 'Opacity' },
+                { v: 'hue', t: 'Hue' },
+                { v: 'saturation', t: 'Saturation' },
+                { v: 'value', t: 'Value' }
             ]
         });
 
@@ -139,7 +143,7 @@ class DataPanel extends Panel {
         controls.append(dataSelector);
         controls.append(logScale);
 
-        sep(controls, 'Totals')
+        controls.append(sepLabel('Totals'));
 
         const splatsValue = dataLabel(controls, 'Splats');
         const selectedValue = dataLabel(controls, 'Selected');
@@ -149,7 +153,7 @@ class DataPanel extends Panel {
         controlsContainer.append(controls);
 
         // build histogram
-        const histogram = new Histogram(256, 256);
+        const histogram = new Histogram(256, 128);
 
         const histogramContainer = new Container({
             id: 'histogram-container'
@@ -163,7 +167,14 @@ class DataPanel extends Panel {
         // current splat
         let splat: Splat;
 
-        // returns a function that calculates the value for the current data selector
+        // returns a function which will interpret the splat data for purposes of
+        // viewing it in the histogram.
+        // the returned values will depend on the currently selected data type:
+        //   * some value functions return the raw splat data, like 'x'.
+        //   * other value functions must transform the data for histogram visualization
+        //     (for example 'scale_0', which must be exponentiated).
+        //   * still other values are calculated/derived from multiple values of splat
+        //     data like 'volume' and 'surface area'.
         const getValueFunc = () => {
             // @ts-ignore
             const dataFunc = dataFuncs[dataSelector.value];
@@ -172,13 +183,47 @@ class DataPanel extends Panel {
             let func: (i: number) => number;
             if (dataFunc && data) {
                 func = (i) => dataFunc(data[i]);
-            } else if (dataSelector.value === 'volume') {
-                const sx = splat.splatData.getProp('scale_0');
-                const sy = splat.splatData.getProp('scale_1');
-                const sz = splat.splatData.getProp('scale_2');
-                func = (i) => scaleFunc(sx[i]) * scaleFunc(sy[i]) * scaleFunc(sz[i]);
             } else {
-                func = (i) => undefined;
+                switch (dataSelector.value) {
+                    case 'volume': {
+                        const sx = splat.splatData.getProp('scale_0');
+                        const sy = splat.splatData.getProp('scale_1');
+                        const sz = splat.splatData.getProp('scale_2');
+                        func = (i) => scaleFunc(sx[i]) * scaleFunc(sy[i]) * scaleFunc(sz[i]);
+                        break;
+                    }
+                    case 'surface-area': {
+                        const sx = splat.splatData.getProp('scale_0');
+                        const sy = splat.splatData.getProp('scale_1');
+                        const sz = splat.splatData.getProp('scale_2');
+                        func = (i) => scaleFunc(sx[i]) ** 2 + scaleFunc(sy[i]) ** 2 + scaleFunc(sz[i]) ** 2;
+                        break;
+                    }
+                    case 'hue': {
+                        const r = splat.splatData.getProp('f_dc_0');
+                        const g = splat.splatData.getProp('f_dc_1');
+                        const b = splat.splatData.getProp('f_dc_2');
+                        func = (i) => rgb2hsv({r: colorFunc(r[i]), g: colorFunc(g[i]), b: colorFunc(b[i])}).h * 360;
+                        break;
+                    }
+                    case 'saturation': {
+                        const r = splat.splatData.getProp('f_dc_0');
+                        const g = splat.splatData.getProp('f_dc_1');
+                        const b = splat.splatData.getProp('f_dc_2');
+                        func = (i) => rgb2hsv({r: colorFunc(r[i]), g: colorFunc(g[i]), b: colorFunc(b[i])}).s;
+                        break;
+                    }
+                    case 'value': {
+                        const r = splat.splatData.getProp('f_dc_0');
+                        const g = splat.splatData.getProp('f_dc_1');
+                        const b = splat.splatData.getProp('f_dc_2');
+                        func = (i) => rgb2hsv({r: colorFunc(r[i]), g: colorFunc(g[i]), b: colorFunc(b[i])}).v;
+                        break;
+                    }
+                    default:
+                        func = (i) => undefined;
+                        break;
+                }
             }
 
             return func;
@@ -212,13 +257,12 @@ class DataPanel extends Panel {
                 const func = getValueFunc();
 
                 // update histogram
-                histogram.update(
-                    state.length,
-                    (i) => (selected === 0 ? state[i] === 0 : state[i] === State.selected) ? func(i) : undefined,
-                    {
-                        logScale: logScaleValue.value
-                    }
-                );
+                histogram.update({
+                    count: state.length,
+                    valueFunc: (i) => (state[i] === 0 || state[i] === State.selected) ? func(i) : undefined,
+                    selectedFunc: (i) => state[i] === State.selected,
+                    logScale: logScaleValue.value
+            });
             }
         };
 
@@ -238,6 +282,11 @@ class DataPanel extends Panel {
             }
         });
 
+        events.on('dataPanel.toggle', () => {
+            this.collapsed = !this.collapsed;
+            updateHistogram();
+        });
+
         dataSelector.on('change', updateHistogram);
         logScaleValue.on('change', updateHistogram);
 
@@ -248,7 +297,8 @@ class DataPanel extends Panel {
 
         const popupLabel = new Label({
             id: 'data-panel-popup-label',
-            text: ''
+            text: '',
+            unsafe: true
         });
 
         popupContainer.append(popupLabel);
@@ -265,7 +315,12 @@ class DataPanel extends Panel {
         histogram.events.on('updateOverlay', (info: any) => {
             popupContainer.style.left = `${info.x + 14}px`;
             popupContainer.style.top = `${info.y}px`;
-            popupLabel.text = `value: ${info.value.toFixed(2)} - cnt: ${info.count} (${(info.total ? info.count / info.total * 100 : 0).toFixed(2)}%)`;
+
+            const binValue = info.value.toFixed(2);
+            const count = info.selected + info.unselected;
+            const percentage = (info.total ? count / info.total * 100 : 0).toFixed(2);
+
+            popupLabel.text = `value: ${binValue} cnt: ${count} (${percentage}%) sel: ${info.selected}`;
         });
 
         // highlight
@@ -292,7 +347,7 @@ class DataPanel extends Panel {
             svg.style.display = 'inline';
         });
 
-        histogram.events.on('select', (start: number, end: number) => {
+        histogram.events.on('select', (op: string, start: number, end: number) => {
             svg.style.display = 'none';
 
             const state = splat.splatData.getProp('state') as Uint8Array;
@@ -300,8 +355,8 @@ class DataPanel extends Panel {
             const func = getValueFunc();
 
             // perform selection
-            events.fire('select.pred', 'set', (i: number) => {
-                if (state[i] !== (selection ? State.selected : 0)) {
+            events.fire('select.pred', op, (i: number) => {
+                if (state[i] !== 0 && state[i] !== State.selected) {
                     return false;
                 }
 

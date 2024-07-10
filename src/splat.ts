@@ -320,7 +320,7 @@ class Splat extends Element {
             const state = this.splatData.getProp('state') as Uint8Array;
             const localBound = this.localBoundStorage;
 
-            if (!this.splatData.calcAabbExact(localBound, (i: number) => (state[i] & State.deleted) === 0)) {
+            if (!this.splatData.calcAabb(localBound, (i: number) => (state[i] & State.deleted) === 0)) {
                 localBound.center.set(0, 0, 0);
                 localBound.halfExtents.set(0.5, 0.5, 0.5);
             }

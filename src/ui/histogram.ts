@@ -1,26 +1,29 @@
 import { Events } from '../events';
 
 class HistogramData {
-    bins: Uint32Array;
+    bins: { selected: number, unselected: number }[];
     numValues: number;
     minValue: number;
     maxValue: number;
 
     constructor(numBins: number) {
-        this.bins = new Uint32Array(numBins);
+        this.bins = [];
+        for (let i = 0; i < numBins; ++i) {
+            this.bins.push({ selected: 0, unselected: 0 });
+        }
     }
 
-    calc(count: number, value: (v: number) => number | undefined) {
+    calc(count: number, valueFunc: (v: number) => number | undefined, selectedFunc: (v: number) => boolean) {
         // clear bins
         const bins = this.bins;
         for (let i = 0; i < bins.length; ++i) {
-            bins[i] = 0;
+            bins[i].selected = bins[i].unselected = 0;
         }
 
         // calculate min, max
         let min, max, i;
         for (i = 0; i < count; i++) {
-            const v = value(i);
+            const v = valueFunc(i);
             if (v !== undefined) {
                 min = max = v;
                 break;
@@ -34,7 +37,7 @@ class HistogramData {
 
         // continue min/max calc
         for (; i < count; i++) {
-            const v = value(i);
+            const v = valueFunc(i);
             if (v !== undefined) {
                 if (v < min) min = v; else if (v > max) max = v;
             }
@@ -42,14 +45,17 @@ class HistogramData {
 
         // fill bins
         for (let i = 0; i < count; i++) {
-            const v = value(i);
+            const v = valueFunc(i);
             if (v !== undefined) {
                 const n = min === max ? 0 : (v - min) / (max - min);
                 const bin = Math.min(bins.length - 1, Math.floor(n * bins.length));
-                bins[bin]++;
+                if (selectedFunc(i))
+                    bins[bin].selected++;
+                else
+                    bins[bin].unselected++;
             }
         }
-        this.numValues = bins.reduce((t, v) => t + v, 0);
+        this.numValues = bins.reduce((t, v) => t + v.selected + v.unselected, 0);
         this.minValue = min;
         this.maxValue = max;
     }
@@ -66,6 +72,13 @@ class HistogramData {
         const n = this.minValue === this.maxValue ? 0 : (value - this.minValue) / (this.maxValue - this.minValue);
         return Math.min(this.bins.length - 1, Math.floor(n * this.bins.length));
     }
+}
+
+interface UpdateOptions {
+    count: number;
+    valueFunc: (v: number) => number | undefined;
+    selectedFunc: (v: number) => boolean;
+    logScale?: boolean
 }
 
 class Histogram {
@@ -143,7 +156,8 @@ class Histogram {
             if (dragging) {
                 this.canvas.releasePointerCapture(e.pointerId);
 
-                this.events.fire('select', Math.min(dragStart, dragEnd), Math.max(dragStart, dragEnd));
+                const op = e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set');
+                this.events.fire('select', op, Math.min(dragStart, dragEnd), Math.max(dragStart, dragEnd));
                 dragging = false;
             }
         });
@@ -163,14 +177,16 @@ class Histogram {
                 const rect = this.canvas.getBoundingClientRect();
                 const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
                 
-                const bin = Math.min(h.bins.length - 1, Math.floor(x * h.bins.length));
+                const binIndex = Math.min(h.bins.length - 1, Math.floor(x * h.bins.length));
+                const bin = h.bins[binIndex];
 
                 this.events.fire('updateOverlay', {
                     x: e.offsetX,
                     y: e.offsetY,
-                    value: h.bucketValue(bin),
+                    value: h.bucketValue(binIndex),
                     size: h.bucketSize,
-                    count: h.bins[bin],
+                    selected: bin.selected,
+                    unselected: bin.unselected,
                     total: h.numValues
                 });
             }
@@ -183,21 +199,16 @@ class Histogram {
         this.canvas.addEventListener('pointerleave', (e: PointerEvent) => {
             this.events.fire('hideOverlay');
         });
+
+        this.canvas.addEventListener('contextmenu', (e: MouseEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, true);
     }
 
-    // options: {
-    //     logScale: boolean
-    // }
-    update(count: number, value: (v: number) => number | undefined, options: { logScale?: boolean } = {}) {
-        this.histogram.calc(count, value);
-
-        // convert bin values to log scale
-        const bins = this.histogram.bins;
-        const vals = [];
-        for (let i = 0; i < bins.length; ++i) {
-            vals[i] = options?.logScale ? Math.log(bins[i] + 1) : bins[i];
-        }
-        const valMax = Math.max(...vals);
+    update(options: UpdateOptions) {
+        // update histogram data
+        this.histogram.calc(options.count, options.valueFunc, options.selectedFunc);
 
         // draw histogram
         const canvas = this.canvas;
@@ -205,13 +216,24 @@ class Histogram {
         const pixelData = this.pixelData;
         const pixels = new Uint32Array(pixelData.data.buffer);
 
+        const bins = this.histogram.bins;
+        const binMax = bins.reduce((a, v) => Math.max(a, v.selected + v.unselected), 0);
+
         let i = 0;
         for (let y = 0; y < canvas.height; y++) {
-            for (let x = 0; x < vals.length; x++) {
-                if (vals[x] / valMax > (canvas.height - 1 - y) / canvas.height) {
-                    pixels[i++] = 0xffffffff;
-                } else {
+            for (let x = 0; x < bins.length; x++) {
+                const bin = bins[x];
+                const targetMin = binMax / canvas.height * (canvas.height - 1 - y);
+
+                if (targetMin >= bin.selected + bin.unselected) {
                     pixels[i++] = 0xff000000;
+                } else {
+                    const targetMax = targetMin + binMax / canvas.height;
+                    if (bin.selected === 0 || targetMax < bin.unselected) {
+                        pixels[i++] = 0xffff7777;
+                    } else {
+                        pixels[i++] = 0xff00ffff;
+                    }
                 }
             }
         }

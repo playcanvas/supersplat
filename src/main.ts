@@ -81,6 +81,7 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['Z', 'z'], { event: 'edit.undo', ctrl: true });
     shortcuts.register(['Z', 'z'], { event: 'edit.redo', ctrl: true, shift: true });
     shortcuts.register(['M', 'm'], { event: 'camera.toggleMode' });
+    shortcuts.register(['D', 'd'], { event: 'dataPanel.toggle' });
 
     // keep tabs on splat size changes
     let splatSizeSave = 2;

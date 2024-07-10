@@ -12,9 +12,10 @@ class SplatItem extends Container {
     destroy: () => void;
 
     constructor(name: string, args = {}) {
-        args = Object.assign(args, {
+        args = {
+            ...args,
             class: 'scene-panel-splat-item'
-        });
+        };
 
         super(args);
 
@@ -131,7 +132,8 @@ class SplatList extends Container {
 
 class ControlPanel extends Panel {
     constructor(events: Events, remoteStorageMode: boolean, args = { }) {
-        Object.assign(args, {
+        args = {
+            ...args,
             headerText: `SUPERSPLAT v${appVersion}`,
             id: 'control-panel',
             resizable: 'right',
@@ -139,7 +141,7 @@ class ControlPanel extends Panel {
             collapsible: true,
             collapseHorizontally: true,
             scrollable: true
-        });
+        };
 
         super(args);
 
@@ -153,6 +155,7 @@ class ControlPanel extends Panel {
         const splatListContainer = new Container({
             id: 'scene-panel-splat-list-container',
             resizable: 'bottom',
+            resizeMin: 50
         });
 
         const splatList = new SplatList({
@@ -346,54 +349,6 @@ class ControlPanel extends Panel {
         selectGlobal.append(selectNoneButton);
         selectGlobal.append(invertSelectionButton);
         
-        // select by size
-        const selectBySize = new Container({
-            class: 'control-parent'
-        });
-
-        const selectBySizeRadio = new RadioButton({
-            class: 'control-element'
-        });
-
-        const selectBySizeLabel = new Label({
-            class: 'control-label',
-            text: 'Splat Size'
-        });
-
-        const selectBySizeSlider = new SliderInput({
-            class: 'control-element-expand',
-            precision: 4,
-            enabled: false
-        });
-
-        selectBySize.append(selectBySizeRadio);
-        selectBySize.append(selectBySizeLabel);
-        selectBySize.append(selectBySizeSlider);
-
-        // select by opacity
-        const selectByOpacity = new Container({
-            class: 'control-parent'
-        });
-
-        const selectByOpacityRadio = new RadioButton({
-            class: 'control-element'
-        });
-
-        const selectByOpacityLabel = new Label({
-            class: 'control-label',
-            text: 'Splat Opacity'
-        });
-
-        const selectByOpacitySlider = new SliderInput({
-            class: 'control-element-expand',
-            precision: 4,
-            enabled: false
-        });
-
-        selectByOpacity.append(selectByOpacityRadio);
-        selectByOpacity.append(selectByOpacityLabel);
-        selectByOpacity.append(selectByOpacitySlider);
-
         // select by sphere
         const selectBySphere = new Container({
             class: 'control-parent'
@@ -513,8 +468,6 @@ class ControlPanel extends Panel {
         selectTools.append(pickerSelectButton);
 
         selectionPanel.append(selectGlobal);
-        selectionPanel.append(selectBySize);
-        selectionPanel.append(selectByOpacity);
         selectionPanel.append(selectBySphere);
         selectionPanel.append(selectByPlane);
         selectionPanel.append(setAddRemove);
@@ -554,13 +507,13 @@ class ControlPanel extends Panel {
         });
 
         const deleteSelectionButton = new Button({
-            class: 'control-element',
+            class: 'control-element-expand',
             text: 'Delete Selected Splats',
             icon: 'E124'
         });
 
         const resetButton = new Button({
-            class: 'control-element',
+            class: 'control-element-expand',
             text: 'Reset Splats'
         });
 
@@ -621,13 +574,19 @@ class ControlPanel extends Panel {
 
         optionsPanel.append(allData);
 
+        const controlsContainer = new Container({
+            id: 'control-panel-controls'
+        });
+
+        controlsContainer.append(cameraPanel)
+        controlsContainer.append(selectionPanel);
+        controlsContainer.append(showPanel);
+        controlsContainer.append(modifyPanel);
+        controlsContainer.append(optionsPanel);
+
         // append
         this.content.append(scenePanel);
-        this.content.append(cameraPanel);
-        this.content.append(selectionPanel);
-        this.content.append(showPanel);
-        this.content.append(modifyPanel);
-        this.content.append(optionsPanel);
+        this.content.append(controlsContainer);
 
         rectSelectButton.on('click', () => {
             events.fire('tool.rectSelection');
@@ -648,7 +607,7 @@ class ControlPanel extends Panel {
         });
 
         // radio logic
-        const radioGroup = [selectBySizeRadio, selectByOpacityRadio, selectBySphereRadio, selectByPlaneRadio];
+        const radioGroup = [selectBySphereRadio, selectByPlaneRadio];
         radioGroup.forEach((radio, index) => {
             radio.on('change', () => {
                 if (radio.value) {
@@ -682,8 +641,6 @@ class ControlPanel extends Panel {
             removeButton.enabled = index !== null;
 
             const controlSet = [
-                [selectBySizeSlider],
-                [selectByOpacitySlider],
                 [selectBySphereCenter],
                 [selectByPlaneAxis, selectByPlaneOffset]
             ];
@@ -694,16 +651,14 @@ class ControlPanel extends Panel {
                 });
             });
 
-            events.fire('select.bySpherePlacement', index === 2 ? selectBySphereCenter.value : [0, 0, 0, 0]);
-            events.fire('select.byPlanePlacement', index === 3 ? axes[selectByPlaneAxis.value] : [0, 0, 0], selectByPlaneOffset.value);
+            events.fire('select.bySpherePlacement', index === 0 ? selectBySphereCenter.value : [0, 0, 0, 0]);
+            events.fire('select.byPlanePlacement', index === 1 ? axes[selectByPlaneAxis.value] : [0, 0, 0], selectByPlaneOffset.value);
         });
 
         const performSelect = (op: string) => {
             switch (radioSelection) {
-                case 0: events.fire('select.bySize', op, selectBySizeSlider.value); break;
-                case 1: events.fire('select.byOpacity', op, selectByOpacitySlider.value); break;
-                case 2: events.fire('select.bySphere', op, selectBySphereCenter.value); break;
-                case 3: events.fire('select.byPlane', op, axes[selectByPlaneAxis.value], selectByPlaneOffset.value); break;
+                case 0: events.fire('select.bySphere', op, selectBySphereCenter.value); break;
+                case 1: events.fire('select.byPlane', op, axes[selectByPlaneAxis.value], selectByPlaneOffset.value); break;
             }
         };
 

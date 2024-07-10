@@ -20,11 +20,12 @@ const shortcutList = [
     { header: 'SHOW' },
     { key: 'H', action: 'Hide Selected Splats' },
     { key: 'U', action: 'Unhide All Splats' },
+    { key: 'D', action: 'Toggle Data Panel' },
     { header: 'OTHER' },
     { key: 'Tab', action: 'Select Next Splat' },
     { key: 'Ctrl + Z', action: 'Undo' },
     { key: 'Ctrl + Shift + Z', action: 'Redo' },
-    { key: 'Space', action: 'Toggle Debug Splat Display' },
+    { key: 'Space', action: 'Toggle Splat Overlay' },
     { key: 'F', action: 'Focus Camera on current selection' },
     { key: 'M', action: 'Toggle Camera Mode'},
     { key: 'G', action: 'Toggle Grid' },
@@ -33,11 +34,12 @@ const shortcutList = [
 
 class ShortcutsPopup extends Overlay {
     constructor(args = {}) {
-        args = Object.assign(args, {
+        args = {
+            ...args,
             id: 'shortcuts-popup',
             clickable: true,
             hidden: true
-        });
+        };
 
         super(args);
 

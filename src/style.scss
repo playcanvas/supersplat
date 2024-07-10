@@ -41,6 +41,89 @@ body {
     border-right: 1px solid $bcg-darker;
 }
 
+#main-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    flex-grow: 1;
+}
+
+#canvas-container {
+    width: 100%;
+    background-color: #666666;
+    display: flex;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    flex-grow: 1;
+}
+
+#data-panel {
+    width: 100%;
+    height: 320px;
+}
+
+#sep-container {
+    background-color: $bcg-darker;
+}
+
+#sep-container > span {
+    color: white;
+}
+
+#data-controls-container {
+    width: 256px;
+    flex-grow: 0;
+    flex-shrink: 0;
+    overflow-y: auto;
+    // display: flex;
+    // flex-direction: column;
+}
+
+#data-controls {
+    width: 100%;
+}
+
+#histogram-container {
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+#histogram-canvas {
+
+}
+
+#histogram-svg {
+    pointer-events: none;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+}
+
+#histogram-rect {
+    // fill: rgba()
+}
+
+#data-panel-popup-container {
+    position: absolute;
+    left: 50px;
+    top: 50px;
+    pointer-events: none;
+}
+
+#data-panel-popup-label {
+    background-color: $bcg-dark;
+    color: $text-primary;
+}
+
 #coord-space-toggle.active {
     background-color: $bcg-dark !important;
     color: #f60;
@@ -52,6 +135,17 @@ body {
     border-right: 1px solid #20292b;
     display: flex;
     flex-direction: column;
+    flex-grow: 0;
+    flex-shrink: 0;
+}
+
+#control-panel-controls {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    flex-shrink: 1;
+
+    overflow-y: auto;
 }
 
 .pcui-panel-header-title::before {
@@ -67,6 +161,10 @@ body {
     #options-panel & { content: '\E134'; };
     #export-panel & { content: '\E226'; };
     #keyboard-panel & { content: '\E136'};
+}
+
+#scene-panel {
+    flex-shrink: 0;
 }
 
 #scene-panel-splat-list-container {
@@ -233,13 +331,27 @@ body {
     text-shadow: 0 0 4px black;
 }
 
-.control-panel > .pcui-panel-header {
+#control-panel > .pcui-panel-header {
     background-color: $bcg-dark;
 }
 
-.control-panel > .pcui-panel-content {
+#control-panel > .pcui-panel-content {
     display: flex;
     flex-direction: column;
+}
+
+#camera-panel > .pcui-panel-content {
+    display: flex;
+    flex-direction: column;
+}
+
+#modify-panel > .pcui-panel-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.control-panel {
+    flex-shrink: 0;
 }
 
 .control-parent {
@@ -254,6 +366,7 @@ body {
     flex-shrink: 0;
     flex-grow: 0;
     line-height: 24px;
+    margin: 2px 6px 2px 6px;
 }
 
 .control-element {

@@ -27,6 +27,7 @@ flat varying highp uint vertexId;
 #endif
 
 vec4 discardVec = vec4(0.0, 0.0, 2.0, 1.0);
+
 void main(void)
 {
     // calculate splat uv
@@ -34,16 +35,21 @@ void main(void)
         gl_Position = discardVec;
         return;
     }
+
     // read data
     readData();
+
     vec4 pos;
     if (!evalSplat(pos)) {
         gl_Position = discardVec;
         return;
     }
+
     gl_Position = pos;
+
     texCoord = vertex_position.xy;
     color = getColor();
+
     #ifndef DITHER_NONE
         id = float(splatId);
     #endif
@@ -212,6 +218,8 @@ class Splat extends Element {
         }
 
         this.scene.forceRender = true;
+
+        this.scene.events.fire('splat.stateChanged', this);
     }
 
     get worldTransform() {

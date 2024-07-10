@@ -187,49 +187,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
     });
 
-    events.on('select.bySize', (op: string, value: number) => {
+    events.on('select.pred', (op, pred: (i: number) => boolean) => {
         selectedSplats().forEach((splat) => {
             const splatData = splat.splatData;
             const state = splatData.getProp('state') as Uint8Array;
-            const scale_0 = splatData.getProp('scale_0');
-            const scale_1 = splatData.getProp('scale_1');
-            const scale_2 = splatData.getProp('scale_2');
-
-            // calculate min and max size
-            let first = true;
-            let scaleMin;
-            let scaleMax;
-            for (let i = 0; i < splatData.numSplats; ++i) {
-                if (state[i] & State.deleted) continue;
-                if (first) {
-                    first = false;
-                    scaleMin = Math.min(scale_0[i], scale_1[i], scale_2[i]);
-                    scaleMax = Math.max(scale_0[i], scale_1[i], scale_2[i]);
-                } else {
-                    scaleMin = Math.min(scaleMin, scale_0[i], scale_1[i], scale_2[i]);
-                    scaleMax = Math.max(scaleMax, scale_0[i], scale_1[i], scale_2[i]);
-                }
-            }
-
-            const maxScale = Math.log(Math.exp(scaleMin) + value * (Math.exp(scaleMax) - Math.exp(scaleMin)));
-
-            processSelection(state, op, (i) => scale_0[i] > maxScale || scale_1[i] > maxScale || scale_2[i] > maxScale);
-
-            splat.updateState();
-        });
-    });
-
-    events.on('select.byOpacity', (op: string, value: number) => {
-        selectedSplats().forEach((splat) => {
-            const splatData = splat.splatData;
-            const state = splatData.getProp('state') as Uint8Array;
-            const opacity = splatData.getProp('opacity') as Float32Array;
-
-            processSelection(state, op, (i) => {
-                const t = Math.exp(opacity[i]);
-                return ((1 / (1 + t)) < value);
-            });
-
+            processSelection(state, op, pred);
             splat.updateState();
         });
     });

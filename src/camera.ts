@@ -285,7 +285,7 @@ class Camera extends Element {
             autoResolve: false
         });
         this.entity.camera.renderTarget = renderTarget;
-        this.entity.camera.camera.horizontalFov = width < height;
+        this.entity.camera.camera.horizontalFov = width > height;
 
         // create pick mode render target
         this.pickModeColorBuffer = createTexture(width, height, pixelFormat);

@@ -6,9 +6,10 @@ import logo from './playcanvas-logo.png';
 
 class Toolbar extends Container {
     constructor(events: Events, appContainer: Container, tooltipsContainer: Container, args = {}) {
-        args = Object.assign(args, {
+        args = {
+            ...args,
             id: 'toolbar-container'
-        });
+        };
 
         super(args);
 

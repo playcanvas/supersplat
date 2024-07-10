@@ -34,11 +34,12 @@ const shortcutList = [
 
 class ShortcutsPopup extends Overlay {
     constructor(args = {}) {
-        args = Object.assign(args, {
+        args = {
+            ...args,
             id: 'shortcuts-popup',
             clickable: true,
             hidden: true
-        });
+        };
 
         super(args);
 

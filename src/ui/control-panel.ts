@@ -12,9 +12,10 @@ class SplatItem extends Container {
     destroy: () => void;
 
     constructor(name: string, args = {}) {
-        args = Object.assign(args, {
+        args = {
+            ...args,
             class: 'scene-panel-splat-item'
-        });
+        };
 
         super(args);
 
@@ -131,7 +132,8 @@ class SplatList extends Container {
 
 class ControlPanel extends Panel {
     constructor(events: Events, remoteStorageMode: boolean, args = { }) {
-        Object.assign(args, {
+        args = {
+            ...args,
             headerText: `SUPERSPLAT v${appVersion}`,
             id: 'control-panel',
             resizable: 'right',
@@ -139,7 +141,7 @@ class ControlPanel extends Panel {
             collapsible: true,
             collapseHorizontally: true,
             scrollable: true
-        });
+        };
 
         super(args);
 
@@ -153,6 +155,7 @@ class ControlPanel extends Panel {
         const splatListContainer = new Container({
             id: 'scene-panel-splat-list-container',
             resizable: 'bottom',
+            resizeMin: 50
         });
 
         const splatList = new SplatList({
@@ -504,13 +507,13 @@ class ControlPanel extends Panel {
         });
 
         const deleteSelectionButton = new Button({
-            class: 'control-element',
+            class: 'control-element-expand',
             text: 'Delete Selected Splats',
             icon: 'E124'
         });
 
         const resetButton = new Button({
-            class: 'control-element',
+            class: 'control-element-expand',
             text: 'Reset Splats'
         });
 
@@ -571,13 +574,19 @@ class ControlPanel extends Panel {
 
         optionsPanel.append(allData);
 
+        const controlsContainer = new Container({
+            id: 'control-panel-controls'
+        });
+
+        controlsContainer.append(cameraPanel)
+        controlsContainer.append(selectionPanel);
+        controlsContainer.append(showPanel);
+        controlsContainer.append(modifyPanel);
+        controlsContainer.append(optionsPanel);
+
         // append
         this.content.append(scenePanel);
-        this.content.append(cameraPanel);
-        this.content.append(selectionPanel);
-        this.content.append(showPanel);
-        this.content.append(modifyPanel);
-        this.content.append(optionsPanel);
+        this.content.append(controlsContainer);
 
         rectSelectButton.on('click', () => {
             events.fire('tool.rectSelection');

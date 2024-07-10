@@ -76,8 +76,9 @@ const dataLabel = (parent: Container, labelText: string) => {
 
 class DataPanel extends Panel {
     constructor(events: Events, args = { }) {
-        args = Object.assign(args, {
-            headerText: 'Data',
+        args = {
+            ...args,
+            headerText: 'DATA',
             id: 'data-panel',
             resizable: 'top',
             resizeMax: 1000,
@@ -86,7 +87,7 @@ class DataPanel extends Panel {
             collapseHorizontally: false,
             flex: true,
             flexDirection: 'row'
-        });
+        };
 
         super(args);
 
@@ -330,7 +331,7 @@ class DataPanel extends Panel {
         // create rect element
         const rect = document.createElementNS(svg.namespaceURI, 'rect') as SVGRectElement;
         rect.setAttribute('id', 'highlight-rect');
-        rect.setAttribute('fill', 'rgba(255, 0, 0, 0.2)');
+        rect.setAttribute('fill', 'rgba(255, 102, 0, 0.2)');
         rect.setAttribute('stroke', '#f60');
         rect.setAttribute('stroke-width', '1');
         rect.setAttribute('stroke-dasharray', '5, 5');

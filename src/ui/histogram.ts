@@ -216,8 +216,14 @@ class Histogram {
         const pixelData = this.pixelData;
         const pixels = new Uint32Array(pixelData.data.buffer);
 
-        const bins = this.histogram.bins;
-        const binMax = bins.reduce((a, v) => Math.max(a, v.selected + v.unselected), 0);
+        const binMap = options.logScale ? (x: number) => Math.log(x + 1) : (x: number) => x;
+        const bins = this.histogram.bins.map(v => {
+            return {
+                selected: binMap(v.unselected + v.selected),
+                unselected: binMap(v.unselected)
+            }
+        });
+        const binMax = bins.reduce((a, v) => Math.max(a, v.selected), 0);
 
         let i = 0;
         for (let y = 0; y < canvas.height; y++) {
@@ -225,11 +231,11 @@ class Histogram {
                 const bin = bins[x];
                 const targetMin = binMax / canvas.height * (canvas.height - 1 - y);
 
-                if (targetMin >= bin.selected + bin.unselected) {
+                if (targetMin >= bin.selected) {
                     pixels[i++] = 0xff000000;
                 } else {
                     const targetMax = targetMin + binMax / canvas.height;
-                    if (bin.selected === 0 || targetMax < bin.unselected) {
+                    if (bin.selected === bin.unselected || targetMax < bin.unselected) {
                         pixels[i++] = 0xffff7777;
                     } else {
                         pixels[i++] = 0xff00ffff;

@@ -346,54 +346,6 @@ class ControlPanel extends Panel {
         selectGlobal.append(selectNoneButton);
         selectGlobal.append(invertSelectionButton);
         
-        // select by size
-        const selectBySize = new Container({
-            class: 'control-parent'
-        });
-
-        const selectBySizeRadio = new RadioButton({
-            class: 'control-element'
-        });
-
-        const selectBySizeLabel = new Label({
-            class: 'control-label',
-            text: 'Splat Size'
-        });
-
-        const selectBySizeSlider = new SliderInput({
-            class: 'control-element-expand',
-            precision: 4,
-            enabled: false
-        });
-
-        selectBySize.append(selectBySizeRadio);
-        selectBySize.append(selectBySizeLabel);
-        selectBySize.append(selectBySizeSlider);
-
-        // select by opacity
-        const selectByOpacity = new Container({
-            class: 'control-parent'
-        });
-
-        const selectByOpacityRadio = new RadioButton({
-            class: 'control-element'
-        });
-
-        const selectByOpacityLabel = new Label({
-            class: 'control-label',
-            text: 'Splat Opacity'
-        });
-
-        const selectByOpacitySlider = new SliderInput({
-            class: 'control-element-expand',
-            precision: 4,
-            enabled: false
-        });
-
-        selectByOpacity.append(selectByOpacityRadio);
-        selectByOpacity.append(selectByOpacityLabel);
-        selectByOpacity.append(selectByOpacitySlider);
-
         // select by sphere
         const selectBySphere = new Container({
             class: 'control-parent'
@@ -513,8 +465,6 @@ class ControlPanel extends Panel {
         selectTools.append(pickerSelectButton);
 
         selectionPanel.append(selectGlobal);
-        selectionPanel.append(selectBySize);
-        selectionPanel.append(selectByOpacity);
         selectionPanel.append(selectBySphere);
         selectionPanel.append(selectByPlane);
         selectionPanel.append(setAddRemove);
@@ -648,7 +598,7 @@ class ControlPanel extends Panel {
         });
 
         // radio logic
-        const radioGroup = [selectBySizeRadio, selectByOpacityRadio, selectBySphereRadio, selectByPlaneRadio];
+        const radioGroup = [selectBySphereRadio, selectByPlaneRadio];
         radioGroup.forEach((radio, index) => {
             radio.on('change', () => {
                 if (radio.value) {
@@ -682,8 +632,6 @@ class ControlPanel extends Panel {
             removeButton.enabled = index !== null;
 
             const controlSet = [
-                [selectBySizeSlider],
-                [selectByOpacitySlider],
                 [selectBySphereCenter],
                 [selectByPlaneAxis, selectByPlaneOffset]
             ];
@@ -694,16 +642,14 @@ class ControlPanel extends Panel {
                 });
             });
 
-            events.fire('select.bySpherePlacement', index === 2 ? selectBySphereCenter.value : [0, 0, 0, 0]);
-            events.fire('select.byPlanePlacement', index === 3 ? axes[selectByPlaneAxis.value] : [0, 0, 0], selectByPlaneOffset.value);
+            events.fire('select.bySpherePlacement', index === 0 ? selectBySphereCenter.value : [0, 0, 0, 0]);
+            events.fire('select.byPlanePlacement', index === 1 ? axes[selectByPlaneAxis.value] : [0, 0, 0], selectByPlaneOffset.value);
         });
 
         const performSelect = (op: string) => {
             switch (radioSelection) {
-                case 0: events.fire('select.bySize', op, selectBySizeSlider.value); break;
-                case 1: events.fire('select.byOpacity', op, selectByOpacitySlider.value); break;
-                case 2: events.fire('select.bySphere', op, selectBySphereCenter.value); break;
-                case 3: events.fire('select.byPlane', op, axes[selectByPlaneAxis.value], selectByPlaneOffset.value); break;
+                case 0: events.fire('select.bySphere', op, selectBySphereCenter.value); break;
+                case 1: events.fire('select.byPlane', op, axes[selectByPlaneAxis.value], selectByPlaneOffset.value); break;
             }
         };
 

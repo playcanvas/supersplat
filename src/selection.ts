@@ -1,4 +1,5 @@
 import { Element, ElementType } from './element';
+import { Splat } from './splat';
 import { Events } from './events';
 import { Scene } from './scene';
 
@@ -21,17 +22,10 @@ const initSelection = (events: Events, scene: Scene) => {
     });
 
     events.on('selection', (element: Element) => {
-        if (element !== selection) {
+        if (element !== selection && (!element || (element as Splat).visible)) {
             selection = element;
             events.fire('selection.changed', selection);
             scene.forceRender = true;
-        }
-    });
-
-    events.on('selection.byUid', (uid: number) => {
-        const splat = scene.getElementsByType(ElementType.splat).find(v => v.uid === uid);
-        if (splat) {
-            events.fire('selection', splat);
         }
     });
 
@@ -44,6 +38,12 @@ const initSelection = (events: Events, scene: Scene) => {
         if (splats.length > 1) {
             const idx = splats.indexOf(selection);
             events.fire('selection', splats[(idx + 1) % splats.length]);
+        }
+    });
+
+    events.on('splat.vis', (splat: Splat) => {
+        if (splat === selection && !splat.visible) {
+            events.fire('selection', null);
         }
     });
 };

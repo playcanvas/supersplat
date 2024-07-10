@@ -119,9 +119,9 @@ const initFileHandler = async (scene: Scene, events: Events, canvas: HTMLCanvasE
         }
     });
 
-    // get the active splat
+    // get the array of visible splats
     const getSplats = () => {
-        return scene.getElementsByType(ElementType.splat) as Splat[];
+        return (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
     };
 
     events.function('scene.canSave', () => {

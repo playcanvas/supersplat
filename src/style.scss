@@ -92,6 +92,79 @@ body {
     background-color: royalblue;
 }
 
+.scene-panel-splat-item {
+    display: flex;
+    flex-direction: row;
+
+    border-bottom: 1px solid $bcg-darker;
+
+    &:hover:not(.selected) {
+        background-color: $bcg-darkest;
+    }
+
+    &.selected {
+        color: $text-primary;
+        background-color: royalblue;
+    }
+}
+
+.scene-panel-splat-item-text {
+    flex-grow: 1;
+    flex-shrink: 1;
+    pointer-events: none;
+
+    .selected & {
+        color: $text-primary;
+    }
+}
+
+.scene-panel-splat-item-visible {
+    flex-grow: 0;
+    flex-shrink: 0;
+
+    // border: 1px solid black;
+    padding: 4px;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+
+    color: black;
+    background-color: transparent;
+
+    cursor: pointer;
+
+    &.checked {
+        color: $text-active;
+    }
+
+    &::after {
+        font-family: pc-icon;
+        font-size: 18px;
+        content: '\E117';
+    }
+}
+
+.scene-panel-splat-item-delete {
+    flex-grow: 0;
+    flex-shrink: 0;
+
+    // border: 1px solid black;
+    padding: 4px;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+
+    color: $text-secondary;
+
+    cursor: pointer;
+
+    &::after {
+        font-family: pc-icon;
+        font-size: 16px;
+        content: '\E124';
+    }
+}
+
 #file-selector {
     display: none;
 }

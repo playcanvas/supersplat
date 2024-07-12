@@ -1,4 +1,4 @@
-import { Container, Label } from 'pcui';
+import { Element, Container, Label } from 'pcui';
 import { ControlPanel } from './control-panel';
 import { DataPanel } from './data-panel';
 import { Toolbar } from './toolbar';
@@ -11,6 +11,7 @@ class EditorUI {
     topContainer: Container;
     controlPanel: ControlPanel;
     canvasContainer: Container;
+    toolsContainer: Container;
     canvas: HTMLCanvasElement;
     filenameLabel: Label;
     popup: Popup;
@@ -68,8 +69,24 @@ class EditorUI {
         const canvasContainer = new Container({
             id: 'canvas-container'
         });
+
+        // tools container
+        const toolsContainer = new Container({
+            id: 'tools-container'
+        });
+
+        // focus capture
+        const focusCapture = new Element({
+            id: 'focus-capture'
+        });
+        focusCapture.dom.addEventListener('pointerdown', (event: PointerEvent) => {
+            document.body.focus();
+        }, true);
+
         canvasContainer.dom.appendChild(canvas);
         canvasContainer.append(filenameLabel);
+        canvasContainer.append(toolsContainer);
+        canvasContainer.append(focusCapture);
 
         // control panel
         const controlPanel = new ControlPanel(events, remoteStorageMode);
@@ -99,10 +116,12 @@ class EditorUI {
         this.topContainer = topContainer;
         this.controlPanel = controlPanel;
         this.canvasContainer = canvasContainer;
+        this.toolsContainer = toolsContainer;
         this.canvas = canvas;
         this.filenameLabel = filenameLabel;
 
         document.body.appendChild(appContainer.dom);
+        document.body.setAttribute('tabIndex', '-1');
 
         events.function('showPopup', (options: { type: 'error' | 'info' | 'yesno' | 'okcancel', message: string, value: string}) => {
             return this.popup.show(options.type, options.message, options.value);

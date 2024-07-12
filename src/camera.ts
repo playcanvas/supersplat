@@ -296,6 +296,8 @@ class Camera extends Element {
             samples: samples,
             autoResolve: false
         });
+
+        this.scene.events.fire('camera.resize', {width, height});
     }
 
     onUpdate(deltaTime: number) {

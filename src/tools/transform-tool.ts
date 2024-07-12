@@ -30,7 +30,6 @@ class TransformTool {
         patchGizmoMaterials(this.gizmo);
 
         this.gizmo.coordSpace = events.invoke('tool.coordSpace');
-        this.gizmo.size = 1.2;
 
         this.gizmo.on('render:update', () => {
             scene.forceRender = true;
@@ -100,6 +99,21 @@ class TransformTool {
         events.on('selection.changed', () => {
             this.update();
         });
+
+        const updateGizmoSize = () => {
+            const canvas = document.getElementById('canvas');
+            if (canvas) {
+                const w = canvas.clientWidth;
+                const h = canvas.clientHeight;
+                this.gizmo.size = 1200 / Math.max(w, h);
+            }
+        };
+
+        events.on('camera.resize', () => {
+            this.scene.events.on('camera.resize', updateGizmoSize);
+        });
+
+        updateGizmoSize();
     }
 
     update() {

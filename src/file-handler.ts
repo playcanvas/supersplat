@@ -109,7 +109,7 @@ const initFileHandler = async (scene: Scene, events: Events, canvas: HTMLCanvasE
     }
 
     // create the file drag & drop handler
-    CreateDropHandler(canvas, async (entries) => {
+    CreateDropHandler(document.body, async (entries) => {
         const modelExtensions = ['.ply'];
         for (let i = 0; i < entries.length; i++) {
             const entry = entries[i];

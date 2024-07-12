@@ -1,4 +1,4 @@
-import {path} from 'playcanvas';
+import { path } from 'playcanvas';
 
 class DroppedFile {
     filename: string;
@@ -79,56 +79,49 @@ const removeCommonPrefix = (urls: Array<DroppedFile>) => {
 
 // configure drag and drop
 const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) => {
-    target.addEventListener(
-        'dragstart',
-        ev => {
-            ev.preventDefault();
-            ev.stopPropagation();
-            ev.dataTransfer.effectAllowed = 'all';
-        },
-        false
-    );
 
-    target.addEventListener(
-        'dragover',
-        ev => {
-            ev.preventDefault();
-            ev.stopPropagation();
-            ev.dataTransfer.effectAllowed = 'all';
-        },
-        false
-    );
+    const dragstart = (ev: DragEvent) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        ev.dataTransfer.effectAllowed = 'all';
+    };
 
-    target.addEventListener(
-        'drop',
-        async ev => {
-            ev.preventDefault();
+    const dragover = (ev: DragEvent) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        ev.dataTransfer.effectAllowed = 'all';
+    };
 
-            // resolve directories to files
-            const entries = await resolveDirectories(
-                Array.from(ev.dataTransfer.items).map(item => item.webkitGetAsEntry())
-            );
+    const drop = async (ev: DragEvent) => {
+        ev.preventDefault();
 
-            const files = await Promise.all(
-                entries.map(entry => {
-                    return new Promise<DroppedFile>((resolve, reject) => {
-                        entry.file((entryFile: any) => {
-                            resolve(new DroppedFile(entry.fullPath.substring(1), entryFile));
-                        });
+        // resolve directories to files
+        const entries = await resolveDirectories(
+            Array.from(ev.dataTransfer.items).map(item => item.webkitGetAsEntry())
+        );
+
+        const files = await Promise.all(
+            entries.map(entry => {
+                return new Promise<DroppedFile>((resolve, reject) => {
+                    entry.file((entryFile: any) => {
+                        resolve(new DroppedFile(entry.fullPath.substring(1), entryFile));
                     });
-                })
-            );
+                });
+            })
+        );
 
-            if (files.length > 1) {
-                // if all files share a common filename prefix, remove it
-                removeCommonPrefix(files);
-            }
+        if (files.length > 1) {
+            // if all files share a common filename prefix, remove it
+            removeCommonPrefix(files);
+        }
 
-            // finally, call the drop handler
-            dropHandler(files, !ev.shiftKey);
-        },
-        false
-    );
+        // finally, call the drop handler
+        dropHandler(files, !ev.shiftKey);
+    };
+
+    target.addEventListener('dragstart', dragstart, true);
+    target.addEventListener('dragover', dragover, true);
+    target.addEventListener('drop', drop, true);
 };
 
 export { CreateDropHandler };

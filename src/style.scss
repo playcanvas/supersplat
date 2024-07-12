@@ -52,16 +52,6 @@ body {
     flex-grow: 1;
 }
 
-#canvas-container {
-    width: 100%;
-    background-color: #666666;
-    display: flex;
-    border: 0;
-    padding: 0;
-    margin: 0;
-    flex-grow: 1;
-}
-
 #data-panel {
     width: 100%;
     height: 320px;
@@ -410,6 +400,21 @@ body {
     padding: 0;
     margin: 0;
     flex-grow: 1;
+}
+
+#tools-container {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+#focus-capture {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0;
 }
 
 #canvas {

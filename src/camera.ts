@@ -179,7 +179,9 @@ class Camera extends Element {
             this.entity.camera.setShaderPass(`debug_${this.scene.config.camera.debug_render}`);
         }
 
-        this.controller = new PointerController(this, this.scene.canvas);
+        const target = document.getElementById('canvas-container');
+
+        this.controller = new PointerController(this, target);
 
         // apply scene config
         const config = this.scene.config;

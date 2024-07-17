@@ -109,6 +109,7 @@ class DataPanel extends Panel {
                 { v: 'x', t: 'X' },
                 { v: 'y', t: 'Y' },
                 { v: 'z', t: 'Z' },
+                { v: 'distance', t: 'Distance' },
                 { v: 'volume', t: 'Volume' },
                 { v: 'surface-area', t: 'Surface Area' },
                 { v: 'scale_0', t: 'Scale X' },
@@ -193,6 +194,13 @@ class DataPanel extends Panel {
                         func = (i) => scaleFunc(sx[i]) * scaleFunc(sy[i]) * scaleFunc(sz[i]);
                         break;
                     }
+                    case 'distance': {
+                        const x = splat.splatData.getProp('x');
+                        const y = splat.splatData.getProp('y');
+                        const z = splat.splatData.getProp('z');
+                        func = (i) => Math.sqrt(x[i] ** 2 + y[i] ** 2 + z[i] ** 2);
+                        break;
+                    }
                     case 'surface-area': {
                         const sx = splat.splatData.getProp('scale_0');
                         const sy = splat.splatData.getProp('scale_1');
@@ -249,7 +257,7 @@ class DataPanel extends Panel {
                     }
                 }
 
-                splatsValue.text = state.length.toString();
+                splatsValue.text = (state.length - deleted).toString();
                 selectedValue.text = selected.toString();
                 hiddenValue.text = hidden.toString();
                 deletedValue.text = deleted.toString();

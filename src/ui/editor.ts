@@ -58,7 +58,6 @@ class EditorUI {
         // canvas
         const canvas = document.createElement('canvas');
         canvas.id = 'canvas';
-        canvas.style.touchAction = 'none';
 
         // filename label
         const filenameLabel = new Label({
@@ -75,18 +74,9 @@ class EditorUI {
             id: 'tools-container'
         });
 
-        // focus capture
-        const focusCapture = new Element({
-            id: 'focus-capture'
-        });
-        focusCapture.dom.addEventListener('pointerdown', (event: PointerEvent) => {
-            document.body.focus();
-        }, true);
-
         canvasContainer.dom.appendChild(canvas);
         canvasContainer.append(filenameLabel);
         canvasContainer.append(toolsContainer);
-        canvasContainer.append(focusCapture);
 
         // control panel
         const controlPanel = new ControlPanel(events, remoteStorageMode);
@@ -139,6 +129,14 @@ class EditorUI {
         const pixelRatio = window.devicePixelRatio;
         canvas.width = Math.ceil(canvasContainer.dom.offsetWidth * pixelRatio);
         canvas.height = Math.ceil(canvasContainer.dom.offsetHeight * pixelRatio);
+
+        // disable context menu globally
+        document.addEventListener('contextmenu', event => event.preventDefault());
+
+        // whenever the canvas container is clicked, set keyboard focus on the body
+        canvasContainer.dom.addEventListener('pointerdown', (event: PointerEvent) => {
+            document.body.focus();
+        }, true);
     }
 
     setFilename(filename: string) {

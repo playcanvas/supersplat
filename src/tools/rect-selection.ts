@@ -5,7 +5,7 @@ class RectSelection {
     activate: () => void;
     deactivate: () => void;
 
-    constructor(events: Events, parent: HTMLElement, canvas: HTMLCanvasElement) {
+    constructor(events: Events, parent: HTMLElement) {
         const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         svg.id = 'rect-select-svg';
         svg.classList.add('select-svg');
@@ -39,7 +39,7 @@ class RectSelection {
                 e.stopPropagation();
 
                 dragId = e.pointerId;
-                canvas.setPointerCapture(dragId);
+                parent.setPointerCapture(dragId);
 
                 start.x = end.x = e.offsetX;
                 start.y = end.y = e.offsetY;
@@ -67,10 +67,10 @@ class RectSelection {
                 e.preventDefault();
                 e.stopPropagation();
 
-                const w = canvas.clientWidth;
-                const h = canvas.clientHeight;
+                const w = parent.clientWidth;
+                const h = parent.clientHeight;
 
-                canvas.releasePointerCapture(dragId);
+                parent.releasePointerCapture(dragId);
                 dragId = undefined;
 
                 svg.style.display = 'none';
@@ -83,15 +83,17 @@ class RectSelection {
         };
 
         this.activate = () => {
-            canvas.addEventListener('pointerdown', pointerdown, true);
-            canvas.addEventListener('pointermove', pointermove, true);
-            canvas.addEventListener('pointerup', pointerup, true);
+            parent.style.display = 'block';
+            parent.addEventListener('pointerdown', pointerdown);
+            parent.addEventListener('pointermove', pointermove);
+            parent.addEventListener('pointerup', pointerup);
         };
 
         this.deactivate = () => {
-            canvas.removeEventListener('pointerdown', pointerdown, true);
-            canvas.removeEventListener('pointermove', pointermove, true);
-            canvas.removeEventListener('pointerup', pointerup, true);
+            parent.style.display = 'none';
+            parent.removeEventListener('pointerdown', pointerdown);
+            parent.removeEventListener('pointermove', pointermove);
+            parent.removeEventListener('pointerup', pointerup);
         };
 
         parent.appendChild(svg);

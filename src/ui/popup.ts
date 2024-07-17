@@ -54,7 +54,8 @@ class Popup {
 
         const container = new Container({
             id: 'popup',
-            hidden: true
+            hidden: true,
+            tabIndex: -1
         });
 
         container.append(background);
@@ -119,6 +120,9 @@ class Popup {
                 inputValue.value = value;
                 inputValue.focus();
             }
+
+            // take keyboard focus so shortcuts stop working
+            container.dom.focus();
 
             return new Promise<{action: string, value?: string}>((resolve) => {
                 okFn = () => {

@@ -4,7 +4,7 @@ class BrushSelection {
     activate: () => void;
     deactivate: () => void;
 
-    constructor(events: Events, parent: HTMLElement, canvas: HTMLCanvasElement) {
+    constructor(events: Events, parent: HTMLElement) {
         let radius = 40;
 
         // create svg
@@ -57,7 +57,7 @@ class BrushSelection {
                 e.stopPropagation();
 
                 dragId = e.pointerId;
-                canvas.setPointerCapture(dragId);
+                parent.setPointerCapture(dragId);
 
                 // initialize canvas
                 if (selectCanvas.width !== parent.clientWidth || selectCanvas.height !== parent.clientHeight) {
@@ -92,7 +92,7 @@ class BrushSelection {
                 e.preventDefault();
                 e.stopPropagation();
 
-                canvas.releasePointerCapture(dragId);
+                parent.releasePointerCapture(dragId);
                 dragId = undefined;
 
                 selectCanvas.style.display = 'none';
@@ -107,17 +107,18 @@ class BrushSelection {
 
         this.activate = () => {
             svg.style.display = 'inline';
-            canvas.addEventListener('pointerdown', pointerdown, true);
-            canvas.addEventListener('pointermove', pointermove, true);
-            canvas.addEventListener('pointerup', pointerup, true);
-
+            parent.style.display = 'block';
+            parent.addEventListener('pointerdown', pointerdown);
+            parent.addEventListener('pointermove', pointermove);
+            parent.addEventListener('pointerup', pointerup);
         };
 
         this.deactivate = () => {
             svg.style.display = 'none';
-            canvas.removeEventListener('pointerdown', pointerdown, true);
-            canvas.removeEventListener('pointermove', pointermove, true);
-            canvas.removeEventListener('pointerup', pointerup, true);
+            parent.style.display = 'none';
+            parent.removeEventListener('pointerdown', pointerdown);
+            parent.removeEventListener('pointermove', pointermove);
+            parent.removeEventListener('pointerup', pointerup);
         };
 
         events.on('tool.brushSelection.smaller', () => {

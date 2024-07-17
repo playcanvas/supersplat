@@ -145,10 +145,6 @@ class PointerController {
             camera.pickFocalPoint(event.offsetX, event.offsetY);
         };
 
-        const contextmenu = (event: globalThis.MouseEvent) => {
-            event.preventDefault();
-        };
-
         // key state
         const keys: any = {
             ArrowUp: 0,
@@ -192,7 +188,6 @@ class PointerController {
         target.addEventListener('pointermove', pointermove);
         target.addEventListener('wheel', wheel);
         target.addEventListener('dblclick', dblclick);
-        target.addEventListener('contextmenu', contextmenu);
         document.addEventListener('keydown', keydown);
         document.addEventListener('keyup', keyup);
 
@@ -202,7 +197,6 @@ class PointerController {
             target.removeEventListener('pointermove', pointermove);
             target.removeEventListener('wheel', wheel);
             target.removeEventListener('dblclick', dblclick);
-            target.removeEventListener('contextmenu', contextmenu);
             document.removeEventListener('keydown', keydown);
             document.removeEventListener('keyup', keyup);
         };

@@ -87,7 +87,7 @@ const writeToFile = async (stream: FileSystemWritableFileStream, data: ArrayBuff
 };
 
 // initialize file handler events
-const initFileHandler = async (scene: Scene, events: Events, canvas: HTMLCanvasElement, remoteStorageDetails: RemoteStorageDetails) => {
+const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLElement, remoteStorageDetails: RemoteStorageDetails) => {
 
     // create a file selector element as fallback when showOpenFilePicker isn't available
     let fileSelector: HTMLInputElement;
@@ -109,7 +109,7 @@ const initFileHandler = async (scene: Scene, events: Events, canvas: HTMLCanvasE
     }
 
     // create the file drag & drop handler
-    CreateDropHandler(document.body, async (entries) => {
+    CreateDropHandler(dropTarget, async (entries) => {
         const modelExtensions = ['.ply'];
         for (let i = 0; i < entries.length; i++) {
             const entry = entries[i];

@@ -17,7 +17,8 @@ import { Model } from './model';
 import { Splat } from './splat';
 import { Camera } from './camera';
 import { CustomShadow as Shadow } from './custom-shadow';
-import { Grid } from './grid';
+// import { Grid } from './grid';
+import { InfiniteGrid as Grid } from './infinite-grid';
 
 class Scene {
     events: Events;

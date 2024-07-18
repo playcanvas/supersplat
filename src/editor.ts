@@ -160,6 +160,18 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     });
 
+    // handle camera align events
+    events.on('camera.align', (axis: string) => {
+        switch (axis) {
+            case 'px': scene.camera.setAzimElev(90, 0); break;
+            case 'py': scene.camera.setAzimElev(0, -90); break;
+            case 'pz': scene.camera.setAzimElev(0, 0); break;
+            case 'nx': scene.camera.setAzimElev(270, 0); break;
+            case 'ny': scene.camera.setAzimElev(0, 90); break;
+            case 'nz': scene.camera.setAzimElev(180, 0); break;
+        }
+    });
+
     events.on('select.all', () => {
         selectedSplats().forEach((splat) => {
             const splatData = splat.splatData;

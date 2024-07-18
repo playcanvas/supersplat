@@ -37,7 +37,7 @@ const sceneConfig = {
         enableZoom: true,
         dampingFactor: 0.2,
         minPolarAngle: 0,
-        maxPolarAngle: 2.8,
+        maxPolarAngle: Math.PI,
         minZoom: 0.001,
         maxZoom: 2.0,
         initialAzim: -45,

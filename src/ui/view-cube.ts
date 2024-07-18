@@ -89,10 +89,6 @@ class ViewCube extends Container {
         shapes.ny.children[0].addEventListener('pointerdown', () => { events.fire('camera.align', 'ny'); });
         shapes.nz.children[0].addEventListener('pointerdown', () => { events.fire('camera.align', 'nz'); });
 
-        events.on('camera.align', (axis: string) => {
-            console.log(axis);
-        });
-
         this.dom.appendChild(svg);
 
         let cw = 0;

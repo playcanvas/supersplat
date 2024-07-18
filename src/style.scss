@@ -15,6 +15,7 @@ body {
     max-height: 100%;
     background-color: $bcg-primary;
     overflow: hidden;
+    touch-action: none;
 }
 
 #app-container {
@@ -70,8 +71,6 @@ body {
     flex-grow: 0;
     flex-shrink: 0;
     overflow-y: auto;
-    // display: flex;
-    // flex-direction: column;
 }
 
 #data-controls {
@@ -84,7 +83,7 @@ body {
 }
 
 #histogram-canvas {
-
+    image-rendering: pixelated;
 }
 
 #histogram-svg {
@@ -106,7 +105,6 @@ body {
     position: absolute;
     left: 50px;
     top: 50px;
-    pointer-events: none;
 }
 
 #data-panel-popup-label {
@@ -199,7 +197,6 @@ body {
 .scene-panel-splat-item-text {
     flex-grow: 1;
     flex-shrink: 1;
-    pointer-events: none;
 
     .selected & {
         color: $text-primary;
@@ -382,14 +379,12 @@ body {
     position: absolute;
     width: 100%;
     height: 100%;
-    pointer-events: none;
 }
 
 #brush-select-canvas {
     display: none;
     position: absolute;
     opacity: 0.4;
-    pointer-events: none;
 }
 
 #canvas-container {
@@ -403,18 +398,10 @@ body {
 }
 
 #tools-container {
+    display: none;
     position: absolute;
     width: 100%;
     height: 100%;
-    pointer-events: none;
-}
-
-#focus-capture {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    opacity: 0;
 }
 
 #canvas {

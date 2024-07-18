@@ -154,9 +154,9 @@ const main = async () => {
     toolManager.register('move', new MoveTool(events, editHistory, scene));
     toolManager.register('rotate', new RotateTool(events, editHistory, scene));
     toolManager.register('scale', new ScaleTool(events, editHistory, scene));
-    toolManager.register('rectSelection', new RectSelection(events, editorUI.toolsContainer.dom, editorUI.canvas));
-    toolManager.register('brushSelection', new BrushSelection(events, editorUI.toolsContainer.dom, editorUI.canvas));
-    toolManager.register('pickerSelection', new PickerSelection(events, editorUI.toolsContainer.dom, editorUI.canvas));
+    toolManager.register('rectSelection', new RectSelection(events, editorUI.toolsContainer.dom));
+    toolManager.register('brushSelection', new BrushSelection(events, editorUI.toolsContainer.dom));
+    toolManager.register('pickerSelection', new PickerSelection(events, editorUI.toolsContainer.dom));
 
     window.scene = scene;
 

@@ -90,12 +90,11 @@ class Histogram {
 
     constructor(numBins: number, height: number) {
         const canvas = document.createElement('canvas');
-        canvas.classList.add('histogram-canvas');
+        canvas.setAttribute('id', 'histogram-canvas');
         canvas.width = numBins;
         canvas.height = height;
         canvas.style.width = `100%`;
         canvas.style.height = `100%`;
-        canvas.style.imageRendering = 'pixelated';
 
         const context = canvas.getContext('2d');
         context.globalCompositeOperation = 'copy';
@@ -199,11 +198,6 @@ class Histogram {
         this.canvas.addEventListener('pointerleave', (e: PointerEvent) => {
             this.events.fire('hideOverlay');
         });
-
-        this.canvas.addEventListener('contextmenu', (e: MouseEvent) => {
-            e.preventDefault();
-            e.stopPropagation();
-        }, true);
     }
 
     update(options: UpdateOptions) {

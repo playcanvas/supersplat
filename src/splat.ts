@@ -4,9 +4,11 @@ import {
     PIXELFORMAT_L8,
     Asset,
     BoundingBox,
+    Color,
     Entity,
     GSplatData,
     GSplatResource,
+    Mat4,
     Quat,
     Texture,
     Vec3
@@ -132,6 +134,21 @@ void main(void)
 `;
 
 const vec = new Vec3();
+const veca = new Vec3();
+const vecb = new Vec3();
+
+const boundingPoints =
+    [-1, 1].map((x) => {
+        return [-1, 1].map((y) => {
+            return [-1, 1].map((z) => {
+                return [
+                    new Vec3(x, y, z), new Vec3(x * 0.75, y, z),
+                    new Vec3(x, y, z), new Vec3(x, y * 0.75, z),
+                    new Vec3(x, y, z), new Vec3(x, y, z * 0.75)
+                ];
+            });
+        });
+    }).flat(3);
 
 class Splat extends Element {
     asset: Asset;
@@ -205,16 +222,44 @@ class Splat extends Element {
 
     updateState(recalcBound = false) {
         const state = this.splatData.getProp('state') as Uint8Array;
+
+        // write state data to gpu texture
         const data = this.stateTexture.lock();
         data.set(state);
         this.stateTexture.unlock();
 
+        // update splat debug visual
         this.splatDebug.update();
 
+        // handle splats being added or removed
         if (recalcBound) {
             this.localBoundDirty = true;
             this.worldBoundDirty = true;
             this.scene.boundDirty = true;
+
+            // count number of still-visible splats
+            let numSplats = 0;
+            for (let i = 0; i < state.length; ++i) {
+                if ((state[i] & State.deleted) === 0) {
+                    numSplats++;
+                }
+            }
+
+            let mapping;
+
+            // create a sorter mapping to remove deleted splats
+            if (numSplats !== state.length) {
+                mapping = new Uint32Array(numSplats);
+                let idx = 0;
+                for (let i = 0; i < state.length; ++i) {
+                    if ((state[i] & State.deleted) === 0) {
+                        mapping[idx++] = i;
+                    }
+                }
+            }
+
+            // update sorting instance
+            this.root.gsplat.instance.sorter.setMapping(mapping);
         }
 
         this.scene.forceRender = true;
@@ -285,10 +330,26 @@ class Splat extends Element {
         const material = this.root.gsplat.instance.material;
         material.setParameter('ringSize', (selected && cameraMode === 'rings' && splatSize > 0) ? 0.04 : 0);
 
-        // render splat centers
-        if (this.visible && selected && cameraMode === 'centers' && splatSize > 0) {
-            this.splatDebug.splatSize = splatSize;
-            this.scene.app.drawMeshInstance(this.splatDebug.meshInstance);
+        if (this.visible && selected) {
+            // render splat centers
+            if (cameraMode === 'centers' && splatSize > 0) {
+                this.splatDebug.splatSize = splatSize;
+                this.scene.app.drawMeshInstance(this.splatDebug.meshInstance);
+            }
+
+            // render bounding box
+            const bound = this.localBound;
+            const scale = new Mat4().setTRS(bound.center, Quat.IDENTITY, bound.halfExtents);
+            scale.mul2(this.root.getWorldTransform(), scale);
+
+            for (let i = 0; i < boundingPoints.length / 2; i++) {
+                const a = boundingPoints[i * 2];
+                const b = boundingPoints[i * 2 + 1];
+                scale.transformPoint(a, veca);
+                scale.transformPoint(b, vecb);
+
+                this.scene.app.drawLine(veca, vecb, Color.WHITE, true, this.scene.debugLayer);
+            }
         }
 
         this.entity.enabled = this.visible;

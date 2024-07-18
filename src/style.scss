@@ -381,6 +381,14 @@ body {
     height: 100%;
 }
 
+#view-cube-container {
+    position: absolute;
+    width: 140px;
+    height: 140px;
+    right: 0px;
+    top: 0px;
+}
+
 #brush-select-canvas {
     display: none;
     position: absolute;

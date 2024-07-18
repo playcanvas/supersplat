@@ -1,9 +1,11 @@
-import { Element, Container, Label } from 'pcui';
+import { Container, Label } from 'pcui';
 import { ControlPanel } from './control-panel';
 import { DataPanel } from './data-panel';
 import { Toolbar } from './toolbar';
 import { Events } from '../events';
 import { Popup } from './popup';
+import { ViewCube } from './view-cube';
+import { Mat4 } from 'playcanvas';
 import logo from './playcanvas-logo.png';
 
 class EditorUI {
@@ -78,6 +80,13 @@ class EditorUI {
         canvasContainer.append(filenameLabel);
         canvasContainer.append(toolsContainer);
 
+        // view axes container
+        const viewCube = new ViewCube(events);
+        canvasContainer.append(viewCube);
+        events.on('prerender', (cameraMatrix: Mat4) => {
+            viewCube.update(cameraMatrix);
+        });
+
         // control panel
         const controlPanel = new ControlPanel(events, remoteStorageMode);
 
@@ -131,7 +140,9 @@ class EditorUI {
         canvas.height = Math.ceil(canvasContainer.dom.offsetHeight * pixelRatio);
 
         // disable context menu globally
-        document.addEventListener('contextmenu', event => event.preventDefault());
+        document.addEventListener('contextmenu', (event: MouseEvent) => {
+            event.preventDefault();
+        }, true);
 
         // whenever the canvas container is clicked, set keyboard focus on the body
         canvasContainer.dom.addEventListener('pointerdown', (event: PointerEvent) => {

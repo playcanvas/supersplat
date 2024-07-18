@@ -106,6 +106,12 @@ class TransformTool {
                 const w = canvas.clientWidth;
                 const h = canvas.clientHeight;
                 this.gizmo.size = 1200 / Math.max(w, h);
+
+                // FIXME:
+                // this is a temporary workaround to undo gizmo's own auto scaling.
+                // once gizmo's autoscaling code is removed, this line can go too.
+                // @ts-ignore
+                this.gizmo._deviceStartSize = Math.min(scene.app.graphicsDevice.width, scene.app.graphicsDevice.height);
             }
         };
 

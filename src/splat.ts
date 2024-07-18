@@ -330,8 +330,8 @@ class Splat extends Element {
         const material = this.root.gsplat.instance.material;
         material.setParameter('ringSize', (selected && cameraMode === 'rings' && splatSize > 0) ? 0.04 : 0);
 
-        // render splat centers
         if (this.visible && selected) {
+            // render splat centers
             if (cameraMode === 'centers' && splatSize > 0) {
                 this.splatDebug.splatSize = splatSize;
                 this.scene.app.drawMeshInstance(this.splatDebug.meshInstance);

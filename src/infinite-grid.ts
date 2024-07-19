@@ -7,14 +7,14 @@ import {
     Mat4,
     QuadRender,
     Shader,
+    Vec3,
     createShaderFromCode
 } from 'playcanvas';
 import { Element, ElementType } from './element';
 import { Serializer } from './serializer';
 
 const vsCode = /*glsl*/ `
-    uniform mat4 camera_matrix;
-    uniform vec2 camera_params;
+    uniform mat4 matrix_viewProjectionInverse;
 
     attribute vec2 vertex_position;
 
@@ -23,15 +23,15 @@ const vsCode = /*glsl*/ `
     void main(void) {
         gl_Position = vec4(vertex_position, 0.0, 1.0);
 
-        vec4 v = camera_matrix * vec4(vertex_position * camera_params, -1.0, 1.0);
+        vec4 v = matrix_viewProjectionInverse * vec4(vertex_position, 1.0, 1.0);
 
-        worldFar = v.xyz;
+        worldFar = v.xyz / v.w;
     }
 `;
 
 const fsCode = /*glsl*/ `
-    uniform vec3 camera_position;
-    uniform mat4 camera_viewProjection;
+    uniform mat4 matrix_viewProjection;
+    uniform vec3 view_position;
     uniform sampler2D blueNoiseTex32;
 
     varying vec3 worldFar;
@@ -77,13 +77,13 @@ const fsCode = /*glsl*/ `
     }
 
     float calcDepth(vec3 p) {
-        vec4 v = camera_viewProjection * vec4(p, 1.0);
+        vec4 v = matrix_viewProjection * vec4(p, 1.0);
         return (v.z / v.w) * 0.5 + 0.5;
     }
 
     void main(void) {
-        vec3 p = camera_position;
-        vec3 v = normalize(worldFar - camera_position);
+        vec3 p = view_position;
+        vec3 v = normalize(worldFar - view_position);
 
         // intersect ray with the world xz plane
         float t;
@@ -95,7 +95,7 @@ const fsCode = /*glsl*/ `
         vec3 pos = p + v * t;
 
         // discard distant pixels
-        float dist = length(pos.xz - camera_position.xz);
+        float dist = length(pos.xz - view_position.xz);
         if (dist > 200.0) {
             discard;
         }
@@ -141,18 +141,6 @@ const fsCode = /*glsl*/ `
     }
 `;
 
-const calcHalfSize = (fov: number, aspect: number, fovIsHorizontal: boolean) => {
-    let x, y;
-    if (fovIsHorizontal) {
-        x = Math.tan(fov * Math.PI / 360);
-        y = x / aspect;
-    } else {
-        y = Math.tan(fov * Math.PI / 360);
-        x = y * aspect;
-    }
-    return [ x, y ];
-};
-
 const attributes = {
     vertex_position: SEMANTIC_POSITION
 };
@@ -175,10 +163,9 @@ class InfiniteGrid extends Element {
         this.shader = createShaderFromCode(device, vsCode, fsCode, 'infinite-grid', attributes);
         this.quadRender = new QuadRender(this.shader);
 
-        const cameraMatrixId = device.scope.resolve('camera_matrix');
-        const cameraParamsId = device.scope.resolve('camera_params');
-        const cameraPositionId = device.scope.resolve('camera_position');
-        const cameraViewProjectionId = device.scope.resolve('camera_viewProjection');
+        const viewPosition = device.scope.resolve('view_position');
+        const viewProjection = device.scope.resolve('matrix_viewProjection');
+        const viewProjectionInverse = device.scope.resolve('matrix_viewProjectionInverse');
 
         this.scene.debugLayer.onPreRenderOpaque = () => {
             if (this.visible) {
@@ -187,20 +174,24 @@ class InfiniteGrid extends Element {
                 device.setDepthState(DepthState.WRITEDEPTH);
                 device.setStencilState(null, null);
 
-                const cameraEntity = this.scene.camera.entity;
-                const camera = cameraEntity.camera;
-
                 // update viewProjectionInverse matrix
-                const cameraMatrix = cameraEntity.getWorldTransform().clone();
-                const cameraParams = calcHalfSize(camera.fov, camera.aspectRatio, camera.horizontalFov);
-                const cameraPosition = cameraMatrix.getTranslation();
-                const cameraViewProjection = new Mat4().mul2(camera.projectionMatrix, camera.viewMatrix);
+                const projectionMatrix = this.scene.camera.entity.camera.projectionMatrix;
+                const cameraMatrix = this.scene.camera.entity.getWorldTransform();
 
-                cameraMatrixId.setValue(cameraMatrix.data);
-                cameraParamsId.setValue(cameraParams);
-                cameraPositionId.setValue([cameraPosition.x, cameraPosition.y, cameraPosition.z]);
-                cameraViewProjectionId.setValue(cameraViewProjection.data);
- 
+                const mat = new Mat4();
+                mat.invert(projectionMatrix);
+                mat.mul2(cameraMatrix, mat);
+
+                const mat2 = new Mat4();
+                mat2.invert(mat);
+
+                const viewPos = new Vec3();
+                cameraMatrix.getTranslation(viewPos);
+
+                viewPosition.setValue([viewPos.x, viewPos.y, viewPos.z]);
+                viewProjection.setValue(mat2.data);
+                viewProjectionInverse.setValue(mat.data);
+
                 this.quadRender.render();
             }
         };

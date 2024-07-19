@@ -136,7 +136,6 @@ void main(void)
 const vec = new Vec3();
 const veca = new Vec3();
 const vecb = new Vec3();
-const mat = new Mat4();
 
 const boundingPoints =
     [-1, 1].map((x) => {
@@ -155,8 +154,8 @@ class Splat extends Element {
     asset: Asset;
     splatData: GSplatData;
     splatDebug: SplatDebug;
-    pivot: Entity;
     entity: Entity;
+    root: Entity;
     changedCounter = 0;
     stateTexture: Texture;
     localBoundStorage: BoundingBox;
@@ -172,13 +171,13 @@ class Splat extends Element {
 
         this.asset = asset;
         this.splatData = splatResource.splatData;
-        this.pivot = new Entity('splatPivot');
-        this.entity = splatResource.instantiate({
+        this.entity = new Entity('splatParent');
+        this.root = splatResource.instantiate({
             vertex: vertexShader,
             fragment: fragmentShader
         });
 
-        const instance = this.entity.gsplat.instance;
+        const instance = this.root.gsplat.instance;
 
         // added per-splat state channel
         // bit 1: selected
@@ -211,12 +210,12 @@ class Splat extends Element {
             this.changedCounter++;
         });
 
-        this.pivot.addChild(this.entity);
+        this.entity.addChild(this.root);
     }
 
     destroy() {
         super.destroy();
-        this.pivot.destroy();
+        this.entity.destroy();
         this.asset.registry.remove(this.asset);
         this.asset.unload();
     }
@@ -260,7 +259,7 @@ class Splat extends Element {
             }
 
             // update sorting instance
-            this.entity.gsplat.instance.sorter.setMapping(mapping);
+            this.root.gsplat.instance.sorter.setMapping(mapping);
         }
 
         this.scene.forceRender = true;
@@ -269,7 +268,7 @@ class Splat extends Element {
     }
 
     get worldTransform() {
-        return this.entity.getWorldTransform();
+        return this.root.getWorldTransform();
     }
 
     get filename() {
@@ -293,14 +292,14 @@ class Splat extends Element {
     }
 
     add() {
-        this.splatDebug = new SplatDebug(this.scene, this.entity, this.splatData);
+        this.splatDebug = new SplatDebug(this.scene, this.root, this.splatData);
 
         // add the entity to the scene
-        this.scene.contentRoot.addChild(this.pivot);
+        this.scene.contentRoot.addChild(this.entity);
 
         const localBound = this.localBoundStorage;
-        this.pivot.setLocalPosition(localBound.center.x, localBound.center.y, localBound.center.z);
-        this.entity.setLocalPosition(-localBound.center.x, -localBound.center.y, -localBound.center.z);
+        this.entity.setLocalPosition(localBound.center.x, localBound.center.y, localBound.center.z);
+        this.root.setLocalPosition(-localBound.center.x, -localBound.center.y, -localBound.center.z);
 
         this.localBoundDirty = true;
         this.worldBoundDirty = true;
@@ -311,12 +310,12 @@ class Splat extends Element {
         this.splatDebug.destroy();
         this.splatDebug = null;
 
-        this.scene.contentRoot.removeChild(this.pivot);
+        this.scene.contentRoot.removeChild(this.entity);
         this.scene.boundDirty = true;
     }
 
     serialize(serializer: Serializer) {
-        serializer.packa(this.pivot.getWorldTransform().data);
+        serializer.packa(this.entity.getWorldTransform().data);
         serializer.pack(this.changedCounter);
         serializer.pack(this.visible);
     }
@@ -328,7 +327,7 @@ class Splat extends Element {
         const splatSize = events.invoke('splatSize');
 
         // configure rings rendering
-        const material = this.entity.gsplat.instance.material;
+        const material = this.root.gsplat.instance.material;
         material.setParameter('ringSize', (selected && cameraMode === 'rings' && splatSize > 0) ? 0.04 : 0);
 
         if (this.visible && selected) {
@@ -341,7 +340,7 @@ class Splat extends Element {
             // render bounding box
             const bound = this.localBound;
             const scale = new Mat4().setTRS(bound.center, Quat.IDENTITY, bound.halfExtents);
-            scale.mul2(this.entity.getWorldTransform(), scale);
+            scale.mul2(this.root.getWorldTransform(), scale);
 
             for (let i = 0; i < boundingPoints.length / 2; i++) {
                 const a = boundingPoints[i * 2];
@@ -353,7 +352,7 @@ class Splat extends Element {
             }
         }
 
-        this.pivot.enabled = this.visible;
+        this.entity.enabled = this.visible;
     }
 
     focalPoint() {
@@ -361,15 +360,15 @@ class Splat extends Element {
     }
 
     move(position?: Vec3, rotation?: Quat, scale?: Vec3) {
-        const pivot = this.pivot;
+        const entity = this.entity;
         if (position) {
-            pivot.setLocalPosition(position);
+            entity.setLocalPosition(position);
         }
         if (rotation) {
-            pivot.setLocalRotation(rotation);
+            entity.setLocalRotation(rotation);
         }
         if (scale) {
-            pivot.setLocalScale(scale);
+            entity.setLocalScale(scale);
         }
 
         this.worldBoundDirty = true;
@@ -387,9 +386,6 @@ class Splat extends Element {
                 localBound.halfExtents.set(0.5, 0.5, 0.5);
             }
 
-            this.entity.getWorldTransform().transformPoint(localBound.center, vec);
-            this.setPivot(vec);
-
             this.localBoundDirty = false;
         }
 
@@ -399,23 +395,25 @@ class Splat extends Element {
     // get world space bound
     get worldBound() {
         if (this.worldBoundDirty) {
+            const localBound = this.localBound;
+
+            // calculate movement in local space
+            vec.add2(this.root.getLocalPosition(), localBound.center);
+            this.entity.getWorldTransform().transformVector(vec, vec);
+            vec.add(this.entity.getLocalPosition());
+
+            // update transforms so base entity node is oriented to the center of the mesh
+            this.entity.setLocalPosition(vec);
+            this.root.setLocalPosition(-localBound.center.x, -localBound.center.y, -localBound.center.z);
+
             // calculate meshinstance aabb (transformed local bound)
-            this.worldBoundStorage.setFromTransformedAabb(this.localBound, this.entity.getWorldTransform());
+            this.worldBoundStorage.setFromTransformedAabb(localBound, this.root.getWorldTransform());
 
             // flag scene bound as dirty
             this.worldBoundDirty = false;
         }
 
         return this.worldBoundStorage;
-    }
-
-    // set the world-space location of the pivot point
-    setPivot(position: Vec3) {
-        const world = this.entity.getWorldTransform();
-        mat.invert(world);
-        mat.transformPoint(position, veca);
-        this.entity.setLocalPosition(-veca.x, -veca.y, -veca.z);
-        this.pivot.setLocalPosition(position);
     }
 
     get visible() {

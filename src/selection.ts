@@ -46,10 +46,6 @@ const initSelection = (events: Events, scene: Scene) => {
             events.fire('selection', null);
         }
     });
-
-    events.on('camera.focalPointPicked', (details: { splat: Splat }) => {
-        events.fire('selection', details.splat);
-    });
 };
 
 export { initSelection };

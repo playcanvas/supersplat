@@ -355,7 +355,7 @@ class Camera extends Element {
 
         this.far = dist + boundRadius;
         // if camera is placed inside the sphere bound calculate near based far
-        this.near = Math.max(1e-6, dist < boundRadius ? this.far / (1024 * 16) : dist - boundRadius);
+        this.near = Math.max(0.001, dist < boundRadius ? this.far / 1024 : dist - boundRadius);
     }
 
     onPreRender() {
@@ -454,11 +454,7 @@ class Camera extends Element {
         if (closestSplat) {
             this.setDistance(cameraPos.sub(closestP).length() / this.focusDistance);
             this.setFocalPoint(closestP);
-            scene.events.fire('camera.focalPointPicked', {
-                camera: this,
-                splat: closestSplat,
-                position: closestP
-            });
+            scene.events.fire('selection', closestSplat);
         }
     }
 

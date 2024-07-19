@@ -364,7 +364,7 @@ class Scene {
                         Color.RED,
                         true,
                         undefined,
-                        splat.pivot.getWorldTransform());
+                        splat.root.getWorldTransform());
 
                     const world = splat.worldBound;
                     this.app.drawWireAlignedBox(

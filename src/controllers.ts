@@ -36,7 +36,7 @@ class PointerController {
         };
 
         const zoom = (amount: number) => {
-            camera.setDistance(camera.distance * (1 - amount * camera.scene.config.controls.zoomSensitivity), 2);
+            camera.setDistance(camera.distance - (camera.distance * 0.999 + 0.001) * amount * camera.scene.config.controls.zoomSensitivity, 2);
         };
 
         // mouse state
@@ -82,7 +82,7 @@ class PointerController {
             } else {
                 touches = touches.filter((touch) => touch.id !== event.pointerId);
                 if (touches.length === 0) {
-                    target.setPointerCapture(event.pointerId);
+                    target.releasePointerCapture(event.pointerId);
                 }
             }
         };
@@ -174,7 +174,7 @@ class PointerController {
             const z = keys.ArrowDown - keys.ArrowUp;
 
             if (x || z) {
-                const factor = deltaTime * camera.distance * 20;
+                const factor = deltaTime * camera.distance * camera.focusDistance * 20;
                 const worldTransform = camera.entity.getWorldTransform();
                 const xAxis = worldTransform.getX().mulScalar(x * factor);
                 const zAxis = worldTransform.getZ().mulScalar(z * factor);

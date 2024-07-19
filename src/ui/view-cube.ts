@@ -29,8 +29,7 @@ class ViewCube extends Container {
             const result = document.createElementNS(svg.namespaceURI, 'g') as SVGElement;
 
             const circle = document.createElementNS(svg.namespaceURI, 'circle') as SVGCircleElement;
-            circle.setAttribute('fill', color);
-            circle.setAttribute('fill-opacity', fill ? '1' : '0.14');
+            circle.setAttribute('fill', fill ? color : '#555');
             circle.setAttribute('stroke', color);
             circle.setAttribute('stroke-width', '2');
             circle.setAttribute('r', '10');

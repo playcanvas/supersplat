@@ -1,4 +1,4 @@
-import { TransformGizmo } from 'playcanvas';
+import { TransformGizmo, Vec3 } from 'playcanvas';
 import { Scene } from '../scene';
 import { Splat } from '../splat';
 import { Events } from '../events';
@@ -37,19 +37,19 @@ class TransformTool {
 
         this.gizmo.on('transform:start', () => {
             this.ops = this.splats.map((splat) => {
-                const entity = splat.entity;
+                const pivot = splat.pivot;
 
                 return {
                     splat,
                     old: {
-                        position: entity.getLocalPosition().clone(),
-                        rotation: entity.getLocalRotation().clone(),
-                        scale: entity.getLocalScale().clone()
+                        position: pivot.getLocalPosition().clone(),
+                        rotation: pivot.getLocalRotation().clone(),
+                        scale: pivot.getLocalScale().clone()
                     },
                     new: {
-                        position: entity.getLocalPosition().clone(),
-                        rotation: entity.getLocalRotation().clone(),
-                        scale: entity.getLocalScale().clone()
+                        position: pivot.getLocalPosition().clone(),
+                        rotation: pivot.getLocalRotation().clone(),
+                        scale: pivot.getLocalScale().clone()
                     }
                 }
             });
@@ -65,7 +65,7 @@ class TransformTool {
         this.gizmo.on('transform:end', () => {
             // update new transforms
             this.ops.forEach((op) => {
-                const e = op.splat.entity;
+                const e = op.splat.pivot;
                 op.new.position.copy(e.getLocalPosition());
                 op.new.rotation.copy(e.getLocalRotation());
                 op.new.scale.copy(e.getLocalScale());
@@ -73,7 +73,7 @@ class TransformTool {
 
             // filter out ops that didn't change
             this.ops = this.ops.filter((op) => {
-                const e = op.splat.entity;
+                const e = op.splat.pivot;
                 return !op.old.position.equals(e.getLocalPosition()) ||
                        !op.old.rotation.equals(e.getLocalRotation()) ||
                        !op.old.scale.equals(e.getLocalScale());
@@ -87,7 +87,7 @@ class TransformTool {
 
         events.on('scene.boundChanged', () => {
             if (this.splats) {
-                this.gizmo.attach(this.splats.map((splat) => splat.entity));
+                this.gizmo.attach(this.splats.map((splat) => splat.pivot));
             }
         });
 
@@ -119,6 +119,13 @@ class TransformTool {
             this.scene.events.on('camera.resize', updateGizmoSize);
         });
 
+        events.on('camera.focalPointPicked', (details: { splat: Splat, position: Vec3 }) => {
+            if (this.active) {
+                details.splat.setPivot(details.position);
+                this.update();
+            }
+        });
+
         updateGizmoSize();
     }
 
@@ -137,7 +144,7 @@ class TransformTool {
         }
 
         this.splats = [selection];
-        this.gizmo.attach(this.splats.map((splats) => splats.entity));
+        this.gizmo.attach(this.splats.map((splats) => splats.pivot));
 
         // @ts-ignore - temporary workaround for gizmo size bug, to be removed once https://github.com/playcanvas/engine/issues/6671 is fixed.
         this.gizmo._deviceStartSize = Math.min(this.gizmo._device.width, this.gizmo._device.height);

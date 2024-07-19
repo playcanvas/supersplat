@@ -255,7 +255,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
         const convertData = splats.map((splat) => {
             return {
                 splatData: splat.splatData,
-                modelMat: splat.root.getWorldTransform()
+                modelMat: splat.pivot.getWorldTransform()
             };
         });
 

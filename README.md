@@ -1,13 +1,12 @@
 # SuperSplat
 
-The PlayCanvas SuperSplat tool is used to edit gaussian splat PLY files.
+SuperSplat is a free and open source tool for inspecting and editing 3D Gaussian Splats. It is built on web technologies and runs in the browser so there's nothing to download and install.
 
 <img width="1392" alt="supersplat" src="https://github.com/user-attachments/assets/bb1c53a2-7c3f-490a-b1cb-1256df2d2cc1">
 
 See https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/ for more information on gaussian splats.
 
-A live version of this tool is available at:
-https://playcanvas.com/supersplat/editor
+A live version of this tool is available at: https://playcanvas.com/supersplat/editor
 
 ## Loading Scenes
 
@@ -25,11 +24,11 @@ Once a PLY file is loaded you can use the selection tools to modify splat select
 
 You can also reorient the scene using the SCENE Position/Rotation/Scale controls.
 
-## Saving results
+## Saving Results
 
 Once you're done editing the scene, click the Export -> "Ply file" button to export the edited splat scene to the local file system.
 
-## Current limitations
+## Current Limitations
 
 This editor is in beta and so currently has some limitations:
 
@@ -41,8 +40,8 @@ This editor is in beta and so currently has some limitations:
 The steps required to clone the repo and run a local development server are as follows:
 
 ```sh
-git clone https://github.com/playcanvas/super-splat.git
-cd super-splat
+git clone https://github.com/playcanvas/supersplat.git
+cd supersplat
 npm i
 npm run develop
 ```

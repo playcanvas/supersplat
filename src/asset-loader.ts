@@ -51,6 +51,7 @@ class AssetLoader {
                         decompress: true
                     }
                 );
+
                 asset.on('load', () => {
                     stopSpinner();
 
@@ -59,10 +60,15 @@ class AssetLoader {
                     if (splatData.getProp('scale_0') && splatData.getProp('scale_1') && !splatData.getProp('scale_2')) {
                         const scale2 = new Float32Array(splatData.numSplats).fill(Math.log(1e-6));
                         splatData.addProp('scale_2', scale2);
+
+                        // place the new scale_2 property just after scale_1
+                        const props = splatData.getElement('vertex').properties;
+                        props.splice(props.findIndex((prop: any) => prop.name === 'scale_1') + 1, 0, props.splice(props.length - 1, 1)[0]);
                     }
 
                     resolve(new Splat(asset));
                 });
+
                 asset.on('error', (err: string) => {
                     stopSpinner();
                     reject(err);

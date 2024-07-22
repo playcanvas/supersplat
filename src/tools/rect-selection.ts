@@ -62,6 +62,12 @@ class RectSelection {
             }
         };
 
+        const dragEnd = () => {
+            parent.releasePointerCapture(dragId);
+            dragId = undefined;
+            svg.style.display = 'none';
+        };
+
         const pointerup = (e: PointerEvent) => {
             if (e.pointerId === dragId) {
                 e.preventDefault();
@@ -70,10 +76,7 @@ class RectSelection {
                 const w = parent.clientWidth;
                 const h = parent.clientHeight;
 
-                parent.releasePointerCapture(dragId);
-                dragId = undefined;
-
-                svg.style.display = 'none';
+                dragEnd();
 
                 events.fire('select.rect', e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'), {
                     start: { x: Math.min(start.x, end.x) / w, y: Math.min(start.y, end.y) / h },
@@ -90,6 +93,9 @@ class RectSelection {
         };
 
         this.deactivate = () => {
+            if (dragId !== undefined) {
+                dragEnd();
+            }
             parent.style.display = 'none';
             parent.removeEventListener('pointerdown', pointerdown);
             parent.removeEventListener('pointermove', pointermove);

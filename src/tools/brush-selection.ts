@@ -87,15 +87,18 @@ class BrushSelection {
             update(e);
         };
 
+        const dragEnd = () => {
+            parent.releasePointerCapture(dragId);
+            dragId = undefined;
+            selectCanvas.style.display = 'none';
+        };
+
         const pointerup = (e: PointerEvent) => {
             if (e.pointerId === dragId) {
                 e.preventDefault();
                 e.stopPropagation();
 
-                parent.releasePointerCapture(dragId);
-                dragId = undefined;
-
-                selectCanvas.style.display = 'none';
+                dragEnd();
 
                 events.fire(
                     'select.byMask',
@@ -114,6 +117,10 @@ class BrushSelection {
         };
 
         this.deactivate = () => {
+            // cancel active operation
+            if (dragId !== undefined) {
+                dragEnd();
+            }
             svg.style.display = 'none';
             parent.style.display = 'none';
             parent.removeEventListener('pointerdown', pointerdown);

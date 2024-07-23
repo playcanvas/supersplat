@@ -1,5 +1,6 @@
 import { BooleanInput, Button, Container, Element as PcuiElement, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, TreeViewItem, VectorInput } from 'pcui';
 import { Events } from '../events';
+import { TransformPanel } from './transform-panel';
 import { Element, ElementType } from '../element';
 import { Splat } from '../splat';
 import { version as appVersion } from '../../package.json';
@@ -236,6 +237,8 @@ class ControlPanel extends Panel {
                 splat.destroy();
             }
         });
+
+        const transformPanel = new TransformPanel(events);
 
         // camera panel
         const cameraPanel = new Panel({
@@ -578,6 +581,7 @@ class ControlPanel extends Panel {
             id: 'control-panel-controls'
         });
 
+        controlsContainer.append(transformPanel);
         controlsContainer.append(cameraPanel)
         controlsContainer.append(selectionPanel);
         controlsContainer.append(showPanel);

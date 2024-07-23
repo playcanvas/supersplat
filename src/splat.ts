@@ -374,6 +374,8 @@ class Splat extends Element {
 
         this.worldBoundDirty = true;
         this.scene.boundDirty = true;
+
+        this.scene.events.fire('splat.moved', this);
     }
 
     // get local space bound

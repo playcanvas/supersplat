@@ -1,5 +1,5 @@
 import { Container, Label, NumericInput, Panel, PanelArgs, VectorInput } from 'pcui';
-import { Vec3 } from 'playcanvas';
+import { Quat, Vec3 } from 'playcanvas';
 import { Events } from '../events';
 import { Splat } from '../splat';
 
@@ -122,10 +122,14 @@ class TransformPanel extends Panel {
             return new Vec3(a[0], a[1], a[2]);
         };
 
+        let uiUpdating = false;
+
         const updateUI = () => {
+            uiUpdating = true;
             positionVector.value = toArray(selection.pivot.getLocalPosition());
             rotationVector.value = toArray(selection.pivot.getLocalEulerAngles());
             scaleInput.value = selection.pivot.getLocalScale().x;
+            uiUpdating = false;
         };
 
         events.on('selection.changed', (splat) => {
@@ -148,15 +152,22 @@ class TransformPanel extends Panel {
         });
 
         positionVector.on('change', () => {
-            selection.pivot.setLocalPosition(toVec3(positionVector.value));
+            if (!uiUpdating) {
+                selection.move(toVec3(positionVector.value), null, null);
+            }
         });
 
         rotationVector.on('change', () => {
-            selection.pivot.setLocalEulerAngles(toVec3(rotationVector.value));
+            if (!uiUpdating) {
+                const v = rotationVector.value;
+                selection.move(null, new Quat().setFromEulerAngles(v[0], v[1], v[2]), null);
+            }
         });
 
         scaleInput.on('change', () => {
-            selection.pivot.setLocalScale(scaleInput.value, scaleInput.value, scaleInput.value);
+            if (!uiUpdating) {
+                selection.move(null, null, toVec3([scaleInput.value, scaleInput.value, scaleInput.value]));
+            }
         });
     }
 }

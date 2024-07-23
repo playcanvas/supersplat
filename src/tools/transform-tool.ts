@@ -100,6 +100,10 @@ class TransformTool {
             this.update();
         });
 
+        events.on('splat.moved', (splat: Splat) => {
+            this.update();
+        });
+
         const updateGizmoSize = () => {
             const canvas = document.getElementById('canvas');
             if (canvas) {

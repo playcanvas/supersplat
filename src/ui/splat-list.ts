@@ -1,4 +1,4 @@
-import { Container, Label, Element as PcuiElement } from 'pcui';
+import { Container, Label, Element } from 'pcui';
 
 class SplatItem extends Container {
     getSelected: () => boolean;
@@ -20,11 +20,11 @@ class SplatItem extends Container {
             text: name
         });
 
-        const visible = new PcuiElement({
+        const visible = new Element({
             class: ['scene-panel-splat-item-visible', 'checked']
         });
 
-        const remove = new PcuiElement({
+        const remove = new Element({
             class: 'scene-panel-splat-item-delete'
         });
 
@@ -102,7 +102,7 @@ class SplatItem extends Container {
 }
 
 class SplatList extends Container {
-    protected _onAppendChild(element: PcuiElement): void {
+    protected _onAppendChild(element: Element): void {
         super._onAppendChild(element);
 
         if (element instanceof SplatItem) {
@@ -116,7 +116,7 @@ class SplatList extends Container {
         }
     }
 
-    protected _onRemoveChild(element: PcuiElement): void {
+    protected _onRemoveChild(element: Element): void {
         if (element instanceof SplatItem) {
             element.unbind('click');
             element.unbind('removeClicked');

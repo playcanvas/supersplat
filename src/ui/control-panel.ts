@@ -1,134 +1,10 @@
-import { BooleanInput, Button, Container, Element as PcuiElement, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, TreeViewItem, VectorInput } from 'pcui';
+import { BooleanInput, Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, VectorInput } from 'pcui';
 import { Events } from '../events';
+import { SplatItem, SplatList } from './splat-list';
+import { TransformPanel } from './transform-panel';
 import { Element, ElementType } from '../element';
 import { Splat } from '../splat';
 import { version as appVersion } from '../../package.json';
-
-class SplatItem extends Container {
-    getSelected: () => boolean;
-    setSelected: (value: boolean) => void;
-    getVisible: () => boolean;
-    setVisible: (value: boolean) => void;
-    destroy: () => void;
-
-    constructor(name: string, args = {}) {
-        args = {
-            ...args,
-            class: 'scene-panel-splat-item'
-        };
-
-        super(args);
-
-        const text = new Label({
-            class: 'scene-panel-splat-item-text',
-            text: name
-        });
-
-        const visible = new PcuiElement({
-            class: ['scene-panel-splat-item-visible', 'checked']
-        });
-
-        const remove = new PcuiElement({
-            class: 'scene-panel-splat-item-delete'
-        });
-
-        this.append(text);
-        this.append(visible);
-        this.append(remove);
-
-        this.getSelected = () => {
-            return this.class.contains('selected');
-        };
-
-        this.setSelected = (value: boolean) => {
-            if (value !== this.selected) {
-                if (value) {
-                    this.class.add('selected');
-                    this.emit('select', this);
-                } else {
-                    this.class.remove('selected');
-                    this.emit('unselect', this);
-                }
-            }
-        };
-
-        this.getVisible = () => {
-            return visible.class.contains('checked');
-        };
-
-        this.setVisible = (value: boolean) => {
-            if (value !== this.visible) {
-                if (value) {
-                    visible.class.add('checked');
-                    this.emit('visible', this);
-                } else {
-                    visible.class.remove('checked');
-                    this.emit('invisible', this);
-                }
-            }
-        };
-
-        const toggleVisible = (event: MouseEvent) => {
-            event.stopPropagation();
-            this.visible = !this.visible;
-        };
-
-        const handleRemove = (event: MouseEvent) => {
-            event.stopPropagation();
-            this.emit('removeClicked', this);
-        };
-
-        // handle clicks
-        visible.dom.addEventListener('click', toggleVisible, true);
-        remove.dom.addEventListener('click', handleRemove, true);
-
-        this.destroy = () => {
-            visible.dom.removeEventListener('click', toggleVisible, true);
-            remove.dom.removeEventListener('click', handleRemove, true);
-        }
-    }
-
-    get selected() {
-        return this.getSelected();
-    }
-
-    set selected(value) {
-        this.setSelected(value);
-    }
-
-    get visible() {
-        return this.getVisible();
-    }
-
-    set visible(value) {
-        this.setVisible(value);
-    }
-}
-
-class SplatList extends Container {
-    protected _onAppendChild(element: PcuiElement): void {
-        super._onAppendChild(element);
-
-        if (element instanceof SplatItem) {
-            element.on('click', () => {
-                this.emit('click', element);
-            });
-
-            element.on('removeClicked', () => {
-                this.emit('removeClicked', element);
-            });
-        }
-    }
-
-    protected _onRemoveChild(element: PcuiElement): void {
-        if (element instanceof SplatItem) {
-            element.unbind('click');
-            element.unbind('removeClicked');
-        }
-
-        super._onRemoveChild(element);
-    }
-}
 
 class ControlPanel extends Panel {
     constructor(events: Events, remoteStorageMode: boolean, args = { }) {
@@ -176,7 +52,14 @@ class ControlPanel extends Panel {
                 splatList.append(item);
                 items.set(splat, item);
 
-                item.on('visible', () => splat.visible = true);
+                item.on('visible', () => {
+                    splat.visible = true;
+
+                    // also select it if there is no other selection
+                    if (!events.invoke('selection')) {
+                        events.fire('selection', splat);
+                    }
+                });
                 item.on('invisible', () => splat.visible = false);
             }
         });
@@ -236,6 +119,8 @@ class ControlPanel extends Panel {
                 splat.destroy();
             }
         });
+
+        const transformPanel = new TransformPanel(events);
 
         // camera panel
         const cameraPanel = new Panel({
@@ -578,6 +463,7 @@ class ControlPanel extends Panel {
             id: 'control-panel-controls'
         });
 
+        controlsContainer.append(transformPanel);
         controlsContainer.append(cameraPanel)
         controlsContainer.append(selectionPanel);
         controlsContainer.append(showPanel);

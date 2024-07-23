@@ -9,8 +9,8 @@ const worldDiff = new Vec3();
 const dist = (x0: number, y0: number, x1: number, y1: number) => Math.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2);
 
 class PointerController {
-    destroy: () => void;
     update: (deltaTime: number) => void;
+    destroy: () => void;
 
     constructor(camera: Camera, target: HTMLElement) {
 
@@ -154,7 +154,7 @@ class PointerController {
         };
 
         const keydown = (event: KeyboardEvent) => {
-            if (keys.hasOwnProperty(event.key)) {
+            if (keys.hasOwnProperty(event.key) && event.target === document.body) {
                 keys[event.key] = event.shiftKey ? 10 : (event.ctrlKey || event.metaKey || event.altKey ? 0.1 : 1);
                 event.preventDefault();
                 event.stopPropagation();

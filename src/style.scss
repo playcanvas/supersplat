@@ -142,6 +142,7 @@ body {
     margin-right: 10px;
     color: $text-secondary;
 
+    #transform-panel & { content: '\E111'; };
     #camera-panel & { content: '\E212'; };
     #show-panel & { content: '\E117'; };
     #selection-panel & { content: '\E398'; };
@@ -328,6 +329,15 @@ body {
     flex-direction: column;
 }
 
+#transform-panel > .pcui-panel-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.transform-panel-axis-label {
+    text-align: center;
+}
+
 #camera-panel > .pcui-panel-content {
     display: flex;
     flex-direction: column;
@@ -353,8 +363,8 @@ body {
     width: 100px;
     flex-shrink: 0;
     flex-grow: 0;
-    line-height: 24px;
-    margin: 2px 6px 2px 6px;
+    line-height: 32px;
+    margin: 0px 6px 0px 6px;
 }
 
 .control-element {

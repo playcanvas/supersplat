@@ -374,6 +374,8 @@ class Splat extends Element {
 
         this.worldBoundDirty = true;
         this.scene.boundDirty = true;
+
+        this.scene.events.fire('splat.moved', this);
     }
 
     // get local space bound
@@ -387,10 +389,11 @@ class Splat extends Element {
                 localBound.halfExtents.set(0.5, 0.5, 0.5);
             }
 
+            this.localBoundDirty = false;
+
+            // align the pivot point to the splat center
             this.entity.getWorldTransform().transformPoint(localBound.center, vec);
             this.setPivot(vec);
-
-            this.localBoundDirty = false;
         }
 
         return this.localBoundStorage;
@@ -416,6 +419,8 @@ class Splat extends Element {
         mat.transformPoint(position, veca);
         this.entity.setLocalPosition(-veca.x, -veca.y, -veca.z);
         this.pivot.setLocalPosition(position);
+
+        this.scene.events.fire('splat.moved', this);
     }
 
     get visible() {

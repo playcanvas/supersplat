@@ -363,6 +363,7 @@ class Camera extends Element {
     }
 
     onPostRender() {
+        const device = this.scene.graphicsDevice as WebglGraphicsDevice;
         const renderTarget = this.entity.camera.renderTarget;
 
         // resolve msaa buffer
@@ -371,7 +372,11 @@ class Camera extends Element {
         }
 
         // copy render target
-        drawTexture(this.scene.graphicsDevice, renderTarget.colorBuffer, null);
+        drawTexture(device, renderTarget.colorBuffer, null);
+
+        // FIXME: use this instead to perform the copy once
+        // https://github.com/playcanvas/engine/pull/6849 is available
+        // device.copyRenderTarget(renderTarget, null, true, false);
     }
 
     focus(options?: { sceneRadius?: number, distance?: number, focalPoint?: Vec3}) {

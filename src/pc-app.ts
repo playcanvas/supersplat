@@ -66,7 +66,7 @@ class PCApp extends AppBase {
 
         const appOptions = new AppOptions();
 
-        appOptions.graphicsDevice = this.createDevice(canvas, options);
+        appOptions.graphicsDevice = options.graphicsDevice;
         this.addComponentSystems(appOptions);
         this.addResourceHandles(appOptions);
 
@@ -88,18 +88,6 @@ class PCApp extends AppBase {
         // appOptions.xr = XrManager;
 
         this.init(appOptions);
-    }
-
-    createDevice(canvas: HTMLCanvasElement, options: any) {
-        if (!options.graphicsDeviceOptions) {
-            options.graphicsDeviceOptions = {};
-        }
-        // if (platform.browser && !!(navigator as any).xr) {
-        //     options.graphicsDeviceOptions.xrCompatible = true;
-        // }
-        options.graphicsDeviceOptions.alpha = options.graphicsDeviceOptions.alpha || false;
-
-        return new WebglGraphicsDevice(canvas, options.graphicsDeviceOptions);
     }
 
     addComponentSystems(appOptions: AppOptions) {

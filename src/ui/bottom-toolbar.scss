@@ -1,13 +1,7 @@
-$icon-disabled: #7c7678;
-$icon-inactive: #b3aaac;
-$icon-active: white;
-$icon-bg-light: #333;
-$icon-bg-active: #f60;
-
 #bottom-toolbar {
     position: absolute;
     left: 50%;
-    bottom: 50px;
+    bottom: 24px;
     height: 54px;
     transform: translate(-50%, 0);
     padding: 0px 8px;
@@ -25,23 +19,23 @@ $icon-bg-active: #f60;
 .bottom-toolbar-button, .bottom-toolbar-tool {
     width: 38px;
     height: 38px;
-    border-radius: 2px;
     margin: 0px 1px;
     padding: 0px;
     border: 0px;
+    border-radius: 2px;
 }
 
 .bottom-toolbar-separator {
     width: 1px;
     height: 38px;
-    background-color: $icon-bg-light;
+    background-color: $bgclr-light;
     margin: 0px 8px;
 }
 
 .bottom-toolbar-button {
     svg {
         path {
-            fill: $icon-inactive;
+            fill: $clr-default;
         }
     }
 }
@@ -49,17 +43,17 @@ $icon-bg-active: #f60;
 .bottom-toolbar-tool {
     svg {
         path {
-            fill: $icon-inactive;
+            fill: $clr-default;
         }
     }
-    background-color: $icon-bg-light;
+    background-color: $bgclr-light;
 }
 
 .bottom-toolbar-tool.active {
     svg {
         path {
-            fill: $icon-active;
-            stroke: $icon-active;
+            fill: $clr-active;
+            stroke: $clr-active;
         }
     }
 }
@@ -67,7 +61,7 @@ $icon-bg-active: #f60;
 .bottom-toolbar-tool.disabled {
     svg {
         path {
-            fill: $icon-disabled;
+            fill: $clr-disabled;
         }
     }
     background-color: $bcg-dark;

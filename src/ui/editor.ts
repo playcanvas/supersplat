@@ -6,9 +6,11 @@ import { Toolbar } from './toolbar';
 import { Events } from '../events';
 import { Popup } from './popup';
 import { ViewCube } from './view-cube';
+import { Menu } from './menu';
 import { BottomToolbar } from './bottom-toolbar';
 import { RightToolbar } from './right-toolbar';
 import { Tooltips } from './tooltips';
+import { ShortcutsPopup } from './shortcuts-popup';
 
 import logo from './playcanvas-logo.png';
 
@@ -85,12 +87,14 @@ class EditorUI {
         tooltipsContainer.append(tooltips);
 
         // bottom toolbar
+        const menu = new Menu(events);
         const bottomToolbar = new BottomToolbar(events, tooltips);
         const rightToolbar = new RightToolbar(events, tooltips);
 
         canvasContainer.dom.appendChild(canvas);
         canvasContainer.append(filenameLabel);
         canvasContainer.append(toolsContainer);
+        canvasContainer.append(menu);
         canvasContainer.append(bottomToolbar);
         canvasContainer.append(rightToolbar);
 
@@ -121,9 +125,13 @@ class EditorUI {
         // message popup
         this.popup = new Popup(topContainer);
 
+        // shortcuts popup
+        const shortcutsPopup = new ShortcutsPopup();
+
         appContainer.append(editorContainer);
         appContainer.append(tooltipsContainer);
         appContainer.append(topContainer);
+        appContainer.append(shortcutsPopup);
 
         this.appContainer = appContainer;
         this.topContainer = topContainer;
@@ -135,6 +143,10 @@ class EditorUI {
 
         document.body.appendChild(appContainer.dom);
         document.body.setAttribute('tabIndex', '-1');
+
+        events.on('show.shortcuts', () => {
+            shortcutsPopup.hidden = false;
+        });
 
         events.function('showPopup', (options: { type: 'error' | 'info' | 'yesno' | 'okcancel', message: string, value: string}) => {
             return this.popup.show(options.type, options.message, options.value);

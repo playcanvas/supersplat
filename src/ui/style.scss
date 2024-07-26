@@ -1,4 +1,12 @@
 @import '../../node_modules/@playcanvas/pcui/dist/pcui-theme-grey.scss';
+
+$clr-default: #b3aaac;
+$clr-disabled: #7c7678;
+$clr-active: white;
+$bgclr-light: #333;
+$bgclr-active: #f60;
+
+@import 'menu.scss';
 @import 'bottom-toolbar.scss';
 @import 'right-toolbar.scss';
 @import 'tooltips.scss';

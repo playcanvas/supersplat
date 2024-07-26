@@ -20,10 +20,10 @@
 .right-toolbar-button {
     width: 38px;
     height: 38px;
-    border-radius: 2px;
     margin: 0px 1px;
     padding: 0px;
     border: 0px;
+    border-radius: 2px;
 
     &::before {
         font-size: 18px !important;
@@ -32,17 +32,17 @@
 
     svg {
         path {
-            fill: $icon-inactive;
+            fill: $clr-default;
         }
     }
-    background-color: $icon-bg-light;
+    background-color: $bgclr-light;
 }
 
 .right-toolbar-button.active {
     svg {
         path {
-            fill: $icon-active;
-            stroke: $icon-active;
+            fill: $clr-active;
+            stroke: $clr-active;
         }
     }
 }
@@ -50,7 +50,7 @@
 .right-toolbar-button.disabled {
     svg {
         path {
-            fill: $icon-disabled;
+            fill: $clr-disabled;
         }
     }
     background-color: $bcg-dark;

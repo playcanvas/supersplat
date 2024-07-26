@@ -1,0 +1,66 @@
+#menu {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    height: 54px;
+    padding: 0px 8px 0px 0px;
+    border-radius: 8px;
+    border: 1px solid $bcg-dark;
+
+    overflow: hidden;
+
+    background-color: $bcg-dark;
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+
+    pointer-events: all;
+}
+
+#menu-icon {
+    width: 54px;
+}
+
+.menu-button {
+    height: 38px;
+    margin: 0px 1px;
+    padding: 0px 20px;
+    border: 0px;
+    border-radius: 2px;
+}
+
+#menu-dropdown > div > div {
+    // WARNING: first and last child will hide any submenus
+    &:first-child {
+        border-radius: 10px 10px 0px 0px;
+        overflow: hidden;
+    }
+
+    &:last-child {
+        border-radius: 0px 0px 10px 10px;
+        overflow: hidden;
+    }
+}
+
+#menu-dropdown > div > div > div {
+    margin: 1px 0px 0px 0px;
+
+    background-color: $bcg-dark;
+    color: $clr-default;
+
+    &:hover {
+        background-color: $bcg-darker;
+        color: $clr-active;
+    }
+}
+
+#menu-dropdown > div > div > div > span {
+    height: 28px;
+    line-height: 28px;
+
+    &::before {
+        margin: 0px 10px;
+        font-size: 14px;
+    }
+}

@@ -174,17 +174,12 @@ class Toolbar extends Container {
         // toolbarToolsContainer.append(brushTool);
 
         // keyboard shortcuts
-        const shortcutsPopup = new ShortcutsPopup();
-
-        appContainer.append(shortcutsPopup);
-
-        // keyboard shortcuts
         const shortcuts = new Button({
             class: 'toolbar-button',
             icon: 'E136'
         });
         shortcuts.on('click', () => {
-            shortcutsPopup.hidden = false;
+            events.fire('show.shortcuts');
         });
 
         // github

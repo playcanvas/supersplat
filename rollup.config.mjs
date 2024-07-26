@@ -63,7 +63,7 @@ const application = {
         }),
         alias({entries: aliasEntries}),
         resolve(),
-        image({dom: true}),
+        image({dom: false}),
         sass({
             output: false,
             insert: true

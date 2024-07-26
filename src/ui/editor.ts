@@ -1,11 +1,13 @@
 import { Container, Label } from 'pcui';
+import { Mat4 } from 'playcanvas';
 import { ControlPanel } from './control-panel';
 import { DataPanel } from './data-panel';
 import { Toolbar } from './toolbar';
 import { Events } from '../events';
 import { Popup } from './popup';
 import { ViewCube } from './view-cube';
-import { Mat4 } from 'playcanvas';
+import { BottomToolbar } from './bottom-toolbar';
+
 import logo from './playcanvas-logo.png';
 
 class EditorUI {
@@ -22,7 +24,7 @@ class EditorUI {
         // favicon
         const link = document.createElement('link');
         link.rel = 'icon';
-        link.href = logo.src;
+        link.href = logo;
         document.head.appendChild(link);
 
         // app
@@ -76,9 +78,12 @@ class EditorUI {
             id: 'tools-container'
         });
 
+        const bottomToolbar = new BottomToolbar(events);
+
         canvasContainer.dom.appendChild(canvas);
         canvasContainer.append(filenameLabel);
         canvasContainer.append(toolsContainer);
+        canvasContainer.append(bottomToolbar);
 
         // view axes container
         const viewCube = new ViewCube(events);

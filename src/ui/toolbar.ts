@@ -22,7 +22,7 @@ class Toolbar extends Container {
         const appLogo = document.createElement('img');
         appLogo.classList.add('toolbar-button');
         appLogo.id = 'app-logo';
-        appLogo.src = logo.src;
+        appLogo.src = logo;
 
         // file
         const fileButton = new Button({

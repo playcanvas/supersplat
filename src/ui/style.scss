@@ -1,5 +1,7 @@
-@import '../node_modules/@playcanvas/pcui/dist/pcui-theme-grey.scss';
-@import 'ui/bottom-toolbar.scss';
+@import '../../node_modules/@playcanvas/pcui/dist/pcui-theme-grey.scss';
+@import 'bottom-toolbar.scss';
+@import 'right-toolbar.scss';
+@import 'tooltips.scss';
 
 * {
     font-size: 12px;

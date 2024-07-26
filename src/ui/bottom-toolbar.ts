@@ -1,5 +1,6 @@
 import { Button, Element, Container } from 'pcui';
 import { Events } from '../events';
+import { Tooltips } from './tooltips';
 
 import undoSvg from '../svg/undo.svg';
 import redoSvg from '../svg/redo.svg';
@@ -11,7 +12,7 @@ import frameSelectionSvg from '../svg/frame-selection.svg';
 import showHideSelectionSvg from '../svg/show-hide-selection.svg';
 
 class BottomToolbar extends Container {
-    constructor(events: Events, args = {}) {
+    constructor(events: Events, tooltips: Tooltips, args = {}) {
         args = {
             ...args,
             id: 'bottom-toolbar'
@@ -129,6 +130,16 @@ class BottomToolbar extends Container {
             picker.class[toolName === 'rectSelection' ? 'add' : 'remove']('active');
             brush.class[toolName === 'brushSelection' ? 'add' : 'remove']('active');
         });
+
+        // register tooltips
+        tooltips.register(undo, 'Undo');
+        tooltips.register(redo, 'Redo');
+        tooltips.register(picker, 'Select Picker');
+        tooltips.register(brush, 'Select Brush');
+        tooltips.register(lasso, 'Select Lasso');
+        tooltips.register(crop, 'Crop');
+        tooltips.register(frame, 'Frame Selection');
+        tooltips.register(showHide, 'Show/Hide Selection');
     }
 }
 

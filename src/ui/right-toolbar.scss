@@ -1,0 +1,57 @@
+
+#right-toolbar {
+    position: absolute;
+    right: 70px;
+    top: 50%;
+    width: 54px;
+    transform: translate(50%, -50%);
+    padding: 8px 0px;
+    border-radius: 8px;
+
+    background-color: $bcg-dark;
+ 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    pointer-events: all;
+}
+
+.right-toolbar-button {
+    width: 38px;
+    height: 38px;
+    border-radius: 2px;
+    margin: 0px 1px;
+    padding: 0px;
+    border: 0px;
+
+    &::before {
+        font-size: 18px !important;
+        line-height: 100%;
+    }
+
+    svg {
+        path {
+            fill: $icon-inactive;
+        }
+    }
+    background-color: $icon-bg-light;
+}
+
+.right-toolbar-button.active {
+    svg {
+        path {
+            fill: $icon-active;
+            stroke: $icon-active;
+        }
+    }
+}
+
+.right-toolbar-button.disabled {
+    svg {
+        path {
+            fill: $icon-disabled;
+        }
+    }
+    background-color: $bcg-dark;
+}

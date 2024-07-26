@@ -7,13 +7,13 @@ $icon-bg-active: #f60;
 #bottom-toolbar {
     position: absolute;
     left: 50%;
-    translate: -50%;
     bottom: 50px;
     height: 54px;
-    padding-left: 8px;
-    padding-right: 8px;
-    background-color: $bcg-dark;
+    transform: translate(-50%, 0);
+    padding: 0px 8px;
     border-radius: 8px;
+
+    background-color: $bcg-dark;
 
     display: flex;
     flex-direction: row;

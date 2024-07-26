@@ -7,6 +7,8 @@ import { Events } from '../events';
 import { Popup } from './popup';
 import { ViewCube } from './view-cube';
 import { BottomToolbar } from './bottom-toolbar';
+import { RightToolbar } from './right-toolbar';
+import { Tooltips } from './tooltips';
 
 import logo from './playcanvas-logo.png';
 
@@ -78,12 +80,19 @@ class EditorUI {
             id: 'tools-container'
         });
 
-        const bottomToolbar = new BottomToolbar(events);
+        // tooltips
+        const tooltips = new Tooltips();
+        tooltipsContainer.append(tooltips);
+
+        // bottom toolbar
+        const bottomToolbar = new BottomToolbar(events, tooltips);
+        const rightToolbar = new RightToolbar(events, tooltips);
 
         canvasContainer.dom.appendChild(canvas);
         canvasContainer.append(filenameLabel);
         canvasContainer.append(toolsContainer);
         canvasContainer.append(bottomToolbar);
+        canvasContainer.append(rightToolbar);
 
         // view axes container
         const viewCube = new ViewCube(events);

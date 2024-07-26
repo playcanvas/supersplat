@@ -7,6 +7,7 @@ import { Events } from '../events';
 import { Popup } from './popup';
 import { ViewCube } from './view-cube';
 import { Menu } from './menu';
+import { ScenePanel } from './scene-panel';
 import { BottomToolbar } from './bottom-toolbar';
 import { RightToolbar } from './right-toolbar';
 import { Tooltips } from './tooltips';
@@ -88,6 +89,7 @@ class EditorUI {
 
         // bottom toolbar
         const menu = new Menu(events);
+        const scenePanel = new ScenePanel(events);
         const bottomToolbar = new BottomToolbar(events, tooltips);
         const rightToolbar = new RightToolbar(events, tooltips);
 
@@ -95,6 +97,7 @@ class EditorUI {
         canvasContainer.append(filenameLabel);
         canvasContainer.append(toolsContainer);
         canvasContainer.append(menu);
+        canvasContainer.append(scenePanel);
         canvasContainer.append(bottomToolbar);
         canvasContainer.append(rightToolbar);
 

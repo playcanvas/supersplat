@@ -1,0 +1,12 @@
+#scene-panel {
+    position: absolute;
+    top: 102px;
+    left: 24px;
+    width: 320px;
+    border-radius: 8px;
+    border: 1px solid $bcg-dark;
+}
+
+.scene-panel-header {
+    background-color: $bcg-dark;
+}

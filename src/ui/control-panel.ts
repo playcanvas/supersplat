@@ -1,9 +1,7 @@
 import { BooleanInput, Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, VectorInput } from 'pcui';
 import { Events } from '../events';
-import { SplatItem, SplatList } from './splat-list';
+import { SplatList } from './splat-list';
 import { Transform } from './transform';
-import { Element, ElementType } from '../element';
-import { Splat } from '../splat';
 import { version as appVersion } from '../../package.json';
 
 class ControlPanel extends Panel {
@@ -23,102 +21,21 @@ class ControlPanel extends Panel {
 
         // scene panel
         const scenePanel = new Panel({
-            id: 'scene-panel',
+            id: 'control-panel-scene-panel',
             class: 'control-panel',
             headerText: 'SCENE'
         });
 
         const splatListContainer = new Container({
-            id: 'scene-panel-splat-list-container',
+            id: 'control-panel-scene-panel-splat-list-container',
             resizable: 'bottom',
             resizeMin: 50
         });
 
-        const splatList = new SplatList({
-            id: 'scene-panel-splat-list'
-        });
+        const splatList = new SplatList(events);
 
         splatListContainer.append(splatList);
         scenePanel.content.append(splatListContainer);
-
-        // handle selection and scene updates
-
-        const items = new Map<Splat, SplatItem>();
-
-        events.on('scene.elementAdded', (element: Element) => {
-            if (element.type === ElementType.splat) {
-                const splat = element as Splat;
-                const item = new SplatItem(splat.filename);
-                splatList.append(item);
-                items.set(splat, item);
-
-                item.on('visible', () => {
-                    splat.visible = true;
-
-                    // also select it if there is no other selection
-                    if (!events.invoke('selection')) {
-                        events.fire('selection', splat);
-                    }
-                });
-                item.on('invisible', () => splat.visible = false);
-            }
-        });
-
-        events.on('scene.elementRemoved', (element: Element) => {
-            if (element.type === ElementType.splat) {
-                const splat = element as Splat;
-                const item = items.get(splat);
-                if (item) {
-                    splatList.remove(item);
-                    items.delete(splat);
-                }
-            }
-        });
-
-        events.on('selection.changed', (selection: Splat) => {
-            items.forEach((value, key) => {
-                value.selected = key === selection;
-            });
-        });
-
-        events.on('splat.vis', (splat: Splat) => {
-            const item = items.get(splat);
-            if (item) {
-                item.visible = splat.visible;
-            }
-        });
-
-        splatList.on('click', (item: SplatItem) => {
-            for (const [key, value] of items) {
-                if (item === value) {
-                    events.fire('selection', key);
-                    break;
-                }
-            }            
-        });
-
-        splatList.on('removeClicked', async (item: SplatItem) => {
-            let splat;
-            for (const [key, value] of items) {
-                if (item === value) {
-                    splat = key;
-                    break;
-                }
-            }  
-
-            if (!splat) {
-                return;
-            }
-
-            const result = await events.invoke('showPopup', {
-                type: 'yesno',
-                message: `Would you like to remove '${splat.filename}' from the scene?`
-            });
-
-            if (result?.action === 'yes') {
-                splat.destroy();
-            }
-        });
 
         const transformPanel = new Panel({
             id: 'transform-panel',
@@ -469,6 +386,7 @@ class ControlPanel extends Panel {
             id: 'control-panel-controls'
         });
 
+        controlsContainer.append(scenePanel);
         controlsContainer.append(transformPanel);
         controlsContainer.append(cameraPanel)
         controlsContainer.append(selectionPanel);
@@ -477,7 +395,6 @@ class ControlPanel extends Panel {
         controlsContainer.append(optionsPanel);
 
         // append
-        this.content.append(scenePanel);
         this.content.append(controlsContainer);
 
         rectSelectButton.on('click', () => {

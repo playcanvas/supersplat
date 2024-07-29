@@ -1,0 +1,86 @@
+.splat-list {
+    min-height: 80px;
+    padding: 1px 0px;
+}
+
+.splat-item {
+    display: flex;
+    flex-direction: row;
+    padding: 2px;
+
+    &:hover:not(.selected).visible {
+        cursor: pointer;
+    }
+
+    &.selected {
+        background-color: $bcg-darker;
+    }
+}
+
+.splat-item-text {
+    flex-grow: 1;
+    flex-shrink: 1;
+
+    .visible & {
+        &:hover:not(.selected) {
+            color: $text-primary;
+        }
+    }
+
+    .selected & {
+        color: $text-primary;
+    }
+}
+
+.splat-item-visible {
+    flex-grow: 0;
+    flex-shrink: 0;
+
+    padding: 4px;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+
+    color: black;
+    background-color: transparent;
+
+    cursor: pointer;
+
+    .visible & {
+        color: $text-secondary;
+    }
+
+    &:hover {
+        background-color: $bcg-dark;
+    }
+
+    &::after {
+        font-family: pc-icon;
+        font-size: 16px;
+        content: '\E117';
+    }
+}
+
+.splat-item-delete {
+    flex-grow: 0;
+    flex-shrink: 0;
+
+    padding: 4px;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+
+    color: $text-secondary;
+
+    cursor: pointer;
+
+    &:hover {
+        background-color: $bcg-dark;
+    }
+
+    &::after {
+        font-family: pc-icon;
+        font-size: 14px;
+        content: '\E124';
+    }
+}

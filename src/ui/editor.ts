@@ -89,7 +89,7 @@ class EditorUI {
 
         // bottom toolbar
         const menu = new Menu(events);
-        const scenePanel = new ScenePanel(events);
+        const scenePanel = new ScenePanel(events, tooltips);
         const bottomToolbar = new BottomToolbar(events, tooltips);
         const rightToolbar = new RightToolbar(events, tooltips);
 

@@ -1,4 +1,7 @@
-import { Container, Label, Element } from 'pcui';
+import { Container, Label, Element as PcuiElement } from 'pcui';
+import { Events } from '../events';
+import { Splat } from '../splat';
+import { Element, ElementType } from '../element';
 
 class SplatItem extends Container {
     getSelected: () => boolean;
@@ -10,22 +13,22 @@ class SplatItem extends Container {
     constructor(name: string, args = {}) {
         args = {
             ...args,
-            class: 'scene-panel-splat-item'
+            class: ['splat-item', 'visible']
         };
 
         super(args);
 
         const text = new Label({
-            class: 'scene-panel-splat-item-text',
+            class: 'splat-item-text',
             text: name
         });
 
-        const visible = new Element({
-            class: ['scene-panel-splat-item-visible', 'checked']
+        const visible = new PcuiElement({
+            class: 'splat-item-visible',
         });
 
-        const remove = new Element({
-            class: 'scene-panel-splat-item-delete'
+        const remove = new PcuiElement({
+            class: 'splat-item-delete'
         });
 
         this.append(text);
@@ -49,16 +52,16 @@ class SplatItem extends Container {
         };
 
         this.getVisible = () => {
-            return visible.class.contains('checked');
+            return this.class.contains('visible');
         };
 
         this.setVisible = (value: boolean) => {
             if (value !== this.visible) {
                 if (value) {
-                    visible.class.add('checked');
+                    this.class.add('visible');
                     this.emit('visible', this);
                 } else {
-                    visible.class.remove('checked');
+                    this.class.remove('visible');
                     this.emit('invisible', this);
                 }
             }
@@ -102,6 +105,92 @@ class SplatItem extends Container {
 }
 
 class SplatList extends Container {
+    constructor(events: Events, args = {}) {
+        args = {
+            ...args,
+            class: 'splat-list'
+        };
+
+        super(args);
+
+        const items = new Map<Splat, SplatItem>();
+
+        events.on('scene.elementAdded', (element: Element) => {
+            if (element.type === ElementType.splat) {
+                const splat = element as Splat;
+                const item = new SplatItem(splat.filename);
+                this.append(item);
+                items.set(splat, item);
+
+                item.on('visible', () => {
+                    splat.visible = true;
+
+                    // also select it if there is no other selection
+                    if (!events.invoke('selection')) {
+                        events.fire('selection', splat);
+                    }
+                });
+                item.on('invisible', () => splat.visible = false);
+            }
+        });
+
+        events.on('scene.elementRemoved', (element: Element) => {
+            if (element.type === ElementType.splat) {
+                const splat = element as Splat;
+                const item = items.get(splat);
+                if (item) {
+                    this.remove(item);
+                    items.delete(splat);
+                }
+            }
+        });
+
+        events.on('selection.changed', (selection: Splat) => {
+            items.forEach((value, key) => {
+                value.selected = key === selection;
+            });
+        });
+
+        events.on('splat.vis', (splat: Splat) => {
+            const item = items.get(splat);
+            if (item) {
+                item.visible = splat.visible;
+            }
+        });
+
+        this.on('click', (item: SplatItem) => {
+            for (const [key, value] of items) {
+                if (item === value) {
+                    events.fire('selection', key);
+                    break;
+                }
+            }            
+        });
+
+        this.on('removeClicked', async (item: SplatItem) => {
+            let splat;
+            for (const [key, value] of items) {
+                if (item === value) {
+                    splat = key;
+                    break;
+                }
+            }  
+
+            if (!splat) {
+                return;
+            }
+
+            const result = await events.invoke('showPopup', {
+                type: 'yesno',
+                message: `Would you like to remove '${splat.filename}' from the scene?`
+            });
+
+            if (result?.action === 'yes') {
+                splat.destroy();
+            }
+        });
+    }
+
     protected _onAppendChild(element: Element): void {
         super._onAppendChild(element);
 

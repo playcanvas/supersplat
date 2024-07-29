@@ -9,6 +9,7 @@ $bgclr-active: #f60;
 @import 'tooltips.scss';
 @import 'menu.scss';
 @import 'scene-panel.scss';
+@import 'splat-list.scss';
 @import 'transform.scss';
 @import 'bottom-toolbar.scss';
 @import 'right-toolbar.scss';
@@ -166,103 +167,21 @@ body {
     #keyboard-panel & { content: '\E136'};
 }
 
-#scene-panel {
+#control-panel-scene-panel {
     flex-shrink: 0;
 }
 
-#scene-panel-splat-list-container {
+#control-panel-scene-panel-splat-list-container {
     // padding: 10px;
     overflow: scroll;
 
     width: 100%;
     height: 100px;
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     flex-grow: 1;
 
     background-color: $bcg-primary;
-}
-
-#scene-panel-splat-list {
-    width: 100%;
-    height: 100%;
-    padding: 4px;
-}
-
-#scene-panel-splat-list .pcui-treeview-item-contents.pcui-treeview-item-selected {
-    background-color: royalblue;
-}
-
-.scene-panel-splat-item {
-    display: flex;
-    flex-direction: row;
-
-    border-bottom: 1px solid $bcg-darker;
-
-    &:hover:not(.selected) {
-        background-color: $bcg-darkest;
-    }
-
-    &.selected {
-        color: $text-primary;
-        background-color: royalblue;
-    }
-}
-
-.scene-panel-splat-item-text {
-    flex-grow: 1;
-    flex-shrink: 1;
-
-    .selected & {
-        color: $text-primary;
-    }
-}
-
-.scene-panel-splat-item-visible {
-    flex-grow: 0;
-    flex-shrink: 0;
-
-    // border: 1px solid black;
-    padding: 4px;
-    width: 16px;
-    height: 16px;
-    line-height: 16px;
-
-    color: black;
-    background-color: transparent;
-
-    cursor: pointer;
-
-    &.checked {
-        color: $text-active;
-    }
-
-    &::after {
-        font-family: pc-icon;
-        font-size: 18px;
-        content: '\E117';
-    }
-}
-
-.scene-panel-splat-item-delete {
-    flex-grow: 0;
-    flex-shrink: 0;
-
-    // border: 1px solid black;
-    padding: 4px;
-    width: 16px;
-    height: 16px;
-    line-height: 16px;
-
-    color: $text-secondary;
-
-    cursor: pointer;
-
-    &::after {
-        font-family: pc-icon;
-        font-size: 16px;
-        content: '\E124';
-    }
 }
 
 #file-selector {

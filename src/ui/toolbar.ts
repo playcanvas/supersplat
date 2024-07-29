@@ -1,5 +1,4 @@
 import { Button, Container, Element, Menu } from 'pcui';
-import { ShortcutsPopup } from './shortcuts-popup';
 import { Tooltip } from './tooltip';
 import { Events } from '../events';
 import logo from './playcanvas-logo.png';

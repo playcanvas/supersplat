@@ -2,7 +2,7 @@ import { Button, Container, Menu as PcuiMenu } from 'pcui';
 import { Events } from '../events';
 import { version } from '../../package.json';
 
-import logo from './playcanvas-logo.png';
+import logoSvg from '../svg/playcanvas-logo.svg';
 
 class Menu extends Container {
     constructor(events: Events, args = {}) {
@@ -24,15 +24,15 @@ class Menu extends Container {
 
         const icon = document.createElement('img');
         icon.setAttribute('id', 'menu-icon');
-        icon.src = logo;
-
-        const file = new Button({
-            text: 'File',
-            class: 'menu-button'
-        });
+        icon.src = logoSvg;
 
         const scene = new Button({
             text: 'Scene',
+            class: 'menu-button'
+        });
+
+        const selection = new Button({
+            text: 'Selection',
             class: 'menu-button'
         });
 
@@ -42,11 +42,11 @@ class Menu extends Container {
         });
 
         this.dom.appendChild(icon);
-        this.append(file);
         this.append(scene);
+        this.append(selection);
         this.append(help);
 
-        const fileMenu = new PcuiMenu({
+        const sceneMenu = new PcuiMenu({
             id: 'menu-dropdown',
             items: [{
                 class: 'menu-dropdown-item',
@@ -94,7 +94,7 @@ class Menu extends Container {
             }]
         });
 
-        const sceneMenu = new PcuiMenu({
+        const selectionMenu = new PcuiMenu({
             id: 'menu-dropdown',
             items: [{
                 class: 'menu-dropdown-item',
@@ -134,20 +134,20 @@ class Menu extends Container {
             }]
         });
 
-        this.append(fileMenu);
         this.append(sceneMenu);
+        this.append(selectionMenu);
         this.append(helpMenu);
-
-        file.on('click', () => {
-            const r = file.dom.getBoundingClientRect();
-            fileMenu.position(r.left, r.bottom + 8);
-            fileMenu.hidden = false;
-        });
 
         scene.on('click', () => {
             const r = scene.dom.getBoundingClientRect();
             sceneMenu.position(r.left, r.bottom + 8);
             sceneMenu.hidden = false;
+        });
+
+        selection.on('click', () => {
+            const r = selection.dom.getBoundingClientRect();
+            selectionMenu.position(r.left, r.bottom + 8);
+            selectionMenu.hidden = false;
         });
 
         help.on('click', () => {
@@ -157,16 +157,16 @@ class Menu extends Container {
         });
 
         window.addEventListener('click', (e: Event) => {
-            if (!fileMenu.hidden &&
-                !fileMenu.dom.contains(e.target as Node) &&
-                e.target !== file.dom) {
-                fileMenu.hidden = true;
-            }
-
             if (!sceneMenu.hidden &&
                 !sceneMenu.dom.contains(e.target as Node) &&
                 e.target !== scene.dom) {
                 sceneMenu.hidden = true;
+            }
+
+            if (!selectionMenu.hidden &&
+                !selectionMenu.dom.contains(e.target as Node) &&
+                e.target !== selection.dom) {
+                    selectionMenu.hidden = true;
             }
 
             if (!helpMenu.hidden &&

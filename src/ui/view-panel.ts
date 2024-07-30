@@ -171,12 +171,12 @@ class ViewPanel extends Container {
 
         // splat size
 
-        events.on('splatSize', (value: number) => {
+        events.on('camera.splatSize', (value: number) => {
             splatSizeSlider.value = value;
         });
 
         splatSizeSlider.on('change', (value: number) => {
-            events.fire('splatSize', value);
+            events.fire('camera.setSplatSize', value);
         });
 
         // show grid

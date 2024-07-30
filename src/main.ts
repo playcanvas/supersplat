@@ -15,7 +15,6 @@ import { RectSelection } from './tools/rect-selection';
 import { BrushSelection } from './tools/brush-selection';
 import { Shortcuts } from './shortcuts';
 import { Events } from './events';
-import { PickerSelection } from './tools/picker-selection';
 
 declare global {
     interface LaunchParams {
@@ -70,7 +69,7 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['F', 'f'], { event: 'camera.focus' });
     shortcuts.register(['B', 'b'], { event: 'tool.brushSelection', sticky: true });
     shortcuts.register(['R', 'r'], { event: 'tool.rectSelection', sticky: true });
-    shortcuts.register(['P', 'p'], { event: 'tool.pickerSelection', sticky: true });
+    shortcuts.register(['P', 'p'], { event: 'tool.rectSelection', sticky: true });
     shortcuts.register(['A', 'a'], { event: 'select.all' });
     shortcuts.register(['A', 'a'], { event: 'select.none', shift: true });
     shortcuts.register(['I', 'i'], { event: 'select.invert' });
@@ -83,18 +82,10 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['M', 'm'], { event: 'camera.toggleMode' });
     shortcuts.register(['D', 'd'], { event: 'dataPanel.toggle' });
 
-    // keep tabs on splat size changes
-    let splatSizeSave = 2;
-    events.on('splatSize', (size: number) => {
-        if (size !== 0) {
-            splatSizeSave = size;
-        }
-    });
-
     // space toggles between 0 and size
     shortcuts.register([' '], {
         func: () => {
-            events.fire('splatSize', events.invoke('splatSize') === 0 ? splatSizeSave : 0);
+            events.fire('camera.toggleDebug');
         }
     });
 
@@ -156,7 +147,6 @@ const main = async () => {
     toolManager.register('scale', new ScaleTool(events, editHistory, scene));
     toolManager.register('rectSelection', new RectSelection(events, editorUI.toolsContainer.dom));
     toolManager.register('brushSelection', new BrushSelection(events, editorUI.toolsContainer.dom));
-    toolManager.register('pickerSelection', new PickerSelection(events, editorUI.toolsContainer.dom));
 
     window.scene = scene;
 

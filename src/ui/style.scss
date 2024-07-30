@@ -158,7 +158,6 @@ body {
     margin-right: 10px;
     color: $text-secondary;
 
-    #camera-panel & { content: '\E212'; };
     #show-panel & { content: '\E117'; };
     #selection-panel & { content: '\E398'; };
     #modify-panel & { content: '\E130'; };
@@ -240,11 +239,6 @@ body {
 }
 
 #control-panel > .pcui-panel-content {
-    display: flex;
-    flex-direction: column;
-}
-
-#camera-panel > .pcui-panel-content {
     display: flex;
     flex-direction: column;
 }

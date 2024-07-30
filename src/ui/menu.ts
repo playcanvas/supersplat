@@ -109,17 +109,17 @@ class Menu extends Container {
                 class: 'menu-dropdown-item',
                 text: 'All',
                 icon: 'E0020',
-                onSelect: () => events.fire('selection.all')
+                onSelect: () => events.fire('select.all')
             }, {
                 class: 'menu-dropdown-item',
                 text: 'None',
                 icon: 'E0020',
-                onSelect: () => events.fire('selection.none')
+                onSelect: () => events.fire('select.none')
             }, {
                 class: 'menu-dropdown-item',
                 text: 'Invert',
                 icon: 'E0020',
-                onSelect: () => events.fire('selection.invert')
+                onSelect: () => events.fire('select.invert')
             }]
         });
 

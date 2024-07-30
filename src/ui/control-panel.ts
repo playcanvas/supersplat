@@ -17,84 +17,6 @@ class ControlPanel extends Panel {
 
         super(args);
 
-        // camera panel
-        const cameraPanel = new Panel({
-            id: 'camera-panel',
-            class: 'control-panel',
-            headerText: 'CAMERA'
-        });
-
-        // mode
-        const mode = new Container({
-            class: 'control-parent'
-        });
-
-        const modeLabel = new Label({
-            class: 'control-label',
-            text: 'Mode'
-        });
-
-        const modeSelect = new SelectInput({
-            class: 'control-element-expand',
-            defaultValue: 'centers',
-            options: [
-                { v: 'centers', t: 'Centers' },
-                { v: 'rings', t: 'Rings' }
-            ]
-        });
-
-        mode.append(modeLabel);
-        mode.append(modeSelect);
-
-        // splat size
-        const splatSize = new Container({
-            class: 'control-parent'
-        });
-
-        const splatSizeLabel = new Label({
-            class: 'control-label',
-            text: 'Splat Size'
-        });
-
-        const splatSizeSlider = new SliderInput({
-            class: 'control-element-expand',
-            precision: 1,
-            min: 0,
-            max: 10,
-            value: 2
-        });
-
-        splatSize.append(splatSizeLabel);
-        splatSize.append(splatSizeSlider);
-
-        // show grid
-        const showGrid = new Container({
-            class: 'control-parent'
-        });
-
-        const showGridLabel = new Label({
-            class: 'control-label',
-            text: 'Show Grid'
-        });
-
-        const showGridToggle = new BooleanInput({
-            class: 'control-element',
-            value: true
-        });
-
-        showGrid.append(showGridLabel);
-        showGrid.append(showGridToggle);
-
-        const focusButton = new Button({
-            class: 'control-element',
-            text: 'Frame Selection'
-        });
-
-        cameraPanel.append(mode);
-        cameraPanel.append(splatSize);
-        cameraPanel.append(showGrid);
-        cameraPanel.append(focusButton);
-
         // selection panel
         const selectionPanel = new Panel({
             id: 'selection-panel',
@@ -102,33 +24,6 @@ class ControlPanel extends Panel {
             headerText: 'SELECTION'
         });
 
-        // selection button parent
-        const selectGlobal = new Container({
-            class: 'control-parent'
-        });
-
-        // all
-        const selectAllButton = new Button({
-            class: 'control-element-expand',
-            text: 'All'
-        });
-
-        // none
-        const selectNoneButton = new Button({
-            class: 'control-element-expand',
-            text: 'None'
-        });
-
-        // invert
-        const invertSelectionButton = new Button({
-            class: 'control-element-expand',
-            text: 'Invert'
-        });
-
-        selectGlobal.append(selectAllButton);
-        selectGlobal.append(selectNoneButton);
-        selectGlobal.append(invertSelectionButton);
-        
         // select by sphere
         const selectBySphere = new Container({
             class: 'control-parent'
@@ -220,38 +115,9 @@ class ControlPanel extends Panel {
         setAddRemove.append(addButton);
         setAddRemove.append(removeButton);
 
-        // selection parent
-        const selectTools = new Container({
-            class: 'control-parent'
-        });
-
-        const rectSelectButton = new Button({
-            class: 'control-element-expand',
-            text: 'Rect',
-            enabled: true
-        });
-
-        const brushSelectButton = new Button({
-            class: 'control-element-expand',
-            text: 'Brush',
-            enabled: true
-        });
-
-        const pickerSelectButton = new Button({
-            class: 'control-element-expand',
-            text: 'Picker',
-            enabled: true
-        });
-
-        selectTools.append(rectSelectButton);
-        selectTools.append(brushSelectButton);
-        selectTools.append(pickerSelectButton);
-
-        selectionPanel.append(selectGlobal);
         selectionPanel.append(selectBySphere);
         selectionPanel.append(selectByPlane);
         selectionPanel.append(setAddRemove);
-        selectionPanel.append(selectTools);
 
         // show panel
         const showPanel = new Panel({
@@ -297,36 +163,8 @@ class ControlPanel extends Panel {
             text: 'Reset Splats'
         });
 
-        const undoRedo = new Container({
-            class: 'control-parent'
-        });
-
-        const undoButton = new Button({
-            class: 'control-element-expand',
-            text: 'Undo',
-            icon: 'E339',
-            enabled: false
-        });
-
-        const redoButton = new Button({
-            class: 'control-element-expand',
-            text: 'Redo',
-            icon: 'E338',
-            enabled: false
-        });
-
-        undoRedo.append(undoButton);
-        undoRedo.append(redoButton);
-
         modifyPanel.append(deleteSelectionButton);
         modifyPanel.append(resetButton);
-        modifyPanel.append(undoRedo);
-
-        undoButton.on('click', () => { events.fire('edit.undo'); });
-        redoButton.on('click', () => { events.fire('edit.redo'); });
-
-        events.on('edit.canUndo', (value: boolean) => { undoButton.enabled = value; });
-        events.on('edit.canRedo', (value: boolean) => { redoButton.enabled = value; });
 
         // options
         const optionsPanel = new Panel({
@@ -358,7 +196,6 @@ class ControlPanel extends Panel {
             id: 'control-panel-controls'
         });
 
-        controlsContainer.append(cameraPanel)
         controlsContainer.append(selectionPanel);
         controlsContainer.append(showPanel);
         controlsContainer.append(modifyPanel);
@@ -366,24 +203,6 @@ class ControlPanel extends Panel {
 
         // append
         this.content.append(controlsContainer);
-
-        rectSelectButton.on('click', () => {
-            events.fire('tool.rectSelection');
-        });
-
-        brushSelectButton.on('click', () => {
-            events.fire('tool.brushSelection');
-        });
-
-        pickerSelectButton.on('click', () => {
-            events.fire('tool.pickerSelection');
-        });
-
-        events.on('tool.activated', (toolName: string) => {
-            rectSelectButton.class[toolName === 'rectSelection' ? 'add' : 'remove']('active');
-            brushSelectButton.class[toolName === 'brushSelection' ? 'add' : 'remove']('active');
-            pickerSelectButton.class[toolName === 'pickerSelection' ? 'add' : 'remove']('active');
-        });
 
         // radio logic
         const radioGroup = [selectBySphereRadio, selectByPlaneRadio];
@@ -468,10 +287,6 @@ class ControlPanel extends Panel {
             setCameraMode(events.invoke('camera.mode') === 'centers' ? 'rings' : 'centers');
         });
 
-        events.on('camera.mode', (mode: string) => {
-            modeSelect.value = mode;
-        });
-
         // camera debug
 
         let cameraDebug = true;
@@ -495,44 +310,23 @@ class ControlPanel extends Panel {
             setCameraDebug(!events.invoke('camera.debug'));
         });
 
-        modeSelect.on('change', (value: string) => {
-            setCameraMode(value);
-        });
+        // splat size
 
-        events.on('splatSize', (value: number) => {
-            splatSizeSlider.value = value;
-        });
+        let splatSize = 2;
 
-        events.function('splatSize', () => {
-            return splatSizeSlider.value;
-        });
+        const setSplatSize = (value: number) => {
+            if (value !== splatSize) {
+                splatSize = value;
+                events.fire('camera.splatSize', splatSize);
+            }
+        };
 
-        splatSizeSlider.on('change', (value: number) => {
-            events.fire('splatSize', value);
+        events.function('camera.splatSize', () => {
+            return splatSize;
         });
-
-        focusButton.on('click', () => {
-            events.fire('camera.focus');
-        });
-
-        showGridToggle.on('change', (enabled: boolean) => {
-            events.fire('grid.setVisible', enabled);
-        });
-
-        events.on('grid.visible', (visible: boolean) => {
-            showGridToggle.value = visible;
-        });
-
-        selectAllButton.on('click', () => {
-            events.fire('select.all');
-        });
-
-        selectNoneButton.on('click', () => {
-            events.fire('select.none');
-        });
-
-        invertSelectionButton.on('click', () => {
-            events.fire('select.invert');
+    
+        events.on('camera.setSplatSize', (value: number) => {
+            setSplatSize(value);
         });
 
         selectBySphereCenter.on('change', () => {

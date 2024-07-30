@@ -120,7 +120,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         scene.forceRender = true;
     });
 
-    events.on('splatSize', () => {
+    events.on('camera.splatSize', () => {
         scene.forceRender = true;
     });
 
@@ -416,7 +416,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 const y = splatData.getProp('y');
                 const z = splatData.getProp('z');
 
-                const splatSize = events.invoke('splatSize');
+                const splatSize = events.invoke('camera.splatSize');
                 const camera = scene.camera.entity.camera;
                 const sx = point.x * width;
                 const sy = point.y * height;

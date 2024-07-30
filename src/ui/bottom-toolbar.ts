@@ -34,12 +34,14 @@ class BottomToolbar extends Container {
 
         const undo = new Button({
             id: 'bottom-toolbar-undo',
-            class: 'bottom-toolbar-button'
+            class: 'bottom-toolbar-button',
+            enabled: false
         });
 
         const redo = new Button({
             id: 'bottom-toolbar-redo',
             class: 'bottom-toolbar-button',
+            enabled: false
         });
 
         const picker = new Button({
@@ -89,6 +91,9 @@ class BottomToolbar extends Container {
         picker.dom.addEventListener('click', () => {
             events.fire('tool.rectSelection');
         });
+
+        events.on('edit.canUndo', (value: boolean) => { undo.enabled = value; });
+        events.on('edit.canRedo', (value: boolean) => { redo.enabled = value; });
 
         brush.dom.addEventListener('click', () => {
             events.fire('tool.brushSelection');

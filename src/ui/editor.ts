@@ -173,7 +173,11 @@ class EditorUI {
 
         // whenever the canvas container is clicked, set keyboard focus on the body
         canvasContainer.dom.addEventListener('pointerdown', (event: PointerEvent) => {
-            document.body.focus();
+            // set focus on the body if user is busy pressing on the canvas or a child of the tools
+            // element
+            if (event.target === canvas || toolsContainer.dom.contains(event.target as Node)) {
+                document.body.focus();
+            }
         }, true);
     }
 

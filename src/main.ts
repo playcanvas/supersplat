@@ -153,7 +153,7 @@ const main = async () => {
     registerEditorEvents(events, editHistory, scene, editorUI);
     initSelection(events, scene);
     initShortcuts(events);
-    await initFileHandler(scene, events, editorUI.canvas, remoteStorageDetails);
+    await initFileHandler(scene, events, editorUI.appContainer.dom, remoteStorageDetails);
 
     // load async models
     await scene.load();

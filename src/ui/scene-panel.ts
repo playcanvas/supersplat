@@ -14,13 +14,8 @@ class ScenePanel extends Container {
 
         super(args);
 
-        const handleDown = (event: PointerEvent) => {
-            event.preventDefault();
-            event.stopPropagation();
-        };
-
         this.dom.addEventListener('pointerdown', (event) => {
-            handleDown(event);
+            event.stopPropagation();
         });
 
         const sceneHeader = new Container({

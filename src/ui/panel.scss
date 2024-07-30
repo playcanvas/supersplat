@@ -10,6 +10,7 @@
     & > .panel-header {
         display: flex;
         flex-direction: row;
+        align-items: center;
         padding: 2px;
     
         background-color: $bcg-dark;
@@ -18,7 +19,7 @@
             font-family: pc-icon;
             font-weight: bold;
             font-size: 13px;
-            color: #ff6600;
+            color: $clr-hilight;
         }
     
         & > .panel-header-label {
@@ -31,7 +32,7 @@
             font-family: pc-icon;
             font-weight: bold;
             font-size: 13px;
-            color: #ff6600;
+            color: $clr-hilight;
     
             &:hover {
                 color: #ff9900;

@@ -64,6 +64,30 @@ class BottomToolbar extends Container {
             class: ['bottom-toolbar-tool', 'disabled']
         });
 
+        const translate = new Button({
+            id: 'bottom-toolbar-translate',
+            class: 'bottom-toolbar-tool',
+            icon: 'E111'
+        });
+
+        const rotate = new Button({
+            id: 'bottom-toolbar-rotate',
+            class: 'bottom-toolbar-tool',
+            icon: 'E113'
+        });
+
+        const scale = new Button({
+            id: 'bottom-toolbar-scale',
+            class: 'bottom-toolbar-tool',
+            icon: 'E112'
+        });
+
+        const coordSpace = new Button({
+            id: 'bottom-toolbar-coord-space',
+            class: 'bottom-toolbar-toggle',
+            icon: 'E118'
+        });
+
         undo.dom.appendChild(createSvg(undoSvg));
         redo.dom.appendChild(createSvg(redoSvg));
         picker.dom.appendChild(createSvg(pickerSvg));
@@ -79,29 +103,33 @@ class BottomToolbar extends Container {
         this.append(lasso);
         this.append(crop);
         this.append(new Element({ class: 'bottom-toolbar-separator' }));
+        this.append(translate);
+        this.append(rotate);
+        this.append(scale);
+        this.append(coordSpace);
 
-        undo.dom.addEventListener('click', () => {
-            events.fire('edit.undo');
-        });
-
-        redo.dom.addEventListener('click', () => {
-            events.fire('edit.redo');
-        });
-
-        picker.dom.addEventListener('click', () => {
-            events.fire('tool.rectSelection');
-        });
+        undo.dom.addEventListener('click', () => events.fire('edit.undo'));
+        redo.dom.addEventListener('click', () => events.fire('edit.redo'));
+        brush.dom.addEventListener('click', () => events.fire('tool.brushSelection'));
+        picker.dom.addEventListener('click', () => events.fire('tool.rectSelection'));
+        translate.dom.addEventListener('click', () => events.fire('tool.move'));
+        rotate.dom.addEventListener('click', () => events.fire('tool.rotate'));
+        scale.dom.addEventListener('click', () => events.fire('tool.scale'));
+        coordSpace.dom.addEventListener('click', () => events.fire('tool.toggleCoordSpace'));
 
         events.on('edit.canUndo', (value: boolean) => { undo.enabled = value; });
         events.on('edit.canRedo', (value: boolean) => { redo.enabled = value; });
 
-        brush.dom.addEventListener('click', () => {
-            events.fire('tool.brushSelection');
-        });
-
         events.on('tool.activated', (toolName: string) => {
             picker.class[toolName === 'rectSelection' ? 'add' : 'remove']('active');
             brush.class[toolName === 'brushSelection' ? 'add' : 'remove']('active');
+            translate.class[toolName === 'move' ? 'add' : 'remove']('active');
+            rotate.class[toolName === 'rotate' ? 'add' : 'remove']('active');
+            scale.class[toolName === 'scale' ? 'add' : 'remove']('active');
+        });
+
+        events.on('tool.coordSpace', (space: 'local' | 'world') => {
+            coordSpace.dom.classList[space === 'local' ? 'add' : 'remove']('active');
         });
 
         // register tooltips
@@ -111,6 +139,11 @@ class BottomToolbar extends Container {
         tooltips.register(brush, 'Select Brush');
         tooltips.register(lasso, 'Select Lasso');
         tooltips.register(crop, 'Crop');
+        tooltips.register(translate, 'Translate');
+        tooltips.register(rotate, 'Rotate');
+        tooltips.register(scale, 'Scale');
+        tooltips.register(coordSpace, 'Enable Local Space');
+
     }
 }
 

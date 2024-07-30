@@ -1,4 +1,3 @@
-
 #right-toolbar {
     position: absolute;
     right: 70px;
@@ -15,43 +14,84 @@
     align-items: center;
 
     pointer-events: all;
-}
 
-.right-toolbar-button {
-    width: 38px;
-    height: 38px;
-    margin: 0px 1px;
-    padding: 0px;
-    border: 0px;
-    border-radius: 2px;
+    &>.right-toolbar-button, .right-toolbar-tool, .right-toolbar-toggle {
+        width: 38px;
+        height: 38px;
+        margin: 0px 1px;
+        padding: 0px;
+        border: 0px;
+        border-radius: 2px;
 
-    &::before {
-        font-size: 18px !important;
-        line-height: 100%;
-    }
+        &::before {
+            font-size: 16px !important;
+            line-height: 100%;
+        }
 
-    svg {
-        path {
-            fill: $clr-default;
+        svg {
+            path {
+                fill: $clr-default;
+            }
         }
     }
-    background-color: $bgclr-light;
-}
 
-.right-toolbar-button.active {
-    svg {
-        path {
-            fill: $clr-active;
-            stroke: $clr-active;
+    &>.right-toolbar-separator {
+        width: 38px;
+        height: 1px;
+        margin: 8px 0px;
+        background-color: $bgclr-light;
+    }
+
+    &>.right-toolbar-button {
+        svg {
+            path {
+                fill: $clr-default;
+            }
         }
     }
-}
 
-.right-toolbar-button.disabled {
-    svg {
-        path {
-            fill: $clr-disabled;
+    &>.right-toolbar-tool {
+        background-color: $bgclr-light;
+
+        svg {
+            path {
+                fill: $clr-default;
+            }
+        }
+
+        &.active {
+            background-color: $clr-hilight !important;
+
+            svg {
+                path {
+                    fill: $clr-active;
+                    stroke: $clr-active;
+                }
+            }
+        }
+
+        &.disabled {
+            svg {
+                path {
+                    fill: $clr-disabled;
+                }
+            }
+            background-color: $bcg-dark;
         }
     }
-    background-color: $bcg-dark;
+
+    &>.right-toolbar-toggle.active {
+        // highlight icon
+        &::before {
+            color: $clr-hilight;
+        }
+
+        // highlight svg
+        svg {
+            path {
+                fill: $clr-hilight;
+                stroke: $clr-hilight;
+            }
+        }
+    }
 }

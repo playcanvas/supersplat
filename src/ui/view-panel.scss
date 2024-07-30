@@ -27,7 +27,7 @@
             }
 
             &.pcui-boolean-input-ticked {
-                background-color: $bgclr-active;
+                background-color: $clr-hilight;
 
                 &::after {
                     background-color: $clr-active;

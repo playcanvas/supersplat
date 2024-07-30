@@ -2,7 +2,6 @@ import { Container, Label } from 'pcui';
 import { Mat4 } from 'playcanvas';
 import { ControlPanel } from './control-panel';
 import { DataPanel } from './data-panel';
-import { Toolbar } from './toolbar';
 import { Events } from '../events';
 import { Popup } from './popup';
 import { ViewCube } from './view-cube';
@@ -61,9 +60,6 @@ class EditorUI {
 
         topContainer.dom.addEventListener('mousemove', (event: MouseEvent) => killit(event));
         topContainer.on('click', (event: MouseEvent) => killit(event));
-
-        // toolbar
-        const toolbar = new Toolbar(events, appContainer, tooltipsContainer);
 
         // canvas
         const canvas = document.createElement('canvas');
@@ -124,7 +120,6 @@ class EditorUI {
         mainContainer.append(canvasContainer);
         mainContainer.append(dataPanel);
 
-        editorContainer.append(toolbar);
         editorContainer.append(controlPanel);
         editorContainer.append(mainContainer);
 

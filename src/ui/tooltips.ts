@@ -1,7 +1,9 @@
 import { Container, Element, Label } from 'pcui';
 
+type Direction = 'left' | 'right' | 'top' | 'bottom';
+
 class Tooltips extends Container {
-    register: (target: Element, text: string) => void;
+    register: (target: Element, text: string, direction?: Direction) => void;
     unregister: (target: Element) => void;
     destroy: () => void;
 
@@ -24,7 +26,7 @@ class Tooltips extends Container {
         const style = this.dom.style;
         let timer: number = 0;
 
-        this.register = (target: Element, textString: string, direction: 'left' | 'right' | 'top' | 'bottom' = 'bottom') => {
+        this.register = (target: Element, textString: string, direction: Direction = 'bottom') => {
 
             const activate = () => {
                 const rect = target.dom.getBoundingClientRect();

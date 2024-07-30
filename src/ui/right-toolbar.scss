@@ -60,6 +60,7 @@
         }
 
         &.active {
+            color: $clr-active;
             background-color: $clr-hilight !important;
 
             svg {

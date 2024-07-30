@@ -191,7 +191,7 @@ class SplatList extends Container {
         });
     }
 
-    protected _onAppendChild(element: Element): void {
+    protected _onAppendChild(element: PcuiElement): void {
         super._onAppendChild(element);
 
         if (element instanceof SplatItem) {
@@ -205,7 +205,7 @@ class SplatList extends Container {
         }
     }
 
-    protected _onRemoveChild(element: Element): void {
+    protected _onRemoveChild(element: PcuiElement): void {
         if (element instanceof SplatItem) {
             element.unbind('click');
             element.unbind('removeClicked');

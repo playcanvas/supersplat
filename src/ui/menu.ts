@@ -52,29 +52,38 @@ class Menu extends Container {
                 class: 'menu-dropdown-item',
                 text: 'New',
                 icon: 'E208',
-                onSelect: () => events.fire('scene.new')
+                onSelect: () => events.invoke('scene.new')
             }, {
                 class: 'menu-dropdown-item',
-                text: 'Open...',
+                text: 'Open',
                 icon: 'E226',
+                onSelect: async () => {
+                    if (await events.invoke('scene.new')) {
+                        events.fire('scene.open');
+                    }
+                }
+            }, {
+                class: 'menu-dropdown-item',
+                text: 'Import',
+                icon: 'E245',
                 onSelect: () => events.fire('scene.open')
             }, {
                 class: 'menu-dropdown-item',
                 text: 'Save',
                 icon: 'E216',
                 onSelect: () => events.fire('scene.save'),
-                onIsEnabled: () => events.invoke('scene.canSave')
+                onIsEnabled: () => !events.invoke('scene.empty')
             }, {
                 class: 'menu-dropdown-item',
                 text: 'Save As...',
                 icon: 'E216',
                 onSelect: () => events.fire('scene.saveAs'),
-                onIsEnabled: () => events.invoke('scene.canSave')
+                onIsEnabled: () => !events.invoke('scene.empty')
             }, {
                 class: 'menu-dropdown-item',
                 text: 'Export',
                 icon: 'E225',
-                onIsEnabled: () => events.invoke('scene.canSave'),
+                onIsEnabled: () => !events.invoke('scene.empty'),
                 items: [{
                     class: 'menu-dropdown-item',
                     text: 'Compressed Ply',
@@ -98,17 +107,17 @@ class Menu extends Container {
             id: 'menu-dropdown',
             items: [{
                 class: 'menu-dropdown-item',
-                text: 'Select All',
+                text: 'All',
                 icon: 'E0020',
                 onSelect: () => events.fire('selection.all')
             }, {
                 class: 'menu-dropdown-item',
-                text: 'Select None',
+                text: 'None',
                 icon: 'E0020',
                 onSelect: () => events.fire('selection.none')
             }, {
                 class: 'menu-dropdown-item',
-                text: 'Invert Selection',
+                text: 'Invert',
                 icon: 'E0020',
                 onSelect: () => events.fire('selection.invert')
             }]

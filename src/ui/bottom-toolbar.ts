@@ -8,8 +8,11 @@ import pickerSvg from '../svg/select-picker.svg';
 import lassoSvg from '../svg/select-lasso.svg';
 import brushSvg from '../svg/select-brush.svg';
 import cropSvg from '../svg/crop.svg';
-import frameSelectionSvg from '../svg/frame-selection.svg';
-import showHideSelectionSvg from '../svg/show-hide-selection.svg';
+
+const createSvg = (svgString: string) => {
+    const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
+    return new DOMParser().parseFromString(decodedStr, 'image/svg+xml').documentElement;
+};
 
 class BottomToolbar extends Container {
     constructor(events: Events, tooltips: Tooltips, args = {}) {
@@ -28,11 +31,6 @@ class BottomToolbar extends Container {
         this.dom.addEventListener('pointerdown', (event) => {
             handleDown(event);
         });
-
-        const createSvg = (svgString: string) => {
-            const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
-            return new DOMParser().parseFromString(decodedStr, 'image/svg+xml').documentElement;
-        };
 
         const undo = new Button({
             id: 'bottom-toolbar-undo',
@@ -64,24 +62,12 @@ class BottomToolbar extends Container {
             class: ['bottom-toolbar-tool', 'disabled']
         });
 
-        const frame = new Button({
-            id: 'bottom-toolbar-frame',
-            class: 'bottom-toolbar-button'
-        });
-
-        const showHide = new Button({
-            id: 'bottom-toolbar-show-hide',
-            class: ['bottom-toolbar-tool', 'active']
-        });
-
         undo.dom.appendChild(createSvg(undoSvg));
         redo.dom.appendChild(createSvg(redoSvg));
         picker.dom.appendChild(createSvg(pickerSvg));
         brush.dom.appendChild(createSvg(brushSvg));
         lasso.dom.appendChild(createSvg(lassoSvg));
         crop.dom.appendChild(createSvg(cropSvg));
-        frame.dom.appendChild(createSvg(frameSelectionSvg));
-        showHide.dom.appendChild(createSvg(showHideSelectionSvg));
 
         this.append(undo);
         this.append(redo);
@@ -91,8 +77,6 @@ class BottomToolbar extends Container {
         this.append(lasso);
         this.append(crop);
         this.append(new Element({ class: 'bottom-toolbar-separator' }));
-        this.append(frame);
-        this.append(showHide);
 
         undo.dom.addEventListener('click', () => {
             events.fire('edit.undo');
@@ -110,22 +94,6 @@ class BottomToolbar extends Container {
             events.fire('tool.brushSelection');
         });
 
-        frame.dom.addEventListener('click', () => {
-            events.fire('camera.focus');
-        });
-
-        let splatSizeSave = 2;
-        events.on('splatSize', (size: number) => {
-            if (size !== 0) {
-                splatSizeSave = size;
-            }
-            showHide.class[size === 0 ? 'remove' : 'add']('active');
-        });
-
-        showHide.dom.addEventListener('click', () => {
-            events.fire('splatSize', events.invoke('splatSize') === 0 ? splatSizeSave : 0);
-        });
-
         events.on('tool.activated', (toolName: string) => {
             picker.class[toolName === 'rectSelection' ? 'add' : 'remove']('active');
             brush.class[toolName === 'brushSelection' ? 'add' : 'remove']('active');
@@ -138,8 +106,6 @@ class BottomToolbar extends Container {
         tooltips.register(brush, 'Select Brush');
         tooltips.register(lasso, 'Select Lasso');
         tooltips.register(crop, 'Crop');
-        tooltips.register(frame, 'Frame Selection');
-        tooltips.register(showHide, 'Show/Hide Selection');
     }
 }
 

@@ -65,7 +65,7 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['1'], { event: 'tool.move', sticky: true });
     shortcuts.register(['2'], { event: 'tool.rotate', sticky: true });
     shortcuts.register(['3'], { event: 'tool.scale', sticky: true });
-    shortcuts.register(['G', 'g'], { event: 'show.gridToggle' });
+    shortcuts.register(['G', 'g'], { event: 'grid.toggleVisible' });
     shortcuts.register(['C', 'c'], { event: 'tool.toggleCoordSpace' });
     shortcuts.register(['F', 'f'], { event: 'camera.focus' });
     shortcuts.register(['B', 'b'], { event: 'tool.brushSelection', sticky: true });

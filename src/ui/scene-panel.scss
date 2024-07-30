@@ -1,45 +1,5 @@
 #scene-panel {
-    position: absolute;
     top: 102px;
     left: 24px;
     width: 320px;
-    border-radius: 8px;
-    overflow: hidden;
-
-    background-color: $bcg-primary;
-
-    pointer-events: all;
-}
-
-.scene-panel-header {
-    display: flex;
-    flex-direction: row;
-    padding: 2px;
-
-    background-color: $bcg-dark;
-
-    & > .scene-panel-header-icon {
-        font-family: pc-icon;
-        font-weight: bold;
-        font-size: 13px;
-        color: #ff6600;
-    }
-
-    & > .scene-panel-header-label {
-        color: $text-primary;
-        font-weight: bold;
-        flex-grow: 1;
-    }
-
-    & > .scene-panel-header-button {
-        font-family: pc-icon;
-        font-weight: bold;
-        font-size: 13px;
-        color: #ff6600;
-
-        &:hover {
-            color: #ff9900;
-            cursor: pointer;
-        }
-    }
 }

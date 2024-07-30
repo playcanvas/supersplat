@@ -1,7 +1,5 @@
 import { BooleanInput, Button, Container, Label, NumericInput, Panel, RadioButton, SelectInput, SliderInput, VectorInput } from 'pcui';
 import { Events } from '../events';
-import { SplatList } from './splat-list';
-import { Transform } from './transform';
 import { version as appVersion } from '../../package.json';
 
 class ControlPanel extends Panel {
@@ -18,32 +16,6 @@ class ControlPanel extends Panel {
         };
 
         super(args);
-
-        // scene panel
-        const scenePanel = new Panel({
-            id: 'control-panel-scene-panel',
-            class: 'control-panel',
-            headerText: 'SCENE'
-        });
-
-        const splatListContainer = new Container({
-            id: 'control-panel-scene-panel-splat-list-container',
-            resizable: 'bottom',
-            resizeMin: 50
-        });
-
-        const splatList = new SplatList(events);
-
-        splatListContainer.append(splatList);
-        scenePanel.content.append(splatListContainer);
-
-        const transformPanel = new Panel({
-            id: 'transform-panel',
-            class: 'control-panel',
-            headerText: 'TRANSFORM',
-        });
-
-        transformPanel.content.append(new Transform(events));
 
         // camera panel
         const cameraPanel = new Panel({
@@ -386,8 +358,6 @@ class ControlPanel extends Panel {
             id: 'control-panel-controls'
         });
 
-        controlsContainer.append(scenePanel);
-        controlsContainer.append(transformPanel);
         controlsContainer.append(cameraPanel)
         controlsContainer.append(selectionPanel);
         controlsContainer.append(showPanel);
@@ -475,20 +445,58 @@ class ControlPanel extends Panel {
         addButton.on('click', () => performSelect('add'));
         removeButton.on('click', () => performSelect('remove'));
 
+        // camera mode
+
+        let activeMode = 'centers';
+
+        const setCameraMode = (mode: string) => {
+            if (mode !== activeMode) {
+                activeMode = mode;
+                events.fire('camera.mode', activeMode);
+            }
+        };
+
         events.function('camera.mode', () => {
-            return modeSelect.value;
+            return activeMode;
+        });
+
+        events.on('camera.setMode', (mode: string) => {
+            setCameraMode(mode);
+        });
+
+        events.on('camera.toggleMode', () => {
+            setCameraMode(events.invoke('camera.mode') === 'centers' ? 'rings' : 'centers');
         });
 
         events.on('camera.mode', (mode: string) => {
             modeSelect.value = mode;
         });
 
-        events.on('camera.toggleMode', () => {
-            modeSelect.value = modeSelect.value === 'centers' ? 'rings' : 'centers';
+        // camera debug
+
+        let cameraDebug = true;
+
+        const setCameraDebug = (enabled: boolean) => {
+            if (enabled !== cameraDebug) {
+                cameraDebug = enabled;
+                events.fire('camera.debug', cameraDebug);
+            }
+        };
+
+        events.function('camera.debug', () => {
+            return cameraDebug;
+        });
+
+        events.on('camera.setDebug', (value: boolean) => {
+            setCameraDebug(value);
+        });
+
+        events.on('camera.toggleDebug', () => {
+            setCameraDebug(!events.invoke('camera.debug'));
         });
 
         modeSelect.on('change', (value: string) => {
-            events.fire('camera.mode', value);
+            setCameraMode(value);
         });
 
         events.on('splatSize', (value: number) => {
@@ -508,7 +516,11 @@ class ControlPanel extends Panel {
         });
 
         showGridToggle.on('change', (enabled: boolean) => {
-            events.fire(enabled ? 'show.gridOn' : 'show.gridOff');
+            events.fire('grid.setVisible', enabled);
+        });
+
+        events.on('grid.visible', (visible: boolean) => {
+            showGridToggle.value = visible;
         });
 
         selectAllButton.on('click', () => {

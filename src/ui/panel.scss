@@ -1,0 +1,42 @@
+.panel {
+    position: absolute;
+    border-radius: 8px;
+    overflow: hidden;
+
+    background-color: $bcg-primary;
+
+    pointer-events: all;
+
+    & > .panel-header {
+        display: flex;
+        flex-direction: row;
+        padding: 2px;
+    
+        background-color: $bcg-dark;
+    
+        & > .panel-header-icon {
+            font-family: pc-icon;
+            font-weight: bold;
+            font-size: 13px;
+            color: #ff6600;
+        }
+    
+        & > .panel-header-label {
+            color: $text-primary;
+            font-weight: bold;
+            flex-grow: 1;
+        }
+    
+        & > .panel-header-button {
+            font-family: pc-icon;
+            font-weight: bold;
+            font-size: 13px;
+            color: #ff6600;
+    
+            &:hover {
+                color: #ff9900;
+                cursor: pointer;
+            }
+        }
+    }    
+}

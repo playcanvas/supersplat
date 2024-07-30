@@ -36,7 +36,7 @@ class Toolbar extends Container {
                 class: 'file-menu-item',
                 text: 'New',
                 icon: 'E208',
-                onSelect: () => events.fire('scene.new')
+                onSelect: () => events.invoke('scene.new')
             }, {
                 class: 'file-menu-item',
                 text: 'Open...',
@@ -47,18 +47,18 @@ class Toolbar extends Container {
                 text: 'Save',
                 icon: 'E216',
                 onSelect: () => events.fire('scene.save'),
-                onIsEnabled: () => events.invoke('scene.canSave')
+                onIsEnabled: () => events.invoke('scene.empty')
             }, {
                 class: 'file-menu-item',
                 text: 'Save As...',
                 icon: 'E216',
                 onSelect: () => events.fire('scene.saveAs'),
-                onIsEnabled: () => events.invoke('scene.canSave')
+                onIsEnabled: () => events.invoke('scene.empty')
             }, {
                 class: 'file-menu-item',
                 text: 'Export',
                 icon: 'E225',
-                onIsEnabled: () => events.invoke('scene.canSave'),
+                onIsEnabled: () => events.invoke('scene.empty'),
                 items: [{
                     class: 'file-menu-item',
                     text: 'Compressed Ply',

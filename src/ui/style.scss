@@ -7,8 +7,10 @@ $bgclr-light: #333;
 $bgclr-active: #f60;
 
 @import 'tooltips.scss';
+@import 'panel.scss';
 @import 'menu.scss';
 @import 'scene-panel.scss';
+@import 'view-panel.scss';
 @import 'splat-list.scss';
 @import 'transform.scss';
 @import 'bottom-toolbar.scss';
@@ -156,32 +158,13 @@ body {
     margin-right: 10px;
     color: $text-secondary;
 
-    #transform-panel & { content: '\E111'; };
     #camera-panel & { content: '\E212'; };
     #show-panel & { content: '\E117'; };
     #selection-panel & { content: '\E398'; };
     #modify-panel & { content: '\E130'; };
-    #scene-panel & { content: '\E142'; };
     #options-panel & { content: '\E134'; };
     #export-panel & { content: '\E226'; };
     #keyboard-panel & { content: '\E136'};
-}
-
-#control-panel-scene-panel {
-    flex-shrink: 0;
-}
-
-#control-panel-scene-panel-splat-list-container {
-    // padding: 10px;
-    overflow: scroll;
-
-    width: 100%;
-    height: 100px;
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-
-    background-color: $bcg-primary;
 }
 
 #file-selector {

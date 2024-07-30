@@ -124,12 +124,25 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
         return (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
     };
 
-    events.function('scene.canSave', () => {
-        return getSplats().length > 0;
+    events.function('scene.empty', () => {
+        return getSplats().length === 0;
     });
 
-    events.on('scene.new', () => {
+    events.function('scene.new', async () => {
+        if (events.invoke('scene.dirty')) {
+            const result = await events.invoke('showPopup', {
+                type: 'yesno',
+                message: `You have unsaved changed. Are you sure you want to clear the scene?`
+            });
+
+            if (result.action !== 'yes') {
+                return false;
+            }
+        }
+
         scene.clear();
+
+        return true;
     });
 
     events.on('scene.open', async () => {

@@ -94,7 +94,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     // add unsaved changes warning message.
     window.addEventListener("beforeunload", function (e) {
-        if (editHistory.cursor === lastExportCursor) {
+        if (!events.invoke('scene.dirty')) {
             // if the undo cursor matches last export, then we have no unsaved changes
             return undefined;
         }
@@ -102,6 +102,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         const msg = 'You have unsaved changes. Are you sure you want to leave?';
         e.returnValue = msg;
         return msg;
+    });
+
+    events.function('scene.dirty', () => {
+        return editHistory.cursor !== lastExportCursor;
     });
 
     events.on('scene.saved', () => {
@@ -112,24 +116,31 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         scene.forceRender = true;
     });
 
+    events.on('camera.debug', () => {
+        scene.forceRender = true;
+    });
+
     events.on('splatSize', () => {
         scene.forceRender = true;
     });
 
-    events.on('show.gridOn', () => {
-        scene.grid.visible = true;
-    });
+    const setGridVisible = (visible: boolean) => {
+        if (visible !== scene.grid.visible) {
+            scene.grid.visible = visible;
+            events.fire('grid.visible', visible);
+        }
+    };
 
-    events.on('show.gridOff', () => {
-        scene.grid.visible = false;
-    });
-
-    events.on('show.gridToggle', () => {
-        scene.grid.visible = !scene.grid.visible;
-    });
-
-    events.function('show.grid', () => {
+    events.function('grid.visible', () => {
         return scene.grid.visible;
+    });
+
+    events.on('grid.toggleVisible', () => {
+        setGridVisible(!scene.grid.visible);
+    });
+
+    events.on('grid.setVisible', (visible: boolean) => {
+        setGridVisible(visible);
     });
 
     events.on('camera.focus', () => {

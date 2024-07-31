@@ -23,16 +23,6 @@
     width: 54px;
 }
 
-#menu-title {
-    position: absolute;
-    right: 2px;
-    top: 0px;
-    font-size: 10px;
-    color: $text-dark;
-
-    margin: 2px;
-}
-
 #menu-container {
     display: flex;
     flex-direction: column;
@@ -41,13 +31,11 @@
 #menu-options-container {
     display: flex;
     flex-direction: row;
-    height: 100%;
     flex-grow: 1;
-    align-items: flex-end;
 }
 
 .menu-option {
-    padding: 8px 20px;
+    padding: 16px 20px;
     margin: 0px;
     flex-grow: 1;
     text-align: center;
@@ -57,7 +45,7 @@
     cursor: pointer;
 
     &:hover {
-        // color: $text-primary;
+        color: $text-primary;
         background-color: $bcg-dark;
     }
 }

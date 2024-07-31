@@ -6,12 +6,11 @@
     }
     flex-direction: column;
 
-    border: 1px solid $bcg-light;
     border-radius: 8px;
     overflow: hidden;
 
-    background-color: rgba(40, 40, 40, 0.8);
-    backdrop-filter: blur(2px);
+    background-color: $bcg-dark;
+    filter: drop-shadow(5px 5px 10px rgba(0, 0, 0, 0.8));
 
     cursor: pointer;
 }
@@ -22,7 +21,11 @@
     min-width: 180px;
 
     &:hover {
-        background-color: $bcg-darker;
+        background-color: $bcg-darkest;
+
+        & > .menu-row-text {
+            color: $text-primary;
+        }
     }
 }
 

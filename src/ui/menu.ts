@@ -2,7 +2,6 @@ import { Container, Label } from 'pcui';
 import { Events } from '../events';
 import { MenuPanel } from './menu-panel';
 
-import { version } from '../../package.json';
 import logoSvg from '../svg/playcanvas-logo.svg';
 
 class Menu extends Container {
@@ -26,11 +25,6 @@ class Menu extends Container {
         const icon = document.createElement('img');
         icon.setAttribute('id', 'menu-icon');
         icon.src = logoSvg;
-
-        const title = new Label({
-            text: `SUPERSPLAT v${version}`,
-            id: 'menu-title'
-        });
 
         const scene = new Label({
             text: 'Scene',
@@ -56,7 +50,7 @@ class Menu extends Container {
 
         menubar.dom.appendChild(icon);
         menubar.append(buttonsContainer);
-        menubar.append(title);
+        // menubar.append(title);
 
         const exportMenuPanel = new MenuPanel([{
             text: 'Compressed Ply',

@@ -13,6 +13,7 @@ import { RightToolbar } from './right-toolbar';
 import { Tooltips } from './tooltips';
 import { ShortcutsPopup } from './shortcuts-popup';
 
+import { version } from '../../package.json';
 import logo from './playcanvas-logo.png';
 
 class EditorUI {
@@ -22,7 +23,6 @@ class EditorUI {
     canvasContainer: Container;
     toolsContainer: Container;
     canvas: HTMLCanvasElement;
-    filenameLabel: Label;
     popup: Popup;
 
     constructor(events: Events, remoteStorageMode: boolean) {
@@ -66,8 +66,9 @@ class EditorUI {
         canvas.id = 'canvas';
 
         // filename label
-        const filenameLabel = new Label({
-            id: 'filename-label'
+        const appLabel = new Label({
+            id: 'app-label',
+            text: `SUPERSPLAT v${version}`
         });
 
         // canvas container
@@ -92,7 +93,7 @@ class EditorUI {
         const menu = new Menu(events);
 
         canvasContainer.dom.appendChild(canvas);
-        canvasContainer.append(filenameLabel);
+        canvasContainer.append(appLabel);
         canvasContainer.append(toolsContainer);
         canvasContainer.append(scenePanel);
         canvasContainer.append(viewPanel);
@@ -140,7 +141,6 @@ class EditorUI {
         this.canvasContainer = canvasContainer;
         this.toolsContainer = toolsContainer;
         this.canvas = canvas;
-        this.filenameLabel = filenameLabel;
 
         document.body.appendChild(appContainer.dom);
         document.body.setAttribute('tabIndex', '-1');
@@ -182,7 +182,7 @@ class EditorUI {
     }
 
     setFilename(filename: string) {
-        this.filenameLabel.text = filename;
+        // this.filenameLabel.text = filename;
     }
 }
 

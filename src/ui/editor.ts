@@ -85,20 +85,20 @@ class EditorUI {
         tooltipsContainer.append(tooltips);
 
         // bottom toolbar
-        const menu = new Menu(events);
         const scenePanel = new ScenePanel(events, tooltips);
         const viewPanel = new ViewPanel(events, tooltips);
         const bottomToolbar = new BottomToolbar(events, tooltips);
         const rightToolbar = new RightToolbar(events, tooltips);
+        const menu = new Menu(events);
 
         canvasContainer.dom.appendChild(canvas);
         canvasContainer.append(filenameLabel);
         canvasContainer.append(toolsContainer);
-        canvasContainer.append(menu);
         canvasContainer.append(scenePanel);
         canvasContainer.append(viewPanel);
         canvasContainer.append(bottomToolbar);
         canvasContainer.append(rightToolbar);
+        canvasContainer.append(menu);
 
         // view axes container
         const viewCube = new ViewCube(events);

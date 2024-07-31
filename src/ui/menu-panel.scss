@@ -1,0 +1,46 @@
+.menu-panel {
+    position: absolute;
+
+    &::not(.pcui-hidden) {
+        display: flex;
+    }
+    flex-direction: column;
+
+    border: 1px solid $bcg-light;
+    border-radius: 8px;
+    overflow: hidden;
+
+    background-color: rgba(40, 40, 40, 0.8);
+    backdrop-filter: blur(2px);
+
+    cursor: pointer;
+}
+
+.menu-row {
+    display: flex;
+    flex-direction: row;
+    min-width: 180px;
+
+    &:hover {
+        background-color: $bcg-darker;
+    }
+}
+
+.menu-row-icon {
+    font-family: 'pc-icon';
+}
+
+.menu-row-text {
+    flex-grow: 1;
+}
+
+.menu-row-postscript {
+    color: $text-dark;
+}
+
+.menu-row-separator {
+    margin-left: 10%;
+    width: 80%;
+    height: 1px;
+    background-color: $bcg-light;
+}

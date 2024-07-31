@@ -37,7 +37,7 @@
         width: 38px;
         height: 1px;
         margin: 8px 0px;
-        background-color: $bgclr-light;
+        background-color: $bcg-primary;
     }
 
     &>.right-toolbar-button {
@@ -49,7 +49,7 @@
     }
 
     &>.right-toolbar-tool {
-        background-color: $bgclr-light;
+        background-color: $bcg-primary;
 
         svg {
             path {

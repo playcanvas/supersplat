@@ -1,5 +1,9 @@
 #menu {
     position: absolute;
+}
+
+#menu-bar {
+    position: absolute;
     top: 24px;
     left: 24px;
     width: 320px;
@@ -19,45 +23,41 @@
     width: 54px;
 }
 
-.menu-button {
-    height: 38px;
-    margin: 0px 1px;
-    padding: 0px 20px;
-    border: 0px;
-    border-radius: 2px;
+#menu-title {
+    position: absolute;
+    right: 2px;
+    top: 0px;
+    font-size: 10px;
+    color: $text-dark;
+
+    margin: 2px;
 }
 
-#menu-dropdown > div > div {
-    // WARNING: first and last child will hide any submenus
-    &:first-child {
-        border-radius: 10px 10px 0px 0px;
-        overflow: hidden;
-    }
-
-    &:last-child {
-        border-radius: 0px 0px 10px 10px;
-        overflow: hidden;
-    }
+#menu-container {
+    display: flex;
+    flex-direction: column;
 }
 
-#menu-dropdown > div > div > div {
-    margin: 1px 0px 0px 0px;
+#menu-options-container {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    flex-grow: 1;
+    align-items: flex-end;
+}
 
-    background-color: $bcg-dark;
-    color: $clr-default;
+.menu-option {
+    padding: 8px 20px;
+    margin: 0px;
+    flex-grow: 1;
+    text-align: center;
+
+    background-color: $bcg-primary;
+
+    cursor: pointer;
 
     &:hover {
-        background-color: $bcg-darker;
-        color: $clr-active;
-    }
-}
-
-#menu-dropdown > div > div > div > span {
-    height: 28px;
-    line-height: 28px;
-
-    &::before {
-        margin: 0px 10px;
-        font-size: 14px;
+        // color: $text-primary;
+        background-color: $bcg-dark;
     }
 }

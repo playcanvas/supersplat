@@ -1,4 +1,4 @@
-import { Container, Label } from 'pcui';
+import { Container, Element, Label } from 'pcui';
 
 type MenuItemType = 'button' | 'menu' | 'separator';
 
@@ -9,8 +9,8 @@ type MenuItem = {
 
     text?: string;
     icon?: string;
-    shortcut?: string;
-    menuPanel?: MenuPanel;
+    additional?: string | Element;
+    subMenu?: MenuPanel;
 
     onSelect?: () => void;
     isEnabled?: () => boolean;
@@ -45,6 +45,10 @@ const arrange = (element: HTMLElement, target: HTMLElement, direction: Direction
     }
 };
 
+const isString = (value: any) => {
+    return !value || typeof value === 'string' || value instanceof String;
+};
+
 class MenuPanel extends Container {
     constructor(menuItems: MenuItem[], args = {}) {
         args = {
@@ -57,8 +61,8 @@ class MenuPanel extends Container {
 
         this.on('hide', () => {
             for (let menuItem of menuItems) {
-                if (menuItem.menuPanel) {
-                    menuItem.menuPanel.hidden = true;
+                if (menuItem.subMenu) {
+                    menuItem.subMenu.hidden = true;
                 }
             }
         });
@@ -66,7 +70,7 @@ class MenuPanel extends Container {
         let deactivate: () => void | null = null;
 
         for (let menuItem of menuItems) {
-            const type = menuItem.type ?? (menuItem.menuPanel ? 'menu' : menuItem.text ? 'button' : 'separator');
+            const type = menuItem.type ?? (menuItem.subMenu ? 'menu' : menuItem.text ? 'button' : 'separator');
 
             let row: Container | null = null;
             let activate: () => void | null = null;
@@ -75,7 +79,7 @@ class MenuPanel extends Container {
                     row = new Container({ class: 'menu-row' });
                     const icon = new Label({ class: 'menu-row-icon', text: menuItem.icon && String.fromCodePoint(parseInt(menuItem.icon, 16)) });
                     const text = new Label({ class: 'menu-row-text', text: menuItem.text });
-                    const postscript = new Label({ class: 'menu-row-postscript', text: menuItem.shortcut });
+                    const postscript = isString(menuItem.additional) ? new Label({ class: 'menu-row-postscript', text: menuItem.additional as string }) : menuItem.additional;
                     row.append(icon);
                     row.append(text);
                     row.append(postscript);
@@ -104,7 +108,7 @@ class MenuPanel extends Container {
                     row.append(text);
                     row.append(postscript);
 
-                    const childPanel = menuItem.menuPanel;
+                    const childPanel = menuItem.subMenu;
                     if (childPanel) {
                         activate = () => {
                             if (childPanel.hidden) {

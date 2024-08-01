@@ -119,38 +119,11 @@ class ControlPanel extends Panel {
         selectionPanel.append(selectByPlane);
         selectionPanel.append(setAddRemove);
 
-        // options
-        const optionsPanel = new Panel({
-            id: 'options-panel',
-            class: 'control-panel',
-            headerText: 'OPTIONS'
-        });
-
-        const allData = new Container({
-            class: 'control-parent'
-        });
-
-        const allDataLabel = new Label({
-            class: 'control-label',
-            text: 'Load all PLY data'
-        });
-
-        const allDataToggle = new BooleanInput({
-            class: 'control-element',
-            value: true
-        });
-
-        allData.append(allDataLabel);
-        allData.append(allDataToggle);
-
-        optionsPanel.append(allData);
-
         const controlsContainer = new Container({
             id: 'control-panel-controls'
         });
 
         controlsContainer.append(selectionPanel);
-        controlsContainer.append(optionsPanel);
 
         // append
         this.content.append(controlsContainer);
@@ -290,14 +263,6 @@ class ControlPanel extends Panel {
 
         selectByPlaneOffset.on('change', () => {
             events.fire('select.byPlanePlacement', axes[selectByPlaneAxis.value], selectByPlaneOffset.value);
-        });
-
-        allDataToggle.on('change', (enabled: boolean) => {
-            events.fire('allData', enabled);
-        });
-
-        events.on('splat.count', (count: number) => {
-            selectionPanel.headerText = `SELECTION${count === 0 ? '' : ' (' + count.toString() + ')'}`;
         });
     }
 }

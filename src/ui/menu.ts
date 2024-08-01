@@ -1,4 +1,4 @@
-import { Container, Label } from 'pcui';
+import { Container, Label, BooleanInput } from 'pcui';
 import { Events } from '../events';
 import { MenuPanel } from './menu-panel';
 
@@ -61,6 +61,14 @@ class Menu extends Container {
             onSelect: () => events.invoke('scene.export', 'splat')
         }]);
 
+        const allDataToggle = new BooleanInput({
+            value: true
+        });
+
+        events.on('allData', (value) => {
+            allDataToggle.value = value;
+        });
+
         const sceneMenuPanel = new MenuPanel([{
             text: 'New',
             icon: 'E208',
@@ -80,6 +88,14 @@ class Menu extends Container {
         }, {
             // separator
         }, {
+            text: 'Load all PLY data',
+            additional: allDataToggle,
+            onSelect: () => {
+                events.fire('toggleAllData');
+            }
+        }, {
+            // separator
+        }, {
             text: 'Save',
             icon: 'E216',
             onSelect: () => events.fire('scene.save'),
@@ -93,38 +109,38 @@ class Menu extends Container {
             type: 'menu',
             text: 'Export',
             icon: 'E225',
-            menuPanel: exportMenuPanel,
+            subMenu: exportMenuPanel,
             isEnabled: () => !events.invoke('scene.empty'),
         }]);
 
         const selectionMenuPanel = new MenuPanel([{
             text: 'All',
             icon: 'E0020',
-            shortcut: 'A',
+            additional: 'A',
             onSelect: () => events.fire('select.all')
         }, {
             text: 'None',
             icon: 'E0020',
-            shortcut: 'Shift + A',
+            additional: 'Shift + A',
             onSelect: () => events.fire('select.none')
         }, {
             text: 'Invert',
             icon: 'E0020',
-            shortcut: 'I',
+            additional: 'I',
             onSelect: () => events.fire('select.invert')
         }, {
             // separator
         }, {
             text: 'Lock Selection',
-            shortcut: 'H',
+            additional: 'H',
             onSelect: () => events.fire('select.hide')
         }, {
             text: 'Unlock All',
-            shortcut: 'U',
+            additional: 'U',
             onSelect: () => events.fire('select.unhide')
         }, {
             text: 'Delete Selection',
-            shortcut: 'Delete',
+            additional: 'Delete',
             onSelect: () => events.fire('select.delete')
         }, {
             text: 'Reset Splat',

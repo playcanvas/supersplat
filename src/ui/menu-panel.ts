@@ -1,18 +1,14 @@
-import { Container, Element, Label } from 'pcui';
-
-type MenuItemType = 'button' | 'menu' | 'separator';
+import { Container, Element, Label, Menu } from 'pcui';
 
 type Direction = 'left' | 'right' | 'top' | 'bottom';
 
 type MenuItem = {
-    type?: MenuItemType;
-
     text?: string;
     icon?: string;
-    additional?: string | Element;
+    extra?: string | Element;
     subMenu?: MenuPanel;
 
-    onSelect?: () => void;
+    onSelect?: () => any;
     isEnabled?: () => boolean;
 };
 
@@ -50,6 +46,8 @@ const isString = (value: any) => {
 };
 
 class MenuPanel extends Container {
+    parentPanel: MenuPanel | null = null;
+
     constructor(menuItems: MenuItem[], args = {}) {
         args = {
             ...args,
@@ -67,10 +65,19 @@ class MenuPanel extends Container {
             }
         });
 
+        this.on('show', () => {
+            for (let i = 0; i < menuItems.length; i++) {
+                const menuItem = menuItems[i];
+                if (menuItem.isEnabled) {
+                    this.dom.children.item(i).ui.enabled = menuItem.isEnabled();
+                }
+            }
+        });
+
         let deactivate: () => void | null = null;
 
         for (let menuItem of menuItems) {
-            const type = menuItem.type ?? (menuItem.subMenu ? 'menu' : menuItem.text ? 'button' : 'separator');
+            const type = menuItem.subMenu ? 'menu' : menuItem.text ? 'button' : 'separator';
 
             let row: Container | null = null;
             let activate: () => void | null = null;
@@ -79,22 +86,10 @@ class MenuPanel extends Container {
                     row = new Container({ class: 'menu-row' });
                     const icon = new Label({ class: 'menu-row-icon', text: menuItem.icon && String.fromCodePoint(parseInt(menuItem.icon, 16)) });
                     const text = new Label({ class: 'menu-row-text', text: menuItem.text });
-                    const postscript = isString(menuItem.additional) ? new Label({ class: 'menu-row-postscript', text: menuItem.additional as string }) : menuItem.additional;
+                    const postscript = isString(menuItem.extra) ? new Label({ class: 'menu-row-postscript', text: menuItem.extra as string }) : menuItem.extra;
                     row.append(icon);
                     row.append(text);
                     row.append(postscript);
-
-                    row.dom.addEventListener('pointerdown', () => {
-                        if (menuItem.onSelect) {
-                            menuItem.onSelect();
-                        }
-                    });
-
-                    row.dom.addEventListener('pointerup', () => {
-                        if (menuItem.onSelect) {
-                            menuItem.onSelect();
-                        }
-                    });
 
                     break;
                 }
@@ -107,6 +102,9 @@ class MenuPanel extends Container {
                     row.append(icon);
                     row.append(text);
                     row.append(postscript);
+
+                    // set parent panel
+                    menuItem.subMenu.parentPanel = this;
 
                     const childPanel = menuItem.subMenu;
                     if (childPanel) {
@@ -151,9 +149,30 @@ class MenuPanel extends Container {
                     }
                 });
 
+                row.dom.addEventListener('pointerdown', (event: PointerEvent) => {
+                    event.stopPropagation();
+                });
+
+                row.dom.addEventListener('pointerup', (event: PointerEvent) => {
+                    event.stopPropagation();
+
+                    if (!row.disabled && menuItem.onSelect) {
+                        this.rootPanel.hidden = true;
+                        menuItem.onSelect();
+                    }
+                });
+
                 this.append(row);
             }
         }
+    }
+
+    get rootPanel() {
+        let panel: MenuPanel = this;
+        while (panel.parentPanel) {
+            panel = panel.parentPanel;
+        }
+        return panel;
     }
 
     position(parent: HTMLElement, direction: Direction, padding = 2) {

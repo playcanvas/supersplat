@@ -11,8 +11,6 @@
 
     background-color: $bcg-dark;
     filter: drop-shadow(5px 5px 10px rgba(0, 0, 0, 0.8));
-
-    cursor: pointer;
 }
 
 .menu-row {
@@ -23,11 +21,18 @@
     height: 32px;
     padding: 0px 8px;
 
-    &:hover {
+    &:hover:not(.pcui-disabled) {
         background-color: $bcg-darkest;
+        cursor: pointer;
 
         & > .menu-row-text, .menu-row-postscript, .menu-row-icon {
             color: $text-primary;
+        }
+    }
+
+    &.pcui-disabled {
+        & > .menu-row-text, .menu-row-postscript, .menu-row-icon {
+            color: $text-darkest;
         }
     }
 

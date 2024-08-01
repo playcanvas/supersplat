@@ -54,11 +54,13 @@ class Menu extends Container {
         const exportMenuPanel = new MenuPanel([{
             text: 'Compressed Ply',
             icon: 'E245',
-            onSelect: () => events.invoke('scene.export', 'compressed-ply')
+            onSelect: () => events.invoke('scene.export', 'compressed-ply'),
+            isEnabled: () => !events.invoke('scene.empty'),
         }, {
             text: 'Splat file',
             icon: 'E245',
-            onSelect: () => events.invoke('scene.export', 'splat')
+            onSelect: () => events.invoke('scene.export', 'splat'),
+            isEnabled: () => !events.invoke('scene.empty'),
         }]);
 
         const allDataToggle = new BooleanInput({
@@ -89,9 +91,11 @@ class Menu extends Container {
             // separator
         }, {
             text: 'Load all PLY data',
-            additional: allDataToggle,
+            extra: allDataToggle,
             onSelect: () => {
                 events.fire('toggleAllData');
+                // panel is hidden by default - unhide it again
+                sceneMenuPanel.hidden = false;
             }
         }, {
             // separator
@@ -106,41 +110,39 @@ class Menu extends Container {
             onSelect: () => events.fire('scene.saveAs'),
             isEnabled: () => !events.invoke('scene.empty')
         }, {
-            type: 'menu',
             text: 'Export',
             icon: 'E225',
-            subMenu: exportMenuPanel,
-            isEnabled: () => !events.invoke('scene.empty'),
+            subMenu: exportMenuPanel
         }]);
 
         const selectionMenuPanel = new MenuPanel([{
             text: 'All',
             icon: 'E0020',
-            additional: 'A',
+            extra: 'A',
             onSelect: () => events.fire('select.all')
         }, {
             text: 'None',
             icon: 'E0020',
-            additional: 'Shift + A',
+            extra: 'Shift + A',
             onSelect: () => events.fire('select.none')
         }, {
             text: 'Invert',
             icon: 'E0020',
-            additional: 'I',
+            extra: 'I',
             onSelect: () => events.fire('select.invert')
         }, {
             // separator
         }, {
             text: 'Lock Selection',
-            additional: 'H',
+            extra: 'H',
             onSelect: () => events.fire('select.hide')
         }, {
             text: 'Unlock All',
-            additional: 'U',
+            extra: 'U',
             onSelect: () => events.fire('select.unhide')
         }, {
             text: 'Delete Selection',
-            additional: 'Delete',
+            extra: 'Delete',
             onSelect: () => events.fire('select.delete')
         }, {
             text: 'Reset Splat',

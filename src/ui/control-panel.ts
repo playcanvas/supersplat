@@ -119,53 +119,6 @@ class ControlPanel extends Panel {
         selectionPanel.append(selectByPlane);
         selectionPanel.append(setAddRemove);
 
-        // show panel
-        const showPanel = new Panel({
-            id: 'show-panel',
-            class: 'control-panel',
-            headerText: 'SHOW'
-        });
-
-        const showButtons = new Container({
-            class: 'control-parent'
-        });
-
-        const hideSelection = new Button({
-            class: 'control-element-expand',
-            text: 'Hide Selection'
-        });
-
-        const unhideAll = new Button({
-            class: 'control-element-expand',
-            text: 'Unhide All'
-        });
-
-        showButtons.append(hideSelection);
-        showButtons.append(unhideAll);
-
-        showPanel.append(showButtons);
-
-        // modify
-        const modifyPanel = new Panel({
-            id: 'modify-panel',
-            class: 'control-panel',
-            headerText: 'MODIFY'
-        });
-
-        const deleteSelectionButton = new Button({
-            class: 'control-element-expand',
-            text: 'Delete Selected Splats',
-            icon: 'E124'
-        });
-
-        const resetButton = new Button({
-            class: 'control-element-expand',
-            text: 'Reset Splats'
-        });
-
-        modifyPanel.append(deleteSelectionButton);
-        modifyPanel.append(resetButton);
-
         // options
         const optionsPanel = new Panel({
             id: 'options-panel',
@@ -197,8 +150,6 @@ class ControlPanel extends Panel {
         });
 
         controlsContainer.append(selectionPanel);
-        controlsContainer.append(showPanel);
-        controlsContainer.append(modifyPanel);
         controlsContainer.append(optionsPanel);
 
         // append
@@ -339,22 +290,6 @@ class ControlPanel extends Panel {
 
         selectByPlaneOffset.on('change', () => {
             events.fire('select.byPlanePlacement', axes[selectByPlaneAxis.value], selectByPlaneOffset.value);
-        });
-
-        hideSelection.on('click', () => {
-            events.fire('select.hide');
-        });
-
-        unhideAll.on('click', () => {
-            events.fire('select.unhide');
-        });
-
-        deleteSelectionButton.on('click', () => {
-            events.fire('select.delete');
-        });
-
-        resetButton.on('click', () => {
-            events.fire('scene.reset');
         });
 
         allDataToggle.on('change', (enabled: boolean) => {

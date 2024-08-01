@@ -50,7 +50,6 @@ class Menu extends Container {
 
         menubar.dom.appendChild(icon);
         menubar.append(buttonsContainer);
-        // menubar.append(title);
 
         const exportMenuPanel = new MenuPanel([{
             text: 'Compressed Ply',
@@ -101,15 +100,35 @@ class Menu extends Container {
         const selectionMenuPanel = new MenuPanel([{
             text: 'All',
             icon: 'E0020',
+            shortcut: 'A',
             onSelect: () => events.fire('select.all')
         }, {
             text: 'None',
             icon: 'E0020',
+            shortcut: 'Shift + A',
             onSelect: () => events.fire('select.none')
         }, {
             text: 'Invert',
             icon: 'E0020',
+            shortcut: 'I',
             onSelect: () => events.fire('select.invert')
+        }, {
+            // separator
+        }, {
+            text: 'Lock Selection',
+            shortcut: 'H',
+            onSelect: () => events.fire('select.hide')
+        }, {
+            text: 'Unlock All',
+            shortcut: 'U',
+            onSelect: () => events.fire('select.unhide')
+        }, {
+            text: 'Delete Selection',
+            shortcut: 'Delete',
+            onSelect: () => events.fire('select.delete')
+        }, {
+            text: 'Reset Splat',
+            onSelect: () => events.fire('scene.reset')
         }]);
 
         const helpMenuPanel = new MenuPanel([{

@@ -66,15 +66,16 @@ class MenuPanel extends Container {
         let deactivate: () => void | null = null;
 
         for (let menuItem of menuItems) {
-            const row = new Container({ class: 'menu-row' });
             const type = menuItem.type ?? (menuItem.menuPanel ? 'menu' : menuItem.text ? 'button' : 'separator');
 
+            let row: Container | null = null;
             let activate: () => void | null = null;
             switch (type) {
                 case 'button': {
-                    const icon = new Label({ class: 'menu-row-icon' });
+                    row = new Container({ class: 'menu-row' });
+                    const icon = new Label({ class: 'menu-row-icon', text: menuItem.icon && String.fromCodePoint(parseInt(menuItem.icon, 16)) });
                     const text = new Label({ class: 'menu-row-text', text: menuItem.text });
-                    const postscript = new Label({ class: 'menu-row-postscript' });
+                    const postscript = new Label({ class: 'menu-row-postscript', text: menuItem.shortcut });
                     row.append(icon);
                     row.append(text);
                     row.append(postscript);
@@ -95,9 +96,10 @@ class MenuPanel extends Container {
                 }
 
                 case 'menu': {
-                    const icon = new Label({ class: 'menu-row-icon' });
+                    row = new Container({ class: 'menu-row' });
+                    const icon = new Label({ class: 'menu-row-icon', text: menuItem.icon &&String.fromCodePoint(parseInt(menuItem.icon, 16)) });
                     const text = new Label({ class: 'menu-row-text', text: menuItem.text });
-                    const postscript = new Label({ class: 'menu-row-postscript', text: '>' });
+                    const postscript = new Label({ class: 'menu-row-postscript', text: '\u232A' });
                     row.append(icon);
                     row.append(text);
                     row.append(postscript);
@@ -120,31 +122,33 @@ class MenuPanel extends Container {
                 }
 
                 case 'separator':
-                    row.append(new Container({ class: 'menu-row-separator' }));
+                    this.append(new Container({ class: 'menu-row-separator' }));
                     break;
             }
 
-            let timer = -1;
+            if (row) {
+                let timer = -1;
 
-            row.dom.addEventListener('pointerenter', () => {
-                timer = setTimeout(() => {
-                    if (deactivate) {
-                        deactivate();
+                row.dom.addEventListener('pointerenter', () => {
+                    timer = setTimeout(() => {
+                        if (deactivate) {
+                            deactivate();
+                        }
+                        if (activate) {
+                            activate();
+                        }
+                    }, 250);
+                });
+
+                row.dom.addEventListener('pointerleave', () => {
+                    if (timer !== -1) {
+                        clearTimeout(timer);
+                        timer = -1;
                     }
-                    if (activate) {
-                        activate();
-                    }
-                }, 250);
-            });
+                });
 
-            row.dom.addEventListener('pointerleave', () => {
-                if (timer !== -1) {
-                    clearTimeout(timer);
-                    timer = -1;
-                }
-            });
-
-            this.append(row);
+                this.append(row);
+            }
         }
     }
 

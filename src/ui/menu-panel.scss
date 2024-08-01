@@ -19,18 +19,21 @@
     display: flex;
     flex-direction: row;
     min-width: 180px;
+    align-items: center;
+    height: 32px;
+    padding: 0px 8px;
 
     &:hover {
         background-color: $bcg-darkest;
 
-        & > .menu-row-text {
+        & > .menu-row-text, .menu-row-postscript, .menu-row-icon {
             color: $text-primary;
         }
     }
 }
 
 .menu-row-icon {
-    font-family: 'pc-icon';
+    font-family: 'pc-icon' !important;
 }
 
 .menu-row-text {

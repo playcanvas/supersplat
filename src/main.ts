@@ -8,11 +8,12 @@ import { registerEditorEvents } from './editor';
 import { initFileHandler } from './file-handler';
 import { initSelection } from './selection';
 import { ToolManager } from './tools/tool-manager';
+import { RectSelection } from './tools/rect-selection';
+import { BrushSelection } from './tools/brush-selection';
+import { SphereSelection } from './tools/sphere-selection';
 import { MoveTool } from './tools/move-tool';
 import { RotateTool } from './tools/rotate-tool';
 import { ScaleTool } from './tools/scale-tool';
-import { RectSelection } from './tools/rect-selection';
-import { BrushSelection } from './tools/brush-selection';
 import { Shortcuts } from './shortcuts';
 import { Events } from './events';
 
@@ -142,11 +143,12 @@ const main = async () => {
 
     // tool manager
     const toolManager = new ToolManager(events);
+    toolManager.register('rectSelection', new RectSelection(events, editorUI.toolsContainer.dom));
+    toolManager.register('brushSelection', new BrushSelection(events, editorUI.toolsContainer.dom));
+    toolManager.register('sphereSelection', new SphereSelection(events, scene, editorUI.canvasContainer));
     toolManager.register('move', new MoveTool(events, editHistory, scene));
     toolManager.register('rotate', new RotateTool(events, editHistory, scene));
     toolManager.register('scale', new ScaleTool(events, editHistory, scene));
-    toolManager.register('rectSelection', new RectSelection(events, editorUI.toolsContainer.dom));
-    toolManager.register('brushSelection', new BrushSelection(events, editorUI.toolsContainer.dom));
 
     window.scene = scene;
 

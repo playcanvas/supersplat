@@ -32,7 +32,7 @@ class ToolManager {
 
         events.function('tool.coordSpace', () => {
             return coordSpace;
-        })
+        });
 
         events.on('tool.setCoordSpace', (value: 'local' | 'world') => {
             setCoordSpace(value);

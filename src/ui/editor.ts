@@ -1,6 +1,5 @@
 import { Container, Label } from 'pcui';
 import { Mat4 } from 'playcanvas';
-import { ControlPanel } from './control-panel';
 import { DataPanel } from './data-panel';
 import { Events } from '../events';
 import { Popup } from './popup';
@@ -19,7 +18,6 @@ import logo from './playcanvas-logo.png';
 class EditorUI {
     appContainer: Container;
     topContainer: Container;
-    controlPanel: ControlPanel;
     canvasContainer: Container;
     toolsContainer: Container;
     canvas: HTMLCanvasElement;
@@ -108,9 +106,6 @@ class EditorUI {
             viewCube.update(cameraMatrix);
         });
 
-        // control panel
-        const controlPanel = new ControlPanel(events, remoteStorageMode);
-
         // main container
         const mainContainer = new Container({
             id: 'main-container'
@@ -121,7 +116,6 @@ class EditorUI {
         mainContainer.append(canvasContainer);
         mainContainer.append(dataPanel);
 
-        editorContainer.append(controlPanel);
         editorContainer.append(mainContainer);
 
         // message popup
@@ -137,7 +131,6 @@ class EditorUI {
 
         this.appContainer = appContainer;
         this.topContainer = topContainer;
-        this.controlPanel = controlPanel;
         this.canvasContainer = canvasContainer;
         this.toolsContainer = toolsContainer;
         this.canvas = canvas;

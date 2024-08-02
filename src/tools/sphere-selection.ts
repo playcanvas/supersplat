@@ -29,13 +29,17 @@ class SphereSelection {
             hidden: true
         });
 
+        selectToolbar.dom.addEventListener('pointerdown', (e) => { e.stopPropagation(); });
+
         const setButton = new Button({ text: 'Set', class: 'select-toolbar-button' });
         const addButton = new Button({ text: 'Add', class: 'select-toolbar-button' });
         const removeButton = new Button({ text: 'Remove', class: 'select-toolbar-button' });
         const radius = new NumericInput({
-            precision: 4,
+            precision: 2,
             value: sphere.radius,
-            placeholder: 'Radius'
+            placeholder: 'Radius',
+            width: 80,
+            min: 0.01
         });
 
         selectToolbar.append(setButton);

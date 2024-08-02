@@ -141,15 +141,15 @@ class BottomToolbar extends Container {
         // register tooltips
         tooltips.register(undo, 'Undo');
         tooltips.register(redo, 'Redo');
-        tooltips.register(picker, 'Select Picker');
-        tooltips.register(brush, 'Select Brush');
-        tooltips.register(lasso, 'Select Lasso');
-        tooltips.register(sphere, 'Sphere Selector');
+        tooltips.register(picker, 'Picker Select');
+        tooltips.register(brush, 'Brush Select');
+        tooltips.register(lasso, 'Lasso Select');
+        tooltips.register(sphere, 'Sphere Select');
         tooltips.register(crop, 'Crop');
         tooltips.register(translate, 'Translate');
         tooltips.register(rotate, 'Rotate');
         tooltips.register(scale, 'Scale');
-        tooltips.register(coordSpace, 'Enable Local Space');
+        tooltips.register(coordSpace, 'Local Space Gizmo');
 
     }
 }

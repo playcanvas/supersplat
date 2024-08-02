@@ -115,10 +115,6 @@ body {
     left: 0;
 }
 
-#histogram-rect {
-    // fill: rgba()
-}
-
 #data-panel-popup-container {
     position: absolute;
     left: 50px;
@@ -134,38 +130,6 @@ body {
 #coord-space-toggle.active {
     background-color: $bcg-dark !important;
     color: #f60;
-}
-
-#control-panel {
-    width: 340px;
-    height: 100%;
-    border-right: 1px solid #20292b;
-    display: flex;
-    flex-direction: column;
-    flex-grow: 0;
-    flex-shrink: 0;
-}
-
-#control-panel-controls {
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-    flex-shrink: 1;
-
-    overflow-y: auto;
-}
-
-.pcui-panel-header-title::before {
-    font-family: pc-icon;
-    margin-right: 10px;
-    color: $text-secondary;
-
-    #show-panel & { content: '\E117'; };
-    #selection-panel & { content: '\E398'; };
-    #modify-panel & { content: '\E130'; };
-    #options-panel & { content: '\E134'; };
-    #export-panel & { content: '\E226'; };
-    #keyboard-panel & { content: '\E136'};
 }
 
 #file-selector {
@@ -205,24 +169,6 @@ body {
     bottom: 20px;
     color: $text-primary;
     text-shadow: 1px 1px 4px black;
-}
-
-#control-panel > .pcui-panel-header {
-    background-color: $bcg-dark;
-}
-
-#control-panel > .pcui-panel-content {
-    display: flex;
-    flex-direction: column;
-}
-
-#modify-panel > .pcui-panel-content {
-    display: flex;
-    flex-direction: column;
-}
-
-.control-panel {
-    flex-shrink: 0;
 }
 
 .control-parent {

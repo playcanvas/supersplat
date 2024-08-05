@@ -19,6 +19,8 @@ $bcg-darkest: #181818;
 @import 'bottom-toolbar.scss';
 @import 'right-toolbar.scss';
 @import 'select-toolbar.scss';
+@import 'data-panel.scss';
+@import 'popup.scss';
 
 * {
     font-size: 12px;
@@ -71,60 +73,12 @@ body {
     flex-grow: 1;
 }
 
-#data-panel {
-    width: 100%;
-    height: 320px;
-}
-
 #sep-container {
     background-color: $bcg-darker;
 }
 
 #sep-container > span {
     color: white;
-}
-
-#data-controls-container {
-    width: 256px;
-    flex-grow: 0;
-    flex-shrink: 0;
-    overflow-y: auto;
-}
-
-#data-controls {
-    width: 100%;
-}
-
-#histogram-container {
-    flex-grow: 1;
-    flex-shrink: 1;
-}
-
-#histogram-canvas {
-    image-rendering: pixelated;
-}
-
-#histogram-svg {
-    pointer-events: none;
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
-}
-
-#data-panel-popup-container {
-    position: absolute;
-    left: 50px;
-    top: 50px;
-    pointer-events: none;
-}
-
-#data-panel-popup-label {
-    background-color: $bcg-dark;
-    color: $text-primary;
 }
 
 #coord-space-toggle.active {
@@ -171,34 +125,6 @@ body {
     text-shadow: 1px 1px 4px black;
 }
 
-.control-parent {
-    width: 100%;
-    display: flex;
-    flex-direction: row;
-    flex-grow: 1;
-}
-
-.control-label {
-    width: 100px;
-    flex-shrink: 0;
-    flex-grow: 0;
-    line-height: 32px;
-    margin: 0px 6px 0px 6px;
-}
-
-.control-element {
-    flex-shrink: 0;
-    flex-grow: 0;
-}
-
-.control-element-expand {
-    flex-grow: 1;
-}
-
-.control-element.pcui-boolean-input {
-    margin-top: 10px;
-}
-
 .select-svg {
     display: none;
     position: absolute;
@@ -236,6 +162,7 @@ body {
     position: absolute;
     width: 100%;
     height: 100%;
+    cursor: crosshair;
 }
 
 #canvas {
@@ -272,69 +199,6 @@ body {
 .pcui-vector-input {
     margin-left: 6px;
     margin-right: 6px;
-}
-
-//-- Popup
-
-#popup {
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    pointer-events: all;
-}
-
-#popup-background {
-    display: flex;
-    flex-direction: column;
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 600px;
-    transform: translate(-50%, -50%);
-    background-color: $bcg-primary;
-    padding: 20px;
-    border-radius: 10px;
-    border: 1px solid $bcg-darker;
-    pointer-events: all;
-}
-
-#popup-buttons {
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-}
-
-.popup-button {
-    background-color: $bcg-darker;
-    color: white;
-    height: 40px;
-    width: 120px
-}
-
-#popup-text {
-    font-size: 18px;
-    color: $text-primary;
-    text-wrap: wrap;
-    text-align: center;
-    margin: 20px 0px;
-}
-
-#popup-text-input {
-    margin-bottom: 24px;
-}
-
-#popup-text.error::before {
-    content: '\E218';
-    font-family: 'pc-icon';
-    margin: 0px 10px;
-    color: $error;
-}
-
-#popup-text.info::before {
-    content: '\E400';
-    font-family: 'pc-icon';
-    margin: 0px 10px;
-    color: $text-primary;
 }
 
 /* scrollbar styling */

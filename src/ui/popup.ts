@@ -1,11 +1,34 @@
 import { Button, Container, Label, TextInput } from 'pcui';
 
-class Popup {
-    show: (type: 'error' | 'info' | 'yesno' | 'okcancel', message: string, value?: string) => void;
+interface ShowOptions {
+    type: 'error' | 'info' | 'yesno' | 'okcancel';
+    message: string;
+    header?: string;
+    value?: string;
+}
+
+class Popup extends Container {
+    show: (options: ShowOptions) => void;
     hide: () => void;
     destroy: () => void;
 
-    constructor(parent: Container) {
+    constructor(args = {}) {
+        args = {
+            id: 'popup',
+            hidden: true,
+            tabIndex: -1,
+            ...args
+        };
+
+        super(args);
+
+        const dialog = new Container({
+            id: 'popup-dialog'
+        });
+
+        const header = new Label({
+            id: 'popup-header'
+        });
 
         const text = new Label({
             id: 'popup-text'
@@ -44,23 +67,12 @@ class Popup {
         buttons.append(yesButton);
         buttons.append(noButton);
 
-        const background = new Container({
-            id: 'popup-background'
-        });
+        dialog.append(header);
+        dialog.append(text);
+        dialog.append(inputValue);
+        dialog.append(buttons);
 
-        background.append(text);
-        background.append(inputValue);
-        background.append(buttons);
-
-        const container = new Container({
-            id: 'popup',
-            hidden: true,
-            tabIndex: -1
-        });
-
-        container.append(background);
-
-        parent.append(container);
+        this.append(dialog);
 
         let okFn: () => void;
         let cancelFn: () => void;
@@ -84,36 +96,30 @@ class Popup {
             noFn();
         });
 
-        container.on('click', () => {
+        this.on('click', () => {
             containerFn();
         });
 
-        background.on('click', (event) => {
+        dialog.on('click', (event) => {
             event.stopPropagation();
         });
 
-        this.show = async (type: 'error' | 'info' | 'yesno' | 'okcancel', message: string, value?: string) => {
-            // set the message
-            text.text = message;
+        this.show = async (options: ShowOptions) => {
+            header.text = options.header;
+            text.text = options.message;
 
-            if (type === 'error') {
-                text.class.add('error');
-                text.class.remove('info');
-            } else if (type === 'info') {
-                text.class.remove('error');
-                text.class.add('info');
-            } else {
-                text.class.remove('error');
-                text.class.remove('info');
-            }
+            const { type, value } = options;
 
+            ['error', 'info', 'yesno', 'okcancel'].forEach((t) => {
+                text.class[t === type ? 'add' : 'remove'](t);
+            });
 
             // configure based on message type
             okButton.hidden = type === 'yesno';
             cancelButton.hidden = type !== 'okcancel';
             yesButton.hidden = type !== 'yesno';
             noButton.hidden = type !== 'yesno';
-            container.hidden = false;
+            this.hidden = false;
 
             inputValue.hidden = value === undefined;
             if (value !== undefined) {
@@ -122,7 +128,7 @@ class Popup {
             }
 
             // take keyboard focus so shortcuts stop working
-            container.dom.focus();
+            this.dom.focus();
 
             return new Promise<{action: string, value?: string}>((resolve) => {
                 okFn = () => {
@@ -153,14 +159,14 @@ class Popup {
         };
 
         this.hide = () => {
-            container.hidden = true;
+            this.hidden = true;
         };
 
         this.destroy = () => {
             this.hide();
-            container.destroy();
+            this.destroy();
         };
     }
 }
 
-export { Popup };
+export { Popup, ShowOptions };

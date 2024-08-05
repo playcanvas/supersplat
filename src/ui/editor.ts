@@ -2,7 +2,7 @@ import { Container, Label } from 'pcui';
 import { Mat4 } from 'playcanvas';
 import { DataPanel } from './data-panel';
 import { Events } from '../events';
-import { Popup } from './popup';
+import { Popup, ShowOptions } from './popup';
 import { ViewCube } from './view-cube';
 import { Menu } from './menu';
 import { ScenePanel } from './scene-panel';
@@ -119,7 +119,8 @@ class EditorUI {
         editorContainer.append(mainContainer);
 
         // message popup
-        this.popup = new Popup(topContainer);
+        const popup = new Popup(topContainer);
+        topContainer.append(popup);
 
         // shortcuts popup
         const shortcutsPopup = new ShortcutsPopup();
@@ -134,6 +135,7 @@ class EditorUI {
         this.canvasContainer = canvasContainer;
         this.toolsContainer = toolsContainer;
         this.canvas = canvas;
+        this.popup = popup;
 
         document.body.appendChild(appContainer.dom);
         document.body.setAttribute('tabIndex', '-1');
@@ -142,16 +144,8 @@ class EditorUI {
             shortcutsPopup.hidden = false;
         });
 
-        events.function('showPopup', (options: { type: 'error' | 'info' | 'yesno' | 'okcancel', message: string, value: string}) => {
-            return this.popup.show(options.type, options.message, options.value);
-        });
-
-        events.function('error', (err: any) => {
-            return this.popup.show('error', err);
-        });
-
-        events.function('info', (info: string) => {
-            return this.popup.show('info', info);
+        events.function('showPopup', (options: ShowOptions) => {
+            return this.popup.show(options);
         });
 
         // initialize canvas to correct size before creating graphics device etc

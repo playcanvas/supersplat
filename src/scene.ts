@@ -215,7 +215,11 @@ class Scene {
             this.camera.focus();
             this.events.fire('loaded', filename);
         } catch (err) {
-            this.events.fire('error', err);
+            this.events.invoke('showPopup', {
+                type: 'error',
+                header: 'ERROR LOADING FILE',
+                message: `${err.message} while loading '${filename}'`
+            });
         }
     }
 

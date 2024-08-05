@@ -182,7 +182,8 @@ class SplatList extends Container {
 
             const result = await events.invoke('showPopup', {
                 type: 'yesno',
-                message: `Would you like to remove '${splat.filename}' from the scene?`
+                header: 'Remove Splat',
+                message: `Are you sure you want to remove '${splat.filename}' from the scene? This operation can not be undone.`
             });
 
             if (result?.action === 'yes') {

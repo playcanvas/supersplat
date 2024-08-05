@@ -70,6 +70,6 @@ class RightToolbar extends Container {
             events.fire('camera.toggleDebug');
         });
     }
-};
+}
 
 export { RightToolbar };

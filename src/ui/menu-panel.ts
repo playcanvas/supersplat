@@ -58,7 +58,7 @@ class MenuPanel extends Container {
         super(args);
 
         this.on('hide', () => {
-            for (let menuItem of menuItems) {
+            for (const menuItem of menuItems) {
                 if (menuItem.subMenu) {
                     menuItem.subMenu.hidden = true;
                 }
@@ -76,7 +76,7 @@ class MenuPanel extends Container {
 
         let deactivate: () => void | null = null;
 
-        for (let menuItem of menuItems) {
+        for (const menuItem of menuItems) {
             const type = menuItem.subMenu ? 'menu' : menuItem.text ? 'button' : 'separator';
 
             let row: Container | null = null;
@@ -168,6 +168,7 @@ class MenuPanel extends Container {
     }
 
     get rootPanel() {
+        // eslint-disable-next-line  @typescript-eslint/no-this-alias
         let panel: MenuPanel = this;
         while (panel.parentPanel) {
             panel = panel.parentPanel;

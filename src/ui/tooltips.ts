@@ -114,7 +114,7 @@ class Tooltips extends Container {
         };
 
         this.destroy = () => {
-            for (let target of targets.keys()) {
+            for (const target of targets.keys()) {
                 this.unregister(target);
             }
         };

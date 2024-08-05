@@ -200,6 +200,6 @@ class SphereShape extends Element {
     get radius() {
         return this._radius;
     }
-};
+}
 
 export { SphereShape };

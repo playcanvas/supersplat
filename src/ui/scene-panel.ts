@@ -82,6 +82,6 @@ class ScenePanel extends Container {
         this.append(transformHeader);
         this.append(new Transform(events));
     }
-};
+}
 
 export { ScenePanel };

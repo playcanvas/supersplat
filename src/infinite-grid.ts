@@ -7,7 +7,8 @@ import {
     Mat4,
     QuadRender,
     Shader,
-    createShaderFromCode
+    createShaderFromCode,
+    FUNC_LESSEQUAL
 } from 'playcanvas';
 import { Element, ElementType } from './element';
 import { Serializer } from './serializer';
@@ -161,7 +162,7 @@ class InfiniteGrid extends Element {
     shader: Shader;
     quadRender: QuadRender;
     blendState = new BlendState(false);
-    depthState = new DepthState(FUNC_ALWAYS, true);
+    depthState = new DepthState(FUNC_LESSEQUAL, true);
 
     visible = true;
 

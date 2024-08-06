@@ -172,7 +172,7 @@ class Menu extends Container {
         const helpMenuPanel = new MenuPanel([{
             text: 'About SuperSplat',
             icon: 'E138',
-            onSelect: () => events.fire('show.about')
+            onSelect: () => events.invoke('show.about')
         }, {
             text: 'Keyboard Shortcuts',
             icon: 'E136',

@@ -40,11 +40,13 @@
             text-align: center;
             padding: 20px 0px;
 
-            color: $text-secondary;
+            color: $text-primary;
 
             &::before {
                 font-family: 'pc-icon';
+                font-size: 16px;
                 margin: 0px 10px;
+                color: $text-primary;
             }
 
             &.error::before {
@@ -54,17 +56,14 @@
     
             &.info::before {
                 content: '\E400';
-                color: $text-primary;
             }
 
             &.yesno::before {
                 content: '\E138';
-                color: $text-primary;
             }
 
             &.okcancel::before {
                 content: '\E138';
-                color: $text-primary;
             }
         }
 
@@ -85,6 +84,7 @@
                 background-color: $bcg-darker;
 
                 &:hover {
+                    color: $text-primary;
                     background-color: $clr-hilight;
                 }
             }

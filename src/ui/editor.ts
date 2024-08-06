@@ -144,6 +144,14 @@ class EditorUI {
             shortcutsPopup.hidden = false;
         });
 
+        events.function('show.about', () => {
+            return this.popup.show({
+                type: 'info',
+                header: 'About',
+                message: `SUPERSPLAT v${version}`
+            });
+        });
+
         events.function('showPopup', (options: ShowOptions) => {
             return this.popup.show(options);
         });

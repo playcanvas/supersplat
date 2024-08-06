@@ -89,6 +89,10 @@ class ScenePanel extends Container {
         this.append(splatList);
         this.append(transformHeader);
         this.append(new Transform(events));
+        this.append(new Element({
+            class: `panel-header`,
+            height: 20
+        }));
     }
 }
 

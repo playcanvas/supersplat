@@ -3,6 +3,15 @@ import { Events } from '../events';
 import { Splat } from '../splat';
 import { Element, ElementType } from '../element';
 
+import shownSvg from '../svg/shown.svg';
+import hiddenSvg from '../svg/hidden.svg';
+import deleteSvg from '../svg/delete.svg';
+
+const createSvg = (svgString: string) => {
+    const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
+    return new DOMParser().parseFromString(decodedStr, 'image/svg+xml').documentElement;
+};
+
 class SplatItem extends Container {
     getSelected: () => boolean;
     setSelected: (value: boolean) => void;
@@ -24,15 +33,24 @@ class SplatItem extends Container {
         });
 
         const visible = new PcuiElement({
+            dom: createSvg(shownSvg),
             class: 'splat-item-visible',
         });
 
+        const invisible = new PcuiElement({
+            dom: createSvg(hiddenSvg),
+            class: 'splat-item-visible',
+            hidden: true
+        });
+
         const remove = new PcuiElement({
+            dom: createSvg(deleteSvg),
             class: 'splat-item-delete'
         });
 
         this.append(text);
         this.append(visible);
+        this.append(invisible);
         this.append(remove);
 
         this.getSelected = () => {
@@ -57,6 +75,8 @@ class SplatItem extends Container {
 
         this.setVisible = (value: boolean) => {
             if (value !== this.visible) {
+                visible.hidden = !value;
+                invisible.hidden = value;
                 if (value) {
                     this.class.add('visible');
                     this.emit('visible', this);
@@ -79,10 +99,12 @@ class SplatItem extends Container {
 
         // handle clicks
         visible.dom.addEventListener('click', toggleVisible, true);
+        invisible.dom.addEventListener('click', toggleVisible, true);
         remove.dom.addEventListener('click', handleRemove, true);
 
         this.destroy = () => {
             visible.dom.removeEventListener('click', toggleVisible, true);
+            invisible.dom.removeEventListener('click', toggleVisible, true);
             remove.dom.removeEventListener('click', handleRemove, true);
         }
     }

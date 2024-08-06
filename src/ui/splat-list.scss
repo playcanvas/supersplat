@@ -36,13 +36,11 @@
     flex-grow: 0;
     flex-shrink: 0;
 
-    padding: 4px;
-    width: 16px;
-    height: 16px;
-    line-height: 16px;
+    width: 24px;
+    height: 24px;
+    line-height: 24px;
 
-    color: black;
-    background-color: transparent;
+    color: $text-secondary;
 
     cursor: pointer;
 
@@ -51,13 +49,8 @@
     }
 
     &:hover {
+        color: $text-primary;
         background-color: $bcg-dark;
-    }
-
-    &::after {
-        font-family: pc-icon;
-        font-size: 16px;
-        content: '\E117';
     }
 }
 
@@ -75,12 +68,7 @@
     cursor: pointer;
 
     &:hover {
+        color: $text-primary;
         background-color: $bcg-dark;
-    }
-
-    &::after {
-        font-family: pc-icon;
-        font-size: 14px;
-        content: '\E124';
     }
 }

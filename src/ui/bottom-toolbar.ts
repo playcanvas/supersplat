@@ -7,8 +7,8 @@ import redoSvg from '../svg/redo.svg';
 import pickerSvg from '../svg/select-picker.svg';
 import brushSvg from '../svg/select-brush.svg';
 import sphereSvg from '../svg/select-sphere.svg';
-import lassoSvg from '../svg/select-lasso.svg';
-import cropSvg from '../svg/crop.svg';
+// import lassoSvg from '../svg/select-lasso.svg';
+// import cropSvg from '../svg/crop.svg';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -50,20 +50,20 @@ class BottomToolbar extends Container {
             class: 'bottom-toolbar-tool'
         });
 
-        const lasso = new Button({
-            id: 'bottom-toolbar-lasso',
-            class: ['bottom-toolbar-tool', 'disabled']
-        });
+        // const lasso = new Button({
+        //     id: 'bottom-toolbar-lasso',
+        //     class: ['bottom-toolbar-tool', 'disabled']
+        // });
 
         const sphere = new Button({
             id: 'bottom-toolbar-sphere',
             class: 'bottom-toolbar-tool'
         });
 
-        const crop = new Button({
-            id: 'bottom-toolbar-crop',
-            class: ['bottom-toolbar-tool', 'disabled']
-        });
+        // const crop = new Button({
+        //     id: 'bottom-toolbar-crop',
+        //     class: ['bottom-toolbar-tool', 'disabled']
+        // });
 
         const translate = new Button({
             id: 'bottom-toolbar-translate',
@@ -94,18 +94,18 @@ class BottomToolbar extends Container {
         picker.dom.appendChild(createSvg(pickerSvg));
         brush.dom.appendChild(createSvg(brushSvg));
         sphere.dom.appendChild(createSvg(sphereSvg));
-        lasso.dom.appendChild(createSvg(lassoSvg));
-        crop.dom.appendChild(createSvg(cropSvg));
+        // lasso.dom.appendChild(createSvg(lassoSvg));
+        // crop.dom.appendChild(createSvg(cropSvg));
 
         this.append(undo);
         this.append(redo);
         this.append(new Element({ class: 'bottom-toolbar-separator' }));
         this.append(picker);
         this.append(brush);
-        this.append(lasso);
+        // this.append(lasso);
         this.append(new Element({ class: 'bottom-toolbar-separator' }));
         this.append(sphere);
-        this.append(crop);
+        // this.append(crop);
         this.append(new Element({ class: 'bottom-toolbar-separator' }));
         this.append(translate);
         this.append(rotate);
@@ -143,9 +143,9 @@ class BottomToolbar extends Container {
         tooltips.register(redo, 'Redo');
         tooltips.register(picker, 'Picker Select');
         tooltips.register(brush, 'Brush Select');
-        tooltips.register(lasso, 'Lasso Select');
+        // tooltips.register(lasso, 'Lasso Select');
         tooltips.register(sphere, 'Sphere Select');
-        tooltips.register(crop, 'Crop');
+        // tooltips.register(crop, 'Crop');
         tooltips.register(translate, 'Translate');
         tooltips.register(rotate, 'Rotate');
         tooltips.register(scale, 'Scale');

@@ -27,9 +27,7 @@
         }
 
         svg {
-            path {
-                fill: $clr-default;
-            }
+            color: $clr-default;
         }
     }
 
@@ -42,9 +40,7 @@
 
     &>.right-toolbar-button {
         svg {
-            path {
-                fill: $clr-default;
-            }
+            color: $clr-default;
         }
     }
 
@@ -52,9 +48,7 @@
         background-color: $bcg-primary;
 
         svg {
-            path {
-                fill: $clr-default;
-            }
+            color: $clr-default;
         }
 
         &.active {
@@ -62,20 +56,16 @@
             background-color: $clr-hilight !important;
 
             svg {
-                path {
-                    fill: $clr-active;
-                    stroke: $clr-active;
-                }
+                color: $clr-active;
             }
         }
 
         &.disabled {
-            svg {
-                path {
-                    fill: $clr-disabled;
-                }
-            }
             background-color: $bcg-dark;
+
+            svg {
+                color: $clr-disabled;
+            }
         }
     }
 
@@ -85,12 +75,8 @@
             color: $clr-hilight;
         }
 
-        // highlight svg
         svg {
-            path {
-                fill: $clr-hilight;
-                stroke: $clr-hilight;
-            }
+            color: $clr-hilight;
         }
     }
 }

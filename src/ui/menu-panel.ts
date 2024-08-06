@@ -4,7 +4,7 @@ type Direction = 'left' | 'right' | 'top' | 'bottom';
 
 type MenuItem = {
     text?: string;
-    icon?: string;
+    icon?: string | Element;
     extra?: string | Element;
     subMenu?: MenuPanel;
 
@@ -79,12 +79,18 @@ class MenuPanel extends Container {
         for (const menuItem of menuItems) {
             const type = menuItem.subMenu ? 'menu' : menuItem.text ? 'button' : 'separator';
 
+            const createIcon = (icon: string | Element) => {
+                return isString(menuItem.icon) ?
+                    new Label({ class: 'menu-row-icon', text: menuItem.icon && String.fromCodePoint(parseInt(menuItem.icon as string, 16)) }) :
+                        menuItem.icon;
+            };
+
             let row: Container | null = null;
             let activate: () => void | null = null;
             switch (type) {
                 case 'button': {
                     row = new Container({ class: 'menu-row' });
-                    const icon = new Label({ class: 'menu-row-icon', text: menuItem.icon && String.fromCodePoint(parseInt(menuItem.icon, 16)) });
+                    const icon = createIcon(menuItem.icon);
                     const text = new Label({ class: 'menu-row-text', text: menuItem.text });
                     const postscript = isString(menuItem.extra) ? new Label({ class: 'menu-row-postscript', text: menuItem.extra as string }) : menuItem.extra;
                     row.append(icon);
@@ -96,7 +102,7 @@ class MenuPanel extends Container {
 
                 case 'menu': {
                     row = new Container({ class: 'menu-row' });
-                    const icon = new Label({ class: 'menu-row-icon', text: menuItem.icon &&String.fromCodePoint(parseInt(menuItem.icon, 16)) });
+                    const icon = createIcon(menuItem.icon);
                     const text = new Label({ class: 'menu-row-text', text: menuItem.text });
                     const postscript = new Label({ class: 'menu-row-postscript', text: '\u232A' });
                     row.append(icon);

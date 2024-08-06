@@ -1,8 +1,26 @@
-import { Container, Label, BooleanInput } from 'pcui';
+import { Container, Element, Label, BooleanInput } from 'pcui';
 import { Events } from '../events';
 import { MenuPanel } from './menu-panel';
 
 import logoSvg from '../svg/playcanvas-logo.svg';
+import sceneNew from '../svg/new.svg';
+import sceneOpen from '../svg/open.svg';
+import sceneSave from '../svg/save.svg';
+import sceneExport from '../svg/export.svg';
+import sceneImport from '../svg/import.svg';
+import selectAll from '../svg/select-all.svg';
+import selectNone from '../svg/select-none.svg';
+import selectInverse from '../svg/select-inverse.svg';
+import selectLock from '../svg/select-lock.svg';
+import selectUnlock from '../svg/select-unlock.svg';
+import selectDelete from '../svg/delete.svg';
+
+const createSvg = (svgString: string) => {
+    const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
+    return new Element({
+        dom: new DOMParser().parseFromString(decodedStr, 'image/svg+xml').documentElement
+    });
+};
 
 class Menu extends Container {
     constructor(events: Events, args = {}) {
@@ -52,12 +70,12 @@ class Menu extends Container {
 
         const exportMenuPanel = new MenuPanel([{
             text: 'Compressed Ply',
-            icon: 'E245',
+            icon: createSvg(sceneExport),
             onSelect: () => events.invoke('scene.export', 'compressed-ply'),
             isEnabled: () => !events.invoke('scene.empty'),
         }, {
             text: 'Splat file',
-            icon: 'E245',
+            icon: createSvg(sceneExport),
             onSelect: () => events.invoke('scene.export', 'splat'),
             isEnabled: () => !events.invoke('scene.empty'),
         }]);
@@ -72,11 +90,11 @@ class Menu extends Container {
 
         const sceneMenuPanel = new MenuPanel([{
             text: 'New',
-            icon: 'E208',
+            icon: createSvg(sceneNew),
             onSelect: () => events.invoke('scene.new')
         }, {
             text: 'Open',
-            icon: 'E226',
+            icon: createSvg(sceneOpen),
             onSelect: async () => {
                 if (await events.invoke('scene.new')) {
                     events.fire('scene.open');
@@ -84,7 +102,7 @@ class Menu extends Container {
             }
         }, {
             text: 'Import',
-            icon: 'E245',
+            icon: createSvg(sceneImport),
             onSelect: () => events.fire('scene.open')
         }, {
             // separator
@@ -100,47 +118,50 @@ class Menu extends Container {
             // separator
         }, {
             text: 'Save',
-            icon: 'E216',
+            icon: createSvg(sceneSave),
             onSelect: () => events.fire('scene.save'),
             isEnabled: () => !events.invoke('scene.empty')
         }, {
             text: 'Save As...',
-            icon: 'E216',
+            icon: createSvg(sceneSave),
             onSelect: () => events.fire('scene.saveAs'),
             isEnabled: () => !events.invoke('scene.empty')
         }, {
             text: 'Export',
-            icon: 'E225',
+            icon: createSvg(sceneExport),
             subMenu: exportMenuPanel
         }]);
 
         const selectionMenuPanel = new MenuPanel([{
             text: 'All',
-            icon: 'E0020',
+            icon: createSvg(selectAll),
             extra: 'A',
             onSelect: () => events.fire('select.all')
         }, {
             text: 'None',
-            icon: 'E0020',
+            icon: createSvg(selectNone),
             extra: 'Shift + A',
             onSelect: () => events.fire('select.none')
         }, {
-            text: 'Invert',
-            icon: 'E0020',
+            text: 'Inverse',
+            icon: createSvg(selectInverse),
             extra: 'I',
             onSelect: () => events.fire('select.invert')
         }, {
             // separator
         }, {
             text: 'Lock Selection',
+            icon: createSvg(selectLock),
             extra: 'H',
             onSelect: () => events.fire('select.hide')
         }, {
             text: 'Unlock All',
+            icon: createSvg(selectUnlock),
             extra: 'U',
             onSelect: () => events.fire('select.unhide')
         }, {
             text: 'Delete Selection',
+            icon: createSvg(selectDelete),
             extra: 'Delete',
             onSelect: () => events.fire('select.delete')
         }, {

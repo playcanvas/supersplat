@@ -24,6 +24,10 @@
     height: 32px;
     padding: 0px 8px;
 
+    svg {
+        color: $text-secondary;
+    }
+
     &:hover:not(.pcui-disabled) {
         background-color: $bcg-darkest;
         cursor: pointer;
@@ -31,10 +35,18 @@
         & > .menu-row-text, .menu-row-postscript, .menu-row-icon {
             color: $text-primary;
         }
+
+        svg {
+            color: $text-primary;
+        }
     }
 
     &.pcui-disabled {
         & > .menu-row-text, .menu-row-postscript, .menu-row-icon {
+            color: $text-darkest;
+        }
+
+        svg {
             color: $text-darkest;
         }
     }

@@ -1,8 +1,16 @@
-import { Container, Label } from 'pcui';
+import { Container, Element, Label } from 'pcui';
 import { Events } from '../events';
 import { Tooltips } from './tooltips';
 import { SplatList } from './splat-list';
 import { Transform } from './transform';
+
+import sceneImportSvg from '../svg/import.svg';
+import sceneNewSvg from '../svg/new.svg';
+
+const createSvg = (svgString: string) => {
+    const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
+    return new DOMParser().parseFromString(decodedStr, 'image/svg+xml').documentElement;
+};
 
 class ScenePanel extends Container {
     constructor(events: Events, tooltips: Tooltips, args = {}) {
@@ -32,15 +40,15 @@ class ScenePanel extends Container {
             class: `panel-header-label`
         });
 
-        const sceneImport = new Label({
-            text: '\uE245',
+        const sceneImport = new Container({
             class: `panel-header-button`
         });
+        sceneImport.dom.appendChild(createSvg(sceneImportSvg));
 
-        const sceneNew = new Label({
-            text: '\uE208',
+        const sceneNew = new Container({
             class: `panel-header-button`
         });
+        sceneNew.dom.appendChild(createSvg(sceneNewSvg));
 
         sceneHeader.append(sceneIcon);
         sceneHeader.append(sceneLabel);

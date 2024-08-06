@@ -32,6 +32,12 @@
             font-size: 13px;
             color: $clr-hilight;
     
+            padding: 4px;
+
+            svg {
+                color: $clr-hilight;
+            }
+
             &:hover {
                 color: #ff9900;
                 cursor: pointer;

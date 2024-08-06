@@ -24,13 +24,6 @@ $bcg-darkest: #181818;
 
 * {
     font-size: 12px;
-}
-
-*.unselectable {
-    -moz-user-select: none;
-    -khtml-user-select: none;
-    -webkit-user-select: none;
-    -ms-user-select: none;
     user-select: none;
 }
 

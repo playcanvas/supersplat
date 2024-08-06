@@ -8,8 +8,7 @@ class Menu extends Container {
     constructor(events: Events, args = {}) {
         args = {
             ...args,
-            id: 'menu',
-            class: 'unselectable'
+            id: 'menu'
         };
 
         super(args);

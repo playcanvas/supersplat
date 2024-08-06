@@ -11,6 +11,9 @@
 
     background-color: $bcg-dark;
     filter: drop-shadow(5px 5px 10px rgba(0, 0, 0, 0.8));
+
+    // the following is needed to get drop-shadow working on safari
+    will-change: transform;
 }
 
 .menu-row {

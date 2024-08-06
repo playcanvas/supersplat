@@ -21,6 +21,9 @@
 
         filter: drop-shadow(5px 5px 10px rgba(0, 0, 0, 0.8));
 
+        // the following is needed to get drop-shadow working on safari
+        will-change: transform;
+
         #popup-header {
             height: 32px;
             line-height: 32px;

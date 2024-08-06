@@ -60,21 +60,21 @@ const fsCode = /* glsl */ `
         return vec2(azimuth, elev) * 180.0 / 3.14159;
     }
 
-    bool strips(vec3 lp) {
-        vec2 ae = calcAzimuthElev(normalize(lp));
-
-        float spacing = 10.0;
-        float size = 0.25 / spacing;
-        return fract(ae.x / spacing) > size &&
-               fract(ae.y / spacing) > size;
-    }
-
     uniform sampler2D blueNoiseTex32;
     uniform vec3 view_position;
     uniform mat4 matrix_viewProjection;
     uniform vec4 sphere;
 
     varying vec3 fragWorld;
+
+    bool strips(vec3 lp) {
+        vec2 ae = calcAzimuthElev(normalize(lp));
+
+        float spacing = 180.0 / (2.0 * 3.14159 * sphere.w);
+        float size = 0.03;
+        return fract(ae.x / spacing) > size &&
+               fract(ae.y / spacing) > size;
+    }
 
     void behind(vec3 ray, float t) {
         vec3 wp = view_position + ray * t;

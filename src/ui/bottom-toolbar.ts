@@ -139,16 +139,16 @@ class BottomToolbar extends Container {
         });
 
         // register tooltips
-        tooltips.register(undo, 'Undo');
-        tooltips.register(redo, 'Redo');
-        tooltips.register(picker, 'Picker Select');
-        tooltips.register(brush, 'Brush Select');
+        tooltips.register(undo, 'Undo ( Ctrl + Z )');
+        tooltips.register(redo, 'Redo ( Ctrl + Shift + Z )');
+        tooltips.register(picker, 'Picker Select ( P )');
+        tooltips.register(brush, 'Brush Select ( B )');
         // tooltips.register(lasso, 'Lasso Select');
         tooltips.register(sphere, 'Sphere Select');
         // tooltips.register(crop, 'Crop');
-        tooltips.register(translate, 'Translate');
-        tooltips.register(rotate, 'Rotate');
-        tooltips.register(scale, 'Scale');
+        tooltips.register(translate, 'Translate ( 1 )');
+        tooltips.register(rotate, 'Rotate ( 2 )');
+        tooltips.register(scale, 'Scale ( 3 )');
         tooltips.register(coordSpace, 'Local Space Gizmo');
 
     }

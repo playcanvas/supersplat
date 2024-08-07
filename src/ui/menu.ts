@@ -39,9 +39,16 @@ class Menu extends Container {
             event.stopPropagation();
         });
 
-        const icon = document.createElement('img');
-        icon.setAttribute('id', 'menu-icon');
-        icon.src = logoSvg;
+        const iconDom = document.createElement('img');
+        iconDom.src = logoSvg;
+        iconDom.setAttribute('id', 'menu-icon');
+        iconDom.addEventListener('pointerdown', (event) => {
+            window.open('https://playcanvas.com', '_blank').focus()
+        });
+
+        const icon = new Element({
+            dom: iconDom
+        });
 
         const scene = new Label({
             text: 'Scene',
@@ -65,7 +72,7 @@ class Menu extends Container {
         buttonsContainer.append(selection);
         buttonsContainer.append(help);
 
-        menubar.dom.appendChild(icon);
+        menubar.append(icon);
         menubar.append(buttonsContainer);
 
         const exportMenuPanel = new MenuPanel([{

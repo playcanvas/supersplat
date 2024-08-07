@@ -47,9 +47,9 @@ class RightToolbar extends Container {
         this.append(new Element({ class: 'right-toolbar-separator' }));
         this.append(options);
 
-        tooltips.register(showHideSplats, 'Show/Hide Splats', 'left');
-        tooltips.register(frameSelection, 'Frame Selection', 'left');
-        tooltips.register(options, 'Options', 'left');
+        tooltips.register(showHideSplats, 'Show/Hide Splats ( Space )', 'left');
+        tooltips.register(frameSelection, 'Frame Selection ( F )', 'left');
+        tooltips.register(options, 'View Options', 'left');
 
         // add event handlers
 

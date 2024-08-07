@@ -13,6 +13,18 @@
     flex-direction: column;
     align-items: center;
 
+    #right-toolbar-mode-toggle {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+
+        svg {
+            width: 20px;
+            height: 20px;
+        }
+    }
+
     &>.right-toolbar-button, .right-toolbar-tool, .right-toolbar-toggle {
         width: 38px;
         height: 38px;
@@ -33,8 +45,8 @@
 
     &>.right-toolbar-separator {
         width: 38px;
-        height: 1px;
-        margin: 8px 0px;
+        height: 2px;
+        margin: 10px 0px;
         background-color: $bcg-primary;
     }
 

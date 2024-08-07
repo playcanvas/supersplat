@@ -100,8 +100,6 @@ class DataPanel extends Panel {
             id: 'data-controls'
         });
 
-        controls.append(sepLabel('Histogram'));
-
         const dataSelector = new SelectInput({
             class: 'control-element-expand',
             defaultValue: 'surface-area',

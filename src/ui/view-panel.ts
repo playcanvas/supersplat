@@ -82,7 +82,7 @@ class ViewPanel extends Container {
         });
 
         const splatSizeLabel = new Label({
-            text: 'Splat Size',
+            text: 'Centers Size',
             class: 'view-panel-row-label'
         });
 

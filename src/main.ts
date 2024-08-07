@@ -82,13 +82,7 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['Z', 'z'], { event: 'edit.redo', ctrl: true, shift: true });
     shortcuts.register(['M', 'm'], { event: 'camera.toggleMode' });
     shortcuts.register(['D', 'd'], { event: 'dataPanel.toggle' });
-
-    // space toggles between 0 and size
-    shortcuts.register([' '], {
-        func: () => {
-            events.fire('camera.toggleDebug');
-        }
-    });
+    shortcuts.register([' '], { event: 'camera.toggleDebug' });
 
     return shortcuts;
 };

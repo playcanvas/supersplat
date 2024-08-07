@@ -1,9 +1,11 @@
-import { Button, Container, Element } from 'pcui';
+import { Button, Container, Element, Label } from 'pcui';
 import { Events } from '../events';
 import { Tooltips } from './tooltips';
 
 import showHideSplatsSvg from '../svg/show-hide-splats.svg';
 import frameSelectionSvg from '../svg/frame-selection.svg';
+import centersSvg from '../svg/centers.svg';
+import ringsSvg from '../svg/rings.svg';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -23,6 +25,11 @@ class RightToolbar extends Container {
             event.stopPropagation();
         });
 
+        const ringsModeToggle = new Button({
+            id: 'right-toolbar-mode-toggle',
+            class: 'right-toolbar-toggle'
+        });
+
         const showHideSplats = new Button({
             id: 'right-toolbar-show-hide',
             class: ['right-toolbar-toggle', 'active']
@@ -39,35 +46,39 @@ class RightToolbar extends Container {
             icon: 'E283'
         });
 
+        ringsModeToggle.dom.appendChild(createSvg(ringsSvg));
         showHideSplats.dom.appendChild(createSvg(showHideSplatsSvg));
         frameSelection.dom.appendChild(createSvg(frameSelectionSvg));
 
+        this.append(ringsModeToggle);
         this.append(showHideSplats);
+        this.append(new Element({ class: 'right-toolbar-separator' }));
         this.append(frameSelection);
         this.append(new Element({ class: 'right-toolbar-separator' }));
         this.append(options);
 
+        tooltips.register(ringsModeToggle, 'Toggle Mode ( M )', 'left');
         tooltips.register(showHideSplats, 'Show/Hide Splats ( Space )', 'left');
         tooltips.register(frameSelection, 'Frame Selection ( F )', 'left');
         tooltips.register(options, 'View Options', 'left');
 
         // add event handlers
 
-        options.on('click', () => events.fire('viewPanel.toggleVisible'));
+        ringsModeToggle.on('click', () => events.fire('camera.toggleMode'));
+        showHideSplats.on('click', () => events.fire('camera.toggleDebug'));
         frameSelection.on('click', () => events.fire('camera.focus'));
+        options.on('click', () => events.fire('viewPanel.toggleVisible'));
+
+        events.on('camera.mode', (mode: string) => {
+            ringsModeToggle.class[mode === 'rings' ? 'add' : 'remove']('active');
+        });
+
+        events.on('camera.debug', (debug: boolean) => {
+            showHideSplats.class[debug ? 'add' : 'remove']('active');
+        });
 
         events.on('viewPanel.visible', (visible: boolean) => {
             options.class[visible ? 'add' : 'remove']('active');
-        });
-
-        // show-hide splats
-
-        events.on('camera.debug', (debug: boolean) => {
-            showHideSplats.dom.classList[debug ? 'add' : 'remove']('active');
-        });
-
-        showHideSplats.dom.addEventListener('click', () => {
-            events.fire('camera.toggleDebug');
         });
     }
 }

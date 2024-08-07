@@ -9,6 +9,7 @@ import { ScenePanel } from './scene-panel';
 import { ViewPanel } from './view-panel';
 import { BottomToolbar } from './bottom-toolbar';
 import { RightToolbar } from './right-toolbar';
+import { ModeToggle } from './mode-toggle';
 import { Tooltips } from './tooltips';
 import { ShortcutsPopup } from './shortcuts-popup';
 
@@ -88,6 +89,7 @@ class EditorUI {
         const viewPanel = new ViewPanel(events, tooltips);
         const bottomToolbar = new BottomToolbar(events, tooltips);
         const rightToolbar = new RightToolbar(events, tooltips);
+        const modeToggle = new ModeToggle(events, tooltips);
         const menu = new Menu(events);
 
         canvasContainer.dom.appendChild(canvas);
@@ -97,6 +99,7 @@ class EditorUI {
         canvasContainer.append(viewPanel);
         canvasContainer.append(bottomToolbar);
         canvasContainer.append(rightToolbar);
+        canvasContainer.append(modeToggle);
         canvasContainer.append(menu);
 
         // view axes container

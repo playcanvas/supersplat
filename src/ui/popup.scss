@@ -9,7 +9,8 @@
         position: absolute;
         left: 50%;
         top: 50%;
-        width: 320px;
+        min-width: 320px;
+        max-width: 480px;
         transform: translate(-50%, -50%);
 
         display: flex;
@@ -38,7 +39,7 @@
         #popup-text {
             text-wrap: wrap;
             text-align: center;
-            padding: 20px 0px;
+            padding: 20px 10px;
 
             color: $text-primary;
 
@@ -68,7 +69,8 @@
         }
 
         #popup-text-input {
-            margin-bottom: 24px;
+            width: 360px;
+            margin: 20px;
         }
 
         #popup-buttons {

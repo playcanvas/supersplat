@@ -191,7 +191,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             const y = splatData.getProp('y');
             const z = splatData.getProp('z');
 
-            const radius2 = sphere[3] * sphere[3];
+            splat.worldTransform.getScale(vec);
+
+            const radius2 = (sphere[3] / vec.x) ** 2;
             vec.set(sphere[0], sphere[1], sphere[2]);
 
             mat.invert(splat.worldTransform);

@@ -1,8 +1,9 @@
-import { TranslateGizmo } from 'playcanvas';
+import { TranslateGizmo, Vec3 } from 'playcanvas';
 import { Button, Container, NumericInput } from 'pcui';
 import { Events } from '../events';
 import { Scene } from '../scene';
 import { SphereShape } from '../sphere-shape';
+import { Splat } from '../splat';
 
 class SphereSelection {
     activate: () => void;
@@ -58,6 +59,13 @@ class SphereSelection {
         addButton.dom.addEventListener('pointerdown', (e) => { e.stopPropagation(); apply('add'); });
         removeButton.dom.addEventListener('pointerdown', (e) => { e.stopPropagation(); apply('remove'); });
         radius.on('change', () => { sphere.radius = radius.value; });
+
+        events.on('camera.focalPointPicked', (details: { splat: Splat, position: Vec3 }) => {
+            if (this.active) {
+                sphere.pivot.setPosition(details.position);
+                gizmo.attach([sphere.pivot]);
+            }
+        });
 
         this.activate = () => {
             this.active = true;

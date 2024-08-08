@@ -36,46 +36,7 @@ class ViewPanel extends Container {
         header.append(icon);
         header.append(label);
 
-        // rings mode
-
-        const ringsModeRow = new Container({
-            class: 'view-panel-row'
-        });
-
-        const ringsModeLabel = new Label({
-            text: 'Rings Mode',
-            class: 'view-panel-row-label'
-        });
-
-        const ringsModeToggle = new BooleanInput({
-            type: 'toggle',
-            class: 'view-panel-row-toggle'
-        });
-
-        ringsModeRow.append(ringsModeLabel);
-        ringsModeRow.append(ringsModeToggle);
-
-        // show splats
-
-        const showSplatsRow = new Container({
-            class: 'view-panel-row'
-        });
-
-        const showSplatsLabel = new Label({
-            text: 'Show Splats',
-            class: 'view-panel-row-label'
-        });
-
-        const showSplatsToggle = new BooleanInput({
-            type: 'toggle',
-            class: 'view-panel-row-toggle',
-            value: true
-        });
-
-        showSplatsRow.append(showSplatsLabel);
-        showSplatsRow.append(showSplatsToggle);
-
-        // splat size
+        // centers size
 
         const splatSizeRow = new Container({
             class: 'view-panel-row'
@@ -118,8 +79,6 @@ class ViewPanel extends Container {
         showGridRow.append(showGridToggle);
 
         this.append(header);
-        this.append(ringsModeRow);
-        this.append(showSplatsRow);
         this.append(splatSizeRow);
         this.append(showGridRow);
 
@@ -144,26 +103,6 @@ class ViewPanel extends Container {
             setVisible(this.hidden);
         });
 
-        // rings mode
-
-        events.on('camera.mode', (mode: string) => {
-            ringsModeToggle.value = mode === 'rings';
-        });
-
-        ringsModeToggle.on('change', () => {
-            events.fire('camera.setMode', ringsModeToggle.value ? 'rings' : 'centers');
-        });
-
-        // show splats
-
-        events.on('camera.debug', (debug: boolean) => {
-            showSplatsToggle.value = debug;
-        });
-
-        showSplatsToggle.on('change', () => {
-            events.fire('camera.setDebug', showSplatsToggle.value);
-        });
-
         // splat size
 
         events.on('camera.splatSize', (value: number) => {
@@ -172,6 +111,8 @@ class ViewPanel extends Container {
 
         splatSizeSlider.on('change', (value: number) => {
             events.fire('camera.setSplatSize', value);
+            events.fire('camera.setDebug', true);
+            events.fire('camera.setMode', 'centers');
         });
 
         // show grid

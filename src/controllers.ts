@@ -142,7 +142,9 @@ class PointerController {
         };
 
         const dblclick = (event: globalThis.MouseEvent) => {
-            camera.pickFocalPoint(event.offsetX, event.offsetY);
+            if (event.target === target) {
+                camera.pickFocalPoint(event.offsetX, event.offsetY);
+            }
         };
 
         // key state

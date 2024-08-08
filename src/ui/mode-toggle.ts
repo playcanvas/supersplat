@@ -32,12 +32,12 @@ class ModeToggle extends Container {
 
         const centersText = new Label({
             id: 'centers-text',
-            text: 'Centers'
+            text: 'Centers mode'
         });
 
         const ringsText = new Label({
             id: 'rings-text',
-            text: 'Rings'
+            text: 'Rings mode'
         });
 
         this.append(centersIcon);
@@ -48,7 +48,7 @@ class ModeToggle extends Container {
         this.dom.addEventListener('pointerdown', (event) => {
             event.stopPropagation();
             events.fire('camera.toggleMode');
-            
+            events.fire('camera.setDebug', true);
         });
 
         events.on('camera.mode', (mode: string) => {
@@ -56,7 +56,7 @@ class ModeToggle extends Container {
             this.class[mode === 'rings' ? 'add' : 'remove']('rings-mode');
         });
 
-        tooltips.register(this, 'Toggle Mode ( M )');
+        tooltips.register(this, 'Splat Mode ( M )');
     }
 }
 

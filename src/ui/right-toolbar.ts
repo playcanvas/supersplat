@@ -46,7 +46,12 @@ class RightToolbar extends Container {
             icon: 'E283'
         });
 
-        ringsModeToggle.dom.appendChild(createSvg(ringsSvg));
+        const centersDom = createSvg(centersSvg);
+        const ringsDom = createSvg(ringsSvg);
+        ringsDom.style.display = 'none';
+
+        ringsModeToggle.dom.appendChild(centersDom);
+        ringsModeToggle.dom.appendChild(ringsDom);
         showHideSplats.dom.appendChild(createSvg(showHideSplatsSvg));
         frameSelection.dom.appendChild(createSvg(frameSelectionSvg));
 
@@ -57,20 +62,25 @@ class RightToolbar extends Container {
         this.append(new Element({ class: 'right-toolbar-separator' }));
         this.append(options);
 
-        tooltips.register(ringsModeToggle, 'Toggle Mode ( M )', 'left');
+        tooltips.register(ringsModeToggle, 'Splat Mode ( M )', 'left');
         tooltips.register(showHideSplats, 'Show/Hide Splats ( Space )', 'left');
         tooltips.register(frameSelection, 'Frame Selection ( F )', 'left');
         tooltips.register(options, 'View Options', 'left');
 
         // add event handlers
 
-        ringsModeToggle.on('click', () => events.fire('camera.toggleMode'));
+        ringsModeToggle.on('click', () => {
+            events.fire('camera.toggleMode');
+            events.fire('camera.setDebug', true);
+        });
         showHideSplats.on('click', () => events.fire('camera.toggleDebug'));
         frameSelection.on('click', () => events.fire('camera.focus'));
         options.on('click', () => events.fire('viewPanel.toggleVisible'));
 
         events.on('camera.mode', (mode: string) => {
             ringsModeToggle.class[mode === 'rings' ? 'add' : 'remove']('active');
+            centersDom.style.display = mode === 'rings' ? 'none' : 'block';
+            ringsDom.style.display = mode === 'rings' ? 'block' : 'none';
         });
 
         events.on('camera.debug', (debug: boolean) => {

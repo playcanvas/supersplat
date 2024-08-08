@@ -1,0 +1,53 @@
+#menu {
+    position: absolute;
+}
+
+#menu-bar {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    width: 320px;
+    height: 50px;
+    border-radius: 8px;
+
+    overflow: hidden;
+
+    background-color: $bcg-primary;
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+#menu-icon {
+    width: 54px;
+    font-family: 'pc-icon';
+    cursor: pointer;
+}
+
+#menu-container {
+    display: flex;
+    flex-direction: column;
+}
+
+#menu-options-container {
+    display: flex;
+    flex-direction: row;
+    flex-grow: 1;
+}
+
+.menu-option {
+    padding: 16px 20px;
+    margin: 0px;
+    flex-grow: 1;
+    text-align: center;
+
+    background-color: $bcg-primary;
+
+    cursor: pointer;
+
+    &:hover {
+        color: $text-primary;
+        background-color: $bcg-dark;
+    }
+}

@@ -9,7 +9,6 @@ class ToolManager {
     tools = new Map<string, Tool>();
     events: Events;
     active: string | null = null;
-    coordSpace: 'local' | 'world' = 'world';
 
     constructor(events: Events) {
         this.events = events;
@@ -22,22 +21,25 @@ class ToolManager {
             return this.active;
         });
 
-        this.events.on('tool.localCoordSpace', () => {
-            this.coordSpace = 'local';
-            events.fire('tool.coordSpace', 'local');
+        let coordSpace: 'local' | 'world' = 'world';
+
+        const setCoordSpace = (space: 'local' | 'world') => {
+            if (space !== coordSpace) {
+                coordSpace = space;
+                events.fire('tool.coordSpace', coordSpace);
+            }
+        };
+
+        events.function('tool.coordSpace', () => {
+            return coordSpace;
         });
 
-        this.events.on('tool.worldCoordSpace', () => {
-            this.coordSpace = 'world';
-            events.fire('tool.coordSpace', 'world');
+        events.on('tool.setCoordSpace', (value: 'local' | 'world') => {
+            setCoordSpace(value);
         });
 
-        this.events.on('tool.toggleCoordSpace', () => {
-            this.events.fire(`tool.${this.coordSpace === 'local' ? 'world' : 'local'}CoordSpace`);
-        });
-
-        this.events.function('tool.coordSpace', () => {
-            return this.coordSpace;
+        events.on('tool.toggleCoordSpace', () => {
+            setCoordSpace(coordSpace === 'local' ? 'world' : 'local');
         });
     }
 

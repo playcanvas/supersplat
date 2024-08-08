@@ -1,0 +1,43 @@
+
+#mode-toggle {
+    position: absolute;
+    left: calc(50% - 60px);
+    top: 0px;
+    width: 120px;
+
+    padding: 0px 8px;
+    border-radius: 0px 0px 8px 8px;
+
+    background-color: $bcg-dark;
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+
+    cursor: pointer;
+
+    &.centers-mode {
+        #rings-icon, #rings-text {
+            display: none;
+        }
+    }
+
+    &.rings-mode {
+        #centers-icon, #centers-text {
+            display: none;
+        }
+    }
+
+    #centers-icon {
+        color: $clr-hilight;
+    }
+
+    #rings-icon {
+        color: $clr-hilight;
+    }
+
+    &:hover {
+        color: $text-primary;
+    }
+}

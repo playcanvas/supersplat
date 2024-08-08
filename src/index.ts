@@ -1,4 +1,4 @@
-import style from './style.scss';
+import style from './ui/style.scss';
 import { main } from './main';
 import { version as appVersion } from '../package.json';
 import { version as pcuiVersion, revision as pcuiRevision } from 'pcui';

@@ -1,0 +1,23 @@
+#select-toolbar {
+    position: absolute;
+    left: 50%;
+    bottom: 100px;
+    height: 54px;
+    transform: translate(-50%, 0);
+    padding: 0px 8px;
+    border-radius: 8px;
+
+    background-color: $bcg-primary;
+
+    &:not(.pcui-hidden) {
+        display: flex;
+    }
+    flex-direction: row;
+    align-items: center;
+
+    .select-toolbar-button {
+        height: 38px;
+        padding: 0px 16px;
+        border-radius: 2px;
+    }
+}

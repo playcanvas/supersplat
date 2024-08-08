@@ -96,10 +96,12 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
         fileSelector.setAttribute('id', 'file-selector');
         fileSelector.setAttribute('type', 'file');
         fileSelector.setAttribute('accept', '.ply');
+        fileSelector.setAttribute('multiple', 'true');
+
         fileSelector.onchange = async () => {
             const files = fileSelector.files;
-            if (files.length > 0) {
-                const file = fileSelector.files[0];
+            for (let i = 0; i < files.length; i++) {
+                const file = fileSelector.files[i];
                 const url = URL.createObjectURL(file);
                 await scene.loadModel(url, file.name);
                 URL.revokeObjectURL(url);
@@ -124,12 +126,26 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
         return (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
     };
 
-    events.function('scene.canSave', () => {
-        return getSplats().length > 0;
+    events.function('scene.empty', () => {
+        return getSplats().length === 0;
     });
 
-    events.on('scene.new', () => {
+    events.function('scene.new', async () => {
+        if (events.invoke('scene.dirty')) {
+            const result = await events.invoke('showPopup', {
+                type: 'yesno',
+                header: 'RESET SCENE',
+                message: `You have unsaved changes. Are you sure you want to reset the scene?`
+            });
+
+            if (result.action !== 'yes') {
+                return false;
+            }
+        }
+
         scene.clear();
+
+        return true;
     });
 
     events.on('scene.open', async () => {
@@ -137,16 +153,22 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
             fileSelector.click();
         } else {
             try {
-                const handle = (await window.showOpenFilePicker({
+                const handles = await window.showOpenFilePicker({
                     id: 'SuperSplatFileOpen',
+                    multiple: true,
                     types: filePickerTypes.ply as FilePickerAcceptType[]
-                }))[0];
-                const file = await handle.getFile();
-                const url = URL.createObjectURL(file);
-                await scene.loadModel(url, file.name);
-                URL.revokeObjectURL(url);
+                });
+                for (let i = 0; i < handles.length; i++) {
+                    const handle = handles[i];
+                    const file = await handle.getFile();
+                    const url = URL.createObjectURL(file);
+                    await scene.loadModel(url, file.name);
+                    URL.revokeObjectURL(url);
 
-                fileHandle = handle;
+                    if (i === 0) {
+                        fileHandle = handle;
+                    }
+                }
             } catch (error) {
                 if (error.name !== 'AbortError') {
                     console.error(error);
@@ -196,12 +218,12 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
                 }
             }
         } else {
-            await events.invoke('scene.export', 'ply', splat.filename);
+            await events.invoke('scene.export', 'ply', splat.filename, 'saveAs');
             events.fire('scene.saved');
         }
     });
 
-    events.function('scene.export', async (type: ExportType, outputFilename: string = null) => {
+    events.function('scene.export', async (type: ExportType, outputFilename: string = null, exportType: 'export' | 'saveAs' = 'export') => {
         const extensions = {
             'ply': '.ply',
             'compressed-ply': '.compressed.ply',
@@ -238,7 +260,8 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
         } else {
             const result = await events.invoke('showPopup', {
                 type: 'okcancel',
-                message: 'Enter filename:',
+                header: exportType === 'saveAs' ? 'SAVE AS' : 'EXPORT',
+                message: 'Please enter a filename',
                 value: filename
             });
 

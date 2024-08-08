@@ -20,6 +20,7 @@ class RectSelection {
         const start = { x: 0, y: 0 };
         const end = { x: 0, y: 0 };
         let dragId: number | undefined;
+        let dragMoved = false;
 
         const updateRect = () => {
             const x = Math.min(start.x, end.x);
@@ -39,6 +40,7 @@ class RectSelection {
                 e.stopPropagation();
 
                 dragId = e.pointerId;
+                dragMoved = false;
                 parent.setPointerCapture(dragId);
 
                 start.x = end.x = e.offsetX;
@@ -55,6 +57,7 @@ class RectSelection {
                 e.preventDefault();
                 e.stopPropagation();
 
+                dragMoved = true;
                 end.x = e.offsetX;
                 end.y = e.offsetY;
 
@@ -78,10 +81,22 @@ class RectSelection {
 
                 dragEnd();
 
-                events.fire('select.rect', e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'), {
-                    start: { x: Math.min(start.x, end.x) / w, y: Math.min(start.y, end.y) / h },
-                    end: { x: Math.max(start.x, end.x) / w, y: Math.max(start.y, end.y) / h },
-                });
+                if (dragMoved) {
+                    // rect select
+                    events.fire(
+                        'select.rect',
+                        e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'), {
+                        start: { x: Math.min(start.x, end.x) / w, y: Math.min(start.y, end.y) / h },
+                        end: { x: Math.max(start.x, end.x) / w, y: Math.max(start.y, end.y) / h },
+                    });
+                } else {
+                    // pick
+                    events.fire(
+                        'select.point',
+                        e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
+                        { x: e.offsetX / parent.clientWidth, y: e.offsetY / parent.clientHeight }
+                    );
+                }
             }
         };
 

@@ -1,0 +1,66 @@
+
+#transform {
+    display: flex;
+    flex-direction: column;
+
+    background-color: $bcg-primary;
+
+    padding: 0px 6px 12px 6px;
+}
+
+.transform-row {
+    height: 32px;
+    line-height: 32px;
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    flex-grow: 1;
+    align-items: center;
+}
+
+.transform-label {
+    width: 70px;
+    flex-shrink: 0;
+    flex-grow: 0;
+    margin: 0px;
+}
+
+.transform-axis-label {
+    text-align: center;
+}
+
+.transform-expand {
+    flex-grow: 1;
+}
+
+$height: 22px;
+
+#transform > div > div.pcui-vector-input {
+    margin: 0px;
+    gap: 10px;
+    height: $height;
+}
+
+#transform > div > div.pcui-numeric-input {
+    margin: 0px;
+    height: $height;
+    line-height: $height;
+
+    & > input {
+        padding: 0px;
+        margin: 0px 0px 0px 4px;
+        height: $height;
+    }
+}
+
+#transform > div > div > div.pcui-numeric-input {
+    margin: 0px;
+    height: $height;
+    line-height: $height;
+
+    & > input {
+        padding: 0px;
+        margin: 0px 0px 0px 4px;
+        height: $height;
+    }
+}

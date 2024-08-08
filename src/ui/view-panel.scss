@@ -1,0 +1,51 @@
+#view-panel {
+    top: 50%;
+    transform: translate(0, -50%);
+    right: 102px;
+    width: 320px;
+
+    :not(.pcui-hidden) {
+        display: flex;
+    }
+    flex-direction: column;
+
+    & > .view-panel-row {
+        display: flex;
+        flex-direction: row;
+        padding: 2px;
+        height: 28px;
+
+        & > .view-panel-row-label {
+            flex-grow: 1;
+        }
+
+        & > .view-panel-row-toggle {
+            background-color: $bcg-dark;
+
+            &::after {
+                background-color: $clr-default;
+            }
+
+            &.pcui-boolean-input-ticked {
+                background-color: $clr-hilight;
+
+                &::after {
+                    background-color: $clr-active;
+                }
+            }
+        }
+
+        & > .view-panel-row-slider {
+            margin: 0px;
+
+            & > .pcui-slider-container {
+                & > .pcui-slider-bar {
+                    & > .pcui-slider-handle {
+                        background-color: $clr-default;
+                        border-radius: 3px;
+                    }
+                }
+            }
+        }
+    }
+}

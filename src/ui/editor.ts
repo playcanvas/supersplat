@@ -1,28 +1,34 @@
 import { Container, Label } from 'pcui';
-import { ControlPanel } from './control-panel';
-import { DataPanel } from './data-panel';
-import { Toolbar } from './toolbar';
-import { Events } from '../events';
-import { Popup } from './popup';
-import { ViewCube } from './view-cube';
 import { Mat4 } from 'playcanvas';
+import { DataPanel } from './data-panel';
+import { Events } from '../events';
+import { Popup, ShowOptions } from './popup';
+import { ViewCube } from './view-cube';
+import { Menu } from './menu';
+import { ScenePanel } from './scene-panel';
+import { ViewPanel } from './view-panel';
+import { BottomToolbar } from './bottom-toolbar';
+import { RightToolbar } from './right-toolbar';
+import { ModeToggle } from './mode-toggle';
+import { Tooltips } from './tooltips';
+import { ShortcutsPopup } from './shortcuts-popup';
+
+import { version } from '../../package.json';
 import logo from './playcanvas-logo.png';
 
 class EditorUI {
     appContainer: Container;
     topContainer: Container;
-    controlPanel: ControlPanel;
     canvasContainer: Container;
     toolsContainer: Container;
     canvas: HTMLCanvasElement;
-    filenameLabel: Label;
     popup: Popup;
 
     constructor(events: Events, remoteStorageMode: boolean) {
         // favicon
         const link = document.createElement('link');
         link.rel = 'icon';
-        link.href = logo.src;
+        link.href = logo;
         document.head.appendChild(link);
 
         // app
@@ -54,16 +60,14 @@ class EditorUI {
         topContainer.dom.addEventListener('mousemove', (event: MouseEvent) => killit(event));
         topContainer.on('click', (event: MouseEvent) => killit(event));
 
-        // toolbar
-        const toolbar = new Toolbar(events, appContainer, tooltipsContainer);
-
         // canvas
         const canvas = document.createElement('canvas');
         canvas.id = 'canvas';
 
         // filename label
-        const filenameLabel = new Label({
-            id: 'filename-label'
+        const appLabel = new Label({
+            id: 'app-label',
+            text: `SUPERSPLAT v${version}`
         });
 
         // canvas container
@@ -76,9 +80,27 @@ class EditorUI {
             id: 'tools-container'
         });
 
+        // tooltips
+        const tooltips = new Tooltips();
+        tooltipsContainer.append(tooltips);
+
+        // bottom toolbar
+        const scenePanel = new ScenePanel(events, tooltips);
+        const viewPanel = new ViewPanel(events, tooltips);
+        const bottomToolbar = new BottomToolbar(events, tooltips);
+        const rightToolbar = new RightToolbar(events, tooltips);
+        const modeToggle = new ModeToggle(events, tooltips);
+        const menu = new Menu(events);
+
         canvasContainer.dom.appendChild(canvas);
-        canvasContainer.append(filenameLabel);
+        canvasContainer.append(appLabel);
         canvasContainer.append(toolsContainer);
+        canvasContainer.append(scenePanel);
+        canvasContainer.append(viewPanel);
+        canvasContainer.append(bottomToolbar);
+        canvasContainer.append(rightToolbar);
+        canvasContainer.append(modeToggle);
+        canvasContainer.append(menu);
 
         // view axes container
         const viewCube = new ViewCube(events);
@@ -86,9 +108,6 @@ class EditorUI {
         events.on('prerender', (cameraMatrix: Mat4) => {
             viewCube.update(cameraMatrix);
         });
-
-        // control panel
-        const controlPanel = new ControlPanel(events, remoteStorageMode);
 
         // main container
         const mainContainer = new Container({
@@ -100,38 +119,44 @@ class EditorUI {
         mainContainer.append(canvasContainer);
         mainContainer.append(dataPanel);
 
-        editorContainer.append(toolbar);
-        editorContainer.append(controlPanel);
         editorContainer.append(mainContainer);
 
         // message popup
-        this.popup = new Popup(topContainer);
+        const popup = new Popup(topContainer);
+        topContainer.append(popup);
+
+        // shortcuts popup
+        const shortcutsPopup = new ShortcutsPopup();
 
         appContainer.append(editorContainer);
         appContainer.append(tooltipsContainer);
         appContainer.append(topContainer);
+        appContainer.append(shortcutsPopup);
 
         this.appContainer = appContainer;
         this.topContainer = topContainer;
-        this.controlPanel = controlPanel;
         this.canvasContainer = canvasContainer;
         this.toolsContainer = toolsContainer;
         this.canvas = canvas;
-        this.filenameLabel = filenameLabel;
+        this.popup = popup;
 
         document.body.appendChild(appContainer.dom);
         document.body.setAttribute('tabIndex', '-1');
 
-        events.function('showPopup', (options: { type: 'error' | 'info' | 'yesno' | 'okcancel', message: string, value: string}) => {
-            return this.popup.show(options.type, options.message, options.value);
+        events.on('show.shortcuts', () => {
+            shortcutsPopup.hidden = false;
         });
 
-        events.function('error', (err: any) => {
-            return this.popup.show('error', err);
+        events.function('show.about', () => {
+            return this.popup.show({
+                type: 'info',
+                header: 'About',
+                message: `SUPERSPLAT v${version}`
+            });
         });
 
-        events.function('info', (info: string) => {
-            return this.popup.show('info', info);
+        events.function('showPopup', (options: ShowOptions) => {
+            return this.popup.show(options);
         });
 
         // initialize canvas to correct size before creating graphics device etc
@@ -146,12 +171,16 @@ class EditorUI {
 
         // whenever the canvas container is clicked, set keyboard focus on the body
         canvasContainer.dom.addEventListener('pointerdown', (event: PointerEvent) => {
-            document.body.focus();
+            // set focus on the body if user is busy pressing on the canvas or a child of the tools
+            // element
+            if (event.target === canvas || toolsContainer.dom.contains(event.target as Node)) {
+                document.body.focus();
+            }
         }, true);
     }
 
     setFilename(filename: string) {
-        this.filenameLabel.text = filename;
+        // this.filenameLabel.text = filename;
     }
 }
 

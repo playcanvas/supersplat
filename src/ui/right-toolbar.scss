@@ -1,0 +1,94 @@
+#right-toolbar {
+    position: absolute;
+    right: 24px;
+    top: 50%;
+    width: 54px;
+    transform: translate(0, -50%);
+    padding: 8px 0px;
+    border-radius: 8px;
+
+    background-color: $bcg-dark;
+ 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    #right-toolbar-mode-toggle {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+
+        svg {
+            width: 20px;
+            height: 20px;
+        }
+    }
+
+    &>.right-toolbar-button, .right-toolbar-tool, .right-toolbar-toggle {
+        width: 38px;
+        height: 38px;
+        margin: 0px 1px;
+        padding: 0px;
+        border: 0px;
+        border-radius: 2px;
+
+        &::before {
+            font-size: 16px !important;
+            line-height: 100%;
+        }
+
+        svg {
+            color: $clr-default;
+        }
+    }
+
+    &>.right-toolbar-separator {
+        width: 38px;
+        height: 2px;
+        margin: 10px 0px;
+        background-color: $bcg-primary;
+    }
+
+    &>.right-toolbar-button {
+        svg {
+            color: $clr-default;
+        }
+    }
+
+    &>.right-toolbar-tool {
+        background-color: $bcg-primary;
+
+        svg {
+            color: $clr-default;
+        }
+
+        &.active {
+            color: $clr-active;
+            background-color: $clr-hilight !important;
+
+            svg {
+                color: $clr-active;
+            }
+        }
+
+        &.disabled {
+            background-color: $bcg-dark;
+
+            svg {
+                color: $clr-disabled;
+            }
+        }
+    }
+
+    &>.right-toolbar-toggle.active {
+        // highlight icon
+        &::before {
+            color: $clr-hilight;
+        }
+
+        svg {
+            color: $clr-hilight;
+        }
+    }
+}

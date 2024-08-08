@@ -1,0 +1,95 @@
+#popup {
+    width: 100%;
+    height: 100%;
+
+    // background-color: rgba(0, 0, 0, 0.5);
+    pointer-events: all;
+
+    #popup-dialog {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        min-width: 320px;
+        max-width: 480px;
+        transform: translate(-50%, -50%);
+
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+
+        border-radius: 8px;
+        background-color: $bcg-primary;
+
+        filter: drop-shadow(5px 5px 10px rgba(0, 0, 0, 0.8));
+
+        // the following is needed to get drop-shadow working on safari
+        will-change: transform;
+
+        #popup-header {
+            height: 32px;
+            line-height: 32px;
+            margin: 0px;
+            padding: 0px 8px;
+
+            font-weight: bold;
+            color: $text-primary;
+            background-color: $bcg-darker;
+        }
+
+        #popup-text {
+            text-wrap: wrap;
+            text-align: center;
+            padding: 20px 10px;
+
+            color: $text-primary;
+
+            &::before {
+                font-family: 'pc-icon';
+                font-size: 16px;
+                margin: 0px 10px;
+                color: $text-primary;
+            }
+
+            &.error::before {
+                content: '\E218';
+                color: $error;
+            }
+    
+            &.info::before {
+                content: '\E400';
+            }
+
+            &.yesno::before {
+                content: '\E138';
+            }
+
+            &.okcancel::before {
+                content: '\E138';
+            }
+        }
+
+        #popup-text-input {
+            width: 360px;
+            margin: 20px;
+        }
+
+        #popup-buttons {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            margin: 6px;
+
+            .popup-button {
+                height: 40px;
+                width: 120px;
+                border-radius: 4px;
+                background-color: $bcg-darker;
+
+                &:hover {
+                    color: $text-primary;
+                    background-color: $clr-hilight;
+                }
+            }
+        }
+    }
+}

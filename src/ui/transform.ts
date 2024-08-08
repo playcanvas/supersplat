@@ -1,40 +1,38 @@
-import { Container, Label, NumericInput, Panel, PanelArgs, VectorInput } from 'pcui';
+import { Container, ContainerArgs, Label, NumericInput, Panel, PanelArgs, VectorInput } from 'pcui';
 import { Quat, Vec3 } from 'playcanvas';
 import { Events } from '../events';
 import { Splat } from '../splat';
 
-class TransformPanel extends Panel {
-    constructor(events: Events, args: PanelArgs = {}) {
+class Transform extends Container {
+    constructor(events: Events, args: ContainerArgs = {}) {
         args = {
-            id: 'transform-panel',
-            class: 'control-panel',
-            headerText: 'TRANSFORM',
-            ...args
+            ...args,
+            id: 'transform'
         };
 
         super(args);
 
         const axis = new Container({
-            class: 'control-parent'
+            class: 'transform-row'
         });
 
         const axisLabel = new Label({
-            class: 'control-label',
+            class: 'transform-label',
             text: ''
         });
 
         const xLabel = new Label({
-            class: ['control-element-expand', 'transform-panel-axis-label'],
+            class: ['transform-expand', 'transform-label', 'transform-axis-label'],
             text: 'x'
         });
 
         const yLabel = new Label({
-            class: ['control-element-expand', 'transform-panel-axis-label'],
+            class: ['transform-expand', 'transform-label', 'transform-axis-label'],
             text: 'y'
         });
 
         const zLabel = new Label({
-            class: ['control-element-expand', 'transform-panel-axis-label'],
+            class: ['transform-expand', 'transform-label', 'transform-axis-label'],
             text: 'z'
         });
 
@@ -45,16 +43,16 @@ class TransformPanel extends Panel {
 
         // position
         const position = new Container({
-            class: 'control-parent'
+            class: 'transform-row'
         });
 
         const positionLabel = new Label({
-            class: 'control-label',
+            class: 'transform-label',
             text: 'Position'
         });
 
         const positionVector = new VectorInput({
-            class: 'control-element-expand',
+            class: 'transform-expand',
             precision: 2,
             dimensions: 3,
             value: [0, 0, 0],
@@ -66,16 +64,16 @@ class TransformPanel extends Panel {
 
         // rotation
         const rotation = new Container({
-            class: 'control-parent'
+            class: 'transform-row'
         });
 
         const rotationLabel = new Label({
-            class: 'control-label',
+            class: 'transform-label',
             text: 'Rotation'
         });
 
         const rotationVector = new VectorInput({
-            class: 'control-element-expand',
+            class: 'transform-expand',
             precision: 2,
             dimensions: 3,
             value: [0, 0, 0],
@@ -87,16 +85,16 @@ class TransformPanel extends Panel {
 
         // scale
         const scale = new Container({
-            class: 'control-parent'
+            class: 'transform-row'
         });
 
         const scaleLabel = new Label({
-            class: 'control-label',
+            class: 'transform-label',
             text: 'Scale'
         });
 
         const scaleInput = new NumericInput({
-            class: 'control-element-expand',
+            class: 'transform-expand',
             precision: 2,
             value: 1,
             min: 0.01,
@@ -172,4 +170,4 @@ class TransformPanel extends Panel {
     }
 }
 
-export { TransformPanel };
+export { Transform };

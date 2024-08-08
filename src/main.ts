@@ -8,14 +8,14 @@ import { registerEditorEvents } from './editor';
 import { initFileHandler } from './file-handler';
 import { initSelection } from './selection';
 import { ToolManager } from './tools/tool-manager';
+import { RectSelection } from './tools/rect-selection';
+import { BrushSelection } from './tools/brush-selection';
+import { SphereSelection } from './tools/sphere-selection';
 import { MoveTool } from './tools/move-tool';
 import { RotateTool } from './tools/rotate-tool';
 import { ScaleTool } from './tools/scale-tool';
-import { RectSelection } from './tools/rect-selection';
-import { BrushSelection } from './tools/brush-selection';
 import { Shortcuts } from './shortcuts';
 import { Events } from './events';
-import { PickerSelection } from './tools/picker-selection';
 
 declare global {
     interface LaunchParams {
@@ -65,12 +65,12 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['1'], { event: 'tool.move', sticky: true });
     shortcuts.register(['2'], { event: 'tool.rotate', sticky: true });
     shortcuts.register(['3'], { event: 'tool.scale', sticky: true });
-    shortcuts.register(['G', 'g'], { event: 'show.gridToggle' });
+    shortcuts.register(['G', 'g'], { event: 'grid.toggleVisible' });
     shortcuts.register(['C', 'c'], { event: 'tool.toggleCoordSpace' });
     shortcuts.register(['F', 'f'], { event: 'camera.focus' });
     shortcuts.register(['B', 'b'], { event: 'tool.brushSelection', sticky: true });
     shortcuts.register(['R', 'r'], { event: 'tool.rectSelection', sticky: true });
-    shortcuts.register(['P', 'p'], { event: 'tool.pickerSelection', sticky: true });
+    shortcuts.register(['P', 'p'], { event: 'tool.rectSelection', sticky: true });
     shortcuts.register(['A', 'a'], { event: 'select.all' });
     shortcuts.register(['A', 'a'], { event: 'select.none', shift: true });
     shortcuts.register(['I', 'i'], { event: 'select.invert' });
@@ -82,21 +82,7 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['Z', 'z'], { event: 'edit.redo', ctrl: true, shift: true });
     shortcuts.register(['M', 'm'], { event: 'camera.toggleMode' });
     shortcuts.register(['D', 'd'], { event: 'dataPanel.toggle' });
-
-    // keep tabs on splat size changes
-    let splatSizeSave = 2;
-    events.on('splatSize', (size: number) => {
-        if (size !== 0) {
-            splatSizeSave = size;
-        }
-    });
-
-    // space toggles between 0 and size
-    shortcuts.register([' '], {
-        func: () => {
-            events.fire('splatSize', events.invoke('splatSize') === 0 ? splatSizeSave : 0);
-        }
-    });
+    shortcuts.register([' '], { event: 'camera.toggleDebug' });
 
     return shortcuts;
 };
@@ -151,19 +137,19 @@ const main = async () => {
 
     // tool manager
     const toolManager = new ToolManager(events);
+    toolManager.register('rectSelection', new RectSelection(events, editorUI.toolsContainer.dom));
+    toolManager.register('brushSelection', new BrushSelection(events, editorUI.toolsContainer.dom));
+    toolManager.register('sphereSelection', new SphereSelection(events, scene, editorUI.canvasContainer));
     toolManager.register('move', new MoveTool(events, editHistory, scene));
     toolManager.register('rotate', new RotateTool(events, editHistory, scene));
     toolManager.register('scale', new ScaleTool(events, editHistory, scene));
-    toolManager.register('rectSelection', new RectSelection(events, editorUI.toolsContainer.dom));
-    toolManager.register('brushSelection', new BrushSelection(events, editorUI.toolsContainer.dom));
-    toolManager.register('pickerSelection', new PickerSelection(events, editorUI.toolsContainer.dom));
 
     window.scene = scene;
 
     registerEditorEvents(events, editHistory, scene, editorUI);
     initSelection(events, scene);
     initShortcuts(events);
-    await initFileHandler(scene, events, editorUI.canvas, remoteStorageDetails);
+    await initFileHandler(scene, events, editorUI.appContainer.dom, remoteStorageDetails);
 
     // load async models
     await scene.load();

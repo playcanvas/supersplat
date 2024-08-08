@@ -7,8 +7,11 @@ import resolve from '@rollup/plugin-node-resolve';
 import strip from '@rollup/plugin-strip';
 import typescript from '@rollup/plugin-typescript';
 import json from '@rollup/plugin-json';
-import sass from 'rollup-plugin-sass';
 // import { visualizer } from 'rollup-plugin-visualizer';
+
+import autoprefixer from 'autoprefixer';
+import postcss from 'postcss';
+import sass from 'rollup-plugin-sass';
 
 // prod is release build
 if (process.env.BUILD_TYPE === 'prod') {
@@ -63,10 +66,15 @@ const application = {
         }),
         alias({entries: aliasEntries}),
         resolve(),
-        image({dom: true}),
+        image({dom: false}),
         sass({
             output: false,
-            insert: true
+            insert: true,
+            processor: (css) => {
+                return postcss([autoprefixer])
+                        .process(css)
+                        .then(result => result.css);
+            }
         }),
         json(),
         typescript({

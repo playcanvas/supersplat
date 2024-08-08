@@ -325,7 +325,7 @@ class Splat extends Element {
         const events = this.scene.events;
         const selected = events.invoke('selection') === this;
         const cameraMode = events.invoke('camera.mode');
-        const splatSize = events.invoke('splatSize');
+        const splatSize = events.invoke('camera.debug') ? events.invoke('camera.splatSize') : 0;
 
         // configure rings rendering
         const material = this.entity.gsplat.instance.material;

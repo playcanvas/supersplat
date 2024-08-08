@@ -1,0 +1,11 @@
+.tooltips {
+    position: absolute;
+    background-color: $bcg-darkest;
+    border-radius: 3px;
+    padding: 1px;
+}
+
+.tooltips-content {
+    color: $clr-default;
+    margin: 2px;
+}

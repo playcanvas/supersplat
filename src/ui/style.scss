@@ -1,0 +1,239 @@
+@import '../../node_modules/@playcanvas/pcui/dist/pcui-theme-grey.scss';
+
+$clr-default: #b3aaac;
+$clr-disabled: #7c7678;
+$clr-active: white;
+$clr-hilight: #f60;
+
+$bcg-light: #555;
+$bcg-darkest: #181818;
+
+@import 'tooltips.scss';
+@import 'panel.scss';
+@import 'menu-panel.scss';
+@import 'menu.scss';
+@import 'scene-panel.scss';
+@import 'view-panel.scss';
+@import 'splat-list.scss';
+@import 'transform.scss';
+@import 'bottom-toolbar.scss';
+@import 'right-toolbar.scss';
+@import 'select-toolbar.scss';
+@import 'data-panel.scss';
+@import 'popup.scss';
+@import 'mode-toggle.scss';
+
+* {
+    font-size: 12px;
+    user-select: none;
+}
+
+html {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    max-height: 100%;
+    background-color: $bcg-primary;
+    overflow: hidden;
+    touch-action: none;
+}
+
+#app-container {
+    width: 100%;
+    height: 100%;
+}
+
+#editor-container {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: row;
+}
+
+#main-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    flex-grow: 1;
+}
+
+#sep-container {
+    background-color: $bcg-darker;
+}
+
+#sep-container > span {
+    color: white;
+}
+
+#coord-space-toggle.active {
+    background-color: $bcg-dark !important;
+    color: #f60;
+}
+
+#file-selector {
+    display: none;
+}
+
+#file-menu {
+    position: absolute;
+}
+
+.file-menu-item span {
+    padding: 6px;
+    color: $text-secondary !important;
+    font-size: 14px;
+}
+
+#shortcuts-panel {
+    background-color: $bcg-dark;
+}
+
+#shortcuts-container {
+    margin: 10px;
+}
+
+.shortcut-key {
+    width: 80px;
+    text-align: right;
+}
+
+.shortcut-header {
+    background-color: $bcg-darker;
+}
+
+#app-label {
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+    color: $text-primary;
+    text-shadow: 1px 1px 4px black;
+}
+
+.select-svg {
+    display: none;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+#view-cube-container {
+    position: absolute;
+    width: 140px;
+    height: 140px;
+    right: 0px;
+    top: 0px;
+    pointer-events: none;
+}
+
+#brush-select-canvas {
+    display: none;
+    position: absolute;
+    opacity: 0.4;
+}
+
+#canvas-container {
+    width: 100%;
+    background-color: #666666;
+    display: flex;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    flex-grow: 1;
+}
+
+#tools-container {
+    display: none;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+}
+
+#canvas {
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+}
+
+#tooltips-container {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+#top-container {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+// placeholder
+.pcui-input-element[placeholder] {
+    &::after {
+        color: $text-darkest;
+    }
+}
+
+.pcui-vector-input {
+    margin-left: 6px;
+    margin-right: 6px;
+}
+
+/* scrollbar styling */
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #20292b;
+}
+::-webkit-scrollbar-thumb {
+    background: #5b7073;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #f60;
+}
+::-webkit-scrollbar-corner {
+    background: #2c393c;
+}
+
+.font-thin {
+    font-family: 'Proxima Nova Thin', 'Helvetica Neue', Arial, Helvetica, sans-serif;
+    font-weight: 100;
+    font-style: normal;
+}
+
+.font-light {
+    font-family: 'Proxima Nova Light', 'Helvetica Neue', Arial, Helvetica, sans-serif;
+    font-weight: 200;
+    font-style: normal;
+}
+
+.font-regular {
+    font-family: 'Proxima Nova Regular', 'Helvetica Neue', Arial, Helvetica, sans-serif;
+    font-weight: normal;
+    font-style: normal;
+}
+
+.font-bold {
+    font-family: 'Proxima Nova Bold', 'Helvetica Neue', Arial, Helvetica, sans-serif;
+    font-weight: bold;
+    font-style: normal;
+}

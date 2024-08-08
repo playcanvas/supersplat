@@ -1,6 +1,5 @@
 import {
     BoundingBox,
-    Color,
     Mat4,
     Vec3,
     Vec4,
@@ -29,41 +28,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         const selected = events.invoke('selection') as Splat;
         return selected?.visible ? [selected] : [];
     };
-
-    const debugSphereCenter = new Vec3();
-    let debugSphereRadius = 0;
-
-    const debugPlane = new Vec3();
-    let debugPlaneDistance = 0;
-
-    // draw debug mesh instances
-    events.on('prerender', () => {
-        const app = scene.app;
-
-        if (debugSphereRadius > 0) {
-            app.drawWireSphere(debugSphereCenter, debugSphereRadius, Color.RED, 40);
-        }
-
-        if (debugPlane.length() > 0) {
-            vec.copy(debugPlane).mulScalar(debugPlaneDistance);
-            vec2.add2(vec, debugPlane);
-
-            mat.setLookAt(vec, vec2, Math.abs(Vec3.UP.dot(debugPlane)) > 0.99 ? Vec3.FORWARD : Vec3.UP);
-
-            const lines = [
-                new Vec3(-1,-1, 0), new Vec3( 1,-1, 0),
-                new Vec3( 1,-1, 0), new Vec3( 1, 1, 0),
-                new Vec3( 1, 1, 0), new Vec3(-1, 1, 0),
-                new Vec3(-1, 1, 0), new Vec3(-1,-1, 0),
-                new Vec3( 0, 0, 0), new Vec3( 0, 0,-1)
-            ];
-            for (let i = 0; i < lines.length; ++i) {
-                mat.transformPoint(lines[i], lines[i]);
-            }
-
-            app.drawLines(lines, Color.RED);
-        }
-    });
 
     const processSelection = (state: Uint8Array, op: string, pred: (i: number) => boolean) => {
         for (let i = 0; i < state.length; ++i) {
@@ -94,7 +58,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     // add unsaved changes warning message.
     window.addEventListener("beforeunload", function (e) {
-        if (editHistory.cursor === lastExportCursor) {
+        if (!events.invoke('scene.dirty')) {
             // if the undo cursor matches last export, then we have no unsaved changes
             return undefined;
         }
@@ -102,6 +66,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         const msg = 'You have unsaved changes. Are you sure you want to leave?';
         e.returnValue = msg;
         return msg;
+    });
+
+    events.function('scene.dirty', () => {
+        return editHistory.cursor !== lastExportCursor;
     });
 
     events.on('scene.saved', () => {
@@ -112,24 +80,31 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         scene.forceRender = true;
     });
 
-    events.on('splatSize', () => {
+    events.on('camera.debug', () => {
         scene.forceRender = true;
     });
 
-    events.on('show.gridOn', () => {
-        scene.grid.visible = true;
+    events.on('camera.splatSize', () => {
+        scene.forceRender = true;
     });
 
-    events.on('show.gridOff', () => {
-        scene.grid.visible = false;
-    });
+    const setGridVisible = (visible: boolean) => {
+        if (visible !== scene.grid.visible) {
+            scene.grid.visible = visible;
+            events.fire('grid.visible', visible);
+        }
+    };
 
-    events.on('show.gridToggle', () => {
-        scene.grid.visible = !scene.grid.visible;
-    });
-
-    events.function('show.grid', () => {
+    events.function('grid.visible', () => {
         return scene.grid.visible;
+    });
+
+    events.on('grid.toggleVisible', () => {
+        setGridVisible(!scene.grid.visible);
+    });
+
+    events.on('grid.setVisible', (visible: boolean) => {
+        setGridVisible(visible);
     });
 
     events.on('camera.focus', () => {
@@ -208,20 +183,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
     });
 
-    events.on('select.bySpherePlacement', (sphere: number[]) => {
-        debugSphereCenter.set(sphere[0], sphere[1], sphere[2]);
-        debugSphereRadius = sphere[3];
-
-        scene.forceRender = true;
-    });
-
-    events.on('select.byPlanePlacement', (axis: number[], distance: number) => {
-        debugPlane.set(axis[0], axis[1], axis[2]);
-        debugPlaneDistance = distance;
-
-        scene.forceRender = true;
-    });
-
     events.on('select.bySphere', (op: string, sphere: number[]) => {
         selectedSplats().forEach((splat) => {
             const splatData = splat.splatData;
@@ -230,7 +191,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             const y = splatData.getProp('y');
             const z = splatData.getProp('z');
 
-            const radius2 = sphere[3] * sphere[3];
+            splat.worldTransform.getScale(vec);
+
+            const radius2 = (sphere[3] / vec.x) ** 2;
             vec.set(sphere[0], sphere[1], sphere[2]);
 
             mat.invert(splat.worldTransform);
@@ -405,7 +368,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 const y = splatData.getProp('y');
                 const z = splatData.getProp('z');
 
-                const splatSize = events.invoke('splatSize');
+                const splatSize = events.invoke('camera.splatSize');
                 const camera = scene.camera.entity.camera;
                 const sx = point.x * width;
                 const sy = point.y * height;
@@ -478,8 +441,84 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
     });
 
-    events.on('allData', (value: boolean) => {
-        scene.assetLoader.loadAllData = value;
+    const setAllData = (value: boolean) => {
+        if (value !== scene.assetLoader.loadAllData) {
+            scene.assetLoader.loadAllData = value;
+            events.fire('allData', scene.assetLoader.loadAllData);
+        }
+    };
+
+    events.function('allData', () => {
+        return scene.assetLoader.loadAllData;
+    });
+
+    events.on('toggleAllData', (value: boolean) => {
+        setAllData(!events.invoke('allData'));
+    });
+
+    // camera mode
+
+    let activeMode = 'centers';
+
+    const setCameraMode = (mode: string) => {
+        if (mode !== activeMode) {
+            activeMode = mode;
+            events.fire('camera.mode', activeMode);
+        }
+    };
+
+    events.function('camera.mode', () => {
+        return activeMode;
+    });
+
+    events.on('camera.setMode', (mode: string) => {
+        setCameraMode(mode);
+    });
+
+    events.on('camera.toggleMode', () => {
+        setCameraMode(events.invoke('camera.mode') === 'centers' ? 'rings' : 'centers');
+    });
+
+    // camera debug
+
+    let cameraDebug = true;
+
+    const setCameraDebug = (enabled: boolean) => {
+        if (enabled !== cameraDebug) {
+            cameraDebug = enabled;
+            events.fire('camera.debug', cameraDebug);
+        }
+    };
+
+    events.function('camera.debug', () => {
+        return cameraDebug;
+    });
+
+    events.on('camera.setDebug', (value: boolean) => {
+        setCameraDebug(value);
+    });
+
+    events.on('camera.toggleDebug', () => {
+        setCameraDebug(!events.invoke('camera.debug'));
+    });
+
+    // splat size
+
+    let splatSize = 2;
+
+    const setSplatSize = (value: number) => {
+        if (value !== splatSize) {
+            splatSize = value;
+            events.fire('camera.splatSize', splatSize);
+        }
+    };
+
+    events.function('camera.splatSize', () => {
+        return splatSize;
+    });
+
+    events.on('camera.setSplatSize', (value: number) => {
+        setSplatSize(value);
     });
 }
 

@@ -42,7 +42,7 @@ const sepLabel = (labelText: string) => {
     container.class.add('sep-container');
 
     const label = new Label({
-        class: 'contol-element-expand',
+        class: 'control-element-expand',
         text: labelText
     });
 
@@ -78,7 +78,7 @@ class DataPanel extends Panel {
     constructor(events: Events, args = { }) {
         args = {
             ...args,
-            headerText: 'DATA',
+            headerText: 'SPLAT DATA',
             id: 'data-panel',
             resizable: 'top',
             resizeMax: 1000,
@@ -99,8 +99,6 @@ class DataPanel extends Panel {
         const controls = new Container({
             id: 'data-controls'
         });
-
-        controls.append(sepLabel('Histogram'));
 
         const dataSelector = new SelectInput({
             class: 'control-element-expand',
@@ -163,8 +161,8 @@ class DataPanel extends Panel {
 
         histogramContainer.dom.appendChild(histogram.canvas);
 
-        this.content.append(histogramContainer);
         this.content.append(controlsContainer);
+        this.content.append(histogramContainer);
 
         // current splat
         let splat: Splat;

@@ -141,8 +141,11 @@ class PointerController {
             orbit(sign(event.deltaX) * 2.0, 0);
         };
 
+        // FIXME: safari sends canvas as target of dblclick event but chrome sends the target element
+        const canvas = camera.scene.app.graphicsDevice.canvas;
+
         const dblclick = (event: globalThis.MouseEvent) => {
-            if (event.target === target) {
+            if (event.target === target || event.target === canvas) {
                 camera.pickFocalPoint(event.offsetX, event.offsetY);
             }
         };

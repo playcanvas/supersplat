@@ -2,13 +2,11 @@ import {
     ADDRESS_CLAMP_TO_EDGE,
     FILTER_NEAREST,
     PIXELFORMAT_L8,
-    PIXELFORMAT_RGBA16F,
-    PIXELFORMAT_RGBA32F,
+    PIXELFORMAT_RGBA32U,
     Asset,
     BoundingBox,
     Color,
     Entity,
-    FloatPacking,
     GSplatData,
     GSplatResource,
     Mat4,
@@ -27,12 +25,108 @@ uniform sampler2D splatState;
 uniform vec3 camera_position;
 
 flat varying highp uint vertexState;
-flat varying highp ivec2 splatUV2;
-flat varying vec3 viewDir;
 
 #ifdef PICK_PASS
 flat varying highp uint vertexId;
 #endif
+
+#if defined(USE_SH1)
+    uniform highp usampler2D splatSH_1to4;
+#if defined(USE_SH2)
+    uniform highp usampler2D splatSH_5to8;
+#if defined(USE_SH3)
+    uniform highp usampler2D splatSH_9to12;
+    uniform highp usampler2D splatSH_13to15;
+#endif
+#endif
+#endif
+
+#define SH_C0 0.28209479177387814f
+#define SH_C1 0.4886025119029199f
+
+#define SH_C2_0 1.0925484305920792f
+#define SH_C2_1 -1.0925484305920792f
+#define SH_C2_2 0.31539156525252005f
+#define SH_C2_3 -1.0925484305920792f
+#define SH_C2_4 0.5462742152960396f
+
+#define SH_C3_0 -0.5900435899266435f
+#define SH_C3_1 2.890611442640554f
+#define SH_C3_2 -0.4570457994644658f
+#define SH_C3_3 0.3731763325901154f
+#define SH_C3_4 -0.4570457994644658f
+#define SH_C3_5 1.445305721320277f
+#define SH_C3_6 -0.5900435899266435f
+
+vec3 unpack111011(uint bits) {
+    return vec3(
+        float(bits >> 21u) / 2047.0,
+        float((bits >> 11u) & 0x3ffu) / 1023.0,
+        float(bits & 0x7ffu) / 2047.0
+    );
+}
+
+// fetch quantized spherical harmonic coefficients
+void fetch(in highp usampler2D sampler, out vec3 a, out vec3 b, out vec3 c, out vec3 d) {
+    uvec4 t = texelFetch(sampler, splatUV, 0);
+    a = unpack111011(t.x) * 2.0 - 1.0;
+    b = unpack111011(t.y) * 2.0 - 1.0;
+    c = unpack111011(t.z) * 2.0 - 1.0;
+    d = unpack111011(t.w) * 2.0 - 1.0;
+}
+
+vec4 evalColor(vec3 dir) {
+    float x = dir.x;
+    float y = dir.y;
+    float z = dir.z;
+
+    vec4 color = texelFetch(splatColor, splatUV, 0);
+
+    vec3 result = color.rgb;
+
+#if defined(USE_SH1)
+    // 1st degree
+    vec3 sh1, sh2, sh3, sh4;
+    fetch(splatSH_1to4, sh1, sh2, sh3, sh4);
+    result += SH_C1 * (-sh1 * y + sh2 * z - sh3 * x);
+
+#if defined(USE_SH2)
+    float xx = x * x;
+    float yy = y * y;
+    float zz = z * z;
+    float xy = x * y;
+    float yz = y * z;
+    float xz = x * z;
+
+    // 2nd degree
+    vec3 sh5, sh6, sh7, sh8;
+    fetch(splatSH_5to8, sh5, sh6, sh7, sh8);
+    result +=
+        sh4 * (SH_C2_0 * xy) *  +
+        sh5 * (SH_C2_1 * yz) +
+        sh6 * (SH_C2_2 * (2.0 * zz - xx - yy)) +
+        sh7 * (SH_C2_3 * xz) +
+        sh8 * (SH_C2_4 * (xx - yy));
+
+#if defined(USE_SH3)
+    // 3rd degree
+    vec3 sh9, sh10, sh11, sh12, sh13, sh14, sh15, dummy;
+    fetch(splatSH_9to12, sh9, sh10, sh11, sh12);
+    fetch(splatSH_13to15, sh13, sh14, sh15, dummy);
+    result +=
+        sh9  * (SH_C3_0 * y * (3.0 * xx - yy)) +
+        sh10 * (SH_C3_1 * xy * z) +
+        sh11 * (SH_C3_2 * y * (4.0 * zz - xx - yy)) +
+        sh12 * (SH_C3_3 * z * (2.0 * zz - 3.0 * xx - 3.0 * yy)) +
+        sh13 * (SH_C3_4 * x * (4.0 * zz - xx - yy)) +
+        sh14 * (SH_C3_5 * z * (xx - yy)) +
+        sh15 * (SH_C3_6 * x * (xx - 3.0 * yy));
+#endif
+#endif
+#endif
+
+    return vec4(max(result, 0.0), color.a);
+}
 
 vec4 discardVec = vec4(0.0, 0.0, 2.0, 1.0);
 
@@ -56,7 +150,6 @@ void main(void)
     gl_Position = pos;
 
     texCoord = vertex_position.xy;
-    // color = getColor();
 
     #ifndef DITHER_NONE
         id = float(splatId);
@@ -64,10 +157,10 @@ void main(void)
 
     vertexState = uint(texelFetch(splatState, splatUV, 0).r * 255.0);
 
-    splatUV2 = splatUV;
-
     vec3 worldDir = (matrix_model * vec4(center, 1.0)).xyz - camera_position;
-    viewDir = normalize(worldDir * mat3(matrix_model)) * vec3(-1.0, 1.0, 1.0);
+    vec3 viewDir = normalize(worldDir * mat3(matrix_model)) * vec3(1.0, 1.0, 1.0);
+
+    color = evalColor(viewDir);
 
     #ifdef PICK_PASS
         vertexId = splatId;
@@ -82,107 +175,14 @@ const fragmentShader = /*glsl*/`
 #endif
 
 flat varying highp uint vertexState;
-flat varying highp ivec2 splatUV2;
-flat varying vec3 viewDir;
 
 uniform float pickerAlpha;
 uniform float ringSize;
 float PI = 3.14159;
 
-// uniform sampler2D splatColor;
-uniform sampler2D splatSH_0;
-uniform sampler2D splatSH_1;
-uniform sampler2D splatSH_2;
-uniform sampler2D splatSH_3;
-uniform sampler2D splatSH_4;
-uniform sampler2D splatSH_5;
-uniform sampler2D splatSH_6;
-uniform sampler2D splatSH_7;
-uniform sampler2D splatSH_8;
-uniform sampler2D splatSH_9;
-uniform sampler2D splatSH_10;
-uniform sampler2D splatSH_11;
-uniform sampler2D splatSH_12;
-uniform sampler2D splatSH_13;
-uniform sampler2D splatSH_14;
-uniform sampler2D splatSH_15;
-
-#define SH_C0 0.28209479177387814f
-#define SH_C1 0.4886025119029199f
-
-#define SH_C2_0 1.0925484305920792f
-#define SH_C2_1 -1.0925484305920792f
-#define SH_C2_2 0.31539156525252005f
-#define SH_C2_3 -1.0925484305920792f
-#define SH_C2_4 0.5462742152960396f
-
-#define SH_C3_0 -0.5900435899266435f
-#define SH_C3_1 2.890611442640554f
-#define SH_C3_2 -0.4570457994644658f
-#define SH_C3_3 0.3731763325901154f
-#define SH_C3_4 -0.4570457994644658f
-#define SH_C3_5 1.445305721320277f
-#define SH_C3_6 -0.5900435899266435f
-
-vec4 evalSH() {
-    float x = viewDir.x;
-    float y = viewDir.y;
-    float z = viewDir.z;
-
-    // ambient band
-    vec4 sh0 = texelFetch(splatSH_0, splatUV2, 0);
-    vec3 result = SH_C0 * sh0.xyz + vec3(0.5);
-    // vec3 result = col.rgb;
-
-    // 1st degree
-    vec3 sh1 = texelFetch(splatSH_1, splatUV2, 0).rgb;
-    vec3 sh2 = texelFetch(splatSH_2, splatUV2, 0).rgb;
-    vec3 sh3 = texelFetch(splatSH_3, splatUV2, 0).rgb;
-    result += SH_C1 * (-sh1 * y + sh2 * z - sh3 * x);
-
-    float xx = x * x;
-    float yy = y * y;
-    float zz = z * z;
-    float xy = x * y;
-    float yz = y * z;
-    float xz = x * z;
-
-    // 2nd degree
-    vec3 sh4 = texelFetch(splatSH_4, splatUV2, 0).rgb;
-    vec3 sh5 = texelFetch(splatSH_5, splatUV2, 0).rgb;
-    vec3 sh6 = texelFetch(splatSH_6, splatUV2, 0).rgb;
-    vec3 sh7 = texelFetch(splatSH_7, splatUV2, 0).rgb;
-    vec3 sh8 = texelFetch(splatSH_8, splatUV2, 0).rgb;
-    result +=
-        sh4 * (SH_C2_0 * xy) *  +
-        sh5 * (SH_C2_1 * yz) +
-        sh6 * (SH_C2_2 * (2.0 * zz - xx - yy)) +
-        sh7 * (SH_C2_3 * xz) +
-        sh8 * (SH_C2_4 * (xx - yy));
-
-    // 3rd degree
-    vec3 sh9 = texelFetch(splatSH_9, splatUV2, 0).rgb;
-    vec3 sh10 = texelFetch(splatSH_10, splatUV2, 0).rgb;
-    vec3 sh11 = texelFetch(splatSH_11, splatUV2, 0).rgb;
-    vec3 sh12 = texelFetch(splatSH_12, splatUV2, 0).rgb;
-    vec3 sh13 = texelFetch(splatSH_13, splatUV2, 0).rgb;
-    vec3 sh14 = texelFetch(splatSH_14, splatUV2, 0).rgb;
-    vec3 sh15 = texelFetch(splatSH_15, splatUV2, 0).rgb;
-    result +=
-        sh9  * (SH_C3_0 * y * (3.0 * xx - yy)) +
-        sh10 * (SH_C3_1 * xy * z) +
-        sh11 * (SH_C3_2 * y * (4.0 * zz - xx - yy)) +
-        sh12 * (SH_C3_3 * z * (2.0 * zz - 3.0 * xx - 3.0 * yy)) +
-        sh13 * (SH_C3_4 * x * (4.0 * zz - xx - yy)) +
-        sh14 * (SH_C3_5 * z * (xx - yy)) +
-        sh15 * (SH_C3_6 * x * (xx - 3.0 * yy));
-
-    return vec4(max(result, 0.0), sh0.a);
-}
-
 void main(void)
 {
-    if ((vertexState & uint(4)) == uint(4)) {
+    if ((vertexState & 4u) == 4u) {
         // deleted
         discard;
     }
@@ -192,31 +192,29 @@ void main(void)
         discard;
     }
 
-    vec4 color = evalSH();
-
     float B = exp(-A) * color.a;
+
     #ifdef PICK_PASS
-        if (B < pickerAlpha ||
+        if (B < pickerAlpha || (vertexState & 2u) == 2u) {
             // hidden
-            (vertexState & uint(2)) == uint(2)) {
             discard;
         }
         gl_FragColor = vec4(
-            float(vertexId & uint(255)) / 255.0,
-            float((vertexId >> 8) & uint(255)) / 255.0,
-            float((vertexId >> 16) & uint(255)) / 255.0,
-            float((vertexId >> 24) & uint(255)) / 255.0
+            float(vertexId & 255u) / 255.0,
+            float((vertexId >> 8) & 255u) / 255.0,
+            float((vertexId >> 16) & 255u) / 255.0,
+            float((vertexId >> 24) & 255u) / 255.0
         );
     #else
         vec3 c;
         float alpha;
 
-        if ((vertexState & uint(2)) == uint(2)) {
+        if ((vertexState & 2u) == 2u) {
             // hidden
             c = vec3(0.0, 0.0, 0.0);
             alpha = B * 0.05;
         } else {
-            if ((vertexState & uint(1)) == uint(1)) {
+            if ((vertexState & 1u) == 1u) {
                 // selected
                 c = vec3(1.0, 1.0, 0.0);
             } else {
@@ -271,20 +269,31 @@ class Splat extends Element {
     localBoundDirty = true;
     worldBoundDirty = true;
     visible_ = true;
-    shTextures: Texture[] = [];
+
+    rebuildMaterial: (bands: number) => void;
 
     constructor(asset: Asset) {
         super(ElementType.splat);
 
         const splatResource = asset.resource as GSplatResource;
 
+        // get material options object for a shader that renders with the given number of bands
+        const getMaterialOptions = (bands: number) => {
+            return {
+                vertex: [
+                    bands > 0 ? '#define USE_SH1' : '',
+                    bands > 1 ? '#define USE_SH2' : '',
+                    bands > 2 ? '#define USE_SH3' : '',
+                    vertexShader
+                ].join('\n'),
+                fragment: fragmentShader
+            };
+        };
+
         this.asset = asset;
         this.splatData = splatResource.splatData;
         this.pivot = new Entity('splatPivot');
-        this.entity = splatResource.instantiate({
-            vertex: vertexShader,
-            fragment: fragmentShader
-        });
+        this.entity = splatResource.instantiate(getMaterialOptions(0));
 
         const instance = this.entity.gsplat.instance;
 
@@ -297,95 +306,93 @@ class Splat extends Element {
         const w = instance.splat.colorTexture.width;
         const h = instance.splat.colorTexture.height;
 
+        // pack spherical harmonic data
+        const createTexture = (name: string, format: number) => {
+            return new Texture(splatResource.device, {
+                name: name,
+                width: w,
+                height: h,
+                format: format,
+                mipmaps: false,
+                minFilter: FILTER_NEAREST,
+                magFilter: FILTER_NEAREST,
+                addressU: ADDRESS_CLAMP_TO_EDGE,
+                addressV: ADDRESS_CLAMP_TO_EDGE
+            });
+        };
+
         // create the state texture
-        this.stateTexture = new Texture(splatResource.device, {
-            name: 'splatState',
-            width: w,
-            height: h,
-            format: PIXELFORMAT_L8,
-            mipmaps: false,
-            minFilter: FILTER_NEAREST,
-            magFilter: FILTER_NEAREST,
-            addressU: ADDRESS_CLAMP_TO_EDGE,
-            addressV: ADDRESS_CLAMP_TO_EDGE
-        });
+        this.stateTexture = createTexture('splatState', PIXELFORMAT_L8);
 
-            const sigmoid = (v: number) => {
-                if (v > 0) {
-                    return 1 / (1 + Math.exp(-v));
-                }
+        const src: Float32Array[] = [];
+        for (let i = 0; i < 45; ++i) {
+            src.push(this.splatData.getProp(`f_rest_${i}`) as Float32Array);
+        }
 
-                const t = Math.exp(v);
-                return t / (1 + t);
+        const hasSH = src.every((x) => x);
+
+        // expect all SH or none
+        if (hasSH) {
+            // create the spherical harmonic textures
+            const sh1to4 = createTexture('splatSH_1to4', PIXELFORMAT_RGBA32U);
+            const sh5to8 = createTexture('splatSH_5to8', PIXELFORMAT_RGBA32U);
+            const sh9to12 = createTexture('splatSH_9to12', PIXELFORMAT_RGBA32U);
+            const sh13to15 = createTexture('splatSH_13to15', PIXELFORMAT_RGBA32U);
+
+            const sh1to4Data = sh1to4.lock();
+            const sh5to8Data = sh5to8.lock();
+            const sh9to12Data = sh9to12.lock();
+            const sh13to15Data = sh13to15.lock();
+
+            const packUnorm = (value: number, bits: number) => {
+                const t = (1 << bits) - 1;
+                return Math.max(0, Math.min(t, Math.floor(value * t + 0.5)));
             };
 
-            const colTexture = new Texture(splatResource.device, {
-                name: `splatSH_0`,
-                width: w,
-                height: h,
-                format: PIXELFORMAT_RGBA32F,
-                mipmaps: false,
-                minFilter: FILTER_NEAREST,
-                magFilter: FILTER_NEAREST,
-                addressU: ADDRESS_CLAMP_TO_EDGE,
-                addressV: ADDRESS_CLAMP_TO_EDGE
-            });
+            const pack = (sh: number, idx: number) => {
+                return packUnorm(src[sh][idx] * 0.5 + 0.5, 11) << 21 |
+                    packUnorm(src[sh+15][idx] * 0.5 + 0.5, 10) << 11 |
+                    packUnorm(src[sh+30][idx] * 0.5 + 0.5, 11);
+            };
 
-            const r = this.splatData.getProp('f_dc_0') as Float32Array;
-            const g = this.splatData.getProp('f_dc_1') as Float32Array;
-            const b = this.splatData.getProp('f_dc_2') as Float32Array;
-            const a = this.splatData.getProp('opacity') as Float32Array;
+            for (let i = 0; i < this.splatData.numSplats; ++i) {
+                sh1to4Data[i * 4 + 0] = pack(0, i);
+                sh1to4Data[i * 4 + 1] = pack(1, i);
+                sh1to4Data[i * 4 + 2] = pack(2, i);
+                sh1to4Data[i * 4 + 3] = pack(3, i);
 
-            // target data
-            const targetData = colTexture.lock();
+                sh5to8Data[i * 4 + 0] = pack(4, i);
+                sh5to8Data[i * 4 + 1] = pack(5, i);
+                sh5to8Data[i * 4 + 2] = pack(6, i);
+                sh5to8Data[i * 4 + 3] = pack(7, i);
 
-            for (let j = 0; j < this.splatData.numSplats; ++j) {
-                targetData[j * 4 + 0] = r[j]; // FloatPacking.float2Half(r[i]);
-                targetData[j * 4 + 1] = g[j]; // FloatPacking.float2Half(g[i]);
-                targetData[j * 4 + 2] = b[j]; // FloatPacking.float2Half(b[i]);
-                targetData[j * 4 + 3] = sigmoid(a[j]);
+                sh9to12Data[i * 4 + 0] = pack(8, i);
+                sh9to12Data[i * 4 + 1] = pack(9, i);
+                sh9to12Data[i * 4 + 2] = pack(10, i);
+                sh9to12Data[i * 4 + 3] = pack(11, i);
+
+                sh13to15Data[i * 4 + 0] = pack(12, i);
+                sh13to15Data[i * 4 + 1] = pack(13, i);
+                sh13to15Data[i * 4 + 2] = pack(14, i);
+                sh13to15Data[i * 4 + 3] = 0;
             }
 
-            colTexture.unlock();
-            instance.material.setParameter(`splatSH_0`, colTexture);
+            sh1to4.unlock();
+            sh5to8.unlock();
+            sh9to12.unlock();
+            sh13to15.unlock();
 
-        // allocate spherical harmonic texture data
-        for (let i = 0; i < 15; ++i) {
-            // source data
-            const r = this.splatData.getProp(`f_rest_${i}`) as Float32Array;
-            const g = this.splatData.getProp(`f_rest_${i + 15}`) as Float32Array;
-            const b = this.splatData.getProp(`f_rest_${i + 30}`) as Float32Array;
-
-            if (!r || !g || !b) {
-                continue;
-            }
-
-            const texture = new Texture(splatResource.device, {
-                name: `splatSH_${i + 1}`,
-                width: w,
-                height: h,
-                format: PIXELFORMAT_RGBA16F,
-                mipmaps: false,
-                minFilter: FILTER_NEAREST,
-                magFilter: FILTER_NEAREST,
-                addressU: ADDRESS_CLAMP_TO_EDGE,
-                addressV: ADDRESS_CLAMP_TO_EDGE
-            });
-
-            // target data
-            const targetData = texture.lock();
-
-            for (let j = 0; j < this.splatData.numSplats; ++j) {
-                targetData[j * 4 + 0] = FloatPacking.float2Half(r[j]);
-                targetData[j * 4 + 1] = FloatPacking.float2Half(g[j]);
-                targetData[j * 4 + 2] = FloatPacking.float2Half(b[j]);
-            }
-
-            texture.unlock();
-            this.shTextures.push(texture);
-
-            instance.material.setParameter(`splatSH_${i + 1}`, texture);
+            instance.material.setParameter(`splatSH_1to4`, sh1to4);
+            instance.material.setParameter(`splatSH_5to8`, sh5to8);
+            instance.material.setParameter(`splatSH_9to12`, sh9to12);
+            instance.material.setParameter(`splatSH_13to15`, sh13to15);
         }
+
+        this.rebuildMaterial = (bands: number) => {
+            if (hasSH) {
+                this.entity.gsplat.instance.createMaterial(getMaterialOptions(bands));
+            }
+        };
 
         this.localBoundStorage = instance.splat.aabb;
         this.worldBoundStorage = instance.meshInstance._aabb;
@@ -492,6 +499,15 @@ class Splat extends Element {
         this.localBoundDirty = true;
         this.worldBoundDirty = true;
         this.scene.boundDirty = true;
+
+        this.scene.events.on('view.bands', (bands: number) => {
+            this.rebuildMaterial(bands);
+        });
+
+        const bands = this.scene.events.invoke('view.bands');
+        if (bands !== 0) {
+            this.rebuildMaterial(bands);
+        }
     }
 
     remove() {

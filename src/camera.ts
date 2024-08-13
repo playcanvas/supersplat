@@ -476,7 +476,7 @@ class Camera extends Element {
 
         const device = this.scene.graphicsDevice as WebglGraphicsDevice;
         const events = this.scene.events;
-        const alpha = events.invoke('camera.debug') && events.invoke('camera.mode') === 'rings' ? 0.0 : 0.2;
+        const alpha = events.invoke('camera.mode') === 'rings' ? 0.0 : 0.2;
 
         // hide non-selected elements
         const splats = this.scene.getElementsByType(ElementType.splat);

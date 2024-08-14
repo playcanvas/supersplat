@@ -88,6 +88,12 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         scene.forceRender = true;
     });
 
+    events.on('camera.bound', () => {
+        scene.forceRender = true;
+    });
+
+    // grid.visible
+
     const setGridVisible = (visible: boolean) => {
         if (visible !== scene.grid.visible) {
             scene.grid.visible = visible;
@@ -99,12 +105,35 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         return scene.grid.visible;
     });
 
+    events.on('grid.setVisible', (visible: boolean) => {
+        setGridVisible(visible);
+    });
+
     events.on('grid.toggleVisible', () => {
         setGridVisible(!scene.grid.visible);
     });
 
-    events.on('grid.setVisible', (visible: boolean) => {
-        setGridVisible(visible);
+    // camera.bound
+
+    let bound = true;
+
+    const setBoundVisible = (visible: boolean) => {
+        if (visible !== bound) {
+            bound = visible;
+            events.fire('camera.bound', bound);
+        }
+    };
+
+    events.function('camera.bound', () => {
+        return bound;
+    });
+
+    events.on('camera.setBound', (value: boolean) => {
+        setBoundVisible(value);
+    });
+
+    events.on('camera.toggleBound', () => {
+        setBoundVisible(!events.invoke('camera.bound'));
     });
 
     events.on('camera.focus', () => {

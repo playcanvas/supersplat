@@ -22,7 +22,7 @@ import { State } from './edit-ops';
 const vertexShader = /*glsl*/`
 
 uniform sampler2D splatState;
-uniform vec3 camera_position;
+uniform vec3 view_position;
 
 flat varying highp uint vertexState;
 
@@ -157,10 +157,10 @@ void main(void)
 
     vertexState = uint(texelFetch(splatState, splatUV, 0).r * 255.0);
 
-    vec3 worldDir = (matrix_model * vec4(center, 1.0)).xyz - camera_position;
-    vec3 viewDir = normalize(worldDir * mat3(matrix_model)) * vec3(1.0, 1.0, 1.0);
+    vec3 worldDir = (matrix_model * vec4(center, 1.0)).xyz - view_position;
+    vec3 modelDir = normalize(worldDir * mat3(matrix_model)) * vec3(1.0, -1.0, 1.0);
 
-    color = evalColor(viewDir);
+    color = evalColor(modelDir);
 
     #ifdef PICK_PASS
         vertexId = splatId;
@@ -500,9 +500,7 @@ class Splat extends Element {
         this.worldBoundDirty = true;
         this.scene.boundDirty = true;
 
-        this.scene.events.on('view.bands', (bands: number) => {
-            this.rebuildMaterial(bands);
-        });
+        this.scene.events.on('view.bands', this.rebuildMaterial, this);
 
         const bands = this.scene.events.invoke('view.bands');
         if (bands !== 0) {
@@ -513,6 +511,8 @@ class Splat extends Element {
     remove() {
         this.splatDebug.destroy();
         this.splatDebug = null;
+
+        this.scene.events.off('view.bands', this.rebuildMaterial, this);
 
         this.scene.contentRoot.removeChild(this.pivot);
         this.scene.boundDirty = true;

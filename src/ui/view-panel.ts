@@ -99,10 +99,31 @@ class ViewPanel extends Container {
         showGridRow.append(showGridLabel);
         showGridRow.append(showGridToggle);
 
+        // show bound
+
+        const showBoundRow = new Container({
+            class: 'view-panel-row'
+        });
+
+        const showBoundLabel = new Label({
+            text: 'Show Bound',
+            class: 'view-panel-row-label'
+        });
+
+        const showBoundToggle = new BooleanInput({
+            type: 'toggle',
+            class: 'view-panel-row-toggle',
+            value: true
+        });
+
+        showBoundRow.append(showBoundLabel);
+        showBoundRow.append(showBoundToggle);
+
         this.append(header);
         this.append(shBandsRow);
         this.append(centersSizeRow);
         this.append(showGridRow);
+        this.append(showBoundRow);
 
         // handle panel visibility
 
@@ -155,6 +176,16 @@ class ViewPanel extends Container {
 
         showGridToggle.on('change', () => {
             events.fire('grid.setVisible', showGridToggle.value);
+        });
+
+        // show bound
+
+        events.on('camera.bound', (visible: boolean) => {
+            showBoundToggle.value = visible;
+        });
+
+        showBoundToggle.on('change', () => {
+            events.fire('camera.setBound', showBoundToggle.value);
         });
     }
 }

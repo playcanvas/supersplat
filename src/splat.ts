@@ -542,17 +542,19 @@ class Splat extends Element {
             }
 
             // render bounding box
-            const bound = this.localBound;
-            const scale = new Mat4().setTRS(bound.center, Quat.IDENTITY, bound.halfExtents);
-            scale.mul2(this.entity.getWorldTransform(), scale);
+            if (events.invoke('camera.bound')) {
+                const bound = this.localBound;
+                const scale = new Mat4().setTRS(bound.center, Quat.IDENTITY, bound.halfExtents);
+                scale.mul2(this.entity.getWorldTransform(), scale);
 
-            for (let i = 0; i < boundingPoints.length / 2; i++) {
-                const a = boundingPoints[i * 2];
-                const b = boundingPoints[i * 2 + 1];
-                scale.transformPoint(a, veca);
-                scale.transformPoint(b, vecb);
+                for (let i = 0; i < boundingPoints.length / 2; i++) {
+                    const a = boundingPoints[i * 2];
+                    const b = boundingPoints[i * 2 + 1];
+                    scale.transformPoint(a, veca);
+                    scale.transformPoint(b, vecb);
 
-                this.scene.app.drawLine(veca, vecb, Color.WHITE, true, this.scene.debugLayer);
+                    this.scene.app.drawLine(veca, vecb, Color.WHITE, true, this.scene.debugLayer);
+                }
             }
         }
 

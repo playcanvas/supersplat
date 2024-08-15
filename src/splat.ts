@@ -9,6 +9,7 @@ import {
     Entity,
     GSplatData,
     GSplatResource,
+    Mat3,
     Mat4,
     Quat,
     Texture,
@@ -18,6 +19,7 @@ import { Element, ElementType } from "./element";
 import { SplatDebug } from "./splat-debug";
 import { Serializer } from "./serializer";
 import { State } from './edit-ops';
+import { SHRotation } from './sh-utils';
 
 const vertexShader = /*glsl*/`
 
@@ -172,7 +174,7 @@ void main(void)
     vertexState = uint(texelFetch(splatState, splatUV, 0).r * 255.0);
 
     vec3 worldDir = (matrix_model * vec4(center, 1.0)).xyz - view_position;
-    vec3 modelDir = normalize(worldDir * mat3(matrix_model)) * vec3(-1.0, -1.0, 1.0);
+    vec3 modelDir = normalize(worldDir * mat3(matrix_model));
 
     color = evalColor(modelDir);
 
@@ -347,6 +349,31 @@ class Splat extends Element {
 
         // expect all SH or none
         if (hasSH) {
+
+            // apply load-time transform to SH coefficients
+            const m4 = new Mat4();
+            m4.setScale(-1, -1, 1);
+
+            const m3 = new Mat3();
+            m3.setFromMat4(m4);
+
+            const rot = new SHRotation(m3);
+
+            const sh = [];
+            for (let i = 0; i < this.splatData.numSplats; ++i) {
+                for (let c = 0; c < 3; ++c) {
+                    for (let d = 0; d < 15; ++d) {
+                        sh[d + 1] = src[c * 15 + d][i];
+                    }
+
+                    rot.rotate(sh, sh);
+
+                    for (let d = 0; d < 15; ++d) {
+                        src[c * 15 + d][i] = sh[d + 1];
+                    }
+                }
+            }
+
             // create the spherical harmonic textures
             const sh1to3 = createTexture('splatSH_1to3', PIXELFORMAT_RGBA32U);
             const sh4to7 = createTexture('splatSH_4to7', PIXELFORMAT_RGBA32U);

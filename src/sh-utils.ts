@@ -38,7 +38,7 @@ const dp = (start: number, n: number, a: number[] | Float32Array, b: number[] | 
 const coeffsIn = new Float32Array(16);
 
 class SHRotation {
-    rotate: (coeffs: Float32Array, coeffsIn: Float32Array) => void;
+    rotate: (coeffs: Float32Array | number[], coeffsIn: Float32Array | number[]) => void;
 
     constructor(mat: Mat3) {
         const rot = mat.data;

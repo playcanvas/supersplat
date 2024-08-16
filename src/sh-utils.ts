@@ -37,6 +37,9 @@ const dp = (n: number, start: number, a: number[] | Float32Array, b: number[] | 
 
 const coeffsIn = new Float32Array(16);
 
+// Rotate spherical harmonics up to band 3
+// Calculates the rotation factors once which can then be applied to multiple spherical
+// harmonics.
 class SHRotation {
     rotate: (result: Float32Array | number[], src?: Float32Array | number[]) => void;
 

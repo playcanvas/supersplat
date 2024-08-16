@@ -42,7 +42,7 @@ const coeffsIn = new Float32Array(16);
 // This implementation calculates the rotation factors during construction which can then
 // be used to rotate multiple spherical harmonics cheaply.
 class SHRotation {
-    rotate: (result: Float32Array | number[], src?: Float32Array | number[]) => void;
+    apply: (result: Float32Array | number[], src?: Float32Array | number[]) => void;
 
     constructor(mat: Mat3) {
         const rot = mat.data;
@@ -147,7 +147,7 @@ class SHRotation {
         ]];
 
         // rotate spherical harmonic coefficients, up to band 3
-        this.rotate = (result: Float32Array | number[], src?: Float32Array | number[]) => {
+        this.apply = (result: Float32Array | number[], src?: Float32Array | number[]) => {
             if (!src || src == result) {
                 coeffsIn.set(result);
                 src = coeffsIn;

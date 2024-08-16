@@ -154,7 +154,7 @@ const convertPly = (convertData: ConvertEntry[]) => {
                         shCoeffs[d + 1] = shData[c * 15 + d][i];
                     }
 
-                    shRot.rotate(shCoeffs, shCoeffs);
+                    shRot.apply(shCoeffs, shCoeffs);
 
                     for (let d = 0; d < 15; ++d) {
                         splat[`f_rest_${c * 15 + d}`] = shCoeffs[d + 1];

@@ -368,7 +368,7 @@ class Splat extends Element {
                         sh[d + 1] = src[c * 15 + d][i];
                     }
 
-                    rot.rotate(sh, sh);
+                    rot.apply(sh, sh);
 
                     for (let d = 0; d < 15; ++d) {
                         src[c * 15 + d][i] = sh[d + 1];

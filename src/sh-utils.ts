@@ -27,7 +27,7 @@ const kSqrt15_16  = Math.sqrt(15.0 / 16.0);
 const kSqrt01_18  = Math.sqrt( 1.0 / 18.0);
 const kSqrt01_60  = Math.sqrt( 1.0 / 60.0);
 
-const dp = (start: number, n: number, a: number[] | Float32Array, b: number[] | Float32Array) => {
+const dp = (n: number, start: number, a: number[] | Float32Array, b: number[] | Float32Array) => {
     let sum = 0;
     for (let i = 0; i < n; i++) {
         sum += a[start + i] * b[i];
@@ -38,16 +38,16 @@ const dp = (start: number, n: number, a: number[] | Float32Array, b: number[] | 
 const coeffsIn = new Float32Array(16);
 
 class SHRotation {
-    rotate: (coeffs: Float32Array | number[], coeffsIn: Float32Array | number[]) => void;
+    rotate: (result: Float32Array | number[], src?: Float32Array | number[]) => void;
 
     constructor(mat: Mat3) {
         const rot = mat.data;
 
         // band 1
         const sh1 = [
-            [ rot[4], rot[7], rot[1] ],
-            [ rot[5], rot[8], rot[2] ],
-            [ rot[3], rot[6], rot[0] ]
+            [ rot[4],-rot[7], rot[1] ],
+            [-rot[5], rot[8],-rot[2] ],
+            [ rot[3],-rot[6], rot[0] ]
         ];
 
         // band 2
@@ -143,47 +143,42 @@ class SHRotation {
         ]];
 
         // rotate spherical harmonic coefficients, up to band 3
-        this.rotate = (coeffs: Float32Array, src?: Float32Array) => {
-            if (!src || src == coeffs) {
-                coeffsIn.set(coeffs);
+        this.rotate = (result: Float32Array | number[], src?: Float32Array | number[]) => {
+            if (!src || src == result) {
+                coeffsIn.set(result);
                 src = coeffsIn;
             }
 
-            let idx = 0;
-
             // band 0
-            coeffs[idx] = src[idx];
-            if (coeffs.length < 4) {
-                return;
-            }
-            idx++;
+            result[0] = src[0];
 
             // band 1
-            coeffs[1] = dp(idx, 3, src, sh1[0]);
-            coeffs[2] = dp(idx, 3, src, sh1[1]);
-            coeffs[3] = dp(idx, 3, src, sh1[2]);
-            if (coeffs.length < 9)
+            if (result.length < 4) {
                 return;
-            idx += 3;
+            }
+            result[1] = dp(3, 1, src, sh1[0]);
+            result[2] = dp(3, 1, src, sh1[1]);
+            result[3] = dp(3, 1, src, sh1[2]);
 
             // band 2
-            coeffs[4] = dp(idx, 5, src, sh2[0]);
-            coeffs[5] = dp(idx, 5, src, sh2[1]);
-            coeffs[6] = dp(idx, 5, src, sh2[2]);
-            coeffs[7] = dp(idx, 5, src, sh2[3]);
-            coeffs[8] = dp(idx, 5, src, sh2[4]);
-            if (coeffs.length < 16)
+            if (result.length < 9)
                 return;
-            idx += 5;
+            result[4] = dp(5, 4, src, sh2[0]);
+            result[5] = dp(5, 4, src, sh2[1]);
+            result[6] = dp(5, 4, src, sh2[2]);
+            result[7] = dp(5, 4, src, sh2[3]);
+            result[8] = dp(5, 4, src, sh2[4]);
 
             // band 3
-            coeffs[9]  = dp(idx, 7, src, sh3[0]);
-            coeffs[10] = dp(idx, 7, src, sh3[1]);
-            coeffs[11] = dp(idx, 7, src, sh3[2]);
-            coeffs[12] = dp(idx, 7, src, sh3[3]);
-            coeffs[13] = dp(idx, 7, src, sh3[4]);
-            coeffs[14] = dp(idx, 7, src, sh3[5]);
-            coeffs[15] = dp(idx, 7, src, sh3[6]);
+            if (result.length < 16)
+                return;
+            result[9]  = dp(7, 9, src, sh3[0]);
+            result[10] = dp(7, 9, src, sh3[1]);
+            result[11] = dp(7, 9, src, sh3[2]);
+            result[12] = dp(7, 9, src, sh3[3]);
+            result[13] = dp(7, 9, src, sh3[4]);
+            result[14] = dp(7, 9, src, sh3[5]);
+            result[15] = dp(7, 9, src, sh3[6]);
         };
     }
 }

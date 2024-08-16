@@ -94,11 +94,11 @@ vec4 evalColor(vec3 dir) {
     float z = dir.z;
 
     vec3 result = vec3(0.0);
-    float scale = 1.0;
 
     // see https://github.com/graphdeco-inria/gaussian-splatting/blob/main/utils/sh_utils.py
 #if defined(USE_SH1)
     // 1st degree
+    float scale;
     vec3 sh1, sh2, sh3;
     fetchScale(splatSH_1to3, scale, sh1, sh2, sh3);
     result += SH_C1 * (-sh1 * y + sh2 * z - sh3 * x);
@@ -137,11 +137,12 @@ vec4 evalColor(vec3 dir) {
         sh15 * (SH_C3_6 * x * (xx - 3.0 * yy));
 #endif
 #endif
+    result *= scale;
 #endif
 
     vec4 color = texelFetch(splatColor, splatUV, 0);
 
-    return vec4(max(result * scale + color.rgb, 0.0), color.a);
+    return vec4(max(result + color.rgb, 0.0), color.a);
 }
 
 vec4 discardVec = vec4(0.0, 0.0, 2.0, 1.0);
@@ -173,7 +174,8 @@ void main(void)
 
     vertexState = uint(texelFetch(splatState, splatUV, 0).r * 255.0);
 
-    vec3 worldDir = (matrix_model * vec4(center, 1.0)).xyz - view_position;
+    vec4 worldPos = matrix_model * vec4(center, 1.0);
+    vec3 worldDir = worldPos.xyz / worldPos.w - view_position;
     vec3 modelDir = normalize(worldDir * mat3(matrix_model));
 
     color = evalColor(modelDir);
@@ -292,6 +294,7 @@ class Splat extends Element {
         super(ElementType.splat);
 
         const splatResource = asset.resource as GSplatResource;
+        const splatData = splatResource.splatData;
 
         // get material options object for a shader that renders with the given number of bands
         const getMaterialOptions = (bands: number) => {
@@ -306,8 +309,15 @@ class Splat extends Element {
             };
         };
 
+        const src: Float32Array[] = [];
+        for (let i = 0; i < 45; ++i) {
+            src.push(splatData.getProp(`f_rest_${i}`) as Float32Array);
+        }
+
+        const hasSH = src.every((x) => x);
+
         this.asset = asset;
-        this.splatData = splatResource.splatData;
+        this.splatData = splatData;
         this.pivot = new Entity('splatPivot');
         this.entity = splatResource.instantiate(getMaterialOptions(0));
 
@@ -340,16 +350,8 @@ class Splat extends Element {
         // create the state texture
         this.stateTexture = createTexture('splatState', PIXELFORMAT_L8);
 
-        const src: Float32Array[] = [];
-        for (let i = 0; i < 45; ++i) {
-            src.push(this.splatData.getProp(`f_rest_${i}`) as Float32Array);
-        }
-
-        const hasSH = src.every((x) => x);
-
         // expect all SH or none
         if (hasSH) {
-
             // apply load-time transform to SH coefficients
             const m4 = new Mat4();
             m4.setScale(-1, -1, 1);

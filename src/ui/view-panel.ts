@@ -36,18 +36,39 @@ class ViewPanel extends Container {
         header.append(icon);
         header.append(label);
 
-        // centers size
-
-        const splatSizeRow = new Container({
+        // sh bands
+        const shBandsRow = new Container({
             class: 'view-panel-row'
         });
 
-        const splatSizeLabel = new Label({
+        const shBandsLabel = new Label({
+            text: 'SH Bands',
+            class: 'view-panel-row-label'
+        });
+
+        const shBandsSlider = new SliderInput({
+            class: 'view-panel-row-slider',
+            min: 0,
+            max: 3,
+            precision: 0,
+            value: 0
+        });
+
+        shBandsRow.append(shBandsLabel);
+        shBandsRow.append(shBandsSlider);
+
+        // centers size
+
+        const centersSizeRow = new Container({
+            class: 'view-panel-row'
+        });
+
+        const centersSizeLabel = new Label({
             text: 'Centers Size',
             class: 'view-panel-row-label'
         });
 
-        const splatSizeSlider = new SliderInput({
+        const centersSizeSlider = new SliderInput({
             class: 'view-panel-row-slider',
             min: 0,
             max: 10,
@@ -55,8 +76,8 @@ class ViewPanel extends Container {
             value: 2
         });
 
-        splatSizeRow.append(splatSizeLabel);
-        splatSizeRow.append(splatSizeSlider);
+        centersSizeRow.append(centersSizeLabel);
+        centersSizeRow.append(centersSizeSlider);
 
         // show grid
 
@@ -99,7 +120,8 @@ class ViewPanel extends Container {
         showBoundRow.append(showBoundToggle);
 
         this.append(header);
-        this.append(splatSizeRow);
+        this.append(shBandsRow);
+        this.append(centersSizeRow);
         this.append(showGridRow);
         this.append(showBoundRow);
 
@@ -124,13 +146,23 @@ class ViewPanel extends Container {
             setVisible(this.hidden);
         });
 
+        // sh bands
+
+        events.on('view.bands', (bands: number) => {
+            shBandsSlider.value = bands;
+        });
+
+        shBandsSlider.on('change', (value: number) => {
+            events.fire('view.setBands', value);
+        });
+
         // splat size
 
         events.on('camera.splatSize', (value: number) => {
-            splatSizeSlider.value = value;
+            centersSizeSlider.value = value;
         });
 
-        splatSizeSlider.on('change', (value: number) => {
+        centersSizeSlider.on('change', (value: number) => {
             events.fire('camera.setSplatSize', value);
             events.fire('camera.setDebug', true);
             events.fire('camera.setMode', 'centers');

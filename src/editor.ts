@@ -88,6 +88,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         scene.forceRender = true;
     });
 
+    events.on('view.bands', (bands: number) => {
+        scene.forceRender = true;
+    });
+
     events.on('camera.bound', () => {
         scene.forceRender = true;
     });
@@ -548,6 +552,25 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('camera.setSplatSize', (value: number) => {
         setSplatSize(value);
+    });
+
+    // view spherical harmonic bands
+
+    let viewBands = 0;
+
+    const setViewBands = (value: number) => {
+        if (value !== viewBands) {
+            viewBands = value;
+            events.fire('view.bands', viewBands);
+        }
+    };
+
+    events.function('view.bands', () => {
+        return viewBands;
+    });
+
+    events.on('view.setBands', (value: number) => {
+        setViewBands(value);
     });
 }
 

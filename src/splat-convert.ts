@@ -1,10 +1,12 @@
 import {
     GSplatData,
+    Mat3,
     Mat4,
     Quat,
     Vec3
 } from 'playcanvas';
 import { State } from './edit-ops';
+import { SHRotation } from './sh-utils';
 
 interface ConvertEntry {
     splatData: GSplatData;
@@ -42,6 +44,7 @@ const getCommonPropNames = (convertData: ConvertEntry[]) => {
 };
 
 const mat = new Mat4();
+const mat3 = new Mat3();
 const quat = new Quat();
 const scale = new Vec3();
 const v = new Vec3();
@@ -58,6 +61,12 @@ const convertPly = (convertData: ConvertEntry[]) => {
     const hasPosition = ['x', 'y', 'z'].every(v => propNames.includes(v));
     const hasRotation = ['rot_0', 'rot_1', 'rot_2', 'rot_3'].every(v => propNames.includes(v));
     const hasScale = ['scale_0', 'scale_1', 'scale_2'].every(v => propNames.includes(v));
+    const hasSH = (() => {
+        for (let i = 0; i < 45; ++i) {
+            if (!propNames.includes(`f_rest_${i}`)) return false;
+        }
+        return true;
+    })();
 
     const headerText = [
         `ply`,
@@ -95,6 +104,24 @@ const convertPly = (convertData: ConvertEntry[]) => {
         quat.setFromMat4(mat);
         mat.getScale(scale);
 
+        let shRot;
+        let shData;
+        let shCoeffs: number[];
+        if (hasSH) {
+            mat3.setFromQuat(quat);
+
+            // initialize sh rotation helper
+            shRot = new SHRotation(mat3);
+
+            // get sh coefficients
+            shData = [];
+            for (let i = 0; i < 45; ++i) {
+                shData.push(splatData.getProp(`f_rest_${i}`));
+            }
+
+            shCoeffs = [0];
+        }
+
         for (let i = 0; i < splatData.numSplats; ++i) {
             if ((state[i] & State.deleted) === State.deleted) continue;
 
@@ -121,7 +148,19 @@ const convertPly = (convertData: ConvertEntry[]) => {
                 splat.scale_2 = Math.log(Math.exp(splat.scale_2) * scale.z);
             }
 
-            // TODO: transform spherical harmonics
+            if (hasSH) {
+                for (let c = 0; c < 3; ++c) {
+                    for (let d = 0; d < 15; ++d) {
+                        shCoeffs[d + 1] = shData[c * 15 + d][i];
+                    }
+
+                    shRot.apply(shCoeffs, shCoeffs);
+
+                    for (let d = 0; d < 15; ++d) {
+                        splat[`f_rest_${c * 15 + d}`] = shCoeffs[d + 1];
+                    }
+                }
+            }
 
             // write
             for (let j = 0; j < propNames.length; ++j) {

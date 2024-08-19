@@ -8,6 +8,7 @@ const cacheName = `superSplat-v${appVersion}`;
 const cacheUrls = [
     './',
     './index.html',
+    './index.css',
     './index.js',
     './manifest.json',
     './static/icons/logo-192.png',

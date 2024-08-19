@@ -68,8 +68,7 @@ const application = {
         resolve(),
         image({dom: false}),
         sass({
-            output: false,
-            insert: true,
+            output: 'dist/index.css',
             processor: (css) => {
                 return postcss([autoprefixer])
                         .process(css)

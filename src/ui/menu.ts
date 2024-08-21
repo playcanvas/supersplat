@@ -177,17 +177,27 @@ class Menu extends Container {
         }]);
 
         const helpMenuPanel = new MenuPanel([{
-            text: 'About SuperSplat',
-            icon: 'E138',
-            onSelect: () => events.invoke('show.about')
-        }, {
             text: 'Keyboard Shortcuts',
             icon: 'E136',
             onSelect: () => events.fire('show.shortcuts')
         }, {
+            text: 'User Guide',
+            icon: 'E232',
+            onSelect: () => window.open('https://github.com/playcanvas/supersplat/blob/main/docs/index.md#supersplat-user-guide', '_blank').focus()
+        }, {
+            text: 'Log an Issue',
+            icon: 'E336',
+            onSelect: () => window.open('https://github.com/playcanvas/supersplat/issues', '_blank').focus()
+        }, {
             text: 'GitHub Repo',
             icon: 'E259',
             onSelect: () => window.open('https://github.com/playcanvas/supersplat', '_blank').focus()
+        }, {
+            // separator
+        }, {
+            text: 'About SuperSplat',
+            icon: 'E138',
+            onSelect: () => events.invoke('show.about')
         }]);
 
         this.append(menubar);

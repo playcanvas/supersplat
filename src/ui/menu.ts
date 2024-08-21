@@ -195,6 +195,16 @@ class Menu extends Container {
         }, {
             // separator
         }, {
+            text: 'Discord Server',
+            icon: 'E233',
+            onSelect: () => window.open('https://discord.com/channels/408617316415307776/1275850227663769686', '_blank').focus()
+        }, {
+            text: 'Forum',
+            icon: 'E432',
+            onSelect: () => window.open('https://forum.playcanvas.com', '_blank').focus()
+        }, {
+            // separator
+        }, {
             text: 'About SuperSplat',
             icon: 'E138',
             onSelect: () => events.invoke('show.about')

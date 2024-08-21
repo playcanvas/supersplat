@@ -16,7 +16,7 @@ However, for your convenience, you can also install SuperSplat as a PWA (Progres
 
 SuperSplat loads splats from .ply files. Only .ply files containing 3D Gaussian Splat data can be loaded. If you attempt to load any other type of data from a .ply file, it will fail.
 
-There are two ways that you can load a .ply file:
+There are three ways that you can load a .ply file:
 
 1. Drag and drop one or more .ply files from your file system into SuperSplat's client area.
 2. Select the `Scene` > `Open` menu item and select one or more .ply files from your file system.

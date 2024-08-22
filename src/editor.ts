@@ -572,6 +572,25 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.on('view.setBands', (value: number) => {
         setViewBands(value);
     });
+
+    events.function('camera.getPose', () => {
+        const camera = scene.camera;
+        const position = camera.entity.getPosition();
+        const focalPoint = camera.focalPoint;
+        return {
+            position: { x: position.x, y: position.y, z: position.z },
+            target: { x: focalPoint.x, y: focalPoint.y, z: focalPoint.z }
+        };
+    });
+
+    type Vec3d = { x: number, y: number, z: number };
+
+    events.on('camera.setPose', (pose: { position: Vec3d, target: Vec3d }) => {
+        scene.camera.setPose(
+            new Vec3(pose.position.x, pose.position.y, pose.position.z),
+            new Vec3(pose.target.x, pose.target.y, pose.target.z)
+        );
+    });
 }
 
 export { registerEditorEvents };

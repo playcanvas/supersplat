@@ -2,6 +2,8 @@ import { BooleanInput, Container, Label, SliderInput } from 'pcui';
 import { Events } from '../events';
 import { Tooltips } from './tooltips';
 
+type Vec3d = { x: number, y: number, z: number };
+
 class ViewPanel extends Container {
     constructor(events: Events, tooltips: Tooltips, args = {}) {
         args = {
@@ -119,11 +121,54 @@ class ViewPanel extends Container {
         showBoundRow.append(showBoundLabel);
         showBoundRow.append(showBoundToggle);
 
+        // camera poses
+
+        const poseHeader = new Container({
+            class: 'panel-header'
+        });
+
+        const poseIcon = new Label({
+            class: 'panel-header-icon',
+            text: '\uE212'
+        });
+
+        const poseHeaderLabel = new Label({
+            text: 'POSES',
+            class: 'panel-header-label'
+        });
+
+        const poseAdd = new Label({
+            class: 'panel-header-button',
+            text: '\uE120'
+        });
+
+        const posePlay = new Label({
+            class: 'panel-header-button',
+            text: '\uE131'
+        });
+
+        poseHeader.append(poseIcon);
+        poseHeader.append(poseHeaderLabel);
+        poseHeader.append(poseAdd);
+        poseHeader.append(posePlay);
+
+        const poseListContainer = new Container({
+            class: 'view-panel-list-container'
+        });
+
+        const poseList = new Container({
+            class: 'view-panel-list'
+        });
+
+        poseListContainer.append(poseList);
+
         this.append(header);
         this.append(shBandsRow);
         this.append(centersSizeRow);
         this.append(showGridRow);
         this.append(showBoundRow);
+        this.append(poseHeader);
+        this.append(poseListContainer);
 
         // handle panel visibility
 
@@ -186,6 +231,48 @@ class ViewPanel extends Container {
 
         showBoundToggle.on('change', () => {
             events.fire('camera.setBound', showBoundToggle.value);
+        });
+
+        // poses
+
+        type Pose = { name: string, position: Vec3d, target: Vec3d };
+
+        const poses: Pose[] = [];
+
+        events.function('camera.poses', () => {
+            return poses;
+        });
+
+        events.on('camera.addPose', (pose: Pose) => {
+            const poseRow = new Container({
+                class: 'view-panel-list-row'
+            });
+
+            const poseLabel = new Label({
+                text: pose.name ?? 'camera',
+                class: 'view-panel-list-row-label'
+            });
+
+            poseRow.append(poseLabel);
+
+            poseRow.on('click', () => {
+                events.fire('camera.setPose', pose);
+            });
+
+            poseList.append(poseRow);
+
+            poses.push(pose);
+        });
+
+        poseAdd.on('click', () => {
+            // get the current camera pose
+            const pose = events.invoke('camera.getPose');
+
+            events.fire('camera.addPose', {
+                name: `camera_${poses.length}`,
+                position: pose.position,
+                target: pose.target
+            });
         });
     }
 }

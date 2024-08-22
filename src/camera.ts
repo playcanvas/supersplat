@@ -162,6 +162,16 @@ class Camera extends Element {
         this.setDistance(distance, dampingFactorFactor);
     }
 
+    setPose(position: Vec3, target: Vec3, dampingFactorFactor: number = 1) {
+        vec.sub2(target, position);
+        const l = vec.length();
+        const azim = Math.atan2(-vec.x / l, -vec.z / l) * math.RAD_TO_DEG;
+        const elev = Math.asin(vec.y / l) * math.RAD_TO_DEG;
+        this.setFocalPoint(target, dampingFactorFactor);
+        this.setAzimElev(azim, elev, dampingFactorFactor);
+        this.setDistance(l / this.focusDistance, dampingFactorFactor);
+    }
+
     // convert world to screen coordinate
     worldToScreen(world: Vec3, screen: Vec3) {
         this.entity.camera.worldToScreen(world, screen);

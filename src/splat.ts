@@ -26,6 +26,8 @@ const vertexShader = /*glsl*/`
 uniform sampler2D splatState;
 uniform vec3 view_position;
 
+uniform mat3 matrix_sh;
+
 flat varying highp uint vertexState;
 
 #ifdef PICK_PASS
@@ -176,7 +178,7 @@ void main(void)
 
     vec4 worldPos = matrix_model * vec4(center, 1.0);
     vec3 worldDir = worldPos.xyz / worldPos.w - view_position;
-    vec3 modelDir = normalize(worldDir * mat3(matrix_model));
+    vec3 modelDir = matrix_sh * normalize(worldDir * mat3(matrix_model));
 
     color = evalColor(modelDir);
 
@@ -288,6 +290,14 @@ class Splat extends Element {
     worldBoundDirty = true;
     visible_ = true;
 
+    shRotX = 0;
+    shRotY = 0;
+    shRotZ = 0;
+
+    shScaleX = 1;
+    shScaleY = 1;
+    shScaleZ = 1;
+
     rebuildMaterial: (bands: number) => void;
 
     constructor(asset: Asset) {
@@ -353,11 +363,23 @@ class Splat extends Element {
         // expect all SH or none
         if (hasSH) {
             // apply load-time transform to SH coefficients
-            const m4 = new Mat4();
-            m4.setScale(-1, -1, 1);
+            // const q = new Quat();
+            // q.setFromEulerAngles(0, 0, 180);
+
+            // const q2 = new Quat();
+            // q2.setFromEulerAngles(-39.168, 0.1349, 0.3792);
+
+            // q.mul2(q, q2);
+
+            mat.setFromEulerAngles(0, 0, 180);
+            // const mat2 = new Mat4().setFromEulerAngles(-39.168, 0.1349, 0.3792);
+            // mat2.invert();
+
+            // mat.mul2(mat, mat2);
 
             const m3 = new Mat3();
-            m3.setFromMat4(m4);
+            // m3.setFromQuat(q);
+            m3.setFromMat4(mat);
 
             const rot = new SHRotation(m3);
 
@@ -392,14 +414,25 @@ class Splat extends Element {
                 return Math.max(0, Math.min(t, Math.floor(value * t + 0.5)));
             };
 
-            const pack = (coef: number, idx: number, m: number) => {
-                const r = src[coef     ][idx] / m;
-                const g = src[coef + 15][idx] / m;
-                const b = src[coef + 30][idx] / m;
+            const pack = (coef: number, idx: number, scale: number) => {
+                const r = src[coef     ][idx] * scale;
+                const g = src[coef + 15][idx] * scale;
+                const b = src[coef + 30][idx] * scale;
 
                 return packUnorm(r * 0.5 + 0.5, 11) << 21 |
                        packUnorm(g * 0.5 + 0.5, 10) << 11 |
                        packUnorm(b * 0.5 + 0.5, 11);
+            };
+
+            const unpackUnorm = (value: number, bits: number) => {
+                const t = (1 << bits) - 1;
+                return (value & t) / t;
+            };
+
+            const unpack = (result: Vec3, value: number) => {
+                result.x = unpackUnorm(value >>> 21, 11);
+                result.y = unpackUnorm(value >>> 11, 10);
+                result.z = unpackUnorm(value, 11);
             };
 
             const float32 = new Float32Array(1);
@@ -407,35 +440,38 @@ class Splat extends Element {
 
             for (let i = 0; i < this.splatData.numSplats; ++i) {
                 let m = Math.abs(src[0][i]);
+
                 for (let j = 1; j < 45; ++j) {
                     m = Math.max(m, Math.abs(src[j][i]));
                 }
 
-                if (m === 0) {
-                    continue;
-                }
+                // if (m === 0) {
+                //     continue;
+                // }
+
+                const scale = m === 0 ? 0 : 1 / m;
 
                 float32[0] = m;
 
                 sh1to3Data[i * 4 + 0] = uint32[0];
-                sh1to3Data[i * 4 + 1] = pack(0, i, m);
-                sh1to3Data[i * 4 + 2] = pack(1, i, m);
-                sh1to3Data[i * 4 + 3] = pack(2, i, m);
+                sh1to3Data[i * 4 + 1] = pack(0, i, scale);
+                sh1to3Data[i * 4 + 2] = pack(1, i, scale);
+                sh1to3Data[i * 4 + 3] = pack(2, i, scale);
 
-                sh4to7Data[i * 4 + 0] = pack(3, i, m);
-                sh4to7Data[i * 4 + 1] = pack(4, i, m);
-                sh4to7Data[i * 4 + 2] = pack(5, i, m);
-                sh4to7Data[i * 4 + 3] = pack(6, i, m);
+                sh4to7Data[i * 4 + 0] = pack(3, i, scale);
+                sh4to7Data[i * 4 + 1] = pack(4, i, scale);
+                sh4to7Data[i * 4 + 2] = pack(5, i, scale);
+                sh4to7Data[i * 4 + 3] = pack(6, i, scale);
 
-                sh8to11Data[i * 4 + 0] = pack(7, i, m);
-                sh8to11Data[i * 4 + 1] = pack(8, i, m);
-                sh8to11Data[i * 4 + 2] = pack(9, i, m);
-                sh8to11Data[i * 4 + 3] = pack(10, i, m);
+                sh8to11Data[i * 4 + 0] = pack(7, i, scale);
+                sh8to11Data[i * 4 + 1] = pack(8, i, scale);
+                sh8to11Data[i * 4 + 2] = pack(9, i, scale);
+                sh8to11Data[i * 4 + 3] = pack(10, i, scale);
 
-                sh12to15Data[i * 4 + 0] = pack(11, i, m);
-                sh12to15Data[i * 4 + 1] = pack(12, i, m);
-                sh12to15Data[i * 4 + 2] = pack(13, i, m);
-                sh12to15Data[i * 4 + 3] = pack(14, i, m);
+                sh12to15Data[i * 4 + 0] = pack(11, i, scale);
+                sh12to15Data[i * 4 + 1] = pack(12, i, scale);
+                sh12to15Data[i * 4 + 2] = pack(13, i, scale);
+                sh12to15Data[i * 4 + 3] = pack(14, i, scale);
             }
 
             sh1to3.unlock();
@@ -567,6 +603,20 @@ class Splat extends Element {
         if (bands !== 0) {
             this.rebuildMaterial(bands);
         }
+
+        this.scene.events.function('shRot', (x: number, y: number, z: number) => {
+            this.shRotX = x;
+            this.shRotY = y;
+            this.shRotZ = z;
+            this.scene.forceRender = true;
+        });
+
+        this.scene.events.function('shScale', (x: number, y: number, z: number) => {
+            this.shScaleX = x;
+            this.shScaleY = y;
+            this.shScaleZ = z;
+            this.scene.forceRender = true;
+        });
     }
 
     remove() {
@@ -617,6 +667,16 @@ class Splat extends Element {
                     this.scene.app.drawLine(veca, vecb, Color.WHITE, true, this.scene.debugLayer);
                 }
             }
+
+            const quat = new Quat();
+            quat.setFromEulerAngles(this.shRotX, this.shRotY, this.shRotZ);
+
+            mat.setTRS(Vec3.ZERO, quat, new Vec3(this.shScaleX, this.shScaleY, this.shScaleZ));
+
+            const shMat = new Mat3();
+            shMat.setFromMat4(mat);
+
+            material.setParameter('matrix_sh', shMat.data);
         }
 
         this.pivot.enabled = this.visible;

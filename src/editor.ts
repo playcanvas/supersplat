@@ -556,7 +556,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     // view spherical harmonic bands
 
-    let viewBands = 0;
+    let viewBands = 3;
 
     const setViewBands = (value: number) => {
         if (value !== viewBands) {

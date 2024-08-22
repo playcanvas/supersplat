@@ -51,7 +51,7 @@ class ViewPanel extends Container {
             min: 0,
             max: 3,
             precision: 0,
-            value: 0
+            value: 3
         });
 
         shBandsRow.append(shBandsLabel);

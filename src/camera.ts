@@ -84,6 +84,20 @@ class Camera extends Element {
         // this.entity.camera.requestSceneColorMap(true);
     }
 
+    // fov
+    get fov() {
+        return this.entity.camera.fov;
+    }
+
+    setFov(value: number) {
+        this.entity.camera.fov = value;
+        this.scene.config.camera.fov = value;
+        this.entity.camera.camera._updateViewProjMat();
+        this.fitClippingPlanes(this.entity.getLocalPosition(), this.entity.forward);
+        this.scene.forceRender = true;
+        this.scene.events.fire('camera.fov', value);
+    }
+
     // near clip
     set near(value: number) {
         this.entity.camera.nearClip = value;
@@ -213,6 +227,9 @@ class Camera extends Element {
         // initial camera position and orientation
         this.setAzimElev(controls.initialAzim, controls.initialElev, 0);
         this.setDistance(controls.initialZoom, 0);
+
+        // initial fov
+        this.setFov(config.camera.fov);
 
         // picker
         const { width, height } = this.scene.targetSize;

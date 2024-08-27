@@ -141,14 +141,12 @@ class ViewPanel extends Container {
         showBoundRow.append(showBoundLabel);
         showBoundRow.append(showBoundToggle);
 
-
         this.append(header);
         this.append(fovRow);
         this.append(shBandsRow);
         this.append(centersSizeRow);
         this.append(showGridRow);
         this.append(showBoundRow);
-        
         // handle panel visibility
 
         const setVisible = (visible: boolean) => {

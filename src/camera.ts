@@ -163,15 +163,6 @@ class Camera extends Element {
         t.goto({ distance }, dampingFactorFactor * controls.dampingFactor);
     }
 
-    // convert point (relative to camera focus point) to azimuth, elevation, distance
-    setOrientation(point: Vec3, dampingFactorFactor: number = 1.0) {
-        const distance = point.length();
-        const azim = Math.atan2(-point.x / distance, -point.z / distance) * math.RAD_TO_DEG;
-        const elev = Math.asin(point.y / distance) * math.RAD_TO_DEG;
-        this.setAzimElev(azim, elev, dampingFactorFactor);
-        this.setDistance(distance, dampingFactorFactor);
-    }
-
     setPose(position: Vec3, target: Vec3, dampingFactorFactor: number = 1) {
         vec.sub2(target, position);
         const l = vec.length();

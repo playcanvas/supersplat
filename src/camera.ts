@@ -222,9 +222,6 @@ class Camera extends Element {
         this.setAzimElev(controls.initialAzim, controls.initialElev, 0);
         this.setDistance(controls.initialZoom, 0);
 
-        // initial fov
-        this.setFov(config.camera.fov);
-
         // picker
         const { width, height } = this.scene.targetSize;
         this.picker = new Picker(this.scene.app, width, height);

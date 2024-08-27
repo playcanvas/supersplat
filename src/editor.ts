@@ -124,7 +124,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     });
 
     events.on('camera.setFov', (fov: number) => {
-        scene.camera.setFov(fov);
+        scene.camera.fov = fov;
     });
 
     // camera.bound

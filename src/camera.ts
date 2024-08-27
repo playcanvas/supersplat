@@ -5,6 +5,7 @@ import {
     PIXELFORMAT_RGBA8,
     PIXELFORMAT_DEPTH,
     drawTexture,
+    BoundingBox,
     Color,
     Entity,
     EventHandler,
@@ -52,18 +53,16 @@ const mod = (n: number, m: number) => ((n % m) + m) % m;
 class Camera extends Element {
     controller: PointerController;
     entity: Entity;
-    focalPointTween = new TweenValue({x: 0, y: 0.5, z: 0});
-    azimElevTween = new TweenValue({azim: 30, elev: -15});
-    distanceTween = new TweenValue({distance: 2});
+    focalPointTween = new TweenValue({ x: 0, y: 0.5, z: 0 });
+    azimElevTween = new TweenValue({ azim: 30, elev: -15 });
+    distanceTween = new TweenValue({ distance: 2 });
 
     minElev = -90;
     maxElev = 90;
 
     events = new EventHandler();
 
-    autoRotateTimer = 0;
-    autoRotateDelayValue = 0;
-    focusDistance: number;
+    sceneRadius = 5;
 
     picker: Picker;
     pickModeColorBuffer: Texture;
@@ -82,6 +81,15 @@ class Camera extends Element {
         // NOTE: this call is needed for refraction effect to work correctly, but
         // it slows rendering and should only be made when required.
         // this.entity.camera.requestSceneColorMap(true);
+    }
+
+    // fov
+    set fov(value: number) {
+        this.entity.camera.fov = value;
+    }
+
+    get fov() {
+        return this.entity.camera.fov;
     }
 
     // near clip
@@ -150,7 +158,7 @@ class Camera extends Element {
         distance = Math.max(this.scene.config.controls.minZoom, Math.min(this.scene.config.controls.maxZoom, distance));
 
         const t = this.distanceTween;
-        t.goto({distance}, dampingFactorFactor * this.scene.config.controls.dampingFactor);
+        t.goto({ distance }, dampingFactorFactor * this.scene.config.controls.dampingFactor);
     }
 
     // convert point (relative to camera focus point) to azimuth, elevation, distance
@@ -191,10 +199,6 @@ class Camera extends Element {
         const clr = config.backgroundColor;
         this.entity.camera.clearColor.set(clr.r, clr.g, clr.b, clr.a);
 
-        // initialize autorotate
-        this.autoRotateTimer = 0;
-        this.autoRotateDelayValue = controls.autoRotateInitialDelay;
-
         this.minElev = (controls.minPolarAngle * 180) / Math.PI - 90;
         this.maxElev = (controls.maxPolarAngle * 180) / Math.PI - 90;
 
@@ -210,6 +214,8 @@ class Camera extends Element {
         // exposure
         this.scene.app.scene.exposure = config.camera.exposure;
 
+        this.fov = config.camera.fov;
+
         // initial camera position and orientation
         this.setAzimElev(controls.initialAzim, controls.initialElev, 0);
         this.setDistance(controls.initialZoom, 0);
@@ -217,6 +223,12 @@ class Camera extends Element {
         // picker
         const { width, height } = this.scene.targetSize;
         this.picker = new Picker(this.scene.app, width, height);
+
+        this.scene.events.on('scene.boundChanged', (bound: BoundingBox) => {
+            const newSceneRadius = bound.halfExtents.length();
+            this.setDistance(this.distance * this.sceneRadius / newSceneRadius, 0);
+            this.sceneRadius = newSceneRadius;
+        });
     }
 
     remove() {
@@ -233,7 +245,7 @@ class Camera extends Element {
 
     serialize(serializer: Serializer) {
         const camera = this.entity.camera.camera;
-        serializer.pack(camera.fov);
+        serializer.pack(this.fov);
         serializer.packa(this.entity.getWorldTransform().data);
         serializer.pack(this.entity.camera.renderTarget?.width, this.entity.camera.renderTarget?.height);
     }
@@ -303,24 +315,6 @@ class Camera extends Element {
     }
 
     onUpdate(deltaTime: number) {
-        const config = this.scene.config;
-
-        // auto rotate
-        if (config.controls.autoRotate) {
-            if (this.autoRotateDelayValue > 0) {
-                this.autoRotateDelayValue = Math.max(0, this.autoRotateDelayValue - deltaTime);
-                this.autoRotateTimer = 0;
-            } else {
-                this.autoRotateTimer += deltaTime;
-                const rotateSpeed = Math.min(1, Math.pow(this.autoRotateTimer * 0.5 - 1, 5) + 1); // soften the initial rotation speedup
-                this.setAzimElev(
-                    this.azim + config.controls.autoRotateSpeed * 10 * deltaTime * rotateSpeed,
-                    this.elevation,
-                    0
-                );
-            }
-        }
-
         // controller update
         this.controller.update(deltaTime);
 
@@ -334,7 +328,7 @@ class Camera extends Element {
 
         calcForwardVec(forwardVec, azimElev.azim, azimElev.elev);
         cameraPosition.copy(forwardVec);
-        cameraPosition.mulScalar(this.focusDistance * (config.camera.dollyZoom ? distance.distance : 1.0));
+        cameraPosition.mulScalar(this.sceneRadius * distance.distance);
         cameraPosition.add(this.focalPointTween.value);
 
         this.entity.setLocalPosition(cameraPosition);
@@ -342,7 +336,6 @@ class Camera extends Element {
 
         this.fitClippingPlanes(this.entity.getLocalPosition(), this.entity.forward);
 
-        this.entity.camera.fov = config.camera.fov * (config.camera.dollyZoom ? 1.0 : distance.distance);
         this.entity.camera.camera._updateViewProjMat();
     }
 
@@ -379,31 +372,24 @@ class Camera extends Element {
         // device.copyRenderTarget(renderTarget, null, true, false);
     }
 
-    focus(options?: { sceneRadius?: number, distance?: number, focalPoint?: Vec3}) {
-        const config = this.scene.config;
-
-        let focalPoint: Vec3 = options?.focalPoint;
-        if (!focalPoint) {
-            this.scene.elements.forEach((element: any) => {
-                if (!focalPoint && element.type === ElementType.splat) {
-                    focalPoint = element.focalPoint && element.focalPoint();
+    focus(options?: { focalPoint: Vec3, radius: number }) {
+        const getSplatFocalPoint = () => {
+            for (const element of this.scene.elements) {
+                if (element.type === ElementType.splat) {
+                    const focalPoint = (element as Splat).focalPoint?.();
+                    if (focalPoint) {
+                        return focalPoint;
+                    }
                 }
-            });
-        }
+            }
+        };
 
-        const sceneRadius = options?.sceneRadius ?? this.scene.bound.halfExtents.length();
-        const distance = sceneRadius / Math.sin(config.camera.fov * math.DEG_TO_RAD * 0.5);
+        const focalPoint = options ? options.focalPoint : (getSplatFocalPoint() ?? this.scene.bound.center);
+        const radius = options ? options.radius : this.scene.bound.halfExtents.length();
+        const distance = radius / Math.sin(this.fov * math.DEG_TO_RAD * 0.5);
 
-        this.setDistance(options?.distance ?? 1.0, 0);
-        this.setFocalPoint(focalPoint ?? this.scene.bound.center, 0);
-        this.focusDistance = 1.1 * distance;
-    }
-
-    notify(event: string, data?: any) {
-        const config = this.scene.config;
-
-        this.events.fire(event, data);
-        this.autoRotateDelayValue = config.controls.autoRotateDelay;
+        this.setDistance(distance / this.sceneRadius, 0);
+        this.setFocalPoint(focalPoint, 0);
     }
 
     // interesect the scene at the given screen coordinate and focus the camera on this location
@@ -457,7 +443,7 @@ class Camera extends Element {
         }
 
         if (closestSplat) {
-            this.setDistance(cameraPos.sub(closestP).length() / this.focusDistance);
+            this.setDistance(cameraPos.sub(closestP).length() / this.sceneRadius);
             this.setFocalPoint(closestP);
             scene.events.fire('camera.focalPointPicked', {
                 camera: this,

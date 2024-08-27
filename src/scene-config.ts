@@ -22,7 +22,6 @@ const sceneConfig = {
         pixelScale: 1,
         multisample: false,
         fov: 50,
-        dollyZoom: true,
         exposure: 1.0,
         toneMapping: 'linear',
         debug_render: ''
@@ -32,9 +31,6 @@ const sceneConfig = {
         fade: true
     },
     controls: {
-        enableRotate: true, // enableOrbit
-        enablePan: true,
-        enableZoom: true,
         dampingFactor: 0.2,
         minPolarAngle: 0,
         maxPolarAngle: Math.PI,
@@ -43,15 +39,8 @@ const sceneConfig = {
         initialAzim: -45,
         initialElev: -10,
         initialZoom: 1.0,
-        autoRotate: false,
-        autoRotateSpeed: -2.0,
-        autoRotateInitialDelay: 0.0,
-        autoRotateDelay: 5.0,
         orbitSensitivity: 0.3,
         zoomSensitivity: 0.4
-    },
-    animation: {
-        autoPlay: false
     },
     debug: {
         showBound: false

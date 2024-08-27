@@ -163,7 +163,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
             scene.camera.focus({
                 focalPoint: vec,
-                distance: aabb.halfExtents.length() * vec2.x / scene.bound.halfExtents.length()
+                radius: aabb.halfExtents.length() * vec2.x
             });
         }
     });

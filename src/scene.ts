@@ -287,7 +287,7 @@ class Scene {
             });
 
             this.boundDirty = false;
-            this.events.fire('scene.boundChanged');
+            this.events.fire('scene.boundChanged', this.boundStorage);
         }
 
         return this.boundStorage;

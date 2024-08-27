@@ -179,7 +179,7 @@ class Camera extends Element {
         const elev = Math.asin(vec.y / l) * math.RAD_TO_DEG;
         this.setFocalPoint(target, dampingFactorFactor);
         this.setAzimElev(azim, elev, dampingFactorFactor);
-        this.setDistance(l / this.focusDistance, dampingFactorFactor);
+        this.setDistance(l / this.sceneRadius * this.fovFactor, dampingFactorFactor);
     }
 
     // convert world to screen coordinate

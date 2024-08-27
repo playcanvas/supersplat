@@ -155,14 +155,6 @@ void main(void)
         return;
     }
 
-    // get splat state, discard if it's deleted (this should not happen as we filter out
-    // deleted splats from sorting and rendering anyway)
-    vertexState = uint(texelFetch(splatState, splatUV, 0).r * 255.0);
-    if ((vertexState & 4u) == 4u) {
-        gl_Position = discardVec;
-        return;
-    }
-
     // read splat data
     readData();
 
@@ -175,6 +167,7 @@ void main(void)
     gl_Position = pos;
 
     texCoord = vertex_position.xy;
+    vertexState = uint(texelFetch(splatState, splatUV, 0).r * 255.0);
 
     vec4 worldPos = matrix_model * vec4(center, 1.0);
     vec3 worldDir = worldPos.xyz / worldPos.w - view_position;

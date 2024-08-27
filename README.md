@@ -34,13 +34,6 @@ The SPLAT DATA panel plots various scene properties on a histogram display. You 
 
 Once you're done editing the scene, use the Scene menu to Save, Save As and Export the scene to the local file system. Only visible splats are written.
 
-## Current Limitations
-
-This editor currently has the following limitations:
-
-- Only supports Gaussian splat PLY files
-- Spherical harmonic data is not rotated on export
-
 ## Local Development
 
 The steps required to clone the repo and run a local development server are as follows:

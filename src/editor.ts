@@ -163,7 +163,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
             scene.camera.focus({
                 focalPoint: vec,
-                distance: aabb.halfExtents.length() * vec2.x / scene.bound.halfExtents.length()
+                radius: aabb.halfExtents.length() * vec2.x
             });
         }
     });
@@ -556,7 +556,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     // view spherical harmonic bands
 
-    let viewBands = 0;
+    let viewBands = 3;
 
     const setViewBands = (value: number) => {
         if (value !== viewBands) {

@@ -157,7 +157,7 @@ void main(void)
         return;
     }
 
-    // read data
+    // read splat data
     readData();
 
     vec4 pos;
@@ -169,11 +169,6 @@ void main(void)
     gl_Position = pos;
 
     texCoord = vertex_position.xy;
-
-    #ifndef DITHER_NONE
-        id = float(splatId);
-    #endif
-
     vertexState = uint(texelFetch(splatState, splatUV, 0).r * 255.0);
 
     vec4 worldPos = matrix_model * vec4(center, 1.0);
@@ -181,6 +176,10 @@ void main(void)
     vec3 modelDir = matrix_sh * normalize(worldDir * mat3(matrix_model));
 
     color = evalColor(modelDir);
+
+    #ifndef DITHER_NONE
+        id = float(splatId);
+    #endif
 
     #ifdef PICK_PASS
         vertexId = splatId;
@@ -202,11 +201,6 @@ float PI = 3.14159;
 
 void main(void)
 {
-    if ((vertexState & 4u) == 4u) {
-        // deleted
-        discard;
-    }
-
     float A = dot(texCoord, texCoord);
     if (A > 4.0) {
         discard;
@@ -230,7 +224,7 @@ void main(void)
         float alpha;
 
         if ((vertexState & 2u) == 2u) {
-            // hidden
+            // frozen/hidden
             c = vec3(0.0, 0.0, 0.0);
             alpha = B * 0.05;
         } else {
@@ -242,14 +236,16 @@ void main(void)
                 c = color.xyz;
             }
 
-            alpha = B;
-
             if (ringSize > 0.0) {
+                // rings mode
                 if (A < 4.0 - ringSize * 4.0) {
                     alpha = max(0.05, B);
                 } else {
                     alpha = 0.6;
                 }
+            } else {
+                // centers mode
+                alpha = B;
             }
         }
 
@@ -360,6 +356,11 @@ class Splat extends Element {
         // create the state texture
         this.stateTexture = createTexture('splatState', PIXELFORMAT_L8);
 
+        let sh1to3: Texture;
+        let sh4to7: Texture;
+        let sh8to11: Texture;
+        let sh12to15: Texture;
+
         // expect all SH or none
         if (hasSH) {
             // apply load-time transform to SH coefficients
@@ -399,10 +400,10 @@ class Splat extends Element {
             }
 
             // create the spherical harmonic textures
-            const sh1to3 = createTexture('splatSH_1to3', PIXELFORMAT_RGBA32U);
-            const sh4to7 = createTexture('splatSH_4to7', PIXELFORMAT_RGBA32U);
-            const sh8to11 = createTexture('splatSH_8to11', PIXELFORMAT_RGBA32U);
-            const sh12to15 = createTexture('splatSH_12to15', PIXELFORMAT_RGBA32U);
+            sh1to3 = createTexture('splatSH_1to3', PIXELFORMAT_RGBA32U);
+            sh4to7 = createTexture('splatSH_4to7', PIXELFORMAT_RGBA32U);
+            sh8to11 = createTexture('splatSH_8to11', PIXELFORMAT_RGBA32U);
+            sh12to15 = createTexture('splatSH_12to15', PIXELFORMAT_RGBA32U);
 
             const sh1to3Data = sh1to3.lock();
             const sh4to7Data = sh4to7.lock();
@@ -478,24 +479,29 @@ class Splat extends Element {
             sh4to7.unlock();
             sh8to11.unlock();
             sh12to15.unlock();
-
-            instance.material.setParameter(`splatSH_1to3`, sh1to3);
-            instance.material.setParameter(`splatSH_4to7`, sh4to7);
-            instance.material.setParameter(`splatSH_8to11`, sh8to11);
-            instance.material.setParameter(`splatSH_12to15`, sh12to15);
         }
 
         this.rebuildMaterial = (bands: number) => {
+            const instance = this.entity.gsplat.instance;
+            instance.createMaterial(getMaterialOptions(hasSH ? bands : 0));
+
+            const material = instance.material;
+            material.setParameter('splatState', this.stateTexture);
+
             if (hasSH) {
-                this.entity.gsplat.instance.createMaterial(getMaterialOptions(bands));
+                material.setParameter(`splatSH_1to3`, sh1to3);
+                material.setParameter(`splatSH_4to7`, sh4to7);
+                material.setParameter(`splatSH_8to11`, sh8to11);
+                material.setParameter(`splatSH_12to15`, sh12to15);
             }
+
+            material.update();
         };
 
         this.localBoundStorage = instance.splat.aabb;
         this.worldBoundStorage = instance.meshInstance._aabb;
 
         instance.meshInstance._updateAabb = false;
-        instance.material.setParameter('splatState', this.stateTexture);
 
         // when sort changes, re-render the scene
         instance.sorter.on('updated', () => {
@@ -597,13 +603,6 @@ class Splat extends Element {
         this.worldBoundDirty = true;
         this.scene.boundDirty = true;
 
-        this.scene.events.on('view.bands', this.rebuildMaterial, this);
-
-        const bands = this.scene.events.invoke('view.bands');
-        if (bands !== 0) {
-            this.rebuildMaterial(bands);
-        }
-
         this.scene.events.function('shRot', (x: number, y: number, z: number) => {
             this.shRotX = x;
             this.shRotY = y;
@@ -617,6 +616,9 @@ class Splat extends Element {
             this.shScaleZ = z;
             this.scene.forceRender = true;
         });
+
+        this.scene.events.on('view.bands', this.rebuildMaterial, this);
+        this.rebuildMaterial(this.scene.events.invoke('view.bands'));
     }
 
     remove() {

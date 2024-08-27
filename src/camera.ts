@@ -226,14 +226,7 @@ class Camera extends Element {
         const { width, height } = this.scene.targetSize;
         this.picker = new Picker(this.scene.app, width, height);
 
-        // handle the scene's bound changing. the camera must be configured to render
-        // the entire extents as well as possible.
-        // also update the existing camera distance to maintain the current view
-        this.scene.events.on('scene.boundChanged', (bound: BoundingBox) => {
-            const prevDistance = this.distanceTween.value.distance * this.sceneRadius;
-            this.sceneRadius = bound.halfExtents.length();
-            this.setDistance(prevDistance / this.sceneRadius, 0);
-        });
+        this.scene.events.on('scene.boundChanged', this.onBoundChanged, this);
     }
 
     remove() {
@@ -246,6 +239,17 @@ class Camera extends Element {
         // destroy doesn't exist on picker?
         // this.picker.destroy();
         this.picker = null;
+
+        this.scene.events.off('scene.boundChanged', this.onBoundChanged, this);
+    }
+
+    // handle the scene's bound changing. the camera must be configured to render
+    // the entire extents as well as possible.
+    // also update the existing camera distance to maintain the current view
+    onBoundChanged(bound: BoundingBox) {
+        const prevDistance = this.distanceTween.value.distance * this.sceneRadius;
+        this.sceneRadius = bound.halfExtents.length();
+        this.setDistance(prevDistance / this.sceneRadius, 0);
     }
 
     serialize(serializer: Serializer) {

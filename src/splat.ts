@@ -155,7 +155,7 @@ void main(void)
         return;
     }
 
-    // read data
+    // read splat data
     readData();
 
     vec4 pos;
@@ -167,11 +167,6 @@ void main(void)
     gl_Position = pos;
 
     texCoord = vertex_position.xy;
-
-    #ifndef DITHER_NONE
-        id = float(splatId);
-    #endif
-
     vertexState = uint(texelFetch(splatState, splatUV, 0).r * 255.0);
 
     vec4 worldPos = matrix_model * vec4(center, 1.0);
@@ -179,6 +174,10 @@ void main(void)
     vec3 modelDir = normalize(worldDir * mat3(matrix_model));
 
     color = evalColor(modelDir);
+
+    #ifndef DITHER_NONE
+        id = float(splatId);
+    #endif
 
     #ifdef PICK_PASS
         vertexId = splatId;
@@ -200,11 +199,6 @@ float PI = 3.14159;
 
 void main(void)
 {
-    if ((vertexState & 4u) == 4u) {
-        // deleted
-        discard;
-    }
-
     float A = dot(texCoord, texCoord);
     if (A > 4.0) {
         discard;
@@ -228,7 +222,7 @@ void main(void)
         float alpha;
 
         if ((vertexState & 2u) == 2u) {
-            // hidden
+            // frozen/hidden
             c = vec3(0.0, 0.0, 0.0);
             alpha = B * 0.05;
         } else {
@@ -240,14 +234,16 @@ void main(void)
                 c = color.xyz;
             }
 
-            alpha = B;
-
             if (ringSize > 0.0) {
+                // rings mode
                 if (A < 4.0 - ringSize * 4.0) {
                     alpha = max(0.05, B);
                 } else {
                     alpha = 0.6;
                 }
+            } else {
+                // centers mode
+                alpha = B;
             }
         }
 

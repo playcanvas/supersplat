@@ -24,7 +24,7 @@ class PointerController {
             // For panning to work at any zoom level, we use screen point to world projection
             // to work out how far we need to pan the pivotEntity in world space
             const c = camera.entity.camera;
-            const distance = camera.sceneRadius * camera.distanceTween.value.distance;
+            const distance = camera.distanceTween.value.distance * camera.sceneRadius / camera.fovFactor;
 
             c.screenToWorld(x, y, distance, fromWorldPoint);
             c.screenToWorld(x - dx, y - dy, distance, toWorldPoint);

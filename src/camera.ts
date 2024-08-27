@@ -154,11 +154,13 @@ class Camera extends Element {
     }
 
     setDistance(distance: number, dampingFactorFactor: number = 1) {
+        const controls = this.scene.config.controls;
+
         // clamp
-        distance = Math.max(this.scene.config.controls.minZoom, Math.min(this.scene.config.controls.maxZoom, distance));
+        distance = Math.max(controls.minZoom, Math.min(controls.maxZoom, distance));
 
         const t = this.distanceTween;
-        t.goto({ distance }, dampingFactorFactor * this.scene.config.controls.dampingFactor);
+        t.goto({ distance }, dampingFactorFactor * controls.dampingFactor);
     }
 
     // convert point (relative to camera focus point) to azimuth, elevation, distance
@@ -224,10 +226,13 @@ class Camera extends Element {
         const { width, height } = this.scene.targetSize;
         this.picker = new Picker(this.scene.app, width, height);
 
+        // handle the scene's bound changing. the camera must be configured to render
+        // the entire extents as well as possible.
+        // also update the existing camera distance to maintain the current view
         this.scene.events.on('scene.boundChanged', (bound: BoundingBox) => {
-            const newSceneRadius = bound.halfExtents.length();
-            this.setDistance(this.distance * this.sceneRadius / newSceneRadius, 0);
-            this.sceneRadius = newSceneRadius;
+            const prevDistance = this.distanceTween.value.distance * this.sceneRadius;
+            this.sceneRadius = bound.halfExtents.length();
+            this.setDistance(prevDistance / this.sceneRadius, 0);
         });
     }
 
@@ -328,7 +333,7 @@ class Camera extends Element {
 
         calcForwardVec(forwardVec, azimElev.azim, azimElev.elev);
         cameraPosition.copy(forwardVec);
-        cameraPosition.mulScalar(this.sceneRadius * distance.distance);
+        cameraPosition.mulScalar(distance.distance * this.sceneRadius / this.fovFactor);
         cameraPosition.add(this.focalPointTween.value);
 
         this.entity.setLocalPosition(cameraPosition);
@@ -385,11 +390,14 @@ class Camera extends Element {
         };
 
         const focalPoint = options ? options.focalPoint : (getSplatFocalPoint() ?? this.scene.bound.center);
-        const radius = options ? options.radius : this.scene.bound.halfExtents.length();
-        const distance = radius / Math.sin(this.fov * math.DEG_TO_RAD * 0.5);
+        const focalRadius = options ? options.radius : this.scene.bound.halfExtents.length();
 
-        this.setDistance(distance / this.sceneRadius, 0);
+        this.setDistance(focalRadius / this.sceneRadius, 0);
         this.setFocalPoint(focalPoint, 0);
+    }
+
+    get fovFactor() {
+        return Math.sin(this.fov * math.DEG_TO_RAD * 0.5);
     }
 
     // interesect the scene at the given screen coordinate and focus the camera on this location
@@ -403,10 +411,6 @@ class Camera extends Element {
         const sy = screenY / target.clientHeight * scene.targetSize.height;
 
         const splats = scene.getElementsByType(ElementType.splat);
-
-        const dist = (a: Vec3, b: Vec3) => {
-            return vecb.sub2(a, b).length();
-        };
 
         let closestD = 0;
         const closestP = new Vec3();
@@ -425,14 +429,13 @@ class Camera extends Element {
                 plane.setFromPointNormal(vec, this.entity.forward);
 
                 // create the pick ray in world space
-                const res = this.entity.camera.screenToWorld(screenX, screenY, 1.0, vec);
-                vec.sub2(res, cameraPos);
-                vec.normalize();
+                this.entity.camera.screenToWorld(screenX, screenY, 1.0, vec);
+                vec.sub(cameraPos).normalize();
                 ray.set(cameraPos, vec);
 
                 // find intersection
                 if (plane.intersectsRay(ray, vec)) {
-                    const distance = dist(vec, cameraPos);
+                    const distance = vecb.sub2(vec, cameraPos).length();
                     if (!closestSplat || distance < closestD) {
                         closestD = distance;
                         closestP.copy(vec);
@@ -443,8 +446,8 @@ class Camera extends Element {
         }
 
         if (closestSplat) {
-            this.setDistance(cameraPos.sub(closestP).length() / this.sceneRadius);
             this.setFocalPoint(closestP);
+            this.setDistance(closestD / this.sceneRadius * this.fovFactor);
             scene.events.fire('camera.focalPointPicked', {
                 camera: this,
                 splat: closestSplat,

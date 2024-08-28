@@ -117,6 +117,16 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         setGridVisible(!scene.grid.visible);
     });
 
+    // camera.fov
+
+    events.function('camera.fov', () => {
+        return scene.camera.fov;
+    });
+
+    events.on('camera.setFov', (fov: number) => {
+        scene.camera.fov = fov;
+    });
+
     // camera.bound
 
     let bound = true;

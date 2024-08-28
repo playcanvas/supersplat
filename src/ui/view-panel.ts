@@ -38,6 +38,28 @@ class ViewPanel extends Container {
         header.append(icon);
         header.append(label);
 
+        // camera fov
+
+        const fovRow = new Container({
+            class: 'view-panel-row'
+        });
+        
+        const fovLabel = new Label({
+            text: 'Field of View',
+            class: 'view-panel-row-label'
+        });
+        
+        const fovSlider = new SliderInput({
+            class: 'view-panel-row-slider',
+            min: 10,
+            max: 120,
+            precision: 1,
+            value: 60
+        });
+
+        fovRow.append(fovLabel);
+        fovRow.append(fovSlider);
+
         // sh bands
         const shBandsRow = new Container({
             class: 'view-panel-row'
@@ -163,6 +185,7 @@ class ViewPanel extends Container {
         poseListContainer.append(poseList);
 
         this.append(header);
+        this.append(fovRow);
         this.append(shBandsRow);
         this.append(centersSizeRow);
         this.append(showGridRow);
@@ -273,6 +296,16 @@ class ViewPanel extends Container {
                 position: pose.position,
                 target: pose.target
             });
+        });
+
+        // camera fov
+
+        events.on('camera.fov', (fov: number) => {
+            fovSlider.value = fov;
+        });
+
+        fovSlider.on('change', (value: number) => {
+            events.fire('camera.setFov', value);
         });
     }
 }

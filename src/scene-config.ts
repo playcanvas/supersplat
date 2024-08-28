@@ -24,7 +24,8 @@ const sceneConfig = {
         fov: 50,
         exposure: 1.0,
         toneMapping: 'linear',
-        debug_render: ''
+        debug_render: '',
+        debug: true
     },
     shadow: {
         intensity: 0.25,

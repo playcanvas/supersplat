@@ -119,12 +119,19 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     // camera.fov
 
+    const setCameraFov = (fov: number) => {
+        if (fov !== scene.camera.fov) {
+            scene.camera.fov = fov;
+            events.fire('camera.fov', scene.camera.fov);
+        }
+    };
+
     events.function('camera.fov', () => {
         return scene.camera.fov;
     });
 
     events.on('camera.setFov', (fov: number) => {
-        scene.camera.fov = fov;
+        setCameraFov(fov);
     });
 
     // camera.bound
@@ -524,7 +531,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     // camera debug
 
-    let cameraDebug = true;
+    let cameraDebug = scene.config.camera.debug;
 
     const setCameraDebug = (enabled: boolean) => {
         if (enabled !== cameraDebug) {
@@ -582,6 +589,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.on('view.setBands', (value: number) => {
         setViewBands(value);
     });
+
+    // hack: fire events to initialize UI
+    events.fire('camera.fov', scene.camera.fov);
+    events.fire('camera.debug', cameraDebug);
 }
 
 export { registerEditorEvents };

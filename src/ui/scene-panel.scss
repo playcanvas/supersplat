@@ -3,3 +3,9 @@
     left: 24px;
     width: 320px;
 }
+
+@media (max-width: 600px) {
+    #scene-panel {
+        display: none;
+    }
+}

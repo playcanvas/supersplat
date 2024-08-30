@@ -198,8 +198,7 @@ class Camera extends Element {
         const controls = config.controls;
 
         // configure background
-        const clr = config.backgroundColor;
-        this.entity.camera.clearColor.set(clr.r, clr.g, clr.b, clr.a);
+        this.entity.camera.clearColor.set(0, 0, 0, 0);
 
         this.minElev = (controls.minPolarAngle * 180) / Math.PI - 90;
         this.maxElev = (controls.maxPolarAngle * 180) / Math.PI - 90;

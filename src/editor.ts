@@ -117,6 +117,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         setGridVisible(!scene.grid.visible);
     });
 
+    setGridVisible(scene.config.show.grid);
+
     // camera.fov
 
     const setCameraFov = (fov: number) => {
@@ -136,7 +138,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     // camera.bound
 
-    let bound = true;
+    let bound = scene.config.show.bound;
 
     const setBoundVisible = (visible: boolean) => {
         if (visible !== bound) {
@@ -156,6 +158,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.on('camera.toggleBound', () => {
         setBoundVisible(!events.invoke('camera.bound'));
     });
+
+    // camera.focus
 
     events.on('camera.focus', () => {
         const splat = selectedSplats()[0];
@@ -573,7 +577,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     // view spherical harmonic bands
 
-    let viewBands = 3;
+    let viewBands = scene.config.show.shBands;
 
     const setViewBands = (value: number) => {
         if (value !== viewBands) {
@@ -593,6 +597,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // hack: fire events to initialize UI
     events.fire('camera.fov', scene.camera.fov);
     events.fire('camera.debug', cameraDebug);
+    events.fire('view.bands', viewBands);
 }
 
 export { registerEditorEvents };

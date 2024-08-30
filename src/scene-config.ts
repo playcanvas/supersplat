@@ -18,7 +18,7 @@ const sceneConfig = {
         intensity: 1.0,
         rotation: 0.0
     },
-    bcgClr: DEFAULT,
+    bgClr: DEFAULT,
     camera: {
         pixelScale: 1,
         multisample: false,

@@ -135,6 +135,11 @@ const main = async () => {
         graphicsDevice
     );
 
+    // configure body background color
+    const clr = sceneConfig.bgClr;
+    const cnv = (v: number) => `${Math.max(0, Math.min(255, (v * 255))).toFixed(0)}`
+    document.body.style.backgroundColor = `rgba(${cnv(clr.r)},${cnv(clr.g)},${cnv(clr.b)},${clr.a.toFixed(2)})`;
+
     // tool manager
     const toolManager = new ToolManager(events);
     toolManager.register('rectSelection', new RectSelection(events, editorUI.toolsContainer.dom));

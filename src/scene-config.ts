@@ -1,14 +1,15 @@
 
-const contentsPromise: Promise<ArrayBuffer> = null;
+type Color = { r: number, g: number, b: number, a: number };
+
+const DEFAULT: Color = { r: 0.4, g: 0.4, b: 0.4, a: 1 };
 
 // default config
 const sceneConfig = {
     model: {
         url: '',
         filename: '',
-        contents: contentsPromise,
-        position: {x: 0, y: 0, z: 0},
-        rotation: {x: 0, y: 0, z: 0},
+        position: { x: 0, y: 0, z: 0 },
+        rotation: { x: 0, y: 0, z: 0 },
         scale: 1.0,
         hideLeftShoe: true
     },
@@ -17,7 +18,7 @@ const sceneConfig = {
         intensity: 1.0,
         rotation: 0.0
     },
-    backgroundColor: {r: 0, g: 0, b: 0, a: 0},
+    bgClr: DEFAULT,
     camera: {
         pixelScale: 1,
         multisample: false,
@@ -26,6 +27,11 @@ const sceneConfig = {
         toneMapping: 'linear',
         debug_render: '',
         debug: true
+    },
+    show: {
+        grid: true,
+        bound: true,
+        shBands: 3
     },
     shadow: {
         intensity: 0.25,
@@ -91,35 +97,46 @@ class Params {
         return typeof value === 'string' ? parseFloat(value) : value;
     }
 
-    getVec3(path: string) {
+    getVec(path: string) {
         const value = this.get(path);
-        if (typeof value === 'string') {
-            const values = value.split(',').map((v: string) => parseFloat(v));
-            return values.length === 1
-                ? {x: values[0], y: values[0], z: values[0]}
-                : {x: values[0], y: values[1], z: values[2]};
-        } else if (typeof value === 'number') {
-            return {x: value, y: value, z: value};
+        return typeof value === 'string' ? value.split(',') : undefined;
+    }
+
+    getVec3(path: string) {
+        const value = this.getVec(path);
+        if (value) {
+            const numbers = value.map(v => parseFloat(v));
+            if (value.length === 1) {
+                return { x: numbers[0], y: numbers[0], z: numbers[0] };
+            } else if (value.length === 3) {
+                return { x: numbers[0], y: numbers[1], z: numbers[2] };
+            }
         }
         return undefined;
     }
 
     getColor(path: string) {
-        const value = this.get(path);
-        const makeColor = (vals: number[]) => {
-            return vals.length === 4 ? {r: vals[0], g: vals[1], b: vals[2], a: vals[3]} : undefined;
-        };
-        return typeof value === 'string' ? makeColor(value.split(',').map(v => parseFloat(v))) : undefined;
-    }
-
-    getVec(path: string) {
-        const value = this.get(path);
-        return typeof value === 'string' ? value.split(',') : undefined;
+        const value = this.getVec(path);
+        if (value) {
+            const numbers = value.map(v => parseFloat(v));
+            if (value.length === 1) {
+                return { r: numbers[0], g: numbers[0], b: numbers[0], a: 1 };
+            } else if (value.length === 3) {
+                return { r: numbers[0], g: numbers[1], b: numbers[2], a: 1 };
+            } else if (value.length === 4) {
+                return { r: numbers[0], g: numbers[1], b: numbers[2], a: numbers[3] };
+            }
+        }
+        return undefined;
     }
 }
 
 const getSceneConfig = (overrides: any[]) => {
     const params = new Params(overrides);
+
+    const cmp = (a: any[], b: any[]) => {
+        return a.length === b.length && a.every((v, i) => v === b[i]);
+    };
 
     // recurse the object and replace concrete leaf values with overrides
     const rec = (obj: any, path: string) => {
@@ -136,6 +153,17 @@ const getSceneConfig = (overrides: any[]) => {
                 case 'string':
                     obj[child] = params.get(childPath) ?? childValue;
                     break;
+                case 'object': {
+                    const keys = Object.keys(childValue).sort();
+                    if (cmp(keys, ['a', 'b', 'g', 'r'])) {
+                        obj[child] = params.getColor(childPath) ?? childValue;
+                    } else if (cmp(keys, ['x', 'y', 'z'])) {
+                        obj[child] = params.getVec3(childPath) ?? childValue;
+                    } else {
+                        rec(childValue, childPath);
+                    }
+                    break;
+                }
                 default:
                     rec(childValue, childPath);
                     break;

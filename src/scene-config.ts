@@ -153,7 +153,7 @@ const getSceneConfig = (overrides: any[]) => {
                 case 'string':
                     obj[child] = params.get(childPath) ?? childValue;
                     break;
-                case 'object':
+                case 'object': {
                     const keys = Object.keys(childValue).sort();
                     if (cmp(keys, ['a', 'b', 'g', 'r'])) {
                         obj[child] = params.getColor(childPath) ?? childValue;
@@ -163,6 +163,7 @@ const getSceneConfig = (overrides: any[]) => {
                         rec(childValue, childPath);
                     }
                     break;
+                }
                 default:
                     rec(childValue, childPath);
                     break;

@@ -3,6 +3,8 @@
 }
 
 #menu-bar {
+    transition: width 0.1s ease;
+
     position: absolute;
     top: 24px;
     left: 24px;
@@ -19,10 +21,15 @@
     align-items: center;
 }
 
-#menu-icon {
+#app-icon {
     width: 54px;
     font-family: 'pc-icon';
+
     cursor: pointer;
+}
+
+#menu-arrow {
+    display: none;
 }
 
 #menu-container {
@@ -36,11 +43,27 @@
     flex-grow: 1;
 }
 
+.menu-icon {
+    width: 16px;
+    height: 16px;
+    padding: 16px 10px;
+    margin: 0px;
+    flex-grow: 1;
+    color: $text-secondary;
+
+    cursor: pointer;
+    &:hover {
+        color: $text-primary;
+        background-color: $bcg-dark;
+    }
+}
+
 .menu-option {
     padding: 16px 20px;
     margin: 0px;
     flex-grow: 1;
     text-align: center;
+    text-overflow: clip;
 
     background-color: $bcg-primary;
 
@@ -49,5 +72,23 @@
     &:hover {
         color: $text-primary;
         background-color: $bcg-dark;
+    }
+}
+
+.collapsed {
+    #menu-bar {
+        width: 90px;
+    }
+
+    #menu-collapse {
+        display: none;
+    }
+
+    #menu-arrow {
+        display: block;
+    }
+
+    .menu-option {
+        display: none;
     }
 }

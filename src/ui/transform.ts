@@ -157,8 +157,6 @@ class Transform extends Container {
             const r = selection.pivot.getLocalRotation();
             const s = selection.pivot.getLocalScale();
 
-            console.log('creating');
-
             op = new EntityTransformOp(selection.scene, [{
                 splat: selection,
                 old: {
@@ -176,8 +174,6 @@ class Transform extends Container {
 
         const updateOp = () => {
             const n = op.entityOps[0].new;
-
-            console.log('updating');
 
             const p = positionVector.value;
             n.position.x = p[0];

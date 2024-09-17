@@ -4,7 +4,7 @@ interface EditOp {
     name: string;
     do(): void;
     undo(): void;
-    destroy(): void;
+    destroy?(): void;
 }
 
 class EditHistory {
@@ -34,7 +34,7 @@ class EditHistory {
 
     add(editOp: EditOp) {
         while (this.cursor < this.history.length) {
-            this.history.pop().destroy();
+            this.history.pop().destroy?.();
         }
         this.history.push(editOp);
         this.redo();

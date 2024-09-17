@@ -488,6 +488,10 @@ class Splat extends Element {
         this.scene.events.fire('splat.moved', this);
     }
 
+    getPivot() {
+        return this.pivot.getLocalPosition();
+    }
+
     get visible() {
         return this.visible_;
     }

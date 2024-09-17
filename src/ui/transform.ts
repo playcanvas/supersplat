@@ -157,7 +157,7 @@ class Transform extends Container {
             const r = selection.pivot.getLocalRotation();
             const s = selection.pivot.getLocalScale();
 
-            op = new EntityTransformOp(selection.scene, [{
+            op = new EntityTransformOp([{
                 splat: selection,
                 old: {
                     position: p.clone(),

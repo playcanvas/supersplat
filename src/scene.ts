@@ -218,7 +218,7 @@ class Scene {
             this.events.invoke('showPopup', {
                 type: 'error',
                 header: 'ERROR LOADING FILE',
-                message: `${err.message} while loading '${filename}'`
+                message: `${err.message ?? err} while loading '${filename}'`
             });
         }
     }

@@ -178,10 +178,6 @@ class EditorUI {
             }
         }, true);
     }
-
-    setFilename(filename: string) {
-        // this.filenameLabel.text = filename;
-    }
 }
 
 export { EditorUI };

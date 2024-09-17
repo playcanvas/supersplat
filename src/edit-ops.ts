@@ -103,9 +103,9 @@ class ResetEditOp {
 }
 
 interface EntityTransform {
-    position: Vec3;
-    rotation: Quat;
-    scale: Vec3;
+    position?: Vec3;
+    rotation?: Quat;
+    scale?: Vec3;
 }
 
 interface EntityOp {

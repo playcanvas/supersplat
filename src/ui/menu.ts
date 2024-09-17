@@ -69,6 +69,7 @@ class Menu extends Container {
 
         const toggleCollapsed = () => {
             document.body.classList.toggle('collapsed');
+            
         };
 
         const collapse = createSvg(collapseSvg);

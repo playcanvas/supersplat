@@ -66,7 +66,19 @@ class AssetLoader {
                         props.splice(props.findIndex((prop: any) => prop.name === 'scale_1') + 1, 0, props.splice(props.length - 1, 1)[0]);
                     }
 
-                    resolve(new Splat(asset));
+                    // check the PLY contains minimal set of we expect
+                    const required = [
+                        'x', 'y', 'z',
+                        'scale_0', 'scale_1', 'scale_2',
+                        'rot_0', 'rot_1', 'rot_2', 'rot_3',
+                        'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity'
+                    ];
+                    const missing = required.filter(x => !splatData.getProp(x));
+                    if (missing.length > 0) {
+                        reject(`This file does not contain gaussian splatting data. The following properties are missing: ${missing.join(', ')}`);
+                    } else {
+                        resolve(new Splat(asset));
+                    }
                 });
 
                 asset.on('error', (err: string) => {

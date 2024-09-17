@@ -19,10 +19,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     const mat = new Mat4();
     const aabb = new BoundingBox();
 
-    events.on('loaded', (filename: string) => {
-        editorUI.setFilename(filename);
-    });
-
     // get the list of selected splats (currently limited to just a single one)
     const selectedSplats = () => {
         const selected = events.invoke('selection') as Splat;
@@ -433,8 +429,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 const py1 = Math.floor(my1 / mask.height * height);
                 const pw = px1 - px0 + 1;
                 const ph = py1 - py0 + 1;
-
-                console.log(`px0=${px0}, py0=${py0}, px1=${px1}, py1=${py1}, pw=${pw}, ph=${ph}`);
 
                 scene.camera.pickPrep(splat);
                 const pick = scene.camera.pickRect(px0, py0, pw, ph);

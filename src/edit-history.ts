@@ -26,6 +26,10 @@ class EditHistory {
                 this.redo();
             }
         });
+
+        events.on('edit.add', (editOp: EditOp) => {
+            this.add(editOp);
+        });
     }
 
     add(editOp: EditOp) {

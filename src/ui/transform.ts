@@ -2,6 +2,7 @@ import { Container, ContainerArgs, Label, NumericInput, Panel, PanelArgs, Vector
 import { Quat, Vec3 } from 'playcanvas';
 import { Events } from '../events';
 import { Splat } from '../splat';
+import { EntityTransformOp } from '../edit-ops';
 
 class Transform extends Container {
     constructor(events: Events, args: ContainerArgs = {}) {
@@ -149,23 +150,78 @@ class Transform extends Container {
             }
         });
 
-        positionVector.on('change', () => {
-            if (!uiUpdating) {
-                selection.move(toVec3(positionVector.value), null, null);
-            }
-        });
+        let op: EntityTransformOp | null = null;
 
-        rotationVector.on('change', () => {
-            if (!uiUpdating) {
-                const v = rotationVector.value;
-                selection.move(null, new Quat().setFromEulerAngles(v[0], v[1], v[2]), null);
-            }
-        });
+        const createOp = () => {
+            const p = selection.pivot.getLocalPosition();
+            const r = selection.pivot.getLocalRotation();
+            const s = selection.pivot.getLocalScale();
 
-        scaleInput.on('change', () => {
+            op = new EntityTransformOp([{
+                splat: selection,
+                old: {
+                    position: p.clone(),
+                    rotation: r.clone(),
+                    scale: s.clone()
+                },
+                new: {
+                    position: p.clone(),
+                    rotation: r.clone(),
+                    scale: s.clone()
+                }
+            }]);
+        };
+
+        const updateOp = () => {
+            const n = op.entityOps[0].new;
+
+            const p = positionVector.value;
+            n.position.x = p[0];
+            n.position.y = p[1];
+            n.position.z = p[2];
+
+            const r = rotationVector.value;
+            const q = new Quat().setFromEulerAngles(r[0], r[1], r[2]);
+            n.rotation.copy(q);
+
+            const s = scaleInput.value;
+            n.scale.x = s;
+            n.scale.y = s;
+            n.scale.z = s;
+
+            op.do();
+        };
+
+        const submitOp = () => {
+            events.fire('edit.add', op);
+            op = null;
+        };
+
+        const change = () => {
             if (!uiUpdating) {
-                selection.move(null, null, toVec3([scaleInput.value, scaleInput.value, scaleInput.value]));
+                if (op) {
+                    updateOp();
+                } else {
+                    createOp();
+                    updateOp();
+                    submitOp();
+                }
             }
+        };
+
+        const mousedown = () => {
+            createOp();
+        };
+
+        const mouseup = () => {
+            updateOp();
+            submitOp();
+        };
+
+        [positionVector.inputs, rotationVector.inputs, scaleInput].flat().forEach((input) => {
+            input.on('change', change);
+            input.on('slider:mousedown', mousedown);
+            input.on('slider:mouseup', mouseup);
         });
     }
 }

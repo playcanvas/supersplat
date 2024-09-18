@@ -3,6 +3,8 @@ import { Events } from '../events';
 import { MenuPanel } from './menu-panel';
 
 import logoSvg from '../svg/playcanvas-logo.svg';
+import collapseSvg from '../svg/collapse.svg';
+import arrowSvg from '../svg/arrow.svg';
 import sceneNew from '../svg/new.svg';
 import sceneOpen from '../svg/open.svg';
 import sceneSave from '../svg/save.svg';
@@ -41,7 +43,7 @@ class Menu extends Container {
 
         const iconDom = document.createElement('img');
         iconDom.src = logoSvg;
-        iconDom.setAttribute('id', 'menu-icon');
+        iconDom.setAttribute('id', 'app-icon');
         iconDom.addEventListener('pointerdown', (event) => {
             window.open('https://playcanvas.com', '_blank').focus()
         });
@@ -65,12 +67,29 @@ class Menu extends Container {
             class: 'menu-option'
         });
 
+        const toggleCollapsed = () => {
+            document.body.classList.toggle('collapsed');
+            
+        };
+
+        const collapse = createSvg(collapseSvg);
+        collapse.dom.classList.add('menu-icon');
+        collapse.dom.setAttribute('id', 'menu-collapse');
+        collapse.dom.addEventListener('click', toggleCollapsed);
+
+        const arrow = createSvg(arrowSvg);
+        arrow.dom.classList.add('menu-icon');
+        arrow.dom.setAttribute('id', 'menu-arrow');
+        arrow.dom.addEventListener('click', toggleCollapsed);
+
         const buttonsContainer = new Container({
             id: 'menu-options-container'
         });
         buttonsContainer.append(scene);
         buttonsContainer.append(selection);
         buttonsContainer.append(help);
+        buttonsContainer.append(collapse);
+        buttonsContainer.append(arrow);
 
         menubar.append(icon);
         menubar.append(buttonsContainer);

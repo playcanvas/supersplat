@@ -1,5 +1,5 @@
-import {Serializer} from './serializer';
-import {Element, ElementType, ElementTypeList} from './element';
+import { Serializer } from './serializer';
+import { Element, ElementType, ElementTypeList } from './element';
 
 const common = new Set<Element>();
 
@@ -148,4 +148,4 @@ class SceneState {
     }
 }
 
-export {SceneState};
+export { SceneState };

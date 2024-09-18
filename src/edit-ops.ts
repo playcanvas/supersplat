@@ -103,9 +103,9 @@ class ResetEditOp {
 }
 
 interface EntityTransform {
-    position: Vec3;
-    rotation: Quat;
-    scale: Vec3;
+    position?: Vec3;
+    rotation?: Quat;
+    scale?: Vec3;
 }
 
 interface EntityOp {
@@ -116,11 +116,9 @@ interface EntityOp {
 
 class EntityTransformOp {
     name = 'entityTransform';
-    scene: Scene;
     entityOps: EntityOp[];
 
-    constructor(scene: Scene, entityOps: EntityOp[]) {
-        this.scene = scene;
+    constructor(entityOps: EntityOp[]) {
         this.entityOps = entityOps;
     }
 

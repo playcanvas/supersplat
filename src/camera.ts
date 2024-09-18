@@ -373,14 +373,10 @@ class Camera extends Element {
         }
 
         // copy render target
-        drawTexture(device, renderTarget.colorBuffer, null);
-
-        // FIXME: use this instead to perform the copy once
-        // https://github.com/playcanvas/engine/pull/6849 is available
-        // device.copyRenderTarget(renderTarget, null, true, false);
+        device.copyRenderTarget(renderTarget, null, true, false);
     }
 
-    focus(options?: { focalPoint: Vec3, radius: number }) {
+    focus(options?: { focalPoint: Vec3, radius: number, speed: number }) {
         const getSplatFocalPoint = () => {
             for (const element of this.scene.elements) {
                 if (element.type === ElementType.splat) {
@@ -395,8 +391,8 @@ class Camera extends Element {
         const focalPoint = options ? options.focalPoint : (getSplatFocalPoint() ?? this.scene.bound.center);
         const focalRadius = options ? options.radius : this.scene.bound.halfExtents.length();
 
-        this.setDistance(focalRadius / this.sceneRadius, 0);
-        this.setFocalPoint(focalPoint, 0);
+        this.setDistance(focalRadius / this.sceneRadius, options?.speed ?? 0);
+        this.setFocalPoint(focalPoint, options?.speed ?? 0);
     }
 
     get fovFactor() {

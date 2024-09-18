@@ -13,6 +13,27 @@ const patchGizmoMaterials = (gizmo: TransformGizmo) => {
     gizmo._meshColors.disabled.a = 0.8;
 };
 
+class SetPivotOp {
+    name = "setPivot";
+    splat: Splat;
+    oldPivot: Vec3;
+    newPivot: Vec3;
+
+    constructor(splat: Splat, oldPivot: Vec3, newPivot: Vec3) {
+        this.splat = splat;
+        this.oldPivot = oldPivot;
+        this.newPivot = newPivot;
+    }
+
+    do() {
+        this.splat.setPivot(this.newPivot);
+    }
+
+    undo() {
+        this.splat.setPivot(this.oldPivot);
+    }
+}
+
 class TransformTool {
     scene: Scene;
     gizmo: TransformGizmo;
@@ -80,7 +101,7 @@ class TransformTool {
             });
 
             if (this.ops.length > 0) {
-                editHistory.add(new EntityTransformOp(scene, this.ops));
+                editHistory.add(new EntityTransformOp(this.ops));
                 this.ops = [];
             }
         });
@@ -125,8 +146,8 @@ class TransformTool {
 
         events.on('camera.focalPointPicked', (details: { splat: Splat, position: Vec3 }) => {
             if (this.active) {
-                details.splat.setPivot(details.position);
-                this.update();
+                const op = new SetPivotOp(details.splat, details.splat.pivot.getLocalPosition().clone(), details.position.clone());
+                editHistory.add(op);
             }
         });
 

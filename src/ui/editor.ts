@@ -174,13 +174,10 @@ class EditorUI {
             // set focus on the body if user is busy pressing on the canvas or a child of the tools
             // element
             if (event.target === canvas || toolsContainer.dom.contains(event.target as Node)) {
+                event.preventDefault();
                 document.body.focus();
             }
         }, true);
-    }
-
-    setFilename(filename: string) {
-        // this.filenameLabel.text = filename;
     }
 }
 

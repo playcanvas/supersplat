@@ -66,6 +66,14 @@ class EditHistory {
         this.events.fire('edit.canUndo', this.canUndo());
         this.events.fire('edit.canRedo', this.canRedo());
     }
+
+    clear() {
+        this.history.forEach((editOp) => {
+            editOp.destroy?.();
+        });
+        this.history = [];
+        this.cursor = 0;
+    }
 }
 
 export { EditHistory, EditOp };

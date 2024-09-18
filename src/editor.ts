@@ -64,6 +64,12 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         return msg;
     });
 
+    events.on('scene.clear', () => {
+        scene.clear();
+        editHistory.clear();
+        lastExportCursor = 0;
+    });
+
     events.function('scene.dirty', () => {
         return editHistory.cursor !== lastExportCursor;
     });

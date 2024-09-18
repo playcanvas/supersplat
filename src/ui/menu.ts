@@ -72,6 +72,11 @@ class Menu extends Container {
             
         };
 
+        // collapse menu on mobile
+        if (document.body.clientWidth < 600) {
+            toggleCollapsed();
+        }
+
         const collapse = createSvg(collapseSvg);
         collapse.dom.classList.add('menu-icon');
         collapse.dom.setAttribute('id', 'menu-collapse');

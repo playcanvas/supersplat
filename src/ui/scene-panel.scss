@@ -7,3 +7,8 @@
 .collapsed #scene-panel {
     display: none;
 }
+
+.splat-list-container {
+    max-height: 300px;
+    overflow: auto;
+}

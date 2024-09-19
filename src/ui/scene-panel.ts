@@ -68,6 +68,11 @@ class ScenePanel extends Container {
 
         const splatList = new SplatList(events);
 
+        const splatListContainer = new Container({
+            class: 'splat-list-container'
+        });
+        splatListContainer.append(splatList);
+
         const transformHeader = new Container({
             class: `panel-header`
         });
@@ -86,7 +91,7 @@ class ScenePanel extends Container {
         transformHeader.append(transformLabel);
 
         this.append(sceneHeader);
-        this.append(splatList);
+        this.append(splatListContainer);
         this.append(transformHeader);
         this.append(new Transform(events));
         this.append(new Element({

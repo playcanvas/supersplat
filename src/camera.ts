@@ -342,7 +342,7 @@ class Camera extends Element {
         this.entity.setLocalPosition(cameraPosition);
         this.entity.setLocalEulerAngles(azimElev.elev, azimElev.azim, 0);
 
-        this.fitClippingPlanes(this.entity.getLocalPosition(), this.entity.forward);
+        // this.fitClippingPlanes(this.entity.getLocalPosition(), this.entity.forward);
 
         this.entity.camera.camera._updateViewProjMat();
     }

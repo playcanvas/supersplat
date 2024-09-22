@@ -18,7 +18,8 @@ import { Splat } from './splat';
 import { Camera } from './camera';
 import { CustomShadow as Shadow } from './custom-shadow';
 // import { Grid } from './grid';
-import { InfiniteGrid as Grid } from './infinite-grid';
+// import { InfiniteGrid as Grid } from './infinite-grid';
+import { WebglStudioGrid as Grid } from './blender-grid';
 
 class Scene {
     events: Events;
@@ -202,7 +203,9 @@ class Scene {
         // add them to the scene
         elements.forEach(e => this.add(e));
 
-        this.camera.focus();
+        if (config.model.url && config.model.url!='') {
+            this.camera.focus();
+        }
 
         // start the app
         this.app.start();

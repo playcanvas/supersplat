@@ -207,6 +207,106 @@ export const localizeInit = () => {
                         "tooltip.scale": "スケール ( 3 )",
                         "tooltip.local-space": "ローカルスペースギズモ"
                     }
+                },
+                zh: {
+                    translation: {
+                        // Scene menu
+                        "scene": "场景",
+                        "scene.new": "新建",
+                        "scene.open": "打开",
+                        "scene.import": "导入",
+                        "scene.load-all-ply-data": "加载所有 PLY 数据",
+                        "scene.save": "保存",
+                        "scene.save-as": "另存为...",
+                        "scene.export": "导出",
+                        "scene.export.compressed-ply": "压缩 Ply",
+                        "scene.export.splat": "Splat 文件",
+
+                        // Selection menu
+                        "selection": "选择",
+                        "selection.all": "全部",
+                        "selection.none": "无",
+                        "selection.invert": "反选",
+                        "selection.lock": "锁定选择",
+                        "selection.unlock": "解锁全部",
+                        "selection.delete": "删除选择",
+                        "selection.reset": "重置 Splat",
+
+                        // Help menu
+                        "help": "帮助",
+                        "help.shortcuts": "键盘快捷键",
+                        "help.user-guide": "用户指南",
+                        "help.log-an-issue": "报告问题",
+                        "help.github-repo": "GitHub 仓库",
+                        "help.discord": "Discord 服务器",
+                        "help.forum": "论坛",
+                        "help.about": "关于 SuperSplat",
+
+                        // Modes
+                        "mode.centers": "中心模式",
+                        "mode.rings": "环模式",
+
+                        // Scene panel
+                        "scene-manager": "场景管理器",
+                        "transform": "变换",
+                        "position": "位置",
+                        "rotation": "旋转",
+                        "scale": "缩放",
+
+                        // Options panel
+                        "options": "视图选项",
+                        "options.fov": "视野角",
+                        "options.sh-bands": "SH 带",
+                        "options.centers-size": "中心大小",
+                        "options.show-grid": "显示网格",
+                        "options.show-bound": "显示边界",
+
+                        // Data panel
+                        "data": "SPLAT 数据",
+                        "data.distance": "距离",
+                        "data.volume": "体积",
+                        "data.surface-area": "表面积",
+                        "data.scale-x": "缩放 X",
+                        "data.scale-y": "缩放 Y",
+                        "data.scale-z": "缩放 Z",
+                        "data.red": "红",
+                        "data.green": "绿",
+                        "data.blue": "蓝",
+                        "data.opacity": "不透明度",
+                        "data.hue": "色相",
+                        "data.saturation": "饱和度",
+                        "data.value": "明度",
+                        "data.log-scale": "对数缩放",
+                        "data.totals": "总计",
+                        "data.totals.splats": "Splat",
+                        "data.totals.selected": "选择",
+                        "data.totals.hidden": "隐藏",
+                        "data.totals.deleted": "删除",
+                        
+                        // Popup
+                        "popup.ok": "确定",
+                        "popup.cancel": "取消",
+                        "popup.yes": "是",
+                        "popup.no": "否",
+                        "popup.error-loading": "加载文件错误",
+
+                        // Right toolbar
+                        "tooltip.splat-mode": "Splat 模式 ( M )",
+                        "tooltip.show-hide": "显示/隐藏 Splats ( Space )",
+                        "tooltip.frame-selection": "框选 ( F )",
+                        "tooltip.view-options": "视图选项",
+
+                        // Bottom toolbar
+                        "tooltip.undo": "撤销 ( Ctrl + Z )",
+                        "tooltip.redo": "重做 ( Ctrl + Shift + Z )",
+                        "tooltip.picker": "选择器 ( P )",
+                        "tooltip.brush": "画笔 ( B )",
+                        "tooltip.sphere": "球选择",
+                        "tooltip.translate": "移动 ( 1 )",
+                        "tooltip.rotate": "旋转 ( 2 )",
+                        "tooltip.scale": "缩放 ( 3 )",
+                        "tooltip.local-space": "局部坐标系"
+                    }
                 }
             },
             interpolation: {

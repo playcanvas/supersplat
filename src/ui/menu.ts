@@ -139,7 +139,7 @@ class Menu extends Container {
         }, {
             // separator
         }, {
-            text: localize('scene.load-all-ply-data'),
+            text: localize('scene.load-all-data'),
             extra: allDataToggle,
             onSelect: () => {
                 events.fire('toggleAllData');
@@ -210,7 +210,7 @@ class Menu extends Container {
             icon: 'E232',
             onSelect: () => window.open('https://github.com/playcanvas/supersplat/blob/main/docs/index.md#supersplat-user-guide', '_blank').focus()
         }, {
-            text: localize('help.log-an-issue'),
+            text: localize('help.log-issue'),
             icon: 'E336',
             onSelect: () => window.open('https://github.com/playcanvas/supersplat/issues', '_blank').focus()
         }, {

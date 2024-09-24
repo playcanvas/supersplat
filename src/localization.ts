@@ -208,6 +208,106 @@ export const localizeInit = () => {
                         "tooltip.local-space": "ローカルスペースギズモ"
                     }
                 },
+                kr: {
+                    translation: {
+                        // Scene menu
+                        "scene": "장면",
+                        "scene.new": "새로 만들기",
+                        "scene.open": "열기",
+                        "scene.import": "가져오기",
+                        "scene.load-all-ply-data": "모든 PLY 데이터 불러오기",
+                        "scene.save": "저장",
+                        "scene.save-as": "다른 이름으로 저장...",
+                        "scene.export": "내보내기",
+                        "scene.export.compressed-ply": "압축된 Ply",
+                        "scene.export.splat": "Splat 파일",
+
+                        // Selection menu
+                        "selection": "선택",
+                        "selection.all": "모두",
+                        "selection.none": "없음",
+                        "selection.invert": "반전",
+                        "selection.lock": "선택 잠금",
+                        "selection.unlock": "모두 잠금 해제",
+                        "selection.delete": "선택 삭제",
+                        "selection.reset": "Splat 재설정",
+
+                        // Help menu
+                        "help": "도움말",
+                        "help.shortcuts": "키보드 단축키",
+                        "help.user-guide": "사용자 가이드",
+                        "help.log-an-issue": "문제 보고",
+                        "help.github-repo": "GitHub 저장소",
+                        "help.discord": "Discord 서버",
+                        "help.forum": "포럼",
+                        "help.about": "SuperSplat 정보",
+
+                        // Modes
+                        "mode.centers": "센터 모드",
+                        "mode.rings": "링 모드",
+
+                        // Scene panel
+                        "scene-manager": "장면 관리자",
+                        "transform": "변환",
+                        "position": "위치",
+                        "rotation": "회전",
+                        "scale": "크기",
+
+                        // Options panel
+                        "options": "보기 옵션",
+                        "options.fov": "시야각",
+                        "options.sh-bands": "SH 밴드",
+                        "options.centers-size": "센터 크기",
+                        "options.show-grid": "그리드 표시",
+                        "options.show-bound": "경계 표시",
+
+                        // Data panel
+                        "data": "SPLAT 데이터",
+                        "data.distance": "거리",
+                        "data.volume": "부피",
+                        "data.surface-area": "표면적",
+                        "data.scale-x": "크기 X",
+                        "data.scale-y": "크기 Y",
+                        "data.scale-z": "크기 Z",
+                        "data.red": "빨강",
+                        "data.green": "녹색",
+                        "data.blue": "파랑",
+                        "data.opacity": "불투명도",
+                        "data.hue": "색조",
+                        "data.saturation": "채도",
+                        "data.value": "명도",
+                        "data.log-scale": "로그 크기",
+                        "data.totals": "합계",
+                        "data.totals.splats": "Splat",
+                        "data.totals.selected": "선택",
+                        "data.totals.hidden": "숨겨진",
+                        "data.totals.deleted": "삭제된",
+
+                        // Popup
+                        "popup.ok": "확인",
+                        "popup.cancel": "취소",
+                        "popup.yes": "예",
+                        "popup.no": "아니요",
+                        "popup.error-loading": "파일 로드 오류",
+
+                        // Right toolbar
+                        "tooltip.splat-mode": "Splat 모드 ( M )",
+                        "tooltip.show-hide": "스플래츠 표시/숨기기 ( Space )",
+                        "tooltip.frame-selection": "프레임 선택 ( F )",
+                        "tooltip.view-options": "보기 옵션",
+
+                        // Bottom toolbar
+                        "tooltip.undo": "실행 취소 ( Ctrl + Z )",
+                        "tooltip.redo": "다시 실행 ( Ctrl + Shift + Z )",
+                        "tooltip.picker": "피커 선택 ( P )",
+                        "tooltip.brush": "브러시 선택 ( B )",
+                        "tooltip.sphere": "구 선택",
+                        "tooltip.translate": "이동 ( 1 )",
+                        "tooltip.rotate": "회전 ( 2 )",
+                        "tooltip.scale": "크기 조정 ( 3 )",
+                        "tooltip.local-space": "로컬 공간"
+                    }
+                },
                 zh: {
                     translation: {
                         // Scene menu

@@ -208,7 +208,7 @@ export const localizeInit = () => {
                         "tooltip.local-space": "ローカルスペースギズモ"
                     }
                 },
-                kr: {
+                ko: {
                     translation: {
                         // Scene menu
                         "scene": "장면",

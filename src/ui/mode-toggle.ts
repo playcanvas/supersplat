@@ -1,6 +1,7 @@
 import { Container, Element, Label } from 'pcui';
 import { Events } from '../events';
 import { Tooltips } from './tooltips';
+import { localize } from '../localization';
 
 import centersSvg from '../svg/centers.svg';
 import ringsSvg from '../svg/rings.svg';
@@ -32,12 +33,12 @@ class ModeToggle extends Container {
 
         const centersText = new Label({
             id: 'centers-text',
-            text: 'Centers mode'
+            text: localize('mode.centers')
         });
 
         const ringsText = new Label({
             id: 'rings-text',
-            text: 'Rings mode'
+            text: localize('mode.rings')
         });
 
         this.append(centersIcon);

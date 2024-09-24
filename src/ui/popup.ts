@@ -1,5 +1,5 @@
 import { Button, Container, Label, TextInput } from 'pcui';
-import { localize } from '../localization';
+import { localize } from './localization';
 
 interface ShowOptions {
     type: 'error' | 'info' | 'yesno' | 'okcancel';

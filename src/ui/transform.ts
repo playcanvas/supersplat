@@ -3,7 +3,7 @@ import { Quat, Vec3 } from 'playcanvas';
 import { Events } from '../events';
 import { Splat } from '../splat';
 import { EntityTransformOp } from '../edit-ops';
-import { localize } from '../localization';
+import { localize } from './localization';
 
 class Transform extends Container {
     constructor(events: Events, args: ContainerArgs = {}) {

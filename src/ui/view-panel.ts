@@ -1,7 +1,7 @@
 import { BooleanInput, Container, Label, SliderInput } from 'pcui';
 import { Events } from '../events';
 import { Tooltips } from './tooltips';
-import { localize } from '../localization';
+import { localize } from './localization';
 
 class ViewPanel extends Container {
     constructor(events: Events, tooltips: Tooltips, args = {}) {

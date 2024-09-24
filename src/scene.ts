@@ -19,7 +19,7 @@ import { Camera } from './camera';
 import { CustomShadow as Shadow } from './custom-shadow';
 // import { Grid } from './grid';
 import { InfiniteGrid as Grid } from './infinite-grid';
-import { localize } from './localization';
+import { localize } from './ui/localization';
 
 class Scene {
     events: Events;

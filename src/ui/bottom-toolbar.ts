@@ -1,7 +1,7 @@
 import { Button, Element, Container } from 'pcui';
 import { Events } from '../events';
 import { Tooltips } from './tooltips';
-import { localize } from '../localization';
+import { localize } from './localization';
 
 import undoSvg from '../svg/undo.svg';
 import redoSvg from '../svg/redo.svg';

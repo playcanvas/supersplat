@@ -3,7 +3,7 @@ import { Events } from '../events';
 import { Tooltips } from './tooltips';
 import { SplatList } from './splat-list';
 import { Transform } from './transform';
-import { localize } from '../localization';
+import { localize } from './localization';
 
 import sceneImportSvg from '../svg/import.svg';
 import sceneNewSvg from '../svg/new.svg';

@@ -1,7 +1,7 @@
 import { Container, Element, Label, BooleanInput } from 'pcui';
 import { Events } from '../events';
 import { MenuPanel } from './menu-panel';
-import { localize } from '../localization';
+import { localize } from './localization';
 
 import logoSvg from '../svg/playcanvas-logo.svg';
 import collapseSvg from '../svg/collapse.svg';

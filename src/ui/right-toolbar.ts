@@ -1,7 +1,7 @@
 import { Button, Container, Element, Label } from 'pcui';
 import { Events } from '../events';
 import { Tooltips } from './tooltips';
-import { localize } from '../localization';
+import { localize } from './localization';
 
 import showHideSplatsSvg from '../svg/show-hide-splats.svg';
 import frameSelectionSvg from '../svg/frame-selection.svg';

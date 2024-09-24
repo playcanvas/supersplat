@@ -2,7 +2,6 @@ import { createGraphicsDevice } from 'playcanvas';
 import { Scene } from './scene';
 import { getSceneConfig } from './scene-config';
 import { initMaterials } from './material';
-import { localizeInit } from './localization';
 import { EditHistory } from './edit-history';
 import { EditorUI } from './ui/editor';
 import { registerEditorEvents } from './editor';
@@ -90,8 +89,6 @@ const initShortcuts = (events: Events) => {
 
 const main = async () => {
     const url = new URL(window.location.href);
-
-    localizeInit();
 
     // decode remote storage details
     let remoteStorageDetails;

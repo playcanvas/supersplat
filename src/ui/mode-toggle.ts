@@ -1,7 +1,7 @@
 import { Container, Element, Label } from 'pcui';
 import { Events } from '../events';
 import { Tooltips } from './tooltips';
-import { localize } from '../localization';
+import { localize } from './localization';
 
 import centersSvg from '../svg/centers.svg';
 import ringsSvg from '../svg/rings.svg';

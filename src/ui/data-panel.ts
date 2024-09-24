@@ -3,7 +3,7 @@ import { Events } from '../events';
 import { Splat } from '../splat';
 import { Histogram } from './histogram';
 import { State } from '../edit-ops';
-import { localize } from '../localization';
+import { localize } from './localization';
 import { rgb2hsv } from './color';
 
 const SH_C0 = 0.28209479177387814;

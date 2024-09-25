@@ -115,54 +115,54 @@ const localizeInit = () => {
                         "scene.new": "新規作成",
                         "scene.open": "開く",
                         "scene.import": "インポート",
-                        "scene.load-all-data": "全ての PLY データを読み込む",
+                        "scene.load-all-data": "全てのPLYデータを読み込む",
                         "scene.save": "保存",
                         "scene.save-as": "名前を付けて保存",
                         "scene.export": "エクスポート",
-                        "scene.export.compressed-ply": "圧縮 PLY",
-                        "scene.export.splat": "Splat ファイル",
+                        "scene.export.compressed-ply": "Compressed PLY ( .ply )",
+                        "scene.export.splat": "Splat ( .splat )",
 
                         // Selection menu
                         "selection": "選択",
                         "selection.all": "全て",
-                        "selection.none": "なし",
+                        "selection.none": "選択を解除",
                         "selection.invert": "反転",
                         "selection.lock": "選択をロック",
-                        "selection.unlock": "全ての選択を解除",
+                        "selection.unlock": "ロックを解除",
                         "selection.delete": "選択を削除",
-                        "selection.reset": "Splat をリセット",
+                        "selection.reset": "変更を全てリセット",
 
                         // Help menu
                         "help": "ヘルプ",
                         "help.shortcuts": "キーボードショートカット",
                         "help.user-guide": "ユーザーガイド",
                         "help.log-issue": "問題を報告",
-                        "help.github-repo": "GitHub リポジトリ",
-                        "help.discord": "Discord サーバー",
+                        "help.github-repo": "GitHubリポジトリ",
+                        "help.discord": "Discordサーバー",
                         "help.forum": "フォーラム",
-                        "help.about": "SuperSplat について",
+                        "help.about": "SuperSplatについて",
 
                         // Modes
                         "mode.centers": "センターモード",
                         "mode.rings": "リングモード",
 
                         // Scene panel
-                        "scene-manager": "シーンマネージャ",
-                        "transform": "変換",
+                        "scene-manager": "シーンマネージャー",
+                        "transform": "トランスフォーム",
                         "position": "位置",
                         "rotation": "回転",
                         "scale": "スケール",
 
                         // Options panel
                         "options": "表示オプション",
-                        "options.fov": "視野角",
-                        "options.sh-bands": "球面調和バンド",
+                        "options.fov": "視野 ( FOV )",
+                        "options.sh-bands": "球面調和関数のバンド",
                         "options.centers-size": "センターサイズ",
-                        "options.show-grid": "グリッドを表示",
-                        "options.show-bound": "バウンドを表示",
+                        "options.show-grid": "グリッド",
+                        "options.show-bound": "バウンディングボックス",
 
                         // Data panel
-                        "data": "SPLAT データ",
+                        "data": "スプラットの統計",
                         "data.distance": "距離",
                         "data.volume": "体積",
                         "data.surface-area": "表面積",
@@ -178,8 +178,8 @@ const localizeInit = () => {
                         "data.value": "明度",
                         "data.log-scale": "対数スケール",
                         "data.totals": "合計",
-                        "data.totals.splats": "スプラット",
-                        "data.totals.selected": "選択",
+                        "data.totals.splats": "スプラット数",
+                        "data.totals.selected": "選択中",
                         "data.totals.hidden": "非表示",
                         "data.totals.deleted": "削除",
 
@@ -193,7 +193,7 @@ const localizeInit = () => {
                         // Right toolbar
                         "tooltip.splat-mode": "スプラットモード ( M )",
                         "tooltip.show-hide": "スプラットの表示/非表示 ( Space )",
-                        "tooltip.frame-selection": "選択をフレーム ( F )",
+                        "tooltip.frame-selection": "選択をフレームイン ( F )",
                         "tooltip.view-options": "表示オプション",
 
                         // Bottom toolbar
@@ -201,11 +201,11 @@ const localizeInit = () => {
                         "tooltip.redo": "やり直し ( Ctrl + Shift + Z )",
                         "tooltip.picker": "ピッカー選択 ( P )",
                         "tooltip.brush": "ブラシ選択 ( B )",
-                        "tooltip.sphere": "球選択",
+                        "tooltip.sphere": "球で選択",
                         "tooltip.translate": "移動 ( 1 )",
                         "tooltip.rotate": "回転 ( 2 )",
                         "tooltip.scale": "スケール ( 3 )",
-                        "tooltip.local-space": "ローカルスペースギズモ"
+                        "tooltip.local-space": "ローカル座標へ切り替え"
                     }
                 },
                 ko: {

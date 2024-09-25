@@ -1,6 +1,7 @@
 import { Container, Element, Label, BooleanInput } from 'pcui';
 import { Events } from '../events';
 import { MenuPanel } from './menu-panel';
+import { localize } from './localization';
 
 import logoSvg from '../svg/playcanvas-logo.svg';
 import collapseSvg from '../svg/collapse.svg';
@@ -53,17 +54,17 @@ class Menu extends Container {
         });
 
         const scene = new Label({
-            text: 'Scene',
+            text: localize('scene'),
             class: 'menu-option'
         });
 
         const selection = new Label({
-            text: 'Selection',
+            text: localize('selection'),
             class: 'menu-option'
         });
 
         const help = new Label({
-            text: 'Help',
+            text: localize('help'),
             class: 'menu-option'
         });
 
@@ -100,12 +101,12 @@ class Menu extends Container {
         menubar.append(buttonsContainer);
 
         const exportMenuPanel = new MenuPanel([{
-            text: 'Compressed Ply',
+            text: localize('scene.export.compressed-ply'),
             icon: createSvg(sceneExport),
             onSelect: () => events.invoke('scene.export', 'compressed-ply'),
             isEnabled: () => !events.invoke('scene.empty'),
         }, {
-            text: 'Splat file',
+            text: localize('scene.export.splat'),
             icon: createSvg(sceneExport),
             onSelect: () => events.invoke('scene.export', 'splat'),
             isEnabled: () => !events.invoke('scene.empty'),
@@ -120,11 +121,11 @@ class Menu extends Container {
         });
 
         const sceneMenuPanel = new MenuPanel([{
-            text: 'New',
+            text: localize('scene.new'),
             icon: createSvg(sceneNew),
             onSelect: () => events.invoke('scene.new')
         }, {
-            text: 'Open',
+            text: localize('scene.open'),
             icon: createSvg(sceneOpen),
             onSelect: async () => {
                 if (await events.invoke('scene.new')) {
@@ -132,13 +133,13 @@ class Menu extends Container {
                 }
             }
         }, {
-            text: 'Import',
+            text: localize('scene.import'),
             icon: createSvg(sceneImport),
             onSelect: () => events.fire('scene.open')
         }, {
             // separator
         }, {
-            text: 'Load all PLY data',
+            text: localize('scene.load-all-data'),
             extra: allDataToggle,
             onSelect: () => {
                 events.fire('toggleAllData');
@@ -148,88 +149,88 @@ class Menu extends Container {
         }, {
             // separator
         }, {
-            text: 'Save',
+            text: localize('scene.save'),
             icon: createSvg(sceneSave),
             onSelect: () => events.fire('scene.save'),
             isEnabled: () => !events.invoke('scene.empty')
         }, {
-            text: 'Save As...',
+            text: localize('scene.save-as'),
             icon: createSvg(sceneSave),
             onSelect: () => events.fire('scene.saveAs'),
             isEnabled: () => !events.invoke('scene.empty')
         }, {
-            text: 'Export',
+            text: localize('scene.export'),
             icon: createSvg(sceneExport),
             subMenu: exportMenuPanel
         }]);
 
         const selectionMenuPanel = new MenuPanel([{
-            text: 'All',
+            text: localize('selection.all'),
             icon: createSvg(selectAll),
             extra: 'A',
             onSelect: () => events.fire('select.all')
         }, {
-            text: 'None',
+            text: localize('selection.none'),
             icon: createSvg(selectNone),
             extra: 'Shift + A',
             onSelect: () => events.fire('select.none')
         }, {
-            text: 'Inverse',
+            text: localize('selection.invert'),
             icon: createSvg(selectInverse),
             extra: 'I',
             onSelect: () => events.fire('select.invert')
         }, {
             // separator
         }, {
-            text: 'Lock Selection',
+            text: localize('selection.lock'),
             icon: createSvg(selectLock),
             extra: 'H',
             onSelect: () => events.fire('select.hide')
         }, {
-            text: 'Unlock All',
+            text: localize('selection.unlock'),
             icon: createSvg(selectUnlock),
             extra: 'U',
             onSelect: () => events.fire('select.unhide')
         }, {
-            text: 'Delete Selection',
+            text: localize('selection.delete'),
             icon: createSvg(selectDelete),
             extra: 'Delete',
             onSelect: () => events.fire('select.delete')
         }, {
-            text: 'Reset Splat',
+            text: localize('selection.reset'),
             onSelect: () => events.fire('scene.reset')
         }]);
 
         const helpMenuPanel = new MenuPanel([{
-            text: 'Keyboard Shortcuts',
+            text: localize('help.shortcuts'),
             icon: 'E136',
             onSelect: () => events.fire('show.shortcuts')
         }, {
-            text: 'User Guide',
+            text: localize('help.user-guide'),
             icon: 'E232',
             onSelect: () => window.open('https://github.com/playcanvas/supersplat/blob/main/docs/index.md#supersplat-user-guide', '_blank').focus()
         }, {
-            text: 'Log an Issue',
+            text: localize('help.log-issue'),
             icon: 'E336',
             onSelect: () => window.open('https://github.com/playcanvas/supersplat/issues', '_blank').focus()
         }, {
-            text: 'GitHub Repo',
+            text: localize('help.github-repo'),
             icon: 'E259',
             onSelect: () => window.open('https://github.com/playcanvas/supersplat', '_blank').focus()
         }, {
             // separator
         }, {
-            text: 'Discord Server',
+            text: localize('help.discord'),
             icon: 'E233',
             onSelect: () => window.open('https://discord.com/channels/408617316415307776/1275850227663769686', '_blank').focus()
         }, {
-            text: 'Forum',
+            text: localize('help.forum'),
             icon: 'E432',
             onSelect: () => window.open('https://forum.playcanvas.com', '_blank').focus()
         }, {
             // separator
         }, {
-            text: 'About SuperSplat',
+            text: localize('help.about'),
             icon: 'E138',
             onSelect: () => events.invoke('show.about')
         }]);

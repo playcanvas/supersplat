@@ -1,4 +1,5 @@
 import { Button, Container, Label, TextInput } from 'pcui';
+import { localize } from './localization';
 
 interface ShowOptions {
     type: 'error' | 'info' | 'yesno' | 'okcancel';
@@ -40,22 +41,22 @@ class Popup extends Container {
 
         const okButton = new Button({
             class: 'popup-button',
-            text: 'OK'
+            text: localize('popup.ok')
         });
 
         const cancelButton = new Button({
             class: 'popup-button',
-            text: 'Cancel'
+            text: localize('popup.cancel')
         });
 
         const yesButton = new Button({
             class: 'popup-button',
-            text: 'Yes'
+            text: localize('popup.yes')
         });
 
         const noButton = new Button({
             class: 'popup-button',
-            text: 'No'
+            text: localize('popup.no')
         });
 
         const buttons = new Container({

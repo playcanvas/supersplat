@@ -19,6 +19,7 @@ import { Camera } from './camera';
 import { CustomShadow as Shadow } from './custom-shadow';
 // import { Grid } from './grid';
 import { InfiniteGrid as Grid } from './infinite-grid';
+import { localize } from './ui/localization';
 
 class Scene {
     events: Events;
@@ -217,7 +218,7 @@ class Scene {
         } catch (err) {
             this.events.invoke('showPopup', {
                 type: 'error',
-                header: 'ERROR LOADING FILE',
+                header: localize('popup.error-loading'),
                 message: `${err.message ?? err} while loading '${filename}'`
             });
         }

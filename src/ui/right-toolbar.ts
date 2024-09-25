@@ -1,6 +1,7 @@
 import { Button, Container, Element, Label } from 'pcui';
 import { Events } from '../events';
 import { Tooltips } from './tooltips';
+import { localize } from './localization';
 
 import showHideSplatsSvg from '../svg/show-hide-splats.svg';
 import frameSelectionSvg from '../svg/frame-selection.svg';
@@ -62,10 +63,10 @@ class RightToolbar extends Container {
         this.append(new Element({ class: 'right-toolbar-separator' }));
         this.append(options);
 
-        tooltips.register(ringsModeToggle, 'Splat Mode ( M )', 'left');
-        tooltips.register(showHideSplats, 'Show/Hide Splats ( Space )', 'left');
-        tooltips.register(frameSelection, 'Frame Selection ( F )', 'left');
-        tooltips.register(options, 'View Options', 'left');
+        tooltips.register(ringsModeToggle, localize('tooltip.splat-mode'), 'left');
+        tooltips.register(showHideSplats, localize('tooltip.show-hide'), 'left');
+        tooltips.register(frameSelection, localize('tooltip.frame-selection'), 'left');
+        tooltips.register(options, localize('tooltip.view-options'), 'left');
 
         // add event handlers
 

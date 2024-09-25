@@ -3,6 +3,7 @@ import { Quat, Vec3 } from 'playcanvas';
 import { Events } from '../events';
 import { Splat } from '../splat';
 import { EntityTransformOp } from '../edit-ops';
+import { localize } from './localization';
 
 class Transform extends Container {
     constructor(events: Events, args: ContainerArgs = {}) {
@@ -49,7 +50,7 @@ class Transform extends Container {
 
         const positionLabel = new Label({
             class: 'transform-label',
-            text: 'Position'
+            text: localize('position')
         });
 
         const positionVector = new VectorInput({
@@ -70,7 +71,7 @@ class Transform extends Container {
 
         const rotationLabel = new Label({
             class: 'transform-label',
-            text: 'Rotation'
+            text: localize('rotation')
         });
 
         const rotationVector = new VectorInput({
@@ -91,7 +92,7 @@ class Transform extends Container {
 
         const scaleLabel = new Label({
             class: 'transform-label',
-            text: 'Scale'
+            text: localize('scale')
         });
 
         const scaleInput = new NumericInput({

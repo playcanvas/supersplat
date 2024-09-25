@@ -3,6 +3,7 @@ import { Events } from '../events';
 import { Splat } from '../splat';
 import { Histogram } from './histogram';
 import { State } from '../edit-ops';
+import { localize } from './localization';
 import { rgb2hsv } from './color';
 
 const SH_C0 = 0.28209479177387814;
@@ -78,7 +79,7 @@ class DataPanel extends Panel {
     constructor(events: Events, args = { }) {
         args = {
             ...args,
-            headerText: 'SPLAT DATA',
+            headerText: localize('data'),
             id: 'data-panel',
             resizable: 'top',
             resizeMax: 1000,
@@ -107,19 +108,19 @@ class DataPanel extends Panel {
                 { v: 'x', t: 'X' },
                 { v: 'y', t: 'Y' },
                 { v: 'z', t: 'Z' },
-                { v: 'distance', t: 'Distance' },
-                { v: 'volume', t: 'Volume' },
-                { v: 'surface-area', t: 'Surface Area' },
-                { v: 'scale_0', t: 'Scale X' },
-                { v: 'scale_1', t: 'Scale Y' },
-                { v: 'scale_2', t: 'Scale Z' },
-                { v: 'f_dc_0', t: 'Red' },
-                { v: 'f_dc_1', t: 'Green' },
-                { v: 'f_dc_2', t: 'Blue' },
-                { v: 'opacity', t: 'Opacity' },
-                { v: 'hue', t: 'Hue' },
-                { v: 'saturation', t: 'Saturation' },
-                { v: 'value', t: 'Value' }
+                { v: 'distance', t: localize('data.distance') },
+                { v: 'volume', t: localize('data.volume') },
+                { v: 'surface-area', t: localize('data.surface-area') },
+                { v: 'scale_0', t: localize('data.scale-x') },
+                { v: 'scale_1', t: localize('data.scale-y') },
+                { v: 'scale_2', t: localize('data.scale-z') },
+                { v: 'f_dc_0', t: localize('data.red') },
+                { v: 'f_dc_1', t: localize('data.green') },
+                { v: 'f_dc_2', t: localize('data.blue') },
+                { v: 'opacity', t: localize('data.opacity') },
+                { v: 'hue', t: localize('data.hue') },
+                { v: 'saturation', t: localize('data.saturation') },
+                { v: 'value', t: localize('data.value') }
             ]
         });
 
@@ -129,7 +130,7 @@ class DataPanel extends Panel {
 
         const logScaleLabel = new Label({
             class: 'control-label',
-            text: 'Log Scale'
+            text: localize('data.log-scale')
         });
 
         const logScaleValue = new BooleanInput({
@@ -143,12 +144,12 @@ class DataPanel extends Panel {
         controls.append(dataSelector);
         controls.append(logScale);
 
-        controls.append(sepLabel('Totals'));
+        controls.append(sepLabel(localize('data.totals')));
 
-        const splatsValue = dataLabel(controls, 'Splats');
-        const selectedValue = dataLabel(controls, 'Selected');
-        const hiddenValue = dataLabel(controls, 'Hidden');
-        const deletedValue = dataLabel(controls, 'Deleted');
+        const splatsValue = dataLabel(controls, localize('data.totals.splats'));
+        const selectedValue = dataLabel(controls, localize('data.totals.selected'));
+        const hiddenValue = dataLabel(controls, localize('data.totals.hidden'));
+        const deletedValue = dataLabel(controls, localize('data.totals.deleted'));
 
         controlsContainer.append(controls);
 

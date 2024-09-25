@@ -1,6 +1,7 @@
 import { Button, Element, Container } from 'pcui';
 import { Events } from '../events';
 import { Tooltips } from './tooltips';
+import { localize } from './localization';
 
 import undoSvg from '../svg/undo.svg';
 import redoSvg from '../svg/redo.svg';
@@ -139,17 +140,17 @@ class BottomToolbar extends Container {
         });
 
         // register tooltips
-        tooltips.register(undo, 'Undo ( Ctrl + Z )');
-        tooltips.register(redo, 'Redo ( Ctrl + Shift + Z )');
-        tooltips.register(picker, 'Picker Select ( P )');
-        tooltips.register(brush, 'Brush Select ( B )');
+        tooltips.register(undo, localize('tooltip.undo'));
+        tooltips.register(redo, localize('tooltip.redo'));
+        tooltips.register(picker, localize('tooltip.picker'));
+        tooltips.register(brush, localize('tooltip.brush'));
         // tooltips.register(lasso, 'Lasso Select');
-        tooltips.register(sphere, 'Sphere Select');
+        tooltips.register(sphere, localize('tooltip.sphere'));
         // tooltips.register(crop, 'Crop');
-        tooltips.register(translate, 'Translate ( 1 )');
-        tooltips.register(rotate, 'Rotate ( 2 )');
-        tooltips.register(scale, 'Scale ( 3 )');
-        tooltips.register(coordSpace, 'Local Space Gizmo');
+        tooltips.register(translate, localize('tooltip.translate'));
+        tooltips.register(rotate, localize('tooltip.rotate'));
+        tooltips.register(scale, localize('tooltip.scale'));
+        tooltips.register(coordSpace, localize('tooltip.local-space'));
 
     }
 }

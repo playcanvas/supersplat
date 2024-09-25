@@ -192,6 +192,10 @@ const boundingPoints =
 class Splat extends Element {
     asset: Asset;
     splatData: GSplatData;
+    numSplats = 0;
+    numDeleted = 0;
+    numHidden = 0;
+    numSelected = 0;
     pivot: Entity;
     entity: Entity;
     changedCounter = 0;
@@ -224,6 +228,7 @@ class Splat extends Element {
 
         this.asset = asset;
         this.splatData = splatData;
+        this.numSplats = splatData.numSplats;
         this.pivot = new Entity('splatPivot');
         this.entity = splatResource.instantiate(getMaterialOptions(0));
 
@@ -294,26 +299,39 @@ class Splat extends Element {
         data.set(state);
         this.stateTexture.unlock();
 
+        let numSelected = 0;
+        let numHidden = 0;
+        let numDeleted = 0;
+
+        for (let i = 0; i < state.length; ++i) {
+            const s = state[i];
+            if (s & State.deleted) {
+                numDeleted++;
+            } else if (s & State.hidden) {
+                numHidden++;
+            } else if (s & State.selected) {
+                numSelected++;
+            }
+        }
+
+        this.numSplats = state.length - numDeleted;
+        this.numHidden = numHidden;
+        this.numSelected = numSelected;
+        this.numDeleted = numDeleted;
+
+        this.selectionBoundDirty = true;
+
         // handle splats being added or removed
         if (changedState & State.deleted) {
-            this.selectionBoundDirty = true;
             this.localBoundDirty = true;
             this.worldBoundDirty = true;
             this.scene.boundDirty = true;
 
-            // count number of still-visible splats
-            let numSplats = 0;
-            for (let i = 0; i < state.length; ++i) {
-                if ((state[i] & State.deleted) === 0) {
-                    numSplats++;
-                }
-            }
-
             let mapping;
 
             // create a sorter mapping to remove deleted splats
-            if (numSplats !== state.length) {
-                mapping = new Uint32Array(numSplats);
+            if (this.numSplats !== state.length) {
+                mapping = new Uint32Array(this.numSplats);
                 let idx = 0;
                 for (let i = 0; i < state.length; ++i) {
                     if ((state[i] & State.deleted) === 0) {
@@ -327,7 +345,6 @@ class Splat extends Element {
         }
 
         this.scene.forceRender = true;
-
         this.scene.events.fire('splat.stateChanged', this, changedState);
     }
 

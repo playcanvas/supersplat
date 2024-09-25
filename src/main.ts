@@ -151,7 +151,7 @@ const main = async () => {
 
     window.scene = scene;
 
-    registerEditorEvents(events, editHistory, scene, editorUI);
+    registerEditorEvents(events, editHistory, scene);
     initSelection(events, scene);
     initShortcuts(events);
     await initFileHandler(scene, events, editorUI.appContainer.dom, remoteStorageDetails);

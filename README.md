@@ -1,4 +1,4 @@
-# SuperSplat
+# SuperSplat - 3D Gaussian Splat Editor
 
 SuperSplat is a free and open source tool for inspecting and editing 3D Gaussian Splats. It is built on web technologies and runs in the browser, so there's nothing to download or install.
 

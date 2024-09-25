@@ -8,7 +8,8 @@ import { Scene } from './scene';
 import { EditorUI } from './ui/editor';
 import { EditHistory } from './edit-history';
 import { Splat } from './splat';
-import { State, DeleteSelectionEditOp, ResetEditOp } from './edit-ops';
+import { State } from './splat-state';
+import { DeleteSelectionEditOp, ResetEditOp } from './edit-ops';
 import { Events } from './events';
 
 // register for editor and scene events

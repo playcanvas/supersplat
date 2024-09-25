@@ -1,11 +1,5 @@
 import { Events } from './events';
-
-interface EditOp {
-    name: string;
-    do(): void;
-    undo(): void;
-    destroy?(): void;
-}
+import { EditOp } from './edit-ops';
 
 class EditHistory {
     history: EditOp[] = [];
@@ -76,4 +70,4 @@ class EditHistory {
     }
 }
 
-export { EditHistory, EditOp };
+export { EditHistory };

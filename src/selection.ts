@@ -41,7 +41,7 @@ const initSelection = (events: Events, scene: Scene) => {
         }
     });
 
-    events.on('splat.vis', (splat: Splat) => {
+    events.on('splat.visibility', (splat: Splat) => {
         if (splat === selection && !splat.visible) {
             events.fire('selection', null);
         }

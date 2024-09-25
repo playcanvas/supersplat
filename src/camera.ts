@@ -422,7 +422,7 @@ class Camera extends Element {
             const pickId = this.pick(sx, sy);
 
             if (pickId !== -1) {
-                splat.getSplatWorldPosition(pickId, vec);
+                splat.calcSplatWorldPosition(pickId, vec);
 
                 // create a plane at the world position facing perpendicular to the camera
                 plane.setFromPointNormal(vec, this.entity.forward);

@@ -19,7 +19,7 @@ export const localizeInit = () => {
                         "scene.save": "Save",
                         "scene.save-as": "Save As...",
                         "scene.export": "Export",
-                        "scene.export.compressed-ply": "Compressed Ply",
+                        "scene.export.compressed-ply": "Compressed PLY",
                         "scene.export.splat": "Splat file",
 
                         // Selection menu
@@ -119,7 +119,7 @@ export const localizeInit = () => {
                         "scene.save": "保存",
                         "scene.save-as": "名前を付けて保存",
                         "scene.export": "エクスポート",
-                        "scene.export.compressed-ply": "圧縮 Ply",
+                        "scene.export.compressed-ply": "圧縮 PLY",
                         "scene.export.splat": "Splat ファイル",
 
                         // Selection menu
@@ -219,7 +219,7 @@ export const localizeInit = () => {
                         "scene.save": "저장",
                         "scene.save-as": "다른 이름으로 저장...",
                         "scene.export": "내보내기",
-                        "scene.export.compressed-ply": "압축된 Ply",
+                        "scene.export.compressed-ply": "압축된 PLY",
                         "scene.export.splat": "Splat 파일",
 
                         // Selection menu
@@ -308,7 +308,7 @@ export const localizeInit = () => {
                         "tooltip.local-space": "로컬 공간"
                     }
                 },
-                zh: {
+                "zh-CN": {
                     translation: {
                         // Scene menu
                         "scene": "场景",
@@ -319,7 +319,7 @@ export const localizeInit = () => {
                         "scene.save": "保存",
                         "scene.save-as": "另存为...",
                         "scene.export": "导出",
-                        "scene.export.compressed-ply": "压缩 Ply",
+                        "scene.export.compressed-ply": "压缩 PLY",
                         "scene.export.splat": "Splat 文件",
 
                         // Selection menu

@@ -109,7 +109,7 @@ class SplatDebug extends Element {
             const vertexData = new Uint32Array(splatData.numSplats);
             for (let i = 0; i < splatData.numSplats; ++i) {
                 vertexData[i] = i;
-            };
+            }
 
             const vertexBuffer = new VertexBuffer(device, vertexFormat, splatData.numSplats, {
                 usage: BUFFER_STATIC,

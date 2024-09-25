@@ -8,11 +8,12 @@ import { Scene } from './scene';
 import { EditorUI } from './ui/editor';
 import { EditHistory } from './edit-history';
 import { Splat } from './splat';
-import { State, DeleteSelectionEditOp, ResetEditOp } from './edit-ops';
+import { State } from './splat-state';
+import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp } from './edit-ops';
 import { Events } from './events';
 
 // register for editor and scene events
-const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: Scene, editorUI: EditorUI) => {
+const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: Scene) => {
     const vec = new Vec3();
     const vec2 = new Vec3();
     const vec4 = new Vec4();
@@ -23,31 +24,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     const selectedSplats = () => {
         const selected = events.invoke('selection') as Splat;
         return selected?.visible ? [selected] : [];
-    };
-
-    const processSelection = (state: Uint8Array, op: string, pred: (i: number) => boolean) => {
-        for (let i = 0; i < state.length; ++i) {
-            if (state[i] & (State.deleted | State.hidden)) {
-                state[i] &= ~State.selected;
-            } else {
-                const result = pred(i);
-                switch (op) {
-                    case 'add':
-                        if (result) state[i] |= State.selected;
-                        break;
-                    case 'remove':
-                        if (result) state[i] &= ~State.selected;
-                        break;
-                    case 'set':
-                        if (result) {
-                            state[i] |= State.selected;
-                        } else {
-                            state[i] &= ~State.selected;
-                        }
-                        break;
-                }
-            }
-        }
     };
 
     let lastExportCursor = 0;
@@ -206,44 +182,31 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('select.all', () => {
         selectedSplats().forEach((splat) => {
-            const splatData = splat.splatData;
-            const state = splatData.getProp('state') as Uint8Array;
-            processSelection(state, 'set', () => true);
-            splat.updateState();
+            events.fire('edit.add', new SelectAllOp(splat));
         });
     });
 
     events.on('select.none', () => {
         selectedSplats().forEach((splat) => {
-            const splatData = splat.splatData;
-            const state = splatData.getProp('state') as Uint8Array;
-            processSelection(state, 'set', () => false);
-            splat.updateState();
+            events.fire('edit.add', new SelectNoneOp(splat));
         });
     });
 
     events.on('select.invert', () => {
         selectedSplats().forEach((splat) => {
-            const splatData = splat.splatData;
-            const state = splatData.getProp('state') as Uint8Array;
-            processSelection(state, 'set', (i) => !(state[i] & State.selected));
-            splat.updateState();
+            events.fire('edit.add', new SelectInvertOp(splat));
         });
     });
 
     events.on('select.pred', (op, pred: (i: number) => boolean) => {
         selectedSplats().forEach((splat) => {
-            const splatData = splat.splatData;
-            const state = splatData.getProp('state') as Uint8Array;
-            processSelection(state, op, pred);
-            splat.updateState();
+            events.fire('edit.add', new SelectOp(splat, op, pred));
         });
     });
 
-    events.on('select.bySphere', (op: string, sphere: number[]) => {
+    events.on('select.bySphere', (op: 'add'|'remove'|'set', sphere: number[]) => {
         selectedSplats().forEach((splat) => {
             const splatData = splat.splatData;
-            const state = splatData.getProp('state') as Uint8Array;
             const x = splatData.getProp('x');
             const y = splatData.getProp('y');
             const z = splatData.getProp('z');
@@ -256,48 +219,23 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             mat.invert(splat.worldTransform);
             mat.transformPoint(vec, vec);
 
-            processSelection(state, op, (i) => {
-                vec2.set(x[i], y[i], z[i]);
-                return vec2.sub(vec).lengthSq() < radius2;
-            });
+            const sx = vec.x;
+            const sy = vec.y;
+            const sz = vec.z;
 
-            splat.updateState();
+            const filter = (i: number) => {
+                return (x[i] - sx) ** 2 + (y[i] - sy) ** 2 + (z[i] - sz) ** 2 < radius2;
+            };
+
+            events.fire('edit.add', new SelectOp(splat, op, filter));
         });
     });
 
-    events.on('select.byPlane', (op: string, axis: number[], distance: number) => {
-        selectedSplats().forEach((splat) => {
-            const splatData = splat.splatData;
-            const state = splatData.getProp('state') as Uint8Array;
-            const x = splatData.getProp('x');
-            const y = splatData.getProp('y');
-            const z = splatData.getProp('z');
-
-            vec.set(axis[0], axis[1], axis[2]);
-            vec2.set(axis[0] * distance, axis[1] * distance, axis[2] * distance);
-
-            // transform the plane to local space
-            mat.invert(splat.worldTransform);
-            mat.transformVector(vec, vec);
-            mat.transformPoint(vec2, vec2);
-
-            const localDistance = vec.dot(vec2);
-
-            processSelection(state, op, (i) => {
-                vec2.set(x[i], y[i], z[i]);
-                return vec.dot(vec2) - localDistance > 0;
-            });
-
-            splat.updateState();
-        });
-    });
-
-    events.on('select.rect', (op: string, rect: any) => {
+    events.on('select.rect', (op: 'add'|'remove'|'set', rect: any) => {
         const mode = events.invoke('camera.mode');
 
         selectedSplats().forEach((splat) => {
             const splatData = splat.splatData;
-            const state = splatData.getProp('state') as Uint8Array;
 
             if (mode === 'centers') {
                 const px = splatData.getProp('x');
@@ -320,7 +258,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 const ex = rect.end.x * 2 - 1;
                 const ey = rect.end.y * 2 - 1;
 
-                processSelection(state, op, (i) => {
+                const filter = (i: number) => {
                     const vx = px[i];
                     const vy = py[i];
                     const vz = pz[i];
@@ -340,7 +278,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     const z = (vx * m20 + vy * m21 + vz * m22 + m23);
 
                     return z >= -w && z <= w;
-                });
+                };
+
+                events.fire('edit.add', new SelectOp(splat, op, filter));
             } else if (mode === 'rings') {
                 const { width, height } = scene.targetSize;
 
@@ -351,22 +291,22 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     Math.floor((rect.end.x - rect.start.x) * width),
                     Math.floor((rect.end.y - rect.start.y) * height)
                 );
-                const selected = new Set<number>(pick);
-                processSelection(state, op, (i) => {
-                    return selected.has(i);
-                });
-            }
 
-            splat.updateState();
+                const selected = new Set<number>(pick);
+                const filter = (i: number) => {
+                    return selected.has(i);
+                };
+
+                events.fire('edit.add', new SelectOp(splat, op, filter));
+            }
         });
     });
 
-    events.on('select.byMask', (op: string, mask: ImageData) => {
+    events.on('select.byMask', (op: 'add'|'remove'|'set', mask: ImageData) => {
         const mode = events.invoke('camera.mode');
 
         selectedSplats().forEach((splat) => {
             const splatData = splat.splatData;
-            const state = splatData.getProp('state') as Uint8Array;
 
             if (mode === 'centers') {
                 const px = splatData.getProp('x');
@@ -387,7 +327,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 const width = mask.width;
                 const height = mask.height;
 
-                processSelection(state, op, (i) => {
+                const filter = (i: number) => {
                     const vx = px[i];
                     const vy = py[i];
                     const vz = pz[i];
@@ -411,7 +351,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     const mx = Math.floor((x / w * 0.5 + 0.5) * width);
                     const my = Math.floor((y / w * -0.5 + 0.5) * height);
                     return mask.data[(my * width + mx) * 4] === 255;
-                });
+                };
+
+                events.fire('edit.add', new SelectOp(splat, op, filter));
             } else if (mode === 'rings') {
                 // calculate mask bound so we limit pixel operations
                 let mx0 = mask.width - 1;
@@ -451,22 +393,21 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     }
                 }
 
-                processSelection(state, op, (i) => {
+                const filter = (i: number) => {
                     return selected.has(i);
-                });
-            }
+                };
 
-            splat.updateState();
+                events.fire('edit.add', new SelectOp(splat, op, filter));
+            }
         });
     });
 
-    events.on('select.point', (op: string, point: { x: number, y: number }) => {
+    events.on('select.point', (op: 'add'|'remove'|'set', point: { x: number, y: number }) => {
         const { width, height } = scene.targetSize;
         const mode = events.invoke('camera.mode');
 
         selectedSplats().forEach((splat) => {
             const splatData = splat.splatData;
-            const state = splatData.getProp('state') as Uint8Array;
 
             if (mode === 'centers') {
                 const x = splatData.getProp('x');
@@ -481,13 +422,15 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 // calculate final matrix
                 mat.mul2(camera.camera._viewProjMat, splat.worldTransform);
 
-                processSelection(state, op, (i) => {
+                const filter = (i: number) => {
                     vec4.set(x[i], y[i], z[i], 1.0);
                     mat.transformVec4(vec4, vec4);
                     const px = (vec4.x / vec4.w * 0.5 + 0.5) * width;
                     const py = (-vec4.y / vec4.w * 0.5 + 0.5) * height;
                     return Math.abs(px - sx) < splatSize && Math.abs(py - sy) < splatSize;
-                });
+                };
+
+                events.fire('edit.add', new SelectOp(splat, op, filter));
             } else if (mode === 'rings') {
                 scene.camera.pickPrep(splat);
 
@@ -496,53 +439,37 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     Math.floor(point.y * height),
                     1, 1
                 )[0];
-                processSelection(state, op, (i) => {
-                    return i === pickId;
-                });
-            }
 
-            splat.updateState();
+                const filter = (i: number) => {
+                    return i === pickId;
+                };
+
+                events.fire('edit.add', new SelectOp(splat, op, filter));
+            }
         });
     });
 
     events.on('select.hide', () => {
         selectedSplats().forEach((splat) => {
-            const splatData = splat.splatData;
-            const state = splatData.getProp('state') as Uint8Array;
-
-            for (let i = 0; i < state.length; ++i) {
-                if (state[i] & State.selected) {
-                    state[i] &= ~State.selected;
-                    state[i] |= State.hidden;
-                }
-            }
-
-            splat.updateState();
+            events.fire('edit.add', new HideSelectionOp(splat));
         });
     });
 
     events.on('select.unhide', () => {
         selectedSplats().forEach((splat) => {
-            const splatData = splat.splatData;
-            const state = splatData.getProp('state') as Uint8Array;
-
-            for (let i = 0; i < state.length; ++i) {
-                state[i] &= ~State.hidden;
-            }
-
-            splat.updateState();
+            events.fire('edit.add', new UnhideAllOp(splat));
         });
     });
 
     events.on('select.delete', () => {
         selectedSplats().forEach((splat) => {
-            editHistory.add(new DeleteSelectionEditOp(splat));
+            editHistory.add(new DeleteSelectionOp(splat));
         });
     });
 
     events.on('scene.reset', () => {
         selectedSplats().forEach((splat) => {
-            editHistory.add(new ResetEditOp(splat));
+            editHistory.add(new ResetOp(splat));
         });
     });
 

@@ -5,7 +5,7 @@ import {
     Quat,
     Vec3
 } from 'playcanvas';
-import { State } from './edit-ops';
+import { State } from './splat-state';
 import { SHRotation } from './sh-utils';
 
 interface ConvertEntry {

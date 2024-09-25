@@ -8,22 +8,22 @@ import {
     Entity,
     GSplatData,
     GSplatResource,
-    Mat3,
     Mat4,
     Quat,
     Texture,
     Vec3
 } from 'playcanvas';
 import { Element, ElementType } from "./element";
-import { SplatDebug } from "./splat-debug";
 import { Serializer } from "./serializer";
-import { State } from './edit-ops';
+import { State } from './splat-state';
 
 const vertexShader = /*glsl*/`
 uniform vec3 view_position;
 
 uniform sampler2D splatColor;
 uniform sampler2D splatState;
+
+uniform mat4 selection_transform;
 
 varying mediump vec2 texCoord;
 varying mediump vec4 color;
@@ -44,6 +44,14 @@ void main(void)
 
     // get center
     vec3 center = getCenter();
+
+    // get vertex state
+    vertexState = uint(texelFetch(splatState, splatUV, 0).r * 255.0);
+
+    // apply selection transform
+    if ((vertexState & 1u) != 0u) {
+        center = (selection_transform * vec4(center, 1.0)).xyz;
+    }
 
     // handle transforms
     mat4 model_view = matrix_view * matrix_model;
@@ -89,8 +97,6 @@ void main(void)
     #ifndef DITHER_NONE
         id = float(splatId);
     #endif
-
-    vertexState = uint(texelFetch(splatState, splatUV, 0).r * 255.0);
 
     #ifdef PICK_PASS
         vertexId = splatId;
@@ -169,7 +175,6 @@ const vec = new Vec3();
 const veca = new Vec3();
 const vecb = new Vec3();
 const mat = new Mat4();
-const mat3 = new Mat3();
 
 const boundingPoints =
     [-1, 1].map((x) => {
@@ -187,16 +192,22 @@ const boundingPoints =
 class Splat extends Element {
     asset: Asset;
     splatData: GSplatData;
-    splatDebug: SplatDebug;
+    numSplats = 0;
+    numDeleted = 0;
+    numHidden = 0;
+    numSelected = 0;
     pivot: Entity;
     entity: Entity;
     changedCounter = 0;
     stateTexture: Texture;
+    selectionBoundStorage: BoundingBox;
     localBoundStorage: BoundingBox;
     worldBoundStorage: BoundingBox;
+    selectionBoundDirty = true;
     localBoundDirty = true;
     worldBoundDirty = true;
     visible_ = true;
+    selectionTransform = new Mat4();
 
     rebuildMaterial: (bands: number) => void;
 
@@ -217,6 +228,7 @@ class Splat extends Element {
 
         this.asset = asset;
         this.splatData = splatData;
+        this.numSplats = splatData.numSplats;
         this.pivot = new Entity('splatPivot');
         this.entity = splatResource.instantiate(getMaterialOptions(0));
 
@@ -255,6 +267,7 @@ class Splat extends Element {
 
             const material = instance.material;
             material.setParameter('splatState', this.stateTexture);
+            material.setParameter('selection_transform', this.selectionTransform.data);
             material.update();
         };
 
@@ -278,7 +291,7 @@ class Splat extends Element {
         this.asset.unload();
     }
 
-    updateState(recalcBound = false) {
+    updateState(changedState = State.selected) {
         const state = this.splatData.getProp('state') as Uint8Array;
 
         // write state data to gpu texture
@@ -286,28 +299,39 @@ class Splat extends Element {
         data.set(state);
         this.stateTexture.unlock();
 
-        // update splat debug visual
-        this.splatDebug.update();
+        let numSelected = 0;
+        let numHidden = 0;
+        let numDeleted = 0;
+
+        for (let i = 0; i < state.length; ++i) {
+            const s = state[i];
+            if (s & State.deleted) {
+                numDeleted++;
+            } else if (s & State.hidden) {
+                numHidden++;
+            } else if (s & State.selected) {
+                numSelected++;
+            }
+        }
+
+        this.numSplats = state.length - numDeleted;
+        this.numHidden = numHidden;
+        this.numSelected = numSelected;
+        this.numDeleted = numDeleted;
+
+        this.selectionBoundDirty = true;
 
         // handle splats being added or removed
-        if (recalcBound) {
+        if (changedState & State.deleted) {
             this.localBoundDirty = true;
             this.worldBoundDirty = true;
             this.scene.boundDirty = true;
 
-            // count number of still-visible splats
-            let numSplats = 0;
-            for (let i = 0; i < state.length; ++i) {
-                if ((state[i] & State.deleted) === 0) {
-                    numSplats++;
-                }
-            }
-
             let mapping;
 
             // create a sorter mapping to remove deleted splats
-            if (numSplats !== state.length) {
-                mapping = new Uint32Array(numSplats);
+            if (this.numSplats !== state.length) {
+                mapping = new Uint32Array(this.numSplats);
                 let idx = 0;
                 for (let i = 0; i < state.length; ++i) {
                     if ((state[i] & State.deleted) === 0) {
@@ -321,8 +345,7 @@ class Splat extends Element {
         }
 
         this.scene.forceRender = true;
-
-        this.scene.events.fire('splat.stateChanged', this);
+        this.scene.events.fire('splat.stateChanged', this, changedState);
     }
 
     get worldTransform() {
@@ -333,7 +356,7 @@ class Splat extends Element {
         return this.asset.file.filename;
     }
 
-    getSplatWorldPosition(splatId: number, result: Vec3) {
+    calcSplatWorldPosition(splatId: number, result: Vec3) {
         if (splatId >= this.splatData.numSplats) {
             return false;
         }
@@ -350,8 +373,6 @@ class Splat extends Element {
     }
 
     add() {
-        this.splatDebug = new SplatDebug(this.scene, this.entity, this.splatData);
-
         // add the entity to the scene
         this.scene.contentRoot.addChild(this.pivot);
 
@@ -361,6 +382,7 @@ class Splat extends Element {
         this.pivot.setLocalPosition(vec);
         this.entity.setLocalPosition(-vec.x, -vec.y, -vec.z);
 
+        this.selectionBoundDirty = true;
         this.localBoundDirty = true;
         this.worldBoundDirty = true;
         this.scene.boundDirty = true;
@@ -370,9 +392,6 @@ class Splat extends Element {
     }
 
     remove() {
-        this.splatDebug.destroy();
-        this.splatDebug = null;
-
         this.scene.events.off('view.bands', this.rebuildMaterial, this);
 
         this.scene.contentRoot.removeChild(this.pivot);
@@ -396,12 +415,6 @@ class Splat extends Element {
         material.setParameter('ringSize', (selected && cameraMode === 'rings' && splatSize > 0) ? 0.04 : 0);
 
         if (this.visible && selected) {
-            // render splat centers
-            if (cameraMode === 'centers' && splatSize > 0) {
-                this.splatDebug.splatSize = splatSize;
-                this.scene.app.drawMeshInstance(this.splatDebug.meshInstance);
-            }
-
             // render bounding box
             if (events.invoke('camera.bound')) {
                 const bound = this.localBound;
@@ -442,6 +455,23 @@ class Splat extends Element {
         this.scene.boundDirty = true;
 
         this.scene.events.fire('splat.moved', this);
+    }
+
+    // get the selection bound
+    get selectionBound() {
+        if (this.selectionBoundDirty) {
+            const state = this.splatData.getProp('state') as Uint8Array;
+            const selectionBound = this.selectionBoundStorage;
+
+            const visiblePred = (i: number) => (state[i] & (State.hidden | State.deleted)) === 0;
+            const selectionPred = (i: number) => visiblePred(i) && ((state[i] & State.selected) === State.selected);
+
+            if (!this.splatData.calcAabb(selectionBound, selectionPred)) {
+                selectionBound.copy(this.localBound);
+            }
+        }
+
+        return this.selectionBoundStorage;
     }
 
     // get local space bound
@@ -499,7 +529,7 @@ class Splat extends Element {
     set visible(value: boolean) {
         if (value !== this.visible) {
             this.visible_ = value;
-            this.scene.events.fire('splat.vis', this);
+            this.scene.events.fire('splat.visibility', this);
         }
     }
 }

@@ -5,7 +5,7 @@ import { EditHistory } from '../edit-history';
 import { Scene } from '../scene';
 
 class ScaleTool extends TransformTool {
-    constructor(events: Events, editHistory: EditHistory, scene: Scene) {
+    constructor(events: Events, scene: Scene) {
         const gizmo = new ScaleGizmo(scene.app, scene.camera.entity.camera, scene.gizmoLayer);
 
         // disable everything except uniform scale
@@ -13,7 +13,7 @@ class ScaleTool extends TransformTool {
             gizmo.enableShape(axis, false);
         });
 
-        super(gizmo, events, editHistory, scene);
+        super(gizmo, events, scene);
     }
 }
 

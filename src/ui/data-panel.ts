@@ -2,7 +2,7 @@ import { BooleanInput, Container, Label, Panel, SelectInput } from 'pcui';
 import { Events } from '../events';
 import { Splat } from '../splat';
 import { Histogram } from './histogram';
-import { State } from '../edit-ops';
+import { State } from '../splat-state';
 import { localize } from './localization';
 import { rgb2hsv } from './color';
 
@@ -242,24 +242,10 @@ class DataPanel extends Panel {
 
             const state = splat.splatData.getProp('state') as Uint8Array;
             if (state) {
-                // calculate totals
-                let selected = 0;
-                let hidden = 0;
-                let deleted = 0;
-                for (let i = 0; i < state.length; ++i) {
-                    if (state[i] & State.deleted) {
-                        deleted++;
-                    } else if (state[i] & State.hidden) {
-                        hidden++;
-                    } else if (state[i] & State.selected) {
-                        selected++;
-                    }
-                }
-
-                splatsValue.text = (state.length - deleted).toString();
-                selectedValue.text = selected.toString();
-                hiddenValue.text = hidden.toString();
-                deletedValue.text = deleted.toString();
+                splatsValue.text = (state.length - splat.numDeleted).toString();
+                selectedValue.text = splat.numSelected.toString();
+                hiddenValue.text = splat.numHidden.toString();
+                deletedValue.text = splat.numDeleted.toString();
 
                 // update histogram
                 const func = getValueFunc();

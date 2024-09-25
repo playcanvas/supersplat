@@ -42,7 +42,7 @@ class TransformTool {
     constructor(gizmo: TransformGizmo, events: Events, scene: Scene) {
         let active = false;
         let target: Splat = null;
-        let op: EditOp = null;
+        let op: EntityTransformOp = null;
 
         // create the transform pivot
         const pivot = new Entity('gizmoPivot');

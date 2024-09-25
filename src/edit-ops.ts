@@ -224,37 +224,6 @@ class EntityTransformOp {
     }
 }
 
-class SelectionTransformOp {
-    name = 'selectionTransform';
-
-    splat: Splat;
-    indices: Uint32Array;
-    transform: Mat4;
-
-    constructor(options: { splat: Splat, transform: Mat4 }) {
-        const splatData = options.splat.splatData;
-        const state = splatData.getProp('state') as Uint8Array;
-        const indices = buildIndex(splatData.numSplats, (i) => !!(state[i] & State.selected));
-
-        this.splat = options.splat;
-        this.indices = indices;
-        this.transform = options.transform;
-    }
-
-    do() {
-
-    }
-
-    undo() {
-
-    }
-
-    destroy() {
-        this.splat = null;
-        this.transform = null;
-    }
-}
-
 class SetPivotOp {
     name = "setPivot";
     splat: Splat;

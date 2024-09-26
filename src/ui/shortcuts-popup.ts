@@ -1,35 +1,36 @@
 import { Container, Label, Overlay, Panel } from 'pcui';
+import { localize } from './localization';
 
 const shortcutList = [
-    { header: 'TOOLS' },
-    { key: '1', action: 'Move' },
-    { key: '2', action: 'Rotate' },
-    { key: '3', action: 'Scale' },
-    { key: 'R', action: 'Rect Selection' },
-    { key: 'B', action: 'Brush Selection' },
-    { key: 'P', action: 'Picker Selection' },
-    { key: '[ ]', action: 'Decrease/Increase brush size' },
-    { key: 'Esc', action: 'Deactivate Tool' },
-    { header: 'SELECTION' },
-    { key: 'A', action: 'Select All' },
-    { key: 'Shift + A', action: 'Deselect All' },
-    { key: 'I', action: 'Invert Selection' },
-    { key: 'Shift', action: 'Add to Selection' },
-    { key: 'Ctrl', action: 'Remove from Selection' },
-    { key: 'Delete', action: 'Delete Selected Splats' },
-    { header: 'SHOW' },
-    { key: 'H', action: 'Hide Selected Splats' },
-    { key: 'U', action: 'Unhide All Splats' },
-    { key: 'D', action: 'Toggle Data Panel' },
-    { header: 'OTHER' },
-    { key: 'Tab', action: 'Select Next Splat' },
-    { key: 'Ctrl + Z', action: 'Undo' },
-    { key: 'Ctrl + Shift + Z', action: 'Redo' },
-    { key: 'Space', action: 'Toggle Splat Overlay' },
-    { key: 'F', action: 'Focus Camera on current selection' },
-    { key: 'M', action: 'Toggle Camera Mode'},
-    { key: 'G', action: 'Toggle Grid' },
-    { key: 'C', action: 'Toggle Gizmo Coordinate Space' },
+    { header: 'tools' },
+    { key: '1', action: 'move' },
+    { key: '2', action: 'rotate' },
+    { key: '3', action: 'scale' },
+    { key: 'R', action: 'rect-selection' },
+    { key: 'B', action: 'brush-selection' },
+    { key: 'P', action: 'picker-selection' },
+    { key: '[ ]', action: 'brush-size' },
+    { key: 'Esc', action: 'deactivate-tool' },
+    { header: 'selection' },
+    { key: 'A', action: 'select-all' },
+    { key: 'Shift + A', action: 'deselect-all' },
+    { key: 'I', action: 'invert-selection' },
+    { key: 'Shift', action: 'add-to-selection' },
+    { key: 'Ctrl', action: 'remove-from-selection' },
+    { key: 'Delete', action: 'delete-selected-splats' },
+    { header: 'show' },
+    { key: 'H', action: 'hide-selected-splats' },
+    { key: 'U', action: 'unhide-all-splats' },
+    { key: 'D', action: 'toggle-data-panel' },
+    { header: 'other' },
+    { key: 'Tab', action: 'select-next-splat' },
+    { key: 'Ctrl + Z', action: 'undo' },
+    { key: 'Ctrl + Shift + Z', action: 'redo' },
+    { key: 'Space', action: 'toggle-splat-overlay' },
+    { key: 'F', action: 'focus-camera' },
+    { key: 'M', action: 'toggle-camera-mode'},
+    { key: 'G', action: 'toggle-grid' },
+    { key: 'C', action: 'toggle-gizmo-coordinate-space' },
 ];
 
 class ShortcutsPopup extends Overlay {
@@ -51,7 +52,7 @@ class ShortcutsPopup extends Overlay {
             if (shortcut.header) {
                 const label = new Label({
                     class: 'shortcut-header-label',
-                    text: shortcut.header
+                    text: localize(`shortcuts.${shortcut.header}`)
                 });
 
                 const entry = new Container({
@@ -69,7 +70,7 @@ class ShortcutsPopup extends Overlay {
 
                 const action = new Label({
                     class: 'shortcut-action',
-                    text: shortcut.action
+                    text: localize(`shortcuts.${shortcut.action}`)
                 });
 
                 const entry = new Container({
@@ -85,7 +86,7 @@ class ShortcutsPopup extends Overlay {
 
         const shortcutsPanel = new Panel({
             id: 'shortcuts-panel',
-            headerText: 'KEYBOARD SHORTCUTS'
+            headerText: localize('shortcuts.title')
         });
 
         shortcutsPanel.append(shortcutsContainer);

@@ -6,7 +6,6 @@ const localizeInit = () => {
         .use(LanguageDetector)
         .init({
             fallbackLng: 'en',
-            debug: true,
             resources: {
                 en: {
                     translation: {
@@ -172,7 +171,7 @@ const localizeInit = () => {
                         "help.github-repo": "Dépôt GitHub",
                         "help.discord": "Serveur Discord",
                         "help.forum": "Forum",
-                        "help.about": "À propos de supersplat",
+                        "help.about": "À propos de SuperSplat",
 
                         // modes
                         "mode.centers": "Mode centres",

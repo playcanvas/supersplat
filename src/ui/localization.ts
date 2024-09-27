@@ -140,6 +140,138 @@ const localizeInit = () => {
                         "tooltip.local-space": "Local Space Gizmo"
                     }
                 },
+                fr: {
+                    translation: {
+                        // scene menu
+                        "scene": "Scène",
+                        "scene.new": "Créer",
+                        "scene.open": "Ouvrir",
+                        "scene.import": "Importer",
+                        "scene.load-all-data": "Charger toutes les données ply",
+                        "scene.save": "Enregistrer",
+                        "scene.save-as": "Enregistrer sous...",
+                        "scene.export": "Exporter",
+                        "scene.export.compressed-ply": "Ply compressé",
+                        "scene.export.splat": "Fichier splat",
+
+                        // selection menu
+                        "selection": "Sélection",
+                        "selection.all": "Tout",
+                        "selection.none": "Aucune",
+                        "selection.invert": "Inverser",
+                        "selection.lock": "Verrouiller la sélection",
+                        "selection.unlock": "Tout débloquer",
+                        "selection.delete": "Supprimer la sélection",
+                        "selection.reset": "Réinitialiser splat",
+
+                        // help menu
+                        "help": "Aide",
+                        "help.shortcuts": "Raccourcis claviers",
+                        "help.user-guide": "Guide utilisateur",
+                        "help.log-issue": "Signaler un problème",
+                        "help.github-repo": "Dépôt GitHub",
+                        "help.discord": "Serveur Discord",
+                        "help.forum": "Forum",
+                        "help.about": "À propos de supersplat",
+
+                        // modes
+                        "mode.centers": "Mode centres",
+                        "mode.rings": "Mode anneaux",
+
+                        // scene panel
+                        "scene-manager": "GESTIONNAIRE DE SCENE",
+                        "transform": "TRANSFORMATION",
+                        "position": "Position",
+                        "rotation": "Rotation",
+                        "scale": "Échelle",
+
+                        // options panel
+                        "options": "OPTIONS D'AFFICHAGE",
+                        "options.fov": "Champ de vision",
+                        "options.sh-bands": "Ordres d'HS",
+                        "options.centers-size": "Échelle des centres",
+                        "options.show-grid": "Afficher la grille",
+                        "options.show-bound": "Afficher limites",
+
+                        // data panel
+                        "data": "DONNEES SPLAT",
+                        "data.distance": "Distance",
+                        "data.volume": "Volume",
+                        "data.surface-area": "Zone de surface",
+                        "data.scale-x": "Échelle X",
+                        "data.scale-y": "Échelle Y",
+                        "data.scale-z": "Échelle Z",
+                        "data.red": "Rouge",
+                        "data.green": "Vert",
+                        "data.blue": "Bleu",
+                        "data.opacity": "Opacité",
+                        "data.hue": "Teinte",
+                        "data.saturation": "Saturation",
+                        "data.value": "Luminosité",
+                        "data.log-scale": "Échelle logarithmique",
+                        "data.totals": "Totaux",
+                        "data.totals.splats": "Splats",
+                        "data.totals.selected": "Selectionné",
+                        "data.totals.hidden": "Caché",
+                        "data.totals.deleted": "Supprimé",
+
+                        // Shortcuts panel
+                        "shortcuts.title": "RACCOURCIS CLAVIERS",
+                        "shortcuts.tools": "OUTILS",
+                        "shortcuts.move": "Déplacer",
+                        "shortcuts.rotate": "Tourner",
+                        "shortcuts.scale": "Changer l'échelle",
+                        "shortcuts.rect-selection": "Sélection avec rectangle",
+                        "shortcuts.brush-selection": "Sélection avec pinceau",
+                        "shortcuts.picker-selection": "Sélection avec pipette",
+                        "shortcuts.brush-size": "Augmenter/Diminuer la taille du pinceau",
+                        "shortcuts.deactivate-tool": "Désactiver l'outil",
+                        "shortcuts.selection": "SELECTION",
+                        "shortcuts.select-all": "Tout sélectionner",
+                        "shortcuts.deselect-all": "Tout desélectionner",
+                        "shortcuts.invert-selection": "Inverser la sélection",
+                        "shortcuts.add-to-selection": "Ajouter à la sélection",
+                        "shortcuts.remove-from-selection": "Retirer de la sélection",
+                        "shortcuts.delete-selected-splats": "Supprimer splats sélectionnés",
+                        "shortcuts.show": "AFFICHER",
+                        "shortcuts.hide-selected-splats": "Masquer splats sélectionnés",
+                        "shortcuts.unhide-all-splats": "Réafficher tous les splats",
+                        "shortcuts.toggle-data-panel": "Afficher/Cacher l'onglet données",
+                        "shortcuts.other": "AUTRES",
+                        "shortcuts.select-next-splat": "Sélectionner le splat suivant",
+                        "shortcuts.undo": "Annuler",
+                        "shortcuts.redo": "Rétablir",
+                        "shortcuts.toggle-splat-overlay": "Basculer affichage splat",
+                        "shortcuts.focus-camera": "Focaliser la caméra sur la sélection actuelle",
+                        "shortcuts.toggle-camera-mode": "Basculer le mode de camera",
+                        "shortcuts.toggle-grid": "Afficher/Cacher la grille",
+                        "shortcuts.toggle-gizmo-coordinate-space": "Basculer en espace de coordonnées Gizmo",
+
+                        // popup
+                        "popup.ok": "OK",
+                        "popup.cancel": "Annuler",
+                        "popup.yes": "Oui",
+                        "popup.no": "Non",
+                        "popup.error-loading": "Erreur de chargement du fichier",
+
+                        // right toolbar
+                        "tooltip.splat-mode": "Mode splat ( M )",
+                        "tooltip.show-hide": "Afficher/cacher les splats ( Barre espace )",
+                        "tooltip.frame-selection": "Cadrer la sélection ( F )",
+                        "tooltip.view-options": "Options d'affichage",
+
+                        // bottom toolbar
+                        "tooltip.undo": "Annuler ( Ctrl + Z )",
+                        "tooltip.redo": "Rétablir ( Ctrl + Shift + Z )",
+                        "tooltip.picker": "Sélection avec pipette ( P )",
+                        "tooltip.brush": "Sélection avec pinceau ( B )",
+                        "tooltip.sphere": "Sélection avec sphère",
+                        "tooltip.translate": "Translation ( 1 )",
+                        "tooltip.rotate": "Rotation ( 2 )",
+                        "tooltip.scale": "Échelle ( 3 )",
+                        "tooltip.local-space": "Espace local gizmo"
+                    }
+                },
                 ja: {
                     translation: {
                         // Scene menu

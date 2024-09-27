@@ -209,14 +209,6 @@ class Splat extends Element {
     visible_ = true;
     selectionTransform = new Mat4();
 
-    shRotX = 0;
-    shRotY = 0;
-    shRotZ = 0;
-
-    shScaleX = 1;
-    shScaleY = 1;
-    shScaleZ = 1;
-
     rebuildMaterial: (bands: number) => void;
 
     constructor(asset: Asset) {
@@ -395,20 +387,6 @@ class Splat extends Element {
         this.worldBoundDirty = true;
         this.scene.boundDirty = true;
 
-        this.scene.events.function('shRot', (x: number, y: number, z: number) => {
-            this.shRotX = x;
-            this.shRotY = y;
-            this.shRotZ = z;
-            this.scene.forceRender = true;
-        });
-
-        this.scene.events.function('shScale', (x: number, y: number, z: number) => {
-            this.shScaleX = x;
-            this.shScaleY = y;
-            this.shScaleZ = z;
-            this.scene.forceRender = true;
-        });
-
         this.scene.events.on('view.bands', this.rebuildMaterial, this);
         this.rebuildMaterial(this.scene.events.invoke('view.bands'));
     }
@@ -452,16 +430,6 @@ class Splat extends Element {
                     this.scene.app.drawLine(veca, vecb, Color.WHITE, true, this.scene.debugLayer);
                 }
             }
-
-            const quat = new Quat();
-            quat.setFromEulerAngles(this.shRotX, this.shRotY, this.shRotZ);
-
-            mat.setTRS(Vec3.ZERO, quat, new Vec3(this.shScaleX, this.shScaleY, this.shScaleZ));
-
-            const shMat = new Mat3();
-            shMat.setFromMat4(mat);
-
-            material.setParameter('matrix_sh', shMat.data);
         }
 
         this.pivot.enabled = this.visible;

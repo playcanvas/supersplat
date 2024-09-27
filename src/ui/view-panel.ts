@@ -1,6 +1,7 @@
 import { BooleanInput, Container, Label, SliderInput } from 'pcui';
 import { Events } from '../events';
 import { Tooltips } from './tooltips';
+import { localize } from './localization';
 
 type Vec3d = { x: number, y: number, z: number };
 
@@ -31,7 +32,7 @@ class ViewPanel extends Container {
         });
 
         const label = new Label({
-            text: 'VIEW OPTIONS',
+            text: localize('options'),
             class: `panel-header-label`
         });
 
@@ -45,7 +46,7 @@ class ViewPanel extends Container {
         });
         
         const fovLabel = new Label({
-            text: 'Field of View',
+            text: localize('options.fov'),
             class: 'view-panel-row-label'
         });
         
@@ -66,7 +67,7 @@ class ViewPanel extends Container {
         });
 
         const shBandsLabel = new Label({
-            text: 'SH Bands',
+            text: localize('options.sh-bands'),
             class: 'view-panel-row-label'
         });
 
@@ -88,7 +89,7 @@ class ViewPanel extends Container {
         });
 
         const centersSizeLabel = new Label({
-            text: 'Centers Size',
+            text: localize('options.centers-size'),
             class: 'view-panel-row-label'
         });
 
@@ -110,7 +111,7 @@ class ViewPanel extends Container {
         });
 
         const showGridLabel = new Label({
-            text: 'Show Grid',
+            text: localize('options.show-grid'),
             class: 'view-panel-row-label'
         });
 
@@ -130,7 +131,7 @@ class ViewPanel extends Container {
         });
 
         const showBoundLabel = new Label({
-            text: 'Show Bound',
+            text: localize('options.show-bound'),
             class: 'view-panel-row-label'
         });
 

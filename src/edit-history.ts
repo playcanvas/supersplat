@@ -1,11 +1,5 @@
 import { Events } from './events';
-
-interface EditOp {
-    name: string;
-    do(): void;
-    undo(): void;
-    destroy(): void;
-}
+import { EditOp } from './edit-ops';
 
 class EditHistory {
     history: EditOp[] = [];
@@ -26,11 +20,15 @@ class EditHistory {
                 this.redo();
             }
         });
+
+        events.on('edit.add', (editOp: EditOp) => {
+            this.add(editOp);
+        });
     }
 
     add(editOp: EditOp) {
         while (this.cursor < this.history.length) {
-            this.history.pop().destroy();
+            this.history.pop().destroy?.();
         }
         this.history.push(editOp);
         this.redo();
@@ -62,6 +60,14 @@ class EditHistory {
         this.events.fire('edit.canUndo', this.canUndo());
         this.events.fire('edit.canRedo', this.canRedo());
     }
+
+    clear() {
+        this.history.forEach((editOp) => {
+            editOp.destroy?.();
+        });
+        this.history = [];
+        this.cursor = 0;
+    }
 }
 
-export { EditHistory, EditOp };
+export { EditHistory };

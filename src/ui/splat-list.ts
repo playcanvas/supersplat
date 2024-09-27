@@ -173,7 +173,7 @@ class SplatList extends Container {
             });
         });
 
-        events.on('splat.vis', (splat: Splat) => {
+        events.on('splat.visibility', (splat: Splat) => {
             const item = items.get(splat);
             if (item) {
                 item.visible = splat.visible;

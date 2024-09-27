@@ -12,6 +12,7 @@ import { RightToolbar } from './right-toolbar';
 import { ModeToggle } from './mode-toggle';
 import { Tooltips } from './tooltips';
 import { ShortcutsPopup } from './shortcuts-popup';
+import { localizeInit } from './localization';
 
 import { version } from '../../package.json';
 import logo from './playcanvas-logo.png';
@@ -25,6 +26,8 @@ class EditorUI {
     popup: Popup;
 
     constructor(events: Events, remoteStorageMode: boolean) {
+        localizeInit();
+
         // favicon
         const link = document.createElement('link');
         link.rel = 'icon';
@@ -174,13 +177,10 @@ class EditorUI {
             // set focus on the body if user is busy pressing on the canvas or a child of the tools
             // element
             if (event.target === canvas || toolsContainer.dom.contains(event.target as Node)) {
+                event.preventDefault();
                 document.body.focus();
             }
         }, true);
-    }
-
-    setFilename(filename: string) {
-        // this.filenameLabel.text = filename;
     }
 }
 

@@ -3,6 +3,7 @@ import { Events } from '../events';
 import { Tooltips } from './tooltips';
 import { SplatList } from './splat-list';
 import { Transform } from './transform';
+import { localize } from './localization';
 
 import sceneImportSvg from '../svg/import.svg';
 import sceneNewSvg from '../svg/new.svg';
@@ -36,7 +37,7 @@ class ScenePanel extends Container {
         });
 
         const sceneLabel = new Label({
-            text: 'SCENE MANAGER',
+            text: localize('scene-manager'),
             class: `panel-header-label`
         });
 
@@ -68,6 +69,11 @@ class ScenePanel extends Container {
 
         const splatList = new SplatList(events);
 
+        const splatListContainer = new Container({
+            class: 'splat-list-container'
+        });
+        splatListContainer.append(splatList);
+
         const transformHeader = new Container({
             class: `panel-header`
         });
@@ -78,7 +84,7 @@ class ScenePanel extends Container {
         });
 
         const transformLabel = new Label({
-            text: 'TRANSFORM',
+            text: localize('transform'),
             class: `panel-header-label`
         });
 
@@ -86,7 +92,7 @@ class ScenePanel extends Container {
         transformHeader.append(transformLabel);
 
         this.append(sceneHeader);
-        this.append(splatList);
+        this.append(splatListContainer);
         this.append(transformHeader);
         this.append(new Transform(events));
         this.append(new Element({

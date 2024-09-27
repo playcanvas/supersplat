@@ -189,7 +189,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
             }
         }
 
-        scene.clear();
+        events.fire('scene.clear');
 
         return true;
     });

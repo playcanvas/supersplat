@@ -4,8 +4,11 @@
     width: 320px;
 }
 
-@media (max-width: 600px) {
-    #scene-panel {
-        display: none;
-    }
+.collapsed #scene-panel {
+    display: none;
+}
+
+.splat-list-container {
+    max-height: 300px;
+    overflow: auto;
 }

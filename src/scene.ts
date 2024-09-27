@@ -15,10 +15,12 @@ import { SceneConfig } from './scene-config';
 import { AssetLoader } from './asset-loader';
 import { Model } from './model';
 import { Splat } from './splat';
+import { SplatDebug } from './splat-debug';
 import { Camera } from './camera';
 import { CustomShadow as Shadow } from './custom-shadow';
 // import { Grid } from './grid';
 import { InfiniteGrid as Grid } from './infinite-grid';
+import { localize } from './ui/localization';
 
 class Scene {
     events: Events;
@@ -43,6 +45,7 @@ class Scene {
 
     assetLoader: AssetLoader;
     camera: Camera;
+    splatDebug: SplatDebug;
     shadow: Shadow;
     grid: Grid;
 
@@ -171,6 +174,9 @@ class Scene {
         this.camera = new Camera();
         this.add(this.camera);
 
+        this.splatDebug = new SplatDebug();
+        this.add(this.splatDebug);
+
         // this.shadow = new Shadow();
         // this.add(this.shadow);
 
@@ -217,8 +223,8 @@ class Scene {
         } catch (err) {
             this.events.invoke('showPopup', {
                 type: 'error',
-                header: 'ERROR LOADING FILE',
-                message: `${err.message} while loading '${filename}'`
+                header: localize('popup.error-loading'),
+                message: `${err.message ?? err} while loading '${filename}'`
             });
         }
     }

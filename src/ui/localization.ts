@@ -5,6 +5,10 @@ const localizeInit = () => {
     i18next
         .use(LanguageDetector)
         .init({
+            detection: {
+                order: ['querystring', /*'cookie', 'localStorage', 'sessionStorage',*/ 'navigator', 'htmlTag'],
+            },
+            supportedLngs: ['en', 'fr', 'ja', 'ko', 'zh-CN'],
             fallbackLng: 'en',
             resources: {
                 en: {

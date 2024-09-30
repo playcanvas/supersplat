@@ -183,7 +183,7 @@ class PointerController {
             }
         };
 
-        let destroyFunc: () => void = null;
+        let destroy: () => void = null;
 
         const wrap = (target: any, name: string, fn: any) => {
             const callback = (event: any) => {
@@ -191,10 +191,10 @@ class PointerController {
                 fn(event);
             };
             target.addEventListener(name, callback);
-            destroyFunc = () => {
-                destroyFunc?.();
+            destroy = () => {
+                destroy?.();
                 target.removeEventListener(name, callback);
-            }
+            };
         };
 
         wrap(target, 'pointerdown', pointerdown);
@@ -205,9 +205,7 @@ class PointerController {
         wrap(document, 'keydown', keydown);
         wrap(document, 'keyup', keyup);
 
-        this.destroy = () => {
-            destroyFunc();
-        };
+        this.destroy = destroy;
     }
 }
 

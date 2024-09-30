@@ -111,7 +111,7 @@ const loadCameraPoses = (url: string, filename: string, events: Events) => {
                     vec.copy(z).mulScalar(dot).add(p);
 
                     events.fire('camera.addPose', {
-                        name: `${filename}_${i}`,
+                        name: pose.img_name ?? `${filename}_${i}`,
                         position: new Vec3(-p.x, -p.y, p.z),
                         target: new Vec3(-vec.x, -vec.y, vec.z)
                     });

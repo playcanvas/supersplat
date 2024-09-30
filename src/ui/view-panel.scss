@@ -58,8 +58,6 @@
 
         overflow-y: auto;
 
-        pointer-events: all;
-
         > .view-panel-list {
             width: 100%;
             display: flex;
@@ -77,6 +75,10 @@
                     flex-grow: 1;
                 }
             }
+        }
+
+        .selected {
+            background-color: $bcg-darker;
         }
     }
 }

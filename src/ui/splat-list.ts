@@ -98,14 +98,14 @@ class SplatItem extends Container {
         };
 
         // handle clicks
-        visible.dom.addEventListener('click', toggleVisible, true);
-        invisible.dom.addEventListener('click', toggleVisible, true);
-        remove.dom.addEventListener('click', handleRemove, true);
+        visible.dom.addEventListener('click', toggleVisible);
+        invisible.dom.addEventListener('click', toggleVisible);
+        remove.dom.addEventListener('click', handleRemove);
 
         this.destroy = () => {
-            visible.dom.removeEventListener('click', toggleVisible, true);
-            invisible.dom.removeEventListener('click', toggleVisible, true);
-            remove.dom.removeEventListener('click', handleRemove, true);
+            visible.dom.removeEventListener('click', toggleVisible);
+            invisible.dom.removeEventListener('click', toggleVisible);
+            remove.dom.removeEventListener('click', handleRemove);
         }
     }
 

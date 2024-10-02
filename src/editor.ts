@@ -5,7 +5,6 @@ import {
     Vec4,
 } from 'playcanvas';
 import { Scene } from './scene';
-import { EditorUI } from './ui/editor';
 import { EditHistory } from './edit-history';
 import { Splat } from './splat';
 import { State } from './splat-state';
@@ -582,14 +581,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         };
     });
 
-    type Vec3d = { x: number, y: number, z: number };
-
-    events.on('camera.setPose', (pose: { position: Vec3d, target: Vec3d }, speed = 1) => {
-        scene.camera.setPose(
-            new Vec3(pose.position.x, pose.position.y, pose.position.z),
-            new Vec3(pose.target.x, pose.target.y, pose.target.z),
-            speed
-        );
+    events.on('camera.setPose', (pose: { position: Vec3, target: Vec3 }, speed = 1) => {
+        scene.camera.setPose(pose.position, pose.target, speed);
     });
 
     // hack: fire events to initialize UI

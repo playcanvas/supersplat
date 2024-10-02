@@ -1,9 +1,8 @@
+import { Vec3 } from 'playcanvas';
 import { BooleanInput, Container, Label, SliderInput } from 'pcui';
 import { Events } from '../events';
 import { Tooltips } from './tooltips';
 import { localize } from './localization';
-
-type Vec3d = { x: number, y: number, z: number };
 
 class ViewPanel extends Container {
     constructor(events: Events, tooltips: Tooltips, args = {}) {
@@ -280,7 +279,11 @@ class ViewPanel extends Container {
 
         // poses
 
-        type Pose = { name: string, position: Vec3d, target: Vec3d };
+        type Pose = {
+            name: string,
+            position: Vec3,
+            target: Vec3
+        };
         const poses: { pose: Pose, row: Container }[] = [];
         let currentPose = -1;
 

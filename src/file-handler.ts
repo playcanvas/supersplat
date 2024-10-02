@@ -88,37 +88,34 @@ const writeToFile = async (stream: FileSystemWritableFileStream, data: ArrayBuff
     await stream.close();
 };
 
-const loadCameraPoses = (url: string, filename: string, events: Events) => {
-    return fetch(url)
-    .then((response) => response.json())
-    .then((json) => {
-        if (json.length > 0) {
+const loadCameraPoses = async (url: string, filename: string, events: Events) => {
+    const response = await fetch(url);
+    const json = await response.json();
+    if (json.length > 0) {
+        // calculate the average position of the camera poses
+        const ave = new Vec3(0, 0, 0);
+        json.forEach((pose: any) => {
+            vec.set(pose.position[0], pose.position[1], pose.position[2]);
+            ave.add(vec);
+        });
+        ave.mulScalar(1 / json.length);
 
-            // calculate the average position of the camera poses
-            const ave = new Vec3(0, 0, 0);
-            json.forEach((pose: any) => {
-                vec.set(pose.position[0], pose.position[1], pose.position[2]);
-                ave.add(vec);
-            });
-            ave.mulScalar(1 / json.length);
+        json.forEach((pose: any, i: number) => {
+            if (pose.hasOwnProperty('position') && pose.hasOwnProperty('rotation')) {
+                const p = new Vec3(pose.position);
+                const z = new Vec3(pose.rotation[0][2], pose.rotation[1][2], pose.rotation[2][2]);
 
-            json.forEach((pose: any, i: number) => {
-                if (pose.hasOwnProperty('position') && pose.hasOwnProperty('rotation')) {
-                    const p = new Vec3(pose.position);
-                    const z = new Vec3(pose.rotation[0][2], pose.rotation[1][2], pose.rotation[2][2]);
+                const dot = vec.sub2(ave, p).dot(z);
+                vec.copy(z).mulScalar(dot).add(p);
 
-                    const dot = vec.sub2(ave, p).dot(z);
-                    vec.copy(z).mulScalar(dot).add(p);
-
-                    events.fire('camera.addPose', {
-                        name: pose.img_name ?? `${filename}_${i}`,
-                        position: new Vec3(-p.x, -p.y, p.z),
-                        target: new Vec3(-vec.x, -vec.y, vec.z)
-                    });
-                }
-            });
-        }
-    })
+                events.fire('camera.addPose', {
+                    name: pose.img_name ?? `${filename}_${i}`,
+                    position: new Vec3(-p.x, -p.y, p.z),
+                    target: new Vec3(-vec.x, -vec.y, vec.z)
+                });
+            }
+        });
+    }
 };
 
 // initialize file handler events

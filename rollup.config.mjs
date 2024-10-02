@@ -35,7 +35,7 @@ const outputHeader = () => {
     const RESET_OUT = `\x1b[0m`;
 
     const title = [
-        `Building PlayCanvas Model Viewer`,
+        `Building SuperSplat`,
         `type ${BOLD_OUT}${BUILD_TYPE}${REGULAR_OUT}`,
         `engine ${BOLD_OUT}${ENGINE_DIR}${REGULAR_OUT}`,
         `pcui ${BOLD_OUT}${PCUI_DIR}${REGULAR_OUT}`

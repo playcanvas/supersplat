@@ -584,10 +584,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     type Vec3d = { x: number, y: number, z: number };
 
-    events.on('camera.setPose', (pose: { position: Vec3d, target: Vec3d }) => {
+    events.on('camera.setPose', (pose: { position: Vec3d, target: Vec3d }, speed = 1) => {
         scene.camera.setPose(
             new Vec3(pose.position.x, pose.position.y, pose.position.z),
-            new Vec3(pose.target.x, pose.target.y, pose.target.z)
+            new Vec3(pose.target.x, pose.target.y, pose.target.z),
+            speed
         );
     });
 

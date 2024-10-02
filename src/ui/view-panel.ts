@@ -284,13 +284,13 @@ class ViewPanel extends Container {
         const poses: { pose: Pose, row: Container }[] = [];
         let currentPose = -1;
 
-        const setPose = (index: number) => {
+        const setPose = (index: number, speed = 1) => {
             if (index === currentPose) {
                 return;
             }
 
             if (index !== -1) {
-                events.fire('camera.setPose', poses[index].pose);
+                events.fire('camera.setPose', poses[index].pose, speed);
             }
 
             poses.forEach((p, i) => {
@@ -332,7 +332,7 @@ class ViewPanel extends Container {
 
         const nextPose = () => {
             if (poses.length > 0) {
-                setPose((currentPose + 1) % poses.length);
+                setPose((currentPose + 1) % poses.length, 2.5);
             }
         };
 

@@ -1,4 +1,4 @@
-import { Mat4, Quat, Vec3 } from 'playcanvas';
+import { Quat, Vec3 } from 'playcanvas';
 import { Splat } from './splat';
 import { State } from './splat-state';
 

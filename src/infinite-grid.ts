@@ -1,6 +1,5 @@
 import {
     CULLFACE_NONE,
-    FUNC_ALWAYS,
     SEMANTIC_POSITION,
     BlendState,
     DepthState,
@@ -54,8 +53,9 @@ const fsCode = /*glsl*/ `
     }
 
     // https://bgolus.medium.com/the-best-darn-grid-shader-yet-727f9278b9d8#1e7c
-    float pristineGrid( in vec2 uv, in vec2 ddx, in vec2 ddy, vec2 lineWidth)
-    {
+    float pristineGrid( in vec2 uv, vec2 lineWidth) {
+        vec2 ddx = dFdx(uv);
+        vec2 ddy = dFdy(uv);
         vec2 uvDeriv = vec2(length(vec2(ddx.x, ddy.x)), length(vec2(ddx.y, ddy.y)));
         bvec2 invertLine = bvec2(lineWidth.x > 0.5, lineWidth.y > 0.5);
         vec2 targetWidth = vec2(
@@ -82,6 +82,16 @@ const fsCode = /*glsl*/ `
         return (v.z / v.w) * 0.5 + 0.5;
     }
 
+    float fade(float value) {
+        return cos(clamp(value, 0.0, 1.0) * 3.14159) * 0.5 + 0.5;
+    }
+
+    bool writeDepth(float alpha) {
+        vec2 uv = fract(gl_FragCoord.xy / 32.0);
+        float noise = texture2DLodEXT(blueNoiseTex32, uv, 0.0).y;
+        return alpha > noise;
+    }
+
     void main(void) {
         vec3 p = camera_position;
         vec3 v = normalize(worldFar - camera_position);
@@ -95,50 +105,62 @@ const fsCode = /*glsl*/ `
         // calculate grid intersection
         vec3 pos = p + v * t;
 
-        // discard distant pixels
-        float dist = length(pos.xz - camera_position.xz);
-        if (dist > 200.0) {
+        float epsilon = 1.0 / 255.0;
+
+        // calculate fade
+        float fade = 1.0 - smoothstep(400.0, 1000.0, length(pos - camera_position));
+        if (fade < epsilon) {
             discard;
         }
 
-        // evaluate the grid function
-        float grid = pristineGrid(pos.xz, dFdx(pos.xz), dFdy(pos.xz), vec2(1.0 / 50.0));
+        vec3 levelPos;
+        float levelSize;
+        float levelAlpha;
 
-        // smooth fade into distance
-        float a = grid * (1.0 - sin(dist / 200.0 * 3.14159 * 0.5));
-
-        // early discard semitrans pixels
-        if (a < 0.1) {
-            discard;
-        }
-
-        bool writedepth = true;
-
-        if (a < 0.9) {
-            // apply dithered discard for semitrans pixels
-            vec2 uv = fract(gl_FragCoord.xy / 32.0);
-            float noise = texture2DLodEXT(blueNoiseTex32, uv, 0.0).y;
-            writedepth = a > noise;
-        }
-
-        // calculate color
-        vec3 color;
-
-        vec3 apos = abs(pos);
-        if (apos.x < 0.05) {
-            if (apos.z < 0.05) {
-                color = vec3(1.0);
+        // 10m grid with colored main axes
+        levelPos = pos * 0.1;
+        levelSize = 2.0 / 1000.0;
+        levelAlpha = pristineGrid(levelPos.xz, vec2(levelSize)) * fade;
+        if (levelAlpha > epsilon) {
+            vec3 color;
+            levelPos = abs(levelPos);
+            if (levelPos.x < levelSize) {
+                if (levelPos.z < levelSize) {
+                    color = vec3(1.0);
+                } else {
+                    color = vec3(0.2, 0.2, 1.0);
+                }
+            } else if (levelPos.z < levelSize) {
+                color = vec3(1.0, 0.2, 0.2);
             } else {
-                color = vec3(0.2, 0.2, 1.0);
+                color = vec3(1.0);
             }
-        } else if (apos.z < 0.05) {
-            color = vec3(1.0, 0.2, 0.2);
-        } else {
-            color = vec3(0.6);
+            gl_FragColor = vec4(color, levelAlpha);
+            gl_FragDepth = writeDepth(levelAlpha) ? calcDepth(pos) : 1.0;
+            return;
         }
 
-        gl_FragColor = vec4(color, a);
-        gl_FragDepth = writedepth ? calcDepth(pos) : 1.0;
+        // 1m grid
+        levelPos = pos;
+        levelSize = 1.0 / 100.0;
+        levelAlpha = pristineGrid(levelPos.xz, vec2(levelSize)) * fade;
+        if (levelAlpha > epsilon) {
+            gl_FragColor = vec4(vec3(0.6), levelAlpha);
+            gl_FragDepth = writeDepth(levelAlpha) ? calcDepth(pos) : 1.0;
+            return;
+        }
+
+        // 0.1m grid
+        levelPos = pos * 10.0;
+        levelSize = 1.0 / 100.0;
+        levelAlpha = pristineGrid(levelPos.xz, vec2(levelSize)) * fade;
+        if (levelAlpha > epsilon) {
+            gl_FragColor = vec4(vec3(0.6), levelAlpha);
+            gl_FragDepth = writeDepth(levelAlpha) ? calcDepth(pos) : 1.0;
+            return;
+        }
+
+        discard;
     }
 `;
 

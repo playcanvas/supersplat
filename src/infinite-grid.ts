@@ -112,13 +112,13 @@ const fsCode = /*glsl*/ `
             discard;
         }
 
+        bool writedepth = true;
+
         if (a < 0.9) {
             // apply dithered discard for semitrans pixels
             vec2 uv = fract(gl_FragCoord.xy / 32.0);
             float noise = texture2DLodEXT(blueNoiseTex32, uv, 0.0).y;
-            if (a < noise) {
-                discard;
-            }
+            writedepth = a > noise;
         }
 
         // calculate color
@@ -137,8 +137,8 @@ const fsCode = /*glsl*/ `
             color = vec3(0.6);
         }
 
-        gl_FragColor = vec4(color, 1.0);
-        gl_FragDepth = calcDepth(pos);
+        gl_FragColor = vec4(color, a);
+        gl_FragDepth = writedepth ? calcDepth(pos) : 1.0;
     }
 `;
 

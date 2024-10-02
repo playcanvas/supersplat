@@ -54,15 +54,6 @@ class EditorUI {
             id: 'top-container'
         });
 
-        const killit = (event: UIEvent) => {
-            event.preventDefault();
-            event.stopPropagation();
-            return false;
-        };
-
-        topContainer.dom.addEventListener('mousemove', (event: MouseEvent) => killit(event));
-        topContainer.on('click', (event: MouseEvent) => killit(event));
-
         // canvas
         const canvas = document.createElement('canvas');
         canvas.id = 'canvas';
@@ -177,10 +168,9 @@ class EditorUI {
             // set focus on the body if user is busy pressing on the canvas or a child of the tools
             // element
             if (event.target === canvas || toolsContainer.dom.contains(event.target as Node)) {
-                event.preventDefault();
                 document.body.focus();
             }
-        }, true);
+        });
     }
 }
 

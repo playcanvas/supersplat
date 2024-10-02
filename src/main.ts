@@ -159,11 +159,11 @@ const main = async () => {
     // load async models
     await scene.load();
 
-    // handle load param
-    const loadParam = url.searchParams.get('load');
-    const loadUrl = loadParam && decodeURIComponent(loadParam);
-    if (loadUrl) {
-        await scene.loadModel(loadUrl, loadUrl);
+    // handle load params
+    const loadList = url.searchParams.getAll('load');
+    for (const value of loadList) {
+        const loadUrl = decodeURIComponent(value);
+        await events.invoke('load', loadUrl, loadUrl);
     }
 
     // handle OS-based file association in PWA mode

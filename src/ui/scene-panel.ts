@@ -23,8 +23,9 @@ class ScenePanel extends Container {
 
         super(args);
 
-        this.dom.addEventListener('pointerdown', (event) => {
-            event.stopPropagation();
+        // stop pointer events bubbling
+        ['pointerdown', 'pointerup', 'pointermove', 'wheel', 'dblclick'].forEach((eventName) => {
+            this.dom.addEventListener(eventName, (event: Event) => event.stopPropagation());
         });
 
         const sceneHeader = new Container({

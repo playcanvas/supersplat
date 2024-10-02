@@ -1,4 +1,4 @@
-import { path } from 'playcanvas';
+import { path, Mat3, Mat4, Vec3 } from 'playcanvas';
 import { Scene } from './scene';
 import { Events } from './events';
 import { CreateDropHandler } from './drop-handler';
@@ -43,6 +43,8 @@ const filePickerTypes = {
 
 let fileHandle: FileSystemFileHandle = null;
 
+const vec = new Vec3();
+
 // download the data to the given filename
 const download = (filename: string, data: ArrayBuffer) => {
     const blob = new Blob([data], { type: "octet/stream" });
@@ -86,8 +88,52 @@ const writeToFile = async (stream: FileSystemWritableFileStream, data: ArrayBuff
     await stream.close();
 };
 
+const loadCameraPoses = async (url: string, filename: string, events: Events) => {
+    const response = await fetch(url);
+    const json = await response.json();
+    if (json.length > 0) {
+        // calculate the average position of the camera poses
+        const ave = new Vec3(0, 0, 0);
+        json.forEach((pose: any) => {
+            vec.set(pose.position[0], pose.position[1], pose.position[2]);
+            ave.add(vec);
+        });
+        ave.mulScalar(1 / json.length);
+
+        json.forEach((pose: any, i: number) => {
+            if (pose.hasOwnProperty('position') && pose.hasOwnProperty('rotation')) {
+                const p = new Vec3(pose.position);
+                const z = new Vec3(pose.rotation[0][2], pose.rotation[1][2], pose.rotation[2][2]);
+
+                const dot = vec.sub2(ave, p).dot(z);
+                vec.copy(z).mulScalar(dot).add(p);
+
+                events.fire('camera.addPose', {
+                    name: pose.img_name ?? `${filename}_${i}`,
+                    position: new Vec3(-p.x, -p.y, p.z),
+                    target: new Vec3(-vec.x, -vec.y, vec.z)
+                });
+            }
+        });
+    }
+};
+
 // initialize file handler events
 const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLElement, remoteStorageDetails: RemoteStorageDetails) => {
+
+    const handleLoad = (url: string, filename: string) => {
+        if (filename.toLowerCase().endsWith('.json')) {
+            return loadCameraPoses(url, filename, events);
+        } else if (filename.toLowerCase().endsWith('.ply')) {
+            return scene.loadModel(url, filename);
+        } else {
+            return null;
+        }
+    };
+
+    events.function('load', (url: string, filename: string) => {
+        return handleLoad(url, filename);
+    });
 
     // create a file selector element as fallback when showOpenFilePicker isn't available
     let fileSelector: HTMLInputElement;
@@ -103,7 +149,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
             for (let i = 0; i < files.length; i++) {
                 const file = fileSelector.files[i];
                 const url = URL.createObjectURL(file);
-                await scene.loadModel(url, file.name);
+                await handleLoad(url, file.name);
                 URL.revokeObjectURL(url);
             }
         };
@@ -112,12 +158,9 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
 
     // create the file drag & drop handler
     CreateDropHandler(dropTarget, async (entries) => {
-        const modelExtensions = ['.ply'];
         for (let i = 0; i < entries.length; i++) {
             const entry = entries[i];
-            if (modelExtensions.some(extension => entry.filename.endsWith(extension))) {
-                await scene.loadModel(entry.url, entry.filename);
-            }
+            await handleLoad(entry.url, entry.filename);
         }
     });
 
@@ -162,7 +205,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
                     const handle = handles[i];
                     const file = await handle.getFile();
                     const url = URL.createObjectURL(file);
-                    await scene.loadModel(url, file.name);
+                    await handleLoad(url, file.name);
                     URL.revokeObjectURL(url);
 
                     if (i === 0) {

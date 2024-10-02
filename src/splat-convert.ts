@@ -98,8 +98,7 @@ const convertPly = (convertData: ConvertEntry[]) => {
         const storage = propNames.map((name) => splatData.getProp(name));
 
         // we must undo the transform we apply at load time to output data
-        mat.setScale(-1, -1, 1);
-        mat.invert();
+        mat.setFromEulerAngles(0, 0, -180);
         mat.mul2(mat, entry.modelMat);
         quat.setFromMat4(mat);
         mat.getScale(scale);

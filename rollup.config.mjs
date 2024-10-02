@@ -10,8 +10,7 @@ import json from '@rollup/plugin-json';
 // import { visualizer } from 'rollup-plugin-visualizer';
 
 import autoprefixer from 'autoprefixer';
-import postcss from 'postcss';
-import sass from 'rollup-plugin-sass';
+import postcss from 'rollup-plugin-postcss';
 
 // prod is release build
 if (process.env.BUILD_TYPE === 'prod') {
@@ -29,10 +28,27 @@ const ENGINE_PATH = path.resolve(ENGINE_DIR, 'build', ENGINE_NAME);
 
 const PCUI_DIR = path.resolve(process.env.PCUI_PATH || 'node_modules/@playcanvas/pcui');
 
-const aliasEntries = {
-    playcanvas: ENGINE_PATH,
-    pcui: PCUI_DIR
+const outputHeader = () => {
+    const BLUE_OUT = '\x1b[34m';
+    const BOLD_OUT = `\x1b[1m`;
+    const REGULAR_OUT = `\x1b[22m`;
+    const RESET_OUT = `\x1b[0m`;
+
+    const title = [
+        `Building SuperSplat`,
+        `type ${BOLD_OUT}${BUILD_TYPE}${REGULAR_OUT}`,
+        `engine ${BOLD_OUT}${ENGINE_DIR}${REGULAR_OUT}`,
+        `pcui ${BOLD_OUT}${PCUI_DIR}${REGULAR_OUT}`
+    ].map(l => `${BLUE_OUT}${l}`).join(`\n`);
+    console.log(`${BLUE_OUT}${title}${RESET_OUT}\n`);
 };
+
+outputHeader();
+
+const aliasEntries = [
+    { find: 'playcanvas', replacement: ENGINE_PATH },
+    { find: 'pcui', replacement: PCUI_DIR }
+];
 
 const tsCompilerOptions = {
     baseUrl: '.',
@@ -58,22 +74,26 @@ const application = {
                         return contents.toString().replace('__BASE_HREF__', HREF);
                     }
                 },
-                {src: 'src/manifest.json'},
-                {src: 'static/images', dest: 'static'},
-                {src: 'static/icons', dest: 'static'},
-                {src: 'static/env/VertebraeHDRI_v1_512.png', dest: 'static/env'}
+                { src: 'src/manifest.json' },
+                { src: 'static/images', dest: 'static' },
+                { src: 'static/icons', dest: 'static' },
+                { src: 'static/env/VertebraeHDRI_v1_512.png', dest: 'static/env' }
             ]
         }),
-        alias({entries: aliasEntries}),
+        alias({ entries: aliasEntries }),
         resolve(),
-        image({dom: false}),
-        sass({
-            output: 'dist/index.css',
-            processor: (css) => {
-                return postcss([autoprefixer])
-                        .process(css)
-                        .then(result => result.css);
-            }
+        image({ dom: false }),
+        postcss({
+            extract: 'index.css',
+            extensions: ['.scss', '.sass', '.css'],
+            use: [
+                ['sass', {
+                    includePaths: [ path.resolve(PCUI_DIR, 'dist') ]
+                }]
+            ],
+            plugins: [
+                autoprefixer
+            ]
         }),
         json(),
         typescript({

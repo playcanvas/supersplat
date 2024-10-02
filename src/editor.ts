@@ -5,7 +5,6 @@ import {
     Vec4,
 } from 'playcanvas';
 import { Scene } from './scene';
-import { EditorUI } from './ui/editor';
 import { EditHistory } from './edit-history';
 import { Splat } from './splat';
 import { State } from './splat-state';
@@ -570,6 +569,20 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('view.setBands', (value: number) => {
         setViewBands(value);
+    });
+
+    events.function('camera.getPose', () => {
+        const camera = scene.camera;
+        const position = camera.entity.getPosition();
+        const focalPoint = camera.focalPoint;
+        return {
+            position: { x: position.x, y: position.y, z: position.z },
+            target: { x: focalPoint.x, y: focalPoint.y, z: focalPoint.z }
+        };
+    });
+
+    events.on('camera.setPose', (pose: { position: Vec3, target: Vec3 }, speed = 1) => {
+        scene.camera.setPose(pose.position, pose.target, speed);
     });
 
     // hack: fire events to initialize UI

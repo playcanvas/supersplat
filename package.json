@@ -13,32 +13,6 @@
     ],
     "license": "MIT",
     "main": "index.js",
-    "eslintConfig": {
-        "root": true,
-        "parser": "@typescript-eslint/parser",
-        "plugins": [
-            "@typescript-eslint"
-        ],
-        "extends": [
-            "@playcanvas/eslint-config",
-            "plugin:@typescript-eslint/recommended",
-            "plugin:import/typescript"
-        ],
-        "rules": {
-            "@typescript-eslint/ban-ts-comment": 0,
-            "@typescript-eslint/no-explicit-any": 0,
-            "@typescript-eslint/no-empty-function": 0,
-            "@typescript-eslint/explicit-module-boundary-types": 0,
-            "lines-between-class-members": [
-                "error",
-                "always",
-                {
-                    "exceptAfterSingleLine": true
-                }
-            ],
-            "import/no-unresolved": "off"
-        }
-    },
     "scripts": {
         "build": "rollup -c",
         "watch": "rollup -c -w",
@@ -52,19 +26,19 @@
     },
     "devDependencies": {
         "@playcanvas/eslint-config": "^1.7.4",
-        "@playcanvas/pcui": "^4.4.0",
-        "@rollup/plugin-alias": "^5.1.0",
+        "@playcanvas/pcui": "^4.5.0",
+        "@rollup/plugin-alias": "^5.1.1",
         "@rollup/plugin-image": "^3.0.3",
         "@rollup/plugin-json": "^6.1.0",
-        "@rollup/plugin-node-resolve": "^15.2.3",
+        "@rollup/plugin-node-resolve": "^15.3.0",
         "@rollup/plugin-strip": "^3.0.4",
         "@rollup/plugin-terser": "^0.4.4",
-        "@rollup/plugin-typescript": "^11.1.6",
+        "@rollup/plugin-typescript": "^12.1.0",
         "@types/wicg-file-system-access": "^2023.10.5",
         "@typescript-eslint/eslint-plugin": "^7.15.0",
         "@typescript-eslint/parser": "^7.15.0",
         "autoprefixer": "^10.4.20",
-        "concurrently": "^8.2.2",
+        "concurrently": "^9.0.1",
         "cors": "^2.8.5",
         "cross-env": "^7.0.3",
         "eslint": "^8.56.0",
@@ -72,11 +46,12 @@
         "i18next-browser-languagedetector": "^8.0.0",
         "jest": "^29.7.0",
         "playcanvas": "^1.74.0",
-        "postcss": "^8.4.41",
-        "rollup": "^4.21.0",
-        "rollup-plugin-sass": "^1.13.2",
+        "postcss": "^8.4.47",
+        "rollup": "^4.23.0",
+        "rollup-plugin-postcss": "^4.0.2",
         "rollup-plugin-visualizer": "^5.12.0",
+        "sass": "^1.79.4",
         "serve": "^14.2.3",
-        "tslib": "^2.6.3"
+        "tslib": "^2.7.0"
     }
 }

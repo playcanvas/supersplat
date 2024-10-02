@@ -135,7 +135,6 @@ class PointerController {
         };
 
         const wheel = (event: WheelEvent) => {
-            event.preventDefault();
             const sign = (v: number) => v > 0 ? 1 : v < 0 ? -1 : 0;
             zoom(sign(event.deltaY) * -0.2);
             orbit(sign(event.deltaX) * 2.0, 0);
@@ -161,16 +160,12 @@ class PointerController {
         const keydown = (event: KeyboardEvent) => {
             if (keys.hasOwnProperty(event.key) && event.target === document.body) {
                 keys[event.key] = event.shiftKey ? 10 : (event.ctrlKey || event.metaKey || event.altKey ? 0.1 : 1);
-                event.preventDefault();
-                event.stopPropagation();
             }
         };
 
         const keyup = (event: KeyboardEvent) => {
             if (keys.hasOwnProperty(event.key)) {
                 keys[event.key] = 0;
-                event.preventDefault();
-                event.stopPropagation();
             }
         };
 
@@ -188,23 +183,29 @@ class PointerController {
             }
         };
 
-        target.addEventListener('pointerdown', pointerdown);
-        target.addEventListener('pointerup', pointerup);
-        target.addEventListener('pointermove', pointermove);
-        target.addEventListener('wheel', wheel);
-        target.addEventListener('dblclick', dblclick);
-        document.addEventListener('keydown', keydown);
-        document.addEventListener('keyup', keyup);
+        let destroy: () => void = null;
 
-        this.destroy = () => {
-            target.removeEventListener('pointerdown', pointerdown);
-            target.removeEventListener('pointerup', pointerup);
-            target.removeEventListener('pointermove', pointermove);
-            target.removeEventListener('wheel', wheel);
-            target.removeEventListener('dblclick', dblclick);
-            document.removeEventListener('keydown', keydown);
-            document.removeEventListener('keyup', keyup);
+        const wrap = (target: any, name: string, fn: any) => {
+            const callback = (event: any) => {
+                camera.scene.events.fire('camera.controller', name);
+                fn(event);
+            };
+            target.addEventListener(name, callback);
+            destroy = () => {
+                destroy?.();
+                target.removeEventListener(name, callback);
+            };
         };
+
+        wrap(target, 'pointerdown', pointerdown);
+        wrap(target, 'pointerup', pointerup);
+        wrap(target, 'pointermove', pointermove);
+        wrap(target, 'wheel', wheel);
+        wrap(target, 'dblclick', dblclick);
+        wrap(document, 'keydown', keydown);
+        wrap(document, 'keyup', keyup);
+
+        this.destroy = destroy;
     }
 }
 

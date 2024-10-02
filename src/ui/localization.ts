@@ -5,6 +5,10 @@ const localizeInit = () => {
     i18next
         .use(LanguageDetector)
         .init({
+            detection: {
+                order: ['querystring', /*'cookie', 'localStorage', 'sessionStorage',*/ 'navigator', 'htmlTag'],
+            },
+            supportedLngs: ['en', 'fr', 'ja', 'ko', 'zh-CN'],
             fallbackLng: 'en',
             resources: {
                 en: {
@@ -59,6 +63,12 @@ const localizeInit = () => {
                         "options.centers-size": "Centers Size",
                         "options.show-grid": "Show Grid",
                         "options.show-bound": "Show Bound",
+
+                        "options.add-pose": "Add Pose",
+                        "options.prev-pose": "Previous Pose",
+                        "options.next-pose": "Next Pose",
+                        "options.play-poses": "Play Poses",
+                        "options.clear-poses": "Clear Poses",
 
                         // Data panel
                         "data": "SPLAT DATA",
@@ -324,6 +334,12 @@ const localizeInit = () => {
                         "options.show-grid": "グリッド",
                         "options.show-bound": "バウンディングボックス",
 
+                        "options.add-pose": "ポーズを追加",
+                        "options.prev-pose": "前のポーズ",
+                        "options.next-pose": "次のポーズ",
+                        "options.play-poses": "ポーズを再生",
+                        "options.clear-poses": "ポーズをクリア",
+
                         // Data panel
                         "data": "スプラットの統計",
                         "data.distance": "距離",
@@ -456,6 +472,12 @@ const localizeInit = () => {
                         "options.show-grid": "그리드 표시",
                         "options.show-bound": "경계 표시",
 
+                        "options.add-pose": "포즈 추가",
+                        "options.prev-pose": "이전 포즈",
+                        "options.next-pose": "다음 포즈",
+                        "options.play-poses": "포즈 재생",
+                        "options.clear-poses": "포즈 지우기",
+
                         // Data panel
                         "data": "SPLAT 데이터",
                         "data.distance": "거리",
@@ -587,6 +609,12 @@ const localizeInit = () => {
                         "options.centers-size": "中心大小",
                         "options.show-grid": "显示网格",
                         "options.show-bound": "显示边界",
+
+                        "options.add-pose": "添加姿势",
+                        "options.prev-pose": "上一个姿势",
+                        "options.next-pose": "下一个姿势",
+                        "options.play-poses": "播放姿势",
+                        "options.clear-poses": "清除姿势",
 
                         // Data panel
                         "data": "SPLAT 数据",

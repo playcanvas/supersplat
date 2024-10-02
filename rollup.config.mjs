@@ -80,6 +80,9 @@ const application = {
                 { src: 'static/env/VertebraeHDRI_v1_512.png', dest: 'static/env' }
             ]
         }),
+        alias({ entries: aliasEntries }),
+        resolve(),
+        image({ dom: false }),
         postcss({
             extract: 'index.css',
             extensions: ['.scss', '.sass', '.css'],
@@ -92,9 +95,6 @@ const application = {
                 autoprefixer
             ]
         }),
-        alias({ entries: aliasEntries }),
-        resolve(),
-        image({ dom: false }),
         json(),
         typescript({
             compilerOptions: tsCompilerOptions

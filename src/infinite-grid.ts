@@ -7,7 +7,11 @@ import {
     QuadRender,
     Shader,
     createShaderFromCode,
-    FUNC_LESSEQUAL
+    FUNC_LESSEQUAL,
+    BLENDMODE_ONE,
+    BLENDMODE_ONE_MINUS_SRC_ALPHA,
+    BLENDMODE_SRC_ALPHA,
+    BLENDEQUATION_ADD
 } from 'playcanvas';
 import { Element, ElementType } from './element';
 import { Serializer } from './serializer';
@@ -53,9 +57,7 @@ const fsCode = /*glsl*/ `
     }
 
     // https://bgolus.medium.com/the-best-darn-grid-shader-yet-727f9278b9d8#1e7c
-    float pristineGrid( in vec2 uv, vec2 lineWidth) {
-        vec2 ddx = dFdx(uv);
-        vec2 ddy = dFdy(uv);
+    float pristineGrid(in vec2 uv, in vec2 ddx, in vec2 ddy, vec2 lineWidth) {
         vec2 uvDeriv = vec2(length(vec2(ddx.x, ddy.x)), length(vec2(ddx.y, ddy.y)));
         bvec2 invertLine = bvec2(lineWidth.x > 0.5, lineWidth.y > 0.5);
         vec2 targetWidth = vec2(
@@ -82,10 +84,6 @@ const fsCode = /*glsl*/ `
         return (v.z / v.w) * 0.5 + 0.5;
     }
 
-    float fade(float value) {
-        return cos(clamp(value, 0.0, 1.0) * 3.14159) * 0.5 + 0.5;
-    }
-
     bool writeDepth(float alpha) {
         vec2 uv = fract(gl_FragCoord.xy / 32.0);
         float noise = texture2DLodEXT(blueNoiseTex32, uv, 0.0).y;
@@ -104,6 +102,8 @@ const fsCode = /*glsl*/ `
 
         // calculate grid intersection
         vec3 pos = p + v * t;
+        vec2 ddx = dFdx(pos.xz);
+        vec2 ddy = dFdy(pos.xz);
 
         float epsilon = 1.0 / 255.0;
 
@@ -120,20 +120,20 @@ const fsCode = /*glsl*/ `
         // 10m grid with colored main axes
         levelPos = pos * 0.1;
         levelSize = 2.0 / 1000.0;
-        levelAlpha = pristineGrid(levelPos.xz, vec2(levelSize)) * fade;
+        levelAlpha = pristineGrid(levelPos.xz, ddx * 0.1, ddy * 0.1, vec2(levelSize)) * fade;
         if (levelAlpha > epsilon) {
             vec3 color;
-            levelPos = abs(levelPos);
-            if (levelPos.x < levelSize) {
-                if (levelPos.z < levelSize) {
+            vec2 loc = max(vec2(0.0), abs(levelPos.xz) - abs(ddx * 0.1) - abs(ddy * 0.1));
+            if (loc.x < levelSize) {
+                if (loc.y < levelSize) {
                     color = vec3(1.0);
                 } else {
                     color = vec3(0.2, 0.2, 1.0);
                 }
-            } else if (levelPos.z < levelSize) {
+            } else if (loc.y < levelSize) {
                 color = vec3(1.0, 0.2, 0.2);
             } else {
-                color = vec3(1.0);
+                color = vec3(0.9);
             }
             gl_FragColor = vec4(color, levelAlpha);
             gl_FragDepth = writeDepth(levelAlpha) ? calcDepth(pos) : 1.0;
@@ -143,9 +143,9 @@ const fsCode = /*glsl*/ `
         // 1m grid
         levelPos = pos;
         levelSize = 1.0 / 100.0;
-        levelAlpha = pristineGrid(levelPos.xz, vec2(levelSize)) * fade;
+        levelAlpha = pristineGrid(levelPos.xz, ddx, ddy, vec2(levelSize)) * fade;
         if (levelAlpha > epsilon) {
-            gl_FragColor = vec4(vec3(0.6), levelAlpha);
+            gl_FragColor = vec4(vec3(0.7), levelAlpha);
             gl_FragDepth = writeDepth(levelAlpha) ? calcDepth(pos) : 1.0;
             return;
         }
@@ -153,9 +153,9 @@ const fsCode = /*glsl*/ `
         // 0.1m grid
         levelPos = pos * 10.0;
         levelSize = 1.0 / 100.0;
-        levelAlpha = pristineGrid(levelPos.xz, vec2(levelSize)) * fade;
+        levelAlpha = pristineGrid(levelPos.xz, ddx * 10.0, ddy * 10.0, vec2(levelSize)) * fade;
         if (levelAlpha > epsilon) {
-            gl_FragColor = vec4(vec3(0.6), levelAlpha);
+            gl_FragColor = vec4(vec3(0.7), levelAlpha);
             gl_FragDepth = writeDepth(levelAlpha) ? calcDepth(pos) : 1.0;
             return;
         }
@@ -203,9 +203,15 @@ class InfiniteGrid extends Element {
         const cameraPositionId = device.scope.resolve('camera_position');
         const cameraViewProjectionId = device.scope.resolve('camera_viewProjection');
 
+        const blendState = new BlendState(
+            true,
+            BLENDEQUATION_ADD, BLENDMODE_SRC_ALPHA, BLENDMODE_ONE_MINUS_SRC_ALPHA,
+            BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE_MINUS_SRC_ALPHA
+        );
+
         this.scene.debugLayer.onPreRenderOpaque = () => {
             if (this.visible) {
-                device.setBlendState(BlendState.ALPHABLEND);
+                device.setBlendState(blendState);
                 device.setCullMode(CULLFACE_NONE);
                 device.setDepthState(DepthState.WRITEDEPTH);
                 device.setStencilState(null, null);

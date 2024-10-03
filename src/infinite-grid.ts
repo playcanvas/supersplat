@@ -84,10 +84,6 @@ const fsCode = /*glsl*/ `
         return (v.z / v.w) * 0.5 + 0.5;
     }
 
-    float fade(float value) {
-        return cos(clamp(value, 0.0, 1.0) * 3.14159) * 0.5 + 0.5;
-    }
-
     bool writeDepth(float alpha) {
         vec2 uv = fract(gl_FragCoord.xy / 32.0);
         float noise = texture2DLodEXT(blueNoiseTex32, uv, 0.0).y;
@@ -149,7 +145,7 @@ const fsCode = /*glsl*/ `
         levelSize = 1.0 / 100.0;
         levelAlpha = pristineGrid(levelPos.xz, ddx, ddy, vec2(levelSize)) * fade;
         if (levelAlpha > epsilon) {
-            gl_FragColor = vec4(vec3(0.6), levelAlpha);
+            gl_FragColor = vec4(vec3(0.7), levelAlpha);
             gl_FragDepth = writeDepth(levelAlpha) ? calcDepth(pos) : 1.0;
             return;
         }
@@ -159,7 +155,7 @@ const fsCode = /*glsl*/ `
         levelSize = 1.0 / 100.0;
         levelAlpha = pristineGrid(levelPos.xz, ddx * 10.0, ddy * 10.0, vec2(levelSize)) * fade;
         if (levelAlpha > epsilon) {
-            gl_FragColor = vec4(vec3(0.6), levelAlpha);
+            gl_FragColor = vec4(vec3(0.7), levelAlpha);
             gl_FragDepth = writeDepth(levelAlpha) ? calcDepth(pos) : 1.0;
             return;
         }

@@ -6,7 +6,8 @@ import { EditHistory } from './edit-history';
 import { EditorUI } from './ui/editor';
 import { registerEditorEvents } from './editor';
 import { initFileHandler } from './file-handler';
-import { initSelection } from './selection';
+import { registerSelectionEvents } from './selection';
+import { registerTransformTargetEvents } from './transform-target';
 import { ToolManager } from './tools/tool-manager';
 import { RectSelection } from './tools/rect-selection';
 import { BrushSelection } from './tools/brush-selection';
@@ -152,7 +153,8 @@ const main = async () => {
     window.scene = scene;
 
     registerEditorEvents(events, editHistory, scene);
-    initSelection(events, scene);
+    registerSelectionEvents(events, scene);
+    registerTransformTargetEvents(events);
     initShortcuts(events);
     await initFileHandler(scene, events, editorUI.appContainer.dom, remoteStorageDetails);
 

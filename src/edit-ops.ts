@@ -191,9 +191,9 @@ class ResetOp extends StateOp {
 }
 
 interface EntityTransform {
-    position?: Vec3;
-    rotation?: Quat;
-    scale?: Vec3;
+    position: Vec3;
+    rotation: Quat;
+    scale: Vec3;
 }
 
 class EntityTransformOp {
@@ -255,6 +255,7 @@ export {
     UnhideAllOp,
     DeleteSelectionOp,
     ResetOp,
+    EntityTransform,
     EntityTransformOp,
     SetPivotOp
 };

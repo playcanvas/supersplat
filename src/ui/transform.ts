@@ -1,9 +1,10 @@
 import { Container, ContainerArgs, Label, NumericInput, Panel, PanelArgs, VectorInput } from 'pcui';
 import { Quat, Vec3 } from 'playcanvas';
 import { Events } from '../events';
-import { Splat } from '../splat';
-import { EntityTransformOp } from '../edit-ops';
+import { TransformTarget } from '../transform-target';
 import { localize } from './localization';
+
+const v = new Vec3();
 
 class Transform extends Container {
     constructor(events: Events, args: ContainerArgs = {}) {
@@ -112,95 +113,44 @@ class Transform extends Container {
         this.append(rotation);
         this.append(scale);
 
-        let selection: Splat | null = null;
-
         const toArray = (v: Vec3) => {
             return [v.x, v.y, v.z];
         };
 
-        const toVec3 = (a: number[]) => {
-            return new Vec3(a[0], a[1], a[2]);
-        };
 
+        let target: TransformTarget | null = null;
         let uiUpdating = false;
 
         const updateUI = () => {
             uiUpdating = true;
-            positionVector.value = toArray(selection.pivot.getLocalPosition());
-            rotationVector.value = toArray(selection.pivot.getLocalEulerAngles());
-            scaleInput.value = selection.pivot.getLocalScale().x;
+            const pivot = target.pivot;
+            pivot.rotation.getEulerAngles(v);
+            positionVector.value = toArray(pivot.position);
+            rotationVector.value = toArray(v);
+            scaleInput.value = pivot.scale.x;
             uiUpdating = false;
         };
 
-        events.on('selection.changed', (splat) => {
-            selection = splat;
-
-            if (selection) {
-                // enable inputs
-                updateUI();
-                positionVector.enabled = rotationVector.enabled = scaleInput.enabled = true;
-            } else {
-                // enable inputs
-                positionVector.enabled = rotationVector.enabled = scaleInput.enabled = false;
-            }
-        });
-
-        events.on('splat.moved', (splat: Splat) => {
-            if (splat === selection) {
-                updateUI();
-            }
-        });
-
-        let op: EntityTransformOp | null = null;
-
         const createOp = () => {
-            const p = selection.pivot.getLocalPosition();
-            const r = selection.pivot.getLocalRotation();
-            const s = selection.pivot.getLocalScale();
-
-            op = new EntityTransformOp({
-                splat: selection,
-                oldt: {
-                    position: p.clone(),
-                    rotation: r.clone(),
-                    scale: s.clone()
-                },
-                newt: {
-                    position: p.clone(),
-                    rotation: r.clone(),
-                    scale: s.clone()
-                }
-            });
+            target.start();
         };
 
         const updateOp = () => {
-            const n = op.newt;
-
             const p = positionVector.value;
-            n.position.x = p[0];
-            n.position.y = p[1];
-            n.position.z = p[2];
-
             const r = rotationVector.value;
             const q = new Quat().setFromEulerAngles(r[0], r[1], r[2]);
-            n.rotation.copy(q);
-
             const s = scaleInput.value;
-            n.scale.x = s;
-            n.scale.y = s;
-            n.scale.z = s;
 
-            op.do();
+            target.update(new Vec3(p[0], p[1], p[2]), q, new Vec3(s, s, s));
         };
 
         const submitOp = () => {
-            events.fire('edit.add', op);
-            op = null;
+            target.end();
         };
 
         const change = () => {
             if (!uiUpdating) {
-                if (op) {
+                if (target && target.op) {
                     updateOp();
                 } else {
                     createOp();
@@ -223,6 +173,25 @@ class Transform extends Container {
             input.on('change', change);
             input.on('slider:mousedown', mousedown);
             input.on('slider:mouseup', mouseup);
+        });
+
+        events.on('transformTarget.changed', (t: TransformTarget) => {
+            target = t;
+
+            if (target) {
+                // enable inputs
+                updateUI();
+                positionVector.enabled = rotationVector.enabled = scaleInput.enabled = true;
+            } else {
+                // disable inputs
+                positionVector.enabled = rotationVector.enabled = scaleInput.enabled = false;
+            }
+        });
+
+        events.on('transformTarget.moved', (t: TransformTarget) => {
+            if (t === target) {
+                updateUI();
+            }
         });
     }
 }

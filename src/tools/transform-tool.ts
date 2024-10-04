@@ -2,7 +2,8 @@ import { Entity, GraphicsDevice, TransformGizmo, Vec3 } from 'playcanvas';
 import { Scene } from '../scene';
 import { Splat } from '../splat';
 import { Events } from '../events';
-import { EditOp, EntityTransformOp, SetPivotOp } from '../edit-ops';
+import { EntityTransform, SetPivotOp } from '../edit-ops';
+import { TransformTarget } from '../transform-target';
 
 // patch gizmo to be more opaque
 const patchGizmoMaterials = (gizmo: TransformGizmo) => {
@@ -29,86 +30,44 @@ const updateGizmoSize = (gizmo: TransformGizmo, device: GraphicsDevice) => {
     }
 };
 
-const copyTransform = (target: Entity, source: Entity) => {
-    target.setLocalPosition(source.getLocalPosition());
-    target.setLocalRotation(source.getLocalRotation());
-    target.setLocalScale(source.getLocalScale());
-};
-
 class TransformTool {
     activate: () => void;
     deactivate: () => void;
 
     constructor(gizmo: TransformGizmo, events: Events, scene: Scene) {
         let active = false;
-        let target: Splat = null;
-        let op: EntityTransformOp = null;
+        let target: TransformTarget = null;
 
         // create the transform pivot
         const pivot = new Entity('gizmoPivot');
         scene.app.root.addChild(pivot);
 
-        gizmo.on('transform:start', () => {
-            const p = pivot.getLocalPosition().clone();
-            const r = pivot.getLocalRotation().clone();
-            const s = pivot.getLocalScale().clone();
-
-            // create a new op instance on start
-            op = new EntityTransformOp({
-                splat: target,
-                oldt: {
-                    position: p.clone(),
-                    rotation: r.clone(),
-                    scale: s.clone()
-                },
-                newt: {
-                    position: p.clone(),
-                    rotation: r.clone(),
-                    scale: s.clone()
-                }
-            });
-        });
-
         gizmo.on('render:update', () => {
             scene.forceRender = true;
         });
 
+        gizmo.on('transform:start', () => {
+            target.start();
+        });
+
         gizmo.on('transform:move', () => {
-            copyTransform(target.pivot, pivot);
-            target.worldBoundDirty = true;
-            scene.boundDirty = true;
+            target.update(pivot.getLocalPosition(), pivot.getLocalRotation(), pivot.getLocalScale());
         });
 
         gizmo.on('transform:end', () => {
-            const p = pivot.getLocalPosition();
-            const r = pivot.getLocalRotation();
-            const s = pivot.getLocalScale();
-
-            // update new transforms
-            if (!p.equals(op.oldt.position) ||
-                !r.equals(op.oldt.rotation) ||
-                !s.equals(op.oldt.scale)) {
-
-                op.newt.position.copy(p);
-                op.newt.rotation.copy(r);
-                op.newt.scale.copy(s);
-
-                events.fire('edit.add', op);
-            }
-
-            op = null;
+            target.end();
         });
 
         // reattach the gizmo to the pivot
         const reattach = () => {
-            const selection = events.invoke('selection') as Splat;
+            target = events.invoke('transformTarget') as TransformTarget;
 
-            if (!active || !selection) {
+            if (!active || !target) {
                 gizmo.detach();
-                target = null;
             } else {
-                target = selection;
-                copyTransform(pivot, target.pivot);
+                pivot.setLocalPosition(target.pivot.position);
+                pivot.setLocalRotation(target.pivot.rotation);
+                pivot.setLocalScale(target.pivot.scale);
                 gizmo.attach([pivot]);
             }
         };
@@ -118,9 +77,8 @@ class TransformTool {
             scene.forceRender = true;
         });
 
-        events.on('scene.boundChanged', reattach);
-        events.on('selection.changed', reattach);
-        events.on('splat.moved', reattach);
+        events.on('transformTarget.changed', reattach);
+        events.on('transformTarget.moved', reattach);
 
         events.on('camera.resize', () => {
             scene.events.on('camera.resize', () => updateGizmoSize(gizmo, scene.graphicsDevice));
@@ -136,12 +94,12 @@ class TransformTool {
         this.activate = () => {
             active = true;
             reattach();
-        }
+        };
 
         this.deactivate = () => {
             active = false;
             reattach();
-        }
+        };
 
         // update gizmo size
         updateGizmoSize(gizmo, scene.graphicsDevice);

@@ -8,9 +8,148 @@ const localizeInit = () => {
             detection: {
                 order: ['querystring', /*'cookie', 'localStorage', 'sessionStorage',*/ 'navigator', 'htmlTag'],
             },
-            supportedLngs: ['en', 'fr', 'ja', 'ko', 'zh-CN'],
+            supportedLngs: ['de', 'en', 'fr', 'ja', 'ko', 'zh-CN'],
             fallbackLng: 'en',
             resources: {
+                de: {
+                    translation: {
+                        // Scene menu
+                        "scene": "Szene",
+                        "scene.new": "Neu",
+                        "scene.open": "Öffnen",
+                        "scene.import": "Importieren",
+                        "scene.load-all-data": "PLY-Daten vollständig laden",
+                        "scene.save": "Speichern",
+                        "scene.save-as": "Speichern als...",
+                        "scene.export": "Exportieren",
+                        "scene.export.compressed-ply": "Komprimiertes PLY",
+                        "scene.export.splat": "Splat",
+
+                        // Selection menu
+                        "selection": "Selektion",
+                        "selection.all": "Alles",
+                        "selection.none": "Aufheben",
+                        "selection.invert": "Invertieren",
+                        "selection.lock": "Selektion sperren",
+                        "selection.unlock": "Sperre aufheben",
+                        "selection.delete": "Selektion aufheben",
+                        "selection.reset": "Splats zurücksetzen",
+
+                        // Help menu
+                        "help": "Hilfe",
+                        "help.shortcuts": "Tastaturkürzel",
+                        "help.user-guide": "Handbuch",
+                        "help.log-issue": "Problem melden",
+                        "help.github-repo": "GitHub Repository",
+                        "help.discord": "Discord Server",
+                        "help.forum": "Forum",
+                        "help.about": "Über SuperSplat",
+
+                        // Modes
+                        "mode.centers": "Punkt Modus",
+                        "mode.rings": "Ring Modus",
+
+                        // Scene panel
+                        "scene-manager": "SZENEN MANAGER",
+                        "transform": "TRANSFORMATION",
+                        "position": "Position",
+                        "rotation": "Rotation",
+                        "scale": "Skalierung",
+
+                        // Options panel
+                        "options": "ANSICHTS OPTIONEN",
+                        "options.fov": "Blickwinkel (FoV)",
+                        "options.sh-bands": "SH Bänder",
+                        "options.centers-size": "Punktgrößen",
+                        "options.show-grid": "Raster anzeigen",
+                        "options.show-bound": "Objektbox anzeigen",
+
+                        "options.pose-header": "POSEN",
+                        "options.add-pose": "Pose hinzufügen",
+                        "options.prev-pose": "Vorherige Pose",
+                        "options.next-pose": "Nächste Pose",
+                        "options.play-poses": "Posen abspielen",
+                        "options.clear-poses": "Posen leeren",
+
+                        // Data panel
+                        "data": "SPLAT DATEN",
+                        "data.distance": "Entfernung",
+                        "data.volume": "Volumen",
+                        "data.surface-area": "Oberfläche",
+                        "data.scale-x": "Größe X",
+                        "data.scale-y": "Größe Y",
+                        "data.scale-z": "Größe Z",
+                        "data.red": "Rot",
+                        "data.green": "Grün",
+                        "data.blue": "Blau",
+                        "data.opacity": "Deckkraft",
+                        "data.hue": "Farbe",
+                        "data.saturation": "Sättigung",
+                        "data.value": "Helligkeit",
+                        "data.log-scale": "Logarithmische Skala",
+                        "data.totals": "Summe",
+                        "data.totals.splats": "Splats",
+                        "data.totals.selected": "Selektiert",
+                        "data.totals.hidden": "Ausgeblendet",
+                        "data.totals.deleted": "Gelöscht",
+
+                        // Shortcuts panel
+                        "shortcuts.title": "TASTATURKÜRZEL",
+                        "shortcuts.tools": "WERKZEUGE",
+                        "shortcuts.move": "Bewegen",
+                        "shortcuts.rotate": "Drehen",
+                        "shortcuts.scale": "Skalieren",
+                        "shortcuts.rect-selection": "Rechteckselektion",
+                        "shortcuts.brush-selection": "Pinselselektion",
+                        "shortcuts.picker-selection": "Einzelselektion",
+                        "shortcuts.brush-size": "Pinsel Verkleinern/Vergrößern",
+                        "shortcuts.deactivate-tool": "Werkzeug deaktivieren",
+                        "shortcuts.selection": "SELEKTION",
+                        "shortcuts.select-all": "Alle Selektieren",
+                        "shortcuts.deselect-all": "Selektion aufheben",
+                        "shortcuts.invert-selection": "Selektion invertieren",
+                        "shortcuts.add-to-selection": "Zur Selektion hinzufügen",
+                        "shortcuts.remove-from-selection": "Von Selektion entfernen",
+                        "shortcuts.delete-selected-splats": "Selektierte Splats löschen",
+                        "shortcuts.show": "ANZEIGEN",
+                        "shortcuts.hide-selected-splats": "Selektierte Splats ausblenden",
+                        "shortcuts.unhide-all-splats": "Alle Splats einblenden",
+                        "shortcuts.toggle-data-panel": "Splat Daten Panel anzeigen",
+                        "shortcuts.other": "WEITERE",
+                        "shortcuts.select-next-splat": "Nächsten Splat selektieren",
+                        "shortcuts.undo": "Rückgängig",
+                        "shortcuts.redo": "Wiederholen",
+                        "shortcuts.toggle-splat-overlay": "Splateinblendung umschalten",
+                        "shortcuts.focus-camera": "Kamera auf selektion ausrichten",
+                        "shortcuts.toggle-camera-mode": "Kameramodus umschalten",
+                        "shortcuts.toggle-grid": "Rasteranzeige umschalten",
+                        "shortcuts.toggle-gizmo-coordinate-space": "Gizmoanzeige umschalten",
+
+                        // Popup
+                        "popup.ok": "OK",
+                        "popup.cancel": "Abbrechen",
+                        "popup.yes": "Ja",
+                        "popup.no": "Nein",
+                        "popup.error-loading": "FEHLER BEIM LADEN DER DATEI",
+
+                        // Right toolbar
+                        "tooltip.splat-mode": "Splat Modus ( M )",
+                        "tooltip.show-hide": "Anzeigen/Ausplenden Splats ( Leertaste )",
+                        "tooltip.frame-selection": "Rechteckselektion ( F )",
+                        "tooltip.view-options": "Anzeige Optionen",
+
+                        // Bottom toolbar
+                        "tooltip.undo": "Rückgängig ( Strg + Z )",
+                        "tooltip.redo": "Wiederholen ( Strg + Shift + Z )",
+                        "tooltip.picker": "Einzelselektion ( P )",
+                        "tooltip.brush": "Pinselselektion ( B )",
+                        "tooltip.sphere": "Kugelselektion",
+                        "tooltip.translate": "Verschieben ( 1 )",
+                        "tooltip.rotate": "Drehen ( 2 )",
+                        "tooltip.scale": "Skalieren ( 3 )",
+                        "tooltip.local-space": "Gizmo in local-space"
+                    }
+                },
                 en: {
                     translation: {
                         // Scene menu
@@ -64,6 +203,7 @@ const localizeInit = () => {
                         "options.show-grid": "Show Grid",
                         "options.show-bound": "Show Bound",
 
+                        "options.pose-header": "POSES",
                         "options.add-pose": "Add Pose",
                         "options.prev-pose": "Previous Pose",
                         "options.next-pose": "Next Pose",

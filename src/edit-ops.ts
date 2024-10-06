@@ -9,51 +9,46 @@ interface EditOp {
     destroy?(): void;
 }
 
-// build an index array based on a boolean predicate over indices
+/**
+ * Build two index arrays based on a boolean predicate over indices.
+ * The first array contains single indices.
+ * The second array contains groups of two, defining a range of indices with exclusive end.
+ */
 const buildIndex = (total: number, pred: (i: number) => boolean) => {
     let num = 0;
     for (let i = 0; i < total; ++i) {
         if (pred(i)) num++;
     }
 
-    const singles = new Uint32Array(num);
-    const ranges = new Uint32Array(num);
+    // For efficient packing, single indices are placed at the beginning of this Uint32Array,
+    // Ranges are placed to the end.
+    const indices = new Uint32Array(num);
+
     let singleIdx = 0;
-    let rangeIdx = 0;
+    let rangeIdx = num - 1;
     let rangeStart = -1;
 
-    let saved = 0;
-    let predi = false, last = false;
-
-    for (let i = 0; i < total; i++) {
-        predi = pred(i);
-        last = i === total - 1;
-        if (predi && !last){
+    for (let i = 0; i <= total; i++) {
+        if (pred(i) && i < total){
             if(rangeStart === -1){
                 rangeStart = i;
             }
         }
         else{
-            if(rangeStart !== -1 || (last && predi)){
-                if(predi)
-                    i++;
+            if(rangeStart !== -1){
                 if(i - rangeStart < 2){
-                    singles[singleIdx++] = i - 1; // current i had already pred(i) === false
+                    indices[singleIdx++] = i - 1; // current i had already pred(i) === false
                 }
                 else{
-                    ranges[rangeIdx++] = rangeStart;
-                    ranges[rangeIdx++] = i; // range end is exclusive
-                    saved += (i - rangeStart - 2);  
+                    indices[rangeIdx--] = i ; // range end is exclusive
+                    indices[rangeIdx--] = rangeStart;
                 }       
                 rangeStart = -1;
             }
         }            
     }
 
-    console.log('saved: ' + saved);    
-    console.log('shrinked to: ' + ((singleIdx + rangeIdx) / num * 100) + '%');
-
-    return [singles.subarray(0, singleIdx), ranges.subarray(0, rangeIdx)];
+    return [indices.slice(0, singleIdx), indices.subarray(rangeIdx + 1)];
 };
 
 type filterFunc = (state: number, index: number) => boolean;
@@ -83,34 +78,32 @@ class StateOp {
         this.updateFlags = updateFlags;
     }
 
-    do() {
-        const splatData = this.splat.splatData;
-        const state = splatData.getProp('state') as Uint8Array;
+    forEachIndex(operation: (idx: number) => void) {
         for (let i = 0; i < this.singleIndices.length; ++i) {
             const idx = this.singleIndices[i];
-            state[idx] = this.doIt(state[idx]);
+            operation(idx);
         }
 
         for(let rIdx = 0; rIdx < this.rangeIndices.length; rIdx += 2){
             for(let idx = this.rangeIndices[rIdx], endIdx = this.rangeIndices[rIdx + 1];  idx < endIdx; idx++){
-                state[idx] = this.doIt(state[idx]);
+                operation(idx);
             }
         }
+    }
+
+    do() {
+        const splatData = this.splat.splatData;
+        const state = splatData.getProp('state') as Uint8Array;
+
+        this.forEachIndex((idx) => {state[idx] = this.doIt(state[idx])});
         this.splat.updateState(this.updateFlags);
     }
 
     undo() {
         const splatData = this.splat.splatData;
         const state = splatData.getProp('state') as Uint8Array;
-        for (let i = 0; i < this.singleIndices.length; ++i) {
-            const idx = this.singleIndices[i];
-            state[idx] = this.undoIt(state[idx]);
-        }
-        for(let rIdx = 0; rIdx < this.rangeIndices.length; rIdx += 2){
-            for(let idx = this.rangeIndices[rIdx], endIdx = this.rangeIndices[rIdx + 1];  idx < endIdx; idx++){
-                state[idx] = this.undoIt(state[idx]);
-            }
-        }
+        
+        this.forEachIndex((idx) => {state[idx] = this.undoIt(state[idx])});
         this.splat.updateState(this.updateFlags);
     }
 

@@ -16,15 +16,39 @@ const buildIndex = (total: number, pred: (i: number) => boolean) => {
         if (pred(i)) num++;
     }
 
-    const result = new Uint32Array(num);
-    let idx = 0;
-    for (let i = 0; i < total; ++i) {
-        if (pred(i)) {
-            result[idx++] = i;
+    const singles = new Uint32Array(num);
+    const ranges = new Uint32Array(num);
+    let singleIdx = 0;
+    let rangeIdx = 0;
+    let rangeStart = -1;
+
+    let saved = 0;
+
+    for (let i = 0; i < total; i++) {
+        if (pred(i)){
+            if(rangeStart === -1){
+                rangeStart = i;
+            }
         }
+        else{
+            if(rangeStart !== -1 || i === num - 1){
+                if(i - rangeStart < 2){ 
+                    singles[singleIdx++] = i - 1;
+                }
+                else{
+                    ranges[rangeIdx++] = rangeStart;
+                    ranges[rangeIdx++] = i;
+                    saved += i - rangeStart -2;  
+                }       
+                rangeStart = -1
+            }
+        }            
     }
 
-    return result;
+    console.log('saved: ' + saved);    
+    console.log('shrinked to: ' + ((singleIdx + rangeIdx) / num * 100) + '%');
+
+    return [singles.slice(0, singleIdx), ranges.slice(0, rangeIdx)];
 };
 
 type filterFunc = (state: number, index: number) => boolean;
@@ -33,7 +57,8 @@ type undoFunc = (state: number) => number;
 
 class StateOp {
     splat: Splat;
-    indices: Uint32Array;
+    singleIndices: Uint32Array;
+    rangeIndices: Uint32Array;
     doIt: doFunc;
     undoIt: undoFunc;
     updateFlags: number;
@@ -41,10 +66,10 @@ class StateOp {
     constructor(splat: Splat, filter: filterFunc, doIt: doFunc, undoIt: undoFunc, updateFlags = State.selected) {
         const splatData = splat.splatData;
         const state = splatData.getProp('state') as Uint8Array;
-        const indices = buildIndex(splatData.numSplats, (i) => filter(state[i], i));
+        
+        [this.singleIndices, this.rangeIndices] = buildIndex(splatData.numSplats, (i) => filter(state[i], i));
 
         this.splat = splat;
-        this.indices = indices;
         this.doIt = doIt;
         this.undoIt = undoIt;
         this.updateFlags = updateFlags;
@@ -53,9 +78,15 @@ class StateOp {
     do() {
         const splatData = this.splat.splatData;
         const state = splatData.getProp('state') as Uint8Array;
-        for (let i = 0; i < this.indices.length; ++i) {
-            const idx = this.indices[i];
+        for (let i = 0; i < this.singleIndices.length; ++i) {
+            const idx = this.singleIndices[i];
             state[idx] = this.doIt(state[idx]);
+        }
+
+        for(let rIdx = 0; rIdx < this.rangeIndices.length; rIdx += 2){
+            for(let idx = this.rangeIndices[rIdx], endIdx = this.rangeIndices[rIdx + 1];  idx < endIdx; idx++){
+                state[idx] = this.doIt(state[idx]);
+            }
         }
         this.splat.updateState(this.updateFlags);
     }
@@ -63,16 +94,22 @@ class StateOp {
     undo() {
         const splatData = this.splat.splatData;
         const state = splatData.getProp('state') as Uint8Array;
-        for (let i = 0; i < this.indices.length; ++i) {
-            const idx = this.indices[i];
+        for (let i = 0; i < this.singleIndices.length; ++i) {
+            const idx = this.singleIndices[i];
             state[idx] = this.undoIt(state[idx]);
+        }
+        for(let rIdx = 0; rIdx < this.rangeIndices.length; rIdx += 2){
+            for(let idx = this.rangeIndices[rIdx], endIdx = this.rangeIndices[rIdx + 1];  idx < endIdx; idx++){
+                state[idx] = this.undoIt(state[idx]);
+            }
         }
         this.splat.updateState(this.updateFlags);
     }
 
     destroy() {
         this.splat = null;
-        this.indices = null;
+        this.singleIndices = null;
+        this.rangeIndices = null;
     }
 }
 

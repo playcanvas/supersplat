@@ -23,24 +23,29 @@ const buildIndex = (total: number, pred: (i: number) => boolean) => {
     let rangeStart = -1;
 
     let saved = 0;
+    let predi = false, last = false;
 
     for (let i = 0; i < total; i++) {
-        if (pred(i)){
+        predi = pred(i);
+        last = i === total - 1;
+        if (predi && !last){
             if(rangeStart === -1){
                 rangeStart = i;
             }
         }
         else{
-            if(rangeStart !== -1 || i === num - 1){
-                if(i - rangeStart < 2){ 
-                    singles[singleIdx++] = i - 1;
+            if(rangeStart !== -1 || (last && predi)){
+                if(predi)
+                    i++;
+                if(i - rangeStart < 2){
+                    singles[singleIdx++] = i - 1; // current i had already pred(i) === false
                 }
                 else{
                     ranges[rangeIdx++] = rangeStart;
-                    ranges[rangeIdx++] = i;
-                    saved += i - rangeStart -2;  
+                    ranges[rangeIdx++] = i; // range end is exclusive
+                    saved += (i - rangeStart - 2);  
                 }       
-                rangeStart = -1
+                rangeStart = -1;
             }
         }            
     }
@@ -48,7 +53,7 @@ const buildIndex = (total: number, pred: (i: number) => boolean) => {
     console.log('saved: ' + saved);    
     console.log('shrinked to: ' + ((singleIdx + rangeIdx) / num * 100) + '%');
 
-    return [singles.slice(0, singleIdx), ranges.slice(0, rangeIdx)];
+    return [singles.subarray(0, singleIdx), ranges.subarray(0, rangeIdx)];
 };
 
 type filterFunc = (state: number, index: number) => boolean;
@@ -67,7 +72,10 @@ class StateOp {
         const splatData = splat.splatData;
         const state = splatData.getProp('state') as Uint8Array;
         
-        [this.singleIndices, this.rangeIndices] = buildIndex(splatData.numSplats, (i) => filter(state[i], i));
+        const [singleIndices, rangeIndices] = buildIndex(splatData.numSplats, (i) => filter(state[i], i));
+        
+        this.singleIndices = singleIndices;
+        this.rangeIndices = rangeIndices;
 
         this.splat = splat;
         this.doIt = doIt;

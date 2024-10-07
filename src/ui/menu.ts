@@ -222,7 +222,7 @@ class Menu extends Container {
         }, {
             text: localize('help.discord'),
             icon: 'E233',
-            onSelect: () => window.open('https://discord.com/channels/408617316415307776/1275850227663769686', '_blank').focus()
+            onSelect: () => window.open('https://discord.gg/T3pnhRTTAY', '_blank').focus()
         }, {
             text: localize('help.forum'),
             icon: 'E432',

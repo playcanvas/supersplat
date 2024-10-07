@@ -10,9 +10,11 @@ interface EditOp {
 }
 
 /**
- * Build two index arrays based on a boolean predicate over indices.
- * The first array contains single indices.
- * The second array contains groups of two, defining a range of indices with exclusive end.
+ * Build two index lists based on a boolean predicate over indices.
+ * The first list contains single indices.
+ * The second list contains groups of two, defining a range of indices with exclusive end.
+ * Both lists are stored in the same result array, adding values from the single indices at
+ * the front and index-ranges at the end.
  */
 const buildIndex = (total: number, pred: (i: number) => boolean) => {
     let num = 0;

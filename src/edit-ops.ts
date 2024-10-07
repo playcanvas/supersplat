@@ -22,7 +22,7 @@ const buildIndex = (total: number, pred: (i: number) => boolean) => {
 
     // For efficient packing, single indices are placed at the beginning of this Uint32Array,
     // Ranges are placed to the end.
-    const indices = new Uint32Array(num);
+    const result = new Uint32Array(num);
 
     let singleIdx = 0;
     let rangeIdx = num - 1;
@@ -37,18 +37,18 @@ const buildIndex = (total: number, pred: (i: number) => boolean) => {
         else{
             if(rangeStart !== -1){
                 if(i - rangeStart < 2){
-                    indices[singleIdx++] = i - 1; // current i had already pred(i) === false
+                    result[singleIdx++] = i - 1; // current i had already pred(i) === false
                 }
                 else{
-                    indices[rangeIdx--] = i ; // range end is exclusive
-                    indices[rangeIdx--] = rangeStart;
+                    result[rangeIdx--] = i ; // range end is exclusive
+                    result[rangeIdx--] = rangeStart;
                 }       
                 rangeStart = -1;
             }
         }            
     }
 
-    return [indices.slice(0, singleIdx), indices.subarray(rangeIdx + 1)];
+    return [result.slice(0, singleIdx), result.slice(rangeIdx + 1)];
 };
 
 type filterFunc = (state: number, index: number) => boolean;
@@ -102,7 +102,7 @@ class StateOp {
     undo() {
         const splatData = this.splat.splatData;
         const state = splatData.getProp('state') as Uint8Array;
-        
+
         this.forEachIndex((idx) => {state[idx] = this.undoIt(state[idx])});
         this.splat.updateState(this.updateFlags);
     }

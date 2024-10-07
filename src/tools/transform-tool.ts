@@ -84,13 +84,6 @@ class TransformTool {
             scene.events.on('camera.resize', () => updateGizmoSize(gizmo, scene.graphicsDevice));
         });
 
-        events.on('camera.focalPointPicked', (details: { splat: Splat, position: Vec3 }) => {
-            if (active) {
-                const op = new SetPivotOp(details.splat, details.splat.pivot.getLocalPosition().clone(), details.position.clone());
-                events.fire('edit.add', op);
-            }
-        });
-
         this.activate = () => {
             active = true;
             reattach();

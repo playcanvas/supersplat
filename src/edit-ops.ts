@@ -1,4 +1,4 @@
-import { Quat, Vec3 } from 'playcanvas';
+import { Mat4, Quat, Vec3 } from 'playcanvas';
 import { Splat } from './splat';
 import { State } from './splat-state';
 
@@ -196,6 +196,7 @@ interface EntityTransform {
     scale: Vec3;
 }
 
+// op for modifying a splat transform
 class EntityTransformOp {
     name = 'entityTransform';
 
@@ -221,6 +222,88 @@ class EntityTransformOp {
         this.splat = null;
         this.oldt = null;
         this.newt = null;
+    }
+}
+
+const vec = new Vec3();
+
+// op for modifying a subset of individual splats
+class SplatsTransformOp {
+    name = 'splatsTransform';
+
+    splat: Splat;
+    indices: Uint32Array;
+    positions: Float32Array;
+    transform: Mat4;
+
+    constructor(options: { splat: Splat, transform: Mat4 }) {
+        const splatData = options.splat.splatData;
+        const state = splatData.getProp('state') as Uint8Array;
+        const indices = buildIndex(splatData.numSplats, (i) => state[i] === State.selected);
+
+        const x = splatData.getProp('x') as Float32Array;
+        const y = splatData.getProp('y') as Float32Array;
+        const z = splatData.getProp('z') as Float32Array;
+
+        const positions = new Float32Array(indices.length * 3);
+        for (let i = 0; i < indices.length; ++i) {
+            const idx = indices[i];
+            positions[i * 3 + 0] = x[idx];
+            positions[i * 3 + 1] = y[idx];
+            positions[i * 3 + 2] = z[idx];
+        }
+
+        this.splat = options.splat;
+        this.indices = indices;
+        this.positions = positions;
+        this.transform = options.transform.clone();
+    }
+
+    // apply the transform to the selected splat positions
+    do() {
+        const { splat, indices, positions, transform } = this;
+
+        const x = splat.splatData.getProp('x') as Float32Array;
+        const y = splat.splatData.getProp('y') as Float32Array;
+        const z = splat.splatData.getProp('z') as Float32Array;
+
+        for (let i = 0; i < indices.length; ++i) {
+            const idx = indices[i];
+
+            vec.set(positions[i * 3 + 0], positions[i * 3 + 1], positions[i * 3 + 2]);
+            transform.transformPoint(vec, vec);
+
+            x[idx] = vec.x;
+            y[idx] = vec.y;
+            z[idx] = vec.z;
+        }
+
+        splat.updatePositions();
+    }
+
+    // restore splat positions to their original values
+    undo() {
+        const { splat, indices, positions } = this;
+
+        const x = splat.splatData.getProp('x') as Float32Array;
+        const y = splat.splatData.getProp('y') as Float32Array;
+        const z = splat.splatData.getProp('z') as Float32Array;
+
+        for (let i = 0; i < indices.length; ++i) {
+            const idx = indices[i];
+            x[idx] = positions[i * 3 + 0];
+            y[idx] = positions[i * 3 + 1];
+            z[idx] = positions[i * 3 + 2];
+        }
+
+        splat.updatePositions();
+    }
+
+    destroy() {
+        this.splat = null;
+        this.indices = null;
+        this.positions = null;
+        this.transform = null;
     }
 }
 
@@ -257,5 +340,6 @@ export {
     ResetOp,
     EntityTransform,
     EntityTransformOp,
+    SplatsTransformOp,
     SetPivotOp
 };

@@ -271,6 +271,7 @@ class Splat extends Element {
             material.update();
         };
 
+        this.selectionBoundStorage = new BoundingBox();
         this.localBoundStorage = instance.splat.aabb;
         this.worldBoundStorage = instance.meshInstance._aabb;
 
@@ -345,7 +346,34 @@ class Splat extends Element {
         }
 
         this.scene.forceRender = true;
-        this.scene.events.fire('splat.stateChanged', this, changedState);
+        this.scene.events.fire('splat.stateChanged', this);
+    }
+
+    updatePositions() {
+        const x = this.splatData.getProp('x') as Float32Array;
+        const y = this.splatData.getProp('y') as Float32Array;
+        const z = this.splatData.getProp('z') as Float32Array;
+
+        const transformATexture = this.entity.gsplat.instance.splat.transformATexture;
+        const data = transformATexture.lock();
+        const dataF32 = new Float32Array(data.buffer);
+
+        for (let i = 0; i < this.splatData.numSplats; ++i) {
+            const idx = i * 4;
+            dataF32[idx + 0] = x[i];
+            dataF32[idx + 1] = y[i];
+            dataF32[idx + 2] = z[i];
+        }
+
+        transformATexture.unlock();
+
+        // reset bounds
+        this.localBoundDirty = true;
+        this.worldBoundDirty = true;
+        this.scene.boundDirty = true;
+
+        this.scene.forceRender = true;
+        this.scene.events.fire('splat.stateChanged', this);
     }
 
     get worldTransform() {

@@ -1,7 +1,7 @@
 import { Quat, Vec3 } from 'playcanvas';
 import { Events } from './events';
 import { Splat } from './splat';
-import { EntityTransform, EntityTransformOp } from './edit-ops';
+import { SetPivotOp, EntityTransform, EntityTransformOp } from './edit-ops';
 import { TransformTarget } from './transform-target';
 
 class EntityTransformTarget implements TransformTarget {
@@ -18,9 +18,15 @@ class EntityTransformTarget implements TransformTarget {
         this.events = events;
 
         this.events.on('splat.moved', (splat: Splat) => {
-            if (splat === this.splat) {
+            if (this.splat && splat === this.splat) {
                 this.updatePivot();
-                this.events.fire('transformTarget.moved', this);
+            }
+        });
+
+        events.on('camera.focalPointPicked', (details: { splat: Splat, position: Vec3 }) => {
+            if (this.splat && details.splat == this.splat) {
+                const op = new SetPivotOp(details.splat, details.splat.pivot.getLocalPosition().clone(), details.position.clone());
+                events.fire('edit.add', op);
             }
         });
     }
@@ -30,12 +36,18 @@ class EntityTransformTarget implements TransformTarget {
         this.pivot.position.copy(pivot.getLocalPosition());
         this.pivot.rotation.copy(pivot.getLocalRotation());
         this.pivot.scale.copy(pivot.getLocalScale());
+        this.events.fire('transformTarget.moved', this);
     }
 
-    bind(splat: Splat) {
-        this.splat = splat;
-        this.updatePivot();
-        this.events.fire('transformTarget.moved', this);
+    bind() {
+        this.splat = this.events.invoke('selection') as Splat;
+        if (this.splat) {
+            this.updatePivot();
+        }
+    }
+
+    unbind() {
+        this.splat = null;
     }
 
     start() {
@@ -90,15 +102,4 @@ class EntityTransformTarget implements TransformTarget {
     }
 }
 
-const registerEntityTransformTargetEvents = (events: Events) => {
-    const entityTransformTarget = new EntityTransformTarget(events);
-
-    events.on('selection.changed', (splat) => {
-        if (splat) {
-            entityTransformTarget.bind(splat);
-            events.fire('transformTarget', entityTransformTarget);
-        }
-    });
-};
-
-export { registerEntityTransformTargetEvents };
+export { EntityTransformTarget };

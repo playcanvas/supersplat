@@ -20,6 +20,8 @@ attribute uint vertex_id;
 uniform mat4 matrix_model;
 uniform mat4 matrix_viewProjection;
 
+uniform mat4 selection_transform;
+
 uniform sampler2D splatState;
 uniform highp usampler2D splatPosition;
 uniform float splatSize;
@@ -36,6 +38,13 @@ void main(void) {
     ivec2 splatUV = calcSplatUV(vertex_id, texParams.x);
     uint splatState = uint(texelFetch(splatState, splatUV, 0).r * 255.0);
 
+    vec3 center = uintBitsToFloat(texelFetch(splatPosition, splatUV, 0).xyz);
+
+    // apply selection transform
+    if ((splatState & 1u) != 0u) {
+        center = (selection_transform * vec4(center, 1.0)).xyz;
+    }
+    
     if ((splatState & 6u) != 0u) {
         // deleted or hidden (4 or 2)
         gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
@@ -48,9 +57,7 @@ void main(void) {
             varying_color = vec4(0.0, 0.0, 1.0, 0.5);
         }
 
-        vec3 p = uintBitsToFloat(texelFetch(splatPosition, splatUV, 0).xyz);
-
-        gl_Position = matrix_viewProjection * matrix_model * vec4(p, 1.0);
+        gl_Position = matrix_viewProjection * matrix_model * vec4(center, 1.0);
         gl_PointSize = splatSize;
     }
 }

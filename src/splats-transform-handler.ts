@@ -2,7 +2,7 @@ import { Mat4, Vec3 } from 'playcanvas';
 import { Events } from './events';
 import { Splat } from './splat';
 import { Transform } from './transform';
-import { SetPivotOp, SplatsTransformOp, MultiOp } from './edit-ops';
+import { PlacePivotOp, SplatsTransformOp, MultiOp } from './edit-ops';
 import { TransformHandler } from './transform-handler';
 import { Pivot } from './pivot';
 
@@ -43,7 +43,7 @@ class SplatsTransformHandler implements TransformHandler {
                 this.placePivot();
             }
         });
-    
+
         events.on('splat.stateChanged', (splat: Splat) => {
             if (this.splat && splat === this.splat) {
                 this.placePivot();
@@ -55,7 +55,7 @@ class SplatsTransformHandler implements TransformHandler {
                 const pivot = events.invoke('pivot') as Pivot;
                 const oldt = pivot.transform.clone();
                 const newt = new Transform(details.position, pivot.transform.rotation, pivot.transform.scale);
-                const op = new SetPivotOp({ pivot, oldt, newt });
+                const op = new PlacePivotOp({ pivot, oldt, newt });
                 events.fire('edit.add', op);
             }
         });
@@ -120,7 +120,7 @@ class SplatsTransformHandler implements TransformHandler {
 
         const oldt = this.pivotStart.clone();
         const newt = pivot.transform.clone();
-        const pop = new SetPivotOp({ pivot, newt, oldt });
+        const pop = new PlacePivotOp({ pivot, newt, oldt });
 
         // adding to edit history will apply the op
         this.events.fire('edit.add', new MultiOp([top, pop]));

@@ -2,6 +2,9 @@ import { Vec3, Quat } from 'playcanvas';
 import { Events } from './events';
 import { Transform } from './transform';
 
+// stores the transform pivot location in world space
+// the transform tools (translate, rotate, scale) and transform panel modify this pivot
+// then the active transform handler applies the changes to the current selection.
 class Pivot {
     transform = new Transform();
 

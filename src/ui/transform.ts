@@ -130,9 +130,7 @@ class Transform extends Container {
             uiUpdating = false;
         };
 
-        let pivot: Pivot;
-
-        const update = () => {
+        const update = (pivot: Pivot) => {
             const p = positionVector.value;
             const r = rotationVector.value;
             const q = new Quat().setFromEulerAngles(r[0], r[1], r[2]);
@@ -143,11 +141,12 @@ class Transform extends Container {
 
         const change = () => {
             if (!uiUpdating) {
+                const pivot = events.invoke('pivot') as Pivot;
                 if (mouseUpdating) {
-                    update();
+                    update(pivot);
                 } else {
                     pivot.start();
-                    update();
+                    update(pivot);
                     pivot.end();
                 }
             }
@@ -155,12 +154,13 @@ class Transform extends Container {
 
         const mousedown = () => {
             mouseUpdating = true;
-            pivot = events.invoke('pivot') as Pivot;
+            const pivot = events.invoke('pivot') as Pivot;
             pivot.start();
         };
 
         const mouseup = () => {
-            update();
+            const pivot = events.invoke('pivot') as Pivot;
+            update(pivot);
             pivot.end();
             mouseUpdating = false;
         };

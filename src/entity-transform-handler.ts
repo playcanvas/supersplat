@@ -2,7 +2,7 @@ import { Mat4, Quat, Vec3 } from 'playcanvas';
 import { Events } from './events';
 import { Splat } from './splat';
 import { Transform } from './transform';
-import { SetPivotOp, EntityTransformOp, MultiOp } from './edit-ops';
+import { PlacePivotOp, EntityTransformOp, MultiOp } from './edit-ops';
 import { TransformHandler } from './transform-handler';
 import { Pivot } from './pivot';
 
@@ -15,7 +15,7 @@ class EntityTransformHandler implements TransformHandler {
     events: Events;
     splat: Splat;
     top: EntityTransformOp;
-    pop: SetPivotOp;
+    pop: PlacePivotOp;
     bindMat = new Mat4();
 
     constructor(events: Events) {
@@ -43,7 +43,7 @@ class EntityTransformHandler implements TransformHandler {
             if (this.splat) {
                 const pivot = events.invoke('pivot') as Pivot;
                 const newt = new Transform(details.position, pivot.transform.rotation, pivot.transform.scale);
-                const op = new SetPivotOp({ pivot, oldt: pivot.transform.clone(), newt });
+                const op = new PlacePivotOp({ pivot, oldt: pivot.transform.clone(), newt });
                 events.fire('edit.add', op);
             }
         });
@@ -89,7 +89,7 @@ class EntityTransformHandler implements TransformHandler {
             newt: new Transform(p, r, s)
         });
 
-        this.pop = new SetPivotOp({
+        this.pop = new PlacePivotOp({
             pivot,
             oldt: transform.clone(),
             newt: transform.clone()

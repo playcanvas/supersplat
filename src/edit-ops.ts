@@ -302,7 +302,7 @@ class SplatsTransformOp {
     }
 }
 
-class SetPivotOp {
+class PlacePivotOp {
     name = "setPivot";
     pivot: Pivot;
     oldt: Transform;
@@ -352,6 +352,6 @@ export {
     ResetOp,
     EntityTransformOp,
     SplatsTransformOp,
-    SetPivotOp,
+    PlacePivotOp,
     MultiOp
 };

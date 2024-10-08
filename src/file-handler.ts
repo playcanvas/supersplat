@@ -2,7 +2,7 @@ import { path, Vec3 } from 'playcanvas';
 import { Scene } from './scene';
 import { Events } from './events';
 import { CreateDropHandler } from './drop-handler';
-import { convertPly, convertPlyCompressed, convertSplat } from './splat-convert';
+import { serializeAsPly, serializeAsCompressedPly, serializeAsSplat } from './splat-serializer';
 import { startSpinner, stopSpinner } from './ui/spinner';
 import { ElementType } from './element';
 import { Splat } from './splat';
@@ -34,9 +34,16 @@ const filePickerTypes = {
         }
     }],
     'splat': [{
+            description: 'Gaussian Splat SPLAT File',
+            accept: {
+                'application/splat': ['.splat']
+            }
+    }],
+    'gsplatfile': [{
             description: 'Gaussian Splat File',
             accept: {
-                'application/octet-stream': ['.splat']
+                'application/ply': ['.ply'],                
+                'application/splat': ['.splat']
             }
     }]
 };
@@ -124,7 +131,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
     const handleLoad = (url: string, filename: string) => {
         if (filename.toLowerCase().endsWith('.json')) {
             return loadCameraPoses(url, filename, events);
-        } else if (filename.toLowerCase().endsWith('.ply')) {
+        } else if (filename.toLowerCase().endsWith('.ply') || filename.toLowerCase().endsWith('.splat')) {
             return scene.loadModel(url, filename);
         } else {
             return null;
@@ -191,7 +198,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
         return true;
     });
 
-    events.on('scene.open', async () => {
+    events.on('scene.import', async () => {
         if (fileSelector) {
             fileSelector.click();
         } else {
@@ -199,7 +206,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
                 const handles = await window.showOpenFilePicker({
                     id: 'SuperSplatFileOpen',
                     multiple: true,
-                    types: filePickerTypes.ply as FilePickerAcceptType[]
+                    types: filePickerTypes.gsplatfile as FilePickerAcceptType[]
                 });
                 for (let i = 0; i < handles.length; i++) {
                     const handle = handles[i];
@@ -220,53 +227,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
         }
     });
 
-    events.on('scene.save', async () => {
-        if (fileHandle) {
-            try {
-                await events.invoke('scene.write', {
-                    type: 'ply',
-                    stream: await fileHandle.createWritable()
-                });
-                events.fire('scene.saved');
-            } catch (error) {
-                if (error.name !== 'AbortError') {
-                    console.error(error);
-                }
-            }
-        } else {
-            events.fire('scene.saveAs');
-        }
-    });
-
-    events.on('scene.saveAs', async () => {
-        const splats = getSplats();
-        const splat = splats[0];
-
-        if (window.showSaveFilePicker) {
-            try {
-                const handle = await window.showSaveFilePicker({
-                    id: 'SuperSplatFileSave',
-                    types: filePickerTypes.ply as FilePickerAcceptType[],
-                    suggestedName: fileHandle?.name ?? splat.filename ?? 'scene.ply'
-                });
-                await events.invoke('scene.write', {
-                    type: 'ply',
-                    stream: await handle.createWritable()
-                });
-                fileHandle = handle;
-                events.fire('scene.saved');
-            } catch (error) {
-                if (error.name !== 'AbortError') {
-                    console.error(error);
-                }
-            }
-        } else {
-            await events.invoke('scene.export', 'ply', splat.filename, 'saveAs');
-            events.fire('scene.saved');
-        }
-    });
-
-    events.function('scene.export', async (type: ExportType, outputFilename: string = null, exportType: 'export' | 'saveAs' = 'export') => {
+    events.function('scene.export', async (type: ExportType, outputFilename: string = null) => {
         const extensions = {
             'ply': '.ply',
             'compressed-ply': '.compressed.ply',
@@ -303,7 +264,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
         } else {
             const result = await events.invoke('showPopup', {
                 type: 'okcancel',
-                header: exportType === 'saveAs' ? 'SAVE AS' : 'EXPORT',
+                header: 'EXPORT',
                 message: 'Please enter a filename',
                 value: filename
             });
@@ -317,6 +278,24 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
         }
     });
 
+    const serializeData = (splats: Splat[], type: ExportType) => {
+        const convertData = splats.map((splat) => {
+            return {
+                splatData: splat.splatData,
+                alignmentMat: splat.entity.getWorldTransform()
+            };
+        });
+
+        switch (type) {
+            case 'ply':
+                return serializeAsPly(convertData);
+            case 'compressed-ply':
+                return serializeAsCompressedPly(convertData);
+            case 'splat':
+                return serializeAsSplat(convertData);
+        }
+    };
+
     events.function('scene.write', async (options: SceneWriteOptions) => {
         const splats = getSplats();
 
@@ -327,18 +306,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
             setTimeout(resolve);
         });
 
-        const data = (() => {
-            switch (options.type) {
-                case 'ply':
-                    return convertPly(splats);
-                case 'compressed-ply':
-                    return convertPlyCompressed(splats);
-                case 'splat':
-                    return convertSplat(splats);
-                default:
-                    return null;
-            }
-        })();
+        const data = serializeData(splats, options.type);
 
         if (options.stream) {
             // write to stream

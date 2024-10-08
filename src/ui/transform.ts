@@ -1,8 +1,8 @@
 import { Container, ContainerArgs, Label, NumericInput, Panel, PanelArgs, VectorInput } from 'pcui';
 import { Quat, Vec3 } from 'playcanvas';
 import { Events } from '../events';
-import { TransformTarget } from '../transform-target';
 import { localize } from './localization';
+import { Pivot } from '../pivot';
 
 const v = new Vec3();
 
@@ -117,56 +117,52 @@ class Transform extends Container {
             return [v.x, v.y, v.z];
         };
 
-
-        let target: TransformTarget | null = null;
         let uiUpdating = false;
+        let mouseUpdating = false;
 
-        const updateUI = () => {
+        const updateUI = (pivot: Pivot) => {
             uiUpdating = true;
-            const pivot = target.pivot;
-            pivot.rotation.getEulerAngles(v);
-            positionVector.value = toArray(pivot.position);
+            const transform = pivot.transform;
+            transform.rotation.getEulerAngles(v);
+            positionVector.value = toArray(transform.position);
             rotationVector.value = toArray(v);
-            scaleInput.value = pivot.scale.x;
+            scaleInput.value = transform.scale.x;
             uiUpdating = false;
         };
 
-        const createOp = () => {
-            target.start();
-        };
+        let pivot: Pivot;
 
-        const updateOp = () => {
+        const update = () => {
             const p = positionVector.value;
             const r = rotationVector.value;
             const q = new Quat().setFromEulerAngles(r[0], r[1], r[2]);
             const s = scaleInput.value;
 
-            target.update(new Vec3(p[0], p[1], p[2]), q, new Vec3(s, s, s));
-        };
-
-        const submitOp = () => {
-            target.end();
+            pivot.moveTRS(new Vec3(p[0], p[1], p[2]), q, new Vec3(s, s, s));
         };
 
         const change = () => {
             if (!uiUpdating) {
-                if (target && target.op) {
-                    updateOp();
+                if (mouseUpdating) {
+                    update();
                 } else {
-                    createOp();
-                    updateOp();
-                    submitOp();
+                    pivot.start();
+                    update();
+                    pivot.end();
                 }
             }
         };
 
         const mousedown = () => {
-            createOp();
+            mouseUpdating = true;
+            pivot = events.invoke('pivot') as Pivot;
+            pivot.start();
         };
 
         const mouseup = () => {
-            updateOp();
-            submitOp();
+            update();
+            pivot.end();
+            mouseUpdating = false;
         };
 
         [positionVector.inputs, rotationVector.inputs, scaleInput].flat().forEach((input) => {
@@ -175,12 +171,10 @@ class Transform extends Container {
             input.on('slider:mouseup', mouseup);
         });
 
-        events.on('transformTarget.changed', (t: TransformTarget) => {
-            target = t;
-
-            if (target) {
+        events.on('pivot.placed', (pivot: Pivot) => {
+            if (pivot) {
                 // enable inputs
-                updateUI();
+                updateUI(pivot);
                 positionVector.enabled = rotationVector.enabled = scaleInput.enabled = true;
             } else {
                 // disable inputs
@@ -188,10 +182,8 @@ class Transform extends Container {
             }
         });
 
-        events.on('transformTarget.moved', (t: TransformTarget) => {
-            if (t === target) {
-                updateUI();
-            }
+        events.on('pivot.moved', (pivot: Pivot) => {
+            updateUI(pivot);
         });
     }
 }

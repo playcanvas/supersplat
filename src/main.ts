@@ -7,7 +7,7 @@ import { EditorUI } from './ui/editor';
 import { registerEditorEvents } from './editor';
 import { initFileHandler } from './file-handler';
 import { registerSelectionEvents } from './selection';
-import { registerTransformTargetEvents } from './transform-target';
+import { registerTransformHandlerEvents } from './transform-handler';
 import { ToolManager } from './tools/tool-manager';
 import { RectSelection } from './tools/rect-selection';
 import { BrushSelection } from './tools/brush-selection';
@@ -154,7 +154,7 @@ const main = async () => {
 
     registerEditorEvents(events, editHistory, scene);
     registerSelectionEvents(events, scene);
-    registerTransformTargetEvents(events);
+    registerTransformHandlerEvents(events);
     initShortcuts(events);
     await initFileHandler(scene, events, editorUI.appContainer.dom, remoteStorageDetails);
 

@@ -1,9 +1,7 @@
-import { Entity, GraphicsDevice, TransformGizmo, Vec3 } from 'playcanvas';
+import { Entity, GraphicsDevice, TransformGizmo } from 'playcanvas';
 import { Scene } from '../scene';
-import { Splat } from '../splat';
 import { Events } from '../events';
-import { EntityTransform, SetPivotOp } from '../edit-ops';
-import { TransformTarget } from '../transform-target';
+import { Pivot } from '../pivot';
 
 // patch gizmo to be more opaque
 const patchGizmoMaterials = (gizmo: TransformGizmo) => {
@@ -35,40 +33,39 @@ class TransformTool {
     deactivate: () => void;
 
     constructor(gizmo: TransformGizmo, events: Events, scene: Scene) {
+        let pivot: Pivot;
         let active = false;
-        let target: TransformTarget = null;
 
         // create the transform pivot
-        const pivot = new Entity('gizmoPivot');
-        scene.app.root.addChild(pivot);
+        const pivotEntity = new Entity('gizmoPivot');
+        scene.app.root.addChild(pivotEntity);
 
         gizmo.on('render:update', () => {
             scene.forceRender = true;
         });
 
         gizmo.on('transform:start', () => {
-            target.start();
+            pivot.start();
         });
 
         gizmo.on('transform:move', () => {
-            target.update(pivot.getLocalPosition(), pivot.getLocalRotation(), pivot.getLocalScale());
+            pivot.moveTRS(pivotEntity.getLocalPosition(), pivotEntity.getLocalRotation(), pivotEntity.getLocalScale());
         });
 
         gizmo.on('transform:end', () => {
-            target.end();
+            pivot.end();
         });
 
         // reattach the gizmo to the pivot
         const reattach = () => {
-            target = events.invoke('transformTarget') as TransformTarget;
-
-            if (!active || !target) {
+            if (!active) {
                 gizmo.detach();
             } else {
-                pivot.setLocalPosition(target.pivot.position);
-                pivot.setLocalRotation(target.pivot.rotation);
-                pivot.setLocalScale(target.pivot.scale);
-                gizmo.attach([pivot]);
+                pivot = events.invoke('pivot') as Pivot;
+                pivotEntity.setLocalPosition(pivot.transform.position);
+                pivotEntity.setLocalRotation(pivot.transform.rotation);
+                pivotEntity.setLocalScale(pivot.transform.scale);
+                gizmo.attach([pivotEntity]);
             }
         };
 
@@ -77,8 +74,8 @@ class TransformTool {
             scene.forceRender = true;
         });
 
-        events.on('transformTarget.changed', reattach);
-        events.on('transformTarget.moved', reattach);
+        events.on('pivot.placed', reattach);
+        events.on('pivot.moved', reattach);
 
         events.on('camera.resize', () => {
             scene.events.on('camera.resize', () => updateGizmoSize(gizmo, scene.graphicsDevice));

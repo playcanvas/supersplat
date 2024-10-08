@@ -343,7 +343,7 @@ class ViewPanel extends Container {
             if (poses.length > 0) {
                 setPose((currentPose - 1 + poses.length) % poses.length);
             }
-        }
+        };
 
         poseAdd.on('click', () => {
             // get the current camera pose

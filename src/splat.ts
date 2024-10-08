@@ -174,7 +174,6 @@ void main(void)
 const vec = new Vec3();
 const veca = new Vec3();
 const vecb = new Vec3();
-const mat = new Mat4();
 
 const boundingPoints =
     [-1, 1].map((x) => {
@@ -196,7 +195,6 @@ class Splat extends Element {
     numDeleted = 0;
     numHidden = 0;
     numSelected = 0;
-    pivot: Entity;
     entity: Entity;
     changedCounter = 0;
     stateTexture: Texture;
@@ -229,7 +227,6 @@ class Splat extends Element {
         this.asset = asset;
         this.splatData = splatData;
         this.numSplats = splatData.numSplats;
-        this.pivot = new Entity('splatPivot');
         this.entity = splatResource.instantiate(getMaterialOptions(0));
 
         const instance = this.entity.gsplat.instance;
@@ -281,13 +278,11 @@ class Splat extends Element {
         instance.sorter.on('updated', () => {
             this.changedCounter++;
         });
-
-        this.pivot.addChild(this.entity);
     }
 
     destroy() {
         super.destroy();
-        this.pivot.destroy();
+        this.entity.destroy();
         this.asset.registry.remove(this.asset);
         this.asset.unload();
     }
@@ -324,25 +319,7 @@ class Splat extends Element {
 
         // handle splats being added or removed
         if (changedState & State.deleted) {
-            this.localBoundDirty = true;
-            this.worldBoundDirty = true;
-            this.scene.boundDirty = true;
-
-            let mapping;
-
-            // create a sorter mapping to remove deleted splats
-            if (this.numSplats !== state.length) {
-                mapping = new Uint32Array(this.numSplats);
-                let idx = 0;
-                for (let i = 0; i < state.length; ++i) {
-                    if ((state[i] & State.deleted) === 0) {
-                        mapping[idx++] = i;
-                    }
-                }
-            }
-
-            // update sorting instance
-            this.entity.gsplat.instance.sorter.setMapping(mapping);
+            this.updateSorting();
         }
 
         this.scene.forceRender = true;
@@ -367,13 +344,46 @@ class Splat extends Element {
 
         transformATexture.unlock();
 
-        // reset bounds
+        // update sorter centers
+        const state = this.splatData.getProp('state') as Uint8Array;
+        const { sorter } = this.entity.gsplat.instance;
+        const { centers } = sorter;
+        for (let i = 0; i < this.splatData.numSplats; ++i) {
+            if (state[i] === State.selected) {
+                centers[i * 3 + 0] = x[i];
+                centers[i * 3 + 1] = y[i];
+                centers[i * 3 + 2] = z[i];
+            }
+        }
+
+        this.updateSorting();
+
+        this.scene.forceRender = true;
+        this.scene.events.fire('splat.stateChanged', this);
+    }
+
+    updateSorting() {
+        const state = this.splatData.getProp('state') as Uint8Array;
+
         this.localBoundDirty = true;
         this.worldBoundDirty = true;
         this.scene.boundDirty = true;
 
-        this.scene.forceRender = true;
-        this.scene.events.fire('splat.stateChanged', this);
+        let mapping;
+
+        // create a sorter mapping to remove deleted splats
+        if (this.numSplats !== state.length) {
+            mapping = new Uint32Array(this.numSplats);
+            let idx = 0;
+            for (let i = 0; i < state.length; ++i) {
+                if ((state[i] & State.deleted) === 0) {
+                    mapping[idx++] = i;
+                }
+            }
+        }
+
+        // update sorting instance
+        this.entity.gsplat.instance.sorter.setMapping(mapping);
     }
 
     get worldTransform() {
@@ -402,13 +412,7 @@ class Splat extends Element {
 
     add() {
         // add the entity to the scene
-        this.scene.contentRoot.addChild(this.pivot);
-
-        const center = this.localBoundStorage.center;
-        this.entity.getWorldTransform().transformPoint(center, vec);
-
-        this.pivot.setLocalPosition(vec);
-        this.entity.setLocalPosition(-vec.x, -vec.y, -vec.z);
+        this.scene.contentRoot.addChild(this.entity);
 
         this.selectionBoundDirty = true;
         this.localBoundDirty = true;
@@ -422,12 +426,12 @@ class Splat extends Element {
     remove() {
         this.scene.events.off('view.bands', this.rebuildMaterial, this);
 
-        this.scene.contentRoot.removeChild(this.pivot);
+        this.scene.contentRoot.removeChild(this.entity);
         this.scene.boundDirty = true;
     }
 
     serialize(serializer: Serializer) {
-        serializer.packa(this.pivot.getWorldTransform().data);
+        serializer.packa(this.entity.getWorldTransform().data);
         serializer.pack(this.changedCounter);
         serializer.pack(this.visible);
     }
@@ -460,7 +464,7 @@ class Splat extends Element {
             }
         }
 
-        this.pivot.enabled = this.visible;
+        this.entity.enabled = this.visible;
     }
 
     focalPoint() {
@@ -468,15 +472,15 @@ class Splat extends Element {
     }
 
     move(position?: Vec3, rotation?: Quat, scale?: Vec3) {
-        const pivot = this.pivot;
+        const entity = this.entity;
         if (position) {
-            pivot.setLocalPosition(position);
+            entity.setLocalPosition(position);
         }
         if (rotation) {
-            pivot.setLocalRotation(rotation);
+            entity.setLocalRotation(rotation);
         }
         if (scale) {
-            pivot.setLocalScale(scale);
+            entity.setLocalScale(scale);
         }
 
         this.worldBoundDirty = true;
@@ -517,7 +521,6 @@ class Splat extends Element {
 
             // align the pivot point to the splat center
             this.entity.getWorldTransform().transformPoint(localBound.center, vec);
-            this.setPivot(vec);
         }
 
         return this.localBoundStorage;
@@ -534,20 +537,6 @@ class Splat extends Element {
         }
 
         return this.worldBoundStorage;
-    }
-
-    // set the world-space location of the pivot point
-    setPivot(position: Vec3) {
-        mat.invert(this.entity.getWorldTransform()).transformPoint(position, veca);
-        this.entity.getLocalRotation().transformVector(veca, veca);
-        this.entity.setLocalPosition(-veca.x, -veca.y, -veca.z);
-        this.pivot.setLocalPosition(position);
-
-        this.scene.events.fire('splat.moved', this);
-    }
-
-    getPivot() {
-        return this.pivot.getLocalPosition();
     }
 
     get visible() {

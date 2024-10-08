@@ -1,6 +1,8 @@
-import { Mat4, Quat, Vec3 } from 'playcanvas';
+import { Mat4, Vec3 } from 'playcanvas';
 import { Splat } from './splat';
 import { State } from './splat-state';
+import { Transform } from './transform';
+import { Pivot } from './pivot';
 
 interface EditOp {
     name: string;
@@ -190,21 +192,14 @@ class ResetOp extends StateOp {
     }
 }
 
-interface EntityTransform {
-    position: Vec3;
-    rotation: Quat;
-    scale: Vec3;
-}
-
 // op for modifying a splat transform
 class EntityTransformOp {
     name = 'entityTransform';
-
     splat: Splat;
-    oldt: EntityTransform;
-    newt: EntityTransform;
+    oldt: Transform;
+    newt: Transform;
 
-    constructor(options: { splat: Splat, oldt: EntityTransform, newt: EntityTransform }) {
+    constructor(options: { splat: Splat, oldt: Transform, newt: Transform }) {
         this.splat = options.splat;
         this.oldt = options.oldt;
         this.newt = options.newt;
@@ -256,7 +251,7 @@ class SplatsTransformOp {
         this.splat = options.splat;
         this.indices = indices;
         this.positions = positions;
-        this.transform = options.transform.clone();
+        this.transform = options.transform;
     }
 
     // apply the transform to the selected splat positions
@@ -309,24 +304,41 @@ class SplatsTransformOp {
 
 class SetPivotOp {
     name = "setPivot";
-    splat: Splat;
-    oldPivot: Vec3;
-    newPivot: Vec3;
+    pivot: Pivot;
+    oldt: Transform;
+    newt: Transform;
 
-    constructor(splat: Splat, oldPivot: Vec3, newPivot: Vec3) {
-        this.splat = splat;
-        this.oldPivot = oldPivot;
-        this.newPivot = newPivot;
+    constructor(options: { pivot: Pivot, oldt: Transform, newt: Transform }) {
+        this.pivot = options.pivot;
+        this.oldt = options.oldt;
+        this.newt = options.newt;
     }
 
     do() {
-        this.splat.setPivot(this.newPivot);
+        this.pivot.place(this.newt);
     }
 
     undo() {
-        this.splat.setPivot(this.oldPivot);
+        this.pivot.place(this.oldt);
     }
 }
+
+class MultiOp {
+    name = "multiOp";
+    ops: EditOp[];
+
+    constructor(ops: EditOp[]) {
+        this.ops = ops;
+    }
+
+    do() {
+        this.ops.forEach(op => op.do());
+    }
+
+    undo() {
+        this.ops.forEach(op => op.undo());
+    }
+};
 
 export {
     EditOp,
@@ -338,8 +350,8 @@ export {
     UnhideAllOp,
     DeleteSelectionOp,
     ResetOp,
-    EntityTransform,
     EntityTransformOp,
     SplatsTransformOp,
-    SetPivotOp
+    SetPivotOp,
+    MultiOp
 };

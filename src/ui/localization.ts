@@ -158,9 +158,8 @@ const localizeInit = () => {
                         "scene.open": "Open",
                         "scene.import": "Import",
                         "scene.load-all-data": "Load all PLY data",
-                        "scene.save": "Save",
-                        "scene.save-as": "Save As...",
                         "scene.export": "Export",
+                        "scene.export.ply": "PLY",
                         "scene.export.compressed-ply": "Compressed PLY",
                         "scene.export.splat": "Splat file",
 

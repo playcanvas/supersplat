@@ -8,13 +8,13 @@ import {
 import { State } from './splat-state';
 import { SHRotation } from './sh-utils';
 
-interface ConvertEntry {
+interface SplatWithAlignment {
     splatData: GSplatData;
-    modelMat: Mat4;
+    alignmentMat: Mat4;
 }
 
-const countTotalSplats = (convertData: ConvertEntry[]) => {
-    return convertData.reduce((total, entry) => {
+const countTotalSplats = (data: SplatWithAlignment[]) => {
+    return data.reduce((total, entry) => {
         const splatData = entry.splatData;
         const state = splatData.getProp('state') as Uint8Array;
         for (let i = 0; i < splatData.numSplats; ++i) {
@@ -32,11 +32,11 @@ const getVertexProperties = (splatData: GSplatData) => {
     );
 };
 
-const getCommonPropNames = (convertData: ConvertEntry[]) => {
+const getCommonPropNames = (data: SplatWithAlignment[]) => {
     let result: Set<string>;
 
-    for (let i = 0; i < convertData.length; ++i) {
-        const props = getVertexProperties(convertData[i].splatData);
+    for (let i = 0; i < data.length; ++i) {
+        const props = getVertexProperties(data[i].splatData);
         result = i == 0 ? props : new Set([...result].filter(i => props.has(i)));
     }
 
@@ -50,14 +50,15 @@ const scale = new Vec3();
 const v = new Vec3();
 const q = new Quat();
 
-const convertPly = (convertData: ConvertEntry[]) => {
+
+const serializeAsPly = (data: SplatWithAlignment[]) => {
     // count the number of non-deleted splats
-    const totalSplats = countTotalSplats(convertData);
+    const totalSplats = countTotalSplats(data);
 
     const internalProps = ['state'];
 
     // get the vertex properties common to all splats
-    const propNames = getCommonPropNames(convertData).filter((p) => !internalProps.includes(p));
+    const propNames = getCommonPropNames(data).filter((p) => !internalProps.includes(p));
     const hasPosition = ['x', 'y', 'z'].every(v => propNames.includes(v));
     const hasRotation = ['rot_0', 'rot_1', 'rot_2', 'rot_3'].every(v => propNames.includes(v));
     const hasScale = ['scale_0', 'scale_1', 'scale_2'].every(v => propNames.includes(v));
@@ -91,15 +92,15 @@ const convertPly = (convertData: ConvertEntry[]) => {
 
     let offset = header.byteLength;
 
-    for (let e = 0; e < convertData.length; ++e) {
-        const entry = convertData[e];
+    for (let e = 0; e < data.length; ++e) {
+        const entry = data[e];
         const splatData = entry.splatData;
         const state = splatData.getProp('state') as Uint8Array;
         const storage = propNames.map((name) => splatData.getProp(name));
 
         // we must undo the transform we apply at load time to output data
         mat.setFromEulerAngles(0, 0, -180);
-        mat.mul2(mat, entry.modelMat);
+        mat.mul2(mat, entry.alignmentMat);
         quat.setFromMat4(mat);
         mat.getScale(scale);
 
@@ -173,7 +174,7 @@ const convertPly = (convertData: ConvertEntry[]) => {
 };
 
 interface CompressedIndex {
-    entry: ConvertEntry;
+    entry: SplatWithAlignment;
     entryIndex: number;
     i: number;
     globalIndex: number;
@@ -423,7 +424,7 @@ const sortSplats = (indices: CompressedIndex[]) => {
     indices.sort((a, b) => morton[a.globalIndex] - morton[b.globalIndex]);
 };
 
-const convertPlyCompressed = (convertData: ConvertEntry[]) => {
+const serializeAsCompressedPly = (convertData: SplatWithAlignment[]) => {
     const chunkProps = [
         'min_x', 'min_y', 'min_z',
         'max_x', 'max_y', 'max_z',
@@ -496,9 +497,9 @@ const convertPlyCompressed = (convertData: ConvertEntry[]) => {
     // generate transforms for each splat model
     const transforms = convertData.map((entry) => {
         return {
-            modelMat: entry.modelMat.clone(),
-            quat: new Quat().setFromMat4(entry.modelMat),
-            scale: entry.modelMat.getScale()
+            modelMat: entry.alignmentMat.clone(),
+            quat: new Quat().setFromMat4(entry.alignmentMat),
+            scale: entry.alignmentMat.getScale()
         };
     });
 
@@ -552,7 +553,7 @@ const convertPlyCompressed = (convertData: ConvertEntry[]) => {
     return result;
 };
 
-const convertSplat = (convertData: ConvertEntry[]) => {
+const serializeAsSplat = (convertData: SplatWithAlignment[]) => {
     const totalSplats = countTotalSplats(convertData);
 
     // position.xyz: float32, scale.xyz: float32, color.rgba: uint8, quaternion.ijkl: uint8
@@ -564,6 +565,8 @@ const convertSplat = (convertData: ConvertEntry[]) => {
     for (let e = 0; e < convertData.length; ++e) {
         const entry = convertData[e];
         const splatData = entry.splatData;
+
+        console.log(splatData);
 
         // count the number of non-deleted splats
         const x = splatData.getProp('x');
@@ -586,7 +589,7 @@ const convertSplat = (convertData: ConvertEntry[]) => {
         // we must undo the transform we apply at load time to output data
         mat.setScale(-1, -1, 1);
         mat.invert();
-        mat.mul2(mat, entry.modelMat);
+        mat.mul2(mat, entry.alignmentMat);
         quat.setFromMat4(mat);
         mat.getScale(scale);
 
@@ -624,4 +627,89 @@ const convertSplat = (convertData: ConvertEntry[]) => {
     return result;
 };
 
-export { convertPly, convertPlyCompressed, convertSplat };
+type DataType = Int8Array | Uint8Array | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array;
+
+interface GSplatProperty {
+    type: string,
+    name: string,
+    storage: DataType
+    byteSize: number
+}
+
+interface GSplatElement {
+    name: string,
+    count: number
+    properties: GSplatProperty[]
+}
+
+const deserializeFromSplat = (data: ArrayBufferLike) => {
+    const totalSplats = data.byteLength / 32;
+    const dataView = new DataView(data);
+
+    const storage_x = new Float32Array(totalSplats);
+    const storage_y = new Float32Array(totalSplats);
+    const storage_z = new Float32Array(totalSplats);
+    const storage_opacity = new Float32Array(totalSplats);
+    const storage_rot_0 = new Float32Array(totalSplats);
+    const storage_rot_1 = new Float32Array(totalSplats);
+    const storage_rot_2 = new Float32Array(totalSplats);
+    const storage_rot_3 = new Float32Array(totalSplats);
+    const storage_f_dc_0 = new Float32Array(totalSplats);
+    const storage_f_dc_1 = new Float32Array(totalSplats);
+    const storage_f_dc_2 = new Float32Array(totalSplats);
+    const storage_scale_0 = new Float32Array(totalSplats);
+    const storage_scale_1 = new Float32Array(totalSplats);
+    const storage_scale_2 = new Float32Array(totalSplats);
+    const storage_state = new Uint8Array(totalSplats);
+
+    
+    const SH_C0 = 0.28209479177387814;
+    let off;
+
+    for(let i = 0; i < totalSplats; i++){
+        off = i * 32;
+        storage_x[i] = dataView.getFloat32(off + 0, true);
+        storage_y[i] = dataView.getFloat32(off + 4, true);
+        storage_z[i] = dataView.getFloat32(off + 8, true);
+
+        storage_scale_0[i] = Math.log(dataView.getFloat32(off + 12, true));
+        storage_scale_1[i] = Math.log(dataView.getFloat32(off + 16, true));
+        storage_scale_2[i] = Math.log(dataView.getFloat32(off + 20, true));
+
+        storage_f_dc_0[i] = (dataView.getUint8(off + 24) / 255 - 0.5) / SH_C0;
+        storage_f_dc_1[i] = (dataView.getUint8(off + 25) / 255 - 0.5) / SH_C0;
+        storage_f_dc_2[i] = (dataView.getUint8(off + 26) / 255 - 0.5) / SH_C0;
+
+        storage_opacity[i] = -Math.log(255 / dataView.getUint8(off + 27) - 1);
+
+        storage_rot_0[i] = (dataView.getUint8(off + 28) - 128) / 128;
+        storage_rot_1[i] = (dataView.getUint8(off + 29) - 128) / 128;
+        storage_rot_2[i] = (dataView.getUint8(off + 30) - 128) / 128;
+        storage_rot_3[i] = (dataView.getUint8(off + 31) - 128) / 128;
+    }
+
+
+    return new GSplatData([{
+        name: 'vertex',
+        count: totalSplats,
+        properties: [
+            {type: 'float', name: 'x', storage: storage_x, byteSize: 4},
+            {type: 'float', name: 'y', storage: storage_y, byteSize: 4},
+            {type: 'float', name: 'z', storage: storage_z, byteSize: 4},            
+            {type: 'float', name: 'opacity', storage: storage_opacity, byteSize: 4},
+            {type: 'float', name: 'rot_0', storage: storage_rot_0, byteSize: 4},
+            {type: 'float', name: 'rot_1', storage: storage_rot_1, byteSize: 4},
+            {type: 'float', name: 'rot_2', storage: storage_rot_2, byteSize: 4},
+            {type: 'float', name: 'rot_3', storage: storage_rot_3, byteSize: 4},            
+            {type: 'float', name: 'f_dc_0', storage: storage_f_dc_0, byteSize: 4},
+            {type: 'float', name: 'f_dc_1', storage: storage_f_dc_1, byteSize: 4},
+            {type: 'float', name: 'f_dc_2', storage: storage_f_dc_2, byteSize: 4},            
+            {type: 'float', name: 'scale_0', storage: storage_scale_0, byteSize: 4},
+            {type: 'float', name: 'scale_1', storage: storage_scale_1, byteSize: 4},
+            {type: 'float', name: 'scale_2', storage: storage_scale_2, byteSize: 4},
+            {type: 'float', name: 'state', storage: storage_state, byteSize: 4}
+        ]
+    }]);
+};
+
+export { serializeAsPly, serializeAsCompressedPly, serializeAsSplat, deserializeFromSplat};

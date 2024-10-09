@@ -20,10 +20,13 @@ attribute uint vertex_id;
 uniform mat4 matrix_model;
 uniform mat4 matrix_viewProjection;
 
-uniform mat4 selection_transform;
+// uniform mat4 selection_transform;
 
 uniform sampler2D splatState;
 uniform highp usampler2D splatPosition;
+uniform highp usampler2D splatTransform;        // per-splat index into transform palette
+uniform sampler2D transformPalette;             // palette of transform matrices
+
 uniform float splatSize;
 uniform uvec2 texParams;
 
@@ -38,18 +41,29 @@ void main(void) {
     ivec2 splatUV = calcSplatUV(vertex_id, texParams.x);
     uint splatState = uint(texelFetch(splatState, splatUV, 0).r * 255.0);
 
-    vec3 center = uintBitsToFloat(texelFetch(splatPosition, splatUV, 0).xyz);
-
-    // apply selection transform
-    if ((splatState & 1u) != 0u) {
-        center = (selection_transform * vec4(center, 1.0)).xyz;
-    }
-    
     if ((splatState & 6u) != 0u) {
         // deleted or hidden (4 or 2)
         gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
         gl_PointSize = 0.0;
     } else {
+        mat4 model = matrix_model;
+    
+        // handle per-splat transform
+        uint transformIndex = texelFetch(splatTransform, splatUV, 0).r;
+        if (transformIndex > 0u) {
+            // read transform matrix
+            int u = int(transformIndex % 512u) * 3;
+            int v = int(transformIndex / 512u);
+    
+            mat4 t;
+            t[0] = texelFetch(transformPalette, ivec2(u, v), 0);
+            t[1] = texelFetch(transformPalette, ivec2(u + 1, v), 0);
+            t[2] = texelFetch(transformPalette, ivec2(u + 2, v), 0);
+            t[3] = vec4(0.0, 0.0, 0.0, 1.0);
+    
+            model = matrix_model * transpose(t);
+        }
+
         if ((splatState & 1u) != 0u) {
             // selected
             varying_color = vec4(1.0, 1.0, 0.0, 0.5);
@@ -57,7 +71,9 @@ void main(void) {
             varying_color = vec4(0.0, 0.0, 1.0, 0.5);
         }
 
-        gl_Position = matrix_viewProjection * matrix_model * vec4(center, 1.0);
+        vec3 center = uintBitsToFloat(texelFetch(splatPosition, splatUV, 0).xyz);
+
+        gl_Position = matrix_viewProjection * model * vec4(center, 1.0);
         gl_PointSize = splatSize;
     }
 }
@@ -137,6 +153,8 @@ class SplatDebug extends Element {
 
             material.setParameter('splatState', splat.stateTexture);
             material.setParameter('splatPosition', splat.entity.gsplat.instance.splat.transformATexture);
+            material.setParameter('splatTransform', splat.transformTexture);
+            material.setParameter('transformPalette', splat.transformPalette.texture);
             material.setParameter('texParams', [splat.stateTexture.width, splat.stateTexture.height]);
             material.update();
 

@@ -4,8 +4,8 @@ uniform vec3 view_position;
 
 uniform sampler2D splatColor;
 uniform sampler2D splatState;
-uniform highp usampler2D splatTransform;          // stores per-splat transform index
-uniform sampler2D transformPalette;         // stores transform matrices
+uniform highp usampler2D splatTransform;        // per-splat index into transform palette
+uniform sampler2D transformPalette;             // palette of transform matrices
 
 varying mediump vec2 texCoord;
 varying mediump vec4 color;

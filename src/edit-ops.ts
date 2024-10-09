@@ -221,7 +221,6 @@ class EntityTransformOp {
 }
 
 const mat = new Mat4();
-const vec = new Vec3();
 
 // op for modifying a subset of individual splats
 class SplatsTransformOp {
@@ -242,14 +241,14 @@ class SplatsTransformOp {
         const state = splat.splatData.getProp('state') as Uint8Array;
         const indices = splat.transformTexture.lock() as Uint16Array;
 
-        // set splat palette indices
+        // update splat transform palette indices
         for (let i = 0; i < state.length; ++i) {
             if (state[i] === State.selected) {
                 indices[i] = paletteMap.get(indices[i]);
             }
         }
 
-        // configure the transform palette
+        // update transform palette
         const { transformPalette } = splat;
         this.paletteMap.forEach((newIdx, oldIdx) => {
             transformPalette.getTransform(oldIdx, mat);

@@ -5,8 +5,10 @@ import { Transform } from './transform';
 import { PlacePivotOp, SplatsTransformOp, MultiOp } from './edit-ops';
 import { TransformHandler } from './transform-handler';
 import { Pivot } from './pivot';
+import { State } from './splat-state';
 
 const mat = new Mat4();
+const mat2 = new Mat4();
 const vec = new Vec3();
 const transform = new Transform();
 
@@ -16,6 +18,9 @@ class SplatsTransformHandler implements TransformHandler {
     pivotStart = new Transform();
     localToPivot = new Mat4();
     worldToLocal = new Mat4();
+
+    transform = new Mat4();
+    paletteMap = new Map<number, number>();
 
     constructor(events: Events) {
         this.events = events;
@@ -97,6 +102,36 @@ class SplatsTransformHandler implements TransformHandler {
         this.worldToLocal.invert(splat.entity.getLocalTransform());
 
         this.pivotStart.copy(transform);
+
+        // allocate a new transform for the current selection
+        const state = splat.splatData.getProp('state') as Uint8Array;
+        const indices = splat.transformTexture.lock() as Uint16Array;
+
+        const { paletteMap } = this;
+        paletteMap.clear();
+
+        for (let i = 0; i < state.length; ++i) {
+            if (state[i] === State.selected) {
+                const oldIdx = indices[i];
+                let newIdx;
+                if (!paletteMap.has(oldIdx)) {
+                    newIdx = splat.transformIdx++;
+                    paletteMap.set(oldIdx, newIdx);
+                } else {
+                    newIdx = paletteMap.get(oldIdx);
+                }
+
+                indices[i] = newIdx;
+            }
+        }
+
+        splat.transformTexture.unlock();
+
+        // initialize transforms
+        this.paletteMap.forEach((newIdx, oldIdx) => {
+            splat.transformPalette.getTransform(oldIdx, mat);
+            splat.transformPalette.setTransform(newIdx, mat);
+        });
     }
 
     update(transform: Transform) {
@@ -105,28 +140,36 @@ class SplatsTransformHandler implements TransformHandler {
         mat.mul2(mat, this.localToPivot);       // local -> world
         mat.mul2(this.worldToLocal, mat);       // world -> local
 
-        this.splat.selectionTransform.copy(mat);
+        this.transform.copy(mat);
+
+        // update the transform palette
+        const { transformPalette } = this.splat;
+        this.paletteMap.forEach((newIdx, oldIdx) => {
+            transformPalette.getTransform(oldIdx, mat2);
+            mat2.mul2(mat, mat2);
+            transformPalette.setTransform(newIdx, mat2);
+        });
+
         this.splat.scene.forceRender = true;
     }
 
     end() {
-        const pivot = this.events.invoke('pivot') as Pivot;
-
-        // create op to apply this transform
+        // create op for splat transform
+        const { splat, transform, paletteMap } = this;
         const top = new SplatsTransformOp({
-            splat: this.splat,
-            transform: this.splat.selectionTransform.clone()
+            splat,
+            transform: transform.clone(),
+            paletteMap: new Map(paletteMap)
         });
 
+        // create op for pivot placement
+        const pivot = this.events.invoke('pivot') as Pivot;
         const oldt = this.pivotStart.clone();
         const newt = pivot.transform.clone();
         const pop = new PlacePivotOp({ pivot, newt, oldt });
 
-        // adding to edit history will apply the op
-        this.events.fire('edit.add', new MultiOp([top, pop]));
-
-        // reset shader's selection transform
-        this.splat.selectionTransform.setIdentity();
+        // add the editop without applying it
+        this.events.fire('edit.add', new MultiOp([top, pop]), true);
     }
 };
 

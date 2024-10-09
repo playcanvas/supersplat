@@ -2,6 +2,7 @@ import {
     ADDRESS_CLAMP_TO_EDGE,
     FILTER_NEAREST,
     PIXELFORMAT_L8,
+    PIXELFORMAT_R16U,
     Asset,
     BoundingBox,
     Color,
@@ -16,160 +17,8 @@ import {
 import { Element, ElementType } from "./element";
 import { Serializer } from "./serializer";
 import { State } from './splat-state';
-
-const vertexShader = /*glsl*/`
-uniform vec3 view_position;
-
-uniform sampler2D splatColor;
-uniform sampler2D splatState;
-
-uniform mat4 selection_transform;
-
-varying mediump vec2 texCoord;
-varying mediump vec4 color;
-flat varying highp uint vertexState;
-#ifdef PICK_PASS
-    flat varying highp uint vertexId;
-#endif
-
-mediump vec4 discardVec = vec4(0.0, 0.0, 2.0, 1.0);
-
-void main(void)
-{
-    // calculate splat uv
-    if (!calcSplatUV()) {
-        gl_Position = discardVec;
-        return;
-    }
-
-    // get center
-    vec3 center = getCenter();
-
-    // get vertex state
-    vertexState = uint(texelFetch(splatState, splatUV, 0).r * 255.0);
-
-    // apply selection transform
-    if ((vertexState & 1u) != 0u) {
-        center = (selection_transform * vec4(center, 1.0)).xyz;
-    }
-
-    // handle transforms
-    mat4 model_view = matrix_view * matrix_model;
-    vec4 splat_cam = model_view * vec4(center, 1.0);
-    vec4 splat_proj = matrix_projection * splat_cam;
-
-    // cull behind camera
-    if (splat_proj.z < -splat_proj.w) {
-        gl_Position = discardVec;
-        return;
-    }
-
-    // get covariance
-    vec3 covA, covB;
-    getCovariance(covA, covB);
-
-    vec4 v1v2 = calcV1V2(splat_cam.xyz, covA, covB, transpose(mat3(model_view)));
-
-    // get color
-    color = texelFetch(splatColor, splatUV, 0);
-
-    // calculate scale based on alpha
-    // float scale = min(1.0, sqrt(-log(1.0 / 255.0 / color.a)) / 2.0);
-
-    // v1v2 *= scale;
-
-    // early out tiny splats
-    if (dot(v1v2.xy, v1v2.xy) < 4.0 && dot(v1v2.zw, v1v2.zw) < 4.0) {
-        gl_Position = discardVec;
-        return;
-    }
-
-    gl_Position = splat_proj + vec4((vertex_position.x * v1v2.xy + vertex_position.y * v1v2.zw) / viewport * splat_proj.w, 0, 0);
-
-    texCoord = vertex_position.xy * 0.5; // * scale;
-
-    #ifdef USE_SH1
-        vec4 worldCenter = matrix_model * vec4(center, 1.0);
-        vec3 viewDir = normalize((worldCenter.xyz / worldCenter.w - view_position) * mat3(matrix_model));
-        color.xyz = max(color.xyz + evalSH(viewDir), 0.0);
-    #endif
-
-    #ifndef DITHER_NONE
-        id = float(splatId);
-    #endif
-
-    #ifdef PICK_PASS
-        vertexId = splatId;
-    #endif
-}
-`;
-
-const fragmentShader = /*glsl*/`
-varying mediump vec2 texCoord;
-varying mediump vec4 color;
-
-flat varying highp uint vertexState;
-#ifdef PICK_PASS
-    flat varying highp uint vertexId;
-#endif
-
-uniform float pickerAlpha;
-uniform float ringSize;
-
-void main(void)
-{
-    mediump float A = dot(texCoord, texCoord);
-    if (A > 1.0) {
-        discard;
-    }
-
-    mediump float B = exp(-A * 4.0) * color.a;
-
-    #ifdef PICK_PASS
-        if (B < pickerAlpha || (vertexState & 2u) == 2u) {
-            // hidden
-            discard;
-        }
-        gl_FragColor = vec4(
-            float(vertexId & 255u) / 255.0,
-            float((vertexId >> 8) & 255u) / 255.0,
-            float((vertexId >> 16) & 255u) / 255.0,
-            float((vertexId >> 24) & 255u) / 255.0
-        );
-    #else
-        vec3 c;
-        float alpha;
-
-        if ((vertexState & 2u) == 2u) {
-            // frozen/hidden
-            c = vec3(0.0, 0.0, 0.0);
-            alpha = B * 0.05;
-        } else {
-            if ((vertexState & 1u) == 1u) {
-                // selected
-                c = vec3(1.0, 1.0, 0.0);
-            } else {
-                // normal
-                c = color.xyz;
-            }
-
-            if (ringSize > 0.0) {
-                // rings mode
-                if (A < 1.0 - ringSize) {
-                    alpha = max(0.05, B);
-                } else {
-                    alpha = 0.6;
-                }
-            } else {
-                // centers mode
-                alpha = B;
-            }
-        }
-
-        gl_FragColor = vec4(c, alpha);
-    #endif
-}
-`;
+import { vertexShader, fragmentShader } from './splat-shader';
+import { TransformPalette } from './transform-palette';
 
 const vec = new Vec3();
 const veca = new Vec3();
@@ -198,6 +47,7 @@ class Splat extends Element {
     entity: Entity;
     changedCounter = 0;
     stateTexture: Texture;
+    transformTexture: Texture;
     selectionBoundStorage: BoundingBox;
     localBoundStorage: BoundingBox;
     worldBoundStorage: BoundingBox;
@@ -205,7 +55,8 @@ class Splat extends Element {
     localBoundDirty = true;
     worldBoundDirty = true;
     visible_ = true;
-    selectionTransform = new Mat4();
+    transformPalette: TransformPalette;
+    transformIdx = 1;   // tmp
 
     rebuildMaterial: (bands: number) => void;
 
@@ -237,15 +88,17 @@ class Splat extends Element {
         // bit 3: hidden
         this.splatData.addProp('state', new Uint8Array(this.splatData.numSplats));
 
-        const w = instance.splat.colorTexture.width;
-        const h = instance.splat.colorTexture.height;
+        // per-splat transform matrix
+        this.splatData.addProp('transform', new Uint16Array(this.splatData.numSplats));
+
+        const { width, height } = instance.splat.colorTexture;
 
         // pack spherical harmonic data
         const createTexture = (name: string, format: number) => {
             return new Texture(splatResource.device, {
                 name: name,
-                width: w,
-                height: h,
+                width: width,
+                height: height,
                 format: format,
                 mipmaps: false,
                 minFilter: FILTER_NEAREST,
@@ -257,6 +110,10 @@ class Splat extends Element {
 
         // create the state texture
         this.stateTexture = createTexture('splatState', PIXELFORMAT_L8);
+        this.transformTexture = createTexture('splatTransform', PIXELFORMAT_R16U);
+
+        // create the transform palette
+        this.transformPalette = new TransformPalette(splatResource.device);
 
         this.rebuildMaterial = (bands: number) => {
             // @ts-ignore
@@ -264,7 +121,8 @@ class Splat extends Element {
 
             const material = instance.material;
             material.setParameter('splatState', this.stateTexture);
-            material.setParameter('selection_transform', this.selectionTransform.data);
+            material.setParameter('splatTransform', this.transformTexture);
+            material.setParameter('transformPalette', this.transformPalette.texture);
             material.update();
         };
 

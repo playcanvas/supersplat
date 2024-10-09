@@ -220,6 +220,7 @@ class EntityTransformOp {
     }
 }
 
+const mat = new Mat4();
 const vec = new Vec3();
 
 // op for modifying a subset of individual splats
@@ -227,78 +228,65 @@ class SplatsTransformOp {
     name = 'splatsTransform';
 
     splat: Splat;
-    indices: Uint32Array;
-    positions: Float32Array;
     transform: Mat4;
+    paletteMap: Map<number, number>;
 
-    constructor(options: { splat: Splat, transform: Mat4 }) {
-        const splatData = options.splat.splatData;
-        const state = splatData.getProp('state') as Uint8Array;
-        const indices = buildIndex(splatData.numSplats, (i) => state[i] === State.selected);
-
-        const x = splatData.getProp('x') as Float32Array;
-        const y = splatData.getProp('y') as Float32Array;
-        const z = splatData.getProp('z') as Float32Array;
-
-        const positions = new Float32Array(indices.length * 3);
-        for (let i = 0; i < indices.length; ++i) {
-            const idx = indices[i];
-            positions[i * 3 + 0] = x[idx];
-            positions[i * 3 + 1] = y[idx];
-            positions[i * 3 + 2] = z[idx];
-        }
-
+    constructor(options: { splat: Splat, transform: Mat4, paletteMap: Map<number, number> }) {
         this.splat = options.splat;
-        this.indices = indices;
-        this.positions = positions;
         this.transform = options.transform;
+        this.paletteMap = options.paletteMap;
     }
 
-    // apply the transform to the selected splat positions
     do() {
-        const { splat, indices, positions, transform } = this;
+        const { splat, transform, paletteMap } = this;
+        const state = splat.splatData.getProp('state') as Uint8Array;
+        const indices = splat.transformTexture.lock() as Uint16Array;
 
-        const x = splat.splatData.getProp('x') as Float32Array;
-        const y = splat.splatData.getProp('y') as Float32Array;
-        const z = splat.splatData.getProp('z') as Float32Array;
-
-        for (let i = 0; i < indices.length; ++i) {
-            const idx = indices[i];
-
-            vec.set(positions[i * 3 + 0], positions[i * 3 + 1], positions[i * 3 + 2]);
-            transform.transformPoint(vec, vec);
-
-            x[idx] = vec.x;
-            y[idx] = vec.y;
-            z[idx] = vec.z;
+        // set splat palette indices
+        for (let i = 0; i < state.length; ++i) {
+            if (state[i] === State.selected) {
+                indices[i] = paletteMap.get(indices[i]);
+            }
         }
 
-        splat.updatePositions();
+        // configure the transform palette
+        const { transformPalette } = splat;
+        this.paletteMap.forEach((newIdx, oldIdx) => {
+            transformPalette.getTransform(oldIdx, mat);
+            mat.mul2(transform, mat);
+            transformPalette.setTransform(newIdx, mat);
+        });
+
+        splat.transformTexture.unlock();
+        splat.transformIdx += paletteMap.size;
     }
 
-    // restore splat positions to their original values
     undo() {
-        const { splat, indices, positions } = this;
+        const { splat, paletteMap } = this;
+        const state = splat.splatData.getProp('state') as Uint8Array;
+        const indices = splat.transformTexture.lock() as Uint16Array;
 
-        const x = splat.splatData.getProp('x') as Float32Array;
-        const y = splat.splatData.getProp('y') as Float32Array;
-        const z = splat.splatData.getProp('z') as Float32Array;
+        // invert the palette map
+        const inverseMap = new Map<number, number>();
+        paletteMap.forEach((newIdx, oldIdx) => {
+            inverseMap.set(newIdx, oldIdx);
+        });
 
-        for (let i = 0; i < indices.length; ++i) {
-            const idx = indices[i];
-            x[idx] = positions[i * 3 + 0];
-            y[idx] = positions[i * 3 + 1];
-            z[idx] = positions[i * 3 + 2];
+        // restore the original transform indices
+        for (let i = 0; i < state.length; ++i) {
+            if (state[i] === State.selected) {
+                indices[i] = inverseMap.get(indices[i]);
+            }
         }
 
-        splat.updatePositions();
+        splat.transformTexture.unlock();
+        splat.transformIdx -= paletteMap.size;
     }
 
     destroy() {
         this.splat = null;
-        this.indices = null;
-        this.positions = null;
         this.transform = null;
+        this.paletteMap = null;
     }
 }
 

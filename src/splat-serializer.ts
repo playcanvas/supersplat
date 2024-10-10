@@ -566,8 +566,6 @@ const serializeAsSSplat = (convertData: SplatWithAlignment[]) => {
         const entry = convertData[e];
         const splatData = entry.splatData;
 
-        console.log(splatData);
-
         // count the number of non-deleted splats
         const x = splatData.getProp('x');
         const y = splatData.getProp('y');

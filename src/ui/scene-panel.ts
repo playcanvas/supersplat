@@ -58,7 +58,7 @@ class ScenePanel extends Container {
         sceneHeader.append(sceneNew);
 
         sceneImport.on('click', () => {
-            events.fire('scene.import');
+            events.fire('scene.open');
         });
 
         sceneNew.on('click', () => {

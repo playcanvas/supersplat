@@ -1,6 +1,6 @@
 import { AppBase, Asset, ResourceHandler } from "playcanvas";
-import { SSplatParser } from "./ssplat";
-import { PlayUrl, ResourceHandlerCallback, Parser } from "./play-types";
+import { SSplatParser } from "../parsers/ssplat-parser";
+import { PlayUrl, ResourceHandlerCallback, Parser } from "../play-types";
 
 class SSplatHandler extends ResourceHandler {
 

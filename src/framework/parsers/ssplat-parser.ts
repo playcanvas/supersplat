@@ -1,6 +1,6 @@
 import { Asset, AssetRegistry, GraphicsDevice, GSplatResource } from "playcanvas";
-import { deserializeFromSplat } from "./splat-serializer";
-import { PlayUrl, ResourceHandlerCallback } from "./play-types";
+import { deserializeFromSSplat } from "../../splat-serializer";
+import { PlayUrl, ResourceHandlerCallback } from "../play-types";
 
 
 class SSplatParser {
@@ -23,7 +23,7 @@ class SSplatParser {
 
             const resource = new GSplatResource(
                 this.device,
-                deserializeFromSplat(await blob.arrayBuffer())
+                deserializeFromSSplat(await blob.arrayBuffer())
             );          
 
             callback(null, resource);

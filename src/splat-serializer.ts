@@ -553,7 +553,7 @@ const serializeAsCompressedPly = (convertData: SplatWithAlignment[]) => {
     return result;
 };
 
-const serializeAsSplat = (convertData: SplatWithAlignment[]) => {
+const serializeAsSSplat = (convertData: SplatWithAlignment[]) => {
     const totalSplats = countTotalSplats(convertData);
 
     // position.xyz: float32, scale.xyz: float32, color.rgba: uint8, quaternion.ijkl: uint8
@@ -627,22 +627,7 @@ const serializeAsSplat = (convertData: SplatWithAlignment[]) => {
     return result;
 };
 
-type DataType = Int8Array | Uint8Array | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array;
-
-interface GSplatProperty {
-    type: string,
-    name: string,
-    storage: DataType
-    byteSize: number
-}
-
-interface GSplatElement {
-    name: string,
-    count: number
-    properties: GSplatProperty[]
-}
-
-const deserializeFromSplat = (data: ArrayBufferLike) => {
+const deserializeFromSSplat = (data: ArrayBufferLike) => {
     const totalSplats = data.byteLength / 32;
     const dataView = new DataView(data);
 
@@ -712,4 +697,4 @@ const deserializeFromSplat = (data: ArrayBufferLike) => {
     }]);
 };
 
-export { serializeAsPly, serializeAsCompressedPly, serializeAsSplat, deserializeFromSplat};
+export { serializeAsPly, serializeAsCompressedPly, serializeAsSSplat, deserializeFromSSplat};

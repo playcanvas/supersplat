@@ -57,9 +57,9 @@ import {
     // TextHandler,
     // TextureAtlasHandler,
     TextureHandler,
-    // XrManager
+    // XrManager,
 } from 'playcanvas';
-import { SSplatHandler } from './ssplat-handler';
+import { SSplatHandler } from './framework/handlers/ssplat';
 
 class PCApp extends AppBase {
     constructor(canvas: HTMLCanvasElement, options: any) {

@@ -93,7 +93,7 @@ class AssetLoader {
             } else if (isSplat) {
                 const asset = new Asset(
                     loadRequest.filename || loadRequest.url,
-                    'binary',
+                    'ssplat',
                     {
                         url: loadRequest.url,
                         filename: loadRequest.filename,
@@ -130,23 +130,14 @@ class AssetLoader {
                         resolve(new Splat(asset));
                     }
                 });
-
+                
                 asset.on('error', (err: string) => {
                     stopSpinner();
                     reject(err);
                 });
 
                 registry.add(asset);
-
-                // This is where things are getting too messy :D :D
-                (async () => {
-                    const response = await fetch(asset.file.url);
-                    const blob = await response.blob();
-                    
-                    // this null-device is not working at all
-                    asset.resource = new GSplatResource(null, deserializeFromSplat(await blob.arrayBuffer()));
-                    asset.fire('load', asset);
-                })();
+                registry.load(asset);
             } else {
                 const containerAsset = new Asset(
                     loadRequest.filename || loadRequest.url,

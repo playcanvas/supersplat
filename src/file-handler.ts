@@ -2,7 +2,7 @@ import { path, Mat3, Mat4, Vec3 } from 'playcanvas';
 import { Scene } from './scene';
 import { Events } from './events';
 import { CreateDropHandler } from './drop-handler';
-import { convertPly, convertPlyCompressed, convertSplat } from './splat-convert';
+import { serializeAsPly, serializeAsCompressedPly, serializeAsSSplat } from './splat-serializer';
 import { startSpinner, stopSpinner } from './ui/spinner';
 import { ElementType } from './element';
 import { Splat } from './splat';
@@ -34,9 +34,16 @@ const filePickerTypes = {
         }
     }],
     'splat': [{
+            description: 'Gaussian Splat SPLAT File',
+            accept: {
+                'application/splat': ['.splat']
+            }
+    }],
+    'gsplatfile': [{
             description: 'Gaussian Splat File',
             accept: {
-                'application/octet-stream': ['.splat']
+                'application/ply': ['.ply'],                
+                'application/splat': ['.splat']
             }
     }]
 };
@@ -124,7 +131,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
     const handleLoad = (url: string, filename: string) => {
         if (filename.toLowerCase().endsWith('.json')) {
             return loadCameraPoses(url, filename, events);
-        } else if (filename.toLowerCase().endsWith('.ply')) {
+        } else if (filename.toLowerCase().endsWith('.ply') || filename.toLowerCase().endsWith('.splat')) {
             return scene.loadModel(url, filename);
         } else {
             return null;
@@ -199,7 +206,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
                 const handles = await window.showOpenFilePicker({
                     id: 'SuperSplatFileOpen',
                     multiple: true,
-                    types: filePickerTypes.ply as FilePickerAcceptType[]
+                    types: filePickerTypes.gsplatfile as FilePickerAcceptType[]
                 });
                 for (let i = 0; i < handles.length; i++) {
                     const handle = handles[i];
@@ -317,21 +324,21 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
         }
     });
 
-    const convertData = (splats: Splat[], type: ExportType) => {
+    const serializeData = (splats: Splat[], type: ExportType) => {
         const convertData = splats.map((splat) => {
             return {
                 splatData: splat.splatData,
-                modelMat: splat.entity.getWorldTransform()
+                alignmentMat: splat.entity.getWorldTransform()
             };
         });
 
         switch (type) {
             case 'ply':
-                return convertPly(convertData);
+                return serializeAsPly(convertData);
             case 'compressed-ply':
-                return convertPlyCompressed(convertData);
+                return serializeAsCompressedPly(convertData);
             case 'splat':
-                return convertSplat(convertData);
+                return serializeAsSSplat(convertData);
         }
     };
 
@@ -345,7 +352,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
             setTimeout(resolve);
         });
 
-        const data = convertData(splats, options.type);
+        const data = serializeData(splats, options.type);
 
         if (options.stream) {
             // write to stream

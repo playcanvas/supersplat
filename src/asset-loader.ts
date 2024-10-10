@@ -1,9 +1,10 @@
-import { Asset, AssetRegistry, TEXTURETYPE_RGBP } from 'playcanvas';
+import { Asset, AssetRegistry, GSplatResource, TEXTURETYPE_RGBP } from 'playcanvas';
 import { Model } from './model';
 import { Splat } from './splat';
 import { Env } from './env';
 
 import { startSpinner, stopSpinner } from './ui/spinner';
+import { deserializeFromSSplat } from './splat-serializer';
 
 interface ModelLoadRequest {
     url?: string;
@@ -35,6 +36,7 @@ class AssetLoader {
 
         return new Promise<Model|Splat>((resolve, reject) => {
             const isPly = loadRequest.filename?.endsWith('.ply');
+            const isSSplat = loadRequest.filename?.endsWith('.splat');
 
             if (isPly) {
                 const asset = new Asset(
@@ -79,6 +81,29 @@ class AssetLoader {
                     } else {
                         resolve(new Splat(asset));
                     }
+                });
+
+                asset.on('error', (err: string) => {
+                    stopSpinner();
+                    reject(err);
+                });
+
+                registry.add(asset);
+                registry.load(asset);
+            } else if (isSSplat) {
+                const asset = new Asset(
+                    loadRequest.filename || loadRequest.url,
+                    'ssplat',
+                    {
+                        url: loadRequest.url,
+                        filename: loadRequest.filename,
+                        contents: loadRequest.contents
+                    }
+                );
+
+                asset.on('load', () => {
+                    stopSpinner();
+                    resolve(new Splat(asset));
                 });
 
                 asset.on('error', (err: string) => {

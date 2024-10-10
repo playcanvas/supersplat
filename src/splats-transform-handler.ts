@@ -91,6 +91,7 @@ class SplatsTransformHandler implements TransformHandler {
         const pivot = this.events.invoke('pivot') as Pivot;
         const { transform } = pivot;
         const { splat } = this;
+        const { transformPalette } = splat;
 
         mat.setTRS(transform.position, transform.rotation, transform.scale);
 
@@ -115,7 +116,7 @@ class SplatsTransformHandler implements TransformHandler {
                 const oldIdx = indices[i];
                 let newIdx;
                 if (!paletteMap.has(oldIdx)) {
-                    newIdx = splat.transformIdx++;
+                    newIdx = transformPalette.idx++;
                     paletteMap.set(oldIdx, newIdx);
                 } else {
                     newIdx = paletteMap.get(oldIdx);
@@ -129,8 +130,8 @@ class SplatsTransformHandler implements TransformHandler {
 
         // initialize transforms
         this.paletteMap.forEach((newIdx, oldIdx) => {
-            splat.transformPalette.getTransform(oldIdx, mat);
-            splat.transformPalette.setTransform(newIdx, mat);
+            transformPalette.getTransform(oldIdx, mat);
+            transformPalette.setTransform(newIdx, mat);
         });
     }
 

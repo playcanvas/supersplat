@@ -248,6 +248,8 @@ class SplatsTransformOp {
             }
         }
 
+        splat.transformTexture.unlock();
+
         // update transform palette
         const { transformPalette } = splat;
         this.paletteMap.forEach((newIdx, oldIdx) => {
@@ -256,8 +258,7 @@ class SplatsTransformOp {
             transformPalette.setTransform(newIdx, mat);
         });
 
-        splat.transformTexture.unlock();
-        splat.transformIdx += paletteMap.size;
+        transformPalette.idx += paletteMap.size;
     }
 
     undo() {
@@ -271,6 +272,8 @@ class SplatsTransformOp {
             inverseMap.set(newIdx, oldIdx);
         });
 
+        splat.transformTexture.unlock();
+
         // restore the original transform indices
         for (let i = 0; i < state.length; ++i) {
             if (state[i] === State.selected) {
@@ -278,8 +281,7 @@ class SplatsTransformOp {
             }
         }
 
-        splat.transformTexture.unlock();
-        splat.transformIdx -= paletteMap.size;
+        splat.transformPalette.idx -= paletteMap.size;
     }
 
     destroy() {

@@ -7,12 +7,17 @@ import {
     Texture
 } from 'playcanvas';
 
-const idx = [0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14];
+const idx = [
+    0, 4, 8, 12,
+    1, 5, 9, 13,
+    2, 6, 10, 14
+];
 
 // wraps a palette of transform data
 class TransformPalette {
     texture: Texture;
     data: Float32Array;
+    idx = 1;                // index of the next available matrix. index 0 is identity
 
     constructor(device: GraphicsDevice, maxTransforms = 4096) {
         const width = 512 * 3;                                      // 512 matrices per row (512 * 3 * 4 floats)

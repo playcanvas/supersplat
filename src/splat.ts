@@ -56,7 +56,6 @@ class Splat extends Element {
     worldBoundDirty = true;
     visible_ = true;
     transformPalette: TransformPalette;
-    transformIdx = 1;   // tmp
 
     rebuildMaterial: (bands: number) => void;
 

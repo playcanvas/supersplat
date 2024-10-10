@@ -26,7 +26,7 @@ const sceneConfig = {
         exposure: 1.0,
         toneMapping: 'linear',
         debug_render: '',
-        debug: true
+        overlay: true
     },
     show: {
         grid: true,

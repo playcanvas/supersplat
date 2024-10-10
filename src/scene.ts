@@ -15,7 +15,7 @@ import { SceneConfig } from './scene-config';
 import { AssetLoader } from './asset-loader';
 import { Model } from './model';
 import { Splat } from './splat';
-import { SplatDebug } from './splat-debug';
+import { SplatOverlay } from './splat-overlay';
 import { Camera } from './camera';
 import { CustomShadow as Shadow } from './custom-shadow';
 // import { Grid } from './grid';
@@ -45,7 +45,7 @@ class Scene {
 
     assetLoader: AssetLoader;
     camera: Camera;
-    splatDebug: SplatDebug;
+    splatOverlay: SplatOverlay;
     shadow: Shadow;
     grid: Grid;
 
@@ -174,8 +174,8 @@ class Scene {
         this.camera = new Camera();
         this.add(this.camera);
 
-        this.splatDebug = new SplatDebug();
-        this.add(this.splatDebug);
+        this.splatOverlay = new SplatOverlay();
+        this.add(this.splatOverlay);
 
         // this.shadow = new Shadow();
         // this.add(this.shadow);

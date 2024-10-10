@@ -49,7 +49,7 @@ class ModeToggle extends Container {
         this.dom.addEventListener('pointerdown', (event) => {
             event.stopPropagation();
             events.fire('camera.toggleMode');
-            events.fire('camera.setDebug', true);
+            events.fire('camera.setOverlay', true);
         });
 
         events.on('camera.mode', (mode: string) => {

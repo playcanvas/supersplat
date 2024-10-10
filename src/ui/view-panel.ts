@@ -253,7 +253,7 @@ class ViewPanel extends Container {
 
         centersSizeSlider.on('change', (value: number) => {
             events.fire('camera.setSplatSize', value);
-            events.fire('camera.setDebug', true);
+            events.fire('camera.setOverlay', true);
             events.fire('camera.setMode', 'centers');
         });
 

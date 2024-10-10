@@ -83,7 +83,7 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['Z', 'z'], { event: 'edit.redo', ctrl: true, shift: true });
     shortcuts.register(['M', 'm'], { event: 'camera.toggleMode' });
     shortcuts.register(['D', 'd'], { event: 'dataPanel.toggle' });
-    shortcuts.register([' '], { event: 'camera.toggleDebug' });
+    shortcuts.register([' '], { event: 'camera.toggleOverlay' });
 
     return shortcuts;
 };

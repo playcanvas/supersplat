@@ -72,9 +72,9 @@ class RightToolbar extends Container {
 
         ringsModeToggle.on('click', () => {
             events.fire('camera.toggleMode');
-            events.fire('camera.setDebug', true);
+            events.fire('camera.setOverlay', true);
         });
-        showHideSplats.on('click', () => events.fire('camera.toggleDebug'));
+        showHideSplats.on('click', () => events.fire('camera.toggleOverlay'));
         frameSelection.on('click', () => events.fire('camera.focus'));
         options.on('click', () => events.fire('viewPanel.toggleVisible'));
 
@@ -84,8 +84,8 @@ class RightToolbar extends Container {
             ringsDom.style.display = mode === 'rings' ? 'block' : 'none';
         });
 
-        events.on('camera.debug', (debug: boolean) => {
-            showHideSplats.class[debug ? 'add' : 'remove']('active');
+        events.on('camera.overlay', (value: boolean) => {
+            showHideSplats.class[value ? 'add' : 'remove']('active');
         });
 
         events.on('viewPanel.visible', (visible: boolean) => {

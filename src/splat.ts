@@ -17,7 +17,7 @@ import {
 import { Element, ElementType } from "./element";
 import { Serializer } from "./serializer";
 import { State } from './splat-state';
-import { vertexShader, fragmentShader } from './splat-shader';
+import { vertexShader, fragmentShader } from './shaders/splat-shader';
 import { TransformPalette } from './transform-palette';
 
 const vec = new Vec3();
@@ -297,11 +297,11 @@ class Splat extends Element {
         const events = this.scene.events;
         const selected = events.invoke('selection') === this;
         const cameraMode = events.invoke('camera.mode');
-        const splatSize = events.invoke('camera.debug') ? events.invoke('camera.splatSize') : 0;
+        const cameraOverlay = events.invoke('camera.overlay');
 
         // configure rings rendering
         const material = this.entity.gsplat.instance.material;
-        material.setParameter('ringSize', (selected && cameraMode === 'rings' && splatSize > 0) ? 0.04 : 0);
+        material.setParameter('ringSize', (selected && cameraOverlay && cameraMode === 'rings') ? 0.04 : 0);
 
         if (this.visible && selected) {
             // render bounding box

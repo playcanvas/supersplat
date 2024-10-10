@@ -57,7 +57,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         scene.forceRender = true;
     });
 
-    events.on('camera.debug', () => {
+    events.on('camera.overlay', () => {
         scene.forceRender = true;
     });
 
@@ -510,27 +510,27 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         setCameraMode(events.invoke('camera.mode') === 'centers' ? 'rings' : 'centers');
     });
 
-    // camera debug
+    // camera overlay
 
-    let cameraDebug = scene.config.camera.debug;
+    let cameraOverlay = scene.config.camera.overlay;
 
-    const setCameraDebug = (enabled: boolean) => {
-        if (enabled !== cameraDebug) {
-            cameraDebug = enabled;
-            events.fire('camera.debug', cameraDebug);
+    const setCameraOverlay = (enabled: boolean) => {
+        if (enabled !== cameraOverlay) {
+            cameraOverlay = enabled;
+            events.fire('camera.overlay', cameraOverlay);
         }
     };
 
-    events.function('camera.debug', () => {
-        return cameraDebug;
+    events.function('camera.overlay', () => {
+        return cameraOverlay;
     });
 
-    events.on('camera.setDebug', (value: boolean) => {
-        setCameraDebug(value);
+    events.on('camera.setOverlay', (value: boolean) => {
+        setCameraOverlay(value);
     });
 
-    events.on('camera.toggleDebug', () => {
-        setCameraDebug(!events.invoke('camera.debug'));
+    events.on('camera.toggleOverlay', () => {
+        setCameraOverlay(!events.invoke('camera.overlay'));
     });
 
     // splat size
@@ -587,7 +587,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     // hack: fire events to initialize UI
     events.fire('camera.fov', scene.camera.fov);
-    events.fire('camera.debug', cameraDebug);
+    events.fire('camera.overlay', cameraOverlay);
     events.fire('view.bands', viewBands);
 }
 

@@ -2,7 +2,7 @@ import { path, Mat3, Mat4, Vec3 } from 'playcanvas';
 import { Scene } from './scene';
 import { Events } from './events';
 import { CreateDropHandler } from './drop-handler';
-import { serializeAsPly, serializeAsCompressedPly, serializeAsSplat } from './splat-serializer';
+import { serializeAsPly, serializeAsCompressedPly, serializeAsSSplat } from './splat-serializer';
 import { startSpinner, stopSpinner } from './ui/spinner';
 import { ElementType } from './element';
 import { Splat } from './splat';
@@ -12,7 +12,7 @@ interface RemoteStorageDetails {
     url: string;
 }
 
-type ExportType = 'ply' | 'compressed-ply' | 'splat';
+type ExportType = 'ply' | 'compressed-ply' | 'ssplat';
 
 interface SceneWriteOptions {
     type: ExportType;
@@ -33,7 +33,7 @@ const filePickerTypes = {
             'application/ply': ['.ply']
         }
     }],
-    'splat': [{
+    'ssplat': [{
             description: 'Gaussian Splat SPLAT File',
             accept: {
                 'application/splat': ['.splat']
@@ -231,7 +231,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
         const extensions = {
             'ply': '.ply',
             'compressed-ply': '.compressed.ply',
-            'splat': '.splat'
+            'ssplat': '.splat'
         };
 
         const replaceExtension = (filename: string, extension: string) => {
@@ -291,8 +291,8 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
                 return serializeAsPly(convertData);
             case 'compressed-ply':
                 return serializeAsCompressedPly(convertData);
-            case 'splat':
-                return serializeAsSplat(convertData);
+            case 'ssplat':
+                return serializeAsSSplat(convertData);
         }
     };
 

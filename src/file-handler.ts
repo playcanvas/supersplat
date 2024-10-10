@@ -12,7 +12,7 @@ interface RemoteStorageDetails {
     url: string;
 }
 
-type ExportType = 'ply' | 'compressed-ply' | 'ssplat';
+type ExportType = 'ply' | 'compressed-ply' | 'splat';
 
 interface SceneWriteOptions {
     type: ExportType;
@@ -33,7 +33,7 @@ const filePickerTypes = {
             'application/ply': ['.ply']
         }
     }],
-    'ssplat': [{
+    'splat': [{
             description: 'Gaussian Splat SPLAT File',
             accept: {
                 'application/splat': ['.splat']
@@ -198,7 +198,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
         return true;
     });
 
-    events.on('scene.import', async () => {
+    events.on('scene.open', async () => {
         if (fileSelector) {
             fileSelector.click();
         } else {
@@ -227,11 +227,57 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
         }
     });
 
-    events.function('scene.export', async (type: ExportType, outputFilename: string = null) => {
+    events.on('scene.save', async () => {
+        if (fileHandle) {
+            try {
+                await events.invoke('scene.write', {
+                    type: 'ply',
+                    stream: await fileHandle.createWritable()
+                });
+                events.fire('scene.saved');
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    console.error(error);
+                }
+            }
+        } else {
+            events.fire('scene.saveAs');
+        }
+    });
+
+    events.on('scene.saveAs', async () => {
+        const splats = getSplats();
+        const splat = splats[0];
+
+        if (window.showSaveFilePicker) {
+            try {
+                const handle = await window.showSaveFilePicker({
+                    id: 'SuperSplatFileSave',
+                    types: filePickerTypes.ply as FilePickerAcceptType[],
+                    suggestedName: fileHandle?.name ?? splat.filename ?? 'scene.ply'
+                });
+                await events.invoke('scene.write', {
+                    type: 'ply',
+                    stream: await handle.createWritable()
+                });
+                fileHandle = handle;
+                events.fire('scene.saved');
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    console.error(error);
+                }
+            }
+        } else {
+            await events.invoke('scene.export', 'ply', splat.filename, 'saveAs');
+            events.fire('scene.saved');
+        }
+    });
+
+    events.function('scene.export', async (type: ExportType, outputFilename: string = null, exportType: 'export' | 'saveAs' = 'export') => {
         const extensions = {
             'ply': '.ply',
             'compressed-ply': '.compressed.ply',
-            'ssplat': '.splat'
+            'splat': '.splat'
         };
 
         const replaceExtension = (filename: string, extension: string) => {
@@ -264,7 +310,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
         } else {
             const result = await events.invoke('showPopup', {
                 type: 'okcancel',
-                header: 'EXPORT',
+                header: exportType === 'saveAs' ? 'SAVE AS' : 'EXPORT',
                 message: 'Please enter a filename',
                 value: filename
             });
@@ -291,7 +337,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
                 return serializeAsPly(convertData);
             case 'compressed-ply':
                 return serializeAsCompressedPly(convertData);
-            case 'ssplat':
+            case 'splat':
                 return serializeAsSSplat(convertData);
         }
     };

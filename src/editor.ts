@@ -1,6 +1,9 @@
 import {
+    PIXELFORMAT_RGBA8,
     BoundingBox,
     Mat4,
+    RenderTarget,
+    Texture,
     Vec3,
     Vec4,
 } from 'playcanvas';
@@ -10,6 +13,7 @@ import { Splat } from './splat';
 import { State } from './splat-state';
 import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp } from './edit-ops';
 import { Events } from './events';
+import { DataProcessor } from './data-processor';
 
 // register for editor and scene events
 const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: Scene) => {
@@ -203,30 +207,53 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
     });
 
+    const dataProcessor = new DataProcessor(scene.graphicsDevice);
+    let maskTexture: Texture = null;
+    let resultTexture: Texture = null;
+    let resultRenderTarget: RenderTarget = null;
+    let resultData: Uint8Array;
+
+    const intersectCenters = (splat: Splat, op: 'add'|'remove'|'set', options: any) => {
+        const start = performance.now();
+
+        // create result texture
+        if (!resultTexture || resultTexture.width !== splat.transformTexture.width || resultTexture.height !== splat.transformTexture.height) {
+            if (resultTexture) {
+                resultRenderTarget.destroy();
+                resultTexture.destroy();
+            }
+
+            resultTexture = new Texture(scene.graphicsDevice, {
+                width: splat.transformTexture.width,
+                height: splat.transformTexture.height,
+                format: PIXELFORMAT_RGBA8,
+                mipmaps: false
+            });
+
+            resultRenderTarget = new RenderTarget({
+                colorBuffer: resultTexture,
+                depth: false
+            });
+
+            resultData = new Uint8Array(resultTexture.width * resultTexture.height * 4);
+        }
+
+        dataProcessor.intersect(options, splat, resultRenderTarget);
+
+        // read intersect results
+        scene.graphicsDevice.readPixelsAsync(0, 0, resultTexture.width, resultTexture.height, resultData)
+        .then(() => {
+            const filter = (i: number) => resultData[i * 4 + 3] === 255;
+            events.fire('edit.add', new SelectOp(splat, op, filter));
+            console.log(`select.sphere took ${performance.now() - start}ms`);
+        });
+    };
+
     events.on('select.bySphere', (op: 'add'|'remove'|'set', sphere: number[]) => {
         selectedSplats().forEach((splat) => {
-            const splatData = splat.splatData;
-            const x = splatData.getProp('x');
-            const y = splatData.getProp('y');
-            const z = splatData.getProp('z');
-
-            splat.worldTransform.getScale(vec);
-
-            const radius2 = (sphere[3] / vec.x) ** 2;
-            vec.set(sphere[0], sphere[1], sphere[2]);
-
-            mat.invert(splat.worldTransform);
-            mat.transformPoint(vec, vec);
-
-            const sx = vec.x;
-            const sy = vec.y;
-            const sz = vec.z;
-
-            const filter = (i: number) => {
-                return (x[i] - sx) ** 2 + (y[i] - sy) ** 2 + (z[i] - sz) ** 2 < radius2;
-            };
-
-            events.fire('edit.add', new SelectOp(splat, op, filter));
+            intersectCenters(splat, op, {
+                sphere: { x: sphere[0], y: sphere[1], z: sphere[2], radius: sphere[3] }
+            });
         });
     });
 
@@ -234,52 +261,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         const mode = events.invoke('camera.mode');
 
         selectedSplats().forEach((splat) => {
-            const splatData = splat.splatData;
-
             if (mode === 'centers') {
-                const px = splatData.getProp('x');
-                const py = splatData.getProp('y');
-                const pz = splatData.getProp('z');
-
-                // convert screen rect to camera space
-                const camera = scene.camera.entity.camera;
-
-                // calculate final matrix
-                mat.mul2(camera.camera._viewProjMat, splat.worldTransform);
-                const d = mat.data;
-                const m00 = d[0]; const m01 = d[4]; const m02 = d[8]; const m03 = d[12];
-                const m10 = d[1]; const m11 = d[5]; const m12 = d[9]; const m13 = d[13];
-                const m20 = d[2]; const m21 = d[6]; const m22 = d[10];const m23 = d[14];
-                const m30 = d[3]; const m31 = d[7]; const m32 = d[11];const m33 = d[15];
-
-                const sx = rect.start.x * 2 - 1;
-                const sy = rect.start.y * 2 - 1;
-                const ex = rect.end.x * 2 - 1;
-                const ey = rect.end.y * 2 - 1;
-
-                const filter = (i: number) => {
-                    const vx = px[i];
-                    const vy = py[i];
-                    const vz = pz[i];
-
-                    const w = vx * m30 + vy * m31 + vz * m32 + m33;
-
-                    const x = (vx * m00 + vy * m01 + vz * m02 + m03) / w;
-                    if (x < sx || x > ex) {
-                        return false;
-                    }
-
-                    const y = -(vx * m10 + vy * m11 + vz * m12 + m13) / w;
-                    if (y < sy || y > ey) {
-                        return false;
-                    }
-
-                    const z = (vx * m20 + vy * m21 + vz * m22 + m23);
-
-                    return z >= -w && z <= w;
-                };
-
-                events.fire('edit.add', new SelectOp(splat, op, filter));
+                intersectCenters(splat, op, {
+                    rect: { x1: rect.start.x, y1: rect.start.y, x2: rect.end.x, y2: rect.end.y },
+                });
             } else if (mode === 'rings') {
                 const { width, height } = scene.targetSize;
 
@@ -301,59 +286,26 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
     });
 
-    events.on('select.byMask', (op: 'add'|'remove'|'set', mask: ImageData) => {
+    events.on('select.byMask', (op: 'add'|'remove'|'set', canvas: HTMLCanvasElement, context: CanvasRenderingContext2D) => {
         const mode = events.invoke('camera.mode');
 
         selectedSplats().forEach((splat) => {
-            const splatData = splat.splatData;
-
             if (mode === 'centers') {
-                const px = splatData.getProp('x');
-                const py = splatData.getProp('y');
-                const pz = splatData.getProp('z');
-
-                // convert screen rect to camera space
-                const camera = scene.camera.entity.camera;
-
-                // calculate final matrix
-                mat.mul2(camera.camera._viewProjMat, splat.worldTransform);
-                const d = mat.data;
-                const m00 = d[0]; const m01 = d[4]; const m02 = d[8]; const m03 = d[12];
-                const m10 = d[1]; const m11 = d[5]; const m12 = d[9]; const m13 = d[13];
-                const m20 = d[2]; const m21 = d[6]; const m22 = d[10];const m23 = d[14];
-                const m30 = d[3]; const m31 = d[7]; const m32 = d[11];const m33 = d[15];
-
-                const width = mask.width;
-                const height = mask.height;
-
-                const filter = (i: number) => {
-                    const vx = px[i];
-                    const vy = py[i];
-                    const vz = pz[i];
-
-                    const w = vx * m30 + vy * m31 + vz * m32 + m33;
-                    const x = vx * m00 + vy * m01 + vz * m02 + m03;
-                    if (x < -w || x > w) {
-                        return false;
+                // create mask texture
+                if (!maskTexture || maskTexture.width !== canvas.width || maskTexture.height !== canvas.height) {
+                    if (maskTexture) {
+                        maskTexture.destroy();
                     }
+                    maskTexture = new Texture(scene.graphicsDevice);
+                }
+                maskTexture.setSource(canvas);
 
-                    const y = vx * m10 + vy * m11 + vz * m12 + m13;
-                    if (y < -w || y > w) {
-                        return false;
-                    }
-
-                    const z = vx * m20 + vy * m21 + vz * m22 + m23;
-                    if (z < -w || z > w) {
-                        return false;
-                    }
-
-                    const mx = Math.floor((x / w * 0.5 + 0.5) * width);
-                    const my = Math.floor((y / w * -0.5 + 0.5) * height);
-                    return mask.data[(my * width + mx) * 4] === 255;
-                };
-
-                events.fire('edit.add', new SelectOp(splat, op, filter));
+                intersectCenters(splat, op, {
+                    mask: maskTexture
+                });
             } else if (mode === 'rings') {
+                const mask = context.getImageData(0, 0, canvas.width, canvas.height);
+
                 // calculate mask bound so we limit pixel operations
                 let mx0 = mask.width - 1;
                 let my0 = mask.height - 1;

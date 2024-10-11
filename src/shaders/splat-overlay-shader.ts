@@ -4,8 +4,6 @@ const vertexShader = /* glsl */ `
     uniform mat4 matrix_model;
     uniform mat4 matrix_viewProjection;
 
-    // uniform mat4 selection_transform;
-
     uniform sampler2D splatState;
     uniform highp usampler2D splatPosition;
     uniform highp usampler2D splatTransform;        // per-splat index into transform palette

@@ -358,6 +358,8 @@ class Splat extends Element {
             if (!this.splatData.calcAabb(selectionBound, selectionPred)) {
                 selectionBound.copy(this.localBound);
             }
+
+            this.selectionBoundDirty = false;
         }
 
         return this.selectionBoundStorage;

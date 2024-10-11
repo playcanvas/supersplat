@@ -1,0 +1,73 @@
+1. Hook (API) for loading Gaussian splat scene
+  1.1 One-time load
+  1.2 Stretch goal - stream gaussians live (visualize training)
+2. Additional gaussian metadata (classification)
+  2.1 additional parameter for each gaussian (class color)
+  2.2 Option to toggle visualization of metadata:
+   2.2.1 Visualize different classes by Setting a unique color (color picker?) for each class
+   2.2.2 Select all gaussians corresponding to that class (dropdown list with cheeckboxes)
+3. Bounding box visualization
+  3.1 wireframe rendering
+  3.2 minmaxx,minmaxy coordinate calculation from selected gaussians
+      playcanvas.d.ts
+      calcAabb(result: BoundingBox, pred?: (i: number) => boolean): boolean;
+    /**
+     * Calculate exact scene aabb taking into account splat size
+     *
+     * @param {BoundingBox} result - Where to store the resulting bounding box.
+     * @param {(i: number) => boolean} [pred] - Optional predicate function to filter splats.
+     * @returns {boolean} - Whether the calculation was successful.
+     */
+
+```
+     GSplatInstance -> GSplat -> GSplatData ->:
+    this.aabb = new BoundingBox();
+    gsplatData.calcAabb(this.aabb);
+```
+
+
+1. One time Load:
+GUI:
+ Scene:
+   Add "Start Data Server"
+   menu.ts -> sceneMenuPanel
+
+   file-handler:
+   scene.open -> const file = await handle.getFile();
+                    const url = URL.createObjectURL(file);
+                    await scene.loadModel(url, file.name);
+                    URL.revokeObjectURL(url);
+
+              const model = await this.assetLoader.loadModel({ url, filename });
+            this.add(model);
+
+
+
+ asset.on('load', () => {
+                    stopSpinner();
+
+                    // support loading 2d splats by adding scale_2 property with almost 0 scale
+                    const splatData = asset.resource.splatData;
+                    if (splatData.getProp('scale_0') && splatData.getProp('scale_1') && !splatData.getProp('scale_2')) {
+                        const scale2 = new Float32Array(splatData.numSplats).fill(Math.log(1e-6));
+                        splatData.addProp('scale_2', scale2);
+
+                        // place the new scale_2 property just after scale_1
+                        const props = splatData.getElement('vertex').properties;
+                        props.splice(props.findIndex((prop: any) => prop.name === 'scale_1') + 1, 0, props.splice(props.length - 1, 1)[0]);
+                    }
+
+                    // check the PLY contains minimal set of we expect
+                    const required = [
+                        'x', 'y', 'z',
+                        'scale_0', 'scale_1', 'scale_2',
+                        'rot_0', 'rot_1', 'rot_2', 'rot_3',
+                        'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity'
+                    ];
+                    const missing = required.filter(x => !splatData.getProp(x));
+                    if (missing.length > 0) {
+                        reject(`This file does not contain gaussian splatting data. The following properties are missing: ${missing.join(', ')}`);
+                    } else {
+                        resolve(new Splat(asset));
+                    }
+                });

@@ -214,6 +214,21 @@ class Scene {
         this.app.start();
     }
 
+    async updateModel(url: string, filename: string){
+        try{
+            this.clear();
+            const model = await this.assetLoader.loadModel({ url, filename });
+            this.add(model);
+            this.events.fire('updated');
+        }catch (err) {
+            this.events.invoke('showPopup', {
+                type: 'error',
+                header: localize('popup.error-updating'),
+                message: `${err.message ?? err} while updating model`
+            });
+        }
+    }
+
     async loadModel(url: string, filename: string) {
         try {
             const model = await this.assetLoader.loadModel({ url, filename });

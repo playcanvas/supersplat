@@ -13,6 +13,7 @@ const localizeInit = () => {
                         "scene": "Scene",
                         "scene.new": "New",
                         "scene.open": "Open",
+                        "scene.start-data-server": "Start Data Server",
                         "scene.import": "Import",
                         "scene.load-all-data": "Load all PLY data",
                         "scene.save": "Save",

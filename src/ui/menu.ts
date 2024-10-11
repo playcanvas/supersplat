@@ -11,6 +11,7 @@ import sceneOpen from '../svg/open.svg';
 import sceneSave from '../svg/save.svg';
 import sceneExport from '../svg/export.svg';
 import sceneImport from '../svg/import.svg';
+import sceneDataServer from '../svg/select-sphere.svg';
 import selectAll from '../svg/select-all.svg';
 import selectNone from '../svg/select-none.svg';
 import selectInverse from '../svg/select-inverse.svg';
@@ -133,6 +134,13 @@ class Menu extends Container {
                 }
             }
         }, {
+            text: localize('scene.start-data-server'),
+            icon: createSvg(sceneDataServer),
+            onSelect: async () => {
+                await events.invoke('scene.start-data-server');
+            }
+        },
+        {
             text: localize('scene.import'),
             icon: createSvg(sceneImport),
             onSelect: () => events.fire('scene.open')

@@ -6,6 +6,7 @@ import { EditHistory } from './edit-history';
 import { EditorUI } from './ui/editor';
 import { registerEditorEvents } from './editor';
 import { initFileHandler } from './file-handler';
+import { initDataServer } from './data-server';
 import { initSelection } from './selection';
 import { ToolManager } from './tools/tool-manager';
 import { RectSelection } from './tools/rect-selection';
@@ -155,6 +156,7 @@ const main = async () => {
     initSelection(events, scene);
     initShortcuts(events);
     await initFileHandler(scene, events, editorUI.appContainer.dom, remoteStorageDetails);
+    await initDataServer(scene, events, editorUI.appContainer.dom);
 
     // load async models
     await scene.load();

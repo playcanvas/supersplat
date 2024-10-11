@@ -62,9 +62,10 @@ class DataProcessor {
         scope.resolve('transformA').setValue(transformA);
         scope.resolve('splatTransform').setValue(splatTransform);
         scope.resolve('transformPalette').setValue(transformPalette);
-        scope.resolve('tex_params').setValue([transformA.width, transformA.height, numSplats]);
+        scope.resolve('splat_params').setValue([transformA.width, numSplats]);
         scope.resolve('matrix_model').setValue(splat.entity.getWorldTransform().data);
         scope.resolve('matrix_viewProjection').setValue(this.viewProjectionMat.data);
+        scope.resolve('output_params').setValue([result.width, result.height]);
 
         const maskOptions = options as MaskOptions;
 

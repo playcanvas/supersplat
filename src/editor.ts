@@ -216,16 +216,18 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     const intersectCenters = (splat: Splat, op: 'add'|'remove'|'set', options: any) => {
         const start = performance.now();
 
-        // create result texture
-        if (!resultTexture || resultTexture.width !== splat.transformTexture.width || resultTexture.height !== splat.transformTexture.height) {
+        const resultWidth = Math.max(1, Math.floor(splat.transformTexture.width / 2));
+        const resultHeight = Math.ceil(splat.splatData.numSplats / (resultWidth * 4));
+
+        if (!resultTexture || resultTexture.width !== resultWidth || resultTexture.height !== resultHeight) {
             if (resultTexture) {
                 resultRenderTarget.destroy();
                 resultTexture.destroy();
             }
 
             resultTexture = new Texture(scene.graphicsDevice, {
-                width: splat.transformTexture.width,
-                height: splat.transformTexture.height,
+                width: resultWidth,
+                height: resultHeight,
                 format: PIXELFORMAT_RGBA8,
                 mipmaps: false
             });
@@ -243,9 +245,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         // read intersect results
         scene.graphicsDevice.readPixelsAsync(0, 0, resultTexture.width, resultTexture.height, resultData)
         .then(() => {
-            const filter = (i: number) => resultData[i * 4 + 3] === 255;
+            const filter = (i: number) => resultData[i] === 255;
             events.fire('edit.add', new SelectOp(splat, op, filter));
-            console.log(`select.sphere took ${performance.now() - start}ms`);
+            console.log(`intersect took ${performance.now() - start}ms`);
         });
     };
 

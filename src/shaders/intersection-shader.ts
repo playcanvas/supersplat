@@ -46,13 +46,12 @@ const fragmentShader = /* glsl */ `
             int u = int(transformIndex % 512u) * 3;
             int v = int(transformIndex / 512u);
 
-            mat4 t;
+            mat3x4 t;
             t[0] = texelFetch(transformPalette, ivec2(u, v), 0);
             t[1] = texelFetch(transformPalette, ivec2(u + 1, v), 0);
             t[2] = texelFetch(transformPalette, ivec2(u + 2, v), 0);
-            t[3] = vec4(0.0, 0.0, 0.0, 1.0);
 
-            center = (transpose(t) * vec4(center, 1.0)).xyz;
+            center = vec4(center, 1.0) * t;
         }
 
         // transform to clip space and discard if outside

@@ -259,6 +259,11 @@ class SplatsTransformOp {
         });
 
         transformPalette.idx += paletteMap.size;
+
+        splat.selectionBoundDirty = true;
+        splat.localBoundDirty = true;
+        splat.worldBoundDirty = true;
+        splat.scene.boundDirty = true;
     }
 
     undo() {
@@ -282,6 +287,11 @@ class SplatsTransformOp {
         }
 
         splat.transformPalette.idx -= paletteMap.size;
+
+        splat.selectionBoundDirty = true;
+        splat.localBoundDirty = true;
+        splat.worldBoundDirty = true;
+        splat.scene.boundDirty = true;
     }
 
     destroy() {

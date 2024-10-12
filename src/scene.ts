@@ -21,6 +21,7 @@ import { CustomShadow as Shadow } from './custom-shadow';
 // import { Grid } from './grid';
 import { InfiniteGrid as Grid } from './infinite-grid';
 import { localize } from './ui/localization';
+import { DataProcessor } from './data-processor';
 
 class Scene {
     events: Events;
@@ -43,6 +44,7 @@ class Scene {
         height: 0
     };
 
+    dataProcessor: DataProcessor;
     assetLoader: AssetLoader;
     camera: Camera;
     splatOverlay: SplatOverlay;
@@ -161,6 +163,7 @@ class Scene {
         layers.insert(this.debugLayer, idx + 1);
         layers.push(this.gizmoLayer);
 
+        this.dataProcessor = new DataProcessor(this.app.graphicsDevice);
         this.assetLoader = new AssetLoader(this.app.assets, this.app.graphicsDevice.maxAnisotropy);
 
         // create root entities

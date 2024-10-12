@@ -145,19 +145,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.on('camera.focus', () => {
         const splat = selectedSplats()[0];
         if (splat) {
-            const splatData = splat.splatData;
-            const state = splatData.getProp('state') as Uint8Array;
-
-            const visiblePred = (i: number) => (state[i] & (State.hidden | State.deleted)) === 0;
-            const selectionPred = (i: number) => visiblePred(i) && ((state[i] & State.selected) === State.selected);
-
-            if (splatData.calcAabb(aabb, selectionPred)) {
-                splatData.calcFocalPoint(vec, selectionPred);
-            } else if (splatData.calcAabb(aabb, visiblePred)) {
-                splatData.calcFocalPoint(vec, visiblePred);
-            } else {
-                return;
-            }
+    
+            const bound = splat.numSelected > 0 ? splat.selectionBound : splat.localBound;
+            vec.copy(bound.center);
 
             const worldTransform = splat.worldTransform;
             worldTransform.transformPoint(vec, vec);
@@ -165,7 +155,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
             scene.camera.focus({
                 focalPoint: vec,
-                radius: aabb.halfExtents.length() * vec2.x,
+                radius: bound.halfExtents.length() * vec2.x,
                 speed: 1
             });
         }
@@ -207,7 +197,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
     });
 
-    const dataProcessor = new DataProcessor(scene.graphicsDevice);
     let maskTexture: Texture = null;
     let resultTexture: Texture = null;
     let resultRenderTarget: RenderTarget = null;
@@ -240,7 +229,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             resultData = new Uint8Array(resultTexture.width * resultTexture.height * 4);
         }
 
-        dataProcessor.intersect(options, splat, resultRenderTarget);
+        scene.dataProcessor.intersect(options, splat, resultRenderTarget);
 
         // read intersect results
         scene.graphicsDevice.readPixelsAsync(0, 0, resultTexture.width, resultTexture.height, resultData)

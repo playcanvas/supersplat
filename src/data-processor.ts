@@ -2,16 +2,22 @@ import {
     createShaderFromCode,
     drawQuadWithShader,
     BlendState,
+    BoundingBox,
     GraphicsDevice,
     Mat4,
     RenderTarget,
     Shader,
     Texture,
+    Vec3,
+    WebglGraphicsDevice,
     PIXELFORMAT_RGBA8,
+    PIXELFORMAT_RGBA32F,
     SEMANTIC_POSITION
 } from 'playcanvas';
-import { vertexShader, fragmentShader } from './shaders/intersection-shader';
 import { Splat } from './splat';
+
+import { vertexShader as intersectionVS, fragmentShader as intersectionFS } from './shaders/intersection-shader';
+import { vertexShader as boundVS, fragmentShader as boundFS } from './shaders/bound-shader';
 
 type MaskOptions = {
     mask: Texture;
@@ -25,12 +31,24 @@ type SphereOptions = {
     sphere: { x: number, y: number, z: number, radius: number };
 };
 
+const v1 = new Vec3();
+const v2 = new Vec3();
+
 // gpu processor for splat data
 class DataProcessor {
     device: GraphicsDevice;
     dummyTexture: Texture;
     intersectShader: Shader;
     viewProjectionMat = new Mat4();
+
+    boundShader: Shader;
+    boundMinTexture: Texture;
+    boundMaxTexture: Texture;
+    boundRenderTarget: RenderTarget;
+    boundMaxRenderTarget: RenderTarget;
+    minData = new Float32Array(4);
+    maxData = new Float32Array(4);
+    minMaxData = new Float32Array(8);
 
     constructor(device: GraphicsDevice) {
         this.device = device;
@@ -40,14 +58,18 @@ class DataProcessor {
             format: PIXELFORMAT_RGBA8
         });
 
-        this.intersectShader = createShaderFromCode(device, vertexShader, fragmentShader, 'intersectByMask', {
+        this.intersectShader = createShaderFromCode(device, intersectionVS, intersectionFS, 'intersectByMaskShader', {
+            vertex_position: SEMANTIC_POSITION
+        });
+
+        this.boundShader = createShaderFromCode(device, boundVS, boundFS, 'calcBoundShader', {
             vertex_position: SEMANTIC_POSITION
         });
     }
 
     // calculate the intersection of a mask canvas with splat centers
     intersect(options: MaskOptions | RectOptions | SphereOptions, splat: Splat, result: RenderTarget) {
-        const { device, intersectShader } = this;
+        const { device } = this;
         const { scope } = device;
 
         const numSplats = splat.splatData.numSplats;
@@ -100,7 +122,71 @@ class DataProcessor {
         }
 
         device.setBlendState(BlendState.NOBLEND);
-        drawQuadWithShader(device, result, intersectShader);
+        drawQuadWithShader(device, result, this.intersectShader);
+    }
+
+    calcBound(splat: Splat, boundingBox: BoundingBox, onlySelected: boolean) {
+        const device = splat.scene.graphicsDevice;
+
+        if (!this.boundMinTexture) {
+            this.boundMinTexture = new Texture(device, {
+                width: 1,
+                height: 1,
+                format: PIXELFORMAT_RGBA32F,
+                mipmaps: false
+            });
+
+            this.boundMaxTexture = new Texture(device, {
+                width: 1,
+                height: 1,
+                format: PIXELFORMAT_RGBA32F,
+                mipmaps: false
+            });
+
+            this.boundRenderTarget = new RenderTarget({
+                colorBuffers: [this.boundMinTexture, this.boundMaxTexture],
+                depth: false
+            });
+
+            this.boundMaxRenderTarget = new RenderTarget({
+                colorBuffer: this.boundMaxTexture,
+                depth: false
+            });
+
+            device.initRenderTarget(this.boundMaxRenderTarget);
+        }
+
+        const numSplats = splat.splatData.numSplats;
+        const transformA = splat.entity.gsplat.instance.splat.transformATexture;
+        const splatTransform = splat.transformTexture;
+        const transformPalette = splat.transformPalette.texture;
+
+        const { scope } = device;
+        scope.resolve('transformA').setValue(transformA);
+        scope.resolve('splatTransform').setValue(splatTransform);
+        scope.resolve('transformPalette').setValue(transformPalette);
+        scope.resolve('splatState').setValue(splat.stateTexture);
+        scope.resolve('splat_params').setValue([transformA.width, numSplats]);
+
+        scope.resolve('mode').setValue(onlySelected ? 0 : 1);
+
+        device.setBlendState(BlendState.NOBLEND);
+        drawQuadWithShader(device, this.boundRenderTarget, this.boundShader);
+
+        const glDevice = device as WebglGraphicsDevice;
+
+        glDevice.updateBegin();
+        glDevice.gl.readPixels(0, 0, 1, 1, this.boundMinTexture.impl._glFormat, this.boundMinTexture.impl._glPixelType, this.minData);
+        glDevice.updateEnd();
+
+        glDevice.setRenderTarget(this.boundMaxRenderTarget);
+        glDevice.updateBegin();
+        glDevice.gl.readPixels(0, 0, 1, 1, this.boundMaxTexture.impl._glFormat, this.boundMaxTexture.impl._glPixelType, this.maxData);
+        glDevice.updateEnd();
+
+        v1.set(this.minData[0], this.minData[1], this.minData[2]);
+        v2.set(this.maxData[0], this.maxData[1], this.maxData[2]);
+        boundingBox.setMinMax(v1, v2);
     }
 }
 

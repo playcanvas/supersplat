@@ -3,7 +3,7 @@ import {
     BLEND_NORMAL,
     BUFFER_STATIC,
     PRIMITIVE_POINTS,
-    SEMANTIC_ATTR13,
+    SEMANTIC_POSITION,
     Material,
     Mesh,
     MeshInstance,
@@ -27,7 +27,7 @@ class SplatOverlay extends Element {
         const device = scene.graphicsDevice;
 
         const shader = createShaderFromCode(device, vertexShader, fragmentShader, `splatOverlayShader`, {
-            vertex_id: SEMANTIC_ATTR13
+            vertex_id: SEMANTIC_POSITION
         });
 
         const material = new Material();
@@ -50,7 +50,7 @@ class SplatOverlay extends Element {
             const splatData = splat.splatData;
 
             const vertexFormat = new VertexFormat(device, [{
-                semantic: SEMANTIC_ATTR13,
+                semantic: SEMANTIC_POSITION,
                 components: 1,
                 type: TYPE_UINT32,
                 asInt: true

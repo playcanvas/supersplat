@@ -16,7 +16,7 @@ const fragmentShader = /* glsl */ `
 
     uniform uvec2 output_params;                    // output width, height
 
-    // mode - 0: mask, 1: rect, 2: sphere
+    // 0: mask, 1: rect, 2: sphere
     uniform int mode;
 
     // mask params

@@ -348,54 +348,36 @@ class Splat extends Element {
 
     // get the selection bound
     get selectionBound() {
+        const selectionBound = this.selectionBoundStorage;
         if (this.selectionBoundDirty) {
-            const state = this.splatData.getProp('state') as Uint8Array;
-            const selectionBound = this.selectionBoundStorage;
-
-            const visiblePred = (i: number) => (state[i] & (State.hidden | State.deleted)) === 0;
-            const selectionPred = (i: number) => visiblePred(i) && ((state[i] & State.selected) === State.selected);
-
-            if (!this.splatData.calcAabb(selectionBound, selectionPred)) {
-                selectionBound.copy(this.localBound);
-            }
-
+            this.scene.dataProcessor.calcBound(this, selectionBound, true);
             this.selectionBoundDirty = false;
         }
-
-        return this.selectionBoundStorage;
+        return selectionBound;
     }
 
     // get local space bound
     get localBound() {
+        const localBound = this.localBoundStorage;
         if (this.localBoundDirty) {
-            const state = this.splatData.getProp('state') as Uint8Array;
-            const localBound = this.localBoundStorage;
-
-            if (!this.splatData.calcAabb(localBound, (i: number) => (state[i] & State.deleted) === 0)) {
-                localBound.center.set(0, 0, 0);
-                localBound.halfExtents.set(0.5, 0.5, 0.5);
-            }
-
+            this.scene.dataProcessor.calcBound(this, localBound, false);
             this.localBoundDirty = false;
-
-            // align the pivot point to the splat center
             this.entity.getWorldTransform().transformPoint(localBound.center, vec);
         }
-
-        return this.localBoundStorage;
+        return localBound;
     }
 
     // get world space bound
     get worldBound() {
+        const worldBound = this.worldBoundStorage;
         if (this.worldBoundDirty) {
             // calculate meshinstance aabb (transformed local bound)
-            this.worldBoundStorage.setFromTransformedAabb(this.localBound, this.entity.getWorldTransform());
+            worldBound.setFromTransformedAabb(this.localBound, this.entity.getWorldTransform());
 
             // flag scene bound as dirty
             this.worldBoundDirty = false;
         }
-
-        return this.worldBoundStorage;
+        return worldBound;
     }
 
     get visible() {

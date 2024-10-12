@@ -163,6 +163,11 @@ class SplatsTransformHandler implements TransformHandler {
             paletteMap: new Map(paletteMap)
         });
 
+        splat.selectionBoundDirty = true;
+        splat.localBoundDirty = true;
+        splat.worldBoundDirty = true;
+        splat.scene.boundDirty = true;
+
         // create op for pivot placement
         const pivot = this.events.invoke('pivot') as Pivot;
         const oldt = this.pivotStart.clone();

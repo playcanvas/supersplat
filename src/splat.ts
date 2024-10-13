@@ -207,6 +207,7 @@ class Splat extends Element {
     localBoundDirty = true;
     worldBoundDirty = true;
     visible_ = true;
+    useOriginalColor = true;
     selectionTransform = new Mat4();
 
     rebuildMaterial: (bands: number) => void;
@@ -289,6 +290,20 @@ class Splat extends Element {
         this.pivot.destroy();
         this.asset.registry.remove(this.asset);
         this.asset.unload();
+    }
+
+    updateShaderParams(){
+        this.entity.gsplat.instance.material.setParameter('useOriginalColor', + this.useOriginalColor);
+        this.scene.forceRender = true;
+        this.scene.events.fire('splat.debugShowClasses', this);
+    }
+
+    setShowClasses(showClasses: boolean){
+        if (showClasses == this.useOriginalColor){
+            this.useOriginalColor = !showClasses;
+            this.scene.events.fire('splat.showClasses', showClasses);
+            this.updateShaderParams();
+        }
     }
 
     updateState(changedState = State.selected) {
@@ -388,6 +403,7 @@ class Splat extends Element {
         this.scene.boundDirty = true;
 
         this.scene.events.on('view.bands', this.rebuildMaterial, this);
+        this.scene.events.on('splat.setShowClasses', this.setShowClasses, this);
         this.rebuildMaterial(this.scene.events.invoke('view.bands'));
     }
 

@@ -142,12 +142,33 @@ class ViewPanel extends Container {
         showBoundRow.append(showBoundLabel);
         showBoundRow.append(showBoundToggle);
 
+        // show classes
+
+        const showClassesRow = new Container({
+            class: 'view-panel-row'
+        });
+
+        const showClassesLabel = new Label({
+            text: localize('options.show-classes'),
+            class: 'view-panel-row-label'
+        });
+
+        const showClassesToggle = new BooleanInput({
+            type: 'toggle',
+            class: 'view-panel-row-toggle',
+            value: false
+        });
+
+        showClassesRow.append(showClassesLabel);
+        showClassesRow.append(showClassesToggle);
+
         this.append(header);
         this.append(fovRow);
         this.append(shBandsRow);
         this.append(centersSizeRow);
         this.append(showGridRow);
         this.append(showBoundRow);
+        this.append(showClassesRow);
 
         // handle panel visibility
 
@@ -210,6 +231,15 @@ class ViewPanel extends Container {
 
         showBoundToggle.on('change', () => {
             events.fire('camera.setBound', showBoundToggle.value);
+        });
+        
+        // show classes
+        events.on('splat.showClasses', (show: boolean) => {
+            showClassesToggle.value = show;
+        });
+
+        showClassesToggle.on('change', () => {
+            events.fire('splat.setShowClasses', showClassesToggle.value);
         });
 
         // camera fov

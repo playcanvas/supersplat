@@ -60,6 +60,7 @@ const localizeInit = () => {
                         "options.centers-size": "Centers Size",
                         "options.show-grid": "Show Grid",
                         "options.show-bound": "Show Bound",
+                        "options.show-classes": "Show Classes",
 
                         // Data panel
                         "data": "SPLAT DATA",

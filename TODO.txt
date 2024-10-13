@@ -71,3 +71,12 @@ GUI:
                         resolve(new Splat(asset));
                     }
                 });
+
+
+
+# Update value of splat state:
+a = scene.elements[3].splatData.getProp('state')
+a.fill(1) (Or State enumerator values)
+
+# Update scene with new state values, 1 signifies changed state
+scene.elements[3].updateState(1)

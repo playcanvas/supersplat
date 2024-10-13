@@ -4,6 +4,7 @@ import {
     BUFFER_STATIC,
     PRIMITIVE_POINTS,
     SEMANTIC_ATTR13,
+    SEMANTIC_ATTR14,
     Material,
     Mesh,
     MeshInstance,
@@ -16,6 +17,7 @@ import { ElementType, Element } from './element';
 
 const vs = /* glsl */ `
 attribute uint vertex_id;
+attribute uint class_id;
 
 uniform mat4 matrix_model;
 uniform mat4 matrix_viewProjection;
@@ -26,6 +28,10 @@ uniform float splatSize;
 uniform uvec2 texParams;
 
 varying vec4 varying_color;
+
+// Visualize class instances
+uniform vec3 classColors[6];
+uniform bool useOriginalColor; // true = use original splat color, false = use class-based colors
 
 // calculate the current splat index and uv
 ivec2 calcSplatUV(uint index, uint width) {
@@ -45,7 +51,13 @@ void main(void) {
             // selected
             varying_color = vec4(1.0, 1.0, 0.0, 0.5);
         } else {
-            varying_color = vec4(0.0, 0.0, 1.0, 0.5);
+                if (useOriginalColor) {
+                    // Use the original splat color from texture
+                    varying_color = vec4(0.0, 0.0, 1.0, 0.5);
+                } else {
+                    // Use class color
+                    varying_color = vec4(classColors[class_id], 0.5);
+                }
         }
 
         vec3 p = uintBitsToFloat(texelFetch(splatPosition, splatUV, 0).xyz);
@@ -76,7 +88,8 @@ class SplatDebug extends Element {
         const device = scene.graphicsDevice;
 
         const shader = createShaderFromCode(device, vs, fs, `splatDebugShader`, {
-            vertex_id: SEMANTIC_ATTR13
+            vertex_id: SEMANTIC_ATTR13,
+            class_id: SEMANTIC_ATTR14,
         });
 
         const material = new Material();
@@ -103,12 +116,19 @@ class SplatDebug extends Element {
                 components: 1,
                 type: TYPE_UINT32,
                 asInt: true
+            },{
+                semantic: SEMANTIC_ATTR14,
+                components: 1,
+                type: TYPE_UINT32,
+                asInt: true
             }]);
 
             // TODO: make use of Splat's mapping instead of rendering all splats
-            const vertexData = new Uint32Array(splatData.numSplats);
+            const vertexData = new Uint32Array(splatData.numSplats*2);
+            const class_ids = splatData.getProp('class_id') as Uint32Array;
             for (let i = 0; i < splatData.numSplats; ++i) {
-                vertexData[i] = i;
+                vertexData[i*2] = i;
+                vertexData[i*2+1] = class_ids[i];
             }
 
             const vertexBuffer = new VertexBuffer(device, vertexFormat, splatData.numSplats, {
@@ -130,6 +150,8 @@ class SplatDebug extends Element {
 
             material.setParameter('splatState', splat.stateTexture);
             material.setParameter('splatPosition', splat.entity.gsplat.instance.splat.transformATexture);
+            material.setParameter('classColors[0]', [1.,0.,0., 0.,1.,0., 0.,0.,1., 1.,0.,0., 0.,1.,0., 0.,1.,0.]) //Todo Use color gradient for n classes
+            material.setParameter('useOriginalColor', + splat.useOriginalColor);
             material.setParameter('texParams', [splat.stateTexture.width, splat.stateTexture.height]);
             material.update();
 
@@ -137,6 +159,10 @@ class SplatDebug extends Element {
         };
 
         events.on('selection.changed', (selection: Splat) => {
+            update(selection);
+        });
+
+        events.on('splat.debugShowClasses', (selection: Splat) => {
             update(selection);
         });
 

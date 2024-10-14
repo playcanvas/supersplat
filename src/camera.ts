@@ -281,11 +281,9 @@ class Camera extends Element {
             this.pickModeRenderTarget = null;
         }
 
-        const createTexture = (width: number, height: number, format: number) => {
+        const createTexture = (name: string, width: number, height: number, format: number) => {
             return new Texture(device, {
-                width: width,
-                height: height,
-                format: format,
+                name, width, height, format,
                 mipmaps: false,
                 minFilter: FILTER_NEAREST,
                 magFilter: FILTER_NEAREST,
@@ -298,8 +296,8 @@ class Camera extends Element {
         const pixelFormat = PIXELFORMAT_RGBA8;
         const samples = this.scene.config.camera.multisample ? device.maxSamples : 1;
 
-        const colorBuffer = createTexture(width, height, pixelFormat);
-        const depthBuffer = createTexture(width, height, PIXELFORMAT_DEPTH);
+        const colorBuffer = createTexture('cameraColor', width, height, pixelFormat);
+        const depthBuffer = createTexture('cameraDepth', width, height, PIXELFORMAT_DEPTH);
         const renderTarget = new RenderTarget({
             colorBuffer: colorBuffer,
             depthBuffer: depthBuffer,
@@ -311,7 +309,7 @@ class Camera extends Element {
         this.entity.camera.camera.horizontalFov = width > height;
 
         // create pick mode render target
-        this.pickModeColorBuffer = createTexture(width, height, pixelFormat);
+        this.pickModeColorBuffer = createTexture('cameraPick', width, height, pixelFormat);
         this.pickModeRenderTarget = new RenderTarget({
             colorBuffer: this.pickModeColorBuffer,
             depth: false,
@@ -392,7 +390,9 @@ class Camera extends Element {
         const focalPoint = options ? options.focalPoint : (getSplatFocalPoint() ?? this.scene.bound.center);
         const focalRadius = options ? options.radius : this.scene.bound.halfExtents.length();
 
-        this.setDistance(focalRadius / this.sceneRadius, options?.speed ?? 0);
+        const fdist = focalRadius / this.sceneRadius;
+
+        this.setDistance(isNaN(fdist) ? 1 : fdist, options?.speed ?? 0);
         this.setFocalPoint(focalPoint, options?.speed ?? 0);
     }
 

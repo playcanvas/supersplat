@@ -24,12 +24,11 @@ class TransformPalette {
         const height = Math.ceil(maxTransforms / (width / 3));      // calculate height based on max transforms
 
         this.texture = new Texture(device, {
+            name: 'transformPalette',
             width,
             height,
             format: PIXELFORMAT_RGBA32F,
             mipmaps: false,
-            minFilter: FILTER_NEAREST,
-            magFilter: FILTER_NEAREST,
             addressU: ADDRESS_CLAMP_TO_EDGE,
             addressV: ADDRESS_CLAMP_TO_EDGE
         });

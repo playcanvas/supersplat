@@ -6,32 +6,33 @@ const vertexShader = /* glsl */ `
 `;
 
 const fragmentShader = /* glsl */ `
-    uniform highp usampler2D transformA;            // splat center x, y, z
-    uniform highp usampler2D splatTransform;        // transform palette index
-    uniform sampler2D transformPalette;             // palette of transforms
-    uniform sampler2D splatState;                   // per-splat state
-    uniform uvec2 splat_params;                     // texture width, num splats
+    uniform highp usampler2D transformA;                // splat center x, y, z
+    uniform highp usampler2D splatTransform;            // transform palette index
+    uniform sampler2D transformPalette;                 // palette of transforms
+    uniform sampler2D splatState;                       // per-splat state
+    uniform highp ivec3 splat_params;                   // texture width, texture height, num splats
+    uniform highp uint mode;                            // 0: selected, 1: visible
 
-    // 0: selected, 1: visible
-    uniform int mode;
-
+    // calculate min and max for a single column of splats
     void main(void) {
 
-        vec3 boundMin = vec3(100000);
-        vec3 boundMax = vec3(-100000);
+        vec3 boundMin = vec3(100000.0);
+        vec3 boundMax = vec3(-100000.0);
 
-        for (uint id = 0u; id < splat_params.y; id++) {
+        for (int id = 0; id < splat_params.y; id++) {
             // calculate splatUV
-            ivec2 splatUV = ivec2(
-                int(id % splat_params.x),
-                int(id / splat_params.x)
-            );
+            ivec2 splatUV = ivec2(gl_FragCoord.x, id);
+
+            // skip out-of-range splats
+            if (splatUV.x + splatUV.y * splat_params.x > splat_params.z) {
+                continue;
+            }
 
             // read splat state
             uint state = uint(texelFetch(splatState, splatUV, 0).r * 255.0);
 
             // skip deleted or hidden splats
-            if (((mode == 0) && (state != 1u)) || ((mode == 1) && ((state & 4u) != 0u))) {
+            if (((mode == 0u) && (state != 1u)) || ((mode == 1u) && ((state & 4u) != 0u))) {
                 continue;
             }
 

@@ -1,18 +1,21 @@
 import {
+    ADDRESS_CLAMP_TO_EDGE,
+    PIXELFORMAT_RGBA8,
+    PIXELFORMAT_RGBA32F,
+    SEMANTIC_POSITION,
     createShaderFromCode,
     drawQuadWithShader,
     BlendState,
     BoundingBox,
+    DepthState,
     GraphicsDevice,
     Mat4,
     RenderTarget,
+    ScopeSpace,
     Shader,
     Texture,
     Vec3,
     WebglGraphicsDevice,
-    PIXELFORMAT_RGBA8,
-    PIXELFORMAT_RGBA32F,
-    SEMANTIC_POSITION
 } from 'playcanvas';
 import { Splat } from './splat';
 
@@ -33,22 +36,41 @@ type SphereOptions = {
 
 const v1 = new Vec3();
 const v2 = new Vec3();
+const v3 = new Vec3();
+
+const resolve = (scope: ScopeSpace, values: any) => {
+    for (const key in values) {
+        scope.resolve(key).setValue(values[key]);
+    }
+};
+
+type IntersectResources = {
+    shader: Shader;
+    texture: Texture;
+    renderTarget: RenderTarget;
+    data: Uint8Array;
+};
+
+type BoundResources = {
+    shader: Shader;
+    minTexture: Texture;
+    maxTexture: Texture;
+    renderTarget: RenderTarget;
+    minRenderTarget: RenderTarget;
+    maxRenderTarget: RenderTarget;
+    minData: Float32Array;
+    maxData: Float32Array;
+};
 
 // gpu processor for splat data
 class DataProcessor {
     device: GraphicsDevice;
     dummyTexture: Texture;
-    intersectShader: Shader;
     viewProjectionMat = new Mat4();
+    splatParams = new Int32Array(3);
 
-    boundShader: Shader;
-    boundMinTexture: Texture;
-    boundMaxTexture: Texture;
-    boundRenderTarget: RenderTarget;
-    boundMaxRenderTarget: RenderTarget;
-    minData = new Float32Array(4);
-    maxData = new Float32Array(4);
-    minMaxData = new Float32Array(8);
+    getIntersectResources: (width: number, numSplats: number) => IntersectResources;
+    getBoundResources: (splatTextureWidth: number) => BoundResources;
 
     constructor(device: GraphicsDevice) {
         this.device = device;
@@ -58,17 +80,106 @@ class DataProcessor {
             format: PIXELFORMAT_RGBA8
         });
 
-        this.intersectShader = createShaderFromCode(device, intersectionVS, intersectionFS, 'intersectByMaskShader', {
-            vertex_position: SEMANTIC_POSITION
-        });
+        const createTexture = (name: string, width: number, height: number, format: number) => {
+            return new Texture(device, {
+                name, width, height, format,
+                mipmaps: false,
+                addressU: ADDRESS_CLAMP_TO_EDGE,
+                addressV: ADDRESS_CLAMP_TO_EDGE
+            });
+        };
 
-        this.boundShader = createShaderFromCode(device, boundVS, boundFS, 'calcBoundShader', {
-            vertex_position: SEMANTIC_POSITION
-        });
+        // intersection test
+
+        this.getIntersectResources = (() => {
+            let shader: Shader = null;
+            let texture: Texture = null;
+            let renderTarget: RenderTarget = null;
+            let data: Uint8Array = null;
+
+            return (width: number, numSplats: number) => {
+                if (!shader) {
+                    shader = createShaderFromCode(device, intersectionVS, intersectionFS, 'intersectByMaskShader', {
+                        vertex_position: SEMANTIC_POSITION
+                    });
+                }
+
+                const resultWidth = Math.max(1, Math.floor(width / 2));
+                const resultHeight = Math.ceil(numSplats / (resultWidth * 4));
+
+                if (!texture || texture.width !== resultWidth || texture.height !== resultHeight) {
+                    if (texture) {
+                        texture.destroy();
+                        renderTarget.destroy();
+                    }
+
+                    texture = createTexture('intersectTexture', resultWidth, resultHeight, PIXELFORMAT_RGBA8);
+                    renderTarget = new RenderTarget({
+                        colorBuffer: texture,
+                        depth: false
+                    });
+
+                    data = new Uint8Array(resultWidth * resultHeight * 4);
+                }
+
+                return { shader, texture, renderTarget, data };
+            };
+        })();
+
+        // bound calc
+
+        this.getBoundResources = (() => {
+            let shader: Shader = null;
+            let minTexture: Texture = null;
+            let maxTexture: Texture = null;
+            let renderTarget: RenderTarget = null;
+            let minRenderTarget: RenderTarget = null;
+            let maxRenderTarget: RenderTarget = null;
+            let minData: Float32Array = null;
+            let maxData: Float32Array = null;
+
+            return (splatTextureWidth: number) => {
+                if (!shader) {
+                    shader = createShaderFromCode(device, boundVS, boundFS, 'calcBoundShader', {
+                        vertex_position: SEMANTIC_POSITION
+                    });
+                }
+
+                if (!minTexture || minTexture.width !== splatTextureWidth) {
+                    if (minTexture) {
+                        minTexture.destroy();
+                        minRenderTarget.destroy();
+                    }
+
+                    minTexture = createTexture('calcBoundMin', splatTextureWidth, 1, PIXELFORMAT_RGBA32F);
+                    maxTexture = createTexture('calcBoundMax', splatTextureWidth, 1, PIXELFORMAT_RGBA32F);
+
+                    renderTarget = new RenderTarget({
+                        colorBuffers: [minTexture, maxTexture],
+                        depth: false
+                    });
+
+                    maxRenderTarget = new RenderTarget({
+                        colorBuffer: maxTexture,
+                        depth: false
+                    });
+
+                    minRenderTarget = new RenderTarget({
+                        colorBuffer: minTexture,
+                        depth: false
+                    });
+
+                    minData = new Float32Array(splatTextureWidth * 4);
+                    maxData = new Float32Array(splatTextureWidth * 4);
+                }
+
+                return { shader, minTexture, maxTexture, renderTarget, minRenderTarget, maxRenderTarget, minData, maxData };
+            };
+        })();
     }
 
     // calculate the intersection of a mask canvas with splat centers
-    intersect(options: MaskOptions | RectOptions | SphereOptions, splat: Splat, result: RenderTarget) {
+    intersect(options: MaskOptions | RectOptions | SphereOptions, splat: Splat) {
         const { device } = this;
         const { scope } = device;
 
@@ -81,111 +192,129 @@ class DataProcessor {
         const camera = splat.scene.camera.entity.camera.camera;
         this.viewProjectionMat.mul2(camera.projectionMatrix, camera.viewMatrix);
 
-        scope.resolve('transformA').setValue(transformA);
-        scope.resolve('splatTransform').setValue(splatTransform);
-        scope.resolve('transformPalette').setValue(transformPalette);
-        scope.resolve('splat_params').setValue([transformA.width, numSplats]);
-        scope.resolve('matrix_model').setValue(splat.entity.getWorldTransform().data);
-        scope.resolve('matrix_viewProjection').setValue(this.viewProjectionMat.data);
-        scope.resolve('output_params').setValue([result.width, result.height]);
+        // allocate resources
+        const resources = this.getIntersectResources(transformA.width, numSplats);
+
+        resolve(scope, {
+            transformA,
+            splatTransform,
+            transformPalette,
+            splat_params: [transformA.width, numSplats],
+            matrix_model: splat.entity.getWorldTransform().data,
+            matrix_viewProjection: this.viewProjectionMat.data,
+            output_params: [resources.texture.width, resources.texture.height]
+        });
 
         const maskOptions = options as MaskOptions;
 
         if (maskOptions.mask) {
-            scope.resolve('mode').setValue(0);
-            scope.resolve('mask').setValue(maskOptions.mask);
-            scope.resolve('mask_params').setValue([maskOptions.mask.width, maskOptions.mask.height]);
+            resolve(scope, {
+                mode: 0,
+                mask: maskOptions.mask,
+                mask_params: [maskOptions.mask.width, maskOptions.mask.height]
+            });
         } else {
-            scope.resolve('mask').setValue(this.dummyTexture);
-            scope.resolve('mask_params').setValue(null);
+            resolve(scope, {
+                mask: this.dummyTexture,
+                mask_params: [0, 0]
+            })
         }
 
         const rectOptions = options as RectOptions;
         if (rectOptions.rect) {
-            scope.resolve('mode').setValue(1);
-            scope.resolve('rect_params').setValue([
-                rectOptions.rect.x1 * 2.0 - 1.0,
-                rectOptions.rect.y1 * 2.0 - 1.0,
-                rectOptions.rect.x2 * 2.0 - 1.0,
-                rectOptions.rect.y2 * 2.0 - 1.0
-            ]);
+            resolve(scope, {
+                mode: 1,
+                rect_params: [
+                    rectOptions.rect.x1 * 2.0 - 1.0,
+                    rectOptions.rect.y1 * 2.0 - 1.0,
+                    rectOptions.rect.x2 * 2.0 - 1.0,
+                    rectOptions.rect.y2 * 2.0 - 1.0
+                ]
+            })
         } else {
-            scope.resolve('rect_params').setValue(null);
+            resolve(scope, {
+                rect_params: [0, 0, 0, 0]
+            });
         }
 
         const sphereOptions = options as SphereOptions;
         if (sphereOptions.sphere) {
-            scope.resolve('mode').setValue(2);
-            scope.resolve('sphere_params').setValue([sphereOptions.sphere.x, sphereOptions.sphere.y, sphereOptions.sphere.z, sphereOptions.sphere.radius]);
+            resolve(scope, {
+                mode: 2,
+                sphere_params: [
+                    sphereOptions.sphere.x,
+                    sphereOptions.sphere.y,
+                    sphereOptions.sphere.z,
+                    sphereOptions.sphere.radius
+                ]
+            });
         } else {
-            scope.resolve('sphere_params').setValue(null);
+            resolve(scope, {
+                sphere_params: [0, 0, 0, 0]
+            });
         }
 
-        device.setBlendState(BlendState.NOBLEND);
-        drawQuadWithShader(device, result, this.intersectShader);
+        drawQuadWithShader(device, resources.renderTarget, resources.shader);
+
+        const glDevice = device as WebglGraphicsDevice;
+        glDevice.readPixels(0, 0, resources.texture.width, resources.texture.height, resources.data);
+
+        return resources.data;
     }
 
+    // use gpu to calculate either bound of the currently selected splats or the bound of
+    // all visible splats
     calcBound(splat: Splat, boundingBox: BoundingBox, onlySelected: boolean) {
         const device = splat.scene.graphicsDevice;
-
-        if (!this.boundMinTexture) {
-            this.boundMinTexture = new Texture(device, {
-                width: 1,
-                height: 1,
-                format: PIXELFORMAT_RGBA32F,
-                mipmaps: false
-            });
-
-            this.boundMaxTexture = new Texture(device, {
-                width: 1,
-                height: 1,
-                format: PIXELFORMAT_RGBA32F,
-                mipmaps: false
-            });
-
-            this.boundRenderTarget = new RenderTarget({
-                colorBuffers: [this.boundMinTexture, this.boundMaxTexture],
-                depth: false
-            });
-
-            this.boundMaxRenderTarget = new RenderTarget({
-                colorBuffer: this.boundMaxTexture,
-                depth: false
-            });
-
-            device.initRenderTarget(this.boundMaxRenderTarget);
-        }
+        const { scope } = device;
 
         const numSplats = splat.splatData.numSplats;
         const transformA = splat.entity.gsplat.instance.splat.transformATexture;
         const splatTransform = splat.transformTexture;
         const transformPalette = splat.transformPalette.texture;
+        const splatState = splat.stateTexture;
 
-        const { scope } = device;
-        scope.resolve('transformA').setValue(transformA);
-        scope.resolve('splatTransform').setValue(splatTransform);
-        scope.resolve('transformPalette').setValue(transformPalette);
-        scope.resolve('splatState').setValue(splat.stateTexture);
-        scope.resolve('splat_params').setValue([transformA.width, numSplats]);
+        this.splatParams[0] = transformA.width;
+        this.splatParams[1] = transformA.height;
+        this.splatParams[2] = numSplats;
 
-        scope.resolve('mode').setValue(onlySelected ? 0 : 1);
+        // get resources
+        const resources = this.getBoundResources(transformA.width);
 
-        device.setBlendState(BlendState.NOBLEND);
-        drawQuadWithShader(device, this.boundRenderTarget, this.boundShader);
+        resolve(scope, {
+            transformA,
+            splatTransform,
+            transformPalette,
+            splatState,
+            splat_params: this.splatParams,
+            mode: onlySelected ? 0 : 1,
+        });
 
         const glDevice = device as WebglGraphicsDevice;
 
+        drawQuadWithShader(device, resources.renderTarget, resources.shader);
+        glDevice.gl.readPixels(0, 0, transformA.width, 1, resources.minTexture.impl._glFormat, resources.minTexture.impl._glPixelType, resources.minData);
+
+        glDevice.setRenderTarget(resources.maxRenderTarget);
         glDevice.updateBegin();
-        glDevice.gl.readPixels(0, 0, 1, 1, this.boundMinTexture.impl._glFormat, this.boundMinTexture.impl._glPixelType, this.minData);
+        glDevice.gl.readPixels(0, 0, transformA.width, 1, resources.maxTexture.impl._glFormat, resources.maxTexture.impl._glPixelType, resources.maxData);
         glDevice.updateEnd();
 
-        glDevice.setRenderTarget(this.boundMaxRenderTarget);
-        glDevice.updateBegin();
-        glDevice.gl.readPixels(0, 0, 1, 1, this.boundMaxTexture.impl._glFormat, this.boundMaxTexture.impl._glPixelType, this.maxData);
-        glDevice.updateEnd();
+        // resolve mins/maxs
+        const { minData, maxData } = resources;
+        v1.set(minData[0], minData[1], minData[2]);
+        v2.set(maxData[0], maxData[1], maxData[2]);
 
-        v1.set(this.minData[0], this.minData[1], this.minData[2]);
-        v2.set(this.maxData[0], this.maxData[1], this.maxData[2]);
+        for (let i = 1; i < transformA.width; i++) {
+            v1.x = Math.min(v1.x, minData[i * 4]);
+            v1.y = Math.min(v1.y, minData[i * 4 + 1]);
+            v1.z = Math.min(v1.z, minData[i * 4 + 2]);
+
+            v2.x = Math.max(v2.x, maxData[i * 4]);
+            v2.y = Math.max(v2.y, maxData[i * 4 + 1]);
+            v2.z = Math.max(v2.z, maxData[i * 4 + 2]);
+        }
+
         boundingBox.setMinMax(v1, v2);
     }
 }

@@ -10,10 +10,8 @@ import {
 import { Scene } from './scene';
 import { EditHistory } from './edit-history';
 import { Splat } from './splat';
-import { State } from './splat-state';
 import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp } from './edit-ops';
 import { Events } from './events';
-import { DataProcessor } from './data-processor';
 
 // register for editor and scene events
 const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: Scene) => {
@@ -197,47 +195,12 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
     });
 
-    let maskTexture: Texture = null;
-    let resultTexture: Texture = null;
-    let resultRenderTarget: RenderTarget = null;
-    let resultData: Uint8Array;
-
     const intersectCenters = (splat: Splat, op: 'add'|'remove'|'set', options: any) => {
         const start = performance.now();
-
-        const resultWidth = Math.max(1, Math.floor(splat.transformTexture.width / 2));
-        const resultHeight = Math.ceil(splat.splatData.numSplats / (resultWidth * 4));
-
-        if (!resultTexture || resultTexture.width !== resultWidth || resultTexture.height !== resultHeight) {
-            if (resultTexture) {
-                resultRenderTarget.destroy();
-                resultTexture.destroy();
-            }
-
-            resultTexture = new Texture(scene.graphicsDevice, {
-                width: resultWidth,
-                height: resultHeight,
-                format: PIXELFORMAT_RGBA8,
-                mipmaps: false
-            });
-
-            resultRenderTarget = new RenderTarget({
-                colorBuffer: resultTexture,
-                depth: false
-            });
-
-            resultData = new Uint8Array(resultTexture.width * resultTexture.height * 4);
-        }
-
-        scene.dataProcessor.intersect(options, splat, resultRenderTarget);
-
-        // read intersect results
-        scene.graphicsDevice.readPixelsAsync(0, 0, resultTexture.width, resultTexture.height, resultData)
-        .then(() => {
-            const filter = (i: number) => resultData[i] === 255;
-            events.fire('edit.add', new SelectOp(splat, op, filter));
-            console.log(`intersect took ${performance.now() - start}ms`);
-        });
+        const data = scene.dataProcessor.intersect(options, splat);
+        const filter = (i: number) => data[i] === 255;
+        events.fire('edit.add', new SelectOp(splat, op, filter));
+        console.log(`intersect took ${performance.now() - start}ms`);
     };
 
     events.on('select.bySphere', (op: 'add'|'remove'|'set', sphere: number[]) => {
@@ -276,6 +239,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             }
         });
     });
+
+    let maskTexture: Texture = null;
 
     events.on('select.byMask', (op: 'add'|'remove'|'set', canvas: HTMLCanvasElement, context: CanvasRenderingContext2D) => {
         const mode = events.invoke('camera.mode');

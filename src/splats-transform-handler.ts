@@ -151,7 +151,7 @@ class SplatsTransformHandler implements TransformHandler {
             transformPalette.setTransform(newIdx, mat2);
         });
 
-        this.splat.scene.forceRender = true;
+        this.splat.makeSelectionBoundDirty();
     }
 
     end() {
@@ -163,10 +163,6 @@ class SplatsTransformHandler implements TransformHandler {
             paletteMap: new Map(paletteMap)
         });
 
-        splat.selectionBoundDirty = true;
-        splat.localBoundDirty = true;
-        splat.worldBoundDirty = true;
-        splat.scene.boundDirty = true;
 
         // create op for pivot placement
         const pivot = this.events.invoke('pivot') as Pivot;

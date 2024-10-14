@@ -54,7 +54,7 @@ class Splat extends Element {
     selectionBoundDirty = true;
     localBoundDirty = true;
     worldBoundDirty = true;
-    visible_ = true;
+    _visible = true;
     transformPalette: TransformPalette;
 
     rebuildMaterial: (bands: number) => void;
@@ -172,7 +172,7 @@ class Splat extends Element {
         this.numSelected = numSelected;
         this.numDeleted = numDeleted;
 
-        this.selectionBoundDirty = true;
+        this.makeSelectionBoundDirty();
 
         // handle splats being added or removed
         if (changedState & State.deleted) {
@@ -222,9 +222,7 @@ class Splat extends Element {
     updateSorting() {
         const state = this.splatData.getProp('state') as Uint8Array;
 
-        this.localBoundDirty = true;
-        this.worldBoundDirty = true;
-        this.scene.boundDirty = true;
+        this.makeLocalBoundDirty();
 
         let mapping;
 
@@ -271,10 +269,7 @@ class Splat extends Element {
         // add the entity to the scene
         this.scene.contentRoot.addChild(this.entity);
 
-        this.selectionBoundDirty = true;
-        this.localBoundDirty = true;
-        this.worldBoundDirty = true;
-        this.scene.boundDirty = true;
+        this.makeSelectionBoundDirty();
 
         this.scene.events.on('view.bands', this.rebuildMaterial, this);
         this.rebuildMaterial(this.scene.events.invoke('view.bands'));
@@ -340,10 +335,24 @@ class Splat extends Element {
             entity.setLocalScale(scale);
         }
 
-        this.worldBoundDirty = true;
-        this.scene.boundDirty = true;
+        this.makeWorldBoundDirty();
 
         this.scene.events.fire('splat.moved', this);
+    }
+
+    makeSelectionBoundDirty() {
+        this.selectionBoundDirty = true;
+        this.makeLocalBoundDirty();
+    }
+
+    makeLocalBoundDirty() {
+        this.localBoundDirty = true;
+        this.makeWorldBoundDirty();
+    };
+
+    makeWorldBoundDirty() {
+        this.worldBoundDirty = true;
+        this.scene.boundDirty = true;
     }
 
     // get the selection bound
@@ -381,12 +390,12 @@ class Splat extends Element {
     }
 
     get visible() {
-        return this.visible_;
+        return this._visible;
     }
 
     set visible(value: boolean) {
         if (value !== this.visible) {
-            this.visible_ = value;
+            this._visible = value;
             this.scene.events.fire('splat.visibility', this);
         }
     }

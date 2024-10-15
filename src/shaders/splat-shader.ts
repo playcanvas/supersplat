@@ -39,12 +39,13 @@ void main(void)
         int u = int(transformIndex % 512u) * 3;
         int v = int(transformIndex / 512u);
 
-        mat3x4 t;
+        mat4 t;
         t[0] = texelFetch(transformPalette, ivec2(u, v), 0);
         t[1] = texelFetch(transformPalette, ivec2(u + 1, v), 0);
         t[2] = texelFetch(transformPalette, ivec2(u + 2, v), 0);
+        t[3] = vec4(0.0, 0.0, 0.0, 1.0);
 
-        center = vec4(center, 1.0) * t;
+        model = matrix_model * transpose(t);
     }
 
     // handle transforms

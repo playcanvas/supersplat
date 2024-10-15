@@ -19,6 +19,7 @@ import { Splat } from './splat';
 
 import { vertexShader as intersectionVS, fragmentShader as intersectionFS } from './shaders/intersection-shader';
 import { vertexShader as boundVS, fragmentShader as boundFS } from './shaders/bound-shader';
+import { vertexShader as positionVS, fragmentShader as positionFS } from './shaders/position-shader';
 
 type MaskOptions = {
     mask: Texture;
@@ -34,7 +35,6 @@ type SphereOptions = {
 
 const v1 = new Vec3();
 const v2 = new Vec3();
-const v3 = new Vec3();
 
 const resolve = (scope: ScopeSpace, values: any) => {
     for (const key in values) {
@@ -60,6 +60,13 @@ type BoundResources = {
     maxData: Float32Array;
 };
 
+type PositionResources = {
+    shader: Shader;
+    texture: Texture;
+    renderTarget: RenderTarget;
+    data: Float32Array;
+};
+
 // gpu processor for splat data
 class DataProcessor {
     device: GraphicsDevice;
@@ -69,6 +76,7 @@ class DataProcessor {
 
     getIntersectResources: (width: number, numSplats: number) => IntersectResources;
     getBoundResources: (splatTextureWidth: number) => BoundResources;
+    getPositionResources: (width: number, height: number, numSplats: number) => PositionResources;
 
     constructor(device: GraphicsDevice) {
         this.device = device;
@@ -124,7 +132,7 @@ class DataProcessor {
             };
         })();
 
-        // bound calc
+        // calc bound
 
         this.getBoundResources = (() => {
             let shader: Shader = null;
@@ -136,21 +144,21 @@ class DataProcessor {
             let minData: Float32Array = null;
             let maxData: Float32Array = null;
 
-            return (splatTextureWidth: number) => {
+            return (width: number) => {
                 if (!shader) {
                     shader = createShaderFromCode(device, boundVS, boundFS, 'calcBoundShader', {
                         vertex_position: SEMANTIC_POSITION
                     });
                 }
 
-                if (!minTexture || minTexture.width !== splatTextureWidth) {
+                if (!minTexture || minTexture.width !== width) {
                     if (minTexture) {
                         minTexture.destroy();
                         minRenderTarget.destroy();
                     }
 
-                    minTexture = createTexture('calcBoundMin', splatTextureWidth, 1, PIXELFORMAT_RGBA32F);
-                    maxTexture = createTexture('calcBoundMax', splatTextureWidth, 1, PIXELFORMAT_RGBA32F);
+                    minTexture = createTexture('calcBoundMin', width, 1, PIXELFORMAT_RGBA32F);
+                    maxTexture = createTexture('calcBoundMax', width, 1, PIXELFORMAT_RGBA32F);
 
                     renderTarget = new RenderTarget({
                         colorBuffers: [minTexture, maxTexture],
@@ -167,11 +175,44 @@ class DataProcessor {
                         depth: false
                     });
 
-                    minData = new Float32Array(splatTextureWidth * 4);
-                    maxData = new Float32Array(splatTextureWidth * 4);
+                    minData = new Float32Array(width * 4);
+                    maxData = new Float32Array(width * 4);
                 }
 
                 return { shader, minTexture, maxTexture, renderTarget, minRenderTarget, maxRenderTarget, minData, maxData };
+            };
+        })();
+
+        // calc position
+
+        this.getPositionResources = (() => {
+            let shader: Shader = null;
+            let texture: Texture = null;
+            let renderTarget: RenderTarget = null;
+            let data: Float32Array = null;
+
+            return (width: number, height: number, numSplats: number) => {
+                if (!shader) {
+                    shader = createShaderFromCode(device, positionVS, positionFS, 'calcPositionShader', {
+                        vertex_position: SEMANTIC_POSITION
+                    });
+                }
+
+                if (!texture || texture.width !== width || texture.height !== height) {
+                    if (texture) {
+                        renderTarget.destroy();
+                        texture.destroy();
+                    }
+
+                    texture = createTexture('positionTex', width, height, PIXELFORMAT_RGBA32F);
+                    renderTarget = new RenderTarget({
+                        colorBuffer: texture,
+                        depth: false
+                    });
+                    data = new Float32Array(width * height * 4);
+                }
+
+                return { shader, texture, renderTarget, data };
             };
         })();
     }
@@ -314,6 +355,41 @@ class DataProcessor {
         }
 
         boundingBox.setMinMax(v1, v2);
+    }
+
+    // calculate world-space splat positions
+    calcPositions(splat: Splat) {
+        const { device } = this;
+        const { scope } = device;
+
+        const numSplats = splat.splatData.numSplats;
+        const transformA = splat.entity.gsplat.instance.splat.transformATexture;
+        const splatTransform = splat.transformTexture;
+        const transformPalette = splat.transformPalette.texture;
+
+        // allocate resources
+        const resources = this.getPositionResources(transformA.width, transformA.height, numSplats);
+
+        resolve(scope, {
+            transformA,
+            splatTransform,
+            transformPalette,
+            splat_params: [transformA.width, numSplats]
+        });
+
+        drawQuadWithShader(device, resources.renderTarget, resources.shader);
+
+        const glDevice = device as WebglGraphicsDevice;
+        glDevice.gl.readPixels(
+            0, 0,
+            resources.texture.width,
+            resources.texture.height,
+            resources.texture.impl._glFormat,
+            resources.texture.impl._glPixelType,
+            resources.data
+        );
+
+        return resources.data;
     }
 }
 

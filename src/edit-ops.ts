@@ -261,6 +261,7 @@ class SplatsTransformOp {
         transformPalette.idx += paletteMap.size;
 
         splat.makeSelectionBoundDirty();
+        splat.updatePositions();
     }
 
     undo() {
@@ -286,6 +287,7 @@ class SplatsTransformOp {
         splat.transformPalette.idx -= paletteMap.size;
 
         splat.makeSelectionBoundDirty();
+        splat.updatePositions();
     }
 
     destroy() {

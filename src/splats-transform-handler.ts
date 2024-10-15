@@ -133,6 +133,8 @@ class SplatsTransformHandler implements TransformHandler {
             transformPalette.getTransform(oldIdx, mat);
             transformPalette.setTransform(newIdx, mat);
         });
+
+        splat.selectionAlpha = 0;
     }
 
     update(transform: Transform) {
@@ -155,8 +157,14 @@ class SplatsTransformHandler implements TransformHandler {
     }
 
     end() {
-        // create op for splat transform
         const { splat, transform, paletteMap } = this;
+
+        // TODO: consider moving this to update() function above so splats are sorted correctly
+        // for render during drag (which is slower).
+        splat.updatePositions();
+        splat.selectionAlpha = 1;
+
+        // create op for splat transform
         const top = new SplatsTransformOp({
             splat,
             transform: transform.clone(),

@@ -57,6 +57,8 @@ class Splat extends Element {
     _visible = true;
     transformPalette: TransformPalette;
 
+    selectionAlpha = 1;
+
     rebuildMaterial: (bands: number) => void;
 
     constructor(asset: Asset) {
@@ -184,32 +186,17 @@ class Splat extends Element {
     }
 
     updatePositions() {
-        const x = this.splatData.getProp('x') as Float32Array;
-        const y = this.splatData.getProp('y') as Float32Array;
-        const z = this.splatData.getProp('z') as Float32Array;
+        const data = this.scene.dataProcessor.calcPositions(this);
 
-        const transformATexture = this.entity.gsplat.instance.splat.transformATexture;
-        const data = transformATexture.lock();
-        const dataF32 = new Float32Array(data.buffer);
-
-        for (let i = 0; i < this.splatData.numSplats; ++i) {
-            const idx = i * 4;
-            dataF32[idx + 0] = x[i];
-            dataF32[idx + 1] = y[i];
-            dataF32[idx + 2] = z[i];
-        }
-
-        transformATexture.unlock();
-
-        // update sorter centers
+        // update the splat centers which are used for render-time sorting
         const state = this.splatData.getProp('state') as Uint8Array;
         const { sorter } = this.entity.gsplat.instance;
         const { centers } = sorter;
         for (let i = 0; i < this.splatData.numSplats; ++i) {
             if (state[i] === State.selected) {
-                centers[i * 3 + 0] = x[i];
-                centers[i * 3 + 1] = y[i];
-                centers[i * 3 + 2] = z[i];
+                centers[i * 3 + 0] = data[i * 4];
+                centers[i * 3 + 1] = data[i * 4 + 1];
+                centers[i * 3 + 2] = data[i * 4 + 2];
             }
         }
 
@@ -254,10 +241,14 @@ class Splat extends Element {
             return false;
         }
 
+        // use centers data, which are updated when edits occur
+        const { sorter } = this.entity.gsplat.instance;
+        const { centers } = sorter;
+
         result.set(
-            this.splatData.getProp('x')[splatId],
-            this.splatData.getProp('y')[splatId],
-            this.splatData.getProp('z')[splatId]
+            centers[splatId * 3 + 0],
+            centers[splatId * 3 + 1],
+            centers[splatId * 3 + 2]
         );
 
         this.worldTransform.transformPoint(result, result);
@@ -297,6 +288,7 @@ class Splat extends Element {
         // configure rings rendering
         const material = this.entity.gsplat.instance.material;
         material.setParameter('ringSize', (selected && cameraOverlay && cameraMode === 'rings') ? 0.04 : 0);
+        material.setParameter('selectionAlpha', this.selectionAlpha);
 
         if (this.visible && selected) {
             // render bounding box

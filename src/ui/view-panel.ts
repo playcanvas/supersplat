@@ -156,7 +156,7 @@ class ViewPanel extends Container {
         });
 
         const poseHeaderLabel = new Label({
-            text: 'POSES',
+            text: localize('options.pose-header'),
             class: 'panel-header-label'
         });
 

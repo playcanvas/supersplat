@@ -1,4 +1,4 @@
-import { path, Mat3, Mat4, Vec3 } from 'playcanvas';
+import { path, Vec3 } from 'playcanvas';
 import { Scene } from './scene';
 import { Events } from './events';
 import { CreateDropHandler } from './drop-handler';

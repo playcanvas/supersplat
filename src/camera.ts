@@ -4,7 +4,6 @@ import {
     FILTER_NEAREST,
     PIXELFORMAT_RGBA8,
     PIXELFORMAT_DEPTH,
-    drawTexture,
     BoundingBox,
     Color,
     Entity,
@@ -65,7 +64,6 @@ class Camera extends Element {
     sceneRadius = 5;
 
     picker: Picker;
-    pickModeColorBuffer: Texture;
     pickModeRenderTarget: RenderTarget;
 
     constructor() {
@@ -275,9 +273,7 @@ class Camera extends Element {
             rt.depthBuffer.destroy();
             rt.destroy();
 
-            this.pickModeColorBuffer.destroy();
             this.pickModeRenderTarget.destroy();
-            this.pickModeColorBuffer = null;
             this.pickModeRenderTarget = null;
         }
 
@@ -308,10 +304,9 @@ class Camera extends Element {
         this.entity.camera.renderTarget = renderTarget;
         this.entity.camera.camera.horizontalFov = width > height;
 
-        // create pick mode render target
-        this.pickModeColorBuffer = createTexture('cameraPick', width, height, pixelFormat);
+        // create pick mode render target (reuse color buffer)
         this.pickModeRenderTarget = new RenderTarget({
-            colorBuffer: this.pickModeColorBuffer,
+            colorBuffer: colorBuffer,
             depth: false,
             flipY: false,
             samples: samples,

@@ -154,7 +154,10 @@ class DataProcessor {
                 if (!minTexture || minTexture.width !== width) {
                     if (minTexture) {
                         minTexture.destroy();
+                        maxTexture.destroy();
+                        renderTarget.destroy();
                         minRenderTarget.destroy();
+                        maxRenderTarget.destroy();
                     }
 
                     minTexture = createTexture('calcBoundMin', width, 1, PIXELFORMAT_RGBA32F);
@@ -200,8 +203,8 @@ class DataProcessor {
 
                 if (!texture || texture.width !== width || texture.height !== height) {
                     if (texture) {
-                        renderTarget.destroy();
                         texture.destroy();
+                        renderTarget.destroy();
                     }
 
                     texture = createTexture('positionTex', width, height, PIXELFORMAT_RGBA32F);

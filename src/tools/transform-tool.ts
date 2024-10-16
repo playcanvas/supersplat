@@ -58,7 +58,7 @@ class TransformTool {
 
         // reattach the gizmo to the pivot
         const reattach = () => {
-            if (!active) {
+            if (!active || !events.invoke('selection')) {
                 gizmo.detach();
             } else {
                 pivot = events.invoke('pivot') as Pivot;
@@ -76,6 +76,7 @@ class TransformTool {
 
         events.on('pivot.placed', reattach);
         events.on('pivot.moved', reattach);
+        events.on('selection.changed', reattach);
 
         events.on('camera.resize', () => {
             scene.events.on('camera.resize', () => updateGizmoSize(gizmo, scene.graphicsDevice));

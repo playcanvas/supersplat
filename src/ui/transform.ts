@@ -178,15 +178,13 @@ class Transform extends Container {
             input.on('slider:mouseup', mouseup);
         });
 
+        // toggle ui availability based on selection
+        events.on('selection.changed', (selection) => {
+            positionVector.enabled = rotationVector.enabled = scaleInput.enabled = !!selection;
+        });
+
         events.on('pivot.placed', (pivot: Pivot) => {
-            if (pivot) {
-                // enable inputs
-                updateUI(pivot);
-                positionVector.enabled = rotationVector.enabled = scaleInput.enabled = true;
-            } else {
-                // disable inputs
-                positionVector.enabled = rotationVector.enabled = scaleInput.enabled = false;
-            }
+            updateUI(pivot);
         });
 
         events.on('pivot.moved', (pivot: Pivot) => {

@@ -181,6 +181,6 @@ class SplatsTransformHandler implements TransformHandler {
         // add the editop without applying it
         this.events.fire('edit.add', new MultiOp([top, pop]), true);
     }
-};
+}
 
 export { SplatsTransformHandler };

@@ -340,7 +340,7 @@ class Splat extends Element {
     makeLocalBoundDirty() {
         this.localBoundDirty = true;
         this.makeWorldBoundDirty();
-    };
+    }
 
     makeWorldBoundDirty() {
         this.worldBoundDirty = true;

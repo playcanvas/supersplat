@@ -333,7 +333,7 @@ class MultiOp {
     undo() {
         this.ops.forEach(op => op.undo());
     }
-};
+}
 
 export {
     EditOp,

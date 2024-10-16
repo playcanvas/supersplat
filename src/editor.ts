@@ -196,11 +196,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     });
 
     const intersectCenters = (splat: Splat, op: 'add'|'remove'|'set', options: any) => {
-        const start = performance.now();
         const data = scene.dataProcessor.intersect(options, splat);
         const filter = (i: number) => data[i] === 255;
         events.fire('edit.add', new SelectOp(splat, op, filter));
-        console.log(`intersect took ${performance.now() - start}ms`);
     };
 
     events.on('select.bySphere', (op: 'add'|'remove'|'set', sphere: number[]) => {

@@ -1,4 +1,4 @@
-import { Container, ContainerArgs, Label, NumericInput, Panel, PanelArgs, VectorInput } from 'pcui';
+import { Container, ContainerArgs, Label, NumericInput, VectorInput } from 'pcui';
 import { Quat, Vec3 } from 'playcanvas';
 import { Events } from '../events';
 import { localize } from './localization';
@@ -120,6 +120,7 @@ class Transform extends Container {
         let uiUpdating = false;
         let mouseUpdating = false;
 
+        // update UI with pivot
         const updateUI = (pivot: Pivot) => {
             uiUpdating = true;
             const transform = pivot.transform;
@@ -130,23 +131,29 @@ class Transform extends Container {
             uiUpdating = false;
         };
 
-        const update = (pivot: Pivot) => {
+        // update pivot with UI
+        const updatePivot = (pivot: Pivot) => {
             const p = positionVector.value;
             const r = rotationVector.value;
             const q = new Quat().setFromEulerAngles(r[0], r[1], r[2]);
             const s = scaleInput.value;
 
+            if (q.w < 0) {
+                q.mulScalar(-1);
+            }
+
             pivot.moveTRS(new Vec3(p[0], p[1], p[2]), q, new Vec3(s, s, s));
         };
 
+        // handle a change in the UI state
         const change = () => {
             if (!uiUpdating) {
                 const pivot = events.invoke('pivot') as Pivot;
                 if (mouseUpdating) {
-                    update(pivot);
+                    updatePivot(pivot);
                 } else {
                     pivot.start();
-                    update(pivot);
+                    updatePivot(pivot);
                     pivot.end();
                 }
             }
@@ -160,9 +167,9 @@ class Transform extends Container {
 
         const mouseup = () => {
             const pivot = events.invoke('pivot') as Pivot;
-            update(pivot);
-            pivot.end();
+            updatePivot(pivot);
             mouseUpdating = false;
+            pivot.end();
         };
 
         [positionVector.inputs, rotationVector.inputs, scaleInput].flat().forEach((input) => {
@@ -183,6 +190,12 @@ class Transform extends Container {
         });
 
         events.on('pivot.moved', (pivot: Pivot) => {
+            if (!mouseUpdating) {
+                updateUI(pivot);
+            }
+        });
+
+        events.on('pivot.ended', (pivot: Pivot) => {
             updateUI(pivot);
         });
     }

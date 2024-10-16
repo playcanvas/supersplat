@@ -250,6 +250,8 @@ class SplatsTransformOp {
 
         splat.transformTexture.unlock();
 
+        splat.transformPalette.alloc(paletteMap.size);
+
         // update transform palette
         const { transformPalette } = splat;
         this.paletteMap.forEach((newIdx, oldIdx) => {
@@ -257,8 +259,6 @@ class SplatsTransformOp {
             mat.mul2(transform, mat);
             transformPalette.setTransform(newIdx, mat);
         });
-
-        transformPalette.idx += paletteMap.size;
 
         splat.makeSelectionBoundDirty();
         splat.updatePositions();
@@ -284,7 +284,7 @@ class SplatsTransformOp {
             }
         }
 
-        splat.transformPalette.idx -= paletteMap.size;
+        splat.transformPalette.free(paletteMap.size);
 
         splat.makeSelectionBoundDirty();
         splat.updatePositions();

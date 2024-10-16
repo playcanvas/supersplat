@@ -116,7 +116,7 @@ class SplatsTransformHandler implements TransformHandler {
                 const oldIdx = indices[i];
                 let newIdx;
                 if (!paletteMap.has(oldIdx)) {
-                    newIdx = transformPalette.idx++;
+                    newIdx = transformPalette.alloc();
                     paletteMap.set(oldIdx, newIdx);
                 } else {
                     newIdx = paletteMap.get(oldIdx);

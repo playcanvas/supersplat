@@ -49,12 +49,6 @@ class SplatsTransformHandler implements TransformHandler {
             }
         });
 
-        events.on('splat.stateChanged', (splat: Splat) => {
-            if (this.splat && splat === this.splat) {
-                this.placePivot();
-            }
-        });
-
         events.on('camera.focalPointPicked', (details: { splat: Splat, position: Vec3 }) => {
             if (this.splat) {
                 const pivot = events.invoke('pivot') as Pivot;

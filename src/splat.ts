@@ -203,7 +203,7 @@ class Splat extends Element {
         this.updateSorting();
 
         this.scene.forceRender = true;
-        this.scene.events.fire('splat.stateChanged', this);
+        this.scene.events.fire('splat.positionsChanged', this);
     }
 
     updateSorting() {

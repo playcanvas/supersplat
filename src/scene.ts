@@ -18,7 +18,6 @@ import { Splat } from './splat';
 import { SplatOverlay } from './splat-overlay';
 import { Camera } from './camera';
 import { CustomShadow as Shadow } from './custom-shadow';
-// import { Grid } from './grid';
 import { InfiniteGrid as Grid } from './infinite-grid';
 import { localize } from './ui/localization';
 import { DataProcessor } from './data-processor';

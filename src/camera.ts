@@ -295,10 +295,10 @@ class Camera extends Element {
         const colorBuffer = createTexture('cameraColor', width, height, pixelFormat);
         const depthBuffer = createTexture('cameraDepth', width, height, PIXELFORMAT_DEPTH);
         const renderTarget = new RenderTarget({
-            colorBuffer: colorBuffer,
-            depthBuffer: depthBuffer,
+            colorBuffer,
+            depthBuffer,
             flipY: false,
-            samples: samples,
+            samples,
             autoResolve: false
         });
         this.entity.camera.renderTarget = renderTarget;
@@ -306,10 +306,10 @@ class Camera extends Element {
 
         // create pick mode render target (reuse color buffer)
         this.pickModeRenderTarget = new RenderTarget({
-            colorBuffer: colorBuffer,
+            colorBuffer,
             depth: false,
             flipY: false,
-            samples: samples,
+            samples,
             autoResolve: false
         });
 

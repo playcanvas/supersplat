@@ -71,7 +71,7 @@ class SplatTransformCache {
                 mat.mul2(mat, splat.entity.getWorldTransform());
 
                 // combine with transform palette matrix
-                const transformIndex = indices[index];
+                const transformIndex = indices?.[index] ?? 0;
                 if (transformIndex > 0) {
                     splat.transformPalette.getTransform(transformIndex, tmpMat);
                     mat.mul2(mat, tmpMat);

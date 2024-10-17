@@ -144,6 +144,7 @@ const convertPly = (splats: Splat[]) => {
         `ply`,
         `format binary_little_endian 1.0`,
         `comment ${generatedByString}`,
+        `comment Vertical Axis: y`,
         `element vertex ${totalSplats}`,
          propNames.map(p => `property float ${p}`),
          `end_header`,

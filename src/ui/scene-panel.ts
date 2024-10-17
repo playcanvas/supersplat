@@ -7,6 +7,7 @@ import { localize } from './localization';
 
 import sceneImportSvg from '../svg/import.svg';
 import sceneNewSvg from '../svg/new.svg';
+import { ColorPanel } from './color-panel';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -92,10 +93,29 @@ class ScenePanel extends Container {
         transformHeader.append(transformIcon);
         transformHeader.append(transformLabel);
 
+        const colorHeader = new Container({
+            class: `panel-header`
+        });
+
+        const colorIcon = new Label({
+            text: '\uE111',
+            class: `panel-header-icon`
+        });
+
+        const colorLabel = new Label({
+            text: localize('color'),
+            class: `panel-header-label`
+        });
+
+        colorHeader.append(colorIcon);
+        colorHeader.append(colorLabel);
+
         this.append(sceneHeader);
         this.append(splatListContainer);
         this.append(transformHeader);
         this.append(new Transform(events));
+        this.append(colorHeader);
+        this.append(new ColorPanel(events));
         this.append(new Element({
             class: `panel-header`,
             height: 20

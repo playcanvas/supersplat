@@ -192,6 +192,40 @@ class ResetOp extends StateOp {
     }
 }
 
+interface EntityColorAdjustment {
+    brightness: number
+    temperature: number
+    tint: number
+}
+
+class EntityColorAdjustmentOp {
+    name = 'entityColorAdjustment';
+
+    splat: Splat;
+    oldAdj: EntityColorAdjustment;
+    newAdj: EntityColorAdjustment;
+
+    constructor(options: { splat: Splat, oldAdj: EntityColorAdjustment, newAdj: EntityColorAdjustment }) {
+        this.splat = options.splat;
+        this.oldAdj = options.oldAdj;
+        this.newAdj = options.newAdj;
+    }
+
+    do() {
+        this.splat.colorAdjustment = this.newAdj;
+    }
+
+    undo() {
+        this.splat.colorAdjustment = this.oldAdj;
+    }
+
+    destroy() {
+        this.splat = null;
+        this.oldAdj = null;
+        this.oldAdj = null;
+    }
+}
+
 // op for modifying a splat transform
 class EntityTransformOp {
     name = 'entityTransform';
@@ -348,5 +382,7 @@ export {
     EntityTransformOp,
     SplatsTransformOp,
     PlacePivotOp,
-    MultiOp
+    MultiOp,
+    EntityColorAdjustment,
+    EntityColorAdjustmentOp
 };

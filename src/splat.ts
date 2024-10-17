@@ -19,6 +19,7 @@ import { Serializer } from "./serializer";
 import { State } from './splat-state';
 import { vertexShader, fragmentShader } from './shaders/splat-shader';
 import { TransformPalette } from './transform-palette';
+import { EntityColorAdjustment } from './edit-ops';
 
 const vec = new Vec3();
 const veca = new Vec3();
@@ -55,6 +56,11 @@ class Splat extends Element {
     localBoundDirty = true;
     worldBoundDirty = true;
     _visible = true;
+    _colorAdjustment: EntityColorAdjustment = {
+        brightness: 1,
+        temperature: 0,
+        tint: 0
+    };
     transformPalette: TransformPalette;
 
     selectionAlpha = 1;
@@ -120,10 +126,18 @@ class Splat extends Element {
             // @ts-ignore
             instance.createMaterial(getMaterialOptions(instance.splat.hasSH ? bands : 0));
 
-            const material = instance.material;
+            const material = instance.material;            
+            const {brightness, temperature, tint} = this._colorAdjustment;
+
             material.setParameter('splatState', this.stateTexture);
             material.setParameter('splatTransform', this.transformTexture);
             material.setParameter('transformPalette', this.transformPalette.texture);
+            material.setParameter('colorAdjustment', [
+                (1.0 + temperature + tint) * brightness,
+                (1.0 - Math.abs(temperature / 2) - tint) * brightness,
+                (1.0 - temperature + tint / 2) * brightness,
+                1
+            ]);
             material.update();
         };
 
@@ -390,6 +404,16 @@ class Splat extends Element {
             this._visible = value;
             this.scene.events.fire('splat.visibility', this);
         }
+    }
+
+    set colorAdjustment(adj: EntityColorAdjustment){
+        this._colorAdjustment = adj;        
+        this.rebuildMaterial(this.scene.events.invoke('view.bands'));
+        this.scene.events.fire('splat.color', this);
+    }
+
+    get colorAdjustment() { 
+        return this._colorAdjustment;
     }
 }
 

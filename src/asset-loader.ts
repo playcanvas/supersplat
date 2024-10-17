@@ -178,6 +178,10 @@ class AssetLoader {
                 });
                 asset.resource = new GSplatResource(this.device, gsplatData);
                 resolve(new Splat(asset));
+            })
+            .catch((err) => {
+                console.error(err);
+                reject(`Failed to load splat data (${err})`);
             });
         }).finally(() => {
             stopSpinner();
@@ -185,9 +189,10 @@ class AssetLoader {
     }
 
     loadModel(loadRequest: ModelLoadRequest) {
-        if (loadRequest.filename?.endsWith('.ply')) {
+        const filename = (loadRequest.filename || loadRequest.url).toLowerCase();
+        if (filename.endsWith('.ply')) {
             return this.loadPly(loadRequest);
-        } else if (loadRequest.filename?.endsWith('.splat')) {
+        } else if (filename.endsWith('.splat')) {
             return this.loadSplat(loadRequest);
         }
     }

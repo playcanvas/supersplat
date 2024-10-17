@@ -124,7 +124,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
     const handleLoad = (url: string, filename: string) => {
         if (filename.toLowerCase().endsWith('.json')) {
             return loadCameraPoses(url, filename, events);
-        } else if (filename.toLowerCase().endsWith('.ply')) {
+        } else if (filename.toLowerCase().endsWith('.ply') || filename.toLowerCase().endsWith('.splat')) {
             return scene.loadModel(url, filename);
         } else {
             return null;
@@ -199,7 +199,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
                 const handles = await window.showOpenFilePicker({
                     id: 'SuperSplatFileOpen',
                     multiple: true,
-                    types: filePickerTypes.ply as FilePickerAcceptType[]
+                    types: [filePickerTypes.ply, filePickerTypes.splat] as FilePickerAcceptType[]
                 });
                 for (let i = 0; i < handles.length; i++) {
                     const handle = handles[i];

@@ -71,6 +71,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         scene.forceRender = true;
     });
 
+    events.on('splat.color', () => {
+        scene.forceRender = true;
+    });
+
     events.on('camera.bound', () => {
         scene.forceRender = true;
     });

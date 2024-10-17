@@ -194,6 +194,10 @@ const localizeInit = () => {
                         "position": "Position",
                         "rotation": "Rotation",
                         "scale": "Scale",
+                        "color": "COLOR",
+                        "color.brightness": "Brightness",
+                        "color.temperature": "Temperature",
+                        "color.tint": "Tint",
 
                         // Options panel
                         "options": "VIEW OPTIONS",

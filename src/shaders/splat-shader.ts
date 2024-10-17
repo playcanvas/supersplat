@@ -7,6 +7,8 @@ uniform sampler2D splatState;
 uniform highp usampler2D splatTransform;        // per-splat index into transform palette
 uniform sampler2D transformPalette;             // palette of transform matrices
 
+uniform vec4 colorAdjustment;                   // rgba factors to be applied to SH0
+
 varying mediump vec2 texCoord;
 varying mediump vec4 color;
 flat varying highp uint vertexState;
@@ -66,7 +68,7 @@ void main(void)
     vec4 v1v2 = calcV1V2(splat_cam.xyz, covA, covB, transpose(mat3(model_view)));
 
     // get color
-    color = texelFetch(splatColor, splatUV, 0);
+    color = texelFetch(splatColor, splatUV, 0) * colorAdjustment;
 
     // calculate scale based on alpha
     // float scale = min(1.0, sqrt(-log(1.0 / 255.0 / color.a)) / 2.0);

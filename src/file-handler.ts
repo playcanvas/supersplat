@@ -1,4 +1,4 @@
-import { path, Mat3, Mat4, Vec3 } from 'playcanvas';
+import { path, Vec3 } from 'playcanvas';
 import { Scene } from './scene';
 import { Events } from './events';
 import { CreateDropHandler } from './drop-handler';
@@ -317,24 +317,6 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
         }
     });
 
-    const convertData = (splats: Splat[], type: ExportType) => {
-        const convertData = splats.map((splat) => {
-            return {
-                splatData: splat.splatData,
-                modelMat: splat.entity.getWorldTransform()
-            };
-        });
-
-        switch (type) {
-            case 'ply':
-                return convertPly(convertData);
-            case 'compressed-ply':
-                return convertPlyCompressed(convertData);
-            case 'splat':
-                return convertSplat(convertData);
-        }
-    };
-
     events.function('scene.write', async (options: SceneWriteOptions) => {
         const splats = getSplats();
 
@@ -345,7 +327,18 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
             setTimeout(resolve);
         });
 
-        const data = convertData(splats, options.type);
+        const data = (() => {
+            switch (options.type) {
+                case 'ply':
+                    return convertPly(splats);
+                case 'compressed-ply':
+                    return convertPlyCompressed(splats);
+                case 'splat':
+                    return convertSplat(splats);
+                default:
+                    return null;
+            }
+        })();
 
         if (options.stream) {
             // write to stream

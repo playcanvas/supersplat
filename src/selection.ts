@@ -3,9 +3,9 @@ import { Splat } from './splat';
 import { Events } from './events';
 import { Scene } from './scene';
 
-let selection: Element = null;
+const registerSelectionEvents = (events: Events, scene: Scene) => {
+    let selection: Element = null;
 
-const initSelection = (events: Events, scene: Scene) => {
     events.on('scene.elementAdded', (element: Element) => {
         if (element.type === ElementType.splat) {
             setTimeout(() => {
@@ -52,4 +52,4 @@ const initSelection = (events: Events, scene: Scene) => {
     });
 };
 
-export { initSelection };
+export { registerSelectionEvents };

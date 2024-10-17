@@ -15,12 +15,12 @@ import { SceneConfig } from './scene-config';
 import { AssetLoader } from './asset-loader';
 import { Model } from './model';
 import { Splat } from './splat';
-import { SplatDebug } from './splat-debug';
+import { SplatOverlay } from './splat-overlay';
 import { Camera } from './camera';
 import { CustomShadow as Shadow } from './custom-shadow';
-// import { Grid } from './grid';
 import { InfiniteGrid as Grid } from './infinite-grid';
 import { localize } from './ui/localization';
+import { DataProcessor } from './data-processor';
 
 class Scene {
     events: Events;
@@ -43,9 +43,10 @@ class Scene {
         height: 0
     };
 
+    dataProcessor: DataProcessor;
     assetLoader: AssetLoader;
     camera: Camera;
-    splatDebug: SplatDebug;
+    splatOverlay: SplatOverlay;
     shadow: Shadow;
     grid: Grid;
 
@@ -161,6 +162,7 @@ class Scene {
         layers.insert(this.debugLayer, idx + 1);
         layers.push(this.gizmoLayer);
 
+        this.dataProcessor = new DataProcessor(this.app.graphicsDevice);
         this.assetLoader = new AssetLoader(this.app.assets, this.app.graphicsDevice.maxAnisotropy);
 
         // create root entities
@@ -174,8 +176,8 @@ class Scene {
         this.camera = new Camera();
         this.add(this.camera);
 
-        this.splatDebug = new SplatDebug();
-        this.add(this.splatDebug);
+        this.splatOverlay = new SplatOverlay();
+        this.add(this.splatOverlay);
 
         // this.shadow = new Shadow();
         // this.add(this.shadow);
@@ -374,7 +376,7 @@ class Scene {
                         Color.RED,
                         true,
                         undefined,
-                        splat.pivot.getWorldTransform());
+                        splat.entity.getWorldTransform());
 
                     const world = splat.worldBound;
                     this.app.drawWireAlignedBox(

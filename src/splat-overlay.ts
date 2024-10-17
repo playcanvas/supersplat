@@ -3,7 +3,7 @@ import {
     BLEND_NORMAL,
     BUFFER_STATIC,
     PRIMITIVE_POINTS,
-    SEMANTIC_ATTR13,
+    SEMANTIC_POSITION,
     Material,
     Mesh,
     MeshInstance,
@@ -13,58 +13,9 @@ import {
 } from 'playcanvas';
 import { Splat } from './splat';
 import { ElementType, Element } from './element';
+import { vertexShader, fragmentShader } from './shaders/splat-overlay-shader';
 
-const vs = /* glsl */ `
-attribute uint vertex_id;
-
-uniform mat4 matrix_model;
-uniform mat4 matrix_viewProjection;
-
-uniform sampler2D splatState;
-uniform highp usampler2D splatPosition;
-uniform float splatSize;
-uniform uvec2 texParams;
-
-varying vec4 varying_color;
-
-// calculate the current splat index and uv
-ivec2 calcSplatUV(uint index, uint width) {
-    return ivec2(int(index % width), int(index / width));
-}
-
-void main(void) {
-    ivec2 splatUV = calcSplatUV(vertex_id, texParams.x);
-    uint splatState = uint(texelFetch(splatState, splatUV, 0).r * 255.0);
-
-    if ((splatState & 6u) != 0u) {
-        // deleted or hidden (4 or 2)
-        gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
-        gl_PointSize = 0.0;
-    } else {
-        if ((splatState & 1u) != 0u) {
-            // selected
-            varying_color = vec4(1.0, 1.0, 0.0, 0.5);
-        } else {
-            varying_color = vec4(0.0, 0.0, 1.0, 0.5);
-        }
-
-        vec3 p = uintBitsToFloat(texelFetch(splatPosition, splatUV, 0).xyz);
-
-        gl_Position = matrix_viewProjection * matrix_model * vec4(p, 1.0);
-        gl_PointSize = splatSize;
-    }
-}
-`;
-
-const fs = /* glsl */ `
-varying vec4 varying_color;
-
-void main(void) {
-    gl_FragColor = varying_color;
-}
-`;
-
-class SplatDebug extends Element {
+class SplatOverlay extends Element {
     meshInstance: MeshInstance;
 
     constructor() {
@@ -75,12 +26,12 @@ class SplatDebug extends Element {
         const scene = this.scene;
         const device = scene.graphicsDevice;
 
-        const shader = createShaderFromCode(device, vs, fs, `splatDebugShader`, {
-            vertex_id: SEMANTIC_ATTR13
+        const shader = createShaderFromCode(device, vertexShader, fragmentShader, `splatOverlayShader`, {
+            vertex_id: SEMANTIC_POSITION
         });
 
         const material = new Material();
-        material.name = 'splatDebugMaterial';
+        material.name = 'splatOverlayMaterial';
         material.blendType = BLEND_NORMAL;
         material.shader = shader;
 
@@ -99,7 +50,7 @@ class SplatDebug extends Element {
             const splatData = splat.splatData;
 
             const vertexFormat = new VertexFormat(device, [{
-                semantic: SEMANTIC_ATTR13,
+                semantic: SEMANTIC_POSITION,
                 components: 1,
                 type: TYPE_UINT32,
                 asInt: true
@@ -130,6 +81,8 @@ class SplatDebug extends Element {
 
             material.setParameter('splatState', splat.stateTexture);
             material.setParameter('splatPosition', splat.entity.gsplat.instance.splat.transformATexture);
+            material.setParameter('splatTransform', splat.transformTexture);
+            material.setParameter('transformPalette', splat.transformPalette.texture);
             material.setParameter('texParams', [splat.stateTexture.width, splat.stateTexture.height]);
             material.update();
 
@@ -154,7 +107,7 @@ class SplatDebug extends Element {
 
         if (this.meshInstance.node &&
             splatSize > 0 &&
-            events.invoke('camera.debug') &&
+            events.invoke('camera.overlay') &&
             events.invoke('camera.mode') === 'centers') {
             this.meshInstance.material.setParameter('splatSize', splatSize * window.devicePixelRatio);
             this.scene.app.drawMeshInstance(this.meshInstance);
@@ -162,4 +115,4 @@ class SplatDebug extends Element {
     }
 }
 
-export { SplatDebug };
+export { SplatOverlay };

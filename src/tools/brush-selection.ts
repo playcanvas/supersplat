@@ -103,7 +103,8 @@ class BrushSelection {
                 events.fire(
                     'select.byMask',
                     e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
-                    context.getImageData(0, 0, selectCanvas.width, selectCanvas.height)
+                    selectCanvas,
+                    context
                 );
             }
         };

@@ -4,7 +4,6 @@ import {
     FILTER_NEAREST,
     PIXELFORMAT_RGBA8,
     PIXELFORMAT_DEPTH,
-    drawTexture,
     BoundingBox,
     Color,
     Entity,
@@ -65,7 +64,6 @@ class Camera extends Element {
     sceneRadius = 5;
 
     picker: Picker;
-    pickModeColorBuffer: Texture;
     pickModeRenderTarget: RenderTarget;
 
     constructor() {
@@ -275,17 +273,13 @@ class Camera extends Element {
             rt.depthBuffer.destroy();
             rt.destroy();
 
-            this.pickModeColorBuffer.destroy();
             this.pickModeRenderTarget.destroy();
-            this.pickModeColorBuffer = null;
             this.pickModeRenderTarget = null;
         }
 
-        const createTexture = (width: number, height: number, format: number) => {
+        const createTexture = (name: string, width: number, height: number, format: number) => {
             return new Texture(device, {
-                width: width,
-                height: height,
-                format: format,
+                name, width, height, format,
                 mipmaps: false,
                 minFilter: FILTER_NEAREST,
                 magFilter: FILTER_NEAREST,
@@ -298,25 +292,24 @@ class Camera extends Element {
         const pixelFormat = PIXELFORMAT_RGBA8;
         const samples = this.scene.config.camera.multisample ? device.maxSamples : 1;
 
-        const colorBuffer = createTexture(width, height, pixelFormat);
-        const depthBuffer = createTexture(width, height, PIXELFORMAT_DEPTH);
+        const colorBuffer = createTexture('cameraColor', width, height, pixelFormat);
+        const depthBuffer = createTexture('cameraDepth', width, height, PIXELFORMAT_DEPTH);
         const renderTarget = new RenderTarget({
-            colorBuffer: colorBuffer,
-            depthBuffer: depthBuffer,
+            colorBuffer,
+            depthBuffer,
             flipY: false,
-            samples: samples,
+            samples,
             autoResolve: false
         });
         this.entity.camera.renderTarget = renderTarget;
         this.entity.camera.camera.horizontalFov = width > height;
 
-        // create pick mode render target
-        this.pickModeColorBuffer = createTexture(width, height, pixelFormat);
+        // create pick mode render target (reuse color buffer)
         this.pickModeRenderTarget = new RenderTarget({
-            colorBuffer: this.pickModeColorBuffer,
+            colorBuffer,
             depth: false,
             flipY: false,
-            samples: samples,
+            samples,
             autoResolve: false
         });
 
@@ -392,7 +385,9 @@ class Camera extends Element {
         const focalPoint = options ? options.focalPoint : (getSplatFocalPoint() ?? this.scene.bound.center);
         const focalRadius = options ? options.radius : this.scene.bound.halfExtents.length();
 
-        this.setDistance(focalRadius / this.sceneRadius, options?.speed ?? 0);
+        const fdist = focalRadius / this.sceneRadius;
+
+        this.setDistance(isNaN(fdist) ? 1 : fdist, options?.speed ?? 0);
         this.setFocalPoint(focalPoint, options?.speed ?? 0);
     }
 

@@ -1,9 +1,10 @@
-import { Container, ContainerArgs, Label, NumericInput, Panel, PanelArgs, VectorInput } from 'pcui';
+import { Container, ContainerArgs, Label, NumericInput, VectorInput } from 'pcui';
 import { Quat, Vec3 } from 'playcanvas';
 import { Events } from '../events';
-import { Splat } from '../splat';
-import { EntityTransformOp } from '../edit-ops';
 import { localize } from './localization';
+import { Pivot } from '../pivot';
+
+const v = new Vec3();
 
 class Transform extends Container {
     constructor(events: Events, args: ContainerArgs = {}) {
@@ -112,117 +113,88 @@ class Transform extends Container {
         this.append(rotation);
         this.append(scale);
 
-        let selection: Splat | null = null;
-
         const toArray = (v: Vec3) => {
             return [v.x, v.y, v.z];
         };
 
-        const toVec3 = (a: number[]) => {
-            return new Vec3(a[0], a[1], a[2]);
-        };
-
         let uiUpdating = false;
+        let mouseUpdating = false;
 
-        const updateUI = () => {
+        // update UI with pivot
+        const updateUI = (pivot: Pivot) => {
             uiUpdating = true;
-            positionVector.value = toArray(selection.pivot.getLocalPosition());
-            rotationVector.value = toArray(selection.pivot.getLocalEulerAngles());
-            scaleInput.value = selection.pivot.getLocalScale().x;
+            const transform = pivot.transform;
+            transform.rotation.getEulerAngles(v);
+            positionVector.value = toArray(transform.position);
+            rotationVector.value = toArray(v);
+            scaleInput.value = transform.scale.x;
             uiUpdating = false;
         };
 
-        events.on('selection.changed', (splat) => {
-            selection = splat;
-
-            if (selection) {
-                // enable inputs
-                updateUI();
-                positionVector.enabled = rotationVector.enabled = scaleInput.enabled = true;
-            } else {
-                // enable inputs
-                positionVector.enabled = rotationVector.enabled = scaleInput.enabled = false;
-            }
-        });
-
-        events.on('splat.moved', (splat: Splat) => {
-            if (splat === selection) {
-                updateUI();
-            }
-        });
-
-        let op: EntityTransformOp | null = null;
-
-        const createOp = () => {
-            const p = selection.pivot.getLocalPosition();
-            const r = selection.pivot.getLocalRotation();
-            const s = selection.pivot.getLocalScale();
-
-            op = new EntityTransformOp({
-                splat: selection,
-                oldt: {
-                    position: p.clone(),
-                    rotation: r.clone(),
-                    scale: s.clone()
-                },
-                newt: {
-                    position: p.clone(),
-                    rotation: r.clone(),
-                    scale: s.clone()
-                }
-            });
-        };
-
-        const updateOp = () => {
-            const n = op.newt;
-
+        // update pivot with UI
+        const updatePivot = (pivot: Pivot) => {
             const p = positionVector.value;
-            n.position.x = p[0];
-            n.position.y = p[1];
-            n.position.z = p[2];
-
             const r = rotationVector.value;
             const q = new Quat().setFromEulerAngles(r[0], r[1], r[2]);
-            n.rotation.copy(q);
-
             const s = scaleInput.value;
-            n.scale.x = s;
-            n.scale.y = s;
-            n.scale.z = s;
 
-            op.do();
+            if (q.w < 0) {
+                q.mulScalar(-1);
+            }
+
+            pivot.moveTRS(new Vec3(p[0], p[1], p[2]), q, new Vec3(s, s, s));
         };
 
-        const submitOp = () => {
-            events.fire('edit.add', op);
-            op = null;
-        };
-
+        // handle a change in the UI state
         const change = () => {
             if (!uiUpdating) {
-                if (op) {
-                    updateOp();
+                const pivot = events.invoke('pivot') as Pivot;
+                if (mouseUpdating) {
+                    updatePivot(pivot);
                 } else {
-                    createOp();
-                    updateOp();
-                    submitOp();
+                    pivot.start();
+                    updatePivot(pivot);
+                    pivot.end();
                 }
             }
         };
 
         const mousedown = () => {
-            createOp();
+            mouseUpdating = true;
+            const pivot = events.invoke('pivot') as Pivot;
+            pivot.start();
         };
 
         const mouseup = () => {
-            updateOp();
-            submitOp();
+            const pivot = events.invoke('pivot') as Pivot;
+            updatePivot(pivot);
+            mouseUpdating = false;
+            pivot.end();
         };
 
         [positionVector.inputs, rotationVector.inputs, scaleInput].flat().forEach((input) => {
             input.on('change', change);
             input.on('slider:mousedown', mousedown);
             input.on('slider:mouseup', mouseup);
+        });
+
+        // toggle ui availability based on selection
+        events.on('selection.changed', (selection) => {
+            positionVector.enabled = rotationVector.enabled = scaleInput.enabled = !!selection;
+        });
+
+        events.on('pivot.placed', (pivot: Pivot) => {
+            updateUI(pivot);
+        });
+
+        events.on('pivot.moved', (pivot: Pivot) => {
+            if (!mouseUpdating) {
+                updateUI(pivot);
+            }
+        });
+
+        events.on('pivot.ended', (pivot: Pivot) => {
+            updateUI(pivot);
         });
     }
 }

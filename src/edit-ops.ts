@@ -1,6 +1,8 @@
-import { Quat, Vec3 } from 'playcanvas';
+import { Mat4, Vec3 } from 'playcanvas';
 import { Splat } from './splat';
 import { State } from './splat-state';
+import { Transform } from './transform';
+import { Pivot } from './pivot';
 
 interface EditOp {
     name: string;
@@ -190,20 +192,14 @@ class ResetOp extends StateOp {
     }
 }
 
-interface EntityTransform {
-    position?: Vec3;
-    rotation?: Quat;
-    scale?: Vec3;
-}
-
+// op for modifying a splat transform
 class EntityTransformOp {
     name = 'entityTransform';
-
     splat: Splat;
-    oldt: EntityTransform;
-    newt: EntityTransform;
+    oldt: Transform;
+    newt: Transform;
 
-    constructor(options: { splat: Splat, oldt: EntityTransform, newt: EntityTransform }) {
+    constructor(options: { splat: Splat, oldt: Transform, newt: Transform }) {
         this.splat = options.splat;
         this.oldt = options.oldt;
         this.newt = options.newt;
@@ -224,24 +220,118 @@ class EntityTransformOp {
     }
 }
 
-class SetPivotOp {
-    name = "setPivot";
-    splat: Splat;
-    oldPivot: Vec3;
-    newPivot: Vec3;
+const mat = new Mat4();
 
-    constructor(splat: Splat, oldPivot: Vec3, newPivot: Vec3) {
-        this.splat = splat;
-        this.oldPivot = oldPivot;
-        this.newPivot = newPivot;
+// op for modifying a subset of individual splats
+class SplatsTransformOp {
+    name = 'splatsTransform';
+
+    splat: Splat;
+    transform: Mat4;
+    paletteMap: Map<number, number>;
+
+    constructor(options: { splat: Splat, transform: Mat4, paletteMap: Map<number, number> }) {
+        this.splat = options.splat;
+        this.transform = options.transform;
+        this.paletteMap = options.paletteMap;
     }
 
     do() {
-        this.splat.setPivot(this.newPivot);
+        const { splat, transform, paletteMap } = this;
+        const state = splat.splatData.getProp('state') as Uint8Array;
+        const indices = splat.transformTexture.lock() as Uint16Array;
+
+        // update splat transform palette indices
+        for (let i = 0; i < state.length; ++i) {
+            if (state[i] === State.selected) {
+                indices[i] = paletteMap.get(indices[i]);
+            }
+        }
+
+        splat.transformTexture.unlock();
+
+        splat.transformPalette.alloc(paletteMap.size);
+
+        // update transform palette
+        const { transformPalette } = splat;
+        this.paletteMap.forEach((newIdx, oldIdx) => {
+            transformPalette.getTransform(oldIdx, mat);
+            mat.mul2(transform, mat);
+            transformPalette.setTransform(newIdx, mat);
+        });
+
+        splat.makeSelectionBoundDirty();
+        splat.updatePositions();
     }
 
     undo() {
-        this.splat.setPivot(this.oldPivot);
+        const { splat, paletteMap } = this;
+        const state = splat.splatData.getProp('state') as Uint8Array;
+        const indices = splat.transformTexture.lock() as Uint16Array;
+
+        // invert the palette map
+        const inverseMap = new Map<number, number>();
+        paletteMap.forEach((newIdx, oldIdx) => {
+            inverseMap.set(newIdx, oldIdx);
+        });
+
+        splat.transformTexture.unlock();
+
+        // restore the original transform indices
+        for (let i = 0; i < state.length; ++i) {
+            if (state[i] === State.selected) {
+                indices[i] = inverseMap.get(indices[i]);
+            }
+        }
+
+        splat.transformPalette.free(paletteMap.size);
+
+        splat.makeSelectionBoundDirty();
+        splat.updatePositions();
+    }
+
+    destroy() {
+        this.splat = null;
+        this.transform = null;
+        this.paletteMap = null;
+    }
+}
+
+class PlacePivotOp {
+    name = "setPivot";
+    pivot: Pivot;
+    oldt: Transform;
+    newt: Transform;
+
+    constructor(options: { pivot: Pivot, oldt: Transform, newt: Transform }) {
+        this.pivot = options.pivot;
+        this.oldt = options.oldt;
+        this.newt = options.newt;
+    }
+
+    do() {
+        this.pivot.place(this.newt);
+    }
+
+    undo() {
+        this.pivot.place(this.oldt);
+    }
+}
+
+class MultiOp {
+    name = "multiOp";
+    ops: EditOp[];
+
+    constructor(ops: EditOp[]) {
+        this.ops = ops;
+    }
+
+    do() {
+        this.ops.forEach(op => op.do());
+    }
+
+    undo() {
+        this.ops.forEach(op => op.undo());
     }
 }
 
@@ -256,5 +346,7 @@ export {
     DeleteSelectionOp,
     ResetOp,
     EntityTransformOp,
-    SetPivotOp
+    SplatsTransformOp,
+    PlacePivotOp,
+    MultiOp
 };

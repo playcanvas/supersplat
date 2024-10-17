@@ -21,17 +21,17 @@ class EditHistory {
             }
         });
 
-        events.on('edit.add', (editOp: EditOp) => {
-            this.add(editOp);
+        events.on('edit.add', (editOp: EditOp, suppressOp = false) => {
+            this.add(editOp, suppressOp);
         });
     }
 
-    add(editOp: EditOp) {
+    add(editOp: EditOp, suppressOp = false) {
         while (this.cursor < this.history.length) {
             this.history.pop().destroy?.();
         }
         this.history.push(editOp);
-        this.redo();
+        this.redo(suppressOp);
     }
 
     canUndo() {
@@ -49,9 +49,11 @@ class EditHistory {
         this.fireEvents();
     }
 
-    redo() {
+    redo(suppressOp = false) {
         const editOp = this.history[this.cursor++];
-        editOp.do();
+        if (!suppressOp) {
+            editOp.do();
+        }
         this.events.fire('edit.apply', editOp);
         this.fireEvents();
     }

@@ -6,7 +6,8 @@ import { EditHistory } from './edit-history';
 import { EditorUI } from './ui/editor';
 import { registerEditorEvents } from './editor';
 import { initFileHandler } from './file-handler';
-import { initSelection } from './selection';
+import { registerSelectionEvents } from './selection';
+import { registerTransformHandlerEvents } from './transform-handler';
 import { ToolManager } from './tools/tool-manager';
 import { RectSelection } from './tools/rect-selection';
 import { BrushSelection } from './tools/brush-selection';
@@ -82,7 +83,7 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['Z', 'z'], { event: 'edit.redo', ctrl: true, shift: true });
     shortcuts.register(['M', 'm'], { event: 'camera.toggleMode' });
     shortcuts.register(['D', 'd'], { event: 'dataPanel.toggle' });
-    shortcuts.register([' '], { event: 'camera.toggleDebug' });
+    shortcuts.register([' '], { event: 'camera.toggleOverlay' });
 
     return shortcuts;
 };
@@ -152,7 +153,8 @@ const main = async () => {
     window.scene = scene;
 
     registerEditorEvents(events, editHistory, scene);
-    initSelection(events, scene);
+    registerSelectionEvents(events, scene);
+    registerTransformHandlerEvents(events);
     initShortcuts(events);
     await initFileHandler(scene, events, editorUI.appContainer.dom, remoteStorageDetails);
 

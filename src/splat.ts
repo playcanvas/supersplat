@@ -2,6 +2,7 @@ import {
     ADDRESS_CLAMP_TO_EDGE,
     FILTER_NEAREST,
     PIXELFORMAT_L8,
+    PIXELFORMAT_R16U,
     Asset,
     BoundingBox,
     Color,
@@ -16,165 +17,12 @@ import {
 import { Element, ElementType } from "./element";
 import { Serializer } from "./serializer";
 import { State } from './splat-state';
-
-const vertexShader = /*glsl*/`
-uniform vec3 view_position;
-
-uniform sampler2D splatColor;
-uniform sampler2D splatState;
-
-uniform mat4 selection_transform;
-
-varying mediump vec2 texCoord;
-varying mediump vec4 color;
-flat varying highp uint vertexState;
-#ifdef PICK_PASS
-    flat varying highp uint vertexId;
-#endif
-
-mediump vec4 discardVec = vec4(0.0, 0.0, 2.0, 1.0);
-
-void main(void)
-{
-    // calculate splat uv
-    if (!calcSplatUV()) {
-        gl_Position = discardVec;
-        return;
-    }
-
-    // get center
-    vec3 center = getCenter();
-
-    // get vertex state
-    vertexState = uint(texelFetch(splatState, splatUV, 0).r * 255.0);
-
-    // apply selection transform
-    if ((vertexState & 1u) != 0u) {
-        center = (selection_transform * vec4(center, 1.0)).xyz;
-    }
-
-    // handle transforms
-    mat4 model_view = matrix_view * matrix_model;
-    vec4 splat_cam = model_view * vec4(center, 1.0);
-    vec4 splat_proj = matrix_projection * splat_cam;
-
-    // cull behind camera
-    if (splat_proj.z < -splat_proj.w) {
-        gl_Position = discardVec;
-        return;
-    }
-
-    // get covariance
-    vec3 covA, covB;
-    getCovariance(covA, covB);
-
-    vec4 v1v2 = calcV1V2(splat_cam.xyz, covA, covB, transpose(mat3(model_view)));
-
-    // get color
-    color = texelFetch(splatColor, splatUV, 0);
-
-    // calculate scale based on alpha
-    // float scale = min(1.0, sqrt(-log(1.0 / 255.0 / color.a)) / 2.0);
-
-    // v1v2 *= scale;
-
-    // early out tiny splats
-    if (dot(v1v2.xy, v1v2.xy) < 4.0 && dot(v1v2.zw, v1v2.zw) < 4.0) {
-        gl_Position = discardVec;
-        return;
-    }
-
-    gl_Position = splat_proj + vec4((vertex_position.x * v1v2.xy + vertex_position.y * v1v2.zw) / viewport * splat_proj.w, 0, 0);
-
-    texCoord = vertex_position.xy * 0.5; // * scale;
-
-    #ifdef USE_SH1
-        vec4 worldCenter = matrix_model * vec4(center, 1.0);
-        vec3 viewDir = normalize((worldCenter.xyz / worldCenter.w - view_position) * mat3(matrix_model));
-        color.xyz = max(color.xyz + evalSH(viewDir), 0.0);
-    #endif
-
-    #ifndef DITHER_NONE
-        id = float(splatId);
-    #endif
-
-    #ifdef PICK_PASS
-        vertexId = splatId;
-    #endif
-}
-`;
-
-const fragmentShader = /*glsl*/`
-varying mediump vec2 texCoord;
-varying mediump vec4 color;
-
-flat varying highp uint vertexState;
-#ifdef PICK_PASS
-    flat varying highp uint vertexId;
-#endif
-
-uniform float pickerAlpha;
-uniform float ringSize;
-
-void main(void)
-{
-    mediump float A = dot(texCoord, texCoord);
-    if (A > 1.0) {
-        discard;
-    }
-
-    mediump float B = exp(-A * 4.0) * color.a;
-
-    #ifdef PICK_PASS
-        if (B < pickerAlpha || (vertexState & 2u) == 2u) {
-            // hidden
-            discard;
-        }
-        gl_FragColor = vec4(
-            float(vertexId & 255u) / 255.0,
-            float((vertexId >> 8) & 255u) / 255.0,
-            float((vertexId >> 16) & 255u) / 255.0,
-            float((vertexId >> 24) & 255u) / 255.0
-        );
-    #else
-        vec3 c;
-        float alpha;
-
-        if ((vertexState & 2u) == 2u) {
-            // frozen/hidden
-            c = vec3(0.0, 0.0, 0.0);
-            alpha = B * 0.05;
-        } else {
-            if ((vertexState & 1u) == 1u) {
-                // selected
-                c = vec3(1.0, 1.0, 0.0);
-            } else {
-                // normal
-                c = color.xyz;
-            }
-
-            if (ringSize > 0.0) {
-                // rings mode
-                if (A < 1.0 - ringSize) {
-                    alpha = max(0.05, B);
-                } else {
-                    alpha = 0.6;
-                }
-            } else {
-                // centers mode
-                alpha = B;
-            }
-        }
-
-        gl_FragColor = vec4(c, alpha);
-    #endif
-}
-`;
+import { vertexShader, fragmentShader } from './shaders/splat-shader';
+import { TransformPalette } from './transform-palette';
 
 const vec = new Vec3();
 const veca = new Vec3();
 const vecb = new Vec3();
-const mat = new Mat4();
 
 const boundingPoints =
     [-1, 1].map((x) => {
@@ -196,18 +44,20 @@ class Splat extends Element {
     numDeleted = 0;
     numHidden = 0;
     numSelected = 0;
-    pivot: Entity;
     entity: Entity;
     changedCounter = 0;
     stateTexture: Texture;
+    transformTexture: Texture;
     selectionBoundStorage: BoundingBox;
     localBoundStorage: BoundingBox;
     worldBoundStorage: BoundingBox;
     selectionBoundDirty = true;
     localBoundDirty = true;
     worldBoundDirty = true;
-    visible_ = true;
-    selectionTransform = new Mat4();
+    _visible = true;
+    transformPalette: TransformPalette;
+
+    selectionAlpha = 1;
 
     rebuildMaterial: (bands: number) => void;
 
@@ -229,7 +79,6 @@ class Splat extends Element {
         this.asset = asset;
         this.splatData = splatData;
         this.numSplats = splatData.numSplats;
-        this.pivot = new Entity('splatPivot');
         this.entity = splatResource.instantiate(getMaterialOptions(0));
 
         const instance = this.entity.gsplat.instance;
@@ -240,15 +89,17 @@ class Splat extends Element {
         // bit 3: hidden
         this.splatData.addProp('state', new Uint8Array(this.splatData.numSplats));
 
-        const w = instance.splat.colorTexture.width;
-        const h = instance.splat.colorTexture.height;
+        // per-splat transform matrix
+        this.splatData.addProp('transform', new Uint16Array(this.splatData.numSplats));
+
+        const { width, height } = instance.splat.colorTexture;
 
         // pack spherical harmonic data
         const createTexture = (name: string, format: number) => {
             return new Texture(splatResource.device, {
                 name: name,
-                width: w,
-                height: h,
+                width: width,
+                height: height,
                 format: format,
                 mipmaps: false,
                 minFilter: FILTER_NEAREST,
@@ -260,6 +111,10 @@ class Splat extends Element {
 
         // create the state texture
         this.stateTexture = createTexture('splatState', PIXELFORMAT_L8);
+        this.transformTexture = createTexture('splatTransform', PIXELFORMAT_R16U);
+
+        // create the transform palette
+        this.transformPalette = new TransformPalette(splatResource.device);
 
         this.rebuildMaterial = (bands: number) => {
             // @ts-ignore
@@ -267,10 +122,12 @@ class Splat extends Element {
 
             const material = instance.material;
             material.setParameter('splatState', this.stateTexture);
-            material.setParameter('selection_transform', this.selectionTransform.data);
+            material.setParameter('splatTransform', this.transformTexture);
+            material.setParameter('transformPalette', this.transformPalette.texture);
             material.update();
         };
 
+        this.selectionBoundStorage = new BoundingBox();
         this.localBoundStorage = instance.splat.aabb;
         this.worldBoundStorage = instance.meshInstance._aabb;
 
@@ -280,13 +137,11 @@ class Splat extends Element {
         instance.sorter.on('updated', () => {
             this.changedCounter++;
         });
-
-        this.pivot.addChild(this.entity);
     }
 
     destroy() {
         super.destroy();
-        this.pivot.destroy();
+        this.entity.destroy();
         this.asset.registry.remove(this.asset);
         this.asset.unload();
     }
@@ -319,33 +174,58 @@ class Splat extends Element {
         this.numSelected = numSelected;
         this.numDeleted = numDeleted;
 
-        this.selectionBoundDirty = true;
+        this.makeSelectionBoundDirty();
 
         // handle splats being added or removed
         if (changedState & State.deleted) {
-            this.localBoundDirty = true;
-            this.worldBoundDirty = true;
-            this.scene.boundDirty = true;
-
-            let mapping;
-
-            // create a sorter mapping to remove deleted splats
-            if (this.numSplats !== state.length) {
-                mapping = new Uint32Array(this.numSplats);
-                let idx = 0;
-                for (let i = 0; i < state.length; ++i) {
-                    if ((state[i] & State.deleted) === 0) {
-                        mapping[idx++] = i;
-                    }
-                }
-            }
-
-            // update sorting instance
-            this.entity.gsplat.instance.sorter.setMapping(mapping);
+            this.updateSorting();
         }
 
         this.scene.forceRender = true;
-        this.scene.events.fire('splat.stateChanged', this, changedState);
+        this.scene.events.fire('splat.stateChanged', this);
+    }
+
+    updatePositions() {
+        const data = this.scene.dataProcessor.calcPositions(this);
+
+        // update the splat centers which are used for render-time sorting
+        const state = this.splatData.getProp('state') as Uint8Array;
+        const { sorter } = this.entity.gsplat.instance;
+        const { centers } = sorter;
+        for (let i = 0; i < this.splatData.numSplats; ++i) {
+            if (state[i] === State.selected) {
+                centers[i * 3 + 0] = data[i * 4];
+                centers[i * 3 + 1] = data[i * 4 + 1];
+                centers[i * 3 + 2] = data[i * 4 + 2];
+            }
+        }
+
+        this.updateSorting();
+
+        this.scene.forceRender = true;
+        this.scene.events.fire('splat.positionsChanged', this);
+    }
+
+    updateSorting() {
+        const state = this.splatData.getProp('state') as Uint8Array;
+
+        this.makeLocalBoundDirty();
+
+        let mapping;
+
+        // create a sorter mapping to remove deleted splats
+        if (this.numSplats !== state.length) {
+            mapping = new Uint32Array(this.numSplats);
+            let idx = 0;
+            for (let i = 0; i < state.length; ++i) {
+                if ((state[i] & State.deleted) === 0) {
+                    mapping[idx++] = i;
+                }
+            }
+        }
+
+        // update sorting instance
+        this.entity.gsplat.instance.sorter.setMapping(mapping);
     }
 
     get worldTransform() {
@@ -361,10 +241,14 @@ class Splat extends Element {
             return false;
         }
 
+        // use centers data, which are updated when edits occur
+        const { sorter } = this.entity.gsplat.instance;
+        const { centers } = sorter;
+
         result.set(
-            this.splatData.getProp('x')[splatId],
-            this.splatData.getProp('y')[splatId],
-            this.splatData.getProp('z')[splatId]
+            centers[splatId * 3 + 0],
+            centers[splatId * 3 + 1],
+            centers[splatId * 3 + 2]
         );
 
         this.worldTransform.transformPoint(result, result);
@@ -374,18 +258,9 @@ class Splat extends Element {
 
     add() {
         // add the entity to the scene
-        this.scene.contentRoot.addChild(this.pivot);
+        this.scene.contentRoot.addChild(this.entity);
 
-        const center = this.localBoundStorage.center;
-        this.entity.getWorldTransform().transformPoint(center, vec);
-
-        this.pivot.setLocalPosition(vec);
-        this.entity.setLocalPosition(-vec.x, -vec.y, -vec.z);
-
-        this.selectionBoundDirty = true;
-        this.localBoundDirty = true;
-        this.worldBoundDirty = true;
-        this.scene.boundDirty = true;
+        this.makeSelectionBoundDirty();
 
         this.scene.events.on('view.bands', this.rebuildMaterial, this);
         this.rebuildMaterial(this.scene.events.invoke('view.bands'));
@@ -394,12 +269,12 @@ class Splat extends Element {
     remove() {
         this.scene.events.off('view.bands', this.rebuildMaterial, this);
 
-        this.scene.contentRoot.removeChild(this.pivot);
+        this.scene.contentRoot.removeChild(this.entity);
         this.scene.boundDirty = true;
     }
 
     serialize(serializer: Serializer) {
-        serializer.packa(this.pivot.getWorldTransform().data);
+        serializer.packa(this.entity.getWorldTransform().data);
         serializer.pack(this.changedCounter);
         serializer.pack(this.visible);
     }
@@ -408,11 +283,12 @@ class Splat extends Element {
         const events = this.scene.events;
         const selected = events.invoke('selection') === this;
         const cameraMode = events.invoke('camera.mode');
-        const splatSize = events.invoke('camera.debug') ? events.invoke('camera.splatSize') : 0;
+        const cameraOverlay = events.invoke('camera.overlay');
 
         // configure rings rendering
         const material = this.entity.gsplat.instance.material;
-        material.setParameter('ringSize', (selected && cameraMode === 'rings' && splatSize > 0) ? 0.04 : 0);
+        material.setParameter('ringSize', (selected && cameraOverlay && cameraMode === 'rings') ? 0.04 : 0);
+        material.setParameter('selectionAlpha', this.selectionAlpha);
 
         if (this.visible && selected) {
             // render bounding box
@@ -432,7 +308,7 @@ class Splat extends Element {
             }
         }
 
-        this.pivot.enabled = this.visible;
+        this.entity.enabled = this.visible;
     }
 
     focalPoint() {
@@ -440,95 +316,78 @@ class Splat extends Element {
     }
 
     move(position?: Vec3, rotation?: Quat, scale?: Vec3) {
-        const pivot = this.pivot;
+        const entity = this.entity;
         if (position) {
-            pivot.setLocalPosition(position);
+            entity.setLocalPosition(position);
         }
         if (rotation) {
-            pivot.setLocalRotation(rotation);
+            entity.setLocalRotation(rotation);
         }
         if (scale) {
-            pivot.setLocalScale(scale);
+            entity.setLocalScale(scale);
         }
 
-        this.worldBoundDirty = true;
-        this.scene.boundDirty = true;
+        this.makeWorldBoundDirty();
 
         this.scene.events.fire('splat.moved', this);
+    }
+
+    makeSelectionBoundDirty() {
+        this.selectionBoundDirty = true;
+        this.makeLocalBoundDirty();
+    }
+
+    makeLocalBoundDirty() {
+        this.localBoundDirty = true;
+        this.makeWorldBoundDirty();
+    }
+
+    makeWorldBoundDirty() {
+        this.worldBoundDirty = true;
+        this.scene.boundDirty = true;
     }
 
     // get the selection bound
     get selectionBound() {
+        const selectionBound = this.selectionBoundStorage;
         if (this.selectionBoundDirty) {
-            const state = this.splatData.getProp('state') as Uint8Array;
-            const selectionBound = this.selectionBoundStorage;
-
-            const visiblePred = (i: number) => (state[i] & (State.hidden | State.deleted)) === 0;
-            const selectionPred = (i: number) => visiblePred(i) && ((state[i] & State.selected) === State.selected);
-
-            if (!this.splatData.calcAabb(selectionBound, selectionPred)) {
-                selectionBound.copy(this.localBound);
-            }
+            this.scene.dataProcessor.calcBound(this, selectionBound, true);
+            this.selectionBoundDirty = false;
         }
-
-        return this.selectionBoundStorage;
+        return selectionBound;
     }
 
     // get local space bound
     get localBound() {
+        const localBound = this.localBoundStorage;
         if (this.localBoundDirty) {
-            const state = this.splatData.getProp('state') as Uint8Array;
-            const localBound = this.localBoundStorage;
-
-            if (!this.splatData.calcAabb(localBound, (i: number) => (state[i] & State.deleted) === 0)) {
-                localBound.center.set(0, 0, 0);
-                localBound.halfExtents.set(0.5, 0.5, 0.5);
-            }
-
+            this.scene.dataProcessor.calcBound(this, localBound, false);
             this.localBoundDirty = false;
-
-            // align the pivot point to the splat center
             this.entity.getWorldTransform().transformPoint(localBound.center, vec);
-            this.setPivot(vec);
         }
-
-        return this.localBoundStorage;
+        return localBound;
     }
 
     // get world space bound
     get worldBound() {
+        const worldBound = this.worldBoundStorage;
         if (this.worldBoundDirty) {
             // calculate meshinstance aabb (transformed local bound)
-            this.worldBoundStorage.setFromTransformedAabb(this.localBound, this.entity.getWorldTransform());
+            worldBound.setFromTransformedAabb(this.localBound, this.entity.getWorldTransform());
 
             // flag scene bound as dirty
             this.worldBoundDirty = false;
         }
-
-        return this.worldBoundStorage;
-    }
-
-    // set the world-space location of the pivot point
-    setPivot(position: Vec3) {
-        mat.invert(this.entity.getWorldTransform()).transformPoint(position, veca);
-        this.entity.getLocalRotation().transformVector(veca, veca);
-        this.entity.setLocalPosition(-veca.x, -veca.y, -veca.z);
-        this.pivot.setLocalPosition(position);
-
-        this.scene.events.fire('splat.moved', this);
-    }
-
-    getPivot() {
-        return this.pivot.getLocalPosition();
+        return worldBound;
     }
 
     get visible() {
-        return this.visible_;
+        return this._visible;
     }
 
     set visible(value: boolean) {
         if (value !== this.visible) {
-            this.visible_ = value;
+            this._visible = value;
             this.scene.events.fire('splat.visibility', this);
         }
     }

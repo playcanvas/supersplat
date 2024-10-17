@@ -6,6 +6,7 @@ import { convertPly, convertPlyCompressed, convertSplat } from './splat-convert'
 import { startSpinner, stopSpinner } from './ui/spinner';
 import { ElementType } from './element';
 import { Splat } from './splat';
+import { localize } from './ui/localization';
 
 interface RemoteStorageDetails {
     method: string;
@@ -121,13 +122,27 @@ const loadCameraPoses = async (url: string, filename: string, events: Events) =>
 // initialize file handler events
 const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLElement, remoteStorageDetails: RemoteStorageDetails) => {
 
-    const handleLoad = (url: string, filename: string) => {
-        if (filename.toLowerCase().endsWith('.json')) {
-            return loadCameraPoses(url, filename, events);
-        } else if (filename.toLowerCase().endsWith('.ply') || filename.toLowerCase().endsWith('.splat')) {
-            return scene.loadModel(url, filename);
-        } else {
-            return null;
+    const handleLoad = async (url: string, filename: string) => {
+        try {
+            const lowerFilename = (filename || url).toLowerCase();
+            if (lowerFilename.endsWith('.json')) {
+                await loadCameraPoses(url, filename, events);
+            } else if (lowerFilename.endsWith('.ply') || lowerFilename.endsWith('.splat')) {
+                await scene.assetLoader.loadModel({ url, filename })
+                    .then((model) => {
+                        scene.add(model);
+                        scene.camera.focus();
+                        events.fire('loaded', filename);
+                    });
+            } else {
+                throw new Error(`Unsupported file type`);
+            }
+        } catch (err) {
+            events.invoke('showPopup', {
+                type: 'error',
+                header: localize('popup.error-loading'),
+                message: `${err.message ?? err} while loading '${filename}'`
+            });
         }
     };
 
@@ -141,7 +156,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
         fileSelector = document.createElement('input');
         fileSelector.setAttribute('id', 'file-selector');
         fileSelector.setAttribute('type', 'file');
-        fileSelector.setAttribute('accept', '.ply');
+        fileSelector.setAttribute('accept', '.ply,.splat');
         fileSelector.setAttribute('multiple', 'true');
 
         fileSelector.onchange = async () => {

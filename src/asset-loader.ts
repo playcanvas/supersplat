@@ -181,7 +181,7 @@ class AssetLoader {
             })
             .catch((err) => {
                 console.error(err);
-                reject(`Failed to load splat data (${err})`);
+                reject('Failed to load splat data');
             });
         }).finally(() => {
             stopSpinner();

@@ -216,21 +216,6 @@ class Scene {
         this.app.start();
     }
 
-    async loadModel(url: string, filename: string) {
-        try {
-            const model = await this.assetLoader.loadModel({ url, filename });
-            this.add(model);
-            this.camera.focus();
-            this.events.fire('loaded', filename);
-        } catch (err) {
-            this.events.invoke('showPopup', {
-                type: 'error',
-                header: localize('popup.error-loading'),
-                message: `${err.message ?? err} while loading '${filename}'`
-            });
-        }
-    }
-
     clear() {
         const models = this.getElementsByType(ElementType.model);
         models.forEach((model) => {

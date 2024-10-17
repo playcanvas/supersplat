@@ -173,7 +173,9 @@ const main = async () => {
         window.launchQueue.setConsumer(async (launchParams: LaunchParams) => {
             for (const file of launchParams.files) {
                 const blob = await file.getFile();
-                scene.loadModel(URL.createObjectURL(blob), file.name);
+                const url = URL.createObjectURL(blob);
+                await events.invoke('load', url, file.name);
+                URL.revokeObjectURL(url);
             }
         });
     }

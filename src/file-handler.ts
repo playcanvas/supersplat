@@ -6,6 +6,7 @@ import { convertPly, convertPlyCompressed, convertSplat } from './splat-convert'
 import { startSpinner, stopSpinner } from './ui/spinner';
 import { ElementType } from './element';
 import { Splat } from './splat';
+import { localize } from './ui/localization';
 
 interface RemoteStorageDetails {
     method: string;
@@ -121,13 +122,26 @@ const loadCameraPoses = async (url: string, filename: string, events: Events) =>
 // initialize file handler events
 const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLElement, remoteStorageDetails: RemoteStorageDetails) => {
 
-    const handleLoad = (url: string, filename: string) => {
-        if (filename.toLowerCase().endsWith('.json')) {
-            return loadCameraPoses(url, filename, events);
-        } else if (filename.toLowerCase().endsWith('.ply')) {
-            return scene.loadModel(url, filename);
-        } else {
-            return null;
+    // returns a promise that resolves when the file is loaded
+    const handleLoad = async (url: string, filename: string) => {
+        try {
+            const lowerFilename = (filename || url).toLowerCase();
+            if (lowerFilename.endsWith('.json')) {
+                await loadCameraPoses(url, filename, events);
+            } else if (lowerFilename.endsWith('.ply') || lowerFilename.endsWith('.splat')) {
+                const model = await scene.assetLoader.loadModel({ url, filename });
+                scene.add(model);
+                scene.camera.focus();
+                events.fire('loaded', filename);
+            } else {
+                throw new Error(`Unsupported file type`);
+            }
+        } catch (err) {
+            events.invoke('showPopup', {
+                type: 'error',
+                header: localize('popup.error-loading'),
+                message: `${err.message ?? err} while loading '${filename}'`
+            });
         }
     };
 
@@ -141,7 +155,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
         fileSelector = document.createElement('input');
         fileSelector.setAttribute('id', 'file-selector');
         fileSelector.setAttribute('type', 'file');
-        fileSelector.setAttribute('accept', '.ply');
+        fileSelector.setAttribute('accept', '.ply,.splat');
         fileSelector.setAttribute('multiple', 'true');
 
         fileSelector.onchange = async () => {
@@ -199,7 +213,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
                 const handles = await window.showOpenFilePicker({
                     id: 'SuperSplatFileOpen',
                     multiple: true,
-                    types: filePickerTypes.ply as FilePickerAcceptType[]
+                    types: [filePickerTypes.ply, filePickerTypes.splat] as FilePickerAcceptType[]
                 });
                 for (let i = 0; i < handles.length; i++) {
                     const handle = handles[i];
@@ -318,40 +332,48 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
     });
 
     events.function('scene.write', async (options: SceneWriteOptions) => {
-        const splats = getSplats();
-
         startSpinner();
 
-        // setTimeout so spinner has a chance to activate
-        await new Promise<void>((resolve) => {
-            setTimeout(resolve);
-        });
+        try {
+            const splats = getSplats();
 
-        const data = (() => {
-            switch (options.type) {
-                case 'ply':
-                    return convertPly(splats);
-                case 'compressed-ply':
-                    return convertPlyCompressed(splats);
-                case 'splat':
-                    return convertSplat(splats);
-                default:
-                    return null;
+            // setTimeout so spinner has a chance to activate
+            await new Promise<void>((resolve) => {
+                setTimeout(resolve);
+            });
+
+            const data = (() => {
+                switch (options.type) {
+                    case 'ply':
+                        return convertPly(splats);
+                    case 'compressed-ply':
+                        return convertPlyCompressed(splats);
+                    case 'splat':
+                        return convertSplat(splats);
+                    default:
+                        return null;
+                }
+            })();
+
+            if (options.stream) {
+                // write to stream
+                await writeToFile(options.stream, data);
+            } else if (remoteStorageDetails) {
+                // write data to remote storage
+                await sendToRemoteStorage(options.filename, data, remoteStorageDetails);
+            } else if (options.filename) {
+                // download file to local machine
+                download(options.filename, data);
             }
-        })();
-
-        if (options.stream) {
-            // write to stream
-            await writeToFile(options.stream, data);
-        } else if (remoteStorageDetails) {
-            // write data to remote storage
-            await sendToRemoteStorage(options.filename, data, remoteStorageDetails);
-        } else if (options.filename) {
-            // download file to local machine
-            download(options.filename, data);
+        } catch (err) {
+            events.invoke('showPopup', {
+                type: 'error',
+                header: localize('popup.error-loading'),
+                message: `${err.message ?? err} while saving file`
+            });
+        } finally {
+            stopSpinner();
         }
-
-        stopSpinner();
     });
 };
 

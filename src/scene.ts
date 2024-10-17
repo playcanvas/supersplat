@@ -163,7 +163,7 @@ class Scene {
         layers.push(this.gizmoLayer);
 
         this.dataProcessor = new DataProcessor(this.app.graphicsDevice);
-        this.assetLoader = new AssetLoader(this.app.assets, this.app.graphicsDevice.maxAnisotropy);
+        this.assetLoader = new AssetLoader(graphicsDevice, this.app.assets, this.app.graphicsDevice.maxAnisotropy);
 
         // create root entities
         this.contentRoot = new Entity('contentRoot');
@@ -214,21 +214,6 @@ class Scene {
 
         // start the app
         this.app.start();
-    }
-
-    async loadModel(url: string, filename: string) {
-        try {
-            const model = await this.assetLoader.loadModel({ url, filename });
-            this.add(model);
-            this.camera.focus();
-            this.events.fire('loaded', filename);
-        } catch (err) {
-            this.events.invoke('showPopup', {
-                type: 'error',
-                header: localize('popup.error-loading'),
-                message: `${err.message ?? err} while loading '${filename}'`
-            });
-        }
     }
 
     clear() {

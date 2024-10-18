@@ -29,10 +29,6 @@ const calcHalfSize = (fov: number, aspect: number, fovIsHorizontal: boolean) => 
     return [ x, y ];
 };
 
-const attributes = {
-    vertex_position: SEMANTIC_POSITION
-};
-
 class InfiniteGrid extends Element {
     shader: Shader;
     quadRender: QuadRender;
@@ -48,7 +44,10 @@ class InfiniteGrid extends Element {
     add() {
         const device = this.scene.app.graphicsDevice;
 
-        this.shader = createShaderFromCode(device, vertexShader, fragmentShader, 'infinite-grid', attributes);
+        this.shader = createShaderFromCode(device, vertexShader, fragmentShader, 'infinite-grid', {
+            vertex_position: SEMANTIC_POSITION
+        });
+
         this.quadRender = new QuadRender(this.shader);
 
         const cameraMatrixId = device.scope.resolve('camera_matrix');
@@ -90,6 +89,8 @@ class InfiniteGrid extends Element {
 
     remove() {
         this.scene.debugLayer.onPreRenderOpaque = null;
+        this.shader.destroy();
+        this.quadRender.destroy();
     }
 
     serialize(serializer: Serializer): void {

@@ -17,7 +17,7 @@ import {
 import { Element, ElementType } from "./element";
 import { Serializer } from "./serializer";
 import { State } from './splat-state';
-import { vertexShader, fragmentShader } from './shaders/splat-outline-shader';
+import { vertexShader, fragmentShader } from './shaders/splat-shader';
 import { TransformPalette } from './transform-palette';
 
 const vec = new Vec3();
@@ -257,6 +257,8 @@ class Splat extends Element {
     }
 
     add() {
+        this.entity.gsplat.layers = this.entity.gsplat.layers.concat([this.scene.overlayLayer.id]);
+
         // add the entity to the scene
         this.scene.contentRoot.addChild(this.entity);
 

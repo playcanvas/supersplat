@@ -284,16 +284,12 @@ class Camera extends Element {
         };
 
         // in with the new
-        const pixelFormat = PIXELFORMAT_RGBA8;
-        const samples = this.scene.config.camera.multisample ? device.maxSamples : 1;
-
-        const colorBuffer = createTexture('cameraColor', width, height, pixelFormat);
+        const colorBuffer = createTexture('cameraColor', width, height, PIXELFORMAT_RGBA8);
         const depthBuffer = createTexture('cameraDepth', width, height, PIXELFORMAT_DEPTH);
         const renderTarget = new RenderTarget({
             colorBuffer,
             depthBuffer,
             flipY: false,
-            samples,
             autoResolve: false
         });
         this.entity.camera.renderTarget = renderTarget;
@@ -302,13 +298,10 @@ class Camera extends Element {
         // create pick mode render target (reuse color buffer)
         this.pickModeRenderTarget = new RenderTarget({
             colorBuffer,
-            depth: false,
-            flipY: false,
-            samples,
             autoResolve: false
         });
 
-        this.scene.events.fire('camera.resize', {width, height});
+        this.scene.events.fire('camera.resize', { width, height });
     }
 
     onUpdate(deltaTime: number) {
@@ -360,6 +353,8 @@ class Camera extends Element {
         if (renderTarget.samples > 1) {
             renderTarget.resolve(true, false);
         }
+
+        this.scene.events.fire('camera.preResolve');
 
         // copy render target
         device.copyRenderTarget(renderTarget, null, true, false);

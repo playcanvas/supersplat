@@ -70,11 +70,7 @@ class Camera extends Element {
         super(ElementType.camera);
         // create the camera entity
         this.entity = new Entity('Camera');
-        this.entity.addComponent('camera', {
-            fov: 60,
-            clearColor: new Color(0, 0, 0, 0),
-            frustumCulling: true
-        });
+        this.entity.addComponent('camera');
 
         // NOTE: this call is needed for refraction effect to work correctly, but
         // it slows rendering and should only be made when required.
@@ -269,8 +265,7 @@ class Camera extends Element {
 
         // out with the old
         if (rt) {
-            rt.colorBuffer.destroy();
-            rt.depthBuffer.destroy();
+            rt.destroyTextureBuffers();
             rt.destroy();
 
             this.pickModeRenderTarget.destroy();

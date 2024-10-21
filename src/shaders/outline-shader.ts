@@ -9,22 +9,23 @@ const fragmentShader = /*glsl*/ `
     uniform sampler2D outlineTexture;
 
     void main(void) {
-        if (texelFetch(outlineTexture, ivec2(gl_FragCoord.xy), 0).a != 0.0) {
+        ivec2 texel = ivec2(gl_FragCoord.xy);
+
+        // skip solid pixels
+        if (texelFetch(outlineTexture, texel, 0).a != 0.0) {
             discard;
         }
 
-        float sum = 0.0;
-        for (float x = -3.0; x <= 3.0; x += 1.0) {
-            for (float y = -3.0; y <= 3.0; y += 1.0) {
-                sum += texelFetch(outlineTexture, ivec2(gl_FragCoord.xy + vec2(x, y)), 0).a;
+        for (int x = -2; x <= 2; x++) {
+            for (int y = -2; y <= 2; y++) {
+                if ((x != 0) && (y != 0) && (texelFetch(outlineTexture, texel + ivec2(x, y), 0).a != 0.0)) {
+                    gl_FragColor = vec4(1.0);
+                    return;
+                }
             }
         }
 
-        if (sum == 0.0) {
-            discard;
-        }
-
-        gl_FragColor = vec4(1.0);
+        discard;
     }
 `;
 

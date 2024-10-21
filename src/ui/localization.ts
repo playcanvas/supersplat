@@ -61,6 +61,7 @@ const localizeInit = () => {
                         "options.fov": "Blickwinkel (FoV)",
                         "options.sh-bands": "SH Bänder",
                         "options.centers-size": "Punktgrößen",
+                        "options.outline-selection": "Umriss Selektion",
                         "options.show-grid": "Raster anzeigen",
                         "options.show-bound": "Objektbox anzeigen",
 
@@ -200,6 +201,7 @@ const localizeInit = () => {
                         "options.fov": "Field of View",
                         "options.sh-bands": "SH Bands",
                         "options.centers-size": "Centers Size",
+                        "options.outline-selection": "Outline Selection",
                         "options.show-grid": "Show Grid",
                         "options.show-bound": "Show Bound",
 
@@ -339,6 +341,7 @@ const localizeInit = () => {
                         "options.fov": "Champ de vision",
                         "options.sh-bands": "Ordres d'HS",
                         "options.centers-size": "Échelle des centres",
+                        "options.outline-selection": "Contour de la sélection",
                         "options.show-grid": "Afficher la grille",
                         "options.show-bound": "Afficher limites",
 
@@ -471,6 +474,7 @@ const localizeInit = () => {
                         "options.fov": "視野 ( FOV )",
                         "options.sh-bands": "球面調和関数のバンド",
                         "options.centers-size": "センターサイズ",
+                        "options.outline-selection": "選択のアウトライン",
                         "options.show-grid": "グリッド",
                         "options.show-bound": "バウンディングボックス",
 
@@ -609,6 +613,7 @@ const localizeInit = () => {
                         "options.fov": "시야각",
                         "options.sh-bands": "SH 밴드",
                         "options.centers-size": "센터 크기",
+                        "options.outline-selection": "선택 윤곽선",
                         "options.show-grid": "그리드 표시",
                         "options.show-bound": "경계 표시",
 
@@ -747,6 +752,7 @@ const localizeInit = () => {
                         "options.fov": "视野角",
                         "options.sh-bands": "SH 带",
                         "options.centers-size": "中心大小",
+                        "options.outline-selection": "轮廓选择",
                         "options.show-grid": "显示网格",
                         "options.show-bound": "显示边界",
 

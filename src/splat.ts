@@ -291,7 +291,7 @@ class Splat extends Element {
         const material = this.entity.gsplat.instance.material;
         material.setParameter('mode', cameraMode === 'rings' ? 1 : 0);
         material.setParameter('ringSize', (selected && cameraOverlay && cameraMode === 'rings') ? 0.04 : 0);
-        material.setParameter('selectionAlpha', this.selectionAlpha);
+        material.setParameter('selectionAlpha', events.invoke('view.outlineSelection') ? 0 : this.selectionAlpha);
 
         if (this.visible && selected) {
             // render bounding box

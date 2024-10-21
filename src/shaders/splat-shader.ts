@@ -157,7 +157,14 @@ void main(void)
                 c = vec3(0.0, 0.0, 0.0);
                 alpha = B * 0.05;
             } else {
-                c = color.xyz;
+                // get splat color
+                if ((vertexState & 1u) == 1u) {
+                    // selected
+                    c = mix(color.xyz, vec3(1.0, 1.0, 0.0), selectionAlpha);
+                } else {
+                    // normal
+                    c = color.xyz;
+                }
 
                 if (mode == 0 || ringSize == 0.0) {
                     // centers mode

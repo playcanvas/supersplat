@@ -64,7 +64,7 @@ class Outline extends Element {
 
         // apply the outline texture to the display before gizmos render
         this.scene.gizmoLayer.onPostRenderOpaque = () => {
-            if (!this.enabled) {
+            if (!this.enabled || !this.scene.events.invoke('view.outlineSelection')) {
                 return;
             }
 

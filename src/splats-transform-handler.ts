@@ -128,6 +128,7 @@ class SplatsTransformHandler implements TransformHandler {
             transformPalette.setTransform(newIdx, mat);
         });
 
+        splat.selectionAlpha = 0;
         splat.scene.outline.enabled = false;
     }
 

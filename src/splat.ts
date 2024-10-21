@@ -393,10 +393,6 @@ class Splat extends Element {
             this.scene.events.fire('splat.visibility', this);
         }
     }
-
-    renderOutline() {
-        
-    }
 }
 
 export { Splat };

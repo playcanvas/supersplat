@@ -114,6 +114,7 @@ flat varying highp uint vertexState;
     flat varying highp uint vertexId;
 #endif
 
+uniform int mode;               // 0: centers, 1: rings
 uniform float pickerAlpha;
 uniform float ringSize;
 uniform float selectionAlpha;
@@ -121,13 +122,18 @@ uniform float selectionAlpha;
 void main(void)
 {
     mediump float A = dot(texCoord, texCoord);
-    if (A > 1.0) {
-        discard;
-    }
 
     #if OUTLINE_PASS
+        float cutoff = (mode == 0) ? 0.02 : 1.0;
+        if (A > cutoff) {
+            discard;
+        }
         gl_FragColor = vec4(1.0);
     #else
+        if (A > 1.0) {
+            discard;
+        }
+
         mediump float B = exp(-A * 4.0) * color.a;
 
         #ifdef PICK_PASS
@@ -153,16 +159,17 @@ void main(void)
             } else {
                 c = color.xyz;
 
-                if (ringSize > 0.0) {
+                if (mode == 0 || ringSize == 0.0) {
+                    // centers mode
+                    alpha = B;
+                }
+                else {
                     // rings mode
                     if (A < 1.0 - ringSize) {
                         alpha = max(0.05, B);
                     } else {
                         alpha = 0.6;
                     }
-                } else {
-                    // centers mode
-                    alpha = B;
                 }
             }
 

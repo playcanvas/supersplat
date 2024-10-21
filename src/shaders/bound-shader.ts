@@ -24,7 +24,7 @@ const fragmentShader = /* glsl */ `
             ivec2 splatUV = ivec2(gl_FragCoord.x, id);
 
             // skip out-of-range splats
-            if (splatUV.x + splatUV.y * splat_params.x > splat_params.z) {
+            if ((splatUV.x + splatUV.y * splat_params.x) >= splat_params.z) {
                 continue;
             }
 

@@ -105,7 +105,7 @@ const fragmentShader = /*glsl*/ `
         levelAlpha = pristineGrid(levelPos.xz, ddx * 0.1, ddy * 0.1, vec2(levelSize)) * fade;
         if (levelAlpha > epsilon) {
             vec3 color;
-            vec2 loc = max(vec2(0.0), abs(levelPos.xz) - abs(ddx * 0.1) - abs(ddy * 0.1));
+            vec2 loc = abs(levelPos.xz);
             if (loc.x < levelSize) {
                 if (loc.y < levelSize) {
                     color = vec3(1.0);

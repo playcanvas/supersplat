@@ -128,7 +128,7 @@ class SplatsTransformHandler implements TransformHandler {
             transformPalette.setTransform(newIdx, mat);
         });
 
-        splat.selectionAlpha = 0;
+        splat.scene.outline.enabled = false;
     }
 
     update(transform: Transform) {
@@ -157,6 +157,7 @@ class SplatsTransformHandler implements TransformHandler {
         // for render during drag (which is slower).
         splat.updatePositions();
         splat.selectionAlpha = 1;
+        splat.scene.outline.enabled = true;
 
         // create op for splat transform
         const top = new SplatsTransformOp({

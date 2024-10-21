@@ -26,6 +26,10 @@ class Outline extends Element {
     shader: Shader;
     quadRender: QuadRender;
 
+    clr = new Color(1, 1, 1, 0.5);
+
+    enabled = true;
+
     constructor() {
         super(ElementType.other);
 
@@ -54,18 +58,31 @@ class Outline extends Element {
         this.quadRender = new QuadRender(this.shader);
 
         const outlineTextureId = device.scope.resolve('outlineTexture');
+        const clrId = device.scope.resolve('clr');
+        const clr = this.clr;
+        const clrStorage = [1, 1, 1, 1];
 
         // apply the outline texture to the display before gizmos render
         this.scene.gizmoLayer.onPostRenderOpaque = () => {
-            device.setBlendState(BlendState.NOBLEND);
+            if (!this.enabled) {
+                return;
+            }
+
+            device.setBlendState(BlendState.ALPHABLEND);
             device.setCullMode(CULLFACE_NONE);
             device.setDepthState(DepthState.NODEPTH);
             device.setStencilState(null, null);
 
+            clrStorage[0] = clr.r;
+            clrStorage[1] = clr.g;
+            clrStorage[2] = clr.b;
+            clrStorage[3] = clr.a;
+
             outlineTextureId.setValue(this.colorBuffer);
+            clrId.setValue(clrStorage);
 
             const glDevice = device as WebglGraphicsDevice;
-            glDevice.setRenderTarget(this.scene.camera.entity.camera);
+            glDevice.setRenderTarget(this.scene.camera.entity.camera.renderTarget);
             glDevice.updateBegin();
             this.quadRender.render();
             glDevice.updateEnd();

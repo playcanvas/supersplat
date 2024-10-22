@@ -2,8 +2,7 @@ import { path, Vec3 } from 'playcanvas';
 import { Scene } from './scene';
 import { Events } from './events';
 import { CreateDropHandler } from './drop-handler';
-import { convertPly, convertPlyCompressed, convertSplat } from './splat-convert';
-import { startSpinner, stopSpinner } from './ui/spinner';
+import { WriteFunc, serializePly, serializePlyCompressed, serializeSplat } from './splat-serialize';
 import { ElementType } from './element';
 import { Splat } from './splat';
 import { localize } from './ui/localization';
@@ -47,7 +46,7 @@ let fileHandle: FileSystemFileHandle = null;
 const vec = new Vec3();
 
 // download the data to the given filename
-const download = (filename: string, data: ArrayBuffer) => {
+const download = (filename: string, data: Uint8Array) => {
     const blob = new Blob([data], { type: "octet/stream" });
     const url = window.URL.createObjectURL(blob);
 
@@ -79,14 +78,6 @@ const sendToRemoteStorage = async (filename: string, data: ArrayBuffer, remoteSt
         method: remoteStorageDetails.method,
         body: formData
     });
-};
-
-// write the data to file
-const writeToFile = async (stream: FileSystemWritableFileStream, data: ArrayBuffer) => {
-    await stream.seek(0);
-    await stream.write(data);
-    await stream.truncate(data.byteLength);
-    await stream.close();
 };
 
 const loadCameraPoses = async (url: string, filename: string, events: Events) => {
@@ -331,39 +322,61 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
         }
     });
 
+    const writeScene = async (type: ExportType, writeFunc: WriteFunc) => {
+        const splats = getSplats();
+
+        switch (type) {
+            case 'ply':
+                await serializePly(splats, writeFunc);
+                break;
+            case 'compressed-ply':
+                await serializePlyCompressed(splats, writeFunc);
+                return;
+            case 'splat':
+                await serializeSplat(splats, writeFunc);
+                return;
+        }
+    };
+
     events.function('scene.write', async (options: SceneWriteOptions) => {
-        startSpinner();
+        events.fire('startSpinner');
 
         try {
-            const splats = getSplats();
-
             // setTimeout so spinner has a chance to activate
             await new Promise<void>((resolve) => {
                 setTimeout(resolve);
             });
 
-            const data = (() => {
-                switch (options.type) {
-                    case 'ply':
-                        return convertPly(splats);
-                    case 'compressed-ply':
-                        return convertPlyCompressed(splats);
-                    case 'splat':
-                        return convertSplat(splats);
-                    default:
-                        return null;
-                }
-            })();
+            const { stream } = options;
 
-            if (options.stream) {
-                // write to stream
-                await writeToFile(options.stream, data);
-            } else if (remoteStorageDetails) {
-                // write data to remote storage
-                await sendToRemoteStorage(options.filename, data, remoteStorageDetails);
+            if (stream) {
+                // writer must keep track of written bytes because JS streams don't
+                let cursor = 0;
+                const writeFunc = (data: Uint8Array) => {
+                    cursor += data.byteLength;
+                    return stream.write(data);
+                };
+
+                await stream.seek(0);
+                await writeScene(options.type, writeFunc);
+                await stream.truncate(cursor);
+                await stream.close();
             } else if (options.filename) {
-                // download file to local machine
-                download(options.filename, data);
+                // (safari): concatenate data into single buffer
+                let cursor = 0;
+                let data = new Uint8Array(1024 * 1024);
+
+                const writeFunc = (chunk: Uint8Array) => {
+                    if (cursor + chunk.byteLength > data.byteLength) {
+                        const newData = new Uint8Array(data.byteLength * 2);
+                        newData.set(data);
+                        data = newData;
+                    }
+                    data.set(chunk, cursor);
+                    cursor += chunk.byteLength;
+                };
+                await writeScene(options.type, writeFunc);
+                download(options.filename, new Uint8Array(data.buffer, 0, cursor));
             }
         } catch (err) {
             events.invoke('showPopup', {
@@ -372,7 +385,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
                 message: `${err.message ?? err} while saving file`
             });
         } finally {
-            stopSpinner();
+            events.fire('stopSpinner');
         }
     });
 };

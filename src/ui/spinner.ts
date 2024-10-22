@@ -1,84 +1,29 @@
-const css = `
-.static-spinner::before,
-.static-spinner::after {
-    border: 2px solid;
-    border-left: none;
-    box-sizing: border-box;
-    content: '';
-    display: block;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    -webkit-transform: translateY(-50%);
-    transform: translateY(-50%);
-    -webkit-transform-origin: 0% 50%;
-    transform-origin: 0% 50%;
-    -webkit-animation: spinner-spin 1s linear 0s infinite;
-    animation: spinner-spin 1s linear 0s infinite;
-    border-width: 3px;
-    border-color: #aaa;
-}
+import { Container, Element } from 'pcui';
 
-.static-spinner::before {
-    width: 15px;
-    height: 30px;
-    border-radius: 0 30px 30px 0;
-}
+class Spinner extends Container {
+    constructor(args = {}) {
+        args = {
+            ...args,
+            id: 'spinner-container'
+        };
 
-.static-spinner::after {
-    width: 8px;
-    height: 16px;
-    border-radius: 0 16px 16px 0;
-    animation-direction: reverse;
-}
+        super(args);
 
-@-webkit-keyframes spinner-spin {
-    0% {
-        -webkit-transform: translateY(-50%) rotate(0deg);
-        transform: translateY(-50%) rotate(0deg);
-    }
+        this.dom.tabIndex = 0;
 
-    100% {
-        -webkit-transform: translateY(-50%) rotate(360deg);
-        transform: translateY(-50%) rotate(360deg);
+        const spinner = new Element({
+            dom: 'div',
+            class: 'spinner'
+        });
+
+        this.append(spinner);
+
+        this.dom.addEventListener('keydown', (event) => {
+            if (this.hidden) return;
+            event.stopPropagation();
+            event.preventDefault();
+        });
     }
 }
 
-@keyframes spinner-spin {
-    0% {
-        -webkit-transform: translateY(-50%) rotate(0deg);
-        transform: translateY(-50%) rotate(0deg);
-    }
-
-    100% {
-        -webkit-transform: translateY(-50%) rotate(360deg);
-        transform: translateY(-50%) rotate(360deg);
-    }
-}
-`;
-
-let container: HTMLElement;
-
-const startSpinner = () => {
-    if (!container) {
-        const style = document.createElement('style');
-        style.innerText = css;
-        container = document.createElement('div');
-        container.appendChild(style);
-        const spinner = document.createElement('div');
-        spinner.className = 'static-spinner';
-        container.appendChild(spinner);
-    }
-    document.body.appendChild(container);
-};
-
-const stopSpinner = () => {
-    if (container) {
-        document.body.removeChild(container);
-    }
-};
-
-export {
-    startSpinner,
-    stopSpinner
-};
+export { Spinner };

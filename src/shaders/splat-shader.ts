@@ -87,7 +87,7 @@ void main(void)
 
     texCoord = vertex_position.xy * 0.5;
 
-    #if FORWARD_PASS
+    #ifdef FORWARD_PASS
         // get color
         color = texelFetch(splatColor, splatUV, 0);
 

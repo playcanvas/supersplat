@@ -12,8 +12,9 @@ import { RightToolbar } from './right-toolbar';
 import { ModeToggle } from './mode-toggle';
 import { Tooltips } from './tooltips';
 import { ShortcutsPopup } from './shortcuts-popup';
-import { localizeInit } from './localization';
+import { Spinner } from './spinner';
 
+import { localizeInit } from './localization';
 import { version } from '../../package.json';
 import logo from './playcanvas-logo.png';
 
@@ -151,6 +152,20 @@ class EditorUI {
 
         events.function('showPopup', (options: ShowOptions) => {
             return this.popup.show(options);
+        });
+
+        // spinner
+
+        const spinner = new Spinner();
+
+        topContainer.append(spinner);
+
+        events.on('startSpinner', () => {
+            spinner.hidden = false;
+        });
+
+        events.on('stopSpinner', () => {
+            spinner.hidden = true;
         });
 
         // initialize canvas to correct size before creating graphics device etc

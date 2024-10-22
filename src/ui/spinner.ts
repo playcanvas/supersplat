@@ -24,6 +24,6 @@ class Spinner extends Container {
             event.preventDefault();
         });
     }
-};
+}
 
 export { Spinner };

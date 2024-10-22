@@ -104,6 +104,26 @@ class ViewPanel extends Container {
         centersSizeRow.append(centersSizeLabel);
         centersSizeRow.append(centersSizeSlider);
 
+        // outline selection
+
+        const outlineSelectionRow = new Container({
+            class: 'view-panel-row'
+        });
+
+        const outlineSelectionLabel = new Label({
+            text: localize('options.outline-selection'),
+            class: 'view-panel-row-label'
+        });
+
+        const outlineSelectionToggle = new BooleanInput({
+            type: 'toggle',
+            class: 'view-panel-row-toggle',
+            value: false
+        });
+
+        outlineSelectionRow.append(outlineSelectionLabel);
+        outlineSelectionRow.append(outlineSelectionToggle);
+
         // show grid
 
         const showGridRow = new Container({
@@ -209,6 +229,7 @@ class ViewPanel extends Container {
         this.append(fovRow);
         this.append(shBandsRow);
         this.append(centersSizeRow);
+        this.append(outlineSelectionRow);
         this.append(showGridRow);
         this.append(showBoundRow);
         this.append(poseHeader);
@@ -255,6 +276,16 @@ class ViewPanel extends Container {
             events.fire('camera.setSplatSize', value);
             events.fire('camera.setOverlay', true);
             events.fire('camera.setMode', 'centers');
+        });
+
+        // outline selection
+
+        events.on('view.outlineSelection', (value: boolean) => {
+            outlineSelectionToggle.value = value;
+        });
+
+        outlineSelectionToggle.on('change', (value: boolean) => {
+            events.fire('view.setOutlineSelection', value);
         });
 
         // show grid

@@ -19,8 +19,8 @@ import { SplatOverlay } from './splat-overlay';
 import { Camera } from './camera';
 import { CustomShadow as Shadow } from './custom-shadow';
 import { InfiniteGrid as Grid } from './infinite-grid';
-import { localize } from './ui/localization';
 import { DataProcessor } from './data-processor';
+import { Outline } from './outline';
 
 class Scene {
     events: Events;
@@ -30,6 +30,7 @@ class Scene {
     backgroundLayer: Layer;
     shadowLayer: Layer;
     debugLayer: Layer;
+    overlayLayer: Layer;
     gizmoLayer: Layer;
     sceneState = [new SceneState(), new SceneState()];
     elements: Element[] = [];
@@ -49,6 +50,7 @@ class Scene {
     splatOverlay: SplatOverlay;
     shadow: Shadow;
     grid: Grid;
+    outline: Outline;
 
     contentRoot: Entity;
     cameraRoot: Entity;
@@ -139,9 +141,18 @@ class Scene {
             name: 'Shadow Layer'
         });
 
+        // debug layer
         this.debugLayer = new Layer({
             enabled: true,
             name: 'Debug Layer',
+            opaqueSortMode: SORTMODE_NONE,
+            transparentSortMode: SORTMODE_NONE
+        });
+
+        // overlay layer
+        this.overlayLayer = new Layer({
+            name: 'Overlay',
+            clearDepthBuffer: false,
             opaqueSortMode: SORTMODE_NONE,
             transparentSortMode: SORTMODE_NONE
         });
@@ -160,6 +171,7 @@ class Scene {
         layers.insert(this.backgroundLayer, idx);
         layers.insert(this.shadowLayer, idx + 1);
         layers.insert(this.debugLayer, idx + 1);
+        layers.push(this.overlayLayer);
         layers.push(this.gizmoLayer);
 
         this.dataProcessor = new DataProcessor(this.app.graphicsDevice);
@@ -184,6 +196,9 @@ class Scene {
 
         this.grid = new Grid();
         this.add(this.grid);
+
+        this.outline = new Outline();
+        this.add(this.outline);
     }
 
     async load() {

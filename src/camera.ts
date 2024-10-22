@@ -70,11 +70,7 @@ class Camera extends Element {
         super(ElementType.camera);
         // create the camera entity
         this.entity = new Entity('Camera');
-        this.entity.addComponent('camera', {
-            fov: 60,
-            clearColor: new Color(0, 0, 0, 0),
-            frustumCulling: true
-        });
+        this.entity.addComponent('camera');
 
         // NOTE: this call is needed for refraction effect to work correctly, but
         // it slows rendering and should only be made when required.
@@ -269,8 +265,7 @@ class Camera extends Element {
 
         // out with the old
         if (rt) {
-            rt.colorBuffer.destroy();
-            rt.depthBuffer.destroy();
+            rt.destroyTextureBuffers();
             rt.destroy();
 
             this.pickModeRenderTarget.destroy();
@@ -289,16 +284,12 @@ class Camera extends Element {
         };
 
         // in with the new
-        const pixelFormat = PIXELFORMAT_RGBA8;
-        const samples = this.scene.config.camera.multisample ? device.maxSamples : 1;
-
-        const colorBuffer = createTexture('cameraColor', width, height, pixelFormat);
+        const colorBuffer = createTexture('cameraColor', width, height, PIXELFORMAT_RGBA8);
         const depthBuffer = createTexture('cameraDepth', width, height, PIXELFORMAT_DEPTH);
         const renderTarget = new RenderTarget({
             colorBuffer,
             depthBuffer,
             flipY: false,
-            samples,
             autoResolve: false
         });
         this.entity.camera.renderTarget = renderTarget;
@@ -308,12 +299,10 @@ class Camera extends Element {
         this.pickModeRenderTarget = new RenderTarget({
             colorBuffer,
             depth: false,
-            flipY: false,
-            samples,
             autoResolve: false
         });
 
-        this.scene.events.fire('camera.resize', {width, height});
+        this.scene.events.fire('camera.resize', { width, height });
     }
 
     onUpdate(deltaTime: number) {

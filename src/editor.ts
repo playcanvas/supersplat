@@ -67,6 +67,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         scene.forceRender = true;
     });
 
+    events.on('view.outlineSelection', () => {
+        scene.forceRender = true;
+    });
+
     events.on('view.bands', (bands: number) => {
         scene.forceRender = true;
     });
@@ -456,6 +460,25 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('camera.setSplatSize', (value: number) => {
         setSplatSize(value);
+    });
+
+    // outline selection
+
+    let outlineSelection = false;
+
+    const setOutlineSelection = (value: boolean) => {
+        if (value !== outlineSelection) {
+            outlineSelection = value;
+            events.fire('view.outlineSelection', outlineSelection);
+        }
+    };
+
+    events.function('view.outlineSelection', () => {
+        return outlineSelection;
+    });
+
+    events.on('view.setOutlineSelection', (value: boolean) => {
+        setOutlineSelection(value);
     });
 
     // view spherical harmonic bands

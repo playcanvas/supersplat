@@ -257,6 +257,8 @@ class Splat extends Element {
     }
 
     add() {
+        this.entity.gsplat.layers = this.entity.gsplat.layers.concat([this.scene.overlayLayer.id]);
+
         // add the entity to the scene
         this.scene.contentRoot.addChild(this.entity);
 
@@ -287,8 +289,9 @@ class Splat extends Element {
 
         // configure rings rendering
         const material = this.entity.gsplat.instance.material;
+        material.setParameter('mode', cameraMode === 'rings' ? 1 : 0);
         material.setParameter('ringSize', (selected && cameraOverlay && cameraMode === 'rings') ? 0.04 : 0);
-        material.setParameter('selectionAlpha', this.selectionAlpha);
+        material.setParameter('selectionAlpha', events.invoke('view.outlineSelection') ? 0 : this.selectionAlpha);
 
         if (this.visible && selected) {
             // render bounding box

@@ -216,15 +216,24 @@ class Scene {
 
     async updateLabels(labels: any, filename: string){
         try{
+            var matches = 0;
             this.elements.forEach(element => {
                 if (element.type == ElementType.splat){
                     const splat = element as Splat;
                     if (splat.asset._name == filename) {
+                        matches += 1;
+                        console.info("Updating labels for: "+filename);
                         splat.setLabels(labels);
+                        splat.updateShaderParams();
                     }
                 }
               });
-            this.events.fire('updated');
+            
+            if (matches == 0){
+                console.info("No matches found for uploaded labels: "+ filename);
+            }else{
+                this.events.fire('updated');
+            }
         }catch (err) {
             this.events.invoke('showPopup', {
                 type: 'error',
@@ -239,6 +248,7 @@ class Scene {
             this.clear();
             const model = await this.assetLoader.loadModel({ url, filename });
             this.add(model);
+            console.log("Added uploaded model: " + filename);
             this.events.fire('updated');
         }catch (err) {
             this.events.invoke('showPopup', {

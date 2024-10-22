@@ -4,7 +4,8 @@ class Spinner extends Container {
     constructor(args = {}) {
         args = {
             ...args,
-            id: 'spinner-container'
+            id: 'spinner-container',
+            hidden: true
         };
 
         super(args);

@@ -87,7 +87,7 @@ void main(void)
 
     texCoord = vertex_position.xy * 0.5;
 
-    #ifdef FORWARD_PASS
+    #if FORWARD_PASS
         // get color
         color = texelFetch(splatColor, splatUV, 0);
 
@@ -99,6 +99,7 @@ void main(void)
     #endif
 
     #ifdef PICK_PASS
+        color = texelFetch(splatColor, splatUV, 0);
         vertexId = splatId;
     #endif
 }
@@ -137,7 +138,7 @@ void main(void)
         mediump float B = exp(-A * 4.0) * color.a;
 
         #ifdef PICK_PASS
-            if (B < pickerAlpha || (vertexState & 2u) == 2u) {
+            if (B < pickerAlpha || (vertexState & 2u) != 0u) {
                 // hidden
                 discard;
             }
@@ -152,13 +153,13 @@ void main(void)
             vec3 c;
             float alpha;
 
-            if ((vertexState & 2u) == 2u) {
+            if ((vertexState & 2u) != 0u) {
                 // frozen/hidden
                 c = vec3(0.0, 0.0, 0.0);
                 alpha = B * 0.05;
             } else {
                 // get splat color
-                if ((vertexState & 1u) == 1u) {
+                if ((vertexState & 1u) != 0u) {
                     // selected
                     c = mix(color.xyz, vec3(1.0, 1.0, 0.0), selectionAlpha);
                 } else {

@@ -298,6 +298,7 @@ class Camera extends Element {
         // create pick mode render target (reuse color buffer)
         this.pickModeRenderTarget = new RenderTarget({
             colorBuffer,
+            depth: false,
             autoResolve: false
         });
 
@@ -353,8 +354,6 @@ class Camera extends Element {
         if (renderTarget.samples > 1) {
             renderTarget.resolve(true, false);
         }
-
-        this.scene.events.fire('camera.preResolve');
 
         // copy render target
         device.copyRenderTarget(renderTarget, null, true, false);

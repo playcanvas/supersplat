@@ -16,6 +16,7 @@ import {
 import { Element, ElementType } from "./element";
 import { Serializer } from "./serializer";
 import { State } from './splat-state';
+import { GSplatLabels } from './gsplat-labels';
 
 const vertexShader = /*glsl*/`
 uniform vec3 view_position;
@@ -192,6 +193,7 @@ const boundingPoints =
 class Splat extends Element {
     asset: Asset;
     splatData: GSplatData;
+    labelData: GSplatLabels = null;
     numSplats = 0;
     numDeleted = 0;
     numHidden = 0;
@@ -306,6 +308,10 @@ class Splat extends Element {
         }
     }
 
+    setLabels(data: any){
+        this.labelData = new GSplatLabels(data);
+    }
+
     updateState(changedState = State.selected) {
         const state = this.splatData.getProp('state') as Uint8Array;
 
@@ -409,6 +415,7 @@ class Splat extends Element {
 
     remove() {
         this.scene.events.off('view.bands', this.rebuildMaterial, this);
+        this.scene.events.off('splat.setShowClasses', this.setShowClasses, this);
 
         this.scene.contentRoot.removeChild(this.pivot);
         this.scene.boundDirty = true;

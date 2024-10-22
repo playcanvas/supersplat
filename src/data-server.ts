@@ -48,15 +48,29 @@ const initDataServer = async (scene: Scene, events: Events, dropTarget: HTMLElem
         socket.onmessage = async (event) => {
             if (event.data instanceof Blob){
                 try {
-                    // First 64 bytes used for file name
-                    const name = (await event.data.slice(0, 64).text()).replace(/\0+$/, '');; 
-                    const data = event.data.slice(64, event.data.size);
+                    // First 64 bytes used for message type
+                    const msgtype = (await event.data.slice(0, 64).text()).replace(/\0+$/, '');
+                    
+                    if(msgtype == "PLY"){
+                        // 64 bytes used for file name
+                        const name = (await event.data.slice(64, 128).text()).replace(/\0+$/, '');
+                        const data = event.data.slice(128, event.data.size);
 
-                    const url = URL.createObjectURL(data);
-                    console.log(name);
-                    console.log(data);
-                    await scene.updateModel(url, name);
-                    URL.revokeObjectURL(url);
+                        const url = URL.createObjectURL(data);
+                        await scene.updateModel(url, name);
+                        URL.revokeObjectURL(url);
+                    }
+                    else if(msgtype=="LABELS"){
+                        // 64 bytes used for file name
+                        const name = (await event.data.slice(64, 128).text()).replace(/\0+$/, '');
+                        const data = await event.data.slice(128, event.data.size).text();
+                        const labels = JSON.parse(data);
+                        await scene.updateLabels(labels, name);
+                    }
+                    else{
+                        throw Error("Unknown message type: "+msgtype)
+                    }
+
                 } catch (error) {
                     if (error.name !== 'AbortError') {
                         console.error(error);

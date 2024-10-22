@@ -214,6 +214,26 @@ class Scene {
         this.app.start();
     }
 
+    async updateLabels(labels: any, filename: string){
+        try{
+            this.elements.forEach(element => {
+                if (element.type == ElementType.splat){
+                    const splat = element as Splat;
+                    if (splat.asset._name == filename) {
+                        splat.setLabels(labels);
+                    }
+                }
+              });
+            this.events.fire('updated');
+        }catch (err) {
+            this.events.invoke('showPopup', {
+                type: 'error',
+                header: localize('popup.error-updating'),
+                message: `${err.message ?? err} while updating labels`
+            });
+        }
+    }
+
     async updateModel(url: string, filename: string){
         try{
             this.clear();

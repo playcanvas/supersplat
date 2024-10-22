@@ -48,7 +48,8 @@ class AssetLoader {
                     {
                         elementFilter: this.loadAllData ? (() => true) : null,
                         // decompress data on load
-                        decompress: true
+                        decompress: true,
+                        reorder: false, // Do not perform MortonOrder calculation and reordering when working with labels, since we are not persiting the old indices so we could also reorder the labels that come after.
                     }
                 );
 

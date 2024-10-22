@@ -14,59 +14,7 @@ import {
 } from 'playcanvas';
 import { Splat } from './splat';
 import { ElementType, Element } from './element';
-
-const vs = /* glsl */ `
-attribute uint vertex_id;
-attribute uint class_id;
-
-uniform mat4 matrix_model;
-uniform mat4 matrix_viewProjection;
-
-uniform sampler2D splatState;
-uniform highp usampler2D splatPosition;
-uniform float splatSize;
-uniform uvec2 texParams;
-
-varying vec4 varying_color;
-
-// Visualize class instances
-uniform vec3 classColors[6];
-uniform bool useOriginalColor; // true = use original splat color, false = use class-based colors
-
-// calculate the current splat index and uv
-ivec2 calcSplatUV(uint index, uint width) {
-    return ivec2(int(index % width), int(index / width));
-}
-
-void main(void) {
-    ivec2 splatUV = calcSplatUV(vertex_id, texParams.x);
-    uint splatState = uint(texelFetch(splatState, splatUV, 0).r * 255.0);
-
-    if ((splatState & 6u) != 0u) {
-        // deleted or hidden (4 or 2)
-        gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
-        gl_PointSize = 0.0;
-    } else {
-        if ((splatState & 1u) != 0u) {
-            // selected
-            varying_color = vec4(1.0, 1.0, 0.0, 0.5);
-        } else {
-                if (useOriginalColor) {
-                    // Use the original splat color from texture
-                    varying_color = vec4(0.0, 0.0, 1.0, 0.5);
-                } else {
-                    // Use class color
-                    varying_color = vec4(classColors[class_id], 0.5);
-                }
-        }
-
-        vec3 p = uintBitsToFloat(texelFetch(splatPosition, splatUV, 0).xyz);
-
-        gl_Position = matrix_viewProjection * matrix_model * vec4(p, 1.0);
-        gl_PointSize = splatSize;
-    }
-}
-`;
+import { GSplatLabels } from './gsplat-labels';
 
 const fs = /* glsl */ `
 varying vec4 varying_color;
@@ -84,6 +32,62 @@ class SplatDebug extends Element {
     }
 
     add() {
+        const vs = /* glsl */ `
+        attribute uint vertex_id;
+        attribute uint class_id;
+
+        uniform mat4 matrix_model;
+        uniform mat4 matrix_viewProjection;
+
+        uniform sampler2D splatState;
+        uniform highp usampler2D splatPosition;
+        uniform float splatSize;
+        uniform uvec2 texParams;
+
+        varying vec4 varying_color;
+
+        // Visualize class instances
+        uniform vec3 classColors[${GSplatLabels.MAX_UNIFORM_COLORS}];
+        uniform bool useOriginalColor; // true = use original splat color, false = use class-based colors
+
+        // calculate the current splat index and uv
+        ivec2 calcSplatUV(uint index, uint width) {
+            return ivec2(int(index % width), int(index / width));
+        }
+
+        void main(void) {
+            ivec2 splatUV = calcSplatUV(vertex_id, texParams.x);
+            uint splatState = uint(texelFetch(splatState, splatUV, 0).r * 255.0);
+
+            if ((splatState & 6u) != 0u) {
+                // deleted or hidden (4 or 2)
+                gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
+                gl_PointSize = 0.0;
+            } else {
+                if ((splatState & 1u) != 0u) {
+                    // selected
+                    varying_color = vec4(1.0, 1.0, 0.0, 0.5);
+                } else {
+                        if (useOriginalColor) {
+                            // Use the original splat color from texture
+                            varying_color = vec4(0.0, 0.0, 1.0, 0.5);
+                        } else {
+                            //if (class_id == 0u){
+                            //    varying_color = vec4(1.0, 0.0, 1.0, 0.5); // Unlabelled point - pink
+                            //}else{
+                                varying_color = vec4(classColors[class_id], 0.5); // Use class color
+                            //}
+                        }
+                }
+
+                vec3 p = uintBitsToFloat(texelFetch(splatPosition, splatUV, 0).xyz);
+
+                gl_Position = matrix_viewProjection * matrix_model * vec4(p, 1.0);
+                gl_PointSize = splatSize;
+            }
+        }
+        `;
+
         const scene = this.scene;
         const device = scene.graphicsDevice;
 
@@ -111,24 +115,33 @@ class SplatDebug extends Element {
 
             const splatData = splat.splatData;
 
-            const vertexFormat = new VertexFormat(device, [{
+            const vertexFormat = new VertexFormat(device, [
+                {
                 semantic: SEMANTIC_ATTR13,
                 components: 1,
                 type: TYPE_UINT32,
                 asInt: true
-            },{
-                semantic: SEMANTIC_ATTR14,
-                components: 1,
-                type: TYPE_UINT32,
-                asInt: true
-            }]);
+                },
+                {
+                    semantic: SEMANTIC_ATTR14,
+                    components: 1,
+                    type: TYPE_UINT32,
+                    asInt: true
+                }
+            ]);
 
             // TODO: make use of Splat's mapping instead of rendering all splats
-            const vertexData = new Uint32Array(splatData.numSplats*2);
-            const class_ids = splatData.getProp('class_id') as Uint32Array;
+            const vertexData = new Uint32Array(splatData.numSplats * 2);
+            var class_ids;
+            if (splat.labelData === null){
+                class_ids = new Uint32Array(splatData.numSplats);
+            }else{
+                class_ids = splat.labelData.labels[0].point_annotations;
+            }
+
             for (let i = 0; i < splatData.numSplats; ++i) {
-                vertexData[i*2] = i;
-                vertexData[i*2+1] = class_ids[i];
+                vertexData[i * 2] = i;
+                vertexData[i * 2 + 1] =  class_ids[i];
             }
 
             const vertexBuffer = new VertexBuffer(device, vertexFormat, splatData.numSplats, {
@@ -150,7 +163,7 @@ class SplatDebug extends Element {
 
             material.setParameter('splatState', splat.stateTexture);
             material.setParameter('splatPosition', splat.entity.gsplat.instance.splat.transformATexture);
-            material.setParameter('classColors[0]', [1.,0.,0., 0.,1.,0., 0.,0.,1., 1.,0.,0., 0.,1.,0., 0.,1.,0.]) //Todo Use color gradient for n classes
+            material.setParameter('classColors[0]', splat.labelData === null ? new Float32Array(splatData.numSplats * 3): splat.labelData.concatenated_colors()) //Todo Use color gradient for n classes
             material.setParameter('useOriginalColor', + splat.useOriginalColor);
             material.setParameter('texParams', [splat.stateTexture.width, splat.stateTexture.height]);
             material.update();

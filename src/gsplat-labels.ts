@@ -43,7 +43,7 @@ class Label{
 }
 
 class GSplatLabels {
-    static MAX_UNIFORM_COLORS = 256;
+    static MAX_UNIFORM_COLORS = 4000;
 
     categories: Array<Category>;
     labels: Array<Label>;

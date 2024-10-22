@@ -6,6 +6,7 @@ import { Popup, ShowOptions } from './popup';
 import { ViewCube } from './view-cube';
 import { Menu } from './menu';
 import { ScenePanel } from './scene-panel';
+import { AnnotationsPanel } from './annotations-panel';
 import { ViewPanel } from './view-panel';
 import { BottomToolbar } from './bottom-toolbar';
 import { RightToolbar } from './right-toolbar';
@@ -89,6 +90,7 @@ class EditorUI {
 
         // bottom toolbar
         const scenePanel = new ScenePanel(events, tooltips);
+        const annotationsPanel = new AnnotationsPanel(events, tooltips);
         const viewPanel = new ViewPanel(events, tooltips);
         const bottomToolbar = new BottomToolbar(events, tooltips);
         const rightToolbar = new RightToolbar(events, tooltips);
@@ -99,6 +101,7 @@ class EditorUI {
         canvasContainer.append(appLabel);
         canvasContainer.append(toolsContainer);
         canvasContainer.append(scenePanel);
+        canvasContainer.append(annotationsPanel);
         canvasContainer.append(viewPanel);
         canvasContainer.append(bottomToolbar);
         canvasContainer.append(rightToolbar);

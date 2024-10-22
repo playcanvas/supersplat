@@ -1,0 +1,14 @@
+#annotations-panel {
+    top: 102px;
+    right: 100px;
+    width: 320px;
+}
+
+.collapsed #annotations-panel {
+    display: none;
+}
+
+.splat-list-container {
+    max-height: 300px;
+    overflow: auto;
+}

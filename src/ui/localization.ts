@@ -53,6 +53,11 @@ const localizeInit = () => {
                         "rotation": "Rotation",
                         "scale": "Scale",
 
+                        // Annotations panel
+                        "annotations-manager": "ANNOTATIONS MANAGER",
+                        "annotation_id": "Annotation ID",
+                        "annotation_category_id": "Category ID",
+
                         // Options panel
                         "options": "VIEW OPTIONS",
                         "options.fov": "Field of View",

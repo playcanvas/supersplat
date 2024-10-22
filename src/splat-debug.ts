@@ -72,11 +72,11 @@ class SplatDebug extends Element {
                             // Use the original splat color from texture
                             varying_color = vec4(0.0, 0.0, 1.0, 0.5);
                         } else {
-                            //if (class_id == 0u){
-                            //    varying_color = vec4(1.0, 0.0, 1.0, 0.5); // Unlabelled point - pink
-                            //}else{
-                                varying_color = vec4(classColors[class_id], 0.5); // Use class color
-                            //}
+                            if (class_id == 0u){
+                                varying_color = vec4(1.0, 0.0, 1.0, 0.5); // Unlabelled point - pink
+                            }else{
+                                varying_color = vec4(classColors[class_id - 1u], 0.5); // Use class color
+                            }
                         }
                 }
 
@@ -136,7 +136,7 @@ class SplatDebug extends Element {
             if (splat.labelData === null){
                 class_ids = new Uint32Array(splatData.numSplats);
             }else{
-                class_ids = splat.labelData.labels[0].point_annotations;
+                class_ids = splat.labelData.labels[0].category_annotations;
             }
 
             for (let i = 0; i < splatData.numSplats; ++i) {

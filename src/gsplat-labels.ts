@@ -31,12 +31,14 @@ class Annotation{
 class Label{
     name: string;
     annotations: Array<Annotation>;
-    point_annotations: Uint32Array;
+    point_annotations: Array<number>;
+    category_annotations: Uint32Array;
 
-    constructor(name: string, annotations: Array<Annotation>, point_annotations: Uint32Array) {
+    constructor(name: string, annotations: Array<Annotation>, point_annotations: Array<number>, category_annotations: Uint32Array) {
         this.name = name;
         this.annotations = annotations;
         this.point_annotations = point_annotations;
+        this.category_annotations = category_annotations;
     }
 }
 
@@ -54,13 +56,15 @@ class GSplatLabels {
 
         // Parsing labels from first sample - TODO enable multiple sample parsing
         this.labels = Object.entries(data.dataset.samples[0].labels).map(([labelName, labelObj]: [string, any]) => {
-            const annotations = labelObj.attributes.annotations.map((ann: any) => {
+            const annotations: Array<Annotation> = labelObj.attributes.annotations.map((ann: any) => {
                 return new Annotation(ann.id, ann.category_id, ann.attributes || [], ann.isHidden);
-            });
+            }).sort((a:Annotation, b:Annotation) => a.id - b.id);
         
-            const pointAnnotations = new Uint32Array(labelObj.attributes.point_annotations);
-        
-            return new Label(labelName, annotations, pointAnnotations);
+            // Holds Annotation id
+            const pointAnnotations = labelObj.attributes.point_annotations;
+            // Holds Category id, Check if point has no category (0) - assign 0 class, otherwise take category id from annotation with id
+            const categoryAnnotations = new Uint32Array(labelObj.attributes.point_annotations.map((id:number) => id === 0 ? 0 : annotations[id-1].category_id));
+            return new Label(labelName, annotations, pointAnnotations, categoryAnnotations);
         });
     }
 

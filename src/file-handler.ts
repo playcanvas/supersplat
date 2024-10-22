@@ -3,7 +3,6 @@ import { Scene } from './scene';
 import { Events } from './events';
 import { CreateDropHandler } from './drop-handler';
 import { WriteFunc, serializePly, serializePlyCompressed, serializeSplat } from './splat-serialize';
-import { startSpinner, stopSpinner } from './ui/spinner';
 import { ElementType } from './element';
 import { Splat } from './splat';
 import { localize } from './ui/localization';
@@ -340,7 +339,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
     };
 
     events.function('scene.write', async (options: SceneWriteOptions) => {
-        startSpinner();
+        events.fire('startSpinner');
 
         try {
             // setTimeout so spinner has a chance to activate
@@ -386,7 +385,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
                 message: `${err.message ?? err} while saving file`
             });
         } finally {
-            stopSpinner();
+            events.fire('stopSpinner');
         }
     });
 };

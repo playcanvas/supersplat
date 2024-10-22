@@ -1,8 +1,7 @@
 import { Asset, AssetRegistry, GraphicsDevice, GSplatData, GSplatResource, TEXTURETYPE_RGBP } from 'playcanvas';
 import { Splat } from './splat';
 import { Env } from './env';
-
-import { startSpinner, stopSpinner } from './ui/spinner';
+import { Events } from './events';
 
 interface ModelLoadRequest {
     url?: string;
@@ -94,17 +93,19 @@ const deserializeFromSSplat = (data: ArrayBufferLike) => {
 class AssetLoader {
     device: GraphicsDevice;
     registry: AssetRegistry;
+    events: Events;
     defaultAnisotropy: number;
     loadAllData = true;
 
-    constructor(device: GraphicsDevice, registry: AssetRegistry, defaultAnisotropy?: number) {
+    constructor(device: GraphicsDevice, registry: AssetRegistry, events: Events, defaultAnisotropy?: number) {
         this.device = device;
         this.registry = registry;
+        this.events = events;
         this.defaultAnisotropy = defaultAnisotropy || 1;
     }
 
     loadPly(loadRequest: ModelLoadRequest) {
-        startSpinner();
+        this.events.fire('startSpinner');
 
         return new Promise<Splat>((resolve, reject) => {
             const asset = new Asset(
@@ -154,12 +155,12 @@ class AssetLoader {
             this.registry.add(asset);
             this.registry.load(asset);
         }).finally(() => {
-            stopSpinner();
+            this.events.fire('stopSpinner');
         });
     }
 
     loadSplat(loadRequest: ModelLoadRequest) {
-        startSpinner();
+        this.events.fire('startSpinner');
 
         return new Promise<Splat>((resolve, reject) => {
             fetch(loadRequest.url || loadRequest.filename)
@@ -184,7 +185,7 @@ class AssetLoader {
                 reject('Failed to load splat data');
             });
         }).finally(() => {
-            stopSpinner();
+            this.events.fire('stopSpinner');
         });
     }
 

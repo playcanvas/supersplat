@@ -5,8 +5,8 @@ import { SplatList } from './splat-list';
 import { Transform } from './transform';
 import { localize } from './localization';
 
-import sceneImportSvg from '../svg/import.svg';
-import sceneNewSvg from '../svg/new.svg';
+import sceneImportSvg from './svg/import.svg';
+import sceneNewSvg from './svg/new.svg';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));

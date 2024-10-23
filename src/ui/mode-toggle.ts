@@ -3,8 +3,8 @@ import { Events } from '../events';
 import { Tooltips } from './tooltips';
 import { localize } from './localization';
 
-import centersSvg from '../svg/centers.svg';
-import ringsSvg from '../svg/rings.svg';
+import centersSvg from './svg/centers.svg';
+import ringsSvg from './svg/rings.svg';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));

@@ -5,7 +5,6 @@ import {
     PIXELFORMAT_RGBA8,
     PIXELFORMAT_DEPTH,
     BoundingBox,
-    Color,
     Entity,
     EventHandler,
     Picker,

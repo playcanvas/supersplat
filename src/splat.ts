@@ -292,6 +292,7 @@ class Splat extends Element {
         material.setParameter('mode', cameraMode === 'rings' ? 1 : 0);
         material.setParameter('ringSize', (selected && cameraOverlay && cameraMode === 'rings') ? 0.04 : 0);
         material.setParameter('selectionAlpha', events.invoke('view.outlineSelection') ? 0 : this.selectionAlpha);
+        material.setParameter('ortho', this.scene.camera.ortho ? 1 : 0);
 
         if (this.visible && selected) {
             // render bounding box

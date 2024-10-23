@@ -1,6 +1,7 @@
 
 const vertexShader = /*glsl*/`
 uniform vec3 view_position;
+uniform bool ortho;
 
 uniform sampler2D splatColor;
 uniform sampler2D splatState;
@@ -74,7 +75,7 @@ void main(void)
     vec3 covA, covB;
     getCovariance(covA, covB);
 
-    vec4 v1v2 = calcV1V2(splat_cam.xyz, covA, covB, transpose(mat3(model_view)));
+    vec4 v1v2 = calcV1V2(ortho ? vec3(0.0, 0.0, 1.0) : splat_cam.xyz, covA, covB, transpose(mat3(model_view)));
 
     // early out tiny splats
     if (dot(v1v2.xy, v1v2.xy) < 4.0 && dot(v1v2.zw, v1v2.zw) < 4.0) {
@@ -95,8 +96,13 @@ void main(void)
         color = texelFetch(splatColor, splatUV, 0);
 
         #ifdef USE_SH1
-            vec4 worldCenter = model * vec4(center, 1.0);
-            vec3 viewDir = normalize((worldCenter.xyz / worldCenter.w - view_position) * mat3(model));
+            vec3 viewDir;
+            if (ortho) {
+                viewDir = normalize(-vec3(matrix_view[0].z, matrix_view[1].z, matrix_view[2].z) * mat3(model));
+            } else {
+                vec4 worldCenter = model * vec4(center, 1.0);
+                viewDir = normalize((worldCenter.xyz / worldCenter.w - view_position) * mat3(model));
+            }
             color.xyz = max(color.xyz + evalSH(viewDir), 0.0);
         #endif
     #endif

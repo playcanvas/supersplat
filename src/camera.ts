@@ -14,6 +14,8 @@ import {
     Texture,
     Vec3,
     WebglGraphicsDevice,
+    PROJECTION_ORTHOGRAPHIC,
+    PROJECTION_PERSPECTIVE,
     TONEMAP_LINEAR,
     TONEMAP_FILMIC,
     TONEMAP_HEJL,
@@ -74,6 +76,15 @@ class Camera extends Element {
         // NOTE: this call is needed for refraction effect to work correctly, but
         // it slows rendering and should only be made when required.
         // this.entity.camera.requestSceneColorMap(true);
+    }
+
+    // ortho
+    set ortho(value: boolean) {
+        this.entity.camera.projection = value ? PROJECTION_ORTHOGRAPHIC : PROJECTION_PERSPECTIVE;
+    }
+
+    get ortho() {
+        return this.entity.camera.projection === PROJECTION_ORTHOGRAPHIC;
     }
 
     // fov
@@ -220,6 +231,8 @@ class Camera extends Element {
         this.picker = new Picker(this.scene.app, width, height);
 
         this.scene.events.on('scene.boundChanged', this.onBoundChanged, this);
+
+        this.ortho = true;
     }
 
     remove() {
@@ -326,7 +339,9 @@ class Camera extends Element {
 
         this.fitClippingPlanes(this.entity.getLocalPosition(), this.entity.forward);
 
-        this.entity.camera.camera._updateViewProjMat();
+        const { camera } = this.entity;
+        camera.orthoHeight = this.distanceTween.value.distance * this.sceneRadius * this.fovFactor;
+        camera.camera._updateViewProjMat();
     }
 
     fitClippingPlanes(cameraPosition: Vec3, forwardVec: Vec3) {

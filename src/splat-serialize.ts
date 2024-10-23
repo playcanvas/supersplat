@@ -129,7 +129,7 @@ const serializePly = async (splats: Splat[], write: WriteFunc) => {
     // count the number of non-deleted splats
     const totalSplats = countTotalSplats(splats);
 
-    const internalProps = ['state'];
+    const internalProps = ['state', 'transform'];
 
     // get the vertex properties common to all splats
     const propNames = getCommonPropNames(splats).filter((p) => !internalProps.includes(p));

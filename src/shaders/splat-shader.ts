@@ -63,10 +63,9 @@ void main(void)
     // handle transforms
     mat4 model_view = matrix_view * model;
     vec4 splat_cam = model_view * vec4(center, 1.0);
-    vec4 splat_proj = matrix_projection * splat_cam;
 
     // cull behind camera
-    if (splat_proj.z < -splat_proj.w) {
+    if (splat_cam.z > 0.0) {
         gl_Position = discardVec;
         return;
     }
@@ -83,7 +82,11 @@ void main(void)
         return;
     }
 
+    vec4 splat_proj = matrix_projection * splat_cam;
     gl_Position = splat_proj + vec4((vertex_position.x * v1v2.xy + vertex_position.y * v1v2.zw) / viewport * splat_proj.w, 0, 0);
+
+    // ensure splats aren't clipped by front and back clipping planes
+    gl_Position.z = clamp(gl_Position.z, -abs(gl_Position.w), abs(gl_Position.w));
 
     texCoord = vertex_position.xy * 0.5;
 

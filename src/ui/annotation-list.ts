@@ -1,6 +1,7 @@
 import { Container, Label, Element as PcuiElement } from 'pcui';
 import { Events } from '../events';
 import { Splat } from '../splat';
+import { Annotation } from '../gsplat-labels';
 import { Element, ElementType } from '../element';
 
 import shownSvg from '../svg/shown.svg';
@@ -135,9 +136,10 @@ class AnnotationList extends Container {
 
         super(args);
 
-        const items = new Map<Splat, AnnotationItem>();
+        const items = new Map<Annotation, AnnotationItem>();
+        var splat: Splat = null;
 
-        events.on('scene.elementAdded', (element: Element) => {
+        /*events.on('scene.elementAdded', (element: Element) => {
             if (element.type === ElementType.splat) {
                 const splat = element as Splat;
                 const item = new AnnotationItem(splat.filename);
@@ -154,9 +156,9 @@ class AnnotationList extends Container {
                 });
                 item.on('invisible', () => splat.visible = false);
             }
-        });
+        });*/
 
-        events.on('scene.elementRemoved', (element: Element) => {
+        /*events.on('scene.elementRemoved', (element: Element) => {
             if (element.type === ElementType.splat) {
                 const splat = element as Splat;
                 const item = items.get(splat);
@@ -165,31 +167,84 @@ class AnnotationList extends Container {
                     items.delete(splat);
                 }
             }
-        });
+        });*/
 
         events.on('selection.changed', (selection: Splat) => {
-            items.forEach((value, key) => {
-                value.selected = key === selection;
-            });
+           // if (selection !== splat || items.size === 0){
+                splat = selection;
+                
+                // Clear previous annotations
+                for (const [key, item] of items.entries()) {
+                    this.remove(item)
+                    items.delete(key);
+                }
+
+                // If labelData exists - fill in the annotation list
+                if (splat !== undefined && splat.labelData !== null) {
+                    const labelData = selection.labelData;
+                    const categories = labelData.categories;
+                    // Todo - support multiple label sets on single splat
+                    for (const annotation of labelData.labels[0].annotations){
+
+                        var name;
+                        if (annotation.category_id == 0){
+                            name = categories[annotation.category_id].name;
+                        }else{
+                            name = categories[annotation.category_id].name + " - " + annotation.id.toString();
+                        }
+                        
+                        const item = new AnnotationItem(name)
+                        this.append(item);
+                        items.set(annotation, item);
+                        
+                        item.on('visible', () => {
+                            annotation.isHidden = false;
+                            // BUG: when setting an annotation visible - all hidden annotations are set to visible too
+                            // TODO - perform hide procedure directly on splats, rather than through selection.
+                            events.fire('select.none');
+                            const op = (i: number) => {
+                                return splat.labelData.labels[0].point_annotations[i] === annotation.id;
+                            };
+                            events.fire('select.pred', 'add', op);
+                            events.fire('select.unhide');
+                            events.fire('select.none');
+                        });
+                        item.on('invisible', () => {
+                            annotation.isHidden = true;
+                            events.fire('select.none');
+                            const op = (i: number) => {
+                                return splat.labelData.labels[0].point_annotations[i] === annotation.id;
+                            };
+                            events.fire('select.pred', 'add', op);
+                            events.fire('select.hide');
+                            events.fire('select.none');
+                        });
+                    }
+               // }
+            }
         });
 
-        events.on('splat.visibility', (splat: Splat) => {
+        /*events.on('splat.visibility', (splat: Splat) => {
             const item = items.get(splat);
             if (item) {
                 item.visible = splat.visible;
             }
-        });
+        });*/
 
         this.on('click', (item: AnnotationItem) => {
             for (const [key, value] of items) {
                 if (item === value) {
-                    events.fire('selection', key);
+                    const op = (i: number) => {
+                        return splat.labelData.labels[0].point_annotations[i] === key.id;
+                    };
+                    
+                    events.fire('select.pred', 'add', op);
                     break;
                 }
             }            
         });
 
-        this.on('removeClicked', async (item: AnnotationItem) => {
+        /*this.on('removeClicked', async (item: AnnotationItem) => {
             let splat;
             for (const [key, value] of items) {
                 if (item === value) {
@@ -211,7 +266,7 @@ class AnnotationList extends Container {
             if (result?.action === 'yes') {
                 splat.destroy();
             }
-        });
+        });*/
     }
 
     protected _onAppendChild(element: PcuiElement): void {

@@ -75,7 +75,7 @@ class SplatDebug extends Element {
                             if (class_id == 0u){
                                 varying_color = vec4(1.0, 0.0, 1.0, 0.5); // Unlabelled point - pink
                             }else{
-                                varying_color = vec4(classColors[class_id - 1u], 0.5); // Use class color
+                                varying_color = vec4(classColors[class_id], 0.5); // Use class color
                             }
                         }
                 }

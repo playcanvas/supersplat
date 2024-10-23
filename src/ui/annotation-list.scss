@@ -6,7 +6,7 @@
 .annotation-item {
     display: flex;
     flex-direction: row;
-    padding: 20px;
+    padding: 2px;
 
     &:hover:not(.selected).visible {
         cursor: pointer;

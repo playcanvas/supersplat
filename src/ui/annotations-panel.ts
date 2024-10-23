@@ -1,7 +1,7 @@
 import { Container, Element, Label } from 'pcui';
 import { Events } from '../events';
 import { Tooltips } from './tooltips';
-import { SplatList } from './splat-list';
+import { AnnotationList } from './annotation-list';
 import { Transform } from './transform';
 import { localize } from './localization';
 
@@ -67,14 +67,14 @@ class AnnotationsPanel extends Container {
         tooltips.register(annotationsImport, 'Import Annotations', 'top');
         tooltips.register(annotationsNew, 'New Annotations', 'top');
 
-        const splatList = new SplatList(events);
+        const annotationList = new AnnotationList(events);
 
-        const splatListContainer = new Container({
-            class: 'splat-list-container'
+        const annotationListContainer = new Container({
+            class: 'annotation-list-container'
         });
-        splatListContainer.append(splatList);
+        annotationListContainer.append(annotationList);
 
-        const transformHeader = new Container({
+       /* const transformHeader = new Container({
             class: `panel-header`
         });
 
@@ -90,11 +90,11 @@ class AnnotationsPanel extends Container {
 
         transformHeader.append(transformIcon);
         transformHeader.append(transformLabel);
-
+        */
         this.append(annotationsHeader);
-        this.append(splatListContainer);
-        this.append(transformHeader);
-        this.append(new Transform(events));
+        this.append(annotationListContainer);
+        //this.append(transformHeader);
+       // this.append(new Transform(events));
         this.append(new Element({
             class: `panel-header`,
             height: 20

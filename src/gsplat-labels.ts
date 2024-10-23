@@ -39,6 +39,15 @@ class Label{
         this.annotations = annotations;
         this.point_annotations = point_annotations;
         this.category_annotations = category_annotations;
+
+        // Generate annotation for unlabelled points if one does not exist yet
+        const hasUnlabeledAnnotation = this.annotations.some(ann => ann.category_id === 0);
+        if (!hasUnlabeledAnnotation) {
+            // TODO - do we need to add support for data formats when there may be an existing annotation with id 0?
+            const unlabeled_annotation = new Annotation(0, 0, [], false);
+            // insert at beginning
+            this.annotations.unshift(unlabeled_annotation);
+        }
     }
 }
 
@@ -53,6 +62,15 @@ class GSplatLabels {
         this.categories = data.dataset.task_attributes.categories.map((cat: any) => {
             return new Category(cat.name, cat.id, cat.color, cat.attributes || []);
         });
+
+        // Generate category for unlabelled points if one does not exist yet
+        const hasUnlabeledCategory = this.categories.some(cat => cat.id === 0);
+        if (!hasUnlabeledCategory) {
+            // TODO - can we assume id=0 represents unlabeled data points?
+            const unlabeled_category = new Category("Unlabelled", 0, [255, 0.0, 255], []);
+            // insert at beginning
+            this.categories.unshift(unlabeled_category);
+        }
 
         // Parsing labels from first sample - TODO enable multiple sample parsing
         this.labels = Object.entries(data.dataset.samples[0].labels).map(([labelName, labelObj]: [string, any]) => {
@@ -90,4 +108,4 @@ class GSplatLabels {
     }
 }
 
-export { GSplatLabels };
+export { GSplatLabels, Category, Annotation, Label };

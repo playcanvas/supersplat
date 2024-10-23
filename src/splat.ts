@@ -11,7 +11,8 @@ import {
     Mat4,
     Quat,
     Texture,
-    Vec3
+    Vec3,
+    events
 } from 'playcanvas';
 import { Element, ElementType } from "./element";
 import { Serializer } from "./serializer";
@@ -144,7 +145,7 @@ void main(void)
         if ((vertexState & 2u) == 2u) {
             // frozen/hidden
             c = vec3(0.0, 0.0, 0.0);
-            alpha = B * 0.05;
+            alpha = 0.0; //B * 0.05; // Trace shadow can still be visible when hidden.
         } else {
             if ((vertexState & 1u) == 1u) {
                 // selected
@@ -310,6 +311,7 @@ class Splat extends Element {
 
     setLabels(data: any){
         this.labelData = new GSplatLabels(data);
+        this.scene.events.fire('selection.changed', this);
     }
 
     updateState(changedState = State.selected) {

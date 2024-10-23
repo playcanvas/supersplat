@@ -3,10 +3,11 @@ import { Events } from '../events';
 import { Tooltips } from './tooltips';
 import { localize } from './localization';
 
-import showHideSplatsSvg from '../svg/show-hide-splats.svg';
-import frameSelectionSvg from '../svg/frame-selection.svg';
-import centersSvg from '../svg/centers.svg';
-import ringsSvg from '../svg/rings.svg';
+import showHideSplatsSvg from './svg/show-hide-splats.svg';
+import cameraFrameSelectionSvg from './svg/camera-frame-selection.svg';
+import cameraResetSvg from './svg/camera-reset.svg';
+import centersSvg from './svg/centers.svg';
+import ringsSvg from './svg/rings.svg';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -36,8 +37,13 @@ class RightToolbar extends Container {
             class: ['right-toolbar-toggle', 'active']
         });
 
-        const frameSelection = new Button({
+        const cameraFrameSelection = new Button({
             id: 'right-toolbar-frame-selection',
+            class: 'right-toolbar-button'
+        });
+
+        const cameraReset = new Button({
+            id: 'right-toolbar-camera-origin',
             class: 'right-toolbar-button'
         });
 
@@ -54,18 +60,21 @@ class RightToolbar extends Container {
         ringsModeToggle.dom.appendChild(centersDom);
         ringsModeToggle.dom.appendChild(ringsDom);
         showHideSplats.dom.appendChild(createSvg(showHideSplatsSvg));
-        frameSelection.dom.appendChild(createSvg(frameSelectionSvg));
+        cameraFrameSelection.dom.appendChild(createSvg(cameraFrameSelectionSvg));
+        cameraReset.dom.appendChild(createSvg(cameraResetSvg));
 
         this.append(ringsModeToggle);
         this.append(showHideSplats);
         this.append(new Element({ class: 'right-toolbar-separator' }));
-        this.append(frameSelection);
+        this.append(cameraFrameSelection);
+        this.append(cameraReset);
         this.append(new Element({ class: 'right-toolbar-separator' }));
         this.append(options);
 
         tooltips.register(ringsModeToggle, localize('tooltip.splat-mode'), 'left');
         tooltips.register(showHideSplats, localize('tooltip.show-hide'), 'left');
-        tooltips.register(frameSelection, localize('tooltip.frame-selection'), 'left');
+        tooltips.register(cameraFrameSelection, localize('tooltip.frame-selection'), 'left');
+        tooltips.register(cameraReset, localize('tooltip.camera-reset'), 'left');
         tooltips.register(options, localize('tooltip.view-options'), 'left');
 
         // add event handlers
@@ -75,7 +84,8 @@ class RightToolbar extends Container {
             events.fire('camera.setOverlay', true);
         });
         showHideSplats.on('click', () => events.fire('camera.toggleOverlay'));
-        frameSelection.on('click', () => events.fire('camera.focus'));
+        cameraFrameSelection.on('click', () => events.fire('camera.focus'));
+        cameraReset.on('click', () => events.fire('camera.reset'));
         options.on('click', () => events.fire('viewPanel.toggleVisible'));
 
         events.on('camera.mode', (mode: string) => {

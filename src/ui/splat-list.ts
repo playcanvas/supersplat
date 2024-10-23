@@ -3,9 +3,9 @@ import { Events } from '../events';
 import { Splat } from '../splat';
 import { Element, ElementType } from '../element';
 
-import shownSvg from '../svg/shown.svg';
-import hiddenSvg from '../svg/hidden.svg';
-import deleteSvg from '../svg/delete.svg';
+import shownSvg from './svg/shown.svg';
+import hiddenSvg from './svg/hidden.svg';
+import deleteSvg from './svg/delete.svg';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));

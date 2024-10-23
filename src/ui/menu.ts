@@ -3,20 +3,20 @@ import { Events } from '../events';
 import { MenuPanel } from './menu-panel';
 import { localize } from './localization';
 
-import logoSvg from '../svg/playcanvas-logo.svg';
-import collapseSvg from '../svg/collapse.svg';
-import arrowSvg from '../svg/arrow.svg';
-import sceneNew from '../svg/new.svg';
-import sceneOpen from '../svg/open.svg';
-import sceneSave from '../svg/save.svg';
-import sceneExport from '../svg/export.svg';
-import sceneImport from '../svg/import.svg';
-import selectAll from '../svg/select-all.svg';
-import selectNone from '../svg/select-none.svg';
-import selectInverse from '../svg/select-inverse.svg';
-import selectLock from '../svg/select-lock.svg';
-import selectUnlock from '../svg/select-unlock.svg';
-import selectDelete from '../svg/delete.svg';
+import logoSvg from './svg/playcanvas-logo.svg';
+import collapseSvg from './svg/collapse.svg';
+import arrowSvg from './svg/arrow.svg';
+import sceneNew from './svg/new.svg';
+import sceneOpen from './svg/open.svg';
+import sceneSave from './svg/save.svg';
+import sceneExport from './svg/export.svg';
+import sceneImport from './svg/import.svg';
+import selectAll from './svg/select-all.svg';
+import selectNone from './svg/select-none.svg';
+import selectInverse from './svg/select-inverse.svg';
+import selectLock from './svg/select-lock.svg';
+import selectUnlock from './svg/select-unlock.svg';
+import selectDelete from './svg/delete.svg';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -208,7 +208,7 @@ class Menu extends Container {
         }, {
             text: localize('help.user-guide'),
             icon: 'E232',
-            onSelect: () => window.open('https://github.com/playcanvas/supersplat/blob/main/docs/index.md#supersplat-user-guide', '_blank').focus()
+            onSelect: () => window.open('https://github.com/playcanvas/supersplat/wiki/User-Guide', '_blank').focus()
         }, {
             text: localize('help.log-issue'),
             icon: 'E336',

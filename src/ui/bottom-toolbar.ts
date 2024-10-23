@@ -3,13 +3,13 @@ import { Events } from '../events';
 import { Tooltips } from './tooltips';
 import { localize } from './localization';
 
-import undoSvg from '../svg/undo.svg';
-import redoSvg from '../svg/redo.svg';
-import pickerSvg from '../svg/select-picker.svg';
-import brushSvg from '../svg/select-brush.svg';
-import sphereSvg from '../svg/select-sphere.svg';
-// import lassoSvg from '../svg/select-lasso.svg';
-// import cropSvg from '../svg/crop.svg';
+import undoSvg from './svg/undo.svg';
+import redoSvg from './svg/redo.svg';
+import pickerSvg from './svg/select-picker.svg';
+import brushSvg from './svg/select-brush.svg';
+import sphereSvg from './svg/select-sphere.svg';
+// import lassoSvg from './svg/select-lasso.svg';
+// import cropSvg from './svg/crop.svg';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));

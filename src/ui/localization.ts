@@ -137,6 +137,7 @@ const localizeInit = () => {
                         "tooltip.splat-mode": "Splat Modus ( M )",
                         "tooltip.show-hide": "Anzeigen/Ausplenden Splats ( Leertaste )",
                         "tooltip.frame-selection": "Rechteckselektion ( F )",
+                        "tooltip.camera-reset": "Kamera zurücksetzen",
                         "tooltip.view-options": "Anzeige Optionen",
 
                         // Bottom toolbar
@@ -277,6 +278,7 @@ const localizeInit = () => {
                         "tooltip.splat-mode": "Splat Mode ( M )",
                         "tooltip.show-hide": "Show/Hide Splats ( Space )",
                         "tooltip.frame-selection": "Frame Selection ( F )",
+                        "tooltip.camera-reset": "Reset Camera",
                         "tooltip.view-options": "View Options",
 
                         // Bottom toolbar
@@ -410,6 +412,7 @@ const localizeInit = () => {
                         "tooltip.splat-mode": "Mode splat ( M )",
                         "tooltip.show-hide": "Afficher/cacher les splats ( Barre espace )",
                         "tooltip.frame-selection": "Cadrer la sélection ( F )",
+                        "tooltip.camera-reset": "Réinitialiser la caméra",
                         "tooltip.view-options": "Options d'affichage",
 
                         // bottom toolbar
@@ -549,6 +552,7 @@ const localizeInit = () => {
                         "tooltip.splat-mode": "スプラットモード ( M )",
                         "tooltip.show-hide": "スプラットの表示/非表示 ( Space )",
                         "tooltip.frame-selection": "選択をフレームイン ( F )",
+                        "tooltip.camera-reset": "カメラをリセット",
                         "tooltip.view-options": "表示オプション",
 
                         // Bottom toolbar
@@ -688,6 +692,7 @@ const localizeInit = () => {
                         "tooltip.splat-mode": "Splat 모드 ( M )",
                         "tooltip.show-hide": "스플래츠 표시/숨기기 ( Space )",
                         "tooltip.frame-selection": "프레임 선택 ( F )",
+                        "tooltip.camera-reset": "카메라 재설정",
                         "tooltip.view-options": "보기 옵션",
 
                         // Bottom toolbar
@@ -827,6 +832,7 @@ const localizeInit = () => {
                         "tooltip.splat-mode": "Splat 模式 ( M )",
                         "tooltip.show-hide": "显示/隐藏 Splats ( Space )",
                         "tooltip.frame-selection": "框选 ( F )",
+                        "tooltip.camera-reset": "重置相机",
                         "tooltip.view-options": "视图选项",
 
                         // Bottom toolbar

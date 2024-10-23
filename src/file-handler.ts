@@ -362,21 +362,30 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
                 await stream.truncate(cursor);
                 await stream.close();
             } else if (options.filename) {
-                // (safari): concatenate data into single buffer
+                // safari and firefox: concatenate data into single buffer for old-school download
+                let data: Uint8Array = null;
                 let cursor = 0;
-                let data = new Uint8Array(1024 * 1024);
 
-                const writeFunc = (chunk: Uint8Array) => {
-                    if (cursor + chunk.byteLength > data.byteLength) {
-                        const newData = new Uint8Array(data.byteLength * 2);
-                        newData.set(data);
-                        data = newData;
+                const writeFunc = (chunk: Uint8Array, finalWrite?: boolean) => {
+                    if (!data) {
+                        data = finalWrite ? chunk : chunk.slice();
+                        cursor = chunk.byteLength;
+                     } else {
+                        if (data.byteLength < cursor + chunk.byteLength) {
+                            let newSize = data.byteLength * 2;
+                            while (newSize < cursor + chunk.byteLength) {
+                                newSize *= 2;
+                            }
+                            const newData = new Uint8Array(newSize);
+                            newData.set(data);
+                            data = newData;
+                        }
+                        data.set(chunk, cursor);
+                        cursor += chunk.byteLength;
                     }
-                    data.set(chunk, cursor);
-                    cursor += chunk.byteLength;
                 };
                 await writeScene(options.type, writeFunc);
-                download(options.filename, new Uint8Array(data.buffer, 0, cursor));
+                download(options.filename, (cursor === data.byteLength) ? data : new Uint8Array(data.buffer, 0, cursor));
             }
         } catch (err) {
             events.invoke('showPopup', {

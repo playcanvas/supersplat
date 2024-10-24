@@ -3,31 +3,6 @@ import { Scene } from '../scene';
 import { Events } from '../events';
 import { Pivot } from '../pivot';
 
-// patch gizmo to be more opaque
-const patchGizmoMaterials = (gizmo: TransformGizmo) => {
-    // @ts-ignore
-    ['x', 'y', 'z', 'xyz', 'face'].forEach(name => { gizmo._meshColors.axis[name].a = 0.8; });
-    // @ts-ignore
-    gizmo._meshColors.disabled.a = 0.8;
-};
-
-// set the gizmo size to remain a constant size in screen space.
-// called in response to changes in canvas size
-const updateGizmoSize = (gizmo: TransformGizmo, device: GraphicsDevice) => {
-    const canvas = document.getElementById('canvas');
-    if (canvas) {
-        const w = canvas.clientWidth;
-        const h = canvas.clientHeight;
-        gizmo.size = 1200 / Math.max(w, h);
-
-        // FIXME:
-        // this is a temporary workaround to undo gizmo's own auto scaling.
-        // once gizmo's autoscaling code is removed, this line can go too.
-        // @ts-ignore
-        gizmo._deviceStartSize = Math.min(device.width, device.height);
-    }
-};
-
 class TransformTool {
     activate: () => void;
     deactivate: () => void;
@@ -78,9 +53,14 @@ class TransformTool {
         events.on('pivot.moved', reattach);
         events.on('selection.changed', reattach);
 
-        events.on('camera.resize', () => {
-            scene.events.on('camera.resize', () => updateGizmoSize(gizmo, scene.graphicsDevice));
-        });
+        // set the gizmo size to remain a constant size in screen space.
+        // called in response to changes in canvas size
+        const updateGizmoSize = () => {
+            const { camera, canvas } = scene;
+            gizmo.size = 1200 / Math.max(canvas.clientWidth, canvas.clientHeight) * (camera.ortho ? 1.7 : 1);
+        };
+        updateGizmoSize();
+        events.on('camera.resize', updateGizmoSize);
 
         this.activate = () => {
             active = true;
@@ -91,12 +71,6 @@ class TransformTool {
             active = false;
             reattach();
         };
-
-        // update gizmo size
-        updateGizmoSize(gizmo, scene.graphicsDevice);
-
-        // patch gizmo materials (until we have API to do this)
-        patchGizmoMaterials(gizmo);
 
         // initialize coodinate space
         gizmo.coordSpace = events.invoke('tool.coordSpace');

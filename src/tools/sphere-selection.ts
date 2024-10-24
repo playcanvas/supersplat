@@ -69,7 +69,11 @@ class SphereSelection {
 
         const updateGizmoSize = () => {
             const { camera, canvas } = scene;
-            gizmo.size = 1200 / Math.max(canvas.clientWidth, canvas.clientHeight) * (camera.ortho ? 1.7 : 1);
+            if (camera.ortho) {
+                gizmo.size = 1125 / canvas.clientHeight;
+            } else {
+                gizmo.size = 1200 / Math.max(canvas.clientWidth, canvas.clientHeight);
+            }
         };
         updateGizmoSize();
         events.on('camera.resize', updateGizmoSize);

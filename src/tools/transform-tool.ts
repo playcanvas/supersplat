@@ -10,6 +10,7 @@ class TransformTool {
     constructor(gizmo: TransformGizmo, events: Events, scene: Scene) {
         let pivot: Pivot;
         let active = false;
+        let dragging = false;
 
         // create the transform pivot
         const pivotEntity = new Entity('gizmoPivot');
@@ -20,6 +21,7 @@ class TransformTool {
         });
 
         gizmo.on('transform:start', () => {
+            dragging = true;
             pivot.start();
         });
 
@@ -29,13 +31,14 @@ class TransformTool {
 
         gizmo.on('transform:end', () => {
             pivot.end();
+            dragging = false;
         });
 
         // reattach the gizmo to the pivot
         const reattach = () => {
             if (!active || !events.invoke('selection')) {
                 gizmo.detach();
-            } else {
+            } else if (!dragging) {
                 pivot = events.invoke('pivot') as Pivot;
                 pivotEntity.setLocalPosition(pivot.transform.position);
                 pivotEntity.setLocalRotation(pivot.transform.rotation);

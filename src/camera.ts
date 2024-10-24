@@ -96,7 +96,10 @@ class Camera extends Element {
 
     // ortho
     set ortho(value: boolean) {
-        this.entity.camera.projection = value ? PROJECTION_ORTHOGRAPHIC : PROJECTION_PERSPECTIVE;
+        if (value !== this.ortho) {
+            this.entity.camera.projection = value ? PROJECTION_ORTHOGRAPHIC : PROJECTION_PERSPECTIVE;
+            this.scene.events.fire('camera.ortho', value);
+        }
     }
 
     get ortho() {
@@ -171,6 +174,9 @@ class Camera extends Element {
         } else if (t.source.azim - azim > 180) {
             t.source.azim -= 360;
         }
+
+        // return to perspective mode on rotation
+        this.ortho = false;
     }
 
     setDistance(distance: number, dampingFactorFactor: number = 1) {
@@ -278,8 +284,6 @@ class Camera extends Element {
             set('far_x', hmul(vb.set(1, 0, 1), inv).sub(va));
             set('far_y', hmul(vc.set(0, 1, 1), inv).sub(va));
         };
-
-        this.ortho = true;
     }
 
     remove() {

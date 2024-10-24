@@ -77,6 +77,7 @@ class SphereSelection {
         };
         updateGizmoSize();
         events.on('camera.resize', updateGizmoSize);
+        events.on('camera.ortho', updateGizmoSize);
 
         this.activate = () => {
             this.active = true;

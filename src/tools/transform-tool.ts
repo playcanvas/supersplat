@@ -68,6 +68,7 @@ class TransformTool {
         };
         updateGizmoSize();
         events.on('camera.resize', updateGizmoSize);
+        events.on('camera.ortho', updateGizmoSize);
 
         this.activate = () => {
             active = true;

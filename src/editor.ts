@@ -183,6 +183,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             case 'ny': scene.camera.setAzimElev(0, 90); break;
             case 'nz': scene.camera.setAzimElev(180, 0); break;
         }
+
+        // switch to ortho mode
+        scene.camera.ortho = true;
     });
 
     events.on('select.all', () => {

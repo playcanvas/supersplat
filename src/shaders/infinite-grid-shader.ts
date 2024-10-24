@@ -20,8 +20,8 @@ const vertexShader = /*glsl*/ `
 `;
 
 const fragmentShader = /*glsl*/ `
-    uniform vec3 camera_position;
-    uniform mat4 camera_viewProjection;
+    uniform vec3 view_position;
+    uniform mat4 matrix_viewProjection;
     uniform sampler2D blueNoiseTex32;
 
     varying vec3 worldNear;
@@ -67,7 +67,7 @@ const fragmentShader = /*glsl*/ `
     }
 
     float calcDepth(vec3 p) {
-        vec4 v = camera_viewProjection * vec4(p, 1.0);
+        vec4 v = matrix_viewProjection * vec4(p, 1.0);
         return (v.z / v.w) * 0.5 + 0.5;
     }
 
@@ -95,7 +95,7 @@ const fragmentShader = /*glsl*/ `
         float epsilon = 1.0 / 255.0;
 
         // calculate fade
-        float fade = 1.0 - smoothstep(400.0, 1000.0, length(pos - camera_position));
+        float fade = 1.0 - smoothstep(400.0, 1000.0, length(pos - view_position));
         if (fade < epsilon) {
             discard;
         }

@@ -7,12 +7,14 @@ import {
     BoundingBox,
     Entity,
     EventHandler,
+    Mat4,
     Picker,
     Plane,
     Ray,
     RenderTarget,
     Texture,
     Vec3,
+    Vec4,
     WebglGraphicsDevice,
     PROJECTION_ORTHOGRAPHIC,
     PROJECTION_PERSPECTIVE,
@@ -46,6 +48,18 @@ const plane = new Plane();
 const ray = new Ray();
 const vec = new Vec3();
 const vecb = new Vec3();
+const va = new Vec3();
+const vb = new Vec3();
+const vc = new Vec3();
+const v4 = new Vec4();
+
+// homogenous matrix-vector multiplication
+const hmul = (vec: Vec3, mat: Mat4) => {
+    v4.set(vec.x, vec.y, vec.z, 1);
+    mat.transformVec4(v4, v4);
+    vec.set(v4.x / v4.w, v4.y / v4.w, v4.z / v4.w);
+    return vec;
+};
 
 // modulo dealing with negative numbers
 const mod = (n: number, m: number) => ((n % m) + m) % m;
@@ -66,6 +80,8 @@ class Camera extends Element {
 
     picker: Picker;
     pickModeRenderTarget: RenderTarget;
+
+    updateCameraUniforms: () => void;
 
     constructor() {
         super(ElementType.camera);
@@ -232,6 +248,37 @@ class Camera extends Element {
 
         this.scene.events.on('scene.boundChanged', this.onBoundChanged, this);
 
+        // prepare camera-specific uniforms
+        this.updateCameraUniforms = () => {
+            const device = this.scene.graphicsDevice;
+            const entity = this.entity;
+            const camera = entity.camera;
+
+            const inv = new Mat4().mul2(camera.projectionMatrix, camera.viewMatrix).invert();
+
+            const set = (name: string, vec: Vec3) => {
+                device.scope.resolve(name).setValue([vec.x, vec.y, vec.z]);
+            };
+
+            // near
+            if (camera.projection === PROJECTION_PERSPECTIVE) {
+                // perspective
+                set('near_origin', entity.getPosition());
+                set('near_x', Vec3.ZERO);
+                set('near_y', Vec3.ZERO);
+            } else {
+                // orthographic
+                set('near_origin', hmul(va.set(0, 0, -10), inv));
+                set('near_x', hmul(vb.set(1, 0, -10), inv).sub(va));
+                set('near_y', hmul(vc.set(0, 1, -10), inv).sub(va));
+            }
+
+            // far
+            set('far_origin', hmul(va.set(0, 0, 1), inv));
+            set('far_x', hmul(vb.set(1, 0, 1), inv).sub(va));
+            set('far_y', hmul(vc.set(0, 1, 1), inv).sub(va));
+        };
+
         this.ortho = true;
     }
 
@@ -358,6 +405,7 @@ class Camera extends Element {
 
     onPreRender() {
         this.rebuildRenderTargets();
+        this.updateCameraUniforms();
     }
 
     onPostRender() {

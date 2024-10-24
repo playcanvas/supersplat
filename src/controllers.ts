@@ -137,7 +137,9 @@ class PointerController {
         const wheel = (event: WheelEvent) => {
             const sign = (v: number) => v > 0 ? 1 : v < 0 ? -1 : 0;
             zoom(sign(event.deltaY) * -0.2);
-            orbit(sign(event.deltaX) * 2.0, 0);
+            if (Math.abs(event.deltaX) > 1e-6) {
+                orbit(sign(event.deltaX) * 2.0, 0);
+            }
         };
 
         // FIXME: safari sends canvas as target of dblclick event but chrome sends the target element

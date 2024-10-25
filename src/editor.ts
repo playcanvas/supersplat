@@ -1,8 +1,5 @@
 import {
-    PIXELFORMAT_RGBA8,
-    BoundingBox,
     Mat4,
-    RenderTarget,
     Texture,
     Vec3,
     Vec4,
@@ -19,7 +16,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     const vec2 = new Vec3();
     const vec4 = new Vec4();
     const mat = new Mat4();
-    const aabb = new BoundingBox();
 
     // get the list of selected splats (currently limited to just a single one)
     const selectedSplats = () => {

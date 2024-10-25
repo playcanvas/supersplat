@@ -81,10 +81,8 @@ class PCApp extends AppBase {
         appOptions.scriptsOrder = options.scriptsOrder;
 
         // appOptions.soundManager = new SoundManager(options);
-        // @ts-ignore
         // appOptions.lightmapper = Lightmapper;
         // appOptions.batchManager = BatchManager;
-        // @ts-ignore
         // appOptions.xr = XrManager;
 
         this.init(appOptions);

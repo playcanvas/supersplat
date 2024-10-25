@@ -310,7 +310,6 @@ class Camera extends Element {
     }
 
     serialize(serializer: Serializer) {
-        const camera = this.entity.camera.camera;
         serializer.pack(this.fov);
         serializer.packa(this.entity.getWorldTransform().data);
         serializer.pack(this.entity.camera.renderTarget?.width, this.entity.camera.renderTarget?.height);
@@ -455,7 +454,6 @@ class Camera extends Element {
         const scene = this.scene;
         const cameraPos = this.entity.getPosition();
 
-        // @ts-ignore
         const target = scene.canvas;
         const sx = screenX / target.clientWidth * scene.targetSize.width;
         const sy = screenY / target.clientHeight * scene.targetSize.height;

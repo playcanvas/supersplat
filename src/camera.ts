@@ -6,7 +6,7 @@ import {
     PIXELFORMAT_DEPTH,
     BoundingBox,
     Entity,
-    EventHandler,
+    Layer,
     Mat4,
     Picker,
     Plane,
@@ -73,8 +73,6 @@ class Camera extends Element {
 
     minElev = -90;
     maxElev = 90;
-
-    events = new EventHandler();
 
     sceneRadius = 5;
 
@@ -231,7 +229,7 @@ class Camera extends Element {
         this.maxElev = (controls.maxPolarAngle * 180) / Math.PI - 90;
 
         // tonemapping
-        this.scene.app.scene.toneMapping = {
+        this.scene.app.scene.rendering.toneMapping = {
             linear: TONEMAP_LINEAR,
             filmic: TONEMAP_FILMIC,
             hejl: TONEMAP_HEJL,
@@ -253,6 +251,11 @@ class Camera extends Element {
         this.picker = new Picker(this.scene.app, width, height);
 
         this.scene.events.on('scene.boundChanged', this.onBoundChanged, this);
+
+        // multiple elements in the scene require this callback
+        this.entity.camera.onPreRenderLayer = (layer: Layer, transparent: boolean) => {
+            this.scene.events.fire('camera.preRenderLayer', layer, transparent);
+        };
 
         // prepare camera-specific uniforms
         this.updateCameraUniforms = () => {

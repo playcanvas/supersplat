@@ -129,8 +129,10 @@ class Splat extends Element {
 
         this.selectionBoundStorage = new BoundingBox();
         this.localBoundStorage = instance.splat.aabb;
+        // @ts-ignore
         this.worldBoundStorage = instance.meshInstance._aabb;
 
+        // @ts-ignore
         instance.meshInstance._updateAabb = false;
 
         // when sort changes, re-render the scene

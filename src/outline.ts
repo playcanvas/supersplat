@@ -9,6 +9,7 @@ import {
     DepthState,
     Color,
     Entity,
+    Layer,
     Shader,
     Texture,
     RenderTarget,
@@ -49,7 +50,9 @@ class Outline extends Element {
 
         this.scene.camera.entity.addChild(this.entity);
 
-        this.scene.events.on('camera.resize', (size: { width: number, height: number }) => this.rebuildRenderTargets(size.width, size.height));
+        this.scene.events.on('camera.resize', (size: { width: number, height: number }) => {
+            this.rebuildRenderTargets(size.width, size.height);
+        });
 
         this.shader = createShaderFromCode(device, vertexShader, fragmentShader, 'apply-outline', {
             vertex_position: SEMANTIC_POSITION
@@ -63,8 +66,11 @@ class Outline extends Element {
         const clrStorage = [1, 1, 1, 1];
 
         // apply the outline texture to the display before gizmos render
-        this.scene.gizmoLayer.onPostRenderOpaque = () => {
-            if (!this.enabled || !this.scene.events.invoke('view.outlineSelection')) {
+        this.scene.events.on('camera.preRenderLayer', (layer: Layer, transparent: boolean) => {
+            if (!this.enabled ||
+                !this.scene.events.invoke('view.outlineSelection') ||
+                layer !== this.scene.gizmoLayer ||
+                !transparent) {
                 return;
             }
 
@@ -86,7 +92,7 @@ class Outline extends Element {
             glDevice.updateBegin();
             this.quadRender.render();
             glDevice.updateEnd();
-        };
+        });
     }
 
     remove() {

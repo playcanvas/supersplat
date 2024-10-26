@@ -320,7 +320,7 @@ class Camera extends Element {
 
     // handle the viewer canvas resizing
     rebuildRenderTargets() {
-        const device = this.scene.graphicsDevice as WebglGraphicsDevice;
+        const device = this.scene.graphicsDevice;
         const { width, height } = this.scene.targetSize;
 
         const rt = this.entity.camera.renderTarget;
@@ -514,7 +514,7 @@ class Camera extends Element {
         const { width, height } = this.scene.targetSize;
         const worldLayer = this.scene.app.scene.layers.getLayerByName('World');
 
-        const device = this.scene.graphicsDevice as WebglGraphicsDevice;
+        const device = this.scene.graphicsDevice;
         const events = this.scene.events;
         const alpha = events.invoke('camera.mode') === 'rings' ? 0.0 : 0.2;
 

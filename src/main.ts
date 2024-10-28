@@ -164,8 +164,7 @@ const main = async () => {
     // handle load params
     const loadList = url.searchParams.getAll('load');
     for (const value of loadList) {
-        const loadUrl = decodeURIComponent(value);
-        await events.invoke('load', loadUrl, loadUrl);
+        await events.invoke('load', decodeURIComponent(value));
     }
 
     // handle OS-based file association in PWA mode

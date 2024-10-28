@@ -3,11 +3,11 @@
     transform: translate(0, -50%);
     right: 102px;
     width: 320px;
+    flex-direction: column;
 
-    :not(.pcui-hidden) {
+    &:not(.pcui-hidden) {
         display: flex;
     }
-    flex-direction: column;
 
     & > .view-panel-row {
         display: flex;
@@ -46,6 +46,11 @@
                     }
                 }
             }
+        }
+
+        &>.view-panel-row-picker {
+            margin: 2px 6px;
+            height: 24px;
         }
     }
 

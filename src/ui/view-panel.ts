@@ -1,5 +1,5 @@
 import { Vec3 } from 'playcanvas';
-import { BooleanInput, Container, Label, SliderInput } from 'pcui';
+import { BooleanInput, ColorPicker, Container, Label, SliderInput } from 'pcui';
 import { Events } from '../events';
 import { Tooltips } from './tooltips';
 import { localize } from './localization';
@@ -38,6 +38,25 @@ class ViewPanel extends Container {
 
         header.append(icon);
         header.append(label);
+
+        // background color
+
+        const bgClrRow = new Container({
+            class: 'view-panel-row'
+        });
+
+        const bgClrLabel = new Label({
+            text: localize('options.bg-clr'),
+            class: 'view-panel-row-label'
+        });
+
+        const bgClrPicker = new ColorPicker({
+            class: 'view-panel-row-picker',
+            value: [0.4, 0.4, 0.4]
+        });
+
+        bgClrRow.append(bgClrLabel);
+        bgClrRow.append(bgClrPicker);
 
         // camera fov
 
@@ -226,6 +245,7 @@ class ViewPanel extends Container {
         poseListContainer.append(poseList);
 
         this.append(header);
+        this.append(bgClrRow);
         this.append(fovRow);
         this.append(shBandsRow);
         this.append(centersSizeRow);
@@ -444,6 +464,12 @@ class ViewPanel extends Container {
             while (poses.length > 0) {
                 removePose(0);
             }
+        });
+
+        // background color
+
+        bgClrPicker.on('change', (value: number[]) => {
+            events.fire('setBgClr', value[0], value[1], value[2]);
         });
 
         // camera fov

@@ -159,6 +159,11 @@ class Menu extends Container {
             onSelect: () => events.fire('scene.saveAs'),
             isEnabled: () => !events.invoke('scene.empty')
         }, {
+            text: localize('scene.save-screenshot'),
+            icon: createSvg(sceneExport),
+            onSelect: () => events.invoke('scene.saveScreenshot'),
+            isEnabled: () => true
+        }, {
             text: localize('scene.export'),
             icon: createSvg(sceneExport),
             subMenu: exportMenuPanel

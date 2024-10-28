@@ -114,8 +114,17 @@ const loadCameraPoses = async (url: string, filename: string, events: Events) =>
 const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLElement, remoteStorageDetails: RemoteStorageDetails) => {
 
     // returns a promise that resolves when the file is loaded
-    const handleLoad = async (url: string, filename: string) => {
+    const handleLoad = async (url: string, filename?: string) => {
         try {
+            if (!filename) {
+                // extract filename from url if one ins't provided
+                try {
+                    filename = new URL(url, document.baseURI).pathname.split('/').pop();
+                } catch (e) {
+                    filename = url;
+                }                
+            }
+
             const lowerFilename = (filename || url).toLowerCase();
             if (lowerFilename.endsWith('.json')) {
                 await loadCameraPoses(url, filename, events);
@@ -136,7 +145,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
         }
     };
 
-    events.function('load', (url: string, filename: string) => {
+    events.function('load', (url: string, filename?: string) => {
         return handleLoad(url, filename);
     });
 

@@ -39,6 +39,14 @@ void main(void)
         }
     #endif
 
+
+    #if UNDERLAY_PASS
+    if ((vertexState & 3u) == 0u) {
+        gl_Position = discardVec;
+        return;
+    }
+    #endif
+
     // get center
     vec3 center = getCenter();
 
@@ -164,7 +172,13 @@ void main(void)
                 // get splat color
                 if ((vertexState & 1u) != 0u) {
                     // selected
-                    c = mix(color.xyz, vec3(1.0, 1.0, 0.0), selectionAlpha);
+
+                    #if UNDERLAY_PASS
+                        vec3 baseColor = vec3(0.2, 0.2, 0.0);
+                    #else
+                        vec3 baseColor = vec3(0.8, 0.8, 0.0);
+                    #endif
+                    c = mix(color.xyz, baseColor, selectionAlpha);
                 } else {
                     // normal
                     c = color.xyz;

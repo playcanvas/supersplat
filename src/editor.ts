@@ -1,8 +1,7 @@
 import {
-    PIXELFORMAT_RGBA8,
+    path,
     BoundingBox,
     Mat4,
-    RenderTarget,
     Texture,
     Vec3,
     Vec4,
@@ -12,6 +11,7 @@ import { EditHistory } from './edit-history';
 import { Splat } from './splat';
 import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp } from './edit-ops';
 import { Events } from './events';
+import { PngCompressor } from './png-compressor';
 
 // register for editor and scene events
 const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: Scene) => {
@@ -528,6 +528,60 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.fire('camera.fov', scene.camera.fov);
     events.fire('camera.overlay', cameraOverlay);
     events.fire('view.bands', viewBands);
+
+    const replaceExtension = (filename: string, extension: string) => {
+        const removeExtension = (filename: string) => {
+            return filename.substring(0, filename.length - path.getExtension(filename).length);
+        };
+        return `${removeExtension(filename)}${extension}`;
+    };
+
+    let compressor: PngCompressor;
+
+    events.function('scene.saveScreenshot', async () => {
+        const texture = scene.camera.entity.camera.renderTarget.colorBuffer;
+        await texture.downloadAsync();
+
+        // construct the png compressor
+        if (!compressor) {
+            compressor = new PngCompressor();
+        }            
+
+        // @ts-ignore
+        const pixels = new Uint8ClampedArray(texture.getSource().buffer.slice());
+
+        // the render buffer contains premultiplied alpha. so apply background color.
+        const bkClr = 102;
+        for (let i = 0; i < pixels.length; i += 4) {
+            const r = pixels[i];
+            const g = pixels[i + 1];
+            const b = pixels[i + 2];
+            const a = pixels[i + 3];
+
+            pixels[i + 0] = r + (255 - a) * bkClr / 255;
+            pixels[i + 1] = g + (255 - a) * bkClr / 255;
+            pixels[i + 2] = b + (255 - a) * bkClr / 255;
+            pixels[i + 3] = 255;
+        }
+
+        const arrayBuffer = await compressor.compress(
+            new Uint32Array(pixels.buffer),
+            texture.width,
+            texture.height
+        );
+
+        // construct filename
+        const filename = replaceExtension(selectedSplats()?.[0]?.filename ?? 'SuperSplat', '.png');
+
+        // download
+        const blob = new Blob([arrayBuffer], { type: 'octet/stream' });
+        const url = window.URL.createObjectURL(blob);
+        const el = document.createElement('a');
+        el.download = filename;
+        el.href = url;
+        el.click();
+        window.URL.revokeObjectURL(url);
+    });
 }
 
 export { registerEditorEvents };

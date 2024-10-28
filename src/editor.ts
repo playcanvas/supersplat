@@ -548,7 +548,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             // construct the png compressor
             if (!compressor) {
                 compressor = new PngCompressor();
-            }            
+            }
 
             // @ts-ignore
             const pixels = new Uint8ClampedArray(texture.getSource().buffer.slice());

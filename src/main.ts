@@ -137,11 +137,7 @@ const main = async () => {
     );
 
     // background color
-    const clr = {
-        r: sceneConfig.bgClr.r,
-        g: sceneConfig.bgClr.g,
-        b: sceneConfig.bgClr.b
-    };
+    const clr = { r: -1, g: -1, b: -1 };
 
     const setBgClr = (r: number, g: number, b: number) => {
         if (r !== clr.r || g !== clr.g || b !== clr.b) {

@@ -47,6 +47,11 @@
                 }
             }
         }
+
+        &>.view-panel-row-picker {
+            margin: 2px 6px;
+            height: 24px;
+        }
     }
 
     > .view-panel-list-container {

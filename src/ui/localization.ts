@@ -59,6 +59,7 @@ const localizeInit = () => {
 
                         // Options panel
                         "options": "ANSICHTS OPTIONEN",
+                        "options.bg-clr": "Hintergrundfarbe",
                         "options.fov": "Blickwinkel (FoV)",
                         "options.sh-bands": "SH Bänder",
                         "options.centers-size": "Punktgrößen",
@@ -201,6 +202,7 @@ const localizeInit = () => {
 
                         // Options panel
                         "options": "VIEW OPTIONS",
+                        "options.bg-clr": "Background Color",
                         "options.fov": "Field of View",
                         "options.sh-bands": "SH Bands",
                         "options.centers-size": "Centers Size",
@@ -343,6 +345,7 @@ const localizeInit = () => {
 
                         // options panel
                         "options": "OPTIONS D'AFFICHAGE",
+                        "options.bg-clr": "Couleur de fond",
                         "options.fov": "Champ de vision",
                         "options.sh-bands": "Ordres d'HS",
                         "options.centers-size": "Échelle des centres",
@@ -478,6 +481,7 @@ const localizeInit = () => {
 
                         // Options panel
                         "options": "表示オプション",
+                        "options.bg-clr": "背景色",
                         "options.fov": "視野 ( FOV )",
                         "options.sh-bands": "球面調和関数のバンド",
                         "options.centers-size": "センターサイズ",
@@ -619,6 +623,7 @@ const localizeInit = () => {
 
                         // Options panel
                         "options": "보기 옵션",
+                        "options.bg-clr": "배경 색상",
                         "options.fov": "시야각",
                         "options.sh-bands": "SH 밴드",
                         "options.centers-size": "센터 크기",
@@ -760,6 +765,7 @@ const localizeInit = () => {
 
                         // Options panel
                         "options": "视图选项",
+                        "options.bg-clr": "背景颜色",
                         "options.fov": "视野角",
                         "options.sh-bands": "SH 带",
                         "options.centers-size": "中心大小",

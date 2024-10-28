@@ -283,7 +283,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
                 return filename.substring(0, filename.length - path.getExtension(filename).length);
             };
             return `${removeExtension(filename)}${extension}`;
-        }
+        };
 
         const splats = getSplats();
         const splat = splats[0];

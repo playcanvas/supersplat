@@ -77,6 +77,7 @@ const application = {
                 { src: 'src/manifest.json' },
                 { src: 'static/images', dest: 'static' },
                 { src: 'static/icons', dest: 'static' },
+                { src: 'static/lib', dest: 'static' },
                 { src: 'static/env/VertebraeHDRI_v1_512.png', dest: 'static/env' }
             ]
         }),

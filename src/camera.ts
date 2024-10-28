@@ -391,7 +391,7 @@ class Camera extends Element {
         this.fitClippingPlanes(this.entity.getLocalPosition(), this.entity.forward);
 
         const { camera } = this.entity;
-        camera.orthoHeight = this.distanceTween.value.distance * this.sceneRadius * this.fovFactor;
+        camera.orthoHeight = 0.5 * this.distanceTween.value.distance * this.sceneRadius / this.fovFactor * (camera.camera.horizontalFov ? this.scene.targetSize.height / this.scene.targetSize.width : 1);
         camera.camera._updateViewProjMat();
     }
 
@@ -450,7 +450,7 @@ class Camera extends Element {
         return Math.sin(this.fov * math.DEG_TO_RAD * 0.5);
     }
 
-    // interesect the scene at the given screen coordinate and focus the camera on this location
+    // intersect the scene at the given screen coordinate and focus the camera on this location
     pickFocalPoint(screenX: number, screenY: number) {
         const scene = this.scene;
         const cameraPos = this.entity.getPosition();
@@ -479,13 +479,20 @@ class Camera extends Element {
                 plane.setFromPointNormal(vec, this.entity.forward);
 
                 // create the pick ray in world space
-                this.entity.camera.screenToWorld(screenX, screenY, 1.0, vec);
-                vec.sub(cameraPos).normalize();
-                ray.set(cameraPos, vec);
+                if (this.ortho) {
+                    this.entity.camera.screenToWorld(screenX, screenY, -1.0, vec);
+                    this.entity.camera.screenToWorld(screenX, screenY, 1.0, vecb);
+                    vecb.sub(vec).normalize();
+                    ray.set(vec, vecb);
+                } else {
+                    this.entity.camera.screenToWorld(screenX, screenY, 1.0, vec);
+                    vec.sub(cameraPos).normalize();
+                    ray.set(cameraPos, vec);
+                }
 
                 // find intersection
                 if (plane.intersectsRay(ray, vec)) {
-                    const distance = vecb.sub2(vec, cameraPos).length();
+                    const distance = vecb.sub2(vec, ray.origin).length();
                     if (!closestSplat || distance < closestD) {
                         closestD = distance;
                         closestP.copy(vec);

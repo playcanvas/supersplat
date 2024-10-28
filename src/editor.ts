@@ -539,48 +539,50 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     let compressor: PngCompressor;
 
     events.function('scene.saveScreenshot', async () => {
-        const texture = scene.camera.entity.camera.renderTarget.colorBuffer;
-        await texture.downloadAsync();
+        events.fire('startSpinner');
 
-        // construct the png compressor
-        if (!compressor) {
-            compressor = new PngCompressor();
-        }            
+        try {
+            const texture = scene.camera.entity.camera.renderTarget.colorBuffer;
+            await texture.downloadAsync();
 
-        // @ts-ignore
-        const pixels = new Uint8ClampedArray(texture.getSource().buffer.slice());
+            // construct the png compressor
+            if (!compressor) {
+                compressor = new PngCompressor();
+            }
 
-        // the render buffer contains premultiplied alpha. so apply background color.
-        const bkClr = 102;
-        for (let i = 0; i < pixels.length; i += 4) {
-            const r = pixels[i];
-            const g = pixels[i + 1];
-            const b = pixels[i + 2];
-            const a = pixels[i + 3];
+            // @ts-ignore
+            const pixels = new Uint8ClampedArray(texture.getSource().buffer.slice());
 
-            pixels[i + 0] = r + (255 - a) * bkClr / 255;
-            pixels[i + 1] = g + (255 - a) * bkClr / 255;
-            pixels[i + 2] = b + (255 - a) * bkClr / 255;
-            pixels[i + 3] = 255;
+            // the render buffer contains premultiplied alpha. so apply background color.
+            const { r, g, b } = events.invoke('bgClr');
+            for (let i = 0; i < pixels.length; i += 4) {
+                const a = 255 - pixels[i + 3];
+                pixels[i + 0] += r * a;
+                pixels[i + 1] += g * a;
+                pixels[i + 2] += b * a;
+                pixels[i + 3] = 255;
+            }
+
+            const arrayBuffer = await compressor.compress(
+                new Uint32Array(pixels.buffer),
+                texture.width,
+                texture.height
+            );
+
+            // construct filename
+            const filename = replaceExtension(selectedSplats()?.[0]?.filename ?? 'SuperSplat', '.png');
+
+            // download
+            const blob = new Blob([arrayBuffer], { type: 'octet/stream' });
+            const url = window.URL.createObjectURL(blob);
+            const el = document.createElement('a');
+            el.download = filename;
+            el.href = url;
+            el.click();
+            window.URL.revokeObjectURL(url);
+        } finally {
+            events.fire('stopSpinner');
         }
-
-        const arrayBuffer = await compressor.compress(
-            new Uint32Array(pixels.buffer),
-            texture.width,
-            texture.height
-        );
-
-        // construct filename
-        const filename = replaceExtension(selectedSplats()?.[0]?.filename ?? 'SuperSplat', '.png');
-
-        // download
-        const blob = new Blob([arrayBuffer], { type: 'octet/stream' });
-        const url = window.URL.createObjectURL(blob);
-        const el = document.createElement('a');
-        el.download = filename;
-        el.href = url;
-        el.click();
-        window.URL.revokeObjectURL(url);
     });
 }
 

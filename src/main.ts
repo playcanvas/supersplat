@@ -136,10 +136,31 @@ const main = async () => {
         graphicsDevice
     );
 
-    // configure body background color
-    const clr = sceneConfig.bgClr;
-    const cnv = (v: number) => `${Math.max(0, Math.min(255, (v * 255))).toFixed(0)}`
-    document.body.style.backgroundColor = `rgba(${cnv(clr.r)},${cnv(clr.g)},${cnv(clr.b)},${clr.a.toFixed(2)})`;
+    // background color
+    const clr = { r: -1, g: -1, b: -1 };
+
+    const setBgClr = (r: number, g: number, b: number) => {
+        if (r !== clr.r || g !== clr.g || b !== clr.b) {
+            clr.r = r;
+            clr.g = g;
+            clr.b = b;
+
+            const cnv = (v: number) => `${Math.max(0, Math.min(255, (v * 255))).toFixed(0)}`
+            document.body.style.backgroundColor = `rgba(${cnv(r)},${cnv(g)},${cnv(b)},1)`;
+
+            events.fire('bgClr', r, g, b);
+        }
+    };
+
+    events.on('setBgClr', (r: number, g: number, b: number) => {
+        setBgClr(r, g, b);
+    });
+
+    events.function('bgClr', () => {
+        return { r: clr.r, g: clr.g, b: clr.b };
+    });
+
+    setBgClr(sceneConfig.bgClr.r, sceneConfig.bgClr.g, sceneConfig.bgClr.b);
 
     // tool manager
     const toolManager = new ToolManager(events);

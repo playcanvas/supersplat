@@ -543,8 +543,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         events.fire('startSpinner');
 
         try {
-            const texture = scene.camera.entity.camera.renderTarget.colorBuffer;
-            await texture.downloadAsync();
+            const renderTarget = scene.camera.entity.camera.renderTarget;
+            const texture = renderTarget.colorBuffer;
+            const data = new Uint8Array(texture.width * texture.height * 4);
+
+            await texture.read(0, 0, texture.width, texture.height, { renderTarget, data });
 
             // construct the png compressor
             if (!compressor) {
@@ -552,7 +555,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             }
 
             // @ts-ignore
-            const pixels = new Uint8ClampedArray(texture.getSource().buffer.slice());
+            const pixels = new Uint8ClampedArray(data.buffer);
 
             // the render buffer contains premultiplied alpha. so apply background color.
             const { r, g, b } = events.invoke('bgClr');

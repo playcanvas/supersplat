@@ -1,10 +1,9 @@
 import {
-    createShaderFromCode,
     BLEND_NORMAL,
     BUFFER_STATIC,
     PRIMITIVE_POINTS,
     SEMANTIC_POSITION,
-    Material,
+    ShaderMaterial,
     Mesh,
     MeshInstance,
     TYPE_UINT32,
@@ -26,14 +25,13 @@ class SplatOverlay extends Element {
         const scene = this.scene;
         const device = scene.graphicsDevice;
 
-        const shader = createShaderFromCode(device, vertexShader, fragmentShader, `splatOverlayShader`, {
-            vertex_id: SEMANTIC_POSITION
+        const material = new ShaderMaterial({
+            uniqueName: 'splatOverlayMaterial',
+            attributes: { vertex_id: SEMANTIC_POSITION },
+            vertexCode: vertexShader,
+            fragmentCode: fragmentShader
         });
-
-        const material = new Material();
-        material.name = 'splatOverlayMaterial';
         material.blendType = BLEND_NORMAL;
-        material.shader = shader;
 
         const mesh = new Mesh(device);
 

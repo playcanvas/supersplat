@@ -21,9 +21,11 @@ const localizeInit = () => {
                         "scene.load-all-data": "PLY-Daten vollständig laden",
                         "scene.save": "Speichern",
                         "scene.save-as": "Speichern als...",
+                        "scene.save-screenshot": "Screenshot speichern",
                         "scene.export": "Exportieren",
                         "scene.export.compressed-ply": "Komprimiertes PLY",
                         "scene.export.splat": "Splat",
+                        "scene.export.viewer": "Viewer App",
 
                         // Selection menu
                         "selection": "Selektion",
@@ -58,6 +60,7 @@ const localizeInit = () => {
 
                         // Options panel
                         "options": "ANSICHTS OPTIONEN",
+                        "options.bg-clr": "Hintergrundfarbe",
                         "options.fov": "Blickwinkel (FoV)",
                         "options.sh-bands": "SH Bänder",
                         "options.centers-size": "Punktgrößen",
@@ -162,9 +165,11 @@ const localizeInit = () => {
                         "scene.load-all-data": "Load all PLY data",
                         "scene.save": "Save",
                         "scene.save-as": "Save As...",
+                        "scene.save-screenshot": "Save Screenshot", 
                         "scene.export": "Export",
-                        "scene.export.compressed-ply": "Compressed PLY",
-                        "scene.export.splat": "Splat file",
+                        "scene.export.compressed-ply": "Compressed PLY (.ply)",
+                        "scene.export.splat": "Splat file (.splat)",
+                        "scene.export.viewer": "Viewer App (.zip)",
 
                         // Selection menu
                         "selection": "Selection",
@@ -199,6 +204,7 @@ const localizeInit = () => {
 
                         // Options panel
                         "options": "VIEW OPTIONS",
+                        "options.bg-clr": "Background Color",
                         "options.fov": "Field of View",
                         "options.sh-bands": "SH Bands",
                         "options.centers-size": "Centers Size",
@@ -303,9 +309,11 @@ const localizeInit = () => {
                         "scene.load-all-data": "Charger toutes les données ply",
                         "scene.save": "Enregistrer",
                         "scene.save-as": "Enregistrer sous...",
+                        "scene.save-screenshot": "Enregistrer une capture d'écran",
                         "scene.export": "Exporter",
                         "scene.export.compressed-ply": "Ply compressé",
                         "scene.export.splat": "Fichier splat",
+                        "scene.export.viewer": "Application de visualisation",
 
                         // selection menu
                         "selection": "Sélection",
@@ -340,6 +348,7 @@ const localizeInit = () => {
 
                         // options panel
                         "options": "OPTIONS D'AFFICHAGE",
+                        "options.bg-clr": "Couleur de fond",
                         "options.fov": "Champ de vision",
                         "options.sh-bands": "Ordres d'HS",
                         "options.centers-size": "Échelle des centres",
@@ -437,9 +446,11 @@ const localizeInit = () => {
                         "scene.load-all-data": "全てのPLYデータを読み込む",
                         "scene.save": "保存",
                         "scene.save-as": "名前を付けて保存",
+                        "scene.save-screenshot": "スクリーンショットを保存",
                         "scene.export": "エクスポート",
-                        "scene.export.compressed-ply": "Compressed PLY ( .ply )",
-                        "scene.export.splat": "Splat ( .splat )",
+                        "scene.export.compressed-ply": "Compressed PLY (.ply)",
+                        "scene.export.splat": "Splat (.splat)",
+                        "scene.export.viewer": "Viewer App (.zip)",
 
                         // Selection menu
                         "selection": "選択",
@@ -474,6 +485,7 @@ const localizeInit = () => {
 
                         // Options panel
                         "options": "表示オプション",
+                        "options.bg-clr": "背景色",
                         "options.fov": "視野 ( FOV )",
                         "options.sh-bands": "球面調和関数のバンド",
                         "options.centers-size": "センターサイズ",
@@ -577,9 +589,11 @@ const localizeInit = () => {
                         "scene.load-all-data": "모든 PLY 데이터 불러오기",
                         "scene.save": "저장",
                         "scene.save-as": "다른 이름으로 저장...",
+                        "scene.save-screenshot": "스크린샷 저장",
                         "scene.export": "내보내기",
                         "scene.export.compressed-ply": "압축된 PLY",
                         "scene.export.splat": "Splat 파일",
+                        "scene.export.viewer": "뷰어 앱",
 
                         // Selection menu
                         "selection": "선택",
@@ -614,6 +628,7 @@ const localizeInit = () => {
 
                         // Options panel
                         "options": "보기 옵션",
+                        "options.bg-clr": "배경 색상",
                         "options.fov": "시야각",
                         "options.sh-bands": "SH 밴드",
                         "options.centers-size": "센터 크기",
@@ -717,9 +732,11 @@ const localizeInit = () => {
                         "scene.load-all-data": "加载所有 PLY 数据",
                         "scene.save": "保存",
                         "scene.save-as": "另存为...",
+                        "scene.save-screenshot": "保存截图",
                         "scene.export": "导出",
                         "scene.export.compressed-ply": "压缩 PLY",
                         "scene.export.splat": "Splat 文件",
+                        "scene.export.viewer": "查看器应用",
 
                         // Selection menu
                         "selection": "选择",
@@ -754,6 +771,7 @@ const localizeInit = () => {
 
                         // Options panel
                         "options": "视图选项",
+                        "options.bg-clr": "背景颜色",
                         "options.fov": "视野角",
                         "options.sh-bands": "SH 带",
                         "options.centers-size": "中心大小",

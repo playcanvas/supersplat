@@ -2,7 +2,7 @@ import { path, Vec3 } from 'playcanvas';
 import { Scene } from './scene';
 import { Events } from './events';
 import { CreateDropHandler } from './drop-handler';
-import { WriteFunc, serializePly, serializePlyCompressed, serializeSplat } from './splat-serialize';
+import { WriteFunc, serializePly, serializePlyCompressed, serializeSplat, serializeViewer } from './splat-serialize';
 import { ElementType } from './element';
 import { Splat } from './splat';
 import { localize } from './ui/localization';
@@ -12,7 +12,7 @@ interface RemoteStorageDetails {
     url: string;
 }
 
-type ExportType = 'ply' | 'compressed-ply' | 'splat';
+type ExportType = 'ply' | 'compressed-ply' | 'splat' | 'viewer';
 
 interface SceneWriteOptions {
     type: ExportType;
@@ -34,10 +34,16 @@ const filePickerTypes = {
         }
     }],
     'splat': [{
-            description: 'Gaussian Splat File',
-            accept: {
-                'application/octet-stream': ['.splat']
-            }
+        description: 'Gaussian Splat File',
+        accept: {
+            'application/octet-stream': ['.splat']
+        }
+    }],
+    'viewer': [{
+        description: 'Viewer App',
+        accept: {
+            'application/zip': ['.zip']
+        }
     }]
 };
 
@@ -114,8 +120,17 @@ const loadCameraPoses = async (url: string, filename: string, events: Events) =>
 const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLElement, remoteStorageDetails: RemoteStorageDetails) => {
 
     // returns a promise that resolves when the file is loaded
-    const handleLoad = async (url: string, filename: string) => {
+    const handleLoad = async (url: string, filename?: string) => {
         try {
+            if (!filename) {
+                // extract filename from url if one ins't provided
+                try {
+                    filename = new URL(url, document.baseURI).pathname.split('/').pop();
+                } catch (e) {
+                    filename = url;
+                }                
+            }
+
             const lowerFilename = (filename || url).toLowerCase();
             if (lowerFilename.endsWith('.json')) {
                 await loadCameraPoses(url, filename, events);
@@ -136,7 +151,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
         }
     };
 
-    events.function('load', (url: string, filename: string) => {
+    events.function('load', (url: string, filename?: string) => {
         return handleLoad(url, filename);
     });
 
@@ -275,7 +290,8 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
         const extensions = {
             'ply': '.ply',
             'compressed-ply': '.compressed.ply',
-            'splat': '.splat'
+            'splat': '.splat',
+            'viewer': '-viewer.zip'
         };
 
         const replaceExtension = (filename: string, extension: string) => {
@@ -283,7 +299,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
                 return filename.substring(0, filename.length - path.getExtension(filename).length);
             };
             return `${removeExtension(filename)}${extension}`;
-        }
+        };
 
         const splats = getSplats();
         const splat = splats[0];
@@ -334,6 +350,9 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
                 return;
             case 'splat':
                 await serializeSplat(splats, writeFunc);
+                return;
+            case 'viewer':
+                await serializeViewer(splats, writeFunc);
                 return;
         }
     };

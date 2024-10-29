@@ -1,9 +1,8 @@
 import {
-    createShaderFromCode,
-    CULLFACE_NONE,
+    CULLFACE_FRONT,
     BoundingBox,
     Entity,
-    Material,
+    ShaderMaterial,
     Vec3
 } from 'playcanvas';
 import { Element, ElementType } from './element';
@@ -16,7 +15,7 @@ const bound = new BoundingBox();
 class SphereShape extends Element {
     _radius = 1;
     pivot: Entity;
-    material: Material;
+    material: ShaderMaterial;
 
     constructor() {
         super(ElementType.debug);
@@ -30,13 +29,12 @@ class SphereShape extends Element {
     }
 
     add() {
-        const device = this.scene.app.graphicsDevice;
-
-        const shader = createShaderFromCode(device, vertexShader, fragmentShader, 'sphere-shape');
-
-        const material = new Material();
-        material.shader = shader;
-        material.cull = CULLFACE_NONE;
+        const material = new ShaderMaterial({
+            uniqueName: 'sphereShape',
+            vertexCode: vertexShader,
+            fragmentCode: fragmentShader
+        });
+        material.cull = CULLFACE_FRONT;
         material.update();
 
         this.pivot.render.meshInstances[0].material = material;
@@ -65,6 +63,9 @@ class SphereShape extends Element {
     onPreRender() {
         this.pivot.getWorldTransform().getTranslation(v);
         this.material.setParameter('sphere', [v.x, v.y, v.z, this.radius]);
+
+        const device = this.scene.graphicsDevice;
+        device.scope.resolve('targetSize').setValue([device.width, device.height]);
     }
 
     moved() {

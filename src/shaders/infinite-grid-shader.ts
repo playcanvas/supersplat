@@ -1,25 +1,32 @@
 const vertexShader = /*glsl*/ `
-    uniform mat4 camera_matrix;
-    uniform vec2 camera_params;
+    uniform vec3 near_origin;
+    uniform vec3 near_x;
+    uniform vec3 near_y;
+
+    uniform vec3 far_origin;
+    uniform vec3 far_x;
+    uniform vec3 far_y;
 
     attribute vec2 vertex_position;
 
     varying vec3 worldFar;
+    varying vec3 worldNear;
 
     void main(void) {
         gl_Position = vec4(vertex_position, 0.0, 1.0);
 
-        vec4 v = camera_matrix * vec4(vertex_position * camera_params, -1.0, 1.0);
-
-        worldFar = v.xyz;
+        vec2 p = vertex_position * 0.5 + 0.5;
+        worldNear = near_origin + near_x * p.x + near_y * p.y;
+        worldFar = far_origin + far_x * p.x + far_y * p.y;
     }
 `;
 
 const fragmentShader = /*glsl*/ `
-    uniform vec3 camera_position;
-    uniform mat4 camera_viewProjection;
+    uniform vec3 view_position;
+    uniform mat4 matrix_viewProjection;
     uniform sampler2D blueNoiseTex32;
 
+    varying vec3 worldNear;
     varying vec3 worldFar;
 
     bool intersectPlane(inout float t, vec3 pos, vec3 dir, vec4 plane) {
@@ -62,7 +69,7 @@ const fragmentShader = /*glsl*/ `
     }
 
     float calcDepth(vec3 p) {
-        vec4 v = camera_viewProjection * vec4(p, 1.0);
+        vec4 v = matrix_viewProjection * vec4(p, 1.0);
         return (v.z / v.w) * 0.5 + 0.5;
     }
 
@@ -73,8 +80,8 @@ const fragmentShader = /*glsl*/ `
     }
 
     void main(void) {
-        vec3 p = camera_position;
-        vec3 v = normalize(worldFar - camera_position);
+        vec3 p = worldNear;
+        vec3 v = normalize(worldFar - worldNear);
 
         // intersect ray with the world xz plane
         float t;
@@ -90,7 +97,7 @@ const fragmentShader = /*glsl*/ `
         float epsilon = 1.0 / 255.0;
 
         // calculate fade
-        float fade = 1.0 - smoothstep(400.0, 1000.0, length(pos - camera_position));
+        float fade = 1.0 - smoothstep(400.0, 1000.0, length(pos - view_position));
         if (fade < epsilon) {
             discard;
         }

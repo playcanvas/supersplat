@@ -110,6 +110,11 @@ class Menu extends Container {
             icon: createSvg(sceneExport),
             onSelect: () => events.invoke('scene.export', 'splat'),
             isEnabled: () => !events.invoke('scene.empty'),
+        }, {
+            text: localize('scene.export.viewer'),
+            icon: createSvg(sceneExport),
+            onSelect: () => events.invoke('scene.export', 'viewer'),
+            isEnabled: () => !events.invoke('scene.empty'),
         }]);
 
         const allDataToggle = new BooleanInput({
@@ -158,6 +163,11 @@ class Menu extends Container {
             icon: createSvg(sceneSave),
             onSelect: () => events.fire('scene.saveAs'),
             isEnabled: () => !events.invoke('scene.empty')
+        }, {
+            text: localize('scene.save-screenshot'),
+            icon: createSvg(sceneExport),
+            onSelect: () => events.invoke('scene.saveScreenshot'),
+            isEnabled: () => true
         }, {
             text: localize('scene.export'),
             icon: createSvg(sceneExport),

@@ -108,7 +108,7 @@ const main = async () => {
 
     // create the graphics device
     const graphicsDevice = await createGraphicsDevice(editorUI.canvas, {
-        deviceTypes: ['webgl'],
+        deviceTypes: ['webgl2'],
         antialias: false,
         depth: false,
         stencil: false,

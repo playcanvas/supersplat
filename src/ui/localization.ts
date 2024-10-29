@@ -25,6 +25,7 @@ const localizeInit = () => {
                         "scene.export": "Exportieren",
                         "scene.export.compressed-ply": "Komprimiertes PLY",
                         "scene.export.splat": "Splat",
+                        "scene.export.viewer": "Viewer App",
 
                         // Selection menu
                         "selection": "Selektion",
@@ -166,8 +167,9 @@ const localizeInit = () => {
                         "scene.save-as": "Save As...",
                         "scene.save-screenshot": "Save Screenshot", 
                         "scene.export": "Export",
-                        "scene.export.compressed-ply": "Compressed PLY",
-                        "scene.export.splat": "Splat file",
+                        "scene.export.compressed-ply": "Compressed PLY (.ply)",
+                        "scene.export.splat": "Splat file (.splat)",
+                        "scene.export.viewer": "Viewer App (.zip)",
 
                         // Selection menu
                         "selection": "Selection",
@@ -311,6 +313,7 @@ const localizeInit = () => {
                         "scene.export": "Exporter",
                         "scene.export.compressed-ply": "Ply compressé",
                         "scene.export.splat": "Fichier splat",
+                        "scene.export.viewer": "Application de visualisation",
 
                         // selection menu
                         "selection": "Sélection",
@@ -445,8 +448,9 @@ const localizeInit = () => {
                         "scene.save-as": "名前を付けて保存",
                         "scene.save-screenshot": "スクリーンショットを保存",
                         "scene.export": "エクスポート",
-                        "scene.export.compressed-ply": "Compressed PLY ( .ply )",
-                        "scene.export.splat": "Splat ( .splat )",
+                        "scene.export.compressed-ply": "Compressed PLY (.ply)",
+                        "scene.export.splat": "Splat (.splat)",
+                        "scene.export.viewer": "Viewer App (.zip)",
 
                         // Selection menu
                         "selection": "選択",
@@ -589,6 +593,7 @@ const localizeInit = () => {
                         "scene.export": "내보내기",
                         "scene.export.compressed-ply": "압축된 PLY",
                         "scene.export.splat": "Splat 파일",
+                        "scene.export.viewer": "뷰어 앱",
 
                         // Selection menu
                         "selection": "선택",
@@ -731,6 +736,7 @@ const localizeInit = () => {
                         "scene.export": "导出",
                         "scene.export.compressed-ply": "压缩 PLY",
                         "scene.export.splat": "Splat 文件",
+                        "scene.export.viewer": "查看器应用",
 
                         // Selection menu
                         "selection": "选择",

@@ -430,7 +430,7 @@ class ViewPanel extends Container {
             } else if (poses.length > 0) {
                 const next = () => {
                     nextPose();
-                    timeout = setTimeout(next, 250);
+                    timeout = window.setTimeout(next, 250);
                 };
 
                 posePlay.text = '\uE135';

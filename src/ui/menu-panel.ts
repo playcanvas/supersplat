@@ -138,7 +138,7 @@ class MenuPanel extends Container {
                 let timer = -1;
 
                 row.dom.addEventListener('pointerenter', () => {
-                    timer = setTimeout(() => {
+                    timer = window.setTimeout(() => {
                         if (deactivate) {
                             deactivate();
                         }

@@ -75,6 +75,7 @@ const application = {
                     }
                 },
                 { src: 'src/manifest.json' },
+                { src: 'node_modules/jszip/dist/jszip.js' },
                 { src: 'static/images', dest: 'static' },
                 { src: 'static/icons', dest: 'static' },
                 { src: 'static/lib', dest: 'static' },

@@ -61,7 +61,7 @@ class Tooltips extends Container {
             };
 
             const startTimer = (fn: () => void) => {
-                timer = setTimeout(() => {
+                timer = window.setTimeout(() => {
                     fn();
                     timer = -1;
                 }, 250);

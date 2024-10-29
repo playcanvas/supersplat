@@ -45,6 +45,7 @@
         "i18next": "^23.15.1",
         "i18next-browser-languagedetector": "^8.0.0",
         "jest": "^29.7.0",
+        "jszip": "^3.10.1",
         "playcanvas": "^1.74.0",
         "postcss": "^8.4.47",
         "rollup": "^4.23.0",

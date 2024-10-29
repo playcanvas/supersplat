@@ -26,7 +26,7 @@
     },
     "devDependencies": {
         "@playcanvas/eslint-config": "^1.7.4",
-        "@playcanvas/pcui": "^4.5.0",
+        "@playcanvas/pcui": "^4.5.1",
         "@rollup/plugin-alias": "^5.1.1",
         "@rollup/plugin-image": "^3.0.3",
         "@rollup/plugin-json": "^6.1.0",

@@ -1,4 +1,4 @@
-const template = `
+const template = /* javascript */ `
 import {
     Script, math, Vec3, BoundingBox, Quat, Vec2, PROJECTION_PERSPECTIVE,
     MOUSEBUTTON_LEFT, MOUSEBUTTON_RIGHT, MOUSEBUTTON_MIDDLE, EVENT_TOUCHCANCEL,

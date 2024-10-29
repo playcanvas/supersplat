@@ -1,4 +1,4 @@
-const template = `
+const template = /* html */ `
 <!DOCTYPE html>
 <html lang="en">
     <head>
@@ -42,7 +42,7 @@ const template = `
                     </pc-scripts>
                 </pc-entity>
                 <!-- Splat -->
-                <pc-entity name="splat">
+                <pc-entity name="splat" rotation="0,0,180">
                     <pc-splat asset="ply"></pc-splat>
                 </pc-entity>
             </pc-scene>

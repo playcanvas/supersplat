@@ -393,7 +393,7 @@ class Camera extends Element {
         this.fitClippingPlanes(this.entity.getLocalPosition(), this.entity.forward);
 
         const { camera } = this.entity;
-        camera.orthoHeight = 0.5 * this.distanceTween.value.distance * this.sceneRadius / this.fovFactor * (camera.camera.horizontalFov ? this.scene.targetSize.height / this.scene.targetSize.width : 1);
+        camera.orthoHeight = this.distanceTween.value.distance * this.sceneRadius / this.fovFactor * (this.fov / 90) * (camera.camera.horizontalFov ? this.scene.targetSize.height / this.scene.targetSize.width : 1);
         camera.camera._updateViewProjMat();
     }
 

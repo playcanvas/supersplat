@@ -7,13 +7,17 @@ import {
     BoundingBox,
     Entity,
     EventHandler,
+    Mat4,
     Picker,
     Plane,
     Ray,
     RenderTarget,
     Texture,
     Vec3,
+    Vec4,
     WebglGraphicsDevice,
+    PROJECTION_ORTHOGRAPHIC,
+    PROJECTION_PERSPECTIVE,
     TONEMAP_LINEAR,
     TONEMAP_FILMIC,
     TONEMAP_HEJL,
@@ -44,6 +48,18 @@ const plane = new Plane();
 const ray = new Ray();
 const vec = new Vec3();
 const vecb = new Vec3();
+const va = new Vec3();
+const vb = new Vec3();
+const vc = new Vec3();
+const v4 = new Vec4();
+
+// homogenous matrix-vector multiplication
+const hmul = (vec: Vec3, mat: Mat4) => {
+    v4.set(vec.x, vec.y, vec.z, 1);
+    mat.transformVec4(v4, v4);
+    vec.set(v4.x / v4.w, v4.y / v4.w, v4.z / v4.w);
+    return vec;
+};
 
 // modulo dealing with negative numbers
 const mod = (n: number, m: number) => ((n % m) + m) % m;
@@ -65,6 +81,8 @@ class Camera extends Element {
     picker: Picker;
     pickModeRenderTarget: RenderTarget;
 
+    updateCameraUniforms: () => void;
+
     constructor() {
         super(ElementType.camera);
         // create the camera entity
@@ -74,6 +92,18 @@ class Camera extends Element {
         // NOTE: this call is needed for refraction effect to work correctly, but
         // it slows rendering and should only be made when required.
         // this.entity.camera.requestSceneColorMap(true);
+    }
+
+    // ortho
+    set ortho(value: boolean) {
+        if (value !== this.ortho) {
+            this.entity.camera.projection = value ? PROJECTION_ORTHOGRAPHIC : PROJECTION_PERSPECTIVE;
+            this.scene.events.fire('camera.ortho', value);
+        }
+    }
+
+    get ortho() {
+        return this.entity.camera.projection === PROJECTION_ORTHOGRAPHIC;
     }
 
     // fov
@@ -144,6 +174,9 @@ class Camera extends Element {
         } else if (t.source.azim - azim > 180) {
             t.source.azim -= 360;
         }
+
+        // return to perspective mode on rotation
+        this.ortho = false;
     }
 
     setDistance(distance: number, dampingFactorFactor: number = 1) {
@@ -220,6 +253,37 @@ class Camera extends Element {
         this.picker = new Picker(this.scene.app, width, height);
 
         this.scene.events.on('scene.boundChanged', this.onBoundChanged, this);
+
+        // prepare camera-specific uniforms
+        this.updateCameraUniforms = () => {
+            const device = this.scene.graphicsDevice;
+            const entity = this.entity;
+            const camera = entity.camera;
+
+            const inv = new Mat4().mul2(camera.projectionMatrix, camera.viewMatrix).invert();
+
+            const set = (name: string, vec: Vec3) => {
+                device.scope.resolve(name).setValue([vec.x, vec.y, vec.z]);
+            };
+
+            // near
+            if (camera.projection === PROJECTION_PERSPECTIVE) {
+                // perspective
+                set('near_origin', entity.getPosition());
+                set('near_x', Vec3.ZERO);
+                set('near_y', Vec3.ZERO);
+            } else {
+                // orthographic
+                set('near_origin', hmul(va.set(0, 0, -10), inv));
+                set('near_x', hmul(vb.set(1, 0, -10), inv).sub(va));
+                set('near_y', hmul(vc.set(0, 1, -10), inv).sub(va));
+            }
+
+            // far
+            set('far_origin', hmul(va.set(0, 0, 1), inv));
+            set('far_x', hmul(vb.set(1, 0, 1), inv).sub(va));
+            set('far_y', hmul(vc.set(0, 1, 1), inv).sub(va));
+        };
     }
 
     remove() {
@@ -326,7 +390,9 @@ class Camera extends Element {
 
         this.fitClippingPlanes(this.entity.getLocalPosition(), this.entity.forward);
 
-        this.entity.camera.camera._updateViewProjMat();
+        const { camera } = this.entity;
+        camera.orthoHeight = 0.5 * this.distanceTween.value.distance * this.sceneRadius / this.fovFactor * (camera.camera.horizontalFov ? this.scene.targetSize.height / this.scene.targetSize.width : 1);
+        camera.camera._updateViewProjMat();
     }
 
     fitClippingPlanes(cameraPosition: Vec3, forwardVec: Vec3) {
@@ -343,6 +409,7 @@ class Camera extends Element {
 
     onPreRender() {
         this.rebuildRenderTargets();
+        this.updateCameraUniforms();
     }
 
     onPostRender() {
@@ -383,7 +450,7 @@ class Camera extends Element {
         return Math.sin(this.fov * math.DEG_TO_RAD * 0.5);
     }
 
-    // interesect the scene at the given screen coordinate and focus the camera on this location
+    // intersect the scene at the given screen coordinate and focus the camera on this location
     pickFocalPoint(screenX: number, screenY: number) {
         const scene = this.scene;
         const cameraPos = this.entity.getPosition();
@@ -412,13 +479,20 @@ class Camera extends Element {
                 plane.setFromPointNormal(vec, this.entity.forward);
 
                 // create the pick ray in world space
-                this.entity.camera.screenToWorld(screenX, screenY, 1.0, vec);
-                vec.sub(cameraPos).normalize();
-                ray.set(cameraPos, vec);
+                if (this.ortho) {
+                    this.entity.camera.screenToWorld(screenX, screenY, -1.0, vec);
+                    this.entity.camera.screenToWorld(screenX, screenY, 1.0, vecb);
+                    vecb.sub(vec).normalize();
+                    ray.set(vec, vecb);
+                } else {
+                    this.entity.camera.screenToWorld(screenX, screenY, 1.0, vec);
+                    vec.sub(cameraPos).normalize();
+                    ray.set(cameraPos, vec);
+                }
 
                 // find intersection
                 if (plane.intersectsRay(ray, vec)) {
-                    const distance = vecb.sub2(vec, cameraPos).length();
+                    const distance = vecb.sub2(vec, ray.origin).length();
                     if (!closestSplat || distance < closestD) {
                         closestD = distance;
                         closestP.copy(vec);

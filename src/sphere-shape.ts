@@ -1,6 +1,6 @@
 import {
+    CULLFACE_FRONT,
     createShaderFromCode,
-    CULLFACE_NONE,
     BoundingBox,
     Entity,
     Material,
@@ -36,7 +36,7 @@ class SphereShape extends Element {
 
         const material = new Material();
         material.shader = shader;
-        material.cull = CULLFACE_NONE;
+        material.cull = CULLFACE_FRONT;
         material.update();
 
         this.pivot.render.meshInstances[0].material = material;
@@ -65,6 +65,9 @@ class SphereShape extends Element {
     onPreRender() {
         this.pivot.getWorldTransform().getTranslation(v);
         this.material.setParameter('sphere', [v.x, v.y, v.z, this.radius]);
+
+        const device = this.scene.graphicsDevice;
+        device.scope.resolve('targetSize').setValue([device.width, device.height]);
     }
 
     moved() {

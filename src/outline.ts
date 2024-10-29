@@ -103,6 +103,7 @@ class Outline extends Element {
         dst.fov = src.fov;
         dst.nearClip = src.nearClip;
         dst.farClip = src.farClip;
+        dst.orthoHeight = src.orthoHeight;
     }
 
     rebuildRenderTargets(width: number, height: number) {

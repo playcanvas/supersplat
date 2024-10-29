@@ -1,17 +1,19 @@
 import {
+    BLENDMODE_ONE,
+    BLENDMODE_ONE_MINUS_SRC_ALPHA,
+    BLENDMODE_SRC_ALPHA,
+    BLENDEQUATION_ADD,
     CULLFACE_NONE,
+    FUNC_LESSEQUAL,
+    PROJECTION_PERSPECTIVE,
     SEMANTIC_POSITION,
+    createShaderFromCode,
     BlendState,
     DepthState,
     Mat4,
     QuadRender,
     Shader,
-    createShaderFromCode,
-    FUNC_LESSEQUAL,
-    BLENDMODE_ONE,
-    BLENDMODE_ONE_MINUS_SRC_ALPHA,
-    BLENDMODE_SRC_ALPHA,
-    BLENDEQUATION_ADD
+    Vec4,
 } from 'playcanvas';
 import { Element, ElementType } from './element';
 import { Serializer } from './serializer';
@@ -50,11 +52,6 @@ class InfiniteGrid extends Element {
 
         this.quadRender = new QuadRender(this.shader);
 
-        const cameraMatrixId = device.scope.resolve('camera_matrix');
-        const cameraParamsId = device.scope.resolve('camera_params');
-        const cameraPositionId = device.scope.resolve('camera_position');
-        const cameraViewProjectionId = device.scope.resolve('camera_viewProjection');
-
         const blendState = new BlendState(
             true,
             BLENDEQUATION_ADD, BLENDMODE_SRC_ALPHA, BLENDMODE_ONE_MINUS_SRC_ALPHA,
@@ -68,20 +65,6 @@ class InfiniteGrid extends Element {
                 device.setDepthState(DepthState.WRITEDEPTH);
                 device.setStencilState(null, null);
 
-                const cameraEntity = this.scene.camera.entity;
-                const camera = cameraEntity.camera;
-
-                // update viewProjectionInverse matrix
-                const cameraMatrix = cameraEntity.getWorldTransform().clone();
-                const cameraParams = calcHalfSize(camera.fov, camera.aspectRatio, camera.horizontalFov);
-                const cameraPosition = cameraMatrix.getTranslation();
-                const cameraViewProjection = new Mat4().mul2(camera.projectionMatrix, camera.viewMatrix);
-
-                cameraMatrixId.setValue(cameraMatrix.data);
-                cameraParamsId.setValue(cameraParams);
-                cameraPositionId.setValue([cameraPosition.x, cameraPosition.y, cameraPosition.z]);
-                cameraViewProjectionId.setValue(cameraViewProjection.data);
- 
                 this.quadRender.render();
             }
         };

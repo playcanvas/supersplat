@@ -77,7 +77,8 @@ class Camera extends Element {
     sceneRadius = 5;
 
     picker: Picker;
-    pickModeRenderTarget: RenderTarget;
+
+    workRenderTarget: RenderTarget;
 
     updateCameraUniforms: () => void;
 
@@ -250,6 +251,10 @@ class Camera extends Element {
         const { width, height } = this.scene.targetSize;
         this.picker = new Picker(this.scene.app, width, height);
 
+        // override buffer allocation to use our render target
+        this.picker.allocateRenderTarget = () => { };
+        this.picker.releaseRenderTarget = () => { };
+
         this.scene.events.on('scene.boundChanged', this.onBoundChanged, this);
 
         // multiple elements in the scene require this callback
@@ -333,8 +338,8 @@ class Camera extends Element {
             rt.destroyTextureBuffers();
             rt.destroy();
 
-            this.pickModeRenderTarget.destroy();
-            this.pickModeRenderTarget = null;
+            this.workRenderTarget.destroy();
+            this.workRenderTarget = null;
         }
 
         const createTexture = (name: string, width: number, height: number, format: number) => {
@@ -361,11 +366,14 @@ class Camera extends Element {
         this.entity.camera.camera.horizontalFov = width > height;
 
         // create pick mode render target (reuse color buffer)
-        this.pickModeRenderTarget = new RenderTarget({
+        this.workRenderTarget = new RenderTarget({
             colorBuffer,
             depth: false,
             autoResolve: false
         });
+
+        // set picker render target
+        this.picker.renderTarget = this.workRenderTarget;
 
         this.scene.events.fire('camera.resize', { width, height });
     }

@@ -21,7 +21,7 @@
         "develop:local": "cross-env ENGINE_PATH=../engine npm run develop",
         "build:local": "cross-env ENGINE_PATH=../engine npm run build",
         "watch:local": "cross-env ENGINE_PATH=../engine npm run watch",
-        "lint": "eslint src eslint.config.mjs rollup.config.mjs",
+        "lint": "eslint src eslint.config.mjs",
         "test": "jest"
     },
     "devDependencies": {

@@ -18,7 +18,7 @@ const template = `
                 }
             }
         </script>
-        <script type="module" src="https://cdn.jsdelivr.net/npm/@playcanvas/web-components@0.1.1/dist/pwc.mjs"></script>
+        <script type="module" src="https://cdn.jsdelivr.net/npm/@playcanvas/web-components@0.1.2/dist/pwc.mjs"></script>
     </head>
     <body>
         <pc-app>

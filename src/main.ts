@@ -106,15 +106,9 @@ const main = async () => {
     // editor ui
     const editorUI = new EditorUI(events, !!remoteStorageDetails);
 
-    const absoluteUrl = (relative: string) => new URL(relative, document.baseURI).toString();
-
-    const webGpu = url.searchParams.has('webgpu');
-
     // create the graphics device
     const graphicsDevice = await createGraphicsDevice(editorUI.canvas, {
-        deviceTypes: webGpu ? ['webgpu', 'webgl'] : ['webgl2'],
-        glslangUrl: absoluteUrl('static/lib/glslang/glslang.js'),
-        twgslUrl: absoluteUrl('static/lib/twgsl/twgsl.js'),
+        deviceTypes: ['webgl'],
         antialias: false,
         depth: false,
         stencil: false,

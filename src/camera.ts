@@ -268,29 +268,34 @@ class Camera extends Element {
             const entity = this.entity;
             const camera = entity.camera;
 
-            const inv = new Mat4().mul2(camera.projectionMatrix, camera.viewMatrix).invert();
-
             const set = (name: string, vec: Vec3) => {
                 device.scope.resolve(name).setValue([vec.x, vec.y, vec.z]);
             };
 
+            // get frustum corners in world space
+            const points = camera.camera.getFrustumCorners(-100);
+            const worldTransform = entity.getWorldTransform();
+            for (let i = 0; i < points.length; i++) {
+                worldTransform.transformPoint(points[i], points[i]);
+            }
+
             // near
             if (camera.projection === PROJECTION_PERSPECTIVE) {
                 // perspective
-                set('near_origin', entity.getPosition());
+                set('near_origin', worldTransform.getTranslation());
                 set('near_x', Vec3.ZERO);
                 set('near_y', Vec3.ZERO);
             } else {
                 // orthographic
-                set('near_origin', hmul(va.set(0, 0, -10), inv));
-                set('near_x', hmul(vb.set(1, 0, -10), inv).sub(va));
-                set('near_y', hmul(vc.set(0, 1, -10), inv).sub(va));
+                set('near_origin', points[3]);
+                set('near_x', va.sub2(points[0], points[3]));
+                set('near_y', va.sub2(points[2], points[3]));
             }
 
             // far
-            set('far_origin', hmul(va.set(0, 0, 1), inv));
-            set('far_x', hmul(vb.set(1, 0, 1), inv).sub(va));
-            set('far_y', hmul(vc.set(0, 1, 1), inv).sub(va));
+            set('far_origin', points[7]);
+            set('far_x', va.sub2(points[4], points[7]));
+            set('far_y', va.sub2(points[6], points[7]));
         };
     }
 

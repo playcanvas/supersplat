@@ -3,7 +3,6 @@
         "noImplicitAny": true,
         "target": "es2017",
         "lib": ["es2020", "dom", "WebWorker"],
-        "allowSyntheticDefaultImports": true,
         "sourceMap": true,
         "inlineSources": true,
         "module": "es2020",
@@ -13,10 +12,7 @@
         "paths": {
             "playcanvas": ["node_modules/playcanvas/build/playcanvas"],
             "pcui": ["node_modules/@playcanvas/pcui"]
-        },
-        "types": [
-            "@types/wicg-file-system-access"
-        ]
+        }
     },
     "include": ["./src/**/*.ts"],
     "exclude": ["node_modules", "**/*.js", "dist"]

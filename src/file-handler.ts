@@ -2,7 +2,7 @@ import { path, Vec3 } from 'playcanvas';
 import { Scene } from './scene';
 import { Events } from './events';
 import { CreateDropHandler } from './drop-handler';
-import { WriteFunc, serializePly, serializePlyCompressed, serializeSplat } from './splat-serialize';
+import { WriteFunc, serializePly, serializePlyCompressed, serializeSplat, serializeViewer } from './splat-serialize';
 import { ElementType } from './element';
 import { Splat } from './splat';
 import { localize } from './ui/localization';
@@ -12,7 +12,7 @@ interface RemoteStorageDetails {
     url: string;
 }
 
-type ExportType = 'ply' | 'compressed-ply' | 'splat';
+type ExportType = 'ply' | 'compressed-ply' | 'splat' | 'viewer';
 
 interface SceneWriteOptions {
     type: ExportType;
@@ -34,10 +34,16 @@ const filePickerTypes = {
         }
     }],
     'splat': [{
-            description: 'Gaussian Splat File',
-            accept: {
-                'application/octet-stream': ['.splat']
-            }
+        description: 'Gaussian Splat File',
+        accept: {
+            'application/octet-stream': ['.splat']
+        }
+    }],
+    'viewer': [{
+        description: 'Viewer App',
+        accept: {
+            'application/zip': ['.zip']
+        }
     }]
 };
 
@@ -284,7 +290,8 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
         const extensions = {
             'ply': '.ply',
             'compressed-ply': '.compressed.ply',
-            'splat': '.splat'
+            'splat': '.splat',
+            'viewer': '-viewer.zip'
         };
 
         const replaceExtension = (filename: string, extension: string) => {
@@ -343,6 +350,9 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
                 return;
             case 'splat':
                 await serializeSplat(splats, writeFunc);
+                return;
+            case 'viewer':
+                await serializeViewer(splats, writeFunc);
                 return;
         }
     };

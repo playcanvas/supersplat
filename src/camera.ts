@@ -368,7 +368,7 @@ class Camera extends Element {
             autoResolve: false
         });
         this.entity.camera.renderTarget = renderTarget;
-        this.entity.camera.camera.horizontalFov = width > height;
+        this.entity.camera.horizontalFov = width > height;
 
         // create pick mode render target (reuse color buffer)
         this.workRenderTarget = new RenderTarget({
@@ -406,7 +406,7 @@ class Camera extends Element {
         this.fitClippingPlanes(this.entity.getLocalPosition(), this.entity.forward);
 
         const { camera } = this.entity;
-        camera.orthoHeight = this.distanceTween.value.distance * this.sceneRadius / this.fovFactor * (this.fov / 90) * (camera.camera.horizontalFov ? this.scene.targetSize.height / this.scene.targetSize.width : 1);
+        camera.orthoHeight = this.distanceTween.value.distance * this.sceneRadius / this.fovFactor * (this.fov / 90) * (camera.horizontalFov ? this.scene.targetSize.height / this.scene.targetSize.width : 1);
         camera.camera._updateViewProjMat();
     }
 

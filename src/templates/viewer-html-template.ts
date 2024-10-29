@@ -41,7 +41,7 @@ const template = `
                         <pc-script name="orbitCameraInputMouse"></pc-script>
                     </pc-scripts>
                 </pc-entity>
-                <!-- Statue -->
+                <!-- Splat -->
                 <pc-entity name="splat">
                     <pc-splat asset="ply"></pc-splat>
                 </pc-entity>

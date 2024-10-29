@@ -95,9 +95,7 @@ const main = async () => {
     let remoteStorageDetails;
     try {
         remoteStorageDetails = JSON.parse(decodeURIComponent(url.searchParams.get('remoteStorage')));
-    } catch (e) {
-
-    }
+    } catch (e) { }
 
     // root events object
     const events = new Events();

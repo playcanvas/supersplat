@@ -6,7 +6,7 @@ import {
     PIXELFORMAT_DEPTH,
     BoundingBox,
     Entity,
-    EventHandler,
+    Layer,
     Mat4,
     Picker,
     Plane,
@@ -74,12 +74,11 @@ class Camera extends Element {
     minElev = -90;
     maxElev = 90;
 
-    events = new EventHandler();
-
     sceneRadius = 5;
 
     picker: Picker;
-    pickModeRenderTarget: RenderTarget;
+
+    workRenderTarget: RenderTarget;
 
     updateCameraUniforms: () => void;
 
@@ -231,7 +230,7 @@ class Camera extends Element {
         this.maxElev = (controls.maxPolarAngle * 180) / Math.PI - 90;
 
         // tonemapping
-        this.scene.app.scene.toneMapping = {
+        this.scene.app.scene.rendering.toneMapping = {
             linear: TONEMAP_LINEAR,
             filmic: TONEMAP_FILMIC,
             hejl: TONEMAP_HEJL,
@@ -252,7 +251,16 @@ class Camera extends Element {
         const { width, height } = this.scene.targetSize;
         this.picker = new Picker(this.scene.app, width, height);
 
+        // override buffer allocation to use our render target
+        this.picker.allocateRenderTarget = () => { };
+        this.picker.releaseRenderTarget = () => { };
+
         this.scene.events.on('scene.boundChanged', this.onBoundChanged, this);
+
+        // multiple elements in the scene require this callback
+        this.entity.camera.onPreRenderLayer = (layer: Layer, transparent: boolean) => {
+            this.scene.events.fire('camera.preRenderLayer', layer, transparent);
+        };
 
         // prepare camera-specific uniforms
         this.updateCameraUniforms = () => {
@@ -260,29 +268,34 @@ class Camera extends Element {
             const entity = this.entity;
             const camera = entity.camera;
 
-            const inv = new Mat4().mul2(camera.projectionMatrix, camera.viewMatrix).invert();
-
             const set = (name: string, vec: Vec3) => {
                 device.scope.resolve(name).setValue([vec.x, vec.y, vec.z]);
             };
 
+            // get frustum corners in world space
+            const points = camera.camera.getFrustumCorners(-100);
+            const worldTransform = entity.getWorldTransform();
+            for (let i = 0; i < points.length; i++) {
+                worldTransform.transformPoint(points[i], points[i]);
+            }
+
             // near
             if (camera.projection === PROJECTION_PERSPECTIVE) {
                 // perspective
-                set('near_origin', entity.getPosition());
+                set('near_origin', worldTransform.getTranslation());
                 set('near_x', Vec3.ZERO);
                 set('near_y', Vec3.ZERO);
             } else {
                 // orthographic
-                set('near_origin', hmul(va.set(0, 0, -10), inv));
-                set('near_x', hmul(vb.set(1, 0, -10), inv).sub(va));
-                set('near_y', hmul(vc.set(0, 1, -10), inv).sub(va));
+                set('near_origin', points[3]);
+                set('near_x', va.sub2(points[0], points[3]));
+                set('near_y', va.sub2(points[2], points[3]));
             }
 
             // far
-            set('far_origin', hmul(va.set(0, 0, 1), inv));
-            set('far_x', hmul(vb.set(1, 0, 1), inv).sub(va));
-            set('far_y', hmul(vc.set(0, 1, 1), inv).sub(va));
+            set('far_origin', points[7]);
+            set('far_x', va.sub2(points[4], points[7]));
+            set('far_y', va.sub2(points[6], points[7]));
         };
     }
 
@@ -310,7 +323,6 @@ class Camera extends Element {
     }
 
     serialize(serializer: Serializer) {
-        const camera = this.entity.camera.camera;
         serializer.pack(this.fov);
         serializer.packa(this.entity.getWorldTransform().data);
         serializer.pack(this.entity.camera.renderTarget?.width, this.entity.camera.renderTarget?.height);
@@ -318,7 +330,7 @@ class Camera extends Element {
 
     // handle the viewer canvas resizing
     rebuildRenderTargets() {
-        const device = this.scene.graphicsDevice as WebglGraphicsDevice;
+        const device = this.scene.graphicsDevice;
         const { width, height } = this.scene.targetSize;
 
         const rt = this.entity.camera.renderTarget;
@@ -331,8 +343,8 @@ class Camera extends Element {
             rt.destroyTextureBuffers();
             rt.destroy();
 
-            this.pickModeRenderTarget.destroy();
-            this.pickModeRenderTarget = null;
+            this.workRenderTarget.destroy();
+            this.workRenderTarget = null;
         }
 
         const createTexture = (name: string, width: number, height: number, format: number) => {
@@ -356,14 +368,17 @@ class Camera extends Element {
             autoResolve: false
         });
         this.entity.camera.renderTarget = renderTarget;
-        this.entity.camera.camera.horizontalFov = width > height;
+        this.entity.camera.horizontalFov = width > height;
 
         // create pick mode render target (reuse color buffer)
-        this.pickModeRenderTarget = new RenderTarget({
+        this.workRenderTarget = new RenderTarget({
             colorBuffer,
             depth: false,
             autoResolve: false
         });
+
+        // set picker render target
+        this.picker.renderTarget = this.workRenderTarget;
 
         this.scene.events.fire('camera.resize', { width, height });
     }
@@ -391,7 +406,7 @@ class Camera extends Element {
         this.fitClippingPlanes(this.entity.getLocalPosition(), this.entity.forward);
 
         const { camera } = this.entity;
-        camera.orthoHeight = 0.5 * this.distanceTween.value.distance * this.sceneRadius / this.fovFactor * (camera.camera.horizontalFov ? this.scene.targetSize.height / this.scene.targetSize.width : 1);
+        camera.orthoHeight = this.distanceTween.value.distance * this.sceneRadius / this.fovFactor * (this.fov / 90) * (camera.horizontalFov ? this.scene.targetSize.height / this.scene.targetSize.width : 1);
         camera.camera._updateViewProjMat();
     }
 
@@ -455,7 +470,6 @@ class Camera extends Element {
         const scene = this.scene;
         const cameraPos = this.entity.getPosition();
 
-        // @ts-ignore
         const target = scene.canvas;
         const sx = screenX / target.clientWidth * scene.targetSize.width;
         const sy = screenY / target.clientHeight * scene.targetSize.height;
@@ -520,7 +534,7 @@ class Camera extends Element {
         const { width, height } = this.scene.targetSize;
         const worldLayer = this.scene.app.scene.layers.getLayerByName('World');
 
-        const device = this.scene.graphicsDevice as WebglGraphicsDevice;
+        const device = this.scene.graphicsDevice;
         const events = this.scene.events;
         const alpha = events.invoke('camera.mode') === 'rings' ? 0.0 : 0.2;
 

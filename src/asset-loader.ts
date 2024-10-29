@@ -117,7 +117,6 @@ class AssetLoader {
                     contents: loadRequest.contents
                 },
                 {
-                    elementFilter: this.loadAllData ? (() => true) : null,
                     // decompress data on load
                     decompress: true
                 }

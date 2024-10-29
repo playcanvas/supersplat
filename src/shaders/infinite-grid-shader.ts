@@ -14,8 +14,10 @@ const vertexShader = /*glsl*/ `
 
     void main(void) {
         gl_Position = vec4(vertex_position, 0.0, 1.0);
-        worldNear = near_origin + near_x * vertex_position.x + near_y * vertex_position.y;
-        worldFar = far_origin + far_x * vertex_position.x + far_y * vertex_position.y;
+
+        vec2 p = vertex_position * 0.5 + 0.5;
+        worldNear = near_origin + near_x * p.x + near_y * p.y;
+        worldFar = far_origin + far_x * p.x + far_y * p.y;
     }
 `;
 

@@ -17,7 +17,6 @@ import { Model } from './model';
 import { Splat } from './splat';
 import { SplatOverlay } from './splat-overlay';
 import { Camera } from './camera';
-import { CustomShadow as Shadow } from './custom-shadow';
 import { InfiniteGrid as Grid } from './infinite-grid';
 import { DataProcessor } from './data-processor';
 import { Outline } from './outline';
@@ -48,7 +47,6 @@ class Scene {
     assetLoader: AssetLoader;
     camera: Camera;
     splatOverlay: SplatOverlay;
-    shadow: Shadow;
     grid: Grid;
     outline: Outline;
 
@@ -71,6 +69,7 @@ class Scene {
 
         // only render the scene when instructed
         this.app.autoRender = false;
+        // @ts-ignore
         this.app._allowResize = false;
         this.app.scene.clusteredLightingEnabled = false;
 
@@ -190,9 +189,6 @@ class Scene {
 
         this.splatOverlay = new SplatOverlay();
         this.add(this.splatOverlay);
-
-        // this.shadow = new Shadow();
-        // this.add(this.shadow);
 
         this.grid = new Grid();
         this.add(this.grid);

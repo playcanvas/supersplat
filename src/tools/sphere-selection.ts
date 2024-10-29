@@ -14,7 +14,7 @@ class SphereSelection {
     constructor(events: Events, scene: Scene, canvasContainer: Container) {
         const sphere = new SphereShape();
 
-        const gizmo = new TranslateGizmo(scene.app, scene.camera.entity.camera, scene.gizmoLayer);
+        const gizmo = new TranslateGizmo(scene.camera.entity.camera, scene.gizmoLayer);
 
         gizmo.on('render:update', () => {
             scene.forceRender = true;
@@ -67,24 +67,23 @@ class SphereSelection {
             }
         });
 
+        const updateGizmoSize = () => {
+            const { camera, canvas } = scene;
+            if (camera.ortho) {
+                gizmo.size = 1125 / canvas.clientHeight;
+            } else {
+                gizmo.size = 1200 / Math.max(canvas.clientWidth, canvas.clientHeight);
+            }
+        };
+        updateGizmoSize();
+        events.on('camera.resize', updateGizmoSize);
+        events.on('camera.ortho', updateGizmoSize);
+
         this.activate = () => {
             this.active = true;
             scene.add(sphere);
             gizmo.attach([sphere.pivot]);
             selectToolbar.hidden = false;
-
-            const canvas = document.getElementById('canvas');
-            if (canvas) {
-                const w = canvas.clientWidth;
-                const h = canvas.clientHeight;
-                gizmo.size = 1200 / Math.max(w, h);
-
-                // FIXME:
-                // this is a temporary workaround to undo gizmo's own auto scaling.
-                // once gizmo's autoscaling code is removed, this line can go too.
-                // @ts-ignore
-                gizmo._deviceStartSize = Math.min(scene.app.graphicsDevice.width, scene.app.graphicsDevice.height);
-            }
         };
 
         this.deactivate = () => {

@@ -1,3 +1,5 @@
+@use 'colors.scss' as *;
+
 #view-panel {
     top: 50%;
     transform: translate(0, -50%);

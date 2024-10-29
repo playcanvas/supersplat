@@ -5,31 +5,17 @@ import {
     BLENDEQUATION_ADD,
     CULLFACE_NONE,
     FUNC_LESSEQUAL,
-    PROJECTION_PERSPECTIVE,
     SEMANTIC_POSITION,
     createShaderFromCode,
     BlendState,
     DepthState,
-    Mat4,
+    Layer,
     QuadRender,
     Shader,
-    Vec4,
 } from 'playcanvas';
 import { Element, ElementType } from './element';
 import { Serializer } from './serializer';
 import { vertexShader, fragmentShader } from './shaders/infinite-grid-shader';
-
-const calcHalfSize = (fov: number, aspect: number, fovIsHorizontal: boolean) => {
-    let x, y;
-    if (fovIsHorizontal) {
-        x = Math.tan(fov * Math.PI / 360);
-        y = x / aspect;
-    } else {
-        y = Math.tan(fov * Math.PI / 360);
-        x = y * aspect;
-    }
-    return [ x, y ];
-};
 
 class InfiniteGrid extends Element {
     shader: Shader;
@@ -58,8 +44,8 @@ class InfiniteGrid extends Element {
             BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE_MINUS_SRC_ALPHA
         );
 
-        this.scene.debugLayer.onPreRenderOpaque = () => {
-            if (this.visible) {
+        this.scene.events.on('camera.preRenderLayer', (layer: Layer, transparent: boolean) => {
+            if (this.visible && layer === this.scene.debugLayer && !transparent) {
                 device.setBlendState(blendState);
                 device.setCullMode(CULLFACE_NONE);
                 device.setDepthState(DepthState.WRITEDEPTH);
@@ -67,11 +53,10 @@ class InfiniteGrid extends Element {
 
                 this.quadRender.render();
             }
-        };
+        });
     }
 
     remove() {
-        this.scene.debugLayer.onPreRenderOpaque = null;
         this.shader.destroy();
         this.quadRender.destroy();
     }

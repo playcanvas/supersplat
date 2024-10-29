@@ -1,7 +1,7 @@
 import {
     ADDRESS_CLAMP_TO_EDGE,
     FILTER_NEAREST,
-    PIXELFORMAT_L8,
+    PIXELFORMAT_R8,
     PIXELFORMAT_R16U,
     Asset,
     BoundingBox,
@@ -110,7 +110,7 @@ class Splat extends Element {
         };
 
         // create the state texture
-        this.stateTexture = createTexture('splatState', PIXELFORMAT_L8);
+        this.stateTexture = createTexture('splatState', PIXELFORMAT_R8);
         this.transformTexture = createTexture('splatTransform', PIXELFORMAT_R16U);
 
         // create the transform palette
@@ -129,8 +129,10 @@ class Splat extends Element {
 
         this.selectionBoundStorage = new BoundingBox();
         this.localBoundStorage = instance.splat.aabb;
+        // @ts-ignore
         this.worldBoundStorage = instance.meshInstance._aabb;
 
+        // @ts-ignore
         instance.meshInstance._updateAabb = false;
 
         // when sort changes, re-render the scene

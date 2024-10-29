@@ -1,28 +1,20 @@
-@import 'pcui-theme-grey.scss';
-
-$clr-default: #b3aaac;
-$clr-disabled: #7c7678;
-$clr-active: white;
-$clr-hilight: #f60;
-
-$bcg-light: #555;
-$bcg-darkest: #181818;
-
-@import 'tooltips.scss';
-@import 'panel.scss';
-@import 'menu-panel.scss';
-@import 'menu.scss';
-@import 'scene-panel.scss';
-@import 'view-panel.scss';
-@import 'splat-list.scss';
-@import 'transform.scss';
-@import 'bottom-toolbar.scss';
-@import 'right-toolbar.scss';
-@import 'select-toolbar.scss';
-@import 'data-panel.scss';
-@import 'popup.scss';
-@import 'mode-toggle.scss';
-@import 'spinner.scss';
+@use 'pcui-theme-grey.scss';
+@use 'colors.scss' as *;
+@use 'tooltips.scss';
+@use 'panel.scss';
+@use 'menu-panel.scss';
+@use 'menu.scss';
+@use 'scene-panel.scss';
+@use 'view-panel.scss';
+@use 'splat-list.scss';
+@use 'transform.scss';
+@use 'bottom-toolbar.scss';
+@use 'right-toolbar.scss';
+@use 'select-toolbar.scss';
+@use 'data-panel.scss';
+@use 'popup.scss';
+@use 'mode-toggle.scss';
+@use 'spinner.scss';
 
 * {
     font-size: 12px;

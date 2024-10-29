@@ -93,8 +93,7 @@ const fragmentShader = /* glsl */ `
     uniform vec2 targetSize;
 
     void main() {
-        vec2 clip = gl_FragCoord.xy / targetSize * 2.0 - 1.0;
-
+        vec2 clip = gl_FragCoord.xy / targetSize;
         vec3 worldNear = near_origin + near_x * clip.x + near_y * clip.y;
         vec3 worldFar = far_origin + far_x * clip.x + far_y * clip.y;
 

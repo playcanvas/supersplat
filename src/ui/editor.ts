@@ -185,7 +185,7 @@ class EditorUI {
             if (event.target === canvas || toolsContainer.dom.contains(event.target as Node)) {
                 document.body.focus();
             }
-        });
+        }, true);
     }
 }
 

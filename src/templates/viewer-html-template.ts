@@ -14,7 +14,8 @@ const template = /* html */ `
         <script type="importmap">
             {
                 "imports": {
-                    "playcanvas": "https://esm.run/playcanvas@2.2.0"
+                    "playcanvas": "https://esm.run/playcanvas@2.2.1",
+                    "multi-camera": "https://cdn.jsdelivr.net/npm/playcanvas@2.2.1/scripts/camera/multi-camera.js"
                 }
             }
         </script>
@@ -23,13 +24,36 @@ const template = /* html */ `
     <body>
         <pc-app>
             <script type="module">
-                import { registerScript } from 'playcanvas';
-                import { OrbitCamera, OrbitCameraInputMouse } from "data:application/javascript;base64,{{cameraScriptSource}}";
+                import { Application, BoundingBox, registerScript, Script, Vec3 } from 'playcanvas';
+                import { MultiCamera } from 'multi-camera';
 
-                const app = document.querySelector('pc-app');
-                await app.getApplication();
-                registerScript(OrbitCamera, 'orbitCamera');
-                registerScript(OrbitCameraInputMouse, 'orbitCameraInputMouse');
+                const app = await Application.getApplication();
+                registerScript(MultiCamera, 'multiCamera');
+
+                const camera = document.querySelector('pc-entity[name="camera"]');
+                await new Promise(resolve => setTimeout(resolve));
+                const multiCamera = camera.entity.script.multiCamera;
+
+                const frameScene = () => {
+                    const gsplatComponents = app.root.findComponents('gsplat');
+                    const bbox = gsplatComponents?.[0]?.instance?.meshInstance?.aabb ?? new BoundingBox();
+
+                    const start = new Vec3(2, 1, 2).add(bbox.center);
+                    const cameraDist = bbox.center.distance(start);
+
+                    multiCamera.resetZoom(cameraDist);
+                    multiCamera.focus(bbox.center, start);
+                };
+
+                window.addEventListener('keydown', (e) => {
+                    if (e.key === 'f') {
+                        frameScene();
+                    }
+                });
+
+                app.assets.on('load', () => {
+                    setTimeout(frameScene);
+                });
             </script>
             <pc-asset id="ply" type="gsplat" src="data:application/ply;base64,{{plyModel}}"></pc-asset>
             <pc-scene>
@@ -37,8 +61,7 @@ const template = /* html */ `
                 <pc-entity name="camera">
                     <pc-camera clear-color="{{clearColor}}"></pc-camera>
                     <pc-scripts>
-                        <pc-script name="orbitCamera" attributes='{"inertiaFactor": 0.1}'></pc-script>
-                        <pc-script name="orbitCameraInputMouse"></pc-script>
+                        <pc-script name="multiCamera" attributes='{"sceneSize":1}'></pc-script>
                     </pc-scripts>
                 </pc-entity>
                 <!-- Splat -->

@@ -38,11 +38,8 @@ const template = /* html */ `
                     const gsplatComponents = app.root.findComponents('gsplat');
                     const bbox = gsplatComponents?.[0]?.instance?.meshInstance?.aabb ?? new BoundingBox();
 
-                    const start = new Vec3(2, 1, 2).add(bbox.center);
-                    const cameraDist = bbox.center.distance(start);
-
-                    multiCamera.resetZoom(cameraDist);
-                    multiCamera.focus(bbox.center, start);
+                    multiCamera.sceneSize = bbox.halfExtents.length() * 0.2;
+                    multiCamera.focus(Vec3.ZERO, new Vec3(2, 1, 2));
                 };
 
                 window.addEventListener('keydown', (e) => {
@@ -61,7 +58,7 @@ const template = /* html */ `
                 <pc-entity name="camera">
                     <pc-camera clear-color="{{clearColor}}"></pc-camera>
                     <pc-scripts>
-                        <pc-script name="multiCamera" attributes='{"sceneSize":1}'></pc-script>
+                        <pc-script name="multiCamera"></pc-script>
                     </pc-scripts>
                 </pc-entity>
                 <!-- Splat -->

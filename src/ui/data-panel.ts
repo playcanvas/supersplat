@@ -120,7 +120,11 @@ class DataPanel extends Panel {
                 { v: 'opacity', t: localize('data.opacity') },
                 { v: 'hue', t: localize('data.hue') },
                 { v: 'saturation', t: localize('data.saturation') },
-                { v: 'value', t: localize('data.value') }
+                { v: 'value', t: localize('data.value') },
+                { v: 'class_id', t: localize('data.class-id') },
+                { v: 'rg', t: "Red + Green" },
+                { v: 'rb', t: "Red + Blue" },
+                { v: 'gb', t: "Green + Blue" },
             ]
         });
 
@@ -179,7 +183,19 @@ class DataPanel extends Panel {
         const getValueFunc = () => {
             // @ts-ignore
             const dataFunc = dataFuncs[dataSelector.value];
-            const data = splat.splatData.getProp(dataSelector.value);
+
+            var data: any;
+            /*if (dataSelector.value === "class_id"){
+                if (splat.labelData){
+                    data = splat.labelData.labels[0].category_annotations;
+                }else{
+                    data = null;
+                }
+            }else{
+                data = splat.splatData.getProp(dataSelector.value);
+            }*/
+
+            data = splat.splatData.getProp(dataSelector.value);
 
             let func: (i: number) => number;
             if (dataFunc && data) {
@@ -226,6 +242,31 @@ class DataPanel extends Panel {
                         const g = splat.splatData.getProp('f_dc_1');
                         const b = splat.splatData.getProp('f_dc_2');
                         func = (i) => rgb2hsv({r: colorFunc(r[i]), g: colorFunc(g[i]), b: colorFunc(b[i])}).v;
+                        break;
+                    }
+                    case 'rg': {
+                        const r = splat.splatData.getProp('f_dc_0');
+                        const g = splat.splatData.getProp('f_dc_1');
+                        const b = splat.splatData.getProp('f_dc_2');
+                        func = (i) => colorFunc(r[i]) + colorFunc(g[i]) - colorFunc(b[i]);
+                        break;
+                    }
+                    case 'rb': {
+                        const r = splat.splatData.getProp('f_dc_0');
+                        const g = splat.splatData.getProp('f_dc_1');
+                        const b = splat.splatData.getProp('f_dc_2');
+                        func = (i) => colorFunc(r[i]) - colorFunc(g[i]) + colorFunc(b[i]);
+                        break;
+                    }
+                    case 'gb': {
+                        const r = splat.splatData.getProp('f_dc_0');
+                        const g = splat.splatData.getProp('f_dc_1');
+                        const b = splat.splatData.getProp('f_dc_2');
+                        func = (i) => -colorFunc(r[i]) + colorFunc(g[i]) + colorFunc(b[i]);
+                        break;
+                    }
+                    case 'class_id': {
+                        func = (i) => splat.labelData.labels[0].category_annotations[i];
                         break;
                     }
                     default:

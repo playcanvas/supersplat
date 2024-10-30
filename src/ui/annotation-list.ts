@@ -201,12 +201,17 @@ class AnnotationList extends Container {
                             annotation.isHidden = false;
                             // BUG: when setting an annotation visible - all hidden annotations are set to visible too
                             // TODO - perform hide procedure directly on splats, rather than through selection.
-                            events.fire('select.none');
-                            const op = (i: number) => {
-                                return splat.labelData.labels[0].point_annotations[i] === annotation.id;
-                            };
-                            events.fire('select.pred', 'add', op);
                             events.fire('select.unhide');
+                            events.fire('select.none');
+                            for (const visible_annotation of labelData.labels[0].annotations){
+                                if (visible_annotation.isHidden){
+                                    const op = (i: number) => {
+                                        return splat.labelData.labels[0].point_annotations[i] === visible_annotation.id;
+                                    };
+                                    events.fire('select.pred', 'add', op);
+                                }
+                            }
+                            events.fire('select.hide');
                             events.fire('select.none');
                         });
                         item.on('invisible', () => {
@@ -231,19 +236,27 @@ class AnnotationList extends Container {
             }
         });*/
 
-        this.on('click', (item: AnnotationItem) => {
+        this._onClickEvt()
+        this.on('click_item', (item: AnnotationItem, ev: PointerEvent) => {
             for (const [key, value] of items) {
                 if (item === value) {
+                    item.selected = true;
+        
                     const op = (i: number) => {
                         return splat.labelData.labels[0].point_annotations[i] === key.id;
                     };
-                    
+        
+                    if (!ev.shiftKey) {
+                        events.fire('select.none');
+                    }
                     events.fire('select.pred', 'add', op);
-                    break;
+                } else {
+                    if (!ev.shiftKey) {
+                        value.selected = false;
+                    }
                 }
-            }            
+            }
         });
-
         /*this.on('removeClicked', async (item: AnnotationItem) => {
             let splat;
             for (const [key, value] of items) {
@@ -273,8 +286,8 @@ class AnnotationList extends Container {
         super._onAppendChild(element);
 
         if (element instanceof AnnotationItem) {
-            element.on('click', () => {
-                this.emit('click', element);
+            element.on('click', (ev) => {
+                this.emit('click_item', element, ev);
             });
 
             element.on('removeClicked', () => {
@@ -285,7 +298,7 @@ class AnnotationList extends Container {
 
     protected _onRemoveChild(element: PcuiElement): void {
         if (element instanceof AnnotationItem) {
-            element.unbind('click');
+            element.unbind('click_item');
             element.unbind('removeClicked');
         }
 

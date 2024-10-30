@@ -82,6 +82,7 @@ const localizeInit = () => {
                         "data.hue": "Hue",
                         "data.saturation": "Saturation",
                         "data.value": "Value",
+                        "data.class-id": "Class ID",
                         "data.log-scale": "Log Scale",
                         "data.totals": "Totals",
                         "data.totals.splats": "Splats",

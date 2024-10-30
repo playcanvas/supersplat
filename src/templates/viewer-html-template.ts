@@ -31,8 +31,7 @@ const template = /* html */ `
                 registerScript(OrbitCamera, 'orbitCamera');
                 registerScript(OrbitCameraInputMouse, 'orbitCameraInputMouse');
             </script>
-            <pc-asset id="ply" type="gsplat" src="data:application/ply;base64,{{plyModel}}">
-            </pc-asset>
+            <pc-asset id="ply" type="gsplat" src="data:application/ply;base64,{{plyModel}}"></pc-asset>
             <pc-scene>
                 <!-- Camera -->
                 <pc-entity name="camera">

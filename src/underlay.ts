@@ -19,6 +19,7 @@ class Underlay extends Element {
     entity: Entity;
     shader: Shader;
     quadRender: QuadRender;
+    enabled = true;
 
     constructor() {
         super(ElementType.other);
@@ -27,14 +28,6 @@ class Underlay extends Element {
         this.entity.addComponent('camera');
         this.entity.camera.setShaderPass('UNDERLAY');
         this.entity.camera.clearColor = new Color(0, 0, 0, 0);
-    }
-
-    get enabled() {
-        return this.entity.enabled;
-    }
-
-    set enabled(value: boolean) {
-        this.entity.enabled = value;
     }
 
     add() {
@@ -56,7 +49,7 @@ class Underlay extends Element {
         );
 
         this.entity.camera.onPostRenderLayer = (layer: Layer, transparent: boolean) => {
-            if (!this.enabled || layer !== this.scene.overlayLayer || !transparent) {
+            if (!this.entity.enabled || layer !== this.scene.overlayLayer || !transparent) {
                 return;
             }
 
@@ -88,7 +81,7 @@ class Underlay extends Element {
         dst.farClip = src.farClip;
         dst.orthoHeight = src.orthoHeight;
 
-        this.enabled = !this.scene.events.invoke('view.outlineSelection');
+        this.entity.enabled = this.enabled && !this.scene.events.invoke('view.outlineSelection');
         this.entity.camera.renderTarget = this.scene.camera.workRenderTarget;
     }
 }

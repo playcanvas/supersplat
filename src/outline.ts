@@ -18,6 +18,7 @@ class Outline extends Element {
     entity: Entity;
     shader: Shader;
     quadRender: QuadRender;
+    enabled = true;
     clr = new Color(1, 1, 1, 0.5);
 
     constructor() {
@@ -27,14 +28,6 @@ class Outline extends Element {
         this.entity.addComponent('camera');
         this.entity.camera.setShaderPass('OUTLINE');
         this.entity.camera.clearColor = new Color(0, 0, 0, 0);
-    }
-
-    get enabled() {
-        return this.entity.enabled;
-    }
-
-    set enabled(value: boolean) {
-        this.entity.enabled = value;
     }
 
     add() {
@@ -57,7 +50,7 @@ class Outline extends Element {
 
         // apply the outline texture to the display before gizmos render
         this.entity.camera.onPostRenderLayer = (layer: Layer, transparent: boolean) => {
-            if (!this.enabled || layer !== this.scene.overlayLayer || !transparent) {
+            if (!this.entity.enabled || layer !== this.scene.overlayLayer || !transparent) {
                 return;
             }
 
@@ -98,7 +91,7 @@ class Outline extends Element {
         dst.farClip = src.farClip;
         dst.orthoHeight = src.orthoHeight;
 
-        this.enabled = this.scene.events.invoke('view.outlineSelection');
+        this.entity.enabled = this.enabled && this.scene.events.invoke('view.outlineSelection');
         this.entity.camera.renderTarget = this.scene.camera.workRenderTarget;
     }
 }

@@ -1,4 +1,7 @@
 import {
+    BLENDEQUATION_ADD,
+    BLENDMODE_ONE,
+    BLENDMODE_ZERO,
     SEMANTIC_POSITION,
     createShaderFromCode,
     BlendState,
@@ -7,7 +10,7 @@ import {
     Layer,
     Shader,
     QuadRender,
-    WebglGraphicsDevice
+    WebglGraphicsDevice,
 } from "playcanvas";
 import { Element, ElementType } from "./element";
 import { vertexShader, fragmentShader } from './shaders/blit-shader';
@@ -47,16 +50,20 @@ class Underlay extends Element {
         this.quadRender = new QuadRender(this.shader);
 
         const blitTextureId = device.scope.resolve('blitTexture');
+        const blendState = new BlendState(true,
+            BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE,
+            BLENDEQUATION_ADD, BLENDMODE_ZERO, BLENDMODE_ONE
+        );
 
         this.entity.camera.onPostRenderLayer = (layer: Layer, transparent: boolean) => {
             if (!this.enabled || layer !== this.scene.overlayLayer || !transparent) {
                 return;
             }
-    
-            device.setBlendState(BlendState.ADDBLEND);
+
+            device.setBlendState(blendState);
 
             blitTextureId.setValue(this.entity.camera.renderTarget.colorBuffer);
-    
+
             const glDevice = device as WebglGraphicsDevice;
             glDevice.setRenderTarget(this.scene.camera.entity.camera.renderTarget);
             glDevice.updateBegin();

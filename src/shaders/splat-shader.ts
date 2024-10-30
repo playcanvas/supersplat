@@ -177,11 +177,10 @@ void main(void)
                     // selected
 
                     #if UNDERLAY_PASS
-                        vec3 baseColor = vec3(0.2, 0.2, 0.0);
+                        c = mix(color.xyz, vec3(0.2, 0.2, 0.0), selectionAlpha) * selectionAlpha;
                     #else
-                        vec3 baseColor = vec3(0.8, 0.8, 0.0);
+                        c = mix(color.xyz, vec3(0.8, 0.8, 0.0), selectionAlpha);
                     #endif
-                    c = mix(color.xyz, baseColor, selectionAlpha);
                 } else {
                     // normal
                     c = color.xyz;

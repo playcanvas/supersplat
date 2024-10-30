@@ -723,6 +723,15 @@ const serializeSplat = async (splats: Splat[], write: WriteFunc) => {
     await write(result, true);
 };
 
+const encodeBase64 = (bytes: Uint8Array) => {
+    let binary = '';
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa(binary);
+}
+
 const serializeViewer = async (splats: Splat[], write: WriteFunc) => {
     // create compressed PLY data
     let compressedData: Uint8Array;
@@ -730,19 +739,17 @@ const serializeViewer = async (splats: Splat[], write: WriteFunc) => {
         compressedData = data;
     });
 
+    const plyModel = encodeBase64(compressedData);
+    const cameraScriptSource = encodeBase64((new TextEncoder()).encode(OrbitCameraTemplate));
+
     // use camera clear color
     const bgClr = splats[0].scene.events.invoke('bgClr');
-    const html = ViewerHtmlTemplate.replace('{{clearColor}}', `${bgClr.r}, ${bgClr.g}, ${bgClr.b}`);
+    const html = ViewerHtmlTemplate
+        .replace('{{clearColor}}', `${bgClr.r}, ${bgClr.g}, ${bgClr.b}`)
+        .replace('{{plyModel}}', plyModel)
+        .replace('{{cameraScriptSource}}', cameraScriptSource);
 
-    // @ts-ignore
-    const zip = new JSZip();
-    zip.file('index.html', html);
-    zip.file('scene.compressed.ply', compressedData);
-    zip.file('orbit-camera.mjs', OrbitCameraTemplate);
-
-    const result = await zip.generateAsync({type : "uint8array"});
-
-    await write(result, true);
+    await write(new TextEncoder().encode(html), true);
 };
 
 export {

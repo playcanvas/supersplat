@@ -14,24 +14,25 @@ const template = /* html */ `
         <script type="importmap">
             {
                 "imports": {
-                    "playcanvas": "https://esm.run/playcanvas@2.1.0"
+                    "playcanvas": "https://esm.run/playcanvas@2.2.0"
                 }
             }
         </script>
-        <script type="module" src="https://cdn.jsdelivr.net/npm/@playcanvas/web-components@0.1.2/dist/pwc.mjs"></script>
+        <script type="module" src="https://cdn.jsdelivr.net/npm/@playcanvas/web-components@0.1.3/dist/pwc.mjs"></script>
     </head>
     <body>
         <pc-app>
             <script type="module">
                 import { registerScript } from 'playcanvas';
-                import { OrbitCamera, OrbitCameraInputMouse } from './orbit-camera.mjs';
+                import { OrbitCamera, OrbitCameraInputMouse } from "data:application/javascript;base64,{{cameraScriptSource}}";
 
                 const app = document.querySelector('pc-app');
                 await app.getApplication();
                 registerScript(OrbitCamera, 'orbitCamera');
                 registerScript(OrbitCameraInputMouse, 'orbitCameraInputMouse');
             </script>
-            <pc-asset id="ply" src="scene.compressed.ply" preload></pc-asset>
+            <pc-asset id="ply" type="gsplat" src="data:application/ply;base64,{{plyModel}}">
+            </pc-asset>
             <pc-scene>
                 <!-- Camera -->
                 <pc-entity name="camera">

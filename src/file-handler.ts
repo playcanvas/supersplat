@@ -42,7 +42,7 @@ const filePickerTypes = {
     'viewer': [{
         description: 'Viewer App',
         accept: {
-            'application/zip': ['.zip']
+            'text/html': ['.html']
         }
     }]
 };
@@ -291,7 +291,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
             'ply': '.ply',
             'compressed-ply': '.compressed.ply',
             'splat': '.splat',
-            'viewer': '-viewer.zip'
+            'viewer': '-viewer.html'
         };
 
         const replaceExtension = (filename: string, extension: string) => {

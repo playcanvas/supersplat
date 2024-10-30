@@ -10,7 +10,6 @@ import { Splat } from './splat';
 import { SHRotation } from './sh-utils';
 import { version } from '../package.json';
 import { template as ViewerHtmlTemplate } from './templates/viewer-html-template';
-import { template as OrbitCameraTemplate } from './templates/orbit-camera-mjs-template';
 
 // async function for writing data
 type WriteFunc = (data: Uint8Array, finalWrite?: boolean) => void;
@@ -740,14 +739,12 @@ const serializeViewer = async (splats: Splat[], write: WriteFunc) => {
     });
 
     const plyModel = encodeBase64(compressedData);
-    const cameraScriptSource = encodeBase64((new TextEncoder()).encode(OrbitCameraTemplate));
 
     // use camera clear color
     const bgClr = splats[0].scene.events.invoke('bgClr');
     const html = ViewerHtmlTemplate
         .replace('{{clearColor}}', `${bgClr.r}, ${bgClr.g}, ${bgClr.b}`)
-        .replace('{{plyModel}}', plyModel)
-        .replace('{{cameraScriptSource}}', cameraScriptSource);
+        .replace('{{plyModel}}', plyModel);
 
     await write(new TextEncoder().encode(html), true);
 };

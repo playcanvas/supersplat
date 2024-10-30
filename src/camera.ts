@@ -53,14 +53,6 @@ const vb = new Vec3();
 const vc = new Vec3();
 const v4 = new Vec4();
 
-// homogenous matrix-vector multiplication
-const hmul = (vec: Vec3, mat: Mat4) => {
-    v4.set(vec.x, vec.y, vec.z, 1);
-    mat.transformVec4(v4, v4);
-    vec.set(v4.x / v4.w, v4.y / v4.w, v4.z / v4.w);
-    return vec;
-};
-
 // modulo dealing with negative numbers
 const mod = (n: number, m: number) => ((n % m) + m) % m;
 
@@ -370,9 +362,11 @@ class Camera extends Element {
         this.entity.camera.renderTarget = renderTarget;
         this.entity.camera.horizontalFov = width > height;
 
+        const workColorBuffer = createTexture('workColor', width, height, PIXELFORMAT_RGBA8);
+
         // create pick mode render target (reuse color buffer)
         this.workRenderTarget = new RenderTarget({
-            colorBuffer,
+            colorBuffer: workColorBuffer,
             depth: false,
             autoResolve: false
         });

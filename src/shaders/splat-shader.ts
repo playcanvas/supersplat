@@ -33,19 +33,16 @@ void main(void)
             gl_Position = discardVec;
             return;
         }
+    #elif UNDERLAY_PASS
+        if (vertexState != 1u) {
+            gl_Position = discardVec;
+            return;
+        }
     #else
         if ((vertexState & 4u) != 0u) {
             gl_Position = discardVec;
             return;
         }
-    #endif
-
-
-    #if UNDERLAY_PASS
-    if ((vertexState & 3u) == 0u) {
-        gl_Position = discardVec;
-        return;
-    }
     #endif
 
     // get center

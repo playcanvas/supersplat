@@ -14,6 +14,7 @@ import {
     Texture,
     Vec3,
     WebglGraphicsDevice,
+    BlendState,
 } from 'playcanvas';
 import { Splat } from './splat';
 
@@ -296,6 +297,7 @@ class DataProcessor {
             });
         }
 
+        device.setBlendState(BlendState.NOBLEND);
         drawQuadWithShader(device, resources.renderTarget, resources.shader);
 
         const glDevice = device as WebglGraphicsDevice;
@@ -334,6 +336,7 @@ class DataProcessor {
 
         const glDevice = device as WebglGraphicsDevice;
 
+        device.setBlendState(BlendState.NOBLEND);
         drawQuadWithShader(device, resources.renderTarget, resources.shader);
         glDevice.gl.readPixels(0, 0, transformA.width, 1, resources.minTexture.impl._glFormat, resources.minTexture.impl._glPixelType, resources.minData);
 
@@ -380,6 +383,7 @@ class DataProcessor {
             splat_params: [transformA.width, numSplats]
         });
 
+        device.setBlendState(BlendState.NOBLEND);
         drawQuadWithShader(device, resources.renderTarget, resources.shader);
 
         const glDevice = device as WebglGraphicsDevice;

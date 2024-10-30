@@ -1,8 +1,5 @@
 import {
-    ADDRESS_CLAMP_TO_EDGE,
     CULLFACE_NONE,
-    FILTER_NEAREST,
-    PIXELFORMAT_RGBA8,
     SEMANTIC_POSITION,
     createShaderFromCode,
     BlendState,
@@ -11,8 +8,6 @@ import {
     Entity,
     Layer,
     Shader,
-    Texture,
-    RenderTarget,
     QuadRender,
     WebglGraphicsDevice,
 } from "playcanvas";
@@ -21,25 +16,25 @@ import { vertexShader, fragmentShader } from './shaders/outline-shader';
 
 class Outline extends Element {
     entity: Entity;
-    colorBuffer: Texture;
-    renderTarget: RenderTarget;
-
     shader: Shader;
     quadRender: QuadRender;
-
     clr = new Color(1, 1, 1, 0.5);
-
-    enabled = true;
 
     constructor() {
         super(ElementType.other);
 
         this.entity = new Entity('outlineCamera');
-        this.entity.addComponent('camera', {
-            priority: -1,
-        });
+        this.entity.addComponent('camera');
         this.entity.camera.setShaderPass('OUTLINE');
         this.entity.camera.clearColor = new Color(0, 0, 0, 0);
+    }
+
+    get enabled() {
+        return this.entity.enabled;
+    }
+
+    set enabled(value: boolean) {
+        this.entity.enabled = value;
     }
 
     add() {
@@ -47,12 +42,7 @@ class Outline extends Element {
 
         // render overlay layer only
         this.entity.camera.layers = [this.scene.overlayLayer.id];
-
         this.scene.camera.entity.addChild(this.entity);
-
-        this.scene.events.on('camera.resize', (size: { width: number, height: number }) => {
-            this.rebuildRenderTargets(size.width, size.height);
-        });
 
         this.shader = createShaderFromCode(device, vertexShader, fragmentShader, 'apply-outline', {
             vertex_position: SEMANTIC_POSITION
@@ -66,11 +56,8 @@ class Outline extends Element {
         const clrStorage = [1, 1, 1, 1];
 
         // apply the outline texture to the display before gizmos render
-        this.scene.events.on('camera.preRenderLayer', (layer: Layer, transparent: boolean) => {
-            if (!this.enabled ||
-                !this.scene.events.invoke('view.outlineSelection') ||
-                layer !== this.scene.gizmoLayer ||
-                !transparent) {
+        this.entity.camera.onPostRenderLayer = (layer: Layer, transparent: boolean) => {
+            if (!this.enabled || layer !== this.scene.overlayLayer || !transparent) {
                 return;
             }
 
@@ -84,7 +71,7 @@ class Outline extends Element {
             clrStorage[2] = clr.b;
             clrStorage[3] = clr.a;
 
-            outlineTextureId.setValue(this.colorBuffer);
+            outlineTextureId.setValue(this.entity.camera.renderTarget.colorBuffer);
             clrId.setValue(clrStorage);
 
             const glDevice = device as WebglGraphicsDevice;
@@ -92,7 +79,7 @@ class Outline extends Element {
             glDevice.updateBegin();
             this.quadRender.render();
             glDevice.updateEnd();
-        });
+        };
     }
 
     remove() {
@@ -110,36 +97,9 @@ class Outline extends Element {
         dst.nearClip = src.nearClip;
         dst.farClip = src.farClip;
         dst.orthoHeight = src.orthoHeight;
-    }
 
-    rebuildRenderTargets(width: number, height: number) {
-        const old = this.renderTarget;
-        if (old) {
-            old.destroyTextureBuffers();
-            old.destroy();
-        }
-
-        const createTexture = (name: string, format: number) => {
-            return new Texture(this.scene.app.graphicsDevice, {
-                name, width, height, format,
-                mipmaps: false,
-                minFilter: FILTER_NEAREST,
-                magFilter: FILTER_NEAREST,
-                addressU: ADDRESS_CLAMP_TO_EDGE,
-                addressV: ADDRESS_CLAMP_TO_EDGE
-            });
-        };
-
-        const colorBuffer = createTexture('cameraOutline', PIXELFORMAT_RGBA8);
-        const renderTarget = new RenderTarget({
-            colorBuffer,
-            depth: false,
-        });
-
-        this.colorBuffer = colorBuffer;
-        this.renderTarget = renderTarget;
-
-        this.entity.camera.renderTarget = renderTarget;
+        this.enabled = this.scene.events.invoke('view.outlineSelection');
+        this.entity.camera.renderTarget = this.scene.camera.workRenderTarget;
     }
 }
 

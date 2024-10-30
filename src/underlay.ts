@@ -1,31 +1,21 @@
 import {
-    ADDRESS_CLAMP_TO_EDGE,
-    FILTER_NEAREST,
-    PIXELFORMAT_RGBA8,
     SEMANTIC_POSITION,
     createShaderFromCode,
     BlendState,
     Color,
     Entity,
+    Layer,
     Shader,
-    Texture,
-    RenderTarget,
     QuadRender,
-    WebglGraphicsDevice,
-    LAYERID_WORLD
+    WebglGraphicsDevice
 } from "playcanvas";
 import { Element, ElementType } from "./element";
 import { vertexShader, fragmentShader } from './shaders/blit-shader';
 
 class Underlay extends Element {
     entity: Entity;
-    colorBuffer: Texture;
-    renderTarget: RenderTarget;
-
     shader: Shader;
     quadRender: QuadRender;
-
-    enabled = true;
 
     constructor() {
         super(ElementType.other);
@@ -36,53 +26,47 @@ class Underlay extends Element {
         this.entity.camera.clearColor = new Color(0, 0, 0, 0);
     }
 
-    add() {
-        this.entity.camera.layers = [LAYERID_WORLD];
-        this.scene.camera.entity.addChild(this.entity);
+    get enabled() {
+        return this.entity.enabled;
+    }
 
+    set enabled(value: boolean) {
+        this.entity.enabled = value;
+    }
+
+    add() {
         const device = this.scene.app.graphicsDevice;
 
-        this.scene.events.on('camera.resize', (size: { width: number, height: number }) => this.rebuildRenderTargets(size.width, size.height));
+        this.entity.camera.layers = [this.scene.overlayLayer.id];
+        this.scene.camera.entity.addChild(this.entity);
 
-        this.shader = createShaderFromCode(device, vertexShader, fragmentShader, 'apply-blit', {
+        this.shader = createShaderFromCode(device, vertexShader, fragmentShader, 'apply-underlay', {
             vertex_position: SEMANTIC_POSITION
         });
 
         this.quadRender = new QuadRender(this.shader);
 
-        this.scene.app.on('postrender', () => this.onPostRenders());
+        const blitTextureId = device.scope.resolve('blitTexture');
+
+        this.entity.camera.onPostRenderLayer = (layer: Layer, transparent: boolean) => {
+            if (!this.enabled || layer !== this.scene.overlayLayer || !transparent) {
+                return;
+            }
+    
+            device.setBlendState(BlendState.ADDBLEND);
+
+            blitTextureId.setValue(this.entity.camera.renderTarget.colorBuffer);
+    
+            const glDevice = device as WebglGraphicsDevice;
+            glDevice.setRenderTarget(this.scene.camera.entity.camera.renderTarget);
+            glDevice.updateBegin();
+            this.quadRender.render();
+            glDevice.updateEnd();
+        };
     }
 
     remove() {
         this.scene.camera.entity.removeChild(this.entity);
-    }
-
-    onPostRenders(): void {
-        const device = this.scene.app.graphicsDevice;
-
-        const blitTextureId = device.scope.resolve('blitTexture');
-
-        const blendState = device.blendState.clone();
-        device.setBlendState(BlendState.ADDBLEND);
-
-        blitTextureId.setValue(this.colorBuffer);
-
-        const glDevice = device as WebglGraphicsDevice;
-        glDevice.setRenderTarget(this.scene.camera.entity.camera.renderTarget);
-        glDevice.updateBegin();
-        this.quadRender.render();
-        glDevice.updateEnd();
-        device.setBlendState(blendState)
-
-        const renderTarget = this.scene.camera.entity.camera.renderTarget;
-
-        // resolve msaa buffer
-        if (renderTarget.samples > 1) {
-            renderTarget.resolve(true, false);
-        }
-
-        // copy render target
-        glDevice.copyRenderTarget(renderTarget, null, true, false);
     }
 
     onPreRender() {
@@ -95,37 +79,10 @@ class Underlay extends Element {
         dst.fov = src.fov;
         dst.nearClip = src.nearClip;
         dst.farClip = src.farClip;
-    }
+        dst.orthoHeight = src.orthoHeight;
 
-    rebuildRenderTargets(width: number, height: number) {
-        const old = this.renderTarget;
-        if (old) {
-            old.destroyTextureBuffers();
-            old.destroy();
-        }
-
-        const createTexture = (name: string, format: number) => {
-            return new Texture(this.scene.app.graphicsDevice, {
-                name, width, height, format,
-                mipmaps: false,
-                minFilter: FILTER_NEAREST,
-                magFilter: FILTER_NEAREST,
-                addressU: ADDRESS_CLAMP_TO_EDGE,
-                addressV: ADDRESS_CLAMP_TO_EDGE
-            });
-        };
-
-        const colorBuffer = createTexture('cameraOutline', PIXELFORMAT_RGBA8);
-        // NOTE: reuse depthBuffer from the main camera
-        const renderTarget = new RenderTarget({
-            colorBuffer,
-            depthBuffer: this.scene.camera.entity.camera.renderTarget.depthBuffer
-        });
-
-        this.colorBuffer = colorBuffer;
-        this.renderTarget = renderTarget;
-
-        this.entity.camera.renderTarget = renderTarget;
+        this.enabled = !this.scene.events.invoke('view.outlineSelection');
+        this.entity.camera.renderTarget = this.scene.camera.workRenderTarget;
     }
 }
 

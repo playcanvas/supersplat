@@ -169,7 +169,7 @@ const localizeInit = () => {
                         "scene.export": "Export",
                         "scene.export.compressed-ply": "Compressed PLY (.ply)",
                         "scene.export.splat": "Splat file (.splat)",
-                        "scene.export.viewer": "Viewer App (.zip)",
+                        "scene.export.viewer": "Viewer App (.html)",
 
                         // Selection menu
                         "selection": "Selection",
@@ -450,7 +450,7 @@ const localizeInit = () => {
                         "scene.export": "エクスポート",
                         "scene.export.compressed-ply": "Compressed PLY (.ply)",
                         "scene.export.splat": "Splat (.splat)",
-                        "scene.export.viewer": "Viewer App (.zip)",
+                        "scene.export.viewer": "Viewer App (.html)",
 
                         // Selection menu
                         "selection": "選択",

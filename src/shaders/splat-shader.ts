@@ -176,10 +176,12 @@ void main(void)
                 if ((vertexState & 1u) != 0u) {
                     // selected
 
+                    vec3 selectedClr = vec3(1.0, 1.0, 0.0);
+
                     #if UNDERLAY_PASS
-                        c = mix(color.xyz, vec3(0.2, 0.2, 0.0), selectionAlpha) * selectionAlpha;
+                        c = mix(color.xyz, selectedClr * 0.2, selectionAlpha) * selectionAlpha;
                     #else
-                        c = mix(color.xyz, vec3(0.8, 0.8, 0.0), selectionAlpha);
+                        c = mix(color.xyz, selectedClr * 0.8, selectionAlpha);
                     #endif
                 } else {
                     // normal

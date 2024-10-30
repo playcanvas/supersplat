@@ -1,9 +1,10 @@
 import {
-    CULLFACE_NONE,
+    BLENDEQUATION_ADD,
+    BLENDMODE_ONE,
+    BLENDMODE_ZERO,
     SEMANTIC_POSITION,
     createShaderFromCode,
     BlendState,
-    DepthState,
     Color,
     Entity,
     Layer,
@@ -12,60 +13,49 @@ import {
     WebglGraphicsDevice,
 } from "playcanvas";
 import { Element, ElementType } from "./element";
-import { vertexShader, fragmentShader } from './shaders/outline-shader';
+import { vertexShader, fragmentShader } from './shaders/blit-shader';
 
-class Outline extends Element {
+class Underlay extends Element {
     entity: Entity;
     shader: Shader;
     quadRender: QuadRender;
     enabled = true;
-    clr = new Color(1, 1, 1, 0.5);
 
     constructor() {
         super(ElementType.other);
 
-        this.entity = new Entity('outlineCamera');
+        this.entity = new Entity('underlayCamera');
         this.entity.addComponent('camera');
-        this.entity.camera.setShaderPass('OUTLINE');
+        this.entity.camera.setShaderPass('UNDERLAY');
         this.entity.camera.clearColor = new Color(0, 0, 0, 0);
     }
 
     add() {
         const device = this.scene.app.graphicsDevice;
 
-        // render overlay layer only
         this.entity.camera.layers = [this.scene.overlayLayer.id];
         this.scene.camera.entity.addChild(this.entity);
 
-        this.shader = createShaderFromCode(device, vertexShader, fragmentShader, 'apply-outline', {
+        this.shader = createShaderFromCode(device, vertexShader, fragmentShader, 'apply-underlay', {
             vertex_position: SEMANTIC_POSITION
         });
 
         this.quadRender = new QuadRender(this.shader);
 
-        const outlineTextureId = device.scope.resolve('outlineTexture');
-        const clrId = device.scope.resolve('clr');
-        const clr = this.clr;
-        const clrStorage = [1, 1, 1, 1];
+        const blitTextureId = device.scope.resolve('blitTexture');
+        const blendState = new BlendState(true,
+            BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE,
+            BLENDEQUATION_ADD, BLENDMODE_ZERO, BLENDMODE_ONE
+        );
 
-        // apply the outline texture to the display before gizmos render
         this.entity.camera.onPostRenderLayer = (layer: Layer, transparent: boolean) => {
             if (!this.entity.enabled || layer !== this.scene.overlayLayer || !transparent) {
                 return;
             }
 
-            device.setBlendState(BlendState.ALPHABLEND);
-            device.setCullMode(CULLFACE_NONE);
-            device.setDepthState(DepthState.NODEPTH);
-            device.setStencilState(null, null);
+            device.setBlendState(blendState);
 
-            clrStorage[0] = clr.r;
-            clrStorage[1] = clr.g;
-            clrStorage[2] = clr.b;
-            clrStorage[3] = clr.a;
-
-            outlineTextureId.setValue(this.entity.camera.renderTarget.colorBuffer);
-            clrId.setValue(clrStorage);
+            blitTextureId.setValue(this.entity.camera.renderTarget.colorBuffer);
 
             const glDevice = device as WebglGraphicsDevice;
             glDevice.setRenderTarget(this.scene.camera.entity.camera.renderTarget);
@@ -91,9 +81,9 @@ class Outline extends Element {
         dst.farClip = src.farClip;
         dst.orthoHeight = src.orthoHeight;
 
-        this.entity.enabled = this.enabled && this.scene.events.invoke('view.outlineSelection');
+        this.entity.enabled = this.enabled && !this.scene.events.invoke('view.outlineSelection');
         this.entity.camera.renderTarget = this.scene.camera.workRenderTarget;
     }
 }
 
-export { Outline };
+export { Underlay };

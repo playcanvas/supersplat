@@ -20,6 +20,7 @@ import { Camera } from './camera';
 import { InfiniteGrid as Grid } from './infinite-grid';
 import { DataProcessor } from './data-processor';
 import { Outline } from './outline';
+import { Underlay } from './underlay';
 
 class Scene {
     events: Events;
@@ -49,6 +50,7 @@ class Scene {
     splatOverlay: SplatOverlay;
     grid: Grid;
     outline: Outline;
+    underlay: Underlay;
 
     contentRoot: Entity;
     cameraRoot: Entity;
@@ -195,6 +197,8 @@ class Scene {
 
         this.outline = new Outline();
         this.add(this.outline);
+        this.underlay = new Underlay();
+        this.add(this.underlay);
     }
 
     async load() {

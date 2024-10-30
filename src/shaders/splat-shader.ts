@@ -33,6 +33,11 @@ void main(void)
             gl_Position = discardVec;
             return;
         }
+    #elif UNDERLAY_PASS
+        if (vertexState != 1u) {
+            gl_Position = discardVec;
+            return;
+        }
     #else
         if ((vertexState & 4u) != 0u) {
             gl_Position = discardVec;
@@ -170,7 +175,14 @@ void main(void)
                 // get splat color
                 if ((vertexState & 1u) != 0u) {
                     // selected
-                    c = mix(color.xyz, vec3(1.0, 1.0, 0.0), selectionAlpha);
+
+                    vec3 selectedClr = vec3(1.0, 1.0, 0.0);
+
+                    #if UNDERLAY_PASS
+                        c = mix(color.xyz, selectedClr * 0.2, selectionAlpha) * selectionAlpha;
+                    #else
+                        c = mix(color.xyz, selectedClr * 0.8, selectionAlpha);
+                    #endif
                 } else {
                     // normal
                     c = color.xyz;

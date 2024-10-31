@@ -276,6 +276,7 @@ class Splat extends Element {
         };
 
         this.localBoundStorage = instance.splat.aabb;
+        this.selectionBoundStorage = new BoundingBox();
         this.worldBoundStorage = instance.meshInstance._aabb;
 
         instance.meshInstance._updateAabb = false;
@@ -441,6 +442,24 @@ class Splat extends Element {
 
         if (this.visible && selected) {
             // render bounding box
+            const bound_annotation_selection = true;
+            if (bound_annotation_selection){
+                if (events.invoke('camera.bound')) {
+                    const bound = this.selectionBound;
+                    const scale = new Mat4().setTRS(bound.center, Quat.IDENTITY, bound.halfExtents);
+                    scale.mul2(this.entity.getWorldTransform(), scale);
+    
+                    for (let i = 0; i < boundingPoints.length / 2; i++) {
+                        const a = boundingPoints[i * 2];
+                        const b = boundingPoints[i * 2 + 1];
+                        scale.transformPoint(a, veca);
+                        scale.transformPoint(b, vecb);
+    
+                        this.scene.app.drawLine(veca, vecb, Color.RED, true, this.scene.debugLayer);
+                    }
+                }
+            }
+            
             if (events.invoke('camera.bound')) {
                 const bound = this.localBound;
                 const scale = new Mat4().setTRS(bound.center, Quat.IDENTITY, bound.halfExtents);
@@ -491,7 +510,7 @@ class Splat extends Element {
             const visiblePred = (i: number) => (state[i] & (State.hidden | State.deleted)) === 0;
             const selectionPred = (i: number) => visiblePred(i) && ((state[i] & State.selected) === State.selected);
 
-            if (!this.splatData.calcAabb(selectionBound, selectionPred)) {
+            if (!this.splatData.calcAabbExact(selectionBound, selectionPred)) {
                 selectionBound.copy(this.localBound);
             }
         }

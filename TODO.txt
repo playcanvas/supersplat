@@ -80,3 +80,8 @@ a.fill(1) (Or State enumerator values)
 
 # Update scene with new state values, 1 signifies changed state
 scene.elements[3].updateState(1)
+
+
+Wants:
+1. Show bounding box for selection
+Linearly separate the splats based on features (expand in z coordinate for example)

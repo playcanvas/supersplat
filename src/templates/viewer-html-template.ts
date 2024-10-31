@@ -30,26 +30,48 @@ const template = /* html */ `
                 const app = await Application.getApplication();
                 registerScript(MultiCamera, 'multiCamera');
 
-                const camera = document.querySelector('pc-entity[name="camera"]');
                 await new Promise(resolve => setTimeout(resolve));
-                const multiCamera = camera.entity.script.multiCamera;
 
-                const frameScene = () => {
-                    const gsplatComponents = app.root.findComponents('gsplat');
-                    const bbox = gsplatComponents?.[0]?.instance?.meshInstance?.aabb ?? new BoundingBox();
+                const multiCamera = document.querySelector('pc-entity[name="camera"]').entity.script.multiCamera;
 
-                    multiCamera.sceneSize = bbox.halfExtents.length() * 0.2;
+                const frameScene = (bbox) => {
+                    const sceneSize = bbox.halfExtents.length();
+                    multiCamera.sceneSize = sceneSize * 0.2;
+                    multiCamera.focus(bbox.center, new Vec3(2, 1, 2).normalize().mulScalar(multiCamera.sceneSize * 3).add(bbox.center));
+                };
+
+                const resetCamera = (bbox) => {
+                    const sceneSize = bbox.halfExtents.length();
+                    multiCamera.sceneSize = sceneSize * 0.2;
                     multiCamera.focus(Vec3.ZERO, new Vec3(2, 1, 2));
                 };
 
-                window.addEventListener('keydown', (e) => {
-                    if (e.key === 'f') {
-                        frameScene();
-                    }
-                });
+                const calcBound = () => {
+                    const gsplatComponents = app.root.findComponents('gsplat');
+                    return gsplatComponents?.[0]?.instance?.meshInstance?.aabb ?? new BoundingBox();
+                };
 
                 app.assets.on('load', () => {
-                    setTimeout(frameScene);
+                    setTimeout(() => {
+                        const bbox = calcBound();
+
+                        if (bbox.halfExtents.length() > 100) {
+                            resetCamera(bbox);
+                        } else {
+                            frameScene(bbox);
+                        }
+
+                        window.addEventListener('keydown', (e) => {
+                            switch (e.key) {
+                                case 'f':
+                                    frameScene(bbox);
+                                    break;
+                                case 'r':
+                                    resetCamera(bbox);
+                                    break;
+                            }
+                        });
+                    });
                 });
             </script>
             <pc-asset id="ply" type="gsplat" src="data:application/ply;base64,{{plyModel}}"></pc-asset>

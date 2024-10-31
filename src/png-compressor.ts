@@ -67,7 +67,7 @@ class PngCompressor {
     compress: (pixels: Uint32Array, width: number, height: number) => Promise<ArrayBuffer>;
 
     constructor() {
-        const urlBase = new URL('/static/lib/lodepng', document.baseURI);
+        const urlBase = new URL('static/lib/lodepng', document.baseURI);
         const workerBlob = new Blob([`(${WORKER_STR})('${urlBase}')\n\n`], {
             type: 'application/javascript'
         });

@@ -68,18 +68,15 @@ class Splat extends Element {
         const splatData = splatResource.splatData;
 
         // get material options object for a shader that renders with the given number of bands
-        const getMaterialOptions = (bands: number) => {
-            return {
-                vertex: vertexShader,
-                fragment: fragmentShader,
-                defines: ['USE_SH1', 'USE_SH2', 'USE_SH3'].splice(0, bands)
-            };
+        const materialOptions = {
+            vertex: vertexShader,
+            fragment: fragmentShader
         };
 
         this.asset = asset;
         this.splatData = splatData;
         this.numSplats = splatData.numSplats;
-        this.entity = splatResource.instantiate(getMaterialOptions(0));
+        this.entity = splatResource.instantiate(materialOptions);
 
         const instance = this.entity.gsplat.instance;
 
@@ -118,9 +115,14 @@ class Splat extends Element {
 
         this.rebuildMaterial = (bands: number) => {
             // @ts-ignore
-            instance.createMaterial(getMaterialOptions(instance.splat.hasSH ? bands : 0));
+            instance.createMaterial(materialOptions);
 
             const material = instance.material;
+
+            const numBands = instance.splat.hasSH ? bands : 0;
+            material.setDefine('USE_SH1', numBands > 0 ? '1' : false);
+            material.setDefine('USE_SH2', numBands > 1 ? '1' : false);
+            material.setDefine('USE_SH3', numBands > 2 ? '1' : false);
             material.setParameter('splatState', this.stateTexture);
             material.setParameter('splatTransform', this.transformTexture);
             material.setParameter('transformPalette', this.transformPalette.texture);

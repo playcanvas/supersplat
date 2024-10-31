@@ -6,9 +6,49 @@ const template = /* html */ `
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>3D Gaussian Splat Viewer</title>
         <style>
-            body {
+            * {
                 margin: 0;
+                padding: 0;
+            }
+            body {
                 overflow: hidden;
+            }
+            #infoPanel {
+                position: absolute;
+                left: 5px;
+                bottom: 5px;
+                padding: 10px;
+                color: lightgrey;
+                background-color: rgba(0, 0, 0, 0.5);
+                font-family: sans-serif;
+                font-size: 12px;
+                border-radius: 6px;
+                cursor: pointer;
+                user-select: none;
+            }
+            .heading {
+                display: inline-block;
+                font-weight: bold;
+                width: 20px;
+                height: 20px;
+                line-height: 20px;
+                border-radius: 10px;
+                color: black;
+                background-color: white;
+                text-align: center;
+            }
+            .divider {
+                color: white;
+                border-bottom: 1px solid gray;
+                padding: 0px 0px 3px 0px;
+                margin: 0px 0px 3px 0px;
+                font-weight: bold;
+            }
+            :not(.hidden) > .heading {
+                display: none;
+            }
+            .hidden :not(.heading) {
+                display: none;
             }
         </style>
         <script type="importmap">
@@ -32,12 +72,14 @@ const template = /* html */ `
 
                 await new Promise(resolve => setTimeout(resolve));
 
-                const multiCamera = document.querySelector('pc-entity[name="camera"]').entity.script.multiCamera;
+                const entity = document.querySelector('pc-entity[name="camera"]').entity;
+                const multiCamera = entity.script.multiCamera;
 
                 const frameScene = (bbox) => {
                     const sceneSize = bbox.halfExtents.length();
-                    multiCamera.sceneSize = sceneSize * 0.2;
-                    multiCamera.focus(bbox.center, new Vec3(2, 1, 2).normalize().mulScalar(multiCamera.sceneSize * 3).add(bbox.center));
+                    const distance = sceneSize / Math.sin(entity.camera.fov / 180 * Math.PI * 0.5);
+                    multiCamera.sceneSize = sceneSize;
+                    multiCamera.focus(bbox.center, new Vec3(2, 1, 2).normalize().mulScalar(distance).add(bbox.center));
                 };
 
                 const resetCamera = (bbox) => {
@@ -89,6 +131,21 @@ const template = /* html */ `
                 </pc-entity>
             </pc-scene>
         </pc-app>
+
+        <!-- Info Panel -->
+        <div id="infoPanel" class="hidden" onclick="this.classList.toggle('hidden')">
+        <span class="heading">?</span>
+        <div class="divider">Controls</div>
+        <div>Left mouse button - Orbit</div>
+        <div>Middle mouse button - Pan</div>
+        <div>Right mouse button - Look around</div>
+        <div>Mouse wheel - Zoom</div>
+        <div>W,S,A,D - Fly</div>
+        <div>Shift - Fly faster</div>
+        <div>Ctrl - Fly slower</div>
+        <div>F - Frame the scene</div>
+        <div>R - Return to the origin</div>
+    </div>
     </body>
 </html>
 `;

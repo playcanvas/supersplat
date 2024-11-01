@@ -8,6 +8,9 @@ uniform sampler2D splatState;
 uniform highp usampler2D splatTransform;        // per-splat index into transform palette
 uniform sampler2D transformPalette;             // palette of transform matrices
 
+uniform vec4 selectedClr;
+uniform vec4 lockedClr;
+
 varying mediump vec2 texCoord;
 varying mediump vec4 color;
 flat varying highp uint vertexState;
@@ -28,6 +31,7 @@ void main(void)
 
     // get vertex state, discard if deleted
     vertexState = uint(texelFetch(splatState, splatUV, 0).r * 255.0);
+
     #ifdef OUTLINE_PASS
         if (vertexState != 1u) {
             gl_Position = discardVec;
@@ -35,6 +39,11 @@ void main(void)
         }
     #elif UNDERLAY_PASS
         if (vertexState != 1u) {
+            gl_Position = discardVec;
+            return;
+        }
+    #elif if PICK_PASS
+        if ((vertexState & 6u) != 0u) {
             gl_Position = discardVec;
             return;
         }
@@ -96,8 +105,8 @@ void main(void)
 
     texCoord = vertex_position.xy * 0.5;
 
+    // handle splat color
     #ifdef FORWARD_PASS
-        // get color
         color = texelFetch(splatColor, splatUV, 0);
 
         #ifdef USE_SH1
@@ -110,6 +119,19 @@ void main(void)
             }
             color.xyz = max(color.xyz + evalSH(viewDir), 0.0);
         #endif
+
+        if ((vertexState & 2u) != 0u) {
+            // locked
+            color *= lockedClr;
+        } else if ((vertexState & 1u) != 0u) {
+            // selected
+            color.xyz = mix(color.xyz, selectedClr.xyz * 0.8, selectedClr.a);
+        }
+    #endif
+
+    #if UNDERLAY_PASS
+        color = texelFetch(splatColor, splatUV, 0);
+        color.xyz = mix(color.xyz, selectedClr.xyz * 0.2, selectedClr.a) * selectedClr.a;
     #endif
 
     #ifdef PICK_PASS
@@ -132,7 +154,6 @@ flat varying highp uint vertexState;
 uniform int mode;               // 0: centers, 1: rings
 uniform float pickerAlpha;
 uniform float ringSize;
-uniform float selectionAlpha;
 
 void main(void)
 {
@@ -152,8 +173,8 @@ void main(void)
         mediump float B = exp(-A * 4.0) * color.a;
 
         #ifdef PICK_PASS
-            if (B < pickerAlpha || (vertexState & 2u) != 0u) {
-                // hidden
+            if (B < pickerAlpha) {
+                // locked
                 discard;
             }
 
@@ -164,45 +185,16 @@ void main(void)
                 float((vertexId >> 24) & 255u) / 255.0
             );
         #else
-            vec3 c;
-            float alpha;
-
-            if ((vertexState & 2u) != 0u) {
-                // frozen/hidden
-                c = vec3(0.0, 0.0, 0.0);
-                alpha = B * 0.05;
-            } else {
-                // get splat color
-                if ((vertexState & 1u) != 0u) {
-                    // selected
-
-                    vec3 selectedClr = vec3(1.0, 1.0, 0.0);
-
-                    #if UNDERLAY_PASS
-                        c = mix(color.xyz, selectedClr * 0.2, selectionAlpha) * selectionAlpha;
-                    #else
-                        c = mix(color.xyz, selectedClr * 0.8, selectionAlpha);
-                    #endif
+            if (mode != 0 && ringSize > 0.0) {
+                // rings mode
+                if (A < 1.0 - ringSize) {
+                    B = max(0.05, B);
                 } else {
-                    // normal
-                    c = color.xyz;
-                }
-
-                if (mode == 0 || ringSize == 0.0) {
-                    // centers mode
-                    alpha = B;
-                }
-                else {
-                    // rings mode
-                    if (A < 1.0 - ringSize) {
-                        alpha = max(0.05, B);
-                    } else {
-                        alpha = 0.6;
-                    }
+                    B = 0.6;
                 }
             }
 
-            gl_FragColor = vec4(c, alpha);
+            gl_FragColor = vec4(color.xyz, B);
         #endif
     #endif
 }

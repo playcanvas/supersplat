@@ -11,9 +11,8 @@ uniform sampler2D transformPalette;             // palette of transform matrices
 uniform vec4 selectedClr;
 uniform vec4 lockedClr;
 
-varying mediump vec2 texCoord;
+varying mediump vec3 texCoordIsLocked;          // store locked flat in z
 varying mediump vec4 color;
-flat varying highp uint vertexState;
 
 #ifdef PICK_PASS
     flat varying highp uint vertexId;
@@ -30,7 +29,7 @@ void main(void)
     }
 
     // get vertex state, discard if deleted
-    vertexState = uint(texelFetch(splatState, splatUV, 0).r * 255.0);
+    uint vertexState = uint(texelFetch(splatState, splatUV, 0).r * 255.0 + 0.5);
 
     #ifdef OUTLINE_PASS
         if (vertexState != 1u) {
@@ -42,7 +41,7 @@ void main(void)
             gl_Position = discardVec;
             return;
         }
-    #elif if PICK_PASS
+    #elif PICK_PASS
         if ((vertexState & 6u) != 0u) {
             gl_Position = discardVec;
             return;
@@ -103,7 +102,8 @@ void main(void)
     // ensure splats aren't clipped by front and back clipping planes
     gl_Position.z = clamp(gl_Position.z, -abs(gl_Position.w), abs(gl_Position.w));
 
-    texCoord = vertex_position.xy * 0.5;
+    // store texture coord and locked state
+    texCoordIsLocked = vec3(vertex_position.xy * 0.5, (vertexState & 2u) != 0u ? 1.0 : 0.0);
 
     // handle splat color
     #ifdef FORWARD_PASS
@@ -142,10 +142,8 @@ void main(void)
 `;
 
 const fragmentShader = /*glsl*/`
-varying mediump vec2 texCoord;
+varying mediump vec3 texCoordIsLocked;
 varying mediump vec4 color;
-
-flat varying highp uint vertexState;
 
 #ifdef PICK_PASS
     flat varying highp uint vertexId;
@@ -157,6 +155,7 @@ uniform float ringSize;
 
 void main(void)
 {
+    vec2 texCoord = texCoordIsLocked.xy;
     mediump float A = dot(texCoord, texCoord);
 
     #if OUTLINE_PASS
@@ -179,13 +178,13 @@ void main(void)
             }
 
             gl_FragColor = vec4(
-                float(vertexId & 255u) / 255.0,
-                float((vertexId >> 8) & 255u) / 255.0,
-                float((vertexId >> 16) & 255u) / 255.0,
-                float((vertexId >> 24) & 255u) / 255.0
-            );
+                float(vertexId & 255u),
+                float((vertexId >> 8) & 255u),
+                float((vertexId >> 16) & 255u),
+                float((vertexId >> 24) & 255u)
+            ) / 255.0;
         #else
-            if (mode != 0 && ringSize > 0.0) {
+            if (texCoordIsLocked.z == 0.0 && ringSize > 0.0) {
                 // rings mode
                 if (A < 1.0 - ringSize) {
                     B = max(0.05, B);

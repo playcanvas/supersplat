@@ -48,18 +48,22 @@ class PolygonSelection {
         };
 
         const pointerdown = (e: PointerEvent) => {
-            e.preventDefault();
-            e.stopPropagation();
+            if (points.length > 0 || (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary)) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
         };
 
-        const pointerup = (e: PointerEvent) => {            
-            e.preventDefault();
-            e.stopPropagation();
-
-            if(isClosed())
-                commitSelection(e);
-            else
-                points.push(currentPoint);
+        const pointerup = (e: PointerEvent) => {
+            if (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary) {
+                e.preventDefault();
+                e.stopPropagation();
+    
+                if(isClosed())
+                    commitSelection(e);
+                else
+                    points.push(currentPoint);
+            }
         };
 
         const dblclick = (e: PointerEvent) => {   
@@ -125,6 +129,8 @@ class PolygonSelection {
             parent.removeEventListener('pointermove', pointermove);
             parent.removeEventListener('pointerup', pointerup);
             parent.removeEventListener('dblclick', dblclick);
+            points = [];
+            paint();
         };
 
         svg.appendChild(polyline);

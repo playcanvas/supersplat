@@ -73,7 +73,9 @@ class Splat extends Element {
         for (let i = 0; i < 45; ++i) {
             shData.push(splatData.getProp(`f_rest_${i}`));
         }
-        compressSH(shData as unknown as number[][], splatData.numSplats);
+        if (shData.every(x => x)) {
+            compressSH(shData as unknown as number[][], splatData.numSplats);
+        }
         
         // get material options object for a shader that renders with the given number of bands
         const materialOptions = {

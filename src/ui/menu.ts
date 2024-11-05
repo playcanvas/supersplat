@@ -230,6 +230,12 @@ class Menu extends Container {
         }, {
             // separator
         }, {
+            text: localize('help.basics-video'),
+            icon: 'E261',
+            onSelect: () => window.open('https://youtu.be/MwzaEM2I55I', '_blank').focus()
+        }, {
+            // separator
+        }, {
             text: localize('help.discord'),
             icon: 'E233',
             onSelect: () => window.open('https://discord.gg/T3pnhRTTAY', '_blank').focus()

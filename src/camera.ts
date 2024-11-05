@@ -456,7 +456,12 @@ class Camera extends Element {
     }
 
     get fovFactor() {
-        return Math.sin(this.fov * math.DEG_TO_RAD * 0.5);
+        // we set the fov of the longer axis. here we get the fov of the other (smaller) axis so framing
+        // doesn't cut off the scene.
+        const { width, height } = this.scene.targetSize;
+        const aspect = (width && height) ? this.entity.camera.horizontalFov ? height / width : width / height : 1;
+        const fov = 2 * Math.atan(Math.tan(this.fov * math.DEG_TO_RAD * 0.5) * aspect);
+        return Math.sin(fov * 0.5);
     }
 
     // intersect the scene at the given screen coordinate and focus the camera on this location

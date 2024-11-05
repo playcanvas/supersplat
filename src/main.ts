@@ -1,4 +1,4 @@
-import { createGraphicsDevice } from 'playcanvas';
+import { Color, createGraphicsDevice } from 'playcanvas';
 import { Scene } from './scene';
 import { getSceneConfig } from './scene-config';
 import { initMaterials } from './material';
@@ -134,31 +134,43 @@ const main = async () => {
         graphicsDevice
     );
 
-    // background color
-    const clr = { r: -1, g: -1, b: -1 };
+    // colors
+    const bgClr = new Color(0, 0, 0, 1);
+    const selectedClr = new Color(1, 1, 0, 1.0);
+    const unselectedClr = new Color(0, 0, 1, 0.5);
+    const lockedClr = new Color(0, 0, 0, 0.05);
 
-    const setBgClr = (r: number, g: number, b: number) => {
-        if (r !== clr.r || g !== clr.g || b !== clr.b) {
-            clr.r = r;
-            clr.g = g;
-            clr.b = b;
-
-            const cnv = (v: number) => `${Math.max(0, Math.min(255, (v * 255))).toFixed(0)}`
-            document.body.style.backgroundColor = `rgba(${cnv(r)},${cnv(g)},${cnv(b)},1)`;
-
-            events.fire('bgClr', r, g, b);
+    const setClr = (target: Color, value: Color, event: string) => {
+        if (!target.equals(value)) {
+            target.copy(value);
+            events.fire(event, target);
         }
-    };
+    }
 
-    events.on('setBgClr', (r: number, g: number, b: number) => {
-        setBgClr(r, g, b);
+    const setBgClr = (clr: Color) => { setClr(bgClr, clr, 'bgClr'); };
+    const setSelectedClr = (clr: Color) => { setClr(selectedClr, clr, 'selectedClr'); };
+    const setUnselectedClr = (clr: Color) => { setClr(unselectedClr, clr, 'unselectedClr'); };
+    const setLockedClr = (clr: Color) => { setClr(lockedClr, clr, 'lockedClr'); };
+
+    events.on('setBgClr', (clr: Color) => { setBgClr(clr); });
+    events.on('setSelectedClr', (clr: Color) => { setSelectedClr(clr); });
+    events.on('setUnselectedClr', (clr: Color) => { setUnselectedClr(clr); });
+    events.on('setLockedClr', (clr: Color) => { setLockedClr(clr); });
+
+    events.function('bgClr', () => { return bgClr; });
+    events.function('selectedClr', () => { return selectedClr; });
+    events.function('unselectedClr', () => { return unselectedClr; });
+    events.function('lockedClr', () => { return lockedClr; });
+
+    events.on('bgClr', (clr: Color) => {
+        const cnv = (v: number) => `${Math.max(0, Math.min(255, (v * 255))).toFixed(0)}`
+        document.body.style.backgroundColor = `rgba(${cnv(clr.r)},${cnv(clr.g)},${cnv(clr.b)},1)`;
     });
+    events.on('selectedClr', (clr: Color) => { scene.forceRender = true; });
+    events.on('unselectedClr', (clr: Color) => { scene.forceRender = true; });
+    events.on('lockedClr', (clr: Color) => { scene.forceRender = true; });
 
-    events.function('bgClr', () => {
-        return { r: clr.r, g: clr.g, b: clr.b };
-    });
-
-    setBgClr(sceneConfig.bgClr.r, sceneConfig.bgClr.g, sceneConfig.bgClr.b);
+    setBgClr(new Color(sceneConfig.bgClr.r, sceneConfig.bgClr.g, sceneConfig.bgClr.b, 1));
 
     // tool manager
     const toolManager = new ToolManager(events);

@@ -61,7 +61,11 @@ const localizeInit = () => {
 
                         // Options panel
                         "options": "ANSICHTS OPTIONEN",
-                        "options.bg-clr": "Hintergrundfarbe",
+                        "options.colors": "Farben",
+                        "options.bg-color": "Hintergrundfarbe",
+                        "options.selected-color": "Selektierte Farbe",
+                        "options.unselected-color": "Nicht selektierte Farbe",
+                        "options.locked-color": "Gesperrte Farbe",
                         "options.fov": "Blickwinkel (FoV)",
                         "options.sh-bands": "SH Bänder",
                         "options.centers-size": "Punktgrößen",
@@ -206,7 +210,11 @@ const localizeInit = () => {
 
                         // Options panel
                         "options": "VIEW OPTIONS",
-                        "options.bg-clr": "Background Color",
+                        "options.colors": "Colors",
+                        "options.bg-color": "Background Color",
+                        "options.selected-color": "Selected Color",
+                        "options.unselected-color": "Unselected Color",
+                        "options.locked-color": "Locked Color",
                         "options.fov": "Field of View",
                         "options.sh-bands": "SH Bands",
                         "options.centers-size": "Centers Size",
@@ -351,7 +359,11 @@ const localizeInit = () => {
 
                         // options panel
                         "options": "OPTIONS D'AFFICHAGE",
-                        "options.bg-clr": "Couleur de fond",
+                        "options.colors": "Couleurs",
+                        "options.bg-color": "Couleur de fond",
+                        "options.selected-color": "Couleur sélectionnée",
+                        "options.unselected-color": "Couleur non sélectionnée",
+                        "options.locked-color": "Couleur verrouillée",
                         "options.fov": "Champ de vision",
                         "options.sh-bands": "Ordres d'HS",
                         "options.centers-size": "Échelle des centres",
@@ -489,7 +501,11 @@ const localizeInit = () => {
 
                         // Options panel
                         "options": "表示オプション",
-                        "options.bg-clr": "背景色",
+                        "options.colors": "色",
+                        "options.bg-color": "背景色",
+                        "options.selected-color": "選択色",
+                        "options.unselected-color": "非選択色",
+                        "options.locked-color": "ロック色",
                         "options.fov": "視野 ( FOV )",
                         "options.sh-bands": "球面調和関数のバンド",
                         "options.centers-size": "センターサイズ",
@@ -633,7 +649,11 @@ const localizeInit = () => {
 
                         // Options panel
                         "options": "보기 옵션",
-                        "options.bg-clr": "배경 색상",
+                        "options.colors": "색상",
+                        "options.bg-color": "배경 색상",
+                        "options.selected-color": "선택된 색상",
+                        "options.unselected-color": "선택되지 않은 색상",
+                        "options.locked-color": "잠긴 색상",
                         "options.fov": "시야각",
                         "options.sh-bands": "SH 밴드",
                         "options.centers-size": "센터 크기",
@@ -777,7 +797,11 @@ const localizeInit = () => {
 
                         // Options panel
                         "options": "视图选项",
-                        "options.bg-clr": "背景颜色",
+                        "options.colors": "颜色",
+                        "options.bg-color": "背景颜色",
+                        "options.selected-color": "选中颜色",
+                        "options.unselected-color": "未选中颜色",
+                        "options.locked-color": "锁定颜色",
                         "options.fov": "视野角",
                         "options.sh-bands": "SH 带",
                         "options.centers-size": "中心大小",

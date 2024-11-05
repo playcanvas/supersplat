@@ -1,4 +1,4 @@
-import { Vec3 } from 'playcanvas';
+import { Color, Vec3 } from 'playcanvas';
 import { BooleanInput, ColorPicker, Container, Label, SliderInput } from 'pcui';
 import { Events } from '../events';
 import { Tooltips } from './tooltips';
@@ -39,15 +39,19 @@ class ViewPanel extends Container {
         header.append(icon);
         header.append(label);
 
-        // background color
+        // colors
 
-        const bgClrRow = new Container({
+        const clrRow = new Container({
             class: 'view-panel-row'
         });
 
-        const bgClrLabel = new Label({
-            text: localize('options.bg-clr'),
+        const clrLabel = new Label({
+            text: localize('options.colors'),
             class: 'view-panel-row-label'
+        });
+
+        const clrPickers = new Container({
+            class: 'view-panel-row-pickers'
         });
 
         const bgClrPicker = new ColorPicker({
@@ -55,8 +59,31 @@ class ViewPanel extends Container {
             value: [0.4, 0.4, 0.4]
         });
 
-        bgClrRow.append(bgClrLabel);
-        bgClrRow.append(bgClrPicker);
+        const selectedClrPicker = new ColorPicker({
+            class: 'view-panel-row-picker',
+            value: [1, 1, 0, 1],
+            channels: 4
+        });
+
+        const unselectedClrPicker = new ColorPicker({
+            class: 'view-panel-row-picker',
+            value: [0, 0, 1, 1],
+            channels: 4
+        });
+
+        const lockedClrPicker = new ColorPicker({
+            class: 'view-panel-row-picker',
+            value: [0, 0, 0, 0.05],
+            channels: 4
+        });
+
+        clrPickers.append(bgClrPicker);
+        clrPickers.append(selectedClrPicker);
+        clrPickers.append(unselectedClrPicker);
+        clrPickers.append(lockedClrPicker);
+
+        clrRow.append(clrLabel);
+        clrRow.append(clrPickers);
 
         // camera fov
 
@@ -245,7 +272,7 @@ class ViewPanel extends Container {
         poseListContainer.append(poseList);
 
         this.append(header);
-        this.append(bgClrRow);
+        this.append(clrRow);
         this.append(fovRow);
         this.append(shBandsRow);
         this.append(centersSizeRow);
@@ -469,7 +496,19 @@ class ViewPanel extends Container {
         // background color
 
         bgClrPicker.on('change', (value: number[]) => {
-            events.fire('setBgClr', value[0], value[1], value[2]);
+            events.fire('setBgClr', new Color(value[0], value[1], value[2]));
+        });
+
+        selectedClrPicker.on('change', (value: number[]) => {
+            events.fire('setSelectedClr', new Color(value[0], value[1], value[2], value[3]));
+        });
+
+        unselectedClrPicker.on('change', (value: number[]) => {
+            events.fire('setUnselectedClr', new Color(value[0], value[1], value[2], value[3]));
+        });
+
+        lockedClrPicker.on('change', (value: number[]) => {
+            events.fire('setLockedClr', new Color(value[0], value[1], value[2], value[3]));
         });
 
         // camera fov
@@ -483,7 +522,12 @@ class ViewPanel extends Container {
         });
 
         // tooltips
+        tooltips.register(bgClrPicker, localize('options.bg-color'), 'left');
+        tooltips.register(selectedClrPicker, localize('options.selected-color'), 'top');
+        tooltips.register(unselectedClrPicker, localize('options.unselected-color'), 'top');
+        tooltips.register(lockedClrPicker, localize('options.locked-color'), 'top');
 
+        // tooltips
         tooltips.register(poseAdd, localize('options.add-pose'));
         tooltips.register(posePrev, localize('options.prev-pose'));
         tooltips.register(poseNext, localize('options.next-pose'));

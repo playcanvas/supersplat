@@ -50,9 +50,18 @@
             }
         }
 
-        &>.view-panel-row-picker {
-            margin: 2px 6px;
-            height: 24px;
+        & > .view-panel-row-pickers {
+            display: flex;
+            flex-direction: row;
+            margin: 2px 2px;
+            width: 187px;
+            justify-content: space-between;
+
+            & > .view-panel-row-picker {
+                margin: 0px 0px;
+                padding: 0px;
+                height: 24px;
+            }
         }
     }
 

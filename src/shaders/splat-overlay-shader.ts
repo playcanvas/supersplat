@@ -9,8 +9,11 @@ const vertexShader = /* glsl */ `
     uniform highp usampler2D splatTransform;        // per-splat index into transform palette
     uniform sampler2D transformPalette;             // palette of transform matrices
 
-    uniform float splatSize;
     uniform uvec2 texParams;
+
+    uniform float splatSize;
+    uniform vec4 selectedClr;
+    uniform vec4 unselectedClr;
 
     varying vec4 varying_color;
 
@@ -36,22 +39,17 @@ const vertexShader = /* glsl */ `
                 // read transform matrix
                 int u = int(transformIndex % 512u) * 3;
                 int v = int(transformIndex / 512u);
-        
+
                 mat4 t;
                 t[0] = texelFetch(transformPalette, ivec2(u, v), 0);
                 t[1] = texelFetch(transformPalette, ivec2(u + 1, v), 0);
                 t[2] = texelFetch(transformPalette, ivec2(u + 2, v), 0);
                 t[3] = vec4(0.0, 0.0, 0.0, 1.0);
-        
+
                 model = matrix_model * transpose(t);
             }
 
-            if ((splatState & 1u) != 0u) {
-                // selected
-                varying_color = vec4(1.0, 1.0, 0.0, 0.5);
-            } else {
-                varying_color = vec4(0.0, 0.0, 1.0, 0.5);
-            }
+            varying_color = (splatState == 1u) ? selectedClr : unselectedClr;
 
             vec3 center = uintBitsToFloat(texelFetch(splatPosition, splatUV, 0).xyz);
 

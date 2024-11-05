@@ -30,7 +30,7 @@
     &>.right-toolbar-button, .right-toolbar-tool, .right-toolbar-toggle {
         width: 38px;
         height: 38px;
-        margin: 0px 1px;
+        margin: 1px 1px;
         padding: 0px;
         border: 0px;
         border-radius: 2px;
@@ -49,7 +49,7 @@
         width: 38px;
         height: 2px;
         margin: 10px 0px;
-        background-color: $bcg-primary;
+        background-color: $bcg-lighter;
     }
 
     &>.right-toolbar-button {

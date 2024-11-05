@@ -18,7 +18,6 @@ class PolygonSelection {
         // create polyline element
         const polyline = document.createElementNS(svg.namespaceURI, 'polyline') as SVGPolylineElement;
         polyline.setAttribute('fill', 'none');
-        polyline.setAttribute('stroke', '#f60');
         polyline.setAttribute('stroke-width', '1');
         polyline.setAttribute('stroke-dasharray', '5, 5');
         polyline.setAttribute('stroke-dashoffset', '0');
@@ -35,7 +34,7 @@ class PolygonSelection {
 
         const paint = () => {
             polyline.setAttribute('points', [...points, currentPoint].reduce((prev, current) => prev + `${current.x}, ${current.y} `, ""));
-            parent.style.cursor = isClosed() ? 'pointer' : 'crosshair';
+            polyline.setAttribute('stroke', isClosed() ? '#fa6' : '#f60');
         };
 
         const isClosed = () => points.length > 1 && Math.abs(currentPoint.x - points[0].x) < 4 && Math.abs(currentPoint.y - points[0].y) < 4;

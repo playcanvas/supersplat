@@ -11,6 +11,9 @@ uniform sampler2D transformPalette;             // palette of transform matrices
 uniform vec4 selectedClr;
 uniform vec4 lockedClr;
 
+uniform vec3 ambientClr;
+uniform vec3 tintClr;
+
 varying mediump vec3 texCoordIsLocked;          // store locked flat in z
 varying mediump vec4 color;
 
@@ -120,6 +123,10 @@ void main(void)
             color.xyz = max(color.xyz + evalSH(viewDir), 0.0);
         #endif
 
+        // apply tint/brightness
+        color.xyz = ambientClr + color.xyz * tintClr;
+
+        // apply locked/selected colors
         if ((vertexState & 2u) != 0u) {
             // locked
             color *= lockedClr;

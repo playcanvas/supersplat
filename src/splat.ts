@@ -59,6 +59,10 @@ class Splat extends Element {
 
     selectionAlpha = 1;
 
+    _ambientClr = new Color(0, 0, 0);
+    _tintClr = new Color(1, 1, 1);
+    _brightness = 1;
+
     rebuildMaterial: (bands: number) => void;
 
     constructor(asset: Asset) {
@@ -283,6 +287,8 @@ class Splat extends Element {
         serializer.packa(this.entity.getWorldTransform().data);
         serializer.pack(this.changedCounter);
         serializer.pack(this.visible);
+        serializer.pack(this.ambientClr.r, this.ambientClr.g, this.ambientClr.b);
+        serializer.pack(this.tintClr.r, this.tintClr.g, this.tintClr.b, this.brightness);
     }
 
     onPreRender() {
@@ -306,6 +312,8 @@ class Splat extends Element {
         material.setParameter('selectedClr', [selectedClr.r, selectedClr.g, selectedClr.b, selectedClr.a * selectionAlpha]);
         material.setParameter('unselectedClr', [unselectedClr.r, unselectedClr.g, unselectedClr.b, unselectedClr.a]);
         material.setParameter('lockedClr', [lockedClr.r, lockedClr.g, lockedClr.b, lockedClr.a]);
+        material.setParameter('ambientClr', [this.ambientClr.r, this.ambientClr.g, this.ambientClr.b]);
+        material.setParameter('tintClr', [this.tintClr.r * this.brightness, this.tintClr.g * this.brightness, this.tintClr.b * this.brightness]);
 
         if (this.visible && selected) {
             // render bounding box
@@ -406,6 +414,39 @@ class Splat extends Element {
         if (value !== this.visible) {
             this._visible = value;
             this.scene.events.fire('splat.visibility', this);
+        }
+    }
+
+    get ambientClr() {
+        return this._ambientClr;
+    }
+
+    set ambientClr(value: Color) {
+        if (!this._ambientClr.equals(value)) {
+            this._ambientClr.set(value.r, value.g, value.b);
+            this.scene.events.fire('splat.ambientClr', this);
+        }
+    }
+
+    get tintClr() {
+        return this._tintClr;
+    }
+
+    set tintClr(value: Color) {
+        if (!this._tintClr.equals(value)) {
+            this._tintClr.set(value.r, value.g, value.b);
+            this.scene.events.fire('splat.tintClr', this);
+        }
+    }
+
+    get brightness() {
+        return this._brightness;
+    }
+
+    set brightness(value: number) {
+        if (value !== this._brightness) {
+            this._brightness = value;
+            this.scene.events.fire('splat.brightness', this);
         }
     }
 }

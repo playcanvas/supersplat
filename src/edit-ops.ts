@@ -1,4 +1,4 @@
-import { Mat4, Vec3 } from 'playcanvas';
+import { Color, Mat4 } from 'playcanvas';
 import { Splat } from './splat';
 import { State } from './splat-state';
 import { Transform } from './transform';
@@ -318,6 +318,45 @@ class PlacePivotOp {
     }
 }
 
+class SetSplatClrOp {
+    name: "setSplatColor";
+    splat: Splat;
+
+    newAmbientClr: Color;
+    newTintClr: Color;
+    newBrightness: number;
+
+    oldAmbientClr: Color;
+    oldTintClr: Color;
+    oldBrightness: number;
+
+    constructor(options: { splat: Splat, ambientClr?: Color, tintClr?: Color, brightness?: number }) {
+        const { splat, ambientClr, tintClr, brightness } = options;
+
+        this.splat = splat;
+
+        this.newAmbientClr = ambientClr;
+        this.newTintClr = tintClr;
+        this.newBrightness = brightness;
+
+        this.oldAmbientClr = ambientClr ? splat.ambientClr.clone() : null;
+        this.oldTintClr = tintClr ? splat.tintClr.clone() : null;
+        this.oldBrightness = brightness !== null ? splat.brightness : null;
+    }
+
+    do() {
+        if (this.newAmbientClr) this.splat.ambientClr = this.newAmbientClr;
+        if (this.newTintClr) this.splat.tintClr = this.newTintClr;
+        if (this.newBrightness) this.splat.brightness = this.newBrightness;
+    }
+
+    undo() {
+        if (this.oldAmbientClr) this.splat.ambientClr = this.oldAmbientClr;
+        if (this.oldTintClr) this.splat.tintClr = this.oldTintClr;
+        if (this.oldBrightness) this.splat.brightness = this.oldBrightness;
+    }
+}
+
 class MultiOp {
     name = "multiOp";
     ops: EditOp[];
@@ -348,5 +387,6 @@ export {
     EntityTransformOp,
     SplatsTransformOp,
     PlacePivotOp,
+    SetSplatClrOp,
     MultiOp
 };

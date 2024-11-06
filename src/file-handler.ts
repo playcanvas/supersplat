@@ -98,7 +98,14 @@ const loadCameraPoses = async (url: string, filename: string, events: Events) =>
         });
         ave.mulScalar(1 / json.length);
 
-        json.forEach((pose: any, i: number) => {
+        // sort entries by trailing number if it exists
+        const sorter = (a: any, b: any) => {
+            const avalue = a.img_name?.match(/\d*$/)?.[0];
+            const bvalue = b.img_name?.match(/\d*$/)?.[0];
+            return (avalue && bvalue) ? parseInt(avalue, 10) - parseInt(bvalue, 10) : 0;
+        };
+
+        json.sort(sorter).forEach((pose: any, i: number) => {
             if (pose.hasOwnProperty('position') && pose.hasOwnProperty('rotation')) {
                 const p = new Vec3(pose.position);
                 const z = new Vec3(pose.rotation[0][2], pose.rotation[1][2], pose.rotation[2][2]);

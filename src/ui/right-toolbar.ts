@@ -7,6 +7,7 @@ import showHideSplatsSvg from './svg/show-hide-splats.svg';
 import cameraFrameSelectionSvg from './svg/camera-frame-selection.svg';
 import cameraResetSvg from './svg/camera-reset.svg';
 import cameraPanelSvg from './svg/camera-panel.svg';
+import colorPanelSvg from './svg/color-panel.svg';
 import centersSvg from './svg/centers.svg';
 import ringsSvg from './svg/rings.svg';
 
@@ -74,6 +75,7 @@ class RightToolbar extends Container {
         cameraFrameSelection.dom.appendChild(createSvg(cameraFrameSelectionSvg));
         cameraReset.dom.appendChild(createSvg(cameraResetSvg));
         cameraPanel.dom.appendChild(createSvg(cameraPanelSvg));
+        colorPanel.dom.appendChild(createSvg(colorPanelSvg));
 
         this.append(ringsModeToggle);
         this.append(showHideSplats);

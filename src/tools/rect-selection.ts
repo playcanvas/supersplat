@@ -12,10 +12,6 @@ class RectSelection {
 
         // create rect element
         const rect = document.createElementNS(svg.namespaceURI, 'rect') as SVGRectElement;
-        rect.setAttribute('fill', 'none');
-        rect.setAttribute('stroke', '#f60');
-        rect.setAttribute('stroke-width', '1');
-        rect.setAttribute('stroke-dasharray', '5, 5');
 
         const start = { x: 0, y: 0 };
         const end = { x: 0, y: 0 };

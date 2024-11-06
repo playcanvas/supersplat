@@ -17,17 +17,17 @@ class PolygonSelection {
 
         // create polyline element
         const polyline = document.createElementNS(svg.namespaceURI, 'polyline') as SVGPolylineElement;
-        polyline.setAttribute('fill', 'none');
-        polyline.setAttribute('stroke-width', '1');
-        polyline.setAttribute('stroke-dasharray', '5, 5');
-        polyline.setAttribute('stroke-dashoffset', '0');
+        //polyline.setAttribute('fill', 'none');
+        //polyline.setAttribute('stroke-width', '1');
+        //polyline.setAttribute('stroke-dasharray', '5, 5');
+        //polyline.setAttribute('stroke-dashoffset', '0');
 
         // create canvas
         const { canvas, context } = mask;
 
         const paint = () => {
             polyline.setAttribute('points', [...points, currentPoint].reduce((prev, current) => prev + `${current.x}, ${current.y} `, ""));
-            polyline.setAttribute('stroke', isClosed() ? '#fa6' : '#f60');
+            polyline.setAttribute('class', isClosed() ? 'closed' : '');
         };
 
         const dist = (a: Point, b: Point) => {

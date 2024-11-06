@@ -11,6 +11,7 @@ import { registerTransformHandlerEvents } from './transform-handler';
 import { ToolManager } from './tools/tool-manager';
 import { RectSelection } from './tools/rect-selection';
 import { BrushSelection } from './tools/brush-selection';
+import { PolygonSelection } from './tools/polygon-selection';
 import { SphereSelection } from './tools/sphere-selection';
 import { MoveTool } from './tools/move-tool';
 import { RotateTool } from './tools/rotate-tool';
@@ -69,6 +70,7 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['G', 'g'], { event: 'grid.toggleVisible' });
     shortcuts.register(['C', 'c'], { event: 'tool.toggleCoordSpace' });
     shortcuts.register(['F', 'f'], { event: 'camera.focus' });
+    shortcuts.register(['O', 'o'], { event: 'tool.polygonSelection', sticky: true });
     shortcuts.register(['B', 'b'], { event: 'tool.brushSelection', sticky: true });
     shortcuts.register(['R', 'r'], { event: 'tool.rectSelection', sticky: true });
     shortcuts.register(['P', 'p'], { event: 'tool.rectSelection', sticky: true });
@@ -176,6 +178,7 @@ const main = async () => {
     const toolManager = new ToolManager(events);
     toolManager.register('rectSelection', new RectSelection(events, editorUI.toolsContainer.dom));
     toolManager.register('brushSelection', new BrushSelection(events, editorUI.toolsContainer.dom));
+    toolManager.register('polygonSelection', new PolygonSelection(events, editorUI.toolsContainer.dom));
     toolManager.register('sphereSelection', new SphereSelection(events, scene, editorUI.canvasContainer));
     toolManager.register('move', new MoveTool(events, scene));
     toolManager.register('rotate', new RotateTool(events, scene));

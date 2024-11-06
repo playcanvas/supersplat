@@ -6,6 +6,7 @@ import { localize } from './localization';
 import showHideSplatsSvg from './svg/show-hide-splats.svg';
 import cameraFrameSelectionSvg from './svg/camera-frame-selection.svg';
 import cameraResetSvg from './svg/camera-reset.svg';
+import cameraPanelSvg from './svg/camera-panel.svg';
 import centersSvg from './svg/centers.svg';
 import ringsSvg from './svg/rings.svg';
 
@@ -47,6 +48,11 @@ class RightToolbar extends Container {
             class: 'right-toolbar-button'
         });
 
+        const cameraPanel = new Button({
+            id: 'right-toolbar-camera-panel',
+            class: 'right-toolbar-toggle',
+        });
+
         const options = new Button({
             id: 'right-toolbar-options',
             class: 'right-toolbar-toggle',
@@ -62,12 +68,14 @@ class RightToolbar extends Container {
         showHideSplats.dom.appendChild(createSvg(showHideSplatsSvg));
         cameraFrameSelection.dom.appendChild(createSvg(cameraFrameSelectionSvg));
         cameraReset.dom.appendChild(createSvg(cameraResetSvg));
+        cameraPanel.dom.appendChild(createSvg(cameraPanelSvg));
 
         this.append(ringsModeToggle);
         this.append(showHideSplats);
         this.append(new Element({ class: 'right-toolbar-separator' }));
         this.append(cameraFrameSelection);
         this.append(cameraReset);
+        this.append(cameraPanel);
         this.append(new Element({ class: 'right-toolbar-separator' }));
         this.append(options);
 
@@ -86,6 +94,7 @@ class RightToolbar extends Container {
         showHideSplats.on('click', () => events.fire('camera.toggleOverlay'));
         cameraFrameSelection.on('click', () => events.fire('camera.focus'));
         cameraReset.on('click', () => events.fire('camera.reset'));
+        cameraPanel.on('click', () => events.fire('cameraPanel.toggleVisible'));
         options.on('click', () => events.fire('viewPanel.toggleVisible'));
 
         events.on('camera.mode', (mode: string) => {
@@ -96,6 +105,10 @@ class RightToolbar extends Container {
 
         events.on('camera.overlay', (value: boolean) => {
             showHideSplats.class[value ? 'add' : 'remove']('active');
+        });
+
+        events.on('cameraPanel.visible', (visible: boolean) => {
+            cameraPanel.class[visible ? 'add' : 'remove']('active');
         });
 
         events.on('viewPanel.visible', (visible: boolean) => {

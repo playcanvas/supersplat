@@ -73,12 +73,13 @@ const localizeInit = () => {
                         "options.show-grid": "Raster anzeigen",
                         "options.show-bound": "Objektbox anzeigen",
 
-                        "options.pose-header": "POSEN",
-                        "options.add-pose": "Pose hinzufügen",
-                        "options.prev-pose": "Vorherige Pose",
-                        "options.next-pose": "Nächste Pose",
-                        "options.play-poses": "Posen abspielen",
-                        "options.clear-poses": "Posen leeren",
+                        // Camera panel
+                        "camera": "KAMERA POSEN",
+                        "camera.add-pose": "Pose hinzufügen",
+                        "camera.prev-pose": "Vorherige Pose",
+                        "camera.next-pose": "Nächste Pose",
+                        "camera.play-poses": "Posen abspielen",
+                        "camera.clear-poses": "Posen leeren",
 
                         // Data panel
                         "data": "SPLAT DATEN",
@@ -152,6 +153,7 @@ const localizeInit = () => {
                         "tooltip.undo": "Rückgängig ( Strg + Z )",
                         "tooltip.redo": "Wiederholen ( Strg + Shift + Z )",
                         "tooltip.picker": "Einzelselektion ( P )",
+                        "tooltip.polygon": "Polygonselektion ( O )",
                         "tooltip.brush": "Pinselselektion ( B )",
                         "tooltip.sphere": "Kugelselektion",
                         "tooltip.translate": "Verschieben ( 1 )",
@@ -222,12 +224,13 @@ const localizeInit = () => {
                         "options.show-grid": "Show Grid",
                         "options.show-bound": "Show Bound",
 
-                        "options.pose-header": "POSES",
-                        "options.add-pose": "Add Pose",
-                        "options.prev-pose": "Previous Pose",
-                        "options.next-pose": "Next Pose",
-                        "options.play-poses": "Play Poses",
-                        "options.clear-poses": "Clear Poses",
+                        // Camera panel
+                        "camera": "CAMERA POSES",
+                        "camera.add-pose": "Add Pose",
+                        "camera.prev-pose": "Previous Pose",
+                        "camera.next-pose": "Next Pose",
+                        "camera.play-poses": "Play Poses",
+                        "camera.clear-poses": "Clear Poses",
 
                         // Data panel
                         "data": "SPLAT DATA",
@@ -301,6 +304,7 @@ const localizeInit = () => {
                         "tooltip.undo": "Undo ( Ctrl + Z )",
                         "tooltip.redo": "Redo ( Ctrl + Shift + Z )",
                         "tooltip.picker": "Picker Select ( P )",
+                        "tooltip.polygon": "Polygon Select ( O )",
                         "tooltip.brush": "Brush Select ( B )",
                         "tooltip.sphere": "Sphere Select",
                         "tooltip.translate": "Translate ( 1 )",
@@ -311,7 +315,7 @@ const localizeInit = () => {
                 },
                 fr: {
                     translation: {
-                        // scene menu
+                        // Scene menu
                         "scene": "Scène",
                         "scene.new": "Créer",
                         "scene.open": "Ouvrir",
@@ -325,7 +329,7 @@ const localizeInit = () => {
                         "scene.export.splat": "Fichier splat",
                         "scene.export.viewer": "Application de visualisation",
 
-                        // selection menu
+                        // Selection menu
                         "selection": "Sélection",
                         "selection.all": "Tout",
                         "selection.none": "Aucune",
@@ -335,7 +339,7 @@ const localizeInit = () => {
                         "selection.delete": "Supprimer la sélection",
                         "selection.reset": "Réinitialiser splat",
 
-                        // help menu
+                        // Help menu
                         "help": "Aide",
                         "help.shortcuts": "Raccourcis claviers",
                         "help.user-guide": "Guide utilisateur",
@@ -346,18 +350,18 @@ const localizeInit = () => {
                         "help.forum": "Forum",
                         "help.about": "À propos de SuperSplat",
 
-                        // modes
+                        // Modes
                         "mode.centers": "Mode centres",
                         "mode.rings": "Mode anneaux",
 
-                        // scene panel
+                        // Scene panel
                         "scene-manager": "GESTIONNAIRE DE SCENE",
                         "transform": "TRANSFORMATION",
                         "position": "Position",
                         "rotation": "Rotation",
                         "scale": "Échelle",
 
-                        // options panel
+                        // Options panel
                         "options": "OPTIONS D'AFFICHAGE",
                         "options.colors": "Couleurs",
                         "options.bg-color": "Couleur de fond",
@@ -370,6 +374,14 @@ const localizeInit = () => {
                         "options.outline-selection": "Contour de la sélection",
                         "options.show-grid": "Afficher la grille",
                         "options.show-bound": "Afficher limites",
+
+                        // Camera panel
+                        "camera": "POSES DE LA CAMERA",
+                        "camera.add-pose": "Ajouter une pose",
+                        "camera.prev-pose": "Pose précédente",
+                        "camera.next-pose": "Pose suivante",
+                        "camera.play-poses": "Lire les poses",
+                        "camera.clear-poses": "Effacer les poses",
 
                         // data panel
                         "data": "DONNEES SPLAT",
@@ -513,11 +525,13 @@ const localizeInit = () => {
                         "options.show-grid": "グリッド",
                         "options.show-bound": "バウンディングボックス",
 
-                        "options.add-pose": "ポーズを追加",
-                        "options.prev-pose": "前のポーズ",
-                        "options.next-pose": "次のポーズ",
-                        "options.play-poses": "ポーズを再生",
-                        "options.clear-poses": "ポーズをクリア",
+                        // Camera panel
+                        "camera": "カメラポーズ",
+                        "camera.add-pose": "ポーズを追加",
+                        "camera.prev-pose": "前のポーズ",
+                        "camera.next-pose": "次のポーズ",
+                        "camera.play-poses": "ポーズを再生",
+                        "camera.clear-poses": "ポーズをクリア",
 
                         // Data panel
                         "data": "スプラットの統計",
@@ -661,11 +675,13 @@ const localizeInit = () => {
                         "options.show-grid": "그리드 표시",
                         "options.show-bound": "경계 표시",
 
-                        "options.add-pose": "포즈 추가",
-                        "options.prev-pose": "이전 포즈",
-                        "options.next-pose": "다음 포즈",
-                        "options.play-poses": "포즈 재생",
-                        "options.clear-poses": "포즈 지우기",
+                        // Camera panel
+                        "camera": "카메라 포즈",
+                        "camera.add-pose": "포즈 추가",
+                        "camera.prev-pose": "이전 포즈",
+                        "camera.next-pose": "다음 포즈",
+                        "camera.play-poses": "포즈 재생",
+                        "camera.clear-poses": "포즈 지우기",
 
                         // Data panel
                         "data": "SPLAT 데이터",
@@ -809,11 +825,13 @@ const localizeInit = () => {
                         "options.show-grid": "显示网格",
                         "options.show-bound": "显示边界",
 
-                        "options.add-pose": "添加姿势",
-                        "options.prev-pose": "上一个姿势",
-                        "options.next-pose": "下一个姿势",
-                        "options.play-poses": "播放姿势",
-                        "options.clear-poses": "清除姿势",
+                        // Camera panel
+                        "camera": "相机姿势",
+                        "camera.add-pose": "添加姿势",
+                        "camera.prev-pose": "上一个姿势",
+                        "camera.next-pose": "下一个姿势",
+                        "camera.play-poses": "播放姿势",
+                        "camera.clear-poses": "清除姿势",
 
                         // Data panel
                         "data": "SPLAT 数据",

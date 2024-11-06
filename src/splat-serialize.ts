@@ -1,4 +1,5 @@
 import {
+    Color,
     GSplatData,
     Mat3,
     Mat4,
@@ -230,6 +231,29 @@ const serializePly = async (splats: Splat[], write: WriteFunc) => {
                 }
             }
 
+            const SH_C0 = 0.28209479177387814;
+            const to = (value: number) => value * SH_C0 + 0.5;
+            const from = (value: number) => (value - 0.5) / SH_C0;
+
+            const { ambientClr, tintClr, brightness } = splats[e];
+            if (!ambientClr.equals(Color.BLACK) ||
+                !tintClr.equals(Color.WHITE) ||
+                brightness !== 1) {
+
+                // apply tint to colors
+                splat['f_dc_0'] = from(ambientClr.r + to(splat['f_dc_0']) * tintClr.r * brightness);
+                splat['f_dc_1'] = from(ambientClr.g + to(splat['f_dc_1']) * tintClr.g * brightness);
+                splat['f_dc_2'] = from(ambientClr.b + to(splat['f_dc_2']) * tintClr.b * brightness);
+
+                if (hasSH) {
+                    for (let j = 0; j < 15; ++j) {
+                        splat[`f_rest_${j}`] *= tintClr.r * brightness;
+                        splat[`f_rest_${j + 15}`] *= tintClr.g * brightness;
+                        splat[`f_rest_${j + 30}`] *= tintClr.b * brightness;
+                    }
+                }
+            }
+
             // write
             for (let j = 0; j < propNames.length; ++j) {
                 dataView.setFloat32(offset, splat[propNames[j]], true);
@@ -248,6 +272,15 @@ const serializePly = async (splats: Splat[], write: WriteFunc) => {
     if (offset > 0) {
         await write(new Uint8Array(buf.buffer, 0, offset));
     }
+};
+
+const applyColorTint = (target: { f_dc_0: number, f_dc_1: number, f_dc_2: number }, ambientClr: Color, tintClr: Color, brightness: number) => {
+    const SH_C0 = 0.28209479177387814;
+    const to = (value: number) => value * SH_C0 + 0.5;
+    const from = (value: number) => (value - 0.5) / SH_C0;
+    target.f_dc_0 = from(ambientClr.r + to(target.f_dc_0) * tintClr.r * brightness);
+    target.f_dc_1 = from(ambientClr.g + to(target.f_dc_1) * tintClr.g * brightness);
+    target.f_dc_2 = from(ambientClr.b + to(target.f_dc_2) * tintClr.b * brightness);
 };
 
 interface CompressedIndex {
@@ -273,7 +306,8 @@ class SingleSplat {
     rot_3 = 0;
 
     read(splats: Splat[], index: CompressedIndex) {
-        const { splatData } = splats[index.splatIndex];
+        const splat = splats[index.splatIndex];
+        const { splatData } = splat;
         const val = (prop: string) => splatData.getProp(prop)[index.i];
         [this.x, this.y, this.z] = [val('x'), val('y'), val('z')];
         [this.scale_0, this.scale_1, this.scale_2] = [val('scale_0'), val('scale_1'), val('scale_2')];
@@ -615,6 +649,10 @@ const serializePlyCompressed = async (splats: Splat[], write: WriteFunc) => {
             const t = transformCaches[index.splatIndex];
             singleSplat.transform(t.getMat(index.i), t.getRot(index.i), t.getScale(index.i));
 
+            // apply color
+            const { ambientClr, tintClr, brightness } = splats[index.splatIndex];
+            applyColorTint(singleSplat, ambientClr, tintClr, brightness);
+
             // set
             chunk.set(j, singleSplat);
         }
@@ -705,10 +743,17 @@ const serializeSplat = async (splats: Splat[], write: WriteFunc) => {
             dataView.setFloat32(off + 16, Math.exp(scale_1[i]) * scale.x, true);
             dataView.setFloat32(off + 20, Math.exp(scale_2[i]) * scale.x, true);
 
+            const clr = {
+                f_dc_0: f_dc_0[i],
+                f_dc_1: f_dc_1[i],
+                f_dc_2: f_dc_2[i]
+            };
+            applyColorTint(clr, splat.ambientClr, splat.tintClr, splat.brightness);
+
             const SH_C0 = 0.28209479177387814;
-            dataView.setUint8(off + 24, clamp((0.5 + SH_C0 * f_dc_0[i]) * 255));
-            dataView.setUint8(off + 25, clamp((0.5 + SH_C0 * f_dc_1[i]) * 255));
-            dataView.setUint8(off + 26, clamp((0.5 + SH_C0 * f_dc_2[i]) * 255));
+            dataView.setUint8(off + 24, clamp((0.5 + SH_C0 * clr.f_dc_0) * 255));
+            dataView.setUint8(off + 25, clamp((0.5 + SH_C0 * clr.f_dc_1) * 255));
+            dataView.setUint8(off + 26, clamp((0.5 + SH_C0 * clr.f_dc_2) * 255));
             dataView.setUint8(off + 27, clamp((1 / (1 + Math.exp(-opacity[i]))) * 255));
 
             q.set(rot_1[i], rot_2[i], rot_3[i], rot_0[i]).mul2(quat, q).normalize();

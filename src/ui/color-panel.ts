@@ -1,10 +1,26 @@
-import { Color } from 'playcanvas';
-import { ColorPicker, Container, Label, SliderInput } from 'pcui';
+import { ColorPicker, Container, Label, SliderInput, SliderInputArgs } from 'pcui';
 import { Events } from '../events';
 import { Tooltips } from './tooltips';
 import { localize } from './localization';
 import { Splat } from '../splat';
 import { SetSplatClrOp } from '../edit-ops';
+
+// pcui slider doesn't include start and end events
+class MyFancySliderInput extends SliderInput {
+    constructor(args: SliderInputArgs) {
+        super(args);
+    }
+
+    _onSlideStart(pageX: number) {
+        super._onSlideStart(pageX);
+        this.emit('slide:start');
+    }
+
+    _onSlideEnd(pageX: number) {
+        super._onSlideEnd(pageX);
+        this.emit('slide:end');
+    }
+};
 
 class ColorPanel extends Container {
     constructor(events: Events, tooltips: Tooltips, args = {}) {
@@ -89,7 +105,7 @@ class ColorPanel extends Container {
             class: 'color-panel-row-label'
         });
 
-        const brightnessSlider = new SliderInput({
+        const brightnessSlider = new MyFancySliderInput({
             class: 'color-panel-row-slider',
             min: 0,
             max: 3,
@@ -107,38 +123,86 @@ class ColorPanel extends Container {
 
         // handle ui updates
 
+        let suppress = false;
+        let selected: Splat = null;
+        let op: SetSplatClrOp = null;
+
         const updateUI = (splat: Splat) => {
+            if (suppress) return;
+            suppress = true;
             ambientPicker.value = splat ? [splat.ambientClr.r, splat.ambientClr.g, splat.ambientClr.b] : [0, 0, 0];
             tintPicker.value = splat ? [splat.tintClr.r, splat.tintClr.g, splat.tintClr.b] : [1, 1, 1];
             brightnessSlider.value = Math.log(splat ? splat.brightness : 1) / 3 + 1;
+            suppress = false;
         };
 
-        let selected: Splat = null;
+        const start = () => {
+            if (selected) {
+                op = new SetSplatClrOp({
+                    splat: selected,
+                    ambientClr: selected.ambientClr.clone(),
+                    tintClr: selected.tintClr.clone(),
+                    brightness: selected.brightness
+                });
+            }
+        };
+
+        const end = () => {
+            if (op) {
+                op.newAmbientClr.set(ambientPicker.value[0], ambientPicker.value[1], ambientPicker.value[2]);
+                op.newTintClr.set(tintPicker.value[0], tintPicker.value[1], tintPicker.value[2]);
+                op.newBrightness = Math.exp((brightnessSlider.value - 1) * 3);
+                events.fire('edit.add', op);
+                op = null;
+            }
+        };
+
+        ambientPicker.on('picker:color:start', start);
+        ambientPicker.on('picker:color:end', end);
+        tintPicker.on('picker:color:start', start);
+        tintPicker.on('picker:color:end', end);
+        brightnessSlider.on('slide:start', start);
+        brightnessSlider.on('slide:end', end);
 
         ambientPicker.on('change', (value: number[]) => {
-            if (selected) {
-                events.fire('edit.add', new SetSplatClrOp({
-                    splat: selected,
-                    ambientClr: new Color(value[0], value[1], value[2])
-                }));
+            if (!suppress) {
+                suppress = true;
+                if (op) {
+                    op.newAmbientClr.set(value[0], value[1], value[2]);
+                    op.do();
+                } else if (selected) {
+                    start();
+                    end();
+                }
+                suppress = false;
             }
         });
 
         tintPicker.on('change', (value: number[]) => {
-            if (selected) {
-                events.fire('edit.add', new SetSplatClrOp({
-                    splat: selected,
-                    tintClr: new Color(value[0], value[1], value[2])
-                }));
+            if (!suppress) {
+                suppress = true;
+                if (op) {
+                    op.newTintClr.set(value[0], value[1], value[2]);
+                    op.do();
+                } else if (selected) {
+                    start();
+                    end();
+                }
+                suppress = false;
             }
         });
 
         brightnessSlider.on('change', (value: number) => {
-            if (selected) {
-                events.fire('edit.add', new SetSplatClrOp({
-                    splat: selected,
-                    brightness: Math.exp((value - 1) * 3)
-                }));
+            if (!suppress) {
+                suppress = true;
+                if (op) {
+                    op.newBrightness = Math.exp((value - 1) * 3);
+                    op.do();
+                } else if (selected) {
+                    start();
+                    end();
+                }
+                suppress = false;
             }
         });
 

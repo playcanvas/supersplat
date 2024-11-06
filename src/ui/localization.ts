@@ -152,8 +152,8 @@ const localizeInit = () => {
                         // Bottom toolbar
                         "tooltip.undo": "Rückgängig ( Strg + Z )",
                         "tooltip.redo": "Wiederholen ( Strg + Shift + Z )",
-                        "tooltip.picker": "Einzelselektion ( P )",
-                        "tooltip.polygon": "Polygonselektion ( O )",
+                        "tooltip.picker": "Einzelselektion ( R )",
+                        "tooltip.polygon": "Polygonselektion ( P )",
                         "tooltip.brush": "Pinselselektion ( B )",
                         "tooltip.sphere": "Kugelselektion",
                         "tooltip.translate": "Verschieben ( 1 )",
@@ -303,8 +303,8 @@ const localizeInit = () => {
                         // Bottom toolbar
                         "tooltip.undo": "Undo ( Ctrl + Z )",
                         "tooltip.redo": "Redo ( Ctrl + Shift + Z )",
-                        "tooltip.picker": "Picker Select ( P )",
-                        "tooltip.polygon": "Polygon Select ( O )",
+                        "tooltip.picker": "Picker Select ( R )",
+                        "tooltip.polygon": "Polygon Select ( P )",
                         "tooltip.brush": "Brush Select ( B )",
                         "tooltip.sphere": "Sphere Select",
                         "tooltip.translate": "Translate ( 1 )",
@@ -454,7 +454,8 @@ const localizeInit = () => {
                         // bottom toolbar
                         "tooltip.undo": "Annuler ( Ctrl + Z )",
                         "tooltip.redo": "Rétablir ( Ctrl + Shift + Z )",
-                        "tooltip.picker": "Sélection avec pipette ( P )",
+                        "tooltip.picker": "Sélection avec pipette ( R )",
+                        "tooltip.polygon": "Sélection avec polygone ( P )",
                         "tooltip.brush": "Sélection avec pinceau ( B )",
                         "tooltip.sphere": "Sélection avec sphère",
                         "tooltip.translate": "Translation ( 1 )",
@@ -604,7 +605,8 @@ const localizeInit = () => {
                         // Bottom toolbar
                         "tooltip.undo": "元に戻す ( Ctrl + Z )",
                         "tooltip.redo": "やり直し ( Ctrl + Shift + Z )",
-                        "tooltip.picker": "ピッカー選択 ( P )",
+                        "tooltip.picker": "ピッカー選択 ( R )",
+                        "tooltip.polygon": "ポリゴン選択 ( P )",
                         "tooltip.brush": "ブラシ選択 ( B )",
                         "tooltip.sphere": "球で選択",
                         "tooltip.translate": "移動 ( 1 )",
@@ -754,7 +756,8 @@ const localizeInit = () => {
                         // Bottom toolbar
                         "tooltip.undo": "실행 취소 ( Ctrl + Z )",
                         "tooltip.redo": "다시 실행 ( Ctrl + Shift + Z )",
-                        "tooltip.picker": "피커 선택 ( P )",
+                        "tooltip.picker": "피커 선택 ( R )",
+                        "tooltip.polygon": "다각형 선택 ( P )",
                         "tooltip.brush": "브러시 선택 ( B )",
                         "tooltip.sphere": "구 선택",
                         "tooltip.translate": "이동 ( 1 )",
@@ -904,7 +907,8 @@ const localizeInit = () => {
                         // Bottom toolbar
                         "tooltip.undo": "撤销 ( Ctrl + Z )",
                         "tooltip.redo": "重做 ( Ctrl + Shift + Z )",
-                        "tooltip.picker": "选择器 ( P )",
+                        "tooltip.picker": "选择器 ( R )",
+                        "tooltip.polygon": "多边形选择 ( P )",
                         "tooltip.brush": "画笔 ( B )",
                         "tooltip.sphere": "球选择",
                         "tooltip.translate": "移动 ( 1 )",

@@ -1,12 +1,12 @@
 import { Events } from "../events";
 
-type Point = {x: number, y: number};
+type Point = { x: number, y: number };
 
 class PolygonSelection {
     activate: () => void;
     deactivate: () => void;
 
-    constructor(events: Events, parent: HTMLElement) {
+    constructor(events: Events, parent: HTMLElement, mask: { canvas: HTMLCanvasElement, context: CanvasRenderingContext2D }) {
         let points: Point[] = [];
         let currentPoint: Point = null;
 
@@ -23,26 +23,25 @@ class PolygonSelection {
         polyline.setAttribute('stroke-dashoffset', '0');
 
         // create canvas
-        const selectCanvas = document.createElement('canvas');
-        selectCanvas.id = 'polygon-select-canvas';
-
-        const context = selectCanvas.getContext('2d');
-        context.globalCompositeOperation = 'copy';
-
-        const prev = { x: 0, y: 0 };
-        let dragId: number | undefined;
+        const { canvas, context } = mask;
 
         const paint = () => {
             polyline.setAttribute('points', [...points, currentPoint].reduce((prev, current) => prev + `${current.x}, ${current.y} `, ""));
             polyline.setAttribute('stroke', isClosed() ? '#fa6' : '#f60');
         };
 
-        const isClosed = () => points.length > 1 && Math.abs(currentPoint.x - points[0].x) < 4 && Math.abs(currentPoint.y - points[0].y) < 4;
+        const dist = (a: Point, b: Point) => {
+            return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+        };
+
+        const isClosed = () => {
+            return points.length > 1 && dist(currentPoint, points[0]) < 8;
+        };
 
         const pointermove = (e: PointerEvent) => {
-            currentPoint = {x: e.offsetX, y: e.offsetY};
+            currentPoint = { x: e.offsetX, y: e.offsetY };
 
-            if(points.length > 0){    
+            if (points.length > 0) {
                 paint();
             }
         };
@@ -58,44 +57,43 @@ class PolygonSelection {
             if (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary) {
                 e.preventDefault();
                 e.stopPropagation();
-    
-                if(isClosed())
+
+                if (isClosed()) {
                     commitSelection(e);
-                else
+                } else if (points.length === 0 || dist(points[points.length - 1], currentPoint) > 0) {
                     points.push(currentPoint);
+                }
             }
         };
 
-        const dblclick = (e: PointerEvent) => {   
-            if(points.length > 0){
-                points.push(currentPoint);
-                
-                e.preventDefault();
-                e.stopPropagation();
+        const dblclick = (e: PointerEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
 
+            if (points.length > 2) {
                 commitSelection(e);
             }
         };
 
         const commitSelection = (e: PointerEvent) => {
             // initialize canvas
-            if (selectCanvas.width !== parent.clientWidth || selectCanvas.height !== parent.clientHeight) {
-                selectCanvas.width = parent.clientWidth;
-                selectCanvas.height = parent.clientHeight;
+            if (canvas.width !== parent.clientWidth || canvas.height !== parent.clientHeight) {
+                canvas.width = parent.clientWidth;
+                canvas.height = parent.clientHeight;
             }
 
             // clear canvas
-            context.clearRect(0, 0, selectCanvas.width, selectCanvas.height);
+            context.clearRect(0, 0, canvas.width, canvas.height);
 
             context.beginPath();
             context.fillStyle = '#f60';
             context.beginPath();
             points.forEach((p, idx) => {
-                if(idx === 0){
+                if (idx === 0) {
                     context.moveTo(p.x, p.y);
                 }
                 else {
-                    context.lineTo(p.x, p.y);    
+                    context.lineTo(p.x, p.y);
                 }
             });
             context.closePath();
@@ -104,7 +102,7 @@ class PolygonSelection {
             events.fire(
                 'select.byMask',
                 e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
-                selectCanvas,
+                canvas,
                 context
             );
 

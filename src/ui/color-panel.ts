@@ -45,13 +45,13 @@ class ColorPanel extends Container {
         });
 
         const icon = new Label({
-            text: '\uE403',
-            class: `panel-header-icon`
+            class: `panel-header-icon`,
+            text: '\uE146'
         });
 
         const label = new Label({
-            text: localize('colors'),
-            class: `panel-header-label`
+            class: `panel-header-label`,
+            text: localize('colors')
         });
 
         header.append(icon);

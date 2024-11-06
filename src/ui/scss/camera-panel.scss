@@ -1,0 +1,51 @@
+@use 'colors.scss' as *;
+
+#camera-panel {
+    top: 50%;
+    transform: translate(0, -50%);
+    right: 102px;
+    width: 320px;
+    flex-direction: column;
+
+    &:not(.pcui-hidden) {
+        display: flex;
+    }
+
+    > .camera-panel-list-container {
+        width: 100%;
+        height: 300px;
+
+        padding: 4px 0px;
+
+        overflow-y: auto;
+
+        > .camera-panel-list {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+
+            > .camera-panel-list-row {
+                display: flex;
+                flex-direction: row;
+                flex-shrink: 0;
+                flex-grow: 0;
+
+                cursor: pointer;
+
+                > .camera-panel-list-row-text {
+                    flex-grow: 1;
+                }
+            }
+        }
+
+        .selected {
+            background-color: $bcg-darker;
+        }
+    }
+
+    > .camera-panel-control-row {
+        display: flex;
+        flex-direction: row;
+        background-color: $bcg-dark;
+    }
+}

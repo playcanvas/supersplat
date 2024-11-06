@@ -210,67 +210,6 @@ class ViewPanel extends Container {
         showBoundRow.append(showBoundLabel);
         showBoundRow.append(showBoundToggle);
 
-        // camera poses
-
-        const poseHeader = new Container({
-            class: 'panel-header'
-        });
-
-        const poseIcon = new Label({
-            class: 'panel-header-icon',
-            text: '\uE212'
-        });
-
-        const poseHeaderLabel = new Label({
-            text: localize('options.pose-header'),
-            class: 'panel-header-label'
-        });
-
-        const poseAdd = new Label({
-            class: 'panel-header-button',
-            text: '\uE120'
-        });
-
-        const posePrev = new Label({
-            class: 'panel-header-button',
-            text: '\uE162'
-        });
-
-        const poseNext = new Label({
-            class: 'panel-header-button',
-            text: '\uE164'
-        });
-
-        const posePlay = new Label({
-            class: 'panel-header-button',
-            text: '\uE131'
-        });
-
-        const poseClear = new Label({
-            class: 'panel-header-button',
-            text: '\uE125'
-        });
-
-        poseHeader.append(poseIcon);
-        poseHeader.append(poseHeaderLabel);
-        poseHeader.append(poseAdd);
-        poseHeader.append(new Label({ class: 'panel-header-spacer' }));
-        poseHeader.append(posePrev);
-        poseHeader.append(poseNext);
-        poseHeader.append(posePlay);
-        poseHeader.append(new Label({ class: 'panel-header-spacer' }));
-        poseHeader.append(poseClear);
-
-        const poseListContainer = new Container({
-            class: 'view-panel-list-container'
-        });
-
-        const poseList = new Container({
-            class: 'view-panel-list'
-        });
-
-        poseListContainer.append(poseList);
-
         this.append(header);
         this.append(clrRow);
         this.append(fovRow);
@@ -279,8 +218,6 @@ class ViewPanel extends Container {
         this.append(outlineSelectionRow);
         this.append(showGridRow);
         this.append(showBoundRow);
-        this.append(poseHeader);
-        this.append(poseListContainer);
 
         // handle panel visibility
 
@@ -301,6 +238,12 @@ class ViewPanel extends Container {
 
         events.on('viewPanel.toggleVisible', () => {
             setVisible(this.hidden);
+        });
+
+        events.on('cameraPanel.visible', (visible: boolean) => {
+            if (visible) {
+                setVisible(false);
+            }
         });
 
         // sh bands
@@ -355,144 +298,6 @@ class ViewPanel extends Container {
             events.fire('camera.setBound', showBoundToggle.value);
         });
 
-        // poses
-
-        type Pose = {
-            name: string,
-            position: Vec3,
-            target: Vec3
-        };
-        const poses: { pose: Pose, row: Container }[] = [];
-        let currentPose = -1;
-
-        const setPose = (index: number, speed = 1) => {
-            if (index === currentPose) {
-                return;
-            }
-
-            if (index !== -1) {
-                events.fire('camera.setPose', poses[index].pose, speed);
-            }
-
-            poses.forEach((p, i) => {
-                if (i === index) {
-                    p.row.class.add('selected');
-                    p.row.dom.scrollIntoView({ block: 'nearest' });
-                } else {
-                    p.row.class.remove('selected');
-                }
-            });
-
-            currentPose = index;
-        };
-
-        const addPose = (pose: Pose) => {
-            const row = new Container({
-                class: 'view-panel-list-row'
-            });
-
-            const label = new Label({
-                text: pose.name ?? 'camera',
-                class: 'view-panel-list-row-label'
-            });
-
-            row.append(label);
-
-            row.on('click', () => {
-                setPose(poses.findIndex((r) => r.pose === pose));
-            });
-
-            poseList.append(row);
-            poses.push({ row, pose });
-        };
-
-        const removePose = (index: number) => {
-            poseList.remove(poses[index].row);
-            poses.splice(index, 1);
-        };
-
-        const nextPose = () => {
-            if (poses.length > 0) {
-                setPose((currentPose + 1) % poses.length, 2.5);
-            }
-        };
-
-        const prevPose = () => {
-            if (poses.length > 0) {
-                setPose((currentPose - 1 + poses.length) % poses.length);
-            }
-        };
-
-        poseAdd.on('click', () => {
-            // get the current camera pose
-            const pose = events.invoke('camera.getPose');
-
-            addPose({
-                name: `camera_${poses.length}`,
-                position: pose.position,
-                target: pose.target
-            });
-        });
-
-        posePrev.on('click', () => {
-            prevPose();
-        });
-
-        poseNext.on('click', () => {
-            nextPose();
-        });
-
-        let timeout: number = null;
-
-        const stop = () => {
-            posePlay.text = '\uE131';
-            clearTimeout(timeout);
-            timeout = null;
-        };
-
-        posePlay.on('click', () => {
-            if (timeout) {
-                
-                stop();
-            } else if (poses.length > 0) {
-                const next = () => {
-                    nextPose();
-                    timeout = window.setTimeout(next, 250);
-                };
-
-                posePlay.text = '\uE135';
-                next();
-            }
-        });
-
-        events.function('camera.poses', () => {
-            return poses.map(p => p.pose);
-        });
-
-        events.on('camera.addPose', (pose: Pose) => {
-            addPose(pose);
-        });
-
-        events.on('camera.removePose', (index: number) => {
-            removePose(index);
-        });
-
-        events.on('camera.controller', (type: string) => {
-            if (type !== 'pointermove') {
-                if (timeout) {
-                    stop();
-                } else {
-                    setPose(-1);
-                }
-            }
-        });
-
-        poseClear.on('click', () => {
-            while (poses.length > 0) {
-                removePose(0);
-            }
-        });
-
         // background color
 
         bgClrPicker.on('change', (value: number[]) => {
@@ -526,13 +331,6 @@ class ViewPanel extends Container {
         tooltips.register(selectedClrPicker, localize('options.selected-color'), 'top');
         tooltips.register(unselectedClrPicker, localize('options.unselected-color'), 'top');
         tooltips.register(lockedClrPicker, localize('options.locked-color'), 'top');
-
-        // tooltips
-        tooltips.register(poseAdd, localize('options.add-pose'));
-        tooltips.register(posePrev, localize('options.prev-pose'));
-        tooltips.register(poseNext, localize('options.next-pose'));
-        tooltips.register(posePlay, localize('options.play-poses'));
-        tooltips.register(poseClear, localize('options.clear-poses'));
     }
 }
 

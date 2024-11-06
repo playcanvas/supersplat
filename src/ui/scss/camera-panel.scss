@@ -43,4 +43,10 @@
             background-color: $bcg-darker;
         }
     }
+
+    > .camera-panel-control-row {
+        display: flex;
+        flex-direction: row;
+        background-color: $bcg-dark;
+    }
 }

@@ -22,18 +22,39 @@ class CameraPanel extends Container {
 
         // camera poses
 
-        const poseHeader = new Container({
+        const header = new Container({
             class: 'panel-header'
         });
 
-        const poseIcon = new Label({
+        const icon = new Label({
             class: 'panel-header-icon',
             text: '\uE212'
         });
 
-        const poseHeaderLabel = new Label({
-            text: localize('options.pose-header'),
+        const headerLabel = new Label({
+            text: localize('camera'),
             class: 'panel-header-label'
+        });
+
+        header.append(icon);
+        header.append(headerLabel);
+
+        // pose list
+
+        const poseListContainer = new Container({
+            class: 'camera-panel-list-container'
+        });
+
+        const poseList = new Container({
+            class: 'camera-panel-list'
+        });
+
+        poseListContainer.append(poseList);
+
+        // control row
+
+        const controlRow = new Container({
+            class: 'camera-panel-control-row'
         });
 
         const poseAdd = new Label({
@@ -46,14 +67,14 @@ class CameraPanel extends Container {
             text: '\uE162'
         });
 
-        const poseNext = new Label({
-            class: 'panel-header-button',
-            text: '\uE164'
-        });
-
         const posePlay = new Label({
             class: 'panel-header-button',
             text: '\uE131'
+        });
+
+        const poseNext = new Label({
+            class: 'panel-header-button',
+            text: '\uE164'
         });
 
         const poseClear = new Label({
@@ -61,28 +82,17 @@ class CameraPanel extends Container {
             text: '\uE125'
         });
 
-        poseHeader.append(poseIcon);
-        poseHeader.append(poseHeaderLabel);
-        poseHeader.append(poseAdd);
-        poseHeader.append(new Label({ class: 'panel-header-spacer' }));
-        poseHeader.append(posePrev);
-        poseHeader.append(poseNext);
-        poseHeader.append(posePlay);
-        poseHeader.append(new Label({ class: 'panel-header-spacer' }));
-        poseHeader.append(poseClear);
+        controlRow.append(poseAdd);
+        controlRow.append(new Label({ class: 'panel-header-spacer' }));
+        controlRow.append(posePrev);
+        controlRow.append(posePlay);
+        controlRow.append(poseNext);
+        controlRow.append(new Label({ class: 'panel-header-spacer' }));
+        controlRow.append(poseClear);
 
-        const poseListContainer = new Container({
-            class: 'camera-panel-list-container'
-        });
-
-        const poseList = new Container({
-            class: 'camera-panel-list'
-        });
-
-        poseListContainer.append(poseList);
-
-        this.append(poseHeader);
+        this.append(header);
         this.append(poseListContainer);
+        this.append(controlRow);
 
         // poses
 
@@ -223,11 +233,11 @@ class CameraPanel extends Container {
         });
 
         // tooltips
-        tooltips.register(poseAdd, localize('options.add-pose'));
-        tooltips.register(posePrev, localize('options.prev-pose'));
-        tooltips.register(poseNext, localize('options.next-pose'));
-        tooltips.register(posePlay, localize('options.play-poses'));
-        tooltips.register(poseClear, localize('options.clear-poses'));
+        tooltips.register(poseAdd, localize('camera.add-pose'));
+        tooltips.register(posePrev, localize('camera.prev-pose'));
+        tooltips.register(poseNext, localize('camera.next-pose'));
+        tooltips.register(posePlay, localize('camera.play-poses'));
+        tooltips.register(poseClear, localize('camera.clear-poses'));
 
         // handle panel visibility
 

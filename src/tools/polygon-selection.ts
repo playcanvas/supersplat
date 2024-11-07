@@ -1,139 +1,119 @@
 import { Events } from "../events";
+import { Point, ScreenspaceSelection } from "./screenspace-selection";
 
-type Point = { x: number, y: number };
-
-class PolygonSelection {
-    activate: () => void;
-    deactivate: () => void;
+class PolygonSelection extends ScreenspaceSelection{
+    private points: Point[] = [];
+    private currentPoint: Point = null;
+    private polyline: SVGPolylineElement;
 
     constructor(events: Events, parent: HTMLElement, mask: { canvas: HTMLCanvasElement, context: CanvasRenderingContext2D }) {
-        let points: Point[] = [];
-        let currentPoint: Point = null;
+        super(events, parent, mask);
 
+        this.eventHandlers = {
+            pointerdown: this.pointerdown.bind(this),
+            pointermove: this.pointermove.bind(this),
+            pointerup: this.pointerup.bind(this),
+            dblclick: this.dblclick.bind(this)
+        }
+    }
+
+    protected initSVG(){
         // create svg
-        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        svg.id = 'polygon-select-svg';
-        svg.classList.add('select-svg');
-
+        this.svg = document.createElementNS("http://www.w3.org/2000/svg", "svg") as SVGSVGElement;
+        this.svg.id = 'lasso-select-svg';
+        this.svg.classList.add('select-svg');
+    
         // create polyline element
-        const polyline = document.createElementNS(svg.namespaceURI, 'polyline') as SVGPolylineElement;
-        polyline.setAttribute('fill', 'none');
-        polyline.setAttribute('stroke-width', '1');
-        polyline.setAttribute('stroke-dasharray', '5, 5');
-        polyline.setAttribute('stroke-dashoffset', '0');
+        this.polyline = document.createElementNS(this.svg.namespaceURI, 'polyline') as SVGPolylineElement;
+        this.polyline.setAttribute('fill', 'none');
+        this.polyline.setAttribute('stroke-width', '1');
+        this.polyline.setAttribute('stroke-dasharray', '5, 5');
+        this.polyline.setAttribute('stroke-dashoffset', '0');
+    
+        this.svg.appendChild(this.polyline);
+        this.parent.appendChild(this.svg);
+    }
 
-        // create canvas
-        const { canvas, context } = mask;
+    private paint() {
+        this.polyline.setAttribute('points', [...this.points, this.currentPoint].reduce((prev, current) => prev + `${current.x}, ${current.y} `, ""));
+        this.polyline.setAttribute('stroke', this.isClosed() ? '#fa6' : '#f60');
+    };
 
-        const paint = () => {
-            polyline.setAttribute('points', [...points, currentPoint].reduce((prev, current) => prev + `${current.x}, ${current.y} `, ""));
-            polyline.setAttribute('stroke', isClosed() ? '#fa6' : '#f60');
-        };
+    private isClosed() {
+        return this.points.length > 1 && this.dist(this.currentPoint, this.points[0]) < 8;
+    };
 
-        const dist = (a: Point, b: Point) => {
-            return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
-        };
+    private pointermove(e: PointerEvent){
+        this.currentPoint = { x: e.offsetX, y: e.offsetY };
 
-        const isClosed = () => {
-            return points.length > 1 && dist(currentPoint, points[0]) < 8;
-        };
+        if (this.points.length > 0) {
+            this.paint();
+        }
+    };
 
-        const pointermove = (e: PointerEvent) => {
-            currentPoint = { x: e.offsetX, y: e.offsetY };
+    private pointerdown(e: PointerEvent){
+        if (this.points.length > 0 || (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary)) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    };
 
-            if (points.length > 0) {
-                paint();
-            }
-        };
-
-        const pointerdown = (e: PointerEvent) => {
-            if (points.length > 0 || (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary)) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-        };
-
-        const pointerup = (e: PointerEvent) => {
-            if (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary) {
-                e.preventDefault();
-                e.stopPropagation();
-
-                if (isClosed()) {
-                    commitSelection(e);
-                } else if (points.length === 0 || dist(points[points.length - 1], currentPoint) > 0) {
-                    points.push(currentPoint);
-                }
-            }
-        };
-
-        const dblclick = (e: PointerEvent) => {
+    private pointerup(e: PointerEvent){
+        if (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary) {
             e.preventDefault();
             e.stopPropagation();
 
-            if (points.length > 2) {
-                commitSelection(e);
+            if (this.isClosed()) {
+                this.commitSelection(e);
+            } else if (this.points.length === 0 || this.dist(this.points[this.points.length - 1], this.currentPoint) > 0) {
+                this.points.push(this.currentPoint);
             }
-        };
+        }
+    };
 
-        const commitSelection = (e: PointerEvent) => {
-            // initialize canvas
-            if (canvas.width !== parent.clientWidth || canvas.height !== parent.clientHeight) {
-                canvas.width = parent.clientWidth;
-                canvas.height = parent.clientHeight;
+    private dblclick(e: PointerEvent) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (this.points.length > 2) {
+            this.commitSelection(e);
+        }
+    };
+
+    private commitSelection(e: PointerEvent) {
+        // initialize canvas
+        if (this.canvas.width !== this.parent.clientWidth || this.canvas.height !== this.parent.clientHeight) {
+            this.canvas.width = this.parent.clientWidth;
+            this.canvas.height = this.parent.clientHeight;
+        }
+
+        // clear canvas
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        this.context.beginPath();
+        this.context.fillStyle = '#f60';
+        this.context.beginPath();
+        this.points.forEach((p, idx) => {
+            if (idx === 0) {
+                this.context.moveTo(p.x, p.y);
             }
+            else {
+                this.context.lineTo(p.x, p.y);
+            }
+        });
+        this.context.closePath();
+        this.context.fill();
 
-            // clear canvas
-            context.clearRect(0, 0, canvas.width, canvas.height);
+        this.events.fire(
+            'select.byMask',
+            e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
+            this.canvas,
+            this.context
+        );
 
-            context.beginPath();
-            context.fillStyle = '#f60';
-            context.beginPath();
-            points.forEach((p, idx) => {
-                if (idx === 0) {
-                    context.moveTo(p.x, p.y);
-                }
-                else {
-                    context.lineTo(p.x, p.y);
-                }
-            });
-            context.closePath();
-            context.fill();
-
-            events.fire(
-                'select.byMask',
-                e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
-                canvas,
-                context
-            );
-
-            points = [];
-            paint();
-        };
-
-        this.activate = () => {
-            svg.style.display = 'inline';
-            parent.style.display = 'block';
-            parent.addEventListener('pointerdown', pointerdown);
-            parent.addEventListener('pointermove', pointermove);
-            parent.addEventListener('pointerup', pointerup);
-            parent.addEventListener('dblclick', dblclick);
-        };
-
-        this.deactivate = () => {
-            // cancel active operation
-            svg.style.display = 'none';
-            parent.style.display = 'none';
-            parent.removeEventListener('pointerdown', pointerdown);
-            parent.removeEventListener('pointermove', pointermove);
-            parent.removeEventListener('pointerup', pointerup);
-            parent.removeEventListener('dblclick', dblclick);
-            points = [];
-            paint();
-        };
-
-        svg.appendChild(polyline);
-        parent.appendChild(svg);
-    }
+        this.points = [];
+        this.paint();
+    };
 }
 
 export { PolygonSelection };

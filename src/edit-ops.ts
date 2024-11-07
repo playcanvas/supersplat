@@ -1,4 +1,4 @@
-import { Mat4, Vec3 } from 'playcanvas';
+import { Color, Mat4 } from 'playcanvas';
 import { Splat } from './splat';
 import { State } from './splat-state';
 import { Transform } from './transform';
@@ -318,6 +318,49 @@ class PlacePivotOp {
     }
 }
 
+type ColorAdjustment = {
+    tintClr?: Color
+    brightness?: number,
+    blackPoint?: number,
+    whitePoint?: number,
+    transparency?: number
+};
+
+class SetSplatColorAdjustmentOp {
+    name: "setSplatColor";
+    splat: Splat;
+
+    newState: ColorAdjustment;
+    oldState: ColorAdjustment;
+
+    constructor(options: { splat: Splat, oldState: ColorAdjustment, newState: ColorAdjustment }) {
+        const { splat, oldState, newState } = options;
+        this.splat = splat;
+        this.oldState = oldState;
+        this.newState = newState;
+    }
+
+    do() {
+        const { splat } = this;
+        const { tintClr, brightness, blackPoint, whitePoint, transparency } = this.newState;
+        if (tintClr) splat.tintClr = tintClr;
+        if (brightness !== null) splat.brightness = brightness;
+        if (blackPoint !== null) splat.blackPoint = blackPoint;
+        if (whitePoint !== null) splat.whitePoint = whitePoint;
+        if (transparency !== null) splat.transparency = transparency;
+    }
+
+    undo() {
+        const { splat } = this;
+        const { tintClr, brightness, blackPoint, whitePoint, transparency } = this.oldState;
+        if (tintClr) splat.tintClr = tintClr;
+        if (brightness !== null) splat.brightness = brightness;
+        if (blackPoint !== null) splat.blackPoint = blackPoint;
+        if (whitePoint !== null) splat.whitePoint = whitePoint;
+        if (transparency !== null) splat.transparency = transparency;
+    }
+}
+
 class MultiOp {
     name = "multiOp";
     ops: EditOp[];
@@ -348,5 +391,7 @@ export {
     EntityTransformOp,
     SplatsTransformOp,
     PlacePivotOp,
+    ColorAdjustment,
+    SetSplatColorAdjustmentOp,
     MultiOp
 };

@@ -125,9 +125,10 @@ class SplatTransformCache {
 }
 
 // apply color adjustments
-const applyColorTint = (target: { f_dc_0: number, f_dc_1: number, f_dc_2: number }, adjustment: { blackPoint: number, whitePoint: number, brightness: number, tintClr: Color }) => {
-    const { blackPoint, whitePoint, brightness, tintClr } = adjustment;
-    if (blackPoint !== 0 || whitePoint !== 1 || brightness !== 1 || !tintClr.equals(Color.WHITE)) {
+const applyColorTint = (target: { f_dc_0: number, f_dc_1: number, f_dc_2: number, opacity: number }, adjustment: { blackPoint: number, whitePoint: number, brightness: number, tintClr: Color, transparency: number }) => {
+    const { blackPoint, whitePoint, brightness, tintClr, transparency } = adjustment;
+
+    if (!tintClr.equals(Color.WHITE) || blackPoint !== 0 || whitePoint !== 1 || brightness !== 1) {
         const SH_C0 = 0.28209479177387814;
         const to = (value: number) => value * SH_C0 + 0.5;
         const from = (value: number) => (value - 0.5) / SH_C0;
@@ -138,6 +139,13 @@ const applyColorTint = (target: { f_dc_0: number, f_dc_1: number, f_dc_2: number
         target.f_dc_0 = from(offset + to(target.f_dc_0) * tintClr.r * scale);
         target.f_dc_1 = from(offset + to(target.f_dc_1) * tintClr.g * scale);
         target.f_dc_2 = from(offset + to(target.f_dc_2) * tintClr.b * scale);
+    }
+
+    if (transparency !== 1) {
+        const invSig = (value: number) => (value <= 0) ? -400 : ((value >= 1) ? 400 : -Math.log(1 / value - 1));
+        const sig = (value: number) => 1 / (1 + Math.exp(-value));
+
+        target.opacity = invSig(sig(target.opacity) * transparency);
     }
 };
 
@@ -743,7 +751,8 @@ const serializeSplat = async (splats: Splat[], write: WriteFunc) => {
             const clr = {
                 f_dc_0: f_dc_0[i],
                 f_dc_1: f_dc_1[i],
-                f_dc_2: f_dc_2[i]
+                f_dc_2: f_dc_2[i],
+                opacity: opacity[i]
             };
             applyColorTint(clr, splat);
 
@@ -751,7 +760,7 @@ const serializeSplat = async (splats: Splat[], write: WriteFunc) => {
             dataView.setUint8(off + 24, clamp((0.5 + SH_C0 * clr.f_dc_0) * 255));
             dataView.setUint8(off + 25, clamp((0.5 + SH_C0 * clr.f_dc_1) * 255));
             dataView.setUint8(off + 26, clamp((0.5 + SH_C0 * clr.f_dc_2) * 255));
-            dataView.setUint8(off + 27, clamp((1 / (1 + Math.exp(-opacity[i]))) * 255));
+            dataView.setUint8(off + 27, clamp((1 / (1 + Math.exp(-clr.opacity))) * 255));
 
             q.set(rot_1[i], rot_2[i], rot_3[i], rot_0[i]).mul2(quat, q).normalize();
             dataView.setUint8(off + 28, clamp(q.w * 128 + 128));

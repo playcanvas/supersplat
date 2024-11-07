@@ -17,10 +17,6 @@ class PolygonSelection {
 
         // create polyline element
         const polyline = document.createElementNS(svg.namespaceURI, 'polyline') as SVGPolylineElement;
-        //polyline.setAttribute('fill', 'none');
-        //polyline.setAttribute('stroke-width', '1');
-        //polyline.setAttribute('stroke-dasharray', '5, 5');
-        //polyline.setAttribute('stroke-dashoffset', '0');
 
         // create canvas
         const { canvas, context } = mask;

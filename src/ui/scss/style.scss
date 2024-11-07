@@ -151,7 +151,7 @@ body {
     height: 100%;
     cursor: crosshair;
 
-    rect, polyline{
+    rect, polyline {
         fill: none;
         stroke-dasharray: 5px;
         animation: stroke 0.2s linear infinite;

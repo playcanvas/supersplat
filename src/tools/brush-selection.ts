@@ -4,7 +4,7 @@ class BrushSelection {
     activate: () => void;
     deactivate: () => void;
 
-    constructor(events: Events, parent: HTMLElement) {
+    constructor(events: Events, parent: HTMLElement, mask: { canvas: HTMLCanvasElement, context: CanvasRenderingContext2D }) {
         let radius = 40;
 
         // create svg
@@ -20,12 +20,7 @@ class BrushSelection {
         circle.setAttribute('stroke-width', '1');
         circle.setAttribute('stroke-dasharray', '5, 5');
 
-        // create canvas
-        const selectCanvas = document.createElement('canvas');
-        selectCanvas.id = 'brush-select-canvas';
-
-        const context = selectCanvas.getContext('2d');
-        context.globalCompositeOperation = 'copy';
+        const { canvas, context } = mask;
 
         const prev = { x: 0, y: 0 };
         let dragId: number | undefined;
@@ -60,16 +55,16 @@ class BrushSelection {
                 parent.setPointerCapture(dragId);
 
                 // initialize canvas
-                if (selectCanvas.width !== parent.clientWidth || selectCanvas.height !== parent.clientHeight) {
-                    selectCanvas.width = parent.clientWidth;
-                    selectCanvas.height = parent.clientHeight;
+                if (canvas.width !== parent.clientWidth || canvas.height !== parent.clientHeight) {
+                    canvas.width = parent.clientWidth;
+                    canvas.height = parent.clientHeight;
                 }
 
                 // clear canvas
-                context.clearRect(0, 0, selectCanvas.width, selectCanvas.height);
+                context.clearRect(0, 0, canvas.width, canvas.height);
 
                 // display it
-                selectCanvas.style.display = 'inline';
+                canvas.style.display = 'inline';
 
                 prev.x = e.offsetX;
                 prev.y = e.offsetY;
@@ -90,7 +85,7 @@ class BrushSelection {
         const dragEnd = () => {
             parent.releasePointerCapture(dragId);
             dragId = undefined;
-            selectCanvas.style.display = 'none';
+            canvas.style.display = 'none';
         };
 
         const pointerup = (e: PointerEvent) => {
@@ -103,7 +98,7 @@ class BrushSelection {
                 events.fire(
                     'select.byMask',
                     e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
-                    selectCanvas,
+                    canvas,
                     context
                 );
             }
@@ -141,7 +136,6 @@ class BrushSelection {
 
         svg.appendChild(circle);
         parent.appendChild(svg);
-        parent.appendChild(selectCanvas);
     }
 }
 

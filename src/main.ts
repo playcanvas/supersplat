@@ -70,10 +70,9 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['G', 'g'], { event: 'grid.toggleVisible' });
     shortcuts.register(['C', 'c'], { event: 'tool.toggleCoordSpace' });
     shortcuts.register(['F', 'f'], { event: 'camera.focus' });
-    shortcuts.register(['O', 'o'], { event: 'tool.polygonSelection', sticky: true });
-    shortcuts.register(['B', 'b'], { event: 'tool.brushSelection', sticky: true });
     shortcuts.register(['R', 'r'], { event: 'tool.rectSelection', sticky: true });
-    shortcuts.register(['P', 'p'], { event: 'tool.rectSelection', sticky: true });
+    shortcuts.register(['P', 'p'], { event: 'tool.polygonSelection', sticky: true });
+    shortcuts.register(['B', 'b'], { event: 'tool.brushSelection', sticky: true });
     shortcuts.register(['A', 'a'], { event: 'select.all' });
     shortcuts.register(['A', 'a'], { event: 'select.none', shift: true });
     shortcuts.register(['I', 'i'], { event: 'select.invert' });
@@ -174,15 +173,28 @@ const main = async () => {
 
     setBgClr(new Color(sceneConfig.bgClr.r, sceneConfig.bgClr.g, sceneConfig.bgClr.b, 1));
 
+    // create the mask selection canvas
+    const maskCanvas = document.createElement('canvas');
+    const maskContext = maskCanvas.getContext('2d');
+    maskCanvas.setAttribute('id', 'mask-canvas');
+    maskContext.globalCompositeOperation = 'copy';
+
+    const mask = {
+        canvas: maskCanvas,
+        context: maskContext
+    };
+
     // tool manager
     const toolManager = new ToolManager(events);
     toolManager.register('rectSelection', new RectSelection(events, editorUI.toolsContainer.dom));
-    toolManager.register('brushSelection', new BrushSelection(events, editorUI.toolsContainer.dom));
-    toolManager.register('polygonSelection', new PolygonSelection(events, editorUI.toolsContainer.dom));
+    toolManager.register('brushSelection', new BrushSelection(events, editorUI.toolsContainer.dom, mask));
+    toolManager.register('polygonSelection', new PolygonSelection(events, editorUI.toolsContainer.dom, mask));
     toolManager.register('sphereSelection', new SphereSelection(events, scene, editorUI.canvasContainer));
     toolManager.register('move', new MoveTool(events, scene));
     toolManager.register('rotate', new RotateTool(events, scene));
     toolManager.register('scale', new ScaleTool(events, scene));
+
+    editorUI.toolsContainer.dom.appendChild(maskCanvas);
 
     window.scene = scene;
 

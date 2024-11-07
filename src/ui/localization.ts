@@ -234,9 +234,12 @@ const localizeInit = () => {
 
                         // Color panel
                         "colors": "COLORS",
-                        "colors.ambient": "Ambient",
                         "colors.tint": "Tint",
                         "colors.brightness": "Brightness",
+                        "colors.blackPoint": "Black Point",
+                        "colors.whitePoint": "White Point",
+                        "colors.transparency": "Transparency",
+                        "colors.reset": "Reset",
 
                         // Data panel
                         "data": "SPLAT DATA",

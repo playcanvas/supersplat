@@ -318,42 +318,46 @@ class PlacePivotOp {
     }
 }
 
-class SetSplatClrOp {
+type ColorAdjustment = {
+    tintClr?: Color
+    brightness?: number,
+    blackPoint?: number,
+    whitePoint?: number,
+    transparency?: number
+};
+
+class SetSplatColorAdjustmentOp {
     name: "setSplatColor";
     splat: Splat;
 
-    newAmbientClr: Color;
-    newTintClr: Color;
-    newBrightness: number;
+    newState: ColorAdjustment;
+    oldState: ColorAdjustment;
 
-    oldAmbientClr: Color;
-    oldTintClr: Color;
-    oldBrightness: number;
-
-    constructor(options: { splat: Splat, ambientClr?: Color, tintClr?: Color, brightness?: number }) {
-        const { splat, ambientClr, tintClr, brightness } = options;
-
+    constructor(options: { splat: Splat, oldState: ColorAdjustment, newState: ColorAdjustment }) {
+        const { splat, oldState, newState } = options;
         this.splat = splat;
-
-        this.newAmbientClr = ambientClr;
-        this.newTintClr = tintClr;
-        this.newBrightness = brightness;
-
-        this.oldAmbientClr = ambientClr ? splat.ambientClr.clone() : null;
-        this.oldTintClr = tintClr ? splat.tintClr.clone() : null;
-        this.oldBrightness = brightness !== null ? splat.brightness : null;
+        this.oldState = oldState;
+        this.newState = newState;
     }
 
     do() {
-        if (this.newAmbientClr) this.splat.ambientClr = this.newAmbientClr;
-        if (this.newTintClr) this.splat.tintClr = this.newTintClr;
-        if (this.newBrightness) this.splat.brightness = this.newBrightness;
+        const { splat } = this;
+        const { tintClr, brightness, blackPoint, whitePoint, transparency } = this.newState;
+        if (tintClr) splat.tintClr = tintClr;
+        if (brightness !== null) splat.brightness = brightness;
+        if (blackPoint !== null) splat.blackPoint = blackPoint;
+        if (whitePoint !== null) splat.whitePoint = whitePoint;
+        if (transparency !== null) splat.transparency = transparency;
     }
 
     undo() {
-        if (this.oldAmbientClr) this.splat.ambientClr = this.oldAmbientClr;
-        if (this.oldTintClr) this.splat.tintClr = this.oldTintClr;
-        if (this.oldBrightness) this.splat.brightness = this.oldBrightness;
+        const { splat } = this;
+        const { tintClr, brightness, blackPoint, whitePoint, transparency } = this.oldState;
+        if (tintClr) splat.tintClr = tintClr;
+        if (brightness !== null) splat.brightness = brightness;
+        if (blackPoint !== null) splat.blackPoint = blackPoint;
+        if (whitePoint !== null) splat.whitePoint = whitePoint;
+        if (transparency !== null) splat.transparency = transparency;
     }
 }
 
@@ -387,6 +391,7 @@ export {
     EntityTransformOp,
     SplatsTransformOp,
     PlacePivotOp,
-    SetSplatClrOp,
+    ColorAdjustment,
+    SetSplatColorAdjustmentOp,
     MultiOp
 };

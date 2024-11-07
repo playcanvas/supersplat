@@ -29,6 +29,7 @@
         }
 
         & > .color-panel-row-slider {
+            width: 220px;
             margin: 0px;
 
             & > .pcui-slider-container {
@@ -40,5 +41,11 @@
                 }
             }
         }
+    }
+
+    > .color-panel-control-row {
+        display: flex;
+        flex-direction: row;
+        background-color: $bcg-dark;
     }
 }

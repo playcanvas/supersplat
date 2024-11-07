@@ -1,179 +1,157 @@
 import { Events } from "../events";
+import { Point, ScreenspaceSelection } from "./screenspace-selection";
 
-type Point = { x: number, y: number };
-
-class LassoSelection {
-    activate: () => void;
-    deactivate: () => void;
+class LassoSelection extends ScreenspaceSelection{
+    private points: Point[] = [];
+    private currentPoint: Point = null;
+    private lastPointTime = 0;
+    private polyline: SVGPolylineElement;
 
     constructor(events: Events, parent: HTMLElement, mask: { canvas: HTMLCanvasElement, context: CanvasRenderingContext2D }) {
-        let points: Point[] = [];
-        let currentPoint: Point = null;
-        let lastPointTime = 0;
+        super(events, parent, mask);
 
+        this.eventHandlers = {
+            pointerdown: this.pointerdown.bind(this),
+            pointermove: this.pointermove.bind(this),
+            pointerup: this.pointerup.bind(this)
+        }
+    }
+
+    protected initSVG(){
         // create svg
-        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        svg.id = 'lasso-select-svg';
-        svg.classList.add('select-svg');
-
+        this.svg = document.createElementNS("http://www.w3.org/2000/svg", "svg") as SVGSVGElement;
+        this.svg.id = 'lasso-select-svg';
+        this.svg.classList.add('select-svg');
+    
         // create polyline element
-        const polyline = document.createElementNS(svg.namespaceURI, 'polyline') as SVGPolylineElement;
-        polyline.setAttribute('fill', 'none');
-        polyline.setAttribute('stroke-width', '1');
-        polyline.setAttribute('stroke-dasharray', '5, 5');
-        polyline.setAttribute('stroke-dashoffset', '0');
+        this.polyline = document.createElementNS(this.svg.namespaceURI, 'polyline') as SVGPolylineElement;
+        this.polyline.setAttribute('fill', 'none');
+        this.polyline.setAttribute('stroke-width', '1');
+        this.polyline.setAttribute('stroke-dasharray', '5, 5');
+        this.polyline.setAttribute('stroke-dashoffset', '0');
+    
+        this.svg.appendChild(this.polyline);
+        this.parent.appendChild(this.svg);
+    }
 
-        // create canvas
-        const { canvas, context } = mask;
+    private paint() {
+        this.polyline.setAttribute('points', [...this.points, this.currentPoint].reduce((prev, current) => prev + `${current.x}, ${current.y} `, ""));
+        this.polyline.setAttribute('stroke', this.isClosed() ? '#fa6' : '#f60');
+    };
 
-        const paint = () => {
-            polyline.setAttribute('points', [...points, currentPoint].reduce((prev, current) => prev + `${current.x}, ${current.y} `, ""));
-            polyline.setAttribute('stroke', isClosed() ? '#fa6' : '#f60');
-        };
+    private isClosed() {
+        return this.points.length > 1 && this.dist(this.currentPoint, this.points[0]) < 8;
+    };
 
-        const dist = (a: Point, b: Point) => {
-            return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
-        };
+    private update(e: PointerEvent){
+        this.currentPoint = {x: e.offsetX, y: e.offsetY};
 
-        const isClosed = () => {
-            return points.length > 1 && dist(currentPoint, points[0]) < 8;
-        };
-
-        let dragId: number | undefined;
-
-        const update = (e: PointerEvent) => {
-            currentPoint = {x: e.offsetX, y: e.offsetY};
-
-            const distance = points.length === 0 ? 0 : dist(currentPoint, points[points.length - 1]);
-            const millis = Date.now() - lastPointTime;
-            const preventCorners = distance > 20;
-            const slowNarrowSpacing = millis > 500 && distance > 2;
-            const fasterMediumSpacing = millis > 200 && distance > 10;
-            const firstPoints = points.length === 0;
+        const distance = this.points.length === 0 ? 0 : this.dist(this.currentPoint, this.points[this.points.length - 1]);
+        const millis = Date.now() - this.lastPointTime;
+        const preventCorners = distance > 20;
+        const slowNarrowSpacing = millis > 500 && distance > 2;
+        const fasterMediumSpacing = millis > 200 && distance > 10;
+        const firstPoints = this.points.length === 0;
 
 
-            if (dragId !== undefined && (preventCorners || slowNarrowSpacing || fasterMediumSpacing || firstPoints)) {
-                points.push(currentPoint);
-                lastPointTime = Date.now();
-                paint();
-            }
-        };
+        if (this.dragId !== undefined && (preventCorners || slowNarrowSpacing || fasterMediumSpacing || firstPoints)) {
+            this.points.push(this.currentPoint);
+            this.lastPointTime = Date.now();
+            this.paint();
+        }
+    };
 
-        const pointerdown = (e: PointerEvent) => {
-            if (dragId === undefined && (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary)) {
-                e.preventDefault();
-                e.stopPropagation();
+    private pointerdown(e: PointerEvent){
+        if (this.dragId === undefined && (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary)) {
+            e.preventDefault();
+            e.stopPropagation();
 
-                dragId = e.pointerId;
-                parent.setPointerCapture(dragId);
+            this.dragId = e.pointerId;
+            this.parent.setPointerCapture(this.dragId);
 
-                // initialize canvas
-                if (canvas.width !== parent.clientWidth || canvas.height !== parent.clientHeight) {
-                    canvas.width = parent.clientWidth;
-                    canvas.height = parent.clientHeight;
-                }
-
-                // clear canvas
-                context.clearRect(0, 0, canvas.width, canvas.height);
-
-                // display it
-                canvas.style.display = 'inline';
-
-                update(e);
-            }
-        };
-
-        const pointermove = (e: PointerEvent) => {
-            if (dragId !== undefined) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-
-            update(e);
-        };
-
-        const dragEnd = () => {
-            parent.releasePointerCapture(dragId);
-            dragId = undefined;
-            canvas.style.display = 'none';
-        };
-
-        const pointerup = (e: PointerEvent) => {
-            if (e.pointerId === dragId) {
-                e.preventDefault();
-                e.stopPropagation();
-
-                dragEnd();
-
-                commitSelection(e);
-
-                events.fire(
-                    'select.byMask',
-                    e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
-                    canvas,
-                    context
-                );
-            }
-        };
-
-        const commitSelection = (e: PointerEvent) => {
             // initialize canvas
-            if (canvas.width !== parent.clientWidth || canvas.height !== parent.clientHeight) {
-                canvas.width = parent.clientWidth;
-                canvas.height = parent.clientHeight;
+            if (this.canvas.width !== this.parent.clientWidth || this.canvas.height !== this.parent.clientHeight) {
+                this.canvas.width = this.parent.clientWidth;
+                this.canvas.height = this.parent.clientHeight;
             }
 
             // clear canvas
-            context.clearRect(0, 0, canvas.width, canvas.height);
+            this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-            context.beginPath();
-            context.fillStyle = '#f60';
-            context.beginPath();
-            points.forEach((p, idx) => {
-                if (idx === 0) {
-                    context.moveTo(p.x, p.y);
-                }
-                else {
-                    context.lineTo(p.x, p.y);
-                }
-            });
-            context.closePath();
-            context.fill();
+            // display it
+            this.canvas.style.display = 'inline';
 
-            events.fire(
+            this.update(e);
+        }
+    };
+
+    private pointermove(e: PointerEvent){
+        if (this.dragId !== undefined) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        this.update(e);
+    };
+
+    protected dragEnd(){
+        this.parent.releasePointerCapture(this.dragId);
+        this.dragId = undefined;
+        this.canvas.style.display = 'none';
+    };
+
+    private pointerup(e: PointerEvent) {
+        if (e.pointerId === this.dragId) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            this.dragEnd();
+
+            this.commitSelection(e);
+
+            this.events.fire(
                 'select.byMask',
                 e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
-                canvas,
-                context
+                this.canvas,
+                this.context
             );
+        }
+    };
 
-            points = [];
-            paint();
-        };
+    private commitSelection(e: PointerEvent) {
+        // initialize canvas
+        if (this.canvas.width !== this.parent.clientWidth || this.canvas.height !== this.parent.clientHeight) {
+            this.canvas.width = this.parent.clientWidth;
+            this.canvas.height = this.parent.clientHeight;
+        }
 
-        this.activate = () => {
-            svg.style.display = 'inline';
-            parent.style.display = 'block';
-            parent.addEventListener('pointerdown', pointerdown);
-            parent.addEventListener('pointermove', pointermove);
-            parent.addEventListener('pointerup', pointerup);
-        };
+        // clear canvas
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        this.deactivate = () => {
-            // cancel active operation
-            if (dragId !== undefined) {
-                dragEnd();
+        this.context.beginPath();
+        this.context.fillStyle = '#f60';
+        this.context.beginPath();
+        this.points.forEach((p, idx) => {
+            if (idx === 0) {
+                this.context.moveTo(p.x, p.y);
             }
-            svg.style.display = 'none';
-            parent.style.display = 'none';
-            parent.removeEventListener('pointerdown', pointerdown);
-            parent.removeEventListener('pointermove', pointermove);
-            parent.removeEventListener('pointerup', pointerup);
-        };
+            else {
+                this.context.lineTo(p.x, p.y);
+            }
+        });
+        this.context.closePath();
+        this.context.fill();
 
-        svg.appendChild(polyline);
-        parent.appendChild(svg);
-    }
+        this.events.fire(
+            'select.byMask',
+            e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
+            this.canvas,
+            this.context
+        );
+
+        this.points = [];
+        this.paint();
+    };
 }
 
 export { LassoSelection };

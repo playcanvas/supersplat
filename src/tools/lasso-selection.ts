@@ -1,5 +1,5 @@
 import { Events } from "../events";
-import { Point, ScreenspaceSelection } from "./screenspace-selection";
+import { Mask, Point, ScreenspaceSelection } from "./screenspace-selection";
 
 class LassoSelection extends ScreenspaceSelection{
     private points: Point[] = [];
@@ -7,8 +7,10 @@ class LassoSelection extends ScreenspaceSelection{
     private lastPointTime = 0;
     private polyline: SVGPolylineElement;
 
-    constructor(events: Events, parent: HTMLElement, mask: { canvas: HTMLCanvasElement, context: CanvasRenderingContext2D }) {
+    constructor(events: Events, parent: HTMLElement, mask: Mask) {
         super(events, parent, mask);
+
+        this.initSVG();
 
         this.eventHandlers = {
             pointerdown: this.pointerdown.bind(this),
@@ -34,7 +36,7 @@ class LassoSelection extends ScreenspaceSelection{
         this.parent.appendChild(this.svg);
     }
 
-    private paint() {
+    protected updateSVG() {
         this.polyline.setAttribute('points', [...this.points, this.currentPoint].reduce((prev, current) => prev + `${current.x}, ${current.y} `, ""));
         this.polyline.setAttribute('stroke', this.isClosed() ? '#fa6' : '#f60');
     };
@@ -57,7 +59,7 @@ class LassoSelection extends ScreenspaceSelection{
         if (this.dragId !== undefined && (preventCorners || slowNarrowSpacing || fasterMediumSpacing || firstPoints)) {
             this.points.push(this.currentPoint);
             this.lastPointTime = Date.now();
-            this.paint();
+            this.updateSVG();
         }
     };
 
@@ -70,16 +72,16 @@ class LassoSelection extends ScreenspaceSelection{
             this.parent.setPointerCapture(this.dragId);
 
             // initialize canvas
-            if (this.canvas.width !== this.parent.clientWidth || this.canvas.height !== this.parent.clientHeight) {
-                this.canvas.width = this.parent.clientWidth;
-                this.canvas.height = this.parent.clientHeight;
+            if (this.mask.canvas.width !== this.parent.clientWidth || this.mask.canvas.height !== this.parent.clientHeight) {
+                this.mask.canvas.width = this.parent.clientWidth;
+                this.mask.canvas.height = this.parent.clientHeight;
             }
 
             // clear canvas
-            this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            this.mask.context.clearRect(0, 0, this.mask.canvas.width, this.mask.canvas.height);
 
             // display it
-            this.canvas.style.display = 'inline';
+            this.mask.canvas.style.display = 'inline';
 
             this.update(e);
         }
@@ -97,7 +99,7 @@ class LassoSelection extends ScreenspaceSelection{
     protected dragEnd(){
         this.parent.releasePointerCapture(this.dragId);
         this.dragId = undefined;
-        this.canvas.style.display = 'none';
+        this.mask.canvas.style.display = 'none';
     };
 
     private pointerup(e: PointerEvent) {
@@ -112,45 +114,45 @@ class LassoSelection extends ScreenspaceSelection{
             this.events.fire(
                 'select.byMask',
                 e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
-                this.canvas,
-                this.context
+                this.mask.canvas,
+                this.mask.context
             );
         }
     };
 
     private commitSelection(e: PointerEvent) {
         // initialize canvas
-        if (this.canvas.width !== this.parent.clientWidth || this.canvas.height !== this.parent.clientHeight) {
-            this.canvas.width = this.parent.clientWidth;
-            this.canvas.height = this.parent.clientHeight;
+        if (this.mask.canvas.width !== this.parent.clientWidth || this.mask.canvas.height !== this.parent.clientHeight) {
+            this.mask.canvas.width = this.parent.clientWidth;
+            this.mask.canvas.height = this.parent.clientHeight;
         }
 
         // clear canvas
-        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.mask.context.clearRect(0, 0, this.mask.canvas.width, this.mask.canvas.height);
 
-        this.context.beginPath();
-        this.context.fillStyle = '#f60';
-        this.context.beginPath();
+        this.mask.context.beginPath();
+        this.mask.context.fillStyle = '#f60';
+        this.mask.context.beginPath();
         this.points.forEach((p, idx) => {
             if (idx === 0) {
-                this.context.moveTo(p.x, p.y);
+                this.mask.context.moveTo(p.x, p.y);
             }
             else {
-                this.context.lineTo(p.x, p.y);
+                this.mask.context.lineTo(p.x, p.y);
             }
         });
-        this.context.closePath();
-        this.context.fill();
+        this.mask.context.closePath();
+        this.mask.context.fill();
 
         this.events.fire(
             'select.byMask',
             e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
-            this.canvas,
-            this.context
+            this.mask.canvas,
+            this.mask.context
         );
 
         this.points = [];
-        this.paint();
+        this.updateSVG();
     };
 }
 

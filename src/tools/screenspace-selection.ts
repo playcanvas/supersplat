@@ -2,27 +2,25 @@ import { Events } from "../events";
 
 type Point = { x: number, y: number };
 type EventHandlerRegistry = { [key: string] : (e: PointerEvent) => void};
+type Mask = { canvas: HTMLCanvasElement, context: CanvasRenderingContext2D };
 
 abstract class ScreenspaceSelection {
-    protected canvas: HTMLCanvasElement;
-    protected context: CanvasRenderingContext2D;
+    protected mask?: Mask;
     protected parent: HTMLElement;
     protected events: Events;
     protected svg: SVGSVGElement;
     protected eventHandlers: EventHandlerRegistry;
     protected dragId?: number;
 
-    constructor(events: Events, parent: HTMLElement, mask: { canvas: HTMLCanvasElement, context: CanvasRenderingContext2D }) {        
+    constructor(events: Events, parent: HTMLElement, mask?: Mask) {        
         this.events = events;
         this.parent = parent;
-        this.canvas = mask.canvas;
-        this.context = mask.context;
-
-        this.initSVG();
+        this.mask = mask;
     }
 
-    protected initSVG(): void { /* override if required */ };
-    protected dragEnd(): void { /* override if required */ };
+    protected abstract initSVG(): void;
+    protected abstract updateSVG(): void;
+    protected abstract dragEnd(): void;
 
     protected dist(a: Point, b: Point){
         return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
@@ -45,4 +43,4 @@ abstract class ScreenspaceSelection {
     };
 }
 
-export { ScreenspaceSelection, Point, EventHandlerRegistry };
+export { ScreenspaceSelection, Point, Mask, EventHandlerRegistry };

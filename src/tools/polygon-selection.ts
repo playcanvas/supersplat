@@ -1,13 +1,15 @@
 import { Events } from "../events";
-import { Point, ScreenspaceSelection } from "./screenspace-selection";
+import { Mask, Point, ScreenspaceSelection } from "./screenspace-selection";
 
 class PolygonSelection extends ScreenspaceSelection{
     private points: Point[] = [];
     private currentPoint: Point = null;
     private polyline: SVGPolylineElement;
 
-    constructor(events: Events, parent: HTMLElement, mask: { canvas: HTMLCanvasElement, context: CanvasRenderingContext2D }) {
+    constructor(events: Events, parent: HTMLElement, mask: Mask) {
         super(events, parent, mask);
+
+        this.initSVG();
 
         this.eventHandlers = {
             pointerdown: this.pointerdown.bind(this),
@@ -20,7 +22,7 @@ class PolygonSelection extends ScreenspaceSelection{
     protected initSVG(){
         // create svg
         this.svg = document.createElementNS("http://www.w3.org/2000/svg", "svg") as SVGSVGElement;
-        this.svg.id = 'lasso-select-svg';
+        this.svg.id = 'polygon-select-svg';
         this.svg.classList.add('select-svg');
     
         // create polyline element
@@ -34,7 +36,7 @@ class PolygonSelection extends ScreenspaceSelection{
         this.parent.appendChild(this.svg);
     }
 
-    private paint() {
+    protected updateSVG() {
         this.polyline.setAttribute('points', [...this.points, this.currentPoint].reduce((prev, current) => prev + `${current.x}, ${current.y} `, ""));
         this.polyline.setAttribute('stroke', this.isClosed() ? '#fa6' : '#f60');
     };
@@ -47,7 +49,7 @@ class PolygonSelection extends ScreenspaceSelection{
         this.currentPoint = { x: e.offsetX, y: e.offsetY };
 
         if (this.points.length > 0) {
-            this.paint();
+            this.updateSVG();
         }
     };
 
@@ -82,37 +84,40 @@ class PolygonSelection extends ScreenspaceSelection{
 
     private commitSelection(e: PointerEvent) {
         // initialize canvas
-        if (this.canvas.width !== this.parent.clientWidth || this.canvas.height !== this.parent.clientHeight) {
-            this.canvas.width = this.parent.clientWidth;
-            this.canvas.height = this.parent.clientHeight;
+        if (this.mask.canvas.width !== this.parent.clientWidth || this.mask.canvas.height !== this.parent.clientHeight) {
+            this.mask.canvas.width = this.parent.clientWidth;
+            this.mask.canvas.height = this.parent.clientHeight;
         }
 
         // clear canvas
-        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.mask.context.clearRect(0, 0, this.mask.canvas.width, this.mask.canvas.height);
 
-        this.context.beginPath();
-        this.context.fillStyle = '#f60';
-        this.context.beginPath();
+        this.mask.context.beginPath();
+        this.mask.context.fillStyle = '#f60';
+        this.mask.context.beginPath();
         this.points.forEach((p, idx) => {
             if (idx === 0) {
-                this.context.moveTo(p.x, p.y);
+                this.mask.context.moveTo(p.x, p.y);
             }
             else {
-                this.context.lineTo(p.x, p.y);
+                this.mask.context.lineTo(p.x, p.y);
             }
         });
-        this.context.closePath();
-        this.context.fill();
+        this.mask.context.closePath();
+        this.mask.context.fill();
 
         this.events.fire(
             'select.byMask',
             e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
-            this.canvas,
-            this.context
+            this.mask.canvas,
+            this.mask.context
         );
 
         this.points = [];
-        this.paint();
+        this.updateSVG();
+    };
+
+    protected dragEnd(){
     };
 }
 

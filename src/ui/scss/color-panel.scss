@@ -1,0 +1,51 @@
+@use 'colors.scss' as *;
+
+#color-panel {
+    top: 50%;
+    transform: translate(0, -50%);
+    right: 102px;
+    width: 320px;
+    height: 240px;
+    flex-direction: column;
+
+    &:not(.pcui-hidden) {
+        display: flex;
+    }
+
+    & > .color-panel-row {
+        display: flex;
+        flex-direction: row;
+        padding: 2px;
+        height: 28px;
+
+        & > .color-panel-row-label {
+            flex-grow: 1;
+        }
+
+        & > .color-panel-row-picker {
+            margin: 0px 0px;
+            padding: 0px;
+            height: 24px;
+        }
+
+        & > .color-panel-row-slider {
+            width: 220px;
+            margin: 0px;
+
+            & > .pcui-slider-container {
+                & > .pcui-slider-bar {
+                    & > .pcui-slider-handle {
+                        background-color: $clr-default;
+                        border-radius: 3px;
+                    }
+                }
+            }
+        }
+    }
+
+    > .color-panel-control-row {
+        display: flex;
+        flex-direction: row;
+        background-color: $bcg-dark;
+    }
+}

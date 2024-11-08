@@ -104,12 +104,22 @@ class BrushSelection {
             }
         };
 
+        const wheel = (e: WheelEvent) => {
+            const delta = e.deltaX + e.deltaY;
+            if (e.shiftKey && delta !== 0) {
+                events.fire(delta > 0 ? 'tool.brushSelection.smaller' : 'tool.brushSelection.bigger');
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        };
+
         this.activate = () => {
             svg.style.display = 'inline';
             parent.style.display = 'block';
             parent.addEventListener('pointerdown', pointerdown);
             parent.addEventListener('pointermove', pointermove);
             parent.addEventListener('pointerup', pointerup);
+            parent.addEventListener('wheel', wheel);
         };
 
         this.deactivate = () => {
@@ -122,6 +132,7 @@ class BrushSelection {
             parent.removeEventListener('pointerdown', pointerdown);
             parent.removeEventListener('pointermove', pointermove);
             parent.removeEventListener('pointerup', pointerup);
+            parent.removeEventListener('wheel', wheel);
         };
 
         events.on('tool.brushSelection.smaller', () => {

@@ -214,13 +214,15 @@ class ColorPanel extends Container {
                         tintClr: selected.tintClr.clone(),
                         brightness: selected.brightness,
                         blackPoint: selected.blackPoint,
-                        whitePoint: selected.whitePoint
+                        whitePoint: selected.whitePoint,
+                        transparency: selected.transparency
                     },
                     oldState: {
                         tintClr: selected.tintClr.clone(),
                         brightness: selected.brightness,
                         blackPoint: selected.blackPoint,
-                        whitePoint: selected.whitePoint
+                        whitePoint: selected.whitePoint,
+                        transparency: selected.transparency
                     }
                 });
             }
@@ -233,6 +235,7 @@ class ColorPanel extends Container {
                 newState.brightness = brightnessSlider.value;
                 newState.blackPoint = blackPointSlider.value;
                 newState.whitePoint = whitePointSlider.value;
+                newState.transparency = Math.exp(transparencySlider.value);
                 events.fire('edit.add', op);
                 op = null;
             }

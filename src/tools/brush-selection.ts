@@ -24,7 +24,6 @@ class BrushSelection {
 
         const prev = { x: 0, y: 0 };
         let dragId: number | undefined;
-        let wheelModeBrushSize = false;
 
         const update = (e: PointerEvent) => {
             const x = e.offsetX;
@@ -106,25 +105,11 @@ class BrushSelection {
         };
 
         const wheel = (e: WheelEvent) => {
-            if(wheelModeBrushSize){
-                if(e.deltaY > 0)
-                    radius = Math.max(1, radius * 1.05);            
-                else
-                    radius = Math.max(1, radius / 1.05);
-                circle.setAttribute('r', radius.toString());
+            if (e.shiftKey && e.deltaX !== 0) {
+                events.fire(e.deltaX > 0 ? 'tool.brushSelection.smaller' : 'tool.brushSelection.bigger');
                 e.preventDefault();
                 e.stopPropagation();
             }
-        };
-
-        const keydown = (e: KeyboardEvent) => {
-            if (e.shiftKey) {
-                wheelModeBrushSize = true;
-            }
-        };
-          
-        const keyup = (e: KeyboardEvent) => {
-            wheelModeBrushSize = false;
         };
 
         this.activate = () => {
@@ -134,8 +119,6 @@ class BrushSelection {
             parent.addEventListener('pointermove', pointermove);
             parent.addEventListener('pointerup', pointerup);
             parent.addEventListener('wheel', wheel);
-            document.addEventListener('keydown', keydown);
-            document.addEventListener('keyup', keyup);
         };
 
         this.deactivate = () => {
@@ -149,9 +132,6 @@ class BrushSelection {
             parent.removeEventListener('pointermove', pointermove);
             parent.removeEventListener('pointerup', pointerup);
             parent.removeEventListener('wheel', wheel);
-            document.removeEventListener('keydown', keydown);
-            document.removeEventListener('keyup', keyup); 
-            wheelModeBrushSize = false;
         };
 
         events.on('tool.brushSelection.smaller', () => {

@@ -19,6 +19,7 @@ import { ScaleTool } from './tools/scale-tool';
 import { Shortcuts } from './shortcuts';
 import { Events } from './events';
 import { LassoSelection } from './tools/lasso-selection';
+import { Persistence } from './persistence';
 
 declare global {
     interface LaunchParams {
@@ -227,6 +228,8 @@ const main = async () => {
             }
         });
     }
+
+    new Persistence(events);
 };
 
 export { main };

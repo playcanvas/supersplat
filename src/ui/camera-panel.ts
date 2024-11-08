@@ -265,6 +265,12 @@ class CameraPanel extends Container {
                 setVisible(false);
             }
         });
+
+        events.on('colorPanel.visible', (visible: boolean) => {
+            if (visible) {
+                setVisible(false);
+            }
+        });
     }
 }
 

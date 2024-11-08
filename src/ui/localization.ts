@@ -232,6 +232,15 @@ const localizeInit = () => {
                         "camera.play-poses": "Play Poses",
                         "camera.clear-poses": "Clear Poses",
 
+                        // Color panel
+                        "colors": "COLORS",
+                        "colors.tint": "Tint",
+                        "colors.brightness": "Brightness",
+                        "colors.blackPoint": "Black Point",
+                        "colors.whitePoint": "White Point",
+                        "colors.transparency": "Transparency",
+                        "colors.reset": "Reset",
+
                         // Data panel
                         "data": "SPLAT DATA",
                         "data.distance": "Distance",

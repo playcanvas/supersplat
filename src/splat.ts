@@ -59,6 +59,12 @@ class Splat extends Element {
 
     selectionAlpha = 1;
 
+    _tintClr = new Color(1, 1, 1);
+    _brightness = 0;
+    _blackPoint = 0;
+    _whitePoint = 1;
+    _transparency = 1;
+
     rebuildMaterial: (bands: number) => void;
 
     constructor(asset: Asset) {
@@ -283,6 +289,8 @@ class Splat extends Element {
         serializer.packa(this.entity.getWorldTransform().data);
         serializer.pack(this.changedCounter);
         serializer.pack(this.visible);
+        serializer.pack(this.tintClr.r, this.tintClr.g, this.tintClr.b);
+        serializer.pack(this.brightness, this.blackPoint, this.whitePoint, this.transparency);
     }
 
     onPreRender() {
@@ -306,6 +314,18 @@ class Splat extends Element {
         material.setParameter('selectedClr', [selectedClr.r, selectedClr.g, selectedClr.b, selectedClr.a * selectionAlpha]);
         material.setParameter('unselectedClr', [unselectedClr.r, unselectedClr.g, unselectedClr.b, unselectedClr.a]);
         material.setParameter('lockedClr', [lockedClr.r, lockedClr.g, lockedClr.b, lockedClr.a]);
+
+        // combine black pointer, white point and brightness
+        const offset = -this.blackPoint + this.brightness;
+        const scale = 1 / (this.whitePoint - this.blackPoint);
+
+        material.setParameter('clrOffset', [offset, offset, offset]);
+        material.setParameter('clrScale', [
+            this.tintClr.r * scale, 
+            this.tintClr.g * scale,
+            this.tintClr.b * scale,
+            this.transparency
+        ]);
 
         if (this.visible && selected) {
             // render bounding box
@@ -406,6 +426,61 @@ class Splat extends Element {
         if (value !== this.visible) {
             this._visible = value;
             this.scene.events.fire('splat.visibility', this);
+        }
+    }
+
+    get tintClr() {
+        return this._tintClr;
+    }
+
+    set tintClr(value: Color) {
+        if (!this._tintClr.equals(value)) {
+            this._tintClr.set(value.r, value.g, value.b);
+            this.scene.events.fire('splat.tintClr', this);
+        }
+    }
+
+    get brightness() {
+        return this._brightness;
+    }
+
+    set brightness(value: number) {
+        if (value !== this._brightness) {
+            this._brightness = value;
+            this.scene.events.fire('splat.brightness', this);
+        }
+    }
+
+    get blackPoint() {
+        return this._blackPoint;
+    }
+
+    set blackPoint(value: number) {
+        if (value !== this._blackPoint) {
+            this._blackPoint = value;
+            this.scene.events.fire('splat.blackPoint', this);
+        }
+    }
+
+    get whitePoint() {
+        return this._whitePoint;
+    }
+
+    set whitePoint(value: number) {
+        if (value !== this._whitePoint) {
+            this._whitePoint = value;
+            this.scene.events.fire('splat.whitePoint', this);
+        }
+    }
+
+    get transparency() {
+        return this._transparency;
+    }
+
+    set transparency(value: number) {
+        if (value !== this._transparency) {
+            this._transparency = value;
+            this.scene.events.fire('splat.transparency', this);
         }
     }
 }

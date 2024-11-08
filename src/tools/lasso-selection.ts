@@ -54,8 +54,8 @@ class LassoSelection {
             if (dragId !== undefined && (preventCorners || slowNarrowSpacing || fasterMediumSpacing || firstPoints)) {
                 points.push(currentPoint);
                 lastPointTime = Date.now();
-                paint();
             }
+            paint();
         };
 
         const pointerdown = (e: PointerEvent) => {

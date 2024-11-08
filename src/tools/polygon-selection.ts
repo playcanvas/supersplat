@@ -26,7 +26,7 @@ class PolygonSelection {
         const { canvas, context } = mask;
 
         const paint = () => {
-            polyline.setAttribute('points', [...points, currentPoint].reduce((prev, current) => prev + `${current.x}, ${current.y} `, ""));
+            polyline.setAttribute('points', [...points, currentPoint].filter(v => v).reduce((prev, current) => prev + `${current.x}, ${current.y} `, ""));
             polyline.setAttribute('stroke', isClosed() ? '#fa6' : '#f60');
         };
 

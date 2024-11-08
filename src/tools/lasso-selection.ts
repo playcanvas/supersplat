@@ -16,19 +16,19 @@ class LassoSelection {
         svg.id = 'lasso-select-svg';
         svg.classList.add('select-svg');
 
-        // create polyline element
-        const polyline = document.createElementNS(svg.namespaceURI, 'polyline') as SVGPolylineElement;
-        polyline.setAttribute('fill', 'none');
-        polyline.setAttribute('stroke-width', '1');
-        polyline.setAttribute('stroke-dasharray', '5, 5');
-        polyline.setAttribute('stroke-dashoffset', '0');
+        // create polygon element
+        const polygon = document.createElementNS(svg.namespaceURI, 'polygon') as SVGPolygonElement;
+        polygon.setAttribute('fill', 'none');
+        polygon.setAttribute('stroke-width', '1');
+        polygon.setAttribute('stroke-dasharray', '5, 5');
+        polygon.setAttribute('stroke-dashoffset', '0');
 
         // create canvas
         const { canvas, context } = mask;
 
         const paint = () => {
-            polyline.setAttribute('points', [...points, currentPoint].reduce((prev, current) => prev + `${current.x}, ${current.y} `, ""));
-            polyline.setAttribute('stroke', isClosed() ? '#fa6' : '#f60');
+            polygon.setAttribute('points', [...points, currentPoint].reduce((prev, current) => prev + `${current.x}, ${current.y} `, ""));
+            polygon.setAttribute('stroke', isClosed() ? '#fa6' : '#f60');
         };
 
         const dist = (a: Point, b: Point) => {
@@ -51,7 +51,6 @@ class LassoSelection {
             const fasterMediumSpacing = millis > 200 && distance > 10;
             const firstPoints = points.length === 0;
 
-
             if (dragId !== undefined && (preventCorners || slowNarrowSpacing || fasterMediumSpacing || firstPoints)) {
                 points.push(currentPoint);
                 lastPointTime = Date.now();
@@ -66,9 +65,6 @@ class LassoSelection {
 
                 dragId = e.pointerId;
                 parent.setPointerCapture(dragId);
-
-                // display it
-                canvas.style.display = 'inline';
 
                 update(e);
             }
@@ -86,7 +82,6 @@ class LassoSelection {
         const dragEnd = () => {
             parent.releasePointerCapture(dragId);
             dragId = undefined;
-            canvas.style.display = 'none';
         };
 
         const pointerup = (e: PointerEvent) => {
@@ -155,7 +150,7 @@ class LassoSelection {
             parent.removeEventListener('pointerup', pointerup);
         };
 
-        svg.appendChild(polyline);
+        svg.appendChild(polygon);
         parent.appendChild(svg);
     }
 }

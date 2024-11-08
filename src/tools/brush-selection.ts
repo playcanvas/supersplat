@@ -105,9 +105,9 @@ class BrushSelection {
         };
 
         const wheel = (e: WheelEvent) => {
-            const delta = e.deltaX + e.deltaY;
-            if (e.shiftKey && delta !== 0) {
-                events.fire(delta > 0 ? 'tool.brushSelection.smaller' : 'tool.brushSelection.bigger');
+            if (e.altKey || e.metaKey) {
+                const { deltaX, deltaY } = e;
+                events.fire((Math.abs(deltaX) > Math.abs(deltaY) ? deltaX : deltaY) > 0 ? 'tool.brushSelection.smaller' : 'tool.brushSelection.bigger');
                 e.preventDefault();
                 e.stopPropagation();
             }

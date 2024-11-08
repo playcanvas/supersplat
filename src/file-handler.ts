@@ -149,11 +149,11 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
             } else {
                 throw new Error(`Unsupported file type`);
             }
-        } catch (err) {
+        } catch (error) {
             events.invoke('showPopup', {
                 type: 'error',
                 header: localize('popup.error-loading'),
-                message: `${err.message ?? err} while loading '${filename}'`
+                message: `${error.message ?? error} while loading '${filename}'`
             });
         }
     };
@@ -185,9 +185,17 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
 
     // create the file drag & drop handler
     CreateDropHandler(dropTarget, async (entries) => {
-        for (let i = 0; i < entries.length; i++) {
-            const entry = entries[i];
-            await handleLoad(entry.url, entry.filename);
+        if (entries.length === 0) {
+            events.invoke('showPopup', {
+                type: 'error',
+                header: localize('popup.error-loading'),
+                message: localize('popup.drop-files')
+            });
+        } else {
+            for (let i = 0; i < entries.length; i++) {
+                const entry = entries[i];
+                await handleLoad(entry.url, entry.filename);
+            }
         }
     });
 
@@ -413,11 +421,11 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
                 await writeScene(options.type, writeFunc);
                 download(options.filename, (cursor === data.byteLength) ? data : new Uint8Array(data.buffer, 0, cursor));
             }
-        } catch (err) {
+        } catch (error) {
             events.invoke('showPopup', {
                 type: 'error',
                 header: localize('popup.error-loading'),
-                message: `${err.message ?? err} while saving file`
+                message: `${error.message ?? error} while saving file`
             });
         } finally {
             events.fire('stopSpinner');

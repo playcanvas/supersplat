@@ -1,4 +1,5 @@
 import { Events } from './events';
+import { version as appVersion } from '../package.json';
 
 const PERSISTED_EVENTS = [
     'camera.setSplatSize',
@@ -10,6 +11,10 @@ const PERSISTED_EVENTS = [
     'view.setOutlineSelection',
     'grid.setVisible'
 ];
+
+
+const STORAGEKEY_VERSION = 'supersplat.version';
+const STORAGEKEY_EVENTS = 'supersplat.events';
 
 export class Persistence {
 
@@ -24,7 +29,16 @@ export class Persistence {
     }
 
     private loadSettings(){
-        const storedString = localStorage.getItem('events');
+        const settingsVersion = localStorage.getItem(STORAGEKEY_VERSION);
+        if(!settingsVersion){
+            localStorage.setItem(STORAGEKEY_VERSION, appVersion);
+            return;
+        }
+        else if(settingsVersion !== appVersion){
+            this.migrateSettings(settingsVersion);
+        }
+
+        const storedString = localStorage.getItem(STORAGEKEY_EVENTS);
         if(storedString){
             this.settings = JSON.parse(storedString);
             Object.entries(this.settings).forEach(([eventName, args]) => {
@@ -36,7 +50,13 @@ export class Persistence {
     private register(eventName: string){
         this.events.on(eventName, (...args: any[]) => {
             this.settings[eventName] = Array.from(args);
-            localStorage.setItem('events', JSON.stringify(this.settings));
+            localStorage.setItem(STORAGEKEY_EVENTS, JSON.stringify(this.settings));
         })
+    }
+
+    private migrateSettings(fromVersion:string){
+        //TODO: No settings migration yet :)
+        localStorage.removeItem(STORAGEKEY_EVENTS);
+        localStorage.setItem(STORAGEKEY_VERSION, appVersion);
     }
 }

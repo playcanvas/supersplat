@@ -134,12 +134,27 @@ class PointerController {
             }
         };
 
+        // fuzzy detection of mouse wheel events vs trackpad events
+        const isMouseEvent = (deltaX: number, deltaY: number) => {
+            return (Math.abs(deltaX) > 50 && deltaY === 0) ||
+                   (Math.abs(deltaY) > 50 && deltaX === 0) ||
+                   (deltaX === 0 && deltaY !== 0) && !Number.isInteger(deltaY);
+        };
+
         const wheel = (event: WheelEvent) => {
-            const sign = (v: number) => v > 0 ? 1 : v < 0 ? -1 : 0;
-            zoom(sign(event.deltaY) * -0.2);
-            if (Math.abs(event.deltaX) > 1e-6) {
-                orbit(sign(event.deltaX) * 2.0, 0);
+            const { deltaX, deltaY } = event;
+
+            if (isMouseEvent(deltaX, deltaY)) {
+                zoom(deltaY * -0.002);
+            } else if (event.ctrlKey || event.metaKey) {
+                zoom(deltaY * -0.02);
+            } else if (event.shiftKey) {
+                pan(event.offsetX, event.offsetY, deltaX, deltaY);
+            } else {
+                orbit(deltaX, deltaY);
             }
+
+            event.preventDefault();
         };
 
         // FIXME: safari sends canvas as target of dblclick event but chrome sends the target element
@@ -187,12 +202,12 @@ class PointerController {
 
         let destroy: () => void = null;
 
-        const wrap = (target: any, name: string, fn: any) => {
+        const wrap = (target: any, name: string, fn: any, options?: any) => {
             const callback = (event: any) => {
                 camera.scene.events.fire('camera.controller', name);
                 fn(event);
             };
-            target.addEventListener(name, callback);
+            target.addEventListener(name, callback, options);
             destroy = () => {
                 destroy?.();
                 target.removeEventListener(name, callback);
@@ -202,7 +217,7 @@ class PointerController {
         wrap(target, 'pointerdown', pointerdown);
         wrap(target, 'pointerup', pointerup);
         wrap(target, 'pointermove', pointermove);
-        wrap(target, 'wheel', wheel);
+        wrap(target, 'wheel', wheel, { passive: false });
         wrap(target, 'dblclick', dblclick);
         wrap(document, 'keydown', keydown);
         wrap(document, 'keyup', keyup);

@@ -136,9 +136,9 @@ class PointerController {
 
         // fuzzy detection of mouse wheel events vs trackpad events
         const isMouseEvent = (deltaX: number, deltaY: number) => {
-            return Math.abs(deltaX) > 50 ||
-                   Math.abs(deltaY) > 50 ||
-                   (deltaY !== 0) && !Number.isInteger(deltaY); 
+            return (Math.abs(deltaX) > 50 && deltaY === 0) ||
+                   (Math.abs(deltaY) > 50 && deltaX === 0) ||
+                   (deltaX === 0 && deltaY !== 0) && !Number.isInteger(deltaY);
         };
 
         const wheel = (event: WheelEvent) => {
@@ -147,7 +147,6 @@ class PointerController {
             if (isMouseEvent(deltaX, deltaY)) {
                 zoom(deltaY * -0.002);
             } else if (event.ctrlKey || event.metaKey) {
-                console.log('zoom');
                 zoom(deltaY * -0.02);
             } else if (event.shiftKey) {
                 pan(event.offsetX, event.offsetY, deltaX, deltaY);

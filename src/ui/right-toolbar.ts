@@ -7,6 +7,7 @@ import showHideSplatsSvg from './svg/show-hide-splats.svg';
 import cameraFrameSelectionSvg from './svg/camera-frame-selection.svg';
 import cameraResetSvg from './svg/camera-reset.svg';
 import cameraPanelSvg from './svg/camera-panel.svg';
+import colorPanelSvg from './svg/color-panel.svg';
 import centersSvg from './svg/centers.svg';
 import ringsSvg from './svg/rings.svg';
 
@@ -53,6 +54,11 @@ class RightToolbar extends Container {
             class: 'right-toolbar-toggle',
         });
 
+        const colorPanel = new Button({
+            id: 'right-toolbar-color-panel',
+            class: 'right-toolbar-toggle',
+        });
+
         const options = new Button({
             id: 'right-toolbar-options',
             class: 'right-toolbar-toggle',
@@ -69,6 +75,7 @@ class RightToolbar extends Container {
         cameraFrameSelection.dom.appendChild(createSvg(cameraFrameSelectionSvg));
         cameraReset.dom.appendChild(createSvg(cameraResetSvg));
         cameraPanel.dom.appendChild(createSvg(cameraPanelSvg));
+        colorPanel.dom.appendChild(createSvg(colorPanelSvg));
 
         this.append(ringsModeToggle);
         this.append(showHideSplats);
@@ -76,6 +83,7 @@ class RightToolbar extends Container {
         this.append(cameraFrameSelection);
         this.append(cameraReset);
         this.append(cameraPanel);
+        this.append(colorPanel);
         this.append(new Element({ class: 'right-toolbar-separator' }));
         this.append(options);
 
@@ -95,6 +103,7 @@ class RightToolbar extends Container {
         cameraFrameSelection.on('click', () => events.fire('camera.focus'));
         cameraReset.on('click', () => events.fire('camera.reset'));
         cameraPanel.on('click', () => events.fire('cameraPanel.toggleVisible'));
+        colorPanel.on('click', () => events.fire('colorPanel.toggleVisible'));
         options.on('click', () => events.fire('viewPanel.toggleVisible'));
 
         events.on('camera.mode', (mode: string) => {
@@ -109,6 +118,10 @@ class RightToolbar extends Container {
 
         events.on('cameraPanel.visible', (visible: boolean) => {
             cameraPanel.class[visible ? 'add' : 'remove']('active');
+        });
+
+        events.on('colorPanel.visible', (visible: boolean) => {
+            colorPanel.class[visible ? 'add' : 'remove']('active');
         });
 
         events.on('viewPanel.visible', (visible: boolean) => {

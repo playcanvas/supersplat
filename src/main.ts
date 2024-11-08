@@ -20,6 +20,7 @@ import { SphereSelection } from './tools/sphere-selection';
 import { ToolManager } from './tools/tool-manager';
 import { registerTransformHandlerEvents } from './transform-handler';
 import { EditorUI } from './ui/editor';
+import { Persistence } from './persistence';
 
 declare global {
     interface LaunchParams {
@@ -258,6 +259,8 @@ const main = async () => {
             }
         });
     }
+
+    new Persistence(events);
 };
 
 export { main };

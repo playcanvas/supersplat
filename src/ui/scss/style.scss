@@ -152,23 +152,21 @@ body {
     height: 100%;
     cursor: crosshair;
 
-    rect, polyline {
+    rect, polyline, circle {
         fill: none;
         stroke-dasharray: 5px;
-        animation: stroke 0.2s linear infinite;
         stroke-dashoffset: 10px;
+        stroke: #f60;
+        stroke-width: 1px;
+        animation: stroke 0.2s linear infinite;
+
+        &.closed{            
+            stroke: #faa;
+        }
     }
 
     circle {
         fill: rgba(255, 102, 0, 0.2);
-    }
-    
-    rect, polyline, circle {        
-        stroke: #f60;
-        stroke-width: 2px;
-        &.closed{            
-            stroke: #faa;
-        }
     }
 
     @keyframes stroke {

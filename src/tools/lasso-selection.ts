@@ -67,15 +67,6 @@ class LassoSelection {
                 dragId = e.pointerId;
                 parent.setPointerCapture(dragId);
 
-                // initialize canvas
-                if (canvas.width !== parent.clientWidth || canvas.height !== parent.clientHeight) {
-                    canvas.width = parent.clientWidth;
-                    canvas.height = parent.clientHeight;
-                }
-
-                // clear canvas
-                context.clearRect(0, 0, canvas.width, canvas.height);
-
                 // display it
                 canvas.style.display = 'inline';
 
@@ -107,12 +98,8 @@ class LassoSelection {
 
                 commitSelection(e);
 
-                events.fire(
-                    'select.byMask',
-                    e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
-                    canvas,
-                    context
-                );
+                points = [];
+                paint();
             }
         };
 
@@ -146,9 +133,6 @@ class LassoSelection {
                 canvas,
                 context
             );
-
-            points = [];
-            paint();
         };
 
         this.activate = () => {

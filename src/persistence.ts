@@ -112,11 +112,9 @@ class Persistence {
         if(valuesVersion.compare(codeVersion) > 0){
             console.log('Downgrading versions is not supported. Clearing stored data...');            
             localStorage.removeItem(STORAGEKEY_EVENTS);
-            localStorage.setItem(STORAGEKEY_VERSION, appVersion);
-            return;
         }
-
-        updates
+        else{
+            updates
             .filter(update => update.version.compare(codeVersion) <= 0)  // drop updates for newer versions (code inconsistency)
             .sort((a, b) => a.version.compare(b.version))          // make sure the updates are executed in the correct order
             .filter(update => update.version.compare(valuesVersion) > 0) // only run updates that are newer than the persisted data
@@ -124,6 +122,9 @@ class Persistence {
                 console.log(`Updating to ${update.version} ...`);
                 update.fn();
             });
+        }
+            
+        localStorage.setItem(STORAGEKEY_VERSION, appVersion);
     }
 }
 

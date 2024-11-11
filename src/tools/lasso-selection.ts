@@ -2,32 +2,33 @@ import { Events } from "../events";
 
 type Point = { x: number, y: number };
 
-class PolygonSelection {
+class LassoSelection {
     activate: () => void;
     deactivate: () => void;
 
     constructor(events: Events, parent: HTMLElement, mask: { canvas: HTMLCanvasElement, context: CanvasRenderingContext2D }) {
         let points: Point[] = [];
         let currentPoint: Point = null;
+        let lastPointTime = 0;
 
         // create svg
         const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        svg.id = 'polygon-select-svg';
+        svg.id = 'lasso-select-svg';
         svg.classList.add('select-svg');
 
-        // create polyline element
-        const polyline = document.createElementNS(svg.namespaceURI, 'polyline') as SVGPolylineElement;
-        polyline.setAttribute('fill', 'none');
-        polyline.setAttribute('stroke-width', '1');
-        polyline.setAttribute('stroke-dasharray', '5, 5');
-        polyline.setAttribute('stroke-dashoffset', '0');
+        // create polygon element
+        const polygon = document.createElementNS(svg.namespaceURI, 'polygon') as SVGPolygonElement;
+        polygon.setAttribute('fill', 'none');
+        polygon.setAttribute('stroke-width', '1');
+        polygon.setAttribute('stroke-dasharray', '5, 5');
+        polygon.setAttribute('stroke-dashoffset', '0');
 
         // create canvas
         const { canvas, context } = mask;
 
         const paint = () => {
-            polyline.setAttribute('points', [...points, currentPoint].filter(v => v).reduce((prev, current) => prev + `${current.x}, ${current.y} `, ""));
-            polyline.setAttribute('stroke', isClosed() ? '#fa6' : '#f60');
+            polygon.setAttribute('points', [...points, currentPoint].reduce((prev, current) => prev + `${current.x}, ${current.y} `, ""));
+            polygon.setAttribute('stroke', isClosed() ? '#fa6' : '#f60');
         };
 
         const dist = (a: Point, b: Point) => {
@@ -38,40 +39,62 @@ class PolygonSelection {
             return points.length > 1 && dist(currentPoint, points[0]) < 8;
         };
 
-        const pointermove = (e: PointerEvent) => {
-            currentPoint = { x: e.offsetX, y: e.offsetY };
+        let dragId: number | undefined;
 
-            if (points.length > 0) {
+        const update = (e: PointerEvent) => {
+            currentPoint = {x: e.offsetX, y: e.offsetY};
+
+            const distance = points.length === 0 ? 0 : dist(currentPoint, points[points.length - 1]);
+            const millis = Date.now() - lastPointTime;
+            const preventCorners = distance > 20;
+            const slowNarrowSpacing = millis > 500 && distance > 2;
+            const fasterMediumSpacing = millis > 200 && distance > 10;
+            const firstPoints = points.length === 0;
+
+            if (dragId !== undefined && (preventCorners || slowNarrowSpacing || fasterMediumSpacing || firstPoints)) {
+                points.push(currentPoint);
+                lastPointTime = Date.now();
                 paint();
             }
         };
 
         const pointerdown = (e: PointerEvent) => {
-            if (points.length > 0 || (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary)) {
+            if (dragId === undefined && (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary)) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                dragId = e.pointerId;
+                parent.setPointerCapture(dragId);
+
+                update(e);
+            }
+        };
+
+        const pointermove = (e: PointerEvent) => {
+            if (dragId !== undefined) {
                 e.preventDefault();
                 e.stopPropagation();
             }
+
+            update(e);
+        };
+
+        const dragEnd = () => {
+            parent.releasePointerCapture(dragId);
+            dragId = undefined;
         };
 
         const pointerup = (e: PointerEvent) => {
-            if (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary) {
+            if (e.pointerId === dragId) {
                 e.preventDefault();
                 e.stopPropagation();
 
-                if (isClosed()) {
-                    commitSelection(e);
-                } else if (points.length === 0 || dist(points[points.length - 1], currentPoint) > 0) {
-                    points.push(currentPoint);
-                }
-            }
-        };
+                dragEnd();
 
-        const dblclick = (e: PointerEvent) => {
-            e.preventDefault();
-            e.stopPropagation();
-
-            if (points.length > 2) {
                 commitSelection(e);
+
+                points = [];
+                paint();
             }
         };
 
@@ -105,9 +128,6 @@ class PolygonSelection {
                 canvas,
                 context
             );
-
-            points = [];
-            paint();
         };
 
         this.activate = () => {
@@ -116,24 +136,23 @@ class PolygonSelection {
             parent.addEventListener('pointerdown', pointerdown);
             parent.addEventListener('pointermove', pointermove);
             parent.addEventListener('pointerup', pointerup);
-            parent.addEventListener('dblclick', dblclick);
         };
 
         this.deactivate = () => {
             // cancel active operation
+            if (dragId !== undefined) {
+                dragEnd();
+            }
             svg.style.display = 'none';
             parent.style.display = 'none';
             parent.removeEventListener('pointerdown', pointerdown);
             parent.removeEventListener('pointermove', pointermove);
             parent.removeEventListener('pointerup', pointerup);
-            parent.removeEventListener('dblclick', dblclick);
-            points = [];
-            paint();
         };
 
-        svg.appendChild(polyline);
+        svg.appendChild(polygon);
         parent.appendChild(svg);
     }
 }
 
-export { PolygonSelection };
+export { LassoSelection };

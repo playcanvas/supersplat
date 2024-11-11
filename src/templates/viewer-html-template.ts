@@ -9,6 +9,7 @@ const template = /* html */ `
             * {
                 margin: 0;
                 padding: 0;
+                touch-action: none;
             }
             body {
                 overflow: hidden;

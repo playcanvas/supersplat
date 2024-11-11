@@ -141,6 +141,7 @@ const localizeInit = () => {
                         "popup.yes": "Ja",
                         "popup.no": "Nein",
                         "popup.error-loading": "FEHLER BEIM LADEN DER DATEI",
+                        "popup.drop-files": "Bitte Dateien und Ordner ablegen",
 
                         // Right toolbar
                         "tooltip.splat-mode": "Splat Modus ( M )",
@@ -152,8 +153,8 @@ const localizeInit = () => {
                         // Bottom toolbar
                         "tooltip.undo": "Rückgängig ( Strg + Z )",
                         "tooltip.redo": "Wiederholen ( Strg + Shift + Z )",
-                        "tooltip.picker": "Einzelselektion ( P )",
-                        "tooltip.polygon": "Polygonselektion ( O )",
+                        "tooltip.picker": "Einzelselektion ( R )",
+                        "tooltip.polygon": "Polygonselektion ( P )",
                         "tooltip.brush": "Pinselselektion ( B )",
                         "tooltip.sphere": "Kugelselektion",
                         "tooltip.translate": "Verschieben ( 1 )",
@@ -232,6 +233,15 @@ const localizeInit = () => {
                         "camera.play-poses": "Play Poses",
                         "camera.clear-poses": "Clear Poses",
 
+                        // Color panel
+                        "colors": "COLORS",
+                        "colors.tint": "Tint",
+                        "colors.brightness": "Brightness",
+                        "colors.blackPoint": "Black Point",
+                        "colors.whitePoint": "White Point",
+                        "colors.transparency": "Transparency",
+                        "colors.reset": "Reset",
+
                         // Data panel
                         "data": "SPLAT DATA",
                         "data.distance": "Distance",
@@ -292,6 +302,7 @@ const localizeInit = () => {
                         "popup.yes": "Yes",
                         "popup.no": "No",
                         "popup.error-loading": "ERROR LOADING FILE",
+                        "popup.drop-files": "Please drop files and folders",
 
                         // Right toolbar
                         "tooltip.splat-mode": "Splat Mode ( M )",
@@ -303,8 +314,8 @@ const localizeInit = () => {
                         // Bottom toolbar
                         "tooltip.undo": "Undo ( Ctrl + Z )",
                         "tooltip.redo": "Redo ( Ctrl + Shift + Z )",
-                        "tooltip.picker": "Picker Select ( P )",
-                        "tooltip.polygon": "Polygon Select ( O )",
+                        "tooltip.picker": "Picker Select ( R )",
+                        "tooltip.polygon": "Polygon Select ( P )",
                         "tooltip.brush": "Brush Select ( B )",
                         "tooltip.sphere": "Sphere Select",
                         "tooltip.translate": "Translate ( 1 )",
@@ -443,6 +454,7 @@ const localizeInit = () => {
                         "popup.yes": "Oui",
                         "popup.no": "Non",
                         "popup.error-loading": "Erreur de chargement du fichier",
+                        "popup.drop-files": "Veuillez déposer des fichiers et des dossiers",
 
                         // right toolbar
                         "tooltip.splat-mode": "Mode splat ( M )",
@@ -454,7 +466,8 @@ const localizeInit = () => {
                         // bottom toolbar
                         "tooltip.undo": "Annuler ( Ctrl + Z )",
                         "tooltip.redo": "Rétablir ( Ctrl + Shift + Z )",
-                        "tooltip.picker": "Sélection avec pipette ( P )",
+                        "tooltip.picker": "Sélection avec pipette ( R )",
+                        "tooltip.polygon": "Sélection avec polygone ( P )",
                         "tooltip.brush": "Sélection avec pinceau ( B )",
                         "tooltip.sphere": "Sélection avec sphère",
                         "tooltip.translate": "Translation ( 1 )",
@@ -593,6 +606,7 @@ const localizeInit = () => {
                         "popup.yes": "はい",
                         "popup.no": "いいえ",
                         "popup.error-loading": "ファイルの読み込みエラー",
+                        "popup.drop-files": "ファイルやフォルダをドロップしてください",
 
                         // Right toolbar
                         "tooltip.splat-mode": "スプラットモード ( M )",
@@ -604,7 +618,8 @@ const localizeInit = () => {
                         // Bottom toolbar
                         "tooltip.undo": "元に戻す ( Ctrl + Z )",
                         "tooltip.redo": "やり直し ( Ctrl + Shift + Z )",
-                        "tooltip.picker": "ピッカー選択 ( P )",
+                        "tooltip.picker": "ピッカー選択 ( R )",
+                        "tooltip.polygon": "ポリゴン選択 ( P )",
                         "tooltip.brush": "ブラシ選択 ( B )",
                         "tooltip.sphere": "球で選択",
                         "tooltip.translate": "移動 ( 1 )",
@@ -743,6 +758,7 @@ const localizeInit = () => {
                         "popup.yes": "예",
                         "popup.no": "아니요",
                         "popup.error-loading": "파일 로드 오류",
+                        "popup.drop-files": "파일 및 폴더를 드롭하세요",
 
                         // Right toolbar
                         "tooltip.splat-mode": "Splat 모드 ( M )",
@@ -754,7 +770,8 @@ const localizeInit = () => {
                         // Bottom toolbar
                         "tooltip.undo": "실행 취소 ( Ctrl + Z )",
                         "tooltip.redo": "다시 실행 ( Ctrl + Shift + Z )",
-                        "tooltip.picker": "피커 선택 ( P )",
+                        "tooltip.picker": "피커 선택 ( R )",
+                        "tooltip.polygon": "다각형 선택 ( P )",
                         "tooltip.brush": "브러시 선택 ( B )",
                         "tooltip.sphere": "구 선택",
                         "tooltip.translate": "이동 ( 1 )",
@@ -893,6 +910,7 @@ const localizeInit = () => {
                         "popup.yes": "是",
                         "popup.no": "否",
                         "popup.error-loading": "加载文件错误",
+                        "popup.drop-files": "请拖放文件和文件夹",
 
                         // Right toolbar
                         "tooltip.splat-mode": "Splat 模式 ( M )",
@@ -904,7 +922,8 @@ const localizeInit = () => {
                         // Bottom toolbar
                         "tooltip.undo": "撤销 ( Ctrl + Z )",
                         "tooltip.redo": "重做 ( Ctrl + Shift + Z )",
-                        "tooltip.picker": "选择器 ( P )",
+                        "tooltip.picker": "选择器 ( R )",
+                        "tooltip.polygon": "多边形选择 ( P )",
                         "tooltip.brush": "画笔 ( B )",
                         "tooltip.sphere": "球选择",
                         "tooltip.translate": "移动 ( 1 )",

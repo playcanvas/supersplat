@@ -86,39 +86,74 @@ const sendToRemoteStorage = async (filename: string, data: ArrayBuffer, remoteSt
     });
 };
 
+
+interface ColmapPose {
+    id?: number,
+    img_name?: string,
+    width?: number,
+    height?: number,
+    position: [number, number, number],
+    rotation: [[number, number, number], [number, number, number], [number, number, number]]
+    fx?: number,
+    fy?: number
+};
+
+/** 
+ * Checks if the given object is a (nested) array of numbers. 
+ * The length args allow to require a certain number of elements per level. 
+ * So, by passing 4, 4 the object should be a four by four matrix. 
+ */
+const isNestedNumberArray: ((obj: any, ...length: any[]) => boolean) = (obj: any, ...length: any[]) => {
+    if(length.length === 0)
+        return typeof obj === 'number';
+
+    if(!(obj instanceof Array) || obj.length !== length[0])
+        return false;
+
+    return obj.every((sub) => isNestedNumberArray(sub, ...length.slice(1)));
+} 
+
+const toColmapPose = (pose: any) => {
+    if(!pose.hasOwnProperty('position') || !isNestedNumberArray(pose.position, 3))
+        return null;
+
+    if(!pose.hasOwnProperty('rotation') || !isNestedNumberArray(pose.rotation, 3, 3))
+        return null;
+
+    return pose as ColmapPose;
+};
+
+const trailingNumber = (text?: string) => {
+    const value = text?.match(/\d*$/)?.[0];
+    return value ? parseInt(value, 10) : 0;
+}
+
 const loadCameraPoses = async (url: string, filename: string, events: Events) => {
     const response = await fetch(url);
     const json = await response.json();
-    if (json.length > 0) {
+    if(json instanceof Array && json.length > 0){
+        const poses = json
+            .map(obj => toColmapPose(obj))
+            .filter(obj => obj !== null)
+            .sort((a, b) => trailingNumber(a.img_name) - trailingNumber(b.img_name));
+        
         // calculate the average position of the camera poses
         const ave = new Vec3(0, 0, 0);
-        json.forEach((pose: any) => {
-            vec.set(pose.position[0], pose.position[1], pose.position[2]);
-            ave.add(vec);
-        });
-        ave.mulScalar(1 / json.length);
+        poses.forEach((pose: ColmapPose) => ave.add(vec.set(...pose.position)));
+        ave.mulScalar(1 / poses.length);
 
-        // sort entries by trailing number if it exists
-        const sorter = (a: any, b: any) => {
-            const avalue = a.img_name?.match(/\d*$/)?.[0];
-            const bvalue = b.img_name?.match(/\d*$/)?.[0];
-            return (avalue && bvalue) ? parseInt(avalue, 10) - parseInt(bvalue, 10) : 0;
-        };
+        poses.forEach((pose: ColmapPose, i: number) => {
+            const p = new Vec3(pose.position);
+            const z = new Vec3(pose.rotation[0][2], pose.rotation[1][2], pose.rotation[2][2]);
 
-        json.sort(sorter).forEach((pose: any, i: number) => {
-            if (pose.hasOwnProperty('position') && pose.hasOwnProperty('rotation')) {
-                const p = new Vec3(pose.position);
-                const z = new Vec3(pose.rotation[0][2], pose.rotation[1][2], pose.rotation[2][2]);
+            const dot = vec.sub2(ave, p).dot(z);
+            vec.copy(z).mulScalar(dot).add(p);
 
-                const dot = vec.sub2(ave, p).dot(z);
-                vec.copy(z).mulScalar(dot).add(p);
-
-                events.fire('camera.addPose', {
-                    name: pose.img_name ?? `${filename}_${i}`,
-                    position: new Vec3(-p.x, -p.y, p.z),
-                    target: new Vec3(-vec.x, -vec.y, vec.z)
-                });
-            }
+            events.fire('camera.addPose', {
+                name: pose.img_name ?? `${filename}_${i}`,
+                position: new Vec3(-p.x, -p.y, p.z),
+                target: new Vec3(-vec.x, -vec.y, vec.z)
+            });
         });
     }
 };

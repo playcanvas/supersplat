@@ -16,9 +16,6 @@ class BrushSelection {
         const circle = document.createElementNS(svg.namespaceURI, 'circle') as SVGCircleElement;
         circle.setAttribute('r', radius.toString());
         circle.setAttribute('fill', 'rgba(255, 102, 0, 0.2)');
-        circle.setAttribute('stroke', '#f60');
-        circle.setAttribute('stroke-width', '1');
-        circle.setAttribute('stroke-dasharray', '5, 5');
 
         const { canvas, context } = mask;
 

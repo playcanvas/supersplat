@@ -152,6 +152,29 @@ body {
     width: 100%;
     height: 100%;
     cursor: crosshair;
+
+    rect, polyline, polygon, circle {
+        fill: none;
+        stroke-dasharray: 5px;
+        stroke-dashoffset: 10px;
+        stroke: #f60;
+        stroke-width: 1px;
+        animation: stroke 0.2s linear infinite;
+
+        &.closed{            
+            stroke: #faa;
+        }
+    }
+
+    circle {
+        fill: rgba(255, 102, 0, 0.2);
+    }
+
+    @keyframes stroke {
+        to {
+            stroke-dashoffset: 0;
+        }
+    }
 }
 
 #canvas {

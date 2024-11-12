@@ -23,6 +23,8 @@ type NerfstudioCameraIntrinsics = {
     h?: number,
     w?: number,
     file_path?: string,
+    depth_file_path?: string,
+    mask_path?: string,
     fl_x?: number,
     fl_y?: number,
     cx?: number,

@@ -113,7 +113,7 @@ const toColmapPose = (pose: any) => {
 };
 
 const toNerfstudioPose = (pose: any) => {
-    if(!('transform_matrix' in pose) || !isNestedNumberArray(pose.position, 4, 4))
+    if(!('transform_matrix' in pose) || !isNestedNumberArray(pose.transform_matrix, 4, 4))
         return null;
 
     return pose as NerfstudioPose;
@@ -129,7 +129,7 @@ const loadCameraPoses = async (url: string, filename: string, events: Events) =>
     const json = await response.json();
     if(json instanceof Array && json.length > 0)
         loadColmapPoses(json, filename, events);
-    else if('frames' in json && json.frames instanceof Array && json.frames > 0)
+    else if('frames' in json && json.frames instanceof Array && json.frames.length > 0)
         loadNerfstudioPoses(json, filename, events);
 };
 
@@ -164,8 +164,25 @@ const loadNerfstudioPoses = (json: NerfstudioJson, filename: string, events: Eve
         .map(obj => toNerfstudioPose(obj))        
         .filter(obj => obj !== null)
         .sort((a, b) => trailingNumber(a.file_path) - trailingNumber(b.file_path));
+        
+    // calculate the average position of the camera poses
+    const ave = new Vec3(0, 0, 0);
+    poses.forEach((pose: NerfstudioPose) => ave.add(vec.set(pose.transform_matrix[0][3], pose.transform_matrix[1][3], pose.transform_matrix[2][3])));
+    ave.mulScalar(1 / poses.length);
 
-    // TODO: Implement :D
+    poses.forEach((pose: NerfstudioPose, i: number) => {
+        const p = new Vec3(pose.transform_matrix[0][3], pose.transform_matrix[1][3], pose.transform_matrix[2][3]);
+        const z = new Vec3(pose.transform_matrix[0][0], pose.transform_matrix[1][0], pose.transform_matrix[2][0]);
+
+        const dot = vec.sub2(ave, p).dot(z);
+        vec.copy(z).mulScalar(dot).add(p);
+
+        events.fire('camera.addPose', {
+            name: pose.file_path ?? `${filename}_${i}`,
+            position: new Vec3(-p.x, -p.y, p.z),
+            target: new Vec3(-vec.x, -vec.y, vec.z)
+        });
+    });
 }; 
 
 // initialize file handler events

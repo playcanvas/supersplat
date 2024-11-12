@@ -18,6 +18,7 @@ import { RotateTool } from './tools/rotate-tool';
 import { ScaleTool } from './tools/scale-tool';
 import { Shortcuts } from './shortcuts';
 import { Events } from './events';
+import { LassoSelection } from './tools/lasso-selection';
 
 declare global {
     interface LaunchParams {
@@ -72,6 +73,7 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['F', 'f'], { event: 'camera.focus' });
     shortcuts.register(['R', 'r'], { event: 'tool.rectSelection', sticky: true });
     shortcuts.register(['P', 'p'], { event: 'tool.polygonSelection', sticky: true });
+    shortcuts.register(['L', 'l'], { event: 'tool.lassoSelection', sticky: true });
     shortcuts.register(['B', 'b'], { event: 'tool.brushSelection', sticky: true });
     shortcuts.register(['A', 'a'], { event: 'select.all' });
     shortcuts.register(['A', 'a'], { event: 'select.none', shift: true });
@@ -189,6 +191,7 @@ const main = async () => {
     toolManager.register('rectSelection', new RectSelection(events, editorUI.toolsContainer.dom));
     toolManager.register('brushSelection', new BrushSelection(events, editorUI.toolsContainer.dom, mask));
     toolManager.register('polygonSelection', new PolygonSelection(events, editorUI.toolsContainer.dom, mask));
+    toolManager.register('lassoSelection', new LassoSelection(events, editorUI.toolsContainer.dom, mask));
     toolManager.register('sphereSelection', new SphereSelection(events, scene, editorUI.canvasContainer));
     toolManager.register('move', new MoveTool(events, scene));
     toolManager.register('rotate', new RotateTool(events, scene));

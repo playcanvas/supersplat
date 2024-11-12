@@ -179,10 +179,11 @@ class EditorUI {
         canvas.width = Math.ceil(canvasContainer.dom.offsetWidth * pixelRatio);
         canvas.height = Math.ceil(canvasContainer.dom.offsetHeight * pixelRatio);
 
-        // disable context menu globally
-        document.addEventListener('contextmenu', (event: MouseEvent) => {
-            event.preventDefault();
-        }, true);
+        ['contextmenu', 'gesturestart', 'gesturechange', 'gestureend'].forEach((event) => {
+            document.addEventListener(event, (e) => {
+                e.preventDefault();
+            }, true);
+        });
 
         // whenever the canvas container is clicked, set keyboard focus on the body
         canvasContainer.dom.addEventListener('pointerdown', (event: PointerEvent) => {

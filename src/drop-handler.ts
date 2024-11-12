@@ -95,10 +95,12 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
     const drop = async (ev: DragEvent) => {
         ev.preventDefault();
 
+        const items = Array.from(ev.dataTransfer.items)
+            .map(item => item.webkitGetAsEntry())
+            .filter(v => v);
+
         // resolve directories to files
-        const entries = await resolveDirectories(
-            Array.from(ev.dataTransfer.items).map(item => item.webkitGetAsEntry())
-        );
+        const entries = await resolveDirectories(items);
 
         const files = await Promise.all(
             entries.map(entry => {

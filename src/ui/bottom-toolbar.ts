@@ -9,7 +9,7 @@ import pickerSvg from './svg/select-picker.svg';
 import brushSvg from './svg/select-brush.svg';
 import polygonSvg from './svg/select-poly.svg';
 import sphereSvg from './svg/select-sphere.svg';
-// import lassoSvg from './svg/select-lasso.svg';
+import lassoSvg from './svg/select-lasso.svg';
 // import cropSvg from './svg/crop.svg';
 
 const createSvg = (svgString: string) => {
@@ -57,10 +57,10 @@ class BottomToolbar extends Container {
             class: 'bottom-toolbar-tool'
         });
 
-        // const lasso = new Button({
-        //     id: 'bottom-toolbar-lasso',
-        //     class: ['bottom-toolbar-tool', 'disabled']
-        // });
+        const lasso = new Button({
+            id: 'bottom-toolbar-lasso',
+            class: 'bottom-toolbar-tool'
+        });
 
         const sphere = new Button({
             id: 'bottom-toolbar-sphere',
@@ -102,16 +102,16 @@ class BottomToolbar extends Container {
         polygon.dom.appendChild(createSvg(polygonSvg));
         brush.dom.appendChild(createSvg(brushSvg));
         sphere.dom.appendChild(createSvg(sphereSvg));
-        // lasso.dom.appendChild(createSvg(lassoSvg));
+        lasso.dom.appendChild(createSvg(lassoSvg));
         // crop.dom.appendChild(createSvg(cropSvg));
 
         this.append(undo);
         this.append(redo);
         this.append(new Element({ class: 'bottom-toolbar-separator' }));
         this.append(picker);
+        this.append(lasso);
         this.append(polygon);
         this.append(brush);
-        // this.append(lasso);
         this.append(new Element({ class: 'bottom-toolbar-separator' }));
         this.append(sphere);
         // this.append(crop);
@@ -124,6 +124,7 @@ class BottomToolbar extends Container {
         undo.dom.addEventListener('click', () => events.fire('edit.undo'));
         redo.dom.addEventListener('click', () => events.fire('edit.redo'));
         polygon.dom.addEventListener('click', () => events.fire('tool.polygonSelection'));
+        lasso.dom.addEventListener('click', () => events.fire('tool.lassoSelection'));
         brush.dom.addEventListener('click', () => events.fire('tool.brushSelection'));
         picker.dom.addEventListener('click', () => events.fire('tool.rectSelection'));
         sphere.dom.addEventListener('click', () => events.fire('tool.sphereSelection'));
@@ -139,6 +140,7 @@ class BottomToolbar extends Container {
             picker.class[toolName === 'rectSelection' ? 'add' : 'remove']('active');
             brush.class[toolName === 'brushSelection' ? 'add' : 'remove']('active');
             polygon.class[toolName === 'polygonSelection' ? 'add' : 'remove']('active');
+            lasso.class[toolName === 'lassoSelection' ? 'add' : 'remove']('active');
             sphere.class[toolName === 'sphereSelection' ? 'add' : 'remove']('active');
             translate.class[toolName === 'move' ? 'add' : 'remove']('active');
             rotate.class[toolName === 'rotate' ? 'add' : 'remove']('active');
@@ -155,7 +157,7 @@ class BottomToolbar extends Container {
         tooltips.register(picker, localize('tooltip.picker'));
         tooltips.register(brush, localize('tooltip.brush'));
         tooltips.register(polygon, localize('tooltip.polygon'));
-        // tooltips.register(lasso, 'Lasso Select');
+        tooltips.register(lasso, 'Lasso Select');
         tooltips.register(sphere, localize('tooltip.sphere'));
         // tooltips.register(crop, 'Crop');
         tooltips.register(translate, localize('tooltip.translate'));

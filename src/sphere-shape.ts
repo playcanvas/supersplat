@@ -1,5 +1,10 @@
 import {
+    BLENDEQUATION_ADD,
+    BLENDMODE_ONE,
+    BLENDMODE_ONE_MINUS_SRC_ALPHA,
+    BLENDMODE_SRC_ALPHA,
     CULLFACE_FRONT,
+    BlendState,
     BoundingBox,
     Entity,
     ShaderMaterial,
@@ -35,9 +40,15 @@ class SphereShape extends Element {
             fragmentCode: fragmentShader
         });
         material.cull = CULLFACE_FRONT;
+        material.blendState = new BlendState(
+            true,
+            BLENDEQUATION_ADD, BLENDMODE_SRC_ALPHA, BLENDMODE_ONE_MINUS_SRC_ALPHA,
+            BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE_MINUS_SRC_ALPHA
+        );
         material.update();
 
         this.pivot.render.meshInstances[0].material = material;
+        this.pivot.render.layers = [this.scene.debugLayer.id];
 
         this.material = material;
 

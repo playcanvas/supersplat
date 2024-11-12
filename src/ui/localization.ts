@@ -141,6 +141,7 @@ const localizeInit = () => {
                         "popup.yes": "Ja",
                         "popup.no": "Nein",
                         "popup.error-loading": "FEHLER BEIM LADEN DER DATEI",
+                        "popup.drop-files": "Bitte Dateien und Ordner ablegen",
 
                         // Right toolbar
                         "tooltip.splat-mode": "Splat Modus ( M )",
@@ -301,6 +302,7 @@ const localizeInit = () => {
                         "popup.yes": "Yes",
                         "popup.no": "No",
                         "popup.error-loading": "ERROR LOADING FILE",
+                        "popup.drop-files": "Please drop files and folders",
 
                         // Right toolbar
                         "tooltip.splat-mode": "Splat Mode ( M )",
@@ -452,6 +454,7 @@ const localizeInit = () => {
                         "popup.yes": "Oui",
                         "popup.no": "Non",
                         "popup.error-loading": "Erreur de chargement du fichier",
+                        "popup.drop-files": "Veuillez déposer des fichiers et des dossiers",
 
                         // right toolbar
                         "tooltip.splat-mode": "Mode splat ( M )",
@@ -603,6 +606,7 @@ const localizeInit = () => {
                         "popup.yes": "はい",
                         "popup.no": "いいえ",
                         "popup.error-loading": "ファイルの読み込みエラー",
+                        "popup.drop-files": "ファイルやフォルダをドロップしてください",
 
                         // Right toolbar
                         "tooltip.splat-mode": "スプラットモード ( M )",
@@ -754,6 +758,7 @@ const localizeInit = () => {
                         "popup.yes": "예",
                         "popup.no": "아니요",
                         "popup.error-loading": "파일 로드 오류",
+                        "popup.drop-files": "파일 및 폴더를 드롭하세요",
 
                         // Right toolbar
                         "tooltip.splat-mode": "Splat 모드 ( M )",
@@ -905,6 +910,7 @@ const localizeInit = () => {
                         "popup.yes": "是",
                         "popup.no": "否",
                         "popup.error-loading": "加载文件错误",
+                        "popup.drop-files": "请拖放文件和文件夹",
 
                         // Right toolbar
                         "tooltip.splat-mode": "Splat 模式 ( M )",

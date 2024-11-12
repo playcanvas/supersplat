@@ -11,22 +11,48 @@ interface EditOp {
     destroy?(): void;
 }
 
-// build an index array based on a boolean predicate over indices
+/**
+ * Build two index lists based on a boolean predicate over indices.
+ * The first list contains single indices.
+ * The second list contains groups of two, defining a range of indices with exclusive end.
+ * Both lists are stored in the same result array, adding values from the single indices at
+ * the front and index-ranges at the end.
+ */
 const buildIndex = (total: number, pred: (i: number) => boolean) => {
     let num = 0;
     for (let i = 0; i < total; ++i) {
         if (pred(i)) num++;
     }
 
+    // For efficient packing, single indices are placed at the beginning of this Uint32Array,
+    // Ranges are placed to the end.
     const result = new Uint32Array(num);
-    let idx = 0;
-    for (let i = 0; i < total; ++i) {
-        if (pred(i)) {
-            result[idx++] = i;
+
+    let singleIdx = 0;
+    let rangeIdx = num - 1;
+    let rangeStart = -1;
+
+    for (let i = 0; i <= total; i++) {
+        if (pred(i) && i < total){
+            if(rangeStart === -1){
+                rangeStart = i;
+            }
         }
+        else{
+            if(rangeStart !== -1){
+                if(i - rangeStart < 2){
+                    result[singleIdx++] = i - 1; // current i had already pred(i) === false
+                }
+                else{
+                    result[rangeIdx--] = i ; // range end is exclusive
+                    result[rangeIdx--] = rangeStart;
+                }       
+                rangeStart = -1;
+            }
+        }            
     }
 
-    return result;
+    return [result.slice(0, singleIdx), result.slice(rangeIdx + 1)];
 };
 
 type filterFunc = (state: number, index: number) => boolean;
@@ -35,7 +61,8 @@ type undoFunc = (state: number) => number;
 
 class StateOp {
     splat: Splat;
-    indices: Uint32Array;
+    singleIndices: Uint32Array;
+    rangeIndices: Uint32Array;
     doIt: doFunc;
     undoIt: undoFunc;
     updateFlags: number;
@@ -43,38 +70,51 @@ class StateOp {
     constructor(splat: Splat, filter: filterFunc, doIt: doFunc, undoIt: undoFunc, updateFlags = State.selected) {
         const splatData = splat.splatData;
         const state = splatData.getProp('state') as Uint8Array;
-        const indices = buildIndex(splatData.numSplats, (i) => filter(state[i], i));
+        
+        const [singleIndices, rangeIndices] = buildIndex(splatData.numSplats, (i) => filter(state[i], i));
+        
+        this.singleIndices = singleIndices;
+        this.rangeIndices = rangeIndices;
 
         this.splat = splat;
-        this.indices = indices;
         this.doIt = doIt;
         this.undoIt = undoIt;
         this.updateFlags = updateFlags;
     }
 
+    forEachIndex(operation: (idx: number) => void) {
+        for (let i = 0; i < this.singleIndices.length; ++i) {
+            const idx = this.singleIndices[i];
+            operation(idx);
+        }
+
+        for(let rIdx = 0; rIdx < this.rangeIndices.length; rIdx += 2){
+            for(let idx = this.rangeIndices[rIdx], endIdx = this.rangeIndices[rIdx + 1];  idx < endIdx; idx++){
+                operation(idx);
+            }
+        }
+    }
+
     do() {
         const splatData = this.splat.splatData;
         const state = splatData.getProp('state') as Uint8Array;
-        for (let i = 0; i < this.indices.length; ++i) {
-            const idx = this.indices[i];
-            state[idx] = this.doIt(state[idx]);
-        }
+
+        this.forEachIndex((idx) => {state[idx] = this.doIt(state[idx])});
         this.splat.updateState(this.updateFlags);
     }
 
     undo() {
         const splatData = this.splat.splatData;
         const state = splatData.getProp('state') as Uint8Array;
-        for (let i = 0; i < this.indices.length; ++i) {
-            const idx = this.indices[i];
-            state[idx] = this.undoIt(state[idx]);
-        }
+
+        this.forEachIndex((idx) => {state[idx] = this.undoIt(state[idx])});
         this.splat.updateState(this.updateFlags);
     }
 
     destroy() {
         this.splat = null;
-        this.indices = null;
+        this.singleIndices = null;
+        this.rangeIndices = null;
     }
 }
 

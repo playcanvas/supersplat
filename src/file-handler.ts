@@ -6,6 +6,7 @@ import { WriteFunc, serializePly, serializePlyCompressed, serializeSplat, serial
 import { ElementType } from './element';
 import { Splat } from './splat';
 import { localize } from './ui/localization';
+import { ColmapJson, ColmapPose, NerfstudioJson, NerfstudioPose } from './json-types';
 
 interface RemoteStorageDetails {
     method: string;
@@ -86,18 +87,6 @@ const sendToRemoteStorage = async (filename: string, data: ArrayBuffer, remoteSt
     });
 };
 
-
-interface ColmapPose {
-    id?: number,
-    img_name?: string,
-    width?: number,
-    height?: number,
-    position: [number, number, number],
-    rotation: [[number, number, number], [number, number, number], [number, number, number]]
-    fx?: number,
-    fy?: number
-};
-
 /** 
  * Checks if the given object is a (nested) array of numbers. 
  * The length args allow to require a certain number of elements per level. 
@@ -114,13 +103,20 @@ const isNestedNumberArray: ((obj: any, ...length: any[]) => boolean) = (obj: any
 } 
 
 const toColmapPose = (pose: any) => {
-    if(!pose.hasOwnProperty('position') || !isNestedNumberArray(pose.position, 3))
+    if(!('position' in pose) || !isNestedNumberArray(pose.position, 3))
         return null;
 
-    if(!pose.hasOwnProperty('rotation') || !isNestedNumberArray(pose.rotation, 3, 3))
+    if(!('rotation' in pose) || !isNestedNumberArray(pose.rotation, 3, 3))
         return null;
 
     return pose as ColmapPose;
+};
+
+const toNerfstudioPose = (pose: any) => {
+    if(!('transform_matrix' in pose) || !isNestedNumberArray(pose.position, 4, 4))
+        return null;
+
+    return pose as NerfstudioPose;
 };
 
 const trailingNumber = (text?: string) => {
@@ -131,32 +127,46 @@ const trailingNumber = (text?: string) => {
 const loadCameraPoses = async (url: string, filename: string, events: Events) => {
     const response = await fetch(url);
     const json = await response.json();
-    if(json instanceof Array && json.length > 0){
-        const poses = json
-            .map(obj => toColmapPose(obj))
-            .filter(obj => obj !== null)
-            .sort((a, b) => trailingNumber(a.img_name) - trailingNumber(b.img_name));
-        
-        // calculate the average position of the camera poses
-        const ave = new Vec3(0, 0, 0);
-        poses.forEach((pose: ColmapPose) => ave.add(vec.set(...pose.position)));
-        ave.mulScalar(1 / poses.length);
-
-        poses.forEach((pose: ColmapPose, i: number) => {
-            const p = new Vec3(pose.position);
-            const z = new Vec3(pose.rotation[0][2], pose.rotation[1][2], pose.rotation[2][2]);
-
-            const dot = vec.sub2(ave, p).dot(z);
-            vec.copy(z).mulScalar(dot).add(p);
-
-            events.fire('camera.addPose', {
-                name: pose.img_name ?? `${filename}_${i}`,
-                position: new Vec3(-p.x, -p.y, p.z),
-                target: new Vec3(-vec.x, -vec.y, vec.z)
-            });
-        });
-    }
+    if(json instanceof Array && json.length > 0)
+        loadColmapPoses(json, filename, events);
+    else if('frames' in json && json.frames instanceof Array && json.frames > 0)
+        loadNerfstudioPoses(json, filename, events);
 };
+
+const loadColmapPoses = (json: ColmapJson, filename: string, events: Events) => {    
+    const poses = json
+        .map(obj => toColmapPose(obj))
+        .filter(obj => obj !== null)
+        .sort((a, b) => trailingNumber(a.img_name) - trailingNumber(b.img_name));
+
+    // calculate the average position of the camera poses
+    const ave = new Vec3(0, 0, 0);
+    poses.forEach((pose: ColmapPose) => ave.add(vec.set(...pose.position)));
+    ave.mulScalar(1 / poses.length);
+
+    poses.forEach((pose: ColmapPose, i: number) => {
+        const p = new Vec3(pose.position);
+        const z = new Vec3(pose.rotation[0][2], pose.rotation[1][2], pose.rotation[2][2]);
+
+        const dot = vec.sub2(ave, p).dot(z);
+        vec.copy(z).mulScalar(dot).add(p);
+
+        events.fire('camera.addPose', {
+            name: pose.img_name ?? `${filename}_${i}`,
+            position: new Vec3(-p.x, -p.y, p.z),
+            target: new Vec3(-vec.x, -vec.y, vec.z)
+        });
+    });
+};
+
+const loadNerfstudioPoses = (json: NerfstudioJson, filename: string, events: Events) => {      
+    const poses = json.frames
+        .map(obj => toNerfstudioPose(obj))        
+        .filter(obj => obj !== null)
+        .sort((a, b) => trailingNumber(a.file_path) - trailingNumber(b.file_path));
+
+    // TODO: Implement :D
+}; 
 
 // initialize file handler events
 const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLElement, remoteStorageDetails: RemoteStorageDetails) => {

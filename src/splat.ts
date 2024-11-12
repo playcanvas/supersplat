@@ -19,7 +19,7 @@ import { Serializer } from "./serializer";
 import { State } from './splat-state';
 import { vertexShader, fragmentShader } from './shaders/splat-shader';
 import { TransformPalette } from './transform-palette';
-import { compressSH } from './compress-sh';
+import { shCompress } from './sh-compress';
 
 const vec = new Vec3();
 const veca = new Vec3();
@@ -80,9 +80,9 @@ class Splat extends Element {
             shData.push(splatData.getProp(`f_rest_${i}`));
         }
         if (shData.every(x => x)) {
-            compressSH(shData as unknown as number[][], splatData.numSplats);
+            shCompress(shData as unknown as number[][], splatData.numSplats, 1024 * 128, 0.2);
         }
-        
+
         // get material options object for a shader that renders with the given number of bands
         const materialOptions = {
             vertex: vertexShader,

@@ -1,14 +1,12 @@
-import { EventHandler } from "playcanvas";
+import { EventHandler } from 'playcanvas';
+
+type FunctionCallback = (...args: any[]) => any;
 
 class Events extends EventHandler {
-    functions = new Map<string, Function>();
-
-    constructor() {
-        super();
-    }
+    functions = new Map<string, FunctionCallback>();
 
     // declare an editor function
-    function(name: string, fn: Function) {
+    function(name: string, fn: FunctionCallback) {
         if (this.functions.has(name)) {
             throw new Error(`error: function ${name} already exists`);
         }

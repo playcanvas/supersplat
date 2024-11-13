@@ -1,5 +1,6 @@
-import { TranslateGizmo, Vec3 } from 'playcanvas';
 import { Button, Container, NumericInput } from 'pcui';
+import { TranslateGizmo, Vec3 } from 'playcanvas';
+
 import { Events } from '../events';
 import { Scene } from '../scene';
 import { SphereShape } from '../sphere-shape';
@@ -30,7 +31,9 @@ class SphereSelection {
             hidden: true
         });
 
-        selectToolbar.dom.addEventListener('pointerdown', (e) => { e.stopPropagation(); });
+        selectToolbar.dom.addEventListener('pointerdown', (e) => {
+            e.stopPropagation();
+        });
 
         const setButton = new Button({ text: 'Set', class: 'select-toolbar-button' });
         const addButton = new Button({ text: 'Add', class: 'select-toolbar-button' });
@@ -55,10 +58,18 @@ class SphereSelection {
             events.fire('select.bySphere', op, [p.x, p.y, p.z, sphere.radius]);
         };
 
-        setButton.dom.addEventListener('pointerdown', (e) => { e.stopPropagation(); apply('set'); });
-        addButton.dom.addEventListener('pointerdown', (e) => { e.stopPropagation(); apply('add'); });
-        removeButton.dom.addEventListener('pointerdown', (e) => { e.stopPropagation(); apply('remove'); });
-        radius.on('change', () => { sphere.radius = radius.value; });
+        setButton.dom.addEventListener('pointerdown', (e) => {
+            e.stopPropagation(); apply('set');
+        });
+        addButton.dom.addEventListener('pointerdown', (e) => {
+            e.stopPropagation(); apply('add');
+        });
+        removeButton.dom.addEventListener('pointerdown', (e) => {
+            e.stopPropagation(); apply('remove');
+        });
+        radius.on('change', () => {
+            sphere.radius = radius.value;
+        });
 
         events.on('camera.focalPointPicked', (details: { splat: Splat, position: Vec3 }) => {
             if (this.active) {

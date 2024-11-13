@@ -1,4 +1,4 @@
-import { Events } from "./events";
+import { Events } from './events';
 
 interface ShortcutOptions {
     ctrl?: boolean;

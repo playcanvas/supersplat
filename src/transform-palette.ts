@@ -67,7 +67,7 @@ class TransformPalette {
             for (let i = 0; i < 12; ++i) {
                 data[index * 12 + i] = src[idx[i]];
             }
-    
+
             texture.upload();
         };
 
@@ -91,7 +91,9 @@ class TransformPalette {
             nextIdx -= num;
         };
 
-        Object.defineProperty(this, "texture", { get() { return texture; } });
+        Object.defineProperty(this, 'texture', { get() {
+            return texture;
+        } });
 
         // allocate initial storage
         realloc(width, Math.ceil(initialSize / (width / 3)));

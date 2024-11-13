@@ -49,10 +49,11 @@ class HistogramData {
             if (v !== undefined) {
                 const n = min === max ? 0 : (v - min) / (max - min);
                 const bin = Math.min(bins.length - 1, Math.floor(n * bins.length));
-                if (selectedFunc(i))
+                if (selectedFunc(i)) {
                     bins[bin].selected++;
-                else
+                } else {
                     bins[bin].unselected++;
+                }
             }
         }
         this.numValues = bins.reduce((t, v) => t + v.selected + v.unselected, 0);
@@ -93,8 +94,8 @@ class Histogram {
         canvas.setAttribute('id', 'histogram-canvas');
         canvas.width = numBins;
         canvas.height = height;
-        canvas.style.width = `100%`;
-        canvas.style.height = `100%`;
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
 
         const context = canvas.getContext('2d');
         context.globalCompositeOperation = 'copy';
@@ -175,7 +176,7 @@ class Histogram {
 
                 const rect = this.canvas.getBoundingClientRect();
                 const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-                
+
                 const binIndex = Math.min(h.bins.length - 1, Math.floor(x * h.bins.length));
                 const bin = h.bins[binIndex];
 
@@ -211,11 +212,11 @@ class Histogram {
         const pixels = new Uint32Array(pixelData.data.buffer);
 
         const binMap = options.logScale ? (x: number) => Math.log(x + 1) : (x: number) => x;
-        const bins = this.histogram.bins.map(v => {
+        const bins = this.histogram.bins.map((v) => {
             return {
                 selected: binMap(v.unselected + v.selected),
                 unselected: binMap(v.unselected)
-            }
+            };
         });
         const binMax = bins.reduce((a, v) => Math.max(a, v.selected), 0);
 
@@ -240,8 +241,6 @@ class Histogram {
 
         context.putImageData(pixelData, 0, 0);
     }
-
-    
 }
 
 export { Histogram };

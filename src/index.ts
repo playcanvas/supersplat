@@ -1,8 +1,9 @@
 import './ui/scss/style.scss';
-import { main } from './main';
-import { version as appVersion } from '../package.json';
 import { version as pcuiVersion, revision as pcuiRevision } from 'pcui';
 import { version as engineVersion, revision as engineRevision } from 'playcanvas';
+
+import { main } from './main';
+import { version as appVersion } from '../package.json';
 
 // print out versions of dependent packages
 // NOTE: add dummy style reference to prevent tree shaking

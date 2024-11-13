@@ -1,17 +1,14 @@
-import { Color } from 'playcanvas';
 import { ColorPicker, Container, Label, SliderInput, SliderInputArgs } from 'pcui';
+import { Color } from 'playcanvas';
+
 import { Events } from '../events';
-import { Tooltips } from './tooltips';
 import { localize } from './localization';
-import { Splat } from '../splat';
+import { Tooltips } from './tooltips';
 import { SetSplatColorAdjustmentOp } from '../edit-ops';
+import { Splat } from '../splat';
 
 // pcui slider doesn't include start and end events
 class MyFancySliderInput extends SliderInput {
-    constructor(args: SliderInputArgs) {
-        super(args);
-    }
-
     _onSlideStart(pageX: number) {
         super._onSlideStart(pageX);
         this.emit('slide:start');
@@ -21,7 +18,7 @@ class MyFancySliderInput extends SliderInput {
         super._onSlideEnd(pageX);
         this.emit('slide:end');
     }
-};
+}
 
 class ColorPanel extends Container {
     constructor(events: Events, tooltips: Tooltips, args = {}) {
@@ -42,16 +39,16 @@ class ColorPanel extends Container {
         // header
 
         const header = new Container({
-            class: `panel-header`
+            class: 'panel-header'
         });
 
         const icon = new Label({
-            class: `panel-header-icon`,
+            class: 'panel-header-icon',
             text: '\uE146'
         });
 
         const label = new Label({
-            class: `panel-header-label`,
+            class: 'panel-header-label',
             text: localize('colors')
         });
 

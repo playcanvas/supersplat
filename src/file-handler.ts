@@ -1,11 +1,15 @@
 import { path, Vec3 } from 'playcanvas';
-import { Scene } from './scene';
-import { Events } from './events';
+
 import { CreateDropHandler } from './drop-handler';
-import { WriteFunc, serializePly, serializePlyCompressed, serializeSplat, serializeViewer } from './splat-serialize';
 import { ElementType } from './element';
+import { Events } from './events';
+import { Scene } from './scene';
 import { Splat } from './splat';
+import { WriteFunc, serializePly, serializePlyCompressed, serializeSplat, serializeViewer } from './splat-serialize';
 import { localize } from './ui/localization';
+
+// ts compiler and vscode find this type, but eslint does not
+type FilePickerAcceptType = unknown;
 
 interface RemoteStorageDetails {
     method: string;
@@ -53,7 +57,7 @@ const vec = new Vec3();
 
 // download the data to the given filename
 const download = (filename: string, data: Uint8Array) => {
-    const blob = new Blob([data], { type: "octet/stream" });
+    const blob = new Blob([data], { type: 'octet/stream' });
     const url = window.URL.createObjectURL(blob);
 
     const lnk = document.createElement('a');
@@ -62,14 +66,14 @@ const download = (filename: string, data: Uint8Array) => {
 
     // create a "fake" click-event to trigger the download
     if (document.createEvent) {
-        const e = document.createEvent("MouseEvents");
-        e.initMouseEvent("click", true, true, window,
-                         0, 0, 0, 0, 0, false, false, false,
-                         false, 0, null);
+        const e = document.createEvent('MouseEvents');
+        e.initMouseEvent('click', true, true, window,
+            0, 0, 0, 0, 0, false, false, false,
+            false, 0, null);
         lnk.dispatchEvent(e);
     } else {
         // @ts-ignore
-        lnk.fireEvent?.("onclick");
+        lnk.fireEvent?.('onclick');
     }
 
     window.URL.revokeObjectURL(url);
@@ -78,7 +82,7 @@ const download = (filename: string, data: Uint8Array) => {
 // send the file to the remote storage
 const sendToRemoteStorage = async (filename: string, data: ArrayBuffer, remoteStorageDetails: RemoteStorageDetails) => {
     const formData = new FormData();
-    formData.append('file', new Blob([data], { type: "octet/stream" }), filename);
+    formData.append('file', new Blob([data], { type: 'octet/stream' }), filename);
     formData.append('preserveThumbnail', 'true');
     await fetch(remoteStorageDetails.url, {
         method: remoteStorageDetails.method,
@@ -124,7 +128,7 @@ const loadCameraPoses = async (url: string, filename: string, events: Events) =>
 };
 
 // initialize file handler events
-const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLElement, remoteStorageDetails: RemoteStorageDetails) => {
+const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, remoteStorageDetails: RemoteStorageDetails) => {
 
     // returns a promise that resolves when the file is loaded
     const handleLoad = async (url: string, filename?: string) => {
@@ -135,7 +139,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
                     filename = new URL(url, document.baseURI).pathname.split('/').pop();
                 } catch (e) {
                     filename = url;
-                }                
+                }
             }
 
             const lowerFilename = (filename || url).toLowerCase();
@@ -147,7 +151,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
                 scene.camera.focus();
                 events.fire('loaded', filename);
             } else {
-                throw new Error(`Unsupported file type`);
+                throw new Error('Unsupported file type');
             }
         } catch (error) {
             events.invoke('showPopup', {
@@ -213,7 +217,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
             const result = await events.invoke('showPopup', {
                 type: 'yesno',
                 header: 'RESET SCENE',
-                message: `You have unsaved changes. Are you sure you want to reset the scene?`
+                message: 'You have unsaved changes. Are you sure you want to reset the scene?'
             });
 
             if (result.action !== 'yes') {
@@ -368,7 +372,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
                 return;
             case 'viewer':
                 await serializeViewer(splats, writeFunc);
-                return;
+
         }
     };
 
@@ -404,7 +408,7 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
                     if (!data) {
                         data = finalWrite ? chunk : chunk.slice();
                         cursor = chunk.byteLength;
-                     } else {
+                    } else {
                         if (data.byteLength < cursor + chunk.byteLength) {
                             let newSize = data.byteLength * 2;
                             while (newSize < cursor + chunk.byteLength) {

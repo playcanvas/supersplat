@@ -1,4 +1,5 @@
 import { Container, Label, Overlay, Panel } from 'pcui';
+
 import { localize } from './localization';
 
 const shortcutList = [
@@ -28,9 +29,9 @@ const shortcutList = [
     { key: 'Ctrl + Shift + Z', action: 'redo' },
     { key: 'Space', action: 'toggle-splat-overlay' },
     { key: 'F', action: 'focus-camera' },
-    { key: 'M', action: 'toggle-camera-mode'},
+    { key: 'M', action: 'toggle-camera-mode' },
     { key: 'G', action: 'toggle-grid' },
-    { key: 'C', action: 'toggle-gizmo-coordinate-space' },
+    { key: 'C', action: 'toggle-gizmo-coordinate-space' }
 ];
 
 class ShortcutsPopup extends Overlay {

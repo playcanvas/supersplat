@@ -1,4 +1,5 @@
 import { Vec3, Quat } from 'playcanvas';
+
 import { Events } from './events';
 import { Transform } from './transform';
 

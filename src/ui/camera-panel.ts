@@ -1,8 +1,9 @@
-import { Vec3 } from 'playcanvas';
 import { Container, Label } from 'pcui';
+import { Vec3 } from 'playcanvas';
+
 import { Events } from '../events';
-import { Tooltips } from './tooltips';
 import { localize } from './localization';
+import { Tooltips } from './tooltips';
 
 class CameraPanel extends Container {
     constructor(events: Events, tooltips: Tooltips, args = {}) {
@@ -138,7 +139,7 @@ class CameraPanel extends Container {
             row.append(label);
 
             row.on('click', () => {
-                setPose(poses.findIndex((r) => r.pose === pose));
+                setPose(poses.findIndex(r => r.pose === pose));
             });
 
             poseList.append(row);
@@ -191,7 +192,7 @@ class CameraPanel extends Container {
 
         posePlay.on('click', () => {
             if (timeout) {
-                
+
                 stop();
             } else if (poses.length > 0) {
                 const next = () => {

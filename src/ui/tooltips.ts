@@ -37,22 +37,22 @@ class Tooltips extends Container {
                     case 'left':
                         style.left = `${rect.left}px`;
                         style.top = `${midy}px`;
-                        style.transform = `translate(calc(-100% - 10px), -50%)`;
+                        style.transform = 'translate(calc(-100% - 10px), -50%)';
                         break;
                     case 'right':
                         style.left = `${rect.right}px`;
                         style.top = `${midy}px`;
-                        style.transform = `translate(10px, -50%)`;
+                        style.transform = 'translate(10px, -50%)';
                         break;
                     case 'top':
                         style.left = `${midx}px`;
                         style.top = `${rect.top}px`;
-                        style.transform = `translate(-50%, calc(-100% - 10px))`;
+                        style.transform = 'translate(-50%, calc(-100% - 10px))';
                         break;
                     case 'bottom':
                         style.left = `${midx}px`;
                         style.top = `${rect.bottom}px`;
-                        style.transform = `translate(-50%, 10px)`;
+                        style.transform = 'translate(-50%, 10px)';
                         break;
                 }
 
@@ -65,14 +65,14 @@ class Tooltips extends Container {
                     fn();
                     timer = -1;
                 }, 250);
-            }
+            };
 
             const cancelTimer = () => {
                 if (timer >= 0) {
                     clearTimeout(timer);
                     timer = -1;
                 }
-            }
+            };
 
             const enter = () => {
                 cancelTimer();

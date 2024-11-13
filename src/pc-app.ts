@@ -56,7 +56,7 @@ import {
     // TemplateHandler,
     // TextHandler,
     // TextureAtlasHandler,
-    TextureHandler,
+    TextureHandler
     // XrManager
 } from 'playcanvas';
 
@@ -158,4 +158,4 @@ class PCApp extends AppBase {
     }
 }
 
-export {PCApp};
+export { PCApp };

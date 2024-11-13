@@ -14,13 +14,14 @@ import {
     Texture,
     Vec3,
     WebglGraphicsDevice,
-    BlendState,
+    BlendState
 } from 'playcanvas';
-import { Splat } from './splat';
 
-import { vertexShader as intersectionVS, fragmentShader as intersectionFS } from './shaders/intersection-shader';
+
 import { vertexShader as boundVS, fragmentShader as boundFS } from './shaders/bound-shader';
+import { vertexShader as intersectionVS, fragmentShader as intersectionFS } from './shaders/intersection-shader';
 import { vertexShader as positionVS, fragmentShader as positionFS } from './shaders/position-shader';
+import { Splat } from './splat';
 
 type MaskOptions = {
     mask: Texture;
@@ -89,7 +90,10 @@ class DataProcessor {
 
         const createTexture = (name: string, width: number, height: number, format: number) => {
             return new Texture(device, {
-                name, width, height, format,
+                name,
+                width,
+                height,
+                format,
                 mipmaps: false,
                 addressU: ADDRESS_CLAMP_TO_EDGE,
                 addressV: ADDRESS_CLAMP_TO_EDGE
@@ -260,7 +264,7 @@ class DataProcessor {
             resolve(scope, {
                 mask: this.dummyTexture,
                 mask_params: [0, 0]
-            })
+            });
         }
 
         const rectOptions = options as RectOptions;
@@ -273,7 +277,7 @@ class DataProcessor {
                     rectOptions.rect.x2 * 2.0 - 1.0,
                     rectOptions.rect.y2 * 2.0 - 1.0
                 ]
-            })
+            });
         } else {
             resolve(scope, {
                 rect_params: [0, 0, 0, 0]
@@ -331,7 +335,7 @@ class DataProcessor {
             transformPalette,
             splatState,
             splat_params: this.splatParams,
-            mode: onlySelected ? 0 : 1,
+            mode: onlySelected ? 0 : 1
         });
 
         const glDevice = device as WebglGraphicsDevice;

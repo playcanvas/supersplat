@@ -8,11 +8,12 @@ import {
     MeshInstance,
     TYPE_UINT32,
     VertexBuffer,
-    VertexFormat,
+    VertexFormat
 } from 'playcanvas';
-import { Splat } from './splat';
+
 import { ElementType, Element } from './element';
 import { vertexShader, fragmentShader } from './shaders/splat-overlay-shader';
+import { Splat } from './splat';
 
 class SplatOverlay extends Element {
     meshInstance: MeshInstance;
@@ -74,7 +75,7 @@ class SplatOverlay extends Element {
             mesh.primitive[0] = {
                 type: PRIMITIVE_POINTS,
                 base: 0,
-                count: splatData.numSplats,
+                count: splatData.numSplats
             };
 
             material.setParameter('splatState', splat.stateTexture);

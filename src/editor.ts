@@ -473,6 +473,17 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         setSplatSize(value);
     });
 
+    // camera speed
+
+
+    const setCameraSpeed = (value: number) => {
+        scene.camera.speed = value;
+    };
+
+    events.on('camera.setCameraSpeed', (value: number) => {
+        setCameraSpeed(value);
+    });
+
     // outline selection
 
     let outlineSelection = false;

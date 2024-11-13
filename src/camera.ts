@@ -68,6 +68,8 @@ class Camera extends Element {
 
     sceneRadius = 5;
 
+    speed = 5;
+
     picker: Picker;
 
     workRenderTarget: RenderTarget;

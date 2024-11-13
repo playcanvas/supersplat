@@ -150,6 +150,28 @@ class ViewPanel extends Container {
         centersSizeRow.append(centersSizeLabel);
         centersSizeRow.append(centersSizeSlider);
 
+        // camera speed
+
+        const cameraSpeedRow = new Container({
+            class: 'view-panel-row'
+        });
+
+        const cameraSpeedLabel = new Label({
+            text: localize('options.camera-speed'),
+            class: 'view-panel-row-label'
+        });
+
+        const cameraSpeedSlider = new SliderInput({
+            class: 'view-panel-row-slider',
+            min: 0.1,
+            max: 30,
+            precision: 1,
+            value: 5
+        });
+
+        cameraSpeedRow.append(cameraSpeedLabel);
+        cameraSpeedRow.append(cameraSpeedSlider);
+
         // outline selection
 
         const outlineSelectionRow = new Container({
@@ -218,6 +240,7 @@ class ViewPanel extends Container {
         this.append(outlineSelectionRow);
         this.append(showGridRow);
         this.append(showBoundRow);
+        this.append(cameraSpeedRow);
 
         // handle panel visibility
 
@@ -272,6 +295,16 @@ class ViewPanel extends Container {
             events.fire('camera.setSplatSize', value);
             events.fire('camera.setOverlay', true);
             events.fire('camera.setMode', 'centers');
+        });
+
+        // camera speed
+
+        events.on('camera.cameraSpeed', (value: number) => {
+            cameraSpeedSlider.value = value;
+        });
+
+        cameraSpeedSlider.on('change', (value: number) => {
+            events.fire('camera.setCameraSpeed', value);
         });
 
         // outline selection

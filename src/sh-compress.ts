@@ -200,7 +200,7 @@ const shCompress = (src: number[][], numSplats: number, maxGroups: number, epsil
                 }
             }
         }
-    }
+    };
 
     const doBand2 = () => {
         // group band 2

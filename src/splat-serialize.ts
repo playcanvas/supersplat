@@ -96,7 +96,7 @@ class SplatTransformCache {
             }
 
             return transform.rot;
-        }
+        };
 
         this.getScale = (index: number) => {
             const transform = getTransform(index);
@@ -108,7 +108,7 @@ class SplatTransformCache {
             }
 
             return transform.scale;
-        }
+        };
 
         this.getSHRot = (index: number) => {
             const transform = getTransform(index);

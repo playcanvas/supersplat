@@ -1,15 +1,15 @@
 import { Button, Container, Element, Label } from 'pcui';
-import { Events } from '../events';
-import { Tooltips } from './tooltips';
-import { localize } from './localization';
 
-import showHideSplatsSvg from './svg/show-hide-splats.svg';
+import { Events } from '../events';
+import { localize } from './localization';
 import cameraFrameSelectionSvg from './svg/camera-frame-selection.svg';
-import cameraResetSvg from './svg/camera-reset.svg';
 import cameraPanelSvg from './svg/camera-panel.svg';
-import colorPanelSvg from './svg/color-panel.svg';
+import cameraResetSvg from './svg/camera-reset.svg';
 import centersSvg from './svg/centers.svg';
+import colorPanelSvg from './svg/color-panel.svg';
 import ringsSvg from './svg/rings.svg';
+import showHideSplatsSvg from './svg/show-hide-splats.svg';
+import { Tooltips } from './tooltips';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -51,12 +51,12 @@ class RightToolbar extends Container {
 
         const cameraPanel = new Button({
             id: 'right-toolbar-camera-panel',
-            class: 'right-toolbar-toggle',
+            class: 'right-toolbar-toggle'
         });
 
         const colorPanel = new Button({
             id: 'right-toolbar-color-panel',
-            class: 'right-toolbar-toggle',
+            class: 'right-toolbar-toggle'
         });
 
         const options = new Button({

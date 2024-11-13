@@ -1,4 +1,4 @@
-import { Events } from "../events";
+import { Events } from '../events';
 
 class BrushSelection {
     activate: () => void;
@@ -8,7 +8,7 @@ class BrushSelection {
         let radius = 40;
 
         // create svg
-        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.id = 'brush-select-svg';
         svg.classList.add('select-svg');
 

@@ -10,6 +10,7 @@ import {
     ShaderMaterial,
     Vec3
 } from 'playcanvas';
+
 import { Element, ElementType } from './element';
 import { Serializer } from './serializer';
 import { vertexShader, fragmentShader } from './shaders/sphere-shape-shader';

@@ -24,11 +24,12 @@ import {
     TONEMAP_ACES,
     TONEMAP_ACES2
 } from 'playcanvas';
-import { Element, ElementType } from './element';
-import { TweenValue } from './tween-value';
-import { Serializer } from './serializer';
+
 import { PointerController } from './controllers';
+import { Element, ElementType } from './element';
+import { Serializer } from './serializer';
 import { Splat } from './splat';
+import { TweenValue } from './tween-value';
 
 // calculate the forward vector given azimuth and elevation
 const calcForwardVec = (result: Vec3, azim: number, elev: number) => {
@@ -157,7 +158,7 @@ class Camera extends Element {
         elev = Math.max(this.minElev, Math.min(this.maxElev, elev));
 
         const t = this.azimElevTween;
-        t.goto({azim, elev}, dampingFactorFactor * this.scene.config.controls.dampingFactor);
+        t.goto({ azim, elev }, dampingFactorFactor * this.scene.config.controls.dampingFactor);
 
         // handle wraparound
         if (t.source.azim - azim < -180) {
@@ -341,7 +342,10 @@ class Camera extends Element {
 
         const createTexture = (name: string, width: number, height: number, format: number) => {
             return new Texture(device, {
-                name, width, height, format,
+                name,
+                width,
+                height,
+                format,
                 mipmaps: false,
                 minFilter: FILTER_NEAREST,
                 magFilter: FILTER_NEAREST,

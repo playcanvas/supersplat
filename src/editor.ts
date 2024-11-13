@@ -3,14 +3,15 @@ import {
     Mat4,
     Texture,
     Vec3,
-    Vec4,
+    Vec4
 } from 'playcanvas';
-import { Scene } from './scene';
+
 import { EditHistory } from './edit-history';
-import { Splat } from './splat';
 import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp } from './edit-ops';
 import { Events } from './events';
 import { PngCompressor } from './png-compressor';
+import { Scene } from './scene';
+import { Splat } from './splat';
 
 // register for editor and scene events
 const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: Scene) => {
@@ -28,7 +29,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     let lastExportCursor = 0;
 
     // add unsaved changes warning message.
-    window.addEventListener("beforeunload", function (e) {
+    window.addEventListener('beforeunload', (e) => {
         if (!events.invoke('scene.dirty')) {
             // if the undo cursor matches last export, then we have no unsaved changes
             return undefined;
@@ -145,7 +146,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.on('camera.focus', () => {
         const splat = selectedSplats()[0];
         if (splat) {
-    
+
             const bound = splat.numSelected > 0 ? splat.selectionBound : splat.localBound;
             vec.copy(bound.center);
 
@@ -164,7 +165,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.on('camera.reset', () => {
         const { initialAzim, initialElev, initialZoom } = scene.config.controls;
         const x = Math.sin(initialAzim * Math.PI / 180) * Math.cos(initialElev * Math.PI / 180);
-        const y =-Math.sin(initialElev * Math.PI / 180);
+        const y = -Math.sin(initialElev * Math.PI / 180);
         const z = Math.cos(initialAzim * Math.PI / 180) * Math.cos(initialElev * Math.PI / 180);
         const zoom = initialZoom;
 
@@ -230,7 +231,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         selectedSplats().forEach((splat) => {
             if (mode === 'centers') {
                 intersectCenters(splat, op, {
-                    rect: { x1: rect.start.x, y1: rect.start.y, x2: rect.end.x, y2: rect.end.y },
+                    rect: { x1: rect.start.x, y1: rect.start.y, x2: rect.end.x, y2: rect.end.y }
                 });
             } else if (mode === 'rings') {
                 const { width, height } = scene.targetSize;
@@ -588,6 +589,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             events.fire('stopSpinner');
         }
     });
-}
+};
 
 export { registerEditorEvents };

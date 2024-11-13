@@ -1,12 +1,12 @@
 import { Container, Element, Label } from 'pcui';
-import { Events } from '../events';
-import { Tooltips } from './tooltips';
-import { SplatList } from './splat-list';
-import { Transform } from './transform';
-import { localize } from './localization';
 
+import { Events } from '../events';
+import { localize } from './localization';
+import { SplatList } from './splat-list';
 import sceneImportSvg from './svg/import.svg';
 import sceneNewSvg from './svg/new.svg';
+import { Tooltips } from './tooltips';
+import { Transform } from './transform';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -29,26 +29,26 @@ class ScenePanel extends Container {
         });
 
         const sceneHeader = new Container({
-            class: `panel-header`
+            class: 'panel-header'
         });
 
         const sceneIcon = new Label({
             text: '\uE344',
-            class: `panel-header-icon`
+            class: 'panel-header-icon'
         });
 
         const sceneLabel = new Label({
             text: localize('scene-manager'),
-            class: `panel-header-label`
+            class: 'panel-header-label'
         });
 
         const sceneImport = new Container({
-            class: `panel-header-button`
+            class: 'panel-header-button'
         });
         sceneImport.dom.appendChild(createSvg(sceneImportSvg));
 
         const sceneNew = new Container({
-            class: `panel-header-button`
+            class: 'panel-header-button'
         });
         sceneNew.dom.appendChild(createSvg(sceneNewSvg));
 
@@ -76,17 +76,17 @@ class ScenePanel extends Container {
         splatListContainer.append(splatList);
 
         const transformHeader = new Container({
-            class: `panel-header`
+            class: 'panel-header'
         });
 
         const transformIcon = new Label({
             text: '\uE111',
-            class: `panel-header-icon`
+            class: 'panel-header-icon'
         });
 
         const transformLabel = new Label({
             text: localize('transform'),
-            class: `panel-header-label`
+            class: 'panel-header-label'
         });
 
         transformHeader.append(transformIcon);
@@ -97,7 +97,7 @@ class ScenePanel extends Container {
         this.append(transformHeader);
         this.append(new Transform(events));
         this.append(new Element({
-            class: `panel-header`,
+            class: 'panel-header',
             height: 20
         }));
     }

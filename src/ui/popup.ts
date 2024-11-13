@@ -1,4 +1,5 @@
 import { Button, Container, Label, TextInput } from 'pcui';
+
 import { localize } from './localization';
 
 interface ShowOptions {
@@ -105,7 +106,7 @@ class Popup extends Container {
             event.stopPropagation();
         });
 
-        this.show = async (options: ShowOptions) => {
+        this.show = (options: ShowOptions) => {
             header.text = options.header;
             text.text = options.message;
 

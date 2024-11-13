@@ -1,4 +1,4 @@
-import {Color, Vec3} from 'playcanvas';
+import { Color, Vec3 } from 'playcanvas';
 
 // this class is used by elements to store their pertinent state
 // every frame. the data is then compared with the previous frame's
@@ -31,4 +31,4 @@ class Serializer {
     }
 }
 
-export {Serializer};
+export { Serializer };

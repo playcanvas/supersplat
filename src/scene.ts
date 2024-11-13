@@ -7,19 +7,20 @@ import {
     Layer,
     GraphicsDevice
 } from 'playcanvas';
-import { PCApp } from './pc-app';
-import { Events } from './events';
-import { Element, ElementType, ElementTypeList } from './element';
-import { SceneState } from './scene-state';
-import { SceneConfig } from './scene-config';
+
 import { AssetLoader } from './asset-loader';
+import { Camera } from './camera';
+import { DataProcessor } from './data-processor';
+import { Element, ElementType, ElementTypeList } from './element';
+import { Events } from './events';
+import { InfiniteGrid as Grid } from './infinite-grid';
 import { Model } from './model';
+import { Outline } from './outline';
+import { PCApp } from './pc-app';
+import { SceneConfig } from './scene-config';
+import { SceneState } from './scene-state';
 import { Splat } from './splat';
 import { SplatOverlay } from './splat-overlay';
-import { Camera } from './camera';
-import { InfiniteGrid as Grid } from './infinite-grid';
-import { DataProcessor } from './data-processor';
-import { Outline } from './outline';
 import { Underlay } from './underlay';
 
 class Scene {
@@ -217,7 +218,7 @@ class Scene {
 
         // load env
         if (config.env.url) {
-            promises.push(this.assetLoader.loadEnv({url: config.env.url}));
+            promises.push(this.assetLoader.loadEnv({ url: config.env.url }));
         }
 
         const elements = await Promise.all(promises);
@@ -282,7 +283,7 @@ class Scene {
     get bound() {
         if (this.boundDirty) {
             let valid = false;
-            this.forEachElement(e => {
+            this.forEachElement((e) => {
                 const bound = e.worldBound;
                 if (bound) {
                     if (!valid) {
@@ -337,7 +338,7 @@ class Scene {
         this.forceRender = false;
 
         // raise per-type update events
-        ElementTypeList.forEach(type => {
+        ElementTypeList.forEach((type) => {
             if (all.has(type)) {
                 this.events.fire(`updated:${type}`);
             }
@@ -396,4 +397,4 @@ class Scene {
     }
 }
 
-export {SceneConfig, Scene};
+export { SceneConfig, Scene };

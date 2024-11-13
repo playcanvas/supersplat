@@ -1,4 +1,4 @@
-import { Events } from "../events";
+import { Events } from '../events';
 
 type Point = { x: number, y: number };
 
@@ -11,7 +11,7 @@ class PolygonSelection {
         let currentPoint: Point = null;
 
         // create svg
-        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.id = 'polygon-select-svg';
         svg.classList.add('select-svg');
 
@@ -25,17 +25,51 @@ class PolygonSelection {
         // create canvas
         const { canvas, context } = mask;
 
-        const paint = () => {
-            polyline.setAttribute('points', [...points, currentPoint].filter(v => v).reduce((prev, current) => prev + `${current.x}, ${current.y} `, ""));
-            polyline.setAttribute('stroke', isClosed() ? '#fa6' : '#f60');
-        };
-
         const dist = (a: Point, b: Point) => {
             return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
         };
 
         const isClosed = () => {
             return points.length > 1 && dist(currentPoint, points[0]) < 8;
+        };
+
+        const paint = () => {
+            polyline.setAttribute('points', [...points, currentPoint].filter(v => v).reduce((prev, current) => `${prev}${current.x}, ${current.y} `, ''));
+            polyline.setAttribute('stroke', isClosed() ? '#fa6' : '#f60');
+        };
+
+        const commitSelection = (e: PointerEvent) => {
+            // initialize canvas
+            if (canvas.width !== parent.clientWidth || canvas.height !== parent.clientHeight) {
+                canvas.width = parent.clientWidth;
+                canvas.height = parent.clientHeight;
+            }
+
+            // clear canvas
+            context.clearRect(0, 0, canvas.width, canvas.height);
+
+            context.beginPath();
+            context.fillStyle = '#f60';
+            context.beginPath();
+            points.forEach((p, idx) => {
+                if (idx === 0) {
+                    context.moveTo(p.x, p.y);
+                } else {
+                    context.lineTo(p.x, p.y);
+                }
+            });
+            context.closePath();
+            context.fill();
+
+            events.fire(
+                'select.byMask',
+                e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
+                canvas,
+                context
+            );
+
+            points = [];
+            paint();
         };
 
         const pointermove = (e: PointerEvent) => {
@@ -73,41 +107,6 @@ class PolygonSelection {
             if (points.length > 2) {
                 commitSelection(e);
             }
-        };
-
-        const commitSelection = (e: PointerEvent) => {
-            // initialize canvas
-            if (canvas.width !== parent.clientWidth || canvas.height !== parent.clientHeight) {
-                canvas.width = parent.clientWidth;
-                canvas.height = parent.clientHeight;
-            }
-
-            // clear canvas
-            context.clearRect(0, 0, canvas.width, canvas.height);
-
-            context.beginPath();
-            context.fillStyle = '#f60';
-            context.beginPath();
-            points.forEach((p, idx) => {
-                if (idx === 0) {
-                    context.moveTo(p.x, p.y);
-                }
-                else {
-                    context.lineTo(p.x, p.y);
-                }
-            });
-            context.closePath();
-            context.fill();
-
-            events.fire(
-                'select.byMask',
-                e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
-                canvas,
-                context
-            );
-
-            points = [];
-            paint();
         };
 
         this.activate = () => {

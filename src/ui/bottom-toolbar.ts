@@ -1,15 +1,15 @@
 import { Button, Element, Container } from 'pcui';
-import { Events } from '../events';
-import { Tooltips } from './tooltips';
-import { localize } from './localization';
 
-import undoSvg from './svg/undo.svg';
+import { Events } from '../events';
+import { localize } from './localization';
 import redoSvg from './svg/redo.svg';
-import pickerSvg from './svg/select-picker.svg';
 import brushSvg from './svg/select-brush.svg';
+import lassoSvg from './svg/select-lasso.svg';
+import pickerSvg from './svg/select-picker.svg';
 import polygonSvg from './svg/select-poly.svg';
 import sphereSvg from './svg/select-sphere.svg';
-import lassoSvg from './svg/select-lasso.svg';
+import undoSvg from './svg/undo.svg';
+import { Tooltips } from './tooltips';
 // import cropSvg from './svg/crop.svg';
 
 const createSvg = (svgString: string) => {
@@ -133,8 +133,12 @@ class BottomToolbar extends Container {
         scale.dom.addEventListener('click', () => events.fire('tool.scale'));
         coordSpace.dom.addEventListener('click', () => events.fire('tool.toggleCoordSpace'));
 
-        events.on('edit.canUndo', (value: boolean) => { undo.enabled = value; });
-        events.on('edit.canRedo', (value: boolean) => { redo.enabled = value; });
+        events.on('edit.canUndo', (value: boolean) => {
+            undo.enabled = value;
+        });
+        events.on('edit.canRedo', (value: boolean) => {
+            redo.enabled = value;
+        });
 
         events.on('tool.activated', (toolName: string) => {
             picker.class[toolName === 'rectSelection' ? 'add' : 'remove']('active');

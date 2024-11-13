@@ -1,11 +1,12 @@
 import { Mat4, Vec3 } from 'playcanvas';
-import { Events } from './events';
-import { Splat } from './splat';
-import { Transform } from './transform';
+
 import { PlacePivotOp, SplatsTransformOp, MultiOp } from './edit-ops';
-import { TransformHandler } from './transform-handler';
+import { Events } from './events';
 import { Pivot } from './pivot';
+import { Splat } from './splat';
 import { State } from './splat-state';
+import { Transform } from './transform';
+import { TransformHandler } from './transform-handler';
 
 const mat = new Mat4();
 const mat2 = new Mat4();

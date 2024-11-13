@@ -6,6 +6,7 @@ import {
     RenderComponent,
     Vec3
 } from 'playcanvas';
+
 import { Element, ElementType } from './element';
 import { Serializer } from './serializer';
 
@@ -63,7 +64,9 @@ class Model extends Element {
         this.root = this.asset.resource.instantiateRenderEntity({
             app: this.scene.app,
             camera: this.scene.camera.entity,
-            onChanged: () => { this.changedCounter++; }
+            onChanged: () => {
+                this.changedCounter++;
+            }
         });
         this.entity.addChild(this.root);
 

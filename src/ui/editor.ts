@@ -1,24 +1,24 @@
 import { Container, Label } from 'pcui';
 import { Mat4 } from 'playcanvas';
+
 import { DataPanel } from './data-panel';
 import { Events } from '../events';
-import { Popup, ShowOptions } from './popup';
-import { ViewCube } from './view-cube';
-import { Menu } from './menu';
-import { ScenePanel } from './scene-panel';
-import { ViewPanel } from './view-panel';
+import { BottomToolbar } from './bottom-toolbar';
 import { CameraPanel } from './camera-panel';
 import { ColorPanel } from './color-panel';
-import { BottomToolbar } from './bottom-toolbar';
-import { RightToolbar } from './right-toolbar';
+import { localizeInit } from './localization';
+import { Menu } from './menu';
 import { ModeToggle } from './mode-toggle';
-import { Tooltips } from './tooltips';
+import logo from './playcanvas-logo.png';
+import { Popup, ShowOptions } from './popup';
+import { RightToolbar } from './right-toolbar';
+import { ScenePanel } from './scene-panel';
 import { ShortcutsPopup } from './shortcuts-popup';
 import { Spinner } from './spinner';
-
-import { localizeInit } from './localization';
+import { Tooltips } from './tooltips';
+import { ViewCube } from './view-cube';
+import { ViewPanel } from './view-panel';
 import { version } from '../../package.json';
-import logo from './playcanvas-logo.png';
 
 class EditorUI {
     appContainer: Container;

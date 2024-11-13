@@ -6,6 +6,7 @@ type MenuItem = {
     text?: string;
     icon?: string | Element;
     extra?: string | Element;
+    // eslint-disable-next-line no-use-before-define
     subMenu?: MenuPanel;
 
     onSelect?: () => any;
@@ -17,8 +18,8 @@ const offsetParent = (elem: HTMLElement) : HTMLElement => {
 
     return (parent.tagName === 'BODY' || window.getComputedStyle(parent).position !== 'static') ?
         parent :
-            offsetParent(parent);
-}
+        offsetParent(parent);
+};
 
 const arrange = (element: HTMLElement, target: HTMLElement, direction: Direction, padding: number) => {
     const rect = target.getBoundingClientRect();
@@ -46,6 +47,7 @@ const isString = (value: any) => {
 };
 
 class MenuPanel extends Container {
+    // eslint-disable-next-line no-use-before-define
     parentPanel: MenuPanel | null = null;
 
     constructor(menuItems: MenuItem[], args = {}) {
@@ -74,19 +76,18 @@ class MenuPanel extends Container {
             }
         });
 
-        let deactivate: () => void | null = null;
-
         for (const menuItem of menuItems) {
             const type = menuItem.subMenu ? 'menu' : menuItem.text ? 'button' : 'separator';
 
             const createIcon = (icon: string | Element) => {
                 return isString(menuItem.icon) ?
                     new Label({ class: 'menu-row-icon', text: menuItem.icon && String.fromCodePoint(parseInt(menuItem.icon as string, 16)) }) :
-                        menuItem.icon;
+                    menuItem.icon;
             };
 
             let row: Container | null = null;
             let activate: () => void | null = null;
+            let deactivate: () => void | null = null;
             switch (type) {
                 case 'button': {
                     row = new Container({ class: 'menu-row' });

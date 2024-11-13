@@ -1,12 +1,11 @@
 import { Events } from '../events';
 
 class RectSelection {
-
     activate: () => void;
     deactivate: () => void;
 
     constructor(events: Events, parent: HTMLElement) {
-        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.id = 'rect-select-svg';
         svg.classList.add('select-svg');
 
@@ -86,9 +85,9 @@ class RectSelection {
                     events.fire(
                         'select.rect',
                         e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'), {
-                        start: { x: Math.min(start.x, end.x) / w, y: Math.min(start.y, end.y) / h },
-                        end: { x: Math.max(start.x, end.x) / w, y: Math.max(start.y, end.y) / h },
-                    });
+                            start: { x: Math.min(start.x, end.x) / w, y: Math.min(start.y, end.y) / h },
+                            end: { x: Math.max(start.x, end.x) / w, y: Math.max(start.y, end.y) / h }
+                        });
                 } else {
                     // pick
                     events.fire(

@@ -7,6 +7,7 @@ import {
     MeshInstance,
     ShaderMaterial
 } from 'playcanvas';
+
 import { Element, ElementType } from './element';
 import { vertexShader, fragmentShader } from './shaders/debug-shader';
 

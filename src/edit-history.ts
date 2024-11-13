@@ -1,5 +1,5 @@
-import { Events } from './events';
 import { EditOp } from './edit-ops';
+import { Events } from './events';
 
 class EditHistory {
     history: EditOp[] = [];

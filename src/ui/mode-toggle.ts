@@ -1,10 +1,10 @@
 import { Container, Element, Label } from 'pcui';
-import { Events } from '../events';
-import { Tooltips } from './tooltips';
-import { localize } from './localization';
 
+import { Events } from '../events';
+import { localize } from './localization';
 import centersSvg from './svg/centers.svg';
 import ringsSvg from './svg/rings.svg';
+import { Tooltips } from './tooltips';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));

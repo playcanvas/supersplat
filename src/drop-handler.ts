@@ -20,7 +20,7 @@ const resolveDirectories = (entries: Array<FileSystemEntry>): Promise<Array<File
     const promises: Promise<Array<FileSystemFileEntry>>[] = [];
     const result: Array<FileSystemFileEntry> = [];
 
-    entries.forEach(entry => {
+    entries.forEach((entry) => {
         if (entry.isFile) {
             result.push(entry as FileSystemFileEntry);
         } else if (entry.isDirectory) {
@@ -96,14 +96,14 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
         ev.preventDefault();
 
         const items = Array.from(ev.dataTransfer.items)
-            .map(item => item.webkitGetAsEntry())
-            .filter(v => v);
+        .map(item => item.webkitGetAsEntry())
+        .filter(v => v);
 
         // resolve directories to files
         const entries = await resolveDirectories(items);
 
         const files = await Promise.all(
-            entries.map(entry => {
+            entries.map((entry) => {
                 return new Promise<DroppedFile>((resolve, reject) => {
                     entry.file((entryFile: any) => {
                         resolve(new DroppedFile(entry.fullPath.substring(1), entryFile));

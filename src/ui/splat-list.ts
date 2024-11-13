@@ -1,11 +1,11 @@
 import { Container, Label, Element as PcuiElement } from 'pcui';
+
+import { Element, ElementType } from '../element';
 import { Events } from '../events';
 import { Splat } from '../splat';
-import { Element, ElementType } from '../element';
-
-import shownSvg from './svg/shown.svg';
-import hiddenSvg from './svg/hidden.svg';
 import deleteSvg from './svg/delete.svg';
+import hiddenSvg from './svg/hidden.svg';
+import shownSvg from './svg/shown.svg';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -34,7 +34,7 @@ class SplatItem extends Container {
 
         const visible = new PcuiElement({
             dom: createSvg(shownSvg),
-            class: 'splat-item-visible',
+            class: 'splat-item-visible'
         });
 
         const invisible = new PcuiElement({
@@ -106,23 +106,23 @@ class SplatItem extends Container {
             visible.dom.removeEventListener('click', toggleVisible);
             invisible.dom.removeEventListener('click', toggleVisible);
             remove.dom.removeEventListener('click', handleRemove);
-        }
-    }
-
-    get selected() {
-        return this.getSelected();
+        };
     }
 
     set selected(value) {
         this.setSelected(value);
     }
 
-    get visible() {
-        return this.getVisible();
+    get selected() {
+        return this.getSelected();
     }
 
     set visible(value) {
         this.setVisible(value);
+    }
+
+    get visible() {
+        return this.getVisible();
     }
 }
 
@@ -152,7 +152,9 @@ class SplatList extends Container {
                         events.fire('selection', splat);
                     }
                 });
-                item.on('invisible', () => splat.visible = false);
+                item.on('invisible', () => {
+                    splat.visible = false;
+                });
             }
         });
 
@@ -186,7 +188,7 @@ class SplatList extends Container {
                     events.fire('selection', key);
                     break;
                 }
-            }            
+            }
         });
 
         this.on('removeClicked', async (item: SplatItem) => {
@@ -196,7 +198,7 @@ class SplatList extends Container {
                     splat = key;
                     break;
                 }
-            }  
+            }
 
             if (!splat) {
                 return;

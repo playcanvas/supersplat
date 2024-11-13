@@ -1,30 +1,31 @@
 import { Color, createGraphicsDevice } from 'playcanvas';
+
+import { EditHistory } from './edit-history';
+import { registerEditorEvents } from './editor';
+import { Events } from './events';
+import { initFileHandler } from './file-handler';
+import { initMaterials } from './material';
 import { Scene } from './scene';
 import { getSceneConfig } from './scene-config';
-import { initMaterials } from './material';
-import { EditHistory } from './edit-history';
-import { EditorUI } from './ui/editor';
-import { registerEditorEvents } from './editor';
-import { initFileHandler } from './file-handler';
 import { registerSelectionEvents } from './selection';
-import { registerTransformHandlerEvents } from './transform-handler';
-import { ToolManager } from './tools/tool-manager';
-import { RectSelection } from './tools/rect-selection';
+import { Shortcuts } from './shortcuts';
 import { BrushSelection } from './tools/brush-selection';
-import { PolygonSelection } from './tools/polygon-selection';
-import { SphereSelection } from './tools/sphere-selection';
+import { LassoSelection } from './tools/lasso-selection';
 import { MoveTool } from './tools/move-tool';
+import { PolygonSelection } from './tools/polygon-selection';
+import { RectSelection } from './tools/rect-selection';
 import { RotateTool } from './tools/rotate-tool';
 import { ScaleTool } from './tools/scale-tool';
-import { Shortcuts } from './shortcuts';
-import { Events } from './events';
-import { LassoSelection } from './tools/lasso-selection';
+import { SphereSelection } from './tools/sphere-selection';
+import { ToolManager } from './tools/tool-manager';
+import { registerTransformHandlerEvents } from './transform-handler';
+import { EditorUI } from './ui/editor';
 
 declare global {
     interface LaunchParams {
         readonly files: FileSystemFileHandle[];
     }
-    
+
     interface Window {
         launchQueue: {
             setConsumer: (callback: (launchParams: LaunchParams) => void) => void;
@@ -148,30 +149,60 @@ const main = async () => {
             target.copy(value);
             events.fire(event, target);
         }
-    }
+    };
 
-    const setBgClr = (clr: Color) => { setClr(bgClr, clr, 'bgClr'); };
-    const setSelectedClr = (clr: Color) => { setClr(selectedClr, clr, 'selectedClr'); };
-    const setUnselectedClr = (clr: Color) => { setClr(unselectedClr, clr, 'unselectedClr'); };
-    const setLockedClr = (clr: Color) => { setClr(lockedClr, clr, 'lockedClr'); };
+    const setBgClr = (clr: Color) => {
+        setClr(bgClr, clr, 'bgClr');
+    };
+    const setSelectedClr = (clr: Color) => {
+        setClr(selectedClr, clr, 'selectedClr');
+    };
+    const setUnselectedClr = (clr: Color) => {
+        setClr(unselectedClr, clr, 'unselectedClr');
+    };
+    const setLockedClr = (clr: Color) => {
+        setClr(lockedClr, clr, 'lockedClr');
+    };
 
-    events.on('setBgClr', (clr: Color) => { setBgClr(clr); });
-    events.on('setSelectedClr', (clr: Color) => { setSelectedClr(clr); });
-    events.on('setUnselectedClr', (clr: Color) => { setUnselectedClr(clr); });
-    events.on('setLockedClr', (clr: Color) => { setLockedClr(clr); });
+    events.on('setBgClr', (clr: Color) => {
+        setBgClr(clr);
+    });
+    events.on('setSelectedClr', (clr: Color) => {
+        setSelectedClr(clr);
+    });
+    events.on('setUnselectedClr', (clr: Color) => {
+        setUnselectedClr(clr);
+    });
+    events.on('setLockedClr', (clr: Color) => {
+        setLockedClr(clr);
+    });
 
-    events.function('bgClr', () => { return bgClr; });
-    events.function('selectedClr', () => { return selectedClr; });
-    events.function('unselectedClr', () => { return unselectedClr; });
-    events.function('lockedClr', () => { return lockedClr; });
+    events.function('bgClr', () => {
+        return bgClr;
+    });
+    events.function('selectedClr', () => {
+        return selectedClr;
+    });
+    events.function('unselectedClr', () => {
+        return unselectedClr;
+    });
+    events.function('lockedClr', () => {
+        return lockedClr;
+    });
 
     events.on('bgClr', (clr: Color) => {
-        const cnv = (v: number) => `${Math.max(0, Math.min(255, (v * 255))).toFixed(0)}`
+        const cnv = (v: number) => `${Math.max(0, Math.min(255, (v * 255))).toFixed(0)}`;
         document.body.style.backgroundColor = `rgba(${cnv(clr.r)},${cnv(clr.g)},${cnv(clr.b)},1)`;
     });
-    events.on('selectedClr', (clr: Color) => { scene.forceRender = true; });
-    events.on('unselectedClr', (clr: Color) => { scene.forceRender = true; });
-    events.on('lockedClr', (clr: Color) => { scene.forceRender = true; });
+    events.on('selectedClr', (clr: Color) => {
+        scene.forceRender = true;
+    });
+    events.on('unselectedClr', (clr: Color) => {
+        scene.forceRender = true;
+    });
+    events.on('lockedClr', (clr: Color) => {
+        scene.forceRender = true;
+    });
 
     setBgClr(new Color(sceneConfig.bgClr.r, sceneConfig.bgClr.g, sceneConfig.bgClr.b, 1));
 
@@ -217,7 +248,7 @@ const main = async () => {
     }
 
     // handle OS-based file association in PWA mode
-    if ("launchQueue" in window) {
+    if ('launchQueue' in window) {
         window.launchQueue.setConsumer(async (launchParams: LaunchParams) => {
             for (const file of launchParams.files) {
                 const blob = await file.getFile();

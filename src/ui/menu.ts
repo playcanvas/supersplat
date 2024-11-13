@@ -1,22 +1,22 @@
 import { Container, Element, Label, BooleanInput } from 'pcui';
-import { Events } from '../events';
-import { MenuPanel } from './menu-panel';
-import { localize } from './localization';
 
-import logoSvg from './svg/playcanvas-logo.svg';
-import collapseSvg from './svg/collapse.svg';
+import { Events } from '../events';
+import { localize } from './localization';
+import { MenuPanel } from './menu-panel';
 import arrowSvg from './svg/arrow.svg';
-import sceneNew from './svg/new.svg';
-import sceneOpen from './svg/open.svg';
-import sceneSave from './svg/save.svg';
+import collapseSvg from './svg/collapse.svg';
+import selectDelete from './svg/delete.svg';
 import sceneExport from './svg/export.svg';
 import sceneImport from './svg/import.svg';
+import sceneNew from './svg/new.svg';
+import sceneOpen from './svg/open.svg';
+import logoSvg from './svg/playcanvas-logo.svg';
+import sceneSave from './svg/save.svg';
 import selectAll from './svg/select-all.svg';
-import selectNone from './svg/select-none.svg';
 import selectInverse from './svg/select-inverse.svg';
 import selectLock from './svg/select-lock.svg';
+import selectNone from './svg/select-none.svg';
 import selectUnlock from './svg/select-unlock.svg';
-import selectDelete from './svg/delete.svg';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -46,7 +46,7 @@ class Menu extends Container {
         iconDom.src = logoSvg;
         iconDom.setAttribute('id', 'app-icon');
         iconDom.addEventListener('pointerdown', (event) => {
-            window.open('https://playcanvas.com', '_blank').focus()
+            window.open('https://playcanvas.com', '_blank').focus();
         });
 
         const icon = new Element({
@@ -70,7 +70,7 @@ class Menu extends Container {
 
         const toggleCollapsed = () => {
             document.body.classList.toggle('collapsed');
-            
+
         };
 
         // collapse menu on mobile
@@ -104,17 +104,17 @@ class Menu extends Container {
             text: localize('scene.export.compressed-ply'),
             icon: createSvg(sceneExport),
             onSelect: () => events.invoke('scene.export', 'compressed-ply'),
-            isEnabled: () => !events.invoke('scene.empty'),
+            isEnabled: () => !events.invoke('scene.empty')
         }, {
             text: localize('scene.export.splat'),
             icon: createSvg(sceneExport),
             onSelect: () => events.invoke('scene.export', 'splat'),
-            isEnabled: () => !events.invoke('scene.empty'),
+            isEnabled: () => !events.invoke('scene.empty')
         }, {
             text: localize('scene.export.viewer'),
             icon: createSvg(sceneExport),
             onSelect: () => events.invoke('scene.export', 'viewer'),
-            isEnabled: () => !events.invoke('scene.empty'),
+            isEnabled: () => !events.invoke('scene.empty')
         }]);
 
         const allDataToggle = new BooleanInput({
@@ -271,7 +271,9 @@ class Menu extends Container {
         options.forEach((option) => {
             const activate = () => {
                 option.menuPanel.position(option.dom, 'bottom', 2);
-                options.forEach(opt => opt.menuPanel.hidden = opt !== option);
+                options.forEach((opt) => {
+                    opt.menuPanel.hidden = opt !== option;
+                });
             };
 
             option.dom.addEventListener('pointerdown', (event: PointerEvent) => {
@@ -291,7 +293,9 @@ class Menu extends Container {
 
         const checkEvent = (event: PointerEvent) => {
             if (!this.dom.contains(event.target as Node)) {
-                options.forEach(opt => opt.menuPanel.hidden = true);
+                options.forEach((opt) => {
+                    opt.menuPanel.hidden = true;
+                });
             }
         };
 

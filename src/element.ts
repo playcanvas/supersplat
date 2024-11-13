@@ -1,6 +1,7 @@
 import { BoundingBox, Quat, Vec3 } from 'playcanvas';
-import { Serializer } from './serializer';
+
 import { Scene } from './scene';
+import { Serializer } from './serializer';
 
 enum ElementType {
     camera = 'camera',
@@ -63,4 +64,4 @@ class Element {
     }
 }
 
-export {ElementType, ElementTypeList, Element};
+export { ElementType, ElementTypeList, Element };

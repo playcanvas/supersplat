@@ -72,4 +72,4 @@ class TweenValue {
     }
 }
 
-export {TweenValue};
+export { TweenValue };

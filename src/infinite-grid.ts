@@ -11,8 +11,9 @@ import {
     DepthState,
     Layer,
     QuadRender,
-    Shader,
+    Shader
 } from 'playcanvas';
+
 import { Element, ElementType } from './element';
 import { Serializer } from './serializer';
 import { vertexShader, fragmentShader } from './shaders/infinite-grid-shader';

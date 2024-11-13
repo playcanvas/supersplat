@@ -9,9 +9,10 @@ import {
     Layer,
     Shader,
     QuadRender,
-    WebglGraphicsDevice,
-} from "playcanvas";
-import { Element, ElementType } from "./element";
+    WebglGraphicsDevice
+} from 'playcanvas';
+
+import { Element, ElementType } from './element';
 import { vertexShader, fragmentShader } from './shaders/outline-shader';
 
 class Outline extends Element {

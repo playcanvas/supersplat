@@ -1,12 +1,12 @@
 {
     "compilerOptions": {
         "noImplicitAny": true,
-        "target": "es2017",
-        "lib": ["es2020", "dom", "WebWorker"],
+        "target": "es2022",
+        "lib": ["es2022", "dom", "WebWorker"],
         "sourceMap": true,
         "inlineSources": true,
         "module": "es2020",
-        "moduleResolution": "Node",
+        "moduleResolution": "node",
         "resolveJsonModule": true,
         "baseUrl": ".",
         "paths": {

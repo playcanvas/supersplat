@@ -1,5 +1,6 @@
 import { Container } from 'pcui';
 import { Mat4, Vec3 } from 'playcanvas';
+
 import { Events } from '../events';
 
 const vecx = new Vec3();
@@ -19,7 +20,7 @@ class ViewCube extends Container {
         super(args);
 
         // construct svg elements
-        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.id = 'view-cube-svg';
 
         const group = document.createElementNS(svg.namespaceURI, 'g');
@@ -78,15 +79,27 @@ class ViewCube extends Container {
             zaxis: line(b),
             px: circle(r, true, 'X'),
             py: circle(g, true, 'Y'),
-            pz: circle(b, true, 'Z'),
+            pz: circle(b, true, 'Z')
         };
 
-        shapes.px.children[0].addEventListener('pointerdown', (e) => { events.fire('camera.align', 'px'); e.stopPropagation(); });
-        shapes.py.children[0].addEventListener('pointerdown', (e) => { events.fire('camera.align', 'py'); e.stopPropagation(); });
-        shapes.pz.children[0].addEventListener('pointerdown', (e) => { events.fire('camera.align', 'pz'); e.stopPropagation(); });
-        shapes.nx.children[0].addEventListener('pointerdown', (e) => { events.fire('camera.align', 'nx'); e.stopPropagation(); });
-        shapes.ny.children[0].addEventListener('pointerdown', (e) => { events.fire('camera.align', 'ny'); e.stopPropagation(); });
-        shapes.nz.children[0].addEventListener('pointerdown', (e) => { events.fire('camera.align', 'nz'); e.stopPropagation(); });
+        shapes.px.children[0].addEventListener('pointerdown', (e) => {
+            events.fire('camera.align', 'px'); e.stopPropagation();
+        });
+        shapes.py.children[0].addEventListener('pointerdown', (e) => {
+            events.fire('camera.align', 'py'); e.stopPropagation();
+        });
+        shapes.pz.children[0].addEventListener('pointerdown', (e) => {
+            events.fire('camera.align', 'pz'); e.stopPropagation();
+        });
+        shapes.nx.children[0].addEventListener('pointerdown', (e) => {
+            events.fire('camera.align', 'nx'); e.stopPropagation();
+        });
+        shapes.ny.children[0].addEventListener('pointerdown', (e) => {
+            events.fire('camera.align', 'ny'); e.stopPropagation();
+        });
+        shapes.nz.children[0].addEventListener('pointerdown', (e) => {
+            events.fire('camera.align', 'nz'); e.stopPropagation();
+        });
 
         this.dom.appendChild(svg);
 
@@ -118,7 +131,7 @@ class ViewCube extends Container {
 
                 const x2y2 = (line: SVGLineElement, x: number, y: number) => {
                     line.setAttribute('x2', (x * 40).toString());
-                    line.setAttribute('y2', (y * 40).toString());                    
+                    line.setAttribute('y2', (y * 40).toString());
                 };
 
                 transform(shapes.px, vecx.x, -vecx.y);

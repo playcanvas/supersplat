@@ -150,7 +150,9 @@ class AssetLoader {
                 }
             });
 
-            asset.on('error', (err: string) => reject(err));
+            asset.on('error', (err: string) => {
+                reject(err);
+            });
 
             this.registry.add(asset);
             this.registry.load(asset);

@@ -72,7 +72,7 @@ const localizeInit = () => {
                         "options.outline-selection": "Umriss Selektion",
                         "options.show-grid": "Raster anzeigen",
                         "options.show-bound": "Objektbox anzeigen",
-                        "options.camera-speed": "Kamera Geschwindigkeit",
+                        "options.camera-fly-speed": "Kamera Geschwindigkeit",
 
                         // Camera panel
                         "camera": "KAMERA POSEN",
@@ -225,7 +225,7 @@ const localizeInit = () => {
                         "options.outline-selection": "Outline Selection",
                         "options.show-grid": "Show Grid",
                         "options.show-bound": "Show Bound",
-                        "options.camera-speed": "Camera Speed",
+                        "options.camera-fly-speed": "Camera Speed",
 
                         // Camera panel
                         "camera": "CAMERA POSES",

@@ -473,15 +473,15 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         setSplatSize(value);
     });
 
-    // camera speed
+    // camera fly speed
 
 
-    const setCameraSpeed = (value: number) => {
-        scene.camera.speed = value;
+    const setFlySpeed = (value: number) => {
+        scene.camera.flySpeed = value;
     };
 
-    events.on('camera.setCameraSpeed', (value: number) => {
-        setCameraSpeed(value);
+    events.on('camera.setFlySpeed', (value: number) => {
+        setFlySpeed(value);
     });
 
     // outline selection

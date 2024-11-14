@@ -150,18 +150,18 @@ class ViewPanel extends Container {
         centersSizeRow.append(centersSizeLabel);
         centersSizeRow.append(centersSizeSlider);
 
-        // camera speed
+        // camera fly speed
 
-        const cameraSpeedRow = new Container({
+        const cameraFlySpeedRow = new Container({
             class: 'view-panel-row'
         });
 
-        const cameraSpeedLabel = new Label({
-            text: localize('options.camera-speed'),
+        const cameraFlySpeedLabel = new Label({
+            text: localize('options.camera-fly-speed'),
             class: 'view-panel-row-label'
         });
 
-        const cameraSpeedSlider = new SliderInput({
+        const cameraFlySpeedSlider = new SliderInput({
             class: 'view-panel-row-slider',
             min: 0.1,
             max: 30,
@@ -169,8 +169,8 @@ class ViewPanel extends Container {
             value: 5
         });
 
-        cameraSpeedRow.append(cameraSpeedLabel);
-        cameraSpeedRow.append(cameraSpeedSlider);
+        cameraFlySpeedRow.append(cameraFlySpeedLabel);
+        cameraFlySpeedRow.append(cameraFlySpeedSlider);
 
         // outline selection
 
@@ -240,7 +240,7 @@ class ViewPanel extends Container {
         this.append(outlineSelectionRow);
         this.append(showGridRow);
         this.append(showBoundRow);
-        this.append(cameraSpeedRow);
+        this.append(cameraFlySpeedRow);
 
         // handle panel visibility
 
@@ -299,12 +299,12 @@ class ViewPanel extends Container {
 
         // camera speed
 
-        events.on('camera.cameraSpeed', (value: number) => {
-            cameraSpeedSlider.value = value;
+        events.on('camera.flySpeed', (value: number) => {
+            cameraFlySpeedSlider.value = value;
         });
 
-        cameraSpeedSlider.on('change', (value: number) => {
-            events.fire('camera.setCameraSpeed', value);
+        cameraFlySpeedSlider.on('change', (value: number) => {
+            events.fire('camera.setFlySpeed', value);
         });
 
         // outline selection

@@ -68,7 +68,7 @@ class Camera extends Element {
 
     sceneRadius = 5;
 
-    speed = 5;
+    flySpeed = 5;
 
     picker: Picker;
 

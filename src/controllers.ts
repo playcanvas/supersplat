@@ -191,7 +191,7 @@ class PointerController {
             const z = keys.ArrowDown - keys.ArrowUp;
 
             if (x || z) {
-                const factor = deltaTime * camera.speed;
+                const factor = deltaTime * camera.flySpeed;
                 const worldTransform = camera.entity.getWorldTransform();
                 const xAxis = worldTransform.getX().mulScalar(x * factor);
                 const zAxis = worldTransform.getZ().mulScalar(z * factor);

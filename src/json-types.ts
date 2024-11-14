@@ -38,6 +38,17 @@ type NerfstudioCameraIntrinsics = {
 }
 
 type NerfstudioPose = NerfstudioCameraIntrinsics & {    
+    /**
+     * [+X0, +Y0, +Z0, X]
+     * 
+     * [+X1, +Y1, +Z1, Y]
+     * 
+     * [+X2, +Y2, +Z2, Z]
+     * 
+     * [0.0, 0.0, 0.0, 1]
+     * 
+     * https://docs.nerf.studio/quickstart/data_conventions.html
+     */
     transform_matrix: [
         [number, number, number, number],
         [number, number, number, number],

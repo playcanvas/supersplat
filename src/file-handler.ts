@@ -1,4 +1,4 @@
-import { path, Vec3 } from 'playcanvas';
+import { Mat4, path, Vec3 } from 'playcanvas';
 import { Scene } from './scene';
 import { Events } from './events';
 import { CreateDropHandler } from './drop-handler';
@@ -171,8 +171,26 @@ const loadNerfstudioPoses = (json: NerfstudioJson, filename: string, events: Eve
     ave.mulScalar(1 / poses.length);
 
     poses.forEach((pose: NerfstudioPose, i: number) => {
-        const p = new Vec3(pose.transform_matrix[0][3], pose.transform_matrix[1][3], pose.transform_matrix[2][3]);
-        const z = new Vec3(pose.transform_matrix[0][0], pose.transform_matrix[1][0], pose.transform_matrix[2][0]);
+        // nerfstudio-data: 
+        // https://docs.nerf.studio/quickstart/data_conventions.html
+
+        // colmap to nerfstudio-data: 
+        // https://github.com/nerfstudio-project/nerfstudio/blob/6b60855003011b2ca23c2fe3f8e2ca6314c69924/nerfstudio/process_data/colmap_utils.py#L441
+        
+        const flatMat4Array = pose.transform_matrix.reduce((result, current, idx) => {
+            for(let i = 0; i < 4; i++)
+                result[idx + i * 4] = current[i];
+            return result;
+        }, new Array<number>(16));
+        
+        const c2w = (new Mat4()).set(flatMat4Array);
+        const w2c = c2w.invert();
+        const rotation = [w2c.getX(), w2c.getY(), w2c.getZ()];
+        const translation = w2c.getTranslation();
+
+
+        const p = translation;
+        const z = new Vec3(rotation[0].x, rotation[0].y, rotation[0].z);
 
         const dot = vec.sub2(ave, p).dot(z);
         vec.copy(z).mulScalar(dot).add(p);

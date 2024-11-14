@@ -14,10 +14,11 @@ import {
     Texture,
     Vec3
 } from 'playcanvas';
-import { Element, ElementType } from "./element";
-import { Serializer } from "./serializer";
-import { State } from './splat-state';
+
+import { Element, ElementType } from './element';
+import { Serializer } from './serializer';
 import { vertexShader, fragmentShader } from './shaders/splat-shader';
+import { State } from './splat-state';
 import { TransformPalette } from './transform-palette';
 
 const vec = new Vec3();
@@ -321,7 +322,7 @@ class Splat extends Element {
 
         material.setParameter('clrOffset', [offset, offset, offset]);
         material.setParameter('clrScale', [
-            this.tintClr.r * scale, 
+            this.tintClr.r * scale,
             this.tintClr.g * scale,
             this.tintClr.b * scale,
             this.transparency
@@ -418,10 +419,6 @@ class Splat extends Element {
         return worldBound;
     }
 
-    get visible() {
-        return this._visible;
-    }
-
     set visible(value: boolean) {
         if (value !== this.visible) {
             this._visible = value;
@@ -429,8 +426,8 @@ class Splat extends Element {
         }
     }
 
-    get tintClr() {
-        return this._tintClr;
+    get visible() {
+        return this._visible;
     }
 
     set tintClr(value: Color) {
@@ -440,8 +437,8 @@ class Splat extends Element {
         }
     }
 
-    get brightness() {
-        return this._brightness;
+    get tintClr() {
+        return this._tintClr;
     }
 
     set brightness(value: number) {
@@ -451,8 +448,8 @@ class Splat extends Element {
         }
     }
 
-    get blackPoint() {
-        return this._blackPoint;
+    get brightness() {
+        return this._brightness;
     }
 
     set blackPoint(value: number) {
@@ -462,8 +459,8 @@ class Splat extends Element {
         }
     }
 
-    get whitePoint() {
-        return this._whitePoint;
+    get blackPoint() {
+        return this._blackPoint;
     }
 
     set whitePoint(value: number) {
@@ -473,8 +470,8 @@ class Splat extends Element {
         }
     }
 
-    get transparency() {
-        return this._transparency;
+    get whitePoint() {
+        return this._whitePoint;
     }
 
     set transparency(value: number) {
@@ -482,6 +479,10 @@ class Splat extends Element {
             this._transparency = value;
             this.scene.events.fire('splat.transparency', this);
         }
+    }
+
+    get transparency() {
+        return this._transparency;
     }
 }
 

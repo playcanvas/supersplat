@@ -6,9 +6,10 @@ import {
     Quat,
     Vec3
 } from 'playcanvas';
-import { State } from './splat-state';
-import { Splat } from './splat';
+
 import { SHRotation } from './sh-utils';
+import { Splat } from './splat';
+import { State } from './splat-state';
 import { version } from '../package.json';
 import { template as ViewerHtmlTemplate } from './templates/viewer-html-template';
 
@@ -36,7 +37,7 @@ const getCommonPropNames = (splats: Splat[]) => {
 
     for (let i = 0; i < splats.length; ++i) {
         const props = getVertexProperties(splats[i].splatData);
-        result = i == 0 ? props : new Set([...result].filter(i => props.has(i)));
+        result = i === 0 ? props : new Set([...result].filter(i => props.has(i)));
     }
 
     return [...result];
@@ -96,7 +97,7 @@ class SplatTransformCache {
             }
 
             return transform.rot;
-        }
+        };
 
         this.getScale = (index: number) => {
             const transform = getTransform(index);
@@ -108,7 +109,7 @@ class SplatTransformCache {
             }
 
             return transform.scale;
-        }
+        };
 
         this.getSHRot = (index: number) => {
             const transform = getTransform(index);
@@ -142,7 +143,7 @@ const applyColorTint = (target: { f_dc_0: number, f_dc_1: number, f_dc_2: number
     }
 
     if (transparency !== 1) {
-        const invSig = (value: number) => (value <= 0) ? -400 : ((value >= 1) ? 400 : -Math.log(1 / value - 1));
+        const invSig = (value: number) => ((value <= 0) ? -400 : ((value >= 1) ? 400 : -Math.log(1 / value - 1)));
         const sig = (value: number) => 1 / (1 + Math.exp(-value));
 
         target.opacity = invSig(sig(target.opacity) * transparency);
@@ -159,7 +160,7 @@ const serializePly = async (splats: Splat[], write: WriteFunc) => {
     const internalProps = ['state', 'transform'];
 
     // get the vertex properties common to all splats
-    const propNames = getCommonPropNames(splats).filter((p) => !internalProps.includes(p));
+    const propNames = getCommonPropNames(splats).filter(p => !internalProps.includes(p));
     const hasPosition = ['x', 'y', 'z'].every(v => propNames.includes(v));
     const hasRotation = ['rot_0', 'rot_1', 'rot_2', 'rot_3'].every(v => propNames.includes(v));
     const hasScale = ['scale_0', 'scale_1', 'scale_2'].every(v => propNames.includes(v));
@@ -171,14 +172,14 @@ const serializePly = async (splats: Splat[], write: WriteFunc) => {
     })();
 
     const headerText = [
-        `ply`,
-        `format binary_little_endian 1.0`,
+        'ply',
+        'format binary_little_endian 1.0',
         // FIXME: disable for now due to other tooling not supporting any header
         // `comment ${generatedByString}`,
         `element vertex ${totalSplats}`,
-         propNames.map(p => `property float ${p}`),
-         `end_header`,
-         ``
+        propNames.map(p => `property float ${p}`),
+        'end_header',
+        ''
     ].flat().join('\n');
 
     // write encoded header
@@ -197,7 +198,7 @@ const serializePly = async (splats: Splat[], write: WriteFunc) => {
     for (let e = 0; e < splats.length; ++e) {
         const splatData = splats[e].splatData;
         const state = splatData.getProp('state') as Uint8Array;
-        const storage = propNames.map((name) => splatData.getProp(name));
+        const storage = propNames.map(name => splatData.getProp(name));
         const transformCache = new SplatTransformCache(splats[e]);
 
         let shData: any[];
@@ -437,7 +438,7 @@ class Chunk {
         const packRot = (x: number, y: number, z: number, w: number) => {
             q.set(x, y, z, w).normalize();
             const a = [q.x, q.y, q.z, q.w];
-            const largest = a.reduce((curr, v, i) => Math.abs(v) > Math.abs(a[curr]) ? i : curr, 0);
+            const largest = a.reduce((curr, v, i) => (Math.abs(v) > Math.abs(a[curr]) ? i : curr), 0);
 
             if (a[largest] < 0) {
                 a[0] = -a[0];
@@ -612,8 +613,8 @@ const serializePlyCompressed = async (splats: Splat[], write: WriteFunc) => {
 
     const headerText = [
         [
-            `ply`,
-            `format binary_little_endian 1.0`,
+            'ply',
+            'format binary_little_endian 1.0',
             `comment ${generatedByString}`,
             `element chunk ${numChunks}`
         ],
@@ -623,7 +624,7 @@ const serializePlyCompressed = async (splats: Splat[], write: WriteFunc) => {
         ],
         vertexProps.map(p => `property uint ${p}`),
         [
-            `end_header\n`
+            'end_header\n'
         ]
     ].flat().join('\n');
 
@@ -639,7 +640,7 @@ const serializePlyCompressed = async (splats: Splat[], write: WriteFunc) => {
     // sort splats into some kind of order
     sortSplats(splats, indices);
 
-    const transformCaches = splats.map((splat) => new SplatTransformCache(splat));
+    const transformCaches = splats.map(splat => new SplatTransformCache(splat));
     const chunk = new Chunk();
     const singleSplat = new SingleSplat();
 
@@ -780,7 +781,7 @@ const encodeBase64 = (bytes: Uint8Array) => {
         binary += String.fromCharCode(bytes[i]);
     }
     return window.btoa(binary);
-}
+};
 
 const serializeViewer = async (splats: Splat[], write: WriteFunc) => {
     // create compressed PLY data
@@ -794,8 +795,8 @@ const serializeViewer = async (splats: Splat[], write: WriteFunc) => {
     // use camera clear color
     const bgClr = splats[0].scene.events.invoke('bgClr');
     const html = ViewerHtmlTemplate
-        .replace('{{clearColor}}', `${bgClr.r}, ${bgClr.g}, ${bgClr.b}`)
-        .replace('{{plyModel}}', plyModel);
+    .replace('{{clearColor}}', `${bgClr.r}, ${bgClr.g}, ${bgClr.b}`)
+    .replace('{{plyModel}}', plyModel);
 
     await write(new TextEncoder().encode(html), true);
 };

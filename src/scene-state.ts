@@ -1,5 +1,5 @@
-import { Serializer } from './serializer';
 import { Element, ElementType, ElementTypeList } from './element';
+import { Serializer } from './serializer';
 
 const common = new Set<Element>();
 
@@ -27,7 +27,7 @@ class SceneState {
     }
 
     reset() {
-        ElementTypeList.forEach(type => {
+        ElementTypeList.forEach((type) => {
             const state = this.states[type];
             state.elements.clear();
             state.valueStart.length = 0;
@@ -83,7 +83,7 @@ class SceneState {
             changed: new Array<ElementType>()
         };
 
-        ElementTypeList.forEach(type => {
+        ElementTypeList.forEach((type) => {
             const prevState = other.states[type];
             const currState = this.states[type];
 

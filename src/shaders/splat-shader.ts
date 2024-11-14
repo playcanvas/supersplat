@@ -1,5 +1,4 @@
-
-const vertexShader = /*glsl*/`
+const vertexShader = /* glsl*/`
 uniform vec3 view_position;
 uniform bool ortho;
 
@@ -148,7 +147,7 @@ void main(void)
 }
 `;
 
-const fragmentShader = /*glsl*/`
+const fragmentShader = /* glsl*/`
 varying mediump vec3 texCoordIsLocked;
 varying mediump vec4 color;
 

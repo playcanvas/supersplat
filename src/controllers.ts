@@ -1,5 +1,6 @@
-import { Camera } from './camera';
 import { Vec3 } from 'playcanvas';
+
+import { Camera } from './camera';
 
 const fromWorldPoint = new Vec3();
 const toWorldPoint = new Vec3();
@@ -18,7 +19,7 @@ class PointerController {
             const azim = camera.azim - dx * camera.scene.config.controls.orbitSensitivity;
             const elev = camera.elevation - dy * camera.scene.config.controls.orbitSensitivity;
             camera.setAzimElev(azim, elev);
-        }
+        };
 
         const pan = (x: number, y: number, dx: number, dy: number) => {
             // For panning to work at any zoom level, we use screen point to world projection
@@ -80,7 +81,7 @@ class PointerController {
                     target.releasePointerCapture(event.pointerId);
                 }
             } else {
-                touches = touches.filter((touch) => touch.id !== event.pointerId);
+                touches = touches.filter(touch => touch.id !== event.pointerId);
                 if (touches.length === 0) {
                     target.releasePointerCapture(event.pointerId);
                 }
@@ -98,7 +99,7 @@ class PointerController {
                 const mod = buttons[2] ?
                     (event.shiftKey || event.ctrlKey ? 'orbit' :
                         (event.altKey || event.metaKey ? 'zoom' : null)) :
-                            null;
+                    null;
 
                 if (mod === 'orbit' || (mod === null && buttons[0])) {
                     orbit(dx, dy);
@@ -119,7 +120,7 @@ class PointerController {
                     const touch = touches[touches.map(t => t.id).indexOf(event.pointerId)];
                     touch.x = event.offsetX;
                     touch.y = event.offsetY;
- 
+
                     const mx = (touches[0].x + touches[1].x) * 0.5;
                     const my = (touches[0].y + touches[1].y) * 0.5;
                     const ml = dist(touches[0].x, touches[0].y, touches[1].x, touches[1].y);

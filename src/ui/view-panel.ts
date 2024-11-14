@@ -1,8 +1,9 @@
-import { Color, Vec3 } from 'playcanvas';
 import { BooleanInput, ColorPicker, Container, Label, SliderInput } from 'pcui';
+import { Color, Vec3 } from 'playcanvas';
+
 import { Events } from '../events';
-import { Tooltips } from './tooltips';
 import { localize } from './localization';
+import { Tooltips } from './tooltips';
 
 class ViewPanel extends Container {
     constructor(events: Events, tooltips: Tooltips, args = {}) {
@@ -23,17 +24,17 @@ class ViewPanel extends Container {
         // header
 
         const header = new Container({
-            class: `panel-header`
+            class: 'panel-header'
         });
 
         const icon = new Label({
             text: '\uE403',
-            class: `panel-header-icon`
+            class: 'panel-header-icon'
         });
 
         const label = new Label({
             text: localize('options'),
-            class: `panel-header-label`
+            class: 'panel-header-label'
         });
 
         header.append(icon);
@@ -90,12 +91,12 @@ class ViewPanel extends Container {
         const fovRow = new Container({
             class: 'view-panel-row'
         });
-        
+
         const fovLabel = new Label({
             text: localize('options.fov'),
             class: 'view-panel-row-label'
         });
-        
+
         const fovSlider = new SliderInput({
             class: 'view-panel-row-slider',
             min: 10,

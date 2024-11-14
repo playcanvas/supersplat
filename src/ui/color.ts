@@ -1,4 +1,3 @@
-
 const rgb2hsv = (rgb: { r: number, g: number, b: number }) => {
     const r = rgb.r;
     const g = rgb.g;
@@ -63,4 +62,3 @@ const hsv2rgb = (hsv: { h: number, s: number, v: number }) => {
 };
 
 export { rgb2hsv, hsv2rgb };
-

@@ -1,7 +1,8 @@
 import { Asset, AssetRegistry, GraphicsDevice, GSplatData, GSplatResource, TEXTURETYPE_RGBP } from 'playcanvas';
-import { Splat } from './splat';
+
 import { Env } from './env';
 import { Events } from './events';
+import { Splat } from './splat';
 
 interface ModelLoadRequest {
     url?: string;
@@ -43,7 +44,7 @@ const deserializeFromSSplat = (data: ArrayBufferLike) => {
     const SH_C0 = 0.28209479177387814;
     let off;
 
-    for(let i = 0; i < totalSplats; i++){
+    for (let i = 0; i < totalSplats; i++) {
         off = i * 32;
         storage_x[i] = dataView.getFloat32(off + 0, true);
         storage_y[i] = dataView.getFloat32(off + 4, true);
@@ -70,21 +71,21 @@ const deserializeFromSSplat = (data: ArrayBufferLike) => {
         name: 'vertex',
         count: totalSplats,
         properties: [
-            {type: 'float', name: 'x', storage: storage_x, byteSize: 4},
-            {type: 'float', name: 'y', storage: storage_y, byteSize: 4},
-            {type: 'float', name: 'z', storage: storage_z, byteSize: 4},            
-            {type: 'float', name: 'opacity', storage: storage_opacity, byteSize: 4},
-            {type: 'float', name: 'rot_0', storage: storage_rot_0, byteSize: 4},
-            {type: 'float', name: 'rot_1', storage: storage_rot_1, byteSize: 4},
-            {type: 'float', name: 'rot_2', storage: storage_rot_2, byteSize: 4},
-            {type: 'float', name: 'rot_3', storage: storage_rot_3, byteSize: 4},            
-            {type: 'float', name: 'f_dc_0', storage: storage_f_dc_0, byteSize: 4},
-            {type: 'float', name: 'f_dc_1', storage: storage_f_dc_1, byteSize: 4},
-            {type: 'float', name: 'f_dc_2', storage: storage_f_dc_2, byteSize: 4},            
-            {type: 'float', name: 'scale_0', storage: storage_scale_0, byteSize: 4},
-            {type: 'float', name: 'scale_1', storage: storage_scale_1, byteSize: 4},
-            {type: 'float', name: 'scale_2', storage: storage_scale_2, byteSize: 4},
-            {type: 'float', name: 'state', storage: storage_state, byteSize: 4}
+            { type: 'float', name: 'x', storage: storage_x, byteSize: 4 },
+            { type: 'float', name: 'y', storage: storage_y, byteSize: 4 },
+            { type: 'float', name: 'z', storage: storage_z, byteSize: 4 },
+            { type: 'float', name: 'opacity', storage: storage_opacity, byteSize: 4 },
+            { type: 'float', name: 'rot_0', storage: storage_rot_0, byteSize: 4 },
+            { type: 'float', name: 'rot_1', storage: storage_rot_1, byteSize: 4 },
+            { type: 'float', name: 'rot_2', storage: storage_rot_2, byteSize: 4 },
+            { type: 'float', name: 'rot_3', storage: storage_rot_3, byteSize: 4 },
+            { type: 'float', name: 'f_dc_0', storage: storage_f_dc_0, byteSize: 4 },
+            { type: 'float', name: 'f_dc_1', storage: storage_f_dc_1, byteSize: 4 },
+            { type: 'float', name: 'f_dc_2', storage: storage_f_dc_2, byteSize: 4 },
+            { type: 'float', name: 'scale_0', storage: storage_scale_0, byteSize: 4 },
+            { type: 'float', name: 'scale_1', storage: storage_scale_1, byteSize: 4 },
+            { type: 'float', name: 'scale_2', storage: storage_scale_2, byteSize: 4 },
+            { type: 'float', name: 'state', storage: storage_state, byteSize: 4 }
         ]
     }]);
 };
@@ -143,7 +144,7 @@ class AssetLoader {
                 ];
                 const missing = required.filter(x => !splatData.getProp(x));
                 if (missing.length > 0) {
-                    reject(`This file does not contain gaussian splatting data. The following properties are missing: ${missing.join(', ')}`);
+                    reject(new Error(`This file does not contain gaussian splatting data. The following properties are missing: ${missing.join(', ')}`));
                 } else {
                     resolve(new Splat(asset));
                 }
@@ -165,12 +166,12 @@ class AssetLoader {
             fetch(loadRequest.url || loadRequest.filename)
             .then((response) => {
                 if (!response || !response.ok || !response.body) {
-                    reject('Failed to fetch splat data');
+                    reject(new Error('Failed to fetch splat data'));
                 } else {
                     return response.arrayBuffer();
                 }
             })
-            .then((arrayBuffer) => deserializeFromSSplat(arrayBuffer))
+            .then(arrayBuffer => deserializeFromSSplat(arrayBuffer))
             .then((gsplatData) => {
                 const asset = new Asset(loadRequest.filename || loadRequest.url, 'gsplat', {
                     url: loadRequest.url,
@@ -181,7 +182,7 @@ class AssetLoader {
             })
             .catch((err) => {
                 console.error(err);
-                reject('Failed to load splat data');
+                reject(new Error('Failed to load splat data'));
             });
         }).finally(() => {
             this.events.fire('stopSpinner');
@@ -212,4 +213,4 @@ class AssetLoader {
     }
 }
 
-export {AssetLoader};
+export { AssetLoader };

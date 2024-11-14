@@ -1,4 +1,4 @@
-import { Events } from "../events";
+import { Events } from '../events';
 
 type Point = { x: number, y: number };
 
@@ -12,7 +12,7 @@ class LassoSelection {
         let lastPointTime = 0;
 
         // create svg
-        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.id = 'lasso-select-svg';
         svg.classList.add('select-svg');
 
@@ -26,11 +26,6 @@ class LassoSelection {
         // create canvas
         const { canvas, context } = mask;
 
-        const paint = () => {
-            polygon.setAttribute('points', [...points, currentPoint].reduce((prev, current) => prev + `${current.x}, ${current.y} `, ""));
-            polygon.setAttribute('stroke', isClosed() ? '#fa6' : '#f60');
-        };
-
         const dist = (a: Point, b: Point) => {
             return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
         };
@@ -39,10 +34,15 @@ class LassoSelection {
             return points.length > 1 && dist(currentPoint, points[0]) < 8;
         };
 
+        const paint = () => {
+            polygon.setAttribute('points', [...points, currentPoint].reduce((prev, current) => `${prev}${current.x}, ${current.y} `, ''));
+            polygon.setAttribute('stroke', isClosed() ? '#fa6' : '#f60');
+        };
+
         let dragId: number | undefined;
 
         const update = (e: PointerEvent) => {
-            currentPoint = {x: e.offsetX, y: e.offsetY};
+            currentPoint = { x: e.offsetX, y: e.offsetY };
 
             const distance = points.length === 0 ? 0 : dist(currentPoint, points[points.length - 1]);
             const millis = Date.now() - lastPointTime;
@@ -56,6 +56,37 @@ class LassoSelection {
                 lastPointTime = Date.now();
             }
             paint();
+        };
+
+        const commitSelection = (e: PointerEvent) => {
+            // initialize canvas
+            if (canvas.width !== parent.clientWidth || canvas.height !== parent.clientHeight) {
+                canvas.width = parent.clientWidth;
+                canvas.height = parent.clientHeight;
+            }
+
+            // clear canvas
+            context.clearRect(0, 0, canvas.width, canvas.height);
+
+            context.beginPath();
+            context.fillStyle = '#f60';
+            context.beginPath();
+            points.forEach((p, idx) => {
+                if (idx === 0) {
+                    context.moveTo(p.x, p.y);
+                } else {
+                    context.lineTo(p.x, p.y);
+                }
+            });
+            context.closePath();
+            context.fill();
+
+            events.fire(
+                'select.byMask',
+                e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
+                canvas,
+                context
+            );
         };
 
         const pointerdown = (e: PointerEvent) => {
@@ -96,38 +127,6 @@ class LassoSelection {
                 points = [];
                 paint();
             }
-        };
-
-        const commitSelection = (e: PointerEvent) => {
-            // initialize canvas
-            if (canvas.width !== parent.clientWidth || canvas.height !== parent.clientHeight) {
-                canvas.width = parent.clientWidth;
-                canvas.height = parent.clientHeight;
-            }
-
-            // clear canvas
-            context.clearRect(0, 0, canvas.width, canvas.height);
-
-            context.beginPath();
-            context.fillStyle = '#f60';
-            context.beginPath();
-            points.forEach((p, idx) => {
-                if (idx === 0) {
-                    context.moveTo(p.x, p.y);
-                }
-                else {
-                    context.lineTo(p.x, p.y);
-                }
-            });
-            context.closePath();
-            context.fill();
-
-            events.fire(
-                'select.byMask',
-                e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
-                canvas,
-                context
-            );
         };
 
         this.activate = () => {

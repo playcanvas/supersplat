@@ -1,6 +1,7 @@
-import {LAYERID_SKYBOX, Asset, Texture, Quat} from 'playcanvas';
-import {Element, ElementType} from './element';
-import {Serializer} from './serializer';
+import { LAYERID_SKYBOX, Asset, Texture, Quat } from 'playcanvas';
+
+import { Element, ElementType } from './element';
+import { Serializer } from './serializer';
 
 const quat = new Quat();
 
@@ -68,4 +69,4 @@ class Env extends Element {
     }
 }
 
-export {Env};
+export { Env };

@@ -63,6 +63,8 @@ class ExternalPromise {
     }
 }
 
+type ResultCallback = (result: ArrayBuffer) => void;
+
 class PngCompressor {
     compress: (pixels: Uint32Array, width: number, height: number) => Promise<ArrayBuffer>;
 
@@ -73,7 +75,7 @@ class PngCompressor {
         });
         const worker = new Worker(URL.createObjectURL(workerBlob));
         const workerReady = new ExternalPromise();
-        const results = new Map<number, (result: ArrayBuffer)=>void>();
+        const results = new Map<number, ResultCallback>();
         let token = 1;
 
         worker.addEventListener('message', (message) => {

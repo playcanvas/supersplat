@@ -1,8 +1,9 @@
 import { Color, Mat4 } from 'playcanvas';
+
+import { Pivot } from './pivot';
 import { Splat } from './splat';
 import { State } from './splat-state';
 import { Transform } from './transform';
-import { Pivot } from './pivot';
 
 interface EditOp {
     name: string;
@@ -43,7 +44,7 @@ class StateOp {
     constructor(splat: Splat, filter: filterFunc, doIt: doFunc, undoIt: undoFunc, updateFlags = State.selected) {
         const splatData = splat.splatData;
         const state = splatData.getProp('state') as Uint8Array;
-        const indices = buildIndex(splatData.numSplats, (i) => filter(state[i], i));
+        const indices = buildIndex(splatData.numSplats, i => filter(state[i], i));
 
         this.splat = splat;
         this.indices = indices;
@@ -83,9 +84,9 @@ class SelectAllOp extends StateOp {
 
     constructor(splat: Splat) {
         super(splat,
-            (state) => state === 0,
-            (state) => state | State.selected,
-            (state) => state & (~State.selected)
+            state => state === 0,
+            state => state | State.selected,
+            state => state & (~State.selected)
         );
     }
 }
@@ -95,9 +96,9 @@ class SelectNoneOp extends StateOp {
 
     constructor(splat: Splat) {
         super(splat,
-            (state) => state === State.selected,
-            (state) => state & (~State.selected),
-            (state) => state | State.selected
+            state => state === State.selected,
+            state => state & (~State.selected),
+            state => state | State.selected
         );
     }
 }
@@ -107,9 +108,9 @@ class SelectInvertOp extends StateOp {
 
     constructor(splat: Splat) {
         super(splat,
-            (state) => (state & (State.hidden | State.deleted)) === 0,
-            (state) => state ^ State.selected,
-            (state) => state ^ State.selected
+            state => (state & (State.hidden | State.deleted)) === 0,
+            state => state ^ State.selected,
+            state => state ^ State.selected
         );
     }
 }
@@ -121,7 +122,7 @@ class SelectOp extends StateOp {
         const filterFunc = {
             add: (state: number, index: number) => (state === 0) && filter(index),
             remove: (state: number, index: number) => (state === State.selected) && filter(index),
-            set: (state: number, index: number) => (state === State.selected) !== filter(index),
+            set: (state: number, index: number) => (state === State.selected) !== filter(index)
         };
 
         const doIt = {
@@ -145,9 +146,9 @@ class HideSelectionOp extends StateOp {
 
     constructor(splat: Splat) {
         super(splat,
-            (state) => state === State.selected,
-            (state) => state | State.hidden,
-            (state) => state & (~State.hidden),
+            state => state === State.selected,
+            state => state | State.hidden,
+            state => state & (~State.hidden),
             State.hidden
         );
     }
@@ -158,9 +159,9 @@ class UnhideAllOp extends StateOp {
 
     constructor(splat: Splat) {
         super(splat,
-            (state) => (state & (State.hidden | State.deleted)) === State.hidden,
-            (state) => state & (~State.hidden),
-            (state) => state | State.hidden,
+            state => (state & (State.hidden | State.deleted)) === State.hidden,
+            state => state & (~State.hidden),
+            state => state | State.hidden,
             State.hidden
         );
     }
@@ -171,9 +172,9 @@ class DeleteSelectionOp extends StateOp {
 
     constructor(splat: Splat) {
         super(splat,
-            (state) => state === State.selected,
-            (state) => state | State.deleted,
-            (state) => state & (~State.deleted),
+            state => state === State.selected,
+            state => state | State.deleted,
+            state => state & (~State.deleted),
             State.deleted
         );
     }
@@ -184,9 +185,9 @@ class ResetOp extends StateOp {
 
     constructor(splat: Splat) {
         super(splat,
-            (state) => (state & State.deleted) !== 0,
-            (state) => state & (~State.deleted),
-            (state) => state | State.deleted,
+            state => (state & State.deleted) !== 0,
+            state => state & (~State.deleted),
+            state => state | State.deleted,
             State.deleted
         );
     }
@@ -298,7 +299,7 @@ class SplatsTransformOp {
 }
 
 class PlacePivotOp {
-    name = "setPivot";
+    name = 'setPivot';
     pivot: Pivot;
     oldt: Transform;
     newt: Transform;
@@ -327,7 +328,7 @@ type ColorAdjustment = {
 };
 
 class SetSplatColorAdjustmentOp {
-    name: "setSplatColor";
+    name: 'setSplatColor';
     splat: Splat;
 
     newState: ColorAdjustment;
@@ -362,7 +363,7 @@ class SetSplatColorAdjustmentOp {
 }
 
 class MultiOp {
-    name = "multiOp";
+    name = 'multiOp';
     ops: EditOp[];
 
     constructor(ops: EditOp[]) {

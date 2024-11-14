@@ -1,4 +1,4 @@
-const vertexShader = /*glsl*/ `
+const vertexShader = /* glsl*/ `
     uniform vec3 near_origin;
     uniform vec3 near_x;
     uniform vec3 near_y;
@@ -21,7 +21,7 @@ const vertexShader = /*glsl*/ `
     }
 `;
 
-const fragmentShader = /*glsl*/ `
+const fragmentShader = /* glsl*/ `
     uniform vec3 view_position;
     uniform mat4 matrix_viewProjection;
     uniform sampler2D blueNoiseTex32;

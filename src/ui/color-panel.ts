@@ -277,12 +277,20 @@ class ColorPanel extends Container {
             updateOp((op) => {
                 op.newState.blackPoint = value;
             });
+
+            if (value > whitePointSlider.value) {
+                whitePointSlider.value = value;
+            }
         });
 
         whitePointSlider.on('change', (value: number) => {
             updateOp((op) => {
                 op.newState.whitePoint = value;
             });
+
+            if (value < blackPointSlider.value) {
+                blackPointSlider.value = value;
+            }
         });
 
         transparencySlider.on('change', (value: number) => {

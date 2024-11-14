@@ -14,21 +14,20 @@ const PERSISTED_EVENTS = [
 const STORAGEKEY_EVENTS = 'supersplat.events';
 
 class Persistence {
-
     events: Events;
     settings: {[key: string]: any[]} = {};
 
-    constructor(events: Events){
+    constructor(events: Events) {
         this.events = events;
         this.loadSettings();
 
-        PERSISTED_EVENTS.forEach((evt) => this.register(evt));
+        PERSISTED_EVENTS.forEach(evt => this.register(evt));
     }
 
-    loadSettings(){
+    loadSettings() {
 
         const storedString = localStorage.getItem(STORAGEKEY_EVENTS);
-        if(storedString){
+        if (storedString) {
             this.settings = JSON.parse(storedString);
             Object.entries(this.settings).forEach(([eventName, args]) => {
                 this.events.fire(eventName, ...args);
@@ -36,12 +35,12 @@ class Persistence {
         }
     }
 
-    register(eventName: string){
+    register(eventName: string) {
         this.events.on(eventName, (...args: any[]) => {
             this.settings[eventName] = Array.from(args).filter(arg => arg);
             localStorage.setItem(STORAGEKEY_EVENTS, JSON.stringify(this.settings));
-        })
+        });
     }
 }
 
-export {Persistence};
+export { Persistence };

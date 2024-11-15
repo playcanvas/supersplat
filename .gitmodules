@@ -1,0 +1,3 @@
+[submodule "examples/data_streaming/dependencies/gaussian-splatting"]
+	path = examples/data_streaming/dependencies/gaussian-splatting
+	url = https://github.com/graphdeco-inria/gaussian-splatting.git

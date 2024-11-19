@@ -47,7 +47,7 @@ type Group = {
 };
 
 // use median cut to create groups of n-dimensional data
-const groupData = (points: Points, numGroups: number, epsilon = 1e-03): number[][] => {
+const groupPoints = (points: Points, numGroups: number, epsilon = 1e-03): number[][] => {
     const { data, dimensions, numPoints } = points;
 
     // construct the index array, which will be grouped in-place
@@ -169,104 +169,4 @@ const groupData = (points: Points, numGroups: number, epsilon = 1e-03): number[]
     return groups.map((group) => indices.slice(group.left, group.right));
 };
 
-const shCompress = (src: number[][], numSplats: number, maxGroups: number, epsilon: number) => {
-    const doBand1 = () => {
-        // group band 1
-        const band1 = new Points(numSplats * 3, 3);
-        const { data } = band1;
-        for (let i = 0; i < numSplats; ++i) {
-            data.set([
-                src[0][i], src[1][i], src[2][i],
-                src[15][i], src[16][i], src[17][i],
-                src[30][i], src[31][i], src[32][i]
-            ], i * 9);
-        }
-
-        // create band groups
-        const band1Groups = groupData(band1, maxGroups, epsilon);
-
-        console.log(`band1: ${band1Groups.length} (${band1Groups.length * 4 * 3} bytes)`);
-
-        // uncompress band 1
-        for (let i = 0; i < band1Groups.length; ++i) {
-            const group = band1Groups[i];
-            const palette = band1.average(group);
-            for (let j = 0; j < group.length; ++j) {
-                const index = group[j];
-                const splat = index / 3;
-                const prop = (index % 3) * 15;
-                for (let k = 0; k < palette.length; ++k) {
-                    src[prop + k][splat] = palette[k];
-                }
-            }
-        }
-    };
-
-    const doBand2 = () => {
-        // group band 2
-        const band2 = new Points(numSplats * 3, 5);
-        const { data } = band2;
-        for (let i = 0; i < numSplats; ++i) {
-            data.set([
-                src[3][i], src[4][i], src[5][i], src[6][i], src[7][i],
-                src[18][i], src[19][i], src[20][i], src[21][i], src[22][i],
-                src[33][i], src[34][i], src[35][i], src[36][i], src[37][i]
-            ], i * 15);
-        }
-
-        const band2Groups = groupData(band2, maxGroups, epsilon);
-
-        console.log(`band2: ${band2Groups.length} (${band2Groups.length * 4 * 5} bytes)`);
-
-        // uncompress band 2
-        for (let i = 0; i < band2Groups.length; ++i) {
-            const group = band2Groups[i];
-            const palette = band2.average(group);
-            for (let j = 0; j < group.length; ++j) {
-                const index = group[j];
-                const splat = index / 3;
-                const prop = 3 + (index % 3) * 15;
-                for (let k = 0; k < palette.length; ++k) {
-                    src[prop + k][splat] = palette[k];
-                }
-            }
-        }
-    };
-
-    const doBand3 = () => {
-        // group band 3
-        const band3 = new Points(numSplats * 3, 7);
-        const { data } = band3;
-        for (let i = 0; i < numSplats; ++i) {
-            data.set([
-                src[8][i], src[9][i], src[10][i], src[11][i], src[12][i], src[13][i], src[14][i],
-                src[23][i], src[24][i], src[25][i], src[26][i], src[27][i], src[28][i], src[29][i],
-                src[38][i], src[39][i], src[40][i], src[41][i], src[42][i], src[43][i], src[44][i]
-            ], i * 21);
-        }
-
-        const band3Groups = groupData(band3, maxGroups, epsilon);
-
-        console.log(`band3: ${band3Groups.length} (${band3Groups.length * 4 * 7} bytes)`);
-
-        // uncompress band 3
-        for (let i = 0; i < band3Groups.length; ++i) {
-            const group = band3Groups[i];
-            const palette = band3.average(group);
-            for (let j = 0; j < group.length; ++j) {
-                const index = group[j];
-                const splat = index / 3;
-                const prop = 8 + (index % 3) * 15;
-                for (let k = 0; k < palette.length; ++k) {
-                    src[prop + k][splat] = palette[k];
-                }
-            }
-        }
-    };
-
-    doBand1();
-    doBand2();
-    doBand3();
-}
-
-export { shCompress };
+export { Points, groupPoints };

@@ -1,5 +1,6 @@
 import {
     Color,
+    FloatPacking,
     GSplatData,
     Mat3,
     Mat4,
@@ -12,6 +13,7 @@ import { Splat } from './splat';
 import { State } from './splat-state';
 import { version } from '../package.json';
 import { template as ViewerHtmlTemplate } from './templates/viewer-html-template';
+import { Points, groupPoints } from './sh-compress';
 
 // async function for writing data
 type WriteFunc = (data: Uint8Array, finalWrite?: boolean) => void;
@@ -571,7 +573,195 @@ const sortSplats = (splats: Splat[], indices: CompressedIndex[]) => {
     indices.sort((a, b) => morton[a.globalIndex] - morton[b.globalIndex]);
 };
 
+// compress spherical harmonic data
+const compressSH = (splats: Splat[], indices: CompressedIndex[], maxGroups: number[], epsilons: number[]) => {
+    const shNames: string[] = [];
+    for (let i = 0; i < 45; ++i) {
+        shNames.push(`f_rest_${i}`);
+    }
+
+    const splatSHData = splats.map((splat) => {
+        const shData = shNames.map(name => splat.splatData.getProp(name));
+        return shData.every(x => x) ? shData : null;
+    });
+
+    if (!splatSHData.some(x => x)) {
+        return null;
+    }
+
+    // extract points for a single band of sh
+    const buildPoints = (coeffIndices: number[]) => {
+        const dimension = coeffIndices.length;
+        const result = new Points(indices.length * 3, dimension);
+        for (let i = 0; i < indices.length; ++i) {
+            const index = indices[i];
+            const shData = splatSHData[index.splatIndex];
+            const shIndex = index.i;
+            for (let j = 0; j < 3; ++j) {
+                for (let k = 0; k < dimension; ++k) {
+                    result.data[(i * 3 + j) * dimension + k] = shData[j * 15 + coeffIndices[k]][shIndex];
+                }
+            }
+        }
+        return result;
+    };
+
+    const buildPalette = (points: Points, groups: number[][]) => {
+        const palette: Float32Array[] = [];
+        for (let i = 0; i < groups.length; ++i) {
+            palette.push(points.average(groups[i]).slice());
+        }
+        return palette;
+    };
+
+    const buildIndices = (groups: number[][]) => {
+        const result = new Uint32Array(indices.length * 3);
+        for (let i = 0; i < groups.length; ++i) {
+            const group = groups[i];
+            for (let j = 0; j < group.length; ++j) {
+                result[group[j]] = i;
+            }
+        }
+        return result;
+    };
+
+    const compressBand = (maxEntries: number, epsilon: number, coeffIndices: number[]) => {
+        // build a set of points in 3, 5, 7 dimensions
+        const points = buildPoints(coeffIndices);
+        // group the points
+        const groups = groupPoints(points, maxEntries, epsilon);
+        // generate a palette, one entry per group
+        const palette = buildPalette(points, groups);
+        // convert group assignments to array of indices
+        const indices = buildIndices(groups);
+        return { palette, indices };
+    };
+
+    const makeEven = (x: number) => (x + 1) & (~1);
+
+    // convert a palette to half floats
+    const serializePalette = (palette: Float32Array[]) => {
+        const dimension = palette[0].length;
+        const storageLength = makeEven(palette.length) * dimension;
+        const result = new Uint16Array(storageLength);
+
+        for (let i = 0; i < palette.length; ++i) {
+            for (let j = 0; j < dimension; ++j) {
+                result[i * dimension + j] = FloatPacking.float2Half(palette[i][j]);
+            }
+        }
+
+        return result;
+    };
+
+    // pack indices into a per-splat buffer, 16 bytes per splat
+    const serializeIndices = (band1: Uint32Array, band2: Uint32Array, band3: Uint32Array) => {
+        const result = new Uint32Array(indices.length * 4);
+
+        for (let i = 0; i < indices.length; ++i) {
+            // band1: 11, 11, 10
+            // band2: 15, 15, 15
+            // band3: 17, 17, 17
+
+            // packed into uint32s:
+            // 11: 1r, 11: 1g, 10: 1b
+            // 15: 2r, 15: 2g, 2: 2b
+            // 13: 2b, 17: 3r, 2: 3g
+            // 15: 3g, 17: 3b
+
+            const b1r = band1[i * 3];
+            const b1g = band1[i * 3 + 1];
+            const b1b = band1[i * 3 + 2];
+
+            const b2r = band2[i * 3];
+            const b2g = band2[i * 3 + 1];
+            const b2b = band2[i * 3 + 2];
+
+            const b3r = band3[i * 3];
+            const b3g = band3[i * 3 + 1];
+            const b3b = band3[i * 3 + 2];
+
+            result[i * 4 + 0] = (b1r << 21) | (b1g << 10) | (b1b & 0x3ff);
+            result[i * 4 + 1] = (b2r << 17) | (b2g << 2) | (b2b >>> 13);
+            result[i * 4 + 2] = (b2b << 19) | (b3r << 2) | (b3g >>> 15);
+            result[i * 4 + 3] = (b3g << 17) | b3b;
+        }
+
+        return result;
+    };
+
+    const band1 = compressBand(maxGroups[0], epsilons[0], [0, 1, 2]);
+    const band2 = compressBand(maxGroups[1], epsilons[1], [3, 4, 5, 6, 7]);
+    const band3 = compressBand(maxGroups[2], epsilons[2], [8, 9, 10, 11, 12, 13, 14]);
+
+    const band1Palette = serializePalette(band1.palette);
+    const band2Palette = serializePalette(band2.palette);
+    const band3Palette = serializePalette(band3.palette);
+
+    return [{
+        name: 'sh_band_1',
+        length: band1Palette.length / 3,
+        properties: ['0', '1', '2'].map((x) => {
+            return { name: `coeff_${x}`, type: 'ushort' };
+        }),
+        data: band1Palette
+    }, {
+        name: 'sh_band_2',
+        length: band2Palette.length / 5,
+        properties: ['3', '4', '5', '6', '7'].map((x) => {
+            return { name: `coeff_${x}`, type: 'ushort' };
+        }),
+        data: band2Palette
+    }, {
+        name: 'sh_band_3',
+        length: band3Palette.length / 7,
+        properties: ['8', '9', '10', '11', '12', '13', '14'].map((x) => {
+            return { name: `coeff_${x}`, type: 'ushort' };
+        }),
+        data: band3Palette
+    }, {
+        name: 'vertex_sh',
+        length: indices.length,
+        properties: ['0', '1', '2', '3'].map((x) => {
+            return { name: `packed_sh_${x}`, type: 'uint' };
+        }),
+        data: serializeIndices(band1.indices, band2.indices, band3.indices)
+    }];
+};
+
 const serializePlyCompressed = async (splats: Splat[], write: WriteFunc) => {
+    // create a list of indices spanning all splats
+    const indices: CompressedIndex[] = [];
+    for (let splatIndex = 0; splatIndex < splats.length; ++splatIndex) {
+        const splatData = splats[splatIndex].splatData;
+        const state = splatData.getProp('state') as Uint8Array;
+        for (let i = 0; i < splatData.numSplats; ++i) {
+            if ((state[i] & State.deleted) === 0) {
+                indices.push({ splatIndex, i, globalIndex: indices.length });
+            }
+        }
+    }
+
+    if (indices.length === 0) {
+        console.error('nothing to export');
+        return;
+    }
+
+    // sort splats into some kind of order
+    sortSplats(splats, indices);
+
+    const numSplats = indices.length;
+    const numChunks = Math.ceil(numSplats / 256);
+
+    // compress SH data
+    const compressedSHData = compressSH(
+        splats,
+        indices,
+        [1 * 1024, 32 * 1024, 128 * 1024],
+        [0.2, 0.2, 0.2]
+    );
+    console.log(compressedSHData);
+
     const chunkProps = [
         'min_x', 'min_y', 'min_z',
         'max_x', 'max_y', 'max_z',
@@ -587,58 +777,39 @@ const serializePlyCompressed = async (splats: Splat[], write: WriteFunc) => {
         'packed_color'
     ];
 
-    // create a list of indices spanning all splats
-    const indices: CompressedIndex[] = splats.reduce((indices, splat, splatIndex) => {
-        const splatData = splat.splatData;
-        const state = splatData.getProp('state') as Uint8Array;
-        for (let i = 0; i < splatData.numSplats; ++i) {
-            if ((state[i] & State.deleted) === 0) {
-                indices.push({
-                    splatIndex,
-                    i,
-                    globalIndex: indices.length
-                });
-            }
-        }
-        return indices;
-    }, []);
-
-    if (indices.length === 0) {
-        console.error('nothing to export');
-        return;
-    }
-
-    const numSplats = indices.length;
-    const numChunks = Math.ceil(numSplats / 256);
+    const shHeader = compressedSHData.map((element) => {
+        return [
+            `element ${element.name} ${element.length}`,
+            element.properties.map(prop => `property ${prop.type} ${prop.name}`)
+        ];
+    }).flat(2);
 
     const headerText = [
-        [
-            'ply',
-            'format binary_little_endian 1.0',
-            `comment ${generatedByString}`,
-            `element chunk ${numChunks}`
-        ],
+        'ply',
+        'format binary_little_endian 1.0',
+        `comment ${generatedByString}`,
+        `element chunk ${numChunks}`,
         chunkProps.map(p => `property float ${p}`),
-        [
-            `element vertex ${numSplats}`
-        ],
+        `element vertex ${numSplats}`,
         vertexProps.map(p => `property uint ${p}`),
-        [
-            'end_header\n'
-        ]
+        shHeader,
+        'end_header\n'
     ].flat().join('\n');
 
     const header = (new TextEncoder()).encode(headerText);
-    const result = new Uint8Array(header.byteLength + numChunks * chunkProps.length * 4 + numSplats * vertexProps.length * 4);
+
+    const result = new Uint8Array(
+        header.byteLength +
+        numChunks * chunkProps.length * 4 +
+        numSplats * vertexProps.length * 4 +
+        compressedSHData.reduce((acc, x) => acc + x.data.byteLength, 0)
+    );
     const dataView = new DataView(result.buffer);
 
     result.set(header);
 
     const chunkOffset = header.byteLength;
     const vertexOffset = chunkOffset + numChunks * 12 * 4;
-
-    // sort splats into some kind of order
-    sortSplats(splats, indices);
 
     const transformCaches = splats.map(splat => new SplatTransformCache(splat));
     const chunk = new Chunk();
@@ -690,6 +861,17 @@ const serializePlyCompressed = async (splats: Splat[], write: WriteFunc) => {
             dataView.setUint32(offset + j * 4 * 4 + 12, chunk.color[j], true);
         }
     }
+
+    // write sh data
+    const palette1Offset = vertexOffset + numSplats * 4 * 4;
+    const palette2Offset = palette1Offset + compressedSHData[0].data.byteLength;
+    const palette3Offset = palette2Offset + compressedSHData[1].data.byteLength;
+    const indicesOffset = palette3Offset + compressedSHData[2].data.byteLength;
+
+    result.set(new Uint8Array(compressedSHData[0].data.buffer), palette1Offset);
+    result.set(new Uint8Array(compressedSHData[1].data.buffer), palette2Offset);
+    result.set(new Uint8Array(compressedSHData[2].data.buffer), palette3Offset);
+    result.set(new Uint8Array(compressedSHData[3].data.buffer), indicesOffset);
 
     await write(result, true);
 };

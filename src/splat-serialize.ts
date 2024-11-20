@@ -767,10 +767,13 @@ const serializePlyCompressed = async (splats: Splat[], write: WriteFunc) => {
         splats,
         indices,
         transformCaches,
+        // NOTE: for band 1 we compile a palette of 1k entries. however the R and G channels
+        // have enough bits to index 2k entries. we should be generating a palette of
+        // 2048 entries and limiting B channel to the first 1024 entries, but that's logic
+        // is not implemented yet.
         [1 * 1024, 32 * 1024, 128 * 1024],
         [0.2, 0.2, 0.2]
     );
-    console.log(compressedSHData);
 
     const chunkProps = [
         'min_x', 'min_y', 'min_z',

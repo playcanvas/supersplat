@@ -574,7 +574,7 @@ const sortSplats = (splats: Splat[], indices: CompressedIndex[]) => {
 };
 
 // compress spherical harmonic data
-const compressSH = (splats: Splat[], indices: CompressedIndex[], maxGroups: number[], epsilons: number[]) => {
+const compressSH = (splats: Splat[], indices: CompressedIndex[], transformCaches: SplatTransformCache[], maxGroups: number[], epsilons: number[]) => {
     const shNames: string[] = [];
     for (let i = 0; i < 45; ++i) {
         shNames.push(`f_rest_${i}`);
@@ -595,12 +595,18 @@ const compressSH = (splats: Splat[], indices: CompressedIndex[], maxGroups: numb
         const result = new Points(indices.length * 3, dimension);
         for (let i = 0; i < indices.length; ++i) {
             const index = indices[i];
-            const shData = splatSHData[index.splatIndex];
+            const { splatIndex } = index;
+            const shData = splatSHData[splatIndex];
             const shIndex = index.i;
+            const shRot = transformCaches[splatIndex].getSHRot(shIndex)
+
             for (let j = 0; j < 3; ++j) {
                 for (let k = 0; k < dimension; ++k) {
                     result.data[(i * 3 + j) * dimension + k] = shData[j * 15 + coeffIndices[k]][shIndex];
                 }
+
+                // rotate sh coefficients
+                shRot.applyBand(result.data, (i * 3 + j) * dimension, dimension);
             }
         }
         return result;
@@ -747,8 +753,11 @@ const serializePlyCompressed = async (splats: Splat[], write: WriteFunc) => {
         return;
     }
 
-    // sort splats into some kind of order
+    // sort splats into some kind of order (morton order rn)
     sortSplats(splats, indices);
+
+    // create a transform cache per splat
+    const transformCaches = splats.map(splat => new SplatTransformCache(splat));
 
     const numSplats = indices.length;
     const numChunks = Math.ceil(numSplats / 256);
@@ -757,6 +766,7 @@ const serializePlyCompressed = async (splats: Splat[], write: WriteFunc) => {
     const compressedSHData = compressSH(
         splats,
         indices,
+        transformCaches,
         [1 * 1024, 32 * 1024, 128 * 1024],
         [0.2, 0.2, 0.2]
     );
@@ -811,7 +821,6 @@ const serializePlyCompressed = async (splats: Splat[], write: WriteFunc) => {
     const chunkOffset = header.byteLength;
     const vertexOffset = chunkOffset + numChunks * 12 * 4;
 
-    const transformCaches = splats.map(splat => new SplatTransformCache(splat));
     const chunk = new Chunk();
     const singleSplat = new SingleSplat();
 

@@ -8,12 +8,12 @@ import {
     Vec3
 } from 'playcanvas';
 
+import { Points, groupPoints } from './sh-compress';
 import { SHRotation } from './sh-utils';
 import { Splat } from './splat';
 import { State } from './splat-state';
 import { version } from '../package.json';
 import { template as ViewerHtmlTemplate } from './templates/viewer-html-template';
-import { Points, groupPoints } from './sh-compress';
 
 // async function for writing data
 type WriteFunc = (data: Uint8Array, finalWrite?: boolean) => void;
@@ -598,7 +598,7 @@ const compressSH = (splats: Splat[], indices: CompressedIndex[], transformCaches
             const { splatIndex } = index;
             const shData = splatSHData[splatIndex];
             const shIndex = index.i;
-            const shRot = transformCaches[splatIndex].getSHRot(shIndex)
+            const shRot = transformCaches[splatIndex].getSHRot(shIndex);
 
             for (let j = 0; j < 3; ++j) {
                 for (let k = 0; k < dimension; ++k) {

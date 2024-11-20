@@ -217,7 +217,7 @@ class SHRotation {
                 const g = dp(7, offset, data, sh3[6]);
                 data.set([a, b, c, d, e, f, g], offset);
             }
-        }
+        };
     }
 }
 

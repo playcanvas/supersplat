@@ -36,7 +36,7 @@ class Points {
 
         return averageData;
     }
-};
+}
 
 type Group = {
     left: number;
@@ -166,7 +166,7 @@ const groupPoints = (points: Points, numGroups: number, epsilon = 1e-03): number
     }
 
     // convert group range to index array
-    return groups.map((group) => indices.slice(group.left, group.right));
+    return groups.map(group => indices.slice(group.left, group.right));
 };
 
 export { Points, groupPoints };

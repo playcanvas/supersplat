@@ -55,68 +55,15 @@ const template = /* html */ `
         <script type="importmap">
             {
                 "imports": {
-                    "playcanvas": "https://esm.run/playcanvas@2.2.1",
-                    "multi-camera": "https://cdn.jsdelivr.net/npm/playcanvas@2.2.1/scripts/camera/multi-camera.js"
+                    "playcanvas": "https://esm.run/playcanvas@2.2.2",
+                    "multi-camera": "https://cdn.jsdelivr.net/npm/playcanvas@2.2.2/scripts/camera/multi-camera.js"
                 }
             }
         </script>
-        <script type="module" src="https://cdn.jsdelivr.net/npm/@playcanvas/web-components@0.1.3/dist/pwc.mjs"></script>
+        <script type="module" src="https://cdn.jsdelivr.net/npm/@playcanvas/web-components@0.1.7/dist/pwc.mjs"></script>
     </head>
     <body>
-        <pc-app>
-            <script type="module">
-                import { Application, BoundingBox, registerScript, Script, Vec3 } from 'playcanvas';
-                import { MultiCamera } from 'multi-camera';
-
-                const app = await Application.getApplication();
-                registerScript(MultiCamera, 'multiCamera');
-
-                await new Promise(resolve => setTimeout(resolve));
-
-                const entity = document.querySelector('pc-entity[name="camera"]').entity;
-                const multiCamera = entity.script.multiCamera;
-
-                const frameScene = (bbox) => {
-                    const sceneSize = bbox.halfExtents.length();
-                    const distance = sceneSize / Math.sin(entity.camera.fov / 180 * Math.PI * 0.5);
-                    multiCamera.sceneSize = sceneSize;
-                    multiCamera.focus(bbox.center, new Vec3(2, 1, 2).normalize().mulScalar(distance).add(bbox.center));
-                };
-
-                const resetCamera = (bbox) => {
-                    const sceneSize = bbox.halfExtents.length();
-                    multiCamera.sceneSize = sceneSize * 0.2;
-                    multiCamera.focus(Vec3.ZERO, new Vec3(2, 1, 2));
-                };
-
-                const calcBound = () => {
-                    const gsplatComponents = app.root.findComponents('gsplat');
-                    return gsplatComponents?.[0]?.instance?.meshInstance?.aabb ?? new BoundingBox();
-                };
-
-                app.assets.on('load', () => {
-                    setTimeout(() => {
-                        const bbox = calcBound();
-
-                        if (bbox.halfExtents.length() > 100) {
-                            resetCamera(bbox);
-                        } else {
-                            frameScene(bbox);
-                        }
-
-                        window.addEventListener('keydown', (e) => {
-                            switch (e.key) {
-                                case 'f':
-                                    frameScene(bbox);
-                                    break;
-                                case 'r':
-                                    resetCamera(bbox);
-                                    break;
-                            }
-                        });
-                    });
-                });
-            </script>
+        <pc-app antialias="false" depth="false" high-resolution="true" stencil="false">
             <pc-asset id="ply" type="gsplat" src="data:application/ply;base64,{{plyModel}}"></pc-asset>
             <pc-scene>
                 <!-- Camera -->
@@ -127,26 +74,83 @@ const template = /* html */ `
                     </pc-scripts>
                 </pc-entity>
                 <!-- Splat -->
-                <pc-entity name="splat" rotation="0,0,180">
+                <pc-entity name="splat" rotation="0 0 180">
                     <pc-splat asset="ply"></pc-splat>
                 </pc-entity>
             </pc-scene>
         </pc-app>
 
+        <!-- Camera Controls -->
+        <script type="module">
+            import { BoundingBox, registerScript, Vec3 } from 'playcanvas';
+            import { MultiCamera } from 'multi-camera';
+
+            const appElement = await document.querySelector('pc-app').ready();
+            const app = await appElement.app;
+            registerScript(MultiCamera, 'multiCamera');
+
+            await new Promise(resolve => setTimeout(resolve));
+
+            const entityElement = await document.querySelector('pc-entity[name="camera"]').ready();
+            const entity = entityElement.entity;
+            const multiCamera = entity.script.multiCamera;
+
+            const frameScene = (bbox) => {
+                const sceneSize = bbox.halfExtents.length();
+                const distance = sceneSize / Math.sin(entity.camera.fov / 180 * Math.PI * 0.5);
+                multiCamera.sceneSize = sceneSize;
+                multiCamera.focus(bbox.center, new Vec3(2, 1, 2).normalize().mulScalar(distance).add(bbox.center));
+            };
+
+            const resetCamera = (bbox) => {
+                const sceneSize = bbox.halfExtents.length();
+                multiCamera.sceneSize = sceneSize * 0.2;
+                multiCamera.focus(Vec3.ZERO, new Vec3(2, 1, 2));
+            };
+
+            const calcBound = () => {
+                const gsplatComponents = app.root.findComponents('gsplat');
+                return gsplatComponents?.[0]?.instance?.meshInstance?.aabb ?? new BoundingBox();
+            };
+
+            app.assets.on('load', () => {
+                setTimeout(() => {
+                    const bbox = calcBound();
+
+                    if (bbox.halfExtents.length() > 100) {
+                        resetCamera(bbox);
+                    } else {
+                        frameScene(bbox);
+                    }
+
+                    window.addEventListener('keydown', (e) => {
+                        switch (e.key) {
+                            case 'f':
+                                frameScene(bbox);
+                                break;
+                            case 'r':
+                                resetCamera(bbox);
+                                break;
+                        }
+                    });
+                });
+            });
+        </script>
+
         <!-- Info Panel -->
         <div id="infoPanel" class="hidden" onclick="this.classList.toggle('hidden')">
-        <span class="heading">?</span>
-        <div class="divider">Controls</div>
-        <div>Left mouse button - Orbit</div>
-        <div>Middle mouse button - Pan</div>
-        <div>Right mouse button - Look around</div>
-        <div>Mouse wheel - Zoom</div>
-        <div>W,S,A,D - Fly</div>
-        <div>Shift - Fly faster</div>
-        <div>Ctrl - Fly slower</div>
-        <div>F - Frame the scene</div>
-        <div>R - Return to the origin</div>
-    </div>
+            <span class="heading">?</span>
+            <div class="divider">Controls</div>
+            <div>Left mouse button - Orbit</div>
+            <div>Middle mouse button - Pan</div>
+            <div>Right mouse button - Look around</div>
+            <div>Mouse wheel - Zoom</div>
+            <div>W,S,A,D - Fly</div>
+            <div>Shift - Fly faster</div>
+            <div>Ctrl - Fly slower</div>
+            <div>F - Frame the scene</div>
+            <div>R - Return to the origin</div>
+        </div>
     </body>
 </html>
 `;

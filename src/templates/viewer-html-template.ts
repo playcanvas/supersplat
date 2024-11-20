@@ -82,7 +82,7 @@ const template = /* html */ `
 
         <!-- Camera Controls -->
         <script type="module">
-            import { Application, BoundingBox, registerScript, Script, Vec3 } from 'playcanvas';
+            import { BoundingBox, registerScript, Vec3 } from 'playcanvas';
             import { MultiCamera } from 'multi-camera';
 
             const appElement = await document.querySelector('pc-app').ready();

@@ -646,14 +646,27 @@ const compressSH = (splats: Splat[], indices: CompressedIndex[], transformCaches
     const makeEven = (x: number) => (x + 1) & (~1);
 
     // convert a palette to half floats
-    const serializePalette = (palette: Float32Array[]) => {
+    const serializePalette = (palette: Float32Array[], float: boolean) => {
         const dimension = palette[0].length;
         const storageLength = makeEven(palette.length) * dimension;
-        const result = new Uint16Array(storageLength);
 
-        for (let i = 0; i < palette.length; ++i) {
-            for (let j = 0; j < dimension; ++j) {
-                result[i * dimension + j] = FloatPacking.float2Half(palette[i][j]);
+        let result;
+
+        if (float) {
+            // float palette
+            result = new Float32Array(storageLength);
+            for (let i = 0; i < palette.length; ++i) {
+                for (let j = 0; j < dimension; ++j) {
+                    result[i * dimension + j] = palette[i][j];
+                }
+            }
+        } else {
+            // half
+            result = new Uint16Array(storageLength);
+            for (let i = 0; i < palette.length; ++i) {
+                for (let j = 0; j < dimension; ++j) {
+                    result[i * dimension + j] = FloatPacking.float2Half(palette[i][j]);
+                }
             }
         }
 
@@ -700,29 +713,31 @@ const compressSH = (splats: Splat[], indices: CompressedIndex[], transformCaches
     const band2 = compressBand(maxGroups[1], epsilons[1], [3, 4, 5, 6, 7]);
     const band3 = compressBand(maxGroups[2], epsilons[2], [8, 9, 10, 11, 12, 13, 14]);
 
-    const band1Palette = serializePalette(band1.palette);
-    const band2Palette = serializePalette(band2.palette);
-    const band3Palette = serializePalette(band3.palette);
+    const floatPalette = false;
+
+    const band1Palette = serializePalette(band1.palette, floatPalette);
+    const band2Palette = serializePalette(band2.palette, floatPalette);
+    const band3Palette = serializePalette(band3.palette, floatPalette);
 
     return [{
         name: 'sh_band_1',
         length: band1Palette.length / 3,
         properties: ['0', '1', '2'].map((x) => {
-            return { name: `coeff_${x}`, type: 'ushort' };
+            return { name: `coeff_${x}`, type: floatPalette ? 'float' : 'ushort' };
         }),
         data: band1Palette
     }, {
         name: 'sh_band_2',
         length: band2Palette.length / 5,
         properties: ['3', '4', '5', '6', '7'].map((x) => {
-            return { name: `coeff_${x}`, type: 'ushort' };
+            return { name: `coeff_${x}`, type: floatPalette ? 'float' : 'ushort' };
         }),
         data: band2Palette
     }, {
         name: 'sh_band_3',
         length: band3Palette.length / 7,
         properties: ['8', '9', '10', '11', '12', '13', '14'].map((x) => {
-            return { name: `coeff_${x}`, type: 'ushort' };
+            return { name: `coeff_${x}`, type: floatPalette ? 'float' : 'ushort' };
         }),
         data: band3Palette
     }, {

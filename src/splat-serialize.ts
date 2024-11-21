@@ -317,10 +317,11 @@ class SingleSplat {
     read(splats: Splat[], index: CompressedIndex) {
         const splat = splats[index.splatIndex];
         const { splatData } = splat;
+        const SH_C0 = 0.28209479177387814;
         const val = (prop: string) => splatData.getProp(prop)[index.i];
         [this.x, this.y, this.z] = [val('x'), val('y'), val('z')];
         [this.scale_0, this.scale_1, this.scale_2] = [val('scale_0'), val('scale_1'), val('scale_2')];
-        [this.f_dc_0, this.f_dc_1, this.f_dc_2, this.opacity] = [val('f_dc_0'), val('f_dc_1'), val('f_dc_2'), val('opacity')];
+        [this.f_dc_0, this.f_dc_1, this.f_dc_2, this.opacity] = [val('f_dc_0') * SH_C0 + 0.5, val('f_dc_1') * SH_C0 + 0.5, val('f_dc_2') * SH_C0 + 0.5, val('opacity')];
         [this.rot_0, this.rot_1, this.rot_2, this.rot_3] = [val('rot_0'), val('rot_1'), val('rot_2'), val('rot_3')];
     }
 
@@ -418,6 +419,10 @@ class Chunk {
         const sy = calcMinMax(scale_1);
         const sz = calcMinMax(scale_2);
 
+        const cr = calcMinMax(f_dc_0);
+        const cg = calcMinMax(f_dc_1);
+        const cb = calcMinMax(f_dc_2);
+
         const packUnorm = (value: number, bits: number) => {
             const t = (1 << bits) - 1;
             return Math.max(0, Math.min(t, Math.floor(value * t + 0.5)));
@@ -460,16 +465,6 @@ class Chunk {
             return result;
         };
 
-        const packColor = (r: number, g: number, b: number, a: number) => {
-            const SH_C0 = 0.28209479177387814;
-            return pack8888(
-                r * SH_C0 + 0.5,
-                g * SH_C0 + 0.5,
-                b * SH_C0 + 0.5,
-                1 / (1 + Math.exp(-a))
-            );
-        };
-
         // pack
         for (let i = 0; i < this.size; ++i) {
             this.position[i] = pack111011(
@@ -486,10 +481,15 @@ class Chunk {
                 normalize(scale_2[i], sz.min, sz.max)
             );
 
-            this.color[i] = packColor(f_dc_0[i], f_dc_1[i], f_dc_2[i], opacity[i]);
+            this.color[i] = pack8888(
+                normalize(f_dc_0[i], cr.min, cr.max),
+                normalize(f_dc_1[i], cg.min, cg.max),
+                normalize(f_dc_2[i], cb.min, cb.max),
+                1 / (1 + Math.exp(-opacity[i]))
+            );
         }
 
-        return { px, py, pz, sx, sy, sz };
+        return { px, py, pz, sx, sy, sz, cr, cg, cb };
     }
 }
 
@@ -793,9 +793,10 @@ const serializePlyCompressed = async (splats: Splat[], write: WriteFunc) => {
     const chunkProps = [
         'min_x', 'min_y', 'min_z',
         'max_x', 'max_y', 'max_z',
-        'min_scale_x', 'min_scale_y',
-        'min_scale_z', 'max_scale_x',
-        'max_scale_y', 'max_scale_z'
+        'min_scale_x', 'min_scale_y', 'min_scale_z',
+        'max_scale_x', 'max_scale_y', 'max_scale_z',
+        'min_r', 'min_g', 'min_b',
+        'max_r', 'max_g', 'max_b'
     ];
 
     const vertexProps = [
@@ -837,7 +838,7 @@ const serializePlyCompressed = async (splats: Splat[], write: WriteFunc) => {
     result.set(header);
 
     const chunkOffset = header.byteLength;
-    const vertexOffset = chunkOffset + numChunks * 12 * 4;
+    const vertexOffset = chunkOffset + numChunks * chunkProps.length * 4;
 
     const chunk = new Chunk();
     const singleSplat = new SingleSplat();
@@ -863,20 +864,29 @@ const serializePlyCompressed = async (splats: Splat[], write: WriteFunc) => {
 
         const result = chunk.pack();
 
-        // write chunk data
-        dataView.setFloat32(chunkOffset + i * 12 * 4 + 0, result.px.min, true);
-        dataView.setFloat32(chunkOffset + i * 12 * 4 + 4, result.py.min, true);
-        dataView.setFloat32(chunkOffset + i * 12 * 4 + 8, result.pz.min, true);
-        dataView.setFloat32(chunkOffset + i * 12 * 4 + 12, result.px.max, true);
-        dataView.setFloat32(chunkOffset + i * 12 * 4 + 16, result.py.max, true);
-        dataView.setFloat32(chunkOffset + i * 12 * 4 + 20, result.pz.max, true);
+        const off = chunkOffset + i * 18 * 4;
 
-        dataView.setFloat32(chunkOffset + i * 12 * 4 + 24, result.sx.min, true);
-        dataView.setFloat32(chunkOffset + i * 12 * 4 + 28, result.sy.min, true);
-        dataView.setFloat32(chunkOffset + i * 12 * 4 + 32, result.sz.min, true);
-        dataView.setFloat32(chunkOffset + i * 12 * 4 + 36, result.sx.max, true);
-        dataView.setFloat32(chunkOffset + i * 12 * 4 + 40, result.sy.max, true);
-        dataView.setFloat32(chunkOffset + i * 12 * 4 + 44, result.sz.max, true);
+        // write chunk data
+        dataView.setFloat32(off + 0, result.px.min, true);
+        dataView.setFloat32(off + 4, result.py.min, true);
+        dataView.setFloat32(off + 8, result.pz.min, true);
+        dataView.setFloat32(off + 12, result.px.max, true);
+        dataView.setFloat32(off + 16, result.py.max, true);
+        dataView.setFloat32(off + 20, result.pz.max, true);
+
+        dataView.setFloat32(off + 24, result.sx.min, true);
+        dataView.setFloat32(off + 28, result.sy.min, true);
+        dataView.setFloat32(off + 32, result.sz.min, true);
+        dataView.setFloat32(off + 36, result.sx.max, true);
+        dataView.setFloat32(off + 40, result.sy.max, true);
+        dataView.setFloat32(off + 44, result.sz.max, true);
+
+        dataView.setFloat32(off + 48, result.cr.min, true);
+        dataView.setFloat32(off + 52, result.cg.min, true);
+        dataView.setFloat32(off + 56, result.cb.min, true);
+        dataView.setFloat32(off + 60, result.cr.max, true);
+        dataView.setFloat32(off + 64, result.cg.max, true);
+        dataView.setFloat32(off + 68, result.cb.max, true);
 
         // write splat data
         const offset = vertexOffset + i * 256 * 4 * 4;

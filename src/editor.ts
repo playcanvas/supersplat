@@ -474,6 +474,16 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         setSplatSize(value);
     });
 
+    // camera fly speed
+
+    const setFlySpeed = (value: number) => {
+        scene.camera.flySpeed = value;
+    };
+
+    events.on('camera.setFlySpeed', (value: number) => {
+        setFlySpeed(value);
+    });
+
     // outline selection
 
     let outlineSelection = false;

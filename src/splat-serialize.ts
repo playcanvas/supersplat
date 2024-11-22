@@ -317,11 +317,10 @@ class SingleSplat {
     read(splats: Splat[], index: CompressedIndex) {
         const splat = splats[index.splatIndex];
         const { splatData } = splat;
-        const SH_C0 = 0.28209479177387814;
         const val = (prop: string) => splatData.getProp(prop)[index.i];
         [this.x, this.y, this.z] = [val('x'), val('y'), val('z')];
         [this.scale_0, this.scale_1, this.scale_2] = [val('scale_0'), val('scale_1'), val('scale_2')];
-        [this.f_dc_0, this.f_dc_1, this.f_dc_2, this.opacity] = [val('f_dc_0') * SH_C0 + 0.5, val('f_dc_1') * SH_C0 + 0.5, val('f_dc_2') * SH_C0 + 0.5, val('opacity')];
+        [this.f_dc_0, this.f_dc_1, this.f_dc_2, this.opacity] = [val('f_dc_0'), val('f_dc_1'), val('f_dc_2'), val('opacity')];
         [this.rot_0, this.rot_1, this.rot_2, this.rot_3] = [val('rot_0'), val('rot_1'), val('rot_2'), val('rot_3')];
     }
 
@@ -418,6 +417,14 @@ class Chunk {
         const sx = calcMinMax(scale_0);
         const sy = calcMinMax(scale_1);
         const sz = calcMinMax(scale_2);
+
+        // convert f_dc_ to colors before calculating min/max and packaging
+        const SH_C0 = 0.28209479177387814;
+        for (let i = 0; i < f_dc_0.length; ++i) {
+            f_dc_0[i] = f_dc_0[i] * SH_C0 + 0.5;
+            f_dc_1[i] = f_dc_1[i] * SH_C0 + 0.5;
+            f_dc_2[i] = f_dc_2[i] * SH_C0 + 0.5;
+        }
 
         const cr = calcMinMax(f_dc_0);
         const cg = calcMinMax(f_dc_1);
@@ -600,9 +607,13 @@ const compressSH = (splats: Splat[], indices: CompressedIndex[], transformCaches
             const shIndex = index.i;
             const shRot = transformCaches[splatIndex].getSHRot(shIndex);
 
+            const { blackPoint, whitePoint, tintClr } = splats[splatIndex];
+            const scale = 1 / (whitePoint - blackPoint);
+            const tint = [tintClr.r * scale, tintClr.g * scale, tintClr.b * scale];
+
             for (let j = 0; j < 3; ++j) {
                 for (let k = 0; k < dimension; ++k) {
-                    result.data[(i * 3 + j) * dimension + k] = shData[j * 15 + coeffIndices[k]][shIndex];
+                    result.data[(i * 3 + j) * dimension + k] = (shData[j * 15 + coeffIndices[k]][shIndex]) * tint[j];
                 }
 
                 // rotate sh coefficients
@@ -646,27 +657,16 @@ const compressSH = (splats: Splat[], indices: CompressedIndex[], transformCaches
     const makeEven = (x: number) => (x + 1) & (~1);
 
     // convert a palette to half floats
-    const serializePalette = (palette: Float32Array[], float: boolean) => {
+    const serializePalette = (palette: Float32Array[]) => {
         const dimension = palette[0].length;
         const storageLength = makeEven(palette.length) * dimension;
 
         let result;
 
-        if (float) {
-            // float palette
-            result = new Float32Array(storageLength);
-            for (let i = 0; i < palette.length; ++i) {
-                for (let j = 0; j < dimension; ++j) {
-                    result[i * dimension + j] = palette[i][j];
-                }
-            }
-        } else {
-            // half
-            result = new Uint16Array(storageLength);
-            for (let i = 0; i < palette.length; ++i) {
-                for (let j = 0; j < dimension; ++j) {
-                    result[i * dimension + j] = FloatPacking.float2Half(palette[i][j]);
-                }
+        result = new Uint16Array(storageLength);
+        for (let i = 0; i < palette.length; ++i) {
+            for (let j = 0; j < dimension; ++j) {
+                result[i * dimension + j] = FloatPacking.float2Half(palette[i][j]);
             }
         }
 
@@ -713,31 +713,29 @@ const compressSH = (splats: Splat[], indices: CompressedIndex[], transformCaches
     const band2 = compressBand(maxGroups[1], epsilons[1], [3, 4, 5, 6, 7]);
     const band3 = compressBand(maxGroups[2], epsilons[2], [8, 9, 10, 11, 12, 13, 14]);
 
-    const floatPalette = false;
-
-    const band1Palette = serializePalette(band1.palette, floatPalette);
-    const band2Palette = serializePalette(band2.palette, floatPalette);
-    const band3Palette = serializePalette(band3.palette, floatPalette);
+    const band1Palette = serializePalette(band1.palette);
+    const band2Palette = serializePalette(band2.palette);
+    const band3Palette = serializePalette(band3.palette);
 
     return [{
         name: 'sh_band_1',
         length: band1Palette.length / 3,
         properties: ['0', '1', '2'].map((x) => {
-            return { name: `coeff_${x}`, type: floatPalette ? 'float' : 'ushort' };
+            return { name: `coeff_${x}`, type: 'half' };
         }),
         data: band1Palette
     }, {
         name: 'sh_band_2',
         length: band2Palette.length / 5,
         properties: ['3', '4', '5', '6', '7'].map((x) => {
-            return { name: `coeff_${x}`, type: floatPalette ? 'float' : 'ushort' };
+            return { name: `coeff_${x}`, type: 'half' };
         }),
         data: band2Palette
     }, {
         name: 'sh_band_3',
         length: band3Palette.length / 7,
         properties: ['8', '9', '10', '11', '12', '13', '14'].map((x) => {
-            return { name: `coeff_${x}`, type: floatPalette ? 'float' : 'ushort' };
+            return { name: `coeff_${x}`, type: 'half' };
         }),
         data: band3Palette
     }, {
@@ -787,7 +785,7 @@ const serializePlyCompressed = async (splats: Splat[], write: WriteFunc) => {
         // 2048 entries and limiting B channel to the first 1024 entries, but that's logic
         // is not implemented yet.
         [1 * 1024, 32 * 1024, 128 * 1024],
-        [0.2, 0.2, 0.2]
+        [0.1, 0.1, 0.1]
     );
 
     const chunkProps = [
@@ -806,7 +804,7 @@ const serializePlyCompressed = async (splats: Splat[], write: WriteFunc) => {
         'packed_color'
     ];
 
-    const shHeader = compressedSHData.map((element) => {
+    const shHeader = compressedSHData?.map((element) => {
         return [
             `element ${element.name} ${element.length}`,
             element.properties.map(prop => `property ${prop.type} ${prop.name}`)
@@ -821,7 +819,7 @@ const serializePlyCompressed = async (splats: Splat[], write: WriteFunc) => {
         chunkProps.map(p => `property float ${p}`),
         `element vertex ${numSplats}`,
         vertexProps.map(p => `property uint ${p}`),
-        shHeader,
+        shHeader ?? [],
         'end_header\n'
     ].flat().join('\n');
 
@@ -831,7 +829,7 @@ const serializePlyCompressed = async (splats: Splat[], write: WriteFunc) => {
         header.byteLength +
         numChunks * chunkProps.length * 4 +
         numSplats * vertexProps.length * 4 +
-        compressedSHData.reduce((acc, x) => acc + x.data.byteLength, 0)
+        (compressedSHData ? compressedSHData.reduce((acc, x) => acc + x.data.byteLength, 0) : 0)
     );
     const dataView = new DataView(result.buffer);
 
@@ -900,15 +898,17 @@ const serializePlyCompressed = async (splats: Splat[], write: WriteFunc) => {
     }
 
     // write sh data
-    const palette1Offset = vertexOffset + numSplats * 4 * 4;
-    const palette2Offset = palette1Offset + compressedSHData[0].data.byteLength;
-    const palette3Offset = palette2Offset + compressedSHData[1].data.byteLength;
-    const indicesOffset = palette3Offset + compressedSHData[2].data.byteLength;
+    if (compressedSHData) {
+        const palette1Offset = vertexOffset + numSplats * 4 * 4;
+        const palette2Offset = palette1Offset + compressedSHData[0].data.byteLength;
+        const palette3Offset = palette2Offset + compressedSHData[1].data.byteLength;
+        const indicesOffset = palette3Offset + compressedSHData[2].data.byteLength;
 
-    result.set(new Uint8Array(compressedSHData[0].data.buffer), palette1Offset);
-    result.set(new Uint8Array(compressedSHData[1].data.buffer), palette2Offset);
-    result.set(new Uint8Array(compressedSHData[2].data.buffer), palette3Offset);
-    result.set(new Uint8Array(compressedSHData[3].data.buffer), indicesOffset);
+        result.set(new Uint8Array(compressedSHData[0].data.buffer), palette1Offset);
+        result.set(new Uint8Array(compressedSHData[1].data.buffer), palette2Offset);
+        result.set(new Uint8Array(compressedSHData[2].data.buffer), palette3Offset);
+        result.set(new Uint8Array(compressedSHData[3].data.buffer), indicesOffset);
+    }
 
     await write(result, true);
 };

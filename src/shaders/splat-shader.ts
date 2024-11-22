@@ -132,6 +132,9 @@ void main(void)
         } else {
             // apply tint/brightness
             color = color * clrScale + vec4(clrOffset, 0.0);
+
+            // don't allow out-of-range alpha
+            color.a = clamp(color.a, 0.0, 1.0);
         }
     #endif
 

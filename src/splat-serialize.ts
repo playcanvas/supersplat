@@ -210,7 +210,7 @@ const serializePly = async (splats: Splat[], write: WriteFunc) => {
                 shData.push(splatData.getProp(`f_rest_${i}`));
             }
 
-            shCoeffs = [0];
+            shCoeffs = [];
         }
 
         for (let i = 0; i < splatData.numSplats; ++i) {
@@ -246,13 +246,13 @@ const serializePly = async (splats: Splat[], write: WriteFunc) => {
             if (hasSH) {
                 for (let c = 0; c < 3; ++c) {
                     for (let d = 0; d < 15; ++d) {
-                        shCoeffs[d + 1] = shData[c * 15 + d][i];
+                        shCoeffs[d] = shData[c * 15 + d][i];
                     }
 
                     transformCache.getSHRot(i).apply(shCoeffs, shCoeffs);
 
                     for (let d = 0; d < 15; ++d) {
-                        splat[`f_rest_${c * 15 + d}`] = shCoeffs[d + 1];
+                        splat[`f_rest_${c * 15 + d}`] = shCoeffs[d];
                     }
                 }
             }
@@ -637,7 +637,7 @@ const quantizeSH = (splats: Splat[], indices: CompressedIndex[], transformCaches
             }
 
             // rotate
-            shRot.apply(coeffs);
+            shRot.apply(coeffs, coeffs);
 
             // quantize
             for (let k = 0; k < numCoeffs; ++k) {

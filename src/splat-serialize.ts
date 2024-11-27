@@ -1,6 +1,5 @@
 import {
     Color,
-    FloatPacking,
     GSplatData,
     Mat3,
     Mat4,
@@ -8,7 +7,6 @@ import {
     Vec3
 } from 'playcanvas';
 
-import { Points, groupPoints } from './sh-compress';
 import { SHRotation } from './sh-utils';
 import { Splat } from './splat';
 import { State } from './splat-state';
@@ -317,7 +315,8 @@ class SingleSplat {
     read(splats: Splat[], index: CompressedIndex) {
         const splat = splats[index.splatIndex];
         const { splatData } = splat;
-        const val = (prop: string) => splatData.getProp(prop)[index.i];
+        const { i } = index;
+        const val = (prop: string) => splatData.getProp(prop)[i];
         [this.x, this.y, this.z] = [val('x'), val('y'), val('z')];
         [this.scale_0, this.scale_1, this.scale_2] = [val('scale_0'), val('scale_1'), val('scale_2')];
         [this.f_dc_0, this.f_dc_1, this.f_dc_2, this.opacity] = [val('f_dc_0'), val('f_dc_1'), val('f_dc_2'), val('opacity')];
@@ -580,171 +579,84 @@ const sortSplats = (splats: Splat[], indices: CompressedIndex[]) => {
     indices.sort((a, b) => morton[a.globalIndex] - morton[b.globalIndex]);
 };
 
-// compress spherical harmonic data
-const compressSH = (splats: Splat[], indices: CompressedIndex[], transformCaches: SplatTransformCache[], maxGroups: number[], epsilons: number[]) => {
-    const shNames: string[] = [];
-    for (let i = 0; i < 45; ++i) {
-        shNames.push(`f_rest_${i}`);
+// returns the number of spherical harmonic bands present on a splat scene
+const getSHBands = (splat: Splat) => {
+    let coeffs = 0;
+    for (; coeffs < 45; ++coeffs) {
+        if (!splat.splatData.getProp(`f_rest_${coeffs}`)) break;
     }
 
-    const splatSHData = splats.map((splat) => {
-        const shData = shNames.map(name => splat.splatData.getProp(name));
-        return shData.every(x => x) ? shData : null;
-    });
+    if (coeffs === 9) {
+        return 1;
+    } else if (coeffs === 24) {
+        return 2;
+    } else if (coeffs === 45) {
+        return 3;
+    }
 
-    if (!splatSHData.some(x => x)) {
+    return 0;
+};
+
+const quantizeSH = (splats: Splat[], indices: CompressedIndex[], transformCaches: SplatTransformCache[]) => {
+    // get the maximum number of bands in the scene
+    const numBands = Math.max(...splats.map(s => getSHBands(s)));
+    if (numBands === 0) {
         return null;
     }
+    const numCoeffs = [3, 8, 15][numBands - 1];
+    const propNames = new Array(numCoeffs * 3).fill('').map((_, i) => `f_rest_${i}`);
+    const splatSHData = splats.map((splat) => {
+        return propNames.map(name => splat.splatData.getProp(name));
+    });
+    const splatTints = splats.map((splat) => {
+        const { blackPoint, whitePoint, tintClr } = splat;
+        const scale = 1 / (whitePoint - blackPoint);
+        return [tintClr.r * scale, tintClr.g * scale, tintClr.b * scale];
+    });
+    const coeffs = new Float32Array(numCoeffs);
+    const data = new Uint8Array(indices.length * numCoeffs * 3);
 
-    // extract points for a single band of sh
-    const buildPoints = (coeffIndices: number[]) => {
-        const dimension = coeffIndices.length;
-        const result = new Points(indices.length * 3, dimension);
-        for (let i = 0; i < indices.length; ++i) {
-            const index = indices[i];
-            const { splatIndex } = index;
-            const shData = splatSHData[splatIndex];
-            const shIndex = index.i;
-            const shRot = transformCaches[splatIndex].getSHRot(shIndex);
+    for (let i = 0; i < indices.length; ++i) {
+        const index = indices[i];
+        const splatIndex = index.splatIndex;
+        const shIndex = index.i;
+        const shData = splatSHData[splatIndex];
+        const tint = splatTints[splatIndex];
+        const shRot = transformCaches[splatIndex].getSHRot(shIndex);
 
-            const { blackPoint, whitePoint, tintClr } = splats[splatIndex];
-            const scale = 1 / (whitePoint - blackPoint);
-            const tint = [tintClr.r * scale, tintClr.g * scale, tintClr.b * scale];
+        for (let j = 0; j < 3; ++j) {
+            // extract sh coefficients
+            for (let k = 0; k < numCoeffs; ++k) {
+                const src = shData[j * numCoeffs + k];
+                coeffs[k] = src ? src[shIndex] : 0;
+            }
 
-            for (let j = 0; j < 3; ++j) {
-                for (let k = 0; k < dimension; ++k) {
-                    result.data[(i * 3 + j) * dimension + k] = (shData[j * 15 + coeffIndices[k]][shIndex]) * tint[j];
-                }
+            // apply tint
+            for (let k = 0; k < numCoeffs; ++k) {
+                coeffs[k] *= tint[j];
+            }
 
-                // rotate sh coefficients
-                shRot.applyBand(result.data, (i * 3 + j) * dimension, dimension);
+            // rotate
+            shRot.apply(coeffs);
+
+            // quantize
+            for (let k = 0; k < numCoeffs; ++k) {
+                const nvalue = coeffs[k] / 8 + 0.5;
+                data[(i * 3 + j) * numCoeffs + k] = Math.max(0, Math.min(255, Math.trunc(nvalue * 256)));
             }
         }
-        return result;
-    };
-
-    const buildPalette = (points: Points, groups: number[][]) => {
-        const palette: Float32Array[] = [];
-        for (let i = 0; i < groups.length; ++i) {
-            palette.push(points.average(groups[i]).slice());
-        }
-        return palette;
-    };
-
-    const buildIndices = (groups: number[][]) => {
-        const result = new Uint32Array(indices.length * 3);
-        for (let i = 0; i < groups.length; ++i) {
-            const group = groups[i];
-            for (let j = 0; j < group.length; ++j) {
-                result[group[j]] = i;
-            }
-        }
-        return result;
-    };
-
-    const compressBand = (maxEntries: number, epsilon: number, coeffIndices: number[]) => {
-        // build a set of points in 3, 5, 7 dimensions
-        const points = buildPoints(coeffIndices);
-        // group the points
-        const groups = groupPoints(points, maxEntries, epsilon);
-        // generate a palette, one entry per group
-        const palette = buildPalette(points, groups);
-        // convert group assignments to array of indices
-        const indices = buildIndices(groups);
-        return { palette, indices };
-    };
-
-    const makeEven = (x: number) => (x + 1) & (~1);
-
-    // convert a palette to half floats
-    const serializePalette = (palette: Float32Array[]) => {
-        const dimension = palette[0].length;
-        const storageLength = makeEven(palette.length) * dimension;
-
-        let result;
-
-        result = new Uint16Array(storageLength);
-        for (let i = 0; i < palette.length; ++i) {
-            for (let j = 0; j < dimension; ++j) {
-                result[i * dimension + j] = FloatPacking.float2Half(palette[i][j]);
-            }
-        }
-
-        return result;
-    };
-
-    // pack indices into a per-splat buffer, 16 bytes per splat
-    const serializeIndices = (band1: Uint32Array, band2: Uint32Array, band3: Uint32Array) => {
-        const result = new Uint32Array(indices.length * 4);
-
-        for (let i = 0; i < indices.length; ++i) {
-            // band1: 11, 11, 10
-            // band2: 15, 15, 15
-            // band3: 17, 17, 17
-
-            // packed into uint32s:
-            // 11: 1r, 11: 1g, 10: 1b
-            // 15: 2r, 15: 2g, 2: 2b
-            // 13: 2b, 17: 3r, 2: 3g
-            // 15: 3g, 17: 3b
-
-            const b1r = band1[i * 3];
-            const b1g = band1[i * 3 + 1];
-            const b1b = band1[i * 3 + 2];
-
-            const b2r = band2[i * 3];
-            const b2g = band2[i * 3 + 1];
-            const b2b = band2[i * 3 + 2];
-
-            const b3r = band3[i * 3];
-            const b3g = band3[i * 3 + 1];
-            const b3b = band3[i * 3 + 2];
-
-            result[i * 4 + 0] = (b1r << 21) | (b1g << 10) | (b1b & 0x3ff);
-            result[i * 4 + 1] = (b2r << 17) | (b2g << 2) | (b2b >>> 13);
-            result[i * 4 + 2] = (b2b << 19) | (b3r << 2) | (b3g >>> 15);
-            result[i * 4 + 3] = (b3g << 17) | b3b;
-        }
-
-        return result;
-    };
-
-    const band1 = compressBand(maxGroups[0], epsilons[0], [0, 1, 2]);
-    const band2 = compressBand(maxGroups[1], epsilons[1], [3, 4, 5, 6, 7]);
-    const band3 = compressBand(maxGroups[2], epsilons[2], [8, 9, 10, 11, 12, 13, 14]);
-
-    const band1Palette = serializePalette(band1.palette);
-    const band2Palette = serializePalette(band2.palette);
-    const band3Palette = serializePalette(band3.palette);
+    }
 
     return [{
-        name: 'sh_band_1',
-        length: band1Palette.length / 3,
-        properties: ['0', '1', '2'].map((x) => {
-            return { name: `coeff_${x}`, type: 'half' };
-        }),
-        data: band1Palette
-    }, {
-        name: 'sh_band_2',
-        length: band2Palette.length / 5,
-        properties: ['3', '4', '5', '6', '7'].map((x) => {
-            return { name: `coeff_${x}`, type: 'half' };
-        }),
-        data: band2Palette
-    }, {
-        name: 'sh_band_3',
-        length: band3Palette.length / 7,
-        properties: ['8', '9', '10', '11', '12', '13', '14'].map((x) => {
-            return { name: `coeff_${x}`, type: 'half' };
-        }),
-        data: band3Palette
-    }, {
-        name: 'vertex_sh',
+        name: 'sh',
         length: indices.length,
-        properties: ['0', '1', '2', '3'].map((x) => {
-            return { name: `packed_sh_${x}`, type: 'uint' };
+        properties: new Array(numCoeffs * 3).fill('').map((_, i) => {
+            return {
+                name: `f_rest_${i}`,
+                type: 'uchar'
+            };
         }),
-        data: serializeIndices(band1.indices, band2.indices, band3.indices)
+        data
     }];
 };
 
@@ -775,18 +687,7 @@ const serializePlyCompressed = async (splats: Splat[], write: WriteFunc) => {
     const numSplats = indices.length;
     const numChunks = Math.ceil(numSplats / 256);
 
-    // compress SH data
-    const compressedSHData = compressSH(
-        splats,
-        indices,
-        transformCaches,
-        // NOTE: for band 1 we compile a palette of 1k entries. however the R and G channels
-        // have enough bits to index 2k entries. we should be generating a palette of
-        // 2048 entries and limiting B channel to the first 1024 entries, but that's logic
-        // is not implemented yet.
-        [1 * 1024, 32 * 1024, 128 * 1024],
-        [0.1, 0.1, 0.1]
-    );
+    const quantizedSHData = quantizeSH(splats, indices, transformCaches);
 
     const chunkProps = [
         'min_x', 'min_y', 'min_z',
@@ -804,7 +705,7 @@ const serializePlyCompressed = async (splats: Splat[], write: WriteFunc) => {
         'packed_color'
     ];
 
-    const shHeader = compressedSHData?.map((element) => {
+    const shHeader = quantizedSHData?.map((element) => {
         return [
             `element ${element.name} ${element.length}`,
             element.properties.map(prop => `property ${prop.type} ${prop.name}`)
@@ -829,7 +730,7 @@ const serializePlyCompressed = async (splats: Splat[], write: WriteFunc) => {
         header.byteLength +
         numChunks * chunkProps.length * 4 +
         numSplats * vertexProps.length * 4 +
-        (compressedSHData ? compressedSHData.reduce((acc, x) => acc + x.data.byteLength, 0) : 0)
+        (quantizedSHData ? quantizedSHData.reduce((acc, x) => acc + x.data.byteLength, 0) : 0)
     );
     const dataView = new DataView(result.buffer);
 
@@ -898,16 +799,12 @@ const serializePlyCompressed = async (splats: Splat[], write: WriteFunc) => {
     }
 
     // write sh data
-    if (compressedSHData) {
-        const palette1Offset = vertexOffset + numSplats * 4 * 4;
-        const palette2Offset = palette1Offset + compressedSHData[0].data.byteLength;
-        const palette3Offset = palette2Offset + compressedSHData[1].data.byteLength;
-        const indicesOffset = palette3Offset + compressedSHData[2].data.byteLength;
-
-        result.set(new Uint8Array(compressedSHData[0].data.buffer), palette1Offset);
-        result.set(new Uint8Array(compressedSHData[1].data.buffer), palette2Offset);
-        result.set(new Uint8Array(compressedSHData[2].data.buffer), palette3Offset);
-        result.set(new Uint8Array(compressedSHData[3].data.buffer), indicesOffset);
+    if (quantizedSHData) {
+        let offset = vertexOffset + numSplats * 4 * 4;
+        quantizedSHData.forEach((element) => {
+            result.set(new Uint8Array(element.data.buffer), offset);
+            offset += element.data.byteLength;
+        });
     }
 
     await write(result, true);

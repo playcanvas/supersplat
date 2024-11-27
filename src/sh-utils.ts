@@ -45,7 +45,6 @@ const coeffsIn = new Float32Array(16);
 // be used to rotate multiple spherical harmonics cheaply.
 class SHRotation {
     apply: (result: Float32Array | number[], src?: Float32Array | number[]) => void;
-    applyBand: (data: Float32Array, offset: number, length: number) => void;
 
     constructor(mat: Mat3) {
         const rot = mat.data;
@@ -188,35 +187,6 @@ class SHRotation {
             result[13] = dp(7, 9, src, sh3[4]);
             result[14] = dp(7, 9, src, sh3[5]);
             result[15] = dp(7, 9, src, sh3[6]);
-        };
-
-        // apply the rotation to a single band of data
-        this.applyBand = (data: Float32Array, offset: number, length: number) => {
-            if (length === 3) {
-                // band 1
-                const a = dp(3, offset, data, sh1[0]);
-                const b = dp(3, offset, data, sh1[1]);
-                const c = dp(3, offset, data, sh1[2]);
-                data.set([a, b, c], offset);
-            } else if (length === 5) {
-                // band 2
-                const a = dp(5, offset, data, sh2[0]);
-                const b = dp(5, offset, data, sh2[1]);
-                const c = dp(5, offset, data, sh2[2]);
-                const d = dp(5, offset, data, sh2[3]);
-                const e = dp(5, offset, data, sh2[4]);
-                data.set([a, b, c, d, e], offset);
-            } else if (length === 7) {
-                // band 3
-                const a = dp(7, offset, data, sh3[0]);
-                const b = dp(7, offset, data, sh3[1]);
-                const c = dp(7, offset, data, sh3[2]);
-                const d = dp(7, offset, data, sh3[3]);
-                const e = dp(7, offset, data, sh3[4]);
-                const f = dp(7, offset, data, sh3[5]);
-                const g = dp(7, offset, data, sh3[6]);
-                data.set([a, b, c, d, e, f, g], offset);
-            }
         };
     }
 }

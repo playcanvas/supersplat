@@ -41,6 +41,23 @@ const template = /* html */ `
                 backdrop-filter: blur(8px);
                 -webkit-backdrop-filter: blur(8px);
             }
+            #infoPanelContent h3 {
+                margin: 0 0 12px 0;
+                color: #2c3e50;
+            }
+            .control-item {
+                display: flex;
+                justify-content: space-between;
+                gap: 24px;
+                line-height: 1.5;
+            }
+            .control-action {
+                text-align: left;
+            }
+            .control-key {
+                text-align: right;
+                color: #666;
+            }
             #loadingIndicator {
                 font-family: 'Arial', sans-serif;
                 color: #2c3e50;
@@ -72,7 +89,7 @@ const template = /* html */ `
             <pc-asset id="camera-controls" src="https://cdn.jsdelivr.net/npm/playcanvas@2.3.1/scripts/esm/camera-controls.mjs" preload></pc-asset>
             <pc-asset id="xr-controllers" src="https://cdn.jsdelivr.net/npm/playcanvas@2.3.1/scripts/esm/xr-controllers.mjs" preload></pc-asset>
             <pc-asset id="xr-navigation" src="https://cdn.jsdelivr.net/npm/playcanvas@2.3.1/scripts/esm/xr-navigation.mjs" preload></pc-asset>
-            <pc-asset id="ply" type="gsplat" src="data:application/ply;base64,{{plyModel}}" preload></pc-asset>
+            <pc-asset id="ply" type="gsplat" src="data:application/ply;base64,{{plyModel}}"></pc-asset>
             <pc-scene>
                 <!-- Camera (with XR support) -->
                 <pc-entity name="camera root">
@@ -100,16 +117,43 @@ const template = /* html */ `
         <!-- Info Panel -->
         <div id="infoPanel" class="hidden" onclick="document.getElementById('infoPanel').classList.add('hidden')">
             <div id="infoPanelContent" onclick="event.stopPropagation()">
-                <h3 style="margin-top: 0;">Controls</h3>
-                <div>Left mouse button - Orbit</div>
-                <div>Middle mouse button - Pan</div>
-                <div>Right mouse button - Look around</div>
-                <div>Mouse wheel - Zoom</div>
-                <div>W,S,A,D - Fly</div>
-                <div>Shift - Fly faster</div>
-                <div>Ctrl - Fly slower</div>
-                <div>F - Frame the scene</div>
-                <div>R - Return to the origin</div>
+                <h3>Controls</h3>
+                <div class="control-item">
+                    <span class="control-action">Orbit</span>
+                    <span class="control-key">Left mouse button</span>
+                </div>
+                <div class="control-item">
+                    <span class="control-action">Pan</span>
+                    <span class="control-key">Middle mouse button</span>
+                </div>
+                <div class="control-item">
+                    <span class="control-action">Look around</span>
+                    <span class="control-key">Right mouse button</span>
+                </div>
+                <div class="control-item">
+                    <span class="control-action">Zoom</span>
+                    <span class="control-key">Mouse wheel</span>
+                </div>
+                <div class="control-item">
+                    <span class="control-action">Fly</span>
+                    <span class="control-key">W,S,A,D</span>
+                </div>
+                <div class="control-item">
+                    <span class="control-action">Fly faster</span>
+                    <span class="control-key">Shift</span>
+                </div>
+                <div class="control-item">
+                    <span class="control-action">Fly slower</span>
+                    <span class="control-key">Ctrl</span>
+                </div>
+                <div class="control-item">
+                    <span class="control-action">Frame the scene</span>
+                    <span class="control-key">F</span>
+                </div>
+                <div class="control-item">
+                    <span class="control-action">Return to origin</span>
+                    <span class="control-key">R</span>
+                </div>
             </div>
         </div>
 

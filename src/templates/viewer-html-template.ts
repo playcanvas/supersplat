@@ -59,7 +59,7 @@ const template = /* html */ `
             <pc-asset id="camera-controls" src="https://cdn.jsdelivr.net/npm/playcanvas@2.3.1/scripts/esm/camera-controls.mjs" preload></pc-asset>
             <pc-asset id="xr-controllers" src="https://cdn.jsdelivr.net/npm/playcanvas@2.3.1/scripts/esm/xr-controllers.mjs" preload></pc-asset>
             <pc-asset id="xr-navigation" src="https://cdn.jsdelivr.net/npm/playcanvas@2.3.1/scripts/esm/xr-navigation.mjs" preload></pc-asset>
-            <pc-asset id="ply" type="gsplat" src="data:application/ply;base64,{{plyModel}} preload></pc-asset>
+            <pc-asset id="ply" type="gsplat" src="data:application/ply;base64,{{plyModel}}" preload></pc-asset>
             <pc-scene>
                 <!-- Camera (with XR support) -->
                 <pc-entity name="camera root">
@@ -134,123 +134,123 @@ const template = /* html */ `
                 }
 
                 entity.script.create(FrameScene);
-            });
 
-            // Create container for buttons
-            const container = document.createElement('div');
-            Object.assign(container.style, {
-                position: 'absolute',
-                bottom: 'max(16px, env(safe-area-inset-bottom))',
-                right: 'max(16px, env(safe-area-inset-right))',
-                display: 'flex',
-                gap: '8px'
-            });
-
-            function createButton({ icon, title, onClick }) {
-                const button = document.createElement('button');
-                button.innerHTML = icon;
-                button.title = title;
-
-                Object.assign(button.style, {
+                // Create container for buttons
+                const container = document.createElement('div');
+                Object.assign(container.style, {
+                    position: 'absolute',
+                    bottom: 'max(16px, env(safe-area-inset-bottom))',
+                    right: 'max(16px, env(safe-area-inset-right))',
                     display: 'flex',
-                    position: 'relative',
-                    width: '40px',
-                    height: '40px',
-                    background: 'rgba(255, 255, 255, 0.9)',
-                    border: '1px solid #ddd',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '0',
-                    margin: '0',
-                    backdropFilter: 'blur(8px)',
-                    WebkitBackdropFilter: 'blur(8px)',
-                    transition: 'background-color 0.2s',
-                    color: '#2c3e50'
+                    gap: '8px'
                 });
 
-                const svg = button.querySelector('svg');
-                if (svg) {
-                    svg.style.display = 'block';
-                    svg.style.margin = 'auto';
+                function createButton({ icon, title, onClick }) {
+                    const button = document.createElement('button');
+                    button.innerHTML = icon;
+                    button.title = title;
+
+                    Object.assign(button.style, {
+                        display: 'flex',
+                        position: 'relative',
+                        width: '40px',
+                        height: '40px',
+                        background: 'rgba(255, 255, 255, 0.9)',
+                        border: '1px solid #ddd',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0',
+                        margin: '0',
+                        backdropFilter: 'blur(8px)',
+                        WebkitBackdropFilter: 'blur(8px)',
+                        transition: 'background-color 0.2s',
+                        color: '#2c3e50'
+                    });
+
+                    const svg = button.querySelector('svg');
+                    if (svg) {
+                        svg.style.display = 'block';
+                        svg.style.margin = 'auto';
+                    }
+
+                    button.onmouseenter = () => {
+                        button.style.background = 'rgba(255, 255, 255, 1)';
+                    };
+
+                    button.onmouseleave = () => {
+                        button.style.background = 'rgba(255, 255, 255, 0.9)';
+                    };
+
+                    if (onClick) button.onclick = onClick;
+
+                    return button;
                 }
 
-                button.onmouseenter = () => {
-                    button.style.background = 'rgba(255, 255, 255, 1)';
-                };
-
-                button.onmouseleave = () => {
-                    button.style.background = 'rgba(255, 255, 255, 0.9)';
-                };
-
-                if (onClick) button.onclick = onClick;
-
-                return button;
-            }
-
-            // Add VR button if available
-            if (app.xr.isAvailable('immersive-vr')) {
-                const vrButton = createButton({
-                    icon: \`<svg width="32" height="32" viewBox="0 0 48 48">
-                        <path d="M30,34 L26,30 L22,30 L18,34 L14,34 C11.7908610,34 10,32.2091390 10,30 L10,18 C10,15.7908610 11.7908610,14 14,14 L34,14 C36.2091390,14 38,15.7908610 38,18 L38,30 C38,32.2091390 36.2091390,34 34,34 L30,34 Z M44,28 C44,29.1045694 43.1045694,30 42,30 C40.8954306,30 40,29.1045694 40,28 L40,20 C40,18.8954305 40.8954306,18 42,18 C43.1045694,18 44,18.8954305 44,20 L44,28 Z M8,28 C8,29.1045694 7.10456940,30 6,30 C4.89543060,30 4,29.1045694 4,28 L4,20 C4,18.8954305 4.89543060,18 6,18 C7.10456940,18 8,18.8954305 8,20 L8,28 Z" fill="currentColor">
-                    </svg>\`,
-                    title: 'Enter VR',
-                    onClick: () => app.xr.start(app.root.findComponent('camera'), 'immersive-vr', 'local-floor')
-                });
-                container.appendChild(vrButton);
-
-                window.addEventListener('keydown', (event) => {
-                    if (event.key === 'Escape') {
-                        app.xr.end();
-                    }
-                });
-            }
-
-            // Add fullscreen button if supported
-            if (document.documentElement.requestFullscreen && document.exitFullscreen) {
-                const enterFullscreenIcon = \`<svg width="32" height="32" viewBox="0 0 24 24">
-                    <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" fill="currentColor"/>
-                </svg>\`;
-                const exitFullscreenIcon = \`<svg width="32" height="32" viewBox="0 0 24 24">
-                    <path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z" fill="currentColor"/>
-                </svg>\`;
-
-                const fullscreenButton = createButton({
-                    icon: enterFullscreenIcon,
-                    title: 'Toggle Fullscreen',
-                    onClick: () => {
-                        if (!document.fullscreenElement) {
-                            document.documentElement.requestFullscreen();
-                        } else {
-                            document.exitFullscreen();
+                // Add VR button if available
+                if (app.xr.isAvailable('immersive-vr')) {
+                    const vrButton = createButton({
+                        icon: \`<svg width="32" height="32" viewBox="0 0 48 48">
+                            <path d="M30,34 L26,30 L22,30 L18,34 L14,34 C11.7908610,34 10,32.2091390 10,30 L10,18 C10,15.7908610 11.7908610,14 14,14 L34,14 C36.2091390,14 38,15.7908610 38,18 L38,30 C38,32.2091390 36.2091390,34 34,34 L30,34 Z M44,28 C44,29.1045694 43.1045694,30 42,30 C40.8954306,30 40,29.1045694 40,28 L40,20 C40,18.8954305 40.8954306,18 42,18 C43.1045694,18 44,18.8954305 44,20 L44,28 Z M8,28 C8,29.1045694 7.10456940,30 6,30 C4.89543060,30 4,29.1045694 4,28 L4,20 C4,18.8954305 4.89543060,18 6,18 C7.10456940,18 8,18.8954305 8,20 L8,28 Z" fill="currentColor">
+                        </svg>\`,
+                        title: 'Enter VR',
+                        onClick: () => app.xr.start(app.root.findComponent('camera'), 'immersive-vr', 'local-floor')
+                    });
+                    container.appendChild(vrButton);
+    
+                    window.addEventListener('keydown', (event) => {
+                        if (event.key === 'Escape') {
+                            app.xr.end();
                         }
+                    });
+                }
+
+                // Add fullscreen button if supported
+                if (document.documentElement.requestFullscreen && document.exitFullscreen) {
+                    const enterFullscreenIcon = \`<svg width="32" height="32" viewBox="0 0 24 24">
+                        <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" fill="currentColor"/>
+                    </svg>\`;
+                    const exitFullscreenIcon = \`<svg width="32" height="32" viewBox="0 0 24 24">
+                        <path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z" fill="currentColor"/>
+                    </svg>\`;
+
+                    const fullscreenButton = createButton({
+                        icon: enterFullscreenIcon,
+                        title: 'Toggle Fullscreen',
+                        onClick: () => {
+                            if (!document.fullscreenElement) {
+                                document.documentElement.requestFullscreen();
+                            } else {
+                                document.exitFullscreen();
+                            }
+                        }
+                    });
+
+                    // Update icon when fullscreen state changes
+                    document.addEventListener('fullscreenchange', () => {
+                        fullscreenButton.innerHTML = document.fullscreenElement ? exitFullscreenIcon : enterFullscreenIcon;
+                        fullscreenButton.title = document.fullscreenElement ? 'Exit Fullscreen' : 'Enter Fullscreen';
+                    });
+
+                    container.appendChild(fullscreenButton);
+                }
+
+                // Add info button
+                const infoButton = createButton({
+                    icon: \`<svg width="32" height="32" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/>
+                    </svg>\`,
+                    title: 'Show Controls',
+                    onClick: () => {
+                        const infoPanel = document.getElementById('infoPanel');
+                        infoPanel.classList.toggle('hidden');
                     }
                 });
+                container.appendChild(infoButton);
 
-                // Update icon when fullscreen state changes
-                document.addEventListener('fullscreenchange', () => {
-                    fullscreenButton.innerHTML = document.fullscreenElement ? exitFullscreenIcon : enterFullscreenIcon;
-                    fullscreenButton.title = document.fullscreenElement ? 'Exit Fullscreen' : 'Enter Fullscreen';
-                });
-
-                container.appendChild(fullscreenButton);
-            }
-
-            // Add info button
-            const infoButton = createButton({
-                icon: \`<svg width="32" height="32" viewBox="0 0 24 24">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/>
-                </svg>\`,
-                title: 'Show Controls',
-                onClick: () => {
-                    const infoPanel = document.getElementById('infoPanel');
-                    infoPanel.classList.toggle('hidden');
-                }
+                document.body.appendChild(container);
             });
-            container.appendChild(infoButton);
-
-            document.body.appendChild(container);
         </script>
 
         <!-- Info Panel -->

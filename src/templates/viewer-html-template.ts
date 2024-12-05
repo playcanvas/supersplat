@@ -14,42 +14,35 @@ const template = /* html */ `
             body {
                 overflow: hidden;
             }
+            .hidden {
+                display: none !important;
+            }
             #infoPanel {
-                position: absolute;
-                left: 5px;
-                bottom: 5px;
-                padding: 10px;
-                color: lightgrey;
-                background-color: rgba(0, 0, 0, 0.5);
-                font-family: sans-serif;
-                font-size: 12px;
-                border-radius: 6px;
-                cursor: pointer;
-                user-select: none;
+                font-family: 'Arial', sans-serif;
+                color: #2c3e50;
             }
-            .heading {
-                display: inline-block;
-                font-weight: bold;
-                width: 20px;
-                height: 20px;
-                line-height: 20px;
-                border-radius: 10px;
-                color: black;
-                background-color: white;
-                text-align: center;
+            #infoPanel > div {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.3);
+                z-index: 999;
             }
-            .divider {
-                color: white;
-                border-bottom: 1px solid gray;
-                padding: 0px 0px 3px 0px;
-                margin: 0px 0px 3px 0px;
-                font-weight: bold;
-            }
-            :not(.hidden) > .heading {
-                display: none;
-            }
-            .hidden :not(.heading) {
-                display: none;
+            #infoPanel > div > div {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(255, 255, 255, 0.95);
+                padding: 20px;
+                border-radius: 8px;
+                border: 1px solid #ddd;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+                z-index: 1000;
             }
         </style>
         <script type="importmap">
@@ -142,21 +135,161 @@ const template = /* html */ `
 
                 entity.script.create(FrameScene);
             });
+
+            // Create container for buttons
+            const container = document.createElement('div');
+            Object.assign(container.style, {
+                position: 'absolute',
+                bottom: 'max(16px, env(safe-area-inset-bottom))',
+                right: 'max(16px, env(safe-area-inset-right))',
+                display: 'flex',
+                gap: '8px'
+            });
+
+            function createButton({ icon, title, onClick }) {
+                const button = document.createElement('button');
+                button.innerHTML = icon;
+                button.title = title;
+
+                Object.assign(button.style, {
+                    display: 'flex',
+                    position: 'relative',
+                    width: '40px',
+                    height: '40px',
+                    background: 'rgba(255, 255, 255, 0.9)',
+                    border: '1px solid #ddd',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0',
+                    margin: '0',
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
+                    transition: 'background-color 0.2s',
+                    color: '#2c3e50'
+                });
+
+                const svg = button.querySelector('svg');
+                if (svg) {
+                    svg.style.display = 'block';
+                    svg.style.margin = 'auto';
+                }
+
+                button.onmouseenter = () => {
+                    button.style.background = 'rgba(255, 255, 255, 1)';
+                };
+
+                button.onmouseleave = () => {
+                    button.style.background = 'rgba(255, 255, 255, 0.9)';
+                };
+
+                if (onClick) button.onclick = onClick;
+
+                return button;
+            }
+
+            // Add VR button if available
+            if (app.xr.isAvailable('immersive-vr')) {
+                const vrButton = createButton({
+                    icon: \`<svg width="32" height="32" viewBox="0 0 48 48">
+                        <path d="M30,34 L26,30 L22,30 L18,34 L14,34 C11.7908610,34 10,32.2091390 10,30 L10,18 C10,15.7908610 11.7908610,14 14,14 L34,14 C36.2091390,14 38,15.7908610 38,18 L38,30 C38,32.2091390 36.2091390,34 34,34 L30,34 Z M44,28 C44,29.1045694 43.1045694,30 42,30 C40.8954306,30 40,29.1045694 40,28 L40,20 C40,18.8954305 40.8954306,18 42,18 C43.1045694,18 44,18.8954305 44,20 L44,28 Z M8,28 C8,29.1045694 7.10456940,30 6,30 C4.89543060,30 4,29.1045694 4,28 L4,20 C4,18.8954305 4.89543060,18 6,18 C7.10456940,18 8,18.8954305 8,20 L8,28 Z" fill="currentColor">
+                    </svg>\`,
+                    title: 'Enter VR',
+                    onClick: () => app.xr.start(app.root.findComponent('camera'), 'immersive-vr', 'local-floor')
+                });
+                container.appendChild(vrButton);
+
+                window.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape') {
+                        app.xr.end();
+                    }
+                });
+            }
+
+            // Add fullscreen button if supported
+            if (document.documentElement.requestFullscreen && document.exitFullscreen) {
+                const enterFullscreenIcon = \`<svg width="32" height="32" viewBox="0 0 24 24">
+                    <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" fill="currentColor"/>
+                </svg>\`;
+                const exitFullscreenIcon = \`<svg width="32" height="32" viewBox="0 0 24 24">
+                    <path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z" fill="currentColor"/>
+                </svg>\`;
+
+                const fullscreenButton = createButton({
+                    icon: enterFullscreenIcon,
+                    title: 'Toggle Fullscreen',
+                    onClick: () => {
+                        if (!document.fullscreenElement) {
+                            document.documentElement.requestFullscreen();
+                        } else {
+                            document.exitFullscreen();
+                        }
+                    }
+                });
+
+                // Update icon when fullscreen state changes
+                document.addEventListener('fullscreenchange', () => {
+                    fullscreenButton.innerHTML = document.fullscreenElement ? exitFullscreenIcon : enterFullscreenIcon;
+                    fullscreenButton.title = document.fullscreenElement ? 'Exit Fullscreen' : 'Enter Fullscreen';
+                });
+
+                container.appendChild(fullscreenButton);
+            }
+
+            // Add info button
+            const infoButton = createButton({
+                icon: \`<svg width="32" height="32" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/>
+                </svg>\`,
+                title: 'Show Controls',
+                onClick: () => {
+                    const infoPanel = document.getElementById('infoPanel');
+                    infoPanel.classList.toggle('hidden');
+                }
+            });
+            container.appendChild(infoButton);
+
+            document.body.appendChild(container);
         </script>
 
         <!-- Info Panel -->
-        <div id="infoPanel" class="hidden" onclick="this.classList.toggle('hidden')">
-            <span class="heading">?</span>
-            <div class="divider">Controls</div>
-            <div>Left mouse button - Orbit</div>
-            <div>Middle mouse button - Pan</div>
-            <div>Right mouse button - Look around</div>
-            <div>Mouse wheel - Zoom</div>
-            <div>W,S,A,D - Fly</div>
-            <div>Shift - Fly faster</div>
-            <div>Ctrl - Fly slower</div>
-            <div>F - Frame the scene</div>
-            <div>R - Return to the origin</div>
+        <div id="infoPanel" class="hidden">
+            <div style="
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.3);
+                z-index: 999;
+            " onclick="document.getElementById('infoPanel').classList.add('hidden')">
+                <div style="
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: rgba(255, 255, 255, 0.9);
+                    padding: 20px;
+                    border-radius: 8px;
+                    border: 1px solid #ddd;
+                    backdrop-filter: blur(8px);
+                    -webkit-backdrop-filter: blur(8px);
+                    z-index: 1000;
+                    color: #2c3e50;
+                " onclick="event.stopPropagation()">
+                    <h3 style="margin-top: 0;">Controls</h3>
+                    <div>Left mouse button - Orbit</div>
+                    <div>Middle mouse button - Pan</div>
+                    <div>Right mouse button - Look around</div>
+                    <div>Mouse wheel - Zoom</div>
+                    <div>W,S,A,D - Fly</div>
+                    <div>Shift - Fly faster</div>
+                    <div>Ctrl - Fly slower</div>
+                    <div>F - Frame the scene</div>
+                    <div>R - Return to the origin</div>
+                </div>
+            </div>
         </div>
     </body>
 </html>

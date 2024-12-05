@@ -104,6 +104,10 @@ const template = /* html */ `
                         <pc-script name="xrNavigation"></pc-script>
                     </pc-scripts>
                 </pc-entity>
+                <!-- Light (for XR controllers) -->
+                <pc-entity name="light" rotation="35 45 0">
+                    <pc-light color="white" intensity="1.5"></pc-light>
+                </pc-entity>
                 <!-- Splat -->
                 <pc-entity name="splat" rotation="0 0 180">
                     <pc-splat asset="ply"></pc-splat>

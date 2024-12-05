@@ -795,6 +795,7 @@ const serializeViewer = async (splats: Splat[], write: WriteFunc) => {
     // use camera clear color
     const bgClr = splats[0].scene.events.invoke('bgClr');
     const html = ViewerHtmlTemplate
+    .replace('{{backgroundColor}}', `rgb(${bgClr.r * 255} ${bgClr.g * 255} ${bgClr.b * 255})`)
     .replace('{{clearColor}}', `${bgClr.r} ${bgClr.g} ${bgClr.b}`)
     .replace('{{plyModel}}', plyModel);
 

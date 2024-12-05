@@ -13,6 +13,7 @@ const template = /* html */ `
             }
             body {
                 overflow: hidden;
+                background-color: {{backgroundColor}};
             }
             .hidden {
                 display: none !important;
@@ -39,6 +40,22 @@ const template = /* html */ `
                 box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
                 backdrop-filter: blur(8px);
                 -webkit-backdrop-filter: blur(8px);
+            }
+            #loadingIndicator {
+                font-family: 'Arial', sans-serif;
+                color: #2c3e50;
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(255, 255, 255, 0.95);
+                padding: 20px;
+                border-radius: 8px;
+                border: 1px solid #ddd;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+                z-index: 1000;
             }
         </style>
         <script type="importmap">
@@ -77,6 +94,9 @@ const template = /* html */ `
             </pc-scene>
         </pc-app>
 
+        <!-- Loading Indicator -->
+        <div id="loadingIndicator">Loading...</div>
+
         <!-- Info Panel -->
         <div id="infoPanel" class="hidden" onclick="document.getElementById('infoPanel').classList.add('hidden')">
             <div id="infoPanelContent" onclick="event.stopPropagation()">
@@ -102,6 +122,17 @@ const template = /* html */ `
 
                 const entityElement = await document.querySelector('pc-entity[name="camera"]').ready();
                 const entity = entityElement.entity;
+
+                // Handle loading indicator for PLY asset
+                const plyAsset = document.querySelector('pc-asset[id="ply"]');
+                const asset = plyAsset.asset;
+                if (asset.loaded) {
+                    document.getElementById('loadingIndicator').classList.add('hidden');
+                } else {
+                    asset.on('load', () => {
+                        document.getElementById('loadingIndicator').classList.add('hidden');
+                    });
+                }
 
                 class FrameScene extends Script {
                     frameScene(bbox) {

@@ -289,6 +289,14 @@ const template = /* html */ `
                         infoPanel.classList.toggle('hidden');
                     }
                 });
+
+                // Add escape key handler for info panel
+                window.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        document.getElementById('infoPanel').classList.add('hidden');
+                    }
+                });
+
                 container.appendChild(infoButton);
 
                 document.body.appendChild(container);

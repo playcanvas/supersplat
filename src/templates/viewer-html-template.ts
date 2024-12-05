@@ -68,11 +68,17 @@ const template = /* html */ `
             <pc-asset id="xr-controllers" src="https://cdn.jsdelivr.net/npm/playcanvas@2.3.1/scripts/esm/xr-controllers.mjs" preload></pc-asset>
             <pc-asset id="xr-navigation" src="https://cdn.jsdelivr.net/npm/playcanvas@2.3.1/scripts/esm/xr-navigation.mjs" preload></pc-asset>
             <pc-scene>
-                <!-- Camera -->
-                <pc-entity name="camera">
-                    <pc-camera clear-color="{{clearColor}}"></pc-camera>
+                <!-- Camera (with XR support) -->
+                <pc-entity name="camera root">
+                    <pc-entity name="camera">
+                        <pc-camera clear-color="{{clearColor}}"></pc-camera>
+                        <pc-scripts>
+                            <pc-script name="cameraControls"></pc-script>
+                        </pc-scripts>
+                    </pc-entity>
                     <pc-scripts>
-                        <pc-script name="cameraControls"></pc-script>
+                        <pc-script name="xrControllers"></pc-script>
+                        <pc-script name="xrNavigation"></pc-script>
                     </pc-scripts>
                 </pc-entity>
                 <!-- Splat -->

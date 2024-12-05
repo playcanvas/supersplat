@@ -3,7 +3,7 @@ const template = /* html */ `
 <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
         <title>3D Gaussian Splat Viewer</title>
         <style>
             * {
@@ -55,22 +55,24 @@ const template = /* html */ `
         <script type="importmap">
             {
                 "imports": {
-                    "playcanvas": "https://esm.run/playcanvas@2.2.2",
-                    "multi-camera": "https://cdn.jsdelivr.net/npm/playcanvas@2.2.2/scripts/camera/multi-camera.js"
+                    "playcanvas": "https://cdn.jsdelivr.net/npm/playcanvas@2.3.1/build/playcanvas.mjs"
                 }
             }
         </script>
-        <script type="module" src="https://cdn.jsdelivr.net/npm/@playcanvas/web-components@0.1.7/dist/pwc.mjs"></script>
+        <script type="module" src="https://cdn.jsdelivr.net/npm/@playcanvas/web-components@0.1.9/dist/pwc.mjs"></script>
     </head>
     <body>
         <pc-app antialias="false" depth="false" high-resolution="true" stencil="false">
-            <pc-asset id="ply" type="gsplat" src="data:application/ply;base64,{{plyModel}}"></pc-asset>
+            <pc-asset id="ply" type="gsplat" src="data:application/ply;base64,{{plyModel}} preload></pc-asset>
+            <pc-asset id="camera-controls" src="https://cdn.jsdelivr.net/npm/playcanvas@2.3.1/scripts/esm/camera-controls.mjs" preload></pc-asset>
+            <pc-asset id="xr-controllers" src="https://cdn.jsdelivr.net/npm/playcanvas@2.3.1/scripts/esm/xr-controllers.mjs" preload></pc-asset>
+            <pc-asset id="xr-navigation" src="https://cdn.jsdelivr.net/npm/playcanvas@2.3.1/scripts/esm/xr-navigation.mjs" preload></pc-asset>
             <pc-scene>
                 <!-- Camera -->
                 <pc-entity name="camera">
-                    <pc-camera clear-color="{{clearColor}}"></pc-camera>
+                    <pc-camera clear-color="0.4 0.4 0.4"></pc-camera>
                     <pc-scripts>
-                        <pc-script name="multiCamera"></pc-script>
+                        <pc-script name="cameraControls"></pc-script>
                     </pc-scripts>
                 </pc-entity>
                 <!-- Splat -->
@@ -82,58 +84,57 @@ const template = /* html */ `
 
         <!-- Camera Controls -->
         <script type="module">
-            import { BoundingBox, registerScript, Vec3 } from 'playcanvas';
-            import { MultiCamera } from 'multi-camera';
+            import { BoundingBox, Script, Vec3 } from 'playcanvas';
 
-            const appElement = await document.querySelector('pc-app').ready();
-            const app = await appElement.app;
-            registerScript(MultiCamera, 'multiCamera');
+            document.addEventListener('DOMContentLoaded', async () => {
+                const appElement = await document.querySelector('pc-app').ready();
+                const app = await appElement.app;
 
-            await new Promise(resolve => setTimeout(resolve));
+                const entityElement = await document.querySelector('pc-entity[name="camera"]').ready();
+                const entity = entityElement.entity;
 
-            const entityElement = await document.querySelector('pc-entity[name="camera"]').ready();
-            const entity = entityElement.entity;
-            const multiCamera = entity.script.multiCamera;
-
-            const frameScene = (bbox) => {
-                const sceneSize = bbox.halfExtents.length();
-                const distance = sceneSize / Math.sin(entity.camera.fov / 180 * Math.PI * 0.5);
-                multiCamera.sceneSize = sceneSize;
-                multiCamera.focus(bbox.center, new Vec3(2, 1, 2).normalize().mulScalar(distance).add(bbox.center));
-            };
-
-            const resetCamera = (bbox) => {
-                const sceneSize = bbox.halfExtents.length();
-                multiCamera.sceneSize = sceneSize * 0.2;
-                multiCamera.focus(Vec3.ZERO, new Vec3(2, 1, 2));
-            };
-
-            const calcBound = () => {
-                const gsplatComponents = app.root.findComponents('gsplat');
-                return gsplatComponents?.[0]?.instance?.meshInstance?.aabb ?? new BoundingBox();
-            };
-
-            app.assets.on('load', () => {
-                setTimeout(() => {
-                    const bbox = calcBound();
-
-                    if (bbox.halfExtents.length() > 100) {
-                        resetCamera(bbox);
-                    } else {
-                        frameScene(bbox);
+                class FrameScene extends Script {
+                    frameScene(bbox) {
+                        const sceneSize = bbox.halfExtents.length();
+                        const distance = sceneSize / Math.sin(this.entity.camera.fov / 180 * Math.PI * 0.5);
+                        this.entity.script.cameraControls.sceneSize = sceneSize;
+                        this.entity.script.cameraControls.focus(bbox.center, new Vec3(2, 1, 2).normalize().mulScalar(distance).add(bbox.center));
                     }
 
-                    window.addEventListener('keydown', (e) => {
-                        switch (e.key) {
-                            case 'f':
-                                frameScene(bbox);
-                                break;
-                            case 'r':
-                                resetCamera(bbox);
-                                break;
+                    resetCamera(bbox) {
+                        const sceneSize = bbox.halfExtents.length();
+                        this.entity.script.cameraControls.sceneSize = sceneSize * 0.2;
+                        this.entity.script.cameraControls.focus(Vec3.ZERO, new Vec3(2, 1, 2));
+                    }
+
+                    calcBound() {
+                        const gsplatComponents = this.app.root.findComponents('gsplat');
+                        return gsplatComponents?.[0]?.instance?.meshInstance?.aabb ?? new BoundingBox();
+                    }
+
+                    postInitialize() {
+                        const bbox = this.calcBound();
+
+                        if (bbox.halfExtents.length() > 100) {
+                            this.resetCamera(bbox);
+                        } else {
+                            this.frameScene(bbox);
                         }
-                    });
-                });
+
+                        window.addEventListener('keydown', (e) => {
+                            switch (e.key) {
+                                case 'f':
+                                    this.frameScene(bbox);
+                                    break;
+                                case 'r':
+                                    this.resetCamera(bbox);
+                                    break;
+                            }
+                        });
+                    }
+                }
+
+                entity.script.create(FrameScene);
             });
         </script>
 

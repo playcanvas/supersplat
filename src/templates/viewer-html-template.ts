@@ -70,7 +70,7 @@ const template = /* html */ `
             <pc-scene>
                 <!-- Camera -->
                 <pc-entity name="camera">
-                    <pc-camera clear-color="0.4 0.4 0.4"></pc-camera>
+                    <pc-camera clear-color="{{clearColor}}"></pc-camera>
                     <pc-scripts>
                         <pc-script name="cameraControls"></pc-script>
                     </pc-scripts>

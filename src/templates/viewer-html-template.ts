@@ -63,10 +63,10 @@ const template = /* html */ `
     </head>
     <body>
         <pc-app antialias="false" depth="false" high-resolution="true" stencil="false">
-            <pc-asset id="ply" type="gsplat" src="data:application/ply;base64,{{plyModel}} preload></pc-asset>
             <pc-asset id="camera-controls" src="https://cdn.jsdelivr.net/npm/playcanvas@2.3.1/scripts/esm/camera-controls.mjs" preload></pc-asset>
             <pc-asset id="xr-controllers" src="https://cdn.jsdelivr.net/npm/playcanvas@2.3.1/scripts/esm/xr-controllers.mjs" preload></pc-asset>
             <pc-asset id="xr-navigation" src="https://cdn.jsdelivr.net/npm/playcanvas@2.3.1/scripts/esm/xr-navigation.mjs" preload></pc-asset>
+            <pc-asset id="ply" type="gsplat" src="data:application/ply;base64,{{plyModel}} preload></pc-asset>
             <pc-scene>
                 <!-- Camera (with XR support) -->
                 <pc-entity name="camera root">

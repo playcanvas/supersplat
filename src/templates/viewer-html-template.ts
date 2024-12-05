@@ -4,7 +4,7 @@ const template = /* html */ `
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-        <title>3D Gaussian Splat Viewer</title>
+        <title>SuperSplat Viewer</title>
         <style>
             * {
                 margin: 0;

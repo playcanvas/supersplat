@@ -123,17 +123,6 @@ const template = /* html */ `
                 const entityElement = await document.querySelector('pc-entity[name="camera"]').ready();
                 const entity = entityElement.entity;
 
-                // Handle loading indicator for PLY asset
-                const plyAsset = document.querySelector('pc-asset[id="ply"]');
-                const asset = plyAsset.asset;
-                if (asset.loaded) {
-                    document.getElementById('loadingIndicator').classList.add('hidden');
-                } else {
-                    asset.on('load', () => {
-                        document.getElementById('loadingIndicator').classList.add('hidden');
-                    });
-                }
-
                 class FrameScene extends Script {
                     frameScene(bbox) {
                         const sceneSize = bbox.halfExtents.length();
@@ -153,7 +142,9 @@ const template = /* html */ `
                         return gsplatComponents?.[0]?.instance?.meshInstance?.aabb ?? new BoundingBox();
                     }
 
-                    postInitialize() {
+                    initCamara() {
+                        document.getElementById('loadingIndicator').classList.add('hidden');
+
                         const bbox = this.calcBound();
 
                         if (bbox.halfExtents.length() > 100) {
@@ -172,6 +163,20 @@ const template = /* html */ `
                                     break;
                             }
                         });
+                    }
+
+                    postInitialize() {
+                        const assets = this.app.assets.filter(asset => asset.type === 'gsplat');
+                        if (assets.length > 0) {
+                            const asset = assets[0];
+                            if (asset.loaded) {
+                                this.initCamara();
+                            } else {
+                                asset.on('load', () => {
+                                    this.initCamara();
+                                });
+                            }
+                        }
                     }
                 }
 

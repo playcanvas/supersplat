@@ -20,8 +20,6 @@ const template = /* html */ `
             #infoPanel {
                 font-family: 'Arial', sans-serif;
                 color: #2c3e50;
-            }
-            #infoPanel > div {
                 position: fixed;
                 top: 0;
                 left: 0;
@@ -29,12 +27,11 @@ const template = /* html */ `
                 height: 100%;
                 background: rgba(0, 0, 0, 0.3);
                 z-index: 999;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
-            #infoPanel > div > div {
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
+            #infoPanelContent {
                 background: rgba(255, 255, 255, 0.95);
                 padding: 20px;
                 border-radius: 8px;
@@ -42,7 +39,6 @@ const template = /* html */ `
                 box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
                 backdrop-filter: blur(8px);
                 -webkit-backdrop-filter: blur(8px);
-                z-index: 1000;
             }
         </style>
         <script type="importmap">
@@ -81,7 +77,22 @@ const template = /* html */ `
             </pc-scene>
         </pc-app>
 
-        <!-- Camera Controls -->
+        <!-- Info Panel -->
+        <div id="infoPanel" class="hidden" onclick="document.getElementById('infoPanel').classList.add('hidden')">
+            <div id="infoPanelContent" onclick="event.stopPropagation()">
+                <h3 style="margin-top: 0;">Controls</h3>
+                <div>Left mouse button - Orbit</div>
+                <div>Middle mouse button - Pan</div>
+                <div>Right mouse button - Look around</div>
+                <div>Mouse wheel - Zoom</div>
+                <div>W,S,A,D - Fly</div>
+                <div>Shift - Fly faster</div>
+                <div>Ctrl - Fly slower</div>
+                <div>F - Frame the scene</div>
+                <div>R - Return to the origin</div>
+            </div>
+        </div>
+
         <script type="module">
             import { BoundingBox, Script, Vec3 } from 'playcanvas';
 
@@ -252,45 +263,6 @@ const template = /* html */ `
                 document.body.appendChild(container);
             });
         </script>
-
-        <!-- Info Panel -->
-        <div id="infoPanel" class="hidden">
-            <div style="
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.3);
-                z-index: 999;
-            " onclick="document.getElementById('infoPanel').classList.add('hidden')">
-                <div style="
-                    position: fixed;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    background: rgba(255, 255, 255, 0.9);
-                    padding: 20px;
-                    border-radius: 8px;
-                    border: 1px solid #ddd;
-                    backdrop-filter: blur(8px);
-                    -webkit-backdrop-filter: blur(8px);
-                    z-index: 1000;
-                    color: #2c3e50;
-                " onclick="event.stopPropagation()">
-                    <h3 style="margin-top: 0;">Controls</h3>
-                    <div>Left mouse button - Orbit</div>
-                    <div>Middle mouse button - Pan</div>
-                    <div>Right mouse button - Look around</div>
-                    <div>Mouse wheel - Zoom</div>
-                    <div>W,S,A,D - Fly</div>
-                    <div>Shift - Fly faster</div>
-                    <div>Ctrl - Fly slower</div>
-                    <div>F - Frame the scene</div>
-                    <div>R - Return to the origin</div>
-                </div>
-            </div>
-        </div>
     </body>
 </html>
 `;

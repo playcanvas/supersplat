@@ -272,7 +272,7 @@ const serializePly = async (splats: Splat[], write: WriteFunc) => {
 
             // write
             for (let j = 0; j < propNames.length; ++j) {
-                dataView.setFloat32(offset, splat[propNames[j]]);
+                dataView.setFloat32(offset, splat[propNames[j]], true);
                 offset += 4;
             }
 
@@ -766,35 +766,35 @@ const serializePlyCompressed = async (splats: Splat[], write: WriteFunc) => {
         const off = chunkOffset + i * 18 * 4;
 
         // write chunk data
-        dataView.setFloat32(off + 0, result.px.min);
-        dataView.setFloat32(off + 4, result.py.min);
-        dataView.setFloat32(off + 8, result.pz.min);
-        dataView.setFloat32(off + 12, result.px.max);
-        dataView.setFloat32(off + 16, result.py.max);
-        dataView.setFloat32(off + 20, result.pz.max);
+        dataView.setFloat32(off + 0, result.px.min, true);
+        dataView.setFloat32(off + 4, result.py.min, true);
+        dataView.setFloat32(off + 8, result.pz.min, true);
+        dataView.setFloat32(off + 12, result.px.max, true);
+        dataView.setFloat32(off + 16, result.py.max, true);
+        dataView.setFloat32(off + 20, result.pz.max, true);
 
-        dataView.setFloat32(off + 24, result.sx.min);
-        dataView.setFloat32(off + 28, result.sy.min);
-        dataView.setFloat32(off + 32, result.sz.min);
-        dataView.setFloat32(off + 36, result.sx.max);
-        dataView.setFloat32(off + 40, result.sy.max);
-        dataView.setFloat32(off + 44, result.sz.max);
+        dataView.setFloat32(off + 24, result.sx.min, true);
+        dataView.setFloat32(off + 28, result.sy.min, true);
+        dataView.setFloat32(off + 32, result.sz.min, true);
+        dataView.setFloat32(off + 36, result.sx.max, true);
+        dataView.setFloat32(off + 40, result.sy.max, true);
+        dataView.setFloat32(off + 44, result.sz.max, true);
 
-        dataView.setFloat32(off + 48, result.cr.min);
-        dataView.setFloat32(off + 52, result.cg.min);
-        dataView.setFloat32(off + 56, result.cb.min);
-        dataView.setFloat32(off + 60, result.cr.max);
-        dataView.setFloat32(off + 64, result.cg.max);
-        dataView.setFloat32(off + 68, result.cb.max);
+        dataView.setFloat32(off + 48, result.cr.min, true);
+        dataView.setFloat32(off + 52, result.cg.min, true);
+        dataView.setFloat32(off + 56, result.cb.min, true);
+        dataView.setFloat32(off + 60, result.cr.max, true);
+        dataView.setFloat32(off + 64, result.cg.max, true);
+        dataView.setFloat32(off + 68, result.cb.max, true);
 
         // write splat data
         const offset = vertexOffset + i * 256 * 4 * 4;
         const chunkSplats = Math.min(numSplats, (i + 1) * 256) - i * 256;
         for (let j = 0; j < chunkSplats; ++j) {
-            dataView.setUint32(offset + j * 4 * 4 + 0, chunk.position[j]);
-            dataView.setUint32(offset + j * 4 * 4 + 4, chunk.rotation[j]);
-            dataView.setUint32(offset + j * 4 * 4 + 8, chunk.scale[j]);
-            dataView.setUint32(offset + j * 4 * 4 + 12, chunk.color[j]);
+            dataView.setUint32(offset + j * 4 * 4 + 0, chunk.position[j], true);
+            dataView.setUint32(offset + j * 4 * 4 + 4, chunk.rotation[j], true);
+            dataView.setUint32(offset + j * 4 * 4 + 8, chunk.scale[j], true);
+            dataView.setUint32(offset + j * 4 * 4 + 12, chunk.color[j], true);
         }
     }
 
@@ -857,13 +857,13 @@ const serializeSplat = async (splats: Splat[], write: WriteFunc) => {
 
             v.set(x[i], y[i], z[i]);
             mat.transformPoint(v, v);
-            dataView.setFloat32(off + 0, v.x);
-            dataView.setFloat32(off + 4, v.y);
-            dataView.setFloat32(off + 8, v.z);
+            dataView.setFloat32(off + 0, v.x, true);
+            dataView.setFloat32(off + 4, v.y, true);
+            dataView.setFloat32(off + 8, v.z, true);
 
-            dataView.setFloat32(off + 12, Math.exp(scale_0[i]) * scale.x);
-            dataView.setFloat32(off + 16, Math.exp(scale_1[i]) * scale.x);
-            dataView.setFloat32(off + 20, Math.exp(scale_2[i]) * scale.x);
+            dataView.setFloat32(off + 12, Math.exp(scale_0[i]) * scale.x, true);
+            dataView.setFloat32(off + 16, Math.exp(scale_1[i]) * scale.x, true);
+            dataView.setFloat32(off + 20, Math.exp(scale_2[i]) * scale.x, true);
 
             const clr = {
                 f_dc_0: f_dc_0[i],

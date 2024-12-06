@@ -202,6 +202,8 @@ const template = /* html */ `
                         this.entity.camera.horizontalFov = true;
                         this.entity.camera.farClip = bbox.halfExtents.length() * 20;
                         this.entity.camera.nearClip = this.entity.camera.farClip * 0.001;
+                        // set NEUTRAL tonemapping until https://github.com/playcanvas/engine/pull/7179 is deployed
+                        this.entity.camera.toneMapping = 5;
 
                         if (bbox.halfExtents.length() > 100 || resetPosition || resetTarget) {
                             this.resetCamera(bbox);

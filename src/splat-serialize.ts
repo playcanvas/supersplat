@@ -912,6 +912,7 @@ const serializeViewer = async (splats: Splat[], write: WriteFunc) => {
 
     // use camera clear color
     const bgClr = events.invoke('bgClr');
+    const fov = events.invoke('camera.fov');
     const pose = events.invoke('camera.poses')?.[0];
     const p = pose && pose.position;
     const t = pose && pose.target;
@@ -919,9 +920,10 @@ const serializeViewer = async (splats: Splat[], write: WriteFunc) => {
     const html = ViewerHtmlTemplate
     .replace('{{backgroundColor}}', `rgb(${bgClr.r * 255} ${bgClr.g * 255} ${bgClr.b * 255})`)
     .replace('{{clearColor}}', `${bgClr.r} ${bgClr.g} ${bgClr.b}`)
-    .replace('{{plyModel}}', plyModel)
+    .replace('{{fov}}', `${fov.toFixed(2)}`)
     .replace('{{resetPosition}}', pose ? `new Vec3(${p.x}, ${p.y}, ${p.z})` : 'null')
-    .replace('{{resetTarget}}', pose ? `new Vec3(${t.x}, ${t.y}, ${t.z})` : 'null');
+    .replace('{{resetTarget}}', pose ? `new Vec3(${t.x}, ${t.y}, ${t.z})` : 'null')
+    .replace('{{plyModel}}', plyModel);
 
     await write(new TextEncoder().encode(html), true);
 };

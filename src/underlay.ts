@@ -49,7 +49,7 @@ class Underlay extends Element {
             BLENDEQUATION_ADD, BLENDMODE_ZERO, BLENDMODE_ONE
         );
 
-        this.entity.camera.onPostRenderLayer = (layer: Layer, transparent: boolean) => {
+        this.entity.camera.on('postRenderLayer', (layer: Layer, transparent: boolean) => {
             if (!this.entity.enabled || layer !== this.scene.overlayLayer || !transparent) {
                 return;
             }
@@ -63,7 +63,7 @@ class Underlay extends Element {
             glDevice.updateBegin();
             this.quadRender.render();
             glDevice.updateEnd();
-        };
+        });
     }
 
     remove() {

@@ -1,7 +1,10 @@
 import {
+    EVENT_POSTRENDER_LAYER,
+    EVENT_PRERENDER_LAYER,
     LAYERID_DEPTH,
     SORTMODE_NONE,
     BoundingBox,
+    CameraComponent,
     Color,
     Entity,
     Layer,
@@ -126,6 +129,15 @@ class Scene {
         // force render on device restored
         this.app.graphicsDevice.on('devicerestored', () => {
             this.forceRender = true;
+        });
+
+        // fire pre and post render events on the camera
+        this.app.scene.on(EVENT_PRERENDER_LAYER, (camera: CameraComponent, layer: Layer, transparent: boolean) => {
+            camera.fire('preRenderLayer', layer, transparent);
+        });
+
+        this.app.scene.on(EVENT_POSTRENDER_LAYER, (camera: CameraComponent, layer: Layer, transparent: boolean) => {
+            camera.fire('postRenderLayer', layer, transparent);
         });
 
         // background layer

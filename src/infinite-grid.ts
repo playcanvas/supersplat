@@ -45,7 +45,7 @@ class InfiniteGrid extends Element {
             BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE_MINUS_SRC_ALPHA
         );
 
-        this.scene.events.on('camera.preRenderLayer', (layer: Layer, transparent: boolean) => {
+        this.scene.camera.entity.camera.on('preRenderLayer', (layer: Layer, transparent: boolean) => {
             if (this.visible && layer === this.scene.debugLayer && !transparent) {
                 device.setBlendState(blendState);
                 device.setCullMode(CULLFACE_NONE);

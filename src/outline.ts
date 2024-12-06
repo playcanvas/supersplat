@@ -50,7 +50,7 @@ class Outline extends Element {
         const clrStorage = [1, 1, 1, 1];
 
         // apply the outline texture to the display before gizmos render
-        this.entity.camera.onPostRenderLayer = (layer: Layer, transparent: boolean) => {
+        this.entity.camera.on('postRenderLayer', (layer: Layer, transparent: boolean) => {
             if (!this.entity.enabled || layer !== this.scene.overlayLayer || !transparent) {
                 return;
             }
@@ -73,7 +73,7 @@ class Outline extends Element {
             glDevice.updateBegin();
             this.quadRender.render();
             glDevice.updateEnd();
-        };
+        });
     }
 
     remove() {

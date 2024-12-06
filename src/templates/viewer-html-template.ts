@@ -171,6 +171,9 @@ const template = /* html */ `
                 const entityElement = await document.querySelector('pc-entity[name="camera"]').ready();
                 const entity = entityElement.entity;
 
+                const resetPosition = {{resetPosition}};
+                const resetTarget = {{resetTarget}};
+
                 class FrameScene extends Script {
                     frameScene(bbox) {
                         const sceneSize = bbox.halfExtents.length();
@@ -182,7 +185,7 @@ const template = /* html */ `
                     resetCamera(bbox) {
                         const sceneSize = bbox.halfExtents.length();
                         this.entity.script.cameraControls.sceneSize = sceneSize * 0.2;
-                        this.entity.script.cameraControls.focus(Vec3.ZERO, new Vec3(2, 1, 2));
+                        this.entity.script.cameraControls.focus(resetTarget ?? Vec3.ZERO, resetPosition ?? new Vec3(2, 1, 2));
                     }
 
                     calcBound() {
@@ -195,7 +198,7 @@ const template = /* html */ `
 
                         const bbox = this.calcBound();
 
-                        if (bbox.halfExtents.length() > 100) {
+                        if (bbox.halfExtents.length() > 100 || resetPosition || resetTarget) {
                             this.resetCamera(bbox);
                         } else {
                             this.frameScene(bbox);

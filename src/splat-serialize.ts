@@ -900,6 +900,8 @@ const encodeBase64 = (bytes: Uint8Array) => {
 };
 
 const serializeViewer = async (splats: Splat[], write: WriteFunc) => {
+    const { events } = splats[0].scene;
+
     // create compressed PLY data
     let compressedData: Uint8Array;
     serializePlyCompressed(splats, (data, finalWrite) => {
@@ -909,11 +911,17 @@ const serializeViewer = async (splats: Splat[], write: WriteFunc) => {
     const plyModel = encodeBase64(compressedData);
 
     // use camera clear color
-    const bgClr = splats[0].scene.events.invoke('bgClr');
+    const bgClr = events.invoke('bgClr');
+    const pose = events.invoke('camera.poses')?.[0];
+    const p = pose && pose.position;
+    const t = pose && pose.target;
+
     const html = ViewerHtmlTemplate
     .replace('{{backgroundColor}}', `rgb(${bgClr.r * 255} ${bgClr.g * 255} ${bgClr.b * 255})`)
     .replace('{{clearColor}}', `${bgClr.r} ${bgClr.g} ${bgClr.b}`)
-    .replace('{{plyModel}}', plyModel);
+    .replace('{{plyModel}}', plyModel)
+    .replace('{{resetPosition}}', pose ? `new Vec3(${p.x}, ${p.y}, ${p.z})` : 'null')
+    .replace('{{resetTarget}}', pose ? `new Vec3(${t.x}, ${t.y}, ${t.z})` : 'null');
 
     await write(new TextEncoder().encode(html), true);
 };

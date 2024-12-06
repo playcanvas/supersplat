@@ -920,9 +920,8 @@ const serializeViewer = async (splats: Splat[], write: WriteFunc) => {
     .replace('{{backgroundColor}}', `rgb(${bgClr.r * 255} ${bgClr.g * 255} ${bgClr.b * 255})`)
     .replace('{{clearColor}}', `${bgClr.r} ${bgClr.g} ${bgClr.b}`)
     .replace('{{plyModel}}', plyModel)
-    .replace('{{resetPosition}}', pose ? `new Vec3(${p.x}, ${p.y}, ${p.z})` : `null`)
-    .replace('{{resetTarget}}', pose ? `new Vec3(${t.x}, ${t.y}, ${t.z})` : `null`);
-    
+    .replace('{{resetPosition}}', pose ? `new Vec3(${p.x}, ${p.y}, ${p.z})` : 'null')
+    .replace('{{resetTarget}}', pose ? `new Vec3(${t.x}, ${t.y}, ${t.z})` : 'null');
 
     await write(new TextEncoder().encode(html), true);
 };

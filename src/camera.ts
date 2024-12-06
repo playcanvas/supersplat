@@ -21,7 +21,7 @@ import {
     Texture,
     Vec3,
     Vec4,
-    WebglGraphicsDevice,
+    WebglGraphicsDevice
 } from 'playcanvas';
 
 import { PointerController } from './controllers';

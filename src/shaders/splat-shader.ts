@@ -171,6 +171,12 @@ void main(void) {
             color.xyz = max(vec3(0.0), color.xyz + evalSH(state, projState));
         #endif
 
+        // apply tint/brightness
+        color = color * clrScale + vec4(clrOffset, 0.0);
+
+        // don't allow out-of-range alpha
+        color.a = clamp(color.a, 0.0, 1.0);
+
         // apply locked/selected colors
         if ((vertexState & 2u) != 0u) {
             // locked
@@ -178,9 +184,6 @@ void main(void) {
         } else if ((vertexState & 1u) != 0u) {
             // selected
             color.xyz = mix(color.xyz, selectedClr.xyz * 0.8, selectedClr.a);
-        } else {
-            // apply tint/brightness
-            color = color * clrScale + vec4(clrOffset, 0.0);
         }
     
     #endif

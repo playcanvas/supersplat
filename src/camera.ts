@@ -49,9 +49,6 @@ const ray = new Ray();
 const vec = new Vec3();
 const vecb = new Vec3();
 const va = new Vec3();
-const vb = new Vec3();
-const vc = new Vec3();
-const v4 = new Vec4();
 
 // modulo dealing with negative numbers
 const mod = (n: number, m: number) => ((n % m) + m) % m;

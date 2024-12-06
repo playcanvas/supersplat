@@ -37,7 +37,7 @@ const dp = (n: number, start: number, a: number[] | Float32Array, b: number[] | 
     return sum;
 };
 
-const coeffsIn = new Float32Array(16);
+const coeffsIn = new Float32Array(15);
 
 // Rotate spherical harmonics up to band 3 based on https://github.com/andrewwillmott/sh-lib
 //
@@ -155,38 +155,35 @@ class SHRotation {
                 src = coeffsIn;
             }
 
-            // band 0
-            result[0] = src[0];
-
             // band 1
-            if (result.length < 4) {
+            if (result.length < 3) {
                 return;
             }
-            result[1] = dp(3, 1, src, sh1[0]);
-            result[2] = dp(3, 1, src, sh1[1]);
-            result[3] = dp(3, 1, src, sh1[2]);
+            result[0] = dp(3, 0, src, sh1[0]);
+            result[1] = dp(3, 0, src, sh1[1]);
+            result[2] = dp(3, 0, src, sh1[2]);
 
             // band 2
-            if (result.length < 9) {
+            if (result.length < 8) {
                 return;
             }
-            result[4] = dp(5, 4, src, sh2[0]);
-            result[5] = dp(5, 4, src, sh2[1]);
-            result[6] = dp(5, 4, src, sh2[2]);
-            result[7] = dp(5, 4, src, sh2[3]);
-            result[8] = dp(5, 4, src, sh2[4]);
+            result[3] = dp(5, 3, src, sh2[0]);
+            result[4] = dp(5, 3, src, sh2[1]);
+            result[5] = dp(5, 3, src, sh2[2]);
+            result[6] = dp(5, 3, src, sh2[3]);
+            result[7] = dp(5, 3, src, sh2[4]);
 
             // band 3
-            if (result.length < 16) {
+            if (result.length < 15) {
                 return;
             }
-            result[9]  = dp(7, 9, src, sh3[0]);
-            result[10] = dp(7, 9, src, sh3[1]);
-            result[11] = dp(7, 9, src, sh3[2]);
-            result[12] = dp(7, 9, src, sh3[3]);
-            result[13] = dp(7, 9, src, sh3[4]);
-            result[14] = dp(7, 9, src, sh3[5]);
-            result[15] = dp(7, 9, src, sh3[6]);
+            result[8]  = dp(7, 8, src, sh3[0]);
+            result[9]  = dp(7, 8, src, sh3[1]);
+            result[10] = dp(7, 8, src, sh3[2]);
+            result[11] = dp(7, 8, src, sh3[3]);
+            result[12] = dp(7, 8, src, sh3[4]);
+            result[13] = dp(7, 8, src, sh3[5]);
+            result[14] = dp(7, 8, src, sh3[6]);
         };
     }
 }

@@ -412,9 +412,15 @@ class Camera extends Element {
         vec.sub2(bound.center, cameraPosition);
         const dist = vec.dot(forwardVec);
 
-        this.far = dist + boundRadius;
-        // if camera is placed inside the sphere bound calculate near based far
-        this.near = Math.max(1e-6, dist < boundRadius ? this.far / (1024 * 16) : dist - boundRadius);
+        if (dist > 0) {
+            this.far = dist + boundRadius;
+            // if camera is placed inside the sphere bound calculate near based far
+            this.near = Math.max(1e-6, dist < boundRadius ? this.far / (1024 * 16) : dist - boundRadius);
+        } else {
+            // if the scene is behind the camera
+            this.far = boundRadius * 2;
+            this.near = this.far / (1024 * 16);
+        }
     }
 
     onPreRender() {

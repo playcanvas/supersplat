@@ -4,10 +4,16 @@ import {
     FILTER_NEAREST,
     PIXELFORMAT_RGBA8,
     PIXELFORMAT_DEPTH,
+    PROJECTION_ORTHOGRAPHIC,
+    PROJECTION_PERSPECTIVE,
+    TONEMAP_ACES,
+    TONEMAP_ACES2,
+    TONEMAP_FILMIC,
+    TONEMAP_HEJL,
+    TONEMAP_LINEAR,
+    TONEMAP_NEUTRAL,
     BoundingBox,
     Entity,
-    Layer,
-    Mat4,
     Picker,
     Plane,
     Ray,
@@ -15,14 +21,7 @@ import {
     Texture,
     Vec3,
     Vec4,
-    WebglGraphicsDevice,
-    PROJECTION_ORTHOGRAPHIC,
-    PROJECTION_PERSPECTIVE,
-    TONEMAP_LINEAR,
-    TONEMAP_FILMIC,
-    TONEMAP_HEJL,
-    TONEMAP_ACES,
-    TONEMAP_ACES2
+    WebglGraphicsDevice
 } from 'playcanvas';
 
 import { PointerController } from './controllers';
@@ -225,12 +224,13 @@ class Camera extends Element {
         this.maxElev = (controls.maxPolarAngle * 180) / Math.PI - 90;
 
         // tonemapping
-        this.scene.app.scene.rendering.toneMapping = {
+        this.scene.camera.entity.camera.toneMapping = {
             linear: TONEMAP_LINEAR,
             filmic: TONEMAP_FILMIC,
             hejl: TONEMAP_HEJL,
             aces: TONEMAP_ACES,
-            aces2: TONEMAP_ACES2
+            aces2: TONEMAP_ACES2,
+            neutral: TONEMAP_NEUTRAL
         }[config.camera.toneMapping];
 
         // exposure
@@ -251,11 +251,6 @@ class Camera extends Element {
         this.picker.releaseRenderTarget = () => { };
 
         this.scene.events.on('scene.boundChanged', this.onBoundChanged, this);
-
-        // multiple elements in the scene require this callback
-        this.entity.camera.onPreRenderLayer = (layer: Layer, transparent: boolean) => {
-            this.scene.events.fire('camera.preRenderLayer', layer, transparent);
-        };
 
         // prepare camera-specific uniforms
         this.updateCameraUniforms = () => {
@@ -313,7 +308,7 @@ class Camera extends Element {
     // also update the existing camera distance to maintain the current view
     onBoundChanged(bound: BoundingBox) {
         const prevDistance = this.distanceTween.value.distance * this.sceneRadius;
-        this.sceneRadius = bound.halfExtents.length();
+        this.sceneRadius = Math.max(1e-03, bound.halfExtents.length());
         this.setDistance(prevDistance / this.sceneRadius, 0);
     }
 

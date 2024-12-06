@@ -124,19 +124,19 @@ const template = /* html */ `
                 <h3>Controls</h3>
                 <div class="control-item">
                     <span class="control-action">Orbit</span>
-                    <span class="control-key">Left mouse button</span>
+                    <span class="control-key">Left Mouse Button</span>
                 </div>
                 <div class="control-item">
                     <span class="control-action">Pan</span>
-                    <span class="control-key">Middle mouse button</span>
+                    <span class="control-key">Middle Mouse Button</span>
                 </div>
                 <div class="control-item">
                     <span class="control-action">Look around</span>
-                    <span class="control-key">Right mouse button</span>
+                    <span class="control-key">Right Mouse Button</span>
                 </div>
                 <div class="control-item">
                     <span class="control-action">Zoom</span>
-                    <span class="control-key">Mouse wheel</span>
+                    <span class="control-key">Mouse Wheel</span>
                 </div>
                 <div class="control-item">
                     <span class="control-action">Fly</span>
@@ -151,11 +151,11 @@ const template = /* html */ `
                     <span class="control-key">Ctrl</span>
                 </div>
                 <div class="control-item">
-                    <span class="control-action">Frame the scene</span>
+                    <span class="control-action">Frame Scene</span>
                     <span class="control-key">F</span>
                 </div>
                 <div class="control-item">
-                    <span class="control-action">Return to origin</span>
+                    <span class="control-action">Reset Camera</span>
                     <span class="control-key">R</span>
                 </div>
             </div>

@@ -127,9 +127,7 @@ class Splat extends Element {
             const material = instance.material;
 
             const numBands = instance.splat.hasSH ? bands : 0;
-            material.setDefine('USE_SH1', numBands > 0 ? '1' : false);
-            material.setDefine('USE_SH2', numBands > 1 ? '1' : false);
-            material.setDefine('USE_SH3', numBands > 2 ? '1' : false);
+            material.setDefine('SH_BANDS', `${numBands}`);
             material.setParameter('splatState', this.stateTexture);
             material.setParameter('splatTransform', this.transformTexture);
             material.setParameter('transformPalette', this.transformPalette.texture);
@@ -304,7 +302,6 @@ class Splat extends Element {
         const material = this.entity.gsplat.instance.material;
         material.setParameter('mode', cameraMode === 'rings' ? 1 : 0);
         material.setParameter('ringSize', (selected && cameraOverlay && cameraMode === 'rings') ? 0.04 : 0);
-        material.setParameter('ortho', this.scene.camera.ortho ? 1 : 0);
 
         const selectionAlpha = events.invoke('view.outlineSelection') ? 0 : this.selectionAlpha;
 

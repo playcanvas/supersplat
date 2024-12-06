@@ -94,7 +94,7 @@ const template = /* html */ `
                 <!-- Camera (with XR support) -->
                 <pc-entity name="camera root">
                     <pc-entity name="camera">
-                        <pc-camera clear-color="{{clearColor}}"></pc-camera>
+                        <pc-camera clear-color="{{clearColor}}" fov="{{fov}}"></pc-camera>
                         <pc-scripts>
                             <pc-script name="cameraControls"></pc-script>
                         </pc-scripts>
@@ -197,6 +197,11 @@ const template = /* html */ `
                         document.getElementById('loadingIndicator').classList.add('hidden');
 
                         const bbox = this.calcBound();
+
+                        // configure camera
+                        this.entity.camera.horizontalFov = true;
+                        this.entity.camera.farClip = bbox.halfExtents.length() * 20;
+                        this.entity.camera.nearClip = this.entity.camera.farClip * 0.001;
 
                         if (bbox.halfExtents.length() > 100 || resetPosition || resetTarget) {
                             this.resetCamera(bbox);

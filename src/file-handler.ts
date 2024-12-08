@@ -359,20 +359,26 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
 
     const writeScene = async (type: ExportType, writeFunc: WriteFunc) => {
         const splats = getSplats();
+        const events = splats[0].scene.events;
+
+        const options = {
+            splats: splats,
+            maxSHBands: events.invoke('view.bands')
+        };
 
         switch (type) {
             case 'ply':
-                await serializePly(splats, writeFunc);
+                await serializePly(options, writeFunc);
                 break;
             case 'compressed-ply':
-                await serializePlyCompressed(splats, writeFunc);
-                return;
+                await serializePlyCompressed(options, writeFunc);
+                break;
             case 'splat':
-                await serializeSplat(splats, writeFunc);
-                return;
+                await serializeSplat(options, writeFunc);
+                break;
             case 'viewer':
-                await serializeViewer(splats, writeFunc);
-
+                await serializeViewer(options, writeFunc);
+                break;
         }
     };
 

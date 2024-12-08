@@ -203,9 +203,11 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         }
     });
 
-    // get the array of visible splats
+    // get the list of visible splats containing gaussians
     const getSplats = () => {
-        return (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
+        return (scene.getElementsByType(ElementType.splat) as Splat[])
+            .filter(splat => splat.visible)
+            .filter(splat => splat.numSplats - splat.numDeleted > 0);
     };
 
     events.function('scene.empty', () => {

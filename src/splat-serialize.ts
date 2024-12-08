@@ -48,6 +48,17 @@ const getCommonPropNames = (splats: Splat[]) => {
     return [...result];
 };
 
+const shNames = new Array(45).fill('').map((_, i) => `f_rest_${i}`);
+const shBandCoeffs = [0, 3, 8, 15];
+
+// determine the number of sh bands present given an object with 'f_rest_*' properties
+const calcSHBands = (data: Set<string>) => {
+    return { '9': 1, '24': 2, '-1': 3 }[shNames.findIndex(v => !data.has(v))] ?? 0;
+};
+
+const v = new Vec3();
+const q = new Quat();
+
 // calculate splat transforms on demand and cache the result for next time
 class SplatTransformCache {
     getMat: (index: number) => Mat4;
@@ -130,14 +141,6 @@ class SplatTransformCache {
     }
 }
 
-const shNames = new Array(45).fill('').map((_, i) => `f_rest_${i}`);
-const shBandCoeffs = [0, 3, 8, 15];
-
-// calculate the number of bands present in the object
-const calcSHBands = (data: any) => {
-    return { '3': 1, '8': 2, '-1': 3 }[shNames.findIndex(v => !data.hasOwnProperty(v))] ?? 0;
-};
-
 // helper class for extracting and transforming a single splat's data
 // to prepare it for export
 class SingleSplat {
@@ -158,7 +161,7 @@ class SingleSplat {
         const hasColor = ['f_dc_0', 'f_dc_1', 'f_dc_2'].every(v => data.hasOwnProperty(v));
         const hasOpacity = data.hasOwnProperty('opacity');
 
-        const dstSHBands = calcSHBands(data);
+        const dstSHBands = calcSHBands(new Set(Object.keys(data)));
         const dstSHCoeffs = shBandCoeffs[dstSHBands];
         const tmpSHData = dstSHBands ? new Float32Array(dstSHCoeffs) : null;
 
@@ -166,16 +169,11 @@ class SingleSplat {
             splat: Splat;
             transformCache: SplatTransformCache;
             srcProps: { [name: string]: Float32Array };
-            srcSHBands: number;
-            srcSHProps: Float32Array[];
             hasTint: boolean;
         };
 
         const cacheMap = new Map<Splat, CacheEntry>();
         let cacheEntry: CacheEntry;
-
-        const v = new Vec3();
-        const q = new Quat();
 
         const read = (splat: Splat, i: number) => {
             // get the cached data entry for this splat
@@ -183,17 +181,28 @@ class SingleSplat {
                 if (!cacheMap.has(splat)) {
                     const transformCache = new SplatTransformCache(splat);
 
+                    const srcPropNames = getVertexProperties(splat.splatData);
+                    const srcSHBands = calcSHBands(srcPropNames);
+                    const srcSHCoeffs = shBandCoeffs[srcSHBands];
+
                     // cache the props objects
                     const srcProps: { [name: string]: Float32Array } = {};
-                    members.forEach((name) => srcProps[name] = splat.splatData.getProp(name) as Float32Array);
 
-                    const srcSHBands = calcSHBands(srcProps);
-                    const srcSHProps = shNames.slice(0, shBandCoeffs[srcSHBands]).map(v => srcProps[v]);
+                    members.forEach((name) => {
+                        const shIndex = shNames.indexOf(name);
+                        if (shIndex >= 0) {
+                            const a = Math.floor(shIndex / dstSHCoeffs);
+                            const b = shIndex % dstSHCoeffs;
+                            srcProps[name] = (b < srcSHCoeffs) ? splat.splatData.getProp(shNames[a * srcSHCoeffs + b]) as Float32Array : null;
+                        } else {
+                            srcProps[name] = splat.splatData.getProp(name) as Float32Array;
+                        }
+                    });
 
                     const { blackPoint, whitePoint, brightness, tintClr } = splat;
                     const hasTint = (!tintClr.equals(Color.WHITE) || blackPoint !== 0 || whitePoint !== 1 || brightness !== 1);
 
-                    cacheEntry = { splat, transformCache, srcProps, srcSHBands, srcSHProps, hasTint };
+                    cacheEntry = { splat, transformCache, srcProps, hasTint };
 
                     cacheMap.set(splat, cacheEntry);
                 } else {
@@ -201,28 +210,10 @@ class SingleSplat {
                 }
             }
 
-            const { transformCache, srcProps, srcSHBands, srcSHProps, hasTint } = cacheEntry;
+            const { transformCache, srcProps, hasTint } = cacheEntry;
 
             // copy members
-            if (dstSHBands === 0 || dstSHBands === srcSHBands) {
-                // no SH conversion is needed
-                members.forEach((name) => data[name] = srcProps[name]?.[i] ?? 0);
-            } else {
-                // copy non-SH members
-                members.forEach((name) => {
-                    if (!name.startsWith('f_rest_')) {
-                        data[name] = srcProps[name]?.[i] ?? 0;
-                    }
-                });
-
-                // copy SH data and pad missing elements with 0 or chop off missing SH coefficients
-                const srcSHCoeffs = shBandCoeffs[srcSHBands];
-                for (let c = 0; c < 3; ++c) {
-                    for (let d = 0; d < dstSHCoeffs; ++d) {
-                        data[shNames[c * dstSHCoeffs + d]] = d < srcSHCoeffs ? (srcSHProps[c * srcSHCoeffs + d]?.[i] ?? 0) : 0;
-                    }
-                }
-            }
+            members.forEach((name) => data[name] = srcProps[name]?.[i] ?? 0);
 
             // apply transform palette transforms
             const mat = transformCache.getMat(i);
@@ -320,7 +311,7 @@ const serializePly = async (options: SerializeOptions, write: WriteFunc) => {
                 return true;
             }
             const i = parseInt(p.slice(7));
-            return i < [0, 9, 15, 45][maxSHBands];
+            return i < [0, 9, 24, 45][maxSHBands];
         });
 
     const headerText = [
@@ -410,7 +401,7 @@ class Chunk {
 
     set(index: number, splat: SingleSplat) {
         Chunk.members.forEach((name) => {
-            this.data[name][index] = (splat as any)[name];
+            this.data[name][index] = splat.data[name];
         });
     }
 
@@ -618,91 +609,10 @@ const sortSplats = (splats: Splat[], indices: CompressedIndex[]) => {
     indices.sort((a, b) => morton[a.globalIndex] - morton[b.globalIndex]);
 };
 
-// returns the number of spherical harmonic bands present on a splat scene
-const getSHBands = (splat: Splat) => {
-    let coeffs = 0;
-    for (; coeffs < 45; ++coeffs) {
-        if (!splat.splatData.getProp(`f_rest_${coeffs}`)) break;
-    }
-
-    if (coeffs === 9) {
-        return 1;
-    } else if (coeffs === 24) {
-        return 2;
-    } else if (coeffs === 45) {
-        return 3;
-    }
-
-    return 0;
-};
-
-const quantizeSH = (splats: Splat[], indices: CompressedIndex[], transformCaches: SplatTransformCache[]) => {
-    // get the maximum number of bands in the scene
-    const numBands = Math.max(...splats.map(s => getSHBands(s)));
-    if (numBands === 0) {
-        return null;
-    }
-    const numCoeffs = [3, 8, 15][numBands - 1];
-    const propNames = new Array(numCoeffs * 3).fill('').map((_, i) => `f_rest_${i}`);
-    const splatSHData = splats.map((splat) => {
-        return propNames.map(name => splat.splatData.getProp(name));
-    });
-    const splatTints = splats.map((splat) => {
-        const { blackPoint, whitePoint, tintClr } = splat;
-        const scale = 1 / (whitePoint - blackPoint);
-        return [tintClr.r * scale, tintClr.g * scale, tintClr.b * scale];
-    });
-    const coeffs = new Float32Array(numCoeffs);
-    const data = new Uint8Array(indices.length * numCoeffs * 3);
-
-    for (let i = 0; i < indices.length; ++i) {
-        const index = indices[i];
-        const splatIndex = index.splatIndex;
-        const shIndex = index.i;
-        const shData = splatSHData[splatIndex];
-        const tint = splatTints[splatIndex];
-        const shRot = transformCaches[splatIndex].getSHRot(shIndex);
-
-        for (let j = 0; j < 3; ++j) {
-            // extract sh coefficients
-            for (let k = 0; k < numCoeffs; ++k) {
-                const src = shData[j * numCoeffs + k];
-                coeffs[k] = src ? src[shIndex] : 0;
-            }
-
-            // apply tint
-            for (let k = 0; k < numCoeffs; ++k) {
-                coeffs[k] *= tint[j];
-            }
-
-            // rotate
-            shRot.apply(coeffs, coeffs);
-
-            // quantize
-            for (let k = 0; k < numCoeffs; ++k) {
-                const nvalue = coeffs[k] / 8 + 0.5;
-                data[(i * 3 + j) * numCoeffs + k] = Math.max(0, Math.min(255, Math.trunc(nvalue * 256)));
-            }
-        }
-    }
-
-    return [{
-        name: 'sh',
-        length: indices.length,
-        properties: new Array(numCoeffs * 3).fill('').map((_, i) => {
-            return {
-                name: `f_rest_${i}`,
-                type: 'uchar'
-            };
-        }),
-        data
-    }];
-};
-
 const serializePlyCompressed = async (options: SerializeOptions, write: WriteFunc) => {
     const { splats, maxSHBands } = options;
 
-    // create a list of indices spanning all splats
+    // make a list of indices spanning all splats (so we can sort them together)
     const indices: CompressedIndex[] = [];
     for (let splatIndex = 0; splatIndex < splats.length; ++splatIndex) {
         const splatData = splats[splatIndex].splatData;
@@ -719,16 +629,8 @@ const serializePlyCompressed = async (options: SerializeOptions, write: WriteFun
         return;
     }
 
-    // sort splats into some kind of order (morton order rn)
-    sortSplats(splats, indices);
-
-    // create a transform cache per splat
-    const transformCaches = splats.map(splat => new SplatTransformCache(splat));
-
     const numSplats = indices.length;
     const numChunks = Math.ceil(numSplats / 256);
-
-    const quantizedSHData = quantizeSH(splats, indices, transformCaches);
 
     const chunkProps = [
         'min_x', 'min_y', 'min_z',
@@ -746,12 +648,18 @@ const serializePlyCompressed = async (options: SerializeOptions, write: WriteFun
         'packed_color'
     ];
 
-    const shHeader = quantizedSHData?.map((element) => {
-        return [
-            `element ${element.name} ${element.length}`,
-            element.properties.map(prop => `property ${prop.type} ${prop.name}`)
-        ];
-    }).flat(2);
+    // calculate the number of output bands given the scene splat data and
+    // user-chosen maxSHBands
+    const outputSHBands = (() => {
+        const splatBands = splats.map(s => calcSHBands(getVertexProperties(s.splatData)));
+        return Math.min(maxSHBands, Math.max(...splatBands));
+    })();
+    const outputSHCoeffs = shBandCoeffs[outputSHBands];
+
+    const shHeader = outputSHBands ? [
+        `element sh ${numSplats}`,
+        new Array(outputSHCoeffs * 3).fill('').map((_, i) => `property uchar f_rest_${i}`)
+    ].flat() : [];
 
     const headerText = [
         'ply',
@@ -761,7 +669,7 @@ const serializePlyCompressed = async (options: SerializeOptions, write: WriteFun
         chunkProps.map(p => `property float ${p}`),
         `element vertex ${numSplats}`,
         vertexProps.map(p => `property uint ${p}`),
-        shHeader ?? [],
+        shHeader,
         'end_header\n'
     ].flat().join('\n');
 
@@ -771,7 +679,7 @@ const serializePlyCompressed = async (options: SerializeOptions, write: WriteFun
         header.byteLength +
         numChunks * chunkProps.length * 4 +
         numSplats * vertexProps.length * 4 +
-        (quantizedSHData ? quantizedSHData.reduce((acc, x) => acc + x.data.byteLength, 0) : 0)
+        outputSHCoeffs * 3 * numSplats
     );
     const dataView = new DataView(result.buffer);
 
@@ -779,9 +687,18 @@ const serializePlyCompressed = async (options: SerializeOptions, write: WriteFun
 
     const chunkOffset = header.byteLength;
     const vertexOffset = chunkOffset + numChunks * chunkProps.length * 4;
+    const shOffset = vertexOffset + numSplats * 4 * 4;
+
+    // sort splats into some kind of order (morton order rn)
+    sortSplats(splats, indices);
 
     const chunk = new Chunk();
-    const singleSplat = new SingleSplat();
+    const singleSplat = new SingleSplat([
+        'x', 'y', 'z',
+        'scale_0', 'scale_1', 'scale_2',
+        'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity',
+        'rot_0', 'rot_1', 'rot_2', 'rot_3'
+    ].concat(shNames.slice(0, outputSHCoeffs * 3)));
 
     for (let i = 0; i < numChunks; ++i) {
         const num = Math.min(numSplats, (i + 1) * 256) - i * 256;
@@ -789,17 +706,17 @@ const serializePlyCompressed = async (options: SerializeOptions, write: WriteFun
             const index = indices[i * 256 + j];
 
             // read splat
-            singleSplat.read(splats, index);
+            singleSplat.read(splats[index.splatIndex], index.i);
 
-            // transform
-            const t = transformCaches[index.splatIndex];
-            singleSplat.transform(t.getMat(index.i), t.getRot(index.i), t.getScale(index.i));
-
-            // apply color
-            applyColorTint(singleSplat, splats[index.splatIndex]);
-
-            // set
+            // update chunk
             chunk.set(j, singleSplat);
+
+            // quantize and write sh data
+            let off = shOffset + (i * 256 + j) * outputSHCoeffs * 3;
+            for (let k = 0; k < outputSHCoeffs * 3; ++k) {
+                const nvalue = singleSplat.data[shNames[k]] / 8 + 0.5;
+                dataView.setUint8(off++, Math.max(0, Math.min(255, Math.trunc(nvalue * 256))));
+            }
         }
 
         const result = chunk.pack();
@@ -837,15 +754,6 @@ const serializePlyCompressed = async (options: SerializeOptions, write: WriteFun
             dataView.setUint32(offset + j * 4 * 4 + 8, chunk.scale[j], true);
             dataView.setUint32(offset + j * 4 * 4 + 12, chunk.color[j], true);
         }
-    }
-
-    // write sh data
-    if (quantizedSHData) {
-        let offset = vertexOffset + numSplats * 4 * 4;
-        quantizedSHData.forEach((element) => {
-            result.set(new Uint8Array(element.data.buffer), offset);
-            offset += element.data.byteLength;
-        });
     }
 
     await write(result, true);

@@ -17,7 +17,7 @@ import {
 
 import { Element, ElementType } from './element';
 import { Serializer } from './serializer';
-import { vertexShader, fragmentShader } from './shaders/splat-shader';
+import { vertexShader, fragmentShader, gsplatCenter } from './shaders/splat-shader';
 import { State } from './splat-state';
 import { TransformPalette } from './transform-palette';
 
@@ -77,7 +77,8 @@ class Splat extends Element {
         // get material options object for a shader that renders with the given number of bands
         const materialOptions = {
             vertex: vertexShader,
-            fragment: fragmentShader
+            fragment: fragmentShader,
+            chunks: { gsplatCenterVS: gsplatCenter }
         };
 
         this.asset = asset;

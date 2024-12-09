@@ -2,8 +2,6 @@ const vertexShader = /* glsl*/`
 #include "gsplatCommonVS"
 
 uniform sampler2D splatState;
-uniform highp usampler2D splatTransform;        // per-splat index into transform palette
-uniform sampler2D transformPalette;             // palette of transform matrices
 
 uniform vec4 selectedClr;
 uniform vec4 lockedClr;
@@ -16,106 +14,16 @@ varying mediump vec4 color;
 
 mediump vec4 discardVec = vec4(0.0, 0.0, 2.0, 1.0);
 
-// calculate 2d covariance vectors
-bool projectCenterCustom(SplatState state, vec3 center, out ProjectedState projState, in mat4 modelMat) {
-    // project center to screen space
-    mat4 model_view = matrix_view * modelMat;
-    vec4 centerCam = model_view * vec4(center, 1.0);
-    vec4 centerProj = matrix_projection * centerCam;
-    if (centerProj.z < -centerProj.w) {
-        return false;
-    }
-
-    // get covariance
-    vec3 covA, covB;
-    readCovariance(state, covA, covB);
-
-    mat3 Vrk = mat3(
-        covA.x, covA.y, covA.z, 
-        covA.y, covB.x, covB.y,
-        covA.z, covB.y, covB.z
-    );
-
-    float focal = viewport.x * matrix_projection[0][0];
-
-    vec3 v = camera_params.w == 1.0 ? vec3(0.0, 0.0, 1.0) : centerCam.xyz;
-    float J1 = focal / v.z;
-    vec2 J2 = -J1 / v.z * v.xy;
-    mat3 J = mat3(
-        J1, 0.0, J2.x, 
-        0.0, J1, J2.y, 
-        0.0, 0.0, 0.0
-    );
-
-    mat3 W = transpose(mat3(model_view));
-    mat3 T = W * J;
-    mat3 cov = transpose(T) * Vrk * T;
-
-    float diagonal1 = cov[0][0] + 0.3;
-    float offDiagonal = cov[0][1];
-    float diagonal2 = cov[1][1] + 0.3;
-
-    float mid = 0.5 * (diagonal1 + diagonal2);
-    float radius = length(vec2((diagonal1 - diagonal2) / 2.0, offDiagonal));
-    float lambda1 = mid + radius;
-    float lambda2 = max(mid - radius, 0.1);
-
-    float l1 = 2.0 * min(sqrt(2.0 * lambda1), 1024.0);
-    float l2 = 2.0 * min(sqrt(2.0 * lambda2), 1024.0);
-
-    // early-out gaussians smaller than 2 pixels
-    if (l1 < 2.0 && l2 < 2.0) {
-        return false;
-    }
-
-    // perform clipping test against x/y
-    if (any(greaterThan(abs(centerProj.xy) - vec2(l1, l2) / viewport * centerProj.w, centerProj.ww))) {
-        return false;
-    }
-
-    vec2 diagonalVector = normalize(vec2(offDiagonal, lambda1 - diagonal1));
-    vec2 v1 = l1 * diagonalVector;
-    vec2 v2 = l2 * vec2(diagonalVector.y, -diagonalVector.x);
-
-    projState.modelView = model_view;
-    projState.centerCam = centerCam.xyz;
-    projState.centerProj = centerProj;
-    projState.cornerOffset = (state.cornerUV.x * v1 + state.cornerUV.y * v2) / viewport * centerProj.w;
-    projState.cornerProj = centerProj + vec4(projState.cornerOffset, 0.0, 0.0);
-    projState.cornerUV = state.cornerUV;
-
-    return true;
-}
-
-mat4 applyPaletteTransform(SplatState state, mat4 model) {
-    uint transformIndex = texelFetch(splatTransform, state.uv, 0).r;
-    if (transformIndex == 0u) {
-        return model;
-    }
-
-    // read transform matrix
-    int u = int(transformIndex % 512u) * 3;
-    int v = int(transformIndex / 512u);
-
-    mat4 t;
-    t[0] = texelFetch(transformPalette, ivec2(u, v), 0);
-    t[1] = texelFetch(transformPalette, ivec2(u + 1, v), 0);
-    t[2] = texelFetch(transformPalette, ivec2(u + 2, v), 0);
-    t[3] = vec4(0.0, 0.0, 0.0, 1.0);
-
-    return model * transpose(t);
-}
-
 void main(void) {
     // read gaussian details
-    SplatState state;
-    if (!initState(state)) {
+    SplatSource source;
+    if (!initSource(source)) {
         gl_Position = discardVec;
         return;
     }
 
     // get per-gaussian edit state, discard if deleted
-    uint vertexState = uint(texelFetch(splatState, state.uv, 0).r * 255.0 + 0.5);
+    uint vertexState = uint(texelFetch(splatState, source.uv, 0).r * 255.0 + 0.5);
 
     #if OUTLINE_PASS
         if (vertexState != 1u) {
@@ -140,35 +48,40 @@ void main(void) {
     #endif
 
     // get center
-    vec3 center = readCenter(state);
+    vec3 modelCenter = readCenter(source);
 
-    ProjectedState projState;
-    if (!projectCenterCustom(state, center, projState, applyPaletteTransform(state, matrix_model))) {
+    SplatCenter center;
+    if (!initCenter(source, modelCenter, center)) {
         gl_Position = discardVec;
         return;
     }
 
-    // ensure splats aren't clipped by front and back clipping planes
-    gl_Position = projState.cornerProj;
-    gl_Position.z = clamp(gl_Position.z, -abs(gl_Position.w), abs(gl_Position.w));
+    SplatCorner corner;
+    if (!initCorner(source, center, corner)) {
+        gl_Position = discardVec;
+        return;
+    }
+
+    gl_Position = center.proj + vec4(corner.offset, 0.0, 0.0);
 
     // store texture coord and locked state
-    texCoordIsLocked = vec3(state.cornerUV, (vertexState & 2u) != 0u ? 1.0 : 0.0);
+    texCoordIsLocked = vec3(corner.uv, (vertexState & 2u) != 0u ? 1.0 : 0.0);
 
     #if UNDERLAY_PASS
-        color = readColor(state);
+        color = readColor(source);
         color.xyz = mix(color.xyz, selectedClr.xyz * 0.2, selectedClr.a) * selectedClr.a;
     #elif PICK_PASS
-        uvec3 bits = (uvec3(state.id) >> uvec3(0u, 8u, 16u)) & uvec3(255u);
-        color = vec4(vec3(bits) / 255.0, readColor(state).a);
+        uvec3 bits = (uvec3(source.id) >> uvec3(0u, 8u, 16u)) & uvec3(255u);
+        color = vec4(vec3(bits) / 255.0, readColor(source).a);
     // handle splat color
     #elif FORWARD_PASS
         // read color
-        color = readColor(state);
+        color = readColor(source);
 
         // evaluate spherical harmonics
         #if SH_BANDS > 0
-            color.xyz = max(vec3(0.0), color.xyz + evalSH(state, projState));
+            vec3 dir = normalize(center.view * mat3(center.modelView));
+            color.xyz += evalSH(source, dir);
         #endif
 
         // apply tint/brightness
@@ -234,4 +147,54 @@ void main(void) {
 }
 `;
 
-export { vertexShader, fragmentShader };
+const gsplatCenter = /* glsl*/`
+uniform mat4 matrix_model;
+uniform mat4 matrix_view;
+uniform mat4 matrix_projection;
+
+uniform highp usampler2D splatTransform;        // per-splat index into transform palette
+uniform sampler2D transformPalette;             // palette of transform matrices
+
+mat4 applyPaletteTransform(SplatSource source, mat4 model) {
+    uint transformIndex = texelFetch(splatTransform, source.uv, 0).r;
+    if (transformIndex == 0u) {
+        return model;
+    }
+
+    // read transform matrix
+    int u = int(transformIndex % 512u) * 3;
+    int v = int(transformIndex / 512u);
+
+    mat4 t;
+    t[0] = texelFetch(transformPalette, ivec2(u, v), 0);
+    t[1] = texelFetch(transformPalette, ivec2(u + 1, v), 0);
+    t[2] = texelFetch(transformPalette, ivec2(u + 2, v), 0);
+    t[3] = vec4(0.0, 0.0, 0.0, 1.0);
+
+    return model * transpose(t);
+}
+
+// project the model space gaussian center to view and clip space
+bool initCenter(SplatSource source, vec3 modelCenter, out SplatCenter center) {
+    mat4 modelView = matrix_view * applyPaletteTransform(source, matrix_model);
+    vec4 centerView = modelView * vec4(modelCenter, 1.0);
+
+    // early out if splat is behind the camear
+    if (centerView.z > 0.0) {
+        return false;
+    }
+
+    vec4 centerProj = matrix_projection * centerView;
+
+    // ensure gaussians are not clipped by camera near and far
+    centerProj.z = clamp(centerProj.z, -abs(centerProj.w), abs(centerProj.w));
+
+    center.view = centerView.xyz / centerView.w;
+    center.proj = centerProj;
+    center.projMat00 = matrix_projection[0][0];
+    center.modelView = modelView;
+    return true;
+}
+`;
+
+export { vertexShader, fragmentShader, gsplatCenter };

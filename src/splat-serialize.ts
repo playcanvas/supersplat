@@ -153,7 +153,9 @@ class SingleSplat {
     // specify the data members required
     constructor(members: string[]) {
         const data: any = {};
-        members.forEach((name) => data[name] = 0);
+        members.forEach((name) => {
+            data[name] = 0;
+        });
 
         const hasPosition = ['x', 'y', 'z'].every(v => data.hasOwnProperty(v));
         const hasRotation = ['rot_0', 'rot_1', 'rot_2', 'rot_3'].every(v => data.hasOwnProperty(v));
@@ -213,7 +215,9 @@ class SingleSplat {
             const { transformCache, srcProps, hasTint } = cacheEntry;
 
             // copy members
-            members.forEach((name) => data[name] = srcProps[name]?.[i] ?? 0);
+            members.forEach((name) => {
+                data[name] = srcProps[name]?.[i] ?? 0;
+            });
 
             // apply transform palette transforms
             const mat = transformCache.getMat(i);
@@ -290,7 +294,7 @@ class SingleSplat {
         this.data = data;
         this.read = read;
     }
-};
+}
 
 const serializePly = async (options: SerializeOptions, write: WriteFunc) => {
     const { splats, maxSHBands } = options;
@@ -303,16 +307,16 @@ const serializePly = async (options: SerializeOptions, write: WriteFunc) => {
 
     // get the vertex properties common to all splats (even stuff we don't understand)
     const propNames = getCommonPropNames(splats)
-        // filter out internal props
-        .filter(p => !internalProps.includes(p))
-        // filter out max SH bands
-        .filter((p) => {
-            if (!p.startsWith('f_rest_')) {
-                return true;
-            }
-            const i = parseInt(p.slice(7));
-            return i < [0, 9, 24, 45][maxSHBands];
-        });
+    // filter out internal props
+    .filter(p => !internalProps.includes(p))
+    // filter out max SH bands
+    .filter((p) => {
+        if (!p.startsWith('f_rest_')) {
+            return true;
+        }
+        const i = parseInt(p.slice(7), 10);
+        return i < [0, 9, 24, 45][maxSHBands];
+    });
 
     const headerText = [
         'ply',

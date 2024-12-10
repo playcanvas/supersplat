@@ -207,7 +207,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
     const getSplats = () => {
         return (scene.getElementsByType(ElementType.splat) as Splat[])
         .filter(splat => splat.visible)
-        .filter(splat => splat.numSplats - splat.numDeleted > 0);
+        .filter(splat => splat.numSplats > 0);
     };
 
     events.function('scene.empty', () => {

@@ -91,6 +91,8 @@ class RightToolbar extends Container {
         tooltips.register(showHideSplats, localize('tooltip.show-hide'), 'left');
         tooltips.register(cameraFrameSelection, localize('tooltip.frame-selection'), 'left');
         tooltips.register(cameraReset, localize('tooltip.camera-reset'), 'left');
+        tooltips.register(cameraPanel, localize('tooltip.camera-panel'), 'left');
+        tooltips.register(colorPanel, localize('tooltip.color-panel'), 'left');
         tooltips.register(options, localize('tooltip.view-options'), 'left');
 
         // add event handlers

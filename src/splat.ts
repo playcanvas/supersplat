@@ -12,7 +12,8 @@ import {
     Mat4,
     Quat,
     Texture,
-    Vec3
+    Vec3,
+    MeshInstance
 } from 'playcanvas';
 
 import { Element, ElementType } from './element';
@@ -87,6 +88,24 @@ class Splat extends Element {
         this.entity = splatResource.instantiate(materialOptions);
 
         const instance = this.entity.gsplat.instance;
+
+        // use custom render order distance calculation for splats
+        instance.meshInstance.calculateSortDistance = (meshInstance: MeshInstance, pos: Vec3, dir: Vec3) => {
+            const bound = this.localBound;
+            const mat = this.entity.getWorldTransform();
+            let maxDist;
+            for (let i = 0; i < 8; ++i) {
+                vec.x = bound.center.x + bound.halfExtents.x * (i & 1 ? 1 : -1);
+                vec.y = bound.center.y + bound.halfExtents.y * (i & 2 ? 1 : -1);
+                vec.z = bound.center.z + bound.halfExtents.z * (i & 4 ? 1 : -1);
+                mat.transformPoint(vec, vec);
+                const dist = vec.sub(pos).dot(dir);
+                if (i === 0 || dist > maxDist) {
+                    maxDist = dist;
+                }
+            }
+            return maxDist;
+        };
 
         // added per-splat state channel
         // bit 1: selected

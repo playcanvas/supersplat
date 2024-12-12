@@ -166,7 +166,7 @@ class Popup extends Container {
 
         this.destroy = () => {
             this.hide();
-            this.destroy();
+            super.destroy();
         };
     }
 }

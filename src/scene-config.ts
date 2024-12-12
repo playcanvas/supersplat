@@ -73,7 +73,7 @@ class Params {
 
     get(path: string): any {
         // https://stackoverflow.com/a/67243723/2405687
-        const kebabize = (s: string) => s.replace(/[A-Z]+(?![a-z])|[A-Z]/g, ($, ofs) => (ofs ? "-" : "") + $.toLowerCase())
+        const kebabize = (s: string) => s.replace(/[A-Z]+(?![a-z])|[A-Z]/g, ($, ofs) => (ofs ? '-' : '') + $.toLowerCase());
         return this.resolve(this.sources, path.split('.').map(kebabize)) ?? this.resolve(this.sources, path.split('.'));
     }
 

@@ -66,7 +66,7 @@ const localizeInit = () => {
                     'options.selected-color': 'Selektierte Farbe',
                     'options.unselected-color': 'Nicht selektierte Farbe',
                     'options.locked-color': 'Gesperrte Farbe',
-                    'options.fov': 'Blickwinkel (FoV)',
+                    'options.fov': 'Sichtfeld (FoV)',
                     'options.sh-bands': 'SH Bänder',
                     'options.centers-size': 'Punktgrößen',
                     'options.outline-selection': 'Umriss Selektion',
@@ -174,7 +174,7 @@ const localizeInit = () => {
                     'export.default': 'Standard',
                     'export.viewport': 'Aktuelle Ansicht',
                     'export.pose-camera': '1. Kamera Pose',
-                    'export.fov': 'Blickwinkel (FoV)',
+                    'export.fov': 'Sichtfeld (FoV)',
                     'export.background-color': 'Hintergrund',
                     'export.filename': 'Dateiname'
                 }

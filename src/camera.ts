@@ -202,8 +202,8 @@ class Camera extends Element {
             this.scene.gizmoLayer.id
         ]);
 
-        if (this.scene.config.camera.debug_render) {
-            this.entity.camera.setShaderPass(`debug_${this.scene.config.camera.debug_render}`);
+        if (this.scene.config.camera.debugRender) {
+            this.entity.camera.setShaderPass(`debug_${this.scene.config.camera.debugRender}`);
         }
 
         const target = document.getElementById('canvas-container');

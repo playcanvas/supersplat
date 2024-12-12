@@ -1,0 +1,93 @@
+@use 'colors.scss' as *;
+
+#export-popup {
+    width: 100%;
+    height: 100%;
+
+    background-color: rgba(0, 0, 0, 0.4);
+
+    pointer-events: all;
+
+    #dialog {
+        position: absolute;
+        width: 340px;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+
+        border-radius: 8px;
+        background-color: $bcg-primary;
+
+        filter: drop-shadow(5px 5px 10px rgba(0, 0, 0, 0.8));
+
+        // the following is needed to get drop-shadow working on safari
+        will-change: transform;
+
+        #header {
+            height: 32px;
+            line-height: 32px;
+            margin: 0px;
+            padding: 0px 12px;
+
+            font-weight: bold;
+            color: $text-primary;
+            background-color: $bcg-darker;
+
+            #icon {
+                vertical-align: middle;
+                color: $clr-icon-hilight;
+            }
+        }
+
+        #content {
+            min-height: 100px;
+            padding: 12px;
+
+            .row {
+                height: 24px;
+                line-height: 24px;
+                padding-bottom: 8px;
+
+                &:not(.pcui-hidden) {
+                    display: flex;
+                }
+
+                .label {
+                    margin: 0px;
+                    flex-grow: 1;
+                }
+
+                .select, .color-picker, .slider, .text-entry {
+                    margin: 0px;
+                    width: 180px;
+                }
+
+                .text-input {
+                    margin: 0px;
+                    width: 180px;
+                }
+            }
+        }
+
+        #footer {
+            display: flex;
+            justify-content: center;
+            padding-bottom: 4px;
+
+            .button {
+                width: 120px;
+                height: 30px;
+                border-radius: 4px;
+
+                &:hover {
+                    color: $text-primary;
+                    background-color: $clr-hilight;
+                }
+            }
+        }
+    }
+}

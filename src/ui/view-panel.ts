@@ -1,5 +1,5 @@
 import { BooleanInput, ColorPicker, Container, Label, SliderInput } from 'pcui';
-import { Color, Vec3 } from 'playcanvas';
+import { Color } from 'playcanvas';
 
 import { Events } from '../events';
 import { localize } from './localization';

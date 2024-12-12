@@ -180,7 +180,7 @@ const localizeInit = () => {
                     'scene.export': 'Export',
                     'scene.export.compressed-ply': 'Compressed PLY (.ply)',
                     'scene.export.splat': 'Splat file (.splat)',
-                    'scene.export.viewer': 'Viewer App (.html)',
+                    'scene.export.viewer': 'Viewer App',
 
                     // Selection menu
                     'selection': 'Selection',
@@ -327,7 +327,20 @@ const localizeInit = () => {
                     'tooltip.translate': 'Translate ( 1 )',
                     'tooltip.rotate': 'Rotate ( 2 )',
                     'tooltip.scale': 'Scale ( 3 )',
-                    'tooltip.local-space': 'Local Space Gizmo'
+                    'tooltip.local-space': 'Local Space Gizmo',
+
+                    // viewer export
+                    'export.type': 'Export Type',
+                    'export.html': 'HTML',
+                    'export.package': 'ZIP Package',
+                    'export.sh-bands': 'SH Bands',
+                    'export.start-position': 'Start Position',
+                    'export.default': 'Default',
+                    'export.viewport': 'Current Viewport',
+                    'export.pose-camera': '1st Camera Pose',
+                    'export.fov': 'Field of View',
+                    'export.background-color': 'Background',
+                    'export.filename': 'Filename'
                 }
             },
             fr: {
@@ -499,7 +512,7 @@ const localizeInit = () => {
                     'scene.export': 'エクスポート',
                     'scene.export.compressed-ply': 'Compressed PLY (.ply)',
                     'scene.export.splat': 'Splat (.splat)',
-                    'scene.export.viewer': 'Viewer App (.html)',
+                    'scene.export.viewer': 'Viewer App',
 
                     // Selection menu
                     'selection': '選択',

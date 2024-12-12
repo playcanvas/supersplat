@@ -869,11 +869,12 @@ const serializeViewer = async (splats: Splat[], options: ViewerExportOptions, wr
     if (options.type === 'html') {
         await write(new TextEncoder().encode(html), true);
     } else {
+        /* global JSZip */
         // @ts-ignore
         const zip = new JSZip();
         zip.file('index.html', html);
         zip.file('scene.compressed.ply', compressedData);
-        const result = await zip.generateAsync({type : "uint8array"});
+        const result = await zip.generateAsync({ type: 'uint8array' });
         await write(result, true);
     }
 };

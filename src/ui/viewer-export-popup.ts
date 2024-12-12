@@ -1,10 +1,10 @@
 import { Button, ColorPicker, Container, Element, Label, SelectInput, SliderInput, TextInput } from 'pcui';
-
-import { Events } from '../events';
-import { localize } from './localization';
 import { path } from 'playcanvas';
+
+import { localize } from './localization';
+import { Events } from '../events';
+import { ViewerExportOptions } from '../splat-serialize';
 import sceneExport from './svg/export.svg';
-import { ViewerExportOptions } from 'src/splat-serialize';
 
 const createSvg = (svgString: string, args = {}) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -238,7 +238,6 @@ class ViewerExportPopup extends Container {
                 const removeExtension = (filename: string) => {
                     return filename.substring(0, filename.length - path.getExtension(filename).length);
                 };
-        
                 filenameEntry.value = removeExtension(filenameEntry.value) + (typeSelect.value === 'html' ? '.html' : '.zip');
             }
         };

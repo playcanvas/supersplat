@@ -17,7 +17,6 @@ import { DataProcessor } from './data-processor';
 import { Element, ElementType, ElementTypeList } from './element';
 import { Events } from './events';
 import { InfiniteGrid as Grid } from './infinite-grid';
-import { Model } from './model';
 import { Outline } from './outline';
 import { PCApp } from './pc-app';
 import { SceneConfig } from './scene-config';
@@ -214,43 +213,12 @@ class Scene {
         this.add(this.underlay);
     }
 
-    async load() {
-        const config = this.config;
-
-        // load scene assets
-        const promises: Promise<any>[] = [];
-
-        // load model
-        if (config.model.url) {
-            promises.push(this.assetLoader.loadModel({
-                url: config.model.url,
-                filename: config.model.filename
-            }));
-        }
-
-        // load env
-        if (config.env.url) {
-            promises.push(this.assetLoader.loadEnv({ url: config.env.url }));
-        }
-
-        const elements = await Promise.all(promises);
-
-        // add them to the scene
-        elements.forEach(e => this.add(e));
-
-        this.camera.focus();
-
+    start() {
         // start the app
         this.app.start();
     }
 
     clear() {
-        const models = this.getElementsByType(ElementType.model);
-        models.forEach((model) => {
-            this.remove(model);
-            (model as Model).destroy();
-        });
-
         const splats = this.getElementsByType(ElementType.splat);
         splats.forEach((splat) => {
             this.remove(splat);

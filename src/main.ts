@@ -139,10 +139,10 @@ const main = async () => {
     );
 
     // colors
-    const bgClr = new Color(0, 0, 0, 1);
-    const selectedClr = new Color(1, 1, 0, 1.0);
-    const unselectedClr = new Color(0, 0, 1, 0.5);
-    const lockedClr = new Color(0, 0, 0, 0.05);
+    const bgClr = new Color();
+    const selectedClr = new Color();
+    const unselectedClr = new Color();
+    const lockedClr = new Color();
 
     const setClr = (target: Color, value: Color, event: string) => {
         if (!target.equals(value)) {
@@ -204,7 +204,14 @@ const main = async () => {
         scene.forceRender = true;
     });
 
-    setBgClr(new Color(sceneConfig.bgClr.r, sceneConfig.bgClr.g, sceneConfig.bgClr.b, 1));
+    // initialize colors from application config
+    const toColor = (value: { r: number, g: number, b: number, a: number }) => {
+        return new Color(value.r, value.g, value.b, value.a);
+    };
+    setBgClr(toColor(sceneConfig.bgClr));
+    setSelectedClr(toColor(sceneConfig.selectedClr));
+    setUnselectedClr(toColor(sceneConfig.unselectedClr));
+    setLockedClr(toColor(sceneConfig.lockedClr));
 
     // create the mask selection canvas
     const maskCanvas = document.createElement('canvas');
@@ -239,7 +246,7 @@ const main = async () => {
     await initFileHandler(scene, events, editorUI.appContainer.dom, remoteStorageDetails);
 
     // load async models
-    await scene.load();
+    scene.start();
 
     // handle load params
     const loadList = url.searchParams.getAll('load');

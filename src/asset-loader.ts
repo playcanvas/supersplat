@@ -1,6 +1,5 @@
 import { Asset, AssetRegistry, GraphicsDevice, GSplatData, GSplatResource, TEXTURETYPE_RGBP } from 'playcanvas';
 
-import { Env } from './env';
 import { Events } from './events';
 import { Splat } from './splat';
 
@@ -9,11 +8,6 @@ interface ModelLoadRequest {
     contents?: ArrayBuffer;
     filename?: string;
     maxAnisotropy?: number;
-}
-
-interface EnvLoadRequest {
-    url: string;
-    filename?: string;
 }
 
 // ideally this function would stream data directly into GSplatData buffers.
@@ -65,7 +59,6 @@ const deserializeFromSSplat = (data: ArrayBufferLike) => {
         storage_rot_2[i] = (dataView.getUint8(off + 30) - 128) / 128;
         storage_rot_3[i] = (dataView.getUint8(off + 31) - 128) / 128;
     }
-
 
     return new GSplatData([{
         name: 'vertex',
@@ -198,20 +191,6 @@ class AssetLoader {
         } else if (filename.endsWith('.splat')) {
             return this.loadSplat(loadRequest);
         }
-    }
-
-    loadEnv(loadRequest: EnvLoadRequest) {
-        const registry = this.registry;
-        return new Promise<Env>((resolve, reject) => {
-            const textureAsset = new Asset('skybox_equi', 'texture', loadRequest, {
-                mipmaps: false,
-                type: TEXTURETYPE_RGBP
-            });
-            textureAsset.ready(() => resolve(new Env(textureAsset)));
-            textureAsset.on('error', (err: string) => reject(err));
-            registry.add(textureAsset);
-            registry.load(textureAsset);
-        });
     }
 }
 

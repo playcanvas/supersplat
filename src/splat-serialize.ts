@@ -1,3 +1,4 @@
+import JSZip from '@progress/jszip-esm';
 import {
     Color,
     GSplatData,
@@ -12,7 +13,6 @@ import { Splat } from './splat';
 import { State } from './splat-state';
 import { version } from '../package.json';
 import { template as ViewerHtmlTemplate } from './templates/viewer-html-template';
-import JSZip from '@progress/jszip-esm';
 
 // async function for writing data
 type WriteFunc = (data: Uint8Array, finalWrite?: boolean) => void;
@@ -879,12 +879,12 @@ const serializeReact = async (options: SerializeOptions, write: WriteFunc) => {
 
     // Create .env file content
     const envContent = [
-        `VITE_TITLE=SuperSplat Viewer`,
+        'VITE_TITLE=SuperSplat Viewer',
         `VITE_BG_COLOR=${bgCol.toString(false)}`,
         `VITE_CLEAR_COLOR=${bgCol.toString(false)}`,
         `VITE_FOV=${fov.toFixed(2)}`,
-        pose ? `VITE_CAMERA_POSITION=[${pose.position.x},${pose.position.y},${pose.position.z}]` : ``,
-        pose ? `VITE_CAMERA_TARGET=[${pose.target.x},${pose.target.y},${pose.target.z}]` : ``
+        pose ? `VITE_CAMERA_POSITION=[${pose.position.x},${pose.position.y},${pose.position.z}]` : '',
+        pose ? `VITE_CAMERA_TARGET=[${pose.target.x},${pose.target.y},${pose.target.z}]` : ''
     ].join('\n');
 
     // Add .env file to zip
@@ -897,7 +897,7 @@ const serializeReact = async (options: SerializeOptions, write: WriteFunc) => {
 
     // Generate the zip file
     const zipContent = await zip.generateAsync({
-        type: "uint8array",
+        type: 'uint8array'
     });
 
     // Write the zip file

@@ -31,7 +31,6 @@ export default function zipPlugin(options = {}) {
 
       // Helper to recursively add files from a directory
       async function addDirectory(dirPath, zipRoot) {
-        console.log('adding directory', dirPath);
         const files = await fs.readdir(dirPath);
         for (const file of files) {
           const filePath = path.join(dirPath, file);
@@ -42,14 +41,12 @@ export default function zipPlugin(options = {}) {
           
           // Skip if file is ignored by gitignore
           if (ig.ignores(relativePath)) {
-            console.log('ignoring file (gitignore)', relativePath);
             continue;
           }
 
           if (stat.isDirectory()) {
             await addDirectory(filePath, zipRoot.folder(file));
           } else {
-            console.log('adding file', filePath);
             const content = await fs.readFile(filePath);
             zipRoot.file(file, content);
           }
@@ -57,7 +54,6 @@ export default function zipPlugin(options = {}) {
       }
 
       // Add all input files/directories
-      console.log('adding input', input);
       for (const inputPath of input) {
         const stat = await fs.stat(inputPath);
         if (stat.isDirectory()) {
@@ -76,7 +72,6 @@ export default function zipPlugin(options = {}) {
       await fs.mkdir(outputDir, { recursive: true });
 
       // Generate and write the zip file
-      console.log('generating zip');
       const content = await zip.generateAsync({
         type: 'nodebuffer',
         compression,
@@ -85,9 +80,7 @@ export default function zipPlugin(options = {}) {
         }
       });
 
-      console.log('writing zip');
       await fs.writeFile(output, content);
-      console.log('zip written');
     }
   };
 }

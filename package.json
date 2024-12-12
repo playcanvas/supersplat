@@ -60,6 +60,6 @@
         "typescript": "^5.7.2"
     },
     "dependencies": {
-        "@progress/jszip-esm": "^1.0.3",
+        "@progress/jszip-esm": "^1.0.3"
     }
 }

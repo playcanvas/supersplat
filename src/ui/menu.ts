@@ -115,6 +115,11 @@ class Menu extends Container {
             icon: createSvg(sceneExport),
             onSelect: () => events.invoke('scene.export', 'viewer'),
             isEnabled: () => !events.invoke('scene.empty')
+        }, {
+            text: localize('scene.export.react'),
+            icon: createSvg(sceneExport),
+            onSelect: () => events.invoke('scene.export', 'react'),
+            isEnabled: () => !events.invoke('scene.empty')
         }]);
 
         const allDataToggle = new BooleanInput({

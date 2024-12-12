@@ -27,6 +27,7 @@
         "@playcanvas/eslint-config": "^2.0.8",
         "@playcanvas/pcui": "^4.6.0",
         "@rollup/plugin-alias": "^5.1.1",
+        "@rollup/plugin-commonjs": "^28.0.1",
         "@rollup/plugin-image": "^3.0.3",
         "@rollup/plugin-json": "^6.1.0",
         "@rollup/plugin-node-resolve": "^15.3.0",
@@ -45,6 +46,7 @@
         "globals": "^15.13.0",
         "i18next": "^24.0.5",
         "i18next-browser-languagedetector": "^8.0.2",
+        "ignore": "^6.0.2",
         "jest": "^29.7.0",
         "playcanvas": "^2.3.3",
         "postcss": "^8.4.49",
@@ -55,5 +57,9 @@
         "serve": "^14.2.4",
         "tslib": "^2.8.1",
         "typescript": "^5.7.2"
+    },
+    "dependencies": {
+        "@progress/jszip-esm": "^1.0.3",
+        "jszip": "^3.10.1"
     }
 }

@@ -1,5 +1,6 @@
 import path from 'path';
-import copyAndWatch from './copy-and-watch.mjs';
+import copyAndWatch from './plugins/copy-and-watch.mjs';
+import zipPlugin from './plugins/zip.mjs';
 import alias from '@rollup/plugin-alias';
 import image from '@rollup/plugin-image';
 import terser from '@rollup/plugin-terser';
@@ -66,6 +67,10 @@ const application = {
         sourcemap: true
     },
     plugins: [
+        zipPlugin({
+            input: ['src/templates/react'],
+            output: 'dist/static/templates/react.zip'
+        }),
         copyAndWatch({
             targets: [
                 {

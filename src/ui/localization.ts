@@ -26,6 +26,7 @@ const localizeInit = () => {
                     'scene.export.compressed-ply': 'Komprimiertes PLY',
                     'scene.export.splat': 'Splat',
                     'scene.export.viewer': 'Viewer App',
+                    'scene.export.react': 'React App',
 
                     // Selection menu
                     'selection': 'Selektion',
@@ -181,6 +182,7 @@ const localizeInit = () => {
                     'scene.export.compressed-ply': 'Compressed PLY (.ply)',
                     'scene.export.splat': 'Splat file (.splat)',
                     'scene.export.viewer': 'Viewer App (.html)',
+                    'scene.export.react': 'React App (.zip)',
 
                     // Selection menu
                     'selection': 'Selection',
@@ -345,6 +347,7 @@ const localizeInit = () => {
                     'scene.export.compressed-ply': 'Ply compressé',
                     'scene.export.splat': 'Fichier splat',
                     'scene.export.viewer': 'Application de visualisation',
+                    'scene.export.react': 'React Application',
 
                     // Selection menu
                     'selection': 'Sélection',
@@ -500,6 +503,7 @@ const localizeInit = () => {
                     'scene.export.compressed-ply': 'Compressed PLY (.ply)',
                     'scene.export.splat': 'Splat (.splat)',
                     'scene.export.viewer': 'Viewer App (.html)',
+                    'scene.export.react': 'React App (.zip)',
 
                     // Selection menu
                     'selection': '選択',
@@ -655,6 +659,7 @@ const localizeInit = () => {
                     'scene.export.compressed-ply': '압축된 PLY',
                     'scene.export.splat': 'Splat 파일',
                     'scene.export.viewer': '뷰어 앱',
+                    'scene.export.react': '리액트 앱',
 
                     // Selection menu
                     'selection': '선택',
@@ -810,6 +815,7 @@ const localizeInit = () => {
                     'scene.export.compressed-ply': '压缩 PLY',
                     'scene.export.splat': 'Splat 文件',
                     'scene.export.viewer': '查看器应用',
+                    'scene.export.react': '反应应用程序',
 
                     // Selection menu
                     'selection': '选择',

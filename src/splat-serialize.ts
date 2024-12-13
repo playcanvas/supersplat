@@ -891,7 +891,6 @@ const serializeReact = async (options: SerializeOptions, write: WriteFunc) => {
 
     const templateBuffer = await response.arrayBuffer();
 
-    /* global JSZip */
     // @ts-ignore
     const zip = await new JSZip().loadAsync(templateBuffer);
 

@@ -5,6 +5,7 @@ import { registerEditorEvents } from './editor';
 import { Events } from './events';
 import { initFileHandler } from './file-handler';
 import { initMaterials } from './material';
+import { Persistence } from './persistence';
 import { Scene } from './scene';
 import { getSceneConfig } from './scene-config';
 import { registerSelectionEvents } from './selection';
@@ -265,6 +266,8 @@ const main = async () => {
             }
         });
     }
+
+    new Persistence(events);
 };
 
 export { main };

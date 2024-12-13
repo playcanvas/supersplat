@@ -164,7 +164,20 @@ const localizeInit = () => {
                     'tooltip.translate': 'Verschieben ( 1 )',
                     'tooltip.rotate': 'Drehen ( 2 )',
                     'tooltip.scale': 'Skalieren ( 3 )',
-                    'tooltip.local-space': 'Gizmo in local-space'
+                    'tooltip.local-space': 'Gizmo in local-space',
+
+                    // Viewer Export
+                    'export.type': 'Export Typ',
+                    'export.html': 'HTML',
+                    'export.package': 'ZIP Paket',
+                    'export.sh-bands': 'SH Bänder',
+                    'export.start-position': 'Start Position',
+                    'export.default': 'Standard',
+                    'export.viewport': 'Aktuelle Ansicht',
+                    'export.pose-camera': '1. Kamera Pose',
+                    'export.fov': 'Blickwinkel (FoV)',
+                    'export.background-color': 'Hintergrund',
+                    'export.filename': 'Dateiname'
                 }
             },
             en: {
@@ -181,7 +194,7 @@ const localizeInit = () => {
                     'scene.export': 'Export',
                     'scene.export.compressed-ply': 'Compressed PLY (.ply)',
                     'scene.export.splat': 'Splat file (.splat)',
-                    'scene.export.viewer': 'Viewer App (.html)',
+                    'scene.export.viewer': 'Viewer App',
                     'scene.export.react': 'React App (.zip)',
 
                     // Selection menu
@@ -329,7 +342,20 @@ const localizeInit = () => {
                     'tooltip.translate': 'Translate ( 1 )',
                     'tooltip.rotate': 'Rotate ( 2 )',
                     'tooltip.scale': 'Scale ( 3 )',
-                    'tooltip.local-space': 'Local Space Gizmo'
+                    'tooltip.local-space': 'Local Space Gizmo',
+
+                    // Viewer Export
+                    'export.type': 'Export Type',
+                    'export.html': 'HTML',
+                    'export.package': 'ZIP Package',
+                    'export.sh-bands': 'SH Bands',
+                    'export.start-position': 'Start Position',
+                    'export.default': 'Default',
+                    'export.viewport': 'Current Viewport',
+                    'export.pose-camera': '1st Camera Pose',
+                    'export.fov': 'Field of View',
+                    'export.background-color': 'Background',
+                    'export.filename': 'Filename'
                 }
             },
             fr: {
@@ -485,7 +511,20 @@ const localizeInit = () => {
                     'tooltip.translate': 'Translation ( 1 )',
                     'tooltip.rotate': 'Rotation ( 2 )',
                     'tooltip.scale': 'Échelle ( 3 )',
-                    'tooltip.local-space': 'Espace local gizmo'
+                    'tooltip.local-space': 'Espace local gizmo',
+
+                    // Viewer Export
+                    'export.type': 'Type d\'export',
+                    'export.html': 'HTML',
+                    'export.package': 'Package ZIP',
+                    'export.sh-bands': 'Bandes SH',
+                    'export.start-position': 'Position de départ',
+                    'export.default': 'Défaut',
+                    'export.viewport': 'Vue actuelle',
+                    'export.pose-camera': '1ère pose de caméra',
+                    'export.fov': 'Champ de vision',
+                    'export.background-color': 'Arrière-plan',
+                    'export.filename': 'Nom de fichier'
                 }
             },
             ja: {
@@ -502,7 +541,7 @@ const localizeInit = () => {
                     'scene.export': 'エクスポート',
                     'scene.export.compressed-ply': 'Compressed PLY (.ply)',
                     'scene.export.splat': 'Splat (.splat)',
-                    'scene.export.viewer': 'Viewer App (.html)',
+                    'scene.export.viewer': 'Viewer App',
                     'scene.export.react': 'React App (.zip)',
 
                     // Selection menu
@@ -641,7 +680,20 @@ const localizeInit = () => {
                     'tooltip.translate': '移動 ( 1 )',
                     'tooltip.rotate': '回転 ( 2 )',
                     'tooltip.scale': 'スケール ( 3 )',
-                    'tooltip.local-space': 'ローカル座標へ切り替え'
+                    'tooltip.local-space': 'ローカル座標へ切り替え',
+
+                    // Viewer Export
+                    'export.type': 'エクスポートタイプ',
+                    'export.html': 'HTML',
+                    'export.package': 'ZIPパッケージ',
+                    'export.sh-bands': 'SHバンド',
+                    'export.start-position': '開始位置',
+                    'export.default': 'デフォルト',
+                    'export.viewport': '現在のビューポート',
+                    'export.pose-camera': '1番目のカメラポーズ',
+                    'export.fov': '視野角',
+                    'export.background-color': '背景色',
+                    'export.filename': 'ファイル名'
                 }
             },
             ko: {
@@ -797,7 +849,20 @@ const localizeInit = () => {
                     'tooltip.translate': '이동 ( 1 )',
                     'tooltip.rotate': '회전 ( 2 )',
                     'tooltip.scale': '크기 조정 ( 3 )',
-                    'tooltip.local-space': '로컬 공간'
+                    'tooltip.local-space': '로컬 공간',
+
+                    // Viewer Export
+                    'export.type': '내보내기 유형',
+                    'export.html': 'HTML',
+                    'export.package': 'ZIP 패키지',
+                    'export.sh-bands': 'SH 밴드',
+                    'export.start-position': '시작 위치',
+                    'export.default': '기본값',
+                    'export.viewport': '현재 뷰포트',
+                    'export.pose-camera': '1번째 카메라 포즈',
+                    'export.fov': '시야각',
+                    'export.background-color': '배경색',
+                    'export.filename': '파일 이름'
                 }
             },
             'zh-CN': {
@@ -953,7 +1018,20 @@ const localizeInit = () => {
                     'tooltip.translate': '移动 ( 1 )',
                     'tooltip.rotate': '旋转 ( 2 )',
                     'tooltip.scale': '缩放 ( 3 )',
-                    'tooltip.local-space': '局部坐标系'
+                    'tooltip.local-space': '局部坐标系',
+
+                    // Viewer Export
+                    'export.type': '导出类型',
+                    'export.html': 'HTML',
+                    'export.package': 'ZIP 包',
+                    'export.sh-bands': 'SH 带',
+                    'export.start-position': '起始位置',
+                    'export.default': '默认',
+                    'export.viewport': '当前视口',
+                    'export.pose-camera': '第一个相机姿势',
+                    'export.fov': '视野角',
+                    'export.background-color': '背景颜色',
+                    'export.filename': '文件名'
                 }
             }
         },

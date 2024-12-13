@@ -1,40 +1,29 @@
 type Color = { r: number, g: number, b: number, a: number };
 
-const DEFAULT: Color = { r: 0.4, g: 0.4, b: 0.4, a: 1 };
+const DEFAULT_BG_CLR: Color = { r: 0.4, g: 0.4, b: 0.4, a: 1 };
+const DEFAULT_SELECTED_CLR: Color = { r: 1, g: 1, b: 0, a: 1 };
+const DEFAULT_UNSELECTED_CLR: Color = { r: 0, g: 0, b: 1, a: 0.5 };
+const DEFAULT_LOCKED_CLR: Color = { r: 0, g: 0, b: 0, a: 0.05 };
 
 // default config
 const sceneConfig = {
-    model: {
-        url: '',
-        filename: '',
-        position: { x: 0, y: 0, z: 0 },
-        rotation: { x: 0, y: 0, z: 0 },
-        scale: 1.0,
-        hideLeftShoe: true
-    },
-    env: {
-        url: '',
-        intensity: 1.0,
-        rotation: 0.0
-    },
-    bgClr: DEFAULT,
+    bgClr: DEFAULT_BG_CLR,
+    selectedClr: DEFAULT_SELECTED_CLR,
+    unselectedClr: DEFAULT_UNSELECTED_CLR,
+    lockedClr: DEFAULT_LOCKED_CLR,
     camera: {
         pixelScale: 1,
         multisample: false,
         fov: 50,
         exposure: 1.0,
         toneMapping: 'linear',
-        debug_render: '',
+        debugRender: '',
         overlay: true
     },
     show: {
         grid: true,
         bound: true,
         shBands: 3
-    },
-    shadow: {
-        intensity: 0.25,
-        fade: true
     },
     controls: {
         dampingFactor: 0.2,
@@ -83,7 +72,9 @@ class Params {
     }
 
     get(path: string): any {
-        return this.resolve(this.sources, path.split('.'));
+        // https://stackoverflow.com/a/67243723/2405687
+        const kebabize = (s: string) => s.replace(/[A-Z]+(?![a-z])|[A-Z]/g, ($, ofs) => (ofs ? '-' : '') + $.toLowerCase());
+        return this.resolve(this.sources, path.split('.').map(kebabize)) ?? this.resolve(this.sources, path.split('.'));
     }
 
     getBool(path: string): boolean | undefined {

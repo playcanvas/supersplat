@@ -1,5 +1,5 @@
 import { BooleanInput, ColorPicker, Container, Label, SliderInput } from 'pcui';
-import { Color, Vec3 } from 'playcanvas';
+import { Color } from 'playcanvas';
 
 import { Events } from '../events';
 import { localize } from './localization';
@@ -57,25 +57,42 @@ class ViewPanel extends Container {
 
         const bgClrPicker = new ColorPicker({
             class: 'view-panel-row-picker',
-            value: [0.4, 0.4, 0.4]
+            channels: 3
         });
 
         const selectedClrPicker = new ColorPicker({
             class: 'view-panel-row-picker',
-            value: [1, 1, 0, 1],
             channels: 4
         });
 
         const unselectedClrPicker = new ColorPicker({
             class: 'view-panel-row-picker',
-            value: [0, 0, 1, 1],
             channels: 4
         });
 
         const lockedClrPicker = new ColorPicker({
             class: 'view-panel-row-picker',
-            value: [0, 0, 0, 0.05],
             channels: 4
+        });
+
+        const toArray = (clr: Color) => {
+            return [clr.r, clr.g, clr.b, clr.a];
+        };
+
+        events.on('bgClr', (clr: Color) => {
+            bgClrPicker.value = toArray(clr);
+        });
+
+        events.on('selectedClr', (clr: Color) => {
+            selectedClrPicker.value = toArray(clr);
+        });
+
+        events.on('unselectedClr', (clr: Color) => {
+            unselectedClrPicker.value = toArray(clr);
+        });
+
+        events.on('lockedClr', (clr: Color) => {
+            lockedClrPicker.value = toArray(clr);
         });
 
         clrPickers.append(bgClrPicker);

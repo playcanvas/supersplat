@@ -18,6 +18,7 @@ import { Spinner } from './spinner';
 import { Tooltips } from './tooltips';
 import { ViewCube } from './view-cube';
 import { ViewPanel } from './view-panel';
+import { ViewerExportPopup } from './viewer-export-popup';
 import { version } from '../../package.json';
 
 class EditorUI {
@@ -124,10 +125,15 @@ class EditorUI {
 
         // message popup
         const popup = new Popup(topContainer);
-        topContainer.append(popup);
 
         // shortcuts popup
         const shortcutsPopup = new ShortcutsPopup();
+
+        // export popup
+        const viewerExportPopup = new ViewerExportPopup(events);
+
+        topContainer.append(popup);
+        topContainer.append(viewerExportPopup);
 
         appContainer.append(editorContainer);
         appContainer.append(tooltipsContainer);
@@ -146,6 +152,10 @@ class EditorUI {
 
         events.on('show.shortcuts', () => {
             shortcutsPopup.hidden = false;
+        });
+
+        events.function('show.viewerExportPopup', (filename?: string) => {
+            return viewerExportPopup.show(filename);
         });
 
         events.function('show.about', () => {

@@ -5,7 +5,7 @@ import { ElementType } from './element';
 import { Events } from './events';
 import { Scene } from './scene';
 import { Splat } from './splat';
-import { WriteFunc, serializePly, serializePlyCompressed, serializeReact, serializeSplat, serializeViewer } from './splat-serialize';
+import { WriteFunc, serializePly, serializePlyCompressed, serializeSplat, serializeViewer, ViewerExportOptions, serializeReact } from './splat-serialize';
 import { localize } from './ui/localization';
 
 // ts compiler and vscode find this type, but eslint does not
@@ -22,39 +22,46 @@ interface SceneWriteOptions {
     type: ExportType;
     filename?: string;
     stream?: FileSystemWritableFileStream;
+    viewerExportOptions?: ViewerExportOptions
 }
 
-const filePickerTypes = {
-    'ply': [{
+const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
+    'ply': {
         description: 'Gaussian Splat PLY File',
         accept: {
             'application/ply': ['.ply']
         }
-    }],
-    'compressed-ply': [{
+    },
+    'compressed-ply': {
         description: 'Compressed Gaussian Splat PLY File',
         accept: {
             'application/ply': ['.ply']
         }
-    }],
-    'splat': [{
+    },
+    'splat': {
         description: 'Gaussian Splat File',
         accept: {
             'application/octet-stream': ['.splat']
         }
-    }],
-    'viewer': [{
-        description: 'Viewer App',
+    },
+    'htmlViewer': {
+        description: 'Viewer HTML',
         accept: {
             'text/html': ['.html']
         }
-    }],
-    'react': [{
+    },
+    'react': {
         description: 'React App',
         accept: {
             'text/html': ['.zip']
         }
-    }]
+    },
+    'packageViewer': {
+        description: 'Viewer ZIP',
+        accept: {
+            'application/zip': ['.zip']
+        }
+    }
 };
 
 let fileHandle: FileSystemFileHandle = null;
@@ -246,7 +253,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                 const handles = await window.showOpenFilePicker({
                     id: 'SuperSplatFileOpen',
                     multiple: true,
-                    types: [filePickerTypes.ply, filePickerTypes.splat] as FilePickerAcceptType[]
+                    types: [filePickerTypes.ply, filePickerTypes.splat]
                 });
                 for (let i = 0; i < handles.length; i++) {
                     const handle = handles[i];
@@ -293,7 +300,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
             try {
                 const handle = await window.showSaveFilePicker({
                     id: 'SuperSplatFileSave',
-                    types: filePickerTypes.ply as FilePickerAcceptType[],
+                    types: [filePickerTypes.ply],
                     suggestedName: fileHandle?.name ?? splat.filename ?? 'scene.ply'
                 });
                 await events.invoke('scene.write', {
@@ -322,27 +329,50 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
             'react': '.zip'
         };
 
+        const removeExtension = (filename: string) => {
+            return filename.substring(0, filename.length - path.getExtension(filename).length);
+        };
+
         const replaceExtension = (filename: string, extension: string) => {
-            const removeExtension = (filename: string) => {
-                return filename.substring(0, filename.length - path.getExtension(filename).length);
-            };
             return `${removeExtension(filename)}${extension}`;
         };
 
         const splats = getSplats();
         const splat = splats[0];
-        const filename = outputFilename ?? replaceExtension(splat.filename, extensions[type]);
+        let filename = outputFilename ?? replaceExtension(splat.filename, extensions[type]);
 
-        if (window.showSaveFilePicker) {
+        const hasFilePicker = window.showSaveFilePicker;
+
+        let viewerExportOptions;
+        if (type === 'viewer') {
+            // show viewer export options
+            viewerExportOptions = await events.invoke('show.viewerExportPopup', hasFilePicker ? null : filename);
+
+            // return if user cancelled
+            if (!viewerExportOptions) {
+                return;
+            }
+
+            if (hasFilePicker) {
+                filename = replaceExtension(filename, viewerExportOptions.type === 'html' ? '.html' : '.zip');
+            } else {
+                filename = viewerExportOptions.filename;
+            }
+        }
+
+        if (hasFilePicker) {
             try {
+                const filePickerType = type === 'viewer' ? (viewerExportOptions.type === 'html' ? filePickerTypes.htmlViewer : filePickerTypes.packageViewer) : filePickerTypes[type];
+
                 const fileHandle = await window.showSaveFilePicker({
                     id: 'SuperSplatFileExport',
-                    types: filePickerTypes[type] as FilePickerAcceptType[],
+                    types: [filePickerType],
                     suggestedName: filename
                 });
                 await events.invoke('scene.write', {
-                    type: type,
-                    stream: await fileHandle.createWritable()
+                    type,
+                    stream: await fileHandle.createWritable(),
+                    viewerExportOptions
                 });
             } catch (error) {
                 if (error.name !== 'AbortError') {
@@ -350,23 +380,11 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                 }
             }
         } else {
-            const result = await events.invoke('showPopup', {
-                type: 'okcancel',
-                header: exportType === 'saveAs' ? 'SAVE AS' : 'EXPORT',
-                message: 'Please enter a filename',
-                value: filename
-            });
-
-            if (result.action === 'ok') {
-                await events.invoke('scene.write', {
-                    type: type,
-                    filename: result.value
-                });
-            }
+            await events.invoke('scene.write', { type, filename, viewerExportOptions });
         }
     });
 
-    const writeScene = async (type: ExportType, writeFunc: WriteFunc) => {
+    const writeScene = async (type: ExportType, writeFunc: WriteFunc, viewerExportOptions?: ViewerExportOptions) => {
         const splats = getSplats();
         const events = splats[0].scene.events;
 
@@ -386,7 +404,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                 await serializeSplat(options, writeFunc);
                 break;
             case 'viewer':
-                await serializeViewer(options, writeFunc);
+                await serializeViewer(splats, viewerExportOptions, writeFunc);
                 break;
             case 'react':
                 await serializeReact(options, writeFunc);
@@ -403,7 +421,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                 setTimeout(resolve);
             });
 
-            const { stream } = options;
+            const { stream, filename, type, viewerExportOptions } = options;
 
             if (stream) {
                 // writer must keep track of written bytes because JS streams don't
@@ -414,10 +432,10 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                 };
 
                 await stream.seek(0);
-                await writeScene(options.type, writeFunc);
+                await writeScene(type, writeFunc, viewerExportOptions);
                 await stream.truncate(cursor);
                 await stream.close();
-            } else if (options.filename) {
+            } else if (filename) {
                 // safari and firefox: concatenate data into single buffer for old-school download
                 let data: Uint8Array = null;
                 let cursor = 0;
@@ -440,8 +458,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                         cursor += chunk.byteLength;
                     }
                 };
-                await writeScene(options.type, writeFunc);
-                download(options.filename, (cursor === data.byteLength) ? data : new Uint8Array(data.buffer, 0, cursor));
+                await writeScene(type, writeFunc, viewerExportOptions);
+                download(filename, (cursor === data.byteLength) ? data : new Uint8Array(data.buffer, 0, cursor));
             }
         } catch (error) {
             events.invoke('showPopup', {

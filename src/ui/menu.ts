@@ -111,14 +111,14 @@ class Menu extends Container {
             onSelect: () => events.invoke('scene.export', 'splat'),
             isEnabled: () => !events.invoke('scene.empty')
         }, {
-            text: localize('scene.export.viewer'),
-            icon: createSvg(sceneExport),
-            onSelect: () => events.invoke('scene.export', 'viewer'),
-            isEnabled: () => !events.invoke('scene.empty')
-        }, {
             text: localize('scene.export.react'),
             icon: createSvg(sceneExport),
             onSelect: () => events.invoke('scene.export', 'react'),
+            isEnabled: () => !events.invoke('scene.empty')
+        }, {
+            text: localize('scene.export.viewer'),
+            icon: createSvg(sceneExport),
+            onSelect: () => events.invoke('scene.export', 'viewer'),
             isEnabled: () => !events.invoke('scene.empty')
         }]);
 

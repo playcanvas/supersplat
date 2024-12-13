@@ -48,6 +48,7 @@ class HistogramData {
             const v = valueFunc(i);
             if (v !== undefined) {
                 const n = min === max ? 0 : (v - min) / (max - min);
+                if (isNaN(n)) continue;
                 const bin = Math.min(bins.length - 1, Math.floor(n * bins.length));
                 if (selectedFunc(i)) {
                     bins[bin].selected++;

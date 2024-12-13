@@ -1,4 +1,3 @@
-import JSZip from '@progress/jszip-esm';
 import {
     Color,
     GSplatData,
@@ -891,6 +890,9 @@ const serializeReact = async (options: SerializeOptions, write: WriteFunc) => {
     }
 
     const templateBuffer = await response.arrayBuffer();
+
+    /* global JSZip */
+    // @ts-ignore
     const zip = await new JSZip().loadAsync(templateBuffer);
 
     // Get values from events

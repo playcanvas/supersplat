@@ -9,7 +9,6 @@ import { localize } from './localization';
 
 const SH_C0 = 0.28209479177387814;
 
-const identity = (v: number) => v;
 const scaleFunc = (v: number) => Math.exp(v);
 const colorFunc = (v: number) => 0.5 + v * SH_C0;
 const sigmoid = (v: number) => {
@@ -22,9 +21,6 @@ const sigmoid = (v: number) => {
 };
 
 const dataFuncs = {
-    x: identity,
-    y: identity,
-    z: identity,
     scale_0: scaleFunc,
     scale_1: scaleFunc,
     scale_2: scaleFunc,
@@ -105,25 +101,43 @@ class DataPanel extends Panel {
         const dataSelector = new SelectInput({
             class: 'control-element-expand',
             defaultValue: 'surface-area',
-            options: [
-                { v: 'x', t: 'X' },
-                { v: 'y', t: 'Y' },
-                { v: 'z', t: 'Z' },
-                { v: 'distance', t: localize('data.distance') },
-                { v: 'volume', t: localize('data.volume') },
-                { v: 'surface-area', t: localize('data.surface-area') },
-                { v: 'scale_0', t: localize('data.scale-x') },
-                { v: 'scale_1', t: localize('data.scale-y') },
-                { v: 'scale_2', t: localize('data.scale-z') },
-                { v: 'f_dc_0', t: localize('data.red') },
-                { v: 'f_dc_1', t: localize('data.green') },
-                { v: 'f_dc_2', t: localize('data.blue') },
-                { v: 'opacity', t: localize('data.opacity') },
-                { v: 'hue', t: localize('data.hue') },
-                { v: 'saturation', t: localize('data.saturation') },
-                { v: 'value', t: localize('data.value') }
-            ]
+            options: []
         });
+
+        const populateDataSelector = (splat: Splat) => {
+            const localisations: any = {
+                x: 'X',
+                y: 'Y',
+                z: 'Z',
+                distance: localize('data.distance'),
+                volume: localize('data.volume'),
+                'surface-area': localize('data.surface-area'),
+                scale_0: localize('data.scale-x'),
+                scale_1: localize('data.scale-y'),
+                scale_2: localize('data.scale-z'),
+                f_dc_0: localize('data.red'),
+                f_dc_1: localize('data.green'),
+                f_dc_2: localize('data.blue'),
+                opacity: localize('data.opacity'),
+                hue: localize('data.hue'),
+                saturation: localize('data.saturation'),
+                value: localize('data.value')
+            };
+
+            const dataProps = splat.splatData.getElement('vertex').properties.map(p => p.name);
+            const derivedProps = ['distance', 'volume', 'surface-area', 'hue', 'saturation', 'value'];
+            const suppressedProps = ['state', 'transform'].concat(new Array(45).fill('').map((_, i) => `f_rest_${i}`));
+            const allProps = dataProps.concat(derivedProps).filter(p => !suppressedProps.includes(p));
+
+            const options = allProps.map((prop) => {
+                return {
+                    v: prop,
+                    t: localisations[prop] ?? prop
+                };
+            });
+
+            dataSelector.options = options;
+        };
 
         const logScale = new Container({
             class: 'control-parent'
@@ -230,7 +244,7 @@ class DataPanel extends Panel {
                         break;
                     }
                     default:
-                        func = i => undefined;
+                        func = i => data[i];
                         break;
                 }
             }
@@ -273,6 +287,7 @@ class DataPanel extends Panel {
         events.on('selection.changed', (selection: Element) => {
             if (selection instanceof Splat) {
                 splat = selection;
+                populateDataSelector(splat);
                 updateHistogram();
             }
         });

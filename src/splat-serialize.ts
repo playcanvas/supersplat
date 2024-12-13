@@ -432,6 +432,8 @@ class Chunk {
         };
 
         const normalize = (x: number, min: number, max: number) => {
+            if (x <= min) return 0;
+            if (x >= max) return 1;
             return (max - min < 0.00001) ? 0 : (x - min) / (max - min);
         };
 
@@ -459,6 +461,15 @@ class Chunk {
         const sx = calcMinMax(scale_0);
         const sy = calcMinMax(scale_1);
         const sz = calcMinMax(scale_2);
+
+        // clamp scale because sometimes values are at infinity
+        const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+        sx.min = clamp(sx.min, -20, 20);
+        sx.max = clamp(sx.max, -20, 20);
+        sy.min = clamp(sy.min, -20, 20);
+        sy.max = clamp(sy.max, -20, 20);
+        sz.min = clamp(sz.min, -20, 20);
+        sz.max = clamp(sz.max, -20, 20);
 
         // convert f_dc_ to colors before calculating min/max and packaging
         const SH_C0 = 0.28209479177387814;

@@ -28,14 +28,14 @@ const localizeInit = () => {
                     'scene.export.viewer': 'Viewer App',
 
                     // Selection menu
-                    'selection': 'Selektion',
-                    'selection.all': 'Alles',
-                    'selection.none': 'Aufheben',
-                    'selection.invert': 'Invertieren',
-                    'selection.lock': 'Selektion sperren',
-                    'selection.unlock': 'Sperre aufheben',
-                    'selection.delete': 'Selektion aufheben',
-                    'selection.reset': 'Splats zurücksetzen',
+                    'select': 'Auswahl',
+                    'select.all': 'Alles',
+                    'select.none': 'Aufheben',
+                    'select.invert': 'Invertieren',
+                    'select.lock': 'Selektion sperren',
+                    'select.unlock': 'Sperre aufheben',
+                    'select.delete': 'Selektion aufheben',
+                    'select.reset': 'Splats zurücksetzen',
 
                     // Help menu
                     'help': 'Hilfe',
@@ -196,14 +196,14 @@ const localizeInit = () => {
                     'scene.export.viewer': 'Viewer App',
 
                     // Selection menu
-                    'selection': 'Selection',
-                    'selection.all': 'All',
-                    'selection.none': 'None',
-                    'selection.invert': 'Inverse',
-                    'selection.lock': 'Lock Selection',
-                    'selection.unlock': 'Unlock All',
-                    'selection.delete': 'Delete Selection',
-                    'selection.reset': 'Reset Splat',
+                    'select': 'Select',
+                    'select.all': 'All',
+                    'select.none': 'None',
+                    'select.invert': 'Invert',
+                    'select.lock': 'Lock Selection',
+                    'select.unlock': 'Unlock All',
+                    'select.delete': 'Delete Selection',
+                    'select.reset': 'Reset Splat',
 
                     // Help menu
                     'help': 'Help',
@@ -373,14 +373,14 @@ const localizeInit = () => {
                     'scene.export.viewer': 'Application de visualisation',
 
                     // Selection menu
-                    'selection': 'Sélection',
-                    'selection.all': 'Tout',
-                    'selection.none': 'Aucune',
-                    'selection.invert': 'Inverser',
-                    'selection.lock': 'Verrouiller la sélection',
-                    'selection.unlock': 'Tout débloquer',
-                    'selection.delete': 'Supprimer la sélection',
-                    'selection.reset': 'Réinitialiser splat',
+                    'select': 'Sélection',
+                    'select.all': 'Tout',
+                    'select.none': 'Aucune',
+                    'select.invert': 'Inverser',
+                    'select.lock': 'Verrouiller la sélection',
+                    'select.unlock': 'Tout débloquer',
+                    'select.delete': 'Supprimer la sélection',
+                    'select.reset': 'Réinitialiser splat',
 
                     // Help menu
                     'help': 'Aide',
@@ -541,14 +541,14 @@ const localizeInit = () => {
                     'scene.export.viewer': 'Viewer App',
 
                     // Selection menu
-                    'selection': '選択',
-                    'selection.all': '全て',
-                    'selection.none': '選択を解除',
-                    'selection.invert': '反転',
-                    'selection.lock': '選択をロック',
-                    'selection.unlock': 'ロックを解除',
-                    'selection.delete': '選択を削除',
-                    'selection.reset': '変更を全てリセット',
+                    'select': '選択',
+                    'select.all': '全て',
+                    'select.none': '選択を解除',
+                    'select.invert': '反転',
+                    'select.lock': '選択をロック',
+                    'select.unlock': 'ロックを解除',
+                    'select.delete': '選択を削除',
+                    'select.reset': '変更を全てリセット',
 
                     // Help menu
                     'help': 'ヘルプ',
@@ -709,14 +709,14 @@ const localizeInit = () => {
                     'scene.export.viewer': '뷰어 앱',
 
                     // Selection menu
-                    'selection': '선택',
-                    'selection.all': '모두',
-                    'selection.none': '없음',
-                    'selection.invert': '반전',
-                    'selection.lock': '선택 잠금',
-                    'selection.unlock': '모두 잠금 해제',
-                    'selection.delete': '선택 삭제',
-                    'selection.reset': 'Splat 재설정',
+                    'select': '선택',
+                    'select.all': '모두',
+                    'select.none': '없음',
+                    'select.invert': '반전',
+                    'select.lock': '선택 잠금',
+                    'select.unlock': '모두 잠금 해제',
+                    'select.delete': '선택 삭제',
+                    'select.reset': 'Splat 재설정',
 
                     // Help menu
                     'help': '도움말',
@@ -877,14 +877,14 @@ const localizeInit = () => {
                     'scene.export.viewer': '查看器应用',
 
                     // Selection menu
-                    'selection': '选择',
-                    'selection.all': '全部',
-                    'selection.none': '无',
-                    'selection.invert': '反选',
-                    'selection.lock': '锁定选择',
-                    'selection.unlock': '解锁全部',
-                    'selection.delete': '删除选择',
-                    'selection.reset': '重置 Splat',
+                    'select': '选择',
+                    'select.all': '全部',
+                    'select.none': '无',
+                    'select.invert': '反选',
+                    'select.lock': '锁定选择',
+                    'select.unlock': '解锁全部',
+                    'select.delete': '删除选择',
+                    'select.reset': '重置 Splat',
 
                     // Help menu
                     'help': '帮助',

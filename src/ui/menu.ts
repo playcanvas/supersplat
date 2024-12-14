@@ -59,7 +59,7 @@ class Menu extends Container {
         });
 
         const selection = new Label({
-            text: localize('selection'),
+            text: localize('select'),
             class: 'menu-option'
         });
 
@@ -175,39 +175,39 @@ class Menu extends Container {
         }]);
 
         const selectionMenuPanel = new MenuPanel([{
-            text: localize('selection.all'),
+            text: localize('select.all'),
             icon: createSvg(selectAll),
-            extra: 'A',
+            extra: 'Ctrl + A',
             onSelect: () => events.fire('select.all')
         }, {
-            text: localize('selection.none'),
+            text: localize('select.none'),
             icon: createSvg(selectNone),
-            extra: 'Shift + A',
+            extra: 'Ctrl + Shift + A',
             onSelect: () => events.fire('select.none')
         }, {
-            text: localize('selection.invert'),
+            text: localize('select.invert'),
             icon: createSvg(selectInverse),
-            extra: 'I',
+            extra: 'Ctrl + I',
             onSelect: () => events.fire('select.invert')
         }, {
             // separator
         }, {
-            text: localize('selection.lock'),
+            text: localize('select.lock'),
             icon: createSvg(selectLock),
             extra: 'H',
             onSelect: () => events.fire('select.hide')
         }, {
-            text: localize('selection.unlock'),
+            text: localize('select.unlock'),
             icon: createSvg(selectUnlock),
             extra: 'U',
             onSelect: () => events.fire('select.unhide')
         }, {
-            text: localize('selection.delete'),
+            text: localize('select.delete'),
             icon: createSvg(selectDelete),
             extra: 'Delete',
             onSelect: () => events.fire('select.delete')
         }, {
-            text: localize('selection.reset'),
+            text: localize('select.reset'),
             onSelect: () => events.fire('scene.reset')
         }]);
 

@@ -193,7 +193,7 @@ const template = /* html */ `
                         return gsplatComponents?.[0]?.instance?.meshInstance?.aabb ?? new BoundingBox();
                     }
 
-                    initCamara() {
+                    initCamera() {
                         document.getElementById('loadingIndicator').classList.add('hidden');
 
                         const bbox = this.calcBound();
@@ -228,10 +228,10 @@ const template = /* html */ `
                         if (assets.length > 0) {
                             const asset = assets[0];
                             if (asset.loaded) {
-                                this.initCamara();
+                                this.initCamera();
                             } else {
                                 asset.on('load', () => {
-                                    this.initCamara();
+                                    this.initCamera();
                                 });
                             }
                         }

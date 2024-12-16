@@ -61,7 +61,7 @@ class Menu extends Container {
         });
 
         const selection = new Label({
-            text: localize('selection'),
+            text: localize('select'),
             class: 'menu-option'
         });
 
@@ -177,51 +177,51 @@ class Menu extends Container {
         }]);
 
         const selectionMenuPanel = new MenuPanel([{
-            text: localize('selection.all'),
+            text: localize('select.all'),
             icon: createSvg(selectAll),
-            extra: 'A',
+            extra: 'Ctrl + A',
             onSelect: () => events.fire('select.all')
         }, {
-            text: localize('selection.none'),
+            text: localize('select.none'),
             icon: createSvg(selectNone),
-            extra: 'Shift + A',
+            extra: 'Ctrl + Shift + A',
             onSelect: () => events.fire('select.none')
         }, {
-            text: localize('selection.invert'),
+            text: localize('select.invert'),
             icon: createSvg(selectInverse),
-            extra: 'I',
+            extra: 'Ctrl + I',
             onSelect: () => events.fire('select.invert')
         }, {
             // separator
         }, {
-            text: localize('selection.lock'),
+            text: localize('select.lock'),
             icon: createSvg(selectLock),
             extra: 'H',
             onSelect: () => events.fire('select.hide'),
             isEnabled: () => events.invoke('selection.splats')
         }, {
-            text: localize('selection.unlock'),
+            text: localize('select.unlock'),
             icon: createSvg(selectUnlock),
             extra: 'U',
             onSelect: () => events.fire('select.unhide')
         }, {
-            text: localize('selection.delete'),
+            text: localize('select.delete'),
             icon: createSvg(selectDelete),
             extra: 'Delete',
             onSelect: () => events.fire('select.delete'),
             isEnabled: () => events.invoke('selection.splats')
         }, {
-            text: localize('selection.reset'),
+            text: localize('select.reset'),
             onSelect: () => events.fire('scene.reset')
         }, {
             // separator
         }, {
-            text: localize('selection.duplicate'),
+            text: localize('select.duplicate'),
             icon: createSvg(selectDuplicate),
             onSelect: () => events.fire('select.duplicate'),
             isEnabled: () => events.invoke('selection.splats')
         }, {
-            text: localize('selection.separate'),
+            text: localize('select.separate'),
             icon: createSvg(selectSeparate),
             onSelect: () => events.fire('select.separate'),
             isEnabled: () => events.invoke('selection.splats')

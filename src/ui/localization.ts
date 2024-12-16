@@ -36,6 +36,8 @@ const localizeInit = () => {
                     'selection.unlock': 'Sperre aufheben',
                     'selection.delete': 'Selektion aufheben',
                     'selection.reset': 'Splats zurücksetzen',
+                    'selection.duplicate': 'Duplizieren',
+                    'selection.separate': 'Separieren',
 
                     // Help menu
                     'help': 'Hilfe',
@@ -204,6 +206,8 @@ const localizeInit = () => {
                     'selection.unlock': 'Unlock All',
                     'selection.delete': 'Delete Selection',
                     'selection.reset': 'Reset Splat',
+                    'selection.duplicate': 'Duplicate',
+                    'selection.separate': 'Separate',
 
                     // Help menu
                     'help': 'Help',
@@ -381,6 +385,8 @@ const localizeInit = () => {
                     'selection.unlock': 'Tout débloquer',
                     'selection.delete': 'Supprimer la sélection',
                     'selection.reset': 'Réinitialiser splat',
+                    'selection.duplicate': 'Dupliquer',
+                    'selection.separate': 'Séparer',
 
                     // Help menu
                     'help': 'Aide',
@@ -549,6 +555,8 @@ const localizeInit = () => {
                     'selection.unlock': 'ロックを解除',
                     'selection.delete': '選択を削除',
                     'selection.reset': '変更を全てリセット',
+                    'selection.duplicate': '複製',
+                    'selection.separate': '分離',
 
                     // Help menu
                     'help': 'ヘルプ',
@@ -717,6 +725,8 @@ const localizeInit = () => {
                     'selection.unlock': '모두 잠금 해제',
                     'selection.delete': '선택 삭제',
                     'selection.reset': 'Splat 재설정',
+                    'selection.duplicate': '복제',
+                    'selection.separate': '분리',
 
                     // Help menu
                     'help': '도움말',
@@ -885,6 +895,8 @@ const localizeInit = () => {
                     'selection.unlock': '解锁全部',
                     'selection.delete': '删除选择',
                     'selection.reset': '重置 Splat',
+                    'selection.duplicate': '复制',
+                    'selection.separate': '分离',
 
                     // Help menu
                     'help': '帮助',

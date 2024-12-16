@@ -188,7 +188,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         scene.camera.ortho = true;
     });
 
-    // returns true is the currently selected splat has selected gaussians
+    // returns true if the selected splat has selected gaussians
     events.function('selection.splats', () => {
         const splat = events.invoke('selection') as Splat;
         return splat?.numSelected > 0;
@@ -446,7 +446,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
             URL.revokeObjectURL(url);
         }
-    }
+    };
 
     // duplicate the current selection
     events.on('select.duplicate', async () => {

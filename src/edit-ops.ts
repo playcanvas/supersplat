@@ -1,10 +1,10 @@
 import { Color, Mat4 } from 'playcanvas';
 
 import { Pivot } from './pivot';
+import { Scene } from './scene';
 import { Splat } from './splat';
 import { State } from './splat-state';
 import { Transform } from './transform';
-import { Scene } from './scene';
 
 interface EditOp {
     name: string;
@@ -401,7 +401,7 @@ class AddSplatOp {
     destroy() {
         this.splat.destroy();
     }
-};
+}
 
 export {
     EditOp,

@@ -7,11 +7,12 @@ import {
 } from 'playcanvas';
 
 import { EditHistory } from './edit-history';
-import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp } from './edit-ops';
+import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp, MultiOp, AddSplatOp } from './edit-ops';
 import { Events } from './events';
 import { PngCompressor } from './png-compressor';
 import { Scene } from './scene';
 import { Splat } from './splat';
+import { serializePly } from './splat-serialize';
 
 // register for editor and scene events
 const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: Scene) => {
@@ -185,6 +186,12 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
         // switch to ortho mode
         scene.camera.ortho = true;
+    });
+
+    // returns true if the selected splat has selected gaussians
+    events.function('selection.splats', () => {
+        const splat = events.invoke('selection') as Splat;
+        return splat?.numSelected > 0;
     });
 
     events.on('select.all', () => {
@@ -386,6 +393,68 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         selectedSplats().forEach((splat) => {
             editHistory.add(new DeleteSelectionOp(splat));
         });
+    });
+
+    const performSelectionFunc = async (func: 'duplicate' | 'separate') => {
+        const splats = selectedSplats();
+
+        let data: Uint8Array = null;
+        let cursor = 0;
+
+        const writeFunc = (chunk: Uint8Array, finalWrite?: boolean) => {
+            if (!data) {
+                data = finalWrite ? chunk : chunk.slice();
+                cursor = chunk.byteLength;
+            } else {
+                if (data.byteLength < cursor + chunk.byteLength) {
+                    let newSize = data.byteLength * 2;
+                    while (newSize < cursor + chunk.byteLength) {
+                        newSize *= 2;
+                    }
+                    const newData = new Uint8Array(newSize);
+                    newData.set(data);
+                    data = newData;
+                }
+                data.set(chunk, cursor);
+                cursor += chunk.byteLength;
+            }
+        };
+
+        await serializePly({
+            splats,
+            maxSHBands: 3,
+            selected: true
+        }, writeFunc);
+
+        if (data) {
+            const splat = splats[0];
+
+            // wrap PLY in a blob and load it
+            const blob = new Blob([data], { type: 'octet/stream' });
+            const url = URL.createObjectURL(blob);
+            const { filename } = splat;
+            const copy = await scene.assetLoader.loadPly({ url, filename });
+
+            if (func === 'separate') {
+                editHistory.add(new MultiOp([
+                    new DeleteSelectionOp(splat),
+                    new AddSplatOp(scene, copy)
+                ]));
+            } else {
+                editHistory.add(new AddSplatOp(scene, copy));
+            }
+
+            URL.revokeObjectURL(url);
+        }
+    };
+
+    // duplicate the current selection
+    events.on('select.duplicate', async () => {
+        await performSelectionFunc('duplicate');
+    });
+
+    events.on('select.separate', async () => {
+        await performSelectionFunc('separate');
     });
 
     events.on('scene.reset', () => {

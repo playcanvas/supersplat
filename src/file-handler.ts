@@ -156,7 +156,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                 const model = await scene.assetLoader.loadModel({ url, filename });
                 scene.add(model);
                 scene.camera.focus();
-                events.fire('loaded', filename);
+                return model;
             } else {
                 throw new Error('Unsupported file type');
             }

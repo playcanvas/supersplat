@@ -36,6 +36,8 @@ const localizeInit = () => {
                     'select.unlock': 'Sperre aufheben',
                     'select.delete': 'Selektion aufheben',
                     'select.reset': 'Splats zurücksetzen',
+                    'select.duplicate': 'Duplizieren',
+                    'select.separate': 'Separieren',
 
                     // Help menu
                     'help': 'Hilfe',
@@ -204,6 +206,8 @@ const localizeInit = () => {
                     'select.unlock': 'Unlock All',
                     'select.delete': 'Delete Selection',
                     'select.reset': 'Reset Splat',
+                    'select.duplicate': 'Duplicate',
+                    'select.separate': 'Separate',
 
                     // Help menu
                     'help': 'Help',
@@ -381,6 +385,8 @@ const localizeInit = () => {
                     'select.unlock': 'Tout débloquer',
                     'select.delete': 'Supprimer la sélection',
                     'select.reset': 'Réinitialiser splat',
+                    'select.duplicate': 'Dupliquer',
+                    'select.separate': 'Séparer',
 
                     // Help menu
                     'help': 'Aide',
@@ -549,6 +555,8 @@ const localizeInit = () => {
                     'select.unlock': 'ロックを解除',
                     'select.delete': '選択を削除',
                     'select.reset': '変更を全てリセット',
+                    'select.duplicate': '複製',
+                    'select.separate': '分離',
 
                     // Help menu
                     'help': 'ヘルプ',
@@ -717,6 +725,8 @@ const localizeInit = () => {
                     'select.unlock': '모두 잠금 해제',
                     'select.delete': '선택 삭제',
                     'select.reset': 'Splat 재설정',
+                    'select.duplicate': '복제',
+                    'select.separate': '분리',
 
                     // Help menu
                     'help': '도움말',
@@ -885,6 +895,8 @@ const localizeInit = () => {
                     'select.unlock': '解锁全部',
                     'select.delete': '删除选择',
                     'select.reset': '重置 Splat',
+                    'select.duplicate': '复制',
+                    'select.separate': '分离',
 
                     // Help menu
                     'help': '帮助',

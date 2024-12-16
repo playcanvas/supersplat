@@ -1,6 +1,7 @@
 import { Color, Mat4 } from 'playcanvas';
 
 import { Pivot } from './pivot';
+import { Scene } from './scene';
 import { Splat } from './splat';
 import { State } from './splat-state';
 import { Transform } from './transform';
@@ -379,6 +380,29 @@ class MultiOp {
     }
 }
 
+class AddSplatOp {
+    name: 'addSplat';
+    scene: Scene;
+    splat: Splat;
+
+    constructor(scene: Scene, splat: Splat) {
+        this.scene = scene;
+        this.splat = splat;
+    }
+
+    do() {
+        this.scene.add(this.splat);
+    }
+
+    undo() {
+        this.scene.remove(this.splat);
+    }
+
+    destroy() {
+        this.splat.destroy();
+    }
+}
+
 export {
     EditOp,
     SelectAllOp,
@@ -394,5 +418,6 @@ export {
     PlacePivotOp,
     ColorAdjustment,
     SetSplatColorAdjustmentOp,
-    MultiOp
+    MultiOp,
+    AddSplatOp
 };

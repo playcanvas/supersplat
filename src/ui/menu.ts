@@ -13,9 +13,11 @@ import sceneOpen from './svg/open.svg';
 import logoSvg from './svg/playcanvas-logo.svg';
 import sceneSave from './svg/save.svg';
 import selectAll from './svg/select-all.svg';
+import selectDuplicate from './svg/select-duplicate.svg';
 import selectInverse from './svg/select-inverse.svg';
 import selectLock from './svg/select-lock.svg';
 import selectNone from './svg/select-none.svg';
+import selectSeparate from './svg/select-separate.svg';
 import selectUnlock from './svg/select-unlock.svg';
 
 const createSvg = (svgString: string) => {
@@ -195,7 +197,8 @@ class Menu extends Container {
             text: localize('select.lock'),
             icon: createSvg(selectLock),
             extra: 'H',
-            onSelect: () => events.fire('select.hide')
+            onSelect: () => events.fire('select.hide'),
+            isEnabled: () => events.invoke('selection.splats')
         }, {
             text: localize('select.unlock'),
             icon: createSvg(selectUnlock),
@@ -205,10 +208,23 @@ class Menu extends Container {
             text: localize('select.delete'),
             icon: createSvg(selectDelete),
             extra: 'Delete',
-            onSelect: () => events.fire('select.delete')
+            onSelect: () => events.fire('select.delete'),
+            isEnabled: () => events.invoke('selection.splats')
         }, {
             text: localize('select.reset'),
             onSelect: () => events.fire('scene.reset')
+        }, {
+            // separator
+        }, {
+            text: localize('select.duplicate'),
+            icon: createSvg(selectDuplicate),
+            onSelect: () => events.fire('select.duplicate'),
+            isEnabled: () => events.invoke('selection.splats')
+        }, {
+            text: localize('select.separate'),
+            icon: createSvg(selectSeparate),
+            onSelect: () => events.fire('select.separate'),
+            isEnabled: () => events.invoke('selection.splats')
         }]);
 
         const helpMenuPanel = new MenuPanel([{

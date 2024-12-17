@@ -365,7 +365,7 @@ const serializePly = async (options: SerializeOptions, write: WriteFunc) => {
 
         for (let i = 0; i < splatData.numSplats; ++i) {
             if ((state[i] & State.deleted) === State.deleted) continue;
-            if (options.selected && (state[i] & State.selected) === 0) continue;
+            if (options.selected && (state[i] !== State.selected)) continue;
 
             singleSplat.read(splat, i);
 

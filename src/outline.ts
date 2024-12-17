@@ -14,6 +14,7 @@ import {
 
 import { Element, ElementType } from './element';
 import { vertexShader, fragmentShader } from './shaders/outline-shader';
+import { Splat } from './splat';
 
 class Outline extends Element {
     entity: Entity;
@@ -33,9 +34,20 @@ class Outline extends Element {
 
     add() {
         const device = this.scene.app.graphicsDevice;
+        const layerId = this.scene.overlayLayer.id;
+
+        // add selected splat to outline layer
+        this.scene.events.on('selection.changed', (splat: Splat, prev: Splat) => {
+            if (prev) {
+                prev.entity.gsplat.layers = prev.entity.gsplat.layers.filter(id => id !== layerId);
+            }
+            if (splat) {
+                splat.entity.gsplat.layers = splat.entity.gsplat.layers.concat([layerId]);
+            }
+        });
 
         // render overlay layer only
-        this.entity.camera.layers = [this.scene.overlayLayer.id];
+        this.entity.camera.layers = [layerId];
         this.scene.camera.entity.addChild(this.entity);
 
         this.shader = createShaderFromCode(device, vertexShader, fragmentShader, 'apply-outline', {

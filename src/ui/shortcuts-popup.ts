@@ -14,7 +14,7 @@ const shortcutList = [
     { key: 'Esc', action: 'deactivate-tool' },
     { header: 'selection' },
     { key: 'Ctrl + A', action: 'select-all' },
-    { key: 'Ctrl + Shift + A', action: 'deselect-all' },
+    { key: 'Shift + A', action: 'deselect-all' },
     { key: 'Ctrl + I', action: 'invert-selection' },
     { key: 'Shift', action: 'add-to-selection' },
     { key: 'Ctrl', action: 'remove-from-selection' },

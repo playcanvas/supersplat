@@ -77,7 +77,7 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['L', 'l'], { event: 'tool.lassoSelection', sticky: true });
     shortcuts.register(['B', 'b'], { event: 'tool.brushSelection', sticky: true });
     shortcuts.register(['A', 'a'], { event: 'select.all', ctrl: true });
-    shortcuts.register(['A', 'a'], { event: 'select.none', ctrl: true, shift: true });
+    shortcuts.register(['A', 'a'], { event: 'select.none', shift: true });
     shortcuts.register(['I', 'i'], { event: 'select.invert', ctrl: true });
     shortcuts.register(['H', 'h'], { event: 'select.hide' });
     shortcuts.register(['U', 'u'], { event: 'select.unhide' });

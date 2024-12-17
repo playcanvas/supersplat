@@ -57,9 +57,11 @@ class Outline extends Element {
         this.quadRender = new QuadRender(this.shader);
 
         const outlineTextureId = device.scope.resolve('outlineTexture');
+        const alphaCutoffId = device.scope.resolve('alphaCutoff');
         const clrId = device.scope.resolve('clr');
         const clr = this.clr;
         const clrStorage = [1, 1, 1, 1];
+        const events = this.scene.events;
 
         // apply the outline texture to the display before gizmos render
         this.entity.camera.on('postRenderLayer', (layer: Layer, transparent: boolean) => {
@@ -78,6 +80,7 @@ class Outline extends Element {
             clrStorage[3] = clr.a;
 
             outlineTextureId.setValue(this.entity.camera.renderTarget.colorBuffer);
+            alphaCutoffId.setValue(events.invoke('camera.mode') === 'rings' ? 0.0 : 0.4);
             clrId.setValue(clrStorage);
 
             const glDevice = device as WebglGraphicsDevice;

@@ -133,16 +133,13 @@ uniform float ringSize;
 void main(void) {
     mediump float A = dot(texCoordIsLocked.xy, texCoordIsLocked.xy);
 
-    #if OUTLINE_PASS
-        if (A > (mode == 0 ? 0.02 : 1.0)) {
-            discard;
-        }
-        gl_FragColor = vec4(1.0);
-    #else
-        if (A > 1.0) {
-            discard;
-        }
+    if (A > 1.0) {
+        discard;
+    }
 
+    #if OUTLINE_PASS
+        gl_FragColor = vec4(1.0, 1.0, 1.0, mode == 0 ? exp(-A * 4.0) * color.a : 1.0);
+    #else
         mediump float alpha = exp(-A * 4.0) * color.a;
 
         #ifdef PICK_PASS

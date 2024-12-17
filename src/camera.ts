@@ -486,7 +486,7 @@ class Camera extends Element {
         for (let i = 0; i < splats.length; ++i) {
             const splat = splats[i] as Splat;
 
-            this.pickPrep(splat);
+            this.pickPrep(splat, 'set');
             const pickId = this.pick(sx, sy);
 
             if (pickId !== -1) {
@@ -533,7 +533,7 @@ class Camera extends Element {
     // pick mode
 
     // render picker contents
-    pickPrep(splat: Splat) {
+    pickPrep(splat: Splat, op: 'add'|'remove'|'set') {
         const { width, height } = this.scene.targetSize;
         const worldLayer = this.scene.app.scene.layers.getLayerByName('World');
 
@@ -548,6 +548,7 @@ class Camera extends Element {
         });
 
         device.scope.resolve('pickerAlpha').setValue(alpha);
+        device.scope.resolve('pickMode').setValue(['add', 'remove', 'set'].indexOf(op));
         this.picker.resize(width, height);
         this.picker.prepare(this.entity.camera, this.scene.app.scene, [worldLayer]);
 

@@ -162,7 +162,7 @@ const template = /* html */ `
         </div>
 
         <script type="module">
-            import { BoundingBox, Script, Vec3 } from 'playcanvas';
+            import { BoundingBox, Color, Script, Vec3 } from 'playcanvas';
 
             document.addEventListener('DOMContentLoaded', async () => {
                 const appElement = await document.querySelector('pc-app').ready();
@@ -293,36 +293,74 @@ const template = /* html */ `
                     return button;
                 }
 
+                // On entering/exiting AR, we need to set the camera clear color to transparent black
+                let cameraEntity, skyType = null;
+                const clearColor = new Color();
+
+                app.xr.on('start', () => {
+                    if (app.xr.type === 'immersive-ar') {
+                        cameraEntity = app.xr.camera;
+                        clearColor.copy(cameraEntity.camera.clearColor);
+                        cameraEntity.camera.clearColor = new Color(0, 0, 0, 0);
+
+                        const sky = document.querySelector('pc-sky');
+                        if (sky && sky.type !== 'none') {
+                            skyType = sky.type;
+                            sky.type = 'none';
+                        }
+                    }
+                });
+
+                app.xr.on('end', () => {
+                    if (app.xr.type === 'immersive-ar') {
+                        cameraEntity.camera.clearColor = clearColor;
+
+                        const sky = document.querySelector('pc-sky');
+                        if (sky) {
+                            if (skyType) {
+                                sky.type = skyType;
+                                skyType = null;
+                            } else {
+                                sky.removeAttribute('type');
+                            }
+                        }
+                    }
+                });
+
+                // Add AR button if available
+                if (app.xr.isAvailable('immersive-ar')) {
+                    const arButton = createButton({
+                        icon: '<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368"><path d="M440-181 240-296q-19-11-29.5-29T200-365v-230q0-22 10.5-40t29.5-29l200-115q19-11 40-11t40 11l200 115q19 11 29.5 29t10.5 40v230q0 22-10.5 40T720-296L520-181q-19 11-40 11t-40-11Zm0-92v-184l-160-93v185l160 92Zm80 0 160-92v-185l-160 93v184ZM80-680v-120q0-33 23.5-56.5T160-880h120v80H160v120H80ZM280-80H160q-33 0-56.5-23.5T80-160v-120h80v120h120v80Zm400 0v-80h120v-120h80v120q0 33-23.5 56.5T800-80H680Zm120-600v-120H680v-80h120q33 0 56.5 23.5T880-800v120h-80ZM480-526l158-93-158-91-158 91 158 93Zm0 45Zm0-45Zm40 69Zm-80 0Z"/></svg>',
+                        title: 'Enter AR',
+                        onClick: () => app.xr.start(app.root.findComponent('camera'), 'immersive-ar', 'local-floor')
+                    });
+                    container.appendChild(arButton);
+                }
+
                 // Add VR button if available
                 if (app.xr.isAvailable('immersive-vr')) {
                     const vrButton = createButton({
-                        icon: \`<svg width="32" height="32" viewBox="0 0 48 48">
-                            <path d="M30,34 L26,30 L22,30 L18,34 L14,34 C11.7908610,34 10,32.2091390 10,30 L10,18 C10,15.7908610 11.7908610,14 14,14 L34,14 C36.2091390,14 38,15.7908610 38,18 L38,30 C38,32.2091390 36.2091390,34 34,34 L30,34 Z M44,28 C44,29.1045694 43.1045694,30 42,30 C40.8954306,30 40,29.1045694 40,28 L40,20 C40,18.8954305 40.8954306,18 42,18 C43.1045694,18 44,18.8954305 44,20 L44,28 Z M8,28 C8,29.1045694 7.10456940,30 6,30 C4.89543060,30 4,29.1045694 4,28 L4,20 C4,18.8954305 4.89543060,18 6,18 C7.10456940,18 8,18.8954305 8,20 L8,28 Z" fill="currentColor">
-                        </svg>\`,
+                        icon: '<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368"><path d="M300-240q-66 0-113-47t-47-113v-163q0-51 32-89.5t82-47.5q57-11 113-15.5t113-4.5q57 0 113.5 4.5T706-700q50 10 82 48t32 89v163q0 66-47 113t-113 47h-40q-13 0-26-1.5t-25-6.5l-64-22q-12-5-25-5t-25 5l-64 22q-12 5-25 6.5t-26 1.5h-40Zm0-80h40q7 0 13.5-1t12.5-3q29-9 56.5-19t57.5-10q30 0 58 9.5t56 19.5q6 2 12.5 3t13.5 1h40q33 0 56.5-23.5T740-400v-163q0-22-14-38t-35-21q-52-11-104.5-14.5T480-640q-54 0-106 4t-105 14q-21 4-35 20.5T220-563v163q0 33 23.5 56.5T300-320ZM40-400v-160h60v160H40Zm820 0v-160h60v160h-60Zm-380-80Z"/></svg>',
                         title: 'Enter VR',
                         onClick: () => app.xr.start(app.root.findComponent('camera'), 'immersive-vr', 'local-floor')
                     });
                     container.appendChild(vrButton);
-    
-                    window.addEventListener('keydown', (event) => {
-                        if (event.key === 'Escape') {
-                            app.xr.end();
-                        }
-                    });
                 }
+
+                window.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape' && app.xr.active) {
+                        app.xr.end();
+                    }
+                });
 
                 // Add fullscreen button if supported
                 if (document.documentElement.requestFullscreen && document.exitFullscreen) {
-                    const enterFullscreenIcon = \`<svg width="32" height="32" viewBox="0 0 24 24">
-                        <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" fill="currentColor"/>
-                    </svg>\`;
-                    const exitFullscreenIcon = \`<svg width="32" height="32" viewBox="0 0 24 24">
-                        <path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z" fill="currentColor"/>
-                    </svg>\`;
+                    const enterFullscreenIcon = '<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368"><path d="M120-120v-200h80v120h120v80H120Zm520 0v-80h120v-120h80v200H640ZM120-640v-200h200v80H200v120h-80Zm640 0v-120H640v-80h200v200h-80Z"/></svg>';
+                    const exitFullscreenIcon = '<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368"><path d="M240-120v-120H120v-80h200v200h-80Zm400 0v-200h200v80H720v120h-80ZM120-640v-80h120v-120h80v200H120Zm520 0v-200h80v120h120v80H640Z"/></svg>';
 
                     const fullscreenButton = createButton({
                         icon: enterFullscreenIcon,
-                        title: 'Toggle Fullscreen',
+                        title: 'Enter Fullscreen',
                         onClick: () => {
                             if (!document.fullscreenElement) {
                                 document.documentElement.requestFullscreen();
@@ -343,9 +381,7 @@ const template = /* html */ `
 
                 // Add info button
                 const infoButton = createButton({
-                    icon: \`<svg width="32" height="32" viewBox="0 0 24 24">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/>
-                    </svg>\`,
+                    icon: '<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368"><path d="M440-280h80v-240h-80v240Zm40-320q17 0 28.5-11.5T520-640q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640q0 17 11.5 28.5T480-600Zm0 520q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/></svg>',
                     title: 'Show Controls',
                     onClick: () => {
                         const infoPanel = document.getElementById('infoPanel');

@@ -12,6 +12,10 @@ uniform vec4 clrScale;
 varying mediump vec3 texCoordIsLocked;          // store locked flat in z
 varying mediump vec4 color;
 
+#if PICK_PASS
+    uniform uint pickMode;                      // 0: add, 1: remove, 2: set
+#endif
+
 mediump vec4 discardVec = vec4(0.0, 0.0, 2.0, 1.0);
 
 void main(void) {
@@ -23,7 +27,7 @@ void main(void) {
     }
 
     // get per-gaussian edit state, discard if deleted
-    uint vertexState = uint(texelFetch(splatState, source.uv, 0).r * 255.0 + 0.5);
+    uint vertexState = uint(texelFetch(splatState, source.uv, 0).r * 255.0 + 0.5) & 7u;
 
     #if OUTLINE_PASS
         if (vertexState != 1u) {
@@ -36,9 +40,24 @@ void main(void) {
             return;
         }
     #elif PICK_PASS
-        if ((vertexState & 6u) != 0u) {
-            gl_Position = discardVec;
-            return;
+        if (pickMode == 0u) {
+            // add: skip deleted, hidden and selected splats
+            if (vertexState != 0u) {
+                gl_Position = discardVec;
+                return;
+            }
+        } else if (pickMode == 1u) {
+            // remove: skip deleted, hidden and unselected splats
+            if (vertexState != 1u) {
+                gl_Position = discardVec;
+                return;
+            }
+        } else {
+            // set: skip deleted and hidden splats
+            if ((vertexState & 6u) != 0u) {
+                gl_Position = discardVec;
+                return;
+            }
         }
     #else
         if ((vertexState & 4u) != 0u) {

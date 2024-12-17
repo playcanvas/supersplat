@@ -243,7 +243,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             } else if (mode === 'rings') {
                 const { width, height } = scene.targetSize;
 
-                scene.camera.pickPrep(splat);
+                scene.camera.pickPrep(splat, op);
                 const pick = scene.camera.pickRect(
                     Math.floor(rect.start.x * width),
                     Math.floor(rect.start.y * height),
@@ -307,7 +307,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 const pw = px1 - px0 + 1;
                 const ph = py1 - py0 + 1;
 
-                scene.camera.pickPrep(splat);
+                scene.camera.pickPrep(splat, op);
                 const pick = scene.camera.pickRect(px0, py0, pw, ph);
 
                 const selected = new Set<number>();
@@ -360,7 +360,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
                 events.fire('edit.add', new SelectOp(splat, op, filter));
             } else if (mode === 'rings') {
-                scene.camera.pickPrep(splat);
+                scene.camera.pickPrep(splat, op);
 
                 const pickId = scene.camera.pickRect(
                     Math.floor(point.x * width),

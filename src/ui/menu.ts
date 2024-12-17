@@ -184,7 +184,7 @@ class Menu extends Container {
         }, {
             text: localize('select.none'),
             icon: createSvg(selectNone),
-            extra: 'Ctrl + Shift + A',
+            extra: 'Shift + A',
             onSelect: () => events.fire('select.none')
         }, {
             text: localize('select.invert'),

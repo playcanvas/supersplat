@@ -59,7 +59,6 @@ class Outline extends Element {
         const outlineTextureId = device.scope.resolve('outlineTexture');
         const alphaCutoffId = device.scope.resolve('alphaCutoff');
         const clrId = device.scope.resolve('clr');
-        const clr = this.clr;
         const clrStorage = [1, 1, 1, 1];
         const events = this.scene.events;
 
@@ -74,10 +73,11 @@ class Outline extends Element {
             device.setDepthState(DepthState.NODEPTH);
             device.setStencilState(null, null);
 
-            clrStorage[0] = clr.r;
-            clrStorage[1] = clr.g;
-            clrStorage[2] = clr.b;
-            clrStorage[3] = clr.a;
+            const selectedClr = events.invoke('selectedClr');
+            clrStorage[0] = selectedClr.r;
+            clrStorage[1] = selectedClr.g;
+            clrStorage[2] = selectedClr.b;
+            clrStorage[3] = selectedClr.a;
 
             outlineTextureId.setValue(this.entity.camera.renderTarget.colorBuffer);
             alphaCutoffId.setValue(events.invoke('camera.mode') === 'rings' ? 0.0 : 0.4);

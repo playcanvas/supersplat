@@ -4,29 +4,18 @@ import { Scene } from './scene';
 import { Splat } from './splat';
 
 const registerSelectionEvents = (events: Events, scene: Scene) => {
-    let selection: Element = null;
+    let selection: Splat = null;
 
-    events.on('scene.elementAdded', (element: Element) => {
-        if (element.type === ElementType.splat) {
-            setTimeout(() => {
-                events.fire('selection', element);
-            });
+    const setSelection = (splat: Splat) => {
+        if (splat !== selection && (!splat || splat.visible)) {
+            const prev = selection;
+            selection = splat;
+            events.fire('selection.changed', selection, prev);
         }
-    });
+    };
 
-    events.on('scene.elementRemoved', (element: Element) => {
-        if (element === selection) {
-            const splats = scene.getElementsByType(ElementType.splat);
-            events.fire('selection', splats.length === 1 ? null : splats.find(v => v !== element));
-        }
-    });
-
-    events.on('selection', (element: Element) => {
-        if (element !== selection && (!element || (element as Splat).visible)) {
-            selection = element;
-            events.fire('selection.changed', selection);
-            scene.forceRender = true;
-        }
+    events.on('selection', (splat: Splat) => {
+        setSelection(splat);
     });
 
     events.function('selection', () => {
@@ -34,21 +23,34 @@ const registerSelectionEvents = (events: Events, scene: Scene) => {
     });
 
     events.on('selection.next', () => {
-        const splats = scene.getElementsByType(ElementType.splat);
+        const splats = scene.getElementsByType(ElementType.splat) as Splat[];
         if (splats.length > 1) {
             const idx = splats.indexOf(selection);
-            events.fire('selection', splats[(idx + 1) % splats.length]);
+            setSelection(splats[(idx + 1) % splats.length]);
+        }
+    });
+
+    events.on('scene.elementAdded', (element: Element) => {
+        if (element.type === ElementType.splat) {
+            setSelection(element as Splat);
+        }
+    });
+
+    events.on('scene.elementRemoved', (element: Element) => {
+        if (element === selection) {
+            const splats = scene.getElementsByType(ElementType.splat) as Splat[];
+            setSelection(splats.length === 1 ? null : splats.find(v => v !== element));
         }
     });
 
     events.on('splat.visibility', (splat: Splat) => {
         if (splat === selection && !splat.visible) {
-            events.fire('selection', null);
+            setSelection(null);
         }
     });
 
     events.on('camera.focalPointPicked', (details: { splat: Splat }) => {
-        events.fire('selection', details.splat);
+        setSelection(details.splat);
     });
 };
 

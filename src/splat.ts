@@ -286,8 +286,6 @@ class Splat extends Element {
     }
 
     add() {
-        this.entity.gsplat.layers = this.entity.gsplat.layers.concat([this.scene.overlayLayer.id]);
-
         // add the entity to the scene
         this.scene.contentRoot.addChild(this.entity);
 
@@ -323,7 +321,7 @@ class Splat extends Element {
         material.setParameter('mode', cameraMode === 'rings' ? 1 : 0);
         material.setParameter('ringSize', (selected && cameraOverlay && cameraMode === 'rings') ? 0.04 : 0);
 
-        const selectionAlpha = events.invoke('view.outlineSelection') ? 0 : this.selectionAlpha;
+        const selectionAlpha = selected && !events.invoke('view.outlineSelection') ? this.selectionAlpha : 0;
 
         // configure colors
         const selectedClr = events.invoke('selectedClr');

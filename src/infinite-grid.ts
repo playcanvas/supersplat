@@ -11,7 +11,8 @@ import {
     DepthState,
     Layer,
     QuadRender,
-    Shader
+    Shader,
+    Vec3
 } from 'playcanvas';
 
 import { Element, ElementType } from './element';
@@ -51,6 +52,18 @@ class InfiniteGrid extends Element {
                 device.setCullMode(CULLFACE_NONE);
                 device.setDepthState(DepthState.WRITEDEPTH);
                 device.setStencilState(null, null);
+
+                // select the correctly plane in orthographic mode
+                const { camera } = this.scene;
+                if (camera.ortho) {
+                    const cmp = (a:Vec3, b: Vec3) => 1.0 - Math.abs(a.dot(b)) < 1e-03;
+                    const z = camera.entity.getWorldTransform().getZ();
+                    const which = cmp(z, Vec3.RIGHT) ? 0 : (cmp(z, Vec3.BACK) ? 2 : 1);
+                    device.scope.resolve('plane').setValue(which);
+                } else {
+                    // default is xz plane
+                    device.scope.resolve('plane').setValue(1);
+                }
 
                 this.quadRender.render();
             }

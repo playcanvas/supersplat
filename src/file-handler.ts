@@ -5,7 +5,7 @@ import { ElementType } from './element';
 import { Events } from './events';
 import { Scene } from './scene';
 import { Splat } from './splat';
-import { WriteFunc, serializePly, serializePlyCompressed, serializeSplat, serializeViewer, ViewerExportOptions } from './splat-serialize';
+import { WriteFunc, serializePly, serializePlyCompressed, serializeSplat, serializeViewer, ViewerExportOptions, serializeReact } from './splat-serialize';
 import { localize } from './ui/localization';
 
 // ts compiler and vscode find this type, but eslint does not
@@ -16,7 +16,7 @@ interface RemoteStorageDetails {
     url: string;
 }
 
-type ExportType = 'ply' | 'compressed-ply' | 'splat' | 'viewer';
+type ExportType = 'ply' | 'compressed-ply' | 'splat' | 'viewer' | 'react';
 
 interface SceneWriteOptions {
     type: ExportType;
@@ -48,6 +48,12 @@ const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
         description: 'Viewer HTML',
         accept: {
             'text/html': ['.html']
+        }
+    },
+    'react': {
+        description: 'React App',
+        accept: {
+            'text/html': ['.zip']
         }
     },
     'packageViewer': {
@@ -319,7 +325,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
             'ply': '.ply',
             'compressed-ply': '.compressed.ply',
             'splat': '.splat',
-            'viewer': '-viewer.html'
+            'viewer': '-viewer.html',
+            'react': '.zip'
         };
 
         const removeExtension = (filename: string) => {
@@ -398,6 +405,9 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                 break;
             case 'viewer':
                 await serializeViewer(splats, viewerExportOptions, writeFunc);
+                break;
+            case 'react':
+                await serializeReact(options, writeFunc);
                 break;
         }
     };

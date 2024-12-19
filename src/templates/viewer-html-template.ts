@@ -1,4 +1,4 @@
-const template = /* html */ `
+const template = `
 <!DOCTYPE html>
 <html lang="en">
     <head>

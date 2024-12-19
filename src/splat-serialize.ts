@@ -902,12 +902,62 @@ const serializeViewer = async (splats: Splat[], options: ViewerExportOptions, wr
     }
 };
 
+const serializeReact = async (options: SerializeOptions, write: WriteFunc) => {
+    const { splats } = options;
+    const { events } = splats[0].scene;
+
+    // Load the react template zip from URL
+    const response = await fetch('/static/templates/react.zip');
+    if (!response.ok) {
+        throw new Error(`Failed to load template: ${response.statusText}`);
+    }
+
+    const templateBuffer = await response.arrayBuffer();
+
+    // @ts-ignore
+    const zip = await new JSZip().loadAsync(templateBuffer);
+
+    // Get values from events
+    const bgClr = events.invoke('bgClr');
+    const fov = events.invoke('camera.fov');
+    const pose = events.invoke('camera.poses')?.[0];
+
+    const bgCol : Color = new Color(bgClr);
+
+    // Create .env file content
+    const envContent = [
+        'VITE_TITLE=SuperSplat Viewer',
+        `VITE_BG_COLOR=${bgCol.toString(false)}`,
+        `VITE_CLEAR_COLOR=${bgCol.toString(false)}`,
+        `VITE_FOV=${fov.toFixed(2)}`,
+        pose ? `VITE_CAMERA_POSITION=[${pose.position.x},${pose.position.y},${pose.position.z}]` : '',
+        pose ? `VITE_CAMERA_TARGET=[${pose.target.x},${pose.target.y},${pose.target.z}]` : ''
+    ].join('\n');
+
+    // Add .env file to zip
+    zip.file('.env', envContent);
+
+    // Add splat.ply to zip
+    await serializePlyCompressed(options, (data) => {
+        zip.file('/public/splat.ply', data, { binary: true });
+    });
+
+    // Generate the zip file
+    const zipContent = await zip.generateAsync({
+        type: 'uint8array'
+    });
+
+    // Write the zip file
+    await write(zipContent, true);
+};
+
 export {
     WriteFunc,
     serializePly,
     serializePlyCompressed,
     serializeSplat,
     serializeViewer,
+    serializeReact,
     SerializeOptions,
     ViewerExportOptions
 };

@@ -468,9 +468,9 @@ class Camera extends Element {
         return Math.sin(fov * 0.5);
     }
 
-    // find the intersection with the scene at the given screen coordinate
-    intersect(screenX: number, screenY: number) {
-        const { scene } = this;
+    // intersect the scene at the given screen coordinate and focus the camera on this location
+    pickFocalPoint(screenX: number, screenY: number) {
+        const scene = this.scene;
         const cameraPos = this.entity.getPosition();
 
         const target = scene.canvas;
@@ -479,7 +479,9 @@ class Camera extends Element {
 
         const splats = scene.getElementsByType(ElementType.splat);
 
-        const intersections: { splat: Splat, distance: number, position: Vec3 }[]  = [];
+        let closestD = 0;
+        const closestP = new Vec3();
+        let closestSplat = null;
 
         for (let i = 0; i < splats.length; ++i) {
             const splat = splats[i] as Splat;
@@ -507,33 +509,23 @@ class Camera extends Element {
 
                 // find intersection
                 if (plane.intersectsRay(ray, vec)) {
-                    intersections.push({
-                        splat,
-                        distance: vecb.sub2(vec, ray.origin).length(),
-                        position: vec.clone()
-                    });
+                    const distance = vecb.sub2(vec, ray.origin).length();
+                    if (!closestSplat || distance < closestD) {
+                        closestD = distance;
+                        closestP.copy(vec);
+                        closestSplat = splat;
+                    }
                 }
             }
         }
 
-        return intersections;
-    }
-
-    // focus the camera on the scene at the given screen coordinate
-    pickFocalPoint(screenX: number, screenY: number) {
-        const result = this.intersect(screenX, screenY);
-
-        if (result.length > 0) {
-            const { scene } = this;
-            const closest = result.reduce((a, b) => {
-                return a.distance < b.distance ? a : b;
-            });
-            this.setFocalPoint(closest.position);
-            this.setDistance(closest.distance / this.sceneRadius * this.fovFactor);
+        if (closestSplat) {
+            this.setFocalPoint(closestP);
+            this.setDistance(closestD / this.sceneRadius * this.fovFactor);
             scene.events.fire('camera.focalPointPicked', {
                 camera: this,
-                splat: closest.splat,
-                position: closest.position
+                splat: closestSplat,
+                position: closestP
             });
         }
     }

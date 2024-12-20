@@ -96,12 +96,6 @@ class BottomToolbar extends Container {
             icon: 'E118'
         });
 
-        const measure = new Button({
-            id: 'bottom-toolbar-measure',
-            class: 'bottom-toolbar-tool',
-            icon: 'E409'
-        });
-
         undo.dom.appendChild(createSvg(undoSvg));
         redo.dom.appendChild(createSvg(redoSvg));
         picker.dom.appendChild(createSvg(pickerSvg));
@@ -126,8 +120,6 @@ class BottomToolbar extends Container {
         this.append(rotate);
         this.append(scale);
         this.append(coordSpace);
-        this.append(new Element({ class: 'bottom-toolbar-separator' }));
-        this.append(measure);
 
         undo.dom.addEventListener('click', () => events.fire('edit.undo'));
         redo.dom.addEventListener('click', () => events.fire('edit.redo'));
@@ -140,7 +132,6 @@ class BottomToolbar extends Container {
         rotate.dom.addEventListener('click', () => events.fire('tool.rotate'));
         scale.dom.addEventListener('click', () => events.fire('tool.scale'));
         coordSpace.dom.addEventListener('click', () => events.fire('tool.toggleCoordSpace'));
-        measure.dom.addEventListener('click', () => events.fire('tool.measure'));
 
         events.on('edit.canUndo', (value: boolean) => {
             undo.enabled = value;
@@ -158,7 +149,6 @@ class BottomToolbar extends Container {
             translate.class[toolName === 'move' ? 'add' : 'remove']('active');
             rotate.class[toolName === 'rotate' ? 'add' : 'remove']('active');
             scale.class[toolName === 'scale' ? 'add' : 'remove']('active');
-            measure.class[toolName === 'measure' ? 'add' : 'remove']('active');
         });
 
         events.on('tool.coordSpace', (space: 'local' | 'world') => {

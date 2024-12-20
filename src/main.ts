@@ -11,7 +11,6 @@ import { registerSelectionEvents } from './selection';
 import { Shortcuts } from './shortcuts';
 import { BrushSelection } from './tools/brush-selection';
 import { LassoSelection } from './tools/lasso-selection';
-import { MeasureTool } from './tools/measure-tool';
 import { MoveTool } from './tools/move-tool';
 import { PolygonSelection } from './tools/polygon-selection';
 import { RectSelection } from './tools/rect-selection';
@@ -235,7 +234,6 @@ const main = async () => {
     toolManager.register('move', new MoveTool(events, scene));
     toolManager.register('rotate', new RotateTool(events, scene));
     toolManager.register('scale', new ScaleTool(events, scene));
-    toolManager.register('measure', new MeasureTool(events, editorUI.toolsContainer.dom, scene, editorUI.canvasContainer));
 
     editorUI.toolsContainer.dom.appendChild(maskCanvas);
 

@@ -12,6 +12,7 @@ import { Splat } from './splat';
 import { State } from './splat-state';
 import { version } from '../package.json';
 import { template as ViewerHtmlTemplate } from './templates/viewer-html-template';
+import { ZipArchive } from './serialize/zip';
 
 // async function for writing data
 type WriteFunc = (data: Uint8Array, finalWrite?: boolean) => void;
@@ -894,11 +895,20 @@ const serializeViewer = async (splats: Splat[], options: ViewerExportOptions, wr
     } else {
         /* global JSZip */
         // @ts-ignore
-        const zip = new JSZip();
-        zip.file('index.html', html);
-        zip.file('scene.compressed.ply', compressedData);
-        const result = await zip.generateAsync({ type: 'uint8array' });
-        await write(result, true);
+        // const zip = new JSZip();
+        // zip.file('index.html', html);
+        // zip.file('scene.compressed.ply', compressedData);
+        // const result = await zip.generateAsync({ type: 'uint8array' });
+        // await write(result, true);
+
+        const htmlData = new TextEncoder().encode(html);
+
+        const zipArchive = new ZipArchive(write);
+        await zipArchive.file('index.html');
+        await zipArchive.fileData(htmlData);
+        await zipArchive.file('scene.compressed.ply');
+        await zipArchive.fileData(compressedData);
+        await zipArchive.end();
     }
 };
 

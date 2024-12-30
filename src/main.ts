@@ -83,8 +83,8 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['U', 'u'], { event: 'select.unhide' });
     shortcuts.register(['['], { event: 'tool.brushSelection.smaller' });
     shortcuts.register([']'], { event: 'tool.brushSelection.bigger' });
-    shortcuts.register(['Z', 'z'], { event: 'edit.undo', ctrl: true });
-    shortcuts.register(['Z', 'z'], { event: 'edit.redo', ctrl: true, shift: true });
+    shortcuts.register(['Z', 'z'], { event: 'edit.undo', ctrl: true, capture: true });
+    shortcuts.register(['Z', 'z'], { event: 'edit.redo', ctrl: true, shift: true, capture: true });
     shortcuts.register(['M', 'm'], { event: 'camera.toggleMode' });
     shortcuts.register(['D', 'd'], { event: 'dataPanel.toggle' });
     shortcuts.register([' '], { event: 'camera.toggleOverlay' });

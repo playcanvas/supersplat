@@ -8,10 +8,6 @@ class DroppedFile {
         this.filename = filename;
         this.file = file;
     }
-
-    get url() {
-        return URL.createObjectURL(this.file);
-    }
 }
 
 type DropHandlerFunc = (files: Array<DroppedFile>, resetScene: boolean) => void;
@@ -118,7 +114,7 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
         }
 
         // finally, call the drop handler
-        dropHandler(files, !ev.shiftKey);
+        dropHandler(files, ev.shiftKey);
     };
 
     target.addEventListener('dragstart', dragstart, true);

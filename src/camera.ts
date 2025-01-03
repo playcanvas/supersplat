@@ -58,12 +58,12 @@ class Camera extends Element {
     entity: Entity;
     focalPointTween = new TweenValue({ x: 0, y: 0.5, z: 0 });
     azimElevTween = new TweenValue({ azim: 30, elev: -15 });
-    distanceTween = new TweenValue({ distance: 2 });
+    distanceTween = new TweenValue({ distance: 1 });
 
     minElev = -90;
     maxElev = 90;
 
-    sceneRadius = 5;
+    sceneRadius = 1;
 
     flySpeed = 5;
 

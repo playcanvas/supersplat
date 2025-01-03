@@ -13,6 +13,7 @@ import logo from './playcanvas-logo.png';
 import { Popup, ShowOptions } from './popup';
 import { RightToolbar } from './right-toolbar';
 import { ScenePanel } from './scene-panel';
+import { Scrubber } from './scrubber';
 import { ShortcutsPopup } from './shortcuts-popup';
 import { Spinner } from './spinner';
 import { Tooltips } from './tooltips';
@@ -116,9 +117,11 @@ class EditorUI {
             id: 'main-container'
         });
 
+        const scrubber = new Scrubber(events, tooltips);
         const dataPanel = new DataPanel(events);
 
         mainContainer.append(canvasContainer);
+        mainContainer.append(scrubber);
         mainContainer.append(dataPanel);
 
         editorContainer.append(mainContainer);

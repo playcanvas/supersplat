@@ -1,5 +1,6 @@
 import { Color, createGraphicsDevice } from 'playcanvas';
 
+import { registerAnimationEvents } from './animation';
 import { EditHistory } from './edit-history';
 import { registerEditorEvents } from './editor';
 import { Events } from './events';
@@ -242,8 +243,9 @@ const main = async () => {
     registerEditorEvents(events, editHistory, scene);
     registerSelectionEvents(events, scene);
     registerTransformHandlerEvents(events);
+    registerAnimationEvents(events);
     initShortcuts(events);
-    await initFileHandler(scene, events, editorUI.appContainer.dom, remoteStorageDetails);
+    initFileHandler(scene, events, editorUI.appContainer.dom, remoteStorageDetails);
 
     // load async models
     scene.start();

@@ -8,6 +8,7 @@ interface ModelLoadRequest {
     contents?: ArrayBuffer;
     filename?: string;
     maxAnisotropy?: number;
+    animationFrame?: boolean;       // animations disable morton re-ordering at load time for faster loading
 }
 
 // ideally this function would stream data directly into GSplatData buffers.
@@ -99,7 +100,9 @@ class AssetLoader {
     }
 
     loadPly(loadRequest: ModelLoadRequest) {
-        this.events.fire('startSpinner');
+        if (!loadRequest.animationFrame) {
+            this.events.fire('startSpinner');
+        }
 
         return new Promise<Splat>((resolve, reject) => {
             const asset = new Asset(
@@ -112,7 +115,9 @@ class AssetLoader {
                 },
                 {
                     // decompress data on load
-                    decompress: true
+                    decompress: true,
+                    // disable morton re-ordering when loading animation frames
+                    reorder: !(loadRequest.animationFrame ?? false)
                 }
             );
 
@@ -150,7 +155,9 @@ class AssetLoader {
             this.registry.add(asset);
             this.registry.load(asset);
         }).finally(() => {
-            this.events.fire('stopSpinner');
+            if (!loadRequest.animationFrame) {
+                this.events.fire('stopSpinner');
+            }
         });
     }
 

@@ -3,11 +3,11 @@ import { Container, Label, SelectInput, SliderInput } from 'pcui';
 import { Events } from '../events';
 import { Tooltips } from './tooltips';
 
-class Scrubber extends Container {
+class TimelinePanel extends Container {
     constructor(events: Events, tooltips: Tooltips, args = {}) {
         args = {
             ...args,
-            id: 'scrubber',
+            id: 'timeline-panel',
             hidden: true
         };
 
@@ -128,4 +128,4 @@ class Scrubber extends Container {
     }
 }
 
-export { Scrubber };
+export { TimelinePanel };

@@ -138,7 +138,7 @@ const loadCameraPoses = async (url: string, filename: string, events: Events) =>
 const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, remoteStorageDetails: RemoteStorageDetails) => {
 
     // returns a promise that resolves when the file is loaded
-    const handleLoad = async (url: string, filename?: string) => {
+    const handleLoad = async (url: string, filename?: string, focusCamera = true, animationFrame = false) => {
         try {
             if (!filename) {
                 // extract filename from url if one ins't provided
@@ -153,9 +153,9 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
             if (lowerFilename.endsWith('.json')) {
                 await loadCameraPoses(url, filename, events);
             } else if (lowerFilename.endsWith('.ply') || lowerFilename.endsWith('.splat')) {
-                const model = await scene.assetLoader.loadModel({ url, filename });
+                const model = await scene.assetLoader.loadModel({ url, filename, animationFrame });
                 scene.add(model);
-                scene.camera.focus();
+                if (focusCamera) scene.camera.focus();
                 return model;
             } else {
                 throw new Error('Unsupported file type');
@@ -169,8 +169,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         }
     };
 
-    events.function('load', (url: string, filename?: string) => {
-        return handleLoad(url, filename);
+    events.function('load', (url: string, filename?: string, focusCamera = true, animationFrame = false) => {
+        return handleLoad(url, filename, focusCamera, animationFrame);
     });
 
     // create a file selector element as fallback when showOpenFilePicker isn't available
@@ -195,7 +195,15 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
     }
 
     // create the file drag & drop handler
-    CreateDropHandler(dropTarget, async (entries) => {
+    CreateDropHandler(dropTarget, async (entries, shift) => {
+        // filter out non gaussian scene files
+        entries = entries.filter((entry) => {
+            const name = entry.file?.name;
+            if (!name) return false;
+            const lowerName = name.toLowerCase();
+            return lowerName.endsWith('.ply') || lowerName.endsWith('.splat');
+        });
+
         if (entries.length === 0) {
             events.invoke('showPopup', {
                 type: 'error',
@@ -203,9 +211,40 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                 message: localize('popup.drop-files')
             });
         } else {
-            for (let i = 0; i < entries.length; i++) {
-                const entry = entries[i];
-                await handleLoad(entry.url, entry.filename);
+            // determine if all files share a common filename prefix followed by
+            // a frame number, e.g. "frame0001.ply", "frame0002.ply", etc.
+            const isAnimation = () => {
+                if (entries.length <= 1) {
+                    return false;
+                }
+
+                // eslint-disable-next-line regexp/no-super-linear-backtracking
+                const regex = /(.*?)(\d+).ply$/;
+                const baseMatch = entries[0].file.name?.match(regex);
+                if (!baseMatch) {
+                    return false;
+                }
+
+                for (let i = 1; i < entries.length; i++) {
+                    const thisMatch = entries[i].file.name?.match(regex);
+                    if (!thisMatch || thisMatch[1] !== baseMatch[1]) {
+                        return false;
+                    }
+                }
+
+                return true;
+            };
+
+            if (isAnimation()) {
+                events.fire('animation.setFrames', entries.map(e => e.file));
+                events.fire('animation.setFrame', 0);
+            } else {
+                for (let i = 0; i < entries.length; i++) {
+                    const entry = entries[i];
+                    const url = URL.createObjectURL(entry.file);
+                    await handleLoad(url, entry.filename);
+                    URL.revokeObjectURL(url);
+                }
             }
         }
     });
@@ -239,7 +278,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         return true;
     });
 
-    events.on('scene.open', async () => {
+    events.function('scene.open', async () => {
         if (fileSelector) {
             fileSelector.click();
         } else {
@@ -264,6 +303,34 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                 if (error.name !== 'AbortError') {
                     console.error(error);
                 }
+            }
+        }
+    });
+
+    // open a folder
+    events.function('scene.openAnimation', async () => {
+        try {
+            const handle = await window.showDirectoryPicker({
+                id: 'SuperSplatFileOpenAnimation',
+                mode: 'readwrite'
+            });
+
+            if (handle) {
+                const files = [];
+                for await (const value of handle.values()) {
+                    if (value.kind === 'file') {
+                        const file = await value.getFile();
+                        if (file.name.toLowerCase().endsWith('.ply')) {
+                            files.push(file);
+                        }
+                    }
+                }
+                events.fire('animation.setFrames', files);
+                events.fire('animation.setFrame', 0);
+            }
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                console.error(error);
             }
         }
     });

@@ -15,6 +15,7 @@ import { RightToolbar } from './right-toolbar';
 import { ScenePanel } from './scene-panel';
 import { ShortcutsPopup } from './shortcuts-popup';
 import { Spinner } from './spinner';
+import { TimelinePanel } from './timeline-panel';
 import { Tooltips } from './tooltips';
 import { ViewCube } from './view-cube';
 import { ViewPanel } from './view-panel';
@@ -116,9 +117,11 @@ class EditorUI {
             id: 'main-container'
         });
 
+        const timelinePanel = new TimelinePanel(events, tooltips);
         const dataPanel = new DataPanel(events);
 
         mainContainer.append(canvasContainer);
+        mainContainer.append(timelinePanel);
         mainContainer.append(dataPanel);
 
         editorContainer.append(mainContainer);

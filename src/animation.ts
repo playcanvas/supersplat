@@ -10,6 +10,7 @@ const registerAnimationEvents = (events: Events) => {
     let nextFrame = -1;
 
     const setFrames = (files: File[]) => {
+        // eslint-disable-next-line regexp/no-super-linear-backtracking
         const regex = /(.*?)(\d+).ply$/;
 
         // sort frames by trailing number, if it exists

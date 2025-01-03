@@ -218,6 +218,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                     return false;
                 }
 
+                // eslint-disable-next-line regexp/no-super-linear-backtracking
                 const regex = /(.*?)(\d+).ply$/;
                 const baseMatch = entries[0].file.name?.match(regex);
                 if (!baseMatch) {

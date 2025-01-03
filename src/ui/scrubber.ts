@@ -1,4 +1,5 @@
 import { Container, Label, SelectInput, SliderInput } from 'pcui';
+
 import { Events } from '../events';
 import { Tooltips } from './tooltips';
 
@@ -72,7 +73,7 @@ class Scrubber extends Container {
                 const frame = events.invoke('animation.frame');
                 events.fire('animation.setFrame', (frame - 1 + frames) % frames);
             }
-        }
+        };
 
         const nextFrame = () => {
             const frames = events.invoke('animation.frames');
@@ -125,6 +126,6 @@ class Scrubber extends Container {
             slider.value = frame;
         });
     }
-};
+}
 
 export { Scrubber };

@@ -236,7 +236,7 @@ class Menu extends Container {
         }, {
             text: localize('help.user-guide'),
             icon: 'E232',
-            onSelect: () => window.open('https://github.com/playcanvas/supersplat/wiki/User-Guide', '_blank').focus()
+            onSelect: () => window.open('https://github.com/playcanvas/supersplat/wiki', '_blank').focus()
         }, {
             text: localize('help.log-issue'),
             icon: 'E336',

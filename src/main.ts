@@ -5,7 +5,7 @@ import { EditHistory } from './edit-history';
 import { registerEditorEvents } from './editor';
 import { Events } from './events';
 import { initFileHandler } from './file-handler';
-import { initMaterials } from './material';
+import { registerPublishEvents } from './publish';
 import { Scene } from './scene';
 import { getSceneConfig } from './scene-config';
 import { registerSelectionEvents } from './selection';
@@ -94,6 +94,10 @@ const initShortcuts = (events: Events) => {
 };
 
 const main = async () => {
+    // root events object
+    const events = new Events();
+
+    // url
     const url = new URL(window.location.href);
 
     // decode remote storage details
@@ -102,8 +106,9 @@ const main = async () => {
         remoteStorageDetails = JSON.parse(decodeURIComponent(url.searchParams.get('remoteStorage')));
     } catch (e) { }
 
-    // root events object
-    const events = new Events();
+    events.function('app.publish', () => {
+        return url.searchParams.get('publish') !== null;
+    });
 
     // edit history
     const editHistory = new EditHistory(events);
@@ -120,9 +125,6 @@ const main = async () => {
         xrCompatible: false,
         powerPreference: 'high-performance'
     });
-
-    // monkey-patch materials for premul alpha rendering
-    initMaterials();
 
     const overrides = [
         getURLArgs()
@@ -244,6 +246,7 @@ const main = async () => {
     registerSelectionEvents(events, scene);
     registerTransformHandlerEvents(events);
     registerAnimationEvents(events);
+    registerPublishEvents(events);
     initShortcuts(events);
     initFileHandler(scene, events, editorUI.appContainer.dom, remoteStorageDetails);
 

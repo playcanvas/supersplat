@@ -256,6 +256,10 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         .filter(splat => splat.numSplats > 0);
     };
 
+    events.function('scene.splats', () => {
+        return getSplats();
+    });
+
     events.function('scene.empty', () => {
         return getSplats().length === 0;
     });

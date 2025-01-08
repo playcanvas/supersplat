@@ -41,12 +41,13 @@ class ViewerExportPopup extends Container {
 
         const headerText = new Label({
             id: 'header',
-            text: 'VIEWER EXPORT'
+            text: localize('export.header')
         });
 
         header.append(createSvg(sceneExport, {
             id: 'icon'
         }));
+
         header.append(headerText);
 
         // content
@@ -92,7 +93,7 @@ class ViewerExportPopup extends Container {
             min: 0,
             max: 3,
             precision: 0,
-            value: 2
+            value: 3
         });
 
         bandsRow.append(bandsLabel);

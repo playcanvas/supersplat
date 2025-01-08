@@ -192,6 +192,7 @@ const localizeInit = () => {
                     'scene.save': 'Save',
                     'scene.save-as': 'Save As...',
                     'scene.save-screenshot': 'Save Screenshot',
+                    'scene.publish': 'Publish...',
                     'scene.export': 'Export',
                     'scene.export.compressed-ply': 'Compressed PLY (.ply)',
                     'scene.export.splat': 'Splat file (.splat)',
@@ -322,8 +323,10 @@ const localizeInit = () => {
                     'popup.cancel': 'Cancel',
                     'popup.yes': 'Yes',
                     'popup.no': 'No',
+                    'popup.error': 'ERROR',
                     'popup.error-loading': 'ERROR LOADING FILE',
                     'popup.drop-files': 'Please drop files and folders',
+                    'popup.please-log-in': 'Publishing to PlayCanvas requires a user account. Please log in and try again.',
 
                     // Right toolbar
                     'tooltip.splat-mode': 'Splat Mode ( M )',
@@ -347,6 +350,7 @@ const localizeInit = () => {
                     'tooltip.local-space': 'Local Space Gizmo',
 
                     // Viewer Export
+                    'export.header': 'VIEWER EXPORT',
                     'export.type': 'Export Type',
                     'export.html': 'HTML',
                     'export.package': 'ZIP Package',
@@ -357,7 +361,15 @@ const localizeInit = () => {
                     'export.pose-camera': '1st Camera Pose',
                     'export.fov': 'Field of View',
                     'export.background-color': 'Background',
-                    'export.filename': 'Filename'
+                    'export.filename': 'Filename',
+
+                    // Publish Settings Dialog
+                    'publish.header': 'PUBLISH SETTINGS',
+                    'publish.ok': 'Publish',
+                    'publish.cancel': 'Cancel',
+                    'publish.title': 'Title',
+                    'publish.description': 'Description',
+                    'publish.listed': 'Listed'
                 }
             },
             fr: {

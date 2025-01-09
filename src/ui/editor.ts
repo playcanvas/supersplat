@@ -11,6 +11,7 @@ import { Menu } from './menu';
 import { ModeToggle } from './mode-toggle';
 import logo from './playcanvas-logo.png';
 import { Popup, ShowOptions } from './popup';
+import { PublishSettingsDialog } from './publish-settings-dialog';
 import { RightToolbar } from './right-toolbar';
 import { ScenePanel } from './scene-panel';
 import { ShortcutsPopup } from './shortcuts-popup';
@@ -127,7 +128,7 @@ class EditorUI {
         editorContainer.append(mainContainer);
 
         // message popup
-        const popup = new Popup(topContainer);
+        const popup = new Popup(tooltips);
 
         // shortcuts popup
         const shortcutsPopup = new ShortcutsPopup();
@@ -135,12 +136,16 @@ class EditorUI {
         // export popup
         const viewerExportPopup = new ViewerExportPopup(events);
 
+        // publish options
+        const publishSettingsDialog = new PublishSettingsDialog(events);
+
         topContainer.append(popup);
         topContainer.append(viewerExportPopup);
+        topContainer.append(publishSettingsDialog);
 
         appContainer.append(editorContainer);
-        appContainer.append(tooltipsContainer);
         appContainer.append(topContainer);
+        appContainer.append(tooltipsContainer);
         appContainer.append(shortcutsPopup);
 
         this.appContainer = appContainer;
@@ -159,6 +164,10 @@ class EditorUI {
 
         events.function('show.viewerExportPopup', (filename?: string) => {
             return viewerExportPopup.show(filename);
+        });
+
+        events.function('show.publishSettingsDialog', () => {
+            return publishSettingsDialog.show();
         });
 
         events.function('show.about', () => {

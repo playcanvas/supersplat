@@ -5,7 +5,7 @@ import { ElementType } from './element';
 import { Events } from './events';
 import { Scene } from './scene';
 import { Splat } from './splat';
-import { WriteFunc, serializePly, serializePlyCompressed, serializeSplat, serializeViewer, ViewerExportOptions } from './splat-serialize';
+import { WriteFunc, serializePly, serializePlyCompressed, serializeSplat, serializeViewer, ViewerExportSettings } from './splat-serialize';
 import { localize } from './ui/localization';
 
 // ts compiler and vscode find this type, but eslint does not
@@ -22,7 +22,7 @@ interface SceneWriteOptions {
     type: ExportType;
     filename?: string;
     stream?: FileSystemWritableFileStream;
-    viewerExportOptions?: ViewerExportOptions
+    viewerExportSettings?: ViewerExportSettings
 }
 
 const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
@@ -161,7 +161,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                 throw new Error('Unsupported file type');
             }
         } catch (error) {
-            events.invoke('showPopup', {
+            await events.invoke('showPopup', {
                 type: 'error',
                 header: localize('popup.error-loading'),
                 message: `${error.message ?? error} while loading '${filename}'`
@@ -205,7 +205,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         });
 
         if (entries.length === 0) {
-            events.invoke('showPopup', {
+            await events.invoke('showPopup', {
                 type: 'error',
                 header: localize('popup.error-loading'),
                 message: localize('popup.drop-files')
@@ -255,6 +255,10 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         .filter(splat => splat.visible)
         .filter(splat => splat.numSplats > 0);
     };
+
+    events.function('scene.splats', () => {
+        return getSplats();
+    });
 
     events.function('scene.empty', () => {
         return getSplats().length === 0;
@@ -403,26 +407,26 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
 
         const hasFilePicker = window.showSaveFilePicker;
 
-        let viewerExportOptions;
+        let viewerExportSettings;
         if (type === 'viewer') {
             // show viewer export options
-            viewerExportOptions = await events.invoke('show.viewerExportPopup', hasFilePicker ? null : filename);
+            viewerExportSettings = await events.invoke('show.viewerExportPopup', hasFilePicker ? null : filename);
 
             // return if user cancelled
-            if (!viewerExportOptions) {
+            if (!viewerExportSettings) {
                 return;
             }
 
             if (hasFilePicker) {
-                filename = replaceExtension(filename, viewerExportOptions.type === 'html' ? '.html' : '.zip');
+                filename = replaceExtension(filename, viewerExportSettings.type === 'html' ? '.html' : '.zip');
             } else {
-                filename = viewerExportOptions.filename;
+                filename = viewerExportSettings.filename;
             }
         }
 
         if (hasFilePicker) {
             try {
-                const filePickerType = type === 'viewer' ? (viewerExportOptions.type === 'html' ? filePickerTypes.htmlViewer : filePickerTypes.packageViewer) : filePickerTypes[type];
+                const filePickerType = type === 'viewer' ? (viewerExportSettings.type === 'html' ? filePickerTypes.htmlViewer : filePickerTypes.packageViewer) : filePickerTypes[type];
 
                 const fileHandle = await window.showSaveFilePicker({
                     id: 'SuperSplatFileExport',
@@ -432,7 +436,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                 await events.invoke('scene.write', {
                     type,
                     stream: await fileHandle.createWritable(),
-                    viewerExportOptions
+                    viewerExportSettings
                 });
             } catch (error) {
                 if (error.name !== 'AbortError') {
@@ -440,31 +444,30 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                 }
             }
         } else {
-            await events.invoke('scene.write', { type, filename, viewerExportOptions });
+            await events.invoke('scene.write', { type, filename, viewerExportSettings });
         }
     });
 
-    const writeScene = async (type: ExportType, writeFunc: WriteFunc, viewerExportOptions?: ViewerExportOptions) => {
+    const writeScene = async (type: ExportType, writeFunc: WriteFunc, viewerExportSettings?: ViewerExportSettings) => {
         const splats = getSplats();
         const events = splats[0].scene.events;
 
-        const options = {
-            splats: splats,
+        const serializeSettings = {
             maxSHBands: events.invoke('view.bands')
         };
 
         switch (type) {
             case 'ply':
-                await serializePly(options, writeFunc);
+                await serializePly(splats, serializeSettings, writeFunc);
                 break;
             case 'compressed-ply':
-                await serializePlyCompressed(options, writeFunc);
+                await serializePlyCompressed(splats, serializeSettings, writeFunc);
                 break;
             case 'splat':
-                await serializeSplat(options, writeFunc);
+                await serializeSplat(splats, serializeSettings, writeFunc);
                 break;
             case 'viewer':
-                await serializeViewer(splats, viewerExportOptions, writeFunc);
+                await serializeViewer(splats, viewerExportSettings, writeFunc);
                 break;
         }
     };
@@ -478,7 +481,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                 setTimeout(resolve);
             });
 
-            const { stream, filename, type, viewerExportOptions } = options;
+            const { stream, filename, type, viewerExportSettings } = options;
 
             if (stream) {
                 // writer must keep track of written bytes because JS streams don't
@@ -489,7 +492,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                 };
 
                 await stream.seek(0);
-                await writeScene(type, writeFunc, viewerExportOptions);
+                await writeScene(type, writeFunc, viewerExportSettings);
                 await stream.truncate(cursor);
                 await stream.close();
             } else if (filename) {
@@ -515,11 +518,11 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                         cursor += chunk.byteLength;
                     }
                 };
-                await writeScene(type, writeFunc, viewerExportOptions);
+                await writeScene(type, writeFunc, viewerExportSettings);
                 download(filename, (cursor === data.byteLength) ? data : new Uint8Array(data.buffer, 0, cursor));
             }
         } catch (error) {
-            events.invoke('showPopup', {
+            await events.invoke('showPopup', {
                 type: 'error',
                 header: localize('popup.error-loading'),
                 message: `${error.message ?? error} while saving file`

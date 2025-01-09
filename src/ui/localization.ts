@@ -25,7 +25,7 @@ const localizeInit = () => {
                     'scene.export': 'Exportieren',
                     'scene.export.compressed-ply': 'Komprimiertes PLY',
                     'scene.export.splat': 'Splat',
-                    'scene.export.viewer': 'Viewer App',
+                    'scene.export.viewer': 'Viewer App...',
 
                     // Selection menu
                     'select': 'Auswahl',
@@ -192,10 +192,11 @@ const localizeInit = () => {
                     'scene.save': 'Save',
                     'scene.save-as': 'Save As...',
                     'scene.save-screenshot': 'Save Screenshot',
+                    'scene.publish': 'Publish...',
                     'scene.export': 'Export',
                     'scene.export.compressed-ply': 'Compressed PLY (.ply)',
                     'scene.export.splat': 'Splat file (.splat)',
-                    'scene.export.viewer': 'Viewer App',
+                    'scene.export.viewer': 'Viewer App...',
 
                     // Selection menu
                     'select': 'Select',
@@ -322,8 +323,11 @@ const localizeInit = () => {
                     'popup.cancel': 'Cancel',
                     'popup.yes': 'Yes',
                     'popup.no': 'No',
+                    'popup.error': 'ERROR',
                     'popup.error-loading': 'ERROR LOADING FILE',
                     'popup.drop-files': 'Please drop files and folders',
+                    'popup.please-log-in': 'Publishing to PlayCanvas requires a user account. Please log in and try again.',
+                    'popup.copy-to-clipboard': 'Copy link to clipboard',
 
                     // Right toolbar
                     'tooltip.splat-mode': 'Splat Mode ( M )',
@@ -347,6 +351,7 @@ const localizeInit = () => {
                     'tooltip.local-space': 'Local Space Gizmo',
 
                     // Viewer Export
+                    'export.header': 'VIEWER EXPORT',
                     'export.type': 'Export Type',
                     'export.html': 'HTML',
                     'export.package': 'ZIP Package',
@@ -357,7 +362,19 @@ const localizeInit = () => {
                     'export.pose-camera': '1st Camera Pose',
                     'export.fov': 'Field of View',
                     'export.background-color': 'Background',
-                    'export.filename': 'Filename'
+                    'export.filename': 'Filename',
+
+                    // Publish Settings Dialog
+                    'publish.header': 'PUBLISH SETTINGS',
+                    'publish.ok': 'Publish',
+                    'publish.cancel': 'Cancel',
+                    'publish.title': 'Title',
+                    'publish.description': 'Description',
+                    'publish.listed': 'Listed',
+                    'publish.failed': 'PUBLISH FAILED',
+                    'publish.please-try-again': 'Please try again later.',
+                    'publish.succeeded': 'PUBLISH SUCCEEDED',
+                    'publish.message': 'Use the link below to access your scene.'
                 }
             },
             fr: {
@@ -374,7 +391,7 @@ const localizeInit = () => {
                     'scene.export': 'Exporter',
                     'scene.export.compressed-ply': 'Ply compressé',
                     'scene.export.splat': 'Fichier splat',
-                    'scene.export.viewer': 'Application de visualisation',
+                    'scene.export.viewer': 'Application de visualisation...',
 
                     // Selection menu
                     'select': 'Sélection',
@@ -544,7 +561,7 @@ const localizeInit = () => {
                     'scene.export': 'エクスポート',
                     'scene.export.compressed-ply': 'Compressed PLY (.ply)',
                     'scene.export.splat': 'Splat (.splat)',
-                    'scene.export.viewer': 'Viewer App',
+                    'scene.export.viewer': 'Viewer App...',
 
                     // Selection menu
                     'select': '選択',
@@ -714,7 +731,7 @@ const localizeInit = () => {
                     'scene.export': '내보내기',
                     'scene.export.compressed-ply': '압축된 PLY',
                     'scene.export.splat': 'Splat 파일',
-                    'scene.export.viewer': '뷰어 앱',
+                    'scene.export.viewer': '뷰어 앱...',
 
                     // Selection menu
                     'select': '선택',
@@ -884,7 +901,7 @@ const localizeInit = () => {
                     'scene.export': '导出',
                     'scene.export.compressed-ply': '压缩 PLY',
                     'scene.export.splat': 'Splat 文件',
-                    'scene.export.viewer': '查看器应用',
+                    'scene.export.viewer': '查看器应用...',
 
                     // Selection menu
                     'select': '选择',

@@ -1,12 +1,13 @@
 import { Button, Container, Label, TextInput } from 'pcui';
 
 import { localize } from './localization';
+import { Tooltips } from './tooltips';
 
 interface ShowOptions {
     type: 'error' | 'info' | 'yesno' | 'okcancel';
     message: string;
     header?: string;
-    value?: string;
+    link?: string;
 }
 
 class Popup extends Container {
@@ -14,7 +15,7 @@ class Popup extends Container {
     hide: () => void;
     destroy: () => void;
 
-    constructor(args = {}) {
+    constructor(tooltips: Tooltips, args = {}) {
         args = {
             id: 'popup',
             hidden: true,
@@ -36,9 +37,21 @@ class Popup extends Container {
             id: 'popup-text'
         });
 
-        const inputValue = new TextInput({
-            id: 'popup-text-input'
+        const linkText = new Label({
+            id: 'popup-link-text'
         });
+
+        const linkCopy = new Button({
+            id: 'popup-link-copy',
+            icon: 'E351'
+        });
+
+        const linkRow = new Container({
+            id: 'popup-link-row'
+        });
+
+        linkRow.append(linkText);
+        linkRow.append(linkCopy);
 
         const okButton = new Button({
             class: 'popup-button',
@@ -71,7 +84,7 @@ class Popup extends Container {
 
         dialog.append(header);
         dialog.append(text);
-        dialog.append(inputValue);
+        dialog.append(linkRow);
         dialog.append(buttons);
 
         this.append(dialog);
@@ -81,6 +94,7 @@ class Popup extends Container {
         let yesFn: () => void;
         let noFn: () => void;
         let containerFn: () => void;
+        let copyFn: () => void;
 
         okButton.on('click', () => {
             okFn();
@@ -106,11 +120,15 @@ class Popup extends Container {
             event.stopPropagation();
         });
 
+        linkCopy.on('click', () => {
+            copyFn();
+        });
+
         this.show = (options: ShowOptions) => {
             header.text = options.header;
             text.text = options.message;
 
-            const { type, value } = options;
+            const { type, link } = options;
 
             ['error', 'info', 'yesno', 'okcancel'].forEach((t) => {
                 text.class[t === type ? 'add' : 'remove'](t);
@@ -123,10 +141,10 @@ class Popup extends Container {
             noButton.hidden = type !== 'yesno';
             this.hidden = false;
 
-            inputValue.hidden = value === undefined;
-            if (value !== undefined) {
-                inputValue.value = value;
-                inputValue.focus();
+            linkRow.hidden = link === undefined;
+            if (link !== undefined) {
+                linkText.dom.innerHTML = `<a href='${link}' target='_blank'>${link}</a>`;
+                linkCopy.icon = 'E352';
             }
 
             // take keyboard focus so shortcuts stop working
@@ -136,8 +154,7 @@ class Popup extends Container {
                 okFn = () => {
                     this.hide();
                     resolve({
-                        action: 'ok',
-                        value: value !== undefined && inputValue.value
+                        action: 'ok'
                     });
                 };
                 cancelFn = () => {
@@ -153,9 +170,13 @@ class Popup extends Container {
                     resolve({ action: 'no' });
                 };
                 containerFn = () => {
-                    if (type === 'info') {
+                    if (type === 'info' && link === undefined) {
                         cancelFn();
                     }
+                };
+                copyFn = () => {
+                    navigator.clipboard.writeText(link);
+                    linkCopy.icon = 'E348';
                 };
             });
         };
@@ -168,6 +189,8 @@ class Popup extends Container {
             this.hide();
             super.destroy();
         };
+
+        tooltips.register(linkCopy, localize('popup.copy-to-clipboard'));
     }
 }
 

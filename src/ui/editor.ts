@@ -128,7 +128,7 @@ class EditorUI {
         editorContainer.append(mainContainer);
 
         // message popup
-        const popup = new Popup(topContainer);
+        const popup = new Popup(tooltips);
 
         // shortcuts popup
         const shortcutsPopup = new ShortcutsPopup();
@@ -144,8 +144,8 @@ class EditorUI {
         topContainer.append(publishSettingsDialog);
 
         appContainer.append(editorContainer);
-        appContainer.append(tooltipsContainer);
         appContainer.append(topContainer);
+        appContainer.append(tooltipsContainer);
         appContainer.append(shortcutsPopup);
 
         this.appContainer = appContainer;

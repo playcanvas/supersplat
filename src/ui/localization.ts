@@ -327,6 +327,7 @@ const localizeInit = () => {
                     'popup.error-loading': 'ERROR LOADING FILE',
                     'popup.drop-files': 'Please drop files and folders',
                     'popup.please-log-in': 'Publishing to PlayCanvas requires a user account. Please log in and try again.',
+                    'popup.copy-to-clipboard': 'Copy link to clipboard',
 
                     // Right toolbar
                     'tooltip.splat-mode': 'Splat Mode ( M )',
@@ -369,7 +370,11 @@ const localizeInit = () => {
                     'publish.cancel': 'Cancel',
                     'publish.title': 'Title',
                     'publish.description': 'Description',
-                    'publish.listed': 'Listed'
+                    'publish.listed': 'Listed',
+                    'publish.failed': 'PUBLISH FAILED',
+                    'publish.please-try-again': 'Please try again later.',
+                    'publish.succeeded': 'PUBLISH SUCCEEDED',
+                    'publish.message': 'Use the link below to access your scene.'
                 }
             },
             fr: {

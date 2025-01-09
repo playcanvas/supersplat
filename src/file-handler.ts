@@ -161,7 +161,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                 throw new Error('Unsupported file type');
             }
         } catch (error) {
-            events.invoke('showPopup', {
+            await events.invoke('showPopup', {
                 type: 'error',
                 header: localize('popup.error-loading'),
                 message: `${error.message ?? error} while loading '${filename}'`
@@ -205,7 +205,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         });
 
         if (entries.length === 0) {
-            events.invoke('showPopup', {
+            await events.invoke('showPopup', {
                 type: 'error',
                 header: localize('popup.error-loading'),
                 message: localize('popup.drop-files')
@@ -522,7 +522,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                 download(filename, (cursor === data.byteLength) ? data : new Uint8Array(data.buffer, 0, cursor));
             }
         } catch (error) {
-            events.invoke('showPopup', {
+            await events.invoke('showPopup', {
                 type: 'error',
                 header: localize('popup.error-loading'),
                 message: `${error.message ?? error} while saving file`

@@ -31,8 +31,7 @@ const publish = async (data: Uint8Array, publishSettings: PublishSettings) => {
     });
 
     if (!urlResponse.ok) {
-        console.log(`failed to get signed url (${urlResponse.statusText})`);
-        return;
+        throw new Error(`failed to get signed url (${urlResponse.statusText})`);
     }
 
     const json = await urlResponse.json();
@@ -47,8 +46,7 @@ const publish = async (data: Uint8Array, publishSettings: PublishSettings) => {
     });
 
     if (!uploadResponse.ok) {
-        console.log(`failed to upload blob`);
-        return;
+        throw new Error(`failed to upload blob`);
     }
 
     const publishResponse = await fetch(`${origin}/api/splats/publish`, {
@@ -66,11 +64,10 @@ const publish = async (data: Uint8Array, publishSettings: PublishSettings) => {
     });
 
     if (!publishResponse.ok) {
-        console.log(`failed to publish`);
-        return;
+        throw new Error(`failed to publish`);
     }
 
-    return publishResponse.json();
+    return await publishResponse.json();
 };
 
 const registerPublishEvents = (events: Events) => {
@@ -92,15 +89,43 @@ const registerPublishEvents = (events: Events) => {
                 return;
             }
 
-            const splats = events.invoke('scene.splats');
+            try {
+                events.fire('startSpinner');
 
-            // serialize/compress
-            let data: Uint8Array = null;
-            await serializePlyCompressed(splats, publishSettings.serializeSettings, (chunk: Uint8Array) => data = chunk);
+                const splats = events.invoke('scene.splats');
 
-            // publish
-            const response = await publish(data, publishSettings);
-            console.log(response);
+                // serialize/compress
+                let data: Uint8Array = null;
+                await serializePlyCompressed(splats, publishSettings.serializeSettings, (chunk: Uint8Array) => data = chunk);
+
+                // publish
+                const response = await publish(data, publishSettings);
+
+                events.fire('stopSpinner');
+
+                if (!response) {
+                    await events.invoke('showPopup', {
+                        type: 'error',
+                        header: localize('publish.failed'),
+                        message: localize('publish.please-try-again')
+                    });
+                } else {
+                    await events.invoke('showPopup', {
+                        type: 'info',
+                        header: localize('publish.succeeded'),
+                        message: localize('publish.message'),
+                        link: response.url
+                    });
+                }
+            } catch (error) {
+                events.fire('stopSpinner');
+
+                await events.invoke('showPopup', {
+                    type: 'error',
+                    header: localize('publish.failed'),
+                    message: `'${error.message ?? error}'`
+                });
+            }
         }
     });
 };

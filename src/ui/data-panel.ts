@@ -11,14 +11,7 @@ const SH_C0 = 0.28209479177387814;
 
 const scaleFunc = (v: number) => Math.exp(v);
 const colorFunc = (v: number) => 0.5 + v * SH_C0;
-const sigmoid = (v: number) => {
-    if (v > 0) {
-        return 1 / (1 + Math.exp(-v));
-    }
-
-    const t = Math.exp(v);
-    return t / (1 + t);
-};
+const sigmoid = (v: number) => 1 / (1 + Math.exp(-v));
 
 const dataFuncs = {
     scale_0: scaleFunc,

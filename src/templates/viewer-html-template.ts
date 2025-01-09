@@ -167,7 +167,7 @@ const template = /* html */ `
             import viewerSettings from "viewerSettings" with { type: "json" };
 
             document.addEventListener('DOMContentLoaded', async () => {
-                const position = viewerSettings.camera.position && new Vec(viewerSettings.camera.position);
+                const position = viewerSettings.camera.position && new Vec3(viewerSettings.camera.position);
                 const target = viewerSettings.camera.target && new Vec3(viewerSettings.camera.target);
 
                 class FrameScene extends Script {

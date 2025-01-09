@@ -232,12 +232,16 @@ class PublishSettingsDialog extends Container {
                         }
                     };
 
+                    const serializeSettings = {
+                        maxSHBands: bandsSlider.value
+                    };
+
                     resolve({
                         title: titleInput.value,
                         description: descInput.value,
                         listed: listBoolean.value,
                         viewerSettings,
-                        bands: bandsSlider.value
+                        serializeSettings
                     });
                 };
             }).finally(() => {

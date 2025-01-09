@@ -420,8 +420,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             }
         };
 
-        await serializePly({
-            splats,
+        await serializePly(splats, {
             maxSHBands: 3,
             selected: true
         }, writeFunc);

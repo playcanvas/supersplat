@@ -1,13 +1,13 @@
 import { localize } from './ui/localization';
 import { Events } from './events';
-import { serializePlyCompressed, ViewerSettings } from './splat-serialize';
+import { serializePlyCompressed, ViewerSettings, SerializeSettings } from './splat-serialize';
 
 type PublishSettings = {
     title: string;
     description: string;
     listed: boolean;
     viewerSettings: ViewerSettings;
-    bands: number;
+    serializeSettings: SerializeSettings;
 };
 
 const origin = location.origin;
@@ -94,14 +94,9 @@ const registerPublishEvents = (events: Events) => {
 
             const splats = events.invoke('scene.splats');
 
-            const serializeOptions = {
-                splats,
-                maxSHBands: publishSettings.bands
-            };
-
             // serialize/compress
             let data: Uint8Array = null;
-            await serializePlyCompressed(serializeOptions, (chunk: Uint8Array) => data = chunk);
+            await serializePlyCompressed(splats, publishSettings.serializeSettings, (chunk: Uint8Array) => data = chunk);
 
             // publish
             const response = await publish(data, publishSettings);

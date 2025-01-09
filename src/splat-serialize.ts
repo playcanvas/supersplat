@@ -928,6 +928,7 @@ const serializeViewer = async (splats: Splat[], options: ViewerExportSettings, w
     if (options.type === 'html') {
         await write(new TextEncoder().encode(html), true);
     } else {
+        /* global JSZip */
         // @ts-ignore
         const zip = new JSZip();
         zip.file('index.html', html);

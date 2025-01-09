@@ -2,8 +2,8 @@ import { BooleanInput, Button, ColorPicker, Container, Element, Label, SelectInp
 
 import { Events } from '../events';
 import { localize } from './localization';
-import sceneExport from './svg/export.svg';
 import { PublishSettings } from '../publish';
+import sceneExport from './svg/export.svg';
 
 const createSvg = (svgString: string, args = {}) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -23,7 +23,7 @@ class PublishSettingsDialog extends Container {
             ...args,
             id: 'publish-settings-dialog',
             hidden: true,
-            tabIndex: -1,
+            tabIndex: -1
         };
 
         super(args);
@@ -118,7 +118,7 @@ class PublishSettingsDialog extends Container {
         const bandsRow = new Container({ class: 'row' });
         bandsRow.append(bandsLabel);
         bandsRow.append(bandsSlider);
-        
+
         // content
 
         const content = new Container({ id: 'content' });
@@ -224,8 +224,8 @@ class PublishSettingsDialog extends Container {
                     const viewerSettings = {
                         camera: {
                             fov: fovSlider.value,
-                            position: p ? [ p.x, p.y, p.z ] : null,
-                            target: t ? [ t.x, t.y, t.z ] : null
+                            position: p ? [p.x, p.y, p.z] : null,
+                            target: t ? [t.x, t.y, t.z] : null
                         },
                         background: {
                             color: colorPicker.value.slice()

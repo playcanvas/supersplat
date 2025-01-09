@@ -177,7 +177,7 @@ class Popup extends Container {
                 copyFn = () => {
                     navigator.clipboard.writeText(link);
                     linkCopy.icon = 'E348';
-                }
+                };
             });
         };
 

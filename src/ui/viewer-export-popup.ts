@@ -299,8 +299,8 @@ class ViewerExportPopup extends Container {
                     const viewerSettings = {
                         camera: {
                             fov: fovSlider.value,
-                            position: p ? [ p.x, p.y, p.z ] : null,
-                            target: t ? [ t.x, t.y, t.z ] : null
+                            position: p ? [p.x, p.y, p.z] : null,
+                            target: t ? [t.x, t.y, t.z] : null
                         },
                         background: {
                             color: colorPicker.value.slice()

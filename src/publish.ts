@@ -1,6 +1,6 @@
-import { localize } from './ui/localization';
 import { Events } from './events';
 import { serializePlyCompressed, ViewerSettings, SerializeSettings } from './splat-serialize';
+import { localize } from './ui/localization';
 
 type PublishSettings = {
     title: string;
@@ -26,7 +26,7 @@ const publish = async (data: Uint8Array, publishSettings: PublishSettings) => {
         method: 'POST',
         body: JSON.stringify({ filename }),
         headers: {
-            "Content-Type": "application/json"
+            'Content-Type': 'application/json'
         }
     });
 
@@ -46,7 +46,7 @@ const publish = async (data: Uint8Array, publishSettings: PublishSettings) => {
     });
 
     if (!uploadResponse.ok) {
-        throw new Error(`failed to upload blob`);
+        throw new Error('failed to upload blob');
     }
 
     const publishResponse = await fetch(`${origin}/api/splats/publish`, {
@@ -64,7 +64,7 @@ const publish = async (data: Uint8Array, publishSettings: PublishSettings) => {
     });
 
     if (!publishResponse.ok) {
-        throw new Error(`failed to publish`);
+        throw new Error('failed to publish');
     }
 
     return await publishResponse.json();
@@ -96,7 +96,9 @@ const registerPublishEvents = (events: Events) => {
 
                 // serialize/compress
                 let data: Uint8Array = null;
-                await serializePlyCompressed(splats, publishSettings.serializeSettings, (chunk: Uint8Array) => data = chunk);
+                await serializePlyCompressed(splats, publishSettings.serializeSettings, (chunk: Uint8Array) => {
+                    data = chunk;
+                });
 
                 // publish
                 const response = await publish(data, publishSettings);

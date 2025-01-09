@@ -83,7 +83,7 @@ class GaussianFilter {
             return true;
         };
     }
-};
+}
 
 // count the total number of gaussians given a filter
 const countGaussians = (splats: Splat[], filter: GaussianFilter) => {

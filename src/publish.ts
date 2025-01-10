@@ -79,7 +79,7 @@ const registerPublishEvents = (events: Events) => {
             await events.invoke('showPopup', {
                 type: 'error',
                 header: localize('popup.error'),
-                message: localize('popup.please-log-in')
+                message: localize('publish.please-log-in')
             });
         } else {
             // get publish options

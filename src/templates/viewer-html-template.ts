@@ -196,8 +196,8 @@ const template = /* html */ `
 
                         // configure camera
                         this.entity.camera.horizontalFov = true;
-                        this.entity.camera.farClip = bbox.halfExtents.length() * 20;
-                        this.entity.camera.nearClip = this.entity.camera.farClip * 0.001;
+                        this.entity.camera.nearClip = 0.01;
+                        this.entity.camera.farClip = 1000;
                         // set NONE tonemapping until https://github.com/playcanvas/engine/pull/7179 is deployed
                         this.entity.camera.toneMapping = 6;
 

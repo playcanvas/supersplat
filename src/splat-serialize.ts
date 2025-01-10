@@ -922,7 +922,7 @@ const serializeViewer = async (splats: Splat[], options: ViewerExportSettings, w
     const { viewerSettings } = options;
 
     const html = ViewerHtmlTemplate
-    .replace('{{viewerSettingsURL}}', options.type === 'html' ? `data:application/json;base64,${encodeBase64(new TextEncoder().encode(JSON.stringify(viewerSettings)))}` : `./${settingsFilename}`)
+    .replace('{{settingsURL}}', options.type === 'html' ? `data:application/json;base64,${encodeBase64(new TextEncoder().encode(JSON.stringify(viewerSettings)))}` : `./${settingsFilename}`)
     .replace('{{contentURL}}', options.type === 'html' ? `data:application/ply;base64,${encodeBase64(compressedData)}` : `./${sceneFilename}`);
 
     if (options.type === 'html') {

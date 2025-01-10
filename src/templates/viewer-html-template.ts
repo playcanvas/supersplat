@@ -78,11 +78,11 @@ const template = /* html */ `
             {
                 "imports": {
                     "playcanvas": "https://cdn.jsdelivr.net/npm/playcanvas@2.3.3/build/playcanvas.mjs",
-                    "viewerSettings": "{{viewerSettingsURL}}"
+                    "viewerSettings": "{{settingsURL}}"
                 }
             }
         </script>
-        <script type="module" src="https://cdn.jsdelivr.net/npm/@playcanvas/web-components@0.1.10/dist/pwc.mjs"></script>
+        <script type="module" src="https://cdn.jsdelivr.net/npm/@playcanvas/web-components@0.1.11/dist/pwc.mjs"></script>
     </head>
     <body>
         <pc-app antialias="false" depth="false" high-resolution="true" stencil="false">
@@ -94,7 +94,7 @@ const template = /* html */ `
                 <!-- Camera (with XR support) -->
                 <pc-entity name="camera root">
                     <pc-entity name="camera">
-                        <pc-camera>
+                        <pc-camera nearClip="0.01" farClip="1000" horizontalFov="true" tonemap="none"></pc-camera>
                         <pc-scripts>
                             <pc-script name="cameraControls"></pc-script>
                         </pc-scripts>
@@ -193,14 +193,6 @@ const template = /* html */ `
                         document.getElementById('loadingIndicator').classList.add('hidden');
 
                         const bbox = this.calcBound();
-
-                        // configure camera
-                        this.entity.camera.horizontalFov = true;
-                        this.entity.camera.farClip = bbox.halfExtents.length() * 20;
-                        this.entity.camera.nearClip = this.entity.camera.farClip * 0.001;
-                        // set NONE tonemapping until https://github.com/playcanvas/engine/pull/7179 is deployed
-                        this.entity.camera.toneMapping = 6;
-
                         if (bbox.halfExtents.length() > 100 || position || target) {
                             this.resetCamera(bbox);
                         } else {

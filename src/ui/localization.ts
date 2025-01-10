@@ -377,7 +377,7 @@ const localizeInit = () => {
                     'publish.please-try-again': 'Please try again later.',
                     'publish.succeeded': 'PUBLISH SUCCEEDED',
                     'publish.message': 'Use the link below to access your scene.',
-                    'publish.please-log-in': 'Publishing to PlayCanvas requires a user account. Please log in and try again.',
+                    'publish.please-log-in': 'Publishing to PlayCanvas requires a user account. Please log in and try again.'
                 }
             },
             fr: {

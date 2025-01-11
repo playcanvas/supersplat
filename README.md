@@ -6,7 +6,7 @@ SuperSplat is a free and open source tool for inspecting, editing, optimizing an
 
 A live version of this tool is available at: https://playcanvas.com/supersplat/editor
 
-<img width="1414" alt="supersplat" src="https://github.com/user-attachments/assets/dc41179e-afe6-4600-9879-b03bd7088709">
+![image](https://github.com/user-attachments/assets/b6cbb5cc-d3cc-4385-8c71-ab2807fd4fba)
 
 To learn more about using SuperSplat, please refer to the [User Guide](https://github.com/playcanvas/supersplat/wiki).
 

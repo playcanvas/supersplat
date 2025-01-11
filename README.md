@@ -12,7 +12,7 @@ To learn more about using SuperSplat, please refer to the [User Guide](https://g
 
 ## Local Development
 
-To initialize a local development environment for SuperSplat, ensure you have [Node.js](https://nodejs.org/) v18+ installed. Then, in a terminal, do:
+To initialize a local development environment for SuperSplat, ensure you have [Node.js](https://nodejs.org/) 18+ installed. Then, in a terminal, do:
 
 ```sh
 git clone https://github.com/playcanvas/supersplat.git
@@ -26,7 +26,7 @@ The last command `npm run develop` will build SuperSplat and run a local server 
 When running your local build of SuperSplat in Chrome, we recommend you have the Developer Tools panel open. Also:
 
 1. Visit the Network tab and check `Disable cache`.
-2. Visit the Application tab, select Service workers on the left and then check `Update on reload` and `Bypass for network`. 
+2. Visit the Application tab, select `Service workers` on the left and then check `Update on reload` and `Bypass for network`. 
 
 ## Contributors
 

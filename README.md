@@ -12,16 +12,30 @@ To learn more about using SuperSplat, please refer to the [User Guide](https://g
 
 ## Local Development
 
-To initialize a local development environment for SuperSplat, ensure you have [Node.js](https://nodejs.org/) 18+ installed. Then, in a terminal, do:
+To initialize a local development environment for SuperSplat, ensure you have [Node.js](https://nodejs.org/) 18 or later installed. Follow these steps:
 
-```sh
-git clone https://github.com/playcanvas/supersplat.git
-cd supersplat
-npm i
-npm run develop
-```
+1. Clone the repository:
 
-The last command `npm run develop` will build SuperSplat and run a local server at `http://localhost:3000`. When changes to the source are detected, SuperSplat is automatically rebuilt - simply refresh your browser to see your changes.
+   ```sh
+   git clone https://github.com/playcanvas/supersplat.git
+   cd supersplat
+   ```
+
+2. Install dependencies:
+
+   ```sh
+   npm install
+   ```
+
+3. Build SuperSplat and start a local web server:
+
+   ```sh
+   npm run develop
+   ```
+
+4. Open a web browser at `http://localhost:3000`.
+
+When changes to the source are detected, SuperSplat is rebuilt automatically. Simply refresh your browser to see your changes.
 
 When running your local build of SuperSplat in Chrome, we recommend you have the Developer Tools panel open. Also:
 
@@ -30,7 +44,7 @@ When running your local build of SuperSplat in Chrome, we recommend you have the
 
 ## Contributors
 
-SuperSplat is made possible by our open source community:
+SuperSplat is made possible by our amazing open source community:
 
 <a href="https://github.com/playcanvas/supersplat/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=playcanvas/supersplat" />

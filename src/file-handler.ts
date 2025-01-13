@@ -201,7 +201,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
             const name = entry.file?.name;
             if (!name) return false;
             const lowerName = name.toLowerCase();
-            return lowerName.endsWith('.ply') || lowerName.endsWith('.splat');
+            return lowerName.endsWith('.ply') || lowerName.endsWith('.splat') || lowerName.endsWith('.json');
         });
 
         if (entries.length === 0) {

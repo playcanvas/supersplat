@@ -52,7 +52,7 @@ const publish = async (data: Uint8Array, publishSettings: PublishSettings) => {
     const publishResponse = await fetch(`${origin}/api/splats/publish`, {
         method: 'POST',
         body: JSON.stringify({
-            s3_key: json.s3Key,
+            s3Key: json.s3Key,
             title: publishSettings.title,
             description: publishSettings.description,
             listed: publishSettings.listed,

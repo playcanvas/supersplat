@@ -24,7 +24,7 @@ class HistogramData {
         let min, max, i;
         for (i = 0; i < count; i++) {
             const v = valueFunc(i);
-            if (v !== undefined) {
+            if (v !== undefined && !isNaN(v)) {
                 min = max = v;
                 break;
             }

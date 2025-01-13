@@ -1,0 +1,70 @@
+@use 'colors.scss' as *;
+
+#timeline-panel {
+    background-color: $bcg-primary;
+    flex-direction: column;
+    padding: 4px;
+
+    &:not(.pcui-hidden) {
+        display: flex;
+    }
+
+    > #controls-container {
+        display: flex;
+        flex-direction: row;
+        background-color: $bcg-primary;
+        justify-content: center;
+
+        > #controls {
+            display: flex;
+            flex-direction: row;
+            background-color: $bcg-dark;
+            border-radius: 4px;
+
+            > .button {
+                font-family: pc-icon;
+                font-weight: bold;
+                font-size: 13px;
+                color: $clr-hilight;
+
+                width: 36px;
+                height: 28px;
+                margin: 0;
+                padding: 0;
+                flex-grow: 0;
+                flex-shrink: 0;
+
+                border-radius: 4px;
+
+                text-align: center;
+                line-height: 28px;
+
+                &:hover {
+                    color: #ff9900;
+                    background-color: $bcg-darkest;
+                    cursor: pointer;
+                }
+            }
+
+            #speed {
+                width: 80px;
+                height: 28px;
+                margin: 0;
+            }
+        }
+    }
+
+    > #frame-slider {
+        height: 24px;
+        margin: 0px;
+
+        > .pcui-numeric-input {
+            display: none;
+            flex-grow: 0;
+            margin: 0;
+            > input {
+                width: 40px;
+            }
+        }
+    }
+}

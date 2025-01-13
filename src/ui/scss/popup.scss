@@ -4,7 +4,7 @@
     width: 100%;
     height: 100%;
 
-    // background-color: rgba(0, 0, 0, 0.5);
+    background-color: $bcg-darken;
     pointer-events: all;
 
     #popup-dialog {
@@ -70,9 +70,35 @@
             }
         }
 
-        #popup-text-input {
-            width: 360px;
-            margin: 20px;
+        #popup-link-row {
+            margin: 20px 10px;
+
+            &:not(.pcui-hidden) {
+                display: flex;
+            }
+
+            #popup-link-text {
+                width: 360px;
+                height: 32px;
+                line-height: 32px;
+
+                background-color: $bcg-dark;
+                text-align: center;
+
+                a {
+                    color: $clr-hilight;
+                    font-weight: bold;
+                    font-size: 14px;
+                    text-decoration-line: none;
+                };
+            }
+
+            #popup-link-copy {
+                width: 32px;
+                height: 32px;
+                line-height: 24px;
+                font-family: 'pc-icon';
+            }
         }
 
         #popup-buttons {

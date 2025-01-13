@@ -1,6 +1,6 @@
 @use 'colors.scss' as *;
 
-#export-popup {
+#publish-settings-dialog {
     width: 100%;
     height: 100%;
 
@@ -10,7 +10,7 @@
 
     #dialog {
         position: absolute;
-        width: 340px;
+        width: 400px;
         left: 50%;
         top: 50%;
         transform: translate(-50%, -50%);
@@ -29,17 +29,22 @@
 
         #header {
             height: 32px;
-            line-height: 32px;
-            margin: 0px;
+            margin: 0;
             padding: 0px 12px;
 
-            font-weight: bold;
-            color: $text-primary;
             background-color: $bcg-darker;
 
             #icon {
                 vertical-align: middle;
                 color: $clr-icon-hilight;
+            }
+
+            #text {
+                margin: 0;
+                padding: 0px 12px;
+                line-height: 32px;
+                font-weight: bold;
+                color: $text-primary;
             }
         }
 
@@ -48,7 +53,7 @@
             padding: 12px;
 
             .row {
-                height: 24px;
+                // height: 24px;
                 line-height: 24px;
                 padding-bottom: 8px;
 
@@ -57,18 +62,25 @@
                 }
 
                 .label {
+                    width: 140px;
                     margin: 0px;
+                    flex-grow: 0;
+                    flex-shrink: 0;
+                }
+
+                .select, .color-picker, .slider, .text-input, .boolean, .text-area {
+                    margin: 0;
                     flex-grow: 1;
                 }
 
-                .select, .color-picker, .slider, .text-entry {
-                    margin: 0px;
-                    width: 180px;
+                .boolean {
+                    margin: 5px 0 0 0;
+                    flex-grow: 0;
                 }
 
-                .text-input {
-                    margin: 0px;
-                    width: 180px;
+                .slider .pcui-slider-bar {
+                    margin-right: 0px;
+                    width: calc(100% - 9px);
                 }
             }
         }

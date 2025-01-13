@@ -11,6 +11,7 @@ import sceneImport from './svg/import.svg';
 import sceneNew from './svg/new.svg';
 import sceneOpen from './svg/open.svg';
 import logoSvg from './svg/playcanvas-logo.svg';
+import scenePublish from './svg/publish.svg';
 import sceneSave from './svg/save.svg';
 import selectAll from './svg/select-all.svg';
 import selectDuplicate from './svg/select-duplicate.svg';
@@ -136,13 +137,15 @@ class Menu extends Container {
             icon: createSvg(sceneOpen),
             onSelect: async () => {
                 if (await events.invoke('scene.new')) {
-                    events.fire('scene.open');
+                    await events.invoke('scene.open');
                 }
             }
         }, {
             text: localize('scene.import'),
             icon: createSvg(sceneImport),
-            onSelect: () => events.fire('scene.open')
+            onSelect: async () => {
+                await events.invoke('scene.open');
+            }
         }, {
             // separator
         }, {
@@ -174,7 +177,12 @@ class Menu extends Container {
             text: localize('scene.export'),
             icon: createSvg(sceneExport),
             subMenu: exportMenuPanel
-        }]);
+        }].concat(events.invoke('app.publish') ? [{
+            text: localize('scene.publish'),
+            icon: createSvg(scenePublish),
+            onSelect: () => events.invoke('scene.publish'),
+            isEnabled: () => !events.invoke('scene.empty')
+        }] : []));
 
         const selectionMenuPanel = new MenuPanel([{
             text: localize('select.all'),
@@ -234,7 +242,7 @@ class Menu extends Container {
         }, {
             text: localize('help.user-guide'),
             icon: 'E232',
-            onSelect: () => window.open('https://github.com/playcanvas/supersplat/wiki/User-Guide', '_blank').focus()
+            onSelect: () => window.open('https://github.com/playcanvas/supersplat/wiki', '_blank').focus()
         }, {
             text: localize('help.log-issue'),
             icon: 'E336',

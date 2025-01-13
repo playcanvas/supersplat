@@ -13,7 +13,6 @@ const template = /* html */ `
             }
             body {
                 overflow: hidden;
-                background-color: {{backgroundColor}};
             }
             .hidden {
                 display: none !important;
@@ -78,23 +77,24 @@ const template = /* html */ `
         <script type="importmap">
             {
                 "imports": {
-                    "playcanvas": "https://cdn.jsdelivr.net/npm/playcanvas@2.3.3/build/playcanvas.mjs"
+                    "playcanvas": "https://cdn.jsdelivr.net/npm/playcanvas@2.3.3/build/playcanvas.mjs",
+                    "viewerSettings": "{{settingsURL}}"
                 }
             }
         </script>
-        <script type="module" src="https://cdn.jsdelivr.net/npm/@playcanvas/web-components@0.1.10/dist/pwc.mjs"></script>
+        <script type="module" src="https://cdn.jsdelivr.net/npm/@playcanvas/web-components@0.1.11/dist/pwc.mjs"></script>
     </head>
     <body>
         <pc-app antialias="false" depth="false" high-resolution="true" stencil="false">
             <pc-asset id="camera-controls" src="https://cdn.jsdelivr.net/npm/playcanvas@2.3.1/scripts/esm/camera-controls.mjs" preload></pc-asset>
             <pc-asset id="xr-controllers" src="https://cdn.jsdelivr.net/npm/playcanvas@2.3.1/scripts/esm/xr-controllers.mjs" preload></pc-asset>
             <pc-asset id="xr-navigation" src="https://cdn.jsdelivr.net/npm/playcanvas@2.3.1/scripts/esm/xr-navigation.mjs" preload></pc-asset>
-            <pc-asset id="ply" type="gsplat" src="{{plyModel}}"></pc-asset>
+            <pc-asset id="ply" type="gsplat" src="{{contentURL}}"></pc-asset>
             <pc-scene>
                 <!-- Camera (with XR support) -->
                 <pc-entity name="camera root">
                     <pc-entity name="camera">
-                        <pc-camera clear-color="{{clearColor}}" fov="{{fov}}"></pc-camera>
+                        <pc-camera nearClip="0.01" farClip="1000" horizontalFov="true" tonemap="none"></pc-camera>
                         <pc-scripts>
                             <pc-script name="cameraControls"></pc-script>
                         </pc-scripts>
@@ -164,15 +164,11 @@ const template = /* html */ `
         <script type="module">
             import { BoundingBox, Color, Script, Vec3 } from 'playcanvas';
 
+            import viewerSettings from "viewerSettings" with { type: "json" };
+
             document.addEventListener('DOMContentLoaded', async () => {
-                const appElement = await document.querySelector('pc-app').ready();
-                const app = await appElement.app;
-
-                const entityElement = await document.querySelector('pc-entity[name="camera"]').ready();
-                const entity = entityElement.entity;
-
-                const resetPosition = {{resetPosition}};
-                const resetTarget = {{resetTarget}};
+                const position = viewerSettings.camera.position && new Vec3(viewerSettings.camera.position);
+                const target = viewerSettings.camera.target && new Vec3(viewerSettings.camera.target);
 
                 class FrameScene extends Script {
                     frameScene(bbox) {
@@ -185,7 +181,7 @@ const template = /* html */ `
                     resetCamera(bbox) {
                         const sceneSize = bbox.halfExtents.length();
                         this.entity.script.cameraControls.sceneSize = sceneSize * 0.2;
-                        this.entity.script.cameraControls.focus(resetTarget ?? Vec3.ZERO, resetPosition ?? new Vec3(2, 1, 2));
+                        this.entity.script.cameraControls.focus(target ?? Vec3.ZERO, position ?? new Vec3(2, 1, 2));
                     }
 
                     calcBound() {
@@ -197,15 +193,7 @@ const template = /* html */ `
                         document.getElementById('loadingIndicator').classList.add('hidden');
 
                         const bbox = this.calcBound();
-
-                        // configure camera
-                        this.entity.camera.horizontalFov = true;
-                        this.entity.camera.farClip = bbox.halfExtents.length() * 20;
-                        this.entity.camera.nearClip = this.entity.camera.farClip * 0.001;
-                        // set NONE tonemapping until https://github.com/playcanvas/engine/pull/7179 is deployed
-                        this.entity.camera.toneMapping = 6;
-
-                        if (bbox.halfExtents.length() > 100 || resetPosition || resetTarget) {
+                        if (bbox.halfExtents.length() > 100 || position || target) {
                             this.resetCamera(bbox);
                         } else {
                             this.frameScene(bbox);
@@ -238,7 +226,15 @@ const template = /* html */ `
                     }
                 }
 
-                entity.script.create(FrameScene);
+                const appElement = await document.querySelector('pc-app').ready();
+                const cameraElement = await document.querySelector('pc-entity[name="camera"]').ready();
+
+                const app = await appElement.app;
+                const camera = cameraElement.entity;
+
+                camera.camera.clearColor = new Color(viewerSettings.background.color);
+                camera.camera.fov = viewerSettings.camera.fov;
+                camera.script.create(FrameScene);
 
                 // Create container for buttons
                 const container = document.createElement('div');

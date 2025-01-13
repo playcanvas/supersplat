@@ -3,7 +3,7 @@ import { path } from 'playcanvas';
 
 import { localize } from './localization';
 import { Events } from '../events';
-import { ViewerExportOptions } from '../splat-serialize';
+import { ViewerExportSettings } from '../splat-serialize';
 import sceneExport from './svg/export.svg';
 
 const createSvg = (svgString: string, args = {}) => {
@@ -41,12 +41,13 @@ class ViewerExportPopup extends Container {
 
         const headerText = new Label({
             id: 'header',
-            text: 'VIEWER EXPORT'
+            text: localize('export.header')
         });
 
         header.append(createSvg(sceneExport, {
             id: 'icon'
         }));
+
         header.append(headerText);
 
         // content
@@ -92,7 +93,7 @@ class ViewerExportPopup extends Container {
             min: 0,
             max: 3,
             precision: 0,
-            value: 2
+            value: 3
         });
 
         bandsRow.append(bandsLabel);
@@ -277,19 +278,44 @@ class ViewerExportPopup extends Container {
             this.dom.addEventListener('keydown', keydown);
             this.dom.focus();
 
-            return new Promise<null | ViewerExportOptions>((resolve) => {
+            return new Promise<null | ViewerExportSettings>((resolve) => {
                 onCancel = () => {
                     resolve(null);
                 };
 
                 onExport = () => {
+                    let pose;
+                    switch (startSelect.value) {
+                        case 'pose':
+                            pose = events.invoke('camera.poses')?.[0];
+                            break;
+                        case 'viewport':
+                            pose = events.invoke('camera.getPose');
+                            break;
+                    }
+                    const p = pose?.position;
+                    const t = pose?.target;
+
+                    const viewerSettings = {
+                        camera: {
+                            fov: fovSlider.value,
+                            position: p ? [p.x, p.y, p.z] : null,
+                            target: t ? [t.x, t.y, t.z] : null
+                        },
+                        background: {
+                            color: colorPicker.value.slice()
+                        }
+                    };
+
+                    const serializeSettings = {
+                        maxSHBands: bandsSlider.value
+                    };
+
                     resolve({
                         type: typeSelect.value,
-                        shBands: bandsSlider.value,
-                        startPosition: startSelect.value,
-                        backgroundColor: colorPicker.value,
-                        fov: fovSlider.value,
-                        filename: filename && filenameEntry.value
+                        filename: filename && filenameEntry.value,
+                        viewerSettings,
+                        serializeSettings
                     });
                 };
             }).finally(() => {

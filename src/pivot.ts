@@ -56,11 +56,35 @@ class Pivot {
     }
 }
 
+type PivotOrigin = 'center' | 'boundCenter';
+
 const registerPivotEvents = (events: Events) => {
     const pivot = new Pivot(events);
 
     events.function('pivot', () => {
         return pivot;
+    });
+
+    // pivot mode
+    let origin: PivotOrigin = 'center';
+
+    const setOrigin = (o: PivotOrigin) => {
+        if (o !== origin) {
+            origin = o;
+            events.fire('pivot.origin', origin);
+        }
+    };
+
+    events.function('pivot.origin', () => {
+        return origin;
+    });
+
+    events.on('pivot.setOrigin', (o: PivotOrigin) => {
+        setOrigin(o === 'center' ? 'center' : 'boundCenter');
+    });
+
+    events.on('pivot.toggleOrigin', () => {
+        setOrigin(origin === 'center' ? 'boundCenter' : 'center');
     });
 };
 

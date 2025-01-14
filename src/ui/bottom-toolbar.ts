@@ -96,6 +96,12 @@ class BottomToolbar extends Container {
             icon: 'E118'
         });
 
+        const origin = new Button({
+            id: 'bottom-toolbar-origin',
+            class: 'bottom-toolbar-toggle',
+            icon: 'E189'
+        });
+
         undo.dom.appendChild(createSvg(undoSvg));
         redo.dom.appendChild(createSvg(redoSvg));
         picker.dom.appendChild(createSvg(pickerSvg));
@@ -120,6 +126,7 @@ class BottomToolbar extends Container {
         this.append(rotate);
         this.append(scale);
         this.append(coordSpace);
+        this.append(origin);
 
         undo.dom.addEventListener('click', () => events.fire('edit.undo'));
         redo.dom.addEventListener('click', () => events.fire('edit.redo'));
@@ -132,6 +139,7 @@ class BottomToolbar extends Container {
         rotate.dom.addEventListener('click', () => events.fire('tool.rotate'));
         scale.dom.addEventListener('click', () => events.fire('tool.scale'));
         coordSpace.dom.addEventListener('click', () => events.fire('tool.toggleCoordSpace'));
+        origin.dom.addEventListener('click', () => events.fire('pivot.toggleOrigin'));
 
         events.on('edit.canUndo', (value: boolean) => {
             undo.enabled = value;
@@ -155,6 +163,10 @@ class BottomToolbar extends Container {
             coordSpace.dom.classList[space === 'local' ? 'add' : 'remove']('active');
         });
 
+        events.on('pivot.origin', (o: 'center' | 'boundCenter') => {
+            origin.dom.classList[o === 'boundCenter' ? 'add' : 'remove']('active');
+        });
+
         // register tooltips
         tooltips.register(undo, localize('tooltip.undo'));
         tooltips.register(redo, localize('tooltip.redo'));
@@ -168,7 +180,7 @@ class BottomToolbar extends Container {
         tooltips.register(rotate, localize('tooltip.rotate'));
         tooltips.register(scale, localize('tooltip.scale'));
         tooltips.register(coordSpace, localize('tooltip.local-space'));
-
+        tooltips.register(origin, localize('tooltip.bound-center'));
     }
 }
 

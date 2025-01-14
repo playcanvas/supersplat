@@ -20,6 +20,7 @@ import { Element, ElementType } from './element';
 import { Serializer } from './serializer';
 import { vertexShader, fragmentShader, gsplatCenter } from './shaders/splat-shader';
 import { State } from './splat-state';
+import { Transform } from './transform';
 import { TransformPalette } from './transform-palette';
 
 const vec = new Vec3();
@@ -498,6 +499,19 @@ class Splat extends Element {
 
     get transparency() {
         return this._transparency;
+    }
+
+    getPivot(mode: 'center' | 'boundCenter', selection: boolean, result: Transform) {
+        const { entity } = this;
+        switch (mode) {
+            case 'center':
+                result.set(entity.getLocalPosition(), entity.getLocalRotation(), entity.getLocalScale());
+                break;
+            case 'boundCenter':
+                entity.getLocalTransform().transformPoint((selection ? this.selectionBound : this.localBound).center, vec);
+                result.set(vec, entity.getLocalRotation(), entity.getLocalScale());
+                break;
+        }
     }
 }
 

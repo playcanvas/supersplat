@@ -10,7 +10,6 @@ import { TransformHandler } from './transform-handler';
 
 const mat = new Mat4();
 const mat2 = new Mat4();
-const vec = new Vec3();
 const transform = new Transform();
 
 class SplatsTransformHandler implements TransformHandler {
@@ -50,6 +49,12 @@ class SplatsTransformHandler implements TransformHandler {
             }
         });
 
+        events.on('pivot.origin', (mode: 'center' | 'boundCenter') => {
+            if (this.splat) {
+                this.placePivot();
+            }
+        });
+
         events.on('camera.focalPointPicked', (details: { splat: Splat, position: Vec3 }) => {
             if (this.splat) {
                 const pivot = events.invoke('pivot') as Pivot;
@@ -62,12 +67,8 @@ class SplatsTransformHandler implements TransformHandler {
     }
 
     placePivot() {
-        const { splat } = this;
-        const { entity } = splat;
-
-        // place the pivot at the center of the selected splats
-        entity.getLocalTransform().transformPoint(splat.selectionBound.center, vec);
-        transform.set(vec, entity.getLocalRotation(), entity.getLocalScale());
+        const origin = this.events.invoke('pivot.origin');
+        this.splat.getPivot(origin === 'center' ? 'center' : 'boundCenter', false, transform);
         this.events.fire('pivot.place', transform);
     }
 

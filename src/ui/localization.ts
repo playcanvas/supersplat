@@ -169,6 +169,7 @@ const localizeInit = () => {
                     'tooltip.rotate': 'Drehen ( 2 )',
                     'tooltip.scale': 'Skalieren ( 3 )',
                     'tooltip.local-space': 'Gizmo in local-space',
+                    'tooltip.bound-center': 'Mittelpunkt verwenden',
 
                     // Viewer Export
                     'export.type': 'Export Typ',
@@ -350,7 +351,8 @@ const localizeInit = () => {
                     'tooltip.translate': 'Translate ( 1 )',
                     'tooltip.rotate': 'Rotate ( 2 )',
                     'tooltip.scale': 'Scale ( 3 )',
-                    'tooltip.local-space': 'Local Space Gizmo',
+                    'tooltip.local-space': 'Use Local Orientation',
+                    'tooltip.bound-center': 'Use Bound Center',
 
                     // Viewer Export
                     'export.header': 'VIEWER EXPORT',
@@ -538,6 +540,7 @@ const localizeInit = () => {
                     'tooltip.rotate': 'Rotation ( 2 )',
                     'tooltip.scale': 'Échelle ( 3 )',
                     'tooltip.local-space': 'Espace local gizmo',
+                    'tooltip.bound-center': 'Utiliser le centre de la limite',
 
                     // Viewer Export
                     'export.type': 'Type d\'export',
@@ -711,6 +714,7 @@ const localizeInit = () => {
                     'tooltip.rotate': '回転 ( 2 )',
                     'tooltip.scale': 'スケール ( 3 )',
                     'tooltip.local-space': 'ローカル座標へ切り替え',
+                    'tooltip.bound-center': 'バウンディングボックスの中心を使用',
 
                     // Viewer Export
                     'export.type': 'エクスポートタイプ',
@@ -884,6 +888,7 @@ const localizeInit = () => {
                     'tooltip.rotate': '회전 ( 2 )',
                     'tooltip.scale': '크기 조정 ( 3 )',
                     'tooltip.local-space': '로컬 공간',
+                    'tooltip.bound-center': '바운드 중심 사용',
 
                     // Viewer Export
                     'export.type': '내보내기 유형',
@@ -1057,6 +1062,7 @@ const localizeInit = () => {
                     'tooltip.rotate': '旋转 ( 2 )',
                     'tooltip.scale': '缩放 ( 3 )',
                     'tooltip.local-space': '局部坐标系',
+                    'tooltip.bound-center': '使用边界中心',
 
                     // Viewer Export
                     'export.type': '导出类型',

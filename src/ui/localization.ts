@@ -1062,7 +1062,7 @@ const localizeInit = () => {
                     'tooltip.rotate': '旋转 ( 2 )',
                     'tooltip.scale': '缩放 ( 3 )',
                     'tooltip.local-space': '局部坐标系',
-                    'tooltip.bound-center': '使用边界中心',   
+                    'tooltip.bound-center': '使用边界中心',
 
                     // Viewer Export
                     'export.type': '导出类型',

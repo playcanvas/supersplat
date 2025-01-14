@@ -20,8 +20,8 @@ import { Element, ElementType } from './element';
 import { Serializer } from './serializer';
 import { vertexShader, fragmentShader, gsplatCenter } from './shaders/splat-shader';
 import { State } from './splat-state';
-import { TransformPalette } from './transform-palette';
 import { Transform } from './transform';
+import { TransformPalette } from './transform-palette';
 
 const vec = new Vec3();
 const veca = new Vec3();

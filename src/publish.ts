@@ -69,7 +69,7 @@ const publish = async (data: Uint8Array, publishSettings: PublishSettings) => {
             const err = await publishResponse.json();
             msg = err.error ?? msg;
         } catch (e) {
-            msg = "Failed to publish";
+            msg = 'Failed to publish';
         }
 
         throw new Error(msg);

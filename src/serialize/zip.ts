@@ -8,7 +8,7 @@ class ZipArchive {
     // start a new file
     file: (filename: string) => void;
 
-    // write file data
+    // write data to file (multiple calls allowed for streaming purposes)
     fileData: (data: Uint8Array) => void;
 
     // finish the archive

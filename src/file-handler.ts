@@ -55,6 +55,12 @@ const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
         accept: {
             'application/zip': ['.zip']
         }
+    },
+    'super': {
+        description: 'SuperSplat document',
+        accept: {
+            'application/octet-stream': ['.super']
+        }
     }
 };
 
@@ -84,17 +90,6 @@ const download = (filename: string, data: Uint8Array) => {
     }
 
     window.URL.revokeObjectURL(url);
-};
-
-// send the file to the remote storage
-const sendToRemoteStorage = async (filename: string, data: ArrayBuffer, remoteStorageDetails: RemoteStorageDetails) => {
-    const formData = new FormData();
-    formData.append('file', new Blob([data], { type: 'octet/stream' }), filename);
-    formData.append('preserveThumbnail', 'true');
-    await fetch(remoteStorageDetails.url, {
-        method: remoteStorageDetails.method,
-        body: formData
-    });
 };
 
 const loadCameraPoses = async (url: string, filename: string, events: Events) => {
@@ -179,7 +174,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         fileSelector = document.createElement('input');
         fileSelector.setAttribute('id', 'file-selector');
         fileSelector.setAttribute('type', 'file');
-        fileSelector.setAttribute('accept', '.ply,.splat');
+        fileSelector.setAttribute('accept', '.ply,.splat,.super');
         fileSelector.setAttribute('multiple', 'true');
 
         fileSelector.onchange = async () => {
@@ -201,7 +196,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
             const name = entry.file?.name;
             if (!name) return false;
             const lowerName = name.toLowerCase();
-            return lowerName.endsWith('.ply') || lowerName.endsWith('.splat') || lowerName.endsWith('.json');
+            return lowerName.endsWith('.ply') || lowerName.endsWith('.splat') || lowerName.endsWith('.json') || lowerName.endsWith('.super');
         });
 
         if (entries.length === 0) {
@@ -213,7 +208,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         } else {
             // determine if all files share a common filename prefix followed by
             // a frame number, e.g. "frame0001.ply", "frame0002.ply", etc.
-            const isAnimation = () => {
+            const isSequence = () => {
                 if (entries.length <= 1) {
                     return false;
                 }
@@ -235,7 +230,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                 return true;
             };
 
-            if (isAnimation()) {
+            if (isSequence()) {
                 events.fire('animation.setFrames', entries.map(e => e.file));
                 events.fire('animation.setFrame', 0);
             } else {
@@ -283,6 +278,57 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
     });
 
     events.function('scene.open', async () => {
+        let doreset = false;
+
+        if (events.invoke('scene.dirty')) {
+            const result = await events.invoke('showPopup', {
+                type: 'yesno',
+                header: 'RESET SCENE',
+                message: 'You have unsaved changes. Are you sure you want to reset the scene?'
+            });
+
+            if (result.action !== 'yes') {
+                return false;
+            }
+
+            doreset = true;
+        }
+
+        if (fileSelector) {
+            fileSelector.click();
+        } else {
+            try {
+                const handles = await window.showOpenFilePicker({
+                    id: 'SuperSplatFileOpen',
+                    multiple: true,
+                    types: [filePickerTypes.ply, filePickerTypes.splat]
+                });
+                for (let i = 0; i < handles.length; i++) {
+                    const handle = handles[i];
+                    const file = await handle.getFile();
+                    const url = URL.createObjectURL(file);
+                    await handleLoad(url, file.name);
+                    URL.revokeObjectURL(url);
+
+                    if (i === 0) {
+                        fileHandle = handle;
+                    }
+                }
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    console.error(error);
+                }
+            }
+        }
+
+        await events.invoke('doc.load');
+    });
+
+    events.function('scene.save', async () => {
+        
+    });
+
+    events.function('scene.import', async () => {
         if (fileSelector) {
             fileSelector.click();
         } else {

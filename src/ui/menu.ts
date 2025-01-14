@@ -136,15 +136,13 @@ class Menu extends Container {
             text: localize('scene.open'),
             icon: createSvg(sceneOpen),
             onSelect: async () => {
-                if (await events.invoke('scene.new')) {
-                    await events.invoke('scene.open');
-                }
+                await events.invoke('scene.open');
             }
         }, {
             text: localize('scene.import'),
             icon: createSvg(sceneImport),
             onSelect: async () => {
-                await events.invoke('scene.open');
+                await events.invoke('scene.import');
             }
         }, {
             // separator

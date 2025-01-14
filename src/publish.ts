@@ -64,7 +64,15 @@ const publish = async (data: Uint8Array, publishSettings: PublishSettings) => {
     });
 
     if (!publishResponse.ok) {
-        throw new Error('failed to publish');
+        let msg;
+        try {
+            const err = await publishResponse.json();
+            msg = err.error ?? msg;
+        } catch (e) {
+            msg = 'Failed to publish';
+        }
+
+        throw new Error(msg);
     }
 
     return await publishResponse.json();

@@ -11,7 +11,8 @@ import { SHRotation } from './sh-utils';
 import { Splat } from './splat';
 import { State } from './splat-state';
 import { version } from '../package.json';
-import { template as ViewerHtmlTemplate } from './templates/viewer-html-template';
+import { template as ViewerHtmlTemplate } from './templates/viewer-html';
+import { template as ViewerScriptTemplate } from './templates/viewer-script';
 
 // async function for writing data
 type WriteFunc = (data: Uint8Array, finalWrite?: boolean) => void;
@@ -919,21 +920,29 @@ const serializeViewer = async (splats: Splat[], options: ViewerExportSettings, w
 
     const settingsFilename = 'settings.json';
     const sceneFilename = 'scene.compressed.ply';
+    const scriptFilename = 'viewer.js';
     const { viewerSettings } = options;
 
-    const html = ViewerHtmlTemplate
-    .replace('{{settingsURL}}', options.type === 'html' ? `data:application/json;base64,${encodeBase64(new TextEncoder().encode(JSON.stringify(viewerSettings)))}` : `./${settingsFilename}`)
-    .replace('{{contentURL}}', options.type === 'html' ? `data:application/ply;base64,${encodeBase64(compressedData)}` : `./${sceneFilename}`);
-
     if (options.type === 'html') {
+        const html = ViewerHtmlTemplate
+        .replace('{{settingsURL}}', `data:application/json;base64,${encodeBase64(new TextEncoder().encode(JSON.stringify(viewerSettings)))}`)
+        .replace('{{contentURL}}', `data:application/ply;base64,${encodeBase64(compressedData)}`)
+        .replace('{{script}}', `<script type="module">\n${ViewerScriptTemplate}\n</script>`);
+
         await write(new TextEncoder().encode(html), true);
     } else {
+        const html = ViewerHtmlTemplate
+        .replace('{{settingsURL}}', `./${settingsFilename}`)
+        .replace('{{contentURL}}', `./${sceneFilename}`)
+        .replace('{{script}}', `<script type="module" src="./${scriptFilename}"></script>`);
+
         /* global JSZip */
         // @ts-ignore
         const zip = new JSZip();
         zip.file('index.html', html);
         zip.file(settingsFilename, JSON.stringify(viewerSettings, null, 4));
         zip.file(sceneFilename, compressedData);
+        zip.file(scriptFilename, ViewerScriptTemplate);
         const result = await zip.generateAsync({ type: 'uint8array' });
         await write(result, true);
     }

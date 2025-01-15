@@ -56,7 +56,7 @@ class SplatsTransformHandler implements TransformHandler {
         });
 
         events.on('camera.focalPointPicked', (details: { splat: Splat, position: Vec3 }) => {
-            if (this.splat) {
+            if (this.splat && ['move', 'rotate', 'scale'].includes(this.events.invoke('tool.active'))) {
                 const pivot = events.invoke('pivot') as Pivot;
                 const oldt = pivot.transform.clone();
                 const newt = new Transform(details.position, pivot.transform.rotation, pivot.transform.scale);

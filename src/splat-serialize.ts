@@ -11,7 +11,9 @@ import { SHRotation } from './sh-utils';
 import { Splat } from './splat';
 import { State } from './splat-state';
 import { version } from '../package.json';
-import { template as ViewerHtmlTemplate } from './templates/viewer-html-template';
+import { template as CssTemplate } from './templates/viewer-css';
+import { template as HtmlTemplate } from './templates/viewer-html';
+import { template as ScriptTemplate } from './templates/viewer-script';
 
 // async function for writing data
 type WriteFunc = (data: Uint8Array, finalWrite?: boolean) => void;
@@ -917,21 +919,40 @@ const serializeViewer = async (splats: Splat[], options: ViewerExportSettings, w
         compressedData = data;
     });
 
+    const htmlFilename = 'index.html';
+    const scriptFilename = 'index.js';
+    const cssFilename = 'index.css';
     const settingsFilename = 'settings.json';
     const sceneFilename = 'scene.compressed.ply';
+
     const { viewerSettings } = options;
 
-    const html = ViewerHtmlTemplate
-    .replace('{{settingsURL}}', options.type === 'html' ? `data:application/json;base64,${encodeBase64(new TextEncoder().encode(JSON.stringify(viewerSettings)))}` : `./${settingsFilename}`)
-    .replace('{{contentURL}}', options.type === 'html' ? `data:application/ply;base64,${encodeBase64(compressedData)}` : `./${sceneFilename}`);
-
     if (options.type === 'html') {
+        const pad = (text: string, spaces: number) => {
+            const whitespace = ' '.repeat(spaces);
+            return text.split('\n').map((line, i) => (i ? whitespace : '') + line).join('\n');
+        };
+
+        const html = HtmlTemplate
+        .replace('{{style}}', `<style>${pad(CssTemplate, 12)}\n        </style>`)
+        .replace('{{script}}', `<script type="module">${pad(ScriptTemplate, 12)}\n        </script>`)
+        .replace('{{settingsURL}}', `data:application/json;base64,${encodeBase64(new TextEncoder().encode(JSON.stringify(viewerSettings)))}`)
+        .replace('{{contentURL}}', `data:application/ply;base64,${encodeBase64(compressedData)}`);
+
         await write(new TextEncoder().encode(html), true);
     } else {
+        const html = HtmlTemplate
+        .replace('{{style}}', `<link rel="stylesheet" href="./${cssFilename}">`)
+        .replace('{{script}}', `<script type="module" src="./${scriptFilename}"></script>`)
+        .replace('{{settingsURL}}', `./${settingsFilename}`)
+        .replace('{{contentURL}}', `./${sceneFilename}`);
+
         /* global JSZip */
         // @ts-ignore
         const zip = new JSZip();
-        zip.file('index.html', html);
+        zip.file(htmlFilename, html);
+        zip.file(cssFilename, CssTemplate);
+        zip.file(scriptFilename, ScriptTemplate);
         zip.file(settingsFilename, JSON.stringify(viewerSettings, null, 4));
         zip.file(sceneFilename, compressedData);
         const result = await zip.generateAsync({ type: 'uint8array' });

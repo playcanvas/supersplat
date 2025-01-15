@@ -91,7 +91,9 @@ class EditorUI {
 
             const orig = cursorLabel.text;
             cursorLabel.text = localize('cursor.copied');
-            setTimeout(() => { cursorLabel.text = orig; }, 1000);
+            setTimeout(() => {
+                cursorLabel.text = orig;
+            }, 1000);
         });
 
         // canvas container

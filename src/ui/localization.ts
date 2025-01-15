@@ -182,7 +182,11 @@ const localizeInit = () => {
                     'export.pose-camera': '1. Kamera Pose',
                     'export.fov': 'Sichtfeld (FoV)',
                     'export.background-color': 'Hintergrund',
-                    'export.filename': 'Dateiname'
+                    'export.filename': 'Dateiname',
+
+                    // cursor
+                    'cursor.click-to-copy': 'Klicken zum kopieren',
+                    'cursor.copied': 'Kopiert!'
                 }
             },
             en: {
@@ -368,6 +372,10 @@ const localizeInit = () => {
                     'export.background-color': 'Background',
                     'export.filename': 'Filename',
 
+                    // cursor
+                    'cursor.click-to-copy': 'Click to copy',
+                    'cursor.copied': 'Copied!',
+
                     // Publish Settings Dialog
                     'publish.header': 'PUBLISH SETTINGS',
                     'publish.ok': 'Publish',
@@ -379,11 +387,7 @@ const localizeInit = () => {
                     'publish.please-try-again': 'Please try again later.',
                     'publish.succeeded': 'PUBLISH SUCCEEDED',
                     'publish.message': 'Use the link below to access your scene.',
-                    'publish.please-log-in': 'Publishing to PlayCanvas requires a user account. Please log in and try again.',
-
-                    // cursor
-                    'cursor.click-to-copy': 'Click to copy',
-                    'cursor.copied': 'Copied!'
+                    'publish.please-log-in': 'Publishing to PlayCanvas requires a user account. Please log in and try again.'
                 }
             },
             fr: {
@@ -557,7 +561,11 @@ const localizeInit = () => {
                     'export.pose-camera': '1ère pose de caméra',
                     'export.fov': 'Champ de vision',
                     'export.background-color': 'Arrière-plan',
-                    'export.filename': 'Nom de fichier'
+                    'export.filename': 'Nom de fichier',
+
+                    // cursor
+                    'cursor.click-to-copy': 'Cliquez pour copier',
+                    'cursor.copied': 'Copié!'
                 }
             },
             ja: {
@@ -731,7 +739,11 @@ const localizeInit = () => {
                     'export.pose-camera': '1番目のカメラポーズ',
                     'export.fov': '視野角',
                     'export.background-color': '背景色',
-                    'export.filename': 'ファイル名'
+                    'export.filename': 'ファイル名',
+
+                    // cursor
+                    'cursor.click-to-copy': 'クリックしてコピー',
+                    'cursor.copied': 'コピーしました！'
                 }
             },
             ko: {
@@ -905,7 +917,11 @@ const localizeInit = () => {
                     'export.pose-camera': '1번째 카메라 포즈',
                     'export.fov': '시야각',
                     'export.background-color': '배경색',
-                    'export.filename': '파일 이름'
+                    'export.filename': '파일 이름',
+
+                    // cursor
+                    'cursor.click-to-copy': '클릭하여 복사',
+                    'cursor.copied': '복사됨!'
                 }
             },
             'zh-CN': {
@@ -1079,7 +1095,11 @@ const localizeInit = () => {
                     'export.pose-camera': '第一个相机姿势',
                     'export.fov': '视野角',
                     'export.background-color': '背景颜色',
-                    'export.filename': '文件名'
+                    'export.filename': '文件名',
+
+                    // cursor
+                    'cursor.click-to-copy': '点击复制',
+                    'cursor.copied': '已复制!'
                 }
             }
         },

@@ -11,9 +11,9 @@ import { SHRotation } from './sh-utils';
 import { Splat } from './splat';
 import { State } from './splat-state';
 import { version } from '../package.json';
+import { template as CssTemplate } from './templates/viewer-css';
 import { template as HtmlTemplate } from './templates/viewer-html';
 import { template as ScriptTemplate } from './templates/viewer-script';
-import { template as CssTemplate } from './templates/viewer-css';
 
 // async function for writing data
 type WriteFunc = (data: Uint8Array, finalWrite?: boolean) => void;

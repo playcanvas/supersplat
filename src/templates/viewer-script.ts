@@ -150,7 +150,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             dom.infoPanel.classList.add('hidden');
         }
     });
-});
-`;
+});`;
 
 export { template };

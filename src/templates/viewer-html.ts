@@ -2,110 +2,10 @@ const template = /* html */ `
 <!DOCTYPE html>
 <html lang="en">
     <head>
+        <title>SuperSplat Viewer</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-        <title>SuperSplat Viewer</title>
-        <style>
-            * {
-                margin: 0;
-                padding: 0;
-                touch-action: none;
-            }
-            body {
-                overflow: hidden;
-            }
-            .hidden {
-                display: none !important;
-            }
-            #infoPanel {
-                font-family: 'Arial', sans-serif;
-                color: #2c3e50;
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.3);
-                z-index: 999;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-            #infoPanelContent {
-                background: rgba(255, 255, 255, 0.95);
-                padding: 20px;
-                border-radius: 8px;
-                border: 1px solid #ddd;
-                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-                backdrop-filter: blur(8px);
-                -webkit-backdrop-filter: blur(8px);
-            }
-            #infoPanelContent h3 {
-                margin: 0 0 12px 0;
-                color: #2c3e50;
-            }
-            .control-item {
-                display: flex;
-                justify-content: space-between;
-                gap: 24px;
-                line-height: 1.5;
-            }
-            .control-action {
-                text-align: left;
-            }
-            .control-key {
-                text-align: right;
-                color: #666;
-            }
-            #loadingIndicator {
-                font-family: 'Arial', sans-serif;
-                color: #2c3e50;
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                background: rgba(255, 255, 255, 0.95);
-                padding: 20px;
-                border-radius: 8px;
-                border: 1px solid #ddd;
-                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-                backdrop-filter: blur(8px);
-                -webkit-backdrop-filter: blur(8px);
-                z-index: 1000;
-            }
-            #buttonContainer {
-                position: absolute;
-                display: flex;
-                bottom: max(16px, env(safe-area-inset-bottom));
-                right: max(16px, env(safe-area-inset-right));
-                gap: 8px;
-            }
-            .button {
-                display: flex;
-                position: relative;
-                width: 40px;
-                height: 40px;
-                background: rgba(255, 255, 255, 0.9);
-                border: 1px solid #ddd;
-                border-radius: 8px;
-                cursor: pointer;
-                align-items: center;
-                justify-content: center;
-                padding: 0;
-                margin: 0;
-                backdrop-filter: blur(8px);
-                -webkit-backdrop-filter: blur(8px);
-                transition: background-color 0.2s;
-                color: #2c3e50;
-            }
-            .button.hidden {
-                display: none;
-            }
-            .buttonSvg {
-                display: block;
-                margin: auto;
-            }
-        </style>
+        {{style}}
         <script type="importmap">
             {
                 "imports": {
@@ -193,6 +93,7 @@ const template = /* html */ `
             </div>
         </div>
 
+        <!-- Buttons Panel -->
         <div id="buttonContainer">
             <button id="arMode" class="button hidden">
                 <svg class="buttonSvg" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368"><path d="M440-181 240-296q-19-11-29.5-29T200-365v-230q0-22 10.5-40t29.5-29l200-115q19-11 40-11t40 11l200 115q19 11 29.5 29t10.5 40v230q0 22-10.5 40T720-296L520-181q-19 11-40 11t-40-11Zm0-92v-184l-160-93v185l160 92Zm80 0 160-92v-185l-160 93v184ZM80-680v-120q0-33 23.5-56.5T160-880h120v80H160v120H80ZM280-80H160q-33 0-56.5-23.5T80-160v-120h80v120h120v80Zm400 0v-80h120v-120h80v120q0 33-23.5 56.5T800-80H680Zm120-600v-120H680v-80h120q33 0 56.5 23.5T880-800v120h-80ZM480-526l158-93-158-91-158 91 158 93Zm0 45Zm0-45Zm40 69Zm-80 0Z"/></svg>

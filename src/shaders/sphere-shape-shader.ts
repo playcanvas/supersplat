@@ -56,7 +56,7 @@ const fragmentShader = /* glsl */ `
 
     bool writeDepth(float alpha) {
         vec2 uv = fract(gl_FragCoord.xy / 32.0);
-        float noise = texture2DLodEXT(blueNoiseTex32, uv, 0.0).y;
+        float noise = texture2DLod(blueNoiseTex32, uv, 0.0).y;
         return alpha > noise;
     }
 

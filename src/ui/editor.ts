@@ -1,12 +1,12 @@
 import { Container, Label } from 'pcui';
-import { Mat4 } from 'playcanvas';
+import { Mat4, Vec3 } from 'playcanvas';
 
 import { DataPanel } from './data-panel';
 import { Events } from '../events';
 import { BottomToolbar } from './bottom-toolbar';
 import { CameraPanel } from './camera-panel';
 import { ColorPanel } from './color-panel';
-import { localizeInit } from './localization';
+import { localize, localizeInit } from './localization';
 import { Menu } from './menu';
 import { ModeToggle } from './mode-toggle';
 import logo from './playcanvas-logo.png';
@@ -64,10 +64,36 @@ class EditorUI {
         const canvas = document.createElement('canvas');
         canvas.id = 'canvas';
 
-        // filename label
+        // app label
         const appLabel = new Label({
             id: 'app-label',
             text: `SUPERSPLAT v${version}`
+        });
+
+        // cursor label
+        const cursorLabel = new Label({
+            id: 'cursor-label'
+        });
+
+        let fullprecision = '';
+
+        events.on('camera.focalPointPicked', (details: { position: Vec3 }) => {
+            cursorLabel.text = `${details.position.x.toFixed(2)}, ${details.position.y.toFixed(2)}, ${details.position.z.toFixed(2)}`;
+            fullprecision = `${details.position.x}, ${details.position.y}, ${details.position.z}`;
+        });
+
+        ['pointerdown', 'pointerup', 'pointermove', 'wheel', 'dblclick'].forEach((eventName) => {
+            cursorLabel.dom.addEventListener(eventName, (event: Event) => event.stopPropagation());
+        });
+
+        cursorLabel.dom.addEventListener('pointerdown', () => {
+            navigator.clipboard.writeText(fullprecision);
+
+            const orig = cursorLabel.text;
+            cursorLabel.text = localize('cursor.copied');
+            setTimeout(() => {
+                cursorLabel.text = orig;
+            }, 1000);
         });
 
         // canvas container
@@ -96,6 +122,7 @@ class EditorUI {
 
         canvasContainer.dom.appendChild(canvas);
         canvasContainer.append(appLabel);
+        canvasContainer.append(cursorLabel);
         canvasContainer.append(toolsContainer);
         canvasContainer.append(scenePanel);
         canvasContainer.append(viewPanel);
@@ -126,6 +153,8 @@ class EditorUI {
         mainContainer.append(dataPanel);
 
         editorContainer.append(mainContainer);
+
+        tooltips.register(cursorLabel, localize('cursor.click-to-copy'), 'top');
 
         // message popup
         const popup = new Popup(tooltips);

@@ -118,6 +118,26 @@ body {
     text-shadow: 1px 1px 4px black;
 }
 
+#cursor-label {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    color: $text-primary;
+    text-shadow: 1px 1px 4px black;
+
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+
+    cursor: pointer;
+
+    &:hover {
+        
+        border: 1px solid $clr-hilight;
+        background-color: rgba(0, 0, 0, 0.25);
+    }
+}
+
 .select-svg {
     display: none;
     position: absolute;

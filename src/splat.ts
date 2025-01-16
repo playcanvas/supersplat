@@ -144,7 +144,7 @@ class Splat extends Element {
         this.rebuildMaterial = (bands: number) => {
             instance.createMaterial(materialOptions);
             const { material } = instance;
-            material.setDefine('SH_BANDS', `${instance.splat.shBands}`);
+            material.setDefine('SH_BANDS', `${Math.min(bands, instance.splat.shBands)}`);
             material.setParameter('splatState', this.stateTexture);
             material.setParameter('splatTransform', this.transformTexture);
             material.setParameter('transformPalette', this.transformPalette.texture);

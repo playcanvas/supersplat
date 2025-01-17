@@ -6,13 +6,29 @@ type WriteFunc = (data: Uint8Array) => void;
 
 class ZipArchive {
     // start a new file
-    file: (filename: string) => void;
+    start: (filename: string) => void;
 
     // write data to file (multiple calls allowed for streaming purposes)
-    fileData: (data: Uint8Array) => void;
+    appendData: (data: Uint8Array) => void;
+
+    // write text to the file
+    appendText: (text: string) => void;
 
     // finish the archive
     end: () => void;
+
+    // helper function which adds a file and appends its contents
+    async file(filename: string, content: string | Uint8Array) {
+        // start a new file
+        await this.start(filename);
+
+        // write file contents
+        if (typeof content === 'string') {
+            await this.appendText(content);
+        } else {
+            await this.appendData(content);
+        }
+    }
 
     constructor(writeFunc: WriteFunc) {
         const textEncoder = new TextEncoder();
@@ -45,7 +61,7 @@ class ZipArchive {
             await writeFunc(data);
         };
 
-        this.file = async (filename: string) => {
+        this.start = async (filename: string) => {
             // write previous file footer
             if (files.length > 0) {
                 await writeFooter();
@@ -54,11 +70,15 @@ class ZipArchive {
             await writeHeader(filename);
         };
 
-        this.fileData = async (data: Uint8Array) => {
+        this.appendData = async (data: Uint8Array) => {
             const file = files[files.length - 1];
             file.sizeBytes += data.length;
             file.crc.update(data);
             await writeFunc(data);
+        };
+
+        this.appendText = async (text: string) => {
+            await this.appendData(new TextEncoder().encode(text));
         };
 
         this.end = async () => {

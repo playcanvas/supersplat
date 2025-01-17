@@ -950,14 +950,22 @@ const serializeViewer = async (splats: Splat[], options: ViewerExportSettings, w
 
         /* global JSZip */
         // @ts-ignore
-        const zip = new JSZip();
-        zip.file(htmlFilename, html);
-        zip.file(cssFilename, CssTemplate);
-        zip.file(scriptFilename, ScriptTemplate);
-        zip.file(settingsFilename, JSON.stringify(viewerSettings, null, 4));
-        zip.file(sceneFilename, compressedData);
-        const result = await zip.generateAsync({ type: 'uint8array' });
-        await write(result, true);
+        // const zip = new JSZip();
+        // zip.file(htmlFilename, html);
+        // zip.file(cssFilename, CssTemplate);
+        // zip.file(scriptFilename, ScriptTemplate);
+        // zip.file(settingsFilename, JSON.stringify(viewerSettings, null, 4));
+        // zip.file(sceneFilename, compressedData);
+        // const result = await zip.generateAsync({ type: 'uint8array' });
+        // await write(result, true);
+
+        const zipArchive = new ZipArchive(write);
+        await zipArchive.file(htmlFilename, html);
+        await zipArchive.file(cssFilename, CssTemplate);
+        await zipArchive.file(scriptFilename, ScriptTemplate);
+        await zipArchive.file(settingsFilename, JSON.stringify(viewerSettings, null, 4));
+        await zipArchive.file(sceneFilename, compressedData);
+        await zipArchive.end();
     }
 };
 

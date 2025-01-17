@@ -98,7 +98,7 @@ class BottomToolbar extends Container {
 
         const origin = new Button({
             id: 'bottom-toolbar-origin',
-            class: 'bottom-toolbar-toggle',
+            class: ['bottom-toolbar-toggle', 'active'],
             icon: 'E189'
         });
 

@@ -66,7 +66,7 @@ const registerPivotEvents = (events: Events) => {
     });
 
     // pivot mode
-    let origin: PivotOrigin = 'center';
+    let origin: PivotOrigin = 'boundCenter';
 
     const setOrigin = (o: PivotOrigin) => {
         if (o !== origin) {

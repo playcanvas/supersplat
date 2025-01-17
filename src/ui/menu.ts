@@ -73,7 +73,6 @@ class Menu extends Container {
 
         const toggleCollapsed = () => {
             document.body.classList.toggle('collapsed');
-
         };
 
         // collapse menu on mobile

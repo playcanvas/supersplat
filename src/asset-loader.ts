@@ -123,7 +123,7 @@ class AssetLoader {
 
             asset.on('load', () => {
                 // support loading 2d splats by adding scale_2 property with almost 0 scale
-                const splatData = asset.resource.splatData;
+                const splatData = (asset.resource as GSplatResource).splatData;
                 if (splatData.getProp('scale_0') && splatData.getProp('scale_1') && !splatData.getProp('scale_2')) {
                     const scale2 = new Float32Array(splatData.numSplats).fill(Math.log(1e-6));
                     splatData.addProp('scale_2', scale2);
@@ -179,7 +179,7 @@ class AssetLoader {
                     url: loadRequest.url,
                     filename: loadRequest.filename
                 });
-                asset.resource = new GSplatResource(this.device, gsplatData);
+                asset.resource = new GSplatResource(this.device, gsplatData, []);
                 resolve(new Splat(asset));
             })
             .catch((err) => {

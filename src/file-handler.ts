@@ -55,12 +55,6 @@ const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
         accept: {
             'application/zip': ['.zip']
         }
-    },
-    'super': {
-        description: 'SuperSplat document',
-        accept: {
-            'application/octet-stream': ['.super']
-        }
     }
 };
 
@@ -174,7 +168,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         fileSelector = document.createElement('input');
         fileSelector.setAttribute('id', 'file-selector');
         fileSelector.setAttribute('type', 'file');
-        fileSelector.setAttribute('accept', '.ply,.splat,.super');
+        fileSelector.setAttribute('accept', '.ply,.splat');
         fileSelector.setAttribute('multiple', 'true');
 
         fileSelector.onchange = async () => {
@@ -259,75 +253,6 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         return getSplats().length === 0;
     });
 
-    events.function('scene.new', async () => {
-        if (events.invoke('scene.dirty')) {
-            const result = await events.invoke('showPopup', {
-                type: 'yesno',
-                header: 'RESET SCENE',
-                message: 'You have unsaved changes. Are you sure you want to reset the scene?'
-            });
-
-            if (result.action !== 'yes') {
-                return false;
-            }
-        }
-
-        events.fire('scene.clear');
-
-        return true;
-    });
-
-    events.function('scene.open', async () => {
-        let doreset = false;
-
-        if (events.invoke('scene.dirty')) {
-            const result = await events.invoke('showPopup', {
-                type: 'yesno',
-                header: 'RESET SCENE',
-                message: 'You have unsaved changes. Are you sure you want to reset the scene?'
-            });
-
-            if (result.action !== 'yes') {
-                return false;
-            }
-
-            doreset = true;
-        }
-
-        if (fileSelector) {
-            fileSelector.click();
-        } else {
-            try {
-                const handles = await window.showOpenFilePicker({
-                    id: 'SuperSplatFileOpen',
-                    multiple: true,
-                    types: [filePickerTypes.ply, filePickerTypes.splat]
-                });
-                for (let i = 0; i < handles.length; i++) {
-                    const handle = handles[i];
-                    const file = await handle.getFile();
-                    const url = URL.createObjectURL(file);
-                    await handleLoad(url, file.name);
-                    URL.revokeObjectURL(url);
-
-                    if (i === 0) {
-                        fileHandle = handle;
-                    }
-                }
-            } catch (error) {
-                if (error.name !== 'AbortError') {
-                    console.error(error);
-                }
-            }
-        }
-
-        await events.invoke('doc.load');
-    });
-
-    events.function('scene.save', async () => {
-        
-    });
-
     events.function('scene.import', async () => {
         if (fileSelector) {
             fileSelector.click();
@@ -382,52 +307,6 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
             if (error.name !== 'AbortError') {
                 console.error(error);
             }
-        }
-    });
-
-    events.on('scene.save', async () => {
-        if (fileHandle) {
-            try {
-                await events.invoke('scene.write', {
-                    type: 'ply',
-                    stream: await fileHandle.createWritable()
-                });
-                events.fire('scene.saved');
-            } catch (error) {
-                if (error.name !== 'AbortError') {
-                    console.error(error);
-                }
-            }
-        } else {
-            events.fire('scene.saveAs');
-        }
-    });
-
-    events.on('scene.saveAs', async () => {
-        const splats = getSplats();
-        const splat = splats[0];
-
-        if (window.showSaveFilePicker) {
-            try {
-                const handle = await window.showSaveFilePicker({
-                    id: 'SuperSplatFileSave',
-                    types: [filePickerTypes.ply],
-                    suggestedName: fileHandle?.name ?? splat.filename ?? 'scene.ply'
-                });
-                await events.invoke('scene.write', {
-                    type: 'ply',
-                    stream: await handle.createWritable()
-                });
-                fileHandle = handle;
-                events.fire('scene.saved');
-            } catch (error) {
-                if (error.name !== 'AbortError') {
-                    console.error(error);
-                }
-            }
-        } else {
-            await events.invoke('scene.export', 'ply', splat.filename, 'saveAs');
-            events.fire('scene.saved');
         }
     });
 

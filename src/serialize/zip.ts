@@ -8,14 +8,11 @@ class ZipArchive {
     // start a new file
     start: (filename: string) => void;
 
-    // write data to file (multiple calls allowed for streaming purposes)
+    // write data to file. can be called multiple times to stream data out.
     appendData: (data: Uint8Array) => void;
 
-    // write text to the file
+    // write text to the file. can be called multiple times to stream data out.
     appendText: (text: string) => void;
-
-    // finish the archive
-    end: () => void;
 
     // helper function which adds a file and appends its contents
     async file(filename: string, content: string | Uint8Array) {
@@ -29,6 +26,9 @@ class ZipArchive {
             await this.appendData(content);
         }
     }
+
+    // finish the archive
+    end: () => void;
 
     constructor(writeFunc: WriteFunc) {
         const textEncoder = new TextEncoder();
@@ -82,8 +82,8 @@ class ZipArchive {
         };
 
         this.end = async () => {
-            // write footer
-            writeFooter();
+            // write last file's footer
+            await writeFooter();
 
             // write cd records
             let offset = 0;

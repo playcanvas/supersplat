@@ -142,13 +142,9 @@ class Splat extends Element {
         this.transformPalette = new TransformPalette(splatResource.device);
 
         this.rebuildMaterial = (bands: number) => {
-            // @ts-ignore
             instance.createMaterial(materialOptions);
-
-            const material = instance.material;
-
-            const numBands = instance.splat.hasSH ? bands : 0;
-            material.setDefine('SH_BANDS', `${numBands}`);
+            const { material } = instance;
+            material.setDefine('SH_BANDS', `${Math.min(bands, instance.splat.shBands)}`);
             material.setParameter('splatState', this.stateTexture);
             material.setParameter('splatTransform', this.transformTexture);
             material.setParameter('transformPalette', this.transformPalette.texture);
@@ -263,7 +259,7 @@ class Splat extends Element {
     }
 
     get filename() {
-        return this.asset.file.filename;
+        return (this.asset.file as any).filename;
     }
 
     calcSplatWorldPosition(splatId: number, result: Vec3) {
@@ -366,7 +362,9 @@ class Splat extends Element {
     }
 
     focalPoint() {
-        return this.asset.resource?.getFocalPoint?.();
+        // GSplatData has a function for calculating an weighted average of the splat positions
+        // to get a focal point for the camera, but we use bound center instead
+        return this.worldBound.center;
     }
 
     move(position?: Vec3, rotation?: Quat, scale?: Vec3) {

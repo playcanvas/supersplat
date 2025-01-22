@@ -377,6 +377,11 @@ const localizeInit = () => {
                     'cursor.click-to-copy': 'Click to copy',
                     'cursor.copied': 'Copied!',
 
+                    // doc
+                    'doc.reset': 'RESET SCENE',
+                    'doc.unsaved-message': 'You have unsaved changes. Are you sure you want to reset the scene?',
+                    'doc.reset-message': 'Are you sure you want to reset the scene?',
+
                     // Publish Settings Dialog
                     'publish.header': 'PUBLISH SETTINGS',
                     'publish.ok': 'Publish',

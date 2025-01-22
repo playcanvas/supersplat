@@ -127,7 +127,7 @@ class Menu extends Container {
         const sceneMenuPanel = new MenuPanel([{
             text: localize('scene.new'),
             icon: createSvg(sceneNew),
-            isEnabled: () => events.invoke('scene.dirty'),
+            isEnabled: () => !events.invoke('scene.empty'),
             onSelect: () => events.invoke('doc.new')
         }, {
             text: localize('scene.open'),
@@ -138,8 +138,8 @@ class Menu extends Container {
         }, {
             text: localize('scene.save'),
             icon: createSvg(sceneSave),
-            isEnabled: () => !events.invoke('scene.empty'),
-            onSelect: () => events.fire('doc.save')
+            isEnabled: () => !events.invoke('scene.dirty'),
+            onSelect: async () => await events.invoke('doc.save')
         }, {
             text: localize('scene.save-as'),
             icon: createSvg(sceneSave),

@@ -21,6 +21,7 @@ import { SphereSelection } from './tools/sphere-selection';
 import { ToolManager } from './tools/tool-manager';
 import { registerTransformHandlerEvents } from './transform-handler';
 import { EditorUI } from './ui/editor';
+import { registerDocEvents } from './doc';
 
 declare global {
     interface LaunchParams {
@@ -247,6 +248,7 @@ const main = async () => {
     registerTransformHandlerEvents(events);
     registerAnimationEvents(events);
     registerPublishEvents(events);
+    registerDocEvents(events);
     initShortcuts(events);
     initFileHandler(scene, events, editorUI.appContainer.dom, remoteStorageDetails);
 

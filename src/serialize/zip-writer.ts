@@ -1,36 +1,29 @@
-import { Crc } from "./crc";
+import { Crc } from './crc';
+import { Writer } from './writer'
 
 // https://gist.github.com/rvaiya/4a2192df729056880a027789ae3cd4b7
 
-type WriteFunc = (data: Uint8Array) => void;
-
-class ZipArchive {
+class ZipWriter implements Writer {
     // start a new file
     start: (filename: string) => void;
 
-    // write data to file. can be called multiple times to stream data out.
-    appendData: (data: Uint8Array) => void;
+    // write func
+    write: (data: Uint8Array, finalWrite?: boolean) => void;
 
-    // write text to the file. can be called multiple times to stream data out.
-    appendText: (text: string) => void;
-
-    // helper function which adds a file and appends its contents
+    // helper function to start and write file contents
     async file(filename: string, content: string | Uint8Array) {
         // start a new file
         await this.start(filename);
 
         // write file contents
-        if (typeof content === 'string') {
-            await this.appendText(content);
-        } else {
-            await this.appendData(content);
-        }
+        await this.write(typeof content === 'string' ? new TextEncoder().encode(content) : content);
     }
 
-    // finish the archive
-    end: () => void;
+    // finish the archive, the underlying writer will also be closed
+    close: () => void;
 
-    constructor(writeFunc: WriteFunc) {
+    // write an uncompressed zip file to the given writer
+    constructor(writer: Writer) {
         const textEncoder = new TextEncoder();
         const files: { filename: Uint8Array, crc: Crc, sizeBytes: number }[] = [];
 
@@ -44,7 +37,7 @@ class ZipArchive {
             view.setUint16(26, filename.length, true);
             header.set(filenameBuf, 30);
 
-            await writeFunc(header);
+            await this.write(header);
 
             files.push({ filename: filenameBuf, crc: new Crc(), sizeBytes: 0 });
         };
@@ -58,7 +51,7 @@ class ZipArchive {
             view.setUint32(4, crc.value(), true);
             view.setUint32(8, sizeBytes, true);
             view.setUint32(12, sizeBytes, true);
-            await writeFunc(data);
+            await this.write(data);
         };
 
         this.start = async (filename: string) => {
@@ -70,18 +63,16 @@ class ZipArchive {
             await writeHeader(filename);
         };
 
-        this.appendData = async (data: Uint8Array) => {
-            const file = files[files.length - 1];
-            file.sizeBytes += data.length;
-            file.crc.update(data);
-            await writeFunc(data);
+        this.write = async (data?: Uint8Array, finalWrite?: boolean) => {
+            if (data) {
+                const file = files[files.length - 1];
+                file.sizeBytes += data.length;
+                file.crc.update(data);
+            }
+            await writer.write(data, finalWrite);
         };
 
-        this.appendText = async (text: string) => {
-            await this.appendData(new TextEncoder().encode(text));
-        };
-
-        this.end = async () => {
+        this.close = async () => {
             // write last file's footer
             await writeFooter();
 
@@ -102,7 +93,7 @@ class ZipArchive {
                 view.setUint32(42, offset, true);
                 cdr.set(filename, 46);
 
-                await writeFunc(cdr);
+                await this.write(cdr);
 
                 offset += 30 + filename.length + sizeBytes + 16;
             }
@@ -119,9 +110,11 @@ class ZipArchive {
             eocdView.setUint32(12, filenameLength + files.length * 46, true);
             eocdView.setUint32(16, filenameLength + files.length * (30 + 16) + dataLength, true);
 
-            await writeFunc(eocd);
+            await this.write(eocd);
+
+            await writer.close();
         };
     }
 }
 
-export { ZipArchive };
+export { ZipWriter };

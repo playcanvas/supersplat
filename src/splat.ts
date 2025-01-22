@@ -511,6 +511,34 @@ class Splat extends Element {
                 break;
         }
     }
+
+    docSerialize() {
+        const packV3 = (v: Vec3) => [v.x, v.y, v.z];
+        const packQ = (q: Quat) => [q.x, q.y, q.z, q.w];
+        const packC = (c: Color) => [c.r, c.g, c.b, c.a];
+        return {
+            position: packV3(this.entity.getLocalPosition()),
+            rotation: packQ(this.entity.getLocalRotation()),
+            scale: packV3(this.entity.getLocalScale()),
+            visible: this.visible,
+            tintClr: packC(this.tintClr),
+            brightness: this.brightness,
+            blackPoint: this.blackPoint,
+            whitePoint: this.whitePoint,
+            transparency: this.transparency
+        };
+    }
+
+    docDeserialize(doc: any) {
+        const { position, rotation, scale, visible, tintClr, brightness, blackPoint, whitePoint, transparency } = doc;
+        this.move(new Vec3(position), new Quat(rotation), new Vec3(scale));
+        this.visible = visible;
+        this.tintClr = new Color(tintClr[0], tintClr[1], tintClr[2], tintClr[3]);
+        this.brightness = brightness;
+        this.blackPoint = blackPoint;
+        this.whitePoint = whitePoint;
+        this.transparency = transparency;
+    }
 }
 
 export { Splat };

@@ -14,10 +14,8 @@ import { version } from '../package.json';
 import { template as CssTemplate } from './templates/viewer-css';
 import { template as HtmlTemplate } from './templates/viewer-html';
 import { template as ScriptTemplate } from './templates/viewer-script';
-import { ZipArchive } from './serialize/zip';
-
-// async function for writing data
-type WriteFunc = (data: Uint8Array, finalWrite?: boolean) => void;
+import { Writer } from './serialize/writer';
+import { ZipWriter } from './serialize/zip-writer';
 
 type ViewerSettings = {
     camera: {
@@ -31,9 +29,15 @@ type ViewerSettings = {
 };
 
 type SerializeSettings = {
-    maxSHBands: number;
+    maxSHBands?: number;            // specifies the maximum number of bands to be exported
     selected?: boolean;             // only export selected gaussians. used for copy/paste
-    minOpacity?: number;              // filter out gaussians with alpha less than or equal to minAlpha
+    minOpacity?: number;            // filter out gaussians with alpha less than or equal to minAlpha
+
+    // the following options are used when serializing the PLY for document save
+    // and are only supported by serializePly
+    keepStateData?: boolean;        // keep the state data array
+    keepWorldTransform?: boolean;   // don't apply the world transform when resolving splat transforms
+    keepColorTint?: boolean;        // refrain from applying color tints
 };
 
 type ViewerExportSettings = {
@@ -136,7 +140,7 @@ class SplatTransformCache {
     getScale: (index: number) => Vec3;
     getSHRot: (index: number) => SHRotation;
 
-    constructor(splat: Splat) {
+    constructor(splat: Splat, keepWorldTransform = false) {
         const transforms = new Map<number, { transformIndex: number, mat: Mat4, rot: Quat, scale: Vec3, shRot: SHRotation }>();
         const indices = splat.transformTexture.getSource() as unknown as Uint32Array;
         const tmpMat = new Mat4();
@@ -160,8 +164,10 @@ class SplatTransformCache {
                 const mat = new Mat4();
 
                 // we must undo the transform we apply at load time to output data
-                mat.setFromEulerAngles(0, 0, -180);
-                mat.mul2(mat, splat.entity.getWorldTransform());
+                if (!keepWorldTransform) {
+                    mat.setFromEulerAngles(0, 0, -180);
+                    mat.mul2(mat, splat.entity.getWorldTransform());
+                }
 
                 // combine with transform palette matrix
                 if (transform.transformIndex > 0) {
@@ -221,7 +227,7 @@ class SingleSplat {
     read: (splats: Splat, i: number) => void;
 
     // specify the data members required
-    constructor(members: string[]) {
+    constructor(members: string[], serializeSettings: SerializeSettings) {
         const data: any = {};
         members.forEach((name) => {
             data[name] = 0;
@@ -231,7 +237,7 @@ class SingleSplat {
         const hasRotation = ['rot_0', 'rot_1', 'rot_2', 'rot_3'].every(v => data.hasOwnProperty(v));
         const hasScale = ['scale_0', 'scale_1', 'scale_2'].every(v => data.hasOwnProperty(v));
         const hasColor = ['f_dc_0', 'f_dc_1', 'f_dc_2'].every(v => data.hasOwnProperty(v));
-        const hasOpacity = data.hasOwnProperty('opacity');
+        const hasOpacity = serializeSettings.keepColorTint && data.hasOwnProperty('opacity');
 
         const dstSHBands = calcSHBands(new Set(Object.keys(data)));
         const dstSHCoeffs = shBandCoeffs[dstSHBands];
@@ -251,7 +257,7 @@ class SingleSplat {
             // get the cached data entry for this splat
             if (splat !== cacheEntry?.splat) {
                 if (!cacheMap.has(splat)) {
-                    const transformCache = new SplatTransformCache(splat);
+                    const transformCache = new SplatTransformCache(splat, serializeSettings.keepWorldTransform);
 
                     const srcPropNames = getVertexProperties(splat.splatData);
                     const srcSHBands = calcSHBands(srcPropNames);
@@ -272,7 +278,7 @@ class SingleSplat {
                     });
 
                     const { blackPoint, whitePoint, brightness, tintClr } = splat;
-                    const hasTint = (!tintClr.equals(Color.WHITE) || blackPoint !== 0 || whitePoint !== 1 || brightness !== 1);
+                    const hasTint = serializeSettings.keepColorTint && (!tintClr.equals(Color.WHITE) || blackPoint !== 0 || whitePoint !== 1 || brightness !== 1);
 
                     cacheEntry = { splat, transformCache, srcProps, hasTint };
 
@@ -364,18 +370,18 @@ class SingleSplat {
     }
 }
 
-const serializePly = async (splats: Splat[], options: SerializeSettings, write: WriteFunc) => {
-    const { maxSHBands } = options;
+const serializePly = async (splats: Splat[], serializeSettings: SerializeSettings, writer: Writer) => {
+    const { maxSHBands, keepStateData } = serializeSettings;
 
     // create filter and count total gaussians
-    const filter = new GaussianFilter(options);
+    const filter = new GaussianFilter(serializeSettings);
     const totalGaussians = countGaussians(splats, filter);
     if (totalGaussians === 0) {
         return;
     }
 
     // this data is filtered out, as it holds internal editor state
-    const internalProps = ['state', 'transform'];
+    const internalProps = keepStateData ? ['transform'] : ['state', 'transform'];
 
     // get the vertex properties common to all splats (even stuff we don't understand)
     const propNames = getCommonPropNames(splats)
@@ -387,7 +393,7 @@ const serializePly = async (splats: Splat[], options: SerializeSettings, write: 
             return true;
         }
         const i = parseInt(p.slice(7), 10);
-        return i < [0, 9, 24, 45][maxSHBands];
+        return i < [0, 9, 24, 45][maxSHBands ?? 3];
     });
 
     const headerText = [
@@ -404,7 +410,7 @@ const serializePly = async (splats: Splat[], options: SerializeSettings, write: 
     // write encoded header
     await write((new TextEncoder()).encode(headerText));
 
-    const singleSplat = new SingleSplat(propNames);
+    const singleSplat = new SingleSplat(propNames, serializeSettings);
 
     const buf = new Uint8Array(1024 * propNames.length * 4);
     const dataView = new DataView(buf.buffer);
@@ -438,6 +444,9 @@ const serializePly = async (splats: Splat[], options: SerializeSettings, write: 
     if (offset > 0) {
         await write(new Uint8Array(buf.buffer, 0, offset));
     }
+
+    // indicate end-of-stream
+    await write(null, true);
 };
 
 interface CompressedIndex {
@@ -696,7 +705,7 @@ const sortSplats = (splats: Splat[], indices: CompressedIndex[]) => {
     indices.sort((a, b) => morton[a.globalIndex] - morton[b.globalIndex]);
 };
 
-const serializePlyCompressed = async (splats: Splat[], options: SerializeSettings, write: WriteFunc) => {
+const serializePlyCompressed = async (splats: Splat[], options: SerializeSettings, writer: Writer) => {
     const { maxSHBands } = options;
 
     // create filter and count total gaussians
@@ -742,7 +751,7 @@ const serializePlyCompressed = async (splats: Splat[], options: SerializeSetting
     // user-chosen maxSHBands
     const outputSHBands = (() => {
         const splatBands = splats.map(s => calcSHBands(getVertexProperties(s.splatData)));
-        return Math.min(maxSHBands, Math.max(...splatBands));
+        return Math.min(maxSHBands ?? 3, Math.max(...splatBands));
     })();
     const outputSHCoeffs = shBandCoeffs[outputSHBands];
 
@@ -849,7 +858,7 @@ const serializePlyCompressed = async (splats: Splat[], options: SerializeSetting
     await write(result, true);
 };
 
-const serializeSplat = async (splats: Splat[], options: SerializeSettings, write: WriteFunc) => {
+const serializeSplat = async (splats: Splat[], options: SerializeSettings, writer: Writer) => {
     // create filter and count total gaussians
     const filter = new GaussianFilter(options);
     const totalGaussians = countGaussians(splats, filter);
@@ -913,7 +922,7 @@ const encodeBase64 = (bytes: Uint8Array) => {
     return window.btoa(binary);
 };
 
-const serializeViewer = async (splats: Splat[], options: ViewerExportSettings, write: WriteFunc) => {
+const serializeViewer = async (splats: Splat[], options: ViewerExportSettings, writer: Writer) => {
     // create compressed PLY data
     let compressedData: Uint8Array;
     await serializePlyCompressed(splats, options.serializeSettings, (data, finalWrite) => {
@@ -970,7 +979,7 @@ const serializeViewer = async (splats: Splat[], options: ViewerExportSettings, w
 };
 
 export {
-    WriteFunc,
+    Writer,
     serializePly,
     serializePlyCompressed,
     serializeSplat,

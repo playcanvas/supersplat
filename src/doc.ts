@@ -1,8 +1,24 @@
 import { Events } from './events';
-import { ZipArchive } from './serialize/zip';
+import { DownloadWriter, FileStreamWriter } from './serialize/writer';
+import { ZipWriter } from './serialize/zip-writer';
+import { localize } from './ui/localization';
+import { Splat } from './splat';
+import { serializePly } from './splat-serialize';
+
+// ts compiler and vscode find this type, but eslint does not
+type FilePickerAcceptType = unknown;
+
+const SuperFileType: FilePickerAcceptType[] = [{
+    description: 'SuperSplat document',
+    accept: {
+        'application/octet-stream': ['.super']
+    }
+}];
 
 type FileSelectorCallback = (fileList: File) => void;
 
+// helper class to show a file selector dialog.
+// used when showOpenFilePicker is not available.
 class FileSelector {
     show: (callbackFunc: FileSelectorCallback) => void;
 
@@ -32,20 +48,38 @@ class FileSelector {
     }
 };
 
-let fileHandle: FileSystemFileHandle = null;
-
-// the document file handle
-const getWriteFunc = (fileHandle?: FileSystemFileHandle) => {
-    
-};
-
 const registerDocEvents = (events: Events) => {
     // construct the file selector
     const fileSelector = window.showOpenFilePicker ? null : new FileSelector();
+    let documentFileHandle: FileSystemFileHandle = null;
 
-    const loadDocumentFromFile = async (file: File) => {
+    // show the user a reset confirmation popup
+    const getResetConfirmation = async () => {
+        const result = await events.invoke('showPopup', {
+            type: 'yesno',
+            header: localize('doc.reset'),
+            message: localize(events.invoke('scene.dirty') ? 'doc.unsaved-message' : 'doc.reset-message')
+        });
+
+        if (result.action !== 'yes') {
+            return false;
+        }
+
+        return true;
+    };
+
+    // reset the scene
+    const resetScene = () => {
+        events.fire('scene.clear');
+        events.fire('camera.reset');
+        events.fire('doc.setName', null);
+        documentFileHandle = null;
+    };
+
+    // load the document from the given file
+    const loadDocument = async (file: File) => {
         // reset the scene
-        events.invoke('scene.clear');
+        resetScene();
 
         // read the document
         /* global JSZip */
@@ -56,59 +90,75 @@ const registerDocEvents = (events: Events) => {
 
     };
 
-    events.function('doc.new', async () => {
-        const result = await events.invoke('showPopup', {
-            type: 'yesno',
-            header: 'RESET SCENE',
-            message: 'You have unsaved changes. Are you sure you want to reset the scene?'
-        });
+    const saveDocument = async (options: { stream?: FileSystemWritableFileStream, filename?: string }) => {
+        const splats = events.invoke('scene.allSplats') as Splat[];
 
-        if (result.action !== 'yes') {
+        // gather document settings
+        const globalSettings: any = { };
+        events.fire('docSerialize', globalSettings);
+
+        // gather per-splat settings
+        const splatSettings: any[] = splats.map(s => s.docSerialize());
+
+        // construct the document structure
+        const document = {
+            globalSettings,
+            splatSettings
+        };
+
+        // write
+        const serializeSettings = {
+            keepStateData: true,
+            keepWorldTransform: true,
+            keepColorTint: true
+        };
+
+        const writer = options.stream ? new FileStreamWriter(options.stream) : new DownloadWriter(options.filename);
+        const zipWriter = new ZipWriter(writer);
+        await zipWriter.file('document.json', JSON.stringify(document));
+        for (let i = 0; i < splats.length; ++i) {
+            await zipWriter.start(`splat-${i}.ply`);
+            await serializePly([splats[i]], serializeSettings, zipWriter);
+        }
+        await zipWriter.close();
+    };
+
+    // handle user requesting a new document
+    events.function('doc.new', async () => {
+        if (!await getResetConfirmation()) {
             return false;
         }
-
-        events.fire('scene.clear');
-        events.fire('doc.setName', null);
-
+        resetScene();
         return true;
     });
 
     events.function('doc.open', async () => {
-        // if the scene is dirty, ensure user is happy to reset
-        if (events.invoke('scene.dirty')) {
-            const result = await events.invoke('showPopup', {
-                type: 'yesno',
-                header: 'RESET SCENE',
-                message: 'You have unsaved changes. Are you sure you want to reset the scene?'
-            });
-
-            if (result.action !== 'yes') {
-                return false;
-            }
+        if (!await getResetConfirmation()) {
+            return false;
         }
 
         if (fileSelector) {
             fileSelector.show(async (file?: File) => {
                 if (file) {
-                    await loadDocumentFromFile(file);
+                    await loadDocument(file);
                 }
             });
         } else {
             try {
-                const handles = await window.showOpenFilePicker({
+                const fileHandles = await window.showOpenFilePicker({
                     id: 'SuperSplatDocumentOpen',
                     multiple: false,
-                    types: [{
-                        description: 'SuperSplat document',
-                        accept: {
-                            'application/octet-stream': ['.super']
-                        }
-                    }]
+                    types: SuperFileType
                 });
 
-                if (handles?.length === 1) {
-                    const file = await handles[0].getFile();
-                    await loadDocumentFromFile(file);
+                if (fileHandles?.length === 1) {
+                    const fileHandle = fileHandles[0];
+
+                    // null file handle incase loadDocument fails
+                    await loadDocument(await fileHandle.getFile());
+
+                    // store file handle for subsequent saves
+                    documentFileHandle = fileHandle;
                 }
             } catch (error) {
                 if (error.name !== 'AbortError') {
@@ -119,22 +169,12 @@ const registerDocEvents = (events: Events) => {
     });
 
     events.function('doc.save', async () => {
-        const json: any = { };
-        const files: {
-            filename: string,
-            data: Uint8Array
-        }[] = [];
-
-        await events.invoke('doc.serialize', { json, files });
-    });
-
-    events.on('scene.save', async () => {
-        if (fileHandle) {
+        if (documentFileHandle) {
             try {
-                await events.invoke('scene.write', {
-                    type: 'ply',
-                    stream: await fileHandle.createWritable()
+                await saveDocument({
+                    stream: await documentFileHandle.createWritable()
                 });
+
                 events.fire('scene.saved');
             } catch (error) {
                 if (error.name !== 'AbortError') {
@@ -142,26 +182,19 @@ const registerDocEvents = (events: Events) => {
                 }
             }
         } else {
-            events.fire('scene.saveAs');
+            await events.invoke('doc.saveAs');
         }
     });
 
-    events.on('scene.saveAs', async () => {
-        const splats = getSplats();
-        const splat = splats[0];
-
+    events.function('doc.saveAs', async () => {
         if (window.showSaveFilePicker) {
             try {
                 const handle = await window.showSaveFilePicker({
-                    id: 'SuperSplatFileSave',
-                    types: [filePickerTypes.ply],
-                    suggestedName: fileHandle?.name ?? splat.filename ?? 'scene.ply'
+                    id: 'SuperSplatDocumentSave',
+                    types: SuperFileType,
+                    suggestedName: 'scene.super'
                 });
-                await events.invoke('scene.write', {
-                    type: 'ply',
-                    stream: await handle.createWritable()
-                });
-                fileHandle = handle;
+                await saveDocument({ stream: await handle.createWritable() });
                 events.fire('scene.saved');
             } catch (error) {
                 if (error.name !== 'AbortError') {
@@ -169,21 +202,11 @@ const registerDocEvents = (events: Events) => {
                 }
             }
         } else {
-            await events.invoke('scene.export', 'ply', splat.filename, 'saveAs');
+            await saveDocument({
+                filename: 'scene.super'
+            });
             events.fire('scene.saved');
         }
-    });
-
-    // serialize the document to the given 
-    events.on('doc.write', async (fileHandle: FileSystemFileHandle, { json, files }) => {
-        const stream = await fileHandle.createWritable();
-
-        const zipArchive = new ZipArchive(write);
-        await zipArchive.file('document.json', JSON.stringify(json));
-        for (let i = 0; i < files.length; ++i) {
-            await zipArchive.file(files[i].filename, files[i].data);
-        }
-        await zipArchive.end();
     });
 
     //-- doc name

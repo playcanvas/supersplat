@@ -5,7 +5,7 @@ import { ElementType } from './element';
 import { Events } from './events';
 import { Scene } from './scene';
 import { Splat } from './splat';
-import { WriteFunc, serializePly, serializePlyCompressed, serializeSplat, serializeViewer, ViewerExportSettings } from './splat-serialize';
+import { serializePly, serializePlyCompressed, serializeSplat, serializeViewer, ViewerExportSettings } from './splat-serialize';
 import { localize } from './ui/localization';
 
 // ts compiler and vscode find this type, but eslint does not
@@ -245,6 +245,10 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         .filter(splat => splat.numSplats > 0);
     };
 
+    events.function('scene.allSplats', () => {
+        return (scene.getElementsByType(ElementType.splat) as Splat[]);
+    });
+
     events.function('scene.splats', () => {
         return getSplats();
     });
@@ -411,9 +415,11 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
             if (stream) {
                 // writer must keep track of written bytes because JS streams don't
                 let cursor = 0;
-                const writeFunc = (data: Uint8Array) => {
-                    cursor += data.byteLength;
-                    return stream.write(data);
+                const writeFunc = async (data: Uint8Array) => {
+                    if (data) {
+                        cursor += data.byteLength;
+                        await stream.write(data);
+                    }
                 };
 
                 await stream.seek(0);

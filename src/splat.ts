@@ -112,7 +112,9 @@ class Splat extends Element {
         // bit 1: selected
         // bit 2: deleted
         // bit 3: hidden
-        this.splatData.addProp('state', new Uint8Array(this.splatData.numSplats));
+        if (!this.splatData.getProp('state')) {
+            this.splatData.addProp('state', new Uint8Array(this.splatData.numSplats));
+        }
 
         // per-splat transform matrix
         this.splatData.addProp('transform', new Uint16Array(this.splatData.numSplats));

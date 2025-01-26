@@ -381,7 +381,7 @@ const serializePly = async (splats: Splat[], serializeSettings: SerializeSetting
     }
 
     // this data is filtered out, as it holds internal editor state
-    const internalProps = keepStateData ? ['state'] : ['state', 'transform'];
+    const internalProps = keepStateData ? ['transform'] : ['state', 'transform'];
 
     // get the vertex properties common to all splats (even stuff we don't understand)
     const propNames = getCommonPropNames(splats)

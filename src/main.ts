@@ -248,7 +248,7 @@ const main = async () => {
     registerTransformHandlerEvents(events);
     registerAnimationEvents(events);
     registerPublishEvents(events);
-    registerDocEvents(events);
+    registerDocEvents(scene, events);
     initShortcuts(events);
     initFileHandler(scene, events, editorUI.appContainer.dom, remoteStorageDetails);
 

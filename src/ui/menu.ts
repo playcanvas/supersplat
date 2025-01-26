@@ -113,15 +113,15 @@ class Menu extends Container {
             isEnabled: () => !events.invoke('scene.empty'),
             onSelect: () => events.invoke('scene.export', 'compressed-ply')
         }, {
-            text: localize('scene.export.splat'),
-            icon: createSvg(sceneExport),
-            isEnabled: () => !events.invoke('scene.empty'),
-            onSelect: () => events.invoke('scene.export', 'splat')
-        }, {
             text: localize('scene.export.viewer'),
             icon: createSvg(sceneExport),
             isEnabled: () => !events.invoke('scene.empty'),
             onSelect: () => events.invoke('scene.export', 'viewer')
+        }, {
+            text: localize('scene.export.splat'),
+            icon: createSvg(sceneExport),
+            isEnabled: () => !events.invoke('scene.empty'),
+            onSelect: () => events.invoke('scene.export', 'splat')
         }]);
 
         const sceneMenuPanel = new MenuPanel([{
@@ -138,12 +138,12 @@ class Menu extends Container {
         }, {
             text: localize('scene.save'),
             icon: createSvg(sceneSave),
-            isEnabled: () => !events.invoke('scene.dirty'),
+            isEnabled: () => events.invoke('doc.name') && events.invoke('scene.dirty'),
             onSelect: async () => await events.invoke('doc.save')
         }, {
             text: localize('scene.save-as'),
             icon: createSvg(sceneSave),
-            isEnabled: () => events.invoke('doc.name'),
+            isEnabled: () => !events.invoke('scene.empty'),
             onSelect: async () => await events.invoke('doc.saveAs')
         }, {
             // separator

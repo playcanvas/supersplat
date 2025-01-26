@@ -1,4 +1,5 @@
 import { Events } from './events';
+import { Scene } from './scene';
 import { DownloadWriter, FileStreamWriter } from './serialize/writer';
 import { ZipWriter } from './serialize/zip-writer';
 import { Splat } from './splat';
@@ -48,9 +49,11 @@ class FileSelector {
     }
 }
 
-const registerDocEvents = (events: Events) => {
+const registerDocEvents = (scene: Scene, events: Events) => {
     // construct the file selector
     const fileSelector = window.showOpenFilePicker ? null : new FileSelector();
+
+    // this file handle is updated as the current document is loaded and saved
     let documentFileHandle: FileSystemFileHandle = null;
 
     // show the user a reset confirmation popup
@@ -86,8 +89,26 @@ const registerDocEvents = (events: Events) => {
         // @ts-ignore
         const zip = new JSZip();
         await zip.loadAsync(file);
-        const json = zip.file('document.json');
+        const json = JSON.parse(await zip.file('document.json').async('text'));
 
+        // run through each splat and load it
+        for (let i = 0; i < json.splatSettings.length; ++i) {
+            const filename = `splat-${i}.ply`;
+            const splatSettings = json.splatSettings[i];
+
+            // construct the splat asset
+            const contents = await zip.file(`splat-${i}.ply`).async('blob');
+            const url = URL.createObjectURL(contents);
+            const splat = await scene.assetLoader.loadModel({
+                url,
+                filename
+            });
+            URL.revokeObjectURL(url);
+
+            scene.add(splat);
+
+            splat.docDeserialize(splatSettings);
+        }
     };
 
     const saveDocument = async (options: { stream?: FileSystemWritableFileStream, filename?: string }) => {
@@ -133,7 +154,7 @@ const registerDocEvents = (events: Events) => {
     });
 
     events.function('doc.open', async () => {
-        if (!await getResetConfirmation()) {
+        if (!events.invoke('scene.empty') && !await getResetConfirmation()) {
             return false;
         }
 
@@ -159,6 +180,7 @@ const registerDocEvents = (events: Events) => {
 
                     // store file handle for subsequent saves
                     documentFileHandle = fileHandle;
+                    events.fire('doc.setName', fileHandle.name);
                 }
             } catch (error) {
                 if (error.name !== 'AbortError') {
@@ -176,7 +198,7 @@ const registerDocEvents = (events: Events) => {
                 });
                 events.fire('doc.saved');
             } catch (error) {
-                if (error.name !== 'AbortError') {
+                if (error.name !== 'AbortError' && error.name !== 'NotAllowedError') {
                     console.error(error);
                 }
             }

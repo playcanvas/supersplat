@@ -1,9 +1,9 @@
 import { Events } from './events';
 import { DownloadWriter, FileStreamWriter } from './serialize/writer';
 import { ZipWriter } from './serialize/zip-writer';
-import { localize } from './ui/localization';
 import { Splat } from './splat';
 import { serializePly } from './splat-serialize';
+import { localize } from './ui/localization';
 
 // ts compiler and vscode find this type, but eslint does not
 type FilePickerAcceptType = unknown;
@@ -46,7 +46,7 @@ class FileSelector {
             fileSelector.click();
         };
     }
-};
+}
 
 const registerDocEvents = (events: Events) => {
     // construct the file selector
@@ -209,7 +209,7 @@ const registerDocEvents = (events: Events) => {
         }
     });
 
-    //-- doc name
+    // doc name
 
     let docName: string = null;
 

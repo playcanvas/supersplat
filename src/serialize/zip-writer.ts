@@ -1,5 +1,5 @@
 import { Crc } from './crc';
-import { Writer } from './writer'
+import { Writer } from './writer';
 
 // https://gist.github.com/rvaiya/4a2192df729056880a027789ae3cd4b7
 
@@ -10,6 +10,9 @@ class ZipWriter implements Writer {
     // write func
     write: (data: Uint8Array, finalWrite?: boolean) => void;
 
+    // finish the archive, the underlying writer will also be closed
+    close: () => void;
+
     // helper function to start and write file contents
     async file(filename: string, content: string | Uint8Array) {
         // start a new file
@@ -18,9 +21,6 @@ class ZipWriter implements Writer {
         // write file contents
         await this.write(typeof content === 'string' ? new TextEncoder().encode(content) : content);
     }
-
-    // finish the archive, the underlying writer will also be closed
-    close: () => void;
 
     // write uncompressed data to a zip file using the passed-in writer
     constructor(writer: Writer) {
@@ -37,7 +37,7 @@ class ZipWriter implements Writer {
             view.setUint16(26, filename.length, true);
             header.set(filenameBuf, 30);
 
-            await this.write(header);
+            await writer.write(header);
 
             files.push({ filename: filenameBuf, crc: new Crc(), sizeBytes: 0 });
         };
@@ -51,7 +51,7 @@ class ZipWriter implements Writer {
             view.setUint32(4, crc.value(), true);
             view.setUint32(8, sizeBytes, true);
             view.setUint32(12, sizeBytes, true);
-            await this.write(data);
+            await writer.write(data);
         };
 
         this.start = async (filename: string) => {
@@ -63,12 +63,10 @@ class ZipWriter implements Writer {
             await writeHeader(filename);
         };
 
-        this.write = async (data?: Uint8Array, finalWrite?: boolean) => {
-            if (data) {
-                const file = files[files.length - 1];
-                file.sizeBytes += data.length;
-                file.crc.update(data);
-            }
+        this.write = async (data: Uint8Array, finalWrite?: boolean) => {
+            const file = files[files.length - 1];
+            file.sizeBytes += data.length;
+            file.crc.update(data);
             await writer.write(data, finalWrite);
         };
 
@@ -93,7 +91,7 @@ class ZipWriter implements Writer {
                 view.setUint32(42, offset, true);
                 cdr.set(filename, 46);
 
-                await this.write(cdr);
+                await writer.write(cdr);
 
                 offset += 30 + filename.length + sizeBytes + 16;
             }
@@ -110,8 +108,7 @@ class ZipWriter implements Writer {
             eocdView.setUint32(12, filenameLength + files.length * 46, true);
             eocdView.setUint32(16, filenameLength + files.length * (30 + 16) + dataLength, true);
 
-            await this.write(eocd);
-
+            await writer.write(eocd);
             await writer.close();
         };
     }

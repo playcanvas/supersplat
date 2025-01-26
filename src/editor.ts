@@ -11,9 +11,9 @@ import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, U
 import { Events } from './events';
 import { PngCompressor } from './png-compressor';
 import { Scene } from './scene';
+import { BufferWriter } from './serialize/writer';
 import { Splat } from './splat';
 import { serializePly } from './splat-serialize';
-import { BufferWriter } from './serialize/writer';
 
 // register for editor and scene events
 const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: Scene) => {

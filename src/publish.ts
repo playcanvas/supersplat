@@ -1,7 +1,7 @@
 import { Events } from './events';
+import { BufferWriter } from './serialize/writer';
 import { serializePlyCompressed, ViewerSettings, SerializeSettings } from './splat-serialize';
 import { localize } from './ui/localization';
-import { BufferWriter } from './serialize/writer';
 
 type PublishSettings = {
     title: string;

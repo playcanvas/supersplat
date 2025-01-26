@@ -11,11 +11,11 @@ import { SHRotation } from './sh-utils';
 import { Splat } from './splat';
 import { State } from './splat-state';
 import { version } from '../package.json';
+import { BufferWriter, Writer } from './serialize/writer';
+import { ZipWriter } from './serialize/zip-writer';
 import { template as CssTemplate } from './templates/viewer-css';
 import { template as HtmlTemplate } from './templates/viewer-html';
 import { template as ScriptTemplate } from './templates/viewer-script';
-import { BufferWriter, Writer } from './serialize/writer';
-import { ZipWriter } from './serialize/zip-writer';
 
 type ViewerSettings = {
     camera: {
@@ -278,7 +278,7 @@ class SingleSplat {
                     });
 
                     const { blackPoint, whitePoint, brightness, tintClr } = splat;
-                    const hasTint = serializeSettings.keepColorTint && (!tintClr.equals(Color.WHITE) || blackPoint !== 0 || whitePoint !== 1 || brightness !== 1);
+                    const hasTint = (!tintClr.equals(Color.WHITE) || blackPoint !== 0 || whitePoint !== 1 || brightness !== 1);
 
                     cacheEntry = { splat, transformCache, srcProps, hasTint };
 
@@ -331,7 +331,7 @@ class SingleSplat {
                 }
             }
 
-            if (hasColor && hasTint) {
+            if (!serializeSettings.keepColorTint && hasColor && hasTint) {
                 const { blackPoint, whitePoint, brightness, tintClr } = splat;
 
                 const SH_C0 = 0.28209479177387814;
@@ -359,7 +359,7 @@ class SingleSplat {
             }
 
             const { transparency } = splat;
-            if (hasOpacity && transparency !== 1) {
+            if (!serializeSettings.keepColorTint && hasOpacity && transparency !== 1) {
                 const invSig = (value: number) => ((value <= 0) ? -400 : ((value >= 1) ? 400 : -Math.log(1 / value - 1)));
                 data.opacity = invSig(sigmoid(data.opacity) * transparency);
             }
@@ -381,7 +381,7 @@ const serializePly = async (splats: Splat[], serializeSettings: SerializeSetting
     }
 
     // this data is filtered out, as it holds internal editor state
-    const internalProps = keepStateData ? ['transform'] : ['state', 'transform'];
+    const internalProps = keepStateData ? ['state'] : ['state', 'transform'];
 
     // get the vertex properties common to all splats (even stuff we don't understand)
     const propNames = getCommonPropNames(splats)
@@ -944,7 +944,7 @@ const serializeViewer = async (splats: Splat[], options: ViewerExportSettings, w
         .replace('{{style}}', `<style>${pad(CssTemplate, 12)}\n        </style>`)
         .replace('{{script}}', `<script type="module">${pad(ScriptTemplate, 12)}\n        </script>`)
         .replace('{{settingsURL}}', `data:application/json;base64,${encodeBase64(new TextEncoder().encode(JSON.stringify(viewerSettings)))}`)
-        .replace('{{contentURL}}', `data:application/ply;base64,${encodeBase64(plyWriter.buffer)}`);
+        .replace('{{contentURL}}', `data:application/ply;base64,${encodeBase64(plyBuffer)}`);
 
         await writer.write(new TextEncoder().encode(html), true);
     } else {

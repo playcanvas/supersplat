@@ -5,7 +5,7 @@ interface Writer {
 
     // close the writing stream. return value depends on writer implementation.
     close(): any;
-};
+}
 
 // write data to a file stream
 class FileStreamWriter implements Writer {
@@ -27,7 +27,7 @@ class FileStreamWriter implements Writer {
             await stream.close();
         };
     }
-};
+}
 
 // write data to a memory buffer
 class BufferWriter implements Writer {
@@ -59,9 +59,9 @@ class BufferWriter implements Writer {
 
         this.close = () => {
             return cursor === buffer.buffer.byteLength ? buffer : new Uint8Array(buffer.buffer, 0, cursor);
-        }
+        };
     }
-};
+}
 
 // write to a memory download buffer and trigger a browser download when closed
 class DownloadWriter implements Writer {
@@ -69,11 +69,11 @@ class DownloadWriter implements Writer {
     close: () => void;
 
     constructor(filename: string) {
-        let bufferWriter = new BufferWriter();
+        const bufferWriter = new BufferWriter();
 
         this.write = (data: Uint8Array, finalWrite?: boolean) => {
             bufferWriter.write(data, finalWrite);
-        }
+        };
 
         this.close = () => {
             const buffer = bufferWriter.close();
@@ -101,6 +101,6 @@ class DownloadWriter implements Writer {
             window.URL.revokeObjectURL(url);
         };
     }
-};
+}
 
 export { Writer, FileStreamWriter, BufferWriter, DownloadWriter };

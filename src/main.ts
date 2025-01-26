@@ -1,6 +1,7 @@
 import { Color, createGraphicsDevice } from 'playcanvas';
 
 import { registerAnimationEvents } from './animation';
+import { registerDocEvents } from './doc';
 import { EditHistory } from './edit-history';
 import { registerEditorEvents } from './editor';
 import { Events } from './events';
@@ -21,7 +22,6 @@ import { SphereSelection } from './tools/sphere-selection';
 import { ToolManager } from './tools/tool-manager';
 import { registerTransformHandlerEvents } from './transform-handler';
 import { EditorUI } from './ui/editor';
-import { registerDocEvents } from './doc';
 
 declare global {
     interface LaunchParams {

@@ -4,10 +4,10 @@ import { CreateDropHandler } from './drop-handler';
 import { ElementType } from './element';
 import { Events } from './events';
 import { Scene } from './scene';
+import { Writer, DownloadWriter, FileStreamWriter } from './serialize/writer';
 import { Splat } from './splat';
 import { serializePly, serializePlyCompressed, serializeSplat, serializeViewer, ViewerExportSettings } from './splat-serialize';
 import { localize } from './ui/localization';
-import { Writer, DownloadWriter, FileStreamWriter } from './serialize/writer';
 
 // ts compiler and vscode find this type, but eslint does not
 type FilePickerAcceptType = unknown;

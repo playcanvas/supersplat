@@ -7,6 +7,7 @@ import { Scene } from './scene';
 import { Splat } from './splat';
 import { serializePly, serializePlyCompressed, serializeSplat, serializeViewer, ViewerExportSettings } from './splat-serialize';
 import { localize } from './ui/localization';
+import { Writer, DownloadWriter, FileStreamWriter } from './serialize/writer';
 
 // ts compiler and vscode find this type, but eslint does not
 type FilePickerAcceptType = unknown;
@@ -377,7 +378,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         }
     });
 
-    const writeScene = async (type: ExportType, writeFunc: WriteFunc, viewerExportSettings?: ViewerExportSettings) => {
+    const writeScene = async (type: ExportType, writer: Writer, viewerExportSettings?: ViewerExportSettings) => {
         const splats = getSplats();
         const events = splats[0].scene.events;
 
@@ -387,16 +388,16 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
 
         switch (type) {
             case 'ply':
-                await serializePly(splats, serializeSettings, writeFunc);
+                await serializePly(splats, serializeSettings, writer);
                 break;
             case 'compressed-ply':
-                await serializePlyCompressed(splats, serializeSettings, writeFunc);
+                await serializePlyCompressed(splats, serializeSettings, writer);
                 break;
             case 'splat':
-                await serializeSplat(splats, serializeSettings, writeFunc);
+                await serializeSplat(splats, serializeSettings, writer);
                 break;
             case 'viewer':
-                await serializeViewer(splats, viewerExportSettings, writeFunc);
+                await serializeViewer(splats, viewerExportSettings, writer);
                 break;
         }
     };
@@ -411,47 +412,10 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
             });
 
             const { stream, filename, type, viewerExportSettings } = options;
+            const writer = stream ? new FileStreamWriter(stream) : new DownloadWriter(filename);
 
-            if (stream) {
-                // writer must keep track of written bytes because JS streams don't
-                let cursor = 0;
-                const writeFunc = async (data: Uint8Array) => {
-                    if (data) {
-                        cursor += data.byteLength;
-                        await stream.write(data);
-                    }
-                };
-
-                await stream.seek(0);
-                await writeScene(type, writeFunc, viewerExportSettings);
-                await stream.truncate(cursor);
-                await stream.close();
-            } else if (filename) {
-                // safari and firefox: concatenate data into single buffer for old-school download
-                let data: Uint8Array = null;
-                let cursor = 0;
-
-                const writeFunc = (chunk: Uint8Array, finalWrite?: boolean) => {
-                    if (!data) {
-                        data = finalWrite ? chunk : chunk.slice();
-                        cursor = chunk.byteLength;
-                    } else {
-                        if (data.byteLength < cursor + chunk.byteLength) {
-                            let newSize = data.byteLength * 2;
-                            while (newSize < cursor + chunk.byteLength) {
-                                newSize *= 2;
-                            }
-                            const newData = new Uint8Array(newSize);
-                            newData.set(data);
-                            data = newData;
-                        }
-                        data.set(chunk, cursor);
-                        cursor += chunk.byteLength;
-                    }
-                };
-                await writeScene(type, writeFunc, viewerExportSettings);
-                download(filename, (cursor === data.byteLength) ? data : new Uint8Array(data.buffer, 0, cursor));
-            }
+            await writeScene(type, writer, viewerExportSettings);
+            await writer.close();
         } catch (error) {
             await events.invoke('showPopup', {
                 type: 'error',

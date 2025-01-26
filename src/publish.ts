@@ -1,6 +1,7 @@
 import { Events } from './events';
 import { serializePlyCompressed, ViewerSettings, SerializeSettings } from './splat-serialize';
 import { localize } from './ui/localization';
+import { BufferWriter } from './serialize/writer';
 
 type PublishSettings = {
     title: string;
@@ -103,13 +104,12 @@ const registerPublishEvents = (events: Events) => {
                 const splats = events.invoke('scene.splats');
 
                 // serialize/compress
-                let data: Uint8Array = null;
-                await serializePlyCompressed(splats, publishSettings.serializeSettings, (chunk: Uint8Array) => {
-                    data = chunk;
-                });
+                const writer = new BufferWriter();
+                await serializePlyCompressed(splats, publishSettings.serializeSettings, writer);
+                const buffer = writer.close();
 
                 // publish
-                const response = await publish(data, publishSettings);
+                const response = await publish(buffer, publishSettings);
 
                 events.fire('stopSpinner');
 

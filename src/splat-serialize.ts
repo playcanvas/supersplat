@@ -14,7 +14,7 @@ import { version } from '../package.json';
 import { template as CssTemplate } from './templates/viewer-css';
 import { template as HtmlTemplate } from './templates/viewer-html';
 import { template as ScriptTemplate } from './templates/viewer-script';
-import { Writer } from './serialize/writer';
+import { BufferWriter, Writer } from './serialize/writer';
 import { ZipWriter } from './serialize/zip-writer';
 
 type ViewerSettings = {
@@ -408,7 +408,7 @@ const serializePly = async (splats: Splat[], serializeSettings: SerializeSetting
     ].flat().join('\n');
 
     // write encoded header
-    await write((new TextEncoder()).encode(headerText));
+    await writer.write((new TextEncoder()).encode(headerText));
 
     const singleSplat = new SingleSplat(propNames, serializeSettings);
 
@@ -434,7 +434,7 @@ const serializePly = async (splats: Splat[], serializeSettings: SerializeSetting
 
             // buffer is full, write it to the output stream
             if (offset === buf.byteLength) {
-                await write(buf);
+                await writer.write(buf);
                 offset = 0;
             }
         }
@@ -442,11 +442,8 @@ const serializePly = async (splats: Splat[], serializeSettings: SerializeSetting
 
     // write the last (most likely partially filled) buf
     if (offset > 0) {
-        await write(new Uint8Array(buf.buffer, 0, offset));
+        await writer.write(new Uint8Array(buf.buffer, 0, offset));
     }
-
-    // indicate end-of-stream
-    await write(null, true);
 };
 
 interface CompressedIndex {
@@ -797,7 +794,7 @@ const serializePlyCompressed = async (splats: Splat[], options: SerializeSetting
         'scale_0', 'scale_1', 'scale_2',
         'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity',
         'rot_0', 'rot_1', 'rot_2', 'rot_3'
-    ].concat(shNames.slice(0, outputSHCoeffs * 3)));
+    ].concat(shNames.slice(0, outputSHCoeffs * 3)), options);
 
     for (let i = 0; i < numChunks; ++i) {
         const num = Math.min(numSplats, (i + 1) * 256) - i * 256;
@@ -855,7 +852,7 @@ const serializePlyCompressed = async (splats: Splat[], options: SerializeSetting
         }
     }
 
-    await write(result, true);
+    await writer.write(result, true);
 };
 
 const serializeSplat = async (splats: Splat[], options: SerializeSettings, writer: Writer) => {
@@ -872,7 +869,8 @@ const serializeSplat = async (splats: Splat[], options: SerializeSettings, write
 
     let idx = 0;
 
-    const singleSplat = new SingleSplat(['x', 'y', 'z', 'opacity', 'rot_0', 'rot_1', 'rot_2', 'rot_3', 'f_dc_0', 'f_dc_1', 'f_dc_2', 'scale_0', 'scale_1', 'scale_2']);
+    const props = ['x', 'y', 'z', 'opacity', 'rot_0', 'rot_1', 'rot_2', 'rot_3', 'f_dc_0', 'f_dc_1', 'f_dc_2', 'scale_0', 'scale_1', 'scale_2'];
+    const singleSplat = new SingleSplat(props, options);
     const { data } = singleSplat;
 
     const clamp = (x: number) => Math.max(0, Math.min(255, x));
@@ -910,7 +908,7 @@ const serializeSplat = async (splats: Splat[], options: SerializeSettings, write
         }
     }
 
-    await write(result, true);
+    await writer.write(result, true);
 };
 
 const encodeBase64 = (bytes: Uint8Array) => {
@@ -924,10 +922,9 @@ const encodeBase64 = (bytes: Uint8Array) => {
 
 const serializeViewer = async (splats: Splat[], options: ViewerExportSettings, writer: Writer) => {
     // create compressed PLY data
-    let compressedData: Uint8Array;
-    await serializePlyCompressed(splats, options.serializeSettings, (data, finalWrite) => {
-        compressedData = data;
-    });
+    const plyWriter = new BufferWriter();
+    await serializePlyCompressed(splats, options.serializeSettings, plyWriter);
+    const plyBuffer = plyWriter.close();
 
     const htmlFilename = 'index.html';
     const scriptFilename = 'index.js';
@@ -947,9 +944,9 @@ const serializeViewer = async (splats: Splat[], options: ViewerExportSettings, w
         .replace('{{style}}', `<style>${pad(CssTemplate, 12)}\n        </style>`)
         .replace('{{script}}', `<script type="module">${pad(ScriptTemplate, 12)}\n        </script>`)
         .replace('{{settingsURL}}', `data:application/json;base64,${encodeBase64(new TextEncoder().encode(JSON.stringify(viewerSettings)))}`)
-        .replace('{{contentURL}}', `data:application/ply;base64,${encodeBase64(compressedData)}`);
+        .replace('{{contentURL}}', `data:application/ply;base64,${encodeBase64(plyWriter.buffer)}`);
 
-        await write(new TextEncoder().encode(html), true);
+        await writer.write(new TextEncoder().encode(html), true);
     } else {
         const html = HtmlTemplate
         .replace('{{style}}', `<link rel="stylesheet" href="./${cssFilename}">`)
@@ -968,13 +965,13 @@ const serializeViewer = async (splats: Splat[], options: ViewerExportSettings, w
         // const result = await zip.generateAsync({ type: 'uint8array' });
         // await write(result, true);
 
-        const zipArchive = new ZipArchive(write);
-        await zipArchive.file(htmlFilename, html);
-        await zipArchive.file(cssFilename, CssTemplate);
-        await zipArchive.file(scriptFilename, ScriptTemplate);
-        await zipArchive.file(settingsFilename, JSON.stringify(viewerSettings, null, 4));
-        await zipArchive.file(sceneFilename, compressedData);
-        await zipArchive.end();
+        const zipWriter = new ZipWriter(writer);
+        await zipWriter.file(htmlFilename, html);
+        await zipWriter.file(cssFilename, CssTemplate);
+        await zipWriter.file(scriptFilename, ScriptTemplate);
+        await zipWriter.file(settingsFilename, JSON.stringify(viewerSettings, null, 4));
+        await zipWriter.file(sceneFilename, plyBuffer);
+        await zipWriter.close();
     }
 };
 

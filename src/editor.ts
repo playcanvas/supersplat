@@ -13,6 +13,7 @@ import { PngCompressor } from './png-compressor';
 import { Scene } from './scene';
 import { Splat } from './splat';
 import { serializePly } from './splat-serialize';
+import { BufferWriter } from './serialize/writer';
 
 // register for editor and scene events
 const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: Scene) => {
@@ -398,38 +399,20 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     const performSelectionFunc = async (func: 'duplicate' | 'separate') => {
         const splats = selectedSplats();
 
-        let data: Uint8Array = null;
-        let cursor = 0;
-
-        const writeFunc = (chunk: Uint8Array, finalWrite?: boolean) => {
-            if (!data) {
-                data = finalWrite ? chunk : chunk.slice();
-                cursor = chunk.byteLength;
-            } else {
-                if (data.byteLength < cursor + chunk.byteLength) {
-                    let newSize = data.byteLength * 2;
-                    while (newSize < cursor + chunk.byteLength) {
-                        newSize *= 2;
-                    }
-                    const newData = new Uint8Array(newSize);
-                    newData.set(data);
-                    data = newData;
-                }
-                data.set(chunk, cursor);
-                cursor += chunk.byteLength;
-            }
-        };
+        const writer = new BufferWriter();
 
         await serializePly(splats, {
             maxSHBands: 3,
             selected: true
-        }, writeFunc);
+        }, writer);
 
-        if (data) {
+        const buffer = writer.close();
+
+        if (buffer) {
             const splat = splats[0];
 
             // wrap PLY in a blob and load it
-            const blob = new Blob([data], { type: 'octet/stream' });
+            const blob = new Blob([buffer], { type: 'octet/stream' });
             const url = URL.createObjectURL(blob);
             const { filename } = splat;
             const copy = await scene.assetLoader.loadPly({ url, filename });

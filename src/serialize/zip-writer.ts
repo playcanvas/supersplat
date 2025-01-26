@@ -22,7 +22,7 @@ class ZipWriter implements Writer {
     // finish the archive, the underlying writer will also be closed
     close: () => void;
 
-    // write an uncompressed zip file to the given writer
+    // write uncompressed data to a zip file using the passed-in writer
     constructor(writer: Writer) {
         const textEncoder = new TextEncoder();
         const files: { filename: Uint8Array, crc: Crc, sizeBytes: number }[] = [];

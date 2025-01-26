@@ -237,7 +237,7 @@ class SingleSplat {
         const hasRotation = ['rot_0', 'rot_1', 'rot_2', 'rot_3'].every(v => data.hasOwnProperty(v));
         const hasScale = ['scale_0', 'scale_1', 'scale_2'].every(v => data.hasOwnProperty(v));
         const hasColor = ['f_dc_0', 'f_dc_1', 'f_dc_2'].every(v => data.hasOwnProperty(v));
-        const hasOpacity = serializeSettings.keepColorTint && data.hasOwnProperty('opacity');
+        const hasOpacity = data.hasOwnProperty('opacity');
 
         const dstSHBands = calcSHBands(new Set(Object.keys(data)));
         const dstSHCoeffs = shBandCoeffs[dstSHBands];

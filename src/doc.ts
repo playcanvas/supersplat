@@ -174,8 +174,7 @@ const registerDocEvents = (events: Events) => {
                 await saveDocument({
                     stream: await documentFileHandle.createWritable()
                 });
-
-                events.fire('scene.saved');
+                events.fire('doc.saved');
             } catch (error) {
                 if (error.name !== 'AbortError') {
                     console.error(error);
@@ -195,7 +194,9 @@ const registerDocEvents = (events: Events) => {
                     suggestedName: 'scene.super'
                 });
                 await saveDocument({ stream: await handle.createWritable() });
-                events.fire('scene.saved');
+                documentFileHandle = handle;
+                events.fire('doc.setName', handle.name);
+                events.fire('doc.saved');
             } catch (error) {
                 if (error.name !== 'AbortError') {
                     console.error(error);
@@ -205,7 +206,7 @@ const registerDocEvents = (events: Events) => {
             await saveDocument({
                 filename: 'scene.super'
             });
-            events.fire('scene.saved');
+            events.fire('doc.saved');
         }
     });
 

@@ -52,7 +52,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         return editHistory.cursor !== lastExportCursor;
     });
 
-    events.on('scene.saved', () => {
+    events.on('doc.saved', () => {
         lastExportCursor = editHistory.cursor;
     });
 

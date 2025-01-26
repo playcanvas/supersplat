@@ -144,7 +144,7 @@ class Menu extends Container {
             text: localize('scene.save-as'),
             icon: createSvg(sceneSave),
             isEnabled: () => events.invoke('doc.name'),
-            onSelect: () => events.fire('doc.saveAs')
+            onSelect: async () => await events.invoke('doc.saveAs')
         }, {
             // separator
         }, {

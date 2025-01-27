@@ -11,7 +11,6 @@ import { SHRotation } from './sh-utils';
 import { Splat } from './splat';
 import { State } from './splat-state';
 import { version } from '../package.json';
-
 import indexCss from './templates/index.css.template';
 import indexHtml from './templates/index.html.template';
 import indexJs from './templates/index.js.template';
@@ -925,17 +924,17 @@ const serializeViewer = async (splats: Splat[], options: ViewerExportSettings, w
     if (options.type === 'html') {
         const pad = (text: string, spaces: number) => {
             const whitespace = ' '.repeat(spaces);
-            return text.split('\n').map((line, i) => (i ? whitespace : '') + line).join('\n');
+            return text.split('\n').map(line => whitespace + line).join('\n');
         };
 
-        const style = `<link rel="stylesheet" href="./index.css">`;
-        const script = `<script type="module" src="./index.js"></script>`;
-        const settings = `"viewerSettings": "./settings.json"`;
-        const content = `<pc-asset id="ply" type="gsplat" lazy src="./scene.compressed.ply"></pc-asset>`;
+        const style = '<link rel="stylesheet" href="./index.css">';
+        const script = '<script type="module" src="./index.js"></script>';
+        const settings = '"viewerSettings": "./settings.json"';
+        const content = '<pc-asset id="ply" type="gsplat" lazy src="./scene.compressed.ply"></pc-asset>';
 
         const html = indexHtml
-        .replace(style, `<style>${pad('\n' + indexCss, 12)}\n        </style>`)
-        .replace(script, `<script type="module">${pad('\n' + indexJs, 12)}\n        </script>`)
+        .replace(style, `<style>\n${pad(indexCss, 12)}\n        </style>`)
+        .replace(script, `<script type="module">\n${pad(indexJs, 12)}\n        </script>`)
         .replace(settings, `"viewerSettings": "data:application/json;base64,${encodeBase64(new TextEncoder().encode(JSON.stringify(viewerSettings)))}"`)
         .replace(content, `<pc-asset id="ply" type="gsplat" lazy src="data:application/ply;base64,${encodeBase64(compressedData)}"></pc-asset>`);
 

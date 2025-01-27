@@ -11,9 +11,9 @@ import { SHRotation } from './sh-utils';
 import { Splat } from './splat';
 import { State } from './splat-state';
 import { version } from '../package.json';
-import { template as CssTemplate } from './templates/viewer-css';
-import { template as HtmlTemplate } from './templates/viewer-html';
-import { template as ScriptTemplate } from './templates/viewer-script';
+import indexCss from './templates/index.css.template';
+import indexHtml from './templates/index.html.template';
+import indexJs from './templates/index.js.template';
 
 // async function for writing data
 type WriteFunc = (data: Uint8Array, finalWrite?: boolean) => void;
@@ -919,42 +919,35 @@ const serializeViewer = async (splats: Splat[], options: ViewerExportSettings, w
         compressedData = data;
     });
 
-    const htmlFilename = 'index.html';
-    const scriptFilename = 'index.js';
-    const cssFilename = 'index.css';
-    const settingsFilename = 'settings.json';
-    const sceneFilename = 'scene.compressed.ply';
-
     const { viewerSettings } = options;
 
     if (options.type === 'html') {
         const pad = (text: string, spaces: number) => {
             const whitespace = ' '.repeat(spaces);
-            return text.split('\n').map((line, i) => (i ? whitespace : '') + line).join('\n');
+            return text.split('\n').map(line => whitespace + line).join('\n');
         };
 
-        const html = HtmlTemplate
-        .replace('{{style}}', `<style>${pad(CssTemplate, 12)}\n        </style>`)
-        .replace('{{script}}', `<script type="module">${pad(ScriptTemplate, 12)}\n        </script>`)
-        .replace('{{settingsURL}}', `data:application/json;base64,${encodeBase64(new TextEncoder().encode(JSON.stringify(viewerSettings)))}`)
-        .replace('{{contentURL}}', `data:application/ply;base64,${encodeBase64(compressedData)}`);
+        const style = '<link rel="stylesheet" href="./index.css">';
+        const script = '<script type="module" src="./index.js"></script>';
+        const settings = '"viewerSettings": "./settings.json"';
+        const content = '<pc-asset id="ply" type="gsplat" lazy src="./scene.compressed.ply"></pc-asset>';
+
+        const html = indexHtml
+        .replace(style, `<style>\n${pad(indexCss, 12)}\n        </style>`)
+        .replace(script, `<script type="module">\n${pad(indexJs, 12)}\n        </script>`)
+        .replace(settings, `"viewerSettings": "data:application/json;base64,${encodeBase64(new TextEncoder().encode(JSON.stringify(viewerSettings)))}"`)
+        .replace(content, `<pc-asset id="ply" type="gsplat" lazy src="data:application/ply;base64,${encodeBase64(compressedData)}"></pc-asset>`);
 
         await write(new TextEncoder().encode(html), true);
     } else {
-        const html = HtmlTemplate
-        .replace('{{style}}', `<link rel="stylesheet" href="./${cssFilename}">`)
-        .replace('{{script}}', `<script type="module" src="./${scriptFilename}"></script>`)
-        .replace('{{settingsURL}}', `./${settingsFilename}`)
-        .replace('{{contentURL}}', `./${sceneFilename}`);
-
         /* global JSZip */
         // @ts-ignore
         const zip = new JSZip();
-        zip.file(htmlFilename, html);
-        zip.file(cssFilename, CssTemplate);
-        zip.file(scriptFilename, ScriptTemplate);
-        zip.file(settingsFilename, JSON.stringify(viewerSettings, null, 4));
-        zip.file(sceneFilename, compressedData);
+        zip.file('index.html', indexHtml);
+        zip.file('index.css', indexCss);
+        zip.file('index.js', indexJs);
+        zip.file('settings.json', JSON.stringify(viewerSettings, null, 4));
+        zip.file('scene.compressed.ply', compressedData);
         const result = await zip.generateAsync({ type: 'uint8array' });
         await write(result, true);
     }

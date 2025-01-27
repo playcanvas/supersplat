@@ -943,7 +943,7 @@ const serializeViewer = async (splats: Splat[], options: ViewerExportSettings, w
         .replace(style, `<style>\n${pad(indexCss, 12)}\n        </style>`)
         .replace(script, `<script type="module">\n${pad(indexJs, 12)}\n        </script>`)
         .replace(settings, `"viewerSettings": "data:application/json;base64,${encodeBase64(new TextEncoder().encode(JSON.stringify(viewerSettings)))}"`)
-        .replace(content, `<pc-asset id="ply" type="gsplat" lazy src="data:application/ply;base64,${encodeBase64(compressedData)}"></pc-asset>`);
+        .replace(content, `<pc-asset id="ply" type="gsplat" lazy src="data:application/ply;base64,${encodeBase64(plyBuffer)}"></pc-asset>`);
 
         await writer.write(new TextEncoder().encode(html), true);
     } else {

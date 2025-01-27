@@ -103,6 +103,11 @@ class Menu extends Container {
         menubar.append(buttonsContainer);
 
         const exportMenuPanel = new MenuPanel([{
+            text: localize('scene.export.viewer'),
+            icon: createSvg(sceneExport),
+            isEnabled: () => !events.invoke('scene.empty'),
+            onSelect: () => events.invoke('scene.export', 'viewer')
+        }, {
             text: localize('scene.export.ply'),
             icon: createSvg(sceneExport),
             isEnabled: () => !events.invoke('scene.empty'),
@@ -112,11 +117,6 @@ class Menu extends Container {
             icon: createSvg(sceneExport),
             isEnabled: () => !events.invoke('scene.empty'),
             onSelect: () => events.invoke('scene.export', 'compressed-ply')
-        }, {
-            text: localize('scene.export.viewer'),
-            icon: createSvg(sceneExport),
-            isEnabled: () => !events.invoke('scene.empty'),
-            onSelect: () => events.invoke('scene.export', 'viewer')
         }, {
             text: localize('scene.export.splat'),
             icon: createSvg(sceneExport),

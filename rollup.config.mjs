@@ -1,5 +1,6 @@
 import path from 'path';
 import copyAndWatch from './copy-and-watch.mjs';
+import importAsString from './import-as-string.mjs';
 import alias from '@rollup/plugin-alias';
 import image from '@rollup/plugin-image';
 import terser from '@rollup/plugin-terser';
@@ -81,6 +82,9 @@ const application = {
                 { src: 'static/lib', dest: 'static' },
                 { src: 'static/env/VertebraeHDRI_v1_512.png', dest: 'static/env' }
             ]
+        }),
+        importAsString({
+            include: ['src/templates/*']
         }),
         alias({ entries: aliasEntries }),
         resolve(),

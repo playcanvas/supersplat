@@ -258,7 +258,7 @@ const main = async () => {
     // handle load params
     const loadList = url.searchParams.getAll('load');
     for (const value of loadList) {
-        await events.invoke('load', decodeURIComponent(value));
+        await events.invoke('import', decodeURIComponent(value));
     }
 
     // handle OS-based file association in PWA mode
@@ -267,7 +267,7 @@ const main = async () => {
             for (const file of launchParams.files) {
                 const blob = await file.getFile();
                 const url = URL.createObjectURL(blob);
-                await events.invoke('load', url, file.name);
+                await events.invoke('import', url, file.name);
                 URL.revokeObjectURL(url);
             }
         });

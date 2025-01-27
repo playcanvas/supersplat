@@ -115,11 +115,21 @@ class Splat extends Element {
         // bit 2: deleted
         // bit 3: hidden
         if (!this.splatData.getProp('state')) {
-            this.splatData.addProp('state', new Uint8Array(this.splatData.numSplats));
+            this.splatData.getElement('vertex').properties.push({
+                type: 'uchar',
+                name: 'state',
+                storage: new Uint8Array(this.splatData.numSplats),
+                byteSize: 1
+            });
         }
 
         // per-splat transform matrix
-        this.splatData.addProp('transform', new Uint16Array(this.splatData.numSplats));
+        this.splatData.getElement('vertex').properties.push({
+            type: 'ushort',
+            name: 'transform',
+            storage: new Uint16Array(this.splatData.numSplats),
+            byteSize: 2
+        });
 
         const { width, height } = instance.splat.colorTexture;
 
@@ -301,10 +311,11 @@ class Splat extends Element {
         // add the entity to the scene
         this.scene.contentRoot.addChild(this.entity);
 
-        this.makeSelectionBoundDirty();
-
         this.scene.events.on('view.bands', this.rebuildMaterial, this);
         this.rebuildMaterial(this.scene.events.invoke('view.bands'));
+
+        // we must update state in case the state data was loaded from ply
+        this.updateState();
     }
 
     remove() {

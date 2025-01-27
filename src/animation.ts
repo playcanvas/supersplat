@@ -68,7 +68,7 @@ const registerAnimationEvents = (events: Events) => {
 
         const file = animationFiles[frame];
         const url = URL.createObjectURL(file);
-        const newSplat = await events.invoke('load', url, file.name, !animationSplat, true) as Splat;
+        const newSplat = await events.invoke('import', url, file.name, !animationSplat, true) as Splat;
         URL.revokeObjectURL(url);
 
         // wait for first frame render

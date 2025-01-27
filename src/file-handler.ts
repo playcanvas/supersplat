@@ -128,10 +128,10 @@ const loadCameraPoses = async (url: string, filename: string, events: Events) =>
 const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, remoteStorageDetails: RemoteStorageDetails) => {
 
     // returns a promise that resolves when the file is loaded
-    const handleLoad = async (url: string, filename?: string, focusCamera = true, animationFrame = false) => {
+    const handleImport = async (url: string, filename?: string, focusCamera = true, animationFrame = false) => {
         try {
             if (!filename) {
-                // extract filename from url if one ins't provided
+                // extract filename from url if one isn't provided
                 try {
                     filename = new URL(url, document.baseURI).pathname.split('/').pop();
                 } catch (e) {
@@ -159,8 +159,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         }
     };
 
-    events.function('load', (url: string, filename?: string, focusCamera = true, animationFrame = false) => {
-        return handleLoad(url, filename, focusCamera, animationFrame);
+    events.function('import', (url: string, filename?: string, focusCamera = true, animationFrame = false) => {
+        return handleImport(url, filename, focusCamera, animationFrame);
     });
 
     // create a file selector element as fallback when showOpenFilePicker isn't available
@@ -177,7 +177,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
             for (let i = 0; i < files.length; i++) {
                 const file = fileSelector.files[i];
                 const url = URL.createObjectURL(file);
-                await handleLoad(url, file.name);
+                await handleImport(url, file.name);
                 URL.revokeObjectURL(url);
             }
         };
@@ -186,12 +186,18 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
 
     // create the file drag & drop handler
     CreateDropHandler(dropTarget, async (entries, shift) => {
-        // filter out non gaussian scene files
+        // document load, only support a single file drop
+        if (entries.length === 1 && entries[0].file?.name?.toLowerCase().endsWith('.super')) {
+            await events.invoke('doc.dropped', entries[0].file);
+            return;
+        }
+
+        // filter out non supported extensions
         entries = entries.filter((entry) => {
             const name = entry.file?.name;
             if (!name) return false;
             const lowerName = name.toLowerCase();
-            return lowerName.endsWith('.ply') || lowerName.endsWith('.splat') || lowerName.endsWith('.json') || lowerName.endsWith('.super');
+            return lowerName.endsWith('.ply') || lowerName.endsWith('.splat') || lowerName.endsWith('.json');
         });
 
         if (entries.length === 0) {
@@ -204,10 +210,6 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
             // determine if all files share a common filename prefix followed by
             // a frame number, e.g. "frame0001.ply", "frame0002.ply", etc.
             const isSequence = () => {
-                if (entries.length <= 1) {
-                    return false;
-                }
-
                 // eslint-disable-next-line regexp/no-super-linear-backtracking
                 const regex = /(.*?)(\d+).ply$/;
                 const baseMatch = entries[0].file.name?.match(regex);
@@ -225,14 +227,14 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                 return true;
             };
 
-            if (isSequence()) {
+            if (entries.length > 1 && isSequence()) {
                 events.fire('animation.setFrames', entries.map(e => e.file));
                 events.fire('animation.setFrame', 0);
             } else {
                 for (let i = 0; i < entries.length; i++) {
                     const entry = entries[i];
                     const url = URL.createObjectURL(entry.file);
-                    await handleLoad(url, entry.filename);
+                    await handleImport(url, entry.filename);
                     URL.revokeObjectURL(url);
                 }
             }
@@ -272,7 +274,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                     const handle = handles[i];
                     const file = await handle.getFile();
                     const url = URL.createObjectURL(file);
-                    await handleLoad(url, file.name);
+                    await handleImport(url, file.name);
                     URL.revokeObjectURL(url);
 
                     if (i === 0) {

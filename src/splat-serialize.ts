@@ -122,12 +122,46 @@ const getCommonPropNames = (splats: Splat[]) => {
     return [...result];
 };
 
+const getCommonProps = (splats: Splat[]) => {
+    const result = new Map<string, Set<string>>();  // map of name->type
+
+    for (let i = 0; i < splats.length; ++i) {
+        const properties = splats[i].splatData.getElement('vertex').properties.filter((p: any) => p.storage);
+        properties.forEach((p: any) => {
+            if (result.has(p.name)) {
+                result.get(p.name).add(p.type);
+            } else {
+                result.set(p.name, new Set([p.type]));
+            }
+        });
+    }
+
+    return [...result].filter(([_, v]) => v.size === 1).map(([name, type]) => {
+        return { name, type: type.values().next().value };
+    });
+};
+
 const shNames = new Array(45).fill('').map((_, i) => `f_rest_${i}`);
 const shBandCoeffs = [0, 3, 8, 15];
 
 // determine the number of sh bands present given an object with 'f_rest_*' properties
 const calcSHBands = (data: Set<string>) => {
     return { '9': 1, '24': 2, '-1': 3 }[shNames.findIndex(v => !data.has(v))] ?? 0;
+};
+
+type DataType = 'char' | 'uchar' | 'short' | 'ushort' | 'int' | 'uint' | 'float' | 'double';
+
+const DataTypeSize = (dataType: DataType) => {
+    return {
+        char: 1,
+        uchar: 1,
+        short: 2,
+        ushort: 2,
+        int: 4,
+        uint: 4,
+        float: 4,
+        double: 8
+    }[dataType];
 };
 
 const v = new Vec3();
@@ -383,16 +417,15 @@ const serializePly = async (splats: Splat[], serializeSettings: SerializeSetting
     // this data is filtered out, as it holds internal editor state
     const internalProps = keepStateData ? ['transform'] : ['state', 'transform'];
 
-    // get the vertex properties common to all splats (even stuff we don't understand)
-    const propNames = getCommonPropNames(splats)
+    const props = getCommonProps(splats)
     // filter out internal props
-    .filter(p => !internalProps.includes(p))
+    .filter(p => !internalProps.includes(p.name))
     // filter out max SH bands
     .filter((p) => {
-        if (!p.startsWith('f_rest_')) {
+        if (!p.name.startsWith('f_rest_')) {
             return true;
         }
-        const i = parseInt(p.slice(7), 10);
+        const i = parseInt(p.name.slice(7), 10);
         return i < [0, 9, 24, 45][maxSHBands ?? 3];
     });
 
@@ -402,7 +435,7 @@ const serializePly = async (splats: Splat[], serializeSettings: SerializeSetting
         // FIXME: disable for now due to other tooling not supporting any header
         // `comment ${generatedByString}`,
         `element vertex ${totalGaussians}`,
-        propNames.map(p => `property float ${p}`),
+        props.map(p => `property ${p.type} ${p.name}`),
         'end_header',
         ''
     ].flat().join('\n');
@@ -410,9 +443,9 @@ const serializePly = async (splats: Splat[], serializeSettings: SerializeSetting
     // write encoded header
     await writer.write((new TextEncoder()).encode(headerText));
 
-    const singleSplat = new SingleSplat(propNames, serializeSettings);
+    const singleSplat = new SingleSplat(props.map(p => p.name), serializeSettings);
 
-    const buf = new Uint8Array(1024 * propNames.length * 4);
+    const buf = new Uint8Array(1024 * props.reduce((tot, p) => tot + DataTypeSize(p.type), 0));
     const dataView = new DataView(buf.buffer);
     let offset = 0;
 
@@ -427,9 +460,14 @@ const serializePly = async (splats: Splat[], serializeSettings: SerializeSetting
             singleSplat.read(splat, i);
 
             // write
-            for (let j = 0; j < propNames.length; ++j) {
-                dataView.setFloat32(offset, singleSplat.data[propNames[j]], true);
-                offset += 4;
+            for (let j = 0; j < props.length; ++j) {
+                if (props[j].type === 'uchar') {
+                    dataView.setUint8(offset, singleSplat.data[props[j].name]);
+                    offset += 1;
+                } else {
+                    dataView.setFloat32(offset, singleSplat.data[props[j].name], true);
+                    offset += 4;
+                }
             }
 
             // buffer is full, write it to the output stream

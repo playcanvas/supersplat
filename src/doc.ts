@@ -142,6 +142,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
             await serializePly([splats[i]], serializeSettings, zipWriter);
         }
         await zipWriter.close();
+        await writer.close();
     };
 
     // handle user requesting a new document

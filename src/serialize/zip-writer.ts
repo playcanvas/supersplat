@@ -10,7 +10,7 @@ class ZipWriter implements Writer {
     // write func
     write: (data: Uint8Array, finalWrite?: boolean) => void;
 
-    // finish the archive, the underlying writer will also be closed
+    // finish the archive by writing the footer
     close: () => void;
 
     // helper function to start and write file contents
@@ -109,7 +109,6 @@ class ZipWriter implements Writer {
             eocdView.setUint32(16, filenameLength + files.length * (30 + 16) + dataLength, true);
 
             await writer.write(eocd);
-            await writer.close();
         };
     }
 }

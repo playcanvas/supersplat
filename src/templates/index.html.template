@@ -1,32 +1,32 @@
-const template = /* html */ `
 <!DOCTYPE html>
 <html lang="en">
     <head>
         <title>SuperSplat Viewer</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-        {{style}}
+        <base href="">
+        <link rel="stylesheet" href="./index.css">
         <script type="importmap">
             {
                 "imports": {
-                    "playcanvas": "https://cdn.jsdelivr.net/npm/playcanvas@2.3.3/build/playcanvas.mjs",
-                    "viewerSettings": "{{settingsURL}}"
+                    "playcanvas": "https://cdn.jsdelivr.net/npm/playcanvas@2.4.2/build/playcanvas.mjs",
+                    "viewerSettings": "./settings.json"
                 }
             }
         </script>
-        <script type="module" src="https://cdn.jsdelivr.net/npm/@playcanvas/web-components@0.1.11/dist/pwc.mjs"></script>
+        <script type="module" src="https://cdn.jsdelivr.net/npm/@playcanvas/web-components@0.1.13/dist/pwc.mjs"></script>
     </head>
     <body>
         <pc-app antialias="false" depth="false" high-resolution="true" stencil="false">
-            <pc-asset id="camera-controls" src="https://cdn.jsdelivr.net/npm/playcanvas@2.3.1/scripts/esm/camera-controls.mjs" preload></pc-asset>
-            <pc-asset id="xr-controllers" src="https://cdn.jsdelivr.net/npm/playcanvas@2.3.1/scripts/esm/xr-controllers.mjs" preload></pc-asset>
-            <pc-asset id="xr-navigation" src="https://cdn.jsdelivr.net/npm/playcanvas@2.3.1/scripts/esm/xr-navigation.mjs" preload></pc-asset>
-            <pc-asset id="ply" type="gsplat" src="{{contentURL}}"></pc-asset>
+            <pc-asset src="https://cdn.jsdelivr.net/npm/playcanvas@2.4.2/scripts/esm/camera-controls.mjs"></pc-asset>
+            <pc-asset src="https://cdn.jsdelivr.net/npm/playcanvas@2.4.2/scripts/esm/xr-controllers.mjs"></pc-asset>
+            <pc-asset src="https://cdn.jsdelivr.net/npm/playcanvas@2.4.2/scripts/esm/xr-navigation.mjs"></pc-asset>
+            <pc-asset id="ply" type="gsplat" lazy src="./scene.compressed.ply"></pc-asset>
             <pc-scene>
                 <!-- Camera (with XR support) -->
                 <pc-entity name="camera root">
                     <pc-entity name="camera">
-                        <pc-camera nearClip="0.01" farClip="1000" horizontalFov="true" tonemap="none"></pc-camera>
+                        <pc-camera near-clip="0.01" far-clip="1000" horizontal-fov="true" tonemap="none"></pc-camera>
                         <pc-scripts>
                             <pc-script name="cameraControls"></pc-script>
                         </pc-scripts>
@@ -112,9 +112,6 @@ const template = /* html */ `
             </button>
         </div>
 
-        {{script}}
+        <script type="module" src="./index.js"></script>
     </body>
 </html>
-`;
-
-export { template };

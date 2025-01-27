@@ -13,6 +13,8 @@ const createSvg = (svgString: string) => {
 };
 
 class SplatItem extends Container {
+    getName: () => string;
+    setName: (value: string) => void;
     getSelected: () => boolean;
     setSelected: (value: boolean) => void;
     getVisible: () => boolean;
@@ -52,6 +54,14 @@ class SplatItem extends Container {
         this.append(visible);
         this.append(invisible);
         this.append(remove);
+
+        this.getName = () => {
+            return text.value;
+        };
+
+        this.setName = (value: string) => {
+            text.value = value;
+        };
 
         this.getSelected = () => {
             return this.class.contains('selected');
@@ -109,6 +119,14 @@ class SplatItem extends Container {
         };
     }
 
+    set name(value: string) {
+        this.setName(value);
+    }
+
+    get name() {
+        return this.getName();
+    }
+
     set selected(value) {
         this.setSelected(value);
     }
@@ -140,7 +158,7 @@ class SplatList extends Container {
         events.on('scene.elementAdded', (element: Element) => {
             if (element.type === ElementType.splat) {
                 const splat = element as Splat;
-                const item = new SplatItem(splat.filename);
+                const item = new SplatItem(splat.name);
                 this.append(item);
                 items.set(splat, item);
 
@@ -175,6 +193,13 @@ class SplatList extends Container {
             });
         });
 
+        events.on('splat.name', (splat: Splat) => {
+            const item = items.get(splat);
+            if (item) {
+                item.name = splat.name;
+            }
+        });
+
         events.on('splat.visibility', (splat: Splat) => {
             const item = items.get(splat);
             if (item) {
@@ -207,7 +232,7 @@ class SplatList extends Container {
             const result = await events.invoke('showPopup', {
                 type: 'yesno',
                 header: 'Remove Splat',
-                message: `Are you sure you want to remove '${splat.filename}' from the scene? This operation can not be undone.`
+                message: `Are you sure you want to remove '${splat.name}' from the scene? This operation can not be undone.`
             });
 
             if (result?.action === 'yes') {

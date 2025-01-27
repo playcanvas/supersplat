@@ -89,15 +89,15 @@ const registerDocEvents = (scene: Scene, events: Events) => {
         // @ts-ignore
         const zip = new JSZip();
         await zip.loadAsync(file);
-        const json = JSON.parse(await zip.file('document.json').async('text'));
+        const document = JSON.parse(await zip.file('document.json').async('text'));
 
         // run through each splat and load it
-        for (let i = 0; i < json.splatSettings.length; ++i) {
-            const filename = `splat-${i}.ply`;
-            const splatSettings = json.splatSettings[i];
+        for (let i = 0; i < document.splats.length; ++i) {
+            const filename = `splat_${i}.ply`;
+            const splatSettings = document.splats[i];
 
             // construct the splat asset
-            const contents = await zip.file(`splat-${i}.ply`).async('blob');
+            const contents = await zip.file(`splat_${i}.ply`).async('blob');
             const url = URL.createObjectURL(contents);
             const splat = await scene.assetLoader.loadModel({
                 url,
@@ -109,22 +109,27 @@ const registerDocEvents = (scene: Scene, events: Events) => {
 
             splat.docDeserialize(splatSettings);
         }
+
+        // FIXME: trigger scene bound calc in a better way
+        const tmp = scene.bound;
+        if (tmp === null) {
+            console.error('this should never fire');
+        }
+
+        events.invoke('docDeserialize.poses', document.poses);
+        events.invoke('docDeserialize.view', document.view);
+        scene.camera.docDeserialize(document.camera);
     };
 
     const saveDocument = async (options: { stream?: FileSystemWritableFileStream, filename?: string }) => {
         const splats = events.invoke('scene.allSplats') as Splat[];
 
-        // gather document settings
-        const globalSettings: any = { };
-        events.fire('docSerialize', globalSettings);
-
-        // gather per-splat settings
-        const splatSettings: any[] = splats.map(s => s.docSerialize());
-
-        // construct the document structure
         const document = {
-            globalSettings,
-            splatSettings
+            version: 0,
+            camera: scene.camera.docSerialize(),
+            view: events.invoke('docSerialize.view'),
+            poses: events.invoke('docSerialize.poses'),
+            splats: splats.map(s => s.docSerialize())
         };
 
         // write
@@ -138,7 +143,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
         const zipWriter = new ZipWriter(writer);
         await zipWriter.file('document.json', JSON.stringify(document));
         for (let i = 0; i < splats.length; ++i) {
-            await zipWriter.start(`splat-${i}.ply`);
+            await zipWriter.start(`splat_${i}.ply`);
             await serializePly([splats[i]], serializeSettings, zipWriter);
         }
         await zipWriter.close();

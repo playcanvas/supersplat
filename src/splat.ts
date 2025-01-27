@@ -62,6 +62,7 @@ class Splat extends Element {
 
     selectionAlpha = 1;
 
+    _name = '';
     _tintClr = new Color(1, 1, 1);
     _brightness = 0;
     _blackPoint = 0;
@@ -83,6 +84,7 @@ class Splat extends Element {
             chunks: { gsplatCenterVS: gsplatCenter }
         };
 
+        this._name = (asset.file as any).filename;
         this.asset = asset;
         this.splatData = splatData;
         this.numSplats = splatData.numSplats;
@@ -258,6 +260,17 @@ class Splat extends Element {
 
     get worldTransform() {
         return this.entity.getWorldTransform();
+    }
+
+    get name() {
+        return this._name;
+    }
+
+    set name(newName: string) {
+        if (newName !== this.name) {
+            this._name = newName;
+            this.scene.events.fire('splat.name', this);
+        }
     }
 
     get filename() {
@@ -515,13 +528,14 @@ class Splat extends Element {
     }
 
     docSerialize() {
-        const packV3 = (v: Vec3) => [v.x, v.y, v.z];
-        const packQ = (q: Quat) => [q.x, q.y, q.z, q.w];
+        const pack3 = (v: Vec3) => [v.x, v.y, v.z];
+        const pack4 = (q: Quat) => [q.x, q.y, q.z, q.w];
         const packC = (c: Color) => [c.r, c.g, c.b, c.a];
         return {
-            position: packV3(this.entity.getLocalPosition()),
-            rotation: packQ(this.entity.getLocalRotation()),
-            scale: packV3(this.entity.getLocalScale()),
+            name: this.name,
+            position: pack3(this.entity.getLocalPosition()),
+            rotation: pack4(this.entity.getLocalRotation()),
+            scale: pack3(this.entity.getLocalScale()),
             visible: this.visible,
             tintClr: packC(this.tintClr),
             brightness: this.brightness,
@@ -532,7 +546,9 @@ class Splat extends Element {
     }
 
     docDeserialize(doc: any) {
-        const { position, rotation, scale, visible, tintClr, brightness, blackPoint, whitePoint, transparency } = doc;
+        const { name, position, rotation, scale, visible, tintClr, brightness, blackPoint, whitePoint, transparency } = doc;
+
+        this.name = name;
         this.move(new Vec3(position), new Quat(rotation), new Vec3(scale));
         this.visible = visible;
         this.tintClr = new Color(tintClr[0], tintClr[1], tintClr[2], tintClr[3]);

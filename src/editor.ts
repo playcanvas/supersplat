@@ -1,10 +1,4 @@
-import {
-    path,
-    Mat4,
-    Texture,
-    Vec3,
-    Vec4
-} from 'playcanvas';
+import { path, Color, Mat4, Texture, Vec3, Vec4 } from 'playcanvas';
 
 import { EditHistory } from './edit-history';
 import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp, MultiOp, AddSplatOp } from './edit-ops';
@@ -528,8 +522,15 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // camera fly speed
 
     const setFlySpeed = (value: number) => {
-        scene.camera.flySpeed = value;
+        if (value !== scene.camera.flySpeed) {
+            scene.camera.flySpeed = value;
+            events.fire('camera.flySpeed', value);
+        }
     };
+
+    events.function('camera.flySpeed', () => {
+        return scene.camera.flySpeed;
+    });
 
     events.on('camera.setFlySpeed', (value: number) => {
         setFlySpeed(value);
@@ -649,6 +650,37 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         } finally {
             events.fire('stopSpinner');
         }
+    });
+
+    // doc serialization
+    events.function('docSerialize.view', () => {
+        const packC = (c: Color) => [c.r, c.g, c.b, c.a];
+        return {
+            bgColor: packC(events.invoke('bgClr')),
+            selectedColor: packC(events.invoke('selectedClr')),
+            unselectedColor: packC(events.invoke('unselectedClr')),
+            lockedColor: packC(events.invoke('lockedClr')),
+            shBands: events.invoke('view.bands'),
+            centersSize: events.invoke('camera.splatSize'),
+            outlineSelection: events.invoke('view.outlineSelection'),
+            showGrid: events.invoke('grid.visible'),
+            showBound: events.invoke('camera.bound'),
+            flySpeed: events.invoke('camera.flySpeed')
+        };
+    });
+
+    events.function('docDeserialize.view', (docView: any) => {
+        events.fire('setBgClr', new Color(docView.bgColor));
+        events.fire('setSelectedClr', new Color(docView.selectedColor));
+        events.fire('setUnselectedClr', new Color(docView.unselectedColor));
+        events.fire('setLockedClr', new Color(docView.lockedColor));
+        events.fire('view.setBands', docView.shBands);
+        events.fire('camera.setSplatSize', docView.centersSize);
+        events.fire('view.setOutlineSelection', docView.outlineSelection);
+        events.fire('grid.setVisible', docView.showGrid);
+        events.fire('camera.setBound', docView.showBound);
+        events.fire('camera.setFlySpeed', docView.flySpeed);
+        
     });
 };
 

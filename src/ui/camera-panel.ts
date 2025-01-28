@@ -288,7 +288,7 @@ class CameraPanel extends Container {
                         name: pose.name,
                         position: pack3(pose.position),
                         target: pack3(pose.target)
-                    }
+                    };
                 })
             }];
         });

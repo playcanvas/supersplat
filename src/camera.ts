@@ -592,7 +592,7 @@ class Camera extends Element {
             azim: this.azim,
             elev: this.elevation,
             distance: this.distance,
-            fov: this.fov,
+            fov: this.fov
         };
     }
 

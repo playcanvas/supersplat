@@ -272,15 +272,15 @@ class Splat extends Element {
         return this.entity.getWorldTransform();
     }
 
-    get name() {
-        return this._name;
-    }
-
     set name(newName: string) {
         if (newName !== this.name) {
             this._name = newName;
             this.scene.events.fire('splat.name', this);
         }
+    }
+
+    get name() {
+        return this._name;
     }
 
     get filename() {

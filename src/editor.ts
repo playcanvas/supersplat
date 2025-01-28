@@ -680,7 +680,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         events.fire('grid.setVisible', docView.showGrid);
         events.fire('camera.setBound', docView.showBound);
         events.fire('camera.setFlySpeed', docView.flySpeed);
-        
     });
 };
 

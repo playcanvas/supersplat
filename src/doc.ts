@@ -146,9 +146,11 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 splats: splats.map(s => s.docSerialize())
             };
 
-            // write
             const serializeSettings = {
-                keepStateData: true,
+                // even though we support saving selection state, we disable that for now
+                // because including a uint8 array in the document PLY results in slow loading
+                // path.
+                keepStateData: false,
                 keepWorldTransform: true,
                 keepColorTint: true
             };

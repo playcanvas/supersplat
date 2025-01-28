@@ -9,8 +9,9 @@ type MenuItem = {
     // eslint-disable-next-line no-use-before-define
     subMenu?: MenuPanel;
 
-    onSelect?: () => any;
     isEnabled?: () => boolean;
+    isVisible?: () => boolean;
+    onSelect?: () => any;
 };
 
 const offsetParent = (elem: HTMLElement) : HTMLElement => {
@@ -72,6 +73,9 @@ class MenuPanel extends Container {
                 const menuItem = menuItems[i];
                 if (menuItem.isEnabled) {
                     this.dom.children.item(i).ui.enabled = menuItem.isEnabled();
+                }
+                if (menuItem.isVisible) {
+                    this.dom.children.item(i).ui.hidden = !menuItem.isVisible();
                 }
             }
         });

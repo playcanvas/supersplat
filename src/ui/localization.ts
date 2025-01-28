@@ -255,6 +255,14 @@ const localizeInit = () => {
                     'options.show-grid': 'Show Grid',
                     'options.show-bound': 'Show Bound',
                     'options.camera-fly-speed': 'Fly Speed',
+                    'options.tonemapping': 'Tonemapping',
+                    'options.tonemapping-none': 'None',
+                    'options.tonemapping-linear': 'Linear',
+                    'options.tonemapping-neutral': 'Neutral',
+                    'options.tonemapping-aces': 'ACES',
+                    'options.tonemapping-aces2': 'ACES2',
+                    'options.tonemapping-filmic': 'Filmic',
+                    'options.tonemapping-hejl': 'Hejl',
 
                     // Camera panel
                     'camera': 'CAMERA POSES',

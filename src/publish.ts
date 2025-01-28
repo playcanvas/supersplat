@@ -111,8 +111,6 @@ const registerPublishEvents = (events: Events) => {
                 // publish
                 const response = await publish(buffer, publishSettings);
 
-                events.fire('stopSpinner');
-
                 if (!response) {
                     await events.invoke('showPopup', {
                         type: 'error',
@@ -128,13 +126,13 @@ const registerPublishEvents = (events: Events) => {
                     });
                 }
             } catch (error) {
-                events.fire('stopSpinner');
-
                 await events.invoke('showPopup', {
                     type: 'error',
                     header: localize('publish.failed'),
                     message: `'${error.message ?? error}'`
                 });
+            } finally {
+                events.fire('stopSpinner');
             }
         }
     });

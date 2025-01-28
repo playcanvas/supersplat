@@ -138,7 +138,7 @@ class Menu extends Container {
         }, {
             text: localize('scene.save'),
             icon: createSvg(sceneSave),
-            isEnabled: () => events.invoke('doc.name') && events.invoke('scene.dirty'),
+            isEnabled: () => events.invoke('doc.name'),
             onSelect: async () => await events.invoke('doc.save')
         }, {
             text: localize('scene.save-as'),

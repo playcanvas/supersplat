@@ -118,20 +118,17 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 console.error('this should never fire');
             }
 
-            events.invoke('docDeserialize.poses', document.poses);
+            events.invoke('docDeserialize.poseSets', document.poseSets);
             events.invoke('docDeserialize.view', document.view);
             scene.camera.docDeserialize(document.camera);
-
-            events.fire('stopSpinner');
-
         } catch (error) {
-            events.fire('stopSpinner');
-
             await events.invoke('showPopup', {
                 type: 'error',
                 header: localize('doc.load-failed'),
                 message: `'${error.message ?? error}'`
             });
+        } finally {
+            events.fire('stopSpinner');
         }
     };
 
@@ -145,7 +142,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 version: 0,
                 camera: scene.camera.docSerialize(),
                 view: events.invoke('docSerialize.view'),
-                poses: events.invoke('docSerialize.poses'),
+                poseSets: events.invoke('docSerialize.poseSets'),
                 splats: splats.map(s => s.docSerialize())
             };
 
@@ -165,17 +162,14 @@ const registerDocEvents = (scene: Scene, events: Events) => {
             }
             await zipWriter.close();
             await writer.close();
-
-            events.fire('stopSpinner');
-
         } catch (error) {
-            events.fire('stopSpinner');
-
             await events.invoke('showPopup', {
                 type: 'error',
                 header: localize('doc.save-failed'),
                 message: `'${error.message ?? error}'`
             });
+        } finally {
+            events.fire('stopSpinner');
         }
     };
 

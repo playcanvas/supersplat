@@ -381,6 +381,8 @@ const localizeInit = () => {
                     'doc.reset': 'RESET SCENE',
                     'doc.unsaved-message': 'You have unsaved changes. Are you sure you want to reset the scene?',
                     'doc.reset-message': 'Are you sure you want to reset the scene?',
+                    'doc.save-failed': 'FAILED TO SAVE',
+                    'doc.load-failed': 'FAILED TO LOAD',
 
                     // Publish Settings Dialog
                     'publish.header': 'PUBLISH SETTINGS',

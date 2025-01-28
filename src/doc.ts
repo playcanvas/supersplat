@@ -81,73 +81,102 @@ const registerDocEvents = (scene: Scene, events: Events) => {
 
     // load the document from the given file
     const loadDocument = async (file: File) => {
-        // reset the scene
-        resetScene();
+        events.fire('startSpinner');
+        try {
+            // reset the scene
+            resetScene();
 
-        // read the document
-        /* global JSZip */
-        // @ts-ignore
-        const zip = new JSZip();
-        await zip.loadAsync(file);
-        const document = JSON.parse(await zip.file('document.json').async('text'));
+            // read the document
+            /* global JSZip */
+            // @ts-ignore
+            const zip = new JSZip();
+            await zip.loadAsync(file);
+            const document = JSON.parse(await zip.file('document.json').async('text'));
 
-        // run through each splat and load it
-        for (let i = 0; i < document.splats.length; ++i) {
-            const filename = `splat_${i}.ply`;
-            const splatSettings = document.splats[i];
+            // run through each splat and load it
+            for (let i = 0; i < document.splats.length; ++i) {
+                const filename = `splat_${i}.ply`;
+                const splatSettings = document.splats[i];
 
-            // construct the splat asset
-            const contents = await zip.file(`splat_${i}.ply`).async('blob');
-            const url = URL.createObjectURL(contents);
-            const splat = await scene.assetLoader.loadModel({
-                url,
-                filename
+                // construct the splat asset
+                const contents = await zip.file(`splat_${i}.ply`).async('blob');
+                const url = URL.createObjectURL(contents);
+                const splat = await scene.assetLoader.loadModel({
+                    url,
+                    filename
+                });
+                URL.revokeObjectURL(url);
+
+                scene.add(splat);
+
+                splat.docDeserialize(splatSettings);
+            }
+
+            // FIXME: trigger scene bound calc in a better way
+            const tmp = scene.bound;
+            if (tmp === null) {
+                console.error('this should never fire');
+            }
+
+            events.invoke('docDeserialize.poses', document.poses);
+            events.invoke('docDeserialize.view', document.view);
+            scene.camera.docDeserialize(document.camera);
+
+            events.fire('stopSpinner');
+
+        } catch (error) {
+            events.fire('stopSpinner');
+
+            await events.invoke('showPopup', {
+                type: 'error',
+                header: localize('doc.load-failed'),
+                message: `'${error.message ?? error}'`
             });
-            URL.revokeObjectURL(url);
-
-            scene.add(splat);
-
-            splat.docDeserialize(splatSettings);
         }
-
-        // FIXME: trigger scene bound calc in a better way
-        const tmp = scene.bound;
-        if (tmp === null) {
-            console.error('this should never fire');
-        }
-
-        events.invoke('docDeserialize.poses', document.poses);
-        events.invoke('docDeserialize.view', document.view);
-        scene.camera.docDeserialize(document.camera);
     };
 
     const saveDocument = async (options: { stream?: FileSystemWritableFileStream, filename?: string }) => {
-        const splats = events.invoke('scene.allSplats') as Splat[];
+        events.fire('startSpinner');
 
-        const document = {
-            version: 0,
-            camera: scene.camera.docSerialize(),
-            view: events.invoke('docSerialize.view'),
-            poses: events.invoke('docSerialize.poses'),
-            splats: splats.map(s => s.docSerialize())
-        };
+        try {
+            const splats = events.invoke('scene.allSplats') as Splat[];
 
-        // write
-        const serializeSettings = {
-            keepStateData: true,
-            keepWorldTransform: true,
-            keepColorTint: true
-        };
+            const document = {
+                version: 0,
+                camera: scene.camera.docSerialize(),
+                view: events.invoke('docSerialize.view'),
+                poses: events.invoke('docSerialize.poses'),
+                splats: splats.map(s => s.docSerialize())
+            };
 
-        const writer = options.stream ? new FileStreamWriter(options.stream) : new DownloadWriter(options.filename);
-        const zipWriter = new ZipWriter(writer);
-        await zipWriter.file('document.json', JSON.stringify(document));
-        for (let i = 0; i < splats.length; ++i) {
-            await zipWriter.start(`splat_${i}.ply`);
-            await serializePly([splats[i]], serializeSettings, zipWriter);
+            // write
+            const serializeSettings = {
+                keepStateData: true,
+                keepWorldTransform: true,
+                keepColorTint: true
+            };
+
+            const writer = options.stream ? new FileStreamWriter(options.stream) : new DownloadWriter(options.filename);
+            const zipWriter = new ZipWriter(writer);
+            await zipWriter.file('document.json', JSON.stringify(document));
+            for (let i = 0; i < splats.length; ++i) {
+                await zipWriter.start(`splat_${i}.ply`);
+                await serializePly([splats[i]], serializeSettings, zipWriter);
+            }
+            await zipWriter.close();
+            await writer.close();
+
+            events.fire('stopSpinner');
+
+        } catch (error) {
+            events.fire('stopSpinner');
+
+            await events.invoke('showPopup', {
+                type: 'error',
+                header: localize('doc.save-failed'),
+                message: `'${error.message ?? error}'`
+            });
         }
-        await zipWriter.close();
-        await writer.close();
     };
 
     // handle user requesting a new document

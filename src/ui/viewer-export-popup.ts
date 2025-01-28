@@ -202,7 +202,7 @@ class ViewerExportPopup extends Container {
 
         const exportButton = new Button({
             class: 'button',
-            text: localize('scene.export')
+            text: localize('file.export')
         });
 
         footer.append(cancelButton);

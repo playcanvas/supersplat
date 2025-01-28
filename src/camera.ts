@@ -624,7 +624,8 @@ class Camera extends Element {
             azim: this.azim,
             elev: this.elevation,
             distance: this.distance,
-            fov: this.fov
+            fov: this.fov,
+            tonemapping: this.tonemapping
         };
     }
 
@@ -633,6 +634,7 @@ class Camera extends Element {
         this.setAzimElev(settings.azim, settings.elev, 0);
         this.setDistance(settings.distance, 0);
         this.fov = settings.fov;
+        this.tonemapping = settings.tonemapping;
     }
 }
 

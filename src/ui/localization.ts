@@ -13,20 +13,20 @@ const localizeInit = () => {
         resources: {
             de: {
                 translation: {
-                    // Scene menu
-                    'scene': 'Szene',
-                    'scene.new': 'Neu',
-                    'scene.open': 'Öffnen',
-                    'scene.import': 'Importieren...',
-                    'scene.load-all-data': 'PLY-Daten vollständig laden',
-                    'scene.save': 'Speichern',
-                    'scene.save-as': 'Speichern als...',
-                    'scene.save-screenshot': 'Screenshot speichern',
-                    'scene.publish': 'Veröffentlichen...',
-                    'scene.export': 'Exportieren',
-                    'scene.export.compressed-ply': 'Komprimiertes PLY',
-                    'scene.export.splat': 'Splat',
-                    'scene.export.viewer': 'Viewer App...',
+                    // File menu
+                    'file': 'Datei',
+                    'file.new': 'Neu',
+                    'file.open': 'Öffnen',
+                    'file.import': 'Importieren...',
+                    'file.load-all-data': 'PLY-Daten vollständig laden',
+                    'file.save': 'Speichern',
+                    'file.save-as': 'Speichern als...',
+                    'file.save-screenshot': 'Screenshot speichern',
+                    'file.publish': 'Veröffentlichen...',
+                    'file.export': 'Exportieren',
+                    'file.export.compressed-ply': 'Komprimiertes PLY',
+                    'file.export.splat': 'Splat',
+                    'file.export.viewer': 'Viewer App...',
 
                     // Selection menu
                     'select': 'Auswahl',
@@ -191,21 +191,21 @@ const localizeInit = () => {
             },
             en: {
                 translation: {
-                    // Scene menu
-                    'scene': 'Scene',
-                    'scene.new': 'New',
-                    'scene.open': 'Open',
-                    'scene.import': 'Import...',
-                    'scene.load-all-data': 'Load all PLY data',
-                    'scene.save': 'Save',
-                    'scene.save-as': 'Save As...',
-                    'scene.save-screenshot': 'Save Screenshot',
-                    'scene.publish': 'Publish...',
-                    'scene.export': 'Export',
-                    'scene.export.ply': 'PLY (.ply)',
-                    'scene.export.compressed-ply': 'Compressed PLY (.ply)',
-                    'scene.export.splat': 'Splat file (.splat)',
-                    'scene.export.viewer': 'Viewer App...',
+                    // File menu
+                    'file': 'File',
+                    'file.new': 'New',
+                    'file.open': 'Open',
+                    'file.import': 'Import...',
+                    'file.load-all-data': 'Load all PLY data',
+                    'file.save': 'Save',
+                    'file.save-as': 'Save As...',
+                    'file.save-screenshot': 'Save Screenshot',
+                    'file.publish': 'Publish...',
+                    'file.export': 'Export',
+                    'file.export.ply': 'PLY (.ply)',
+                    'file.export.compressed-ply': 'Compressed PLY (.ply)',
+                    'file.export.splat': 'Splat file (.splat)',
+                    'file.export.viewer': 'Viewer App...',
 
                     // Selection menu
                     'select': 'Select',
@@ -400,20 +400,20 @@ const localizeInit = () => {
             },
             fr: {
                 translation: {
-                    // Scene menu
-                    'scene': 'Scène',
-                    'scene.new': 'Créer',
-                    'scene.open': 'Ouvrir',
-                    'scene.import': 'Importer...',
-                    'scene.load-all-data': 'Charger toutes les données ply',
-                    'scene.save': 'Enregistrer',
-                    'scene.save-as': 'Enregistrer sous...',
-                    'scene.save-screenshot': 'Enregistrer une capture d\'écran',
-                    'scene.publish': 'Publier...',
-                    'scene.export': 'Exporter',
-                    'scene.export.compressed-ply': 'Ply compressé',
-                    'scene.export.splat': 'Fichier splat',
-                    'scene.export.viewer': 'Application de visualisation...',
+                    // File menu
+                    'file': 'Fichier',
+                    'file.new': 'Créer',
+                    'file.open': 'Ouvrir',
+                    'file.import': 'Importer...',
+                    'file.load-all-data': 'Charger toutes les données ply',
+                    'file.save': 'Enregistrer',
+                    'file.save-as': 'Enregistrer sous...',
+                    'file.save-screenshot': 'Enregistrer une capture d\'écran',
+                    'file.publish': 'Publier...',
+                    'file.export': 'Exporter',
+                    'file.export.compressed-ply': 'Ply compressé',
+                    'file.export.splat': 'Fichier splat',
+                    'file.export.viewer': 'Application de visualisation...',
 
                     // Selection menu
                     'select': 'Sélection',
@@ -578,20 +578,20 @@ const localizeInit = () => {
             },
             ja: {
                 translation: {
-                    // Scene menu
-                    'scene': 'シーン',
-                    'scene.new': '新規作成',
-                    'scene.open': '開く',
-                    'scene.import': 'インポート...',
-                    'scene.load-all-data': '全てのPLYデータを読み込む',
-                    'scene.save': '保存',
-                    'scene.save-as': '名前を付けて保存',
-                    'scene.save-screenshot': 'スクリーンショットを保存',
-                    'scene.publish': '公開...',
-                    'scene.export': 'エクスポート',
-                    'scene.export.compressed-ply': 'Compressed PLY (.ply)',
-                    'scene.export.splat': 'Splat (.splat)',
-                    'scene.export.viewer': 'Viewer App...',
+                    // File menu
+                    'file': 'ファイル',
+                    'file.new': '新規作成',
+                    'file.open': '開く',
+                    'file.import': 'インポート...',
+                    'file.load-all-data': '全てのPLYデータを読み込む',
+                    'file.save': '保存',
+                    'file.save-as': '名前を付けて保存',
+                    'file.save-screenshot': 'スクリーンショットを保存',
+                    'file.publish': '公開...',
+                    'file.export': 'エクスポート',
+                    'file.export.compressed-ply': 'Compressed PLY (.ply)',
+                    'file.export.splat': 'Splat (.splat)',
+                    'file.export.viewer': 'Viewer App...',
 
                     // Selection menu
                     'select': '選択',
@@ -756,20 +756,20 @@ const localizeInit = () => {
             },
             ko: {
                 translation: {
-                    // Scene menu
-                    'scene': '장면',
-                    'scene.new': '새로 만들기',
-                    'scene.open': '열기',
-                    'scene.import': '가져오기...',
-                    'scene.load-all-data': '모든 PLY 데이터 불러오기',
-                    'scene.save': '저장',
-                    'scene.save-as': '다른 이름으로 저장...',
-                    'scene.save-screenshot': '스크린샷 저장',
-                    'scene.publish': '게시...',
-                    'scene.export': '내보내기',
-                    'scene.export.compressed-ply': '압축된 PLY',
-                    'scene.export.splat': 'Splat 파일',
-                    'scene.export.viewer': '뷰어 앱...',
+                    // File menu
+                    'file': '파일',
+                    'file.new': '새로 만들기',
+                    'file.open': '열기',
+                    'file.import': '가져오기...',
+                    'file.load-all-data': '모든 PLY 데이터 불러오기',
+                    'file.save': '저장',
+                    'file.save-as': '다른 이름으로 저장...',
+                    'file.save-screenshot': '스크린샷 저장',
+                    'file.publish': '게시...',
+                    'file.export': '내보내기',
+                    'file.export.compressed-ply': '압축된 PLY',
+                    'file.export.splat': 'Splat 파일',
+                    'file.export.viewer': '뷰어 앱...',
 
                     // Selection menu
                     'select': '선택',
@@ -934,20 +934,20 @@ const localizeInit = () => {
             },
             'zh-CN': {
                 translation: {
-                    // Scene menu
-                    'scene': '场景',
-                    'scene.new': '新建',
-                    'scene.open': '打开',
-                    'scene.import': '导入...',
-                    'scene.load-all-data': '加载所有 PLY 数据',
-                    'scene.save': '保存',
-                    'scene.save-as': '另存为...',
-                    'scene.save-screenshot': '保存截图',
-                    'scene.publish': '发布...',
-                    'scene.export': '导出',
-                    'scene.export.compressed-ply': '压缩 PLY',
-                    'scene.export.splat': 'Splat 文件',
-                    'scene.export.viewer': '查看器应用...',
+                    // File menu
+                    'file': '文件',
+                    'file.new': '新建',
+                    'file.open': '打开',
+                    'file.import': '导入...',
+                    'file.load-all-data': '加载所有 PLY 数据',
+                    'file.save': '保存',
+                    'file.save-as': '另存为...',
+                    'file.save-screenshot': '保存截图',
+                    'file.publish': '发布...',
+                    'file.export': '导出',
+                    'file.export.compressed-ply': '压缩 PLY',
+                    'file.export.splat': 'Splat 文件',
+                    'file.export.viewer': '查看器应用...',
 
                     // Selection menu
                     'select': '选择',

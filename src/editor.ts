@@ -1,16 +1,11 @@
-import {
-    path,
-    Mat4,
-    Texture,
-    Vec3,
-    Vec4
-} from 'playcanvas';
+import { path, Color, Mat4, Texture, Vec3, Vec4 } from 'playcanvas';
 
 import { EditHistory } from './edit-history';
 import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp, MultiOp, AddSplatOp } from './edit-ops';
 import { Events } from './events';
 import { PngCompressor } from './png-compressor';
 import { Scene } from './scene';
+import { BufferWriter } from './serialize/writer';
 import { Splat } from './splat';
 import { serializePly } from './splat-serialize';
 
@@ -51,7 +46,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         return editHistory.cursor !== lastExportCursor;
     });
 
-    events.on('scene.saved', () => {
+    events.on('doc.saved', () => {
         lastExportCursor = editHistory.cursor;
     });
 
@@ -398,38 +393,20 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     const performSelectionFunc = async (func: 'duplicate' | 'separate') => {
         const splats = selectedSplats();
 
-        let data: Uint8Array = null;
-        let cursor = 0;
-
-        const writeFunc = (chunk: Uint8Array, finalWrite?: boolean) => {
-            if (!data) {
-                data = finalWrite ? chunk : chunk.slice();
-                cursor = chunk.byteLength;
-            } else {
-                if (data.byteLength < cursor + chunk.byteLength) {
-                    let newSize = data.byteLength * 2;
-                    while (newSize < cursor + chunk.byteLength) {
-                        newSize *= 2;
-                    }
-                    const newData = new Uint8Array(newSize);
-                    newData.set(data);
-                    data = newData;
-                }
-                data.set(chunk, cursor);
-                cursor += chunk.byteLength;
-            }
-        };
+        const writer = new BufferWriter();
 
         await serializePly(splats, {
             maxSHBands: 3,
             selected: true
-        }, writeFunc);
+        }, writer);
 
-        if (data) {
+        const buffer = writer.close();
+
+        if (buffer) {
             const splat = splats[0];
 
             // wrap PLY in a blob and load it
-            const blob = new Blob([data], { type: 'octet/stream' });
+            const blob = new Blob([buffer], { type: 'octet/stream' });
             const url = URL.createObjectURL(blob);
             const { filename } = splat;
             const copy = await scene.assetLoader.loadPly({ url, filename });
@@ -545,8 +522,15 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // camera fly speed
 
     const setFlySpeed = (value: number) => {
-        scene.camera.flySpeed = value;
+        if (value !== scene.camera.flySpeed) {
+            scene.camera.flySpeed = value;
+            events.fire('camera.flySpeed', value);
+        }
     };
+
+    events.function('camera.flySpeed', () => {
+        return scene.camera.flySpeed;
+    });
 
     events.on('camera.setFlySpeed', (value: number) => {
         setFlySpeed(value);
@@ -666,6 +650,36 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         } finally {
             events.fire('stopSpinner');
         }
+    });
+
+    // doc serialization
+    events.function('docSerialize.view', () => {
+        const packC = (c: Color) => [c.r, c.g, c.b, c.a];
+        return {
+            bgColor: packC(events.invoke('bgClr')),
+            selectedColor: packC(events.invoke('selectedClr')),
+            unselectedColor: packC(events.invoke('unselectedClr')),
+            lockedColor: packC(events.invoke('lockedClr')),
+            shBands: events.invoke('view.bands'),
+            centersSize: events.invoke('camera.splatSize'),
+            outlineSelection: events.invoke('view.outlineSelection'),
+            showGrid: events.invoke('grid.visible'),
+            showBound: events.invoke('camera.bound'),
+            flySpeed: events.invoke('camera.flySpeed')
+        };
+    });
+
+    events.function('docDeserialize.view', (docView: any) => {
+        events.fire('setBgClr', new Color(docView.bgColor));
+        events.fire('setSelectedClr', new Color(docView.selectedColor));
+        events.fire('setUnselectedClr', new Color(docView.unselectedColor));
+        events.fire('setLockedClr', new Color(docView.lockedColor));
+        events.fire('view.setBands', docView.shBands);
+        events.fire('camera.setSplatSize', docView.centersSize);
+        events.fire('view.setOutlineSelection', docView.outlineSelection);
+        events.fire('grid.setVisible', docView.showGrid);
+        events.fire('camera.setBound', docView.showBound);
+        events.fire('camera.setFlySpeed', docView.flySpeed);
     });
 };
 

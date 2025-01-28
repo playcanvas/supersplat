@@ -272,6 +272,42 @@ class CameraPanel extends Container {
                 setVisible(false);
             }
         });
+
+        events.function('docSerialize.poseSets', (): any[] => {
+            const pack3 = (v: Vec3) => [v.x, v.y, v.z];
+
+            if (poses.length === 0) {
+                return [];
+            }
+
+            return [{
+                name: 'set0',
+                poses: poses.map((p) => {
+                    const { pose } = p;
+                    return {
+                        name: pose.name,
+                        position: pack3(pose.position),
+                        target: pack3(pose.target)
+                    };
+                })
+            }];
+        });
+
+        events.function('docDeserialize.poseSets', (poseSets: any[]) => {
+            if (poseSets.length === 0) {
+                return;
+            }
+
+            // for now, load the first poseSet
+
+            poseSets[0].poses.forEach((docPose: any) => {
+                addPose({
+                    name: docPose.name,
+                    position: new Vec3(docPose.position),
+                    target: new Vec3(docPose.target)
+                });
+            });
+        });
     }
 }
 

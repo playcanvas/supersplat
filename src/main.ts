@@ -1,6 +1,7 @@
 import { Color, createGraphicsDevice } from 'playcanvas';
 
 import { registerAnimationEvents } from './animation';
+import { registerDocEvents } from './doc';
 import { EditHistory } from './edit-history';
 import { registerEditorEvents } from './editor';
 import { Events } from './events';
@@ -247,6 +248,7 @@ const main = async () => {
     registerTransformHandlerEvents(events);
     registerAnimationEvents(events);
     registerPublishEvents(events);
+    registerDocEvents(scene, events);
     initShortcuts(events);
     initFileHandler(scene, events, editorUI.appContainer.dom, remoteStorageDetails);
 
@@ -256,7 +258,7 @@ const main = async () => {
     // handle load params
     const loadList = url.searchParams.getAll('load');
     for (const value of loadList) {
-        await events.invoke('load', decodeURIComponent(value));
+        await events.invoke('import', decodeURIComponent(value));
     }
 
     // handle OS-based file association in PWA mode
@@ -265,7 +267,7 @@ const main = async () => {
             for (const file of launchParams.files) {
                 const blob = await file.getFile();
                 const url = URL.createObjectURL(blob);
-                await events.invoke('load', url, file.name);
+                await events.invoke('import', url, file.name);
                 URL.revokeObjectURL(url);
             }
         });

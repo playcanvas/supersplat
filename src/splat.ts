@@ -62,6 +62,7 @@ class Splat extends Element {
 
     selectionAlpha = 1;
 
+    _name = '';
     _tintClr = new Color(1, 1, 1);
     _brightness = 0;
     _blackPoint = 0;
@@ -83,6 +84,7 @@ class Splat extends Element {
             chunks: { gsplatCenterVS: gsplatCenter }
         };
 
+        this._name = (asset.file as any).filename;
         this.asset = asset;
         this.splatData = splatData;
         this.numSplats = splatData.numSplats;
@@ -112,10 +114,22 @@ class Splat extends Element {
         // bit 1: selected
         // bit 2: deleted
         // bit 3: hidden
-        this.splatData.addProp('state', new Uint8Array(this.splatData.numSplats));
+        if (!this.splatData.getProp('state')) {
+            this.splatData.getElement('vertex').properties.push({
+                type: 'uchar',
+                name: 'state',
+                storage: new Uint8Array(this.splatData.numSplats),
+                byteSize: 1
+            });
+        }
 
         // per-splat transform matrix
-        this.splatData.addProp('transform', new Uint16Array(this.splatData.numSplats));
+        this.splatData.getElement('vertex').properties.push({
+            type: 'ushort',
+            name: 'transform',
+            storage: new Uint16Array(this.splatData.numSplats),
+            byteSize: 2
+        });
 
         const { width, height } = instance.splat.colorTexture;
 
@@ -258,6 +272,17 @@ class Splat extends Element {
         return this.entity.getWorldTransform();
     }
 
+    set name(newName: string) {
+        if (newName !== this.name) {
+            this._name = newName;
+            this.scene.events.fire('splat.name', this);
+        }
+    }
+
+    get name() {
+        return this._name;
+    }
+
     get filename() {
         return (this.asset.file as any).filename;
     }
@@ -286,10 +311,11 @@ class Splat extends Element {
         // add the entity to the scene
         this.scene.contentRoot.addChild(this.entity);
 
-        this.makeSelectionBoundDirty();
-
         this.scene.events.on('view.bands', this.rebuildMaterial, this);
         this.rebuildMaterial(this.scene.events.invoke('view.bands'));
+
+        // we must update state in case the state data was loaded from ply
+        this.updateState();
     }
 
     remove() {
@@ -510,6 +536,37 @@ class Splat extends Element {
                 result.set(vec, entity.getLocalRotation(), entity.getLocalScale());
                 break;
         }
+    }
+
+    docSerialize() {
+        const pack3 = (v: Vec3) => [v.x, v.y, v.z];
+        const pack4 = (q: Quat) => [q.x, q.y, q.z, q.w];
+        const packC = (c: Color) => [c.r, c.g, c.b, c.a];
+        return {
+            name: this.name,
+            position: pack3(this.entity.getLocalPosition()),
+            rotation: pack4(this.entity.getLocalRotation()),
+            scale: pack3(this.entity.getLocalScale()),
+            visible: this.visible,
+            tintClr: packC(this.tintClr),
+            brightness: this.brightness,
+            blackPoint: this.blackPoint,
+            whitePoint: this.whitePoint,
+            transparency: this.transparency
+        };
+    }
+
+    docDeserialize(doc: any) {
+        const { name, position, rotation, scale, visible, tintClr, brightness, blackPoint, whitePoint, transparency } = doc;
+
+        this.name = name;
+        this.move(new Vec3(position), new Quat(rotation), new Vec3(scale));
+        this.visible = visible;
+        this.tintClr = new Color(tintClr[0], tintClr[1], tintClr[2], tintClr[3]);
+        this.brightness = brightness;
+        this.blackPoint = blackPoint;
+        this.whitePoint = whitePoint;
+        this.transparency = transparency;
     }
 }
 

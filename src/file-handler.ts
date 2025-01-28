@@ -4,8 +4,9 @@ import { CreateDropHandler } from './drop-handler';
 import { ElementType } from './element';
 import { Events } from './events';
 import { Scene } from './scene';
+import { Writer, DownloadWriter, FileStreamWriter } from './serialize/writer';
 import { Splat } from './splat';
-import { WriteFunc, serializePly, serializePlyCompressed, serializeSplat, serializeViewer, ViewerExportSettings } from './splat-serialize';
+import { serializePly, serializePlyCompressed, serializeSplat, serializeViewer, ViewerExportSettings } from './splat-serialize';
 import { localize } from './ui/localization';
 
 // ts compiler and vscode find this type, but eslint does not
@@ -86,17 +87,6 @@ const download = (filename: string, data: Uint8Array) => {
     window.URL.revokeObjectURL(url);
 };
 
-// send the file to the remote storage
-const sendToRemoteStorage = async (filename: string, data: ArrayBuffer, remoteStorageDetails: RemoteStorageDetails) => {
-    const formData = new FormData();
-    formData.append('file', new Blob([data], { type: 'octet/stream' }), filename);
-    formData.append('preserveThumbnail', 'true');
-    await fetch(remoteStorageDetails.url, {
-        method: remoteStorageDetails.method,
-        body: formData
-    });
-};
-
 const loadCameraPoses = async (url: string, filename: string, events: Events) => {
     const response = await fetch(url);
     const json = await response.json();
@@ -138,10 +128,10 @@ const loadCameraPoses = async (url: string, filename: string, events: Events) =>
 const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, remoteStorageDetails: RemoteStorageDetails) => {
 
     // returns a promise that resolves when the file is loaded
-    const handleLoad = async (url: string, filename?: string, focusCamera = true, animationFrame = false) => {
+    const handleImport = async (url: string, filename?: string, focusCamera = true, animationFrame = false) => {
         try {
             if (!filename) {
-                // extract filename from url if one ins't provided
+                // extract filename from url if one isn't provided
                 try {
                     filename = new URL(url, document.baseURI).pathname.split('/').pop();
                 } catch (e) {
@@ -169,8 +159,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         }
     };
 
-    events.function('load', (url: string, filename?: string, focusCamera = true, animationFrame = false) => {
-        return handleLoad(url, filename, focusCamera, animationFrame);
+    events.function('import', (url: string, filename?: string, focusCamera = true, animationFrame = false) => {
+        return handleImport(url, filename, focusCamera, animationFrame);
     });
 
     // create a file selector element as fallback when showOpenFilePicker isn't available
@@ -187,7 +177,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
             for (let i = 0; i < files.length; i++) {
                 const file = fileSelector.files[i];
                 const url = URL.createObjectURL(file);
-                await handleLoad(url, file.name);
+                await handleImport(url, file.name);
                 URL.revokeObjectURL(url);
             }
         };
@@ -196,7 +186,13 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
 
     // create the file drag & drop handler
     CreateDropHandler(dropTarget, async (entries, shift) => {
-        // filter out non gaussian scene files
+        // document load, only support a single file drop
+        if (entries.length === 1 && entries[0].file?.name?.toLowerCase().endsWith('.ssproj')) {
+            await events.invoke('doc.dropped', entries[0].file);
+            return;
+        }
+
+        // filter out non supported extensions
         entries = entries.filter((entry) => {
             const name = entry.file?.name;
             if (!name) return false;
@@ -213,11 +209,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         } else {
             // determine if all files share a common filename prefix followed by
             // a frame number, e.g. "frame0001.ply", "frame0002.ply", etc.
-            const isAnimation = () => {
-                if (entries.length <= 1) {
-                    return false;
-                }
-
+            const isSequence = () => {
                 // eslint-disable-next-line regexp/no-super-linear-backtracking
                 const regex = /(.*?)(\d+).ply$/;
                 const baseMatch = entries[0].file.name?.match(regex);
@@ -235,14 +227,14 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                 return true;
             };
 
-            if (isAnimation()) {
+            if (entries.length > 1 && isSequence()) {
                 events.fire('animation.setFrames', entries.map(e => e.file));
                 events.fire('animation.setFrame', 0);
             } else {
                 for (let i = 0; i < entries.length; i++) {
                     const entry = entries[i];
                     const url = URL.createObjectURL(entry.file);
-                    await handleLoad(url, entry.filename);
+                    await handleImport(url, entry.filename);
                     URL.revokeObjectURL(url);
                 }
             }
@@ -256,6 +248,10 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         .filter(splat => splat.numSplats > 0);
     };
 
+    events.function('scene.allSplats', () => {
+        return (scene.getElementsByType(ElementType.splat) as Splat[]);
+    });
+
     events.function('scene.splats', () => {
         return getSplats();
     });
@@ -264,25 +260,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         return getSplats().length === 0;
     });
 
-    events.function('scene.new', async () => {
-        if (events.invoke('scene.dirty')) {
-            const result = await events.invoke('showPopup', {
-                type: 'yesno',
-                header: 'RESET SCENE',
-                message: 'You have unsaved changes. Are you sure you want to reset the scene?'
-            });
-
-            if (result.action !== 'yes') {
-                return false;
-            }
-        }
-
-        events.fire('scene.clear');
-
-        return true;
-    });
-
-    events.function('scene.open', async () => {
+    events.function('scene.import', async () => {
         if (fileSelector) {
             fileSelector.click();
         } else {
@@ -296,7 +274,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                     const handle = handles[i];
                     const file = await handle.getFile();
                     const url = URL.createObjectURL(file);
-                    await handleLoad(url, file.name);
+                    await handleImport(url, file.name);
                     URL.revokeObjectURL(url);
 
                     if (i === 0) {
@@ -336,52 +314,6 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
             if (error.name !== 'AbortError') {
                 console.error(error);
             }
-        }
-    });
-
-    events.on('scene.save', async () => {
-        if (fileHandle) {
-            try {
-                await events.invoke('scene.write', {
-                    type: 'ply',
-                    stream: await fileHandle.createWritable()
-                });
-                events.fire('scene.saved');
-            } catch (error) {
-                if (error.name !== 'AbortError') {
-                    console.error(error);
-                }
-            }
-        } else {
-            events.fire('scene.saveAs');
-        }
-    });
-
-    events.on('scene.saveAs', async () => {
-        const splats = getSplats();
-        const splat = splats[0];
-
-        if (window.showSaveFilePicker) {
-            try {
-                const handle = await window.showSaveFilePicker({
-                    id: 'SuperSplatFileSave',
-                    types: [filePickerTypes.ply],
-                    suggestedName: fileHandle?.name ?? splat.filename ?? 'scene.ply'
-                });
-                await events.invoke('scene.write', {
-                    type: 'ply',
-                    stream: await handle.createWritable()
-                });
-                fileHandle = handle;
-                events.fire('scene.saved');
-            } catch (error) {
-                if (error.name !== 'AbortError') {
-                    console.error(error);
-                }
-            }
-        } else {
-            await events.invoke('scene.export', 'ply', splat.filename, 'saveAs');
-            events.fire('scene.saved');
         }
     });
 
@@ -448,7 +380,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         }
     });
 
-    const writeScene = async (type: ExportType, writeFunc: WriteFunc, viewerExportSettings?: ViewerExportSettings) => {
+    const writeScene = async (type: ExportType, writer: Writer, viewerExportSettings?: ViewerExportSettings) => {
         const splats = getSplats();
         const events = splats[0].scene.events;
 
@@ -458,16 +390,16 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
 
         switch (type) {
             case 'ply':
-                await serializePly(splats, serializeSettings, writeFunc);
+                await serializePly(splats, serializeSettings, writer);
                 break;
             case 'compressed-ply':
-                await serializePlyCompressed(splats, serializeSettings, writeFunc);
+                await serializePlyCompressed(splats, serializeSettings, writer);
                 break;
             case 'splat':
-                await serializeSplat(splats, serializeSettings, writeFunc);
+                await serializeSplat(splats, serializeSettings, writer);
                 break;
             case 'viewer':
-                await serializeViewer(splats, viewerExportSettings, writeFunc);
+                await serializeViewer(splats, viewerExportSettings, writer);
                 break;
         }
     };
@@ -482,45 +414,10 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
             });
 
             const { stream, filename, type, viewerExportSettings } = options;
+            const writer = stream ? new FileStreamWriter(stream) : new DownloadWriter(filename);
 
-            if (stream) {
-                // writer must keep track of written bytes because JS streams don't
-                let cursor = 0;
-                const writeFunc = (data: Uint8Array) => {
-                    cursor += data.byteLength;
-                    return stream.write(data);
-                };
-
-                await stream.seek(0);
-                await writeScene(type, writeFunc, viewerExportSettings);
-                await stream.truncate(cursor);
-                await stream.close();
-            } else if (filename) {
-                // safari and firefox: concatenate data into single buffer for old-school download
-                let data: Uint8Array = null;
-                let cursor = 0;
-
-                const writeFunc = (chunk: Uint8Array, finalWrite?: boolean) => {
-                    if (!data) {
-                        data = finalWrite ? chunk : chunk.slice();
-                        cursor = chunk.byteLength;
-                    } else {
-                        if (data.byteLength < cursor + chunk.byteLength) {
-                            let newSize = data.byteLength * 2;
-                            while (newSize < cursor + chunk.byteLength) {
-                                newSize *= 2;
-                            }
-                            const newData = new Uint8Array(newSize);
-                            newData.set(data);
-                            data = newData;
-                        }
-                        data.set(chunk, cursor);
-                        cursor += chunk.byteLength;
-                    }
-                };
-                await writeScene(type, writeFunc, viewerExportSettings);
-                download(filename, (cursor === data.byteLength) ? data : new Uint8Array(data.buffer, 0, cursor));
-            }
+            await writeScene(type, writer, viewerExportSettings);
+            await writer.close();
         } catch (error) {
             await events.invoke('showPopup', {
                 type: 'error',

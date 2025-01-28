@@ -20,7 +20,6 @@ import {
     RenderTarget,
     Texture,
     Vec3,
-    Vec4,
     WebglGraphicsDevice
 } from 'playcanvas';
 
@@ -129,10 +128,6 @@ class Camera extends Element {
         return new Vec3(t.x, t.y, t.z);
     }
 
-    setFocalPoint(point: Vec3, dampingFactorFactor: number = 1) {
-        this.focalPointTween.goto(point, dampingFactorFactor * this.scene.config.controls.dampingFactor);
-    }
-
     // azimuth, elevation
     get azimElev() {
         return this.azimElevTween.target;
@@ -148,6 +143,10 @@ class Camera extends Element {
 
     get distance() {
         return this.distanceTween.target.distance;
+    }
+
+    setFocalPoint(point: Vec3, dampingFactorFactor: number = 1) {
+        this.focalPointTween.goto(point, dampingFactorFactor * this.scene.config.controls.dampingFactor);
     }
 
     setAzimElev(azim: number, elev: number, dampingFactorFactor: number = 1) {
@@ -583,6 +582,25 @@ class Camera extends Element {
         }
 
         return result;
+    }
+
+    docSerialize() {
+        const pack3 = (v: Vec3) => [v.x, v.y, v.z];
+
+        return {
+            focalPoint: pack3(this.focalPointTween.target),
+            azim: this.azim,
+            elev: this.elevation,
+            distance: this.distance,
+            fov: this.fov
+        };
+    }
+
+    docDeserialize(settings: any) {
+        this.setFocalPoint(new Vec3(settings.focalPoint), 0);
+        this.setAzimElev(settings.azim, settings.elev, 0);
+        this.setDistance(settings.distance, 0);
+        this.fov = settings.fov;
     }
 }
 

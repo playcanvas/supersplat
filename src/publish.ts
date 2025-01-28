@@ -1,4 +1,5 @@
 import { Events } from './events';
+import { BufferWriter, GZipWriter } from './serialize/writer';
 import { serializePlyCompressed, ViewerSettings, SerializeSettings } from './splat-serialize';
 import { localize } from './ui/localization';
 
@@ -103,15 +104,14 @@ const registerPublishEvents = (events: Events) => {
                 const splats = events.invoke('scene.splats');
 
                 // serialize/compress
-                let data: Uint8Array = null;
-                await serializePlyCompressed(splats, publishSettings.serializeSettings, (chunk: Uint8Array) => {
-                    data = chunk;
-                });
+                const writer = new BufferWriter();
+                const gzipWriter = new GZipWriter(writer);
+                await serializePlyCompressed(splats, publishSettings.serializeSettings, gzipWriter);
+                await gzipWriter.close();
+                const buffer = writer.close();
 
                 // publish
-                const response = await publish(data, publishSettings);
-
-                events.fire('stopSpinner');
+                const response = await publish(buffer, publishSettings);
 
                 if (!response) {
                     await events.invoke('showPopup', {
@@ -128,13 +128,13 @@ const registerPublishEvents = (events: Events) => {
                     });
                 }
             } catch (error) {
-                events.fire('stopSpinner');
-
                 await events.invoke('showPopup', {
                     type: 'error',
                     header: localize('publish.failed'),
                     message: `'${error.message ?? error}'`
                 });
+            } finally {
+                events.fire('stopSpinner');
             }
         }
     });

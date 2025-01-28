@@ -337,7 +337,6 @@ class Camera extends Element {
     }
 
     serialize(serializer: Serializer) {
-        serializer.pack();
         serializer.packa(this.entity.getWorldTransform().data);
         serializer.pack(
             this.fov,

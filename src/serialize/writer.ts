@@ -103,4 +103,38 @@ class DownloadWriter implements Writer {
     }
 }
 
-export { Writer, FileStreamWriter, BufferWriter, DownloadWriter };
+// compresses the stream with gzip
+class GZipWriter implements Writer {
+    write: (data: Uint8Array, finalWrite?: boolean) => void;
+    close: () => void;
+
+    constructor(writer: Writer) {
+        const stream = new CompressionStream('gzip');
+        const streamWriter = stream.writable.getWriter();
+        const streamReader = stream.readable.getReader();
+
+        // hook up the reader side of the compressed stream
+        const reader = new Promise(async (resolve, reject) => {
+            while (true) {
+                const { done, value } = await streamReader.read();
+                if (done) break;
+                await writer.write(value);
+            }
+            resolve(true);
+        });
+
+        this.write = async (data: Uint8Array, finalWrite?: boolean) => {
+            await streamWriter.write(data);
+        };
+
+        this.close = async () => {
+            // close the writer, we're done
+            await streamWriter.close();
+
+            // wait for the reader to finish sending data
+            await reader;
+        };
+    }
+};
+
+export { Writer, FileStreamWriter, BufferWriter, DownloadWriter, GZipWriter };

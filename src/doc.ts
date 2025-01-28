@@ -12,7 +12,7 @@ type FilePickerAcceptType = unknown;
 const SuperFileType: FilePickerAcceptType[] = [{
     description: 'SuperSplat document',
     accept: {
-        'application/octet-stream': ['.super']
+        'application/octet-stream': ['.ssproj']
     }
 }];
 
@@ -27,7 +27,7 @@ class FileSelector {
         const fileSelector = document.createElement('input');
         fileSelector.setAttribute('id', 'document-file-selector');
         fileSelector.setAttribute('type', 'file');
-        fileSelector.setAttribute('accept', '.super');
+        fileSelector.setAttribute('accept', '.ssproj');
         fileSelector.setAttribute('multiple', 'false');
 
         document.body.append(fileSelector);
@@ -258,7 +258,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 const handle = await window.showSaveFilePicker({
                     id: 'SuperSplatDocumentSave',
                     types: SuperFileType,
-                    suggestedName: 'scene.super'
+                    suggestedName: 'scene.ssproj'
                 });
                 await saveDocument({ stream: await handle.createWritable() });
                 documentFileHandle = handle;
@@ -271,7 +271,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
             }
         } else {
             await saveDocument({
-                filename: 'scene.super'
+                filename: 'scene.ssproj'
             });
             events.fire('doc.saved');
         }

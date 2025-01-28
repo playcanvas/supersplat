@@ -148,6 +148,11 @@ class Menu extends Container {
             isEnabled: () => !events.invoke('scene.empty'),
             onSelect: async () => await events.invoke('doc.saveAs')
         }, {
+            text: localize('scene.save-screenshot'),
+            icon: createSvg(sceneExport),
+            isEnabled: () => true,
+            onSelect: () => events.invoke('scene.saveScreenshot')
+        }, {
             // separator
         }, {
             text: localize('scene.import'),
@@ -165,13 +170,6 @@ class Menu extends Container {
             isEnabled: () => !events.invoke('scene.empty'),
             isVisible: () => events.invoke('app.publish'),
             onSelect: () => events.invoke('scene.publish')
-        }, {
-            // separator
-        }, {
-            text: localize('scene.save-screenshot'),
-            icon: createSvg(sceneExport),
-            isEnabled: () => true,
-            onSelect: () => events.invoke('scene.saveScreenshot')
         }]);
 
         const selectionMenuPanel = new MenuPanel([{

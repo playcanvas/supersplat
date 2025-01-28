@@ -187,7 +187,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
     // create the file drag & drop handler
     CreateDropHandler(dropTarget, async (entries, shift) => {
         // document load, only support a single file drop
-        if (entries.length === 1 && entries[0].file?.name?.toLowerCase().endsWith('.super')) {
+        if (entries.length === 1 && entries[0].file?.name?.toLowerCase().endsWith('.ssproj')) {
             await events.invoke('doc.dropped', entries[0].file);
             return;
         }

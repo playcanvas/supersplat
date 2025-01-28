@@ -1,5 +1,5 @@
 import { Events } from './events';
-import { BufferWriter } from './serialize/writer';
+import { BufferWriter, GZipWriter } from './serialize/writer';
 import { serializePlyCompressed, ViewerSettings, SerializeSettings } from './splat-serialize';
 import { localize } from './ui/localization';
 
@@ -105,7 +105,9 @@ const registerPublishEvents = (events: Events) => {
 
                 // serialize/compress
                 const writer = new BufferWriter();
-                await serializePlyCompressed(splats, publishSettings.serializeSettings, writer);
+                const gzipWriter = new GZipWriter(writer);
+                await serializePlyCompressed(splats, publishSettings.serializeSettings, gzipWriter);
+                await gzipWriter.close();
                 const buffer = writer.close();
 
                 // publish

@@ -1,4 +1,4 @@
-import { BooleanInput, ColorPicker, Container, Label, SliderInput } from 'pcui';
+import { BooleanInput, ColorPicker, Container, Label, SelectInput, SliderInput } from 'pcui';
 import { Color } from 'playcanvas';
 
 import { Events } from '../events';
@@ -102,6 +102,34 @@ class ViewPanel extends Container {
 
         clrRow.append(clrLabel);
         clrRow.append(clrPickers);
+
+        // tonemapping
+
+        const tonemappingRow = new Container({
+            class: 'view-panel-row'
+        });
+
+        const tonemappingLabel = new Label({
+            text: localize('options.tonemapping'),
+            class: 'view-panel-row-label'
+        });
+
+        const tonemappingSelection = new SelectInput({
+            class: 'view-panel-row-select',
+            defaultValue: 'none',
+            options: [
+                { v: 'none', t: localize('options.tonemapping-none') },
+                { v: 'linear', t: localize('options.tonemapping-linear') },
+                { v: 'neutral', t: localize('options.tonemapping-neutral') },
+                { v: 'aces', t: localize('options.tonemapping-aces') },
+                { v: 'aces2', t: localize('options.tonemapping-aces2') },
+                { v: 'filmic', t: localize('options.tonemapping-filmic') },
+                { v: 'hejl', t: localize('options.tonemapping-hejl') }
+            ]
+        });
+
+        tonemappingRow.append(tonemappingLabel);
+        tonemappingRow.append(tonemappingSelection);
 
         // camera fov
 
@@ -252,13 +280,14 @@ class ViewPanel extends Container {
 
         this.append(header);
         this.append(clrRow);
+        this.append(tonemappingRow);
         this.append(fovRow);
         this.append(shBandsRow);
         this.append(centersSizeRow);
+        this.append(cameraFlySpeedRow);
         this.append(outlineSelectionRow);
         this.append(showGridRow);
         this.append(showBoundRow);
-        this.append(cameraFlySpeedRow);
 
         // handle panel visibility
 
@@ -381,6 +410,16 @@ class ViewPanel extends Container {
 
         fovSlider.on('change', (value: number) => {
             events.fire('camera.setFov', value);
+        });
+
+        // tonemapping
+
+        events.on('camera.tonemapping', (tonemapping: string) => {
+            tonemappingSelection.value = tonemapping;
+        });
+
+        tonemappingSelection.on('change', (value: string) => {
+            events.fire('camera.setTonemapping', value);
         });
 
         // tooltips

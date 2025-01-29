@@ -54,7 +54,7 @@
             display: flex;
             flex-direction: row;
             margin: 2px 2px;
-            width: 187px;
+            width: 185px;
             justify-content: space-between;
 
             & > .view-panel-row-picker {
@@ -62,6 +62,11 @@
                 padding: 0px;
                 height: 24px;
             }
+        }
+
+        & > .view-panel-row-select {
+            width: 187px;
+            margin: 0;
         }
     }
 }

@@ -116,19 +116,12 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     // camera.tonemapping
 
-    const setTonemapping = (tonemapping: string) => {
-        if (tonemapping !== scene.camera.tonemapping) {
-            scene.camera.tonemapping = tonemapping;
-            events.fire('camera.tonemapping', scene.camera.tonemapping);
-        }
-    };
-
     events.function('camera.tonemapping', () => {
         return scene.camera.tonemapping;
     });
 
     events.on('camera.setTonemapping', (value: string) => {
-        setTonemapping(value);
+        scene.camera.tonemapping = value;
     });
 
     // camera.bound

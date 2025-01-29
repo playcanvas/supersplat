@@ -116,7 +116,13 @@ class Camera extends Element {
             filmic: TONEMAP_FILMIC,
             hejl: TONEMAP_HEJL
         };
-        this.entity.camera.toneMapping = mapping[value] ?? TONEMAP_NONE;
+
+        const tvalue = mapping[value];
+
+        if (tvalue !== undefined && tvalue !== this.entity.camera.toneMapping) {
+            this.entity.camera.toneMapping = tvalue;
+            this.scene.events.fire('camera.tonemapping', value);
+        }
     }
 
     get tonemapping() {

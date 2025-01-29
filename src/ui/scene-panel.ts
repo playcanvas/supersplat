@@ -62,7 +62,7 @@ class ScenePanel extends Container {
         });
 
         sceneNew.on('click', () => {
-            events.invoke('scene.new');
+            events.invoke('doc.new');
         });
 
         tooltips.register(sceneImport, 'Import Scene', 'top');

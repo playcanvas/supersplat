@@ -124,13 +124,13 @@ class ViewPanel extends Container {
                 { v: 'aces', t: localize('options.tonemapping-aces') },
                 { v: 'aces2', t: localize('options.tonemapping-aces2') },
                 { v: 'filmic', t: localize('options.tonemapping-filmic') },
-                { v: 'hejl', t: localize('options.tonemapping-hejl') },
+                { v: 'hejl', t: localize('options.tonemapping-hejl') }
             ]
         });
 
         tonemappingRow.append(tonemappingLabel);
         tonemappingRow.append(tonemappingSelection);
-        
+
         // camera fov
 
         const fovRow = new Container({

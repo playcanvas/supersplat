@@ -107,6 +107,16 @@ class CameraPanel extends Container {
         const poses: { pose: Pose, row: Container }[] = [];
         let currentPose = -1;
 
+        // animation support
+        let animHandle: EventHandle = null;
+
+        // stop the playing animation
+        const stop = () => {
+            posePlay.text = '\uE131';
+            animHandle.off();
+            animHandle = null;
+        };
+
         const setPose = (index: number, speed = 1) => {
             if (index === currentPose) {
                 return;
@@ -128,7 +138,7 @@ class CameraPanel extends Container {
             currentPose = index;
 
             // cancel animation playback if user selects a pose during animation
-            if (updateHandle) {
+            if (animHandle) {
                 stop();
             }
         };
@@ -189,15 +199,6 @@ class CameraPanel extends Container {
             nextPose();
         });
 
-        let updateHandle: EventHandle = null;
-
-        // stop the playing animation
-        const stop = () => {
-            posePlay.text = '\uE131';
-            updateHandle.off();
-            updateHandle = null;
-        };
-
         // start playing the current camera poses animation
         const play = () => {
             posePlay.text = '\uE135';
@@ -218,7 +219,7 @@ class CameraPanel extends Container {
             let time = 0;
 
             // handle application update tick
-            updateHandle = events.on('update', (dt: number) => {
+            animHandle = events.on('update', (dt: number) => {
                 time = (time + dt) % (poses.length - 1);
 
                 // evaluate the spline at current time
@@ -232,7 +233,7 @@ class CameraPanel extends Container {
         };
 
         posePlay.on('click', () => {
-            if (updateHandle) {
+            if (animHandle) {
                 stop();
             } else if (poses.length > 0) {
                 play();
@@ -254,7 +255,7 @@ class CameraPanel extends Container {
         // cancel animation playback if user interacts with camera
         events.on('camera.controller', (type: string) => {
             if (type !== 'pointermove') {
-                if (updateHandle) {
+                if (animHandle) {
                     stop();
                 } else {
                     setPose(-1);

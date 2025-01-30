@@ -3,14 +3,20 @@ import { path, Vec3 } from 'playcanvas';
 import { CreateDropHandler } from './drop-handler';
 import { ElementType } from './element';
 import { Events } from './events';
+import { initializeFirebaseStorage } from './firebase/storage';
 import { Scene } from './scene';
+import { FirebaseWriter } from './serialize/firebase-writer';
 import { Writer, DownloadWriter, FileStreamWriter } from './serialize/writer';
 import { Splat } from './splat';
 import { serializePly, serializePlyCompressed, serializeSplat, serializeViewer, ViewerExportSettings } from './splat-serialize';
 import { localize } from './ui/localization';
 
-// ts compiler and vscode find this type, but eslint does not
-type FilePickerAcceptType = unknown;
+type FilePickerAcceptType = {
+    description?: string;
+    accept: {
+        [mimeType: string]: string[];
+    };
+};
 
 interface RemoteStorageDetails {
     method: string;
@@ -23,7 +29,8 @@ interface SceneWriteOptions {
     type: ExportType;
     filename?: string;
     stream?: FileSystemWritableFileStream;
-    viewerExportSettings?: ViewerExportSettings
+    viewerExportSettings?: ViewerExportSettings;
+    useFirebase?: boolean;
 }
 
 const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
@@ -126,6 +133,8 @@ const loadCameraPoses = async (url: string, filename: string, events: Events) =>
 
 // initialize file handler events
 const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, remoteStorageDetails: RemoteStorageDetails) => {
+    // Initialize Firebase storage if available
+    const firebaseStorage = initializeFirebaseStorage();
 
     // returns a promise that resolves when the file is loaded
     const handleImport = async (url: string, filename?: string, focusCamera = true, animationFrame = false) => {
@@ -133,7 +142,17 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
             if (!filename) {
                 // extract filename from url if one isn't provided
                 try {
-                    filename = new URL(url, document.baseURI).pathname.split('/').pop();
+                    const urlObj = new URL(url);
+                    const pathParts = urlObj.pathname.split('/');
+                    // Look for the splats directory in the path
+                    const splatsIndex = pathParts.findIndex(part => part === 'splats');
+                    if (splatsIndex !== -1 && splatsIndex < pathParts.length - 1) {
+                        filename = pathParts[splatsIndex + 1];
+                    } else {
+                        filename = pathParts[pathParts.length - 1];
+                    }
+                    // Remove any query parameters
+                    filename = filename.split('?')[0];
                 } catch (e) {
                     filename = url;
                 }
@@ -293,7 +312,6 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
     events.function('scene.openAnimation', async () => {
         try {
             const handle = await window.showDirectoryPicker({
-                id: 'SuperSplatFileOpenAnimation',
                 mode: 'readwrite'
             });
 
@@ -317,7 +335,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         }
     });
 
-    events.function('scene.export', async (type: ExportType, outputFilename: string = null, exportType: 'export' | 'saveAs' = 'export') => {
+    events.function('scene.export', async (type: ExportType, outputFilename: string = null, exportType: 'export' | 'saveAs' = 'export', useFirebase = false) => {
         const extensions = {
             'ply': '.ply',
             'compressed-ply': '.compressed.ply',
@@ -337,7 +355,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         const splat = splats[0];
         let filename = outputFilename ?? replaceExtension(splat.filename, extensions[type]);
 
-        const hasFilePicker = window.showSaveFilePicker;
+        const hasFilePicker = window.showSaveFilePicker && !useFirebase;
 
         let viewerExportSettings;
         if (type === 'viewer') {
@@ -376,7 +394,12 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                 }
             }
         } else {
-            await events.invoke('scene.write', { type, filename, viewerExportSettings });
+            await events.invoke('scene.write', {
+                type,
+                filename,
+                viewerExportSettings,
+                useFirebase
+            });
         }
     });
 
@@ -413,11 +436,24 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                 setTimeout(resolve);
             });
 
-            const { stream, filename, type, viewerExportSettings } = options;
-            const writer = stream ? new FileStreamWriter(stream) : new DownloadWriter(filename);
+            const { stream, filename, type, viewerExportSettings, useFirebase } = options;
+            let writer: Writer;
+
+            if (useFirebase && firebaseStorage) {
+                writer = new FirebaseWriter(filename, firebaseStorage);
+            } else if (stream) {
+                writer = new FileStreamWriter(stream);
+            } else {
+                writer = new DownloadWriter(filename);
+            }
 
             await writeScene(type, writer, viewerExportSettings);
-            await writer.close();
+            const result = await writer.close();
+
+            // If using Firebase, return the URL
+            if (useFirebase && typeof result === 'string') {
+                events.fire('firebase.uploadComplete', result);
+            }
         } catch (error) {
             await events.invoke('showPopup', {
                 type: 'error',

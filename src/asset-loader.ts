@@ -106,7 +106,7 @@ class AssetLoader {
 
         return new Promise<Splat>((resolve, reject) => {
             const asset = new Asset(
-                loadRequest.filename || loadRequest.url,
+                loadRequest.filename || loadRequest.url || 'untitled',
                 'gsplat',
                 {
                     url: loadRequest.url,
@@ -165,17 +165,28 @@ class AssetLoader {
         this.events.fire('startSpinner');
 
         return new Promise<Splat>((resolve, reject) => {
-            fetch(loadRequest.url || loadRequest.filename)
-            .then((response) => {
-                if (!response || !response.ok || !response.body) {
-                    reject(new Error('Failed to fetch splat data'));
-                } else {
-                    return response.arrayBuffer();
+            if (!loadRequest.url && !loadRequest.filename) {
+                reject(new Error('No URL or filename provided'));
+                return;
+            }
+            fetch(loadRequest.url || loadRequest.filename || '', {
+                headers: {
+                    'Accept': 'application/octet-stream'
                 }
             })
-            .then(arrayBuffer => deserializeFromSSplat(arrayBuffer))
+            .then(async (response) => {
+                if (!response || !response.ok || !response.body) {
+                    console.error('Fetch error:', response.status, response.statusText);
+                    throw new Error(`Failed to fetch splat data: ${response.status} ${response.statusText}`);
+                }
+                const arrayBuffer = await response.arrayBuffer();
+                if (!arrayBuffer) {
+                    throw new Error('Failed to get array buffer from response');
+                }
+                return deserializeFromSSplat(arrayBuffer);
+            })
             .then((gsplatData) => {
-                const asset = new Asset(loadRequest.filename || loadRequest.url, 'gsplat', {
+                const asset = new Asset(loadRequest.filename || loadRequest.url || 'untitled', 'gsplat', {
                     url: loadRequest.url,
                     filename: loadRequest.filename
                 });
@@ -192,7 +203,7 @@ class AssetLoader {
     }
 
     loadModel(loadRequest: ModelLoadRequest) {
-        const filename = (loadRequest.filename || loadRequest.url).toLowerCase();
+        const filename = (loadRequest.filename || loadRequest.url || 'untitled').toLowerCase();
         if (filename.endsWith('.ply')) {
             return this.loadPly(loadRequest);
         } else if (filename.endsWith('.splat')) {

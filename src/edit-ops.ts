@@ -403,8 +403,8 @@ class AddSplatOp {
     }
 }
 
+export type { EditOp, ColorAdjustment };
 export {
-    EditOp,
     SelectAllOp,
     SelectNoneOp,
     SelectInvertOp,
@@ -416,7 +416,6 @@ export {
     EntityTransformOp,
     SplatsTransformOp,
     PlacePivotOp,
-    ColorAdjustment,
     SetSplatColorAdjustmentOp,
     MultiOp,
     AddSplatOp

@@ -1,5 +1,7 @@
 {
     "compilerOptions": {
+        "strict": false,
+        "strictPropertyInitialization": false,
         "noImplicitAny": true,
         "target": "es2022",
         "lib": ["es2022", "dom", "WebWorker"],
@@ -11,7 +13,7 @@
         "baseUrl": ".",
         "paths": {
             "playcanvas": ["node_modules/playcanvas/build/playcanvas"],
-            "pcui": ["node_modules/@playcanvas/pcui"]
+            "pcui": ["node_modules/@playcanvas/pcui/dist/pcui.mjs"]
         }
     },
     "include": ["./src/**/*.ts"],

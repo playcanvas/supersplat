@@ -4,7 +4,7 @@ import { Splat } from './splat';
 const registerAnimationEvents = (events: Events) => {
     // animation support
     let animationFiles: File[] = [];
-    let animationSplat: Splat = null;
+    let animationSplat: Splat | null = null;
     let animationFrame = -1;
     let animationLoading = false;
     let nextFrame = -1;
@@ -28,9 +28,13 @@ const registerAnimationEvents = (events: Events) => {
     // resolves on first render frame
     const firstRender = (splat: Splat) => {
         return new Promise<void>((resolve) => {
-            splat.entity.gsplat.instance.sorter.on('updated', (count) => {
-                resolve();
-            });
+            if (splat.entity?.gsplat?.instance?.sorter) {
+                splat.entity.gsplat.instance.sorter.on('updated', (count) => {
+                    resolve();
+                });
+            } else {
+                resolve(); // Resolve immediately if the sorter is not available
+            }
         });
     };
 

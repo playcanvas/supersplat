@@ -9,7 +9,7 @@ import { localize } from './ui/localization';
 // ts compiler and vscode find this type, but eslint does not
 type FilePickerAcceptType = unknown;
 
-const SuperFileType: FilePickerAcceptType[] = [{
+const SuperFileType = [{
     description: 'SuperSplat document',
     accept: {
         'application/octet-stream': ['.ssproj']

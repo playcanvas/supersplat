@@ -255,8 +255,9 @@ const main = async () => {
     // load async models
     scene.start();
 
-    // handle load params
+    // handle load params and splatUrl
     const loadList = url.searchParams.getAll('load');
+
     for (const value of loadList) {
         await events.invoke('import', decodeURIComponent(value));
     }

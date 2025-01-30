@@ -298,6 +298,9 @@ class Scene {
         // allow elements to update
         this.forEachElement(e => e.onUpdate(deltaTime));
 
+        // fire global update
+        this.events.fire('update', deltaTime);
+
         // fire a 'serialize' event which listers will use to store their state. we'll use
         // this to decide if the view has changed and so requires rendering.
         const i = this.app.frame % 2;

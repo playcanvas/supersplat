@@ -1,5 +1,7 @@
 import { Container, Label } from 'pcui';
-import { Vec3 } from 'playcanvas';
+import { EventHandle, Vec3 } from 'playcanvas';
+
+import { CubicSpline } from 'src/anim/spline';
 
 import { Events } from '../events';
 import { localize } from './localization';
@@ -124,6 +126,11 @@ class CameraPanel extends Container {
             });
 
             currentPose = index;
+
+            // cancel animation playback if user selects a pose during animation
+            if (updateHandle) {
+                stop();
+            }
         };
 
         const addPose = (pose: Pose) => {
@@ -182,26 +189,53 @@ class CameraPanel extends Container {
             nextPose();
         });
 
-        let timeout: number = null;
+        let updateHandle: EventHandle = null;
 
+        // stop the playing animation
         const stop = () => {
             posePlay.text = '\uE131';
-            clearTimeout(timeout);
-            timeout = null;
+            updateHandle.off();
+            updateHandle = null;
+        };
+
+        // start playing the current camera poses animation
+        const play = () => {
+            posePlay.text = '\uE135';
+
+            // construct the spline points to be interpolated
+            const times = poses.map((p, i) => i);
+            const points = [];
+            for (let i = 0; i < poses.length; ++i) {
+                const p = poses[i].pose;
+                points.push(p.position.x, p.position.y, p.position.z);
+                points.push(p.target.x, p.target.y, p.target.z);
+            }
+
+            // interpolate camera positions and camera target positions
+            const spline = CubicSpline.fromPoints(times, points);
+            const result: number[] = [];
+            const pose = { position: new Vec3(), target: new Vec3() };
+            let time = 0;
+
+            // handle application update tick
+            updateHandle = events.on('update', (dt: number) => {
+                time = (time + dt) % (poses.length - 1);
+
+                // evaluate the spline at current time
+                spline.evaluate(time, result);
+
+                // set camera pose
+                pose.position.set(result[0], result[1], result[2]);
+                pose.target.set(result[3], result[4], result[5]);
+                events.fire('camera.setPose', pose, 0);
+            });
         };
 
         posePlay.on('click', () => {
-            if (timeout) {
-
+            if (updateHandle) {
                 stop();
             } else if (poses.length > 0) {
-                const next = () => {
-                    nextPose();
-                    timeout = window.setTimeout(next, 250);
-                };
-
-                posePlay.text = '\uE135';
-                next();
+                play();
             }
         });
 
@@ -217,9 +251,10 @@ class CameraPanel extends Container {
             removePose(index);
         });
 
+        // cancel animation playback if user interacts with camera
         events.on('camera.controller', (type: string) => {
             if (type !== 'pointermove') {
-                if (timeout) {
+                if (updateHandle) {
                     stop();
                 } else {
                     setPose(-1);

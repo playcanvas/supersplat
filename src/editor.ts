@@ -114,6 +114,16 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         setCameraFov(fov);
     });
 
+    // camera.tonemapping
+
+    events.function('camera.tonemapping', () => {
+        return scene.camera.tonemapping;
+    });
+
+    events.on('camera.setTonemapping', (value: string) => {
+        scene.camera.tonemapping = value;
+    });
+
     // camera.bound
 
     let bound = scene.config.show.bound;

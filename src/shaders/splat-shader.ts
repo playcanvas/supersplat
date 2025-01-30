@@ -109,6 +109,9 @@ void main(void) {
         // don't allow out-of-range alpha
         color.a = clamp(color.a, 0.0, 1.0);
 
+        // apply tonemapping
+        color = vec4(prepareOutputFromGamma(max(color.xyz, 0.0)), color.w);
+
         // apply locked/selected colors
         if ((vertexState & 2u) != 0u) {
             // locked

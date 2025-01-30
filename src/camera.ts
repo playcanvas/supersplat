@@ -6,6 +6,7 @@ import {
     PIXELFORMAT_DEPTH,
     PROJECTION_ORTHOGRAPHIC,
     PROJECTION_PERSPECTIVE,
+    TONEMAP_NONE,
     TONEMAP_ACES,
     TONEMAP_ACES2,
     TONEMAP_FILMIC,
@@ -102,6 +103,39 @@ class Camera extends Element {
 
     get fov() {
         return this.entity.camera.fov;
+    }
+
+    // tonemapping
+    set tonemapping(value: string) {
+        const mapping: Record<string, number> = {
+            none: TONEMAP_NONE,
+            linear: TONEMAP_LINEAR,
+            neutral: TONEMAP_NEUTRAL,
+            aces: TONEMAP_ACES,
+            aces2: TONEMAP_ACES2,
+            filmic: TONEMAP_FILMIC,
+            hejl: TONEMAP_HEJL
+        };
+
+        const tvalue = mapping[value];
+
+        if (tvalue !== undefined && tvalue !== this.entity.camera.toneMapping) {
+            this.entity.camera.toneMapping = tvalue;
+            this.scene.events.fire('camera.tonemapping', value);
+        }
+    }
+
+    get tonemapping() {
+        switch (this.entity.camera.toneMapping) {
+            case TONEMAP_NONE: return 'none';
+            case TONEMAP_LINEAR: return 'linear';
+            case TONEMAP_NEUTRAL: return 'neutral';
+            case TONEMAP_ACES: return 'aces';
+            case TONEMAP_ACES2: return 'aces2';
+            case TONEMAP_FILMIC: return 'filmic';
+            case TONEMAP_HEJL: return 'hejl';
+        }
+        return 'none';
     }
 
     // near clip
@@ -309,9 +343,13 @@ class Camera extends Element {
     }
 
     serialize(serializer: Serializer) {
-        serializer.pack(this.fov);
         serializer.packa(this.entity.getWorldTransform().data);
-        serializer.pack(this.entity.camera.renderTarget?.width, this.entity.camera.renderTarget?.height);
+        serializer.pack(
+            this.fov,
+            this.tonemapping,
+            this.entity.camera.renderTarget?.width,
+            this.entity.camera.renderTarget?.height
+        );
     }
 
     // handle the viewer canvas resizing
@@ -592,7 +630,8 @@ class Camera extends Element {
             azim: this.azim,
             elev: this.elevation,
             distance: this.distance,
-            fov: this.fov
+            fov: this.fov,
+            tonemapping: this.tonemapping
         };
     }
 
@@ -601,6 +640,7 @@ class Camera extends Element {
         this.setAzimElev(settings.azim, settings.elev, 0);
         this.setDistance(settings.distance, 0);
         this.fov = settings.fov;
+        this.tonemapping = settings.tonemapping;
     }
 }
 

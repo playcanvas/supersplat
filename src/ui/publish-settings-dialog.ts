@@ -87,9 +87,8 @@ class PublishSettingsDialog extends Container {
             class: 'select',
             defaultValue: 'none',
             options: [
-                { v: 'none', t: localize('export.none') },
-                { v: 'orbit', t: localize('export.orbit') },
-                { v: 'pose', t: localize('export.pose') },
+                { v: 'none', t: localize('export.animation-none') },
+                { v: 'track', t: localize('export.animation-track') },
             ]
         });
         const animationRow = new Container({ class: 'row' });
@@ -206,8 +205,8 @@ class PublishSettingsDialog extends Container {
             listBoolean.value = true;
             startSelect.value = hasPoses ? 'pose' : 'viewport';
             startSelect.disabledOptions = hasPoses ? { } : { pose: startSelect.options[2].t };
-            animationSelect.value = hasPoses ? 'pose' : 'orbit';
-            animationSelect.disabledOptions = hasPoses ? { } : { pose: animationSelect.options[2].t };
+            animationSelect.value = hasPoses ? 'track' : 'none';
+            animationSelect.disabledOptions = hasPoses ? { } : { track: animationSelect.options[1].t };
             colorPicker.value = [bgClr.r, bgClr.g, bgClr.b];
             fovSlider.value = events.invoke('camera.fov');
             bandsSlider.value = events.invoke('view.bands');
@@ -244,10 +243,9 @@ class PublishSettingsDialog extends Container {
                     const t = pose?.target;
 
                     const startAnim = (() => {
-                        switch (startSelect.value) {
+                        switch (animationSelect.value) {
                             case 'none': return 'none';
-                            case 'orbit': return 'orbit';
-                            case 'pose': return 'animTrack';
+                            case 'track': return 'animTrack';
                         };
                     })();
 
@@ -255,9 +253,6 @@ class PublishSettingsDialog extends Container {
                     const animTracks: AnimTrack[] = [];
                     switch (startAnim) {
                         case 'none':
-                            break;
-                        case 'orbit':
-                            // construct an animation from the initial camera pose
                             break;
                         case 'animTrack':
                             // use camera poses

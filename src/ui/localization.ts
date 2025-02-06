@@ -380,6 +380,9 @@ const localizeInit = () => {
                     'export.fov': 'Field of View',
                     'export.background-color': 'Background',
                     'export.filename': 'Filename',
+                    'export.animation': 'Animation',
+                    'export.animation-none': 'None',
+                    'export.animation-track': 'Track',
 
                     // cursor
                     'cursor.click-to-copy': 'Click to copy',

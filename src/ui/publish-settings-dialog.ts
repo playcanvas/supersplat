@@ -273,7 +273,7 @@ class PublishSettingsDialog extends Container {
 
                             animTracks.push({
                                 name: 'cameraAnim',
-                                duration: poses.length,
+                                duration: poses.length - 1,
                                 target: 'camera',
                                 loopMode: 'repeat',
                                 interpolation: 'spline',

@@ -170,7 +170,6 @@ class Menu extends Container {
             text: localize('file.publish'),
             icon: createSvg(scenePublish),
             isEnabled: () => !events.invoke('scene.empty'),
-            isVisible: () => events.invoke('app.publish'),
             onSelect: () => events.invoke('scene.publish')
         }]);
 

@@ -110,7 +110,9 @@ const registerPublishEvents = (events: Events) => {
                 events.fire('startSpinner');
 
                 // delay to allow spinner to show (hopefully 10ms is enough)
-                await new Promise(resolve => setTimeout(resolve, 10));
+                await new Promise((resolve) => {
+                    setTimeout(resolve, 10);
+                });
 
                 const splats = events.invoke('scene.splats');
 

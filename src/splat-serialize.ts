@@ -15,7 +15,9 @@ import { BufferWriter, Writer } from './serialize/writer';
 import { ZipWriter } from './serialize/zip-writer';
 import indexCss from './templates/index.css';
 import indexHtml from './templates/index.html';
+// eslint-disable-next-line import/default
 import indexJs from './templates/index.js';
+// eslint-disable-next-line import/default
 import splineJs from './templates/spline.js';
 
 type SerializeSettings = {
@@ -996,8 +998,6 @@ const serializeViewer = async (splats: Splat[], options: ViewerExportSettings, w
         const spline = '"spline": "./spline.js"';
         const settings = '"viewerSettings": "./settings.json"';
         const content = '<pc-asset id="ply" type="gsplat" lazy src="./scene.compressed.ply"></pc-asset>';
-
-        console.log(indexCss);
 
         const html = indexHtml
         .replace(style, `<style>\n${pad(indexCss, 12)}\n        </style>`)

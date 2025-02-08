@@ -131,13 +131,13 @@ class ViewerExportPopup extends Container {
             defaultValue: 'none',
             options: [
                 { v: 'none', t: localize('export.animation-none') },
-                { v: 'track', t: localize('export.animation-track') },
+                { v: 'track', t: localize('export.animation-track') }
             ]
         });
         const animationRow = new Container({ class: 'row' });
         animationRow.append(animationLabel);
         animationRow.append(animationSelect);
-        
+
         // clear color
 
         const colorRow = new Container({
@@ -279,7 +279,7 @@ class ViewerExportPopup extends Container {
                 bandsSlider.value = events.invoke('view.bands');
                 startSelect.value = hasPoses ? 'pose' : 'viewport';
                 animationSelect.value = hasPoses ? 'track' : 'none';
-                animationSelect.disabledOptions = hasPoses ? { } : { track: animationSelect.options[1].t };    
+                animationSelect.disabledOptions = hasPoses ? { } : { track: animationSelect.options[1].t };
                 colorPicker.value = [bgClr.r, bgClr.g, bgClr.b];
                 fovSlider.value = events.invoke('camera.fov');
             }
@@ -320,7 +320,7 @@ class ViewerExportPopup extends Container {
                         switch (animationSelect.value) {
                             case 'none': return 'none';
                             case 'track': return 'animTrack';
-                        };
+                        }
                     })();
 
                     // extract camera animation
@@ -328,7 +328,7 @@ class ViewerExportPopup extends Container {
                     switch (startAnim) {
                         case 'none':
                             break;
-                        case 'animTrack':
+                        case 'animTrack': {
                             // use camera poses
                             const times = [];
                             const position = [];
@@ -353,6 +353,7 @@ class ViewerExportPopup extends Container {
                             });
 
                             break;
+                        }
                     }
 
                     const experienceSettings: ExperienceSettings = {

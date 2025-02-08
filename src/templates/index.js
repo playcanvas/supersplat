@@ -1,4 +1,5 @@
 import { BoundingBox, Color, Mat4, Script, Vec3 } from 'playcanvas';
+
 import { CubicSpline } from 'spline';
 
 // eslint-disable-next-line

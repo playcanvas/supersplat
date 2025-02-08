@@ -89,7 +89,7 @@ class PublishSettingsDialog extends Container {
             defaultValue: 'none',
             options: [
                 { v: 'none', t: localize('export.animation-none') },
-                { v: 'track', t: localize('export.animation-track') },
+                { v: 'track', t: localize('export.animation-track') }
             ]
         });
         const animationRow = new Container({ class: 'row' });
@@ -247,7 +247,7 @@ class PublishSettingsDialog extends Container {
                         switch (animationSelect.value) {
                             case 'none': return 'none';
                             case 'track': return 'animTrack';
-                        };
+                        }
                     })();
 
                     // extract camera animation
@@ -255,7 +255,7 @@ class PublishSettingsDialog extends Container {
                     switch (startAnim) {
                         case 'none':
                             break;
-                        case 'animTrack':
+                        case 'animTrack': {
                             // use camera poses
                             const times = [];
                             const position = [];
@@ -280,6 +280,7 @@ class PublishSettingsDialog extends Container {
                             });
 
                             break;
+                        }
                     }
 
                     // build experience details
@@ -307,7 +308,7 @@ class PublishSettingsDialog extends Container {
                         description: descInput.value,
                         listed: listBoolean.value,
                         serializeSettings,
-                        experienceSettings,
+                        experienceSettings
                     });
                 };
             }).finally(() => {

@@ -215,7 +215,9 @@ class FrameScene extends Script {
                 poster?.hide();
 
                 // start animating once the first frame is rendered
-                animating = true;
+                if (this.cameraAnim) {
+                    animating = true;
+                }
 
                 // emit first frame event on window
                 window.firstFrame?.();

@@ -49,21 +49,35 @@ body {
     text-align: right;
     color: #666;
 }
-#loadingIndicator {
-    font-family: 'Arial', sans-serif;
-    color: #2c3e50;
+#loadingWrap {
     position: fixed;
-    top: 50%;
+    bottom: 120px;
     left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(255, 255, 255, 0.95);
-    padding: 20px;
+    transform: translate(-50%, 0);
+    width: 380px;
+
+    display: flex;
+    flex-direction: column;
+
+    z-index: 1000;
+    padding: 16px;
     border-radius: 8px;
-    border: 1px solid #ddd;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    z-index: 1000;
+}
+#loadingWrap > #loadingText {
+    font-family: 'Arial', sans-serif;
+    font-size: 18px;
+    color: white;
+    text-align: center;
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+}
+#loadingWrap > #loadingBar {
+    width: 100%;
+    height: 10px;
+    margin-top: 8px;
+    border-radius: 4px;
+    overflow: hidden;
 }
 #buttonContainer {
     position: absolute;
@@ -77,20 +91,28 @@ body {
     position: relative;
     width: 40px;
     height: 40px;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid #ddd;
+    color: white;
+    background-color: #b3aaac;
+    border: 0;
     border-radius: 8px;
     cursor: pointer;
     align-items: center;
     justify-content: center;
     padding: 0;
     margin: 0;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    transition: background-color 0.2s;
-    color: #2c3e50;
 }
 .buttonSvg {
     display: block;
     margin: auto;
+}
+#poster {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
 }

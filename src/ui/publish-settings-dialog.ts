@@ -2,7 +2,8 @@ import { BooleanInput, Button, ColorPicker, Container, Element, Label, SelectInp
 
 import { Events } from '../events';
 import { localize } from './localization';
-import { PublishSettings, ExperienceSettings, AnimTrack } from '../publish';
+import { PublishSettings } from '../publish';
+import { AnimTrack, ExperienceSettings } from '../splat-serialize';
 import sceneExport from './svg/export.svg';
 
 const createSvg = (svgString: string, args = {}) => {

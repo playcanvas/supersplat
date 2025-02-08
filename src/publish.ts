@@ -1,36 +1,7 @@
 import { Events } from './events';
 import { BufferWriter, GZipWriter } from './serialize/writer';
-import { serializePlyCompressed, SerializeSettings } from './splat-serialize';
+import { serializePlyCompressed, ExperienceSettings, SerializeSettings } from './splat-serialize';
 import { localize } from './ui/localization';
-
-type AnimTrack = {
-    name: string,
-    duration: number,
-    target: 'camera',
-    loopMode: 'none' | 'repeat' | 'pingpong',
-    interpolation: 'step' | 'spline',
-    keyframes: {
-        times: number[],
-        values: {
-            position: number[],
-            target: number[],
-        }
-    }
-};
-
-type ExperienceSettings = {
-    camera: {
-        fov?: number,
-        position?: number[],
-        target?: number[],
-        startAnim: 'none' | 'orbit' | 'animTrack',
-        animTrack: string
-    },
-    background: {
-        color?: number[]
-    },
-    animTracks: AnimTrack[]
-};
 
 type PublishSettings = {
     title: string;
@@ -51,7 +22,7 @@ type User = {
 // check whether user is logged in
 const getUser = async () => {
     const urlResponse = await fetch(`${origin}/api/id`);
-    return await urlResponse.json() as User;
+    return urlResponse.ok && (await urlResponse.json() as User);
 };
 
 const publish = async (data: Uint8Array, publishSettings: PublishSettings, user: User) => {
@@ -180,4 +151,4 @@ const registerPublishEvents = (events: Events) => {
     });
 };
 
-export { PublishSettings, ExperienceSettings, AnimTrack, registerPublishEvents };
+export { PublishSettings, registerPublishEvents };

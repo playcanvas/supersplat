@@ -1002,8 +1002,8 @@ const serializeViewer = async (splats: Splat[], options: ViewerExportSettings, w
         const html = indexHtml
         .replace(style, `<style>\n${pad(indexCss, 12)}\n        </style>`)
         .replace(script, `<script type="module">\n${pad(indexJs, 12)}\n        </script>`)
-        .replace(spline, `"spline": "data:application/javascript;base64,${encodeBase64(new TextEncoder().encode(splineJs))}"`)
-        .replace(settings, `"viewerSettings": "data:application/json;base64,${encodeBase64(new TextEncoder().encode(JSON.stringify(experienceSettings)))}"`)
+        .replace(spline, `"spline": "data:application/javascript;,${encodeURIComponent(splineJs)}"`)
+        .replace(settings, `"viewerSettings": "data:application/json;,${encodeURIComponent(JSON.stringify(experienceSettings))}"`)
         .replace(content, `<pc-asset id="ply" type="gsplat" lazy src="data:application/ply;base64,${encodeBase64(plyBuffer)}"></pc-asset>`);
 
         await writer.write(new TextEncoder().encode(html), true);

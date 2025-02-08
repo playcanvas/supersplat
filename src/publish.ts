@@ -21,8 +21,12 @@ type User = {
 
 // check whether user is logged in
 const getUser = async () => {
-    const urlResponse = await fetch(`${origin}/api/id`);
-    return urlResponse.ok && (await urlResponse.json() as User);
+    try {
+        const urlResponse = await fetch(`${origin}/api/id`);
+        return urlResponse.ok && (await urlResponse.json() as User);
+    } catch (e) {
+        return null;
+    }
 };
 
 const publish = async (data: Uint8Array, publishSettings: PublishSettings, user: User) => {

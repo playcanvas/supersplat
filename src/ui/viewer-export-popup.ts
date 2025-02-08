@@ -242,7 +242,7 @@ class ViewerExportPopup extends Container {
                     onCancel();
                     break;
                 case 'Enter':
-                    onExport();
+                    if (!e.shiftKey) onExport();
                     break;
                 default:
                     e.stopPropagation();
@@ -261,28 +261,21 @@ class ViewerExportPopup extends Container {
 
         typeSelect.on('change', updateExtension);
 
-        let firstTime = true;
+        const reset = () => {
+            const hasPoses = events.invoke('camera.poses').length > 0;
+            const bgClr = events.invoke('bgClr');
+
+            bandsSlider.value = events.invoke('view.bands');
+            startSelect.value = hasPoses ? 'pose' : 'viewport';
+            startSelect.disabledOptions = hasPoses ? {} : { 'pose': startSelect.options[2].t };
+            animationSelect.value = hasPoses ? 'track' : 'none';
+            animationSelect.disabledOptions = hasPoses ? { } : { track: animationSelect.options[1].t };
+            colorPicker.value = [bgClr.r, bgClr.g, bgClr.b];
+            fovSlider.value = events.invoke('camera.fov');
+        };
 
         this.show = (filename?: string) => {
-            // populate values from the current state first time popup is shown
-            if (firstTime) {
-                firstTime = false;
-
-                const hasPoses = events.invoke('camera.poses').length > 0;
-                const bgClr = events.invoke('bgClr');
-
-                // disable the pose option if there are no poses
-                startSelect.disabledOptions = hasPoses ? {} : {
-                    'pose': startSelect.options[2].t
-                };
-
-                bandsSlider.value = events.invoke('view.bands');
-                startSelect.value = hasPoses ? 'pose' : 'viewport';
-                animationSelect.value = hasPoses ? 'track' : 'none';
-                animationSelect.disabledOptions = hasPoses ? { } : { track: animationSelect.options[1].t };
-                colorPicker.value = [bgClr.r, bgClr.g, bgClr.b];
-                fovSlider.value = events.invoke('camera.fov');
-            }
+            reset();
 
             // filename is only shown in safari where file picker is not supported
             filenameRow.hidden = !filename;

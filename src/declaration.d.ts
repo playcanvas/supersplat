@@ -13,6 +13,9 @@ declare module '*.scss' {
     export default value;
 }
 
+// these declarations are so typescript considers the
+// viewer source stored in src/templates as strings.
+// we use rollup-plugin-string to inline these files.
 declare module '*.css' {
     const content: string;
     export default content;

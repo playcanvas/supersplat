@@ -113,7 +113,7 @@ const application = {
                 include: ['**/*.ts'],
                 functions: ['Debug.exec']
             }),
-        // BUILD_TYPE !== 'debug' && terser()
+        BUILD_TYPE !== 'debug' && terser()
         // visualizer()
     ],
     treeshake: 'smallest',

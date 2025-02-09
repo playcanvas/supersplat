@@ -3,6 +3,7 @@ import { BooleanInput, Button, ColorPicker, Container, Element, Label, SelectInp
 import { Events } from '../events';
 import { localize } from './localization';
 import { PublishSettings } from '../publish';
+import { AnimTrack, ExperienceSettings } from '../splat-serialize';
 import sceneExport from './svg/export.svg';
 
 const createSvg = (svgString: string, args = {}) => {
@@ -80,6 +81,21 @@ class PublishSettingsDialog extends Container {
         startRow.append(startLabel);
         startRow.append(startSelect);
 
+        // animation
+
+        const animationLabel = new Label({ class: 'label', text: localize('export.animation') });
+        const animationSelect = new SelectInput({
+            class: 'select',
+            defaultValue: 'none',
+            options: [
+                { v: 'none', t: localize('export.animation-none') },
+                { v: 'track', t: localize('export.animation-track') }
+            ]
+        });
+        const animationRow = new Container({ class: 'row' });
+        animationRow.append(animationLabel);
+        animationRow.append(animationSelect);
+
         // clear color
 
         const colorLabel = new Label({ class: 'label', text: localize('export.background-color') });
@@ -126,6 +142,7 @@ class PublishSettingsDialog extends Container {
         content.append(descRow);
         content.append(listRow);
         content.append(startRow);
+        content.append(animationRow);
         content.append(colorRow);
         content.append(fovRow);
         content.append(bandsRow);
@@ -189,6 +206,8 @@ class PublishSettingsDialog extends Container {
             listBoolean.value = true;
             startSelect.value = hasPoses ? 'pose' : 'viewport';
             startSelect.disabledOptions = hasPoses ? { } : { pose: startSelect.options[2].t };
+            animationSelect.value = hasPoses ? 'track' : 'none';
+            animationSelect.disabledOptions = hasPoses ? { } : { track: animationSelect.options[1].t };
             colorPicker.value = [bgClr.r, bgClr.g, bgClr.b];
             fovSlider.value = events.invoke('camera.fov');
             bandsSlider.value = events.invoke('view.bands');
@@ -209,10 +228,13 @@ class PublishSettingsDialog extends Container {
                 };
 
                 onOK = () => {
+                    const poses = events.invoke('camera.poses');
+
+                    // extract camera starting position
                     let pose;
                     switch (startSelect.value) {
                         case 'pose':
-                            pose = events.invoke('camera.poses')?.[0];
+                            pose = poses?.[0];
                             break;
                         case 'viewport':
                             pose = events.invoke('camera.getPose');
@@ -221,15 +243,59 @@ class PublishSettingsDialog extends Container {
                     const p = pose?.position;
                     const t = pose?.target;
 
-                    const viewerSettings = {
+                    const startAnim = (() => {
+                        switch (animationSelect.value) {
+                            case 'none': return 'none';
+                            case 'track': return 'animTrack';
+                        }
+                    })();
+
+                    // extract camera animation
+                    const animTracks: AnimTrack[] = [];
+                    switch (startAnim) {
+                        case 'none':
+                            break;
+                        case 'animTrack': {
+                            // use camera poses
+                            const times = [];
+                            const position = [];
+                            const target = [];
+                            for (let i = 0; i < poses.length; ++i) {
+                                const p = poses[i];
+                                times.push(i);
+                                position.push(p.position.x, p.position.y, p.position.z);
+                                target.push(p.target.x, p.target.y, p.target.z);
+                            }
+
+                            animTracks.push({
+                                name: 'cameraAnim',
+                                duration: poses.length - 1,
+                                target: 'camera',
+                                loopMode: 'repeat',
+                                interpolation: 'spline',
+                                keyframes: {
+                                    times,
+                                    values: { position, target }
+                                }
+                            });
+
+                            break;
+                        }
+                    }
+
+                    // build experience details
+                    const experienceSettings: ExperienceSettings = {
                         camera: {
                             fov: fovSlider.value,
                             position: p ? [p.x, p.y, p.z] : null,
-                            target: t ? [t.x, t.y, t.z] : null
+                            target: t ? [t.x, t.y, t.z] : null,
+                            startAnim,
+                            animTrack: startAnim === 'animTrack' ? 'cameraAnim' : null
                         },
                         background: {
                             color: colorPicker.value.slice()
-                        }
+                        },
+                        animTracks
                     };
 
                     const serializeSettings = {
@@ -241,8 +307,8 @@ class PublishSettingsDialog extends Container {
                         title: titleInput.value,
                         description: descInput.value,
                         listed: listBoolean.value,
-                        viewerSettings,
-                        serializeSettings
+                        serializeSettings,
+                        experienceSettings
                     });
                 };
             }).finally(() => {

@@ -31,5 +31,9 @@ export default [
             'no-await-in-loop': 'off',
             'require-atomic-updates': 'off',
         }
+    }, {
+        ignores: [
+            'src/templates/'
+        ],
     }
 ];

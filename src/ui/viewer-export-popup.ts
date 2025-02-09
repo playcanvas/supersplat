@@ -3,7 +3,7 @@ import { path } from 'playcanvas';
 
 import { localize } from './localization';
 import { Events } from '../events';
-import { ViewerExportSettings } from '../splat-serialize';
+import { AnimTrack, ExperienceSettings, ViewerExportSettings } from '../splat-serialize';
 import sceneExport from './svg/export.svg';
 
 const createSvg = (svgString: string, args = {}) => {
@@ -123,6 +123,21 @@ class ViewerExportPopup extends Container {
         startRow.append(startLabel);
         startRow.append(startSelect);
 
+        // animation
+
+        const animationLabel = new Label({ class: 'label', text: localize('export.animation') });
+        const animationSelect = new SelectInput({
+            class: 'select',
+            defaultValue: 'none',
+            options: [
+                { v: 'none', t: localize('export.animation-none') },
+                { v: 'track', t: localize('export.animation-track') }
+            ]
+        });
+        const animationRow = new Container({ class: 'row' });
+        animationRow.append(animationLabel);
+        animationRow.append(animationSelect);
+
         // clear color
 
         const colorRow = new Container({
@@ -187,6 +202,7 @@ class ViewerExportPopup extends Container {
         content.append(typeRow);
         content.append(bandsRow);
         content.append(startRow);
+        content.append(animationRow);
         content.append(colorRow);
         content.append(fovRow);
         content.append(filenameRow);
@@ -226,7 +242,7 @@ class ViewerExportPopup extends Container {
                     onCancel();
                     break;
                 case 'Enter':
-                    onExport();
+                    if (!e.shiftKey) onExport();
                     break;
                 default:
                     e.stopPropagation();
@@ -245,27 +261,21 @@ class ViewerExportPopup extends Container {
 
         typeSelect.on('change', updateExtension);
 
-        let firstTime = true;
+        const reset = () => {
+            const hasPoses = events.invoke('camera.poses').length > 0;
+            const bgClr = events.invoke('bgClr');
+
+            bandsSlider.value = events.invoke('view.bands');
+            startSelect.value = hasPoses ? 'pose' : 'viewport';
+            startSelect.disabledOptions = hasPoses ? {} : { 'pose': startSelect.options[2].t };
+            animationSelect.value = hasPoses ? 'track' : 'none';
+            animationSelect.disabledOptions = hasPoses ? { } : { track: animationSelect.options[1].t };
+            colorPicker.value = [bgClr.r, bgClr.g, bgClr.b];
+            fovSlider.value = events.invoke('camera.fov');
+        };
 
         this.show = (filename?: string) => {
-            // populate values from the current state first time popup is shown
-            if (firstTime) {
-                firstTime = false;
-
-                const hasPoses = events.invoke('camera.poses').length > 0;
-
-                // disable the pose option if there are no poses
-                startSelect.disabledOptions = hasPoses ? {} : {
-                    'pose': startSelect.options[2].t
-                };
-
-                // FIXME: might be better for caller to pass these in
-                const bgClr = events.invoke('bgClr');
-                bandsSlider.value = events.invoke('view.bands');
-                startSelect.value = hasPoses ? 'pose' : 'viewport';
-                colorPicker.value = [bgClr.r, bgClr.g, bgClr.b];
-                fovSlider.value = events.invoke('camera.fov');
-            }
+            reset();
 
             // filename is only shown in safari where file picker is not supported
             filenameRow.hidden = !filename;
@@ -284,10 +294,13 @@ class ViewerExportPopup extends Container {
                 };
 
                 onExport = () => {
+                    const poses = events.invoke('camera.poses');
+
+                    // extract camera starting pos
                     let pose;
                     switch (startSelect.value) {
                         case 'pose':
-                            pose = events.invoke('camera.poses')?.[0];
+                            pose = poses?.[0];
                             break;
                         case 'viewport':
                             pose = events.invoke('camera.getPose');
@@ -296,15 +309,58 @@ class ViewerExportPopup extends Container {
                     const p = pose?.position;
                     const t = pose?.target;
 
-                    const viewerSettings = {
+                    const startAnim = (() => {
+                        switch (animationSelect.value) {
+                            case 'none': return 'none';
+                            case 'track': return 'animTrack';
+                        }
+                    })();
+
+                    // extract camera animation
+                    const animTracks: AnimTrack[] = [];
+                    switch (startAnim) {
+                        case 'none':
+                            break;
+                        case 'animTrack': {
+                            // use camera poses
+                            const times = [];
+                            const position = [];
+                            const target = [];
+                            for (let i = 0; i < poses.length; ++i) {
+                                const p = poses[i];
+                                times.push(i);
+                                position.push(p.position.x, p.position.y, p.position.z);
+                                target.push(p.target.x, p.target.y, p.target.z);
+                            }
+
+                            animTracks.push({
+                                name: 'cameraAnim',
+                                duration: poses.length - 1,
+                                target: 'camera',
+                                loopMode: 'repeat',
+                                interpolation: 'spline',
+                                keyframes: {
+                                    times,
+                                    values: { position, target }
+                                }
+                            });
+
+                            break;
+                        }
+                    }
+
+                    const experienceSettings: ExperienceSettings = {
                         camera: {
                             fov: fovSlider.value,
                             position: p ? [p.x, p.y, p.z] : null,
-                            target: t ? [t.x, t.y, t.z] : null
+                            target: t ? [t.x, t.y, t.z] : null,
+                            startAnim,
+                            animTrack: startAnim === 'animTrack' ? 'cameraAnim' : null
                         },
                         background: {
                             color: colorPicker.value.slice()
-                        }
+                        },
+                        animTracks
                     };
 
                     const serializeSettings = {
@@ -314,8 +370,8 @@ class ViewerExportPopup extends Container {
                     resolve({
                         type: typeSelect.value,
                         filename: filename && filenameEntry.value,
-                        viewerSettings,
-                        serializeSettings
+                        serializeSettings,
+                        experienceSettings
                     });
                 };
             }).finally(() => {

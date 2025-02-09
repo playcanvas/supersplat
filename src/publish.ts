@@ -1,33 +1,44 @@
 import { Events } from './events';
 import { BufferWriter, GZipWriter } from './serialize/writer';
-import { serializePlyCompressed, ViewerSettings, SerializeSettings } from './splat-serialize';
+import { serializePlyCompressed, ExperienceSettings, SerializeSettings } from './splat-serialize';
 import { localize } from './ui/localization';
 
 type PublishSettings = {
     title: string;
     description: string;
     listed: boolean;
-    viewerSettings: ViewerSettings;
     serializeSettings: SerializeSettings;
+    experienceSettings: ExperienceSettings;
 };
 
 const origin = location.origin;
 
-// check whether user is logged in
-const testUserStatus = async () => {
-    const urlResponse = await fetch(`${origin}/api/id`);
-    return urlResponse.ok;
+type User = {
+    id: string;
+    token: string;
+    apiServer: string;
 };
 
-const publish = async (data: Uint8Array, publishSettings: PublishSettings) => {
+// check whether user is logged in
+const getUser = async () => {
+    try {
+        const urlResponse = await fetch(`${origin}/api/id`);
+        return urlResponse.ok && (await urlResponse.json() as User);
+    } catch (e) {
+        return null;
+    }
+};
+
+const publish = async (data: Uint8Array, publishSettings: PublishSettings, user: User) => {
     const filename = 'scene.ply';
 
     // get signed url
-    const urlResponse = await fetch(`${origin}/api/upload/signed-url`, {
+    const urlResponse = await fetch(`${user.apiServer}/upload/signed-url`, {
         method: 'POST',
         body: JSON.stringify({ filename }),
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${user.token}`
         }
     });
 
@@ -50,17 +61,18 @@ const publish = async (data: Uint8Array, publishSettings: PublishSettings) => {
         throw new Error('failed to upload blob');
     }
 
-    const publishResponse = await fetch(`${origin}/api/splats/publish`, {
+    const publishResponse = await fetch(`${user.apiServer}/splats/publish`, {
         method: 'POST',
         body: JSON.stringify({
             s3Key: json.s3Key,
             title: publishSettings.title,
             description: publishSettings.description,
             listed: publishSettings.listed,
-            settings: publishSettings.viewerSettings
+            settings: publishSettings.experienceSettings
         }),
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${user.token}`
         }
     });
 
@@ -81,9 +93,9 @@ const publish = async (data: Uint8Array, publishSettings: PublishSettings) => {
 
 const registerPublishEvents = (events: Events) => {
     events.function('scene.publish', async () => {
-        const userValid = await testUserStatus();
+        const user = await getUser();
 
-        if (!userValid) {
+        if (!user) {
             // use must be logged in to publish
             await events.invoke('showPopup', {
                 type: 'error',
@@ -101,6 +113,11 @@ const registerPublishEvents = (events: Events) => {
             try {
                 events.fire('startSpinner');
 
+                // delay to allow spinner to show (hopefully 10ms is enough)
+                await new Promise((resolve) => {
+                    setTimeout(resolve, 10);
+                });
+
                 const splats = events.invoke('scene.splats');
 
                 // serialize/compress
@@ -111,7 +128,7 @@ const registerPublishEvents = (events: Events) => {
                 const buffer = writer.close();
 
                 // publish
-                const response = await publish(buffer, publishSettings);
+                const response = await publish(buffer, publishSettings, user);
 
                 if (!response) {
                     await events.invoke('showPopup', {

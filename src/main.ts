@@ -107,10 +107,6 @@ const main = async () => {
         remoteStorageDetails = JSON.parse(decodeURIComponent(url.searchParams.get('remoteStorage')));
     } catch (e) { }
 
-    events.function('app.publish', () => {
-        return url.searchParams.get('publish') !== null;
-    });
-
     // edit history
     const editHistory = new EditHistory(events);
 

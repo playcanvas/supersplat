@@ -1,6 +1,5 @@
 import path from 'path';
 import copyAndWatch from './copy-and-watch.mjs';
-import importAsString from './import-as-string.mjs';
 import alias from '@rollup/plugin-alias';
 import image from '@rollup/plugin-image';
 import terser from '@rollup/plugin-terser';
@@ -8,10 +7,13 @@ import resolve from '@rollup/plugin-node-resolve';
 import strip from '@rollup/plugin-strip';
 import typescript from '@rollup/plugin-typescript';
 import json from '@rollup/plugin-json';
+import { string } from 'rollup-plugin-string';
 // import { visualizer } from 'rollup-plugin-visualizer';
 
 import autoprefixer from 'autoprefixer';
-import postcss from 'rollup-plugin-postcss';
+import postcss from 'postcss';
+import sass from 'sass';
+import scss from 'rollup-plugin-scss';
 
 // prod is release build
 if (process.env.BUILD_TYPE === 'prod') {
@@ -83,28 +85,29 @@ const application = {
                 { src: 'static/env/VertebraeHDRI_v1_512.png', dest: 'static/env' }
             ]
         }),
-        importAsString({
-            include: ['src/templates/*']
+        typescript({
+            compilerOptions: tsCompilerOptions
         }),
         alias({ entries: aliasEntries }),
         resolve(),
         image({ dom: false }),
-        postcss({
-            extract: 'index.css',
-            extensions: ['.scss', '.sass', '.css'],
-            use: [
-                ['sass', {
-                    includePaths: [ path.resolve(PCUI_DIR, 'dist') ]
-                }]
-            ],
-            plugins: [
-                autoprefixer
-            ]
-        }),
         json(),
-        typescript({
-            compilerOptions: tsCompilerOptions
+        scss({
+            sourceMap: true,
+            runtime: sass,
+            processor: (css) => {
+                return postcss([autoprefixer])
+                    .process(css, { from: undefined })
+                    .then(result => result.css);
+            },
+            fileName: 'index.css',
+            includePaths: [ path.resolve(PCUI_DIR, 'dist') ],
+            exclude: ['src/templates/*']
         }),
+        string({
+            include: 'src/templates/*'
+        }),
+
         BUILD_TYPE === 'release' &&
             strip({
                 include: ['**/*.ts'],

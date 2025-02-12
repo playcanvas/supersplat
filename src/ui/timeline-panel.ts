@@ -137,7 +137,7 @@ class Ticks extends Container {
             removeKey(index);
         });
     }
-};
+}
 
 class TimelinePanel extends Container {
     constructor(events: Events, tooltips: Tooltips, args = {}) {
@@ -257,7 +257,7 @@ class TimelinePanel extends Container {
 
             if (orderedKeys.length > 0) {
                 const frame = events.invoke('timeline.frame');
-                const nextKey = orderedKeys.findIndex(k => dir === 'back' ? k.frame >= frame : k.frame > frame);
+                const nextKey = orderedKeys.findIndex(k => (dir === 'back' ? k.frame >= frame : k.frame > frame));
                 const l = orderedKeys.length;
 
                 if (nextKey === -1) {

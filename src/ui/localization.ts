@@ -413,7 +413,7 @@ const localizeInit = () => {
                     'timeline.add-key': 'Add Key',
                     'timeline.remove-key': 'Remove Key',
                     'timeline.frame-rate': 'Frame Rate',
-                    'timeline.total-frames': 'Total Frames',
+                    'timeline.total-frames': 'Total Frames'
                 }
             },
             fr: {

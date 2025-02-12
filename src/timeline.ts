@@ -1,4 +1,5 @@
 import { EventHandle } from 'playcanvas';
+
 import { Events } from './events';
 
 const registerTimelineEvents = (events: Events) => {
@@ -68,7 +69,7 @@ const registerTimelineEvents = (events: Events) => {
             setFrame(Math.floor(time));
             events.fire('timeline.time', time);
         });
-    }
+    };
 
     const stop = () => {
         animHandle.off();

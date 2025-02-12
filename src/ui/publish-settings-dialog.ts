@@ -1,7 +1,7 @@
 import { BooleanInput, Button, ColorPicker, Container, Element, Label, SelectInput, SliderInput, TextAreaInput, TextInput } from 'pcui';
 
-import { Events } from '../events';
 import { Pose } from '../camera-poses';
+import { Events } from '../events';
 import { localize } from './localization';
 import { PublishSettings } from '../publish';
 import { AnimTrack, ExperienceSettings } from '../splat-serialize';
@@ -234,9 +234,9 @@ class PublishSettingsDialog extends Container {
 
                     // get poses
                     const orderedPoses = (events.invoke('camera.poses') as Pose[])
-                        .slice()
-                        .filter(p => p.frame >= 0 && p.frame < frames)
-                        .sort((a, b) => a.frame - b.frame);
+                    .slice()
+                    .filter(p => p.frame >= 0 && p.frame < frames)
+                    .sort((a, b) => a.frame - b.frame);
 
                     // extract camera starting position
                     let pose;

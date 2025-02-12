@@ -104,8 +104,25 @@ class CubicSpline {
         return new CubicSpline(times, knots);
     }
 
-    static fromPointsC2(times: number[], points: number[]) {
+    // create a looping spline by duplicating animation points at the end and beginning
+    static fromPointsLooping(length: number, times: number[], points: number[], tension = 0) {
+        if (times.length <= 2) {
+            return CubicSpline.fromPoints(times, points, tension);
+        }
 
+        const dim = points.length / times.length;
+        const newTimes = times.slice();
+        const newPoints = points.slice();
+
+        // append first two points
+        newTimes.push(length + times[0], length + times[1]);
+        newPoints.push(...points.slice(0, dim * 2));
+
+        // prepend last two points
+        newTimes.splice(0, 0, times[times.length - 2] - length, times[times.length - 1] - length);
+        newPoints.splice(0, 0, ...points.slice(points.length - dim * 2));
+
+        return CubicSpline.fromPoints(newTimes, newPoints, tension);
     }
 }
 

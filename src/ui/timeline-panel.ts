@@ -1,6 +1,7 @@
 import { Button, Container, Label, NumericInput, SelectInput, SliderInput } from 'pcui';
 
 import { Events } from '../events';
+import { localize } from './localization';
 import { Tooltips } from './tooltips';
 
 class Ticks extends Container {
@@ -116,10 +117,10 @@ class Ticks extends Container {
             }
         });
 
-        // rebuild on resize
+        // rebuild the timeline on dom resize
         new ResizeObserver(() => rebuild()).observe(workArea.dom);
 
-        // rebuild when timeline changes
+        // rebuild when timeline frames change
         events.on('timeline.frames', () => {
             rebuild();
         });
@@ -128,11 +129,11 @@ class Ticks extends Container {
             moveCursor(frame);
         });
 
-        events.on('timeline.addKey', (value: number) => {
+        events.on('timeline.keyAdded', (value: number) => {
             addKey(value);
         });
 
-        events.on('timeline.removeKey', (index: number) => {
+        events.on('timeline.keyRemoved', (index: number) => {
             removeKey(index);
         });
     }
@@ -164,13 +165,6 @@ class TimelinePanel extends Container {
             text: '\uE164'
         });
 
-        const playControls = new Container({
-            id: 'controls'
-        });
-        playControls.append(prev);
-        playControls.append(play);
-        playControls.append(next);
-
         // key controls
 
         const addKey = new Button({
@@ -184,11 +178,14 @@ class TimelinePanel extends Container {
             enabled: false
         });
 
-        const keyControls = new Container({
-            id: 'controls'
+        const buttonControls = new Container({
+            id: 'button-controls'
         });
-        keyControls.append(addKey);
-        keyControls.append(removeKey);
+        buttonControls.append(prev);
+        buttonControls.append(play);
+        buttonControls.append(next);
+        buttonControls.append(addKey);
+        buttonControls.append(removeKey);
 
         // settings
 
@@ -222,7 +219,7 @@ class TimelinePanel extends Container {
         });
 
         const settingsControls = new Container({
-            id: 'controls'
+            id: 'settings-controls'
         });
         settingsControls.append(speed);
         settingsControls.append(frames);
@@ -232,9 +229,19 @@ class TimelinePanel extends Container {
         const controlsWrap = new Container({
             id: 'controls-wrap'
         });
-        controlsWrap.append(playControls);
-        controlsWrap.append(keyControls);
-        controlsWrap.append(settingsControls);
+
+        const spacerL = new Container({
+            class: 'spacer'
+        });
+
+        const spacerR = new Container({
+            class: 'spacer'
+        });
+        spacerR.append(settingsControls);
+
+        controlsWrap.append(spacerL);
+        controlsWrap.append(buttonControls);
+        controlsWrap.append(spacerR);
 
         const ticks = new Ticks(events, tooltips);
 
@@ -286,7 +293,7 @@ class TimelinePanel extends Container {
         removeKey.on('click', () => {
             const index = events.invoke('timeline.keys').indexOf(events.invoke('timeline.frame'));
             if (index !== -1) {
-                events.fire('timeline.removeKey', index);
+                events.fire('timeline.remove', index);
             }
         });
 
@@ -352,6 +359,14 @@ class TimelinePanel extends Container {
         events.on('animation.frame', (frame: number) => {
             slider.value = frame;
         });
+
+        tooltips.register(prev, localize('timeline.prev-key'), 'top');
+        tooltips.register(play, localize('timeline.play'), 'top');
+        tooltips.register(next, localize('timeline.next-key'), 'top');
+        tooltips.register(addKey, localize('timeline.add-key'), 'top');
+        tooltips.register(removeKey, localize('timeline.remove-key'), 'top');
+        tooltips.register(speed, localize('timeline.frame-rate'), 'top');
+        tooltips.register(frames, localize('timeline.total-frames'), 'top');
     }
 }
 

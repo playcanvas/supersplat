@@ -91,10 +91,6 @@ const registerCameraPosesEvents = (events: Events) => {
         addPose(pose);
     });
 
-    events.on('camera.removePose', (index: number) => {
-        removePose(index);
-    });
-
     events.on('timeline.add', (frame: number) => {
         // get the current camera pose
         const pose = events.invoke('camera.getPose');
@@ -105,6 +101,10 @@ const registerCameraPosesEvents = (events: Events) => {
             position: pose.position,
             target: pose.target
         });
+    });
+
+    events.on('timeline.remove', (index: number) => {
+        removePose(index);
     });
 
     events.function('docSerialize.poseSets', (): any[] => {

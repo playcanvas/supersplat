@@ -183,7 +183,7 @@ const localizeInit = () => {
                     'export.background-color': 'Hintergrund',
                     'export.filename': 'Dateiname',
 
-                    // cursor
+                    // Cursor
                     'cursor.click-to-copy': 'Klicken zum kopieren',
                     'cursor.copied': 'Kopiert!'
                 }
@@ -382,11 +382,11 @@ const localizeInit = () => {
                     'export.animation-none': 'None',
                     'export.animation-track': 'Track',
 
-                    // cursor
+                    // Cursor
                     'cursor.click-to-copy': 'Click to copy',
                     'cursor.copied': 'Copied!',
 
-                    // doc
+                    // Doc
                     'doc.reset': 'RESET SCENE',
                     'doc.unsaved-message': 'You have unsaved changes. Are you sure you want to reset the scene?',
                     'doc.reset-message': 'Are you sure you want to reset the scene?',
@@ -404,7 +404,16 @@ const localizeInit = () => {
                     'publish.please-try-again': 'Please try again later.',
                     'publish.succeeded': 'PUBLISH SUCCEEDED',
                     'publish.message': 'Use the link below to access your scene.',
-                    'publish.please-log-in': 'Publishing to PlayCanvas requires a user account. Please log in and try again.'
+                    'publish.please-log-in': 'Publishing to PlayCanvas requires a user account. Please log in and try again.',
+
+                    // Timeline
+                    'timeline.prev-key': 'Jump to previous keyframe',
+                    'timeline.play': 'Play/Stop',
+                    'timeline.next-key': 'Jump to next keyframe',
+                    'timeline.add-key': 'Add Key',
+                    'timeline.remove-key': 'Remove Key',
+                    'timeline.frame-rate': 'Frame Rate',
+                    'timeline.total-frames': 'Total Frames',
                 }
             },
             fr: {
@@ -579,7 +588,7 @@ const localizeInit = () => {
                     'export.background-color': 'Arrière-plan',
                     'export.filename': 'Nom de fichier',
 
-                    // cursor
+                    // Cursor
                     'cursor.click-to-copy': 'Cliquez pour copier',
                     'cursor.copied': 'Copié!'
                 }
@@ -756,7 +765,7 @@ const localizeInit = () => {
                     'export.background-color': '背景色',
                     'export.filename': 'ファイル名',
 
-                    // cursor
+                    // Cursor
                     'cursor.click-to-copy': 'クリックしてコピー',
                     'cursor.copied': 'コピーしました！'
                 }
@@ -933,7 +942,7 @@ const localizeInit = () => {
                     'export.background-color': '배경색',
                     'export.filename': '파일 이름',
 
-                    // cursor
+                    // Cursor
                     'cursor.click-to-copy': '클릭하여 복사',
                     'cursor.copied': '복사됨!'
                 }
@@ -1110,7 +1119,7 @@ const localizeInit = () => {
                     'export.background-color': '背景颜色',
                     'export.filename': '文件名',
 
-                    // cursor
+                    // Cursor
                     'cursor.click-to-copy': '点击复制',
                     'cursor.copied': '已复制!'
                 }

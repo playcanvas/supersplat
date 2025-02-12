@@ -310,12 +310,6 @@ class ViewPanel extends Container {
             setVisible(this.hidden);
         });
 
-        events.on('cameraPanel.visible', (visible: boolean) => {
-            if (visible) {
-                setVisible(false);
-            }
-        });
-
         events.on('colorPanel.visible', (visible: boolean) => {
             if (visible) {
                 setVisible(false);

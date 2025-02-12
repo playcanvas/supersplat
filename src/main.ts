@@ -1,6 +1,7 @@
 import { Color, createGraphicsDevice } from 'playcanvas';
 
 import { registerAnimationEvents } from './animation';
+import { registerCameraPosesEvents } from './camera-poses';
 import { registerDocEvents } from './doc';
 import { EditHistory } from './edit-history';
 import { registerEditorEvents } from './editor';
@@ -10,6 +11,7 @@ import { registerPublishEvents } from './publish';
 import { Scene } from './scene';
 import { getSceneConfig } from './scene-config';
 import { registerSelectionEvents } from './selection';
+import { registerTimelineEvents } from './timeline';
 import { Shortcuts } from './shortcuts';
 import { BrushSelection } from './tools/brush-selection';
 import { LassoSelection } from './tools/lasso-selection';
@@ -241,6 +243,8 @@ const main = async () => {
 
     registerEditorEvents(events, editHistory, scene);
     registerSelectionEvents(events, scene);
+    registerTimelineEvents(events);
+    registerCameraPosesEvents(events);
     registerTransformHandlerEvents(events);
     registerAnimationEvents(events);
     registerPublishEvents(events);

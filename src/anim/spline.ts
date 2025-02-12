@@ -1,3 +1,89 @@
+/**
+ * Given an array of data points, compute the Hermite tangents
+ * that make the cubic Hermite spline C2 continuous.
+ *
+ * Each point should be an object with properties 'time' and 'value'.
+ * This function uses natural boundary conditions (M[0] = M[n-1] = 0).
+ *
+ * @param {Array} points - Array of points, e.g. [{time:0, value:0}, {time:1, value:2}, ...]
+ * @returns {Array} tangents - Array of tangent values at each point.
+ */
+function computeC2Tangents(points: {time: number, value: number}[]) {
+    const n = points.length;
+    if (n < 2) {
+        return [];
+    }
+
+    // Step 1. Compute the intervals (h) and the slopes (d).
+    // h[i] = points[i+1].time - points[i].time
+    // d[i] = (points[i+1].value - points[i].value) / h[i]
+    const h = [];
+    const d = [];
+    for (let i = 0; i < n - 1; i++) {
+        const dt = points[i + 1].time - points[i].time;
+        if (dt === 0) {
+            throw new Error("Two points have the same time value.");
+        }
+        h.push(dt);
+        d.push((points[i + 1].value - points[i].value) / dt);
+    }
+
+    // Step 2. Set up and solve the tridiagonal system for the second derivatives M.
+    // For a natural cubic spline, we have M[0] = M[n-1] = 0.
+    // For interior points (i = 1, …, n-2):
+    //   (h[i-1]/6)*M[i-1] + ((h[i-1]+h[i])/3)*M[i] + (h[i]/6)*M[i+1] = d[i] - d[i-1]
+    const M = new Array(n).fill(0); // Second derivatives; endpoints remain 0.
+    
+    // Arrays for the Thomas algorithm (tridiagonal system solver).
+    const a = new Array(n).fill(0); // sub-diagonal
+    const b = new Array(n).fill(0); // diagonal
+    const c = new Array(n).fill(0); // super-diagonal
+    const r = new Array(n).fill(0); // right-hand side
+
+    // Set the boundary condition at the first point.
+    b[0] = 1;
+    r[0] = 0;
+
+    // Set up the equations for the interior points.
+    for (let i = 1; i < n - 1; i++) {
+        a[i] = h[i - 1] / 6;
+        b[i] = (h[i - 1] + h[i]) / 3;
+        c[i] = h[i] / 6;
+        r[i] = d[i] - d[i - 1];
+    }
+
+    // Boundary condition at the last point.
+    b[n - 1] = 1;
+    r[n - 1] = 0;
+
+    // Solve the tridiagonal system using the Thomas algorithm.
+    // Forward sweep.
+    for (let i = 1; i < n; i++) {
+        const w = a[i] / b[i - 1];
+        b[i] = b[i] - w * c[i - 1];
+        r[i] = r[i] - w * r[i - 1];
+    }
+
+    // Back substitution.
+    M[n - 1] = r[n - 1] / b[n - 1];
+    for (let i = n - 2; i >= 0; i--) {
+        M[i] = (r[i] - c[i] * M[i + 1]) / b[i];
+    }
+
+    // Step 3. Compute the Hermite tangents (first derivatives) from the M values.
+    // For i = 0, …, n-2:
+    //   m[i] = d[i] - (h[i] * (2*M[i] + M[i+1])) / 6
+    // For the last point (i = n-1):
+    //   m[n-1] = d[n-2] + (h[n-2] * (2*M[n-1] + M[n-2])) / 6
+    const m = new Array(n);
+    for (let i = 0; i < n - 1; i++) {
+        m[i] = d[i] - (h[i] * (2 * M[i] + M[i + 1])) / 6;
+    }
+    m[n - 1] = d[n - 2] + (h[n - 2] * (2 * M[n - 1] + M[n - 2])) / 6;
+
+    return m;
+}
+
 class CubicSpline {
     // control times
     times: number[];
@@ -102,6 +188,10 @@ class CubicSpline {
         }
 
         return new CubicSpline(times, knots);
+    }
+
+    static fromPointsC2(times: number[], points: number[]) {
+
     }
 }
 

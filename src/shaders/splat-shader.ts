@@ -198,7 +198,7 @@ bool initCenter(SplatSource source, vec3 modelCenter, out SplatCenter center) {
     mat4 modelView = matrix_view * applyPaletteTransform(source, matrix_model);
     vec4 centerView = modelView * vec4(modelCenter, 1.0);
 
-    // early out if splat is behind the camear
+    // early out if splat is behind the camera
     if (centerView.z > 0.0) {
         return false;
     }

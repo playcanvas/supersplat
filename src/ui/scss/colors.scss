@@ -4,9 +4,7 @@ $text-primary: theme.$text-primary;
 $text-secondary: theme.$text-secondary;
 $text-dark: theme.$text-dark;
 $text-darkest: theme.$text-darkest;
-$bcg-primary: theme.$bcg-primary;
-$bcg-dark: theme.$bcg-dark;
-$bcg-darker: theme.$bcg-darker;
+
 $error: theme.$error;
 
 $clr-default: #b3aaac;
@@ -17,6 +15,9 @@ $clr-icon-hilight: #FFAF50;
 
 $bcg-lighter: #444;
 $bcg-light: #555;
+$bcg-primary: theme.$bcg-primary;
+$bcg-dark: theme.$bcg-dark;
+$bcg-darker: theme.$bcg-darker;
 $bcg-darkest: #181818;
 
 // darken amount when showing modal dialogs

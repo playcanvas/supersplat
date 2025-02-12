@@ -1,5 +1,6 @@
 import { BooleanInput, Button, ColorPicker, Container, Element, Label, SelectInput, SliderInput, TextAreaInput, TextInput } from 'pcui';
 
+import { Pose } from '../camera-poses';
 import { Events } from '../events';
 import { localize } from './localization';
 import { PublishSettings } from '../publish';
@@ -228,13 +229,20 @@ class PublishSettingsDialog extends Container {
                 };
 
                 onOK = () => {
-                    const poses = events.invoke('camera.poses');
+                    const frames = events.invoke('timeline.frames');
+                    const frameRate = events.invoke('timeline.frameRate');
+
+                    // get poses
+                    const orderedPoses = (events.invoke('camera.poses') as Pose[])
+                    .slice()
+                    .filter(p => p.frame >= 0 && p.frame < frames)
+                    .sort((a, b) => a.frame - b.frame);
 
                     // extract camera starting position
                     let pose;
                     switch (startSelect.value) {
                         case 'pose':
-                            pose = poses?.[0];
+                            pose = orderedPoses?.[0];
                             break;
                         case 'viewport':
                             pose = events.invoke('camera.getPose');
@@ -260,16 +268,16 @@ class PublishSettingsDialog extends Container {
                             const times = [];
                             const position = [];
                             const target = [];
-                            for (let i = 0; i < poses.length; ++i) {
-                                const p = poses[i];
-                                times.push(i);
+                            for (let i = 0; i < orderedPoses.length; ++i) {
+                                const p = orderedPoses[i];
+                                times.push(p.frame / frameRate);
                                 position.push(p.position.x, p.position.y, p.position.z);
                                 target.push(p.target.x, p.target.y, p.target.z);
                             }
 
                             animTracks.push({
                                 name: 'cameraAnim',
-                                duration: poses.length - 1,
+                                duration: frames / frameRate,
                                 target: 'camera',
                                 loopMode: 'repeat',
                                 interpolation: 'spline',

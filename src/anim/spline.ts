@@ -48,12 +48,12 @@ class CubicSpline {
         const omt = 1 - t;
         const omt2 = omt * omt;
 
-        let idx = segment * 3 * dim;
+        let idx = segment * dim * 3;                    // each knot has 3 values: tangent in, value, tangent out
         for (let i = 0; i < dim; ++i) {
-            const p0 = knots[idx + 1];
-            const m0 = knots[idx + 2];
-            const m1 = knots[idx + 3 * dim];
-            const p1 = knots[idx + 3 * dim + 1];
+            const p0 = knots[idx + 1];                  // p0
+            const m0 = knots[idx + 2];                  // outgoing tangent
+            const m1 = knots[idx + dim * 3];            // incoming tangent
+            const p1 = knots[idx + dim * 3 + 1];        // p1
             idx += 3;
 
             result[i] =
@@ -102,6 +102,27 @@ class CubicSpline {
         }
 
         return new CubicSpline(times, knots);
+    }
+
+    // create a looping spline by duplicating animation points at the end and beginning
+    static fromPointsLooping(length: number, times: number[], points: number[], tension = 0) {
+        if (times.length <= 2) {
+            return CubicSpline.fromPoints(times, points, tension);
+        }
+
+        const dim = points.length / times.length;
+        const newTimes = times.slice();
+        const newPoints = points.slice();
+
+        // append first two points
+        newTimes.push(length + times[0], length + times[1]);
+        newPoints.push(...points.slice(0, dim * 2));
+
+        // prepend last two points
+        newTimes.splice(0, 0, times[times.length - 2] - length, times[times.length - 1] - length);
+        newPoints.splice(0, 0, ...points.slice(points.length - dim * 2));
+
+        return CubicSpline.fromPoints(newTimes, newPoints, tension);
     }
 }
 

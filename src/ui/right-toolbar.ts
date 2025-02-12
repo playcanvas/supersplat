@@ -3,7 +3,6 @@ import { Button, Container, Element, Label } from 'pcui';
 import { Events } from '../events';
 import { localize } from './localization';
 import cameraFrameSelectionSvg from './svg/camera-frame-selection.svg';
-import cameraPanelSvg from './svg/camera-panel.svg';
 import cameraResetSvg from './svg/camera-reset.svg';
 import centersSvg from './svg/centers.svg';
 import colorPanelSvg from './svg/color-panel.svg';
@@ -49,11 +48,6 @@ class RightToolbar extends Container {
             class: 'right-toolbar-button'
         });
 
-        const cameraPanel = new Button({
-            id: 'right-toolbar-camera-panel',
-            class: 'right-toolbar-toggle'
-        });
-
         const colorPanel = new Button({
             id: 'right-toolbar-color-panel',
             class: 'right-toolbar-toggle'
@@ -74,7 +68,6 @@ class RightToolbar extends Container {
         showHideSplats.dom.appendChild(createSvg(showHideSplatsSvg));
         cameraFrameSelection.dom.appendChild(createSvg(cameraFrameSelectionSvg));
         cameraReset.dom.appendChild(createSvg(cameraResetSvg));
-        cameraPanel.dom.appendChild(createSvg(cameraPanelSvg));
         colorPanel.dom.appendChild(createSvg(colorPanelSvg));
 
         this.append(ringsModeToggle);
@@ -82,7 +75,6 @@ class RightToolbar extends Container {
         this.append(new Element({ class: 'right-toolbar-separator' }));
         this.append(cameraFrameSelection);
         this.append(cameraReset);
-        this.append(cameraPanel);
         this.append(colorPanel);
         this.append(new Element({ class: 'right-toolbar-separator' }));
         this.append(options);
@@ -91,7 +83,6 @@ class RightToolbar extends Container {
         tooltips.register(showHideSplats, localize('tooltip.show-hide'), 'left');
         tooltips.register(cameraFrameSelection, localize('tooltip.frame-selection'), 'left');
         tooltips.register(cameraReset, localize('tooltip.camera-reset'), 'left');
-        tooltips.register(cameraPanel, localize('tooltip.camera-panel'), 'left');
         tooltips.register(colorPanel, localize('tooltip.color-panel'), 'left');
         tooltips.register(options, localize('tooltip.view-options'), 'left');
 
@@ -104,7 +95,6 @@ class RightToolbar extends Container {
         showHideSplats.on('click', () => events.fire('camera.toggleOverlay'));
         cameraFrameSelection.on('click', () => events.fire('camera.focus'));
         cameraReset.on('click', () => events.fire('camera.reset'));
-        cameraPanel.on('click', () => events.fire('cameraPanel.toggleVisible'));
         colorPanel.on('click', () => events.fire('colorPanel.toggleVisible'));
         options.on('click', () => events.fire('viewPanel.toggleVisible'));
 
@@ -116,10 +106,6 @@ class RightToolbar extends Container {
 
         events.on('camera.overlay', (value: boolean) => {
             showHideSplats.class[value ? 'add' : 'remove']('active');
-        });
-
-        events.on('cameraPanel.visible', (visible: boolean) => {
-            cameraPanel.class[visible ? 'add' : 'remove']('active');
         });
 
         events.on('colorPanel.visible', (visible: boolean) => {

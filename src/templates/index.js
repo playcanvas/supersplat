@@ -53,7 +53,7 @@ class FrameScene extends Script {
         if (animTracks?.length > 0 && viewerSettings.camera.startAnim === 'animTrack') {
             const track = animTracks.find(track => track.name === camera.animTrack);
             if (track) {
-                const { keyframes } = track;
+                const { keyframes, duration } = track;
                 const { times, values } = keyframes;
                 const { position, target } = values;
 
@@ -66,7 +66,7 @@ class FrameScene extends Script {
 
                 this.cameraAnim = {
                     time: 0,
-                    spline: CubicSpline.fromPoints(times, points),
+                    spline: CubicSpline.fromPointsLooping(duration, times, points),
                     track,
                     result: []
                 };

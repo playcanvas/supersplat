@@ -4,7 +4,6 @@ import { Mat4, Vec3 } from 'playcanvas';
 import { DataPanel } from './data-panel';
 import { Events } from '../events';
 import { BottomToolbar } from './bottom-toolbar';
-import { CameraPanel } from './camera-panel';
 import { ColorPanel } from './color-panel';
 import { localize, localizeInit } from './localization';
 import { Menu } from './menu';
@@ -113,7 +112,6 @@ class EditorUI {
         // bottom toolbar
         const scenePanel = new ScenePanel(events, tooltips);
         const viewPanel = new ViewPanel(events, tooltips);
-        const cameraPanel = new CameraPanel(events, tooltips);
         const colorPanel = new ColorPanel(events, tooltips);
         const bottomToolbar = new BottomToolbar(events, tooltips);
         const rightToolbar = new RightToolbar(events, tooltips);
@@ -126,7 +124,6 @@ class EditorUI {
         canvasContainer.append(toolsContainer);
         canvasContainer.append(scenePanel);
         canvasContainer.append(viewPanel);
-        canvasContainer.append(cameraPanel);
         canvasContainer.append(colorPanel);
         canvasContainer.append(bottomToolbar);
         canvasContainer.append(rightToolbar);

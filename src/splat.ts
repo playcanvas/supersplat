@@ -80,8 +80,7 @@ class Splat extends Element {
         // get material options object for a shader that renders with the given number of bands
         const materialOptions = {
             vertex: vertexShader,
-            fragment: fragmentShader,
-            chunks: { gsplatCenterVS: gsplatCenter }
+            fragment: fragmentShader
         };
 
         this._name = (asset.file as any).filename;
@@ -158,6 +157,7 @@ class Splat extends Element {
         this.rebuildMaterial = (bands: number) => {
             instance.createMaterial(materialOptions);
             const { material } = instance;
+            material.chunks = { gsplatCenterVS: gsplatCenter };
             material.setDefine('SH_BANDS', `${Math.min(bands, instance.splat.shBands)}`);
             material.setParameter('splatState', this.stateTexture);
             material.setParameter('splatTransform', this.transformTexture);

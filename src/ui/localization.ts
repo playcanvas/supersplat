@@ -154,7 +154,6 @@ const localizeInit = () => {
                     'tooltip.show-hide': 'Anzeigen/Ausplenden Splats ( Leertaste )',
                     'tooltip.frame-selection': 'Rechteckselektion ( F )',
                     'tooltip.camera-reset': 'Kamera zurücksetzen',
-                    'tooltip.camera-panel': 'Kamera Posen',
                     'tooltip.color-panel': 'Farben',
                     'tooltip.view-options': 'Anzeige Optionen',
 
@@ -184,7 +183,7 @@ const localizeInit = () => {
                     'export.background-color': 'Hintergrund',
                     'export.filename': 'Dateiname',
 
-                    // cursor
+                    // Cursor
                     'cursor.click-to-copy': 'Klicken zum kopieren',
                     'cursor.copied': 'Kopiert!'
                 }
@@ -350,7 +349,6 @@ const localizeInit = () => {
                     'tooltip.show-hide': 'Show/Hide Splats ( Space )',
                     'tooltip.frame-selection': 'Frame Selection ( F )',
                     'tooltip.camera-reset': 'Reset Camera',
-                    'tooltip.camera-panel': 'Camera Poses',
                     'tooltip.color-panel': 'Colors',
                     'tooltip.view-options': 'View Options',
 
@@ -384,11 +382,11 @@ const localizeInit = () => {
                     'export.animation-none': 'None',
                     'export.animation-track': 'Track',
 
-                    // cursor
+                    // Cursor
                     'cursor.click-to-copy': 'Click to copy',
                     'cursor.copied': 'Copied!',
 
-                    // doc
+                    // Doc
                     'doc.reset': 'RESET SCENE',
                     'doc.unsaved-message': 'You have unsaved changes. Are you sure you want to reset the scene?',
                     'doc.reset-message': 'Are you sure you want to reset the scene?',
@@ -406,7 +404,16 @@ const localizeInit = () => {
                     'publish.please-try-again': 'Please try again later.',
                     'publish.succeeded': 'PUBLISH SUCCEEDED',
                     'publish.message': 'Use the link below to access your scene.',
-                    'publish.please-log-in': 'Publishing to PlayCanvas requires a user account. Please log in and try again.'
+                    'publish.please-log-in': 'Publishing to PlayCanvas requires a user account. Please log in and try again.',
+
+                    // Timeline
+                    'timeline.prev-key': 'Jump to previous keyframe',
+                    'timeline.play': 'Play/Stop',
+                    'timeline.next-key': 'Jump to next keyframe',
+                    'timeline.add-key': 'Add Key',
+                    'timeline.remove-key': 'Remove Key',
+                    'timeline.frame-rate': 'Frame Rate',
+                    'timeline.total-frames': 'Total Frames'
                 }
             },
             fr: {
@@ -552,7 +559,6 @@ const localizeInit = () => {
                     'tooltip.show-hide': 'Afficher/cacher les splats ( Barre espace )',
                     'tooltip.frame-selection': 'Cadrer la sélection ( F )',
                     'tooltip.camera-reset': 'Réinitialiser la caméra',
-                    'tooltip.camera-panel': 'Poses de la caméra',
                     'tooltip.color-panel': 'Couleurs',
                     'tooltip.view-options': 'Options d\'affichage',
 
@@ -582,7 +588,7 @@ const localizeInit = () => {
                     'export.background-color': 'Arrière-plan',
                     'export.filename': 'Nom de fichier',
 
-                    // cursor
+                    // Cursor
                     'cursor.click-to-copy': 'Cliquez pour copier',
                     'cursor.copied': 'Copié!'
                 }
@@ -730,7 +736,6 @@ const localizeInit = () => {
                     'tooltip.show-hide': 'スプラットの表示/非表示 ( Space )',
                     'tooltip.frame-selection': '選択をフレームイン ( F )',
                     'tooltip.camera-reset': 'カメラをリセット',
-                    'tooltip.camera-panel': 'カメラポーズ',
                     'tooltip.color-panel': '色',
                     'tooltip.view-options': '表示オプション',
 
@@ -760,7 +765,7 @@ const localizeInit = () => {
                     'export.background-color': '背景色',
                     'export.filename': 'ファイル名',
 
-                    // cursor
+                    // Cursor
                     'cursor.click-to-copy': 'クリックしてコピー',
                     'cursor.copied': 'コピーしました！'
                 }
@@ -908,7 +913,6 @@ const localizeInit = () => {
                     'tooltip.show-hide': '스플래츠 표시/숨기기 ( Space )',
                     'tooltip.frame-selection': '프레임 선택 ( F )',
                     'tooltip.camera-reset': '카메라 재설정',
-                    'tooltip.camera-panel': '카메라 포즈',
                     'tooltip.color-panel': '색상',
                     'tooltip.view-options': '보기 옵션',
 
@@ -938,7 +942,7 @@ const localizeInit = () => {
                     'export.background-color': '배경색',
                     'export.filename': '파일 이름',
 
-                    // cursor
+                    // Cursor
                     'cursor.click-to-copy': '클릭하여 복사',
                     'cursor.copied': '복사됨!'
                 }
@@ -1086,7 +1090,6 @@ const localizeInit = () => {
                     'tooltip.show-hide': '显示/隐藏 Splats ( Space )',
                     'tooltip.frame-selection': '框选 ( F )',
                     'tooltip.camera-reset': '重置相机',
-                    'tooltip.camera-panel': '相机姿势',
                     'tooltip.color-panel': '颜色',
                     'tooltip.view-options': '视图选项',
 
@@ -1116,7 +1119,7 @@ const localizeInit = () => {
                     'export.background-color': '背景颜色',
                     'export.filename': '文件名',
 
-                    // cursor
+                    // Cursor
                     'cursor.click-to-copy': '点击复制',
                     'cursor.copied': '已复制!'
                 }

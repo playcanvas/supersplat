@@ -280,7 +280,7 @@ class TimelinePanel extends Container {
         });
 
         addKey.on('click', () => {
-            events.fire('timeline.addKey', events.invoke('timeline.frame'));
+            events.fire('timeline.add', events.invoke('timeline.frame'));
         });
 
         removeKey.on('click', () => {

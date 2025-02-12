@@ -95,7 +95,7 @@ const registerCameraPosesEvents = (events: Events) => {
         removePose(index);
     });
 
-    events.on('timeline.addKey', (frame: number) => {
+    events.on('timeline.add', (frame: number) => {
         // get the current camera pose
         const pose = events.invoke('camera.getPose');
 
@@ -132,10 +132,10 @@ const registerCameraPosesEvents = (events: Events) => {
             return;
         }
 
-        // for now, load the first poseSet
+        const fps = events.invoke('timeline.frameRate');
 
+        // for now, load the first poseSet
         poseSets[0].poses.forEach((docPose: any, index: number) => {
-            const fps = events.invoke('timeline.frameRate');
             addPose({
                 name: docPose.name,
                 time: docPose.time ?? (index * fps),

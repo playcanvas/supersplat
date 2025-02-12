@@ -251,19 +251,19 @@ class TimelinePanel extends Container {
         // ui handlers
 
         const skip = (dir: 'forward' | 'back') => {
-            const orderedKeys = (events.invoke('timeline.keys') as number[]).map((time, index) => {
-                return { time, index };
-            }).sort((a, b) => a.time - b.time);
+            const orderedKeys = (events.invoke('timeline.keys') as number[]).map((frame, index) => {
+                return { frame, index };
+            }).sort((a, b) => a.frame - b.frame);
 
             if (orderedKeys.length > 0) {
                 const frame = events.invoke('timeline.frame');
-                const nextKey = orderedKeys.findIndex(k => dir === 'back' ? k.time >= frame : k.time > frame);
+                const nextKey = orderedKeys.findIndex(k => dir === 'back' ? k.frame >= frame : k.frame > frame);
                 const l = orderedKeys.length;
 
                 if (nextKey === -1) {
-                    events.fire('timeline.setFrame', orderedKeys[dir === 'back' ? l - 1 : 0].time);
+                    events.fire('timeline.setFrame', orderedKeys[dir === 'back' ? l - 1 : 0].frame);
                 } else {
-                    events.fire('timeline.setFrame', orderedKeys[dir === 'back' ? (nextKey + l - 1) % l : nextKey].time);
+                    events.fire('timeline.setFrame', orderedKeys[dir === 'back' ? (nextKey + l - 1) % l : nextKey].frame);
                 }
             }
         };

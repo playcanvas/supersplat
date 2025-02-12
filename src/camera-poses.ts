@@ -4,7 +4,7 @@ import { Events } from './events';
 
 type Pose = {
     name: string,
-    time: number,
+    frame: number,
     position: Vec3,
     target: Vec3
 };
@@ -16,10 +16,10 @@ const registerCameraPosesEvents = (events: Events) => {
 
     const rebuildSpline = () => {
         // order by time for spline
-        const orderedPoses = poses.sort((a, b) => a.time - b.time);
+        const orderedPoses = poses.slice().sort((a, b) => a.frame - b.frame);
 
         // construct the spline points to be interpolated
-        const times = orderedPoses.map(p => p.time);
+        const times = orderedPoses.map(p => p.frame);
         const points = [];
         for (let i = 0; i < orderedPoses.length; ++i) {
             const p = orderedPoses[i];
@@ -59,17 +59,17 @@ const registerCameraPosesEvents = (events: Events) => {
     });
 
     const addPose = (pose: Pose) => {
-        if (pose.time === undefined) {
+        if (pose.frame === undefined) {
             return false;
         }
 
         // if a pose already exists at this time, update it
-        const idx = poses.findIndex(p => p.time === pose.time);
+        const idx = poses.findIndex(p => p.frame === pose.frame);
         if (idx !== -1) {
             poses[idx] = pose;
         } else {
             poses.push(pose);
-            events.fire('timeline.addKey', pose.time);
+            events.fire('timeline.addKey', pose.frame);
         }
 
         rebuildSpline();
@@ -97,7 +97,7 @@ const registerCameraPosesEvents = (events: Events) => {
 
         addPose({
             name: `camera_${poses.length}`,
-            time: frame,
+            frame,
             position: pose.position,
             target: pose.target
         });
@@ -119,7 +119,7 @@ const registerCameraPosesEvents = (events: Events) => {
             poses: poses.map((pose) => {
                 return {
                     name: pose.name,
-                    time: pose.time,
+                    frame: pose.frame,
                     position: pack3(pose.position),
                     target: pack3(pose.target)
                 };
@@ -138,7 +138,7 @@ const registerCameraPosesEvents = (events: Events) => {
         poseSets[0].poses.forEach((docPose: any, index: number) => {
             addPose({
                 name: docPose.name,
-                time: docPose.time ?? (index * fps),
+                frame: docPose.frame ?? (index * fps),
                 position: new Vec3(docPose.position),
                 target: new Vec3(docPose.target)
             });
@@ -146,4 +146,4 @@ const registerCameraPosesEvents = (events: Events) => {
     });
 };
 
-export { registerCameraPosesEvents };
+export { registerCameraPosesEvents, Pose };

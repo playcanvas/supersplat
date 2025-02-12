@@ -106,9 +106,9 @@ const registerTimelineEvents = (events: Events) => {
         return keys;
     });
 
-    events.on('timeline.addKey', (value: number) => {
-        keys.push(value);
-        events.fire('timeline.keyAdded', value);
+    events.on('timeline.addKey', (frame: number) => {
+        keys.push(frame);
+        events.fire('timeline.keyAdded', frame);
     });
 
     events.on('timeline.removeKey', (index: number) => {
@@ -116,10 +116,10 @@ const registerTimelineEvents = (events: Events) => {
         events.fire('timeline.keyRemoved', index);
     });
 
-    events.on('timeline.setKey', (index: number, value: number) => {
-        if (value !== keys[index]) {
-            keys[index] = value;
-            events.fire('timeline.keySet', index, value);
+    events.on('timeline.setKey', (index: number, frame: number) => {
+        if (frame !== keys[index]) {
+            keys[index] = frame;
+            events.fire('timeline.keySet', index, frame);
         }
     });
 };

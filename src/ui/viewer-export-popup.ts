@@ -1,6 +1,7 @@
 import { Button, ColorPicker, Container, Element, Label, SelectInput, SliderInput, TextInput } from 'pcui';
 import { path } from 'playcanvas';
 
+import { Pose } from '../camera-poses';
 import { localize } from './localization';
 import { Events } from '../events';
 import { AnimTrack, ExperienceSettings, ViewerExportSettings } from '../splat-serialize';
@@ -294,13 +295,20 @@ class ViewerExportPopup extends Container {
                 };
 
                 onExport = () => {
-                    const poses = events.invoke('camera.poses');
+                    const frames = events.invoke('timeline.frames');
+                    const frameRate = events.invoke('timeline.frameRate');
+
+                    // get poses
+                    const orderedPoses = (events.invoke('camera.poses') as Pose[])
+                    .slice()
+                    .filter(p => p.frame >= 0 && p.frame < frames)
+                    .sort((a, b) => a.frame - b.frame);
 
                     // extract camera starting pos
                     let pose;
                     switch (startSelect.value) {
                         case 'pose':
-                            pose = poses?.[0];
+                            pose = orderedPoses?.[0];
                             break;
                         case 'viewport':
                             pose = events.invoke('camera.getPose');
@@ -326,16 +334,16 @@ class ViewerExportPopup extends Container {
                             const times = [];
                             const position = [];
                             const target = [];
-                            for (let i = 0; i < poses.length; ++i) {
-                                const p = poses[i];
-                                times.push(i);
+                            for (let i = 0; i < orderedPoses.length; ++i) {
+                                const p = orderedPoses[i];
+                                times.push(p.frame / frameRate);
                                 position.push(p.position.x, p.position.y, p.position.z);
                                 target.push(p.target.x, p.target.y, p.target.z);
                             }
 
                             animTracks.push({
                                 name: 'cameraAnim',
-                                duration: poses.length - 1,
+                                duration: frames / frameRate,
                                 target: 'camera',
                                 loopMode: 'repeat',
                                 interpolation: 'spline',

@@ -118,6 +118,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 console.error('this should never fire');
             }
 
+            events.invoke('docDeserialize.timeline', document.timeline);
             events.invoke('docDeserialize.poseSets', document.poseSets);
             events.invoke('docDeserialize.view', document.view);
             scene.camera.docDeserialize(document.camera);
@@ -143,6 +144,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 camera: scene.camera.docSerialize(),
                 view: events.invoke('docSerialize.view'),
                 poseSets: events.invoke('docSerialize.poseSets'),
+                timeline: events.invoke('docSerialize.timeline'),
                 splats: splats.map(s => s.docSerialize())
             };
 

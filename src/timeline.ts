@@ -123,6 +123,22 @@ const registerTimelineEvents = (events: Events) => {
             events.fire('timeline.keySet', index, frame);
         }
     });
+
+    // doc
+
+    events.function('docSerialize.timeline', () => {
+        return {
+            frames,
+            frameRate,
+            frame
+        };
+    });
+
+    events.function('docDeserialize.timeline', (data: any = {}) => {
+        events.fire('timeline.setFrames', data.frames ?? 180);
+        events.fire('timeline.setFrameRate', data.frameRate ?? 30);
+        events.fire('timeline.setFrame', data.frame ?? 0);
+    });
 };
 
 export { registerTimelineEvents };

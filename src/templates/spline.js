@@ -106,7 +106,7 @@ class CubicSpline {
 
     // create a looping spline by duplicating animation points at the end and beginning
     static fromPointsLooping(length, times, points, tension) {
-        if (times.length <= 2) {
+        if (times.length < 2) {
             return CubicSpline.fromPoints(times, points, tension);
         }
 

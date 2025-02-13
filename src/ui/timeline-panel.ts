@@ -202,8 +202,12 @@ class TimelinePanel extends Container {
             ]
         });
 
-        speed.on('change', (value: number) => {
-            events.fire('timeline.setFrameRate', value);
+        speed.on('change', (value: string) => {
+            events.fire('timeline.setFrameRate', parseInt(value, 10));
+        });
+
+        events.on('timeline.frameRate', (frameRate: number) => {
+            speed.value = frameRate.toString();
         });
 
         const frames = new NumericInput({
@@ -216,6 +220,10 @@ class TimelinePanel extends Container {
 
         frames.on('change', (value: number) => {
             events.fire('timeline.setFrames', value);
+        });
+
+        events.on('timeline.frames', (framesIn: number) => {
+            frames.value = framesIn;
         });
 
         const settingsControls = new Container({

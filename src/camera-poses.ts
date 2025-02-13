@@ -110,6 +110,12 @@ const registerCameraPosesEvents = (events: Events) => {
         removePose(index);
     });
 
+    events.on('timeline.frames', () => {
+        rebuildSpline();
+    });
+
+    // doc
+
     events.function('docSerialize.poseSets', (): any[] => {
         const pack3 = (v: Vec3) => [v.x, v.y, v.z];
 

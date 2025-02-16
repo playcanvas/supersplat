@@ -101,7 +101,7 @@ class Transform extends Container {
             class: 'transform-expand',
             precision: 3,
             value: 1,
-            min: 0.01,
+            min: 0.001,
             max: 10000,
             enabled: false
         });

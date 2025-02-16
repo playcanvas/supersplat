@@ -6,7 +6,7 @@ import { Events } from './events';
 import { Scene } from './scene';
 import { Writer, DownloadWriter, FileStreamWriter } from './serialize/writer';
 import { Splat } from './splat';
-import { serializePly, serializePlyCompressed, serializeSplat, serializeViewer, ViewerExportSettings } from './splat-serialize';
+import { serializePly, serializePlyCompressed, SerializeSettings, serializeSplat, serializeViewer, ViewerExportSettings } from './splat-serialize';
 import { localize } from './ui/localization';
 
 // ts compiler and vscode find this type, but eslint does not
@@ -384,7 +384,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         const splats = getSplats();
         const events = splats[0].scene.events;
 
-        const serializeSettings = {
+        const serializeSettings: SerializeSettings = {
             maxSHBands: events.invoke('view.bands')
         };
 
@@ -393,6 +393,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                 await serializePly(splats, serializeSettings, writer);
                 break;
             case 'compressed-ply':
+                serializeSettings.minOpacity = 1 / 255;
+                serializeSettings.removeInvalid = true;
                 await serializePlyCompressed(splats, serializeSettings, writer);
                 break;
             case 'splat':

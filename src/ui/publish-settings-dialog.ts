@@ -308,7 +308,8 @@ class PublishSettingsDialog extends Container {
 
                     const serializeSettings = {
                         maxSHBands: bandsSlider.value,
-                        minOpacity: 1 / 255                 // remove completely semitransparent splats
+                        minOpacity: 1 / 255,                    // remove completely semitransparent splats
+                        removeInvalid: true                     // remove gaussians with any NaN data
                     };
 
                     resolve({

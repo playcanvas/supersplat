@@ -24,6 +24,7 @@ type SerializeSettings = {
     maxSHBands?: number;            // specifies the maximum number of bands to be exported
     selected?: boolean;             // only export selected gaussians. used for copy/paste
     minOpacity?: number;            // filter out gaussians with alpha less than or equal to minAlpha
+    removeInvalid?: boolean;        // filter out gaussians with invalid data (NaN/Infinity)
 
     // the following options are used when serializing the PLY for document save
     // and are only supported by serializePly
@@ -79,7 +80,7 @@ class GaussianFilter {
     test: (i: number) => boolean;
 
     constructor(serializeSettings: SerializeSettings) {
-        let splat = null;
+        let splat: Splat = null;
         let state: Uint8Array = null;
         let opacity: Float32Array = null;
 
@@ -91,6 +92,7 @@ class GaussianFilter {
 
         const onlySelected = serializeSettings.selected ?? false;
         const minOpacity = serializeSettings.minOpacity ?? 0;
+        const removeInvalid = serializeSettings.removeInvalid ?? false;
 
         this.test = (i: number) => {
             // splat is deleted, always removed
@@ -106,6 +108,22 @@ class GaussianFilter {
             // optionally filter based on opacity
             if (minOpacity > 0 && sigmoid(opacity[i]) < minOpacity) {
                 return false;
+            }
+
+            if (removeInvalid) {
+                const { splatData } = splat;
+
+                // check if any property of the gaussian is NaN/Infinity
+                for (let j = 0; j < splatData.elements.length; ++j) {
+                    const element = splatData.elements[j];
+                    for (let k = 0; k < element.properties.length; ++k) {
+                        const prop = element.properties[k];
+                        const { storage } = prop;
+                        if (storage && !Number.isFinite(storage[i])) {
+                            return false;
+                        }
+                    }
+                }
             }
 
             return true;

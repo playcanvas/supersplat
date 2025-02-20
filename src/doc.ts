@@ -12,7 +12,7 @@ type FilePickerAcceptType = unknown;
 const SuperFileType: FilePickerAcceptType[] = [{
     description: 'SuperSplat document',
     accept: {
-        'application/octet-stream': ['.ssproj']
+        'application/x-supersplat': ['.ssproj']
     }
 }];
 

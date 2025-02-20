@@ -42,7 +42,7 @@ const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
     'splat': {
         description: 'Gaussian Splat File',
         accept: {
-            'application/octet-stream': ['.splat']
+            'application/x-gaussian-splat': ['.splat']
         }
     },
     'htmlViewer': {

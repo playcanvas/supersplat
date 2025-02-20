@@ -57,7 +57,7 @@ class Transform extends Container {
 
         const positionVector = new VectorInput({
             class: 'transform-expand',
-            precision: 2,
+            precision: 3,
             dimensions: 3,
             value: [0, 0, 0],
             enabled: false
@@ -99,9 +99,9 @@ class Transform extends Container {
 
         const scaleInput = new NumericInput({
             class: 'transform-expand',
-            precision: 2,
+            precision: 3,
             value: 1,
-            min: 0.01,
+            min: 0.001,
             max: 10000,
             enabled: false
         });

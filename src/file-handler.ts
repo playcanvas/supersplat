@@ -212,13 +212,13 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
             const isSequence = () => {
                 // eslint-disable-next-line regexp/no-super-linear-backtracking
                 const regex = /(.*?)(\d+).ply$/;
-                const baseMatch = entries[0].file.name?.match(regex);
+                const baseMatch = entries[0].file.name?.toLowerCase().match(regex);
                 if (!baseMatch) {
                     return false;
                 }
 
                 for (let i = 1; i < entries.length; i++) {
-                    const thisMatch = entries[i].file.name?.match(regex);
+                    const thisMatch = entries[i].file.name?.toLowerCase().match(regex);
                     if (!thisMatch || thisMatch[1] !== baseMatch[1]) {
                         return false;
                     }
@@ -228,8 +228,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
             };
 
             if (entries.length > 1 && isSequence()) {
-                events.fire('animation.setFrames', entries.map(e => e.file));
-                events.fire('animation.setFrame', 0);
+                events.fire('plysequence.setFrames', entries.map(e => e.file));
+                events.fire('timeline.frame', 0);
             } else {
                 for (let i = 0; i < entries.length; i++) {
                     const entry = entries[i];
@@ -307,8 +307,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                         }
                     }
                 }
-                events.fire('animation.setFrames', files);
-                events.fire('animation.setFrame', 0);
+                events.fire('plysequence.setFrames', files);
+                events.fire('timeline.frame', 0);
             }
         } catch (error) {
             if (error.name !== 'AbortError') {

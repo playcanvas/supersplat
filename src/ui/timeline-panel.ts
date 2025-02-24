@@ -1,7 +1,6 @@
-import { Button, Container, Label, NumericInput, SelectInput, SliderInput } from 'pcui';
+import { Button, Container, NumericInput, SelectInput } from 'pcui';
 
 import { Events } from '../events';
-import { localize } from './localization';
 import { Tooltips } from './tooltips';
 
 class Ticks extends Container {
@@ -273,6 +272,13 @@ class TimelinePanel extends Container {
                 } else {
                     events.fire('timeline.setFrame', orderedKeys[dir === 'back' ? (nextKey + l - 1) % l : nextKey].frame);
                 }
+            } else {
+                // if there are no keys, just to start of timeline or end
+                if (dir === 'back') {
+                    events.fire('timeline.setFrame', 0);
+                } else {
+                    events.fire('timeline.setFrame', events.invoke('timeline.frames') - 1);
+                }
             }
         };
 
@@ -325,56 +331,6 @@ class TimelinePanel extends Container {
                 // stop
             }
         });
-
-        // ply animations
-
-        const slider = new SliderInput({
-            id: 'frame-slider',
-            min: 0,
-            max: 0,
-            precision: 0,
-            value: 0,
-            hidden: true
-        });
-
-        this.append(slider);
-
-        const prevFrame = () => {
-            const frames = events.invoke('animation.frames');
-            if (frames > 0) {
-                const frame = events.invoke('animation.frame');
-                events.fire('animation.setFrame', (frame - 1 + frames) % frames);
-            }
-        };
-
-        const nextFrame = () => {
-            const frames = events.invoke('animation.frames');
-            if (frames > 0) {
-                const frame = events.invoke('animation.frame');
-                events.fire('animation.setFrame', (frame + 1) % frames);
-            }
-        };
-
-        slider.on('change', (value: number) => {
-            events.fire('animation.setFrame', value);
-        });
-
-        events.on('animation.frames', (frames: number) => {
-            this.hidden = frames === 0;
-            slider.max = slider.sliderMax = frames - 1;
-        });
-
-        events.on('animation.frame', (frame: number) => {
-            slider.value = frame;
-        });
-
-        tooltips.register(prev, localize('timeline.prev-key'), 'top');
-        tooltips.register(play, localize('timeline.play'), 'top');
-        tooltips.register(next, localize('timeline.next-key'), 'top');
-        tooltips.register(addKey, localize('timeline.add-key'), 'top');
-        tooltips.register(removeKey, localize('timeline.remove-key'), 'top');
-        tooltips.register(speed, localize('timeline.frame-rate'), 'top');
-        tooltips.register(frames, localize('timeline.total-frames'), 'top');
     }
 }
 

@@ -2,11 +2,10 @@ import { Events } from './events';
 import { Splat } from './splat';
 
 const registerPlySequenceEvents = (events: Events) => {
-    // animation support
-    let animationFiles: File[] = [];
-    let animationSplat: Splat = null;
-    let animationFrame = -1;
-    let animationLoading = false;
+    let sequenceFiles: File[] = [];
+    let sequenceSplat: Splat = null;
+    let sequenceFrame = -1;
+    let sequenceLoading = false;
     let nextFrame = -1;
 
     const setFrames = (files: File[]) => {
@@ -20,9 +19,9 @@ const registerPlySequenceEvents = (events: Events) => {
             return (avalue && bvalue) ? parseInt(avalue, 10) - parseInt(bvalue, 10) : 0;
         };
 
-        animationFiles = files.slice();
-        animationFiles.sort(sorter);
-        events.fire('plysequence.frames', animationFiles.length);
+        sequenceFiles = files.slice();
+        sequenceFiles.sort(sorter);
+        events.fire('timeline.frames', sequenceFiles.length);
     };
 
     // resolves on first render frame
@@ -35,16 +34,16 @@ const registerPlySequenceEvents = (events: Events) => {
     };
 
     const setFrame = async (frame: number) => {
-        if (frame < 0 || frame >= animationFiles.length) {
+        if (frame < 0 || frame >= sequenceFiles.length) {
             return;
         }
 
-        if (animationLoading) {
+        if (sequenceLoading) {
             nextFrame = frame;
             return;
         }
 
-        if (frame === animationFrame) {
+        if (frame === sequenceFrame) {
             return;
         }
 
@@ -61,28 +60,26 @@ const registerPlySequenceEvents = (events: Events) => {
             }
 
             events.fire('scene.clear');
-            animationSplat = null;
+            sequenceSplat = null;
         }
 
-        animationLoading = true;
+        sequenceLoading = true;
 
-        const file = animationFiles[frame];
+        const file = sequenceFiles[frame];
         const url = URL.createObjectURL(file);
-        const newSplat = await events.invoke('import', url, file.name, !animationSplat, true) as Splat;
+        const newSplat = await events.invoke('import', url, file.name, !sequenceSplat, true) as Splat;
         URL.revokeObjectURL(url);
 
         // wait for first frame render
         await firstRender(newSplat);
 
         // destroy the previous frame
-        if (animationSplat) {
-            animationSplat.destroy();
+        if (sequenceSplat) {
+            sequenceSplat.destroy();
         }
-        animationFrame = frame;
-        animationSplat = newSplat;
-        animationLoading = false;
-
-        events.fire('plysequence.frame', frame);
+        sequenceFrame = frame;
+        sequenceSplat = newSplat;
+        sequenceLoading = false;
 
         // initiate the next frame load
         if (nextFrame !== -1) {
@@ -92,20 +89,8 @@ const registerPlySequenceEvents = (events: Events) => {
         }
     };
 
-    events.function('plysequence.frames', () => {
-        return animationFiles?.length ?? 0;
-    });
-
-    events.function('plysequence.frame', () => {
-        return animationFrame;
-    });
-
     events.on('plysequence.setFrames', (files: File[]) => {
         setFrames(files);
-    });
-
-    events.on('plysequence.setFrame', async (frame: number) => {
-        await setFrame(frame);
     });
 
     events.on('timeline.frame', async (frame: number) => {

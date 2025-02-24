@@ -272,6 +272,13 @@ class TimelinePanel extends Container {
                 } else {
                     events.fire('timeline.setFrame', orderedKeys[dir === 'back' ? (nextKey + l - 1) % l : nextKey].frame);
                 }
+            } else {
+                // if there are no keys, just to start of timeline or end
+                if (dir === 'back') {
+                    events.fire('timeline.setFrame', 0);
+                } else {
+                    events.fire('timeline.setFrame', events.invoke('timeline.frames') - 1);
+                }
             }
         };
 

@@ -229,7 +229,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
 
             if (entries.length > 1 && isSequence()) {
                 events.fire('plysequence.setFrames', entries.map(e => e.file));
-                events.fire('plysequence.setFrame', 0);
+                events.fire('timeline.frame', 0);
             } else {
                 for (let i = 0; i < entries.length; i++) {
                     const entry = entries[i];
@@ -308,7 +308,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                     }
                 }
                 events.fire('plysequence.setFrames', files);
-                events.fire('plysequence.setFrame', 0);
+                events.fire('timeline.frame', 0);
             }
         } catch (error) {
             if (error.name !== 'AbortError') {

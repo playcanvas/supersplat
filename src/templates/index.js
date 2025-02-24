@@ -279,44 +279,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // On entering/exiting AR, we need to set the camera clear color to transparent black
-    let cameraEntity, skyType = null;
-    const clearColor = new Color();
-
-    app.xr.on('start', () => {
-        if (app.xr.type === 'immersive-ar') {
-            cameraEntity = app.xr.camera;
-            clearColor.copy(cameraEntity.camera.clearColor);
-            cameraEntity.camera.clearColor = new Color(0, 0, 0, 0);
-
-            const sky = document.querySelector('pc-sky');
-            if (sky && sky.type !== 'none') {
-                skyType = sky.type;
-                sky.type = 'none';
-            }
-
-            app.autoRender = true;
-        }
-    });
-
-    app.xr.on('end', () => {
-        if (app.xr.type === 'immersive-ar') {
-            cameraEntity.camera.clearColor = clearColor;
-
-            const sky = document.querySelector('pc-sky');
-            if (sky) {
-                if (skyType) {
-                    sky.type = skyType;
-                    skyType = null;
-                } else {
-                    sky.removeAttribute('type');
-                }
-            }
-
-            app.autoRender = false;
-        }
-    });
-
     // Get button and info panel elements
     const dom = ['arMode', 'vrMode', 'enterFullscreen', 'exitFullscreen', 'info', 'infoPanel', 'buttonContainer'].reduce((acc, id) => {
         acc[id] = document.getElementById(id);

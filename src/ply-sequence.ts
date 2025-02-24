@@ -1,7 +1,7 @@
 import { Events } from './events';
 import { Splat } from './splat';
 
-const registerAnimationEvents = (events: Events) => {
+const registerPlySequenceEvents = (events: Events) => {
     // animation support
     let animationFiles: File[] = [];
     let animationSplat: Splat = null;
@@ -22,7 +22,7 @@ const registerAnimationEvents = (events: Events) => {
 
         animationFiles = files.slice();
         animationFiles.sort(sorter);
-        events.fire('animation.frames', animationFiles.length);
+        events.fire('plysequence.frames', animationFiles.length);
     };
 
     // resolves on first render frame
@@ -82,7 +82,7 @@ const registerAnimationEvents = (events: Events) => {
         animationSplat = newSplat;
         animationLoading = false;
 
-        events.fire('animation.frame', frame);
+        events.fire('plysequence.frame', frame);
 
         // initiate the next frame load
         if (nextFrame !== -1) {
@@ -92,21 +92,25 @@ const registerAnimationEvents = (events: Events) => {
         }
     };
 
-    events.function('animation.frames', () => {
+    events.function('plysequence.frames', () => {
         return animationFiles?.length ?? 0;
     });
 
-    events.function('animation.frame', () => {
+    events.function('plysequence.frame', () => {
         return animationFrame;
     });
 
-    events.on('animation.setFrames', (files: File[]) => {
+    events.on('plysequence.setFrames', (files: File[]) => {
         setFrames(files);
     });
 
-    events.on('animation.setFrame', async (frame: number) => {
+    events.on('plysequence.setFrame', async (frame: number) => {
+        await setFrame(frame);
+    });
+
+    events.on('timeline.frame', async (frame: number) => {
         await setFrame(frame);
     });
 };
 
-export { registerAnimationEvents };
+export { registerPlySequenceEvents };

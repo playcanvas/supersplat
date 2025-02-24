@@ -1,12 +1,12 @@
 import { Color, createGraphicsDevice } from 'playcanvas';
 
-import { registerAnimationEvents } from './animation';
 import { registerCameraPosesEvents } from './camera-poses';
 import { registerDocEvents } from './doc';
 import { EditHistory } from './edit-history';
 import { registerEditorEvents } from './editor';
 import { Events } from './events';
 import { initFileHandler } from './file-handler';
+import { registerPlySequenceEvents } from './ply-sequence';
 import { registerPublishEvents } from './publish';
 import { Scene } from './scene';
 import { getSceneConfig } from './scene-config';
@@ -246,7 +246,7 @@ const main = async () => {
     registerTimelineEvents(events);
     registerCameraPosesEvents(events);
     registerTransformHandlerEvents(events);
-    registerAnimationEvents(events);
+    registerPlySequenceEvents(events);
     registerPublishEvents(events);
     registerDocEvents(scene, events);
     initShortcuts(events);

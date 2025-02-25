@@ -160,7 +160,7 @@ void main(void) {
                 }
             }
 
-            gl_FragColor = vec4(color.xyz, alpha);
+            gl_FragColor = vec4(color.xyz * alpha, alpha);
         #endif
     #endif
 }

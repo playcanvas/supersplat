@@ -1,9 +1,13 @@
 import {
     ADDRESS_CLAMP_TO_EDGE,
+    BLENDEQUATION_ADD,
+    BLENDMODE_ONE,
+    BLENDMODE_ONE_MINUS_SRC_ALPHA,
     FILTER_NEAREST,
     PIXELFORMAT_R8,
     PIXELFORMAT_R16U,
     Asset,
+    BlendState,
     BoundingBox,
     Color,
     Entity,
@@ -154,10 +158,14 @@ class Splat extends Element {
         // create the transform palette
         this.transformPalette = new TransformPalette(splatResource.device);
 
+        // blend mode for splats
+        const blendState = new BlendState(true, BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE_MINUS_SRC_ALPHA);
+
         this.rebuildMaterial = (bands: number) => {
             instance.createMaterial(materialOptions);
             const { material } = instance;
             material.chunks = { gsplatCenterVS: gsplatCenter };
+            material.blendState = blendState;
             material.setDefine('SH_BANDS', `${Math.min(bands, instance.splat.shBands)}`);
             material.setParameter('splatState', this.stateTexture);
             material.setParameter('splatTransform', this.transformTexture);

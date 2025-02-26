@@ -2,16 +2,13 @@ import { BoundingBox, Color, Mat4, Script, Vec3 } from 'playcanvas';
 
 import { CubicSpline } from 'spline';
 
-// eslint-disable-next-line
-import viewerSettings from "viewerSettings" with { type: "json" };
-
 const nearlyEquals = (a, b, epsilon = 1e-4) => {
     return !a.some((v, i) => Math.abs(v - b[i]) >= epsilon);
 };
 
 const url = new URL(location.href);
 
-const settings = {
+const params = {
     noui: url.searchParams.has('noui'),
     noanim: url.searchParams.has('noanim'),
     posterUrl: url.searchParams.get('poster')
@@ -37,20 +34,19 @@ class Poster {
     }
 }
 
-const poster = settings.posterUrl && new Poster(settings.posterUrl);
+const poster = params.posterUrl && new Poster(params.posterUrl);
 
 class FrameScene extends Script {
-    constructor(args) {
-        super(args);
-
-        const { camera, animTracks } = viewerSettings;
+    initialize() {
+        const { settings } = this;
+        const { camera, animTracks } = settings;
         const { position, target } = camera;
 
         this.position = position && new Vec3(position);
         this.target = target && new Vec3(target);
 
         // construct camera animation track
-        if (animTracks?.length > 0 && viewerSettings.camera.startAnim === 'animTrack') {
+        if (animTracks?.length > 0 && settings.camera.startAnim === 'animTrack') {
             const track = animTracks.find(track => track.name === camera.animTrack);
             if (track) {
                 const { keyframes, duration } = track;
@@ -143,7 +139,7 @@ class FrameScene extends Script {
 
         app.on('update', (deltaTime) => {
             // handle camera animation
-            if (this.cameraAnim && animating && !settings.noanim) {
+            if (this.cameraAnim && animating && !params.noanim) {
                 const { cameraAnim } = this;
                 const { spline, track, result } = cameraAnim;
 
@@ -260,10 +256,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const app = await appElement.app;
     const camera = cameraElement.entity;
+    const settings = await window.settings;
 
-    camera.camera.clearColor = new Color(viewerSettings.background.color);
-    camera.camera.fov = viewerSettings.camera.fov;
-    camera.script.create(FrameScene);
+    camera.camera.clearColor = new Color(settings.background.color);
+    camera.camera.fov = settings.camera.fov;
+    camera.script.create(FrameScene, {
+        properties: { settings }
+    });
 
     // Update loading indicator
     const assets = app.assets.filter(asset => asset.type === 'gsplat');
@@ -362,7 +361,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // Hide UI
-    if (settings.noui) {
+    if (params.noui) {
         dom.buttonContainer.classList.add('hidden');
     }
 });

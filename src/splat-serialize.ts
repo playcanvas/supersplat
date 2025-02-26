@@ -1014,14 +1014,14 @@ const serializeViewer = async (splats: Splat[], options: ViewerExportSettings, w
         const style = '<link rel="stylesheet" href="./index.css">';
         const script = '<script type="module" src="./index.js"></script>';
         const spline = '"spline": "./spline.js"';
-        const settings = '"viewerSettings": "./settings.json"';
+        const settings = 'window.settings = fetch("./settings.json").then(response => response.json());';
         const content = '<pc-asset id="ply" type="gsplat" lazy src="./scene.compressed.ply"></pc-asset>';
 
         const html = indexHtml
         .replace(style, `<style>\n${pad(indexCss, 12)}\n        </style>`)
         .replace(script, `<script type="module">\n${pad(indexJs, 12)}\n        </script>`)
         .replace(spline, `"spline": "data:application/javascript;,${encodeURIComponent(splineJs)}"`)
-        .replace(settings, `"viewerSettings": "data:application/json;,${encodeURIComponent(JSON.stringify(experienceSettings))}"`)
+        .replace(settings, `window.settings = ${JSON.stringify(experienceSettings)};`)
         .replace(content, `<pc-asset id="ply" type="gsplat" lazy src="data:application/ply;base64,${encodeBase64(plyBuffer)}"></pc-asset>`);
 
         await writer.write(new TextEncoder().encode(html), true);

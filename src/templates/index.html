@@ -10,12 +10,14 @@
             {
                 "imports": {
                     "playcanvas": "https://cdn.jsdelivr.net/npm/playcanvas@2.4.2/build/playcanvas.mjs",
-                    "spline": "./spline.js",
-                    "viewerSettings": "./settings.json"
+                    "spline": "./spline.js"
                 }
             }
         </script>
         <script type="module" src="https://cdn.jsdelivr.net/npm/@playcanvas/web-components@0.1.13/dist/pwc.mjs"></script>
+        <script type="module">
+            window.settings = fetch("./settings.json").then(response => response.json());
+        </script>
     </head>
     <body>
         <pc-app antialias="false" depth="false" high-resolution="true" stencil="false">

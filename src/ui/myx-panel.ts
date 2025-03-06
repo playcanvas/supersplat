@@ -13,6 +13,7 @@ const setUpdateDataTransferredInterval = (labelRegistry: Label, labelTraffic: La
             return 0;
         }
 
+        //@ts-ignore
         for (const prop of asset.resource.splatData.elements[0].properties)
             size += prop.storage.byteLength;
         return size;

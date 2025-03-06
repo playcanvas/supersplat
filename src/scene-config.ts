@@ -47,6 +47,7 @@ const sceneConfig = {
         showModeToggle:  () => { return true || !sceneConfig.myx.enabled },
         showDataPanel:  () => { return true || !sceneConfig.myx.enabled },
         showViewCube: () => { return true || !sceneConfig.myx.enabled },
+        showTimelinePanel: () => { return false || !sceneConfig.myx.enabled },
         scene: {
             bulkLoad: {
                 enabled: false,

@@ -120,6 +120,7 @@ const myx_main = async (scene: Scene, config: SceneConfig, events: Events) => {
         });
     
     // events.fire('camera.toggleMode');
+    events.fire('camera.toggleOverlay')
 }
 
 export { myx_main }

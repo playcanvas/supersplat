@@ -173,7 +173,9 @@ class EditorUI {
         const dataPanel = new DataPanel(events);
 
         mainContainer.append(canvasContainer);
-        mainContainer.append(timelinePanel);
+        if (config.myx.showTimelinePanel()) {
+            mainContainer.append(timelinePanel);
+        }
         if (config.myx.showDataPanel()) {
             mainContainer.append(dataPanel);
         }

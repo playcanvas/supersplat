@@ -189,6 +189,8 @@ class Scene {
 
         this.dataProcessor = new DataProcessor(this.app.graphicsDevice);
         this.assetLoader = new AssetLoader(graphicsDevice, this.app.assets, events, this.app.graphicsDevice.maxAnisotropy);
+        //@ts-ignore
+        window.assetLoader = this.assetLoader;
 
         // create root entities
         this.contentRoot = new Entity('contentRoot');
@@ -205,7 +207,10 @@ class Scene {
         this.add(this.splatOverlay);
 
         this.grid = new Grid();
-        this.add(this.grid);
+        if (config.myx.showGrid()) {
+            this.add(this.grid);
+        }
+        
 
         this.outline = new Outline();
         this.add(this.outline);

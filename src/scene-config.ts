@@ -1,6 +1,6 @@
 type Color = { r: number, g: number, b: number, a: number };
 
-const DEFAULT_BG_CLR: Color = { r: 0.4, g: 0.4, b: 0.4, a: 1 };
+const DEFAULT_BG_CLR: Color = { r: 1, g: 1, b: 1, a: 1 };
 const DEFAULT_SELECTED_CLR: Color = { r: 1, g: 1, b: 0, a: 1 };
 const DEFAULT_UNSELECTED_CLR: Color = { r: 0, g: 0, b: 1, a: 0.5 };
 const DEFAULT_LOCKED_CLR: Color = { r: 0, g: 0, b: 0, a: 0.05 };
@@ -36,6 +36,29 @@ const sceneConfig = {
         initialZoom: 1.0,
         orbitSensitivity: 0.3,
         zoomSensitivity: 0.4
+    },
+    myx: {
+        enabled: true,
+        showGrid: () => { return false || !sceneConfig.myx.enabled },
+        showScenePanel:  () => { return true || !sceneConfig.myx.enabled },
+        showMenu:  () => { return false || !sceneConfig.myx.enabled },
+        showBottomToolbar:  () => { return false || !sceneConfig.myx.enabled },
+        showRightToolbar:  () => { return false || !sceneConfig.myx.enabled },
+        showModeToggle:  () => { return true || !sceneConfig.myx.enabled },
+        showDataPanel:  () => { return true || !sceneConfig.myx.enabled },
+        showViewCube: () => { return true || !sceneConfig.myx.enabled },
+        scene: {
+            bulkLoad: {
+                enabled: false,
+                level: 1
+            },
+            cameraLoad: {
+                enabled: false,
+                l1Distance: 10,
+                l2Distance: 5,
+                l3Distance: 1
+            }
+        }
     },
     debug: {
         showBound: false

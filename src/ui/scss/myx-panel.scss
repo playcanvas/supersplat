@@ -1,0 +1,14 @@
+#myx-panel {
+    top: 140px;
+    right: 24px;
+    width: 320px;
+}
+
+.collapsed #myx-panel {
+    display: none;
+}
+
+.splat-list-container {
+    max-height: 300px;
+    overflow: auto;
+}

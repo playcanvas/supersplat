@@ -53,6 +53,7 @@
         "rollup-plugin-scss": "^4.0.1",
         "rollup-plugin-string": "^3.0.0",
         "rollup-plugin-visualizer": "^5.14.0",
+        "rollup-plugin-dev": "^2.0.5",
         "sass": "^1.85.1",
         "serve": "^14.2.4",
         "tslib": "^2.8.1",

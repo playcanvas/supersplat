@@ -24,6 +24,7 @@ import { SphereSelection } from './tools/sphere-selection';
 import { ToolManager } from './tools/tool-manager';
 import { registerTransformHandlerEvents } from './transform-handler';
 import { EditorUI } from './ui/editor';
+import { myx_main } from './myx_main';
 
 declare global {
     interface LaunchParams {
@@ -112,8 +113,15 @@ const main = async () => {
     // edit history
     const editHistory = new EditHistory(events);
 
+    const overrides = [
+        getURLArgs()
+    ];
+
+    // resolve scene config
+    const sceneConfig = getSceneConfig(overrides);
+
     // editor ui
-    const editorUI = new EditorUI(events, !!remoteStorageDetails);
+    const editorUI = new EditorUI(events, !!remoteStorageDetails, sceneConfig);
 
     // create the graphics device
     const graphicsDevice = await createGraphicsDevice(editorUI.canvas, {
@@ -124,13 +132,6 @@ const main = async () => {
         xrCompatible: false,
         powerPreference: 'high-performance'
     });
-
-    const overrides = [
-        getURLArgs()
-    ];
-
-    // resolve scene config
-    const sceneConfig = getSceneConfig(overrides);
 
     // construct the manager
     const scene = new Scene(
@@ -272,6 +273,8 @@ const main = async () => {
             }
         });
     }
+
+    myx_main(scene, sceneConfig, events);
 };
 
 export { main };

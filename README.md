@@ -1,3 +1,16 @@
+# MYX Supersplat
+
+This repository is forked from https://github.com/playcanvas/supersplat.git 
+It aims to add tiling + lod functionality to supersplat, and convert the project from application, to a library, that can later be imported into MYX's twinviewer.
+
+To setup follow the Supersplat steps listed below, Plus an additional step to test the Tiling.
+
+For tiling:
+- Create tiled structure for a twin using the tiling scripts in jupyter
+- Download the structure locally
+- Start http-server in the place where the tiling files are stored
+- The http-server should run on port 8080. The supersplat config for the http-server is visible under rollup.conmfig.mjs - check it there
+
 # SuperSplat - 3D Gaussian Splat Editor
 
 | [SuperSplat Editor](https://superspl.at/editor) | [User Guide](https://github.com/playcanvas/supersplat/wiki) | [Forum](https://forum.playcanvas.com/) | [Discord](https://discord.gg/RSaMRzg) |

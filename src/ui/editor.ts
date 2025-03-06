@@ -21,6 +21,8 @@ import { ViewCube } from './view-cube';
 import { ViewPanel } from './view-panel';
 import { ViewerExportPopup } from './viewer-export-popup';
 import { version } from '../../package.json';
+import { SceneConfig } from 'src/scene-config';
+import { MyxPanel } from './myx-panel';
 
 class EditorUI {
     appContainer: Container;
@@ -30,7 +32,7 @@ class EditorUI {
     canvas: HTMLCanvasElement;
     popup: Popup;
 
-    constructor(events: Events, remoteStorageMode: boolean) {
+    constructor(events: Events, remoteStorageMode: boolean, config: SceneConfig) {
         localizeInit();
 
         // favicon
@@ -110,6 +112,7 @@ class EditorUI {
         tooltipsContainer.append(tooltips);
 
         // bottom toolbar
+        const myxPanel = new MyxPanel(events, config);
         const scenePanel = new ScenePanel(events, tooltips);
         const viewPanel = new ViewPanel(events, tooltips);
         const colorPanel = new ColorPanel(events, tooltips);
@@ -119,20 +122,44 @@ class EditorUI {
         const menu = new Menu(events);
 
         canvasContainer.dom.appendChild(canvas);
-        canvasContainer.append(appLabel);
+        if (!config.myx.enabled) {
+            canvasContainer.append(appLabel);
+        } else {
+            canvasContainer.append(myxPanel);
+        }
+
         canvasContainer.append(cursorLabel);
         canvasContainer.append(toolsContainer);
-        canvasContainer.append(scenePanel);
+
+        if (config.myx.showScenePanel()) {
+            canvasContainer.append(scenePanel);
+        }
+
         canvasContainer.append(viewPanel);
         canvasContainer.append(colorPanel);
-        canvasContainer.append(bottomToolbar);
-        canvasContainer.append(rightToolbar);
-        canvasContainer.append(modeToggle);
-        canvasContainer.append(menu);
+
+        if (config.myx.showBottomToolbar()) {
+            canvasContainer.append(bottomToolbar);
+        }
+
+        if (config.myx.showRightToolbar()) {
+            canvasContainer.append(rightToolbar);
+        }
+
+        if (config.myx.showModeToggle()) {
+            canvasContainer.append(modeToggle);
+        }
+
+        if (config.myx.showMenu()) {
+            canvasContainer.append(menu);
+        }
+
 
         // view axes container
         const viewCube = new ViewCube(events);
-        canvasContainer.append(viewCube);
+        if (config.myx.showViewCube()) {
+            canvasContainer.append(viewCube);
+        }
         events.on('prerender', (cameraMatrix: Mat4) => {
             viewCube.update(cameraMatrix);
         });
@@ -147,7 +174,9 @@ class EditorUI {
 
         mainContainer.append(canvasContainer);
         mainContainer.append(timelinePanel);
-        mainContainer.append(dataPanel);
+        if (config.myx.showDataPanel()) {
+            mainContainer.append(dataPanel);
+        }
 
         editorContainer.append(mainContainer);
 

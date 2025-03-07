@@ -1,0 +1,66 @@
+name: Publish package
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish-package:
+    name: Publish package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@myx-ad'
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compare package version with published version
+        id: check_version
+        run: |
+          current_version=$(jq -r '.version' package.json)
+          echo "Current version: $current_version"
+
+          # Get the published version from GitHub Package Registry
+          published_version=$(npm view @myx-ad/supersplat version || echo "none")
+          echo "Published version: $published_version"
+
+          if [ "$published_version" = "none" ] || [ "$current_version" != "$published_version" ]; then
+            echo "Version has changed or no version found. Proceeding with release."
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "version=$current_version" >> $GITHUB_OUTPUT
+          else
+            echo "No version change."
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Exit if no version change
+        if: steps.check_version.outputs.changed == 'false'
+        run: |
+          echo "No version change, exiting..."
+          exit 1
+
+      - name: Install Dependencies
+        run: yarn install
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build the app
+        run: yarn build:component
+
+      - name: Publish package
+        if: steps.check_version.outputs.changed == 'true'
+        run: |
+          echo "Publishing new version: ${{ steps.check_version.outputs.version }}"
+          yarn publish --non-interactive
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

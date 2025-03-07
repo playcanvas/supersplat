@@ -1,7 +1,7 @@
 {
-    "name": "supersplat",
+    "name": "@myx-ad/supersplat",
     "version": "2.1.0",
-    "author": "PlayCanvas<support@playcanvas.com>",
+    "author": "myx-ad",
     "homepage": "https://playcanvas.com/supersplat/editor",
     "description": "3D Gaussian Splat Editor",
     "keywords": [
@@ -58,5 +58,8 @@
         "serve": "^14.2.4",
         "tslib": "^2.8.1",
         "typescript": "^5.7.3"
+    },
+    "publishConfig": {
+        "registry": "https://npm.pkg.github.com/"
     }
 }

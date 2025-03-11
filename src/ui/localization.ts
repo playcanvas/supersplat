@@ -206,6 +206,10 @@ const localizeInit = () => {
                     'file.export.splat': 'Splat file (.splat)',
                     'file.export.viewer': 'Viewer App...',
 
+                    'render': 'Render',
+                    'render.screenshot': 'Screenshot',
+                    'render.video': 'Video',
+
                     // Selection menu
                     'select': 'Select',
                     'select.all': 'All',

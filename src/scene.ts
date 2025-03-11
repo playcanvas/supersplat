@@ -41,6 +41,9 @@ class Scene {
     boundDirty = true;
     forceRender = false;
 
+    lockedRenderMode = false;
+    lockedRender = false;
+
     canvasResize: {width: number; height: number} | null = null;
     targetSize = {
         width: 0,
@@ -315,7 +318,10 @@ class Scene {
         const all = new Set([...result.added, ...result.removed, ...result.moved, ...result.changed]);
 
         // compare with previously serialized
-        if (!this.app.renderNextFrame) {
+        if (this.lockedRenderMode) {
+            this.app.renderNextFrame = this.lockedRender;
+            this.lockedRender = false;
+        } else if (!this.app.renderNextFrame) {
             this.app.renderNextFrame = this.forceRender || all.size > 0;
         }
         this.forceRender = false;
@@ -377,6 +383,8 @@ class Scene {
 
     private onPostRender() {
         this.forEachElement(e => e.onPostRender());
+
+        this.events.fire('postrender');
     }
 }
 

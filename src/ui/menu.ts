@@ -61,6 +61,11 @@ class Menu extends Container {
             class: 'menu-option'
         });
 
+        const render = new Label({
+            text: localize('render'),
+            class: 'menu-option'
+        });
+
         const selection = new Label({
             text: localize('select'),
             class: 'menu-option'
@@ -94,6 +99,7 @@ class Menu extends Container {
             id: 'menu-options-container'
         });
         buttonsContainer.append(scene);
+        buttonsContainer.append(render);
         buttonsContainer.append(selection);
         buttonsContainer.append(help);
         buttonsContainer.append(collapse);
@@ -126,7 +132,7 @@ class Menu extends Container {
             onSelect: () => events.invoke('scene.export', 'viewer')
         }]);
 
-        const sceneMenuPanel = new MenuPanel([{
+        const fileMenuPanel = new MenuPanel([{
             text: localize('file.new'),
             icon: createSvg(sceneNew),
             isEnabled: () => !events.invoke('scene.empty'),
@@ -150,11 +156,6 @@ class Menu extends Container {
             isEnabled: () => !events.invoke('scene.empty'),
             onSelect: async () => await events.invoke('doc.saveAs')
         }, {
-            text: localize('file.save-screenshot'),
-            icon: createSvg(sceneExport),
-            isEnabled: () => true,
-            onSelect: () => events.invoke('scene.saveScreenshot')
-        }, {
             // separator
         }, {
             text: localize('file.import'),
@@ -171,6 +172,22 @@ class Menu extends Container {
             icon: createSvg(scenePublish),
             isEnabled: () => !events.invoke('scene.empty'),
             onSelect: () => events.invoke('scene.publish')
+        }]);
+
+        const renderMenuPanel = new MenuPanel([{
+            text: localize('render.screenshot'),
+            icon: createSvg(sceneExport),
+            onSelect: () => events.invoke('render.screenshot')
+        }, {
+            text: localize('render.video'),
+            icon: createSvg(sceneExport),
+            onSelect: () => events.invoke('render.video', {
+                startFrame: 0,
+                endFrame: events.invoke('timeline.frames') - 1,
+                frameRate: events.invoke('timeline.frameRate'),
+                width: 1920,
+                height: 1080
+            })
         }]);
 
         const selectionMenuPanel = new MenuPanel([{
@@ -265,14 +282,18 @@ class Menu extends Container {
         }]);
 
         this.append(menubar);
-        this.append(sceneMenuPanel);
+        this.append(fileMenuPanel);
         this.append(exportMenuPanel);
+        this.append(renderMenuPanel);
         this.append(selectionMenuPanel);
         this.append(helpMenuPanel);
 
         const options: { dom: HTMLElement, menuPanel: MenuPanel }[] = [{
             dom: scene.dom,
-            menuPanel: sceneMenuPanel
+            menuPanel: fileMenuPanel
+        }, {
+            dom: render.dom,
+            menuPanel: renderMenuPanel
         }, {
             dom: selection.dom,
             menuPanel: selectionMenuPanel

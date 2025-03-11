@@ -55,7 +55,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build the app
-        run: yarn build:component
+        run: yarn build
 
       - name: Publish package
         if: steps.check_version.outputs.changed == 'true'

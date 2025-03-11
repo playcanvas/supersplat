@@ -96,7 +96,7 @@ class Menu extends Container {
         arrow.dom.addEventListener('click', toggleCollapsed);
 
         const buttonsContainer = new Container({
-            id: 'menu-options-container'
+            id: 'menu-bar-options'
         });
         buttonsContainer.append(scene);
         buttonsContainer.append(render);

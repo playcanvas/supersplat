@@ -90,6 +90,12 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     codec: 'avc',
                     width,
                     height,
+                    // render is upside-down. use transform to flip it
+                    rotation: [
+                        1, 0, 0,
+                        0,-1, 0,
+                        0, height, 1
+                    ]
                 },
                 fastStart: 'in-memory',
                 firstTimestampBehavior: 'offset'
@@ -117,52 +123,44 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             // cpu-side buffer to read pixels into
             const data = new Uint8Array(width * height * 4);
 
-            let currentFrame = -1;
-            let frameCaptured: (value: boolean) => void = null;
+            let captureFrame = -1;
+            let captureResolve: (value: boolean) => void = null;
 
-            const captureFrame = scene.events.on('postrender', async () => {
+            const captureFrameHandle = scene.events.on('postrender', async () => {
                 const { renderTarget } = scene.camera.entity.camera;
                 const { colorBuffer } = renderTarget;
 
-                const currentF = currentFrame;
-                const capturedF = frameCaptured;
-                currentFrame = -1;
-                frameCaptured = null;
-
-                if (!capturedF) {
-                    return;
-                }
-
-                // read the texture data
+                // read the rendered frame
                 await colorBuffer.read(0, 0, width, height, { renderTarget, data });
 
-                // construct the next video frame
+                // construct the video frame
                 const frame = new VideoFrame(data, {
                     format: "RGBA",
                     codedWidth: width,
                     codedHeight: height,
-                    timestamp: 1e6 * currentF / frameRate,
+                    timestamp: 1e6 * captureFrame / frameRate,
                     duration: 1 / frameRate
                 });
                 encoder.encode(frame);
                 frame.close();
 
-                capturedF(true);
+                // resolve the promise
+                captureResolve(true);
             });
 
             for (let frame = startFrame; frame <= endFrame; frame++) {
-                currentFrame = frame;
+                captureFrame = frame;
 
                 // move the timeline which should invoke render
                 events.fire('timeline.setFrame', frame);
                 scene.lockedRender = true;
 
                 await new Promise<boolean>((resolve, reject) => {
-                    frameCaptured = resolve;
+                    captureResolve = resolve;
                 });
             }
 
-            captureFrame.off();
+            captureFrameHandle.off();
 
             // Flush and finalize muxer
             await encoder.flush();
@@ -178,6 +176,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             scene.camera.endOffscreenMode();
             scene.camera.entity.camera.clearColor.set(0, 0, 0, 0);
             scene.lockedRenderMode = false;
+            scene.forceRender = true;       // camera likely moved, finish with normal render
 
             events.fire('stopSpinner');
         }

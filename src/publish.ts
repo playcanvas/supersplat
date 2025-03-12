@@ -92,24 +92,17 @@ const publish = async (data: Uint8Array, publishSettings: PublishSettings, user:
 };
 
 const registerPublishEvents = (events: Events) => {
-    events.function('scene.publish', async () => {
+
+    events.function('publish.enabled', async () => {
+        return !!(await getUser());
+    });
+
+    events.function('scene.publish', async (publishSettings: PublishSettings) => {
         const user = await getUser();
 
-        if (!user) {
-            // use must be logged in to publish
-            await events.invoke('showPopup', {
-                type: 'error',
-                header: localize('popup.error'),
-                message: localize('publish.please-log-in')
-            });
+        if (!user || !publishSettings) {
+            return false;
         } else {
-            // get publish options
-            const publishSettings: PublishSettings = await events.invoke('show.publishSettingsDialog');
-
-            if (!publishSettings) {
-                return;
-            }
-
             try {
                 events.fire('startSpinner');
 

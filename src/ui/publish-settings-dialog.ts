@@ -24,6 +24,7 @@ class PublishSettingsDialog extends Container {
         args = {
             ...args,
             id: 'publish-settings-dialog',
+            class: 'settings-dialog',
             hidden: true,
             tabIndex: -1
         };
@@ -216,19 +217,31 @@ class PublishSettingsDialog extends Container {
 
         // function implementations
 
-        this.show = () => {
+        this.show = async () => {
+            // check user is logged in
+            const canPublish = await events.invoke('publish.enabled');
+
+            if (!canPublish) {
+                await events.invoke('showPopup', {
+                    type: 'error',
+                    header: localize('popup.error'),
+                    message: localize('publish.please-log-in')
+                });
+                return false;
+            }
+
             reset();
 
             this.hidden = false;
             this.dom.addEventListener('keydown', keydown);
             this.dom.focus();
 
-            return new Promise<null | PublishSettings>((resolve) => {
+            return new Promise<boolean>((resolve) => {
                 onCancel = () => {
-                    resolve(null);
+                    resolve(false);
                 };
 
-                onOK = () => {
+                onOK = async () => {
                     const frames = events.invoke('timeline.frames');
                     const frameRate = events.invoke('timeline.frameRate');
 
@@ -312,13 +325,15 @@ class PublishSettingsDialog extends Container {
                         removeInvalid: true                     // remove gaussians with any NaN data
                     };
 
-                    resolve({
+                    const result = await events.invoke('scene.publish', {
                         title: titleInput.value,
                         description: descInput.value,
                         listed: listBoolean.value,
                         serializeSettings,
                         experienceSettings
                     });
+
+                    resolve(result);
                 };
             }).finally(() => {
                 this.dom.removeEventListener('keydown', keydown);

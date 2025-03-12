@@ -21,7 +21,6 @@ const localizeInit = () => {
                     'file.load-all-data': 'PLY-Daten vollständig laden',
                     'file.save': 'Speichern',
                     'file.save-as': 'Speichern als...',
-                    'file.save-screenshot': 'Screenshot speichern',
                     'file.publish': 'Veröffentlichen...',
                     'file.export': 'Exportieren',
                     'file.export.compressed-ply': 'Komprimiertes PLY',
@@ -198,7 +197,6 @@ const localizeInit = () => {
                     'file.load-all-data': 'Load all PLY data',
                     'file.save': 'Save',
                     'file.save-as': 'Save As...',
-                    'file.save-screenshot': 'Save Screenshot',
                     'file.publish': 'Publish...',
                     'file.export': 'Export',
                     'file.export.ply': 'PLY (.ply)',
@@ -207,8 +205,8 @@ const localizeInit = () => {
                     'file.export.viewer': 'Viewer App...',
 
                     'render': 'Render',
-                    'render.screenshot': 'Screenshot',
-                    'render.video': 'Video',
+                    'render.image': 'Image',
+                    'render.video': 'Video...',
 
                     // Selection menu
                     'select': 'Select',
@@ -410,6 +408,12 @@ const localizeInit = () => {
                     'publish.message': 'Use the link below to access your scene.',
                     'publish.please-log-in': 'Publishing to PlayCanvas requires a user account. Please log in and try again.',
 
+                    // Video Settings Dialog
+                    'video.header': 'VIDEO SETTINGS',
+                    'video.resolution': 'Resolution',
+                    'video.transparentBg': 'Transparent Background',
+                    'video.showDebug': 'Show Debug Overlays',
+
                     // Timeline
                     'timeline.prev-key': 'Jump to previous keyframe',
                     'timeline.play': 'Play/Stop',
@@ -430,7 +434,6 @@ const localizeInit = () => {
                     'file.load-all-data': 'Charger toutes les données ply',
                     'file.save': 'Enregistrer',
                     'file.save-as': 'Enregistrer sous...',
-                    'file.save-screenshot': 'Enregistrer une capture d\'écran',
                     'file.publish': 'Publier...',
                     'file.export': 'Exporter',
                     'file.export.compressed-ply': 'Ply compressé',
@@ -607,7 +610,6 @@ const localizeInit = () => {
                     'file.load-all-data': '全てのPLYデータを読み込む',
                     'file.save': '保存',
                     'file.save-as': '名前を付けて保存',
-                    'file.save-screenshot': 'スクリーンショットを保存',
                     'file.publish': '公開...',
                     'file.export': 'エクスポート',
                     'file.export.compressed-ply': 'Compressed PLY (.ply)',
@@ -784,7 +786,6 @@ const localizeInit = () => {
                     'file.load-all-data': '모든 PLY 데이터 불러오기',
                     'file.save': '저장',
                     'file.save-as': '다른 이름으로 저장...',
-                    'file.save-screenshot': '스크린샷 저장',
                     'file.publish': '게시...',
                     'file.export': '내보내기',
                     'file.export.compressed-ply': '압축된 PLY',
@@ -961,7 +962,6 @@ const localizeInit = () => {
                     'file.load-all-data': '加载所有 PLY 数据',
                     'file.save': '保存',
                     'file.save-as': '另存为...',
-                    'file.save-screenshot': '保存截图',
                     'file.publish': '发布...',
                     'file.export': '导出',
                     'file.export.compressed-ply': '压缩 PLY',

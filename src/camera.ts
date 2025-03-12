@@ -652,9 +652,12 @@ class Camera extends Element {
 
     // offscreen render mode
 
-    startOffscreenMode(width: number, height: number) {
+    startOffscreenMode(width: number, height: number, renderDebug: boolean) {
         this.targetSize = { width, height };
         this.suppressFinalBlit = true;
+        if (!renderDebug) {
+            // disable debug overlays etc
+        }
     }
 
     endOffscreenMode() {

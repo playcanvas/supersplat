@@ -19,6 +19,7 @@ import { TimelinePanel } from './timeline-panel';
 import { Tooltips } from './tooltips';
 import { ViewCube } from './view-cube';
 import { ViewPanel } from './view-panel';
+import { VideoSettingsDialog } from './video-settings-dialog';
 import { ViewerExportPopup } from './viewer-export-popup';
 import { version } from '../../package.json';
 
@@ -162,12 +163,16 @@ class EditorUI {
         // export popup
         const viewerExportPopup = new ViewerExportPopup(events);
 
-        // publish options
+        // publish settings
         const publishSettingsDialog = new PublishSettingsDialog(events);
+
+        // video settings
+        const videoSettingsDialog = new VideoSettingsDialog(events);
 
         topContainer.append(popup);
         topContainer.append(viewerExportPopup);
         topContainer.append(publishSettingsDialog);
+        topContainer.append(videoSettingsDialog);
 
         appContainer.append(editorContainer);
         appContainer.append(topContainer);
@@ -194,6 +199,10 @@ class EditorUI {
 
         events.function('show.publishSettingsDialog', () => {
             return publishSettingsDialog.show();
+        });
+
+        events.function('show.videoSettingsDialog', () => {
+            return videoSettingsDialog.show();
         });
 
         events.function('show.about', () => {

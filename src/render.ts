@@ -1,6 +1,7 @@
 import { path } from 'playcanvas';
 
 import { Events } from './events';
+import { localize } from './ui/localization';
 import { Muxer, ArrayBufferTarget } from 'mp4-muxer';
 import { PngCompressor } from './png-compressor';
 import { Scene } from './scene';
@@ -12,6 +13,9 @@ type VideoSettings = {
     frameRate: number;
     width: number;
     height: number;
+    bitrate: number;
+    transparentBg: boolean;
+    showDebug: boolean;
 };
 
 const replaceExtension = (filename: string, extension: string) => {
@@ -34,7 +38,7 @@ const downloadFile = (arrayBuffer: ArrayBuffer, filename: string) => {
 const registerRenderEvents = (scene: Scene, events: Events) => {
     let compressor: PngCompressor;
 
-    events.function('render.screenshot', async () => {
+    events.function('render.image', async () => {
         events.fire('startSpinner');
 
         try {
@@ -82,7 +86,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
     events.function('render.video', async (videoSettings: VideoSettings) => {
         events.fire('startSpinner');
         try {
-            const { startFrame, endFrame, frameRate, width, height } = videoSettings;
+            const { startFrame, endFrame, frameRate, width, height, bitrate, transparentBg, showDebug } = videoSettings;
 
             const muxer = new Muxer({
                 target: new ArrayBufferTarget(),
@@ -105,19 +109,23 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 output: (chunk, meta) => {
                     muxer.addVideoChunk(chunk, meta);
                 },
-                error: (error) => console.log(error)
+                error: (error) => {
+                    console.log(error);
+                }
             });
 
             encoder.configure({
-                codec: 'avc1.420028', // H.264 codec
+                codec: height < 1080 ? 'avc1.420028' : 'avc1.640033', // H.264 profile low : high
                 width,
                 height,
-                bitrate: 1e8
+                bitrate
             });
 
             // start rendering to offscreen buffer only
-            scene.camera.startOffscreenMode(width, height);
-            scene.camera.entity.camera.clearColor.copy(events.invoke('bgClr'));
+            scene.camera.startOffscreenMode(width, height, showDebug);
+            if (!transparentBg) {
+                scene.camera.entity.camera.clearColor.copy(events.invoke('bgClr'));
+            }
             scene.lockedRenderMode = true;
 
             // cpu-side buffer to read pixels into
@@ -125,27 +133,32 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
             let captureFrame = -1;
             let captureResolve: (value: boolean) => void = null;
+            let captureReject: (reason: any) => void = null;
 
             const captureFrameHandle = scene.events.on('postrender', async () => {
                 const { renderTarget } = scene.camera.entity.camera;
                 const { colorBuffer } = renderTarget;
 
-                // read the rendered frame
-                await colorBuffer.read(0, 0, width, height, { renderTarget, data });
+                try {
+                    // read the rendered frame
+                    await colorBuffer.read(0, 0, width, height, { renderTarget, data });
 
-                // construct the video frame
-                const frame = new VideoFrame(data, {
-                    format: "RGBA",
-                    codedWidth: width,
-                    codedHeight: height,
-                    timestamp: 1e6 * captureFrame / frameRate,
-                    duration: 1 / frameRate
-                });
-                encoder.encode(frame);
-                frame.close();
+                    // construct the video frame
+                    const frame = new VideoFrame(data, {
+                        format: "RGBA",
+                        codedWidth: width,
+                        codedHeight: height,
+                        timestamp: 1e6 * captureFrame / frameRate,
+                        duration: 1 / frameRate
+                    });
+                    encoder.encode(frame);
+                    frame.close();
 
-                // resolve the promise
-                captureResolve(true);
+                    // resolve the promise
+                    captureResolve(true);
+                } catch (error) {
+                    captureReject(error);
+                }
             });
 
             for (let frame = startFrame; frame <= endFrame; frame++) {
@@ -157,6 +170,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
                 await new Promise<boolean>((resolve, reject) => {
                     captureResolve = resolve;
+                    captureReject = reject;
                 });
             }
 
@@ -172,6 +186,14 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
             // Free resources
             encoder.close();
+
+            return true;
+        } catch (error) {
+            await events.invoke('showPopup', {
+                type: 'error',
+                header: localize('render.failed'),
+                message: `'${error.message ?? error}'`
+            });
         } finally {
             scene.camera.endOffscreenMode();
             scene.camera.entity.camera.clearColor.set(0, 0, 0, 0);

@@ -171,23 +171,17 @@ class Menu extends Container {
             text: localize('file.publish'),
             icon: createSvg(scenePublish),
             isEnabled: () => !events.invoke('scene.empty'),
-            onSelect: () => events.invoke('scene.publish')
+            onSelect: async () => await events.invoke('show.publishSettingsDialog')
         }]);
 
         const renderMenuPanel = new MenuPanel([{
-            text: localize('render.screenshot'),
+            text: localize('render.image'),
             icon: createSvg(sceneExport),
-            onSelect: () => events.invoke('render.screenshot')
+            onSelect: () => events.invoke('render.image')
         }, {
             text: localize('render.video'),
             icon: createSvg(sceneExport),
-            onSelect: () => events.invoke('render.video', {
-                startFrame: 0,
-                endFrame: events.invoke('timeline.frames') - 1,
-                frameRate: events.invoke('timeline.frameRate'),
-                width: 1920,
-                height: 1080
-            })
+            onSelect: async () => await events.invoke('show.videoSettingsDialog')
         }]);
 
         const selectionMenuPanel = new MenuPanel([{

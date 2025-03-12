@@ -174,16 +174,6 @@ class Menu extends Container {
             onSelect: async () => await events.invoke('show.publishSettingsDialog')
         }]);
 
-        const renderMenuPanel = new MenuPanel([{
-            text: localize('render.image'),
-            icon: createSvg(sceneExport),
-            onSelect: () => events.invoke('render.image')
-        }, {
-            text: localize('render.video'),
-            icon: createSvg(sceneExport),
-            onSelect: async () => await events.invoke('show.videoSettingsDialog')
-        }]);
-
         const selectionMenuPanel = new MenuPanel([{
             text: localize('select.all'),
             icon: createSvg(selectAll),
@@ -235,6 +225,16 @@ class Menu extends Container {
             onSelect: () => events.fire('select.separate')
         }]);
 
+        const renderMenuPanel = new MenuPanel([{
+            text: localize('render.image'),
+            icon: createSvg(sceneExport),
+            onSelect: () => events.invoke('render.image')
+        }, {
+            text: localize('render.video'),
+            icon: createSvg(sceneExport),
+            onSelect: async () => await events.invoke('show.videoSettingsDialog')
+        }]);
+
         const helpMenuPanel = new MenuPanel([{
             text: localize('help.shortcuts'),
             icon: 'E136',
@@ -278,19 +278,19 @@ class Menu extends Container {
         this.append(menubar);
         this.append(fileMenuPanel);
         this.append(exportMenuPanel);
-        this.append(renderMenuPanel);
         this.append(selectionMenuPanel);
+        this.append(renderMenuPanel);
         this.append(helpMenuPanel);
 
         const options: { dom: HTMLElement, menuPanel: MenuPanel }[] = [{
             dom: scene.dom,
             menuPanel: fileMenuPanel
         }, {
-            dom: render.dom,
-            menuPanel: renderMenuPanel
-        }, {
             dom: selection.dom,
             menuPanel: selectionMenuPanel
+        }, {
+            dom: render.dom,
+            menuPanel: renderMenuPanel
         }, {
             dom: help.dom,
             menuPanel: helpMenuPanel

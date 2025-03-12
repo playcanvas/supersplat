@@ -1,5 +1,6 @@
 import { path } from 'playcanvas';
 
+import { ElementType } from './element';
 import { Events } from './events';
 import { localize } from './ui/localization';
 import { Muxer, ArrayBufferTarget } from 'mp4-muxer';
@@ -18,11 +19,8 @@ type VideoSettings = {
     showDebug: boolean;
 };
 
-const replaceExtension = (filename: string, extension: string) => {
-    const removeExtension = (filename: string) => {
-        return filename.substring(0, filename.length - path.getExtension(filename).length);
-    };
-    return `${removeExtension(filename)}${extension}`;
+const removeExtension = (filename: string) => {
+    return filename.substring(0, filename.length - path.getExtension(filename).length);
 };
 
 const downloadFile = (arrayBuffer: ArrayBuffer, filename: string) => {
@@ -74,7 +72,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
             // construct filename
             const selected = events.invoke('selection') as Splat;
-            const filename = replaceExtension(selected?.filename ?? 'SuperSplat', '.png');
+            const filename = `${removeExtension(selected?.name ?? 'SuperSplat')}-image.png`;
 
             // download
             downloadFile(arrayBuffer, filename);
@@ -132,58 +130,78 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             // cpu-side buffer to read pixels into
             const data = new Uint8Array(width * height * 4);
 
-            let captureFrame = -1;
-            let captureResolve: (value: boolean) => void = null;
-            let captureReject: (reason: any) => void = null;
+            // get the list of visible splats
+            const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter((splat) => splat.visible);
 
-            const captureFrameHandle = scene.events.on('postrender', async () => {
+            // prepare the frame for rendering
+            const prepareFrame = async (frame: number) => {
+                // go to first frame of the animation
+                events.fire('timeline.setFrame', frame);
+
+                // initiate manual render
+                scene.lockedRender = true;
+
+                // wait for sorting to complete
+                await Promise.all(splats.map((splat) => {
+                    // create a promise for each splat that will resolve upon sorting complete
+                    return new Promise<void>((resolve) => {
+                        splat.entity.gsplat.instance.sorter.on('updated', () => {
+                            resolve();
+                        });
+                        // in cases where the camera does not move between frames the sorter won't run
+                        // and we need a timeout instead. this is a hack - the engine should allow us to
+                        // know whether the sorter is running or not.
+                        setTimeout(() => resolve(), 1000);
+                    });
+                }));
+            };
+
+            // capture the current video frame
+            const captureFrame = async (frame: number) => {
                 const { renderTarget } = scene.camera.entity.camera;
                 const { colorBuffer } = renderTarget;
 
-                try {
-                    // read the rendered frame
-                    await colorBuffer.read(0, 0, width, height, { renderTarget, data });
+                // read the rendered frame
+                await colorBuffer.read(0, 0, width, height, { renderTarget, data });
 
-                    // construct the video frame
-                    const frame = new VideoFrame(data, {
-                        format: "RGBA",
-                        codedWidth: width,
-                        codedHeight: height,
-                        timestamp: 1e6 * captureFrame / frameRate,
-                        duration: 1 / frameRate
-                    });
-                    encoder.encode(frame);
-                    frame.close();
-
-                    // resolve the promise
-                    captureResolve(true);
-                } catch (error) {
-                    captureReject(error);
-                }
-            });
+                // construct the video frame
+                const videoFrame = new VideoFrame(data, {
+                    format: "RGBA",
+                    codedWidth: width,
+                    codedHeight: height,
+                    timestamp: 1e6 * frame / frameRate,
+                    duration: 1 / frameRate
+                });
+                encoder.encode(videoFrame);
+                videoFrame.close();
+            };
 
             for (let frame = startFrame; frame <= endFrame; frame++) {
-                captureFrame = frame;
-
-                // move the timeline which should invoke render
-                events.fire('timeline.setFrame', frame);
-                scene.lockedRender = true;
-
-                await new Promise<boolean>((resolve, reject) => {
-                    captureResolve = resolve;
-                    captureReject = reject;
+                const capturePromise = new Promise<boolean>((resolve, reject) => {
+                    const handle = scene.events.on('postrender', async () => {
+                        handle.off();
+                        try {
+                            await captureFrame(frame);
+                            resolve(true);
+                        } catch (error) {
+                            reject(error);
+                        }
+                    });
                 });
-            }
 
-            captureFrameHandle.off();
+                // special case the first frame
+                await prepareFrame(frame);
+
+                // wait for capture
+                await capturePromise;
+            }
 
             // Flush and finalize muxer
             await encoder.flush();
             muxer.finalize();
 
             // Download
-            const selected = events.invoke('selection') as Splat;
-            downloadFile(muxer.target.buffer, replaceExtension(selected?.filename ?? 'SuperSplat', '.mp4'));
+            downloadFile(muxer.target.buffer, `${removeExtension(splats[0]?.name ?? 'SuperSplat')}-video.mp4`);
 
             // Free resources
             encoder.close();

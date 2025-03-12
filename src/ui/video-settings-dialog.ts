@@ -63,7 +63,7 @@ class VideoSettingsDialog extends Container {
 
         // bitrate
 
-        const bitrateLabel = new Label({ class: 'label', text: localize('video.resolution') });
+        const bitrateLabel = new Label({ class: 'label', text: localize('video.bitrate') });
         const bitrateSelect = new SelectInput({
             class: 'select',
             defaultValue: '5',
@@ -77,6 +77,14 @@ class VideoSettingsDialog extends Container {
         const bitrateRow = new Container({ class: 'row' });
         bitrateRow.append(bitrateLabel);
         bitrateRow.append(bitrateSelect);
+
+        // portrait mode
+
+        const portraitLabel = new Label({ class: 'label', text: localize('video.portrait') });
+        const portraitBoolean = new BooleanInput({ class: 'boolean', value: false });
+        const portraitRow = new Container({ class: 'row' });
+        portraitRow.append(portraitLabel);
+        portraitRow.append(portraitBoolean);
 
         // transparent background
 
@@ -103,6 +111,7 @@ class VideoSettingsDialog extends Container {
         const content = new Container({ id: 'content' });
         content.append(resolutionRow);
         content.append(bitrateRow);
+        content.append(portraitRow);
         content.append(transparentBgRow);
         content.append(showDebugRow);
 
@@ -188,12 +197,14 @@ class VideoSettingsDialog extends Container {
                         '4k': 2160
                     };
 
+                    const portrait = portraitBoolean.value;
+
                     const videoSettings = {
                         startFrame: 0,
                         endFrame: events.invoke('timeline.frames') - 1,
                         frameRate: events.invoke('timeline.frameRate'),
-                        width: widths[resolutionSelect.value],
-                        height: heights[resolutionSelect.value],
+                        width: (portrait ? heights : widths)[resolutionSelect.value],
+                        height: (portrait ? widths : heights)[resolutionSelect.value],
                         bitrate: parseInt(bitrateSelect.value) * 1e8,
                         transparentBg: transparentBgBoolean.value,
                         showDebug: showDebugBoolean.value

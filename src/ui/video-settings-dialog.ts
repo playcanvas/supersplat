@@ -53,7 +53,7 @@ class VideoSettingsDialog extends Container {
                 { v: '540', t: '960x540' },
                 { v: '720', t: '1280x720' },
                 { v: '1080', t: '1920x1080' },
-                { v: '1440', t:  '2560x1440' },
+                { v: '1440', t: '2560x1440' },
                 { v: '4k', t: '3840x2160' }
             ]
         });
@@ -70,7 +70,7 @@ class VideoSettingsDialog extends Container {
             options: [
                 { v: '2', t: '2mbps' },
                 { v: '5', t: '5mbps' },
-                { v: '8', t:  '8mbps' },
+                { v: '8', t: '8mbps' },
                 { v: '16', t: '16mbps' }
             ]
         });
@@ -162,7 +162,7 @@ class VideoSettingsDialog extends Container {
 
         // reset UI and configure for current state
         const reset = () => {
-            
+
         };
 
         // function implementations
@@ -205,7 +205,7 @@ class VideoSettingsDialog extends Container {
                         frameRate: events.invoke('timeline.frameRate'),
                         width: (portrait ? heights : widths)[resolutionSelect.value],
                         height: (portrait ? widths : heights)[resolutionSelect.value],
-                        bitrate: parseInt(bitrateSelect.value) * 1e8,
+                        bitrate: parseInt(bitrateSelect.value, 10) * 1e8,
                         transparentBg: transparentBgBoolean.value,
                         showDebug: showDebugBoolean.value
                     };

@@ -1,12 +1,12 @@
+import { Muxer, ArrayBufferTarget } from 'mp4-muxer';
 import { path } from 'playcanvas';
 
 import { ElementType } from './element';
 import { Events } from './events';
-import { localize } from './ui/localization';
-import { Muxer, ArrayBufferTarget } from 'mp4-muxer';
 import { PngCompressor } from './png-compressor';
 import { Scene } from './scene';
 import { Splat } from './splat';
+import { localize } from './ui/localization';
 
 type VideoSettings = {
     startFrame: number;
@@ -95,7 +95,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     // render is upside-down. use transform to flip it
                     rotation: [
                         1, 0, 0,
-                        0,-1, 0,
+                        0, -1, 0,
                         0, height, 1
                     ]
                 },
@@ -131,7 +131,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             const data = new Uint8Array(width * height * 4);
 
             // get the list of visible splats
-            const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter((splat) => splat.visible);
+            const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
 
             // prepare the frame for rendering
             const prepareFrame = async (frame: number) => {
@@ -166,7 +166,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
                 // construct the video frame
                 const videoFrame = new VideoFrame(data, {
-                    format: "RGBA",
+                    format: 'RGBA',
                     codedWidth: width,
                     codedHeight: height,
                     timestamp: 1e6 * frame / frameRate,

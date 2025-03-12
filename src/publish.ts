@@ -102,50 +102,49 @@ const registerPublishEvents = (events: Events) => {
 
         if (!user || !publishSettings) {
             return false;
-        } else {
-            try {
-                events.fire('startSpinner');
+        }
+        try {
+            events.fire('startSpinner');
 
-                // delay to allow spinner to show (hopefully 10ms is enough)
-                await new Promise((resolve) => {
-                    setTimeout(resolve, 10);
-                });
+            // delay to allow spinner to show (hopefully 10ms is enough)
+            await new Promise((resolve) => {
+                setTimeout(resolve, 10);
+            });
 
-                const splats = events.invoke('scene.splats');
+            const splats = events.invoke('scene.splats');
 
-                // serialize/compress
-                const writer = new BufferWriter();
-                const gzipWriter = new GZipWriter(writer);
-                await serializePlyCompressed(splats, publishSettings.serializeSettings, gzipWriter);
-                await gzipWriter.close();
-                const buffer = writer.close();
+            // serialize/compress
+            const writer = new BufferWriter();
+            const gzipWriter = new GZipWriter(writer);
+            await serializePlyCompressed(splats, publishSettings.serializeSettings, gzipWriter);
+            await gzipWriter.close();
+            const buffer = writer.close();
 
-                // publish
-                const response = await publish(buffer, publishSettings, user);
+            // publish
+            const response = await publish(buffer, publishSettings, user);
 
-                if (!response) {
-                    await events.invoke('showPopup', {
-                        type: 'error',
-                        header: localize('publish.failed'),
-                        message: localize('publish.please-try-again')
-                    });
-                } else {
-                    await events.invoke('showPopup', {
-                        type: 'info',
-                        header: localize('publish.succeeded'),
-                        message: localize('publish.message'),
-                        link: response.url
-                    });
-                }
-            } catch (error) {
+            if (!response) {
                 await events.invoke('showPopup', {
                     type: 'error',
                     header: localize('publish.failed'),
-                    message: `'${error.message ?? error}'`
+                    message: localize('publish.please-try-again')
                 });
-            } finally {
-                events.fire('stopSpinner');
+            } else {
+                await events.invoke('showPopup', {
+                    type: 'info',
+                    header: localize('publish.succeeded'),
+                    message: localize('publish.message'),
+                    link: response.url
+                });
             }
+        } catch (error) {
+            await events.invoke('showPopup', {
+                type: 'error',
+                header: localize('publish.failed'),
+                message: `'${error.message ?? error}'`
+            });
+        } finally {
+            events.fire('stopSpinner');
         }
     });
 };

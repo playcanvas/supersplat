@@ -17,9 +17,9 @@ import { ShortcutsPopup } from './shortcuts-popup';
 import { Spinner } from './spinner';
 import { TimelinePanel } from './timeline-panel';
 import { Tooltips } from './tooltips';
+import { VideoSettingsDialog } from './video-settings-dialog';
 import { ViewCube } from './view-cube';
 import { ViewPanel } from './view-panel';
-import { VideoSettingsDialog } from './video-settings-dialog';
 import { ViewerExportPopup } from './viewer-export-popup';
 import { version } from '../../package.json';
 

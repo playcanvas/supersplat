@@ -134,22 +134,31 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 // go to first frame of the animation
                 events.fire('timeline.setFrame', frame);
 
-                // initiate manual render
-                scene.lockedRender = true;
+                // manually update the camera so position and rotation are correct
+                scene.camera.onUpdate(0);
 
                 // wait for sorting to complete
                 await Promise.all(splats.map((splat) => {
                     // create a promise for each splat that will resolve upon sorting complete
                     return new Promise<void>((resolve) => {
-                        splat.entity.gsplat.instance.sorter.on('updated', () => {
+                        const { instance } = splat.entity.gsplat;
+                        const handle = instance.sorter.on('updated', () => {
+                            handle.off();
                             resolve();
                         });
+                        instance.sort(scene.camera.entity);
+
                         // in cases where the camera does not move between frames the sorter won't run
                         // and we need a timeout instead. this is a hack - the engine should allow us to
                         // know whether the sorter is running or not.
-                        setTimeout(() => resolve(), 1000);
+                        setTimeout(() => {
+                            resolve();
+                        }, 1000);
                     });
                 }));
+
+                // render during next update
+                scene.lockedRender = true;
             };
 
             // capture the current video frame

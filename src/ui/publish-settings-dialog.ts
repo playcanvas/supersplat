@@ -16,7 +16,7 @@ const createSvg = (svgString: string, args = {}) => {
 };
 
 class PublishSettingsDialog extends Container {
-    show: () => void;
+    show: () => Promise<PublishSettings | null>;
     hide: () => void;
     destroy: () => void;
 
@@ -219,26 +219,15 @@ class PublishSettingsDialog extends Container {
 
         this.show = async () => {
             // check user is logged in
-            const canPublish = await events.invoke('publish.enabled');
-
-            if (!canPublish) {
-                await events.invoke('showPopup', {
-                    type: 'error',
-                    header: localize('popup.error'),
-                    message: localize('publish.please-log-in')
-                });
-                return false;
-            }
-
             reset();
 
             this.hidden = false;
             this.dom.addEventListener('keydown', keydown);
             this.dom.focus();
 
-            return new Promise<boolean>((resolve) => {
+            return new Promise<PublishSettings>((resolve) => {
                 onCancel = () => {
-                    resolve(false);
+                    resolve(null);
                 };
 
                 onOK = async () => {
@@ -325,15 +314,13 @@ class PublishSettingsDialog extends Container {
                         removeInvalid: true                     // remove gaussians with any NaN data
                     };
 
-                    const result = await events.invoke('scene.publish', {
+                    resolve({
                         title: titleInput.value,
                         description: descInput.value,
                         listed: listBoolean.value,
                         serializeSettings,
                         experienceSettings
                     });
-
-                    resolve(result);
                 };
             }).finally(() => {
                 this.dom.removeEventListener('keydown', keydown);

@@ -1,10 +1,8 @@
-import { BooleanInput, Button, ColorPicker, Container, Element, Label, SelectInput, SliderInput, TextAreaInput, TextInput } from 'pcui';
+import { BooleanInput, Button, Container, Element, Label, SelectInput } from 'pcui';
 
-import { Pose } from '../camera-poses';
+import { VideoSettings } from '../render';
 import { Events } from '../events';
 import { localize } from './localization';
-import { PublishSettings } from '../publish';
-import { AnimTrack, ExperienceSettings } from '../splat-serialize';
 import sceneExport from './svg/export.svg';
 
 const createSvg = (svgString: string, args = {}) => {
@@ -16,7 +14,7 @@ const createSvg = (svgString: string, args = {}) => {
 };
 
 class VideoSettingsDialog extends Container {
-    show: () => void;
+    show: () => Promise<VideoSettings | null>;
     hide: () => void;
     destroy: () => void;
 
@@ -174,7 +172,7 @@ class VideoSettingsDialog extends Container {
             this.dom.addEventListener('keydown', keydown);
             this.dom.focus();
 
-            return new Promise<null | PublishSettings>((resolve) => {
+            return new Promise<VideoSettings | null>((resolve) => {
                 onCancel = () => {
                     resolve(null);
                 };
@@ -210,11 +208,7 @@ class VideoSettingsDialog extends Container {
                         showDebug: showDebugBoolean.value
                     };
 
-                    console.log(videoSettings);
-
-                    const result = await events.invoke('render.video', videoSettings);
-
-                    resolve(result);
+                    resolve(videoSettings);
                 };
             }).finally(() => {
                 this.dom.removeEventListener('keydown', keydown);

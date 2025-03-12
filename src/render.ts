@@ -83,6 +83,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
     events.function('render.video', async (videoSettings: VideoSettings) => {
         events.fire('startSpinner');
+
         try {
             const { startFrame, endFrame, frameRate, width, height, bitrate, transparentBg, showDebug } = videoSettings;
 
@@ -92,12 +93,6 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     codec: 'avc',
                     width,
                     height,
-                    // render is upside-down. use transform to flip it
-                    rotation: [
-                        1, 0, 0,
-                        0, -1, 0,
-                        0, height, 1
-                    ]
                 },
                 fastStart: 'in-memory',
                 firstTimestampBehavior: 'offset'
@@ -129,6 +124,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
             // cpu-side buffer to read pixels into
             const data = new Uint8Array(width * height * 4);
+            const line = new Uint8Array(width * 4);
 
             // get the list of visible splats
             const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
@@ -163,6 +159,15 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
                 // read the rendered frame
                 await colorBuffer.read(0, 0, width, height, { renderTarget, data });
+
+                // flip the buffer vertically
+                for (let y = 0; y < height / 2; y++) {
+                    const top = y * width * 4;
+                    const bottom = (height - y - 1) * width * 4;
+                    line.set(data.subarray(top, top + width * 4));
+                    data.copyWithin(top, bottom, bottom + width * 4);
+                    data.set(line, bottom);
+                }
 
                 // construct the video frame
                 const videoFrame = new VideoFrame(data, {
@@ -225,4 +230,4 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
     });
 };
 
-export { registerRenderEvents };
+export { VideoSettings, registerRenderEvents };

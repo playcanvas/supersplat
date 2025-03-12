@@ -197,12 +197,33 @@ class EditorUI {
             return viewerExportPopup.show(filename);
         });
 
-        events.function('show.publishSettingsDialog', () => {
-            return publishSettingsDialog.show();
+        events.function('show.publishSettingsDialog', async () => {
+            // show popup if user isn't logged in
+            const canPublish = await events.invoke('publish.enabled');
+            if (!canPublish) {
+                await events.invoke('showPopup', {
+                    type: 'error',
+                    header: localize('popup.error'),
+                    message: localize('publish.please-log-in')
+                });
+                return false;
+            }
+
+            // get user publish settings
+            const publishSettings = await publishSettingsDialog.show();
+
+            // do publish
+            if (publishSettings) {
+                await events.invoke('scene.publish', publishSettings);
+            }
         });
 
-        events.function('show.videoSettingsDialog', () => {
-            return videoSettingsDialog.show();
+        events.function('show.videoSettingsDialog', async () => {
+            const videoSettings = await videoSettingsDialog.show();
+
+            if (videoSettings) {
+                await events.invoke('render.video', videoSettings);
+            }
         });
 
         events.function('show.about', () => {

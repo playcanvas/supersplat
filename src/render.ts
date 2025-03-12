@@ -142,10 +142,15 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     // create a promise for each splat that will resolve upon sorting complete
                     return new Promise<void>((resolve) => {
                         const { instance } = splat.entity.gsplat;
+
+                        // listen for the sorter to complete
                         const handle = instance.sorter.on('updated', () => {
                             handle.off();
                             resolve();
                         });
+
+                        // manually invoke sort because internally the engine sorts after render the
+                        // scene call is made.
                         instance.sort(scene.camera.entity);
 
                         // in cases where the camera does not move between frames the sorter won't run

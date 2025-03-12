@@ -92,7 +92,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 video: {
                     codec: 'avc',
                     width,
-                    height,
+                    height
                 },
                 fastStart: 'in-memory',
                 firstTimestampBehavior: 'offset'

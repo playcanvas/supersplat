@@ -1,7 +1,7 @@
 import { BooleanInput, Button, Container, Element, Label, SelectInput } from 'pcui';
 
-import { VideoSettings } from '../render';
 import { Events } from '../events';
+import { VideoSettings } from '../render';
 import { localize } from './localization';
 import sceneExport from './svg/export.svg';
 
@@ -177,7 +177,7 @@ class VideoSettingsDialog extends Container {
                     resolve(null);
                 };
 
-                onOK = async () => {
+                onOK = () => {
 
                     const widths: Record<string, number> = {
                         '540': 960,

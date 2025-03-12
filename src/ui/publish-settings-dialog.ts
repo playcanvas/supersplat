@@ -217,7 +217,7 @@ class PublishSettingsDialog extends Container {
 
         // function implementations
 
-        this.show = async () => {
+        this.show = () => {
             // check user is logged in
             reset();
 
@@ -230,7 +230,7 @@ class PublishSettingsDialog extends Container {
                     resolve(null);
                 };
 
-                onOK = async () => {
+                onOK = () => {
                     const frames = events.invoke('timeline.frames');
                     const frameRate = events.invoke('timeline.frameRate');
 

@@ -122,7 +122,8 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             });
 
             // start rendering to offscreen buffer only
-            scene.camera.startOffscreenMode(width, height, showDebug);
+            scene.camera.startOffscreenMode(width, height);
+            scene.camera.renderOverlays = showDebug;
             if (!transparentBg) {
                 scene.camera.entity.camera.clearColor.copy(events.invoke('bgClr'));
             }
@@ -196,6 +197,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             });
         } finally {
             scene.camera.endOffscreenMode();
+            scene.camera.renderOverlays = true;
             scene.camera.entity.camera.clearColor.set(0, 0, 0, 0);
             scene.lockedRenderMode = false;
             scene.forceRender = true;       // camera likely moved, finish with normal render

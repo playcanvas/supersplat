@@ -76,6 +76,8 @@ class Camera extends Element {
 
     suppressFinalBlit = false;
 
+    renderOverlays = true;
+
     updateCameraUniforms: () => void;
 
     constructor() {
@@ -652,12 +654,9 @@ class Camera extends Element {
 
     // offscreen render mode
 
-    startOffscreenMode(width: number, height: number, renderDebug: boolean) {
+    startOffscreenMode(width: number, height: number) {
         this.targetSize = { width, height };
         this.suppressFinalBlit = true;
-        if (!renderDebug) {
-            // disable debug overlays etc
-        }
     }
 
     endOffscreenMode() {

@@ -343,7 +343,7 @@ class Splat extends Element {
 
     onPreRender() {
         const events = this.scene.events;
-        const selected = events.invoke('selection') === this;
+        const selected = this.scene.camera.renderOverlays && events.invoke('selection') === this;
         const cameraMode = events.invoke('camera.mode');
         const cameraOverlay = events.invoke('camera.overlay');
 

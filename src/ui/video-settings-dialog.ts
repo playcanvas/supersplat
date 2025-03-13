@@ -64,12 +64,12 @@ class VideoSettingsDialog extends Container {
         const bitrateLabel = new Label({ class: 'label', text: localize('video.bitrate') });
         const bitrateSelect = new SelectInput({
             class: 'select',
-            defaultValue: '5',
+            defaultValue: 'high',
             options: [
-                { v: '2', t: '2mbps' },
-                { v: '5', t: '5mbps' },
-                { v: '8', t: '8mbps' },
-                { v: '16', t: '16mbps' }
+                { v: 'low', t: 'Low' },
+                { v: 'medium', t: 'Medium' },
+                { v: 'high', t: 'High' },
+                { v: 'ultra', t: 'Ultra' }
             ]
         });
         const bitrateRow = new Container({ class: 'row' });
@@ -119,12 +119,12 @@ class VideoSettingsDialog extends Container {
 
         const cancelButton = new Button({
             class: 'button',
-            text: localize('publish.cancel')
+            text: localize('render.cancel')
         });
 
         const okButton = new Button({
             class: 'button',
-            text: localize('publish.ok')
+            text: localize('render.ok')
         });
 
         footer.append(cancelButton);
@@ -195,15 +195,40 @@ class VideoSettingsDialog extends Container {
                         '4k': 2160
                     };
 
+                    // bits per pixel per frame for different quality settings
+                    const bppfs: Record<string, number> = {
+                        'low': 0.001,
+                        'medium': 0.01,
+                        'high': 0.1,
+                        'ultra': 1
+                    };
+
+                    // scale down higher resolutions
+                    const bbpfFactors: Record<string, number> = {
+                        '540': 1,
+                        '720': 1 / 2,
+                        '1080': 1 / 3,
+                        '1440': 1 / 4,
+                        '4k': 1 / 5
+                    };
+
                     const portrait = portraitBoolean.value;
+                    const width = (portrait ? heights : widths)[resolutionSelect.value];
+                    const height = (portrait ? widths : heights)[resolutionSelect.value];
+                    const frameRate = events.invoke('timeline.frameRate');
+                    const bppf = bppfs[bitrateSelect.value] * bbpfFactors[resolutionSelect.value];
+                    // bitrate (bps) = 100m * (width × height × frame rate × bppf) / 1m
+                    const bitrate = Math.floor(10 * width * height * frameRate * bppf);
+
+                    console.log(bitrate);
 
                     const videoSettings = {
                         startFrame: 0,
                         endFrame: events.invoke('timeline.frames') - 1,
-                        frameRate: events.invoke('timeline.frameRate'),
-                        width: (portrait ? heights : widths)[resolutionSelect.value],
-                        height: (portrait ? widths : heights)[resolutionSelect.value],
-                        bitrate: parseInt(bitrateSelect.value, 10) * 1e8,
+                        frameRate,
+                        width,
+                        height,
+                        bitrate,
                         transparentBg: transparentBgBoolean.value,
                         showDebug: showDebugBoolean.value
                     };

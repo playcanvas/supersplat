@@ -69,7 +69,7 @@ class VideoSettingsDialog extends Container {
                 { v: 'low', t: 'Low' },
                 { v: 'medium', t: 'Medium' },
                 { v: 'high', t: 'High' },
-                { v: 'ultra', t: 'Ultra' },
+                { v: 'ultra', t: 'Ultra' }
             ]
         });
         const bitrateRow = new Container({ class: 'row' });

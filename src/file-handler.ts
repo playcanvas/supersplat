@@ -140,7 +140,9 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
             }
 
             const lowerFilename = (filename || url).toLowerCase();
-            if (lowerFilename.endsWith('.json')) {
+            if (lowerFilename.endsWith('.ssproj')) {
+                await events.invoke('doc.dropped', new File([await (await fetch(url)).blob()], filename));
+            } else if (lowerFilename.endsWith('.json')) {
                 await loadCameraPoses(url, filename, events);
             } else if (lowerFilename.endsWith('.ply') || lowerFilename.endsWith('.splat')) {
                 const model = await scene.assetLoader.loadModel({ url, filename, animationFrame });

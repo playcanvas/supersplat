@@ -47,7 +47,7 @@ class InfiniteGrid extends Element {
         );
 
         this.scene.camera.entity.camera.on('preRenderLayer', (layer: Layer, transparent: boolean) => {
-            if (this.visible && layer === this.scene.debugLayer && !transparent) {
+            if (this.visible && layer === this.scene.debugLayer && !transparent && this.scene.camera.renderOverlays) {
                 device.setBlendState(blendState);
                 device.setCullMode(CULLFACE_NONE);
                 device.setDepthState(DepthState.WRITEDEPTH);

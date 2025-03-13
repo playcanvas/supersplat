@@ -105,6 +105,7 @@ class SplatOverlay extends Element {
         const splatSize = events.invoke('camera.splatSize');
 
         if (this.meshInstance.node &&
+            this.scene.camera.renderOverlays &&
             splatSize > 0 &&
             events.invoke('camera.overlay') &&
             events.invoke('camera.mode') === 'centers') {

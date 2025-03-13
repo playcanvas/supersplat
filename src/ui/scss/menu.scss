@@ -10,7 +10,6 @@
     position: absolute;
     top: 24px;
     left: 24px;
-    width: 320px;
     height: 50px;
     border-radius: 8px;
 
@@ -39,7 +38,7 @@
     flex-direction: column;
 }
 
-#menu-options-container {
+#menu-bar-options {
     display: flex;
     flex-direction: row;
     flex-grow: 1;

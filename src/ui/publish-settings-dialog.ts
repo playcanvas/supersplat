@@ -16,7 +16,7 @@ const createSvg = (svgString: string, args = {}) => {
 };
 
 class PublishSettingsDialog extends Container {
-    show: () => void;
+    show: () => Promise<PublishSettings | null>;
     hide: () => void;
     destroy: () => void;
 
@@ -24,6 +24,7 @@ class PublishSettingsDialog extends Container {
         args = {
             ...args,
             id: 'publish-settings-dialog',
+            class: 'settings-dialog',
             hidden: true,
             tabIndex: -1
         };
@@ -217,13 +218,14 @@ class PublishSettingsDialog extends Container {
         // function implementations
 
         this.show = () => {
+            // check user is logged in
             reset();
 
             this.hidden = false;
             this.dom.addEventListener('keydown', keydown);
             this.dom.focus();
 
-            return new Promise<null | PublishSettings>((resolve) => {
+            return new Promise<PublishSettings>((resolve) => {
                 onCancel = () => {
                     resolve(null);
                 };

@@ -32,7 +32,7 @@ const registerCameraPosesEvents = (events: Events) => {
             const duration = events.invoke('timeline.frames');
 
             // interpolate camera positions and camera target positions
-            const spline = CubicSpline.fromPointsLooping(duration, times, points);
+            const spline = CubicSpline.fromPointsLooping(duration, times, points, -1);
             const result: number[] = [];
             const pose = { position: new Vec3(), target: new Vec3() };
 

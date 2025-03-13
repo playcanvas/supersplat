@@ -61,6 +61,11 @@ class Menu extends Container {
             class: 'menu-option'
         });
 
+        const render = new Label({
+            text: localize('render'),
+            class: 'menu-option'
+        });
+
         const selection = new Label({
             text: localize('select'),
             class: 'menu-option'
@@ -91,10 +96,11 @@ class Menu extends Container {
         arrow.dom.addEventListener('click', toggleCollapsed);
 
         const buttonsContainer = new Container({
-            id: 'menu-options-container'
+            id: 'menu-bar-options'
         });
         buttonsContainer.append(scene);
         buttonsContainer.append(selection);
+        buttonsContainer.append(render);
         buttonsContainer.append(help);
         buttonsContainer.append(collapse);
         buttonsContainer.append(arrow);
@@ -126,7 +132,7 @@ class Menu extends Container {
             onSelect: () => events.invoke('scene.export', 'viewer')
         }]);
 
-        const sceneMenuPanel = new MenuPanel([{
+        const fileMenuPanel = new MenuPanel([{
             text: localize('file.new'),
             icon: createSvg(sceneNew),
             isEnabled: () => !events.invoke('scene.empty'),
@@ -150,11 +156,6 @@ class Menu extends Container {
             isEnabled: () => !events.invoke('scene.empty'),
             onSelect: async () => await events.invoke('doc.saveAs')
         }, {
-            text: localize('file.save-screenshot'),
-            icon: createSvg(sceneExport),
-            isEnabled: () => true,
-            onSelect: () => events.invoke('scene.saveScreenshot')
-        }, {
             // separator
         }, {
             text: localize('file.import'),
@@ -170,7 +171,7 @@ class Menu extends Container {
             text: localize('file.publish'),
             icon: createSvg(scenePublish),
             isEnabled: () => !events.invoke('scene.empty'),
-            onSelect: () => events.invoke('scene.publish')
+            onSelect: async () => await events.invoke('show.publishSettingsDialog')
         }]);
 
         const selectionMenuPanel = new MenuPanel([{
@@ -224,6 +225,16 @@ class Menu extends Container {
             onSelect: () => events.fire('select.separate')
         }]);
 
+        const renderMenuPanel = new MenuPanel([{
+            text: localize('render.image'),
+            icon: createSvg(sceneExport),
+            onSelect: () => events.invoke('render.image')
+        }, {
+            text: localize('render.video'),
+            icon: createSvg(sceneExport),
+            onSelect: async () => await events.invoke('show.videoSettingsDialog')
+        }]);
+
         const helpMenuPanel = new MenuPanel([{
             text: localize('help.shortcuts'),
             icon: 'E136',
@@ -265,17 +276,21 @@ class Menu extends Container {
         }]);
 
         this.append(menubar);
-        this.append(sceneMenuPanel);
+        this.append(fileMenuPanel);
         this.append(exportMenuPanel);
         this.append(selectionMenuPanel);
+        this.append(renderMenuPanel);
         this.append(helpMenuPanel);
 
         const options: { dom: HTMLElement, menuPanel: MenuPanel }[] = [{
             dom: scene.dom,
-            menuPanel: sceneMenuPanel
+            menuPanel: fileMenuPanel
         }, {
             dom: selection.dom,
             menuPanel: selectionMenuPanel
+        }, {
+            dom: render.dom,
+            menuPanel: renderMenuPanel
         }, {
             dom: help.dom,
             menuPanel: helpMenuPanel

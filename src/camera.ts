@@ -71,6 +71,13 @@ class Camera extends Element {
 
     workRenderTarget: RenderTarget;
 
+    // overridden target size
+    targetSize: { width: number, height: number } = null;
+
+    suppressFinalBlit = false;
+
+    renderOverlays = true;
+
     updateCameraUniforms: () => void;
 
     constructor() {
@@ -355,7 +362,7 @@ class Camera extends Element {
     // handle the viewer canvas resizing
     rebuildRenderTargets() {
         const device = this.scene.graphicsDevice;
-        const { width, height } = this.scene.targetSize;
+        const { width, height } = this.targetSize ?? this.scene.targetSize;
 
         const rt = this.entity.camera.renderTarget;
         if (rt && rt.width === width && rt.height === height) {
@@ -472,7 +479,9 @@ class Camera extends Element {
         }
 
         // copy render target
-        device.copyRenderTarget(renderTarget, null, true, false);
+        if (!this.suppressFinalBlit) {
+            device.copyRenderTarget(renderTarget, null, true, false);
+        }
     }
 
     focus(options?: { focalPoint: Vec3, radius: number, speed: number }) {
@@ -641,6 +650,18 @@ class Camera extends Element {
         this.setDistance(settings.distance, 0);
         this.fov = settings.fov;
         this.tonemapping = settings.tonemapping;
+    }
+
+    // offscreen render mode
+
+    startOffscreenMode(width: number, height: number) {
+        this.targetSize = { width, height };
+        this.suppressFinalBlit = true;
+    }
+
+    endOffscreenMode() {
+        this.targetSize = null;
+        this.suppressFinalBlit = false;
     }
 }
 

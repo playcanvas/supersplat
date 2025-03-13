@@ -17,6 +17,7 @@ import { ShortcutsPopup } from './shortcuts-popup';
 import { Spinner } from './spinner';
 import { TimelinePanel } from './timeline-panel';
 import { Tooltips } from './tooltips';
+import { VideoSettingsDialog } from './video-settings-dialog';
 import { ViewCube } from './view-cube';
 import { ViewPanel } from './view-panel';
 import { ViewerExportPopup } from './viewer-export-popup';
@@ -162,12 +163,16 @@ class EditorUI {
         // export popup
         const viewerExportPopup = new ViewerExportPopup(events);
 
-        // publish options
+        // publish settings
         const publishSettingsDialog = new PublishSettingsDialog(events);
+
+        // video settings
+        const videoSettingsDialog = new VideoSettingsDialog(events);
 
         topContainer.append(popup);
         topContainer.append(viewerExportPopup);
         topContainer.append(publishSettingsDialog);
+        topContainer.append(videoSettingsDialog);
 
         appContainer.append(editorContainer);
         appContainer.append(topContainer);
@@ -192,8 +197,33 @@ class EditorUI {
             return viewerExportPopup.show(filename);
         });
 
-        events.function('show.publishSettingsDialog', () => {
-            return publishSettingsDialog.show();
+        events.function('show.publishSettingsDialog', async () => {
+            // show popup if user isn't logged in
+            const canPublish = await events.invoke('publish.enabled');
+            if (!canPublish) {
+                await events.invoke('showPopup', {
+                    type: 'error',
+                    header: localize('popup.error'),
+                    message: localize('publish.please-log-in')
+                });
+                return false;
+            }
+
+            // get user publish settings
+            const publishSettings = await publishSettingsDialog.show();
+
+            // do publish
+            if (publishSettings) {
+                await events.invoke('scene.publish', publishSettings);
+            }
+        });
+
+        events.function('show.videoSettingsDialog', async () => {
+            const videoSettings = await videoSettingsDialog.show();
+
+            if (videoSettings) {
+                await events.invoke('render.video', videoSettings);
+            }
         });
 
         events.function('show.about', () => {

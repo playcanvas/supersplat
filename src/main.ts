@@ -8,6 +8,7 @@ import { Events } from './events';
 import { initFileHandler } from './file-handler';
 import { registerPlySequenceEvents } from './ply-sequence';
 import { registerPublishEvents } from './publish';
+import { registerRenderEvents } from './render';
 import { Scene } from './scene';
 import { getSceneConfig } from './scene-config';
 import { registerSelectionEvents } from './selection';
@@ -249,6 +250,7 @@ const main = async () => {
     registerPlySequenceEvents(events);
     registerPublishEvents(events);
     registerDocEvents(scene, events);
+    registerRenderEvents(scene, events);
     initShortcuts(events);
     initFileHandler(scene, events, editorUI.appContainer.dom, remoteStorageDetails);
 

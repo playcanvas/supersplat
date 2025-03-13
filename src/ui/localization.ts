@@ -207,6 +207,8 @@ const localizeInit = () => {
                     'render': 'Render',
                     'render.image': 'Image',
                     'render.video': 'Video...',
+                    'render.ok': 'Render',
+                    'render.cancel': 'Cancel',
 
                     // Selection menu
                     'select': 'Select',

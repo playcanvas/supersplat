@@ -188,8 +188,8 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     format: 'RGBA',
                     codedWidth: width,
                     codedHeight: height,
-                    timestamp: 1e6 * frame / frameRate,
-                    duration: 1 / frameRate
+                    timestamp: Math.floor(1e6 * frame / frameRate),
+                    duration: Math.floor(1e6 / frameRate)
                 });
                 encoder.encode(videoFrame);
                 videoFrame.close();

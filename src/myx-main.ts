@@ -3,37 +3,32 @@ import { Scene, SceneConfig } from "./scene";
 
 
 function extractLevels(data: any) {
-    let level1Keys = Object.keys(data); // Extract level 1 keys
-    let level2Keys = [];
-    let level3Values = [];
-
-    for (const level1Key in data) {
-        if (data.hasOwnProperty(level1Key)) {
-            let level2 = Object.keys(data[level1Key]); // Get level 2 keys
-            level2Keys.push(...level2);
-
-            let level3 = Object.values(data[level1Key]).flat(); // Get level 3 values
-            level3Values.push(...level3);
-        }
-    }
-
     return {
-        level1: level1Keys,   // Array of level 1 keys
-        level2: level2Keys,   // Array of level 2 keys
-        level3: level3Values  // Array of all level 3 values
+        level1: data,
+        level2: data.map((x: any) => x.children).flat(),
+        level3: data.map((x: any) => x.children.map((y:any) => y.children)).flat().flat() 
     };
 }
 
-async function bulkLoadLevel(scene: Scene, data: string[], folder:string, prefix:string) {
-    for (let name in data) {
-        setTimeout(async () => {
-            const animationFrame = false;
-            const filename = `${prefix}_${name}.ply`;
-            const url = `/tiles/${folder}/${filename}`;
-            console.log(url);
-            const model = await scene.assetLoader.loadModel({ url, filename, animationFrame });
-            scene.add(model);
-        }, 0);
+const addTileToScene = async (scene: Scene, path: string) => {
+    setTimeout(async () => {
+        const animationFrame = false;
+        const url = `/tiles/${path}`;
+        console.log(url);
+        const model = await scene.assetLoader.loadModel({ url, filename:path, animationFrame });
+        scene.add(model);
+    }, 0);
+}
+
+async function bulkLoad(scene: Scene, tiles: any[], loaded: string[]) {
+    const paths = tiles.map((x:any) => x.path);
+    for (let path of paths) {
+        if (loaded.includes(path)) {
+            continue;
+        }
+
+        addTileToScene(scene, path);
+        loaded.push(path);
     }
 }
 
@@ -45,28 +40,28 @@ const positionChanged = (oldPos:any, newPos:any) => {
     return oldPos.x !== newPos.x || oldPos.y !== newPos.y || oldPos.z !== newPos.z;
 }
 
-const filterCloserTiles = (position: object, data:object[], threshold:number) => {
-    debugger;
+const dist = (arr1: number[], arr2: number[]) => {
+    return Math.sqrt((arr1[0] - arr2[0]) ** 2 + (arr1[1] - arr2[1]) ** 2 + (arr1[2] - arr2[2]) ** 2);
+};
+
+
+const filterCloserTiles = (position: any, data:any[], threshold:number) => {
+    return data.filter((tile: any) => {
+        const distance = dist([position.x, position.y, position.z], tile.center);
+        return distance < threshold
+    })
 }
 
 const myx_main = async (scene: Scene, config: SceneConfig, events: Events) => {
-    let [l1, l2, l3]:any = [{
-        data: null,
-        folder: "low",
-        prefix: "low"
-    }, {
-        data:null,
-        folder: "medium",
-        prefix: "med"
-    }, {
-        data: null,
-        folder: "high",
-        prefix: "high"
-    }];
+    let [l1, l2, l3]:any = [null, null, null];
 
     let updateOld = scene.camera.onUpdate;
     let oldPos: any = undefined;
     let bulkLoaded = false;
+
+    let loadedTiles: string[] = [];
+    //@ts-ignore
+    window.loadedTiles = loadedTiles;
 
     scene.camera.onUpdate = function (args) {
         if (typeof updateOld === "function") {
@@ -76,7 +71,21 @@ const myx_main = async (scene: Scene, config: SceneConfig, events: Events) => {
         let newPos = this.entity.getPosition();
         if (positionChanged(oldPos, newPos)) {
             oldPos = { x: newPos.x, y:newPos.y, z:newPos.z}
-            console.log("Update");
+            
+            if (config.myx.scene.cameraLoad.enabled) {
+                const l1_thresh = config.myx.scene.cameraLoad.l1Distance;
+                const l2_thresh = config.myx.scene.cameraLoad.l2Distance;
+                const l3_thresh = config.myx.scene.cameraLoad.l3Distance;
+                
+                let cameraPos = scene.camera.entity.getPosition();
+                const l1_tiles = filterCloserTiles(cameraPos, l1, l1_thresh);
+                const l2_tiles = filterCloserTiles(cameraPos, l2, l2_thresh);
+                const l3_tiles = filterCloserTiles(cameraPos, l3, l3_thresh);
+    
+                bulkLoad(scene, l1_tiles, loadedTiles);
+                bulkLoad(scene, l2_tiles, loadedTiles);
+                bulkLoad(scene, l3_tiles, loadedTiles);
+            }
         }
 
         if (config.myx.scene.bulkLoad.enabled && !bulkLoaded) {
@@ -95,17 +104,7 @@ const myx_main = async (scene: Scene, config: SceneConfig, events: Events) => {
                     break;
             }
 
-            bulkLoadLevel(scene, srcData.data, srcData.folder, srcData.prefix);
-        }
-
-        if (config.myx.scene.cameraLoad.enabled) {
-            const l1_thresh = config.myx.scene.cameraLoad.l1Distance;
-            const l2_thresh = config.myx.scene.cameraLoad.l2Distance;
-            const l3_thresh = config.myx.scene.cameraLoad.l3Distance;
-
-            const l1_tiles = filterCloserTiles(scene.camera.entity.getPosition(), l1, l1_thresh);
-            const l2_tiles = filterCloserTiles(scene.camera.entity.getPosition(), l2, l2_thresh);
-            const l3_tiles = filterCloserTiles(scene.camera.entity.getPosition(), l3, l3_thresh);
+            bulkLoad(scene, srcData, loadedTiles);
         }
     };
 
@@ -114,9 +113,15 @@ const myx_main = async (scene: Scene, config: SceneConfig, events: Events) => {
         .then(async (data) => { 
             const {level1, level2, level3} = extractLevels(data);  
             //@ts-ignore
-            l1.data = level1;
-            l2.data = level2;
-            l3.data = level3;
+            l1 = level1;
+            l2 = level2;
+            l3 = level3;
+            //@ts-ignore
+            window.lod = {
+                l1: l1,
+                l2: l2,
+                l3: l3
+            }
         });
     
     // events.fire('camera.toggleMode');

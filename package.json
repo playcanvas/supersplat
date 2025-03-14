@@ -15,6 +15,7 @@
     "main": "index.js",
     "scripts": {
         "build": "rollup -c",
+        "build:library": "rollup -c rollup.library.mjs",
         "watch": "rollup -c -w",
         "serve": "serve dist -C",
         "develop": "concurrently --kill-others \"npm run watch\" \"npm run serve\"",

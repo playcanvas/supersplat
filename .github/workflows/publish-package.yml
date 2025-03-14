@@ -50,12 +50,12 @@ jobs:
           exit 1
 
       - name: Install Dependencies
-        run: yarn install
+        run: npm install
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build the app
-        run: yarn build
+        run: npm run build:library
 
       - name: Publish package
         if: steps.check_version.outputs.changed == 'true'

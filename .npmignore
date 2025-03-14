@@ -2,3 +2,8 @@
 node_modules
 .DS_Store
 *.tgz
+rollup.*
+tsconfig.json
+eslint.config.*
+copy-and-watch.mjs
+docs

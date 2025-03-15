@@ -272,14 +272,15 @@ class PublishSettingsDialog extends Container {
                             const target = [];
                             for (let i = 0; i < orderedPoses.length; ++i) {
                                 const p = orderedPoses[i];
-                                times.push(p.frame / frameRate);
+                                times.push(p.frame);
                                 position.push(p.position.x, p.position.y, p.position.z);
                                 target.push(p.target.x, p.target.y, p.target.z);
                             }
 
                             animTracks.push({
                                 name: 'cameraAnim',
-                                duration: frames / frameRate,
+                                duration: frames,
+                                frameRate,
                                 target: 'camera',
                                 loopMode: 'repeat',
                                 interpolation: 'spline',

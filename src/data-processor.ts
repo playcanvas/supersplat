@@ -17,7 +17,6 @@ import {
     BlendState
 } from 'playcanvas';
 
-
 import { vertexShader as boundVS, fragmentShader as boundFS } from './shaders/bound-shader';
 import { vertexShader as intersectionVS, fragmentShader as intersectionFS } from './shaders/intersection-shader';
 import { vertexShader as positionVS, fragmentShader as positionFS } from './shaders/position-shader';

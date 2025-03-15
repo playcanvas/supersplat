@@ -36,6 +36,7 @@ type SerializeSettings = {
 type AnimTrack = {
     name: string,
     duration: number,
+    frameRate: number,
     target: 'camera',
     loopMode: 'none' | 'repeat' | 'pingpong',
     interpolation: 'step' | 'spline',

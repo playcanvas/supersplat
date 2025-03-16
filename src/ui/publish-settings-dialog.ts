@@ -279,7 +279,7 @@ class PublishSettingsDialog extends Container {
 
                             animTracks.push({
                                 name: 'cameraAnim',
-                                duration: frames,
+                                duration: frames / frameRate,
                                 frameRate,
                                 target: 'camera',
                                 loopMode: 'repeat',

@@ -30,7 +30,7 @@
         "playcanvas": "^2.5.1"
     },
     "peerDependencies": {
-        "pcui": "^5.2.0"
+        "@playcanvas/pcui": "^5.2.0"
     },
     "devDependencies": {
         "@rollup/plugin-alias": "^5.1.1",

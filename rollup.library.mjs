@@ -1,5 +1,4 @@
 import path from 'path';
-import copyAndWatch from './copy-and-watch.mjs';
 import alias from '@rollup/plugin-alias';
 import image from '@rollup/plugin-image';
 import terser from '@rollup/plugin-terser';
@@ -48,11 +47,6 @@ const outputHeader = () => {
 
 outputHeader();
 
-const aliasEntries = [
-    { find: 'playcanvas', replacement: ENGINE_PATH },
-    { find: 'pcui', replacement: PCUI_DIR }
-];
-
 const tsCompilerOptions = {
     baseUrl: '.',
     paths: {
@@ -74,6 +68,11 @@ const inputFiles = fs.readdirSync(srcDir)
         return acc;
     }, {});
 
+const aliasEntries = [
+    { find: 'playcanvas', replacement: ENGINE_PATH },
+    { find: 'pcui', replacement: PCUI_DIR }
+];
+
 const library = {
     input: inputFiles,
     output: {
@@ -84,29 +83,14 @@ const library = {
         preserveModulesRoot: 'src'
     },
     plugins: [
-        copyAndWatch({
-            targets: [
-                {
-                    src: 'src/index.html',
-                    transform: (contents, filename) => {
-                        return contents.toString().replace('__BASE_HREF__', HREF);
-                    }
-                },
-                { src: 'src/manifest.json' },
-                { src: 'node_modules/jszip/dist/jszip.js' },
-                { src: 'static/images', dest: 'static' },
-                { src: 'static/icons', dest: 'static' },
-                { src: 'static/lib', dest: 'static' },
-                { src: 'static/env/VertebraeHDRI_v1_512.png', dest: 'static/env' }
-            ]
-        }),
         typescript({
             compilerOptions: tsCompilerOptions
         }),
         alias({ entries: aliasEntries }),
-        resolve(),
-        image({ dom: false }),
         json(),
+        resolve(),
+
+        image({ dom: false }),
         scss({
             sourceMap: true,
             runtime: sass,
@@ -122,6 +106,7 @@ const library = {
         string({
             include: 'src/templates/*'
         }),
+        
         BUILD_TYPE === 'release' &&
             strip({
                 include: ['**/*.ts'],

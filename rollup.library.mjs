@@ -82,6 +82,7 @@ const library = {
         preserveModules: true,
         preserveModulesRoot: 'src'
     },
+    external: ['pcui'],
     plugins: [
         typescript({
             compilerOptions: tsCompilerOptions

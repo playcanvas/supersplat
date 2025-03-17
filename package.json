@@ -1,6 +1,6 @@
 {
     "name": "@myx-ad/supersplat",
-    "version": "2.1.0-alpha.4",
+    "version": "2.1.0-alpha.5",
     "author": "myx-ad",
     "homepage": "https://playcanvas.com/supersplat/editor",
     "description": "3D Gaussian Splat Editor",
@@ -15,7 +15,7 @@
     "main": "index.js",
     "scripts": {
         "build": "rollup -c",
-        "build:library": "rollup -c rollup.library.mjs && node replace-types.mjs",
+        "build:library": "rollup -c rollup.library.mjs",
         "watch": "rollup -c -w",
         "serve": "serve dist -C",
         "develop": "concurrently --kill-others \"npm run watch\" \"npm run serve\"",
@@ -28,6 +28,9 @@
         "@playcanvas/eslint-config": "^2.0.9",
         "@playcanvas/pcui": "^5.2.0",
         "playcanvas": "^2.5.1"
+    },
+    "peerDependencies": {
+        "pcui": "^5.2.0"
     },
     "devDependencies": {
         "@rollup/plugin-alias": "^5.1.1",

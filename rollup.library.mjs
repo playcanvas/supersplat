@@ -9,6 +9,7 @@ import typescript from '@rollup/plugin-typescript';
 import json from '@rollup/plugin-json';
 import { string } from 'rollup-plugin-string';
 import fs from 'fs';
+import dts from 'rollup-plugin-dts';
 // import { visualizer } from 'rollup-plugin-visualizer';
 
 import autoprefixer from 'autoprefixer';
@@ -59,7 +60,11 @@ const tsCompilerOptions = {
     paths: {
         playcanvas: [ENGINE_DIR],
         pcui: [PCUI_DIR]
-    }
+    },
+    declaration: true,
+    declarationMap: true, 
+    declarationDir: 'lib',
+    emitDeclarationOnly: true
 };
 
 const srcDir = 'src';

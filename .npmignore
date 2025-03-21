@@ -7,3 +7,4 @@ tsconfig.json
 eslint.config.*
 copy-and-watch.mjs
 docs
+lib_out

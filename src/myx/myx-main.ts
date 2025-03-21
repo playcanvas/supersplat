@@ -1,5 +1,6 @@
-import { Events } from "./events";
-import { Scene, SceneConfig } from "./scene";
+import { Vec3 } from "playcanvas";
+import { Events } from "../events";
+import { Scene, SceneConfig } from "../scene";
 
 
 function extractLevels(data: any) {
@@ -54,6 +55,23 @@ const filterCloserTiles = (position: any, data:any[], threshold:number) => {
 
 const myx_main = async (scene: Scene, config: SceneConfig, events: Events) => {
     let [l1, l2, l3]:any = [null, null, null];
+
+    window.addEventListener("message", (event) => {
+        try {
+            const message = JSON.parse(event.data);
+            console.log(message);
+            if (message.command === "cameraUpdate") {
+                const pos = message.data.pos;
+                const dir = message.data.dir;
+                // scene.camera.setPose(new Vec3(pos[0], pos[1], pos[2]), new Vec3(dir[0], dir[1], dir[2]));
+                scene.camera.setPose(new Vec3(0, 0, 0), new Vec3(1,1,1));
+                console.log(pos);
+                console.log(dir);
+            }
+        } catch (error) {
+            console.error("Invalid JSON received:", error);
+        }
+    });
 
     let updateOld = scene.camera.onUpdate;
     let oldPos: any = undefined;
@@ -125,7 +143,7 @@ const myx_main = async (scene: Scene, config: SceneConfig, events: Events) => {
         });
     
     // events.fire('camera.toggleMode');
-    events.fire('camera.toggleOverlay')
+    events.fire('camera.toggleOverlay');
 }
 
 export { myx_main }

@@ -1,7 +1,7 @@
 import { Button, Container, Divider, Element, Label, TextInput, VectorInput } from 'pcui';
 
 import { Events } from '../events';
-import { SceneConfig } from 'src/scene-config';
+import { SceneConfig } from '../scene-config';
 import { Asset } from 'playcanvas';
 
 const setUpdateDataTransferredInterval = (labelRegistry: Label, labelTraffic: Label, tilesLoadedLabel: Label) => {

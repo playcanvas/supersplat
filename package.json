@@ -15,7 +15,7 @@
     "main": "index.js",
     "scripts": {
         "build": "rollup -c",
-        "build:library": "rollup -c rollup.library.mjs",
+        "build:library": "rollup -c rollup.library.mjs && node replace-types.mjs",
         "watch": "rollup -c -w",
         "serve": "serve dist -C",
         "develop": "concurrently --kill-others \"npm run watch\" \"npm run serve\"",
@@ -37,6 +37,7 @@
         "@rollup/plugin-image": "^3.0.3",
         "@rollup/plugin-json": "^6.1.0",
         "@rollup/plugin-node-resolve": "^16.0.0",
+        "@rollup/plugin-replace": "^6.0.2",
         "@rollup/plugin-strip": "^3.0.4",
         "@rollup/plugin-terser": "^0.4.4",
         "@rollup/plugin-typescript": "^12.1.2",

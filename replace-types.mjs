@@ -3,10 +3,10 @@ import { replaceInFile } from 'replace-in-file';
 const options = {
     files: [
         'lib/**/*.d.ts',  
-        // 'lib/**/*.js'      
+        'lib/**/*.js'      
     ],
-    from: [/pcui/g],  
-    to: ['@playcanvas/pcui'],
+    from: [/"pcui"/g],  
+    to: ['"@playcanvas/pcui"'],
 };
 
 (async () => {

@@ -3,3 +3,4 @@ dist
 .DS_Store
 *.tgz
 lib
+lib_out

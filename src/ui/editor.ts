@@ -22,7 +22,7 @@ import { ViewPanel } from './view-panel';
 import { ViewerExportPopup } from './viewer-export-popup';
 import { version } from '../../package.json';
 import { SceneConfig } from 'src/scene-config';
-import { MyxPanel } from './myx-panel';
+import { MyxPanel } from '../myx/myx-panel';
 
 class EditorUI {
     appContainer: Container;
@@ -112,7 +112,6 @@ class EditorUI {
         tooltipsContainer.append(tooltips);
 
         // bottom toolbar
-        const myxPanel = new MyxPanel(events, config);
         const scenePanel = new ScenePanel(events, tooltips);
         const viewPanel = new ViewPanel(events, tooltips);
         const colorPanel = new ColorPanel(events, tooltips);
@@ -125,6 +124,7 @@ class EditorUI {
         if (!config.myx.enabled) {
             canvasContainer.append(appLabel);
         } else {
+            const myxPanel = new MyxPanel(events, config);
             canvasContainer.append(myxPanel);
         }
 

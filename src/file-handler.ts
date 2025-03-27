@@ -213,7 +213,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
             // a frame number, e.g. "frame0001.ply", "frame0002.ply", etc.
             const isSequence = () => {
                 // eslint-disable-next-line regexp/no-super-linear-backtracking
-                const regex = /(.*?)(\d+).ply$/;
+                const regex = /(.*?)(\d+)(?:\.compressed)?\.ply$/;
                 const baseMatch = entries[0].file.name?.toLowerCase().match(regex);
                 if (!baseMatch) {
                     return false;

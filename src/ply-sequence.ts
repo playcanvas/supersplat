@@ -10,12 +10,12 @@ const registerPlySequenceEvents = (events: Events) => {
 
     const setFrames = (files: File[]) => {
         // eslint-disable-next-line regexp/no-super-linear-backtracking
-        const regex = /(.*?)(\d+).ply$/;
+        const regex = /(.*?)(\d+)(?:\.compressed)?\.ply$/;
 
         // sort frames by trailing number, if it exists
         const sorter = (a: File, b: File) => {
-            const avalue = a.name?.match(regex)?.[2];
-            const bvalue = b.name?.match(regex)?.[2];
+            const avalue = a.name?.toLowerCase().match(regex)?.[2];
+            const bvalue = b.name?.toLowerCase().match(regex)?.[2];
             return (avalue && bvalue) ? parseInt(avalue, 10) - parseInt(bvalue, 10) : 0;
         };
 

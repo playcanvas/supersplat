@@ -102,10 +102,10 @@ const application = {
             },
             fileName: 'index.css',
             includePaths: [ path.resolve(PCUI_DIR, 'dist') ],
-            exclude: ['src/templates/*']
+            exclude: ['submodules/**']
         }),
         string({
-            include: 'src/templates/*'
+            include: [ 'submodules/supersplat-viewer/dist/*' ]
         }),
 
         BUILD_TYPE === 'release' &&

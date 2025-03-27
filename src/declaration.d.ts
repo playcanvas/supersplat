@@ -14,7 +14,7 @@ declare module '*.scss' {
 }
 
 // these declarations are so typescript considers the
-// viewer source stored in src/templates as strings.
+// viewer source stored in submodules/supersplat-viewer/dist as strings.
 // we use rollup-plugin-string to inline these files.
 declare module '*.css' {
     const content: string;

@@ -344,6 +344,7 @@ class ViewerExportPopup extends Container {
                             animTracks.push({
                                 name: 'cameraAnim',
                                 duration: frames / frameRate,
+                                frameRate,
                                 target: 'camera',
                                 loopMode: 'repeat',
                                 interpolation: 'spline',

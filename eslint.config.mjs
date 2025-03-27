@@ -33,7 +33,7 @@ export default [
         }
     }, {
         ignores: [
-            'src/templates/'
+            'submodules/'
         ],
     }
 ];

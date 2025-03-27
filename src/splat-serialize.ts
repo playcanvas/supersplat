@@ -13,12 +13,10 @@ import { State } from './splat-state';
 import { version } from '../package.json';
 import { BufferWriter, Writer } from './serialize/writer';
 import { ZipWriter } from './serialize/zip-writer';
-import indexCss from './templates/index.css';
-import indexHtml from './templates/index.html';
+import indexCss from '../submodules/supersplat-viewer/dist/index.css';
+import indexHtml from '../submodules/supersplat-viewer/dist/index.html';
 // eslint-disable-next-line import/default
-import indexJs from './templates/index.js';
-// eslint-disable-next-line import/default
-import splineJs from './templates/spline.js';
+import indexJs from '../submodules/supersplat-viewer/dist/index.js';
 
 type SerializeSettings = {
     maxSHBands?: number;            // specifies the maximum number of bands to be exported
@@ -1014,16 +1012,14 @@ const serializeViewer = async (splats: Splat[], options: ViewerExportSettings, w
 
         const style = '<link rel="stylesheet" href="./index.css">';
         const script = '<script type="module" src="./index.js"></script>';
-        const spline = '"spline": "./spline.js"';
-        const settings = 'window.settings = fetch("./settings.json").then(response => response.json());';
-        const content = '<pc-asset id="ply" type="gsplat" lazy src="./scene.compressed.ply"></pc-asset>';
+        const settings = 'settings: fetch(settingsUrl).then(response => response.json())';
+        const content = 'contentUrl,';
 
         const html = indexHtml
         .replace(style, `<style>\n${pad(indexCss, 12)}\n        </style>`)
         .replace(script, `<script type="module">\n${pad(indexJs, 12)}\n        </script>`)
-        .replace(spline, `"spline": "data:application/javascript;,${encodeURIComponent(splineJs)}"`)
-        .replace(settings, `window.settings = ${JSON.stringify(experienceSettings)};`)
-        .replace(content, `<pc-asset id="ply" type="gsplat" lazy src="data:application/ply;base64,${encodeBase64(plyBuffer)}"></pc-asset>`);
+        .replace(settings, `settings: ${JSON.stringify(experienceSettings)}`)
+        .replace(content, `contentUrl: "data:application/ply;base64,${encodeBase64(plyBuffer)}",`);
 
         await writer.write(new TextEncoder().encode(html), true);
     } else {
@@ -1031,7 +1027,6 @@ const serializeViewer = async (splats: Splat[], options: ViewerExportSettings, w
         await zipWriter.file('index.html', indexHtml);
         await zipWriter.file('index.css', indexCss);
         await zipWriter.file('index.js', indexJs);
-        await zipWriter.file('spline.js', splineJs);
         await zipWriter.file('settings.json', JSON.stringify(experienceSettings, null, 4));
         await zipWriter.file('scene.compressed.ply', plyBuffer);
         await zipWriter.close();

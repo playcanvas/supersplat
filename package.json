@@ -18,6 +18,7 @@
         "watch": "rollup -c -w",
         "serve": "serve dist -C",
         "develop": "concurrently --kill-others \"npm run watch\" \"npm run serve\"",
+        "develop:auto-launch": "concurrently --kill-others \"xdg-open 'http://localhost:3000/'\" \"npm run watch\" \"npm run serve\"",
         "develop:local": "cross-env ENGINE_PATH=../engine npm run develop",
         "build:local": "cross-env ENGINE_PATH=../engine npm run build",
         "watch:local": "cross-env ENGINE_PATH=../engine npm run watch",

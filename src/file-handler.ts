@@ -101,8 +101,8 @@ const loadCameraPoses = async (url: string, filename: string, events: Events) =>
 
         // sort entries by trailing number if it exists
         const sorter = (a: any, b: any) => {
-            const avalue = a.img_name?.match(/\d*$/)?.[0];
-            const bvalue = b.img_name?.match(/\d*$/)?.[0];
+            const avalue = a.id ?? a.img_name?.match(/\d*$/)?.[0];
+            const bvalue = b.id ?? b.img_name?.match(/\d*$/)?.[0];
             return (avalue && bvalue) ? parseInt(avalue, 10) - parseInt(bvalue, 10) : 0;
         };
 
@@ -116,6 +116,7 @@ const loadCameraPoses = async (url: string, filename: string, events: Events) =>
 
                 events.fire('camera.addPose', {
                     name: pose.img_name ?? `${filename}_${i}`,
+                    frame: i,
                     position: new Vec3(-p.x, -p.y, p.z),
                     target: new Vec3(-vec.x, -vec.y, vec.z)
                 });

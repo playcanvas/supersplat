@@ -1,4 +1,4 @@
-import { EventHandle, Vec3 } from 'playcanvas';
+import { Vec3 } from 'playcanvas';
 
 import { CubicSpline } from './anim/spline';
 import { Events } from './events';
@@ -16,8 +16,13 @@ const registerCameraPosesEvents = (events: Events) => {
     let onTimelineChange: (frame: number) => void;
 
     const rebuildSpline = () => {
-        // order by time for spline
-        const orderedPoses = poses.slice().sort((a, b) => a.frame - b.frame);
+        const duration = events.invoke('timeline.frames');
+
+        const orderedPoses = poses.slice()
+        // filter out keys beyond the end of the timeline
+        .filter(a => a.frame < duration)
+        // order keys by time for spline
+        .sort((a, b) => a.frame - b.frame);
 
         // construct the spline points to be interpolated
         const times = orderedPoses.map(p => p.frame);
@@ -29,8 +34,6 @@ const registerCameraPosesEvents = (events: Events) => {
         }
 
         if (orderedPoses.length > 1) {
-            const duration = events.invoke('timeline.frames');
-
             // interpolate camera positions and camera target positions
             const spline = CubicSpline.fromPointsLooping(duration, times, points, -1);
             const result: number[] = [];

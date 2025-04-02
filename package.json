@@ -23,7 +23,9 @@
         "build:local": "cross-env ENGINE_PATH=../engine npm run build",
         "watch:local": "cross-env ENGINE_PATH=../engine npm run watch",
         "lint": "eslint src",
-        "postinstall": "git submodule update --init && cd submodules/supersplat-viewer && npm i && npm run build"
+        "postinstall": "npm run install:deps && npm run build:deps",
+        "install:deps": "npm --prefix ./submodules/supersplat-viewer ci",
+        "build:deps": "npm --prefix ./submodules/supersplat-viewer run build"
     },
     "devDependencies": {
         "@playcanvas/eslint-config": "^2.0.9",

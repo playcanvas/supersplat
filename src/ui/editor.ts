@@ -123,7 +123,9 @@ class EditorUI {
         canvasContainer.dom.appendChild(canvas);
         if (!config.myx.enabled) {
             canvasContainer.append(appLabel);
-        } else {
+        } 
+
+        if (config.myx.showMyxPanel()) {
             const myxPanel = new MyxPanel(events, config);
             canvasContainer.append(myxPanel);
         }

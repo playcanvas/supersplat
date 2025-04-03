@@ -1,6 +1,7 @@
 import { Vec3 } from "playcanvas";
 import { Events } from "../events";
 import { Scene, SceneConfig } from "../scene";
+import { setupMessageHandlers } from "./myx-communication";
 
 
 function extractLevels(data: any) {
@@ -15,7 +16,6 @@ const addTileToScene = async (scene: Scene, path: string) => {
     setTimeout(async () => {
         const animationFrame = false;
         const url = `/tiles/${path}`;
-        console.log(url);
         const model = await scene.assetLoader.loadModel({ url, filename:path, animationFrame });
         scene.add(model);
     }, 0);
@@ -55,23 +55,6 @@ const filterCloserTiles = (position: any, data:any[], threshold:number) => {
 
 const myx_main = async (scene: Scene, config: SceneConfig, events: Events) => {
     let [l1, l2, l3]:any = [null, null, null];
-
-    window.addEventListener("message", (event) => {
-        try {
-            const message = JSON.parse(event.data);
-            console.log(message);
-            if (message.command === "cameraUpdate") {
-                const pos = message.data.pos;
-                const dir = message.data.dir;
-                // scene.camera.setPose(new Vec3(pos[0], pos[1], pos[2]), new Vec3(dir[0], dir[1], dir[2]));
-                scene.camera.setPose(new Vec3(0, 0, 0), new Vec3(1,1,1));
-                console.log(pos);
-                console.log(dir);
-            }
-        } catch (error) {
-            console.error("Invalid JSON received:", error);
-        }
-    });
 
     let updateOld = scene.camera.onUpdate;
     let oldPos: any = undefined;
@@ -128,8 +111,8 @@ const myx_main = async (scene: Scene, config: SceneConfig, events: Events) => {
 
     fetch('/tiles/scene_tree.json')
         .then((response) => response.json())
-        .then(async (data) => { 
-            const {level1, level2, level3} = extractLevels(data);  
+        .then(async (data) => {
+            const { level1, level2, level3 } = extractLevels(data);
             //@ts-ignore
             l1 = level1;
             l2 = level2;
@@ -141,9 +124,9 @@ const myx_main = async (scene: Scene, config: SceneConfig, events: Events) => {
                 l3: l3
             }
         });
-    
-    // events.fire('camera.toggleMode');
     events.fire('camera.toggleOverlay');
+
+    setupMessageHandlers(scene);
 }
 
 export { myx_main }

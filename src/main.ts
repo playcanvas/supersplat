@@ -36,6 +36,7 @@ declare global {
             setConsumer: (callback: (launchParams: LaunchParams) => void) => void;
         };
         scene: Scene;
+        editor: EditorUI;
     }
 }
 
@@ -195,7 +196,7 @@ const main = async () => {
 
     events.on('bgClr', (clr: Color) => {
         const cnv = (v: number) => `${Math.max(0, Math.min(255, (v * 255))).toFixed(0)}`;
-        document.body.style.backgroundColor = `rgba(${cnv(clr.r)},${cnv(clr.g)},${cnv(clr.b)},1)`;
+        document.body.style.backgroundColor = `rgba(255, 255, 255, 0)`;
     });
     events.on('selectedClr', (clr: Color) => {
         scene.forceRender = true;
@@ -241,6 +242,7 @@ const main = async () => {
     editorUI.toolsContainer.dom.appendChild(maskCanvas);
 
     window.scene = scene;
+    window.editor = editorUI;
 
     registerEditorEvents(events, editHistory, scene);
     registerSelectionEvents(events, scene);

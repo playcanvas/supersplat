@@ -24,6 +24,7 @@ To initialize a local development environment for SuperSplat, ensure you have [N
 2. Install dependencies:
 
    ```sh
+   git submodule update --init
    npm install
    ```
 

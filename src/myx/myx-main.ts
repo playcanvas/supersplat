@@ -109,21 +109,21 @@ const myx_main = async (scene: Scene, config: SceneConfig, events: Events) => {
         }
     };
 
-    fetch('/tiles/scene_tree.json')
-        .then((response) => response.json())
-        .then(async (data) => {
-            const { level1, level2, level3 } = extractLevels(data);
-            //@ts-ignore
-            l1 = level1;
-            l2 = level2;
-            l3 = level3;
-            //@ts-ignore
-            window.lod = {
-                l1: l1,
-                l2: l2,
-                l3: l3
-            }
-        });
+    // fetch('/tiles/scene_tree.json')
+    //     .then((response) => response.json())
+    //     .then(async (data) => {
+    //         const { level1, level2, level3 } = extractLevels(data);
+    //         //@ts-ignore
+    //         l1 = level1;
+    //         l2 = level2;
+    //         l3 = level3;
+    //         //@ts-ignore
+    //         window.lod = {
+    //             l1: l1,
+    //             l2: l2,
+    //             l3: l3
+    //         }
+    //     });
     events.fire('camera.toggleOverlay');
 
     setupMessageHandlers(scene);

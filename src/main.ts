@@ -24,6 +24,7 @@ import { SphereSelection } from './tools/sphere-selection';
 import { ToolManager } from './tools/tool-manager';
 import { registerTransformHandlerEvents } from './transform-handler';
 import { EditorUI } from './ui/editor';
+import { myx_main } from './myx/myx-main';
 
 declare global {
     interface LaunchParams {
@@ -272,6 +273,8 @@ const main = async () => {
             }
         });
     }
+
+    myx_main(scene, events, editorUI);
 };
 
 export { main };

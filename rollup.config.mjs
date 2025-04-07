@@ -7,6 +7,7 @@ import resolve from '@rollup/plugin-node-resolve';
 import strip from '@rollup/plugin-strip';
 import typescript from '@rollup/plugin-typescript';
 import json from '@rollup/plugin-json';
+import dev from 'rollup-plugin-dev'; // Add proxy support
 import { string } from 'rollup-plugin-string';
 // import { visualizer } from 'rollup-plugin-visualizer';
 
@@ -113,7 +114,17 @@ const application = {
                 include: ['**/*.ts'],
                 functions: ['Debug.exec']
             }),
-        BUILD_TYPE !== 'debug' && terser()
+        BUILD_TYPE !== 'debug' && terser(),
+        dev({
+            dirs: ['dist'],
+            port: 3000, // Serve on localhost:3000
+            proxy: [
+                {
+                    from: '/tiles', // Requests starting with "/api"
+                    to: 'http://localhost:8080' // Redirect to backend
+                }
+            ]
+        })
         // visualizer()
     ],
     treeshake: 'smallest',

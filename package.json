@@ -1,7 +1,7 @@
 {
-    "name": "supersplat",
-    "version": "2.1.0",
-    "author": "PlayCanvas<support@playcanvas.com>",
+    "name": "@myx-ad/supersplat",
+    "version": "2.1.0-alpha.5",
+    "author": "myx-ad",
     "homepage": "https://playcanvas.com/supersplat/editor",
     "description": "3D Gaussian Splat Editor",
     "keywords": [
@@ -50,6 +50,7 @@
         "playcanvas": "^2.5.1",
         "postcss": "^8.5.3",
         "rollup": "^4.34.8",
+        "rollup-plugin-dev": "^2.0.5",
         "rollup-plugin-scss": "^4.0.1",
         "rollup-plugin-string": "^3.0.0",
         "rollup-plugin-visualizer": "^5.14.0",

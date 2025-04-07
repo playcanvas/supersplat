@@ -195,12 +195,11 @@ class PublishSettingsDialog extends Container {
         };
 
         // reset UI and configure for current state
-        const reset = () => {
+        const reset = (hasPoses: boolean) => {
             const splats = events.invoke('scene.splats');
             const filename = splats[0].filename;
             const dot = splats[0].filename.lastIndexOf('.');
 
-            const hasPoses = events.invoke('camera.poses').length > 0;
             const bgClr = events.invoke('bgClr');
 
             titleInput.value = filename.slice(0, dot > 0 ? dot : undefined);
@@ -218,8 +217,17 @@ class PublishSettingsDialog extends Container {
         // function implementations
 
         this.show = () => {
-            // check user is logged in
-            reset();
+            const frames = events.invoke('timeline.frames');
+            const frameRate = events.invoke('timeline.frameRate');
+
+            // get poses
+            const orderedPoses = (events.invoke('camera.poses') as Pose[])
+            .slice()
+            .filter(p => p.frame >= 0 && p.frame < frames)
+            .sort((a, b) => a.frame - b.frame);
+
+            // reset UI
+            reset(orderedPoses.length > 0);
 
             this.hidden = false;
             this.dom.addEventListener('keydown', keydown);
@@ -231,15 +239,6 @@ class PublishSettingsDialog extends Container {
                 };
 
                 onOK = () => {
-                    const frames = events.invoke('timeline.frames');
-                    const frameRate = events.invoke('timeline.frameRate');
-
-                    // get poses
-                    const orderedPoses = (events.invoke('camera.poses') as Pose[])
-                    .slice()
-                    .filter(p => p.frame >= 0 && p.frame < frames)
-                    .sort((a, b) => a.frame - b.frame);
-
                     // extract camera starting position
                     let pose;
                     switch (startSelect.value) {

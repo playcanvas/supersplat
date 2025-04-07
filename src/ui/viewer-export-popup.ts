@@ -262,8 +262,7 @@ class ViewerExportPopup extends Container {
 
         typeSelect.on('change', updateExtension);
 
-        const reset = () => {
-            const hasPoses = events.invoke('camera.poses').length > 0;
+        const reset = (hasPoses: boolean) => {
             const bgClr = events.invoke('bgClr');
 
             bandsSlider.value = events.invoke('view.bands');
@@ -276,7 +275,16 @@ class ViewerExportPopup extends Container {
         };
 
         this.show = (filename?: string) => {
-            reset();
+            const frames = events.invoke('timeline.frames');
+            const frameRate = events.invoke('timeline.frameRate');
+
+            // get poses
+            const orderedPoses = (events.invoke('camera.poses') as Pose[])
+            .slice()
+            .filter(p => p.frame >= 0 && p.frame < frames)
+            .sort((a, b) => a.frame - b.frame);
+
+            reset(orderedPoses.length > 0);
 
             // filename is only shown in safari where file picker is not supported
             filenameRow.hidden = !filename;
@@ -295,15 +303,6 @@ class ViewerExportPopup extends Container {
                 };
 
                 onExport = () => {
-                    const frames = events.invoke('timeline.frames');
-                    const frameRate = events.invoke('timeline.frameRate');
-
-                    // get poses
-                    const orderedPoses = (events.invoke('camera.poses') as Pose[])
-                    .slice()
-                    .filter(p => p.frame >= 0 && p.frame < frames)
-                    .sort((a, b) => a.frame - b.frame);
-
                     // extract camera starting pos
                     let pose;
                     switch (startSelect.value) {

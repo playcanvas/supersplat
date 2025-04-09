@@ -22,7 +22,7 @@ import {
 
 import { Element, ElementType } from './element';
 import { Serializer } from './serializer';
-import { vertexShader, fragmentShader, gsplatCenter } from './shaders/splat-shader';
+import { vertexShader, fragmentShader, gsplatCenter, gsplatSH } from './shaders/splat-shader';
 import { State } from './splat-state';
 import { Transform } from './transform';
 import { TransformPalette } from './transform-palette';
@@ -69,6 +69,7 @@ class Splat extends Element {
     _name = '';
     _tintClr = new Color(1, 1, 1);
     _brightness = 0;
+    _saturation = 1;
     _blackPoint = 0;
     _whitePoint = 1;
     _transparency = 1;
@@ -164,7 +165,7 @@ class Splat extends Element {
         this.rebuildMaterial = (bands: number) => {
             instance.createMaterial(materialOptions);
             const { material } = instance;
-            material.chunks = { gsplatCenterVS: gsplatCenter };
+            material.chunks = { gsplatCenterVS: gsplatCenter, gsplatSHVS: gsplatSH };
             material.blendState = blendState;
             material.setDefine('SH_BANDS', `${Math.min(bands, instance.splat.shBands)}`);
             material.setParameter('splatState', this.stateTexture);
@@ -338,7 +339,7 @@ class Splat extends Element {
         serializer.pack(this.changedCounter);
         serializer.pack(this.visible);
         serializer.pack(this.tintClr.r, this.tintClr.g, this.tintClr.b);
-        serializer.pack(this.brightness, this.blackPoint, this.whitePoint, this.transparency);
+        serializer.pack(this.brightness, this.saturation, this.blackPoint, this.whitePoint, this.transparency);
     }
 
     onPreRender() {
@@ -373,6 +374,8 @@ class Splat extends Element {
             this.tintClr.b * scale,
             this.transparency
         ]);
+
+        material.setParameter('saturation', this.saturation);
 
         if (this.visible && selected) {
             // render bounding box
@@ -505,6 +508,17 @@ class Splat extends Element {
 
     get brightness() {
         return this._brightness;
+    }
+
+    set saturation(value: number) {
+        if (value !== this._saturation) {
+            this._saturation = value;
+            this.scene.events.fire('splat.saturation', this);
+        }
+    }
+
+    get saturation() {
+        return this._saturation;
     }
 
     set blackPoint(value: number) {

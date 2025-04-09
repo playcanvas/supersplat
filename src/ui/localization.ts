@@ -279,6 +279,7 @@ const localizeInit = () => {
                     'colors': 'COLORS',
                     'colors.tint': 'Tint',
                     'colors.brightness': 'Brightness',
+                    'colors.saturation': 'Saturation',
                     'colors.blackPoint': 'Black Point',
                     'colors.whitePoint': 'White Point',
                     'colors.transparency': 'Transparency',

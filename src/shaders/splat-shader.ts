@@ -96,6 +96,8 @@ void main(void) {
     #elif FORWARD_PASS
         // read color
         color = readColor(source);
+
+        // apply saturation to base color
         color.xyz = applySaturation(color.xyz);
 
         // evaluate spherical harmonics
@@ -278,6 +280,7 @@ void fetch(in uint t, out vec3 a) {
         fetch(texelFetch(splatSH_8to11, source.uv, 0), sh[7], sh[8], sh[9], sh[10]);
         fetch(texelFetch(splatSH_12to15, source.uv, 0), sh[11], sh[12], sh[13], sh[14]);
 
+        // apply saturation to SH bands
         for (int i = 0; i < 15; i++) {
             sh[i] = applySaturation(sh[i]);
         }

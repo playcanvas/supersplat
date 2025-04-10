@@ -349,8 +349,8 @@ class SingleSplat {
                         }
                     });
 
-                    const { blackPoint, whitePoint, brightness, tintClr } = splat;
-                    const hasTint = (!tintClr.equals(Color.WHITE) || blackPoint !== 0 || whitePoint !== 1 || brightness !== 1);
+                    const { blackPoint, whitePoint, brightness, temperature, tintClr } = splat;
+                    const hasTint = (!tintClr.equals(Color.WHITE) || blackPoint !== 0 || whitePoint !== 1 || brightness !== 1 || temperature !== 0);
 
                     cacheEntry = { splat, transformCache, srcProps, hasTint };
 
@@ -404,7 +404,7 @@ class SingleSplat {
             }
 
             if (!serializeSettings.keepColorTint && hasColor && hasTint) {
-                const { blackPoint, whitePoint, brightness, tintClr } = splat;
+                const { blackPoint, whitePoint, brightness, temperature, tintClr } = splat;
 
                 const SH_C0 = 0.28209479177387814;
                 const to = (value: number) => value * SH_C0 + 0.5;
@@ -413,9 +413,9 @@ class SingleSplat {
                 const offset = -blackPoint + brightness;
                 const scale = 1 / (whitePoint - blackPoint);
 
-                const tr = tintClr.r * scale;
-                const tg = tintClr.g * scale;
-                const tb = tintClr.b * scale;
+                const tr = scale * tintClr.r * (1 + temperature);
+                const tg = scale * tintClr.g;
+                const tb = scale * tintClr.b * (1 - temperature);
 
                 data.f_dc_0 = from(offset + to(data.f_dc_0) * tr);
                 data.f_dc_1 = from(offset + to(data.f_dc_1) * tg);

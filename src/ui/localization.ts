@@ -278,6 +278,7 @@ const localizeInit = () => {
                     // Color panel
                     'colors': 'COLORS',
                     'colors.tint': 'Tint',
+                    'colors.temperature': 'Temperature',
                     'colors.brightness': 'Brightness',
                     'colors.blackPoint': 'Black Point',
                     'colors.whitePoint': 'White Point',

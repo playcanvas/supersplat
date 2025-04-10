@@ -129,7 +129,7 @@ const loadCameraPoses = async (url: string, filename: string, events: Events) =>
 const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, remoteStorageDetails: RemoteStorageDetails) => {
 
     // returns a promise that resolves when the file is loaded
-    const handleImport = async (url: string, filename?: string, focusCamera = true, animationFrame = false) => {
+    const handleImport = async (url: string, filename?: string, animationFrame = false) => {
         try {
             if (!filename) {
                 // extract filename from url if one isn't provided
@@ -148,7 +148,6 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
             } else if (lowerFilename.endsWith('.ply') || lowerFilename.endsWith('.splat')) {
                 const model = await scene.assetLoader.loadModel({ url, filename, animationFrame });
                 scene.add(model);
-                if (focusCamera) scene.camera.focus();
                 return model;
             } else {
                 throw new Error('Unsupported file type');
@@ -162,8 +161,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         }
     };
 
-    events.function('import', (url: string, filename?: string, focusCamera = true, animationFrame = false) => {
-        return handleImport(url, filename, focusCamera, animationFrame);
+    events.function('import', (url: string, filename?: string, animationFrame = false) => {
+        return handleImport(url, filename, animationFrame);
     });
 
     // create a file selector element as fallback when showOpenFilePicker isn't available

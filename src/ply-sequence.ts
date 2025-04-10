@@ -67,7 +67,7 @@ const registerPlySequenceEvents = (events: Events) => {
 
         const file = sequenceFiles[frame];
         const url = URL.createObjectURL(file);
-        const newSplat = await events.invoke('import', url, file.name, !sequenceSplat, true) as Splat;
+        const newSplat = await events.invoke('import', url, file.name, true) as Splat;
         URL.revokeObjectURL(url);
 
         // wait for first frame render

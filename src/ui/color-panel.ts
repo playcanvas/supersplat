@@ -87,8 +87,8 @@ class ColorPanel extends Container {
 
         const temperatureSlider = new MyFancySliderInput({
             class: 'color-panel-row-slider',
-            min: -0.3,
-            max: 0.3,
+            min: -0.5,
+            max: 0.5,
             step: 0.005,
             value: 0
         });

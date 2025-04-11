@@ -349,8 +349,8 @@ class SingleSplat {
                         }
                     });
 
-                    const { tintClr, temperature, brightness, saturation, blackPoint, whitePoint } = splat;
-                    const hasTint = (!tintClr.equals(Color.WHITE) || temperature !== 0 || brightness !== 1 || saturation !== 1 || blackPoint !== 0 || whitePoint !== 1 );
+                    const { tintClr, temperature, saturation, brightness, blackPoint, whitePoint } = splat;
+                    const hasTint = (!tintClr.equals(Color.WHITE) || temperature !== 0 || saturation !== 1 || brightness !== 1 || blackPoint !== 0 || whitePoint !== 1 );
 
                     cacheEntry = { splat, transformCache, srcProps, hasTint };
 
@@ -404,23 +404,23 @@ class SingleSplat {
             }
 
             if (!serializeSettings.keepColorTint && hasColor && hasTint) {
-                const { tintClr, temperature, brightness, saturation, blackPoint, whitePoint } = splat;
+                const { tintClr, temperature, saturation, brightness, blackPoint, whitePoint } = splat;
 
                 const SH_C0 = 0.28209479177387814;
                 const to = (value: number) => value * SH_C0 + 0.5;
                 const from = (value: number) => (value - 0.5) / SH_C0;
 
                 const applyTransform = (c: { r: number, g: number, b: number }, s: { r: number, g: number, b: number }, offset: number) => {
+                    // offset and scale
+                    c.r = offset + c.r * s.r;
+                    c.g = offset + c.g * s.g;
+                    c.b = offset + c.b * s.b;
+
                     // saturation
                     const grey = c.r * 0.299 + c.g * 0.587 + c.b * 0.114;
                     c.r = grey + (c.r - grey) * saturation;
                     c.g = grey + (c.g - grey) * saturation;
                     c.b = grey + (c.b - grey) * saturation;
-
-                    // offset and scale
-                    c.r = offset + c.r * s.r;
-                    c.g = offset + c.g * s.g;
-                    c.b = offset + c.b * s.b;
                 };
 
                 const offset = -blackPoint + brightness;

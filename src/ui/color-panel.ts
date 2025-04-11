@@ -96,28 +96,6 @@ class ColorPanel extends Container {
         temperatureRow.append(temperatureLabel);
         temperatureRow.append(temperatureSlider);
 
-        // brightness
-
-        const brightnessRow = new Container({
-            class: 'color-panel-row'
-        });
-
-        const brightnessLabel = new Label({
-            text: localize('colors.brightness'),
-            class: 'color-panel-row-label'
-        });
-
-        const brightnessSlider = new MyFancySliderInput({
-            class: 'color-panel-row-slider',
-            min: -1,
-            max: 1,
-            step: 0.1,
-            value: 1
-        });
-
-        brightnessRow.append(brightnessLabel);
-        brightnessRow.append(brightnessSlider);
-
         // saturation
 
         const saturationRow = new Container({
@@ -139,6 +117,28 @@ class ColorPanel extends Container {
 
         saturationRow.append(saturationLabel);
         saturationRow.append(saturationSlider);
+
+        // brightness
+
+        const brightnessRow = new Container({
+            class: 'color-panel-row'
+        });
+
+        const brightnessLabel = new Label({
+            text: localize('colors.brightness'),
+            class: 'color-panel-row-label'
+        });
+
+        const brightnessSlider = new MyFancySliderInput({
+            class: 'color-panel-row-slider',
+            min: -1,
+            max: 1,
+            step: 0.1,
+            value: 1
+        });
+
+        brightnessRow.append(brightnessLabel);
+        brightnessRow.append(brightnessSlider);
 
         // black point
 
@@ -224,8 +224,8 @@ class ColorPanel extends Container {
         this.append(header);
         this.append(tintRow);
         this.append(temperatureRow);
-        this.append(brightnessRow);
         this.append(saturationRow);
+        this.append(brightnessRow);
         this.append(blackPointRow);
         this.append(whitePointRow);
         this.append(transparencyRow);
@@ -243,8 +243,8 @@ class ColorPanel extends Container {
             suppress = true;
             tintPicker.value = splat ? [splat.tintClr.r, splat.tintClr.g, splat.tintClr.b] : [1, 1, 1];
             temperatureSlider.value = splat ? splat.temperature : 0;
-            brightnessSlider.value = splat ? splat.brightness : 0;
             saturationSlider.value = splat ? splat.saturation : 0;
+            brightnessSlider.value = splat ? splat.brightness : 0;
             blackPointSlider.value = splat ? splat.blackPoint : 0;
             whitePointSlider.value = splat ? splat.whitePoint : 1;
             transparencySlider.value = splat ? Math.log(splat.transparency) : 0;
@@ -258,8 +258,8 @@ class ColorPanel extends Container {
                     newState: {
                         tintClr: selected.tintClr.clone(),
                         temperature: selected.temperature,
-                        brightness: selected.brightness,
                         saturation: selected.saturation,
+                        brightness: selected.brightness,
                         blackPoint: selected.blackPoint,
                         whitePoint: selected.whitePoint,
                         transparency: selected.transparency
@@ -267,8 +267,8 @@ class ColorPanel extends Container {
                     oldState: {
                         tintClr: selected.tintClr.clone(),
                         temperature: selected.temperature,
-                        brightness: selected.brightness,
                         saturation: selected.saturation,
+                        brightness: selected.brightness,
                         blackPoint: selected.blackPoint,
                         whitePoint: selected.whitePoint,
                         transparency: selected.transparency
@@ -282,8 +282,8 @@ class ColorPanel extends Container {
                 const { newState } = op;
                 newState.tintClr.set(tintPicker.value[0], tintPicker.value[1], tintPicker.value[2]);
                 newState.temperature = temperatureSlider.value;
-                newState.brightness = brightnessSlider.value;
                 newState.saturation = saturationSlider.value;
+                newState.brightness = brightnessSlider.value;
                 newState.blackPoint = blackPointSlider.value;
                 newState.whitePoint = whitePointSlider.value;
                 newState.transparency = Math.exp(transparencySlider.value);
@@ -308,7 +308,7 @@ class ColorPanel extends Container {
             }
         };
 
-        [temperatureSlider, brightnessSlider, saturationSlider, blackPointSlider, whitePointSlider, transparencySlider].forEach((slider) => {
+        [temperatureSlider, saturationSlider, brightnessSlider, blackPointSlider, whitePointSlider, transparencySlider].forEach((slider) => {
             slider.on('slide:start', start);
             slider.on('slide:end', end);
         });
@@ -327,15 +327,15 @@ class ColorPanel extends Container {
             });
         });
 
-        brightnessSlider.on('change', (value: number) => {
-            updateOp((op) => {
-                op.newState.brightness = value;
-            });
-        });
-
         saturationSlider.on('change', (value: number) => {
             updateOp((op) => {
                 op.newState.saturation = value;
+            });
+        });
+
+        brightnessSlider.on('change', (value: number) => {
+            updateOp((op) => {
+                op.newState.brightness = value;
             });
         });
 

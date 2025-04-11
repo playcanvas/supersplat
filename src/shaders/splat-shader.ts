@@ -18,6 +18,13 @@ varying mediump vec4 color;
 
 mediump vec4 discardVec = vec4(0.0, 0.0, 2.0, 1.0);
 
+uniform float saturation;
+
+vec3 applySaturation(vec3 color) {
+    vec3 grey = vec3(dot(color, vec3(0.299, 0.587, 0.114)));
+    return grey + (color - grey) * saturation;
+}
+
 void main(void) {
     // read gaussian details
     SplatSource source;
@@ -97,9 +104,6 @@ void main(void) {
         // read color
         color = readColor(source);
 
-        // apply saturation to base color
-        color.xyz = applySaturation(color.xyz);
-
         // evaluate spherical harmonics
         #if SH_BANDS > 0
             vec3 dir = normalize(center.view * mat3(center.modelView));
@@ -108,6 +112,9 @@ void main(void) {
 
         // apply tint/brightness
         color = color * clrScale + vec4(clrOffset, 0.0);
+
+        // apply saturation
+        color.xyz = applySaturation(color.xyz);
 
         // don't allow out-of-range alpha
         color.a = clamp(color.a, 0.0, 1.0);
@@ -221,13 +228,6 @@ bool initCenter(SplatSource source, vec3 modelCenter, out SplatCenter center) {
 
 const gsplatSH = /* glsl*/`
 
-uniform float saturation;
-
-vec3 applySaturation(vec3 color) {
-    vec3 grey = vec3(dot(color, vec3(0.299, 0.587, 0.114)));
-    return grey + (color - grey) * saturation;
-}
-
 #if SH_BANDS > 0
 
 // unpack signed 11 10 11 bits
@@ -279,11 +279,6 @@ void fetch(in uint t, out vec3 a) {
         fetch(texelFetch(splatSH_4to7, source.uv, 0), sh[3], sh[4], sh[5], sh[6]);
         fetch(texelFetch(splatSH_8to11, source.uv, 0), sh[7], sh[8], sh[9], sh[10]);
         fetch(texelFetch(splatSH_12to15, source.uv, 0), sh[11], sh[12], sh[13], sh[14]);
-
-        // apply saturation to SH bands
-        for (int i = 0; i < 15; i++) {
-            sh[i] = applySaturation(sh[i]);
-        }
     }
 #endif
 

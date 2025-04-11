@@ -69,8 +69,8 @@ class Splat extends Element {
     _name = '';
     _tintClr = new Color(1, 1, 1);
     _temperature = 0;
-    _brightness = 0;
     _saturation = 1;
+    _brightness = 0;
     _blackPoint = 0;
     _whitePoint = 1;
     _transparency = 1;
@@ -340,7 +340,7 @@ class Splat extends Element {
         serializer.pack(this.changedCounter);
         serializer.pack(this.visible);
         serializer.pack(this.tintClr.r, this.tintClr.g, this.tintClr.b);
-        serializer.pack(this.temperature, this.brightness, this.saturation, this.blackPoint, this.whitePoint, this.transparency);
+        serializer.pack(this.temperature, this.saturation, this.brightness, this.blackPoint, this.whitePoint, this.transparency);
     }
 
     onPreRender() {
@@ -511,17 +511,6 @@ class Splat extends Element {
         return this._temperature;
     }
 
-    set brightness(value: number) {
-        if (value !== this._brightness) {
-            this._brightness = value;
-            this.scene.events.fire('splat.brightness', this);
-        }
-    }
-
-    get brightness() {
-        return this._brightness;
-    }
-
     set saturation(value: number) {
         if (value !== this._saturation) {
             this._saturation = value;
@@ -531,6 +520,17 @@ class Splat extends Element {
 
     get saturation() {
         return this._saturation;
+    }
+
+    set brightness(value: number) {
+        if (value !== this._brightness) {
+            this._brightness = value;
+            this.scene.events.fire('splat.brightness', this);
+        }
+    }
+
+    get brightness() {
+        return this._brightness;
     }
 
     set blackPoint(value: number) {

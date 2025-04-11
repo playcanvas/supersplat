@@ -350,7 +350,7 @@ class SingleSplat {
                     });
 
                     const { tintClr, temperature, saturation, brightness, blackPoint, whitePoint } = splat;
-                    const hasTint = (!tintClr.equals(Color.WHITE) || temperature !== 0 || saturation !== 1 || brightness !== 1 || blackPoint !== 0 || whitePoint !== 1 );
+                    const hasTint = (!tintClr.equals(Color.WHITE) || temperature !== 0 || saturation !== 1 || brightness !== 1 || blackPoint !== 0 || whitePoint !== 1);
 
                     cacheEntry = { splat, transformCache, srcProps, hasTint };
 

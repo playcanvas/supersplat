@@ -22,7 +22,7 @@ import {
 
 import { Element, ElementType } from './element';
 import { Serializer } from './serializer';
-import { vertexShader, fragmentShader, gsplatCenter, gsplatSH } from './shaders/splat-shader';
+import { vertexShader, fragmentShader, gsplatCenter } from './shaders/splat-shader';
 import { State } from './splat-state';
 import { Transform } from './transform';
 import { TransformPalette } from './transform-palette';
@@ -166,7 +166,7 @@ class Splat extends Element {
         this.rebuildMaterial = (bands: number) => {
             instance.createMaterial(materialOptions);
             const { material } = instance;
-            material.chunks = { gsplatCenterVS: gsplatCenter, gsplatSHVS: gsplatSH };
+            material.chunks = { gsplatCenterVS: gsplatCenter };
             material.blendState = blendState;
             material.setDefine('SH_BANDS', `${Math.min(bands, instance.splat.shBands)}`);
             material.setParameter('splatState', this.stateTexture);
@@ -591,6 +591,7 @@ class Splat extends Element {
             visible: this.visible,
             tintClr: packC(this.tintClr),
             temperature: this.temperature,
+            saturation: this.saturation,
             brightness: this.brightness,
             blackPoint: this.blackPoint,
             whitePoint: this.whitePoint,
@@ -599,13 +600,14 @@ class Splat extends Element {
     }
 
     docDeserialize(doc: any) {
-        const { name, position, rotation, scale, visible, tintClr, temperature, brightness, blackPoint, whitePoint, transparency } = doc;
+        const { name, position, rotation, scale, visible, tintClr, temperature, saturation, brightness, blackPoint, whitePoint, transparency } = doc;
 
         this.name = name;
         this.move(new Vec3(position), new Quat(rotation), new Vec3(scale));
         this.visible = visible;
         this.tintClr = new Color(tintClr[0], tintClr[1], tintClr[2], tintClr[3]);
         this.temperature = temperature ?? 0;
+        this.saturation = saturation ?? 1;
         this.brightness = brightness;
         this.blackPoint = blackPoint;
         this.whitePoint = whitePoint;

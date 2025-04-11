@@ -372,8 +372,8 @@ class ColorPanel extends Container {
                     newState: {
                         tintClr: new Color(1, 1, 1),
                         temperature: 0,
-                        brightness: 0,
                         saturation: 1,
+                        brightness: 0,
                         blackPoint: 0,
                         whitePoint: 1,
                         transparency: 1
@@ -381,8 +381,8 @@ class ColorPanel extends Container {
                     oldState: {
                         tintClr: selected.tintClr.clone(),
                         temperature: selected.temperature,
-                        brightness: selected.brightness,
                         saturation: selected.saturation,
+                        brightness: selected.brightness,
                         blackPoint: selected.blackPoint,
                         whitePoint: selected.whitePoint,
                         transparency: selected.transparency
@@ -400,8 +400,8 @@ class ColorPanel extends Container {
 
         events.on('splat.tintClr', updateUIFromState);
         events.on('splat.temperature', updateUIFromState);
-        events.on('splat.brightness', updateUIFromState);
         events.on('splat.saturation', updateUIFromState);
+        events.on('splat.brightness', updateUIFromState);
         events.on('splat.blackPoint', updateUIFromState);
         events.on('splat.whitePoint', updateUIFromState);
         events.on('splat.transparency', updateUIFromState);

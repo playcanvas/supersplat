@@ -142,7 +142,7 @@ class BottomToolbar extends Container {
         brush.dom.addEventListener('click', () => events.fire('tool.brushSelection'));
         picker.dom.addEventListener('click', () => events.fire('tool.rectSelection'));
         sphere.dom.addEventListener('click', () => events.fire('tool.sphereSelection'));
-        box.dom.addEventListener('click', () => events.fire('tool.sphereSelection'));
+        box.dom.addEventListener('click', () => events.fire('tool.boxSelection'));
         translate.dom.addEventListener('click', () => events.fire('tool.move'));
         rotate.dom.addEventListener('click', () => events.fire('tool.rotate'));
         scale.dom.addEventListener('click', () => events.fire('tool.scale'));

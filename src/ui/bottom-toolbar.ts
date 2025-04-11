@@ -184,7 +184,7 @@ class BottomToolbar extends Container {
         tooltips.register(polygon, localize('tooltip.polygon'));
         tooltips.register(lasso, 'Lasso Select');
         tooltips.register(sphere, localize('tooltip.sphere'));
-        tooltips.register(box, localize('tooltip.sphere'));
+        tooltips.register(box, localize('tooltip.box'));
         // tooltips.register(crop, 'Crop');
         tooltips.register(translate, localize('tooltip.translate'));
         tooltips.register(rotate, localize('tooltip.rotate'));

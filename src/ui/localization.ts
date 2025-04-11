@@ -84,6 +84,17 @@ const localizeInit = () => {
                     'camera.play-poses': 'Posen abspielen',
                     'camera.clear-poses': 'Posen leeren',
 
+                    // Color panel
+                    'colors': 'FARBE',
+                    'colors.tint': 'Färbung',
+                    'colors.temperature': 'Temperatur',
+                    'colors.saturation': 'Sättigung',
+                    'colors.brightness': 'Helligkeit',
+                    'colors.blackPoint': 'Schwarzpunkt',
+                    'colors.whitePoint': 'Weißpunkt',
+                    'colors.transparency': 'Transparenz',
+                    'colors.reset': 'Zurücksetzen',
+
                     // Data panel
                     'data': 'SPLAT DATEN',
                     'data.distance': 'Entfernung',
@@ -279,6 +290,7 @@ const localizeInit = () => {
                     'colors': 'COLORS',
                     'colors.tint': 'Tint',
                     'colors.temperature': 'Temperature',
+                    'colors.saturation': 'Saturation',
                     'colors.brightness': 'Brightness',
                     'colors.blackPoint': 'Black Point',
                     'colors.whitePoint': 'White Point',
@@ -502,7 +514,18 @@ const localizeInit = () => {
                     'camera.play-poses': 'Lire les poses',
                     'camera.clear-poses': 'Effacer les poses',
 
-                    // data panel
+                    // Color panel
+                    'colors': 'COULEURS',
+                    'colors.tint': 'Teinte',
+                    'colors.temperature': 'Température',
+                    'colors.saturation': 'Saturation',
+                    'colors.brightness': 'Luminosité',
+                    'colors.blackPoint': 'Point noir',
+                    'colors.whitePoint': 'Point blanc',
+                    'colors.transparency': 'Transparence',
+                    'colors.reset': 'Réinitialiser',
+
+                    // Data panel
                     'data': 'DONNEES SPLAT',
                     'data.distance': 'Distance',
                     'data.volume': 'Volume',
@@ -677,6 +700,17 @@ const localizeInit = () => {
                     'camera.next-pose': '次のポーズ',
                     'camera.play-poses': 'ポーズを再生',
                     'camera.clear-poses': 'ポーズをクリア',
+
+                    // Color panel
+                    'colors': '色',
+                    'colors.tint': '色合い',
+                    'colors.temperature': '温度',
+                    'colors.saturation': '彩度',
+                    'colors.brightness': '明るさ',
+                    'colors.blackPoint': '黒点',
+                    'colors.whitePoint': '白点',
+                    'colors.transparency': '透明度',
+                    'colors.reset': 'リセット',
 
                     // Data panel
                     'data': 'スプラットの統計',
@@ -854,6 +888,16 @@ const localizeInit = () => {
                     'camera.play-poses': '포즈 재생',
                     'camera.clear-poses': '포즈 지우기',
 
+                    // Color panel
+                    'colors': '색상',
+                    'colors.tint': '색조',
+                    'colors.temperature': '온도',
+                    'colors.brightness': '밝기',
+                    'colors.blackPoint': '검은 점',
+                    'colors.whitePoint': '흰 점',
+                    'colors.transparency': '투명도',
+                    'colors.reset': '리셋',
+
                     // Data panel
                     'data': 'SPLAT 데이터',
                     'data.distance': '거리',
@@ -1029,6 +1073,17 @@ const localizeInit = () => {
                     'camera.next-pose': '下一个姿势',
                     'camera.play-poses': '播放姿势',
                     'camera.clear-poses': '清除姿势',
+
+                    // Color panel
+                    'colors': '颜色',
+                    'colors.tint': '色调',
+                    'colors.temperature': '温度',
+                    'colors.saturation': '饱和度',
+                    'colors.brightness': '亮度',
+                    'colors.blackPoint': '黑点',
+                    'colors.whitePoint': '白点',
+                    'colors.transparency': '透明度',
+                    'colors.reset': '重置',
 
                     // Data panel
                     'data': 'SPLAT 数据',

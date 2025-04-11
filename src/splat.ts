@@ -69,6 +69,7 @@ class Splat extends Element {
     _name = '';
     _tintClr = new Color(1, 1, 1);
     _temperature = 0;
+    _saturation = 1;
     _brightness = 0;
     _blackPoint = 0;
     _whitePoint = 1;
@@ -339,7 +340,7 @@ class Splat extends Element {
         serializer.pack(this.changedCounter);
         serializer.pack(this.visible);
         serializer.pack(this.tintClr.r, this.tintClr.g, this.tintClr.b);
-        serializer.pack(this.temperature, this.brightness, this.blackPoint, this.whitePoint, this.transparency);
+        serializer.pack(this.temperature, this.saturation, this.brightness, this.blackPoint, this.whitePoint, this.transparency);
     }
 
     onPreRender() {
@@ -374,6 +375,8 @@ class Splat extends Element {
             scale * this.tintClr.b * (1 - this.temperature),
             this.transparency
         ]);
+
+        material.setParameter('saturation', this.saturation);
 
         if (this.visible && selected) {
             // render bounding box
@@ -508,6 +511,17 @@ class Splat extends Element {
         return this._temperature;
     }
 
+    set saturation(value: number) {
+        if (value !== this._saturation) {
+            this._saturation = value;
+            this.scene.events.fire('splat.saturation', this);
+        }
+    }
+
+    get saturation() {
+        return this._saturation;
+    }
+
     set brightness(value: number) {
         if (value !== this._brightness) {
             this._brightness = value;
@@ -577,6 +591,7 @@ class Splat extends Element {
             visible: this.visible,
             tintClr: packC(this.tintClr),
             temperature: this.temperature,
+            saturation: this.saturation,
             brightness: this.brightness,
             blackPoint: this.blackPoint,
             whitePoint: this.whitePoint,
@@ -585,13 +600,14 @@ class Splat extends Element {
     }
 
     docDeserialize(doc: any) {
-        const { name, position, rotation, scale, visible, tintClr, temperature, brightness, blackPoint, whitePoint, transparency } = doc;
+        const { name, position, rotation, scale, visible, tintClr, temperature, saturation, brightness, blackPoint, whitePoint, transparency } = doc;
 
         this.name = name;
         this.move(new Vec3(position), new Quat(rotation), new Vec3(scale));
         this.visible = visible;
         this.tintClr = new Color(tintClr[0], tintClr[1], tintClr[2], tintClr[3]);
         this.temperature = temperature ?? 0;
+        this.saturation = saturation ?? 1;
         this.brightness = brightness;
         this.blackPoint = blackPoint;
         this.whitePoint = whitePoint;

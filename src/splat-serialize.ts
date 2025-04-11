@@ -349,8 +349,8 @@ class SingleSplat {
                         }
                     });
 
-                    const { blackPoint, whitePoint, brightness, temperature, tintClr } = splat;
-                    const hasTint = (!tintClr.equals(Color.WHITE) || blackPoint !== 0 || whitePoint !== 1 || brightness !== 1 || temperature !== 0);
+                    const { tintClr, temperature, saturation, brightness, blackPoint, whitePoint } = splat;
+                    const hasTint = (!tintClr.equals(Color.WHITE) || temperature !== 0 || saturation !== 1 || brightness !== 1 || blackPoint !== 0 || whitePoint !== 1);
 
                     cacheEntry = { splat, transformCache, srcProps, hasTint };
 
@@ -404,28 +404,55 @@ class SingleSplat {
             }
 
             if (!serializeSettings.keepColorTint && hasColor && hasTint) {
-                const { blackPoint, whitePoint, brightness, temperature, tintClr } = splat;
+                const { tintClr, temperature, saturation, brightness, blackPoint, whitePoint } = splat;
 
                 const SH_C0 = 0.28209479177387814;
                 const to = (value: number) => value * SH_C0 + 0.5;
                 const from = (value: number) => (value - 0.5) / SH_C0;
 
+                const applyTransform = (c: { r: number, g: number, b: number }, s: { r: number, g: number, b: number }, offset: number) => {
+                    // offset and scale
+                    c.r = offset + c.r * s.r;
+                    c.g = offset + c.g * s.g;
+                    c.b = offset + c.b * s.b;
+
+                    // saturation
+                    const grey = c.r * 0.299 + c.g * 0.587 + c.b * 0.114;
+                    c.r = grey + (c.r - grey) * saturation;
+                    c.g = grey + (c.g - grey) * saturation;
+                    c.b = grey + (c.b - grey) * saturation;
+                };
+
                 const offset = -blackPoint + brightness;
                 const scale = 1 / (whitePoint - blackPoint);
 
-                const tr = scale * tintClr.r * (1 + temperature);
-                const tg = scale * tintClr.g;
-                const tb = scale * tintClr.b * (1 - temperature);
+                const s = {
+                    r: scale * tintClr.r * (1 + temperature),
+                    g: scale * tintClr.g,
+                    b: scale * tintClr.b * (1 - temperature)
+                };
 
-                data.f_dc_0 = from(offset + to(data.f_dc_0) * tr);
-                data.f_dc_1 = from(offset + to(data.f_dc_1) * tg);
-                data.f_dc_2 = from(offset + to(data.f_dc_2) * tb);
+                const c = {
+                    r: to(data.f_dc_0),
+                    g: to(data.f_dc_1),
+                    b: to(data.f_dc_2)
+                };
+
+                applyTransform(c, s, offset);
+                data.f_dc_0 = from(c.r);
+                data.f_dc_1 = from(c.g);
+                data.f_dc_2 = from(c.b);
 
                 if (dstSHBands > 0) {
                     for (let d = 0; d < dstSHCoeffs; ++d) {
-                        data[shNames[d]] *= tr;
-                        data[shNames[d + dstSHCoeffs]] *= tg;
-                        data[shNames[d + dstSHCoeffs * 2]] *= tb;
+                        c.r = data[shNames[d]];
+                        c.g = data[shNames[d + dstSHCoeffs]];
+                        c.b = data[shNames[d + dstSHCoeffs * 2]];
+
+                        applyTransform(c, s, 0);
+                        data[shNames[d]] = c.r;
+                        data[shNames[d + dstSHCoeffs]] = c.g;
+                        data[shNames[d + dstSHCoeffs * 2]] = c.b;
                     }
                 }
             }

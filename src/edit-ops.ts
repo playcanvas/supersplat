@@ -323,6 +323,7 @@ class PlacePivotOp {
 type ColorAdjustment = {
     tintClr?: Color
     temperature?: number,
+    saturation?: number,
     brightness?: number,
     blackPoint?: number,
     whitePoint?: number,
@@ -345,9 +346,10 @@ class SetSplatColorAdjustmentOp {
 
     do() {
         const { splat } = this;
-        const { tintClr, temperature, brightness, blackPoint, whitePoint, transparency } = this.newState;
+        const { tintClr, temperature, saturation, brightness, blackPoint, whitePoint, transparency } = this.newState;
         if (tintClr) splat.tintClr = tintClr;
         if (temperature !== null) splat.temperature = temperature;
+        if (saturation !== null) splat.saturation = saturation;
         if (brightness !== null) splat.brightness = brightness;
         if (blackPoint !== null) splat.blackPoint = blackPoint;
         if (whitePoint !== null) splat.whitePoint = whitePoint;
@@ -356,9 +358,10 @@ class SetSplatColorAdjustmentOp {
 
     undo() {
         const { splat } = this;
-        const { tintClr, temperature, brightness, blackPoint, whitePoint, transparency } = this.oldState;
+        const { tintClr, temperature, saturation, brightness, blackPoint, whitePoint, transparency } = this.oldState;
         if (tintClr) splat.tintClr = tintClr;
         if (temperature !== null) splat.temperature = temperature;
+        if (saturation !== null) splat.saturation = saturation;
         if (brightness !== null) splat.brightness = brightness;
         if (blackPoint !== null) splat.blackPoint = blackPoint;
         if (whitePoint !== null) splat.whitePoint = whitePoint;

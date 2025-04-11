@@ -18,6 +18,13 @@ varying mediump vec4 color;
 
 mediump vec4 discardVec = vec4(0.0, 0.0, 2.0, 1.0);
 
+uniform float saturation;
+
+vec3 applySaturation(vec3 color) {
+    vec3 grey = vec3(dot(color, vec3(0.299, 0.587, 0.114)));
+    return grey + (color - grey) * saturation;
+}
+
 void main(void) {
     // read gaussian details
     SplatSource source;
@@ -105,6 +112,9 @@ void main(void) {
 
         // apply tint/brightness
         color = color * clrScale + vec4(clrOffset, 0.0);
+
+        // apply saturation
+        color.xyz = applySaturation(color.xyz);
 
         // don't allow out-of-range alpha
         color.a = clamp(color.a, 0.0, 1.0);

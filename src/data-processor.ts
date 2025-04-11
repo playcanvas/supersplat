@@ -39,6 +39,7 @@ const v2 = new Vec3();
 
 const resolve = (scope: ScopeSpace, values: any) => {
     for (const key in values) {
+        // console.error(key);
         scope.resolve(key).setValue(values[key]);
     }
 };

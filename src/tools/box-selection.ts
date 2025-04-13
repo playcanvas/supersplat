@@ -55,7 +55,7 @@ class BoxSelection {
 
         const apply = (op: 'set' | 'add' | 'remove') => {
             const p = sphere.pivot.getPosition();
-            events.fire('select.bySphere', op, [p.x, p.y, p.z, sphere.radius]);
+            events.fire('select.byBox', op, [p.x, p.y, p.z, sphere.radius]);
         };
 
         setButton.dom.addEventListener('pointerdown', (e) => {

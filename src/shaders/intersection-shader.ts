@@ -29,6 +29,9 @@ const fragmentShader = /* glsl */ `
     // sphere params
     uniform vec4 sphere_params;                     // sphere x, y, z, radius
 
+    // box params
+    uniform vec4 box_params;                     // box x, y, z, radius
+
     void main(void) {
         // calculate output id
         uvec2 outputUV = uvec2(gl_FragCoord);
@@ -84,6 +87,20 @@ const fragmentShader = /* glsl */ `
                 } else if (mode == 2) {
                     // select by sphere
                     clr[i] = length(world - sphere_params.xyz) < sphere_params.w ? 1.0 : 0.0;
+                } else if (mode == 3) {
+                    // select by box
+                    vec3 relativePosition = world - box_params.xyz;
+                    bool isInsideCube = true;
+                    if (relativePosition.x < -box_params.w || relativePosition.x > box_params.w) {
+                        isInsideCube = false;
+                    }
+                    if (relativePosition.y < -box_params.w || relativePosition.y > box_params.w) {
+                        isInsideCube = false;
+                    }
+                    if (relativePosition.z < -box_params.w || relativePosition.z > box_params.w) {
+                        isInsideCube = false;
+                    }
+                    clr[i] = isInsideCube ? 1.0 : 0.0;
                 }
             }
         }

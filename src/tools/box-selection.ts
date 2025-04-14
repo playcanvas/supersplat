@@ -3,7 +3,7 @@ import { TranslateGizmo, Vec3 } from 'playcanvas';
 
 import { Events } from '../events';
 import { Scene } from '../scene';
-import { SphereShape } from '../sphere-shape';
+import { BoxShape } from '../box-shape';
 import { Splat } from '../splat';
 
 class BoxSelection {
@@ -13,7 +13,7 @@ class BoxSelection {
     active = false;
 
     constructor(events: Events, scene: Scene, canvasContainer: Container) {
-        const sphere = new SphereShape();
+        const box = new BoxShape();
 
         const gizmo = new TranslateGizmo(scene.camera.entity.camera, scene.gizmoLayer);
 
@@ -22,7 +22,7 @@ class BoxSelection {
         });
 
         gizmo.on('transform:move', () => {
-            sphere.moved();
+            box.moved();
         });
 
         // ui
@@ -40,7 +40,7 @@ class BoxSelection {
         const removeButton = new Button({ text: 'Remove', class: 'select-toolbar-button' });
         const radius = new NumericInput({
             precision: 2,
-            value: sphere.radius,
+            value: box.radius,
             placeholder: 'Radius',
             width: 80,
             min: 0.01
@@ -54,8 +54,8 @@ class BoxSelection {
         canvasContainer.append(selectToolbar);
 
         const apply = (op: 'set' | 'add' | 'remove') => {
-            const p = sphere.pivot.getPosition();
-            events.fire('select.byBox', op, [p.x, p.y, p.z, sphere.radius]);
+            const p = box.pivot.getPosition();
+            events.fire('select.byBox', op, [p.x, p.y, p.z, box.radius]);
         };
 
         setButton.dom.addEventListener('pointerdown', (e) => {
@@ -68,13 +68,13 @@ class BoxSelection {
             e.stopPropagation(); apply('remove');
         });
         radius.on('change', () => {
-            sphere.radius = radius.value;
+            box.radius = radius.value;
         });
 
         events.on('camera.focalPointPicked', (details: { splat: Splat, position: Vec3 }) => {
             if (this.active) {
-                sphere.pivot.setPosition(details.position);
-                gizmo.attach([sphere.pivot]);
+                box.pivot.setPosition(details.position);
+                gizmo.attach([box.pivot]);
             }
         });
 
@@ -92,15 +92,15 @@ class BoxSelection {
 
         this.activate = () => {
             this.active = true;
-            scene.add(sphere);
-            gizmo.attach([sphere.pivot]);
+            scene.add(box);
+            gizmo.attach([box.pivot]);
             selectToolbar.hidden = false;
         };
 
         this.deactivate = () => {
             selectToolbar.hidden = true;
             gizmo.detach();
-            scene.remove(sphere);
+            scene.remove(box);
             this.active = false;
         };
     }

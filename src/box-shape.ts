@@ -28,7 +28,7 @@ class BoxShape extends Element {
     constructor() {
         super(ElementType.debug);
 
-        this.pivot = new Entity('spherePivot');
+        this.pivot = new Entity('boxPivot');
         this.pivot.addComponent('render', {
             type: 'box'
         });

@@ -9,6 +9,7 @@ import pickerSvg from './svg/select-picker.svg';
 import polygonSvg from './svg/select-poly.svg';
 import sphereSvg from './svg/select-sphere.svg';
 import undoSvg from './svg/undo.svg';
+import boxSvg from './svg/show-hide-splats.svg';
 import { Tooltips } from './tooltips';
 // import cropSvg from './svg/crop.svg';
 
@@ -113,7 +114,7 @@ class BottomToolbar extends Container {
         polygon.dom.appendChild(createSvg(polygonSvg));
         brush.dom.appendChild(createSvg(brushSvg));
         sphere.dom.appendChild(createSvg(sphereSvg));
-        box.dom.appendChild(createSvg(sphereSvg));
+        box.dom.appendChild(createSvg(boxSvg));
         lasso.dom.appendChild(createSvg(lassoSvg));
         // crop.dom.appendChild(createSvg(cropSvg));
 

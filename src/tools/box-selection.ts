@@ -1,9 +1,9 @@
 import { Button, Container, NumericInput } from 'pcui';
 import { TranslateGizmo, Vec3 } from 'playcanvas';
 
+import { BoxShape } from '../box-shape';
 import { Events } from '../events';
 import { Scene } from '../scene';
-import { BoxShape } from '../box-shape';
 import { Splat } from '../splat';
 
 class BoxSelection {
@@ -74,7 +74,6 @@ class BoxSelection {
 
         const apply = (op: 'set' | 'add' | 'remove') => {
             const p = box.pivot.getPosition();
-            // console.log(box.lenX, box.lenY, box.lenZ);
             events.fire('select.byBox', op, [p.x, p.y, p.z, box.lenX, box.lenY, box.lenZ]);
         };
 

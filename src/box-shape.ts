@@ -105,6 +105,10 @@ class BoxShape extends Element {
         this.updateBound();
     }
 
+    get lenX() {
+        return this._lenX;
+    }
+
     set lenY(lenY: number) {
         this._lenY = lenY;
 
@@ -112,19 +116,15 @@ class BoxShape extends Element {
         this.updateBound();
     }
 
+    get lenY() {
+        return this._lenY;
+    }
+
     set lenZ(lenZ: number) {
         this._lenZ = lenZ;
 
         this.pivot.setLocalScale(this._lenX * 2, this._lenY * 2, this._lenZ * 2);
         this.updateBound();
-    }
-
-    get lenX() {
-        return this._lenX;
-    }
-
-    get lenY() {
-        return this._lenY;
     }
 
     get lenZ() {

@@ -43,7 +43,6 @@ const v2 = new Vec3();
 
 const resolve = (scope: ScopeSpace, values: any) => {
     for (const key in values) {
-        // console.error(key);
         scope.resolve(key).setValue(values[key]);
     }
 };
@@ -307,8 +306,6 @@ class DataProcessor {
 
         const boxOptions = options as BoxOptions;
         if (boxOptions.box) {
-            console.log('box select');
-            console.log(boxOptions.box.lenx, boxOptions.box.leny, boxOptions.box.lenz);
             resolve(scope, {
                 mode: 3,
                 box_params: [

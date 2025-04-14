@@ -10,23 +10,32 @@ const vertexShader = /* glsl */ `
 `;
 
 const fragmentShader = /* glsl */ `
-    bool intersectSphere(out float t0, out float t1, vec3 pos, vec3 dir, vec4 sphere) {
-        vec3 L = sphere.xyz - pos;
-        float tca = dot(L, dir);
-
-        float d2 = sphere.w * sphere.w - (dot(L, L) - tca * tca);
-        if (d2 <= 0.0) {
-            return false;
+    bool rayAABBIntersect(vec3 origin, vec3 direction, vec3 aabbMin, vec3 aabbMax, out float tMin, out float tMax) {
+        tMin = -1e30; // 初始化为负无穷大
+        tMax = 1e30;  // 初始化为正无穷大
+    
+        for (int i = 0; i < 3; i++) { // 遍历x、y、z轴
+            float dir = direction[i];
+            if (abs(dir) < 1e-6) { // 如果方向向量在该轴上的分量接近于零（平行于该轴）
+                if (origin[i] < aabbMin[i] || origin[i] > aabbMax[i]) { // 检查起点是否在AABB范围内
+                    return false; // 如果不在范围内，则不相交
+                }
+            } else { // 否则，计算参数区间
+                float invDir = 1.0 / dir; // 方向向量的倒数
+                float t1 = (aabbMin[i] - origin[i]) * invDir; // 射线与最小值的交点参数
+                float t2 = (aabbMax[i] - origin[i]) * invDir; // 射线与最大值的交点参数
+            
+                // 更新参数区间
+                tMin = max(tMin, min(t1, t2)); // 取较大的最小值
+                tMax = min(tMax, max(t1, t2)); // 取较小的最大值
+            
+                if (tMin > tMax) { // 如果区间没有重叠，则不相交
+                    return false;
+                }
+            }
         }
-
-        float thc = sqrt(d2);
-        t0 = tca - thc;
-        t1 = tca + thc;
-        if (t1 <= 0.0) {
-            return false;
-        }
-
-        return true;
+    
+        return tMin >= 0.0; // 如果最小参数值大于等于零，则相交
     }
 
     float calcDepth(in vec3 pos, in mat4 viewProjection) {
@@ -77,7 +86,9 @@ const fragmentShader = /* glsl */ `
         vec3 rayDir = normalize(worldFar - worldNear);
 
         float t0, t1;
-        if (!intersectSphere(t0, t1, worldNear, rayDir, sphere)) {
+        vec3 aabbMax = sphere.xyz + sphere.www;
+        vec3 aabbMin = sphere.xyz - sphere.www;
+        if (!rayAABBIntersect(worldNear, rayDir, aabbMin, aabbMax, t0, t1)) {
             discard;
         }
 

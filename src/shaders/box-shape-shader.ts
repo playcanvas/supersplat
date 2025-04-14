@@ -11,31 +11,30 @@ const vertexShader = /* glsl */ `
 
 const fragmentShader = /* glsl */ `
     bool rayAABBIntersect(vec3 origin, vec3 direction, vec3 aabbMin, vec3 aabbMax, out float tMin, out float tMax) {
-        tMin = -1e30; // 初始化为负无穷大
-        tMax = 1e30;  // 初始化为正无穷大
+        tMin = -1e30; 
+        tMax = 1e30;  
     
-        for (int i = 0; i < 3; i++) { // 遍历x、y、z轴
+        for (int i = 0; i < 3; i++) { 
             float dir = direction[i];
-            if (abs(dir) < 1e-6) { // 如果方向向量在该轴上的分量接近于零（平行于该轴）
-                if (origin[i] < aabbMin[i] || origin[i] > aabbMax[i]) { // 检查起点是否在AABB范围内
-                    return false; // 如果不在范围内，则不相交
+            if (abs(dir) < 1e-6) {
+                if (origin[i] < aabbMin[i] || origin[i] > aabbMax[i]) { 
+                    return false;
                 }
-            } else { // 否则，计算参数区间
-                float invDir = 1.0 / dir; // 方向向量的倒数
-                float t1 = (aabbMin[i] - origin[i]) * invDir; // 射线与最小值的交点参数
-                float t2 = (aabbMax[i] - origin[i]) * invDir; // 射线与最大值的交点参数
+            } else { 
+                float invDir = 1.0 / dir; 
+                float t1 = (aabbMin[i] - origin[i]) * invDir; 
+                float t2 = (aabbMax[i] - origin[i]) * invDir;
             
-                // 更新参数区间
-                tMin = max(tMin, min(t1, t2)); // 取较大的最小值
-                tMax = min(tMax, max(t1, t2)); // 取较小的最大值
+                tMin = max(tMin, min(t1, t2)); 
+                tMax = min(tMax, max(t1, t2));
             
-                if (tMin > tMax) { // 如果区间没有重叠，则不相交
+                if (tMin > tMax) { 
                     return false;
                 }
             }
         }
     
-        return tMin >= 0.0; // 如果最小参数值大于等于零，则相交
+        return tMin >= 0.0;
     }
 
     float calcDepth(in vec3 pos, in mat4 viewProjection) {

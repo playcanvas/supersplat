@@ -74,7 +74,7 @@ class BoxShape extends Element {
 
     onPreRender() {
         this.pivot.getWorldTransform().getTranslation(v);
-        this.material.setParameter('sphere', [v.x, v.y, v.z, this.radius]);
+        this.material.setParameter('box', [v.x, v.y, v.z, this.radius]);
 
         const device = this.scene.graphicsDevice;
         device.scope.resolve('targetSize').setValue([device.width, device.height]);

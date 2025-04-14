@@ -51,7 +51,7 @@ const fragmentShader = /* glsl */ `
 
     uniform sampler2D blueNoiseTex32;
     uniform mat4 matrix_viewProjection;
-    uniform vec4 sphere;
+    uniform vec4 box;
 
     uniform vec3 near_origin;
     uniform vec3 near_x;
@@ -70,12 +70,21 @@ const fragmentShader = /* glsl */ `
     }
 
     bool strips(vec3 lp) {
-        vec2 ae = calcAzimuthElev(normalize(lp));
-
-        float spacing = 180.0 / (2.0 * 3.14159 * sphere.w);
-        float size = 0.03;
-        return fract(ae.x / spacing) < size ||
-               fract(ae.y / spacing) < size;
+        vec3 absLp = abs(lp);
+        vec2 uv;
+    
+        if (absLp.x >= absLp.y && absLp.x >= absLp.z) {
+            uv = vec2(lp.y, lp.z) / absLp.x;
+        } else if (absLp.y >= absLp.x && absLp.y >= absLp.z) {
+            uv = vec2(lp.x, lp.z) / absLp.y;
+        } else {
+            uv = vec2(lp.x, lp.y) / absLp.z;
+        }
+    
+        float spacing = 0.5;
+        float size = 0.03;  
+    
+        return fract(uv.x * spacing) <= size ||  fract(uv.y * spacing) <= size;
     }
 
     void main() {
@@ -86,17 +95,17 @@ const fragmentShader = /* glsl */ `
         vec3 rayDir = normalize(worldFar - worldNear);
 
         float t0, t1;
-        vec3 aabbMax = sphere.xyz + sphere.www;
-        vec3 aabbMin = sphere.xyz - sphere.www;
+        vec3 aabbMax = box.xyz + box.www;
+        vec3 aabbMin = box.xyz - box.www;
         if (!rayAABBIntersect(worldNear, rayDir, aabbMin, aabbMax, t0, t1)) {
             discard;
         }
 
         vec3 frontPos = worldNear + rayDir * t0;
-        bool front = t0 > 0.0 && strips(frontPos - sphere.xyz);
+        bool front = t0 > 0.0 && strips(frontPos - box.xyz);
 
         vec3 backPos = worldNear + rayDir * t1;
-        bool back = strips(backPos - sphere.xyz);
+        bool back = strips(backPos - box.xyz);
 
         if (front) {
             gl_FragColor = vec4(1.0, 1.0, 1.0, 0.6);

@@ -30,7 +30,8 @@ const fragmentShader = /* glsl */ `
     uniform vec4 sphere_params;                     // sphere x, y, z, radius
 
     // box params
-    uniform vec4 box_params;                     // box x, y, z, radius
+    uniform vec4 box_params;                     // box x, y, z
+    uniform vec4 aabb_params;                    // len x, y, z
 
     void main(void) {
         // calculate output id
@@ -91,13 +92,13 @@ const fragmentShader = /* glsl */ `
                     // select by box
                     vec3 relativePosition = world - box_params.xyz;
                     bool isInsideCube = true;
-                    if (relativePosition.x < -box_params.w || relativePosition.x > box_params.w) {
+                    if (relativePosition.x < -aabb_params.x || relativePosition.x > aabb_params.x) {
                         isInsideCube = false;
                     }
-                    if (relativePosition.y < -box_params.w || relativePosition.y > box_params.w) {
+                    if (relativePosition.y < -aabb_params.y || relativePosition.y > aabb_params.y) {
                         isInsideCube = false;
                     }
-                    if (relativePosition.z < -box_params.w || relativePosition.z > box_params.w) {
+                    if (relativePosition.z < -aabb_params.z || relativePosition.z > aabb_params.z) {
                         isInsideCube = false;
                     }
                     clr[i] = isInsideCube ? 1.0 : 0.0;

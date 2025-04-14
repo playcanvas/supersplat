@@ -52,6 +52,7 @@ const fragmentShader = /* glsl */ `
     uniform sampler2D blueNoiseTex32;
     uniform mat4 matrix_viewProjection;
     uniform vec4 box;
+    uniform vec4 aabb;
 
     uniform vec3 near_origin;
     uniform vec3 near_x;
@@ -95,8 +96,8 @@ const fragmentShader = /* glsl */ `
         vec3 rayDir = normalize(worldFar - worldNear);
 
         float t0, t1;
-        vec3 aabbMax = box.xyz + box.www;
-        vec3 aabbMin = box.xyz - box.www;
+        vec3 aabbMax = box.xyz + aabb.xyz;
+        vec3 aabbMin = box.xyz - aabb.xyz;
         if (!rayAABBIntersect(worldNear, rayDir, aabbMin, aabbMax, t0, t1)) {
             discard;
         }

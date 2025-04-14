@@ -38,10 +38,27 @@ class BoxSelection {
         const setButton = new Button({ text: 'Set', class: 'select-toolbar-button' });
         const addButton = new Button({ text: 'Add', class: 'select-toolbar-button' });
         const removeButton = new Button({ text: 'Remove', class: 'select-toolbar-button' });
-        const radius = new NumericInput({
+
+        const lenX = new NumericInput({
             precision: 2,
-            value: box.radius,
-            placeholder: 'Radius',
+            value: box.lenX,
+            placeholder: 'LenX',
+            width: 80,
+            min: 0.01
+        });
+
+        const lenY = new NumericInput({
+            precision: 2,
+            value: box.lenY,
+            placeholder: 'LenY',
+            width: 80,
+            min: 0.01
+        });
+
+        const lenZ = new NumericInput({
+            precision: 2,
+            value: box.lenZ,
+            placeholder: 'LenZ',
             width: 80,
             min: 0.01
         });
@@ -49,13 +66,16 @@ class BoxSelection {
         selectToolbar.append(setButton);
         selectToolbar.append(addButton);
         selectToolbar.append(removeButton);
-        selectToolbar.append(radius);
+        selectToolbar.append(lenX);
+        selectToolbar.append(lenY);
+        selectToolbar.append(lenZ);
 
         canvasContainer.append(selectToolbar);
 
         const apply = (op: 'set' | 'add' | 'remove') => {
             const p = box.pivot.getPosition();
-            events.fire('select.byBox', op, [p.x, p.y, p.z, box.radius]);
+            // console.log(box.lenX, box.lenY, box.lenZ);
+            events.fire('select.byBox', op, [p.x, p.y, p.z, box.lenX, box.lenY, box.lenZ]);
         };
 
         setButton.dom.addEventListener('pointerdown', (e) => {
@@ -67,8 +87,14 @@ class BoxSelection {
         removeButton.dom.addEventListener('pointerdown', (e) => {
             e.stopPropagation(); apply('remove');
         });
-        radius.on('change', () => {
-            box.radius = radius.value;
+        lenX.on('change', () => {
+            box.lenX = lenX.value;
+        });
+        lenY.on('change', () => {
+            box.lenY = lenY.value;
+        });
+        lenZ.on('change', () => {
+            box.lenZ = lenZ.value;
         });
 
         events.on('camera.focalPointPicked', (details: { splat: Splat, position: Vec3 }) => {

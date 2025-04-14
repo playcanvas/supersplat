@@ -19,7 +19,9 @@ const v = new Vec3();
 const bound = new BoundingBox();
 
 class BoxShape extends Element {
-    _radius = 1;
+    _lenX = 1;
+    _lenY = 1;
+    _lenZ = 1;
     pivot: Entity;
     material: ShaderMaterial;
 
@@ -30,8 +32,7 @@ class BoxShape extends Element {
         this.pivot.addComponent('render', {
             type: 'box'
         });
-        const r = this._radius * 2;
-        this.pivot.setLocalScale(r, r, r);
+        this.pivot.setLocalScale(this._lenX * 2, this._lenY * 2, this._lenZ * 2);
     }
 
     add() {
@@ -69,12 +70,15 @@ class BoxShape extends Element {
 
     serialize(serializer: Serializer): void {
         serializer.packa(this.pivot.getWorldTransform().data);
-        serializer.pack(this.radius);
+        serializer.pack(this.lenX);
+        serializer.pack(this.lenY);
+        serializer.pack(this.lenZ);
     }
 
     onPreRender() {
         this.pivot.getWorldTransform().getTranslation(v);
-        this.material.setParameter('box', [v.x, v.y, v.z, this.radius]);
+        this.material.setParameter('box', [v.x, v.y, v.z, 0]);
+        this.material.setParameter('aabb', [this._lenX, this._lenY, this._lenZ, 0]);
 
         const device = this.scene.graphicsDevice;
         device.scope.resolve('targetSize').setValue([device.width, device.height]);
@@ -86,7 +90,7 @@ class BoxShape extends Element {
 
     updateBound() {
         bound.center.copy(this.pivot.getPosition());
-        bound.halfExtents.set(this.radius, this.radius, this.radius);
+        bound.halfExtents.set(this._lenX, this._lenY, this._lenZ);
         this.scene.boundDirty = true;
     }
 
@@ -94,17 +98,37 @@ class BoxShape extends Element {
         return bound;
     }
 
-    set radius(radius: number) {
-        this._radius = radius;
+    set lenX(lenX: number) {
+        this._lenX = lenX;
 
-        const r = this._radius * 2;
-        this.pivot.setLocalScale(r, r, r);
-
+        this.pivot.setLocalScale(this._lenX * 2, this._lenY * 2, this._lenZ * 2);
         this.updateBound();
     }
 
-    get radius() {
-        return this._radius;
+    set lenY(lenY: number) {
+        this._lenY = lenY;
+
+        this.pivot.setLocalScale(this._lenX * 2, this._lenY * 2, this._lenZ * 2);
+        this.updateBound();
+    }
+
+    set lenZ(lenZ: number) {
+        this._lenZ = lenZ;
+
+        this.pivot.setLocalScale(this._lenX * 2, this._lenY * 2, this._lenZ * 2);
+        this.updateBound();
+    }
+
+    get lenX() {
+        return this._lenX;
+    }
+
+    get lenY() {
+        return this._lenY;
+    }
+
+    get lenZ() {
+        return this._lenZ;
     }
 }
 

@@ -35,7 +35,7 @@ type SphereOptions = {
 };
 
 type BoxOptions = {
-    box: { x: number, y: number, z: number, radius: number };
+    box: { x: number, y: number, z: number, lenx: number, leny: number, lenz: number };
 };
 
 const v1 = new Vec3();
@@ -308,18 +308,26 @@ class DataProcessor {
         const boxOptions = options as BoxOptions;
         if (boxOptions.box) {
             console.log('box select');
+            console.log(boxOptions.box.lenx, boxOptions.box.leny, boxOptions.box.lenz);
             resolve(scope, {
                 mode: 3,
                 box_params: [
                     boxOptions.box.x,
                     boxOptions.box.y,
                     boxOptions.box.z,
-                    boxOptions.box.radius
+                    0
+                ],
+                aabb_params: [
+                    boxOptions.box.lenx,
+                    boxOptions.box.leny,
+                    boxOptions.box.lenz,
+                    0
                 ]
             });
         } else {
             resolve(scope, {
-                box_params: [0, 0, 0, 0]
+                box_params: [0, 0, 0, 0],
+                aabb_params: [0, 0, 0, 0]
             });
         }
 

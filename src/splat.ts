@@ -171,7 +171,6 @@ class Splat extends Element {
             material.setDefine('SH_BANDS', `${Math.min(bands, instance.splat.shBands)}`);
             material.setParameter('splatState', this.stateTexture);
             material.setParameter('splatTransform', this.transformTexture);
-            material.setParameter('transformPalette', this.transformPalette.texture);
             material.update();
         };
 
@@ -377,6 +376,7 @@ class Splat extends Element {
         ]);
 
         material.setParameter('saturation', this.saturation);
+        material.setParameter('transformPalette', this.transformPalette.texture);
 
         if (this.visible && selected) {
             // render bounding box

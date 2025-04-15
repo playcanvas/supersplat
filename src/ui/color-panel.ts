@@ -74,6 +74,50 @@ class ColorPanel extends Container {
         tintRow.append(tintLabel);
         tintRow.append(tintPicker);
 
+        // temperature
+
+        const temperatureRow = new Container({
+            class: 'color-panel-row'
+        });
+
+        const temperatureLabel = new Label({
+            text: localize('colors.temperature'),
+            class: 'color-panel-row-label'
+        });
+
+        const temperatureSlider = new MyFancySliderInput({
+            class: 'color-panel-row-slider',
+            min: -0.5,
+            max: 0.5,
+            step: 0.005,
+            value: 0
+        });
+
+        temperatureRow.append(temperatureLabel);
+        temperatureRow.append(temperatureSlider);
+
+        // saturation
+
+        const saturationRow = new Container({
+            class: 'color-panel-row'
+        });
+
+        const saturationLabel = new Label({
+            text: localize('colors.saturation'),
+            class: 'color-panel-row-label'
+        });
+
+        const saturationSlider = new MyFancySliderInput({
+            class: 'color-panel-row-slider',
+            min: 0,
+            max: 2,
+            step: 0.1,
+            value: 1
+        });
+
+        saturationRow.append(saturationLabel);
+        saturationRow.append(saturationSlider);
+
         // brightness
 
         const brightnessRow = new Container({
@@ -179,6 +223,8 @@ class ColorPanel extends Container {
 
         this.append(header);
         this.append(tintRow);
+        this.append(temperatureRow);
+        this.append(saturationRow);
         this.append(brightnessRow);
         this.append(blackPointRow);
         this.append(whitePointRow);
@@ -196,6 +242,8 @@ class ColorPanel extends Container {
             if (suppress) return;
             suppress = true;
             tintPicker.value = splat ? [splat.tintClr.r, splat.tintClr.g, splat.tintClr.b] : [1, 1, 1];
+            temperatureSlider.value = splat ? splat.temperature : 0;
+            saturationSlider.value = splat ? splat.saturation : 0;
             brightnessSlider.value = splat ? splat.brightness : 0;
             blackPointSlider.value = splat ? splat.blackPoint : 0;
             whitePointSlider.value = splat ? splat.whitePoint : 1;
@@ -209,6 +257,8 @@ class ColorPanel extends Container {
                     splat: selected,
                     newState: {
                         tintClr: selected.tintClr.clone(),
+                        temperature: selected.temperature,
+                        saturation: selected.saturation,
                         brightness: selected.brightness,
                         blackPoint: selected.blackPoint,
                         whitePoint: selected.whitePoint,
@@ -216,6 +266,8 @@ class ColorPanel extends Container {
                     },
                     oldState: {
                         tintClr: selected.tintClr.clone(),
+                        temperature: selected.temperature,
+                        saturation: selected.saturation,
                         brightness: selected.brightness,
                         blackPoint: selected.blackPoint,
                         whitePoint: selected.whitePoint,
@@ -229,6 +281,8 @@ class ColorPanel extends Container {
             if (op) {
                 const { newState } = op;
                 newState.tintClr.set(tintPicker.value[0], tintPicker.value[1], tintPicker.value[2]);
+                newState.temperature = temperatureSlider.value;
+                newState.saturation = saturationSlider.value;
                 newState.brightness = brightnessSlider.value;
                 newState.blackPoint = blackPointSlider.value;
                 newState.whitePoint = whitePointSlider.value;
@@ -254,7 +308,7 @@ class ColorPanel extends Container {
             }
         };
 
-        [brightnessSlider, blackPointSlider, whitePointSlider, transparencySlider].forEach((slider) => {
+        [temperatureSlider, saturationSlider, brightnessSlider, blackPointSlider, whitePointSlider, transparencySlider].forEach((slider) => {
             slider.on('slide:start', start);
             slider.on('slide:end', end);
         });
@@ -264,6 +318,18 @@ class ColorPanel extends Container {
         tintPicker.on('change', (value: number[]) => {
             updateOp((op) => {
                 op.newState.tintClr.set(value[0], value[1], value[2]);
+            });
+        });
+
+        temperatureSlider.on('change', (value: number) => {
+            updateOp((op) => {
+                op.newState.temperature = value;
+            });
+        });
+
+        saturationSlider.on('change', (value: number) => {
+            updateOp((op) => {
+                op.newState.saturation = value;
             });
         });
 
@@ -305,6 +371,8 @@ class ColorPanel extends Container {
                     splat: selected,
                     newState: {
                         tintClr: new Color(1, 1, 1),
+                        temperature: 0,
+                        saturation: 1,
                         brightness: 0,
                         blackPoint: 0,
                         whitePoint: 1,
@@ -312,6 +380,8 @@ class ColorPanel extends Container {
                     },
                     oldState: {
                         tintClr: selected.tintClr.clone(),
+                        temperature: selected.temperature,
+                        saturation: selected.saturation,
                         brightness: selected.brightness,
                         blackPoint: selected.blackPoint,
                         whitePoint: selected.whitePoint,
@@ -329,6 +399,8 @@ class ColorPanel extends Container {
         });
 
         events.on('splat.tintClr', updateUIFromState);
+        events.on('splat.temperature', updateUIFromState);
+        events.on('splat.saturation', updateUIFromState);
         events.on('splat.brightness', updateUIFromState);
         events.on('splat.blackPoint', updateUIFromState);
         events.on('splat.whitePoint', updateUIFromState);

@@ -94,7 +94,6 @@ class SplatOverlay extends Element {
         });
 
         this.meshInstance = meshInstance;
-        this.splat = null;
     }
 
     destroy() {

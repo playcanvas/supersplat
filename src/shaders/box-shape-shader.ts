@@ -10,42 +10,10 @@ const vertexShader = /* glsl */ `
 `;
 
 const fragmentShader = /* glsl */ `
-    bool rayAABBIntersect(vec3 origin, vec3 direction, vec3 aabbMin, vec3 aabbMax, out float tMin, out float tMax) {
-        tMin = -1e30; 
-        tMax = 1e30;  
     
-        for (int i = 0; i < 3; i++) { 
-            float dir = direction[i];
-            if (abs(dir) < 1e-6) {
-                if (origin[i] < aabbMin[i] || origin[i] > aabbMax[i]) { 
-                    return false;
-                }
-            } else { 
-                float invDir = 1.0 / dir; 
-                float t1 = (aabbMin[i] - origin[i]) * invDir; 
-                float t2 = (aabbMax[i] - origin[i]) * invDir;
-            
-                tMin = max(tMin, min(t1, t2)); 
-                tMax = min(tMax, max(t1, t2));
-            
-                if (tMin > tMax) { 
-                    return false;
-                }
-            }
-        }
-    
-        return tMin >= 0.0;
-    }
-
     float calcDepth(in vec3 pos, in mat4 viewProjection) {
         vec4 v = viewProjection * vec4(pos, 1.0);
         return (v.z / v.w) * 0.5 + 0.5;
-    }
-
-    vec2 calcAzimuthElev(in vec3 dir) {
-        float azimuth = atan(dir.z, dir.x);
-        float elev = asin(dir.y);
-        return vec2(azimuth, elev) * 180.0 / 3.14159;
     }
 
     uniform sampler2D blueNoiseTex32;
@@ -69,22 +37,22 @@ const fragmentShader = /* glsl */ `
         return alpha > noise;
     }
 
-    bool strips(vec3 lp) {
-        vec3 absLp = abs(lp);
-        vec2 uv;
-    
-        if (absLp.x >= absLp.y && absLp.x >= absLp.z) {
-            uv = vec2(lp.y, lp.z) / absLp.x;
-        } else if (absLp.y >= absLp.x && absLp.y >= absLp.z) {
-            uv = vec2(lp.x, lp.z) / absLp.y;
-        } else {
-            uv = vec2(lp.x, lp.y) / absLp.z;
-        }
-    
-        float spacing = 0.5;
-        float size = 0.03;  
-    
-        return fract(uv.x * spacing) <= size ||  fract(uv.y * spacing) <= size;
+    vec2 iBox( in vec3 ro, in vec3 rd, in vec3 cen, in vec3 rad ) 
+    {
+        // ray-box intersection in box space
+        vec3 m = 1.0/rd;
+        vec3 n = m*(ro-cen);
+        vec3 k = abs(m)*rad;
+        
+        vec3 t1 = -n - k;
+        vec3 t2 = -n + k;
+
+        float tN = max( max( t1.x, t1.y ), t1.z );
+        float tF = min( min( t2.x, t2.y ), t2.z );
+        
+        if( tN > tF || tF < 0.0) return vec2(-1.0);
+
+        return vec2( tN, tF );
     }
 
     void main() {
@@ -94,25 +62,40 @@ const fragmentShader = /* glsl */ `
 
         vec3 rayDir = normalize(worldFar - worldNear);
 
-        float t0, t1;
         vec3 aabbMax = box.xyz + aabb.xyz;
         vec3 aabbMin = box.xyz - aabb.xyz;
-        if (!rayAABBIntersect(worldNear, rayDir, aabbMin, aabbMax, t0, t1)) {
-            discard;
-        }
 
-        vec3 frontPos = worldNear + rayDir * t0;
-        bool front = t0 > 0.0 && strips(frontPos - box.xyz);
+        vec3 bcen = 0.5*(aabbMin+aabbMax);
+        vec3 brad = 0.5*(aabbMax-aabbMin);
+        vec2 tbox = iBox( worldNear, rayDir, bcen, brad );
 
-        vec3 backPos = worldNear + rayDir * t1;
-        bool back = strips(backPos - box.xyz);
+        vec3 frontPos = worldNear + rayDir * tbox.x;
+        vec3 backPos = worldNear + rayDir * tbox.y;
 
-        if (front) {
-            gl_FragColor = vec4(1.0, 1.0, 1.0, 0.6);
-            gl_FragDepth = writeDepth(0.6) ? calcDepth(frontPos, matrix_viewProjection) : 1.0;
-        } else if (back) {
-            gl_FragColor = vec4(0.0, 0.0, 0.0, 0.6);
-            gl_FragDepth = writeDepth(0.6) ? calcDepth(backPos, matrix_viewProjection) : 1.0;
+        if( tbox.x > 0.0 )
+        {         
+            vec3 pos = worldNear + rayDir*tbox.x;
+            vec3 e = smoothstep( brad-0.03, brad-0.02, abs(pos-bcen) );
+            float al = 1.0 - (1.0-e.x*e.y)*(1.0-e.y*e.z)*(1.0-e.z*e.x);
+            // front face   
+            if (al > 0.0)
+            {
+                gl_FragColor = vec4(1.0, 1.0, 1.0, 0.6);
+                gl_FragDepth = writeDepth(0.6) ? calcDepth(frontPos, matrix_viewProjection) : 1.0;
+            }
+            else {
+                pos = worldNear + rayDir*tbox.y;
+                e = smoothstep( brad-0.03, brad-0.02, abs(pos-bcen) );
+                al = 1.0 - (1.0-e.x*e.y)*(1.0-e.y*e.z)*(1.0-e.z*e.x);
+                // back face
+                if (al > 0.0)
+                {
+                    // col = mix( col, vec3(0.0), 0.25 + 0.75*al );
+                    gl_FragColor = vec4(0, 0, 0, 0.6);
+                    gl_FragDepth = writeDepth(0.6) ? calcDepth(backPos, matrix_viewProjection) : 1.0;
+                }
+            }
+            
         } else {
             discard;
         }

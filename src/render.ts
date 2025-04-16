@@ -130,9 +130,9 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
 
             // prepare the frame for rendering
-            const prepareFrame = async (frame: number) => {
+            const prepareFrame = async (frameTime: number) => {
                 // go to first frame of the animation
-                events.fire('timeline.setFrame', frame);
+                events.fire('timeline.time', frameTime);
 
                 // manually update the camera so position and rotation are correct
                 scene.camera.onUpdate(0);
@@ -167,7 +167,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             };
 
             // capture the current video frame
-            const captureFrame = async (frame: number) => {
+            const captureFrame = async (frameTime: number) => {
                 const { renderTarget } = scene.camera.entity.camera;
                 const { colorBuffer } = renderTarget;
 
@@ -188,19 +188,22 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     format: 'RGBA',
                     codedWidth: width,
                     codedHeight: height,
-                    timestamp: Math.floor(1e6 * frame / frameRate),
+                    timestamp: Math.floor(1e6 * frameTime),
                     duration: Math.floor(1e6 / frameRate)
                 });
                 encoder.encode(videoFrame);
                 videoFrame.close();
             };
 
-            for (let frame = startFrame; frame <= endFrame; frame++) {
+            const animFrameRate = events.invoke('timeline.frameRate');
+            const duration = (endFrame - startFrame) / animFrameRate;
+
+            for (let frameTime = 0; frameTime <= duration; frameTime += 1.0 / frameRate) {
                 const capturePromise = new Promise<boolean>((resolve, reject) => {
                     const handle = scene.events.on('postrender', async () => {
                         handle.off();
                         try {
-                            await captureFrame(frame);
+                            await captureFrame(frameTime);
                             resolve(true);
                         } catch (error) {
                             reject(error);
@@ -209,7 +212,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 });
 
                 // special case the first frame
-                await prepareFrame(frame);
+                await prepareFrame(startFrame + frameTime * animFrameRate);
 
                 // wait for capture
                 await capturePromise;

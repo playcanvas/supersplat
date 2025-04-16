@@ -426,6 +426,7 @@ const localizeInit = () => {
                     // Video Settings Dialog
                     'video.header': 'VIDEO SETTINGS',
                     'video.resolution': 'Resolution',
+                    'video.frameRate': 'Frame Rate',
                     'video.bitrate': 'Bitrate',
                     'video.portrait': 'Portrait Mode',
                     'video.transparentBg': 'Transparent Background',

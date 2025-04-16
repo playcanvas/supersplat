@@ -236,6 +236,14 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
     });
 
+    events.on('select.byBox', (op: 'add'|'remove'|'set', box: number[]) => {
+        selectedSplats().forEach((splat) => {
+            intersectCenters(splat, op, {
+                box: { x: box[0], y: box[1], z: box[2], lenx: box[3], leny: box[4], lenz: box[5] }
+            });
+        });
+    });
+
     events.on('select.rect', (op: 'add'|'remove'|'set', rect: any) => {
         const mode = events.invoke('camera.mode');
 

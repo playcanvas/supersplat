@@ -195,7 +195,45 @@ const localizeInit = () => {
 
                     // Cursor
                     'cursor.click-to-copy': 'Klicken zum kopieren',
-                    'cursor.copied': 'Kopiert!'
+                    'cursor.copied': 'Kopiert!',
+
+                    // Doc
+                    'doc.reset': 'SZENE ZURÜCKSETZEN',
+                    'doc.unsaved-message': 'Sie haben ungespeicherte Änderungen. Möchten Sie die Szene wirklich zurücksetzen?',
+                    'doc.reset-message': 'Möchten Sie die Szene wirklich zurücksetzen?',
+                    'doc.save-failed': 'FEHLGESCHLAGEN ZU SPEICHERN',
+                    'doc.load-failed': 'FEHLGESCHLAGEN ZU LADEN',
+
+                    // Publish Settings Dialog
+                    'publish.header': 'VERÖFFENTLICHEN EINSTELLUNGEN',
+                    'publish.ok': 'Veröffentlichen',
+                    'publish.cancel': 'Abbrechen',
+                    'publish.title': 'Titel',
+                    'publish.description': 'Beschreibung',
+                    'publish.listed': 'Aufgelistet',
+                    'publish.failed': 'VERÖFFENTLICHEN FEHLGESCHLAGEN',
+                    'publish.please-try-again': 'Bitte versuchen Sie es später erneut.',
+                    'publish.succeeded': 'VERÖFFENTLICHEN ERFOLGREICH',
+                    'publish.message': 'Verwenden Sie den Link unten, um auf Ihre Szene zuzugreifen.',
+                    'publish.please-log-in': 'Das Veröffentlichen in PlayCanvas erfordert ein Benutzerkonto. Bitte melden Sie sich an und versuchen Sie es erneut.',
+
+                    // Video Settings Dialog
+                    'video.header': 'VIDEO EINSTELLUNGEN',
+                    'video.resolution': 'Auflösung',
+                    'video.frameRate': 'Bildrate',
+                    'video.bitrate': 'Bitrate',
+                    'video.portrait': 'Hochformat',
+                    'video.transparentBg': 'Transparenter Hintergrund',
+                    'video.showDebug': 'Debug-Überlagerungen anzeigen',
+
+                    // Timeline
+                    'timeline.prev-key': 'Zur vorherigen Keyframe springen',
+                    'timeline.play': 'Abspielen/Stoppen',
+                    'timeline.next-key': 'Zur nächsten Keyframe springen',
+                    'timeline.add-key': 'Key hinzufügen',
+                    'timeline.remove-key': 'Key entfernen',
+                    'timeline.frame-rate': 'Bildrate',
+                    'timeline.total-frames': 'Gesamtanzahl der Frames'
                 }
             },
             en: {
@@ -626,7 +664,45 @@ const localizeInit = () => {
 
                     // Cursor
                     'cursor.click-to-copy': 'Cliquez pour copier',
-                    'cursor.copied': 'Copié!'
+                    'cursor.copied': 'Copié!',
+
+                    // Doc
+                    'doc.reset': 'REINITIALISER LA SCENE',
+                    'doc.unsaved-message': 'Vous avez des modifications non enregistrées. Êtes-vous sûr de vouloir réinitialiser la scène?',
+                    'doc.reset-message': 'Êtes-vous sûr de vouloir réinitialiser la scène?',
+                    'doc.save-failed': 'ÉCHEC DE L\'ENREGISTREMENT',
+                    'doc.load-failed': 'ÉCHEC DU CHARGEMENT',
+
+                    // Publish Settings Dialog
+                    'publish.header': 'PARAMETRES DE PUBLICATION',
+                    'publish.ok': 'Publier',
+                    'publish.cancel': 'Annuler',
+                    'publish.title': 'Titre',
+                    'publish.description': 'Description',
+                    'publish.listed': 'Répertorié',
+                    'publish.failed': 'ÉCHEC DE PUBLICATION',
+                    'publish.please-try-again': 'Veuillez réessayer plus tard.',
+                    'publish.succeeded': 'PUBLICATION RÉUSSIE',
+                    'publish.message': 'Utilisez le lien ci-dessous pour accéder à votre scène.',
+                    'publish.please-log-in': 'La publication sur PlayCanvas nécessite un compte utilisateur. Veuillez vous connecter et réessayer.',
+
+                    // Video Settings Dialog
+                    'video.header': 'PARAMETRES VIDEO',
+                    'video.resolution': 'Résolution',
+                    'video.frameRate': 'Fréquence d\'image',
+                    'video.bitrate': 'Débit binaire',
+                    'video.portrait': 'Mode portrait',
+                    'video.transparentBg': 'Fond transparent',
+                    'video.showDebug': 'Afficher les superpositions de débogage',
+
+                    // Timeline
+                    'timeline.prev-key': 'Aller à la clé précédente',
+                    'timeline.play': 'Jouer/Arrêter',
+                    'timeline.next-key': 'Aller à la clé suivante',
+                    'timeline.add-key': 'Ajouter une clé',
+                    'timeline.remove-key': 'Supprimer une clé',
+                    'timeline.frame-rate': 'Fréquence d\'image',
+                    'timeline.total-frames': 'Nombre total de frames'
                 }
             },
             ja: {
@@ -813,7 +889,45 @@ const localizeInit = () => {
 
                     // Cursor
                     'cursor.click-to-copy': 'クリックしてコピー',
-                    'cursor.copied': 'コピーしました！'
+                    'cursor.copied': 'コピーしました！',
+
+                    // Doc
+                    'doc.reset': 'シーンをリセット',
+                    'doc.unsaved-message': '保存されていない変更があります。シーンをリセットしてもよろしいですか？',
+                    'doc.reset-message': 'シーンをリセットしてもよろしいですか？',
+                    'doc.save-failed': '保存に失敗',
+                    'doc.load-failed': '読み込みに失敗',
+
+                    // Publish Settings Dialog
+                    'publish.header': '公開設定',
+                    'publish.ok': '公開',
+                    'publish.cancel': 'キャンセル',
+                    'publish.title': 'タイトル',
+                    'publish.description': '説明',
+                    'publish.listed': 'リスト',
+                    'publish.failed': '公開に失敗',
+                    'publish.please-try-again': '後でもう一度お試しください。',
+                    'publish.succeeded': '公開に成功',
+                    'publish.message': '以下のリンクを使用してシーンにアクセスしてください。',
+                    'publish.please-log-in': 'PlayCanvasに公開するにはユーザーアカウントが必要です。ログインしてもう一度お試しください。',
+
+                    // Video Settings Dialog
+                    'video.header': 'ビデオ設定',
+                    'video.resolution': '解像度',
+                    'video.frameRate': 'フレームレート',
+                    'video.bitrate': 'ビットレート',
+                    'video.portrait': 'ポートレートモード',
+                    'video.transparentBg': '透明な背景',
+                    'video.showDebug': 'デバッグオーバーレイを表示',
+
+                    // Timeline
+                    'timeline.prev-key': '前のキーフレームに移動',
+                    'timeline.play': '再生/停止',
+                    'timeline.next-key': '次のキーフレームに移動',
+                    'timeline.add-key': 'キーフレームを追加',
+                    'timeline.remove-key': 'キーフレームを削除',
+                    'timeline.frame-rate': 'フレームレート',
+                    'timeline.total-frames': '総フレーム数'
                 }
             },
             ko: {
@@ -999,7 +1113,45 @@ const localizeInit = () => {
 
                     // Cursor
                     'cursor.click-to-copy': '클릭하여 복사',
-                    'cursor.copied': '복사됨!'
+                    'cursor.copied': '복사됨!',
+
+                    // Doc
+                    'doc.reset': '장면 재설정',
+                    'doc.unsaved-message': '저장되지 않은 변경 사항이 있습니다. 장면을 재설정하시겠습니까?',
+                    'doc.reset-message': '장면을 재설정하시겠습니까?',
+                    'doc.save-failed': '저장 실패',
+                    'doc.load-failed': '로드 실패',
+
+                    // Publish Settings Dialog
+                    'publish.header': '게시 설정',
+                    'publish.ok': '게시',
+                    'publish.cancel': '취소',
+                    'publish.title': '제목',
+                    'publish.description': '설명',
+                    'publish.listed': '목록',
+                    'publish.failed': '게시 실패',
+                    'publish.please-try-again': '잠시 후 다시 시도하십시오.',
+                    'publish.succeeded': '게시 성공',
+                    'publish.message': '아래 링크를 사용하여 장면에 액세스하십시오.',
+                    'publish.please-log-in': 'PlayCanvas에 게시하려면 사용자 계정이 필요합니다. 로그인하고 다시 시도하십시오.',
+
+                    // Video Settings Dialog
+                    'video.header': '비디오 설정',
+                    'video.resolution': '해상도',
+                    'video.frameRate': '프레임 속도',
+                    'video.bitrate': '비트 전송률',
+                    'video.portrait': '세로 모드',
+                    'video.transparentBg': '투명 배경',
+                    'video.showDebug': '디버그 오버레이 표시',
+
+                    // Timeline
+                    'timeline.prev-key': '이전 키로 이동',
+                    'timeline.play': '재생/정지',
+                    'timeline.next-key': '다음 키로 이동',
+                    'timeline.add-key': '키 추가',
+                    'timeline.remove-key': '키 제거',
+                    'timeline.frame-rate': '프레임 속도',
+                    'timeline.total-frames': '총 프레임 수'
                 }
             },
             'zh-CN': {
@@ -1186,7 +1338,45 @@ const localizeInit = () => {
 
                     // Cursor
                     'cursor.click-to-copy': '点击复制',
-                    'cursor.copied': '已复制!'
+                    'cursor.copied': '已复制!',
+
+                    // Doc
+                    'doc.reset': '重置场景',
+                    'doc.unsaved-message': '有未保存的更改。您确定要重置场景吗？',
+                    'doc.reset-message': '您确定要重置场景吗？',
+                    'doc.save-failed': '保存失败',
+                    'doc.load-failed': '加载失败',
+
+                    // Publish Settings Dialog
+                    'publish.header': '发布设置',
+                    'publish.ok': '发布',
+                    'publish.cancel': '取消',
+                    'publish.title': '标题',
+                    'publish.description': '描述',
+                    'publish.listed': '列出',
+                    'publish.failed': '发布失败',
+                    'publish.please-try-again': '请稍后再试。',
+                    'publish.succeeded': '发布成功',
+                    'publish.message': '请使用以下链接访问场景。',
+                    'publish.please-log-in': '要在 PlayCanvas 上发布，需要用户帐户。请登录并重试。',
+
+                    // Video Settings Dialog
+                    'video.header': '视频设置',
+                    'video.resolution': '分辨率',
+                    'video.frameRate': '帧率',
+                    'video.bitrate': '比特率',
+                    'video.portrait': '纵向模式',
+                    'video.transparentBg': '透明背景',
+                    'video.showDebug': '显示调试覆盖',
+
+                    // Timeline
+                    'timeline.prev-key': '上一个关键帧',
+                    'timeline.play': '播放/停止',
+                    'timeline.next-key': '下一个关键帧',
+                    'timeline.add-key': '添加关键帧',
+                    'timeline.remove-key': '删除关键帧',
+                    'timeline.frame-rate': '帧率',
+                    'timeline.total-frames': '总帧数'
                 }
             }
         },

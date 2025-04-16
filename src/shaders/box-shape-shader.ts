@@ -93,6 +93,8 @@ const fragmentShader = /* glsl */ `
                     // col = mix( col, vec3(0.0), 0.25 + 0.75*al );
                     gl_FragColor = vec4(0, 0, 0, 0.6);
                     gl_FragDepth = writeDepth(0.6) ? calcDepth(backPos, matrix_viewProjection) : 1.0;
+                } else {
+                    discard;
                 }
             }
             

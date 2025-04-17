@@ -228,7 +228,7 @@ class Menu extends Container {
         const renderMenuPanel = new MenuPanel([{
             text: localize('render.image'),
             icon: createSvg(sceneExport),
-            onSelect: () => events.invoke('render.image')
+            onSelect: async () => await events.invoke('show.imageSettingsDialog')
         }, {
             text: localize('render.video'),
             icon: createSvg(sceneExport),

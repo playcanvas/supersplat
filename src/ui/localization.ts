@@ -216,7 +216,7 @@ const localizeInit = () => {
                     'file.export.viewer': 'Viewer App...',
 
                     'render': 'Render',
-                    'render.image': 'Image',
+                    'render.image': 'Image...',
                     'render.video': 'Video...',
                     'render.ok': 'Render',
                     'render.cancel': 'Cancel',
@@ -422,6 +422,16 @@ const localizeInit = () => {
                     'publish.succeeded': 'PUBLISH SUCCEEDED',
                     'publish.message': 'Use the link below to access your scene.',
                     'publish.please-log-in': 'Publishing to PlayCanvas requires a user account. Please log in and try again.',
+
+                    // Image Settings Dialog
+                    'image.header': 'IMAGE SETTINGS',
+                    'image.resolution': 'Resolution',
+                    'image.customResolution': 'Custom Resolution',
+                    'image.transparentBg': 'Transparent Background',
+                    'image.showDebug': 'Show Debug Overlays',
+                    'image.resolutionViewport': 'Current Viewport',
+                    'image.resolutionCustom': 'Custom Resolution',
+
 
                     // Video Settings Dialog
                     'video.header': 'VIDEO SETTINGS',

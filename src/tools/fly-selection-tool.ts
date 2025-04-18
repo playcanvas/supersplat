@@ -2,7 +2,7 @@ import { Ray, Vec3, BoundingSphere, Mat4, Vec4 } from 'playcanvas';
 import { Events } from '../events';
 import { Scene } from '../scene';
 import { Splat } from '../splat';
-import { EditOp } from '../edit-ops';
+import { EditOp, SelectOp } from '../edit-ops'; // Import SelectOp
 import { ElementType } from '../element';
 import { State } from '../splat-state'; // Import State
 
@@ -105,8 +105,11 @@ class FlySelectionTool {
             let totalGaussians = 0;
             this.gaussiansToSelect.forEach((indices, splat) => {
                 totalGaussians += indices.length;
-                // Fire selection event for each splat with indices to select
-                this.events.fire('select.splat', splat, true, indices);
+                // Create a Set for efficient lookup in the predicate
+                const indicesSet = new Set(indices);
+                const predicate = (i: number) => indicesSet.has(i);
+                // Fire 'select.pred' event with 'add' operation and the predicate
+                this.events.fire('select.pred', 'add', predicate);
             });
             console.log(`Selected ${totalGaussians} gaussians across ${this.gaussiansToSelect.size} splats via fly-by`);
 

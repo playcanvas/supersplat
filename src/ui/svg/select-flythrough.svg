@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+  <!-- Dashed Selection Line -->
+  <path stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 2" fill="none" d="M3 6 V 18 H 12"/>
+  
+  <!-- Camera Body from Side View -->
+  <path d="M14 8 L 22 6 L 22 18 L 14 16 L 14 8 Z" fill="currentColor" stroke="currentColor" stroke-width="0.5"/>
+  
+  <!-- Camera Lens -->
+  <path d="M12 10 L 14 10 L 14 14 L 12 14 Z" fill="currentColor" stroke="currentColor" stroke-width="0.5"/>
+  
+  <!-- Camera Viewfinder -->
+  <path d="M16 7.5 L 18 7 L 18 9 L 16 8.5 Z" fill="none" stroke="currentColor" stroke-width="0.5"/>
+  
+  <!-- Flash -->
+  <path d="M19 8 L 20 7.75 L 20 9 L 19 8.75 Z" fill="currentColor" stroke="currentColor" stroke-width="0.4"/>
+</svg>

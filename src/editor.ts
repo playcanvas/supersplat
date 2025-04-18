@@ -399,17 +399,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
     });
 
-    // Remove handler for deleting splats from the FlyDeletionTool as it's now FlySelectionTool
-    /*
-    events.on('edit.deleteSplats', (splatsToDelete: Splat[]) => {
-        if (splatsToDelete && splatsToDelete.length > 0) {
-            console.log(`Editor handling deleteSplats for ${splatsToDelete.length} splats`);
-            // Use DeleteSplatsOp to remove the entire splat objects from the scene
-            editHistory.add(new DeleteSplatsOp(scene, splatsToDelete));
-        }
-    });
-    */
-
     const performSelectionFunc = async (func: 'duplicate' | 'separate') => {
         const splats = selectedSplats();
 

@@ -9,7 +9,7 @@ import pickerSvg from './svg/select-picker.svg';
 import polygonSvg from './svg/select-poly.svg';
 import sphereSvg from './svg/select-sphere.svg';
 import undoSvg from './svg/undo.svg';
-import cameraFrameSelectionSvg from './svg/camera-frame-selection.svg'; // Import the camera frame selection icon
+import flythroughSvg from './svg/select-flythrough.svg';
 import { Tooltips } from './tooltips';
 // import cropSvg from './svg/crop.svg';
 
@@ -58,8 +58,8 @@ class BottomToolbar extends Container {
             class: 'bottom-toolbar-tool'
         });
 
-        const flySelect = new Button({ // Renamed from flyDelete
-            id: 'bottom-toolbar-fly-select', // Renamed ID
+        const flySelect = new Button({
+            id: 'bottom-toolbar-fly-select',
             class: 'bottom-toolbar-tool'
         });
 
@@ -113,7 +113,7 @@ class BottomToolbar extends Container {
         picker.dom.appendChild(createSvg(pickerSvg));
         polygon.dom.appendChild(createSvg(polygonSvg));
         brush.dom.appendChild(createSvg(brushSvg));
-        flySelect.dom.appendChild(createSvg(cameraFrameSelectionSvg)); // Use the imported SVG for flySelect
+        flySelect.dom.appendChild(createSvg(flythroughSvg));
         sphere.dom.appendChild(createSvg(sphereSvg));
         lasso.dom.appendChild(createSvg(lassoSvg));
         // crop.dom.appendChild(createSvg(cropSvg));

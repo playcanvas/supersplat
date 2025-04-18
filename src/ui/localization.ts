@@ -174,8 +174,7 @@ const localizeInit = () => {
                     'tooltip.polygon': 'Polygonselektion ( P )',
                     'tooltip.brush': 'Pinselselektion ( B )',
                     'tooltip.sphere': 'Kugelselektion',
-                    'tooltip.fly-delete': 'Fluglöschwerkzeug', // Added
-                    'tooltip.fly-select': 'Flugauswahl', // Added tooltip for fly select
+                    'tooltip.fly-select': 'Flugauswahl',
                     'tooltip.translate': 'Verschieben ( 1 )',
                     'tooltip.rotate': 'Drehen ( 2 )',
                     'tooltip.scale': 'Skalieren ( 3 )',
@@ -416,8 +415,7 @@ const localizeInit = () => {
                     'tooltip.polygon': 'Polygon Select ( P )',
                     'tooltip.brush': 'Brush Select ( B )',
                     'tooltip.sphere': 'Sphere Select',
-                    'tooltip.fly-delete': 'Fly Deletion Tool', // Added
-                    'tooltip.fly-select': 'Fly Select', // Added tooltip for fly select
+                    'tooltip.fly-select': 'Fly Select',
                     'tooltip.translate': 'Translate ( 1 )',
                     'tooltip.rotate': 'Rotate ( 2 )',
                     'tooltip.scale': 'Scale ( 3 )',
@@ -647,8 +645,7 @@ const localizeInit = () => {
                     'tooltip.polygon': 'Sélection avec polygone ( P )',
                     'tooltip.brush': 'Sélection avec pinceau ( B )',
                     'tooltip.sphere': 'Sélection avec sphère',
-                    'tooltip.fly-delete': 'Outil de suppression en vol', // Added
-                    'tooltip.fly-select': 'Sélection en vol', // Added tooltip for fly select
+                    'tooltip.fly-select': 'Sélection en vol',
                     'tooltip.translate': 'Translation ( 1 )',
                     'tooltip.rotate': 'Rotation ( 2 )',
                     'tooltip.scale': 'Échelle ( 3 )',
@@ -874,8 +871,7 @@ const localizeInit = () => {
                     'tooltip.polygon': 'ポリゴン選択 ( P )',
                     'tooltip.brush': 'ブラシ選択 ( B )',
                     'tooltip.sphere': '球で選択',
-                    'tooltip.fly-delete': '飛行削除ツール', // Added
-                    'tooltip.fly-select': '飛行選択', // Added tooltip for fly select
+                    'tooltip.fly-select': '飛行選択',
                     'tooltip.translate': '移動 ( 1 )',
                     'tooltip.rotate': '回転 ( 2 )',
                     'tooltip.scale': 'スケール ( 3 )',
@@ -1100,8 +1096,7 @@ const localizeInit = () => {
                     'tooltip.polygon': '다각형 선택 ( P )',
                     'tooltip.brush': '브러시 선택 ( B )',
                     'tooltip.sphere': '구 선택',
-                    'tooltip.fly-delete': '비행 삭제 도구', // Added
-                    'tooltip.fly-select': '비행 선택', // Added tooltip for fly select
+                    'tooltip.fly-select': '비행 선택',
                     'tooltip.translate': '이동 ( 1 )',
                     'tooltip.rotate': '회전 ( 2 )',
                     'tooltip.scale': '크기 조정 ( 3 )',
@@ -1327,8 +1322,7 @@ const localizeInit = () => {
                     'tooltip.polygon': '多边形选择 ( P )',
                     'tooltip.brush': '画笔 ( B )',
                     'tooltip.sphere': '球选择',
-                    'tooltip.fly-delete': '飞行删除工具', // Added
-                    'tooltip.fly-select': '飞行选择', // Added tooltip for fly select
+                    'tooltip.fly-select': '飞行选择',
                     'tooltip.translate': '移动 ( 1 )',
                     'tooltip.rotate': '旋转 ( 2 )',
                     'tooltip.scale': '缩放 ( 3 )',

@@ -399,30 +399,16 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
     });
 
-    // Add handler for deleting splats from the FlyDeletionTool
+    // Remove handler for deleting splats from the FlyDeletionTool as it's now FlySelectionTool
+    /*
     events.on('edit.deleteSplats', (splatsToDelete: Splat[]) => {
         if (splatsToDelete && splatsToDelete.length > 0) {
-            // Assuming DeleteSplatsOp takes the scene and the array of splats
-            // Or adapt DeleteSelectionOp if it can handle multiple arbitrary splats
-            // For now, let's assume a DeleteSplatsOp exists or can be created.
-            // If not, we might need multiple DeleteSelectionOp or a MultiOp.
             console.log(`Editor handling deleteSplats for ${splatsToDelete.length} splats`);
-            // TODO: Verify/Implement DeleteSplatsOp or adapt existing ops
-            // This might require changes in edit-ops.ts
-            // Example using MultiOp if DeleteSplatsOp doesn't exist:
-            // const ops = splatsToDelete.map(splat => new DeleteSplatOp(scene, splat)); // Assuming DeleteSplatOp exists
-            // if (ops.length > 0) {
-            //     editHistory.add(new MultiOp(ops));
-            // }
-
-            // Placeholder: Assuming a single op can handle multiple splats for simplicity
-            // We need to ensure the Splat objects passed contain enough info (like their index or ID)
-            // for the operation to identify them correctly within the scene's splat data.
-            // The current FlyDeletionTool passes the Splat objects directly.
-            // Let's assume DeleteSplatsOp can work with these objects.
-             editHistory.add(new DeleteSplatsOp(scene, splatsToDelete));
+            // Use DeleteSplatsOp to remove the entire splat objects from the scene
+            editHistory.add(new DeleteSplatsOp(scene, splatsToDelete));
         }
     });
+    */
 
     const performSelectionFunc = async (func: 'duplicate' | 'separate') => {
         const splats = selectedSplats();

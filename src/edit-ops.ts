@@ -5,6 +5,7 @@ import { Scene } from './scene';
 import { Splat } from './splat';
 import { State } from './splat-state';
 import { Transform } from './transform';
+import { ElementType } from './element';
 
 interface EditOp {
     name: string;

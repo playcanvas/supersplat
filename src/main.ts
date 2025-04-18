@@ -23,6 +23,7 @@ import { RotateTool } from './tools/rotate-tool';
 import { ScaleTool } from './tools/scale-tool';
 import { SphereSelection } from './tools/sphere-selection';
 import { ToolManager } from './tools/tool-manager';
+import { FlySelectionTool } from './tools/fly-selection-tool';
 import { registerTransformHandlerEvents } from './transform-handler';
 import { EditorUI } from './ui/editor';
 
@@ -81,6 +82,7 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['P', 'p'], { event: 'tool.polygonSelection', sticky: true });
     shortcuts.register(['L', 'l'], { event: 'tool.lassoSelection', sticky: true });
     shortcuts.register(['B', 'b'], { event: 'tool.brushSelection', sticky: true });
+    shortcuts.register(['K', 'k'], { event: 'tool.flySelection', sticky: true });
     shortcuts.register(['A', 'a'], { event: 'select.all', ctrl: true });
     shortcuts.register(['A', 'a'], { event: 'select.none', shift: true });
     shortcuts.register(['I', 'i'], { event: 'select.invert', ctrl: true });
@@ -237,6 +239,7 @@ const main = async () => {
     toolManager.register('move', new MoveTool(events, scene));
     toolManager.register('rotate', new RotateTool(events, scene));
     toolManager.register('scale', new ScaleTool(events, scene));
+    toolManager.register('flySelection', new FlySelectionTool(events, scene));
 
     editorUI.toolsContainer.dom.appendChild(maskCanvas);
 

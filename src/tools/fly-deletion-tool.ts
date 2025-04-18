@@ -20,7 +20,7 @@ class FlySelectionTool {
     active = false;
     // Store splats and the indices of gaussians within them to select
     gaussiansToSelect: Map<Splat, number[]> = new Map();
-    selectionRadius = 0.1; // Radius around camera to check for gaussians
+    selectionRadius = 0.2; // Radius around camera to check for gaussians
 
     constructor(events: Events, scene: Scene) {
         this.events = events;

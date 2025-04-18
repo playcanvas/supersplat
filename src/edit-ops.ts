@@ -410,66 +410,6 @@ class AddSplatOp {
     }
 }
 
-// Operation to delete a list of specific splats
-class DeleteSplatsOp implements EditOp {
-    name = 'deleteSplats'; // Added name property
-    scene: Scene;
-    // Store Splat objects and their original indices
-    deletedSplats: { splat: Splat, index: number }[] = [];
-
-    constructor(scene: Scene, splatsToDelete: Splat[]) {
-        this.scene = scene;
-
-        // Get current splats to determine indices accurately
-        const currentSceneSplats = this.scene.getElementsByType(ElementType.splat);
-
-        // Store splats and their indices, preparing for removal (sort descending)
-        this.deletedSplats = splatsToDelete
-            .map(splat => ({
-                splat: splat,
-                // Find the current index in the main elements array
-                index: this.scene.elements.indexOf(splat)
-            }))
-            .filter(item => item.index !== -1) // Filter out splats not found (shouldn't happen)
-            .sort((a, b) => b.index - a.index); // Sort descending by index
-    }
-
-    // Renamed redo to do
-    do() {
-        // Remove splats from the scene based on stored info (already sorted descending)
-        this.deletedSplats.forEach(item => {
-            // Check if the splat is still in the scene before removing
-            if (this.scene.elements.includes(item.splat)) {
-                 this.scene.remove(item.splat);
-            } else {
-                 console.warn(`Splat not found in scene during delete operation (do):`, item.splat);
-            }
-        });
-        this.scene.boundDirty = true; // Mark scene bound as dirty
-        const currentSplatCount = this.scene.getElementsByType(ElementType.splat).length;
-        this.scene.events.fire('splat.count', currentSplatCount);
-        this.scene.events.fire('scene.stats');
-    }
-
-    undo() {
-        // Re-add splats. Sort by original index ascending to attempt order restoration.
-        this.deletedSplats.slice().sort((a, b) => a.index - b.index).forEach(item => {
-            // Add the splat back to the scene. scene.add appends to the elements list.
-            // Precise index insertion is complex; appending might change order relative to other elements.
-            this.scene.add(item.splat);
-        });
-         this.scene.boundDirty = true; // Mark scene bound as dirty
-         const currentSplatCount = this.scene.getElementsByType(ElementType.splat).length;
-         this.scene.events.fire('splat.count', currentSplatCount);
-         this.scene.events.fire('scene.stats');
-    }
-
-    // Optional: Clean up references if needed
-    destroy() {
-        this.deletedSplats = [];
-    }
-}
-
 export {
     EditOp,
     SelectAllOp,
@@ -486,6 +426,5 @@ export {
     ColorAdjustment,
     SetSplatColorAdjustmentOp,
     MultiOp,
-    AddSplatOp,
-    DeleteSplatsOp
+    AddSplatOp
 };

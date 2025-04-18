@@ -23,6 +23,7 @@ import { RotateTool } from './tools/rotate-tool';
 import { ScaleTool } from './tools/scale-tool';
 import { SphereSelection } from './tools/sphere-selection';
 import { ToolManager } from './tools/tool-manager';
+import { FlyDeletionTool } from './tools/fly-deletion-tool'; // Import FlyDeletionTool
 import { registerTransformHandlerEvents } from './transform-handler';
 import { EditorUI } from './ui/editor';
 
@@ -237,6 +238,7 @@ const main = async () => {
     toolManager.register('move', new MoveTool(events, scene));
     toolManager.register('rotate', new RotateTool(events, scene));
     toolManager.register('scale', new ScaleTool(events, scene));
+    toolManager.register('flyDeletion', new FlyDeletionTool(events, scene));
 
     editorUI.toolsContainer.dom.appendChild(maskCanvas);
 

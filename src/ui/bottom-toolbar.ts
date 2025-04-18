@@ -141,7 +141,7 @@ class BottomToolbar extends Container {
         polygon.dom.addEventListener('click', () => events.fire('tool.polygonSelection'));
         lasso.dom.addEventListener('click', () => events.fire('tool.lassoSelection'));
         brush.dom.addEventListener('click', () => events.fire('tool.brushSelection'));
-        flySelect.dom.addEventListener('click', () => events.fire('tool.flySelection')); // Fire new event
+        flySelect.dom.addEventListener('click', () => events.fire('tool.flySelection'));
         picker.dom.addEventListener('click', () => events.fire('tool.rectSelection'));
         sphere.dom.addEventListener('click', () => events.fire('tool.sphereSelection'));
         translate.dom.addEventListener('click', () => events.fire('tool.move'));
@@ -160,7 +160,7 @@ class BottomToolbar extends Container {
         events.on('tool.activated', (toolName: string) => {
             picker.class[toolName === 'rectSelection' ? 'add' : 'remove']('active');
             brush.class[toolName === 'brushSelection' ? 'add' : 'remove']('active');
-            flySelect.class[toolName === 'flySelection' ? 'add' : 'remove']('active'); // Handle active state for flySelect
+            flySelect.class[toolName === 'flySelection' ? 'add' : 'remove']('active');
             polygon.class[toolName === 'polygonSelection' ? 'add' : 'remove']('active');
             lasso.class[toolName === 'lassoSelection' ? 'add' : 'remove']('active');
             sphere.class[toolName === 'sphereSelection' ? 'add' : 'remove']('active');
@@ -182,7 +182,7 @@ class BottomToolbar extends Container {
         tooltips.register(redo, localize('tooltip.redo'));
         tooltips.register(picker, localize('tooltip.picker'));
         tooltips.register(brush, localize('tooltip.brush'));
-        tooltips.register(flySelect, localize('tooltip.fly-select')); // Use new tooltip key
+        tooltips.register(flySelect, localize('tooltip.fly-select'));
         tooltips.register(polygon, localize('tooltip.polygon'));
         tooltips.register(lasso, 'Lasso Select');
         tooltips.register(sphere, localize('tooltip.sphere'));

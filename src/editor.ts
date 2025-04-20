@@ -644,8 +644,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         if (result?.action === 'ok' && result?.value !== undefined) {
             const percentage = parseFloat(result.value);
             if (!isNaN(percentage) && percentage > 0 && percentage <= 100) {
+                // Convert from percentage (e.g. 3%) to decimal (0.03)
+                const percentageDecimal = percentage / 100;
                 selectedSplats().forEach((splat) => {
-                    events.fire('edit.add', new SelectLargestSplatsOp(splat, percentage / 100));
+                    events.fire('edit.add', new SelectLargestSplatsOp(splat, percentageDecimal));
                 });
             }
         }

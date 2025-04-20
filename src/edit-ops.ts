@@ -450,8 +450,9 @@ class SelectLargestSplatsOp extends StateOp {
                     continue;
                 }
                 
-                // Calculate approximate volume
-                const volume = scaleX[i] * scaleY[i] * scaleZ[i];
+                // Calculate approximate volume using exponentiated scales
+                const volume = Math.exp(scaleX[i]) * Math.exp(scaleY[i]) * Math.exp(scaleZ[i]);
+                // Alternative: const volume = Math.exp(scaleX[i] + scaleY[i] + scaleZ[i]);
                 volumes[i] = volume;
                 eligibleIndices.push(i);
             }
@@ -465,6 +466,7 @@ class SelectLargestSplatsOp extends StateOp {
             eligibleIndices.sort((a, b) => volumes[b] - volumes[a]);
             
             // Select the top percentage
+            // Ensure percentage is in decimal form (1% = 0.01)
             const numToSelect = Math.max(1, Math.round(eligibleIndices.length * percentage));
             for (let i = 0; i < numToSelect; i++) {
                 const idx = eligibleIndices[i];

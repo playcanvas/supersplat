@@ -37,7 +37,8 @@ const localizeInit = () => {
                     'select.delete': 'Selektion aufheben',
                     'select.reset': 'Splats zurücksetzen',
                     'select.duplicate': 'Duplizieren',
-                    'select.separate': 'Separieren',
+                    'select.separate': 'Trennen',
+                    'select.largestPercent': 'Größte X% auswählen...',
 
                     // Help menu
                     'help': 'Hilfe',
@@ -158,6 +159,8 @@ const localizeInit = () => {
                     'popup.error-loading': 'FEHLER BEIM LADEN DER DATEI',
                     'popup.drop-files': 'Bitte Dateien und Ordner ablegen',
                     'popup.copy-to-clipboard': 'Link in die Zwischenablage kopieren',
+                    'popup.percentageTitle': 'Größte Splats auswählen',
+                    'popup.percentageMessage': 'Geben Sie den Prozentsatz der größten auszuwählenden Splats ein:',
 
                     // Right toolbar
                     'tooltip.splat-mode': 'Splat Modus ( M )',
@@ -270,6 +273,7 @@ const localizeInit = () => {
                     'select.reset': 'Reset Splat',
                     'select.duplicate': 'Duplicate',
                     'select.separate': 'Separate',
+                    'select.largestPercent': 'Select Largest X%...',
 
                     // Help menu
                     'help': 'Help',
@@ -398,6 +402,8 @@ const localizeInit = () => {
                     'popup.error-loading': 'ERROR LOADING FILE',
                     'popup.drop-files': 'Please drop files and folders',
                     'popup.copy-to-clipboard': 'Copy link to clipboard',
+                    'popup.percentageTitle': 'Select Largest Splats',
+                    'popup.percentageMessage': 'Enter the percentage of largest splats to select:',
 
                     // Right toolbar
                     'tooltip.splat-mode': 'Splat Mode ( M )',
@@ -507,6 +513,7 @@ const localizeInit = () => {
                     'select.reset': 'Réinitialiser splat',
                     'select.duplicate': 'Dupliquer',
                     'select.separate': 'Séparer',
+                    'select.largestPercent': 'Sélectionner les X% plus grands...',
 
                     // Help menu
                     'help': 'Aide',
@@ -627,6 +634,8 @@ const localizeInit = () => {
                     'popup.error-loading': 'Erreur de chargement du fichier',
                     'popup.drop-files': 'Veuillez déposer des fichiers et des dossiers',
                     'popup.copy-to-clipboard': 'Copier le lien dans le presse-papiers',
+                    'popup.percentageTitle': 'Sélectionner les plus grands Splats',
+                    'popup.percentageMessage': 'Entrez le pourcentage des plus grands splats à sélectionner :',
 
                     // Right toolbar
                     'tooltip.splat-mode': 'Mode splat ( M )',
@@ -732,6 +741,7 @@ const localizeInit = () => {
                     'select.reset': '変更を全てリセット',
                     'select.duplicate': '複製',
                     'select.separate': '分離',
+                    'select.largestPercent': '大きい順にX%選択...',
 
                     // Help menu
                     'help': 'ヘルプ',
@@ -852,6 +862,8 @@ const localizeInit = () => {
                     'popup.error-loading': 'ファイルの読み込みエラー',
                     'popup.drop-files': 'ファイルやフォルダをドロップしてください',
                     'popup.copy-to-clipboard': 'リンクをクリップボードにコピー',
+                    'popup.percentageTitle': '大きい順にスプラットを選択',
+                    'popup.percentageMessage': '選択する最大のスプラットの割合を入力してください：',
 
                     // Right toolbar
                     'tooltip.splat-mode': 'スプラットモード ( M )',
@@ -957,6 +969,7 @@ const localizeInit = () => {
                     'select.reset': 'Splat 재설정',
                     'select.duplicate': '복제',
                     'select.separate': '분리',
+                    'select.largestPercent': '가장 큰 X% 선택...',
 
                     // Help menu
                     'help': '도움말',
@@ -1007,6 +1020,7 @@ const localizeInit = () => {
                     'colors': '색상',
                     'colors.tint': '색조',
                     'colors.temperature': '온도',
+                    'colors.saturation': '채도',
                     'colors.brightness': '밝기',
                     'colors.blackPoint': '검은 점',
                     'colors.whitePoint': '흰 점',
@@ -1076,6 +1090,8 @@ const localizeInit = () => {
                     'popup.error-loading': '파일 로드 오류',
                     'popup.drop-files': '파일 및 폴더를 드롭하세요',
                     'popup.copy-to-clipboard': '클립 보드에 링크 복사',
+                    'popup.percentageTitle': '가장 큰 Splat 선택',
+                    'popup.percentageMessage': '선택할 가장 큰 Splat의 백분율을 입력하십시오:',
 
                     // Right toolbar
                     'tooltip.splat-mode': 'Splat 모드 ( M )',
@@ -1181,6 +1197,7 @@ const localizeInit = () => {
                     'select.reset': '重置 Splat',
                     'select.duplicate': '复制',
                     'select.separate': '分离',
+                    'select.largestPercent': '选择最大的 X%...',
 
                     // Help menu
                     'help': '帮助',
@@ -1301,6 +1318,8 @@ const localizeInit = () => {
                     'popup.error-loading': '加载文件错误',
                     'popup.drop-files': '请拖放文件和文件夹',
                     'popup.copy-to-clipboard': '复制链接到剪贴板',
+                    'popup.percentageTitle': '选择最大的 Splat',
+                    'popup.percentageMessage': '输入要选择的最大 Splat 的百分比：',
 
                     // Right toolbar
                     'tooltip.splat-mode': 'Splat 模式 ( M )',

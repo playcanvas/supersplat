@@ -409,6 +409,73 @@ class AddSplatOp {
     }
 }
 
+class SelectLargestSplatsOp extends StateOp {
+    name = 'selectLargestSplats';
+
+    constructor(splat: Splat, percentage: number) {
+        // First create a filter function that selects the largest splats
+        const filterFunc = (state: number, index: number) => {
+            // Only process non-hidden, non-deleted splats
+            return (state & (State.hidden | State.deleted)) === 0;
+        };
+        
+        // Then create do and undo functions
+        const doIt = (state: number) => state | State.selected;
+        const undoIt = (state: number) => state & (~State.selected);
+        
+        // Call the parent constructor with our filter
+        super(splat, filterFunc, doIt, undoIt);
+        
+        // Override the default do method to implement the size-based selection
+        this.do = () => {
+            // Clear existing selection first
+            const clearOp = new SelectNoneOp(splat);
+            clearOp.do();
+            
+            const splatData = this.splat.splatData;
+            const state = splatData.getProp('state') as Uint8Array;
+            
+            // Get scale data from splat (we'll use this to determine size)
+            const scaleX = splatData.getProp('scale_0');
+            const scaleY = splatData.getProp('scale_1');
+            const scaleZ = splatData.getProp('scale_2');
+            
+            // Calculate volumes for each splat
+            const volumes = new Array(splatData.numSplats);
+            const eligibleIndices = [];
+            
+            for (let i = 0; i < splatData.numSplats; i++) {
+                // Skip hidden or deleted splats
+                if ((state[i] & (State.hidden | State.deleted)) !== 0) {
+                    continue;
+                }
+                
+                // Calculate approximate volume
+                const volume = scaleX[i] * scaleY[i] * scaleZ[i];
+                volumes[i] = volume;
+                eligibleIndices.push(i);
+            }
+            
+            // If no eligible splats, return
+            if (eligibleIndices.length === 0) {
+                return;
+            }
+            
+            // Sort indices by volume (largest first)
+            eligibleIndices.sort((a, b) => volumes[b] - volumes[a]);
+            
+            // Select the top percentage
+            const numToSelect = Math.max(1, Math.round(eligibleIndices.length * percentage));
+            for (let i = 0; i < numToSelect; i++) {
+                const idx = eligibleIndices[i];
+                state[idx] = doIt(state[idx]);
+            }
+            
+            this.splat.updateState(this.updateFlags);
+        };
+    }
+}
+
 export {
     EditOp,
     SelectAllOp,
@@ -425,5 +492,6 @@ export {
     ColorAdjustment,
     SetSplatColorAdjustmentOp,
     MultiOp,
-    AddSplatOp
+    AddSplatOp,
+    SelectLargestSplatsOp
 };

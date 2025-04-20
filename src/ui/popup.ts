@@ -8,6 +8,7 @@ interface ShowOptions {
     message: string;
     header?: string;
     link?: string;
+    input?: boolean;
 }
 
 class Popup extends Container {
@@ -36,6 +37,17 @@ class Popup extends Container {
         const text = new Label({
             id: 'popup-text'
         });
+
+        // Create the input field container and component
+        const inputContainer = new Container({
+            id: 'popup-input-container'
+        });
+
+        const inputField = new TextInput({
+            id: 'popup-input-field'
+        });
+
+        inputContainer.append(inputField);
 
         const linkText = new Label({
             id: 'popup-link-text'
@@ -84,6 +96,7 @@ class Popup extends Container {
 
         dialog.append(header);
         dialog.append(text);
+        dialog.append(inputContainer);
         dialog.append(linkRow);
         dialog.append(buttons);
 
@@ -128,7 +141,7 @@ class Popup extends Container {
             header.text = options.header;
             text.text = options.message;
 
-            const { type, link } = options;
+            const { type, link, input } = options;
 
             ['error', 'info', 'yesno', 'okcancel'].forEach((t) => {
                 text.class[t === type ? 'add' : 'remove'](t);
@@ -147,6 +160,8 @@ class Popup extends Container {
                 linkCopy.icon = 'E352';
             }
 
+            inputContainer.hidden = !input;
+
             // take keyboard focus so shortcuts stop working
             this.dom.focus();
 
@@ -154,7 +169,8 @@ class Popup extends Container {
                 okFn = () => {
                     this.hide();
                     resolve({
-                        action: 'ok'
+                        action: 'ok',
+                        value: input ? inputField.value : undefined
                     });
                 };
                 cancelFn = () => {

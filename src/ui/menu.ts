@@ -192,6 +192,12 @@ class Menu extends Container {
         }, {
             // separator
         }, {
+            text: localize('select.largestPercent'),
+            isEnabled: () => !events.invoke('scene.empty'),
+            onSelect: () => events.fire('select.largestPercent')
+        }, {
+            // separator
+        }, {
             text: localize('select.lock'),
             icon: createSvg(selectLock),
             extra: 'H',

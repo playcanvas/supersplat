@@ -440,8 +440,8 @@ class SelectLargestSplatsOp extends StateOp {
             const scaleY = splatData.getProp('scale_1');
             const scaleZ = splatData.getProp('scale_2');
             
-            // Calculate volumes for each splat
-            const volumes = new Array(splatData.numSplats);
+            // Calculate size metric for each splat (using max exponentiated scale)
+            const sizeMetrics = new Array(splatData.numSplats);
             const eligibleIndices = [];
             
             for (let i = 0; i < splatData.numSplats; i++) {
@@ -450,10 +450,9 @@ class SelectLargestSplatsOp extends StateOp {
                     continue;
                 }
                 
-                // Calculate approximate volume using exponentiated scales
-                const volume = Math.exp(scaleX[i]) * Math.exp(scaleY[i]) * Math.exp(scaleZ[i]);
-                // Alternative: const volume = Math.exp(scaleX[i] + scaleY[i] + scaleZ[i]);
-                volumes[i] = volume;
+                // Calculate size metric using the maximum exponentiated scale
+                const maxSize = Math.max(Math.exp(scaleX[i]), Math.exp(scaleY[i]), Math.exp(scaleZ[i]));
+                sizeMetrics[i] = maxSize;
                 eligibleIndices.push(i);
             }
             
@@ -462,8 +461,8 @@ class SelectLargestSplatsOp extends StateOp {
                 return;
             }
             
-            // Sort indices by volume (largest first)
-            eligibleIndices.sort((a, b) => volumes[b] - volumes[a]);
+            // Sort indices by size metric (largest first)
+            eligibleIndices.sort((a, b) => sizeMetrics[b] - sizeMetrics[a]);
             
             // Select the top percentage
             // Ensure percentage is in decimal form (1% = 0.01)

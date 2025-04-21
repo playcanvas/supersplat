@@ -411,6 +411,7 @@ class AddSplatOp {
 
 class SelectLargestSplatsOp extends StateOp {
     name = 'selectLargestSplats';
+    selectedIndices: Uint32Array | null = null; // Store the indices actually selected
 
     constructor(splat: Splat, percentage: number) {
         // First create a filter function that selects the largest splats
@@ -423,7 +424,8 @@ class SelectLargestSplatsOp extends StateOp {
         const doIt = (state: number) => state | State.selected;
         const undoIt = (state: number) => state & (~State.selected);
         
-        // Call the parent constructor with our filter
+        // Call the parent constructor - its indices aren't directly used by the final selection,
+        // but it sets up splat, doIt, undoIt, updateFlags
         super(splat, filterFunc, doIt, undoIt);
         
         // Override the default do method to implement the size-based selection
@@ -458,6 +460,7 @@ class SelectLargestSplatsOp extends StateOp {
             
             // If no eligible splats, return
             if (eligibleIndices.length === 0) {
+                this.selectedIndices = new Uint32Array(0); // Ensure selectedIndices is initialized
                 return;
             }
             
@@ -467,13 +470,45 @@ class SelectLargestSplatsOp extends StateOp {
             // Select the top percentage
             // Ensure percentage is in decimal form (1% = 0.01)
             const numToSelect = Math.max(1, Math.round(eligibleIndices.length * percentage));
+            
+            // Store the indices we are about to select
+            this.selectedIndices = new Uint32Array(numToSelect);
+            
             for (let i = 0; i < numToSelect; i++) {
                 const idx = eligibleIndices[i];
                 state[idx] = doIt(state[idx]);
+                this.selectedIndices[i] = idx; // Store the index
             }
             
             this.splat.updateState(this.updateFlags);
         };
+    }
+
+    // Override the undo method to use the stored selectedIndices
+    undo() {
+        if (!this.selectedIndices) {
+            // Should not happen if do() was called, but handle defensively
+            console.error('Undo called on SelectLargestSplatsOp before do() or without selection.');
+            return; 
+        }
+
+        const splatData = this.splat.splatData;
+        const state = splatData.getProp('state') as Uint8Array;
+        
+        // Use the stored indices to undo the selection
+        for (let i = 0; i < this.selectedIndices.length; ++i) {
+            const idx = this.selectedIndices[i];
+            // Check if the splat still exists and wasn't modified by other ops in a way that makes undo invalid
+            if (idx < state.length) { 
+                state[idx] = this.undoIt(state[idx]);
+            }
+        }
+        this.splat.updateState(this.updateFlags);
+    }
+
+    destroy() {
+        super.destroy(); // Call parent destroy
+        this.selectedIndices = null; // Clear stored indices
     }
 }
 

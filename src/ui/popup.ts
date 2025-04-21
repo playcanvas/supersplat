@@ -45,7 +45,7 @@ class Popup extends Container {
 
         const inputField = new TextInput({
             id: 'popup-input-field',
-            value: '3'  // Set default value to 3%
+            value: '1'  // Set default value to 1%
         });
 
         inputContainer.append(inputField);

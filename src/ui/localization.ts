@@ -37,7 +37,7 @@ const localizeInit = () => {
                     'select.delete': 'Selektion aufheben',
                     'select.reset': 'Splats zurücksetzen',
                     'select.duplicate': 'Duplizieren',
-                    'select.separate': 'Trennen',
+                    'select.separate': 'Separieren',
                     'select.largestPercent': 'Größte X% auswählen...',
 
                     // Help menu

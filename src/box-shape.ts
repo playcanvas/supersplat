@@ -19,9 +19,9 @@ const v = new Vec3();
 const bound = new BoundingBox();
 
 class BoxShape extends Element {
-    _lenX = 1;
-    _lenY = 1;
-    _lenZ = 1;
+    _lenX = 2;
+    _lenY = 2;
+    _lenZ = 2;
     pivot: Entity;
     material: ShaderMaterial;
 
@@ -32,7 +32,6 @@ class BoxShape extends Element {
         this.pivot.addComponent('render', {
             type: 'box'
         });
-        this.pivot.setLocalScale(this._lenX * 2, this._lenY * 2, this._lenZ * 2);
     }
 
     add() {
@@ -76,9 +75,10 @@ class BoxShape extends Element {
     }
 
     onPreRender() {
+        this.pivot.setLocalScale(this._lenX, this._lenY, this._lenZ);
         this.pivot.getWorldTransform().getTranslation(v);
-        this.material.setParameter('box', [v.x, v.y, v.z, 0]);
-        this.material.setParameter('aabb', [this._lenX, this._lenY, this._lenZ, 0]);
+        this.material.setParameter('boxCen', [v.x, v.y, v.z]);
+        this.material.setParameter('boxLen', [this._lenX * 0.5, this._lenY * 0.5, this._lenZ  * 0.5]);
 
         const device = this.scene.graphicsDevice;
         device.scope.resolve('targetSize').setValue([device.width, device.height]);
@@ -100,8 +100,6 @@ class BoxShape extends Element {
 
     set lenX(lenX: number) {
         this._lenX = lenX;
-
-        this.pivot.setLocalScale(this._lenX * 2, this._lenY * 2, this._lenZ * 2);
         this.updateBound();
     }
 
@@ -111,8 +109,6 @@ class BoxShape extends Element {
 
     set lenY(lenY: number) {
         this._lenY = lenY;
-
-        this.pivot.setLocalScale(this._lenX * 2, this._lenY * 2, this._lenZ * 2);
         this.updateBound();
     }
 
@@ -122,8 +118,6 @@ class BoxShape extends Element {
 
     set lenZ(lenZ: number) {
         this._lenZ = lenZ;
-
-        this.pivot.setLocalScale(this._lenX * 2, this._lenY * 2, this._lenZ * 2);
         this.updateBound();
     }
 

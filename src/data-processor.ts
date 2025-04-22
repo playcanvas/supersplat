@@ -315,9 +315,9 @@ class DataProcessor {
                     0
                 ],
                 aabb_params: [
-                    boxOptions.box.lenx,
-                    boxOptions.box.leny,
-                    boxOptions.box.lenz,
+                    boxOptions.box.lenx * 0.5,
+                    boxOptions.box.leny * 0.5,
+                    boxOptions.box.lenz * 0.5,
                     0
                 ]
             });

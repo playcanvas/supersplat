@@ -28,6 +28,7 @@ const fragmentShader = /* glsl */ `
         vec3 v0 = -n - k;
         vec3 v1 = -n + k;
 
+        // replace invalid axes with -inf and +inf so the tests below ignore them
         v0 = mix(vec3(-1.0 / 0.0000001), v0, validDir);
         v1 = mix(vec3(1.0 / 0.0000001), v1, validDir);
 

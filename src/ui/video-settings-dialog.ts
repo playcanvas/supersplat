@@ -59,6 +59,25 @@ class VideoSettingsDialog extends Container {
         resolutionRow.append(resolutionLabel);
         resolutionRow.append(resolutionSelect);
 
+        // framerate
+
+        const frameRateLabel = new Label({ class: 'label', text: localize('video.frameRate') });
+        const frameRateSelect = new SelectInput({
+            class: 'select',
+            defaultValue: '30',
+            options: [
+                { v: '12', t: '12 fps' },
+                { v: '24', t: '24 fps' },
+                { v: '30', t: '30 fps' },
+                { v: '60', t: '60 fps' },
+                { v: '120', t: '120 fps' }
+            ]
+        });
+
+        const frameRateRow = new Container({ class: 'row' });
+        frameRateRow.append(frameRateLabel);
+        frameRateRow.append(frameRateSelect);
+
         // bitrate
 
         const bitrateLabel = new Label({ class: 'label', text: localize('video.bitrate') });
@@ -108,6 +127,7 @@ class VideoSettingsDialog extends Container {
 
         const content = new Container({ id: 'content' });
         content.append(resolutionRow);
+        content.append(frameRateRow);
         content.append(bitrateRow);
         content.append(portraitRow);
         content.append(transparentBgRow);
@@ -195,6 +215,14 @@ class VideoSettingsDialog extends Container {
                         '4k': 2160
                     };
 
+                    const frameRates: Record<string, number> = {
+                        '12': 12,
+                        '24': 24,
+                        '30': 30,
+                        '60': 60,
+                        '120': 120
+                    };
+
                     // bits per pixel per frame for different quality settings
                     const bppfs: Record<string, number> = {
                         'low': 0.001,
@@ -215,12 +243,10 @@ class VideoSettingsDialog extends Container {
                     const portrait = portraitBoolean.value;
                     const width = (portrait ? heights : widths)[resolutionSelect.value];
                     const height = (portrait ? widths : heights)[resolutionSelect.value];
-                    const frameRate = events.invoke('timeline.frameRate');
+                    const frameRate = frameRates[frameRateSelect.value];
                     const bppf = bppfs[bitrateSelect.value] * bbpfFactors[resolutionSelect.value];
                     // bitrate (bps) = 100m * (width × height × frame rate × bppf) / 1m
                     const bitrate = Math.floor(10 * width * height * frameRate * bppf);
-
-                    console.log(bitrate);
 
                     const videoSettings = {
                         startFrame: 0,

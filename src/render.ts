@@ -182,8 +182,8 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
 
             // prepare the frame for rendering
-            const prepareFrame = async (frame?: number) => {
-                events.fire('timeline.setFrame', frame);
+            const prepareFrame = async (frameTime: number) => {
+                events.fire('timeline.time', frameTime);
 
                 // manually update the camera so position and rotation are correct
                 scene.camera.onUpdate(0);
@@ -215,7 +215,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             };
 
             // capture the current video frame
-            const captureFrame = async (frame: number) => {
+            const captureFrame = async (frameTime: number) => {
                 const { renderTarget } = scene.camera.entity.camera;
                 const { colorBuffer } = renderTarget;
 
@@ -236,22 +236,27 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     format: 'RGBA',
                     codedWidth: width,
                     codedHeight: height,
-                    timestamp: Math.floor(1e6 * frame / frameRate),
+                    timestamp: Math.floor(1e6 * frameTime),
                     duration: Math.floor(1e6 / frameRate)
                 });
                 encoder.encode(videoFrame);
                 videoFrame.close();
             };
 
-            for (let frame = startFrame; frame <= endFrame; frame++) {
-                // move to the specified output frame
-                await prepareFrame(frame);
-                // flag a render frame
+            const animFrameRate = events.invoke('timeline.frameRate');
+            const duration = (endFrame - startFrame) / animFrameRate;
+
+            for (let frameTime = 0; frameTime <= duration; frameTime += 1.0 / frameRate) {
+                // special case the first frame
+                await prepareFrame(startFrame + frameTime * animFrameRate);
+
+                // render a frame
                 scene.lockedRender = true;
-                // wait for postrender
+
                 await postRender();
-                // capture result
-                await captureFrame(frame);
+
+                // wait for capture
+                await captureFrame(frameTime);
             }
 
             // Flush and finalize muxer

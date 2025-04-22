@@ -465,8 +465,8 @@ const localizeInit = () => {
 
                     // Image Settings Dialog
                     'image.header': 'IMAGE SETTINGS',
+                    'image.preset': 'Preset',
                     'image.resolution': 'Resolution',
-                    'image.customResolution': 'Custom Resolution',
                     'image.transparentBg': 'Transparent Background',
                     'image.showDebug': 'Show Debug Overlays',
                     'image.resolutionCurrent': 'Current',

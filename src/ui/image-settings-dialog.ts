@@ -41,23 +41,28 @@ class ImageSettingsDialog extends Container {
         header.append(headerIcon);
         header.append(headerText);
 
+        // preset
+
+        const presetLabel = new Label({ class: 'label', text: localize('image.preset') });
+        const presetSelect = new SelectInput({
+            class: 'select',
+            defaultValue: 'viewport',
+            options: [
+                { v: 'viewport', t: localize('image.resolutionCurrent')},
+                { v: 'HD', t: 'HD' },
+                { v: 'QHD', t: 'QHD' },
+                { v: '4k', t: '4k' },
+                { v: 'custom', t: localize('image.resolutionCustom') }
+            ]
+        });
+        const presetRow = new Container({ class: 'row' });
+        presetRow.append(presetLabel);
+        presetRow.append(presetSelect);
+
         // resolution
 
         const resolutionLabel = new Label({ class: 'label', text: localize('image.resolution') });
-        const resolutionSelect = new SelectInput({
-            class: 'select',
-            defaultValue: 'viewport',
-            options: []
-        });
-        const resolutionRow = new Container({ class: 'row' });
-        resolutionRow.append(resolutionLabel);
-        resolutionRow.append(resolutionSelect);
-
-
-        // custom resolution background
-
-        const customResolutionLabel = new Label({ class: 'label', text: localize('image.customResolution') });
-        const customResolutionValue = new VectorInput({
+        const resolutionValue = new VectorInput({
             class: 'vector-input',
             dimensions: 2,
             min: 320,
@@ -65,9 +70,9 @@ class ImageSettingsDialog extends Container {
             precision: 0,
             value: [1024, 768]
         });
-        const customResolutionRow = new Container({ class: 'row', enabled: false });
-        customResolutionRow.append(customResolutionLabel);
-        customResolutionRow.append(customResolutionValue);
+        const resolutionRow = new Container({ class: 'row', enabled: false });
+        resolutionRow.append(resolutionLabel);
+        resolutionRow.append(resolutionValue);
 
         // transparent background
 
@@ -88,8 +93,8 @@ class ImageSettingsDialog extends Container {
         // content
 
         const content = new Container({ id: 'content' });
+        content.append(presetRow);
         content.append(resolutionRow);
-        content.append(customResolutionRow);
         content.append(transparentBgRow);
         content.append(showDebugRow);
 
@@ -116,10 +121,34 @@ class ImageSettingsDialog extends Container {
 
         this.append(dialog);
 
+        let targetSize: { width: number, height: number };
+
         // Handle custom resolution activation
 
-        resolutionSelect.on('change', () => {
-            customResolutionRow.enabled = resolutionSelect.value === 'custom';
+        const updateResolution = () => {
+            const widths: Record<string, number> = {
+                'viewport': targetSize.width,
+                'HD': 1920,
+                'QHD': 2560,
+                '4k': 3840
+            };
+
+            const heights: Record<string, number> = {
+                'viewport': targetSize.height,
+                'HD': 1080,
+                'QHD': 1440,
+                '4k': 2160
+            };
+
+            resolutionValue.value = [widths[presetSelect.value], heights[presetSelect.value]];
+        };
+
+        presetSelect.on('change', () => {
+            resolutionRow.enabled = presetSelect.value === 'custom';
+
+            if (presetSelect.value !== 'custom') {
+                updateResolution();
+            }
         });
 
         // handle key bindings for enter and escape
@@ -145,23 +174,16 @@ class ImageSettingsDialog extends Container {
         };
 
         // reset UI and configure for current state
-        const reset = (targetSize: { width: number, height: number }) => {
-            const options = [
-                { v: 'viewport', t: `${localize('image.resolutionCurrent')} (${targetSize.width} x ${targetSize.height})`},
-                { v: '1080', t: '1920 x 1080' },
-                { v: '4k', t: '3840 x 2160' },
-                { v: 'custom', t: localize('image.resolutionCustom') }
-            ];
-
-            resolutionSelect.options = options;
+        const reset = () => {
+            updateResolution();
         };
 
         // function implementations
 
         this.show = () => {
-            const targetSize: { width: number, height: number } = events.invoke('targetSize');
+            targetSize = events.invoke('targetSize');
 
-            reset(targetSize);
+            reset();
 
             this.hidden = false;
             this.dom.addEventListener('keydown', keydown);
@@ -173,20 +195,7 @@ class ImageSettingsDialog extends Container {
                 };
 
                 onOK = () => {
-                    const widths: Record<string, number> = {
-                        'viewport': targetSize.width,
-                        '1080': 1920,
-                        '4k': 3840
-                    };
-
-                    const heights: Record<string, number> = {
-                        'viewport': targetSize.height,
-                        '1080': 1080,
-                        '4k': 2160
-                    };
-
-                    const width = widths[resolutionSelect.value] ?? targetSize.width;
-                    const height = heights[resolutionSelect.value] ?? targetSize.height;
+                    const [ width, height ] = resolutionValue.value;
 
                     const imageSettings = {
                         width,

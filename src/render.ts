@@ -43,6 +43,7 @@ const downloadFile = (arrayBuffer: ArrayBuffer, filename: string) => {
 const registerRenderEvents = (scene: Scene, events: Events) => {
     let compressor: PngCompressor;
 
+    // wait for postrender to fire
     const postRender = () => {
         return new Promise<boolean>((resolve, reject) => {
             const handle = scene.events.on('postrender', async () => {
@@ -69,7 +70,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 scene.camera.entity.camera.clearColor.copy(events.invoke('bgClr'));
             }
 
-            // force render and wait for postrender
+            // render the next frame
             scene.forceRender = true;
 
             // for render to finish
@@ -253,6 +254,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 // render a frame
                 scene.lockedRender = true;
 
+                // wait for render to finish
                 await postRender();
 
                 // wait for capture

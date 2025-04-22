@@ -394,7 +394,7 @@ class DataProcessor {
             const e = maxData[i * 4 + 1];
             const f = maxData[i * 4 + 2];
             if (isFinite(d)) v2.x = Math.max(v2.x, d);
-            if (isFinite(e)) v2.y = Math.max(v2.y, e)
+            if (isFinite(e)) v2.y = Math.max(v2.y, e);
             if (isFinite(f)) v2.z = Math.max(v2.z, f);
         }
 

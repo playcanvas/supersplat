@@ -48,7 +48,7 @@ class ImageSettingsDialog extends Container {
             class: 'select',
             defaultValue: 'viewport',
             options: [
-                { v: 'viewport', t: localize('image.resolutionCurrent')},
+                { v: 'viewport', t: localize('image.resolutionCurrent') },
                 { v: 'HD', t: 'HD' },
                 { v: 'QHD', t: 'QHD' },
                 { v: '4k', t: '4k' },
@@ -195,7 +195,7 @@ class ImageSettingsDialog extends Container {
                 };
 
                 onOK = () => {
-                    const [ width, height ] = resolutionValue.value;
+                    const [width, height] = resolutionValue.value;
 
                     const imageSettings = {
                         width,

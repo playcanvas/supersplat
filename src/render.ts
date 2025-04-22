@@ -46,7 +46,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
     // wait for postrender to fire
     const postRender = () => {
         return new Promise<boolean>((resolve, reject) => {
-            const handle = scene.events.on('postrender', async () => {
+            const handle = scene.events.on('postrender', () => {
                 handle.off();
                 try {
                     resolve(true);

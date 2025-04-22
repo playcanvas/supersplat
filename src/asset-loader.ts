@@ -1,4 +1,4 @@
-import { Asset, AssetRegistry, GraphicsDevice, GSplatData, GSplatResource, TEXTURETYPE_RGBP } from 'playcanvas';
+import { AppBase, Asset, GSplatData, GSplatResource } from 'playcanvas';
 
 import { Events } from './events';
 import { Splat } from './splat';
@@ -86,15 +86,13 @@ const deserializeFromSSplat = (data: ArrayBufferLike) => {
 
 // handles loading gltf container assets
 class AssetLoader {
-    device: GraphicsDevice;
-    registry: AssetRegistry;
+    app: AppBase;
     events: Events;
     defaultAnisotropy: number;
     loadAllData = true;
 
-    constructor(device: GraphicsDevice, registry: AssetRegistry, events: Events, defaultAnisotropy?: number) {
-        this.device = device;
-        this.registry = registry;
+    constructor(app: AppBase, events: Events, defaultAnisotropy?: number) {
+        this.app = app;
         this.events = events;
         this.defaultAnisotropy = defaultAnisotropy || 1;
     }
@@ -123,7 +121,7 @@ class AssetLoader {
 
             asset.on('load', () => {
                 // support loading 2d splats by adding scale_2 property with almost 0 scale
-                const splatData = (asset.resource as GSplatResource).splatData;
+                const splatData = (asset.resource as GSplatResource).splatData as GSplatData;
                 if (splatData.getProp('scale_0') && splatData.getProp('scale_1') && !splatData.getProp('scale_2')) {
                     const scale2 = new Float32Array(splatData.numSplats).fill(Math.log(1e-6));
                     splatData.addProp('scale_2', scale2);
@@ -152,8 +150,8 @@ class AssetLoader {
                 reject(err);
             });
 
-            this.registry.add(asset);
-            this.registry.load(asset);
+            this.app.assets.add(asset);
+            this.app.assets.load(asset);
         }).finally(() => {
             if (!loadRequest.animationFrame) {
                 this.events.fire('stopSpinner');
@@ -179,7 +177,7 @@ class AssetLoader {
                     url: loadRequest.url,
                     filename: loadRequest.filename
                 });
-                asset.resource = new GSplatResource(this.device, gsplatData, []);
+                asset.resource = new GSplatResource(this.app, gsplatData, []);
                 resolve(new Splat(asset));
             })
             .catch((err) => {
@@ -193,7 +191,7 @@ class AssetLoader {
 
     loadModel(loadRequest: ModelLoadRequest) {
         const filename = (loadRequest.filename || loadRequest.url).toLowerCase();
-        if (filename.endsWith('.ply')) {
+        if (filename.endsWith('.ply') || filename === 'meta.json') {
             return this.loadPly(loadRequest);
         } else if (filename.endsWith('.splat')) {
             return this.loadSplat(loadRequest);

@@ -143,12 +143,12 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
             const lowerFilename = (filename || url).toLowerCase();
             if (lowerFilename.endsWith('.ssproj')) {
                 await events.invoke('doc.dropped', new File([await (await fetch(url)).blob()], filename));
-            } else if (lowerFilename.endsWith('.json')) {
-                await loadCameraPoses(url, filename, events);
-            } else if (lowerFilename.endsWith('.ply') || lowerFilename.endsWith('.splat')) {
+            } else if (lowerFilename.endsWith('.ply') || lowerFilename.endsWith('.splat') || (lowerFilename === 'meta.json')) {
                 const model = await scene.assetLoader.loadModel({ url, filename, animationFrame });
                 scene.add(model);
                 return model;
+            } else if (lowerFilename.endsWith('.json')) {
+                await loadCameraPoses(url, filename, events);
             } else {
                 throw new Error('Unsupported file type');
             }

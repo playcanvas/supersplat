@@ -51,7 +51,7 @@ class ImageSettingsDialog extends Container {
                 { v: 'viewport', t: localize('image.resolutionCurrent') },
                 { v: 'HD', t: 'HD' },
                 { v: 'QHD', t: 'QHD' },
-                { v: '4k', t: '4k' },
+                { v: '4K', t: '4K' },
                 { v: 'custom', t: localize('image.resolutionCustom') }
             ]
         });
@@ -130,14 +130,14 @@ class ImageSettingsDialog extends Container {
                 'viewport': targetSize.width,
                 'HD': 1920,
                 'QHD': 2560,
-                '4k': 3840
+                '4K': 3840
             };
 
             const heights: Record<string, number> = {
                 'viewport': targetSize.height,
                 'HD': 1080,
                 'QHD': 1440,
-                '4k': 2160
+                '4K': 2160
             };
 
             resolutionValue.value = [widths[presetSelect.value], heights[presetSelect.value]];

@@ -11,7 +11,6 @@ import { localize } from './ui/localization';
 type ImageSettings = {
     width: number;
     height: number;
-    useViewportSize: boolean;
     transparentBg: boolean;
     showDebug: boolean;
 };
@@ -44,130 +43,79 @@ const downloadFile = (arrayBuffer: ArrayBuffer, filename: string) => {
 const registerRenderEvents = (scene: Scene, events: Events) => {
     let compressor: PngCompressor;
 
-    // prepare the frame for rendering
-    const prepareFrame = async (visibleSplats: Splat[], frame?: number) => {
-
-        if (frame) {
-            // go to first frame of the animation
-            events.fire('timeline.setFrame', frame);
-        }
-
-        // manually update the camera so position and rotation are correct
-        scene.camera.onUpdate(0);
-
-        // wait for sorting to complete
-        await Promise.all(visibleSplats.map((splat) => {
-            // create a promise for each splat that will resolve upon sorting complete
-            return new Promise<void>((resolve) => {
-                const { instance } = splat.entity.gsplat;
-
-                // listen for the sorter to complete
-                const handle = instance.sorter.on('updated', () => {
-                    handle.off();
-                    resolve();
-                });
-
-                // manually invoke sort because internally the engine sorts after render the
-                // scene call is made.
-                instance.sort(scene.camera.entity);
-
-                // in cases where the camera does not move between frames the sorter won't run
-                // and we need a timeout instead. this is a hack - the engine should allow us to
-                // know whether the sorter is running or not.
-                setTimeout(() => {
-                    resolve();
-                }, 1000);
+    const postRender = () => {
+        return new Promise<boolean>((resolve, reject) => {
+            const handle = scene.events.on('postrender', async () => {
+                handle.off();
+                try {
+                    resolve(true);
+                } catch (error) {
+                    reject(error);
+                }
             });
-        }));
-
-        // render during next update
-        scene.lockedRender = true;
+        });
     };
 
     events.function('render.image', async (imageSettings: ImageSettings) => {
         events.fire('startSpinner');
 
         try {
-            const { width, height, transparentBg, showDebug, useViewportSize } = imageSettings;
-            const viewportBuffer = scene.camera.entity.camera.renderTarget.colorBuffer;
-            const renderWidth = useViewportSize ? viewportBuffer.width : width;
-            const renderHeight = useViewportSize ? viewportBuffer.height : height;
+            const { width, height, transparentBg, showDebug } = imageSettings;
 
             // start rendering to offscreen buffer only
-            scene.camera.startOffscreenMode(renderWidth, renderHeight);
+            scene.camera.startOffscreenMode(width, height);
             scene.camera.renderOverlays = showDebug;
             if (!transparentBg) {
                 scene.camera.entity.camera.clearColor.copy(events.invoke('bgClr'));
             }
-            scene.lockedRenderMode = true;
+
+            // force render and wait for postrender
+            scene.forceRender = true;
+
+            // for render to finish
+            await postRender();
 
             // cpu-side buffer to read pixels into
-            const data = new Uint8Array(renderWidth * renderHeight * 4);
+            const data = new Uint8Array(width * height * 4);
 
+            const { renderTarget } = scene.camera.entity.camera;
+            const { colorBuffer } = renderTarget;
 
-            // create a snapshot
-            const createSnapshot = async () => {
-                const { renderTarget } = scene.camera.entity.camera;
-                const { colorBuffer } = renderTarget;
+            // read the rendered frame
+            await colorBuffer.read(0, 0, width, height, { renderTarget, data });
 
-                // read the rendered frame
-                await colorBuffer.read(0, 0, renderWidth, renderHeight, { renderTarget, data });
-
-                // construct the png compressor
-                if (!compressor) {
-                    compressor = new PngCompressor();
-                }
-
+            // the render buffer contains premultiplied alpha. so apply background color.
+            if (!transparentBg) {
                 // @ts-ignore
                 const pixels = new Uint8ClampedArray(data.buffer);
 
-                // the render buffer contains premultiplied alpha. so apply background color.
-                if (!transparentBg) {
-                    const { r, g, b } = events.invoke('bgClr');
-                    for (let i = 0; i < pixels.length; i += 4) {
-                        const a = 255 - pixels[i + 3];
-                        pixels[i + 0] += r * a;
-                        pixels[i + 1] += g * a;
-                        pixels[i + 2] += b * a;
-                        pixels[i + 3] = 255;
-                    }
+                const { r, g, b } = events.invoke('bgClr');
+                for (let i = 0; i < pixels.length; i += 4) {
+                    const a = 255 - pixels[i + 3];
+                    pixels[i + 0] += r * a;
+                    pixels[i + 1] += g * a;
+                    pixels[i + 2] += b * a;
+                    pixels[i + 3] = 255;
                 }
+            }
 
-                const arrayBuffer = await compressor.compress(
-                    new Uint32Array(pixels.buffer),
-                    colorBuffer.width,
-                    colorBuffer.height
-                );
+            // construct the png compressor
+            if (!compressor) {
+                compressor = new PngCompressor();
+            }
 
-                // construct filename
-                const selected = events.invoke('selection') as Splat;
-                const filename = `${removeExtension(selected?.name ?? 'SuperSplat')}-image.png`;
+            const arrayBuffer = await compressor.compress(
+                new Uint32Array(data.buffer),
+                colorBuffer.width,
+                colorBuffer.height
+            );
 
-                // download
-                downloadFile(arrayBuffer, filename);
-            };
+            // construct filename
+            const selected = events.invoke('selection') as Splat;
+            const filename = `${removeExtension(selected?.name ?? 'SuperSplat')}-image.png`;
 
-            const snapshotPromise = new Promise<boolean>((resolve, reject) => {
-                const handle = scene.events.on('postrender', async () => {
-                    handle.off();
-                    try {
-                        await createSnapshot();
-                        resolve(true);
-                    } catch (error) {
-                        reject(error);
-                    }
-                });
-            });
-
-            // get the list of visible splats
-            const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
-
-            // special case the first frame
-            await prepareFrame(splats);
-
-            // wait for capture
-            await snapshotPromise;
-
+            // download
+            downloadFile(arrayBuffer, filename);
 
             return true;
         } catch (error) {
@@ -180,8 +128,6 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             scene.camera.endOffscreenMode();
             scene.camera.renderOverlays = true;
             scene.camera.entity.camera.clearColor.set(0, 0, 0, 0);
-            scene.lockedRenderMode = false;
-            scene.forceRender = true;
 
             events.fire('stopSpinner');
         }
@@ -235,6 +181,39 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             // get the list of visible splats
             const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
 
+            // prepare the frame for rendering
+            const prepareFrame = async (frame?: number) => {
+                events.fire('timeline.setFrame', frame);
+
+                // manually update the camera so position and rotation are correct
+                scene.camera.onUpdate(0);
+
+                // wait for sorting to complete
+                await Promise.all(splats.map((splat) => {
+                    // create a promise for each splat that will resolve upon sorting complete
+                    return new Promise<void>((resolve) => {
+                        const { instance } = splat.entity.gsplat;
+
+                        // listen for the sorter to complete
+                        const handle = instance.sorter.on('updated', () => {
+                            handle.off();
+                            resolve();
+                        });
+
+                        // manually invoke sort because internally the engine sorts after render the
+                        // scene call is made.
+                        instance.sort(scene.camera.entity);
+
+                        // in cases where the camera does not move between frames the sorter won't run
+                        // and we need a timeout instead. this is a hack - the engine should allow us to
+                        // know whether the sorter is running or not.
+                        setTimeout(() => {
+                            resolve();
+                        }, 1000);
+                    });
+                }));
+            };
+
             // capture the current video frame
             const captureFrame = async (frame: number) => {
                 const { renderTarget } = scene.camera.entity.camera;
@@ -265,23 +244,14 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             };
 
             for (let frame = startFrame; frame <= endFrame; frame++) {
-                const capturePromise = new Promise<boolean>((resolve, reject) => {
-                    const handle = scene.events.on('postrender', async () => {
-                        handle.off();
-                        try {
-                            await captureFrame(frame);
-                            resolve(true);
-                        } catch (error) {
-                            reject(error);
-                        }
-                    });
-                });
-
-                // special case the first frame
-                await prepareFrame(splats, frame);
-
-                // wait for capture
-                await capturePromise;
+                // move to the specified output frame
+                await prepareFrame(frame);
+                // flag a render frame
+                scene.lockedRender = true;
+                // wait for postrender
+                await postRender();
+                // capture result
+                await captureFrame(frame);
             }
 
             // Flush and finalize muxer

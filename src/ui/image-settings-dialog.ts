@@ -1,7 +1,7 @@
 import { BooleanInput, Button, Container, Element, Label, NumericInput, SelectInput } from 'pcui';
 
 import { Events } from '../events';
-import { ImageSettings, VideoSettings } from '../render';
+import { ImageSettings } from '../render';
 import { localize } from './localization';
 import sceneExport from './svg/export.svg';
 
@@ -47,12 +47,7 @@ class ImageSettingsDialog extends Container {
         const resolutionSelect = new SelectInput({
             class: 'select',
             defaultValue: 'viewport',
-            options: [
-                { v: 'viewport', t: localize('image.resolutionViewport') },
-                { v: '1080', t: '1920x1080' },
-                { v: '4k', t: '3840x2160' },
-                { v: 'custom', t: localize('image.resolutionCustom') }
-            ]
+            options: []
         });
         const resolutionRow = new Container({ class: 'row' });
         resolutionRow.append(resolutionLabel);
@@ -157,14 +152,23 @@ class ImageSettingsDialog extends Container {
         };
 
         // reset UI and configure for current state
-        const reset = () => {
+        const reset = (targetSize: { width: number, height: number }) => {
+            const options = [
+                { v: 'viewport', t: `${localize('image.resolutionViewport')} (${targetSize.width}x${targetSize.height})`},
+                { v: '1080', t: '1920x1080' },
+                { v: '4k', t: '3840x2160' },
+                { v: 'custom', t: localize('image.resolutionCustom') }
+            ];
 
+            resolutionSelect.options = options;
         };
 
         // function implementations
 
         this.show = () => {
-            reset();
+            const targetSize: { width: number, height: number } = events.invoke('targetSize');
+
+            reset(targetSize);
 
             this.hidden = false;
             this.dom.addEventListener('keydown', keydown);
@@ -176,13 +180,14 @@ class ImageSettingsDialog extends Container {
                 };
 
                 onOK = () => {
-
                     const widths: Record<string, number> = {
+                        'viewport': targetSize.width,
                         '1080': 1920,
                         '4k': 3840
                     };
 
                     const heights: Record<string, number> = {
+                        'viewport': targetSize.height,
                         '1080': 1080,
                         '4k': 2160
                     };
@@ -194,8 +199,7 @@ class ImageSettingsDialog extends Container {
                         width,
                         height,
                         transparentBg: transparentBgBoolean.value,
-                        showDebug: showDebugBoolean.value,
-                        useViewportSize: resolutionSelect.value === 'viewport'
+                        showDebug: showDebugBoolean.value
                     };
 
                     resolve(imageSettings);

@@ -35,6 +35,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         return msg;
     });
 
+    events.function('targetSize', () => {
+        return scene.targetSize;
+    });
+
     events.on('scene.clear', () => {
         scene.clear();
         editHistory.clear();

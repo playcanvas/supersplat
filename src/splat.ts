@@ -11,6 +11,7 @@ import {
     BoundingBox,
     Color,
     Entity,
+    GSplat,
     GSplatData,
     GSplatResource,
     Mat4,
@@ -91,7 +92,7 @@ class Splat extends Element {
 
         this._name = (asset.file as any).filename;
         this.asset = asset;
-        this.splatData = splatData;
+        this.splatData = splatData as GSplatData;
         this.numSplats = splatData.numSplats;
         this.entity = splatResource.instantiate(materialOptions);
 
@@ -136,7 +137,7 @@ class Splat extends Element {
             byteSize: 2
         });
 
-        const { width, height } = instance.splat.colorTexture;
+        const { width, height } = (instance.splat as GSplat).colorTexture;
 
         // pack spherical harmonic data
         const createTexture = (name: string, format: number) => {
@@ -168,7 +169,7 @@ class Splat extends Element {
             const { material } = instance;
             material.chunks = { gsplatCenterVS: gsplatCenter };
             material.blendState = blendState;
-            material.setDefine('SH_BANDS', `${Math.min(bands, instance.splat.shBands)}`);
+            material.setDefine('SH_BANDS', `${Math.min(bands, (instance.splat as GSplat).shBands)}`);
             material.setParameter('splatState', this.stateTexture);
             material.setParameter('splatTransform', this.transformTexture);
             material.update();

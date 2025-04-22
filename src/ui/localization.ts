@@ -469,9 +469,8 @@ const localizeInit = () => {
                     'image.customResolution': 'Custom Resolution',
                     'image.transparentBg': 'Transparent Background',
                     'image.showDebug': 'Show Debug Overlays',
-                    'image.resolutionViewport': 'Current Viewport',
-                    'image.resolutionCustom': 'Custom Resolution',
-
+                    'image.resolutionCurrent': 'Current',
+                    'image.resolutionCustom': 'Custom',
 
                     // Video Settings Dialog
                     'video.header': 'VIDEO SETTINGS',

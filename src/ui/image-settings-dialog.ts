@@ -1,4 +1,4 @@
-import { BooleanInput, Button, Container, Element, Label, NumericInput, SelectInput } from 'pcui';
+import { BooleanInput, Button, Container, Element, Label, NumericInput, SelectInput, VectorInput } from 'pcui';
 
 import { Events } from '../events';
 import { ImageSettings } from '../render';
@@ -57,24 +57,17 @@ class ImageSettingsDialog extends Container {
         // custom resolution background
 
         const customResolutionLabel = new Label({ class: 'label', text: localize('image.customResolution') });
-        const customResolutionWidth = new NumericInput({
-            class: 'custom-width',
-            precision: 0,
-            value: 1024,
+        const customResolutionValue = new VectorInput({
+            class: 'vector-input',
+            dimensions: 2,
             min: 320,
-            max: 16000
-        });
-        const customResolutionHeight = new NumericInput({
-            class: 'custom-height',
+            max: 16000,
             precision: 0,
-            value: 768,
-            min: 240,
-            max: 12000
+            value: [1024, 768]
         });
         const customResolutionRow = new Container({ class: 'row', enabled: false });
         customResolutionRow.append(customResolutionLabel);
-        customResolutionRow.append(customResolutionWidth);
-        customResolutionRow.append(customResolutionHeight);
+        customResolutionRow.append(customResolutionValue);
 
         // transparent background
 
@@ -154,9 +147,9 @@ class ImageSettingsDialog extends Container {
         // reset UI and configure for current state
         const reset = (targetSize: { width: number, height: number }) => {
             const options = [
-                { v: 'viewport', t: `${localize('image.resolutionViewport')} (${targetSize.width}x${targetSize.height})`},
-                { v: '1080', t: '1920x1080' },
-                { v: '4k', t: '3840x2160' },
+                { v: 'viewport', t: `${localize('image.resolutionCurrent')} (${targetSize.width} x ${targetSize.height})`},
+                { v: '1080', t: '1920 x 1080' },
+                { v: '4k', t: '3840 x 2160' },
                 { v: 'custom', t: localize('image.resolutionCustom') }
             ];
 
@@ -192,8 +185,8 @@ class ImageSettingsDialog extends Container {
                         '4k': 2160
                     };
 
-                    const width = widths[resolutionSelect.value] ?? customResolutionWidth.value;
-                    const height = heights[resolutionSelect.value] ?? customResolutionHeight.value;
+                    const width = widths[resolutionSelect.value] ?? targetSize.width;
+                    const height = heights[resolutionSelect.value] ?? targetSize.height;
 
                     const imageSettings = {
                         width,

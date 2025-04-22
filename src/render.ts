@@ -62,12 +62,13 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
         try {
             const { width, height, transparentBg, showDebug } = imageSettings;
+            const bgClr = events.invoke('bgClr');
 
             // start rendering to offscreen buffer only
             scene.camera.startOffscreenMode(width, height);
             scene.camera.renderOverlays = showDebug;
             if (!transparentBg) {
-                scene.camera.entity.camera.clearColor.copy(events.invoke('bgClr'));
+                scene.camera.entity.camera.clearColor.copy(bgClr);
             }
 
             // render the next frame
@@ -90,7 +91,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 // @ts-ignore
                 const pixels = new Uint8ClampedArray(data.buffer);
 
-                const { r, g, b } = events.invoke('bgClr');
+                const { r, g, b } = bgClr;
                 for (let i = 0; i < pixels.length; i += 4) {
                     const a = 255 - pixels[i + 3];
                     pixels[i + 0] += r * a;

@@ -14,6 +14,7 @@ import { getSceneConfig } from './scene-config';
 import { registerSelectionEvents } from './selection';
 import { Shortcuts } from './shortcuts';
 import { registerTimelineEvents } from './timeline';
+import { BoxSelection } from './tools/box-selection';
 import { BrushSelection } from './tools/brush-selection';
 import { LassoSelection } from './tools/lasso-selection';
 import { MoveTool } from './tools/move-tool';
@@ -234,6 +235,7 @@ const main = async () => {
     toolManager.register('polygonSelection', new PolygonSelection(events, editorUI.toolsContainer.dom, mask));
     toolManager.register('lassoSelection', new LassoSelection(events, editorUI.toolsContainer.dom, mask));
     toolManager.register('sphereSelection', new SphereSelection(events, scene, editorUI.canvasContainer));
+    toolManager.register('boxSelection', new BoxSelection(events, scene, editorUI.canvasContainer));
     toolManager.register('move', new MoveTool(events, scene));
     toolManager.register('rotate', new RotateTool(events, scene));
     toolManager.register('scale', new ScaleTool(events, scene));

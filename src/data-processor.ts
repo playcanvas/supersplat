@@ -34,6 +34,10 @@ type SphereOptions = {
     sphere: { x: number, y: number, z: number, radius: number };
 };
 
+type BoxOptions = {
+    box: { x: number, y: number, z: number, lenx: number, leny: number, lenz: number };
+};
+
 const v1 = new Vec3();
 const v2 = new Vec3();
 
@@ -225,7 +229,7 @@ class DataProcessor {
     }
 
     // calculate the intersection of a mask canvas with splat centers
-    intersect(options: MaskOptions | RectOptions | SphereOptions, splat: Splat) {
+    intersect(options: MaskOptions | RectOptions | SphereOptions | BoxOptions, splat: Splat) {
         const { device } = this;
         const { scope } = device;
 
@@ -297,6 +301,30 @@ class DataProcessor {
         } else {
             resolve(scope, {
                 sphere_params: [0, 0, 0, 0]
+            });
+        }
+
+        const boxOptions = options as BoxOptions;
+        if (boxOptions.box) {
+            resolve(scope, {
+                mode: 3,
+                box_params: [
+                    boxOptions.box.x,
+                    boxOptions.box.y,
+                    boxOptions.box.z,
+                    0
+                ],
+                aabb_params: [
+                    boxOptions.box.lenx * 0.5,
+                    boxOptions.box.leny * 0.5,
+                    boxOptions.box.lenz * 0.5,
+                    0
+                ]
+            });
+        } else {
+            resolve(scope, {
+                box_params: [0, 0, 0, 0],
+                aabb_params: [0, 0, 0, 0]
             });
         }
 

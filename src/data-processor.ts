@@ -379,17 +379,23 @@ class DataProcessor {
 
         // resolve mins/maxs
         const { minData, maxData } = resources;
-        v1.set(minData[0], minData[1], minData[2]);
-        v2.set(maxData[0], maxData[1], maxData[2]);
+        v1.set(Infinity, Infinity, Infinity);
+        v2.set(-Infinity, -Infinity, -Infinity);
 
-        for (let i = 1; i < transformA.width; i++) {
-            v1.x = Math.min(v1.x, minData[i * 4]);
-            v1.y = Math.min(v1.y, minData[i * 4 + 1]);
-            v1.z = Math.min(v1.z, minData[i * 4 + 2]);
+        for (let i = 0; i < transformA.width; i++) {
+            const a = minData[i * 4];
+            const b = minData[i * 4 + 1];
+            const c = minData[i * 4 + 2];
+            if (isFinite(a)) v1.x = Math.min(v1.x, a);
+            if (isFinite(b)) v1.y = Math.min(v1.y, b);
+            if (isFinite(c)) v1.z = Math.min(v1.z, c);
 
-            v2.x = Math.max(v2.x, maxData[i * 4]);
-            v2.y = Math.max(v2.y, maxData[i * 4 + 1]);
-            v2.z = Math.max(v2.z, maxData[i * 4 + 2]);
+            const d = maxData[i * 4];
+            const e = maxData[i * 4 + 1];
+            const f = maxData[i * 4 + 2];
+            if (isFinite(d)) v2.x = Math.max(v2.x, d);
+            if (isFinite(e)) v2.y = Math.max(v2.y, e);
+            if (isFinite(f)) v2.z = Math.max(v2.z, f);
         }
 
         boundingBox.setMinMax(v1, v2);

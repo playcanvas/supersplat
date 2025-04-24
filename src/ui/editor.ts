@@ -5,6 +5,7 @@ import { DataPanel } from './data-panel';
 import { Events } from '../events';
 import { BottomToolbar } from './bottom-toolbar';
 import { ColorPanel } from './color-panel';
+import { ImageSettingsDialog } from './image-settings-dialog';
 import { localize, localizeInit } from './localization';
 import { Menu } from './menu';
 import { ModeToggle } from './mode-toggle';
@@ -166,12 +167,16 @@ class EditorUI {
         // publish settings
         const publishSettingsDialog = new PublishSettingsDialog(events);
 
+        // image settings
+        const imageSettingsDialog = new ImageSettingsDialog(events);
+
         // video settings
         const videoSettingsDialog = new VideoSettingsDialog(events);
 
         topContainer.append(popup);
         topContainer.append(viewerExportPopup);
         topContainer.append(publishSettingsDialog);
+        topContainer.append(imageSettingsDialog);
         topContainer.append(videoSettingsDialog);
 
         appContainer.append(editorContainer);
@@ -215,6 +220,14 @@ class EditorUI {
             // do publish
             if (publishSettings) {
                 await events.invoke('scene.publish', publishSettings);
+            }
+        });
+
+        events.function('show.imageSettingsDialog', async () => {
+            const imageSettings = await imageSettingsDialog.show();
+
+            if (imageSettings) {
+                await events.invoke('render.image', imageSettings);
             }
         });
 

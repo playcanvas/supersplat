@@ -27,6 +27,13 @@ const localizeInit = () => {
                     'file.export.splat': 'Splat',
                     'file.export.viewer': 'Viewer App...',
 
+                    // Render menu
+                    'render': 'Rendern',
+                    'render.image': 'Bild...',
+                    'render.video': 'Video...',
+                    'render.ok': 'Rendern',
+                    'render.cancel': 'Abbrechen',
+
                     // Selection menu
                     'select': 'Auswahl',
                     'select.all': 'Alles',
@@ -254,8 +261,9 @@ const localizeInit = () => {
                     'file.export.splat': 'Splat file (.splat)',
                     'file.export.viewer': 'Viewer App...',
 
+                    // Render menu
                     'render': 'Render',
-                    'render.image': 'Image',
+                    'render.image': 'Image...',
                     'render.video': 'Video...',
                     'render.ok': 'Render',
                     'render.cancel': 'Cancel',
@@ -463,6 +471,15 @@ const localizeInit = () => {
                     'publish.message': 'Use the link below to access your scene.',
                     'publish.please-log-in': 'Publishing to PlayCanvas requires a user account. Please log in and try again.',
 
+                    // Image Settings Dialog
+                    'image.header': 'IMAGE SETTINGS',
+                    'image.preset': 'Preset',
+                    'image.resolution': 'Resolution',
+                    'image.transparentBg': 'Transparent Background',
+                    'image.showDebug': 'Show Debug Overlays',
+                    'image.resolutionCurrent': 'Current',
+                    'image.resolutionCustom': 'Custom',
+
                     // Video Settings Dialog
                     'video.header': 'VIDEO SETTINGS',
                     'video.resolution': 'Resolution',
@@ -497,6 +514,13 @@ const localizeInit = () => {
                     'file.export.compressed-ply': 'Ply compressé',
                     'file.export.splat': 'Fichier splat',
                     'file.export.viewer': 'Application de visualisation...',
+
+                    // Render menu
+                    'render': 'Rendu',
+                    'render.image': 'Image...',
+                    'render.video': 'Vidéo...',
+                    'render.ok': 'Rendu',
+                    'render.cancel': 'Annuler',
 
                     // Selection menu
                     'select': 'Sélection',
@@ -724,6 +748,13 @@ const localizeInit = () => {
                     'file.export.splat': 'Splat (.splat)',
                     'file.export.viewer': 'Viewer App...',
 
+                    // Render menu
+                    'render': 'レンダリング',
+                    'render.image': '画像...',
+                    'render.video': '動画...',
+                    'render.ok': 'レンダリング',
+                    'render.cancel': 'キャンセル',
+
                     // Selection menu
                     'select': '選択',
                     'select.all': '全て',
@@ -950,6 +981,13 @@ const localizeInit = () => {
                     'file.export.splat': 'Splat 파일',
                     'file.export.viewer': '뷰어 앱...',
 
+                    // Render menu
+                    'render': '렌더링',
+                    'render.image': '이미지...',
+                    'render.video': '비디오...',
+                    'render.ok': '렌더링',
+                    'render.cancel': '취소',
+
                     // Selection menu
                     'select': '선택',
                     'select.all': '모두',
@@ -1174,6 +1212,13 @@ const localizeInit = () => {
                     'file.export.compressed-ply': '压缩 PLY',
                     'file.export.splat': 'Splat 文件',
                     'file.export.viewer': '查看器应用...',
+
+                    // Render menu
+                    'render': '渲染',
+                    'render.image': '图像...',
+                    'render.video': '视频...',
+                    'render.ok': '渲染',
+                    'render.cancel': '取消',
 
                     // Selection menu
                     'select': '选择',

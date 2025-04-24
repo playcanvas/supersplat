@@ -82,6 +82,20 @@
                     margin-right: 0px;
                     width: calc(100% - 9px);
                 }
+
+                .vector-input {
+                    margin: 0;
+                    flex-grow: 1;
+
+                    div.pcui-numeric-input {
+                        margin-top: 0;
+                        margin-bottom: 0;
+                        line-height: 22px;
+                        > .pcui-numeric-input-slider-control::after {
+                            top: -6px;
+                        }
+                    }
+                }
             }
         }
 

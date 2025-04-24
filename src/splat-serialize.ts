@@ -792,9 +792,9 @@ const sortSplats = (splats: Splat[], indices: CompressedIndex[]) => {
                 const y = centers[i * 3 + 1];
                 const z = centers[i * 3 + 2];
 
-                const ix = Math.floor(1024 * (x - minx) / xlen);
-                const iy = Math.floor(1024 * (y - miny) / ylen);
-                const iz = Math.floor(1024 * (z - minz) / zlen);
+                const ix = Math.min(1023, Math.floor(1024 * (x - minx) / xlen));
+                const iy = Math.min(1023, Math.floor(1024 * (y - miny) / ylen));
+                const iz = Math.min(1023, Math.floor(1024 * (z - minz) / zlen));
 
                 morton[idx++] = encodeMorton3(ix, iy, iz);
             }
@@ -915,6 +915,13 @@ const serializePlyCompressed = async (splats: Splat[], options: SerializeSetting
             for (let k = 0; k < outputSHCoeffs * 3; ++k) {
                 const nvalue = singleSplat.data[shNames[k]] / 8 + 0.5;
                 dataView.setUint8(off++, Math.max(0, Math.min(255, Math.trunc(nvalue * 256))));
+            }
+        }
+
+        // pad the end of the last chunk with duplicate data
+        if (num < 256) {
+            for (let j = num; j < 256; ++j) {
+                chunk.set(j, singleSplat);
             }
         }
 

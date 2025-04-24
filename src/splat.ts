@@ -141,7 +141,7 @@ class Splat extends Element {
 
         // pack spherical harmonic data
         const createTexture = (name: string, format: number) => {
-            return new Texture(splatResource.device, {
+            return new Texture(splatResource.app.graphicsDevice, {
                 name: name,
                 width: width,
                 height: height,
@@ -159,7 +159,7 @@ class Splat extends Element {
         this.transformTexture = createTexture('splatTransform', PIXELFORMAT_R16U);
 
         // create the transform palette
-        this.transformPalette = new TransformPalette(splatResource.device);
+        this.transformPalette = new TransformPalette(splatResource.app.graphicsDevice);
 
         // blend mode for splats
         const blendState = new BlendState(true, BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE_MINUS_SRC_ALPHA);

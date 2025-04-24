@@ -24,7 +24,7 @@ class HistogramData {
         let min, max, i;
         for (i = 0; i < count; i++) {
             const v = valueFunc(i);
-            if (v !== undefined && !isNaN(v)) {
+            if (v !== undefined && isFinite(v)) {
                 min = max = v;
                 break;
             }
@@ -38,7 +38,7 @@ class HistogramData {
         // continue min/max calc
         for (; i < count; i++) {
             const v = valueFunc(i);
-            if (v !== undefined) {
+            if (v !== undefined && isFinite(v)) {
                 if (v < min) min = v; else if (v > max) max = v;
             }
         }
@@ -46,9 +46,8 @@ class HistogramData {
         // fill bins
         for (let i = 0; i < count; i++) {
             const v = valueFunc(i);
-            if (v !== undefined) {
+            if (v !== undefined && isFinite(v)) {
                 const n = min === max ? 0 : (v - min) / (max - min);
-                if (isNaN(n)) continue;
                 const bin = Math.min(bins.length - 1, Math.floor(n * bins.length));
                 if (selectedFunc(i)) {
                     bins[bin].selected++;

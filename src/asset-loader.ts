@@ -177,7 +177,7 @@ class AssetLoader {
                     url: loadRequest.url,
                     filename: loadRequest.filename
                 });
-                asset.resource = new GSplatResource(this.app.graphicsDevice, gsplatData, []);
+                asset.resource = new GSplatResource(this.app, gsplatData, []);
                 resolve(new Splat(asset));
             })
             .catch((err) => {

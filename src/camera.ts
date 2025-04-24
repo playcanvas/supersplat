@@ -501,7 +501,7 @@ class Camera extends Element {
 
         const fdist = focalRadius / this.sceneRadius;
 
-        this.setDistance(isNaN(fdist) ? 1 : fdist, options?.speed ?? 0);
+        this.setDistance(isFinite(fdist) ? fdist : 1, options?.speed ?? 0);
         this.setFocalPoint(focalPoint, options?.speed ?? 0);
     }
 

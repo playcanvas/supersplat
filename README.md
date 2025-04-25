@@ -34,7 +34,14 @@ To initialize a local development environment for SuperSplat, ensure you have [N
    npm run develop
    ```
 
-4. Open a web browser at `http://localhost:3000`.
+4. Open a web browser tab and make sure the caches are clear:
+
+   - On Safari you can use `Cmd+Option+e` or Develop->Empty Caches.
+   - On Chrome ensure the options "Update on reload" and "Bypass for network" are enabled in the Application->Service workers tab:
+
+   <img width="846" alt="Screenshot 2025-04-25 at 16 53 37" src="https://github.com/user-attachments/assets/888bac6c-25c1-4813-b5b6-4beecf437ac9" />
+
+5. Navigate to `http://localhost:3000`
 
 When changes to the source are detected, SuperSplat is rebuilt automatically. Simply refresh your browser to see your changes.
 

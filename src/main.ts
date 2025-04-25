@@ -1,18 +1,42 @@
-import { dracoInitialize, createGraphicsDevice, WebglGraphicsDevice } from 'playcanvas';
+import { Color, createGraphicsDevice } from 'playcanvas';
+
+import { registerCameraPosesEvents } from './camera-poses';
+import { registerDocEvents } from './doc';
+import { EditHistory } from './edit-history';
+import { registerEditorEvents } from './editor';
+import { Events } from './events';
+import { initFileHandler } from './file-handler';
+import { registerPlySequenceEvents } from './ply-sequence';
+import { registerPublishEvents } from './publish';
+import { registerRenderEvents } from './render';
 import { Scene } from './scene';
 import { getSceneConfig } from './scene-config';
-import { CreateDropHandler } from './drop-handler';
-import { initMaterials } from './material';
-import { EditorUI } from './editor-ui';
-import { registerEvents } from './editor-ops';
+import { registerSelectionEvents } from './selection';
+import { Shortcuts } from './shortcuts';
+import { registerTimelineEvents } from './timeline';
+import { BoxSelection } from './tools/box-selection';
+import { BrushSelection } from './tools/brush-selection';
+import { LassoSelection } from './tools/lasso-selection';
+import { MoveTool } from './tools/move-tool';
+import { PolygonSelection } from './tools/polygon-selection';
+import { RectSelection } from './tools/rect-selection';
+import { RotateTool } from './tools/rotate-tool';
+import { ScaleTool } from './tools/scale-tool';
+import { SphereSelection } from './tools/sphere-selection';
+import { ToolManager } from './tools/tool-manager';
+import { registerTransformHandlerEvents } from './transform-handler';
+import { EditorUI } from './ui/editor';
 
 declare global {
-    interface Window {
-        scene: Scene;
+    interface LaunchParams {
+        readonly files: FileSystemFileHandle[];
     }
 
-    interface Navigator {
-        xr: any;
+    interface Window {
+        launchQueue: {
+            setConsumer: (callback: (launchParams: LaunchParams) => void) => void;
+        };
+        scene: Scene;
     }
 }
 
@@ -42,103 +66,68 @@ const getURLArgs = () => {
     return config;
 };
 
-// take a relative URL and returns the absolute version
-const makeUrl = (() => {
-    const scripts = Array.from(document.getElementsByTagName('script')).filter(s => s.src);
-    const urlBase = scripts[scripts.length - 1].src.split('/').slice(0, -1).join('/');
-    return (url: string) => {
-        return `${urlBase}/${url}`;
-    };
-})();
+const initShortcuts = (events: Events) => {
+    const shortcuts = new Shortcuts(events);
 
-const fetchStaticAssets = () => {
-    // fetch static assets
-    const envImage = fetch(makeUrl('static/env/VertebraeHDRI_v1_512.png'))
-        .then(r => r.arrayBuffer())
-        .then(arrayBuffer => URL.createObjectURL(new File([arrayBuffer], 'env.png', {type: 'image/png'})));
+    shortcuts.register(['Delete', 'Backspace'], { event: 'select.delete' });
+    shortcuts.register(['Escape'], { event: 'tool.deactivate' });
+    shortcuts.register(['Tab'], { event: 'selection.next' });
+    shortcuts.register(['1'], { event: 'tool.move', sticky: true });
+    shortcuts.register(['2'], { event: 'tool.rotate', sticky: true });
+    shortcuts.register(['3'], { event: 'tool.scale', sticky: true });
+    shortcuts.register(['G', 'g'], { event: 'grid.toggleVisible' });
+    shortcuts.register(['C', 'c'], { event: 'tool.toggleCoordSpace' });
+    shortcuts.register(['F', 'f'], { event: 'camera.focus' });
+    shortcuts.register(['R', 'r'], { event: 'tool.rectSelection', sticky: true });
+    shortcuts.register(['P', 'p'], { event: 'tool.polygonSelection', sticky: true });
+    shortcuts.register(['L', 'l'], { event: 'tool.lassoSelection', sticky: true });
+    shortcuts.register(['B', 'b'], { event: 'tool.brushSelection', sticky: true });
+    shortcuts.register(['A', 'a'], { event: 'select.all', ctrl: true });
+    shortcuts.register(['A', 'a'], { event: 'select.none', shift: true });
+    shortcuts.register(['I', 'i'], { event: 'select.invert', ctrl: true });
+    shortcuts.register(['H', 'h'], { event: 'select.hide' });
+    shortcuts.register(['U', 'u'], { event: 'select.unhide' });
+    shortcuts.register(['['], { event: 'tool.brushSelection.smaller' });
+    shortcuts.register([']'], { event: 'tool.brushSelection.bigger' });
+    shortcuts.register(['Z', 'z'], { event: 'edit.undo', ctrl: true, capture: true });
+    shortcuts.register(['Z', 'z'], { event: 'edit.redo', ctrl: true, shift: true, capture: true });
+    shortcuts.register(['M', 'm'], { event: 'camera.toggleMode' });
+    shortcuts.register(['D', 'd'], { event: 'dataPanel.toggle' });
+    shortcuts.register([' '], { event: 'camera.toggleOverlay' });
 
-    const dracoJs = fetch(makeUrl('static/lib/draco_decoder.js'))
-        .then(r => r.text())
-        .then(text => URL.createObjectURL(new File([text], 'draco.js', {type: 'application/javascript'})));
-
-    const dracoWasm = fetch(makeUrl('static/lib/draco_decoder.wasm'))
-        .then(r => r.arrayBuffer())
-        .then(arrayBuffer => URL.createObjectURL(new File([arrayBuffer], 'draco.wasm', {type: 'application/wasm'})));
-
-    return { envImage, dracoJs, dracoWasm };
-};
-
-const initDropHandler = (canvas: HTMLCanvasElement, scene: Scene) => {
-    // add a 'choose file' button
-    const selector = document.createElement('input');
-    selector.setAttribute('id', 'file-selector');
-    selector.setAttribute('type', 'file');
-    selector.setAttribute('accept', '.gltf,.glb,.ply');
-    selector.onchange = () => {
-        const files = selector.files;
-        if (files.length > 0) {
-            const file = selector.files[0];
-            scene.loadModel(URL.createObjectURL(file), file.name);
-        }
-    };
-    document.getElementById('file-selector-container')?.appendChild(selector);
-
-    // also support user dragging and dropping a local glb file onto the canvas
-    CreateDropHandler(canvas, urls => {
-        const modelExtensions = ['.glb', '.gltf', '.ply']
-        const model = urls.find(url => modelExtensions.some(extension => url.filename.endsWith(extension)));
-        if (model) {
-            scene.loadModel(model.url, model.filename);
-        }
-    });
+    return shortcuts;
 };
 
 const main = async () => {
+    // root events object
+    const events = new Events();
+
+    // url
     const url = new URL(window.location.href);
 
-    const editorUI = new EditorUI();
+    // decode remote storage details
+    let remoteStorageDetails;
+    try {
+        remoteStorageDetails = JSON.parse(decodeURIComponent(url.searchParams.get('remoteStorage')));
+    } catch (e) { }
 
-    const { envImage, dracoJs, dracoWasm } = fetchStaticAssets();
+    // edit history
+    const editHistory = new EditHistory(events);
+
+    // editor ui
+    const editorUI = new EditorUI(events, !!remoteStorageDetails);
 
     // create the graphics device
-    const createPromise = createGraphicsDevice(editorUI.canvas, {
-        deviceTypes: (url.searchParams.has('webgpu') ? ['webgpu'] : []).concat(['webgl2']),
-        glslangUrl: makeUrl('lib/glslang/glslang.js'),
-        twgslUrl: makeUrl('lib/twgsl/twgsl.js'),
+    const graphicsDevice = await createGraphicsDevice(editorUI.canvas, {
+        deviceTypes: ['webgl2'],
         antialias: false,
         depth: false,
         stencil: false,
-        xrCompatible: true,
+        xrCompatible: false,
         powerPreference: 'high-performance'
     });
 
-    // monkey-patch materials for premul alpha rendering
-    initMaterials();
-
-    // wait for async loads to complete
-    const [dracoJsURL, dracoWasmURL, envImageURL, graphicsDevice] = await Promise.all([dracoJs, dracoWasm, envImage, createPromise]);
-
-    // initialize draco
-    dracoInitialize({
-        jsUrl: dracoJsURL,
-        wasmUrl: dracoWasmURL,
-        numWorkers: 2
-    });
-
-    // handle load param and ready promise for visual testing harness
-    const loadUrl = url.searchParams.get('load');
-    const decodedUrl = loadUrl && decodeURIComponent(loadUrl);
-
     const overrides = [
-        {
-            model: {
-                url: decodedUrl,
-                filename: decodedUrl
-            },
-            env: {
-                url: envImageURL
-            }
-        },
         getURLArgs()
     ];
 
@@ -147,19 +136,146 @@ const main = async () => {
 
     // construct the manager
     const scene = new Scene(
+        events,
         sceneConfig,
         editorUI.canvas,
         graphicsDevice
     );
 
-    registerEvents(scene, editorUI);
+    // colors
+    const bgClr = new Color();
+    const selectedClr = new Color();
+    const unselectedClr = new Color();
+    const lockedClr = new Color();
 
-    initDropHandler(editorUI.canvas, scene);
+    const setClr = (target: Color, value: Color, event: string) => {
+        if (!target.equals(value)) {
+            target.copy(value);
+            events.fire(event, target);
+        }
+    };
 
-    // load async models
-    await scene.load();
+    const setBgClr = (clr: Color) => {
+        setClr(bgClr, clr, 'bgClr');
+    };
+    const setSelectedClr = (clr: Color) => {
+        setClr(selectedClr, clr, 'selectedClr');
+    };
+    const setUnselectedClr = (clr: Color) => {
+        setClr(unselectedClr, clr, 'unselectedClr');
+    };
+    const setLockedClr = (clr: Color) => {
+        setClr(lockedClr, clr, 'lockedClr');
+    };
+
+    events.on('setBgClr', (clr: Color) => {
+        setBgClr(clr);
+    });
+    events.on('setSelectedClr', (clr: Color) => {
+        setSelectedClr(clr);
+    });
+    events.on('setUnselectedClr', (clr: Color) => {
+        setUnselectedClr(clr);
+    });
+    events.on('setLockedClr', (clr: Color) => {
+        setLockedClr(clr);
+    });
+
+    events.function('bgClr', () => {
+        return bgClr;
+    });
+    events.function('selectedClr', () => {
+        return selectedClr;
+    });
+    events.function('unselectedClr', () => {
+        return unselectedClr;
+    });
+    events.function('lockedClr', () => {
+        return lockedClr;
+    });
+
+    events.on('bgClr', (clr: Color) => {
+        const cnv = (v: number) => `${Math.max(0, Math.min(255, (v * 255))).toFixed(0)}`;
+        document.body.style.backgroundColor = `rgba(${cnv(clr.r)},${cnv(clr.g)},${cnv(clr.b)},1)`;
+    });
+    events.on('selectedClr', (clr: Color) => {
+        scene.forceRender = true;
+    });
+    events.on('unselectedClr', (clr: Color) => {
+        scene.forceRender = true;
+    });
+    events.on('lockedClr', (clr: Color) => {
+        scene.forceRender = true;
+    });
+
+    // initialize colors from application config
+    const toColor = (value: { r: number, g: number, b: number, a: number }) => {
+        return new Color(value.r, value.g, value.b, value.a);
+    };
+    setBgClr(toColor(sceneConfig.bgClr));
+    setSelectedClr(toColor(sceneConfig.selectedClr));
+    setUnselectedClr(toColor(sceneConfig.unselectedClr));
+    setLockedClr(toColor(sceneConfig.lockedClr));
+
+    // create the mask selection canvas
+    const maskCanvas = document.createElement('canvas');
+    const maskContext = maskCanvas.getContext('2d');
+    maskCanvas.setAttribute('id', 'mask-canvas');
+    maskContext.globalCompositeOperation = 'copy';
+
+    const mask = {
+        canvas: maskCanvas,
+        context: maskContext
+    };
+
+    // tool manager
+    const toolManager = new ToolManager(events);
+    toolManager.register('rectSelection', new RectSelection(events, editorUI.toolsContainer.dom));
+    toolManager.register('brushSelection', new BrushSelection(events, editorUI.toolsContainer.dom, mask));
+    toolManager.register('polygonSelection', new PolygonSelection(events, editorUI.toolsContainer.dom, mask));
+    toolManager.register('lassoSelection', new LassoSelection(events, editorUI.toolsContainer.dom, mask));
+    toolManager.register('sphereSelection', new SphereSelection(events, scene, editorUI.canvasContainer));
+    toolManager.register('boxSelection', new BoxSelection(events, scene, editorUI.canvasContainer));
+    toolManager.register('move', new MoveTool(events, scene));
+    toolManager.register('rotate', new RotateTool(events, scene));
+    toolManager.register('scale', new ScaleTool(events, scene));
+
+    editorUI.toolsContainer.dom.appendChild(maskCanvas);
 
     window.scene = scene;
-}
+
+    registerEditorEvents(events, editHistory, scene);
+    registerSelectionEvents(events, scene);
+    registerTimelineEvents(events);
+    registerCameraPosesEvents(events);
+    registerTransformHandlerEvents(events);
+    registerPlySequenceEvents(events);
+    registerPublishEvents(events);
+    registerDocEvents(scene, events);
+    registerRenderEvents(scene, events);
+    initShortcuts(events);
+    initFileHandler(scene, events, editorUI.appContainer.dom, remoteStorageDetails);
+
+    // load async models
+    scene.start();
+
+    // handle load params
+    const loadList = url.searchParams.getAll('load');
+    for (const value of loadList) {
+        await events.invoke('import', decodeURIComponent(value));
+    }
+
+    // handle OS-based file association in PWA mode
+    if ('launchQueue' in window) {
+        window.launchQueue.setConsumer(async (launchParams: LaunchParams) => {
+            for (const file of launchParams.files) {
+                const blob = await file.getFile();
+                const url = URL.createObjectURL(blob);
+                await events.invoke('import', url, file.name);
+                URL.revokeObjectURL(url);
+            }
+        });
+    }
+};
 
 export { main };

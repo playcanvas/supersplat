@@ -1,45 +1,48 @@
 import {
+    EVENT_POSTRENDER_LAYER,
+    EVENT_PRERENDER_LAYER,
     LAYERID_DEPTH,
+    SORTMODE_NONE,
     BoundingBox,
+    CameraComponent,
     Color,
     Entity,
-    EventHandler,
     Layer,
-    Mouse,
-    TouchDevice,
-    WebglGraphicsDevice,
     GraphicsDevice
 } from 'playcanvas';
-import { MiniStats } from 'playcanvas-extras';
-import { PCApp } from './pc-app';
-import { Element, ElementType, ElementTypeList } from './element';
-import { SceneState } from './scene-state';
-import { SceneConfig, XRModeConfig } from './scene-config';
+
 import { AssetLoader } from './asset-loader';
-import { Model } from './model';
-import { Splat } from './splat';
 import { Camera } from './camera';
-import { Multiframe } from './multiframe';
-import { Oit } from './oit';
-import { CustomShadow as Shadow } from './custom-shadow';
-// import { VsmShadow as Shadow } from './vsm-shadow';
-// import { BakedShadow as Shadow } from './baked-shadow';
-import { HotSpots } from './hotspots';
-import { XRMode } from './xr-mode';
+import { DataProcessor } from './data-processor';
+import { Element, ElementType, ElementTypeList } from './element';
+import { Events } from './events';
+import { InfiniteGrid as Grid } from './infinite-grid';
+import { Outline } from './outline';
+import { PCApp } from './pc-app';
+import { SceneConfig } from './scene-config';
+import { SceneState } from './scene-state';
+import { Splat } from './splat';
+import { SplatOverlay } from './splat-overlay';
+import { Underlay } from './underlay';
 
-import { registerPlyParser } from 'playcanvas-extras';
-
-const bound = new BoundingBox();
-
-class Scene extends EventHandler {
+class Scene {
+    events: Events;
     config: SceneConfig;
     canvas: HTMLCanvasElement;
     app: PCApp;
+    backgroundLayer: Layer;
     shadowLayer: Layer;
+    debugLayer: Layer;
+    overlayLayer: Layer;
+    gizmoLayer: Layer;
     sceneState = [new SceneState(), new SceneState()];
     elements: Element[] = [];
-    bound = new BoundingBox();
+    boundStorage = new BoundingBox();
+    boundDirty = true;
     forceRender = false;
+
+    lockedRenderMode = false;
+    lockedRender = false;
 
     canvasResize: {width: number; height: number} | null = null;
     targetSize = {
@@ -47,37 +50,36 @@ class Scene extends EventHandler {
         height: 0
     };
 
+    dataProcessor: DataProcessor;
     assetLoader: AssetLoader;
     camera: Camera;
-    multiframe: Multiframe;
-    oit: Oit;
-    shadow: Shadow;
-    hotSpots: HotSpots;
-    xrMode: XRMode;
+    splatOverlay: SplatOverlay;
+    grid: Grid;
+    outline: Outline;
+    underlay: Underlay;
 
     contentRoot: Entity;
     cameraRoot: Entity;
 
     constructor(
+        events: Events,
         config: SceneConfig,
         canvas: HTMLCanvasElement,
         graphicsDevice: GraphicsDevice
     ) {
-        super();
-
+        this.events = events;
         this.config = config;
         this.canvas = canvas;
 
         // configure the playcanvas application. we render to an offscreen buffer so require
         // only the simplest of backbuffers.
-        this.app = new PCApp(canvas, {
-            mouse: new Mouse(canvas),
-            touch: new TouchDevice(canvas),
-            graphicsDevice: graphicsDevice
-        });
+        this.app = new PCApp(canvas, { graphicsDevice });
 
-        // register splat
-        registerPlyParser(this.app);
+        // only render the scene when instructed
+        this.app.autoRender = false;
+        // @ts-ignore
+        this.app._allowResize = false;
+        this.app.scene.clusteredLightingEnabled = false;
 
         // hack: disable lightmapper first bake until we expose option for this
         // @ts-ignore
@@ -85,11 +87,6 @@ class Scene extends EventHandler {
 
         // @ts-ignore
         this.app.loader.getHandler('texture').imgParser.crossOrigin = 'anonymous';
-
-        // only render the scene when instructed
-        this.app.autoRender = false;
-        this.app._allowResize = false;
-        this.app.scene.clusteredLightingEnabled = false;
 
         // this is required to get full res AR mode backbuffer
         this.app.graphicsDevice.maxPixelRatio = window.devicePixelRatio;
@@ -136,19 +133,65 @@ class Scene extends EventHandler {
             this.forceRender = true;
         });
 
-        // create a semitrans shadow layer. this layer contains shadow caster
-        // scene mesh instances, shadow-casting virtual light, shadow catching
-        // plane geometry and the main camera.
+        // fire pre and post render events on the camera
+        this.app.scene.on(EVENT_PRERENDER_LAYER, (camera: CameraComponent, layer: Layer, transparent: boolean) => {
+            camera.fire('preRenderLayer', layer, transparent);
+        });
+
+        this.app.scene.on(EVENT_POSTRENDER_LAYER, (camera: CameraComponent, layer: Layer, transparent: boolean) => {
+            camera.fire('postRenderLayer', layer, transparent);
+        });
+
+        // background layer
+        this.backgroundLayer = new Layer({
+            enabled: true,
+            name: 'Background Layer',
+            opaqueSortMode: SORTMODE_NONE,
+            transparentSortMode: SORTMODE_NONE
+        });
+
+        // shadow layer
+        // this layer contains shadow caster scene mesh instances, shadow-casting
+        // virtual light, shadow catching plane geometry and the main camera.
         this.shadowLayer = new Layer({
             name: 'Shadow Layer'
+        });
+
+        // debug layer
+        this.debugLayer = new Layer({
+            enabled: true,
+            name: 'Debug Layer',
+            opaqueSortMode: SORTMODE_NONE,
+            transparentSortMode: SORTMODE_NONE
+        });
+
+        // overlay layer
+        this.overlayLayer = new Layer({
+            name: 'Overlay',
+            clearDepthBuffer: false,
+            opaqueSortMode: SORTMODE_NONE,
+            transparentSortMode: SORTMODE_NONE
+        });
+
+        // gizmo layer
+        this.gizmoLayer = new Layer({
+            name: 'Gizmo',
+            clearDepthBuffer: true,
+            opaqueSortMode: SORTMODE_NONE,
+            transparentSortMode: SORTMODE_NONE
         });
 
         const layers = this.app.scene.layers;
         const worldLayer = layers.getLayerByName('World');
         const idx = layers.getOpaqueIndex(worldLayer);
+        layers.insert(this.backgroundLayer, idx);
         layers.insert(this.shadowLayer, idx + 1);
+        layers.insert(this.debugLayer, idx + 1);
+        layers.push(this.overlayLayer);
+        layers.push(this.gizmoLayer);
 
-        this.assetLoader = new AssetLoader(this.app.assets, this.app.graphicsDevice.maxAnisotropy);
+        this.dataProcessor = new DataProcessor(this.app.graphicsDevice);
+        this.assetLoader = new AssetLoader(this.app, events, this.app.graphicsDevice.maxAnisotropy);
 
         // create root entities
         this.contentRoot = new Entity('contentRoot');
@@ -161,87 +204,24 @@ class Scene extends EventHandler {
         this.camera = new Camera();
         this.add(this.camera);
 
-        // this.shadow = new Shadow();
-        // this.add(this.shadow);
+        this.splatOverlay = new SplatOverlay();
+        this.add(this.splatOverlay);
 
-        this.hotSpots = new HotSpots();
-        this.add(this.hotSpots);
+        this.grid = new Grid();
+        this.add(this.grid);
 
-        if (config.camera?.oit) {
-            this.oit = new Oit();
-            this.add(this.oit);
-        }
-
-        if (config.camera?.multiframe) {
-            this.multiframe = new Multiframe(this.graphicsDevice as WebglGraphicsDevice, this.camera.entity.camera);
-            this.add(this.multiframe);
-        }
-
-        if (config.xr.mode === XRModeConfig.placement && this.app.xr.supported) {
-            this.xrMode = new XRMode();
-            this.add(this.xrMode);
-        }
-
-        if (config.debug?.ministats) {
-            /* eslint-disable no-new */
-            new MiniStats(this.app, null);
-        }
+        this.outline = new Outline();
+        this.add(this.outline);
+        this.underlay = new Underlay();
+        this.add(this.underlay);
     }
 
-    async load() {
-        const config = this.config;
-
-        const modelStartTime = Date.now();
-
-        // load scene assets
-        const promises: Promise<any>[] = [];
-
-        // load model
-        if (config.model.url) {
-            promises.push(this.assetLoader.loadModel({
-                url: config.model.url,
-                filename: config.model.filename
-            }));
-        };
-
-        // load env
-        if (config.env) {
-            promises.push(this.assetLoader.loadEnv({url: config.env.url}));
-        }
-
-        const elements = await Promise.all(promises);
-
-        // add them to the scene
-        elements.forEach(e => this.add(e));
-
-        // add hotspots
-        if (config.hotSpots) {
-            config.hotSpots.forEach(hotSpot => {
-                this.hotSpots.addHotSpot(hotSpot.name, hotSpot.position.x, hotSpot.position.y, hotSpot.position.z);
-            });
-        }
-
-        this.updateBound();
-        this.camera.focus();
-
+    start() {
         // start the app
         this.app.start();
     }
 
-    async loadModel(url: string, filename: string) {
-        const model = await this.assetLoader.loadModel({ url, filename });
-        this.add(model);
-        this.updateBound();
-        this.camera.focus();
-    }
-
     clear() {
-        const models = this.getElementsByType(ElementType.model);
-        models.forEach((model) => {
-            this.remove(model);
-            (model as Model).destroy();
-        });
-
         const splats = this.getElementsByType(ElementType.splat);
         splats.forEach((splat) => {
             this.remove(splat);
@@ -261,38 +241,48 @@ class Scene extends EventHandler {
             this.forEachElement(e => e !== element && e.onAdded(element));
 
             // notify listeners
-            this.fire('element:added', element);
+            this.events.fire('scene.elementAdded', element);
         }
     }
 
     // remove an element from the scene
     remove(element: Element) {
         if (element.scene === this) {
+            // remove from list
+            this.elements.splice(this.elements.indexOf(element), 1);
+
             // notify listeners
-            this.fire('element:removed', element);
+            this.events.fire('scene.elementRemoved', element);
 
             // notify all elements of scene removal
-            this.forEachElement(e => e !== element && e.onRemoved(element));
+            this.forEachElement(e => e.onRemoved(element));
 
             element.remove();
             element.scene = null;
-            this.elements.splice(this.elements.indexOf(element), 1);
         }
     }
 
-    // get scene bounds
-    private updateBound() {
-        let valid = false;
-        this.forEachElement(e => {
-            if (e.calcBound(bound)) {
-                if (!valid) {
-                    valid = true;
-                    this.bound.copy(bound);
-                } else {
-                    this.bound.add(bound);
+    // get the scene bound
+    get bound() {
+        if (this.boundDirty) {
+            let valid = false;
+            this.forEachElement((e) => {
+                const bound = e.worldBound;
+                if (bound) {
+                    if (!valid) {
+                        valid = true;
+                        this.boundStorage.copy(bound);
+                    } else {
+                        this.boundStorage.add(bound);
+                    }
                 }
-            }
-        });
+            });
+
+            this.boundDirty = false;
+            this.events.fire('scene.boundChanged', this.boundStorage);
+        }
+
+        return this.boundStorage;
     }
 
     getElementsByType(elementType: ElementType) {
@@ -311,6 +301,9 @@ class Scene extends EventHandler {
         // allow elements to update
         this.forEachElement(e => e.onUpdate(deltaTime));
 
+        // fire global update
+        this.events.fire('update', deltaTime);
+
         // fire a 'serialize' event which listers will use to store their state. we'll use
         // this to decide if the view has changed and so requires rendering.
         const i = this.app.frame % 2;
@@ -325,21 +318,18 @@ class Scene extends EventHandler {
         const all = new Set([...result.added, ...result.removed, ...result.moved, ...result.changed]);
 
         // compare with previously serialized
-        if (!this.app.renderNextFrame) {
+        if (this.lockedRenderMode) {
+            this.app.renderNextFrame = this.lockedRender;
+            this.lockedRender = false;
+        } else if (!this.app.renderNextFrame) {
             this.app.renderNextFrame = this.forceRender || all.size > 0;
         }
         this.forceRender = false;
 
-        // update scene bound if models were updated
-        if (all.has(ElementType.model)) {
-            this.updateBound();
-            this.fire('bound:updated');
-        }
-
         // raise per-type update events
-        ElementTypeList.forEach(type => {
+        ElementTypeList.forEach((type) => {
             if (all.has(type)) {
-                this.fire(`updated:${type}`);
+                this.events.fire(`updated:${type}`);
             }
         });
 
@@ -360,17 +350,42 @@ class Scene extends EventHandler {
 
         this.forEachElement(e => e.onPreRender());
 
-        this.fire('prerender');
+        this.events.fire('prerender', this.camera.entity.getWorldTransform());
 
         // debug - display scene bound
         if (this.config.debug.showBound) {
-            this.app.drawWireAlignedBox(this.bound.getMin(), this.bound.getMax(), Color.RED);
+            // draw element bounds
+            this.forEachElement((e: Element) => {
+                if (e.type === ElementType.splat) {
+                    const splat = e as Splat;
+
+                    const local = splat.localBound;
+                    this.app.drawWireAlignedBox(
+                        local.getMin(),
+                        local.getMax(),
+                        Color.RED,
+                        true,
+                        undefined,
+                        splat.entity.getWorldTransform());
+
+                    const world = splat.worldBound;
+                    this.app.drawWireAlignedBox(
+                        world.getMin(),
+                        world.getMax(),
+                        Color.GREEN);
+                }
+            });
+
+            // draw scene bound
+            this.app.drawWireAlignedBox(this.bound.getMin(), this.bound.getMax(), Color.BLUE);
         }
     }
 
     private onPostRender() {
         this.forEachElement(e => e.onPostRender());
+
+        this.events.fire('postrender');
     }
 }
 
-export {SceneConfig, Scene};
+export { SceneConfig, Scene };

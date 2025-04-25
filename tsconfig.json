@@ -1,21 +1,19 @@
 {
     "compilerOptions": {
         "noImplicitAny": true,
-        "target": "es6",
-        "lib": ["es2019", "dom"],
-        "allowSyntheticDefaultImports": true,
+        "target": "es2022",
+        "lib": ["es2022", "dom", "WebWorker"],
         "sourceMap": true,
         "inlineSources": true,
-        "module": "es6",
+        "module": "es2020",
         "moduleResolution": "node",
         "resolveJsonModule": true,
         "baseUrl": ".",
         "paths": {
-            "playcanvas": ["./submodules/engine/build/playcanvas.mjs"],
-            "playcanvas-extras": ["./submodules/engine/build/playcanvas-extras.mjs"],
+            "playcanvas": ["node_modules/playcanvas/build/playcanvas"],
             "pcui": ["node_modules/@playcanvas/pcui"]
         }
     },
-    "include": ["./src/*.ts","./submodules/engine/extras/*/*.ts", "src/ui/control-panel.ts"],
-    "exclude": ["node_modules", "**/*.js", "dist"]
+    "include": ["./src/**/*.ts"],
+    "exclude": ["node_modules", "dist", "submodules"]
 }

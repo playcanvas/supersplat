@@ -1,51 +1,52 @@
-# Super Splat
+# SuperSplat - 3D Gaussian Splat Editor
 
-The PlayCanvas super-splat tool is used to edit gaussian splat PLY files.
+| [SuperSplat Editor](https://superspl.at/editor) | [User Guide](https://github.com/playcanvas/supersplat/wiki) | [Forum](https://forum.playcanvas.com/) | [Discord](https://discord.gg/RSaMRzg) |
 
-<img width="1696" alt="super-splat" src="https://github.com/playcanvas/super-splat/assets/11276292/f86cb5a2-649c-49db-9ea2-aa85b5b40b27">
+SuperSplat is a free and open source tool for inspecting, editing, optimizing and publishing 3D Gaussian Splats. It is built on web technologies and runs in the browser, so there's nothing to download or install.
 
-See https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/ for more information on gaussian splats.
+A live version of this tool is available at: https://playcanvas.com/supersplat/editor
 
-A live version of this tool is available at:
-https://playcanvas.com/super-splat
+![image](https://github.com/user-attachments/assets/b6cbb5cc-d3cc-4385-8c71-ab2807fd4fba)
 
-## Loading Scenes
-
-To load a gaussian splat PLY file, drag & drop it onto the application page. Alternatively click the "Choose file" button bottom left.
-
-If you disable the "Load all PLY data" option before loading the file, then the PLY data not required by the editor is excluded (for example the spherical harmonic data). This can save on browser memory.
-
-## Editing Scenes
-
-Once a PLY file is loaded you can use the selection tools to modify splat selection and then delete splats from the scene.
-
-You can also reorient the scene using the SCENE Position/Rotation/Scale controls.
-
-## Saving results
-
-Once you're done editing the scene, click the Export -> "Ply file" button to export the edited splat scene to the local file system.
-
-## Current limitations
-
-This editor is in beta and so currently has a number of limitations:
-- Only supports gaussian splat PLY files
-- Spherical harmonic data is not rotated on export
+To learn more about using SuperSplat, please refer to the [User Guide](https://github.com/playcanvas/supersplat/wiki).
 
 ## Local Development
 
-The engine's splat rendering code is in a state of flux so we currently reference it by git submodule.
+To initialize a local development environment for SuperSplat, ensure you have [Node.js](https://nodejs.org/) 18 or later installed. Follow these steps:
 
-The steps required to clone the repo and run a local development server are as follows:
-```
-git clone https://github.com/playcanvas/super-splat.git
-cd super-splat
-git submodule update --init
-npm i --prefix submodules/engine
-npm run build --prefix submodules/engine
-npm i
-npm run develop
-```
+1. Clone the repository:
 
-The last command `npm run develop` will build and run a local version of the editor on port 3000. Changes to the source are detected and the editor is automatically rebuilt.
+   ```sh
+   git clone https://github.com/playcanvas/supersplat.git
+   cd supersplat
+   ```
 
-To access the local editor instance, open a browser tab and navigate to `http://localhost:3000`.
+2. Install dependencies:
+
+   ```sh
+   git submodule update --init
+   npm install
+   ```
+
+3. Build SuperSplat and start a local web server:
+
+   ```sh
+   npm run develop
+   ```
+
+4. Open a web browser at `http://localhost:3000`.
+
+When changes to the source are detected, SuperSplat is rebuilt automatically. Simply refresh your browser to see your changes.
+
+When running your local build of SuperSplat in Chrome, we recommend you have the Developer Tools panel open. Also:
+
+1. Visit the Network tab and check `Disable cache`.
+2. Visit the Application tab, select `Service workers` on the left and then check `Update on reload` and `Bypass for network`. 
+
+## Contributors
+
+SuperSplat is made possible by our amazing open source community:
+
+<a href="https://github.com/playcanvas/supersplat/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=playcanvas/supersplat" />
+</a>

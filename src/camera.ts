@@ -3,26 +3,32 @@ import {
     ADDRESS_CLAMP_TO_EDGE,
     FILTER_NEAREST,
     PIXELFORMAT_RGBA8,
-    PIXELFORMAT_RGBA16F,
     PIXELFORMAT_DEPTH,
-    drawTexture,
-    Color,
+    PROJECTION_ORTHOGRAPHIC,
+    PROJECTION_PERSPECTIVE,
+    TONEMAP_NONE,
+    TONEMAP_ACES,
+    TONEMAP_ACES2,
+    TONEMAP_FILMIC,
+    TONEMAP_HEJL,
+    TONEMAP_LINEAR,
+    TONEMAP_NEUTRAL,
+    BoundingBox,
     Entity,
-    EventHandler,
+    Picker,
+    Plane,
+    Ray,
     RenderTarget,
     Texture,
     Vec3,
-    WebglGraphicsDevice,
-    TONEMAP_LINEAR,
-    TONEMAP_FILMIC,
-    TONEMAP_HEJL,
-    TONEMAP_ACES,
-    TONEMAP_ACES2
+    WebglGraphicsDevice
 } from 'playcanvas';
-import {Element, ElementType} from './element';
-import {TweenValue} from './tween-value';
-import {Serializer} from './serializer';
-import {MouseController, TouchController} from './controllers';
+
+import { PointerController } from './controllers';
+import { Element, ElementType } from './element';
+import { Serializer } from './serializer';
+import { Splat } from './splat';
+import { TweenValue } from './tween-value';
 
 // calculate the forward vector given azimuth and elevation
 const calcForwardVec = (result: Vec3, azim: number, elev: number) => {
@@ -38,41 +44,105 @@ const calcForwardVec = (result: Vec3, azim: number, elev: number) => {
 // work globals
 const forwardVec = new Vec3();
 const cameraPosition = new Vec3();
+const plane = new Plane();
+const ray = new Ray();
 const vec = new Vec3();
+const vecb = new Vec3();
+const va = new Vec3();
 
 // modulo dealing with negative numbers
 const mod = (n: number, m: number) => ((n % m) + m) % m;
 
 class Camera extends Element {
-    mouseController: MouseController;
-    touchController: TouchController;
+    controller: PointerController;
     entity: Entity;
-    focalPointTween = new TweenValue({x: 0, y: 0.5, z: 0});
-    azimElevTween = new TweenValue({azim: 30, elev: -15});
-    distanceTween = new TweenValue({distance: 2});
+    focalPointTween = new TweenValue({ x: 0, y: 0.5, z: 0 });
+    azimElevTween = new TweenValue({ azim: 30, elev: -15 });
+    distanceTween = new TweenValue({ distance: 1 });
 
     minElev = -90;
     maxElev = 90;
 
-    events = new EventHandler();
+    sceneRadius = 1;
 
-    autoRotateTimer = 0;
-    autoRotateDelayValue = 0;
-    focusDistance: number;
+    flySpeed = 5;
+
+    picker: Picker;
+
+    workRenderTarget: RenderTarget;
+
+    // overridden target size
+    targetSize: { width: number, height: number } = null;
+
+    suppressFinalBlit = false;
+
+    renderOverlays = true;
+
+    updateCameraUniforms: () => void;
 
     constructor() {
         super(ElementType.camera);
         // create the camera entity
         this.entity = new Entity('Camera');
-        this.entity.addComponent('camera', {
-            fov: 60,
-            clearColor: new Color(0, 0, 0, 0),
-            frustumCulling: true
-        });
+        this.entity.addComponent('camera');
 
         // NOTE: this call is needed for refraction effect to work correctly, but
         // it slows rendering and should only be made when required.
         // this.entity.camera.requestSceneColorMap(true);
+    }
+
+    // ortho
+    set ortho(value: boolean) {
+        if (value !== this.ortho) {
+            this.entity.camera.projection = value ? PROJECTION_ORTHOGRAPHIC : PROJECTION_PERSPECTIVE;
+            this.scene.events.fire('camera.ortho', value);
+        }
+    }
+
+    get ortho() {
+        return this.entity.camera.projection === PROJECTION_ORTHOGRAPHIC;
+    }
+
+    // fov
+    set fov(value: number) {
+        this.entity.camera.fov = value;
+    }
+
+    get fov() {
+        return this.entity.camera.fov;
+    }
+
+    // tonemapping
+    set tonemapping(value: string) {
+        const mapping: Record<string, number> = {
+            none: TONEMAP_NONE,
+            linear: TONEMAP_LINEAR,
+            neutral: TONEMAP_NEUTRAL,
+            aces: TONEMAP_ACES,
+            aces2: TONEMAP_ACES2,
+            filmic: TONEMAP_FILMIC,
+            hejl: TONEMAP_HEJL
+        };
+
+        const tvalue = mapping[value];
+
+        if (tvalue !== undefined && tvalue !== this.entity.camera.toneMapping) {
+            this.entity.camera.toneMapping = tvalue;
+            this.scene.events.fire('camera.tonemapping', value);
+        }
+    }
+
+    get tonemapping() {
+        switch (this.entity.camera.toneMapping) {
+            case TONEMAP_NONE: return 'none';
+            case TONEMAP_LINEAR: return 'linear';
+            case TONEMAP_NEUTRAL: return 'neutral';
+            case TONEMAP_ACES: return 'aces';
+            case TONEMAP_ACES2: return 'aces2';
+            case TONEMAP_FILMIC: return 'filmic';
+            case TONEMAP_HEJL: return 'hejl';
+        }
+        return 'none';
     }
 
     // near clip
@@ -99,10 +169,6 @@ class Camera extends Element {
         return new Vec3(t.x, t.y, t.z);
     }
 
-    setFocalPoint(point: Vec3, dampingFactorFactor: number = 1) {
-        this.focalPointTween.goto(point, dampingFactorFactor * this.scene.config.controls.dampingFactor);
-    }
-
     // azimuth, elevation
     get azimElev() {
         return this.azimElevTween.target;
@@ -120,13 +186,17 @@ class Camera extends Element {
         return this.distanceTween.target.distance;
     }
 
+    setFocalPoint(point: Vec3, dampingFactorFactor: number = 1) {
+        this.focalPointTween.goto(point, dampingFactorFactor * this.scene.config.controls.dampingFactor);
+    }
+
     setAzimElev(azim: number, elev: number, dampingFactorFactor: number = 1) {
         // clamp
         azim = mod(azim, 360);
         elev = Math.max(this.minElev, Math.min(this.maxElev, elev));
 
         const t = this.azimElevTween;
-        t.goto({azim, elev}, dampingFactorFactor * this.scene.config.controls.dampingFactor);
+        t.goto({ azim, elev }, dampingFactorFactor * this.scene.config.controls.dampingFactor);
 
         // handle wraparound
         if (t.source.azim - azim < -180) {
@@ -134,23 +204,29 @@ class Camera extends Element {
         } else if (t.source.azim - azim > 180) {
             t.source.azim -= 360;
         }
+
+        // return to perspective mode on rotation
+        this.ortho = false;
     }
 
     setDistance(distance: number, dampingFactorFactor: number = 1) {
+        const controls = this.scene.config.controls;
+
         // clamp
-        distance = Math.max(this.scene.config.controls.minZoom, Math.min(this.scene.config.controls.maxZoom, distance));
+        distance = Math.max(controls.minZoom, Math.min(controls.maxZoom, distance));
 
         const t = this.distanceTween;
-        t.goto({distance}, dampingFactorFactor * this.scene.config.controls.dampingFactor);
+        t.goto({ distance }, dampingFactorFactor * controls.dampingFactor);
     }
 
-    // convert point (relative to camera focus point) to azimuth, elevation, distance
-    setOrientation(point: Vec3, dampingFactorFactor: number = 1.0) {
-        const distance = point.length();
-        const azim = Math.atan2(-point.x / distance, -point.z / distance) * math.RAD_TO_DEG;
-        const elev = Math.asin(point.y / distance) * math.RAD_TO_DEG;
+    setPose(position: Vec3, target: Vec3, dampingFactorFactor: number = 1) {
+        vec.sub2(target, position);
+        const l = vec.length();
+        const azim = Math.atan2(-vec.x / l, -vec.z / l) * math.RAD_TO_DEG;
+        const elev = Math.asin(vec.y / l) * math.RAD_TO_DEG;
+        this.setFocalPoint(target, dampingFactorFactor);
         this.setAzimElev(azim, elev, dampingFactorFactor);
-        this.setDistance(distance, dampingFactorFactor);
+        this.setDistance(l / this.sceneRadius * this.fovFactor, dampingFactorFactor);
     }
 
     // convert world to screen coordinate
@@ -160,73 +236,133 @@ class Camera extends Element {
 
     add() {
         this.scene.cameraRoot.addChild(this.entity);
-        this.entity.camera.layers = this.entity.camera.layers.concat([this.scene.shadowLayer.id]);
+        this.entity.camera.layers = this.entity.camera.layers.concat([
+            this.scene.shadowLayer.id,
+            this.scene.debugLayer.id,
+            this.scene.gizmoLayer.id
+        ]);
 
-        if (this.scene.config.camera.debug_render) {
-            this.entity.camera.setShaderPass(`debug_${this.scene.config.camera.debug_render}`);
+        if (this.scene.config.camera.debugRender) {
+            this.entity.camera.setShaderPass(`debug_${this.scene.config.camera.debugRender}`);
         }
 
-        this.mouseController = new MouseController(this);
-        this.touchController = new TouchController(this);
+        const target = document.getElementById('canvas-container');
+
+        this.controller = new PointerController(this, target);
 
         // apply scene config
         const config = this.scene.config;
         const controls = config.controls;
 
-        this.mouseController.enableOrbit = this.touchController.enableOrbit = controls.enableRotate;
-        this.mouseController.enablePan = this.touchController.enablePan = controls.enablePan;
-        this.mouseController.enableZoom = this.touchController.enableZoom = controls.enableZoom;
-
         // configure background
-        const clr = config.backgroundColor;
-        this.entity.camera.clearColor.set(clr.r, clr.g, clr.b, clr.a);
-
-        // initialize autorotate
-        this.autoRotateTimer = 0;
-        this.autoRotateDelayValue = controls.autoRotateInitialDelay;
+        this.entity.camera.clearColor.set(0, 0, 0, 0);
 
         this.minElev = (controls.minPolarAngle * 180) / Math.PI - 90;
         this.maxElev = (controls.maxPolarAngle * 180) / Math.PI - 90;
 
         // tonemapping
-        this.scene.app.scene.toneMapping = {
+        this.scene.camera.entity.camera.toneMapping = {
             linear: TONEMAP_LINEAR,
             filmic: TONEMAP_FILMIC,
             hejl: TONEMAP_HEJL,
             aces: TONEMAP_ACES,
-            aces2: TONEMAP_ACES2
+            aces2: TONEMAP_ACES2,
+            neutral: TONEMAP_NEUTRAL
         }[config.camera.toneMapping];
 
         // exposure
         this.scene.app.scene.exposure = config.camera.exposure;
 
+        this.fov = config.camera.fov;
+
         // initial camera position and orientation
         this.setAzimElev(controls.initialAzim, controls.initialElev, 0);
         this.setDistance(controls.initialZoom, 0);
+
+        // picker
+        const { width, height } = this.scene.targetSize;
+        this.picker = new Picker(this.scene.app, width, height);
+
+        // override buffer allocation to use our render target
+        this.picker.allocateRenderTarget = () => { };
+        this.picker.releaseRenderTarget = () => { };
+
+        this.scene.events.on('scene.boundChanged', this.onBoundChanged, this);
+
+        // prepare camera-specific uniforms
+        this.updateCameraUniforms = () => {
+            const device = this.scene.graphicsDevice;
+            const entity = this.entity;
+            const camera = entity.camera;
+
+            const set = (name: string, vec: Vec3) => {
+                device.scope.resolve(name).setValue([vec.x, vec.y, vec.z]);
+            };
+
+            // get frustum corners in world space
+            const points = camera.camera.getFrustumCorners(-100);
+            const worldTransform = entity.getWorldTransform();
+            for (let i = 0; i < points.length; i++) {
+                worldTransform.transformPoint(points[i], points[i]);
+            }
+
+            // near
+            if (camera.projection === PROJECTION_PERSPECTIVE) {
+                // perspective
+                set('near_origin', worldTransform.getTranslation());
+                set('near_x', Vec3.ZERO);
+                set('near_y', Vec3.ZERO);
+            } else {
+                // orthographic
+                set('near_origin', points[3]);
+                set('near_x', va.sub2(points[0], points[3]));
+                set('near_y', va.sub2(points[2], points[3]));
+            }
+
+            // far
+            set('far_origin', points[7]);
+            set('far_x', va.sub2(points[4], points[7]));
+            set('far_y', va.sub2(points[6], points[7]));
+        };
     }
 
     remove() {
-        this.mouseController.destroy();
-        this.mouseController = null;
-
-        this.touchController.destroy();
-        this.touchController = null;
+        this.controller.destroy();
+        this.controller = null;
 
         this.entity.camera.layers = this.entity.camera.layers.filter(layer => layer !== this.scene.shadowLayer.id);
         this.scene.cameraRoot.removeChild(this.entity);
+
+        // destroy doesn't exist on picker?
+        // this.picker.destroy();
+        this.picker = null;
+
+        this.scene.events.off('scene.boundChanged', this.onBoundChanged, this);
+    }
+
+    // handle the scene's bound changing. the camera must be configured to render
+    // the entire extents as well as possible.
+    // also update the existing camera distance to maintain the current view
+    onBoundChanged(bound: BoundingBox) {
+        const prevDistance = this.distanceTween.value.distance * this.sceneRadius;
+        this.sceneRadius = Math.max(1e-03, bound.halfExtents.length());
+        this.setDistance(prevDistance / this.sceneRadius, 0);
     }
 
     serialize(serializer: Serializer) {
-        const camera = this.entity.camera.camera;
-        serializer.pack(camera.fov);
         serializer.packa(this.entity.getWorldTransform().data);
-        serializer.pack(this.entity.camera.renderTarget?.width, this.entity.camera.renderTarget?.height);
+        serializer.pack(
+            this.fov,
+            this.tonemapping,
+            this.entity.camera.renderTarget?.width,
+            this.entity.camera.renderTarget?.height
+        );
     }
 
     // handle the viewer canvas resizing
     rebuildRenderTargets() {
-        const device = this.scene.graphicsDevice as WebglGraphicsDevice;
-        const {width, height} = this.scene.targetSize;
+        const device = this.scene.graphicsDevice;
+        const { width, height } = this.targetSize ?? this.scene.targetSize;
 
         const rt = this.entity.camera.renderTarget;
         if (rt && rt.width === width && rt.height === height) {
@@ -235,16 +371,19 @@ class Camera extends Element {
 
         // out with the old
         if (rt) {
-            rt.colorBuffer.destroy();
-            rt.depthBuffer.destroy();
+            rt.destroyTextureBuffers();
             rt.destroy();
+
+            this.workRenderTarget.destroy();
+            this.workRenderTarget = null;
         }
 
-        const createTexture = (width: number, height: number, format: number) => {
+        const createTexture = (name: string, width: number, height: number, format: number) => {
             return new Texture(device, {
-                width: width,
-                height: height,
-                format: format,
+                name,
+                width,
+                height,
+                format,
                 mipmaps: false,
                 minFilter: FILTER_NEAREST,
                 magFilter: FILTER_NEAREST,
@@ -254,38 +393,35 @@ class Camera extends Element {
         };
 
         // in with the new
-        const pixelFormat = this.scene.config.camera?.oit ? PIXELFORMAT_RGBA16F : PIXELFORMAT_RGBA8;
-        const colorBuffer = createTexture(width, height, pixelFormat);
-        const depthBuffer = createTexture(width, height, PIXELFORMAT_DEPTH);
+        const colorBuffer = createTexture('cameraColor', width, height, PIXELFORMAT_RGBA8);
+        const depthBuffer = createTexture('cameraDepth', width, height, PIXELFORMAT_DEPTH);
         const renderTarget = new RenderTarget({
-            colorBuffer: colorBuffer,
-            depthBuffer: depthBuffer,
+            colorBuffer,
+            depthBuffer,
             flipY: false,
-            samples: this.scene.config.camera.multisample ? device.maxSamples : 1,
             autoResolve: false
         });
         this.entity.camera.renderTarget = renderTarget;
-        this.entity.camera.camera.horizontalFov = width < height;
+        this.entity.camera.horizontalFov = width > height;
+
+        const workColorBuffer = createTexture('workColor', width, height, PIXELFORMAT_RGBA8);
+
+        // create pick mode render target (reuse color buffer)
+        this.workRenderTarget = new RenderTarget({
+            colorBuffer: workColorBuffer,
+            depth: false,
+            autoResolve: false
+        });
+
+        // set picker render target
+        this.picker.renderTarget = this.workRenderTarget;
+
+        this.scene.events.fire('camera.resize', { width, height });
     }
 
     onUpdate(deltaTime: number) {
-        const config = this.scene.config;
-
-        // auto rotate
-        if (config.controls.autoRotate) {
-            if (this.autoRotateDelayValue > 0) {
-                this.autoRotateDelayValue = Math.max(0, this.autoRotateDelayValue - deltaTime);
-                this.autoRotateTimer = 0;
-            } else {
-                this.autoRotateTimer += deltaTime;
-                const rotateSpeed = Math.min(1, Math.pow(this.autoRotateTimer * 0.5 - 1, 5) + 1); // soften the initial rotation speedup
-                this.setAzimElev(
-                    this.azim + config.controls.autoRotateSpeed * 10 * deltaTime * rotateSpeed,
-                    this.elevation,
-                    0
-                );
-            }
-        }
+        // controller update
+        this.controller.update(deltaTime);
 
         // update underlying values
         this.focalPointTween.update(deltaTime);
@@ -297,7 +433,7 @@ class Camera extends Element {
 
         calcForwardVec(forwardVec, azimElev.azim, azimElev.elev);
         cameraPosition.copy(forwardVec);
-        cameraPosition.mulScalar(this.focusDistance * (config.camera.dollyZoom ? distance.distance : 1.0));
+        cameraPosition.mulScalar(distance.distance * this.sceneRadius / this.fovFactor);
         cameraPosition.add(this.focalPointTween.value);
 
         this.entity.setLocalPosition(cameraPosition);
@@ -305,8 +441,9 @@ class Camera extends Element {
 
         this.fitClippingPlanes(this.entity.getLocalPosition(), this.entity.forward);
 
-        this.entity.camera.fov = config.camera.fov * (config.camera.dollyZoom ? 1.0 : distance.distance);
-        this.entity.camera.camera._updateViewProjMat();
+        const { camera } = this.entity;
+        camera.orthoHeight = this.distanceTween.value.distance * this.sceneRadius / this.fovFactor * (this.fov / 90) * (camera.horizontalFov ? this.scene.targetSize.height / this.scene.targetSize.width : 1);
+        camera.camera._updateViewProjMat();
     }
 
     fitClippingPlanes(cameraPosition: Vec3, forwardVec: Vec3) {
@@ -316,59 +453,216 @@ class Camera extends Element {
         vec.sub2(bound.center, cameraPosition);
         const dist = vec.dot(forwardVec);
 
-        this.far = dist + boundRadius;
-        // if camera is placed inside the sphere bound calculate near based far
-        this.near = Math.max(0.001, dist < boundRadius ? this.far / 1024 : dist - boundRadius);
+        if (dist > 0) {
+            this.far = dist + boundRadius;
+            // if camera is placed inside the sphere bound calculate near based far
+            this.near = Math.max(1e-6, dist < boundRadius ? this.far / (1024 * 16) : dist - boundRadius);
+        } else {
+            // if the scene is behind the camera
+            this.far = boundRadius * 2;
+            this.near = this.far / (1024 * 16);
+        }
     }
 
     onPreRender() {
         this.rebuildRenderTargets();
+        this.updateCameraUniforms();
     }
 
     onPostRender() {
-        // const device = this.scene.graphicsDevice as WebglGraphicsDevice;
+        const device = this.scene.graphicsDevice as WebglGraphicsDevice;
         const renderTarget = this.entity.camera.renderTarget;
 
         // resolve msaa buffer
-        if (renderTarget._samples > 1) {
+        if (renderTarget.samples > 1) {
             renderTarget.resolve(true, false);
         }
 
-        // if multiframe isn't enabled (otherwise multiframe element will handle this)
-        if (!this.scene.config.camera?.multiframe) {
-            const device = this.scene.graphicsDevice as WebglGraphicsDevice;
-
-            // copy render target
-            drawTexture(this.scene.graphicsDevice, renderTarget.colorBuffer, null);
+        // copy render target
+        if (!this.suppressFinalBlit) {
+            device.copyRenderTarget(renderTarget, null, true, false);
         }
     }
 
-    focus(options?: { sceneRadius?: number, distance?: number, focalPoint?: Vec3}) {
-        const config = this.scene.config;
-
-        let focalPoint: Vec3 = options?.focalPoint;
-        if (!focalPoint) {
-            this.scene.elements.forEach((element: any) => {
-                if (!focalPoint && element.type === ElementType.splat) {
-                    focalPoint = element.focalPoint && element.focalPoint();
+    focus(options?: { focalPoint: Vec3, radius: number, speed: number }) {
+        const getSplatFocalPoint = () => {
+            for (const element of this.scene.elements) {
+                if (element.type === ElementType.splat) {
+                    const focalPoint = (element as Splat).focalPoint?.();
+                    if (focalPoint) {
+                        return focalPoint;
+                    }
                 }
+            }
+        };
+
+        const focalPoint = options ? options.focalPoint : (getSplatFocalPoint() ?? this.scene.bound.center);
+        const focalRadius = options ? options.radius : this.scene.bound.halfExtents.length();
+
+        const fdist = focalRadius / this.sceneRadius;
+
+        this.setDistance(isFinite(fdist) ? fdist : 1, options?.speed ?? 0);
+        this.setFocalPoint(focalPoint, options?.speed ?? 0);
+    }
+
+    get fovFactor() {
+        // we set the fov of the longer axis. here we get the fov of the other (smaller) axis so framing
+        // doesn't cut off the scene.
+        const { width, height } = this.scene.targetSize;
+        const aspect = (width && height) ? this.entity.camera.horizontalFov ? height / width : width / height : 1;
+        const fov = 2 * Math.atan(Math.tan(this.fov * math.DEG_TO_RAD * 0.5) * aspect);
+        return Math.sin(fov * 0.5);
+    }
+
+    // intersect the scene at the given screen coordinate and focus the camera on this location
+    pickFocalPoint(screenX: number, screenY: number) {
+        const scene = this.scene;
+        const cameraPos = this.entity.getPosition();
+
+        const target = scene.canvas;
+        const sx = screenX / target.clientWidth * scene.targetSize.width;
+        const sy = screenY / target.clientHeight * scene.targetSize.height;
+
+        const splats = scene.getElementsByType(ElementType.splat);
+
+        let closestD = 0;
+        const closestP = new Vec3();
+        let closestSplat = null;
+
+        for (let i = 0; i < splats.length; ++i) {
+            const splat = splats[i] as Splat;
+
+            this.pickPrep(splat, 'set');
+            const pickId = this.pick(sx, sy);
+
+            if (pickId !== -1) {
+                splat.calcSplatWorldPosition(pickId, vec);
+
+                // create a plane at the world position facing perpendicular to the camera
+                plane.setFromPointNormal(vec, this.entity.forward);
+
+                // create the pick ray in world space
+                if (this.ortho) {
+                    this.entity.camera.screenToWorld(screenX, screenY, -1.0, vec);
+                    this.entity.camera.screenToWorld(screenX, screenY, 1.0, vecb);
+                    vecb.sub(vec).normalize();
+                    ray.set(vec, vecb);
+                } else {
+                    this.entity.camera.screenToWorld(screenX, screenY, 1.0, vec);
+                    vec.sub(cameraPos).normalize();
+                    ray.set(cameraPos, vec);
+                }
+
+                // find intersection
+                if (plane.intersectsRay(ray, vec)) {
+                    const distance = vecb.sub2(vec, ray.origin).length();
+                    if (!closestSplat || distance < closestD) {
+                        closestD = distance;
+                        closestP.copy(vec);
+                        closestSplat = splat;
+                    }
+                }
+            }
+        }
+
+        if (closestSplat) {
+            this.setFocalPoint(closestP);
+            this.setDistance(closestD / this.sceneRadius * this.fovFactor);
+            scene.events.fire('camera.focalPointPicked', {
+                camera: this,
+                splat: closestSplat,
+                position: closestP
             });
         }
-
-        const sceneRadius = options?.sceneRadius ?? this.scene.bound.halfExtents.length();
-        const distance = sceneRadius / Math.sin(config.camera.fov * math.DEG_TO_RAD * 0.5);
-
-        this.setDistance(options?.distance ?? 1.0, 0);
-        this.setFocalPoint(focalPoint ?? this.scene.bound.center, 0);
-        this.focusDistance = 1.1 * distance;
     }
 
-    notify(event: string, data?: any) {
-        const config = this.scene.config;
+    // pick mode
 
-        this.events.fire(event, data);
-        this.autoRotateDelayValue = config.controls.autoRotateDelay;
+    // render picker contents
+    pickPrep(splat: Splat, op: 'add'|'remove'|'set') {
+        const { width, height } = this.scene.targetSize;
+        const worldLayer = this.scene.app.scene.layers.getLayerByName('World');
+
+        const device = this.scene.graphicsDevice;
+        const events = this.scene.events;
+        const alpha = events.invoke('camera.mode') === 'rings' ? 0.0 : 0.2;
+
+        // hide non-selected elements
+        const splats = this.scene.getElementsByType(ElementType.splat);
+        splats.forEach((s: Splat) => {
+            s.entity.enabled = s === splat;
+        });
+
+        device.scope.resolve('pickerAlpha').setValue(alpha);
+        device.scope.resolve('pickMode').setValue(['add', 'remove', 'set'].indexOf(op));
+        this.picker.resize(width, height);
+        this.picker.prepare(this.entity.camera, this.scene.app.scene, [worldLayer]);
+
+        // re-enable all splats
+        splats.forEach((splat: Splat) => {
+            splat.entity.enabled = true;
+        });
+    }
+
+    pick(x: number, y: number) {
+        return this.pickRect(x, y, 1, 1)[0];
+    }
+
+    pickRect(x: number, y: number, width: number, height: number) {
+        const device = this.scene.graphicsDevice as WebglGraphicsDevice;
+        const pixels = new Uint8Array(width * height * 4);
+
+        // read pixels
+        device.setRenderTarget(this.picker.renderTarget);
+        device.updateBegin();
+        device.readPixels(x, this.picker.renderTarget.height - y - height, width, height, pixels);
+        device.updateEnd();
+
+        const result: number[] = [];
+        for (let i = 0; i < width * height; i++) {
+            result.push(
+                pixels[i * 4] |
+                (pixels[i * 4 + 1] << 8) |
+                (pixels[i * 4 + 2] << 16) |
+                (pixels[i * 4 + 3] << 24)
+            );
+        }
+
+        return result;
+    }
+
+    docSerialize() {
+        const pack3 = (v: Vec3) => [v.x, v.y, v.z];
+
+        return {
+            focalPoint: pack3(this.focalPointTween.target),
+            azim: this.azim,
+            elev: this.elevation,
+            distance: this.distance,
+            fov: this.fov,
+            tonemapping: this.tonemapping
+        };
+    }
+
+    docDeserialize(settings: any) {
+        this.setFocalPoint(new Vec3(settings.focalPoint), 0);
+        this.setAzimElev(settings.azim, settings.elev, 0);
+        this.setDistance(settings.distance, 0);
+        this.fov = settings.fov;
+        this.tonemapping = settings.tonemapping;
+    }
+
+    // offscreen render mode
+
+    startOffscreenMode(width: number, height: number) {
+        this.targetSize = { width, height };
+        this.suppressFinalBlit = true;
+    }
+
+    endOffscreenMode() {
+        this.targetSize = null;
+        this.suppressFinalBlit = false;
     }
 }
 
-export {Camera};
+export { Camera };

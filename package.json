@@ -1,9 +1,9 @@
 {
-    "name": "super-splat",
-    "version": "0.10.4",
+    "name": "supersplat",
+    "version": "2.6.0",
     "author": "PlayCanvas<support@playcanvas.com>",
-    "homepage": "https://playcanvas.com",
-    "description": "All the splat things",
+    "homepage": "https://playcanvas.com/supersplat/editor",
+    "description": "3D Gaussian Splat Editor",
     "keywords": [
         "playcanvas",
         "ply",
@@ -13,64 +13,54 @@
     ],
     "license": "MIT",
     "main": "index.js",
-    "eslintConfig": {
-        "root": true,
-        "parser": "@typescript-eslint/parser",
-        "plugins": [
-            "@typescript-eslint"
-        ],
-        "extends": [
-            "@playcanvas/eslint-config",
-            "plugin:@typescript-eslint/recommended",
-            "plugin:import/typescript"
-        ],
-        "rules": {
-            "@typescript-eslint/ban-ts-comment": 0,
-            "@typescript-eslint/no-explicit-any": 0,
-            "@typescript-eslint/no-empty-function": 0,
-            "@typescript-eslint/explicit-module-boundary-types": 0,
-            "lines-between-class-members": [
-                "error",
-                "always",
-                {
-                    "exceptAfterSingleLine": true
-                }
-            ],
-            "import/no-unresolved": "off"
-        }
-    },
     "scripts": {
         "build": "rollup -c",
         "watch": "rollup -c -w",
-        "serve": "serve dist",
+        "serve": "serve dist -C",
         "develop": "concurrently --kill-others \"npm run watch\" \"npm run serve\"",
+        "develop:auto-launch": "concurrently --kill-others \"xdg-open 'http://localhost:3000/'\" \"npm run watch\" \"npm run serve\"",
         "develop:local": "cross-env ENGINE_PATH=../engine npm run develop",
         "build:local": "cross-env ENGINE_PATH=../engine npm run build",
         "watch:local": "cross-env ENGINE_PATH=../engine npm run watch",
-        "lint": "eslint --ext .ts src",
-        "test": "jest"
+        "lint": "eslint src",
+        "postinstall": "npm run install:deps && npm run build:deps",
+        "install:deps": "npm --prefix ./submodules/supersplat-viewer ci",
+        "build:deps": "npm --prefix ./submodules/supersplat-viewer run build"
     },
     "devDependencies": {
-        "@playcanvas/eslint-config": "^1.4.1",
-        "@playcanvas/pcui": "^4.1.2",
-        "@rollup/plugin-alias": "^5.0.0",
-        "@rollup/plugin-image": "^3.0.2",
-        "@rollup/plugin-json": "^6.0.1",
-        "@rollup/plugin-node-resolve": "^15.1.0",
-        "@rollup/plugin-strip": "^3.0.2",
-        "@rollup/plugin-terser": "^0.4.1",
-        "@rollup/plugin-typescript": "^11.1.0",
-        "@typescript-eslint/eslint-plugin": "^5.59.5",
-        "@typescript-eslint/parser": "^5.59.5",
-        "concurrently": "^8.2.0",
+        "@playcanvas/eslint-config": "^2.0.9",
+        "@playcanvas/pcui": "^5.2.0",
+        "@rollup/plugin-alias": "^5.1.1",
+        "@rollup/plugin-image": "^3.0.3",
+        "@rollup/plugin-json": "^6.1.0",
+        "@rollup/plugin-node-resolve": "^16.0.1",
+        "@rollup/plugin-strip": "^3.0.4",
+        "@rollup/plugin-terser": "^0.4.4",
+        "@rollup/plugin-typescript": "^12.1.2",
+        "@types/wicg-file-system-access": "^2023.10.6",
+        "@typescript-eslint/eslint-plugin": "^8.31.0",
+        "@typescript-eslint/parser": "^8.31.0",
+        "autoprefixer": "^10.4.21",
+        "concurrently": "^9.1.2",
         "cors": "^2.8.5",
         "cross-env": "^7.0.3",
-        "eslint": "^8.43.0",
-        "jest": "^29.5.0",
-        "rollup": "^3.25.1",
-        "rollup-plugin-sass": "^1.12.21",
-        "rollup-plugin-visualizer": "^5.9.2",
-        "serve": "^14.2.0",
-        "tslib": "^2.5.3"
+        "eslint": "^9.25.1",
+        "eslint-import-resolver-typescript": "^4.3.4",
+        "globals": "^16.0.0",
+        "i18next": "^25.0.1",
+        "i18next-browser-languagedetector": "^8.0.5",
+        "jest": "^29.7.0",
+        "jszip": "^3.10.1",
+        "mp4-muxer": "^5.2.1",
+        "playcanvas": "^2.7.2",
+        "postcss": "^8.5.3",
+        "rollup": "^4.40.0",
+        "rollup-plugin-scss": "^4.0.1",
+        "rollup-plugin-string": "^3.0.0",
+        "rollup-plugin-visualizer": "^5.14.0",
+        "sass": "^1.87.0",
+        "serve": "^14.2.4",
+        "tslib": "^2.8.1",
+        "typescript": "^5.8.3"
     }
 }

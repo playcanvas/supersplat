@@ -1,77 +1,43 @@
-interface HotSpot {
-    name: string;
-    position: {x: number; y: number; z: number};
-}
+type Color = { r: number, g: number, b: number, a: number };
 
-enum XRModeConfig {
-    none = 'none',
-    placement = 'placement'
-}
-
-const contentsPromise: Promise<ArrayBuffer> = null;
-const hotSpots: HotSpot[] = [];
+const DEFAULT_BG_CLR: Color = { r: 0.4, g: 0.4, b: 0.4, a: 1 };
+const DEFAULT_SELECTED_CLR: Color = { r: 1, g: 1, b: 0, a: 1 };
+const DEFAULT_UNSELECTED_CLR: Color = { r: 0, g: 0, b: 1, a: 0.5 };
+const DEFAULT_LOCKED_CLR: Color = { r: 0, g: 0, b: 0, a: 0.05 };
 
 // default config
 const sceneConfig = {
-    model: {
-        url: '',
-        filename: '',
-        contents: contentsPromise,
-        position: {x: 0, y: 0, z: 0},
-        rotation: {x: 0, y: 0, z: 0},
-        scale: 1.0,
-        hideLeftShoe: true
-    },
-    env: {
-        url: '',
-        intensity: 1.0,
-        rotation: 0.0
-    },
-    backgroundColor: {r: 0, g: 0, b: 0, a: 0},
+    bgClr: DEFAULT_BG_CLR,
+    selectedClr: DEFAULT_SELECTED_CLR,
+    unselectedClr: DEFAULT_UNSELECTED_CLR,
+    lockedClr: DEFAULT_LOCKED_CLR,
     camera: {
         pixelScale: 1,
         multisample: false,
-        multiframe: false,
-        oit: false,
-        fov: 36,
-        dollyZoom: true,
+        fov: 50,
         exposure: 1.0,
-        toneMapping: 'aces2',
-        debug_render: ''
+        toneMapping: 'linear',
+        debugRender: '',
+        overlay: true
     },
-    shadow: {
-        intensity: 0.25,
-        fade: true
+    show: {
+        grid: true,
+        bound: true,
+        shBands: 3
     },
     controls: {
-        enableRotate: true, // enableOrbit
-        enablePan: true,
-        enableZoom: true,
         dampingFactor: 0.2,
         minPolarAngle: 0,
-        maxPolarAngle: 2.8,
-        minZoom: 0.01,
-        maxZoom: 2.0,
-        initialAzim: 0,
-        initialElev: -27,
+        maxPolarAngle: Math.PI,
+        minZoom: 1e-6,
+        maxZoom: 10.0,
+        initialAzim: -45,
+        initialElev: -10,
         initialZoom: 1.0,
-        autoRotate: false,
-        autoRotateSpeed: -2.0,
-        autoRotateInitialDelay: 0.0,
-        autoRotateDelay: 5.0,
         orbitSensitivity: 0.3,
         zoomSensitivity: 0.4
     },
-    animation: {
-        autoPlay: false
-    },
-    hotSpots: hotSpots,
-    xr: {
-        mode: XRModeConfig.none,
-        showControls: true
-    },
     debug: {
-        ministats: false,
         showBound: false
     }
 };
@@ -106,7 +72,9 @@ class Params {
     }
 
     get(path: string): any {
-        return this.resolve(this.sources, path.split('.'));
+        // https://stackoverflow.com/a/67243723/2405687
+        const kebabize = (s: string) => s.replace(/[A-Z]+(?![a-z])|[A-Z]/g, ($, ofs) => (ofs ? '-' : '') + $.toLowerCase());
+        return this.resolve(this.sources, path.split('.').map(kebabize)) ?? this.resolve(this.sources, path.split('.'));
     }
 
     getBool(path: string): boolean | undefined {
@@ -119,35 +87,46 @@ class Params {
         return typeof value === 'string' ? parseFloat(value) : value;
     }
 
-    getVec3(path: string) {
+    getVec(path: string) {
         const value = this.get(path);
-        if (typeof value === 'string') {
-            const values = value.split(',').map((v: string) => parseFloat(v));
-            return values.length === 1
-                ? {x: values[0], y: values[0], z: values[0]}
-                : {x: values[0], y: values[1], z: values[2]};
-        } else if (typeof value === 'number') {
-            return {x: value, y: value, z: value};
+        return typeof value === 'string' ? value.split(',') : undefined;
+    }
+
+    getVec3(path: string) {
+        const value = this.getVec(path);
+        if (value) {
+            const numbers = value.map(v => parseFloat(v));
+            if (value.length === 1) {
+                return { x: numbers[0], y: numbers[0], z: numbers[0] };
+            } else if (value.length === 3) {
+                return { x: numbers[0], y: numbers[1], z: numbers[2] };
+            }
         }
         return undefined;
     }
 
     getColor(path: string) {
-        const value = this.get(path);
-        const makeColor = (vals: number[]) => {
-            return vals.length === 4 ? {r: vals[0], g: vals[1], b: vals[2], a: vals[3]} : undefined;
-        };
-        return typeof value === 'string' ? makeColor(value.split(',').map(v => parseFloat(v))) : undefined;
-    }
-
-    getVec(path: string) {
-        const value = this.get(path);
-        return typeof value === 'string' ? value.split(',') : undefined;
+        const value = this.getVec(path);
+        if (value) {
+            const numbers = value.map(v => parseFloat(v));
+            if (value.length === 1) {
+                return { r: numbers[0], g: numbers[0], b: numbers[0], a: 1 };
+            } else if (value.length === 3) {
+                return { r: numbers[0], g: numbers[1], b: numbers[2], a: 1 };
+            } else if (value.length === 4) {
+                return { r: numbers[0], g: numbers[1], b: numbers[2], a: numbers[3] };
+            }
+        }
+        return undefined;
     }
 }
 
 const getSceneConfig = (overrides: any[]) => {
     const params = new Params(overrides);
+
+    const cmp = (a: any[], b: any[]) => {
+        return a.length === b.length && a.every((v, i) => v === b[i]);
+    };
 
     // recurse the object and replace concrete leaf values with overrides
     const rec = (obj: any, path: string) => {
@@ -164,6 +143,17 @@ const getSceneConfig = (overrides: any[]) => {
                 case 'string':
                     obj[child] = params.get(childPath) ?? childValue;
                     break;
+                case 'object': {
+                    const keys = Object.keys(childValue).sort();
+                    if (cmp(keys, ['a', 'b', 'g', 'r'])) {
+                        obj[child] = params.getColor(childPath) ?? childValue;
+                    } else if (cmp(keys, ['x', 'y', 'z'])) {
+                        obj[child] = params.getVec3(childPath) ?? childValue;
+                    } else {
+                        rec(childValue, childPath);
+                    }
+                    break;
+                }
                 default:
                     rec(childValue, childPath);
                     break;
@@ -176,4 +166,4 @@ const getSceneConfig = (overrides: any[]) => {
     return sceneConfig;
 };
 
-export {SceneConfig, getSceneConfig, XRModeConfig};
+export { SceneConfig, getSceneConfig };

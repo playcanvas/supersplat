@@ -1,0 +1,14 @@
+#scene-panel {
+    top: 102px;
+    left: 24px;
+    width: 320px;
+}
+
+.collapsed #scene-panel {
+    display: none;
+}
+
+.splat-list-container {
+    max-height: 300px;
+    overflow: auto;
+}

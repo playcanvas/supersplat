@@ -1,313 +1,230 @@
-import {Camera} from './camera';
-import {
-    EVENT_MOUSEDOWN,
-    EVENT_MOUSEUP,
-    EVENT_MOUSEMOVE,
-    EVENT_MOUSEWHEEL,
-    MOUSEBUTTON_LEFT,
-    MOUSEBUTTON_MIDDLE,
-    MOUSEBUTTON_RIGHT,
-    EVENT_TOUCHSTART,
-    EVENT_TOUCHEND,
-    EVENT_TOUCHCANCEL,
-    EVENT_TOUCHMOVE,
-    Vec2,
-    Vec3,
-    Mouse,
-    MouseEvent,
-    Touch,
-    TouchDevice,
-    TouchEvent
-} from 'playcanvas';
+import { Vec3 } from 'playcanvas';
 
-const vec = new Vec3();
+import { Camera } from './camera';
+
 const fromWorldPoint = new Vec3();
 const toWorldPoint = new Vec3();
 const worldDiff = new Vec3();
 
-// MouseController
+// calculate the distance between two 2d points
+const dist = (x0: number, y0: number, x1: number, y1: number) => Math.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2);
 
-class MouseController {
-    mouse: Mouse;
-    camera: Camera;
-    leftButton = false;
-    middleButton = false;
-    rightButton = false;
-    lastPoint = new Vec2();
+class PointerController {
+    update: (deltaTime: number) => void;
+    destroy: () => void;
 
-    enableOrbit = true;
-    enablePan = true;
-    enableZoom = true;
-    zoomedIn = 1;
-    xMouse = 0;
-    yMouse = 0;
+    constructor(camera: Camera, target: HTMLElement) {
 
-    onMouseOutFunc = () => {
-        this.onMouseOut();
-    };
+        const orbit = (dx: number, dy: number) => {
+            const azim = camera.azim - dx * camera.scene.config.controls.orbitSensitivity;
+            const elev = camera.elevation - dy * camera.scene.config.controls.orbitSensitivity;
+            camera.setAzimElev(azim, elev);
+        };
 
-    constructor(camera: Camera) {
-        this.camera = camera;
-        const mouse = camera.scene.app.mouse;
-        mouse.on(EVENT_MOUSEDOWN, this.onMouseDown, this);
-        mouse.on(EVENT_MOUSEUP, this.onMouseUp, this);
-        mouse.on(EVENT_MOUSEMOVE, this.onMouseMove, this);
-        mouse.on(EVENT_MOUSEWHEEL, this.onMouseWheel, this);
+        const pan = (x: number, y: number, dx: number, dy: number) => {
+            // For panning to work at any zoom level, we use screen point to world projection
+            // to work out how far we need to pan the pivotEntity in world space
+            const c = camera.entity.camera;
+            const distance = camera.distanceTween.value.distance * camera.sceneRadius / camera.fovFactor;
 
-        // Listen to when the mouse travels out of the window
-        // window.addEventListener('mouseout', this.onMouseOutFunc, false);
+            c.screenToWorld(x, y, distance, fromWorldPoint);
+            c.screenToWorld(x - dx, y - dy, distance, toWorldPoint);
 
-        // Disabling the context menu stops the browser displaying a menu when
-        // you right-click the page
-        mouse.disableContextMenu();
-    }
+            worldDiff.sub2(toWorldPoint, fromWorldPoint);
+            worldDiff.add(camera.focalPoint);
 
-    destroy() {
-        const mouse = this.camera.scene.app.mouse;
-        mouse.off(EVENT_MOUSEDOWN, this.onMouseDown, this);
-        mouse.off(EVENT_MOUSEUP, this.onMouseUp, this);
-        mouse.off(EVENT_MOUSEMOVE, this.onMouseMove, this);
-        mouse.off(EVENT_MOUSEWHEEL, this.onMouseWheel, this);
+            camera.setFocalPoint(worldDiff);
+        };
 
-        // window.removeEventListener('mouseout', this.onMouseOutFunc, false);
-    }
+        const zoom = (amount: number) => {
+            camera.setDistance(camera.distance - (camera.distance * 0.999 + 0.001) * amount * camera.scene.config.controls.zoomSensitivity, 2);
+        };
 
-    orbit(dx: number, dy: number) {
-        if (!this.enableOrbit) {
-            return;
-        }
-        const azim = this.camera.azim - dx * this.camera.scene.config.controls.orbitSensitivity;
-        const elev = this.camera.elevation - dy * this.camera.scene.config.controls.orbitSensitivity;
-        this.camera.setAzimElev(azim, elev);
-    }
+        // mouse state
+        const buttons = [false, false, false];
+        let x: number, y: number;
 
-    pan(x: number, y: number) {
-        if (!this.enablePan) {
-            return;
-        }
-        // For panning to work at any zoom level, we use screen point to world projection
-        // to work out how far we need to pan the pivotEntity in world space
-        const camera = this.camera.entity.camera;
-        const distance = this.camera.focusDistance * this.camera.distanceTween.value.distance;
+        // touch state
+        let touches: { id: number, x: number, y: number}[] = [];
+        let midx: number, midy: number, midlen: number;
 
-        camera.screenToWorld(x, y, distance, fromWorldPoint);
-        camera.screenToWorld(this.lastPoint.x, this.lastPoint.y, distance, toWorldPoint);
+        const pointerdown = (event: PointerEvent) => {
+            if (event.pointerType === 'mouse') {
+                if (buttons.every(b => !b)) {
+                    target.setPointerCapture(event.pointerId);
+                }
+                buttons[event.button] = true;
+                x = event.offsetX;
+                y = event.offsetY;
+            } else if (event.pointerType === 'touch') {
+                if (touches.length === 0) {
+                    target.setPointerCapture(event.pointerId);
+                }
+                touches.push({
+                    x: event.offsetX,
+                    y: event.offsetY,
+                    id: event.pointerId
+                });
 
-        worldDiff.sub2(toWorldPoint, fromWorldPoint);
-        worldDiff.add(this.camera.focalPoint);
-
-        this.camera.setFocalPoint(worldDiff);
-    }
-
-    zoom(amount: number) {
-        if (!this.enableZoom) {
-            return;
-        }
-        this.camera.setDistance(this.camera.distance * (1 - amount), 2);
-    }
-
-    hasDragged(event: MouseEvent): boolean {
-        return this.xMouse !== event.x || this.yMouse !== event.y;
-    }
-
-    onMouseDown(event: MouseEvent) {
-        this.xMouse = event.x;
-        this.yMouse = event.y;
-        switch (event.button) {
-            case MOUSEBUTTON_LEFT:
-                this.leftButton = true;
-                this.camera.notify('mouseStart');
-                break;
-            case MOUSEBUTTON_MIDDLE:
-                this.middleButton = true;
-                this.camera.notify('mouseStart');
-                break;
-            case MOUSEBUTTON_RIGHT:
-                this.rightButton = true;
-                this.camera.notify('mouseStart');
-                break;
-        }
-    }
-
-    onMouseUp(event: MouseEvent) {
-        switch (event.button) {
-            case MOUSEBUTTON_LEFT:
-                this.leftButton = false;
-                this.camera.notify('mouseEnd');
-                break;
-            case MOUSEBUTTON_MIDDLE:
-                this.middleButton = false;
-                this.camera.notify('mouseEnd');
-                break;
-            case MOUSEBUTTON_RIGHT:
-                this.rightButton = false;
-                this.camera.notify('mouseEnd');
-                break;
-        }
-
-        if (this.hasDragged(event)) {
-            this.xMouse = event.x;
-            this.yMouse = event.y;
-        }
-    }
-
-    onMouseMove(event: MouseEvent) {
-        if (this.leftButton) {
-            if (event.ctrlKey) {
-                this.zoom(event.dx * -0.02);
-            } else if (event.shiftKey) {
-                this.pan(event.x, event.y);
-            } else {
-                this.orbit(event.dx, event.dy);
+                if (touches.length === 2) {
+                    midx = (touches[0].x + touches[1].x) * 0.5;
+                    midy = (touches[0].y + touches[1].y) * 0.5;
+                    midlen = dist(touches[0].x, touches[0].y, touches[1].x, touches[1].y);
+                }
             }
-        } else if (this.rightButton) {
-            this.pan(event.x, event.y);
-        } else if (this.middleButton) {
-            this.zoom(event.dx * -0.02);
-        }
+        };
 
-        this.lastPoint.set(event.x, event.y);
-    }
+        const pointerup = (event: PointerEvent) => {
+            if (event.pointerType === 'mouse') {
+                buttons[event.button] = false;
+                if (buttons.every(b => !b)) {
+                    target.releasePointerCapture(event.pointerId);
+                }
+            } else {
+                touches = touches.filter(touch => touch.id !== event.pointerId);
+                if (touches.length === 0) {
+                    target.releasePointerCapture(event.pointerId);
+                }
+            }
+        };
 
-    onMouseWheel(event: MouseEvent) {
-        this.zoom(event.wheelDelta * -0.2 * this.camera.scene.config.controls.zoomSensitivity);
-        this.camera.notify('mouseZoom');
-        event.event.preventDefault();
-        if (event.wheelDelta !== this.zoomedIn) {
-            this.zoomedIn = event.wheelDelta;
-        }
-    }
+        const pointermove = (event: PointerEvent) => {
+            if (event.pointerType === 'mouse') {
+                const dx = event.offsetX - x;
+                const dy = event.offsetY - y;
+                x = event.offsetX;
+                y = event.offsetY;
 
-    onMouseOut() {
-        this.leftButton = this.middleButton = this.rightButton = false;
+                // right button can be used to orbit with ctrl key and to zoom with alt | meta key
+                const mod = buttons[2] ?
+                    (event.shiftKey || event.ctrlKey ? 'orbit' :
+                        (event.altKey || event.metaKey ? 'zoom' : null)) :
+                    null;
+
+                if (mod === 'orbit' || (mod === null && buttons[0])) {
+                    orbit(dx, dy);
+                } else if (mod === 'zoom' || (mod === null && buttons[1])) {
+                    zoom(dy * -0.02);
+                } else if (mod === 'pan' || (mod === null && buttons[2])) {
+                    pan(x, y, dx, dy);
+                }
+            } else {
+                if (touches.length === 1) {
+                    const touch = touches[0];
+                    const dx = event.offsetX - touch.x;
+                    const dy = event.offsetY - touch.y;
+                    touch.x = event.offsetX;
+                    touch.y = event.offsetY;
+                    orbit(dx, dy);
+                } else if (touches.length === 2) {
+                    const touch = touches[touches.map(t => t.id).indexOf(event.pointerId)];
+                    touch.x = event.offsetX;
+                    touch.y = event.offsetY;
+
+                    const mx = (touches[0].x + touches[1].x) * 0.5;
+                    const my = (touches[0].y + touches[1].y) * 0.5;
+                    const ml = dist(touches[0].x, touches[0].y, touches[1].x, touches[1].y);
+
+                    pan(mx, my, (mx - midx), (my - midy));
+                    zoom((ml - midlen) * 0.01);
+
+                    midx = mx;
+                    midy = my;
+                    midlen = ml;
+                }
+            }
+        };
+
+        // fuzzy detection of mouse wheel events vs trackpad events
+        const isMouseEvent = (deltaX: number, deltaY: number) => {
+            return (Math.abs(deltaX) > 50 && deltaY === 0) ||
+                   (Math.abs(deltaY) > 50 && deltaX === 0) ||
+                   (deltaX === 0 && deltaY !== 0) && !Number.isInteger(deltaY);
+        };
+
+        const wheel = (event: WheelEvent) => {
+            const { deltaX, deltaY } = event;
+
+            if (isMouseEvent(deltaX, deltaY)) {
+                zoom(deltaY * -0.002);
+            } else if (event.ctrlKey || event.metaKey) {
+                zoom(deltaY * -0.02);
+            } else if (event.shiftKey) {
+                pan(event.offsetX, event.offsetY, deltaX, deltaY);
+            } else {
+                orbit(deltaX, deltaY);
+            }
+
+            event.preventDefault();
+        };
+
+        // FIXME: safari sends canvas as target of dblclick event but chrome sends the target element
+        const canvas = camera.scene.app.graphicsDevice.canvas;
+
+        const dblclick = (event: globalThis.MouseEvent) => {
+            if (event.target === target || event.target === canvas) {
+                camera.pickFocalPoint(event.offsetX, event.offsetY);
+            }
+        };
+
+        // key state
+        const keys: any = {
+            ArrowUp: 0,
+            ArrowDown: 0,
+            ArrowLeft: 0,
+            ArrowRight: 0
+        };
+
+        const keydown = (event: KeyboardEvent) => {
+            if (keys.hasOwnProperty(event.key) && event.target === document.body) {
+                keys[event.key] = event.shiftKey ? 10 : (event.ctrlKey || event.metaKey || event.altKey ? 0.1 : 1);
+            }
+        };
+
+        const keyup = (event: KeyboardEvent) => {
+            if (keys.hasOwnProperty(event.key)) {
+                keys[event.key] = 0;
+            }
+        };
+
+        this.update = (deltaTime: number) => {
+            const x = keys.ArrowRight - keys.ArrowLeft;
+            const z = keys.ArrowDown - keys.ArrowUp;
+
+            if (x || z) {
+                const factor = deltaTime * camera.flySpeed;
+                const worldTransform = camera.entity.getWorldTransform();
+                const xAxis = worldTransform.getX().mulScalar(x * factor);
+                const zAxis = worldTransform.getZ().mulScalar(z * factor);
+                const p = camera.focalPoint.add(xAxis).add(zAxis);
+                camera.setFocalPoint(p);
+            }
+        };
+
+        let destroy: () => void = null;
+
+        const wrap = (target: any, name: string, fn: any, options?: any) => {
+            const callback = (event: any) => {
+                camera.scene.events.fire('camera.controller', name);
+                fn(event);
+            };
+            target.addEventListener(name, callback, options);
+            destroy = () => {
+                destroy?.();
+                target.removeEventListener(name, callback);
+            };
+        };
+
+        wrap(target, 'pointerdown', pointerdown);
+        wrap(target, 'pointerup', pointerup);
+        wrap(target, 'pointermove', pointermove);
+        wrap(target, 'wheel', wheel, { passive: false });
+        wrap(target, 'dblclick', dblclick);
+        wrap(document, 'keydown', keydown);
+        wrap(document, 'keyup', keyup);
+
+        this.destroy = destroy;
     }
 }
 
-// TouchController
-
-class TouchController {
-    touch: TouchDevice;
-    camera: Camera;
-    lastTouchPoint = new Vec2();
-    lastPinchMidPoint = new Vec2();
-    lastPinchDistance = 0;
-    pinchMidPoint = new Vec2();
-
-    enableOrbit = true;
-    enablePan = true;
-    enableZoom = true;
-    xTouch: number;
-    yTouch: number;
-
-    constructor(camera: Camera) {
-        this.camera = camera;
-        this.xTouch = 0;
-        this.yTouch = 0;
-        // Use the same callback for the touchStart, touchEnd and touchCancel events as they
-        // all do the same thing which is to deal the possible multiple touches to the screen
-        const touch = this.camera.scene.app.touch;
-        touch.on(EVENT_TOUCHSTART, this.onTouchStartEndCancel, this);
-        touch.on(EVENT_TOUCHEND, this.onTouchStartEndCancel, this);
-        touch.on(EVENT_TOUCHCANCEL, this.onTouchStartEndCancel, this);
-        touch.on(EVENT_TOUCHMOVE, this.onTouchMove, this);
-    }
-
-    destroy() {
-        const touch = this.camera.scene.app.touch;
-        touch.off(EVENT_TOUCHSTART, this.onTouchStartEndCancel, this);
-        touch.off(EVENT_TOUCHEND, this.onTouchStartEndCancel, this);
-        touch.off(EVENT_TOUCHCANCEL, this.onTouchStartEndCancel, this);
-        touch.off(EVENT_TOUCHMOVE, this.onTouchMove, this);
-    }
-
-    getPinchDistance(pointA: Touch, pointB: Touch) {
-        // Return the distance between the two points
-        const dx = pointA.x - pointB.x;
-        const dy = pointA.y - pointB.y;
-        return Math.sqrt(dx * dx + dy * dy);
-    }
-
-    calcMidPoint(pointA: Touch, pointB: Touch, result: Vec2) {
-        result.set(pointB.x - pointA.x, pointB.y - pointA.y);
-        result.mulScalar(0.5);
-        result.x += pointA.x;
-        result.y += pointA.y;
-    }
-
-    onTouchStartEndCancel(event: TouchEvent) {
-        // We only care about the first touch for camera rotation. As the user touches the screen,
-        // we stored the current touch position
-        const touches = event.touches;
-        if (touches.length === 1) {
-            this.lastTouchPoint.set(touches[0].x, touches[0].y);
-            this.camera.notify('touchStart');
-            this.xTouch = touches[0].x;
-            this.yTouch = touches[0].y;
-        } else if (touches.length === 2) {
-            // If there are 2 touches on the screen, then set the pinch distance
-            this.lastPinchDistance = this.getPinchDistance(touches[0], touches[1]);
-            this.calcMidPoint(touches[0], touches[1], this.lastPinchMidPoint);
-            this.camera.notify('touchStart');
-        } else {
-            this.camera.notify('touchEnd');
-        }
-    }
-
-    pan(midPoint: Vec2) {
-        if (!this.enablePan) {
-            return;
-        }
-
-        // For panning to work at any zoom level, we use screen point to world projection
-        // to work out how far we need to pan the pivotEntity in world space
-        const camera = this.camera.entity.camera;
-        const distance = this.camera.distance;
-
-        camera.screenToWorld(midPoint.x, midPoint.y, distance, fromWorldPoint);
-        camera.screenToWorld(this.lastPinchMidPoint.x, this.lastPinchMidPoint.y, distance, toWorldPoint);
-
-        worldDiff.sub2(toWorldPoint, fromWorldPoint);
-        worldDiff.add(this.camera.focalPoint);
-
-        this.camera.setFocalPoint(worldDiff);
-    }
-
-    onTouchMove(event: TouchEvent) {
-        const pinchMidPoint = this.pinchMidPoint;
-
-        // We only care about the first touch for camera rotation. Work out the difference moved since the last event
-        // and use that to update the camera target position
-        const touches = event.touches;
-        if (touches.length === 1 && this.enableOrbit) {
-            const touch = touches[0];
-            const elev =
-                this.camera.elevation -
-                (touch.y - this.lastTouchPoint.y) * this.camera.scene.config.controls.orbitSensitivity;
-            const azim =
-                this.camera.azim -
-                (touch.x - this.lastTouchPoint.x) * this.camera.scene.config.controls.orbitSensitivity;
-            this.camera.setAzimElev(azim, elev);
-            this.lastTouchPoint.set(touch.x, touch.y);
-        } else if (touches.length === 2 && this.enableZoom) {
-            // Calculate the difference in pinch distance since the last event
-            const currentPinchDistance = this.getPinchDistance(touches[0], touches[1]);
-            const diffInPinchDistance = currentPinchDistance - this.lastPinchDistance;
-            this.lastPinchDistance = currentPinchDistance;
-
-            const distance =
-                this.camera.distance -
-                diffInPinchDistance *
-                    this.camera.scene.config.controls.zoomSensitivity *
-                    0.1 *
-                    (this.camera.distance * 0.1);
-            this.camera.setDistance(distance);
-
-            // Calculate pan difference
-            this.calcMidPoint(touches[0], touches[1], pinchMidPoint);
-            this.pan(pinchMidPoint);
-            this.lastPinchMidPoint.copy(pinchMidPoint);
-        }
-    }
-}
-
-export {MouseController, TouchController};
+export { PointerController };

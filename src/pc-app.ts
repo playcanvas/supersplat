@@ -30,6 +30,7 @@ import {
     // ZoneComponentSystem,
     CameraComponentSystem,
     LightComponentSystem,
+    GSplatComponentSystem,
     // ScriptComponentSystem,
     RenderHandler,
     // AnimationHandler,
@@ -42,6 +43,7 @@ import {
     CubemapHandler,
     // FolderHandler,
     // FontHandler,
+    GSplatHandler,
     // HierarchyHandler,
     // HtmlHandler,
     // JsonHandler,
@@ -54,8 +56,8 @@ import {
     // TemplateHandler,
     // TextHandler,
     // TextureAtlasHandler,
-    TextureHandler,
-    XrManager
+    TextureHandler
+    // XrManager
 } from 'playcanvas';
 
 class PCApp extends AppBase {
@@ -64,7 +66,7 @@ class PCApp extends AppBase {
 
         const appOptions = new AppOptions();
 
-        appOptions.graphicsDevice = this.createDevice(canvas, options);
+        appOptions.graphicsDevice = options.graphicsDevice;
         this.addComponentSystems(appOptions);
         this.addResourceHandles(appOptions);
 
@@ -79,25 +81,11 @@ class PCApp extends AppBase {
         appOptions.scriptsOrder = options.scriptsOrder;
 
         // appOptions.soundManager = new SoundManager(options);
-        // @ts-ignore
         // appOptions.lightmapper = Lightmapper;
         // appOptions.batchManager = BatchManager;
-        // @ts-ignore
-        appOptions.xr = XrManager;
+        // appOptions.xr = XrManager;
 
         this.init(appOptions);
-    }
-
-    createDevice(canvas: HTMLCanvasElement, options: any) {
-        if (!options.graphicsDeviceOptions) {
-            options.graphicsDeviceOptions = {};
-        }
-        // if (platform.browser && !!(navigator as any).xr) {
-        //     options.graphicsDeviceOptions.xrCompatible = true;
-        // }
-        options.graphicsDeviceOptions.alpha = options.graphicsDeviceOptions.alpha || false;
-
-        return new WebglGraphicsDevice(canvas, options.graphicsDeviceOptions);
     }
 
     addComponentSystems(appOptions: AppOptions) {
@@ -114,7 +102,7 @@ class PCApp extends AppBase {
             // @ts-ignore
             CameraComponentSystem,
             // @ts-ignore
-            LightComponentSystem
+            LightComponentSystem,
             // script.legacy ? ScriptLegacyComponentSystem : ScriptComponentSystem,
             // AudioSourceComponentSystem,
             // SoundComponentSystem,
@@ -128,7 +116,8 @@ class PCApp extends AppBase {
             // SpriteComponentSystem,
             // LayoutGroupComponentSystem,
             // LayoutChildComponentSystem,
-            // ZoneComponentSystem
+            // ZoneComponentSystem,
+            GSplatComponentSystem
         ];
     }
 
@@ -163,9 +152,10 @@ class PCApp extends AppBase {
             // SpriteHandler,
             // TemplateHandler,
             // @ts-ignore
-            ContainerHandler
+            ContainerHandler,
+            GSplatHandler
         ];
     }
 }
 
-export {PCApp};
+export { PCApp };

@@ -1,13 +1,14 @@
-import {BoundingBox} from 'playcanvas';
-import {Serializer} from './serializer';
-import {Scene} from './scene';
+import { BoundingBox, Quat, Vec3 } from 'playcanvas';
+
+import { Scene } from './scene';
+import { Serializer } from './serializer';
 
 enum ElementType {
     camera = 'camera',
     model = 'model',
     splat = 'splat',
     shadow = 'shadow',
-    hotspots = 'hotspots',
+    debug = 'debug',
     other = 'other'
 }
 
@@ -16,16 +17,20 @@ const ElementTypeList = [
     ElementType.model,
     ElementType.splat,
     ElementType.shadow,
-    ElementType.hotspots,
+    ElementType.debug,
     ElementType.other
 ];
+
+let nextUid = 1;
 
 class Element {
     type: ElementType;
     scene: Scene = null;
+    uid: number;
 
     constructor(type: ElementType) {
         this.type = type;
+        this.uid = nextUid++;
     }
 
     destroy() {
@@ -37,10 +42,6 @@ class Element {
     add() {}
 
     remove() {}
-
-    calcBound(result: BoundingBox): boolean {
-        return false;
-    }
 
     serialize(serializer: Serializer) {}
 
@@ -55,6 +56,12 @@ class Element {
     onAdded(element: Element) {}
 
     onRemoved(element: Element) {}
+
+    move(position?: Vec3, rotation?: Quat, scale?: Vec3) {}
+
+    get worldBound(): BoundingBox | null {
+        return null;
+    }
 }
 
-export {ElementType, ElementTypeList, Element};
+export { ElementType, ElementTypeList, Element };

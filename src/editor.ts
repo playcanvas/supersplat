@@ -1,12 +1,13 @@
 import { Color, Mat4, Texture, Vec3, Vec4 } from 'playcanvas';
 
 import { EditHistory } from './edit-history';
-import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp, MultiOp, AddSplatOp } from './edit-ops';
+import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp, MultiOp, AddSplatOp, SelectLargestSplatsOp } from './edit-ops';
 import { Events } from './events';
 import { Scene } from './scene';
 import { BufferWriter } from './serialize/writer';
 import { Splat } from './splat';
 import { serializePly } from './splat-serialize';
+import { localize } from './ui/localization'; // Import localize
 
 // register for editor and scene events
 const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: Scene) => {
@@ -642,6 +643,26 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         events.fire('grid.setVisible', docView.showGrid);
         events.fire('camera.setBound', docView.showBound);
         events.fire('camera.setFlySpeed', docView.flySpeed);
+    });
+
+    events.on('select.largestPercent', async () => {
+        const result = await events.invoke('showPopup', {
+            type: 'okcancel',
+            header: localize('popup.percentageTitle'),
+            message: localize('popup.percentageMessage'),
+            input: true
+        });
+
+        if (result?.action === 'ok' && result?.value !== undefined) {
+            const percentage = parseFloat(result.value);
+            if (!isNaN(percentage) && percentage > 0 && percentage <= 100) {
+                // Convert from percentage (e.g. 3%) to decimal (0.03)
+                const percentageDecimal = percentage / 100;
+                selectedSplats().forEach((splat) => {
+                    events.fire('edit.add', new SelectLargestSplatsOp(splat, percentageDecimal));
+                });
+            }
+        }
     });
 };
 

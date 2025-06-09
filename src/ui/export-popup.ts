@@ -15,7 +15,7 @@ const createSvg = (svgString: string, args = {}) => {
     });
 };
 
-class ViewerExportPopup extends Container {
+class ExportPopup extends Container {
     show: (filename?: string) => void;
     hide: () => void;
     destroy: () => void;
@@ -399,4 +399,4 @@ class ViewerExportPopup extends Container {
     }
 }
 
-export { ViewerExportPopup };
+export { ExportPopup };

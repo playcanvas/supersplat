@@ -108,30 +108,6 @@ class Menu extends Container {
         menubar.append(icon);
         menubar.append(buttonsContainer);
 
-        const exportMenuPanel = new MenuPanel([{
-            text: localize('file.export.ply'),
-            icon: createSvg(sceneExport),
-            isEnabled: () => !events.invoke('scene.empty'),
-            onSelect: () => events.invoke('scene.export', 'ply')
-        }, {
-            text: localize('file.export.compressed-ply'),
-            icon: createSvg(sceneExport),
-            isEnabled: () => !events.invoke('scene.empty'),
-            onSelect: () => events.invoke('scene.export', 'compressed-ply')
-        }, {
-            text: localize('file.export.splat'),
-            icon: createSvg(sceneExport),
-            isEnabled: () => !events.invoke('scene.empty'),
-            onSelect: () => events.invoke('scene.export', 'splat')
-        }, {
-            // separator
-        }, {
-            text: localize('file.export.viewer'),
-            icon: createSvg(sceneExport),
-            isEnabled: () => !events.invoke('scene.empty'),
-            onSelect: () => events.invoke('scene.export', 'viewer')
-        }]);
-
         const fileMenuPanel = new MenuPanel([{
             text: localize('file.new'),
             icon: createSvg(sceneNew),
@@ -166,7 +142,8 @@ class Menu extends Container {
         }, {
             text: localize('file.export'),
             icon: createSvg(sceneExport),
-            subMenu: exportMenuPanel
+            isEnabled: () => !events.invoke('scene.empty'),
+            onSelect: () => events.invoke('scene.export')
         }, {
             text: localize('file.publish'),
             icon: createSvg(scenePublish),
@@ -277,7 +254,6 @@ class Menu extends Container {
 
         this.append(menubar);
         this.append(fileMenuPanel);
-        this.append(exportMenuPanel);
         this.append(selectionMenuPanel);
         this.append(renderMenuPanel);
         this.append(helpMenuPanel);

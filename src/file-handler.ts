@@ -319,14 +319,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         }
     });
 
-    events.function('scene.export', async (type: ExportType, outputFilename: string = null, exportType: 'export' | 'saveAs' = 'export') => {
-        const extensions = {
-            'ply': '.ply',
-            'compressed-ply': '.compressed.ply',
-            'splat': '.splat',
-            'viewer': '-viewer.html'
-        };
-
+    events.function('scene.export', async (outputFilename: string = null, exportType: 'export' | 'saveAs' = 'export') => {
         const removeExtension = (filename: string) => {
             return filename.substring(0, filename.length - path.getExtension(filename).length);
         };
@@ -337,49 +330,49 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
 
         const splats = getSplats();
         const splat = splats[0];
-        let filename = outputFilename ?? replaceExtension(splat.filename, extensions[type]);
+        let filename = outputFilename ?? replaceExtension(splat.filename, '.ply');
 
         const hasFilePicker = window.showSaveFilePicker;
 
-        let viewerExportSettings;
-        if (type === 'viewer') {
-            // show viewer export options
-            viewerExportSettings = await events.invoke('show.viewerExportPopup', hasFilePicker ? null : filename);
+        // show viewer export options
+        const viewerExportSettings = await events.invoke('show.exportPopup', splats.map(s => s.name), hasFilePicker ? null : filename);
 
-            // return if user cancelled
-            if (!viewerExportSettings) {
-                return;
-            }
-
-            if (hasFilePicker) {
-                filename = replaceExtension(filename, viewerExportSettings.type === 'html' ? '.html' : '.zip');
-            } else {
-                filename = viewerExportSettings.filename;
-            }
+        // return if user cancelled
+        if (!viewerExportSettings) {
+            return;
         }
 
         if (hasFilePicker) {
-            try {
-                const filePickerType = type === 'viewer' ? (viewerExportSettings.type === 'html' ? filePickerTypes.htmlViewer : filePickerTypes.packageViewer) : filePickerTypes[type];
-
-                const fileHandle = await window.showSaveFilePicker({
-                    id: 'SuperSplatFileExport',
-                    types: [filePickerType],
-                    suggestedName: filename
-                });
-                await events.invoke('scene.write', {
-                    type,
-                    stream: await fileHandle.createWritable(),
-                    viewerExportSettings
-                });
-            } catch (error) {
-                if (error.name !== 'AbortError') {
-                    console.error(error);
-                }
-            }
+            filename = replaceExtension(filename, viewerExportSettings.type === 'html' ? '.html' : '.zip');
         } else {
-            await events.invoke('scene.write', { type, filename, viewerExportSettings });
+            filename = viewerExportSettings.filename;
         }
+
+        // TODO: finish rest of flow
+        console.log('scene.export completed');
+
+        // if (hasFilePicker) {
+        //     try {
+        //         const filePickerType = type === 'viewer' ? (viewerExportSettings.type === 'html' ? filePickerTypes.htmlViewer : filePickerTypes.packageViewer) : filePickerTypes[type];
+        //
+        //         const fileHandle = await window.showSaveFilePicker({
+        //             id: 'SuperSplatFileExport',
+        //             types: [filePickerType],
+        //             suggestedName: filename
+        //         });
+        //         await events.invoke('scene.write', {
+        //             type,
+        //             stream: await fileHandle.createWritable(),
+        //             viewerExportSettings
+        //         });
+        //     } catch (error) {
+        //         if (error.name !== 'AbortError') {
+        //             console.error(error);
+        //         }
+        //     }
+        // } else {
+        //     await events.invoke('scene.write', { type, filename, viewerExportSettings });
+        // }
     });
 
     const writeScene = async (options: SceneWriteOptions) => {

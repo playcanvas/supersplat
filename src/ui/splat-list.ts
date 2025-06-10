@@ -4,6 +4,7 @@ import { Element, ElementType } from '../element';
 import { Events } from '../events';
 import { Splat } from '../splat';
 import deleteSvg from './svg/delete.svg';
+import editSvg from './svg/edit.svg';
 import hiddenSvg from './svg/hidden.svg';
 import shownSvg from './svg/shown.svg';
 
@@ -34,6 +35,11 @@ class SplatItem extends Container {
             text: name
         });
 
+        const edit = new PcuiElement({
+            dom: createSvg(editSvg),
+            class: 'splat-item-edit'
+        });
+
         const visible = new PcuiElement({
             dom: createSvg(shownSvg),
             class: 'splat-item-visible'
@@ -51,6 +57,7 @@ class SplatItem extends Container {
         });
 
         this.append(text);
+        this.append(edit);
         this.append(visible);
         this.append(invisible);
         this.append(remove);
@@ -77,6 +84,11 @@ class SplatItem extends Container {
                     this.emit('unselect', this);
                 }
             }
+        };
+
+        const handleEdit = (event: MouseEvent) => {
+            event.stopPropagation();
+            console.log('edit pressed');
         };
 
         this.getVisible = () => {
@@ -108,11 +120,13 @@ class SplatItem extends Container {
         };
 
         // handle clicks
+        edit.dom.addEventListener('click', handleEdit);
         visible.dom.addEventListener('click', toggleVisible);
         invisible.dom.addEventListener('click', toggleVisible);
         remove.dom.addEventListener('click', handleRemove);
 
         this.destroy = () => {
+            edit.dom.removeEventListener('click', handleEdit);
             visible.dom.removeEventListener('click', toggleVisible);
             invisible.dom.removeEventListener('click', toggleVisible);
             remove.dom.removeEventListener('click', handleRemove);

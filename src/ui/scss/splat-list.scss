@@ -34,6 +34,23 @@
     }
 }
 
+.splat-item-edit {
+    flex-grow: 0;
+    flex-shrink: 0;
+
+    width: 24px;
+    height: 24px;
+    line-height: 24px;
+
+    color: $text-secondary;
+
+    cursor: pointer;
+
+    &:hover {
+        color: $text-primary;
+    }
+}
+
 .splat-item-visible {
     flex-grow: 0;
     flex-shrink: 0;

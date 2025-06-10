@@ -446,6 +446,14 @@ const localizeInit = () => {
                     'export.animation': 'Animation',
                     'export.animation-none': 'None',
                     'export.animation-track': 'Track',
+                    // TODO: review translation
+                    'export.ply': 'PLY (.ply)',
+                    'export.ply-compress': 'Compress PLY',
+                    'export.splat': 'Splat file (.splat)',
+                    'export.viewer-html': 'Viewer App (.html)',
+                    'export.viewer-zip': 'Viewer App (.zip)',
+                    'export.splats-select': 'Splats',
+                    'export.splats-select.all': 'All Splats',
 
                     // Cursor
                     'cursor.click-to-copy': 'Click to copy',

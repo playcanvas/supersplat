@@ -1,5 +1,6 @@
 import { Container, Label, Element as PcuiElement, TextInput } from 'pcui';
 
+import { RenameSplatOp } from '../edit-ops';
 import { Element, ElementType } from '../element';
 import { Events } from '../events';
 import { Splat } from '../splat';
@@ -115,7 +116,7 @@ class SplatItem extends Container {
             textEdit.hidden = true;
             text.hidden = false;
             // apply updated value
-            splat.name = textEdit.value;
+            splat.scene.events.fire('edit.add', new RenameSplatOp(splat, textEdit.value));
         };
 
         const toggleEdit = (event: MouseEvent) => {

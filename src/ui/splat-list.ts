@@ -4,6 +4,7 @@ import { RenameSplatOp } from '../edit-ops';
 import { Element, ElementType } from '../element';
 import { Events } from '../events';
 import { Splat } from '../splat';
+import { localize } from './localization';
 import deleteSvg from './svg/delete.svg';
 import editSvg from './svg/edit.svg';
 import hiddenSvg from './svg/hidden.svg';
@@ -13,6 +14,16 @@ const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
     return new DOMParser().parseFromString(decodedStr, 'image/svg+xml').documentElement;
 };
+
+/**
+ * A simple & permissive regex for checking filename
+ * - `^`: Asserts the start of the string.
+ * - `(.+)`: Capturing group for the filename (still allows any character).
+ * - `\.`: Matches the literal dot.
+ * - `([^.]+)`: Capturing group for the extension. Matches any character that is NOT a dot.
+ * - `$`: Asserts the end of the string.
+ */
+const FILENAME_REGEX = /^(.+)\.([^.]+)$/;
 
 class SplatItem extends Container {
     getName: () => string;
@@ -95,12 +106,12 @@ class SplatItem extends Container {
             }
         };
 
-        // pre-define endRename for reference below
-        let endRename = () => {};
+        // pre-define for reference below
+        let tryEndRename = () => false;
 
         const enterHandler = (e: KeyboardEvent) => {
             if (e.key === 'Enter' && !e.shiftKey) {
-                endRename();
+                tryEndRename();
             }
         };
 
@@ -111,12 +122,22 @@ class SplatItem extends Container {
             this.dom.focus();
         };
 
-        endRename = () => {
+        tryEndRename = () => {
+            if (!FILENAME_REGEX.test(textEdit.value)) {
+                // async call ignored, should have a better way
+                splat.scene.events.invoke('showPopup', {
+                    type: 'error',
+                    header: localize('popup.error'),
+                    message: localize('popup.error-rename')
+                });
+                return false;
+            }
             this.dom.removeEventListener('keydown', enterHandler);
             textEdit.hidden = true;
             text.hidden = false;
             // apply updated value
             splat.scene.events.fire('edit.add', new RenameSplatOp(splat, textEdit.value));
+            return true;
         };
 
         const toggleEdit = (event: MouseEvent) => {
@@ -124,7 +145,7 @@ class SplatItem extends Container {
             if (textEdit.hidden) {
                 startRename();
             } else {
-                endRename();
+                tryEndRename();
             }
         };
 

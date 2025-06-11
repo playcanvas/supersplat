@@ -1,4 +1,4 @@
-import { Container, Label, Element as PcuiElement } from 'pcui';
+import { Container, Label, Element as PcuiElement, TextInput } from 'pcui';
 
 import { Element, ElementType } from '../element';
 import { Events } from '../events';
@@ -22,7 +22,7 @@ class SplatItem extends Container {
     setVisible: (value: boolean) => void;
     destroy: () => void;
 
-    constructor(name: string, args = {}) {
+    constructor(splat: Splat, args = {}) {
         args = {
             ...args,
             class: ['splat-item', 'visible']
@@ -32,7 +32,13 @@ class SplatItem extends Container {
 
         const text = new Label({
             class: 'splat-item-text',
-            text: name
+            text: splat.name
+        });
+
+        const textEdit = new TextInput({
+            class: 'splat-item-text-edit',
+            value: splat.name,
+            hidden: true
         });
 
         const edit = new PcuiElement({
@@ -57,6 +63,7 @@ class SplatItem extends Container {
         });
 
         this.append(text);
+        this.append(textEdit);
         this.append(edit);
         this.append(visible);
         this.append(invisible);
@@ -68,6 +75,7 @@ class SplatItem extends Container {
 
         this.setName = (value: string) => {
             text.value = value;
+            textEdit.value = value;
         };
 
         this.getSelected = () => {
@@ -86,9 +94,37 @@ class SplatItem extends Container {
             }
         };
 
-        const handleEdit = (event: MouseEvent) => {
+        // pre-define endRename for reference below
+        let endRename = () => {};
+
+        const enterHandler = (e: KeyboardEvent) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                endRename();
+            }
+        };
+
+        const startRename = () => {
+            text.hidden = true;
+            textEdit.hidden = false;
+            this.dom.addEventListener('keydown', enterHandler);
+            this.dom.focus();
+        };
+
+        endRename = () => {
+            this.dom.removeEventListener('keydown', enterHandler);
+            textEdit.hidden = true;
+            text.hidden = false;
+            // apply updated value
+            splat.name = textEdit.value;
+        };
+
+        const toggleEdit = (event: MouseEvent) => {
             event.stopPropagation();
-            console.log('edit pressed');
+            if (textEdit.hidden) {
+                startRename();
+            } else {
+                endRename();
+            }
         };
 
         this.getVisible = () => {
@@ -120,13 +156,13 @@ class SplatItem extends Container {
         };
 
         // handle clicks
-        edit.dom.addEventListener('click', handleEdit);
+        edit.dom.addEventListener('click', toggleEdit);
         visible.dom.addEventListener('click', toggleVisible);
         invisible.dom.addEventListener('click', toggleVisible);
         remove.dom.addEventListener('click', handleRemove);
 
         this.destroy = () => {
-            edit.dom.removeEventListener('click', handleEdit);
+            edit.dom.removeEventListener('click', toggleEdit);
             visible.dom.removeEventListener('click', toggleVisible);
             invisible.dom.removeEventListener('click', toggleVisible);
             remove.dom.removeEventListener('click', handleRemove);
@@ -172,7 +208,7 @@ class SplatList extends Container {
         events.on('scene.elementAdded', (element: Element) => {
             if (element.type === ElementType.splat) {
                 const splat = element as Splat;
-                const item = new SplatItem(splat.name);
+                const item = new SplatItem(splat);
                 this.append(item);
                 items.set(splat, item);
 

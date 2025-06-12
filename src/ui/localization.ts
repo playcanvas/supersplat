@@ -200,6 +200,13 @@ const localizeInit = () => {
                     'export.fov': 'Sichtfeld (FoV)',
                     'export.background-color': 'Hintergrund',
                     'export.filename': 'Dateiname',
+                    'export.ply': 'PLY (.ply)',
+                    'export.ply-compress': 'PLY komprimieren',
+                    'export.splat': 'Splat-Datei (.splat)',
+                    'export.viewer-html': 'Viewer-App (.html)',
+                    'export.viewer-zip': 'Viewer-App (.zip)',
+                    'export.splats-select': 'Splats',
+                    'export.splats-select.all': 'Alle Splats',
 
                     // Cursor
                     'cursor.click-to-copy': 'Klicken zum kopieren',
@@ -446,7 +453,6 @@ const localizeInit = () => {
                     'export.animation': 'Animation',
                     'export.animation-none': 'None',
                     'export.animation-track': 'Track',
-                    // TODO: review translation
                     'export.ply': 'PLY (.ply)',
                     'export.ply-compress': 'Compress PLY',
                     'export.splat': 'Splat file (.splat)',
@@ -696,6 +702,13 @@ const localizeInit = () => {
                     'export.fov': 'Champ de vision',
                     'export.background-color': 'Arrière-plan',
                     'export.filename': 'Nom de fichier',
+                    'export.ply': 'PLY (.ply)',
+                    'export.ply-compress': 'Compresser PLY',
+                    'export.splat': 'Fichier Splat (.splat)',
+                    'export.viewer-html': 'Application de visualisation (.html)',
+                    'export.viewer-zip': 'Application de visualisation (.zip)',
+                    'export.splats-select': 'Splats',
+                    'export.splats-select.all': 'Tous les Splats',
 
                     // Cursor
                     'cursor.click-to-copy': 'Cliquez pour copier',
@@ -929,6 +942,13 @@ const localizeInit = () => {
                     'export.fov': '視野角',
                     'export.background-color': '背景色',
                     'export.filename': 'ファイル名',
+                    'export.ply': 'PLY (.ply)',
+                    'export.ply-compress': 'PLYを圧縮',
+                    'export.splat': 'Splatファイル (.splat)',
+                    'export.viewer-html': 'ビューアアプリ (.html)',
+                    'export.viewer-zip': 'ビューアアプリ (.zip)',
+                    'export.splats-select': 'Splat',
+                    'export.splats-select.all': 'すべてのSplat',
 
                     // Cursor
                     'cursor.click-to-copy': 'クリックしてコピー',
@@ -1161,6 +1181,13 @@ const localizeInit = () => {
                     'export.fov': '시야각',
                     'export.background-color': '배경색',
                     'export.filename': '파일 이름',
+                    'export.ply': 'PLY (.ply)',
+                    'export.ply-compress': 'PLY 압축',
+                    'export.splat': 'Splat 파일 (.splat)',
+                    'export.viewer-html': '뷰어 앱 (.html)',
+                    'export.viewer-zip': '뷰어 앱 (.zip)',
+                    'export.splats-select': 'Splat',
+                    'export.splats-select.all': '모든 Splat',
 
                     // Cursor
                     'cursor.click-to-copy': '클릭하여 복사',
@@ -1394,6 +1421,13 @@ const localizeInit = () => {
                     'export.fov': '视野角',
                     'export.background-color': '背景颜色',
                     'export.filename': '文件名',
+                    'export.ply': 'PLY (.ply)',
+                    'export.ply-compress': '压缩PLY',
+                    'export.splat': 'Splat文件 (.splat)',
+                    'export.viewer-html': '查看器应用 (.html)',
+                    'export.viewer-zip': '查看器应用 (.zip)',
+                    'export.splats-select': 'Splat',
+                    'export.splats-select.all': '所有Splat',
 
                     // Cursor
                     'cursor.click-to-copy': '点击复制',

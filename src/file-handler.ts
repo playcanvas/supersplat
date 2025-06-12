@@ -382,29 +382,36 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         }
     });
 
-    const writeScene = async (type: ExportType, writer: Writer, viewerExportSettings?: ViewerExportSettings) => {
-        const splats = getSplats();
-        const events = splats[0].scene.events;
+    const writeScene = async (options: SceneWriteOptions) => {
+        const { stream, filename, type, viewerExportSettings } = options;
 
-        const serializeSettings: SerializeSettings = {
-            maxSHBands: events.invoke('view.bands')
-        };
+        const writer = stream ? new FileStreamWriter(stream) : new DownloadWriter(filename);
+        try {
+            const splats = getSplats();
+            const events = splats[0].scene.events;
 
-        switch (type) {
-            case 'ply':
-                await serializePly(splats, serializeSettings, writer);
-                break;
-            case 'compressed-ply':
-                serializeSettings.minOpacity = 1 / 255;
-                serializeSettings.removeInvalid = true;
-                await serializePlyCompressed(splats, serializeSettings, writer);
-                break;
-            case 'splat':
-                await serializeSplat(splats, serializeSettings, writer);
-                break;
-            case 'viewer':
-                await serializeViewer(splats, viewerExportSettings, writer);
-                break;
+            const serializeSettings: SerializeSettings = {
+                maxSHBands: events.invoke('view.bands')
+            };
+
+            switch (type) {
+                case 'ply':
+                    await serializePly(splats, serializeSettings, writer);
+                    break;
+                case 'compressed-ply':
+                    serializeSettings.minOpacity = 1 / 255;
+                    serializeSettings.removeInvalid = true;
+                    await serializePlyCompressed(splats, serializeSettings, writer);
+                    break;
+                case 'splat':
+                    await serializeSplat(splats, serializeSettings, writer);
+                    break;
+                case 'viewer':
+                    await serializeViewer(splats, viewerExportSettings, writer);
+                    break;
+            }
+        } finally {
+            await writer.close();
         }
     };
 
@@ -416,12 +423,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
             await new Promise<void>((resolve) => {
                 setTimeout(resolve);
             });
-
-            const { stream, filename, type, viewerExportSettings } = options;
-            const writer = stream ? new FileStreamWriter(stream) : new DownloadWriter(filename);
-
-            await writeScene(type, writer, viewerExportSettings);
-            await writer.close();
+            await writeScene(options);
         } catch (error) {
             await events.invoke('showPopup', {
                 type: 'error',

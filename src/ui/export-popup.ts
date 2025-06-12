@@ -368,7 +368,7 @@ class ExportPopup extends Container {
             splatsSelect.value = 'all';
             splatsSelect.options = [
                 { v: 'all', t: localize('export.splats-select.all') },
-                ...splatNames.map(s => ({ v: s, t: s }))
+                ...splatNames.map((s, i) => ({ v: i.toString(), t: s }))
             ];
             bandsSlider.value = events.invoke('view.bands');
             // ply
@@ -408,7 +408,7 @@ class ExportPopup extends Container {
             const assemblePlyOptions = () : UISceneWriteOptions => {
                 return {
                     type: compressBoolean.value ? 'compressed-ply' : 'ply',
-                    splats: splatsSelect.value === 'all' ? 'all' : [splatsSelect.value],
+                    splatIdx: splatsSelect.value === 'all' ? 'all' : [splatsSelect.value],
                     filename: filename && filenameEntry.value,
                     serializeSettings: {
                         maxSHBands: bandsSlider.value
@@ -419,7 +419,7 @@ class ExportPopup extends Container {
             const assembleSplatOptions = () : UISceneWriteOptions => {
                 return {
                     type: 'splat',
-                    splats: splatsSelect.value === 'all' ? 'all' : [splatsSelect.value],
+                    splatIdx: splatsSelect.value === 'all' ? 'all' : [splatsSelect.value],
                     filename: filename && filenameEntry.value,
                     serializeSettings: {
                         maxSHBands: bandsSlider.value
@@ -502,7 +502,7 @@ class ExportPopup extends Container {
 
                 return {
                     type: 'viewer',
-                    splats: splatsSelect.value === 'all' ? 'all' : [splatsSelect.value],
+                    splatIdx: splatsSelect.value === 'all' ? 'all' : [splatsSelect.value],
                     viewerExportSettings: {
                         type: typeSelect.value,
                         filename: filename && filenameEntry.value,

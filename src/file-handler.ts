@@ -21,7 +21,7 @@ type ExportType = 'ply' | 'compressed-ply' | 'splat' | 'viewer';
 
 interface UISceneWriteOptions {
     type: ExportType;
-    splats: 'all' | [string];
+    splatIdx: 'all' | [string];
     filename?: string; // for ply, compressed-ply and splat type
     serializeSettings?: SerializeSettings; // for ply, compressed-ply and splat type
     viewerExportSettings?: ViewerExportSettings; // for viewer type
@@ -29,7 +29,7 @@ interface UISceneWriteOptions {
 
 interface SceneWriteOptions {
     type: ExportType;
-    splats: 'all' | [string];
+    splatIdx: 'all' | [string];
     filename?: string;
     stream?: FileSystemWritableFileStream;
     serializeSettings?: SerializeSettings; // for ply, compressed-ply and splat type
@@ -394,7 +394,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                 });
                 await events.invoke('scene.write', {
                     type: options.type,
-                    splats: options.splats,
+                    splatIdx: options.splatIdx,
                     stream: await fileHandle.createWritable(),
                     serializeSettings: options.serializeSettings,
                     viewerExportSettings: options.viewerExportSettings
@@ -407,7 +407,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         } else {
             await events.invoke('scene.write', {
                 type: options.type,
-                splats: options.splats,
+                splatIdx: options.splatIdx,
                 filename,
                 serializeSettings: options.serializeSettings,
                 viewerExportSettings: options.viewerExportSettings
@@ -416,12 +416,12 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
     });
 
     const writeScene = async (options: SceneWriteOptions) => {
-        const { stream, filename, type, splats: splatNames, serializeSettings, viewerExportSettings } = options;
+        const { stream, filename, type, splatIdx, serializeSettings, viewerExportSettings } = options;
 
         const writer = stream ? new FileStreamWriter(stream) : new DownloadWriter(filename);
         try {
             let splats = getSplats();
-            splats = splatNames === 'all' ? splats : splats.filter(s => splatNames.includes(s.name));
+            splats = splatIdx === 'all' ? splats : splats.filter((s, i) => splatIdx.includes(i.toString()));
 
             switch (type) {
                 case 'ply':

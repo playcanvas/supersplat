@@ -246,8 +246,9 @@ class ExportPopup extends Container {
 
         // content
 
-        const plyRows = [compressRow];
-        const viewerRows = [startRow, animationRow, colorRow, fovRow];
+        const plyRows = [bandsRow, compressRow];
+        const splatRows: Container[] = [];
+        const viewerRows = [bandsRow, startRow, animationRow, colorRow, fovRow];
         const specialRows = [...plyRows, ...viewerRows];
 
         content.append(typeRow);
@@ -255,7 +256,9 @@ class ExportPopup extends Container {
         content.append(splatsRow);
         content.append(bandsRow);
         plyRows.forEach(r => content.append(r));
-        viewerRows.forEach(r => content.append(r));
+        // ignore duplicate when adding
+        splatRows.filter(r => r.parent !== content).forEach(r => content.append(r));
+        viewerRows.filter(r => r.parent !== content).forEach(r => content.append(r));
 
         // ply default
         specialRows.forEach((r) => {
@@ -318,7 +321,7 @@ class ExportPopup extends Container {
             const activeRows = (() => {
                 switch (typeSelect.value) {
                     case 'ply': return plyRows;
-                    case 'splat': return [];
+                    case 'splat': return splatRows;
                     case 'html': return viewerRows;
                     case 'zip': return viewerRows;
                     // should not happen
@@ -421,9 +424,7 @@ class ExportPopup extends Container {
                     type: 'splat',
                     splatIdx: splatsSelect.value === 'all' ? 'all' : [splatsSelect.value],
                     filename: filename && filenameEntry.value,
-                    serializeSettings: {
-                        maxSHBands: bandsSlider.value
-                    }
+                    serializeSettings: {}
                 };
             };
 

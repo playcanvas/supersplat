@@ -4,7 +4,8 @@ import { path } from 'playcanvas';
 import { Pose } from '../camera-poses';
 import { localize } from './localization';
 import { Events } from '../events';
-import { AnimTrack, ExperienceSettings, ViewerExportSettings } from '../splat-serialize';
+import { UISceneWriteOptions } from '../file-handler';
+import { AnimTrack, ExperienceSettings } from '../splat-serialize';
 import sceneExport from './svg/export.svg';
 
 const createSvg = (svgString: string, args = {}) => {
@@ -404,93 +405,128 @@ class ExportPopup extends Container {
             this.dom.addEventListener('keydown', keydown);
             this.dom.focus();
 
-            return new Promise<null | ViewerExportSettings>((resolve) => {
+            const assemblePlyOptions = () : UISceneWriteOptions => {
+                return {
+                    type: compressBoolean.value ? 'compressed-ply' : 'ply',
+                    splats: splatsSelect.value === 'all' ? 'all' : [splatsSelect.value],
+                    filename: filename && filenameEntry.value,
+                    serializeSettings: {
+                        maxSHBands: bandsSlider.value
+                    }
+                };
+            };
+
+            const assembleSplatOptions = () : UISceneWriteOptions => {
+                return {
+                    type: 'splat',
+                    splats: splatsSelect.value === 'all' ? 'all' : [splatsSelect.value],
+                    filename: filename && filenameEntry.value,
+                    serializeSettings: {
+                        maxSHBands: bandsSlider.value
+                    }
+                };
+            };
+
+            const assembleViewerOptions = () : UISceneWriteOptions => {
+                // extract camera starting pos
+                let pose;
+                switch (startSelect.value) {
+                    case 'pose':
+                        pose = orderedPoses?.[0];
+                        break;
+                    case 'viewport':
+                        pose = events.invoke('camera.getPose');
+                        break;
+                }
+                const p = pose?.position;
+                const t = pose?.target;
+
+                const startAnim = (() => {
+                    switch (animationSelect.value) {
+                        case 'none': return 'none';
+                        case 'track': return 'animTrack';
+                    }
+                })();
+
+                // extract camera animation
+                const animTracks: AnimTrack[] = [];
+                switch (startAnim) {
+                    case 'none':
+                        break;
+                    case 'animTrack': {
+                        // use camera poses
+                        const times = [];
+                        const position = [];
+                        const target = [];
+                        for (let i = 0; i < orderedPoses.length; ++i) {
+                            const p = orderedPoses[i];
+                            times.push(p.frame);
+                            position.push(p.position.x, p.position.y, p.position.z);
+                            target.push(p.target.x, p.target.y, p.target.z);
+                        }
+
+                        animTracks.push({
+                            name: 'cameraAnim',
+                            duration: frames / frameRate,
+                            frameRate,
+                            target: 'camera',
+                            loopMode: 'repeat',
+                            interpolation: 'spline',
+                            keyframes: {
+                                times,
+                                values: { position, target }
+                            }
+                        });
+
+                        break;
+                    }
+                }
+
+                const experienceSettings: ExperienceSettings = {
+                    camera: {
+                        fov: fovSlider.value,
+                        position: p ? [p.x, p.y, p.z] : null,
+                        target: t ? [t.x, t.y, t.z] : null,
+                        startAnim,
+                        animTrack: startAnim === 'animTrack' ? 'cameraAnim' : null
+                    },
+                    background: {
+                        color: colorPicker.value.slice()
+                    },
+                    animTracks
+                };
+
+                const serializeSettings = {
+                    maxSHBands: bandsSlider.value
+                };
+
+                return {
+                    type: 'viewer',
+                    splats: splatsSelect.value === 'all' ? 'all' : [splatsSelect.value],
+                    viewerExportSettings: {
+                        type: typeSelect.value,
+                        filename: filename && filenameEntry.value,
+                        serializeSettings,
+                        experienceSettings
+                    }
+                };
+            };
+
+            return new Promise<null | UISceneWriteOptions>((resolve) => {
                 onCancel = () => {
                     resolve(null);
                 };
 
                 onExport = () => {
-                    // TODO: complete the logic below
-                    console.log('Export Called');
-                    return null;
-                    // // extract camera starting pos
-                    // let pose;
-                    // switch (startSelect.value) {
-                    //     case 'pose':
-                    //         pose = orderedPoses?.[0];
-                    //         break;
-                    //     case 'viewport':
-                    //         pose = events.invoke('camera.getPose');
-                    //         break;
-                    // }
-                    // const p = pose?.position;
-                    // const t = pose?.target;
-                    //
-                    // const startAnim = (() => {
-                    //     switch (animationSelect.value) {
-                    //         case 'none': return 'none';
-                    //         case 'track': return 'animTrack';
-                    //     }
-                    // })();
-                    //
-                    // // extract camera animation
-                    // const animTracks: AnimTrack[] = [];
-                    // switch (startAnim) {
-                    //     case 'none':
-                    //         break;
-                    //     case 'animTrack': {
-                    //         // use camera poses
-                    //         const times = [];
-                    //         const position = [];
-                    //         const target = [];
-                    //         for (let i = 0; i < orderedPoses.length; ++i) {
-                    //             const p = orderedPoses[i];
-                    //             times.push(p.frame);
-                    //             position.push(p.position.x, p.position.y, p.position.z);
-                    //             target.push(p.target.x, p.target.y, p.target.z);
-                    //         }
-                    //
-                    //         animTracks.push({
-                    //             name: 'cameraAnim',
-                    //             duration: frames / frameRate,
-                    //             frameRate,
-                    //             target: 'camera',
-                    //             loopMode: 'repeat',
-                    //             interpolation: 'spline',
-                    //             keyframes: {
-                    //                 times,
-                    //                 values: { position, target }
-                    //             }
-                    //         });
-                    //
-                    //         break;
-                    //     }
-                    // }
-                    //
-                    // const experienceSettings: ExperienceSettings = {
-                    //     camera: {
-                    //         fov: fovSlider.value,
-                    //         position: p ? [p.x, p.y, p.z] : null,
-                    //         target: t ? [t.x, t.y, t.z] : null,
-                    //         startAnim,
-                    //         animTrack: startAnim === 'animTrack' ? 'cameraAnim' : null
-                    //     },
-                    //     background: {
-                    //         color: colorPicker.value.slice()
-                    //     },
-                    //     animTracks
-                    // };
-                    //
-                    // const serializeSettings = {
-                    //     maxSHBands: bandsSlider.value
-                    // };
-                    //
-                    // resolve({
-                    //     type: typeSelect.value,
-                    //     filename: filename && filenameEntry.value,
-                    //     serializeSettings,
-                    //     experienceSettings
-                    // });
+                    const settings: UISceneWriteOptions = (() => {
+                        switch (typeSelect.value) {
+                            case 'ply': return assemblePlyOptions();
+                            case 'splat': return assembleSplatOptions();
+                            case 'html': // fallthrough
+                            case 'zip': return assembleViewerOptions();
+                        }
+                    })();
+                    resolve(settings);
                 };
             }).finally(() => {
                 this.dom.removeEventListener('keydown', keydown);

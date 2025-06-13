@@ -118,8 +118,8 @@ class SplatItem extends Container {
         const startRename = () => {
             text.hidden = true;
             textEdit.hidden = false;
-            this.dom.addEventListener('keydown', enterHandler);
-            this.dom.focus();
+            textEdit.dom.addEventListener('keydown', enterHandler);
+            textEdit.dom.focus();
         };
 
         tryEndRename = () => {
@@ -132,7 +132,7 @@ class SplatItem extends Container {
                 });
                 return false;
             }
-            this.dom.removeEventListener('keydown', enterHandler);
+            textEdit.dom.removeEventListener('keydown', enterHandler);
             textEdit.hidden = true;
             text.hidden = false;
             // apply updated value

@@ -18,12 +18,12 @@ const createSvg = (svgString: string) => {
 /**
  * A simple & permissive regex for checking filename
  * - `^`: Asserts the start of the string.
- * - `(.+)`: Capturing group for the filename (still allows any character).
+ * - `.+`: Capturing group for the filename (still allows any character).
  * - `\.`: Matches the literal dot.
- * - `([^.]+)`: Capturing group for the extension. Matches any character that is NOT a dot.
+ * - `[^.]+`: Capturing group for the extension. Matches any character that is NOT a dot.
  * - `$`: Asserts the end of the string.
  */
-const FILENAME_REGEX = /^(.+)\.([^.]+)$/;
+const FILENAME_REGEX = /^.+\.[^.]+$/;
 
 class SplatItem extends Container {
     getName: () => string;

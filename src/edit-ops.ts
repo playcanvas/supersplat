@@ -331,7 +331,7 @@ type ColorAdjustment = {
 };
 
 class SetSplatColorAdjustmentOp {
-    name: 'setSplatColor';
+    name = 'setSplatColor';
     splat: Splat;
 
     newState: ColorAdjustment;
@@ -387,7 +387,7 @@ class MultiOp {
 }
 
 class AddSplatOp {
-    name: 'addSplat';
+    name = 'addSplat';
     scene: Scene;
     splat: Splat;
 
@@ -410,7 +410,7 @@ class AddSplatOp {
 }
 
 class RenameSplatOp {
-    name: 'renameSplat';
+    name = 'renameSplat';
     splat: Splat;
     oldName: string;
     newName: string;

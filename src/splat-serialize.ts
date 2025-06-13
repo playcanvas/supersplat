@@ -100,7 +100,7 @@ class GaussianFilter {
             }
 
             // optionally filter out unselected gaussians
-            if (onlySelected && ((state[i] & State.selected) === 0)) {
+            if (onlySelected && (state[i] !== State.selected)) {
                 return false;
             }
 

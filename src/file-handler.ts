@@ -21,7 +21,7 @@ type ExportType = 'ply' | 'compressed-ply' | 'splat' | 'viewer';
 
 interface UISceneWriteOptions {
     type: ExportType;
-    splatIdx: 'all' | [string];
+    splatIdx: 'all' | string[];
     filename?: string; // for ply, compressed-ply and splat type
     serializeSettings?: SerializeSettings; // for ply, compressed-ply and splat type
     viewerExportSettings?: ViewerExportSettings; // for viewer type
@@ -29,7 +29,7 @@ interface UISceneWriteOptions {
 
 interface SceneWriteOptions {
     type: ExportType;
-    splatIdx: 'all' | [string];
+    splatIdx: 'all' | string[];
     filename?: string;
     stream?: FileSystemWritableFileStream;
     serializeSettings?: SerializeSettings; // for ply, compressed-ply and splat type

@@ -198,7 +198,7 @@ class EditorUI {
             shortcutsPopup.hidden = false;
         });
 
-        events.function('show.exportPopup', (splatNames: [string], filename?: string) => {
+        events.function('show.exportPopup', (splatNames: string[], filename?: string) => {
             return exportPopup.show(splatNames, filename);
         });
 

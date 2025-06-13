@@ -185,6 +185,8 @@ class SplatItem extends Container {
 
         this.destroy = () => {
             edit.dom.removeEventListener('click', toggleEdit);
+            // ensure it's gone on destruction, would be no-op if not added
+            textEdit.dom.removeEventListener('keydown', enterHandler);
             visible.dom.removeEventListener('click', toggleVisible);
             invisible.dom.removeEventListener('click', toggleVisible);
             remove.dom.removeEventListener('click', handleRemove);

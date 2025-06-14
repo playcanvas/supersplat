@@ -121,7 +121,7 @@ class SplatItem extends Container {
             text.hidden = true;
             textEdit.hidden = false;
             textEdit.dom.addEventListener('keydown', enterHandler);
-            textEdit.dom.focus();
+            setTimeout(() => textEdit.focus());
         };
 
         tryEndRename = (action: 'cancel' | 'save') => {

@@ -107,11 +107,13 @@ class SplatItem extends Container {
         };
 
         // pre-define for reference below
-        let tryEndRename = () => false;
+        let tryEndRename = (action: 'cancel' | 'save') => false;
 
         const enterHandler = (e: KeyboardEvent) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                tryEndRename();
+            if (e.key === 'Escape') {
+                tryEndRename('cancel');
+            } else if (e.key === 'Enter' && !e.shiftKey) {
+                tryEndRename('save');
             }
         };
 
@@ -122,22 +124,32 @@ class SplatItem extends Container {
             textEdit.dom.focus();
         };
 
-        tryEndRename = () => {
-            if (!FILENAME_REGEX.test(textEdit.value)) {
-                // async call ignored, should have a better way
-                splat.scene.events.invoke('showPopup', {
-                    type: 'error',
-                    header: localize('popup.error'),
-                    message: localize('popup.error-rename')
-                });
-                return false;
+        tryEndRename = (action: 'cancel' | 'save') => {
+            const cancel = action === 'cancel';
+            if (!cancel) {
+                if (!FILENAME_REGEX.test(textEdit.value)) {
+                    // async call ignored, should have a better way
+                    splat.scene.events.invoke('showPopup', {
+                        type: 'error',
+                        header: localize('popup.error'),
+                        message: localize('popup.error-rename')
+                    });
+                    return false;
+                }
             }
+
             textEdit.dom.removeEventListener('keydown', enterHandler);
             textEdit.hidden = true;
             text.hidden = false;
-            // apply updated value
-            splat.scene.events.fire('edit.add', new RenameSplatOp(splat, textEdit.value));
-            return true;
+
+            if (!cancel) {
+                // apply updated value
+                splat.scene.events.fire('edit.add', new RenameSplatOp(splat, textEdit.value));
+                return true;
+            }
+            textEdit.value = text.value;
+            return false;
+
         };
 
         const toggleEdit = (event: MouseEvent) => {
@@ -145,7 +157,7 @@ class SplatItem extends Container {
             if (textEdit.hidden) {
                 startRename();
             } else {
-                tryEndRename();
+                tryEndRename('save');
             }
         };
 

@@ -163,6 +163,7 @@ const localizeInit = () => {
                     'popup.no': 'Nein',
                     'popup.error': 'FEHLER',
                     'popup.error-loading': 'FEHLER BEIM LADEN DER DATEI',
+                    'popup.error-rename': 'Szenenname muss ein gültiger Dateiname sein',
                     'popup.drop-files': 'Bitte Dateien und Ordner ablegen',
                     'popup.copy-to-clipboard': 'Link in die Zwischenablage kopieren',
 
@@ -405,6 +406,7 @@ const localizeInit = () => {
                     'popup.no': 'No',
                     'popup.error': 'ERROR',
                     'popup.error-loading': 'ERROR LOADING FILE',
+                    'popup.error-rename': 'Scene name must be a valid filename',
                     'popup.drop-files': 'Please drop files and folders',
                     'popup.copy-to-clipboard': 'Copy link to clipboard',
 
@@ -651,6 +653,7 @@ const localizeInit = () => {
                     'popup.no': 'Non',
                     'popup.error': 'ERREUR',
                     'popup.error-loading': 'Erreur de chargement du fichier',
+                    'popup.error-rename': 'Le nom de la scène doit être un nom de fichier valide',
                     'popup.drop-files': 'Veuillez déposer des fichiers et des dossiers',
                     'popup.copy-to-clipboard': 'Copier le lien dans le presse-papiers',
 
@@ -884,6 +887,7 @@ const localizeInit = () => {
                     'popup.no': 'いいえ',
                     'popup.error': 'エラー',
                     'popup.error-loading': 'ファイルの読み込みエラー',
+                    'popup.error-rename': 'シーン名は有効なファイル名である必要があります',
                     'popup.drop-files': 'ファイルやフォルダをドロップしてください',
                     'popup.copy-to-clipboard': 'リンクをクリップボードにコピー',
 
@@ -1116,6 +1120,7 @@ const localizeInit = () => {
                     'popup.no': '아니요',
                     'popup.error': '오류',
                     'popup.error-loading': '파일 로드 오류',
+                    'popup.error-rename': '장면 이름은 유효한 파일 이름이어야 합니다',
                     'popup.drop-files': '파일 및 폴더를 드롭하세요',
                     'popup.copy-to-clipboard': '클립 보드에 링크 복사',
 
@@ -1349,6 +1354,7 @@ const localizeInit = () => {
                     'popup.no': '否',
                     'popup.error': '错误',
                     'popup.error-loading': '加载文件错误',
+                    'popup.error-rename': '场景名称必须是有效的文件名',
                     'popup.drop-files': '请拖放文件和文件夹',
                     'popup.copy-to-clipboard': '复制链接到剪贴板',
 

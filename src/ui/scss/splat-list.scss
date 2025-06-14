@@ -34,6 +34,41 @@
     }
 }
 
+.splat-item-text-edit {
+
+    margin: 0;
+
+    flex-grow: 1;
+    flex-shrink: 1;
+
+    .visible & {
+        &:hover:not(.selected) {
+            color: $text-primary;
+        }
+    }
+
+    .selected & {
+        color: $text-primary;
+    }
+}
+
+.splat-item-edit {
+    flex-grow: 0;
+    flex-shrink: 0;
+
+    width: 24px;
+    height: 24px;
+    line-height: 24px;
+
+    color: $text-secondary;
+
+    cursor: pointer;
+
+    &:hover {
+        color: $text-primary;
+    }
+}
+
 .splat-item-visible {
     flex-grow: 0;
     flex-shrink: 0;

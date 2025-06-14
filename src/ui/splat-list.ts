@@ -1,9 +1,12 @@
-import { Container, Label, Element as PcuiElement } from 'pcui';
+import { Container, Label, Element as PcuiElement, TextInput } from 'pcui';
 
+import { RenameSplatOp } from '../edit-ops';
 import { Element, ElementType } from '../element';
 import { Events } from '../events';
 import { Splat } from '../splat';
+import { localize } from './localization';
 import deleteSvg from './svg/delete.svg';
+import editSvg from './svg/edit.svg';
 import hiddenSvg from './svg/hidden.svg';
 import shownSvg from './svg/shown.svg';
 
@@ -11,6 +14,16 @@ const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
     return new DOMParser().parseFromString(decodedStr, 'image/svg+xml').documentElement;
 };
+
+/**
+ * A simple & permissive regex for checking filename
+ * - `^`: Asserts the start of the string.
+ * - `.+`: Capturing group for the filename (still allows any character).
+ * - `\.`: Matches the literal dot.
+ * - `[^.]+`: Capturing group for the extension. Matches any character that is NOT a dot.
+ * - `$`: Asserts the end of the string.
+ */
+const FILENAME_REGEX = /^.+\.[^.]+$/;
 
 class SplatItem extends Container {
     getName: () => string;
@@ -21,7 +34,7 @@ class SplatItem extends Container {
     setVisible: (value: boolean) => void;
     destroy: () => void;
 
-    constructor(name: string, args = {}) {
+    constructor(splat: Splat, args = {}) {
         args = {
             ...args,
             class: ['splat-item', 'visible']
@@ -31,7 +44,18 @@ class SplatItem extends Container {
 
         const text = new Label({
             class: 'splat-item-text',
-            text: name
+            text: splat.name
+        });
+
+        const textEdit = new TextInput({
+            class: 'splat-item-text-edit',
+            value: splat.name,
+            hidden: true
+        });
+
+        const edit = new PcuiElement({
+            dom: createSvg(editSvg),
+            class: 'splat-item-edit'
         });
 
         const visible = new PcuiElement({
@@ -51,6 +75,8 @@ class SplatItem extends Container {
         });
 
         this.append(text);
+        this.append(textEdit);
+        this.append(edit);
         this.append(visible);
         this.append(invisible);
         this.append(remove);
@@ -61,6 +87,7 @@ class SplatItem extends Container {
 
         this.setName = (value: string) => {
             text.value = value;
+            textEdit.value = value;
         };
 
         this.getSelected = () => {
@@ -76,6 +103,61 @@ class SplatItem extends Container {
                     this.class.remove('selected');
                     this.emit('unselect', this);
                 }
+            }
+        };
+
+        // pre-define for reference below
+        let tryEndRename = (action: 'cancel' | 'save') => false;
+
+        const enterHandler = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                tryEndRename('cancel');
+            } else if (e.key === 'Enter' && !e.shiftKey) {
+                tryEndRename('save');
+            }
+        };
+
+        const startRename = () => {
+            text.hidden = true;
+            textEdit.hidden = false;
+            textEdit.dom.addEventListener('keydown', enterHandler);
+            setTimeout(() => textEdit.focus());
+        };
+
+        tryEndRename = (action: 'cancel' | 'save') => {
+            const cancel = action === 'cancel';
+            if (!cancel) {
+                if (!FILENAME_REGEX.test(textEdit.value)) {
+                    // async call ignored, should have a better way
+                    splat.scene.events.invoke('showPopup', {
+                        type: 'error',
+                        header: localize('popup.error'),
+                        message: localize('popup.error-rename')
+                    });
+                    return false;
+                }
+            }
+
+            textEdit.dom.removeEventListener('keydown', enterHandler);
+            textEdit.hidden = true;
+            text.hidden = false;
+
+            if (!cancel) {
+                // apply updated value
+                splat.scene.events.fire('edit.add', new RenameSplatOp(splat, textEdit.value));
+                return true;
+            }
+            textEdit.value = text.value;
+            return false;
+
+        };
+
+        const toggleEdit = (event: MouseEvent) => {
+            event.stopPropagation();
+            if (textEdit.hidden) {
+                startRename();
+            } else {
+                tryEndRename('save');
             }
         };
 
@@ -108,11 +190,15 @@ class SplatItem extends Container {
         };
 
         // handle clicks
+        edit.dom.addEventListener('click', toggleEdit);
         visible.dom.addEventListener('click', toggleVisible);
         invisible.dom.addEventListener('click', toggleVisible);
         remove.dom.addEventListener('click', handleRemove);
 
         this.destroy = () => {
+            edit.dom.removeEventListener('click', toggleEdit);
+            // ensure it's gone on destruction, would be no-op if not added
+            textEdit.dom.removeEventListener('keydown', enterHandler);
             visible.dom.removeEventListener('click', toggleVisible);
             invisible.dom.removeEventListener('click', toggleVisible);
             remove.dom.removeEventListener('click', handleRemove);
@@ -158,7 +244,7 @@ class SplatList extends Container {
         events.on('scene.elementAdded', (element: Element) => {
             if (element.type === ElementType.splat) {
                 const splat = element as Splat;
-                const item = new SplatItem(splat.name);
+                const item = new SplatItem(splat);
                 this.append(item);
                 items.set(splat, item);
 

@@ -19,11 +19,21 @@ interface RemoteStorageDetails {
 
 type ExportType = 'ply' | 'compressed-ply' | 'splat' | 'viewer';
 
+interface UISceneWriteOptions {
+    type: ExportType;
+    splatIdx: 'all' | string[];
+    filename?: string; // for ply, compressed-ply and splat type
+    serializeSettings?: SerializeSettings; // for ply, compressed-ply and splat type
+    viewerExportSettings?: ViewerExportSettings; // for viewer type
+}
+
 interface SceneWriteOptions {
     type: ExportType;
+    splatIdx: 'all' | string[];
     filename?: string;
     stream?: FileSystemWritableFileStream;
-    viewerExportSettings?: ViewerExportSettings
+    serializeSettings?: SerializeSettings; // for ply, compressed-ply and splat type
+    viewerExportSettings?: ViewerExportSettings; // for viewer type
 }
 
 const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
@@ -56,6 +66,31 @@ const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
         accept: {
             'application/zip': ['.zip']
         }
+    }
+};
+
+function filenameForUIOptions(options: UISceneWriteOptions) {
+    // use in viewerExportSettings.filename when viewer
+    return options.type === 'viewer' ? options.viewerExportSettings.filename : options.filename;
+}
+
+const pickerTypeForUIOptions = (option: UISceneWriteOptions) => {
+    if (option.type === 'viewer') {
+        return option.viewerExportSettings.type === 'zip' ? filePickerTypes.packageViewer : filePickerTypes.htmlViewer;
+    }
+    return filePickerTypes[option.type];
+};
+
+const extensionForUIOptions = (option: UISceneWriteOptions) => {
+    switch (option.type) {
+        case 'ply':
+            return '.ply';
+        case 'compressed-ply':
+            return '.compressed.ply';
+        case 'splat':
+            return '.splat';
+        case 'viewer':
+            return option.viewerExportSettings.type === 'zip' ? '.zip' : '.html';
     }
 };
 
@@ -319,14 +354,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         }
     });
 
-    events.function('scene.export', async (type: ExportType, outputFilename: string = null, exportType: 'export' | 'saveAs' = 'export') => {
-        const extensions = {
-            'ply': '.ply',
-            'compressed-ply': '.compressed.ply',
-            'splat': '.splat',
-            'viewer': '-viewer.html'
-        };
-
+    events.function('scene.export', async (outputFilename: string = null, exportType: 'export' | 'saveAs' = 'export') => {
         const removeExtension = (filename: string) => {
             return filename.substring(0, filename.length - path.getExtension(filename).length);
         };
@@ -337,30 +365,27 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
 
         const splats = getSplats();
         const splat = splats[0];
-        let filename = outputFilename ?? replaceExtension(splat.filename, extensions[type]);
+        let filename = outputFilename ?? replaceExtension(splat.filename, '.ply');
 
         const hasFilePicker = window.showSaveFilePicker;
 
-        let viewerExportSettings;
-        if (type === 'viewer') {
-            // show viewer export options
-            viewerExportSettings = await events.invoke('show.viewerExportPopup', hasFilePicker ? null : filename);
+        // show viewer export options
+        const options: UISceneWriteOptions = await events.invoke('show.exportPopup', splats.map(s => s.name), hasFilePicker ? null : filename);
 
-            // return if user cancelled
-            if (!viewerExportSettings) {
-                return;
-            }
+        // return if user cancelled
+        if (!options) {
+            return;
+        }
 
-            if (hasFilePicker) {
-                filename = replaceExtension(filename, viewerExportSettings.type === 'html' ? '.html' : '.zip');
-            } else {
-                filename = viewerExportSettings.filename;
-            }
+        if (hasFilePicker) {
+            filename = replaceExtension(filename, extensionForUIOptions(options));
+        } else {
+            filename = filenameForUIOptions(options);
         }
 
         if (hasFilePicker) {
             try {
-                const filePickerType = type === 'viewer' ? (viewerExportSettings.type === 'html' ? filePickerTypes.htmlViewer : filePickerTypes.packageViewer) : filePickerTypes[type];
+                const filePickerType = pickerTypeForUIOptions(options);
 
                 const fileHandle = await window.showSaveFilePicker({
                     id: 'SuperSplatFileExport',
@@ -368,9 +393,11 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                     suggestedName: filename
                 });
                 await events.invoke('scene.write', {
-                    type,
+                    type: options.type,
+                    splatIdx: options.splatIdx,
                     stream: await fileHandle.createWritable(),
-                    viewerExportSettings
+                    serializeSettings: options.serializeSettings,
+                    viewerExportSettings: options.viewerExportSettings
                 });
             } catch (error) {
                 if (error.name !== 'AbortError') {
@@ -378,33 +405,42 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                 }
             }
         } else {
-            await events.invoke('scene.write', { type, filename, viewerExportSettings });
+            await events.invoke('scene.write', {
+                type: options.type,
+                splatIdx: options.splatIdx,
+                filename,
+                serializeSettings: options.serializeSettings,
+                viewerExportSettings: options.viewerExportSettings
+            });
         }
     });
 
-    const writeScene = async (type: ExportType, writer: Writer, viewerExportSettings?: ViewerExportSettings) => {
-        const splats = getSplats();
-        const events = splats[0].scene.events;
+    const writeScene = async (options: SceneWriteOptions) => {
+        const { stream, filename, type, splatIdx, serializeSettings, viewerExportSettings } = options;
 
-        const serializeSettings: SerializeSettings = {
-            maxSHBands: events.invoke('view.bands')
-        };
+        const writer = stream ? new FileStreamWriter(stream) : new DownloadWriter(filename);
+        try {
+            let splats = getSplats();
+            splats = splatIdx === 'all' ? splats : splats.filter((s, i) => splatIdx.includes(i.toString()));
 
-        switch (type) {
-            case 'ply':
-                await serializePly(splats, serializeSettings, writer);
-                break;
-            case 'compressed-ply':
-                serializeSettings.minOpacity = 1 / 255;
-                serializeSettings.removeInvalid = true;
-                await serializePlyCompressed(splats, serializeSettings, writer);
-                break;
-            case 'splat':
-                await serializeSplat(splats, serializeSettings, writer);
-                break;
-            case 'viewer':
-                await serializeViewer(splats, viewerExportSettings, writer);
-                break;
+            switch (type) {
+                case 'ply':
+                    await serializePly(splats, serializeSettings, writer);
+                    break;
+                case 'compressed-ply':
+                    serializeSettings.minOpacity = 1 / 255;
+                    serializeSettings.removeInvalid = true;
+                    await serializePlyCompressed(splats, serializeSettings, writer);
+                    break;
+                case 'splat':
+                    await serializeSplat(splats, serializeSettings, writer);
+                    break;
+                case 'viewer':
+                    await serializeViewer(splats, viewerExportSettings, writer);
+                    break;
+            }
+        } finally {
+            await writer.close();
         }
     };
 
@@ -416,12 +452,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
             await new Promise<void>((resolve) => {
                 setTimeout(resolve);
             });
-
-            const { stream, filename, type, viewerExportSettings } = options;
-            const writer = stream ? new FileStreamWriter(stream) : new DownloadWriter(filename);
-
-            await writeScene(type, writer, viewerExportSettings);
-            await writer.close();
+            await writeScene(options);
         } catch (error) {
             await events.invoke('showPopup', {
                 type: 'error',
@@ -434,4 +465,4 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
     });
 };
 
-export { initFileHandler };
+export { initFileHandler, UISceneWriteOptions };

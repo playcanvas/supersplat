@@ -17,7 +17,7 @@
 @use 'mode-toggle.scss';
 @use 'settings-dialog.scss';
 @use 'spinner.scss';
-@use 'viewer-export-popup.scss';
+@use 'export-popup.scss';
 @use 'timeline-panel.scss';
 
 * {
@@ -131,7 +131,6 @@ body {
     cursor: pointer;
 
     &:hover {
-        
         border: 1px solid $clr-hilight;
         background-color: rgba(0, 0, 0, 0.25);
     }

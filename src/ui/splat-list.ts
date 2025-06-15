@@ -50,7 +50,9 @@ class SplatItem extends Container {
         const textEdit = new TextInput({
             class: 'splat-item-text-edit',
             value: splat.name,
-            hidden: true
+            hidden: true,
+            blurOnEscape: false,
+            blurOnEnter: false
         });
 
         const edit = new PcuiElement({
@@ -109,6 +111,15 @@ class SplatItem extends Container {
         // pre-define for reference below
         let tryEndRename = (action: 'cancel' | 'save') => false;
 
+        // lock to prevent undesired triggering
+        let enableLoseFocusBehaviour = true;
+
+        const loseFocusHandler = () => {
+            if (enableLoseFocusBehaviour) {
+                tryEndRename('cancel');
+            }
+        };
+
         const enterHandler = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
                 tryEndRename('cancel');
@@ -121,23 +132,32 @@ class SplatItem extends Container {
             text.hidden = true;
             textEdit.hidden = false;
             textEdit.dom.addEventListener('keydown', enterHandler);
+            textEdit.dom.addEventListener('focusout', loseFocusHandler);
             setTimeout(() => textEdit.focus());
         };
 
         tryEndRename = (action: 'cancel' | 'save') => {
+            // disable to prevent race, manually reset at return because of async behaviour in dialog
+            enableLoseFocusBehaviour = false;
+
             const cancel = action === 'cancel';
             if (!cancel) {
                 if (!FILENAME_REGEX.test(textEdit.value)) {
                     // async call ignored, should have a better way
-                    splat.scene.events.invoke('showPopup', {
+                    const dialog : Promise<any> = splat.scene.events.invoke('showPopup', {
                         type: 'error',
                         header: localize('popup.error'),
                         message: localize('popup.error-rename')
+                    });
+                    // only re-enable when dialog is done
+                    dialog.finally(() => {
+                        enableLoseFocusBehaviour = true;
                     });
                     return false;
                 }
             }
 
+            textEdit.dom.removeEventListener('focusout', loseFocusHandler);
             textEdit.dom.removeEventListener('keydown', enterHandler);
             textEdit.hidden = true;
             text.hidden = false;
@@ -145,11 +165,12 @@ class SplatItem extends Container {
             if (!cancel) {
                 // apply updated value
                 splat.scene.events.fire('edit.add', new RenameSplatOp(splat, textEdit.value));
+                enableLoseFocusBehaviour = true;
                 return true;
             }
             textEdit.value = text.value;
+            enableLoseFocusBehaviour = true;
             return false;
-
         };
 
         const toggleEdit = (event: MouseEvent) => {
@@ -190,7 +211,7 @@ class SplatItem extends Container {
         };
 
         // handle clicks
-        edit.dom.addEventListener('click', toggleEdit);
+        edit.dom.addEventListener('mousedown', toggleEdit);
         visible.dom.addEventListener('click', toggleVisible);
         invisible.dom.addEventListener('click', toggleVisible);
         remove.dom.addEventListener('click', handleRemove);
@@ -199,6 +220,7 @@ class SplatItem extends Container {
             edit.dom.removeEventListener('click', toggleEdit);
             // ensure it's gone on destruction, would be no-op if not added
             textEdit.dom.removeEventListener('keydown', enterHandler);
+            textEdit.dom.removeEventListener('focusout', loseFocusHandler);
             visible.dom.removeEventListener('click', toggleVisible);
             invisible.dom.removeEventListener('click', toggleVisible);
             remove.dom.removeEventListener('click', handleRemove);

@@ -452,7 +452,6 @@ const localizeInit = () => {
                     'export.animation-none': 'None',
                     'export.animation-track': 'Track',
                     'export.ply': 'PLY (.ply)',
-                    'export.compressed-ply': 'Compressed PLY (.compressed.ply)',
                     'export.ply-compress': 'Compress PLY',
                     'export.splat': 'Splat file (.splat)',
                     'export.viewer-app': 'Viewer App',

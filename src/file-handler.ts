@@ -18,7 +18,7 @@ interface RemoteStorageDetails {
 }
 
 type ExportType = 'ply' | 'splat' | 'viewer';
-type FileType = 'ply' | 'compressed-ply' | 'splat' | 'htmlViewer' | 'packageViewer';
+type FileType = 'ply' | 'compressedPly' | 'splat' | 'htmlViewer' | 'packageViewer';
 
 interface SceneExportOptions {
     filename: string;
@@ -39,7 +39,7 @@ const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
             'application/ply': ['.ply']
         }
     },
-    'compressed-ply': {
+    'compressedPly': {
         description: 'Compressed Gaussian Splat PLY File',
         accept: {
             'application/ply': ['.ply']
@@ -316,7 +316,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
 
         const fileType = 
             (exportType === 'viewer') ? (options.viewerExportSettings.type === 'zip' ? 'packageViewer' : 'htmlViewer') :
-            (exportType === 'ply') ? (options.plyExportSettings?.compressed ? 'compressed-ply' : 'ply') : 'splat'
+            (exportType === 'ply') ? (options.plyExportSettings?.compressed ? 'compressedPly' : 'ply') : 'splat'
 
         if (hasFilePicker) {
             try {
@@ -356,7 +356,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                     case 'ply':
                         await serializePly(splats, serializeSettings, writer);
                         break;
-                    case 'compressed-ply':
+                    case 'compressedPly':
                         serializeSettings.minOpacity = 1 / 255;
                         serializeSettings.removeInvalid = true;
                         await serializePlyCompressed(splats, serializeSettings, writer);

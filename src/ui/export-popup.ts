@@ -58,50 +58,6 @@ class ExportPopup extends Container {
 
         const content = new Container({ id: 'content' });
 
-        // splats
-
-        const splatsRow = new Container({
-            class: 'row'
-        });
-
-        const splatsLabel = new Label({
-            class: 'label',
-            text: localize('export.splats-select')
-        });
-
-        const splatsSelect = new SelectInput({
-            class: 'select',
-            defaultValue: 'ply',
-            options: [
-                { v: 'all', t: localize('export.splats-select.all') }
-            ]
-        });
-
-        splatsRow.append(splatsLabel);
-        splatsRow.append(splatsSelect);
-
-        // spherical harmonic bands
-
-        const bandsRow = new Container({
-            class: 'row'
-        });
-
-        const bandsLabel = new Label({
-            class: 'label',
-            text: localize('export.sh-bands')
-        });
-
-        const bandsSlider = new SliderInput({
-            class: 'slider',
-            min: 0,
-            max: 3,
-            precision: 0,
-            value: 3
-        });
-
-        bandsRow.append(bandsLabel);
-        bandsRow.append(bandsSlider);
-
         // ply: compress or not
 
         const compressRow = new Container({
@@ -224,6 +180,50 @@ class ExportPopup extends Container {
         fovRow.append(fovLabel);
         fovRow.append(fovSlider);
 
+        // splats
+
+        const splatsRow = new Container({
+            class: 'row'
+        });
+
+        const splatsLabel = new Label({
+            class: 'label',
+            text: localize('export.splats-select')
+        });
+
+        const splatsSelect = new SelectInput({
+            class: 'select',
+            defaultValue: 'ply',
+            options: [
+                { v: 'all', t: localize('export.splats-select.all') }
+            ]
+        });
+
+        splatsRow.append(splatsLabel);
+        splatsRow.append(splatsSelect);
+
+        // spherical harmonic bands
+
+        const bandsRow = new Container({
+            class: 'row'
+        });
+
+        const bandsLabel = new Label({
+            class: 'label',
+            text: localize('export.sh-bands')
+        });
+
+        const bandsSlider = new SliderInput({
+            class: 'slider',
+            min: 0,
+            max: 3,
+            precision: 0,
+            value: 3
+        });
+
+        bandsRow.append(bandsLabel);
+        bandsRow.append(bandsSlider);
+
         // filename
 
         const filenameRow = new Container({
@@ -244,14 +244,14 @@ class ExportPopup extends Container {
 
         // content
 
-        content.append(splatsRow);
-        content.append(bandsRow);
         content.append(compressRow);
         content.append(viewerTypeRow);
         content.append(startRow);
         content.append(animationRow);
         content.append(colorRow);
         content.append(fovRow);
+        content.append(splatsRow);
+        content.append(bandsRow);
         content.append(filenameRow);
 
         // footer
@@ -301,13 +301,13 @@ class ExportPopup extends Container {
 
         const reset = (exportType: ExportType, splatNames: string[], hasPoses: boolean) => {
             const allRows = [
-                splatsRow, bandsRow, compressRow, viewerTypeRow, startRow, animationRow, colorRow, fovRow, filenameRow
+                compressRow, viewerTypeRow, startRow, animationRow, colorRow, fovRow, splatsRow, bandsRow, filenameRow
             ];
 
             const activeRows = {
-                ply: [splatsRow, bandsRow, compressRow, filenameRow],
+                ply: [compressRow, splatsRow, bandsRow, filenameRow],
                 splat: [splatsRow, bandsRow, filenameRow],
-                viewer: [splatsRow, bandsRow, viewerTypeRow, startRow, animationRow, colorRow, fovRow, filenameRow],
+                viewer: [viewerTypeRow, startRow, animationRow, colorRow, fovRow, splatsRow, bandsRow, filenameRow],
             }[exportType];
 
             allRows.forEach((r) => {

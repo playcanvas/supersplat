@@ -28,7 +28,7 @@ const removeKnownExtension = (filename: string) => {
     }
 
     return filename;
-}
+};
 
 class ExportPopup extends Container {
     show: (exportType: ExportType, splatNames: string[], showFilenameEdit: boolean) => Promise<null | SceneExportOptions>;
@@ -333,7 +333,7 @@ class ExportPopup extends Container {
             const activeRows = {
                 ply: [compressRow, splatsRow, bandsRow, filenameRow],
                 splat: [splatsRow, bandsRow, filenameRow],
-                viewer: [viewerTypeRow, startRow, animationRow, colorRow, fovRow, splatsRow, bandsRow, filenameRow],
+                viewer: [viewerTypeRow, startRow, animationRow, colorRow, fovRow, splatsRow, bandsRow, filenameRow]
             }[exportType];
 
             allRows.forEach((r) => {
@@ -389,9 +389,9 @@ class ExportPopup extends Container {
             const frames = events.invoke('timeline.frames');
             const frameRate = events.invoke('timeline.frameRate');
             const orderedPoses = (events.invoke('camera.poses') as Pose[])
-                .slice()
-                .filter(p => p.frame >= 0 && p.frame < frames)
-                .sort((a, b) => a.frame - b.frame);
+            .slice()
+            .filter(p => p.frame >= 0 && p.frame < frames)
+            .sort((a, b) => a.frame - b.frame);
 
             reset(exportType, splatNames, orderedPoses.length > 0);
 

@@ -18,6 +18,7 @@ interface RemoteStorageDetails {
 }
 
 type ExportType = 'ply' | 'splat' | 'viewer';
+
 type FileType = 'ply' | 'compressedPly' | 'splat' | 'htmlViewer' | 'packageViewer';
 
 interface SceneExportOptions {
@@ -314,9 +315,9 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
             return;
         }
 
-        const fileType = 
+        const fileType =
             (exportType === 'viewer') ? (options.viewerExportSettings.type === 'zip' ? 'packageViewer' : 'htmlViewer') :
-            (exportType === 'ply') ? (options.plyExportSettings?.compressed ? 'compressedPly' : 'ply') : 'splat'
+                (exportType === 'ply') ? (options.plyExportSettings?.compressed ? 'compressedPly' : 'ply') : 'splat';
 
         if (hasFilePicker) {
             try {

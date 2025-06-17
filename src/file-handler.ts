@@ -308,7 +308,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         const hasFilePicker = !!window.showSaveFilePicker;
 
         // show viewer export options
-        const options = await events.invoke('show.exportPopup', exportType, splats.map(s => s.name), !hasFilePicker);
+        const options = await events.invoke('show.exportPopup', exportType, splats.map(s => s.name), !hasFilePicker) as SceneExportOptions;
 
         // return if user cancelled
         if (!options) {
@@ -317,7 +317,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
 
         const fileType =
             (exportType === 'viewer') ? (options.viewerExportSettings.type === 'zip' ? 'packageViewer' : 'htmlViewer') :
-                (exportType === 'ply') ? (options.plyExportSettings?.compressed ? 'compressedPly' : 'ply') : 'splat';
+                (exportType === 'ply') ? (options.compressedPly ? 'compressedPly' : 'ply') : 'splat';
 
         if (hasFilePicker) {
             try {

@@ -332,7 +332,7 @@ class ExportPopup extends Container {
 
             const activeRows = {
                 ply: [compressRow, splatsRow, bandsRow, filenameRow],
-                splat: [splatsRow, bandsRow, filenameRow],
+                splat: [splatsRow, filenameRow],
                 viewer: [viewerTypeRow, startRow, animationRow, colorRow, fovRow, splatsRow, bandsRow, filenameRow]
             }[exportType];
 

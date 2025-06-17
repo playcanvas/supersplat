@@ -4,7 +4,7 @@ import { path } from 'playcanvas';
 import { Pose } from '../camera-poses';
 import { localize } from './localization';
 import { Events } from '../events';
-import { SceneExportOptions } from '../file-handler';
+import { ExportType, SceneExportOptions } from '../file-handler';
 import { AnimTrack, ExperienceSettings } from '../splat-serialize';
 import sceneExport from './svg/export.svg';
 
@@ -17,7 +17,7 @@ const createSvg = (svgString: string, args = {}) => {
 };
 
 class ExportPopup extends Container {
-    show: (splatNames: [string], filename?: string) => void;
+    show: (exportType: ExportType, splatNames: string[], showFilenameEdit: boolean) => Promise<null | SceneExportOptions>;
     hide: () => void;
     destroy: () => void;
 
@@ -57,49 +57,6 @@ class ExportPopup extends Container {
         // content
 
         const content = new Container({ id: 'content' });
-
-        // type
-
-        const typeRow = new Container({
-            class: 'row'
-        });
-
-        const typeLabel = new Label({
-            class: 'label',
-            text: localize('export.type')
-        });
-
-        const typeSelect = new SelectInput({
-            class: 'select',
-            defaultValue: 'ply',
-            options: [
-                { v: 'ply', t: localize('export.ply') },
-                { v: 'compressed-ply', t: localize('export.compressed-ply') },
-                { v: 'splat', t: localize('export.splat') },
-                { v: 'app', t: localize('export.viewer-app') }
-            ]
-        });
-
-        typeRow.append(typeLabel);
-        typeRow.append(typeSelect);
-
-        // filename
-
-        const filenameRow = new Container({
-            class: 'row'
-        });
-
-        const filenameLabel = new Label({
-            class: 'label',
-            text: localize('export.filename')
-        });
-
-        const filenameEntry = new TextInput({
-            class: 'text-input'
-        });
-
-        filenameRow.append(filenameLabel);
-        filenameRow.append(filenameEntry);
 
         // splats
 
@@ -163,6 +120,29 @@ class ExportPopup extends Container {
 
         compressRow.append(compressLabel);
         compressRow.append(compressBoolean);
+
+        // type
+
+        const viewerTypeRow = new Container({
+            class: 'row'
+        });
+
+        const viewerTypeLabel = new Label({
+            class: 'label',
+            text: localize('export.type')
+        });
+
+        const viewerTypeSelect = new SelectInput({
+            class: 'select',
+            defaultValue: 'html',
+            options: [
+                { v: 'html', t: localize('export.html') },
+                { v: 'zip', t: localize('export.package') }
+            ]
+        });
+
+        viewerTypeRow.append(viewerTypeLabel);
+        viewerTypeRow.append(viewerTypeSelect);
 
         // viewer: camera start position
 
@@ -244,29 +224,35 @@ class ExportPopup extends Container {
         fovRow.append(fovLabel);
         fovRow.append(fovSlider);
 
+        // filename
+
+        const filenameRow = new Container({
+            class: 'row'
+        });
+
+        const filenameLabel = new Label({
+            class: 'label',
+            text: localize('export.filename')
+        });
+
+        const filenameEntry = new TextInput({
+            class: 'text-input'
+        });
+
+        filenameRow.append(filenameLabel);
+        filenameRow.append(filenameEntry);
+
         // content
 
-        const plyRows = [bandsRow, compressRow];
-        const splatRows: Container[] = [];
-        const viewerRows = [bandsRow, startRow, animationRow, colorRow, fovRow];
-        const specialRows = [...plyRows, ...viewerRows];
-
-        content.append(typeRow);
-        content.append(filenameRow);
         content.append(splatsRow);
         content.append(bandsRow);
-        plyRows.forEach(r => content.append(r));
-        // ignore duplicate when adding
-        splatRows.filter(r => r.parent !== content).forEach(r => content.append(r));
-        viewerRows.filter(r => r.parent !== content).forEach(r => content.append(r));
-
-        // ply default
-        specialRows.forEach((r) => {
-            r.hidden = true;
-        });
-        plyRows.forEach((r) => {
-            r.hidden = false;
-        });
+        content.append(compressRow);
+        content.append(viewerTypeRow);
+        content.append(startRow);
+        content.append(animationRow);
+        content.append(colorRow);
+        content.append(fovRow);
+        content.append(filenameRow);
 
         // footer
 
@@ -313,57 +299,20 @@ class ExportPopup extends Container {
             }
         };
 
-        typeSelect.on('change', () => {
-            specialRows.forEach((r) => {
-                r.hidden = true;
+        const reset = (exportType: ExportType, splatNames: string[], hasPoses: boolean) => {
+            const allRows = [
+                splatsRow, bandsRow, compressRow, viewerTypeRow, startRow, animationRow, colorRow, fovRow, filenameRow
+            ];
+
+            const activeRows = {
+                ply: [splatsRow, bandsRow, compressRow, filenameRow],
+                splat: [splatsRow, bandsRow, filenameRow],
+                viewer: [splatsRow, bandsRow, viewerTypeRow, startRow, animationRow, colorRow, fovRow, filenameRow],
+            }[exportType];
+
+            allRows.forEach((r) => {
+                r.hidden = activeRows.indexOf(r) === -1;
             });
-            const activeRows = (() => {
-                switch (typeSelect.value) {
-                    case 'ply': return plyRows;
-                    case 'splat': return splatRows;
-                    case 'html': return viewerRows;
-                    case 'zip': return viewerRows;
-                    // should not happen
-                    default: throw new Error(`Unsupported type for specific options query ${typeSelect.value}`);
-                }
-            })();
-            activeRows.forEach((r) => {
-                r.hidden = false;
-            });
-        });
-
-        const updateExtension = () => {
-            if (!filenameRow.hidden) {
-                const removeExtension = (filename: string) => {
-                    let suffixLength;
-                    if (filename.endsWith('-viewer.html')) {
-                        suffixLength = '-viewer.html'.length;
-                    } else if (filename.endsWith('-viewer.zip')) {
-                        suffixLength = '-viewer.zip'.length;
-                    } else {
-                        suffixLength = path.getExtension(filename).length;
-                    }
-                    return filename.substring(0, filename.length - suffixLength);
-                };
-                const extension = (() => {
-                    switch (typeSelect.value) {
-                        case 'ply': return compressBoolean.value ? '.compressed.ply' : '.ply';
-                        case 'splat': return '.splat';
-                        case 'html': return '-viewer.html';
-                        case 'zip': return '-viewer.zip';
-                        // should not happen
-                        default: throw new Error(`Unsupported type for extension query ${typeSelect.value}`);
-                    }
-                })();
-                filenameEntry.value = removeExtension(filenameEntry.value) + extension;
-            }
-        };
-
-        typeSelect.on('change', updateExtension);
-        compressBoolean.on('change', updateExtension);
-
-        const reset = (splatNames: [string], hasPoses: boolean) => {
-            const bgClr = events.invoke('bgClr');
 
             splatsSelect.options = [
                 { v: 'all', t: localize('export.splats-select.all') },
@@ -371,9 +320,12 @@ class ExportPopup extends Container {
             ];
             splatsSelect.value = 'all';
             bandsSlider.value = events.invoke('view.bands');
+
             // ply
             compressBoolean.value = false;
+
             // viewer
+            const bgClr = events.invoke('bgClr');
             startSelect.value = hasPoses ? 'pose' : 'viewport';
             startSelect.disabledOptions = hasPoses ? {} : { 'pose': startSelect.options[2].t };
             animationSelect.value = hasPoses ? 'track' : 'none';
@@ -382,24 +334,18 @@ class ExportPopup extends Container {
             fovSlider.value = events.invoke('camera.fov');
         };
 
-        this.show = (splatNames: [string], filename?: string) => {
+        this.show = (exportType: ExportType, splatNames: string[], showFilenameEdit: boolean) => {
             const frames = events.invoke('timeline.frames');
             const frameRate = events.invoke('timeline.frameRate');
-
-            // get poses
             const orderedPoses = (events.invoke('camera.poses') as Pose[])
-            .slice()
-            .filter(p => p.frame >= 0 && p.frame < frames)
-            .sort((a, b) => a.frame - b.frame);
+                .slice()
+                .filter(p => p.frame >= 0 && p.frame < frames)
+                .sort((a, b) => a.frame - b.frame);
 
-            reset(splatNames, orderedPoses.length > 0);
+            reset(exportType, splatNames, orderedPoses.length > 0);
 
             // filename is only shown in safari where file picker is not supported
-            filenameRow.hidden = !filename;
-            if (filename) {
-                filenameEntry.value = filename;
-                updateExtension();
-            }
+            filenameRow.hidden = !showFilenameEdit;
 
             this.hidden = false;
             this.dom.addEventListener('keydown', keydown);
@@ -407,21 +353,20 @@ class ExportPopup extends Container {
 
             const assemblePlyOptions = () : SceneExportOptions => {
                 return {
-                    type: compressBoolean.value ? 'compressed-ply' : 'ply',
+                    filename: filenameEntry.value,
                     splatIdx: splatsSelect.value === 'all' ? 'all' : splatsSelect.value,
-                    filename: filename && filenameEntry.value,
                     serializeSettings: {
                         maxSHBands: bandsSlider.value
-                    }
+                    },
+                    compressedPly: compressBoolean.value
                 };
             };
 
             const assembleSplatOptions = () : SceneExportOptions => {
                 return {
-                    type: 'splat',
+                    filename: filenameEntry.value,
                     splatIdx: splatsSelect.value === 'all' ? 'all' : splatsSelect.value,
-                    filename: filename && filenameEntry.value,
-                    serializeSettings: {}
+                    serializeSettings: { }
                 };
             };
 
@@ -494,17 +439,14 @@ class ExportPopup extends Container {
                     animTracks
                 };
 
-                const serializeSettings = {
-                    maxSHBands: bandsSlider.value
-                };
-
                 return {
-                    type: 'viewer',
+                    filename: filenameEntry.value,
                     splatIdx: splatsSelect.value === 'all' ? 'all' : splatsSelect.value,
-                    filename: filename && filenameEntry.value,
-                    serializeSettings,
+                    serializeSettings: {
+                        maxSHBands: bandsSlider.value
+                    },
                     viewerExportSettings: {
-                        type: typeSelect.value,
+                        type: viewerTypeSelect.value,
                         experienceSettings
                     }
                 };
@@ -516,15 +458,17 @@ class ExportPopup extends Container {
                 };
 
                 onExport = () => {
-                    const settings: SceneExportOptions = (() => {
-                        switch (typeSelect.value) {
-                            case 'ply': return assemblePlyOptions();
-                            case 'splat': return assembleSplatOptions();
-                            case 'html': // fallthrough
-                            case 'zip': return assembleViewerOptions();
-                        }
-                    })();
-                    resolve(settings);
+                    switch (exportType) {
+                        case 'ply':
+                            resolve(assemblePlyOptions());
+                            break;
+                        case 'splat':
+                            resolve(assembleSplatOptions());
+                            break;
+                        case 'viewer':
+                            resolve(assembleViewerOptions());
+                            break;
+                    }
                 };
             }).finally(() => {
                 this.dom.removeEventListener('keydown', keydown);

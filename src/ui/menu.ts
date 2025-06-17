@@ -272,6 +272,7 @@ class Menu extends Container {
 
         this.append(menubar);
         this.append(fileMenuPanel);
+        this.append(exportMenuPanel);
         this.append(selectionMenuPanel);
         this.append(renderMenuPanel);
         this.append(helpMenuPanel);

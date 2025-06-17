@@ -22,7 +22,7 @@ const localizeInit = () => {
                     'file.save': 'Speichern',
                     'file.save-as': 'Speichern als...',
                     'file.publish': 'Veröffentlichen...',
-                    'file.export': 'Exportieren...',
+                    'file.export': 'Exportieren',
                     'file.export.splat': 'Splat',
                     'file.export.viewer': 'Viewer App...',
 
@@ -261,7 +261,7 @@ const localizeInit = () => {
                     'file.save': 'Save',
                     'file.save-as': 'Save As...',
                     'file.publish': 'Publish...',
-                    'file.export': 'Export...',
+                    'file.export': 'Export',
                     'file.export.ply': 'PLY (.ply)',
                     'file.export.splat': 'Splat file (.splat)',
                     'file.export.viewer': 'Viewer App...',
@@ -524,7 +524,7 @@ const localizeInit = () => {
                     'file.save': 'Enregistrer',
                     'file.save-as': 'Enregistrer sous...',
                     'file.publish': 'Publier...',
-                    'file.export': 'Exporter...',
+                    'file.export': 'Exporter',
                     'file.export.splat': 'Fichier splat',
                     'file.export.viewer': 'Application de visualisation...',
 
@@ -763,7 +763,7 @@ const localizeInit = () => {
                     'file.save': '保存',
                     'file.save-as': '名前を付けて保存',
                     'file.publish': '公開...',
-                    'file.export': 'エクスポート...',
+                    'file.export': 'エクスポート',
                     'file.export.splat': 'Splat (.splat)',
                     'file.export.viewer': 'Viewer App...',
 
@@ -1002,7 +1002,7 @@ const localizeInit = () => {
                     'file.save': '저장',
                     'file.save-as': '다른 이름으로 저장...',
                     'file.publish': '게시...',
-                    'file.export': '내보내기...',
+                    'file.export': '내보내기',
                     'file.export.splat': 'Splat 파일',
                     'file.export.viewer': '뷰어 앱...',
 
@@ -1240,7 +1240,7 @@ const localizeInit = () => {
                     'file.save': '保存',
                     'file.save-as': '另存为...',
                     'file.publish': '发布...',
-                    'file.export': '导出...',
+                    'file.export': '导出',
                     'file.export.splat': 'Splat 文件',
                     'file.export.viewer': '查看器应用...',
 

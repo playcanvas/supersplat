@@ -63,8 +63,6 @@ type ExperienceSettings = {
 
 type ViewerExportSettings = {
     type: 'html' | 'zip';
-    filename?: string;
-    serializeSettings: SerializeSettings;
     experienceSettings: ExperienceSettings;
 };
 
@@ -1030,12 +1028,12 @@ const encodeBase64 = (bytes: Uint8Array) => {
     return window.btoa(binary);
 };
 
-const serializeViewer = async (splats: Splat[], options: ViewerExportSettings, writer: Writer) => {
+const serializeViewer = async (splats: Splat[], serializeSettings: SerializeSettings, options: ViewerExportSettings, writer: Writer) => {
     const { experienceSettings } = options;
 
     // create compressed PLY data
     const plyWriter = new BufferWriter();
-    await serializePlyCompressed(splats, options.serializeSettings, plyWriter);
+    await serializePlyCompressed(splats, serializeSettings, plyWriter);
     const plyBuffer = plyWriter.close();
 
     if (options.type === 'html') {

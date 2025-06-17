@@ -4,7 +4,7 @@ import { path } from 'playcanvas';
 import { Pose } from '../camera-poses';
 import { localize } from './localization';
 import { Events } from '../events';
-import { UISceneWriteOptions } from '../file-handler';
+import { SceneExportOptions } from '../file-handler';
 import { AnimTrack, ExperienceSettings } from '../splat-serialize';
 import sceneExport from './svg/export.svg';
 
@@ -74,9 +74,9 @@ class ExportPopup extends Container {
             defaultValue: 'ply',
             options: [
                 { v: 'ply', t: localize('export.ply') },
+                { v: 'compressed-ply', t: localize('export.compressed-ply') },
                 { v: 'splat', t: localize('export.splat') },
-                { v: 'html', t: localize('export.viewer-html') },
-                { v: 'zip', t: localize('export.viewer-zip') }
+                { v: 'app', t: localize('export.viewer-app') }
             ]
         });
 
@@ -268,7 +268,6 @@ class ExportPopup extends Container {
             r.hidden = false;
         });
 
-
         // footer
 
         const footer = new Container({ id: 'footer' });
@@ -314,7 +313,7 @@ class ExportPopup extends Container {
             }
         };
 
-        const updateOptions = () => {
+        typeSelect.on('change', () => {
             specialRows.forEach((r) => {
                 r.hidden = true;
             });
@@ -331,9 +330,7 @@ class ExportPopup extends Container {
             activeRows.forEach((r) => {
                 r.hidden = false;
             });
-        };
-
-        typeSelect.on('change', updateOptions);
+        });
 
         const updateExtension = () => {
             if (!filenameRow.hidden) {
@@ -368,11 +365,11 @@ class ExportPopup extends Container {
         const reset = (splatNames: [string], hasPoses: boolean) => {
             const bgClr = events.invoke('bgClr');
 
-            splatsSelect.value = 'all';
             splatsSelect.options = [
                 { v: 'all', t: localize('export.splats-select.all') },
-                ...splatNames.map((s, i) => ({ v: i.toString(), t: s }))
+                ...splatNames.map((s, i) => ({ v: i, t: s }))
             ];
+            splatsSelect.value = 'all';
             bandsSlider.value = events.invoke('view.bands');
             // ply
             compressBoolean.value = false;
@@ -408,10 +405,10 @@ class ExportPopup extends Container {
             this.dom.addEventListener('keydown', keydown);
             this.dom.focus();
 
-            const assemblePlyOptions = () : UISceneWriteOptions => {
+            const assemblePlyOptions = () : SceneExportOptions => {
                 return {
                     type: compressBoolean.value ? 'compressed-ply' : 'ply',
-                    splatIdx: splatsSelect.value === 'all' ? 'all' : [splatsSelect.value],
+                    splatIdx: splatsSelect.value === 'all' ? 'all' : splatsSelect.value,
                     filename: filename && filenameEntry.value,
                     serializeSettings: {
                         maxSHBands: bandsSlider.value
@@ -419,16 +416,16 @@ class ExportPopup extends Container {
                 };
             };
 
-            const assembleSplatOptions = () : UISceneWriteOptions => {
+            const assembleSplatOptions = () : SceneExportOptions => {
                 return {
                     type: 'splat',
-                    splatIdx: splatsSelect.value === 'all' ? 'all' : [splatsSelect.value],
+                    splatIdx: splatsSelect.value === 'all' ? 'all' : splatsSelect.value,
                     filename: filename && filenameEntry.value,
                     serializeSettings: {}
                 };
             };
 
-            const assembleViewerOptions = () : UISceneWriteOptions => {
+            const assembleViewerOptions = () : SceneExportOptions => {
                 // extract camera starting pos
                 let pose;
                 switch (startSelect.value) {
@@ -503,23 +500,23 @@ class ExportPopup extends Container {
 
                 return {
                     type: 'viewer',
-                    splatIdx: splatsSelect.value === 'all' ? 'all' : [splatsSelect.value],
+                    splatIdx: splatsSelect.value === 'all' ? 'all' : splatsSelect.value,
+                    filename: filename && filenameEntry.value,
+                    serializeSettings,
                     viewerExportSettings: {
                         type: typeSelect.value,
-                        filename: filename && filenameEntry.value,
-                        serializeSettings,
                         experienceSettings
                     }
                 };
             };
 
-            return new Promise<null | UISceneWriteOptions>((resolve) => {
+            return new Promise<null | SceneExportOptions>((resolve) => {
                 onCancel = () => {
                     resolve(null);
                 };
 
                 onExport = () => {
-                    const settings: UISceneWriteOptions = (() => {
+                    const settings: SceneExportOptions = (() => {
                         switch (typeSelect.value) {
                             case 'ply': return assemblePlyOptions();
                             case 'splat': return assembleSplatOptions();

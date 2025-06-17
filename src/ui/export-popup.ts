@@ -16,6 +16,20 @@ const createSvg = (svgString: string, args = {}) => {
     });
 };
 
+const removeKnownExtension = (filename: string) => {
+    // remove known extensions
+    const knownExtensions = ['.compressed.ply', '.ply', '.splat', '.html', '.zip'];
+
+    for (let i = 0; i < knownExtensions.length; ++i) {
+        const ext = knownExtensions[i];
+        if (filename.endsWith(ext)) {
+            return filename.slice(0, -ext.length);
+        }
+    }
+
+    return filename;
+}
+
 class ExportPopup extends Container {
     show: (exportType: ExportType, splatNames: string[], showFilenameEdit: boolean) => Promise<null | SceneExportOptions>;
     hide: () => void;
@@ -57,25 +71,6 @@ class ExportPopup extends Container {
         // content
 
         const content = new Container({ id: 'content' });
-
-        // ply: compress or not
-
-        const compressRow = new Container({
-            class: 'row'
-        });
-
-        const compressLabel = new Label({
-            class: 'label',
-            text: localize('export.ply-compress')
-        });
-
-        const compressBoolean = new BooleanInput({
-            class: 'boolean',
-            type: 'toggle'
-        });
-
-        compressRow.append(compressLabel);
-        compressRow.append(compressBoolean);
 
         // type
 
@@ -180,6 +175,25 @@ class ExportPopup extends Container {
         fovRow.append(fovLabel);
         fovRow.append(fovSlider);
 
+        // compress
+
+        const compressRow = new Container({
+            class: 'row'
+        });
+
+        const compressLabel = new Label({
+            class: 'label',
+            text: localize('export.ply-compress')
+        });
+
+        const compressBoolean = new BooleanInput({
+            class: 'boolean',
+            type: 'toggle'
+        });
+
+        compressRow.append(compressLabel);
+        compressRow.append(compressBoolean);
+
         // splats
 
         const splatsRow = new Container({
@@ -244,12 +258,12 @@ class ExportPopup extends Container {
 
         // content
 
-        content.append(compressRow);
         content.append(viewerTypeRow);
         content.append(startRow);
         content.append(animationRow);
         content.append(colorRow);
         content.append(fovRow);
+        content.append(compressRow);
         content.append(splatsRow);
         content.append(bandsRow);
         content.append(filenameRow);
@@ -277,7 +291,7 @@ class ExportPopup extends Container {
 
         this.append(dialog);
 
-        // handler
+        // handlers
 
         let onCancel: () => void;
         let onExport: () => void;
@@ -299,9 +313,21 @@ class ExportPopup extends Container {
             }
         };
 
+        const updateExtension = (ext: string) => {
+            filenameEntry.value = removeKnownExtension(filenameEntry.value) + ext;
+        };
+
+        compressBoolean.on('change', () => {
+            updateExtension(compressBoolean.value ? '.compressed.ply' : '.ply');
+        });
+
+        viewerTypeSelect.on('change', () => {
+            updateExtension(viewerTypeSelect.value === 'html' ? '.html' : '.zip');
+        });
+
         const reset = (exportType: ExportType, splatNames: string[], hasPoses: boolean) => {
             const allRows = [
-                compressRow, viewerTypeRow, startRow, animationRow, colorRow, fovRow, splatsRow, bandsRow, filenameRow
+                viewerTypeRow, startRow, animationRow, colorRow, fovRow, compressRow, splatsRow, bandsRow, filenameRow
             ];
 
             const activeRows = {
@@ -314,23 +340,48 @@ class ExportPopup extends Container {
                 r.hidden = activeRows.indexOf(r) === -1;
             });
 
+            // update splat list
             splatsSelect.options = [
-                { v: 'all', t: localize('export.splats-select.all') },
-                ...splatNames.map((s, i) => ({ v: i, t: s }))
+                {
+                    v: 'all',
+                    t: localize('export.splats-select.all')
+                },
+                ...splatNames.map((s, i) => ({ v: i.toFixed(0), t: s }))
             ];
             splatsSelect.value = 'all';
+            splatsSelect.enabled = splatNames.length > 1;
+
             bandsSlider.value = events.invoke('view.bands');
 
             // ply
             compressBoolean.value = false;
 
+            // filename
+            filenameEntry.value = splatNames[0];
+            switch (exportType) {
+                case 'ply':
+                    updateExtension('.ply');
+                    break;
+                case 'splat':
+                    updateExtension('.splat');
+                    break;
+                case 'viewer':
+                    updateExtension(viewerTypeSelect.value === 'html' ? '.html' : '.zip');
+                    break;
+            }
+
             // viewer
             const bgClr = events.invoke('bgClr');
+
             startSelect.value = hasPoses ? 'pose' : 'viewport';
             startSelect.disabledOptions = hasPoses ? {} : { 'pose': startSelect.options[2].t };
+
             animationSelect.value = hasPoses ? 'track' : 'none';
             animationSelect.disabledOptions = hasPoses ? { } : { track: animationSelect.options[1].t };
+            animationSelect.enabled = hasPoses;
+
             colorPicker.value = [bgClr.r, bgClr.g, bgClr.b];
+
             fovSlider.value = events.invoke('camera.fov');
         };
 

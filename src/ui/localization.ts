@@ -23,6 +23,9 @@ const localizeInit = () => {
                     'file.save-as': 'Speichern als...',
                     'file.publish': 'Veröffentlichen...',
                     'file.export': 'Exportieren...',
+                    'file.export.compressed-ply': 'Komprimiertes PLY',
+                    'file.export.splat': 'Splat',
+                    'file.export.viewer': 'Viewer App...',
 
                     // Render menu
                     'render': 'Rendern',
@@ -187,6 +190,8 @@ const localizeInit = () => {
 
                     // Viewer Export
                     'export.type': 'Export Typ',
+                    'export.html': 'HTML',
+                    'export.package': 'ZIP Paket',
                     'export.sh-bands': 'SH Bänder',
                     'export.start-position': 'Start Position',
                     'export.default': 'Standard',
@@ -258,6 +263,10 @@ const localizeInit = () => {
                     'file.save-as': 'Save As...',
                     'file.publish': 'Publish...',
                     'file.export': 'Export...',
+                    'file.export.ply': 'PLY (.ply)',
+                    'file.export.compressed-ply': 'Compressed PLY (.ply)',
+                    'file.export.splat': 'Splat file (.splat)',
+                    'file.export.viewer': 'Viewer App...',
 
                     // Render menu
                     'render': 'Render',
@@ -431,6 +440,8 @@ const localizeInit = () => {
                     // Viewer Export
                     'export.header': 'EXPORT',
                     'export.type': 'Export Type',
+                    'export.html': 'HTML',
+                    'export.package': 'ZIP Package',
                     'export.sh-bands': 'SH Bands',
                     'export.start-position': 'Start Position',
                     'export.default': 'Default',
@@ -514,6 +525,9 @@ const localizeInit = () => {
                     'file.save-as': 'Enregistrer sous...',
                     'file.publish': 'Publier...',
                     'file.export': 'Exporter...',
+                    'file.export.compressed-ply': 'Ply compressé',
+                    'file.export.splat': 'Fichier splat',
+                    'file.export.viewer': 'Application de visualisation...',
 
                     // Render menu
                     'render': 'Rendu',
@@ -678,6 +692,8 @@ const localizeInit = () => {
 
                     // Viewer Export
                     'export.type': 'Type d\'export',
+                    'export.html': 'HTML',
+                    'export.package': 'Package ZIP',
                     'export.sh-bands': 'Bandes SH',
                     'export.start-position': 'Position de départ',
                     'export.default': 'Défaut',
@@ -749,6 +765,9 @@ const localizeInit = () => {
                     'file.save-as': '名前を付けて保存',
                     'file.publish': '公開...',
                     'file.export': 'エクスポート...',
+                    'file.export.compressed-ply': 'Compressed PLY (.ply)',
+                    'file.export.splat': 'Splat (.splat)',
+                    'file.export.viewer': 'Viewer App...',
 
                     // Render menu
                     'render': 'レンダリング',
@@ -913,6 +932,8 @@ const localizeInit = () => {
 
                     // Viewer Export
                     'export.type': 'エクスポートタイプ',
+                    'export.html': 'HTML',
+                    'export.package': 'ZIPパッケージ',
                     'export.sh-bands': 'SHバンド',
                     'export.start-position': '開始位置',
                     'export.default': 'デフォルト',
@@ -984,6 +1005,9 @@ const localizeInit = () => {
                     'file.save-as': '다른 이름으로 저장...',
                     'file.publish': '게시...',
                     'file.export': '내보내기...',
+                    'file.export.compressed-ply': '압축된 PLY',
+                    'file.export.splat': 'Splat 파일',
+                    'file.export.viewer': '뷰어 앱...',
 
                     // Render menu
                     'render': '렌더링',
@@ -1147,6 +1171,8 @@ const localizeInit = () => {
 
                     // Viewer Export
                     'export.type': '내보내기 유형',
+                    'export.html': 'HTML',
+                    'export.package': 'ZIP 패키지',
                     'export.sh-bands': 'SH 밴드',
                     'export.start-position': '시작 위치',
                     'export.default': '기본값',
@@ -1218,6 +1244,9 @@ const localizeInit = () => {
                     'file.save-as': '另存为...',
                     'file.publish': '发布...',
                     'file.export': '导出...',
+                    'file.export.compressed-ply': '压缩 PLY',
+                    'file.export.splat': 'Splat 文件',
+                    'file.export.viewer': '查看器应用...',
 
                     // Render menu
                     'render': '渲染',
@@ -1382,6 +1411,8 @@ const localizeInit = () => {
 
                     // Viewer Export
                     'export.type': '导出类型',
+                    'export.html': 'HTML',
+                    'export.package': 'ZIP 包',
                     'export.sh-bands': 'SH 带',
                     'export.start-position': '起始位置',
                     'export.default': '默认',

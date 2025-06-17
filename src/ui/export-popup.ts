@@ -17,7 +17,7 @@ const createSvg = (svgString: string, args = {}) => {
 };
 
 class ExportPopup extends Container {
-    show: (splatNames: string[], filename?: string) => void;
+    show: (splatNames: [string], filename?: string) => void;
     hide: () => void;
     destroy: () => void;
 
@@ -365,7 +365,7 @@ class ExportPopup extends Container {
         typeSelect.on('change', updateExtension);
         compressBoolean.on('change', updateExtension);
 
-        const reset = (splatNames: string[], hasPoses: boolean) => {
+        const reset = (splatNames: [string], hasPoses: boolean) => {
             const bgClr = events.invoke('bgClr');
 
             splatsSelect.value = 'all';
@@ -385,7 +385,7 @@ class ExportPopup extends Container {
             fovSlider.value = events.invoke('camera.fov');
         };
 
-        this.show = (splatNames: string[], filename?: string) => {
+        this.show = (splatNames: [string], filename?: string) => {
             const frames = events.invoke('timeline.frames');
             const frameRate = events.invoke('timeline.frameRate');
 

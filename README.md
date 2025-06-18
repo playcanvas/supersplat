@@ -4,7 +4,7 @@
 
 SuperSplat is a free and open source tool for inspecting, editing, optimizing and publishing 3D Gaussian Splats. It is built on web technologies and runs in the browser, so there's nothing to download or install.
 
-A live version of this tool is available at: https://playcanvas.com/supersplat/editor
+A live version of this tool is available at: https://superspl.at/editor
 
 ![image](https://github.com/user-attachments/assets/b6cbb5cc-d3cc-4385-8c71-ab2807fd4fba)
 

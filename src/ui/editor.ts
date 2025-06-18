@@ -5,6 +5,7 @@ import { DataPanel } from './data-panel';
 import { Events } from '../events';
 import { BottomToolbar } from './bottom-toolbar';
 import { ColorPanel } from './color-panel';
+import { ExportPopup } from './export-popup';
 import { ImageSettingsDialog } from './image-settings-dialog';
 import { localize, localizeInit } from './localization';
 import { Menu } from './menu';
@@ -21,7 +22,6 @@ import { Tooltips } from './tooltips';
 import { VideoSettingsDialog } from './video-settings-dialog';
 import { ViewCube } from './view-cube';
 import { ViewPanel } from './view-panel';
-import { ViewerExportPopup } from './viewer-export-popup';
 import { version } from '../../package.json';
 
 class EditorUI {
@@ -162,7 +162,7 @@ class EditorUI {
         const shortcutsPopup = new ShortcutsPopup();
 
         // export popup
-        const viewerExportPopup = new ViewerExportPopup(events);
+        const exportPopup = new ExportPopup(events);
 
         // publish settings
         const publishSettingsDialog = new PublishSettingsDialog(events);
@@ -174,7 +174,7 @@ class EditorUI {
         const videoSettingsDialog = new VideoSettingsDialog(events);
 
         topContainer.append(popup);
-        topContainer.append(viewerExportPopup);
+        topContainer.append(exportPopup);
         topContainer.append(publishSettingsDialog);
         topContainer.append(imageSettingsDialog);
         topContainer.append(videoSettingsDialog);
@@ -198,8 +198,8 @@ class EditorUI {
             shortcutsPopup.hidden = false;
         });
 
-        events.function('show.viewerExportPopup', (filename?: string) => {
-            return viewerExportPopup.show(filename);
+        events.function('show.exportPopup', (exportType, splatNames: [string], showFilenameEdit: boolean) => {
+            return exportPopup.show(exportType, splatNames, showFilenameEdit);
         });
 
         events.function('show.publishSettingsDialog', async () => {

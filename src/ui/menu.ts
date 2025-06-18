@@ -114,11 +114,6 @@ class Menu extends Container {
             isEnabled: () => !events.invoke('scene.empty'),
             onSelect: () => events.invoke('scene.export', 'ply')
         }, {
-            text: localize('file.export.compressed-ply'),
-            icon: createSvg(sceneExport),
-            isEnabled: () => !events.invoke('scene.empty'),
-            onSelect: () => events.invoke('scene.export', 'compressed-ply')
-        }, {
             text: localize('file.export.splat'),
             icon: createSvg(sceneExport),
             isEnabled: () => !events.invoke('scene.empty'),

@@ -10,7 +10,7 @@
 
     #dialog {
         position: absolute;
-        width: 340px;
+        width: 380px;
         left: 50%;
         top: 50%;
         transform: translate(-50%, -50%);
@@ -44,7 +44,7 @@
         }
 
         #content {
-            min-height: 100px;
+            min-height: 60px;
             padding: 12px;
 
             .row {
@@ -59,16 +59,17 @@
                 .label {
                     margin: 0px;
                     flex-grow: 1;
+                    width: 180px;
                 }
 
                 .select, .color-picker, .slider, .text-entry {
                     margin: 0px;
-                    width: 180px;
+                    width: 100%;
                 }
 
                 .text-input {
                     margin: 0px;
-                    width: 180px;
+                    width: 100%;
                 }
             }
         }

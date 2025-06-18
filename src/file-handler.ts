@@ -1,10 +1,10 @@
-import { path, Vec3 } from 'playcanvas';
+import { Vec3 } from 'playcanvas';
 
 import { CreateDropHandler } from './drop-handler';
 import { ElementType } from './element';
 import { Events } from './events';
 import { Scene } from './scene';
-import { Writer, DownloadWriter, FileStreamWriter } from './serialize/writer';
+import { DownloadWriter, FileStreamWriter } from './serialize/writer';
 import { Splat } from './splat';
 import { serializePly, serializePlyCompressed, SerializeSettings, serializeSplat, serializeViewer, ViewerExportSettings } from './splat-serialize';
 import { localize } from './ui/localization';
@@ -17,13 +17,20 @@ interface RemoteStorageDetails {
     url: string;
 }
 
-type ExportType = 'ply' | 'compressed-ply' | 'splat' | 'viewer';
+type ExportType = 'ply' | 'splat' | 'viewer';
 
-interface SceneWriteOptions {
-    type: ExportType;
-    filename?: string;
-    stream?: FileSystemWritableFileStream;
-    viewerExportSettings?: ViewerExportSettings
+type FileType = 'ply' | 'compressedPly' | 'splat' | 'htmlViewer' | 'packageViewer';
+
+interface SceneExportOptions {
+    filename: string;
+    splatIdx: 'all' | number;
+    serializeSettings: SerializeSettings;
+
+    // ply
+    compressedPly?: boolean;
+
+    // viewer
+    viewerExportSettings?: ViewerExportSettings;
 }
 
 const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
@@ -33,7 +40,7 @@ const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
             'application/ply': ['.ply']
         }
     },
-    'compressed-ply': {
+    'compressedPly': {
         description: 'Compressed Gaussian Splat PLY File',
         accept: {
             'application/ply': ['.ply']
@@ -62,30 +69,6 @@ const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
 let fileHandle: FileSystemFileHandle = null;
 
 const vec = new Vec3();
-
-// download the data to the given filename
-const download = (filename: string, data: Uint8Array) => {
-    const blob = new Blob([data], { type: 'octet/stream' });
-    const url = window.URL.createObjectURL(blob);
-
-    const lnk = document.createElement('a');
-    lnk.download = filename;
-    lnk.href = url;
-
-    // create a "fake" click-event to trigger the download
-    if (document.createEvent) {
-        const e = document.createEvent('MouseEvents');
-        e.initMouseEvent('click', true, true, window,
-            0, 0, 0, 0, 0, false, false, false,
-            false, 0, null);
-        lnk.dispatchEvent(e);
-    } else {
-        // @ts-ignore
-        lnk.fireEvent?.('onclick');
-    }
-
-    window.URL.revokeObjectURL(url);
-};
 
 const loadCameraPoses = async (url: string, filename: string, events: Events) => {
     const response = await fetch(url);
@@ -319,96 +302,42 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         }
     });
 
-    events.function('scene.export', async (type: ExportType, outputFilename: string = null, exportType: 'export' | 'saveAs' = 'export') => {
-        const extensions = {
-            'ply': '.ply',
-            'compressed-ply': '.compressed.ply',
-            'splat': '.splat',
-            'viewer': '-viewer.html'
-        };
-
-        const removeExtension = (filename: string) => {
-            return filename.substring(0, filename.length - path.getExtension(filename).length);
-        };
-
-        const replaceExtension = (filename: string, extension: string) => {
-            return `${removeExtension(filename)}${extension}`;
-        };
-
+    events.function('scene.export', async (exportType: 'ply' | 'splat' | 'viewer') => {
         const splats = getSplats();
-        const splat = splats[0];
-        let filename = outputFilename ?? replaceExtension(splat.filename, extensions[type]);
 
-        const hasFilePicker = window.showSaveFilePicker;
+        const hasFilePicker = !!window.showSaveFilePicker;
 
-        let viewerExportSettings;
-        if (type === 'viewer') {
-            // show viewer export options
-            viewerExportSettings = await events.invoke('show.viewerExportPopup', hasFilePicker ? null : filename);
+        // show viewer export options
+        const options = await events.invoke('show.exportPopup', exportType, splats.map(s => s.name), !hasFilePicker) as SceneExportOptions;
 
-            // return if user cancelled
-            if (!viewerExportSettings) {
-                return;
-            }
-
-            if (hasFilePicker) {
-                filename = replaceExtension(filename, viewerExportSettings.type === 'html' ? '.html' : '.zip');
-            } else {
-                filename = viewerExportSettings.filename;
-            }
+        // return if user cancelled
+        if (!options) {
+            return;
         }
+
+        const fileType =
+            (exportType === 'viewer') ? (options.viewerExportSettings.type === 'zip' ? 'packageViewer' : 'htmlViewer') :
+                (exportType === 'ply') ? (options.compressedPly ? 'compressedPly' : 'ply') : 'splat';
 
         if (hasFilePicker) {
             try {
-                const filePickerType = type === 'viewer' ? (viewerExportSettings.type === 'html' ? filePickerTypes.htmlViewer : filePickerTypes.packageViewer) : filePickerTypes[type];
-
                 const fileHandle = await window.showSaveFilePicker({
                     id: 'SuperSplatFileExport',
-                    types: [filePickerType],
-                    suggestedName: filename
+                    types: [filePickerTypes[fileType]],
+                    suggestedName: options.filename
                 });
-                await events.invoke('scene.write', {
-                    type,
-                    stream: await fileHandle.createWritable(),
-                    viewerExportSettings
-                });
+                await events.invoke('scene.write', fileType, options, await fileHandle.createWritable());
             } catch (error) {
                 if (error.name !== 'AbortError') {
                     console.error(error);
                 }
             }
         } else {
-            await events.invoke('scene.write', { type, filename, viewerExportSettings });
+            await events.invoke('scene.write', fileType, options);
         }
     });
 
-    const writeScene = async (type: ExportType, writer: Writer, viewerExportSettings?: ViewerExportSettings) => {
-        const splats = getSplats();
-        const events = splats[0].scene.events;
-
-        const serializeSettings: SerializeSettings = {
-            maxSHBands: events.invoke('view.bands')
-        };
-
-        switch (type) {
-            case 'ply':
-                await serializePly(splats, serializeSettings, writer);
-                break;
-            case 'compressed-ply':
-                serializeSettings.minOpacity = 1 / 255;
-                serializeSettings.removeInvalid = true;
-                await serializePlyCompressed(splats, serializeSettings, writer);
-                break;
-            case 'splat':
-                await serializeSplat(splats, serializeSettings, writer);
-                break;
-            case 'viewer':
-                await serializeViewer(splats, viewerExportSettings, writer);
-                break;
-        }
-    };
-
-    events.function('scene.write', async (options: SceneWriteOptions) => {
+    events.function('scene.write', async (fileType: FileType, options: SceneExportOptions, stream?: FileSystemWritableFileStream) => {
         events.fire('startSpinner');
 
         try {
@@ -417,11 +346,34 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                 setTimeout(resolve);
             });
 
-            const { stream, filename, type, viewerExportSettings } = options;
+            const { filename, splatIdx, serializeSettings, viewerExportSettings } = options;
+
             const writer = stream ? new FileStreamWriter(stream) : new DownloadWriter(filename);
 
-            await writeScene(type, writer, viewerExportSettings);
-            await writer.close();
+            try {
+                const splats = splatIdx === 'all' ? getSplats() : [getSplats()[splatIdx]];
+
+                switch (fileType) {
+                    case 'ply':
+                        await serializePly(splats, serializeSettings, writer);
+                        break;
+                    case 'compressedPly':
+                        serializeSettings.minOpacity = 1 / 255;
+                        serializeSettings.removeInvalid = true;
+                        await serializePlyCompressed(splats, serializeSettings, writer);
+                        break;
+                    case 'splat':
+                        await serializeSplat(splats, serializeSettings, writer);
+                        break;
+                    case 'htmlViewer':
+                    case 'packageViewer':
+                        await serializeViewer(splats, serializeSettings, viewerExportSettings, writer);
+                        break;
+                }
+            } finally {
+                await writer.close();
+            }
+
         } catch (error) {
             await events.invoke('showPopup', {
                 type: 'error',
@@ -434,4 +386,4 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
     });
 };
 
-export { initFileHandler };
+export { initFileHandler, ExportType, SceneExportOptions };

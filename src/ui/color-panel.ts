@@ -1,4 +1,4 @@
-import { ColorPicker, Container, Label, SliderInput, SliderInputArgs } from 'pcui';
+import { ColorPicker, Container, Label, SliderInput } from '@playcanvas/pcui';
 import { Color } from 'playcanvas';
 
 import { Events } from '../events';

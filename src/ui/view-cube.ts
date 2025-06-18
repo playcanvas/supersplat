@@ -1,4 +1,4 @@
-import { Container } from 'pcui';
+import { Container } from '@playcanvas/pcui';
 import { Mat4, Vec3 } from 'playcanvas';
 
 import { Events } from '../events';

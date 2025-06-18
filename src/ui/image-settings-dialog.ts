@@ -1,4 +1,4 @@
-import { BooleanInput, Button, Container, Element, Label, NumericInput, SelectInput, VectorInput } from 'pcui';
+import { BooleanInput, Button, Container, Element, Label, NumericInput, SelectInput, VectorInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { ImageSettings } from '../render';

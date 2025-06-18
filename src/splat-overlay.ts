@@ -3,7 +3,7 @@ import {
     BUFFER_STATIC,
     PRIMITIVE_POINTS,
     SEMANTIC_POSITION,
-    GSplat,
+    GSplatResource,
     ShaderMaterial,
     Mesh,
     MeshInstance,
@@ -31,8 +31,8 @@ class SplatOverlay extends Element {
         const material = new ShaderMaterial({
             uniqueName: 'splatOverlayMaterial',
             attributes: { vertex_id: SEMANTIC_POSITION },
-            vertexCode: vertexShader,
-            fragmentCode: fragmentShader
+            vertexGLSL: vertexShader,
+            fragmentGLSL: fragmentShader
         });
         material.blendType = BLEND_NORMAL;
 
@@ -81,7 +81,7 @@ class SplatOverlay extends Element {
             };
 
             material.setParameter('splatState', splat.stateTexture);
-            material.setParameter('splatPosition', (splat.entity.gsplat.instance.splat as GSplat).transformATexture);
+            material.setParameter('splatPosition', (splat.entity.gsplat.instance.resource as GSplatResource).transformATexture);
             material.setParameter('splatTransform', splat.transformTexture);
             material.setParameter('texParams', [splat.stateTexture.width, splat.stateTexture.height]);
             material.update();

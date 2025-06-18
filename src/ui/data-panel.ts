@@ -1,4 +1,4 @@
-import { BooleanInput, Container, Label, Panel, SelectInput } from 'pcui';
+import { BooleanInput, Container, Label, Panel, SelectInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { Splat } from '../splat';

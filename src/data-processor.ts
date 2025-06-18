@@ -7,7 +7,7 @@ import {
     drawQuadWithShader,
     BoundingBox,
     GraphicsDevice,
-    GSplat,
+    GSplatResource,
     Mat4,
     RenderTarget,
     ScopeSpace,
@@ -235,7 +235,7 @@ class DataProcessor {
         const { scope } = device;
 
         const numSplats = splat.splatData.numSplats;
-        const transformA = (splat.entity.gsplat.instance.splat as GSplat).transformATexture;
+        const transformA = (splat.entity.gsplat.instance.resource as GSplatResource).transformATexture;
         const splatTransform = splat.transformTexture;
         const transformPalette = splat.transformPalette.texture;
 
@@ -345,7 +345,7 @@ class DataProcessor {
         const { scope } = device;
 
         const numSplats = splat.splatData.numSplats;
-        const transformA = (splat.entity.gsplat.instance.splat as GSplat).transformATexture;
+        const transformA = (splat.entity.gsplat.instance.resource as GSplatResource).transformATexture;
         const splatTransform = splat.transformTexture;
         const transformPalette = splat.transformPalette.texture;
         const splatState = splat.stateTexture;
@@ -407,7 +407,7 @@ class DataProcessor {
         const { scope } = device;
 
         const numSplats = splat.splatData.numSplats;
-        const transformA = (splat.entity.gsplat.instance.splat as GSplat).transformATexture;
+        const transformA = (splat.entity.gsplat.instance.resource as GSplatResource).transformATexture;
         const splatTransform = splat.transformTexture;
         const transformPalette = splat.transformPalette.texture;
 

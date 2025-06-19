@@ -20,6 +20,7 @@
         "develop": "cross-env BUILD_TYPE=debug concurrently --kill-others \"npm run watch\" \"npm run serve\"",
         "develop:auto-launch": "concurrently --kill-others \"xdg-open 'http://localhost:3000/'\" \"npm run watch\" \"npm run serve\"",
         "lint": "eslint src",
+        "type:check": "tsc --noEmit --skipLibCheck",
         "postinstall": "npm run install:deps && npm run build:deps",
         "install:deps": "npm --prefix ./submodules/supersplat-viewer ci",
         "build:deps": "npm --prefix ./submodules/supersplat-viewer run build"

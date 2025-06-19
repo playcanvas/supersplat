@@ -1,4 +1,4 @@
-import { Button, Container, Element, Label } from 'pcui';
+import { Button, Container, Element, Label } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { localize } from './localization';

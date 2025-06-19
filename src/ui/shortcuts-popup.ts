@@ -1,4 +1,4 @@
-import { Container, Label, Overlay, Panel } from 'pcui';
+import { Container, Label, Overlay, Panel } from '@playcanvas/pcui';
 
 import { localize } from './localization';
 

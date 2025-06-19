@@ -1,4 +1,4 @@
-import { Button, Container, Label, TextInput } from 'pcui';
+import { Button, Container, Label, TextInput } from '@playcanvas/pcui';
 
 import { localize } from './localization';
 import { Tooltips } from './tooltips';
@@ -194,4 +194,4 @@ class Popup extends Container {
     }
 }
 
-export { Popup, ShowOptions };
+export { ShowOptions, Popup };

@@ -1,4 +1,4 @@
-import { Container, Label } from 'pcui';
+import { Container, Label } from '@playcanvas/pcui';
 import { Mat4, Vec3 } from 'playcanvas';
 
 import { DataPanel } from './data-panel';

@@ -1,5 +1,5 @@
 import './ui/scss/style.scss';
-import { version as pcuiVersion, revision as pcuiRevision } from 'pcui';
+import { version as pcuiVersion, revision as pcuiRevision } from '@playcanvas/pcui';
 import { version as engineVersion, revision as engineRevision } from 'playcanvas';
 
 import { main } from './main';

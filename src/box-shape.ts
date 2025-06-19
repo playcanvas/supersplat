@@ -37,8 +37,8 @@ class BoxShape extends Element {
     add() {
         const material = new ShaderMaterial({
             uniqueName: 'boxShape',
-            vertexCode: vertexShader,
-            fragmentCode: fragmentShader
+            vertexGLSL: vertexShader,
+            fragmentGLSL: fragmentShader
         });
         material.cull = CULLFACE_FRONT;
         material.blendState = new BlendState(

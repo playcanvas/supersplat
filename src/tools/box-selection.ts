@@ -1,4 +1,4 @@
-import { Button, Container, NumericInput } from 'pcui';
+import { Button, Container, NumericInput } from '@playcanvas/pcui';
 import { TranslateGizmo, Vec3 } from 'playcanvas';
 
 import { BoxShape } from '../box-shape';

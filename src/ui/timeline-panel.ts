@@ -1,4 +1,4 @@
-import { Button, Container, NumericInput, SelectInput } from 'pcui';
+import { Button, Container, NumericInput, SelectInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { Tooltips } from './tooltips';

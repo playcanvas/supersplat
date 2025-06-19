@@ -7,8 +7,8 @@ const cacheName = `superSplat-v${appVersion}`;
 
 const cacheUrls = [
     './',
-    './index.html',
     './index.css',
+    './index.html',
     './index.js',
     './index.js.map',
     './jszip.js',
@@ -16,7 +16,9 @@ const cacheUrls = [
     './static/icons/logo-192.png',
     './static/icons/logo-512.png',
     './static/images/screenshot-narrow.jpg',
-    './static/images/screenshot-wide.jpg'
+    './static/images/screenshot-wide.jpg',
+    './static/lib/lodepng/lodepng.js',
+    './static/lib/lodepng/lodepng.wasm'
 ];
 
 self.addEventListener('install', (event) => {

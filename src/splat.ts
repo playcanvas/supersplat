@@ -11,7 +11,6 @@ import {
     BoundingBox,
     Color,
     Entity,
-    GSplat,
     GSplatData,
     GSplatResource,
     Mat4,
@@ -82,19 +81,17 @@ class Splat extends Element {
         super(ElementType.splat);
 
         const splatResource = asset.resource as GSplatResource;
-        const splatData = splatResource.splatData;
-
-        // get material options object for a shader that renders with the given number of bands
-        const materialOptions = {
-            vertex: vertexShader,
-            fragment: fragmentShader
-        };
+        const splatData = splatResource.gsplatData;
+        const { device } = splatResource;
 
         this._name = (asset.file as any).filename;
         this.asset = asset;
         this.splatData = splatData as GSplatData;
         this.numSplats = splatData.numSplats;
-        this.entity = splatResource.instantiate(materialOptions);
+
+        this.entity = new Entity('splatEntitiy');
+        this.entity.setEulerAngles(0, 0, 180);
+        this.entity.addComponent('gsplat', { asset });
 
         const instance = this.entity.gsplat.instance;
 
@@ -137,11 +134,11 @@ class Splat extends Element {
             byteSize: 2
         });
 
-        const { width, height } = (instance.splat as GSplat).colorTexture;
+        const { width, height } = splatResource.colorTexture;
 
         // pack spherical harmonic data
         const createTexture = (name: string, format: number) => {
-            return new Texture(splatResource.app.graphicsDevice, {
+            return new Texture(device, {
                 name: name,
                 width: width,
                 height: height,
@@ -159,24 +156,27 @@ class Splat extends Element {
         this.transformTexture = createTexture('splatTransform', PIXELFORMAT_R16U);
 
         // create the transform palette
-        this.transformPalette = new TransformPalette(splatResource.app.graphicsDevice);
+        this.transformPalette = new TransformPalette(device);
 
         // blend mode for splats
         const blendState = new BlendState(true, BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE_MINUS_SRC_ALPHA);
 
         this.rebuildMaterial = (bands: number) => {
-            instance.createMaterial(materialOptions);
             const { material } = instance;
-            material.chunks = { gsplatCenterVS: gsplatCenter };
-            material.blendState = blendState;
-            material.setDefine('SH_BANDS', `${Math.min(bands, (instance.splat as GSplat).shBands)}`);
+            // material.blendState = blendState;
+            const { glsl } = material.shaderChunks;
+            glsl.set('gsplatVS', vertexShader);
+            glsl.set('gsplatPS', fragmentShader);
+            glsl.set('gsplatCenterVS', gsplatCenter);
+
+            material.setDefine('SH_BANDS', `${Math.min(bands, (instance.resource as GSplatResource).shBands)}`);
             material.setParameter('splatState', this.stateTexture);
             material.setParameter('splatTransform', this.transformTexture);
             material.update();
         };
 
         this.selectionBoundStorage = new BoundingBox();
-        this.localBoundStorage = instance.splat.aabb;
+        this.localBoundStorage = instance.resource.aabb;
         // @ts-ignore
         this.worldBoundStorage = instance.meshInstance._aabb;
 

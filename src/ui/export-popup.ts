@@ -1,5 +1,4 @@
-import { Button, ColorPicker, Container, Element, Label, SelectInput, SliderInput, TextInput, BooleanInput } from 'pcui';
-import { path } from 'playcanvas';
+import { Button, ColorPicker, Container, Element, Label, SelectInput, SliderInput, TextInput, BooleanInput } from '@playcanvas/pcui';
 
 import { Pose } from '../camera-poses';
 import { localize } from './localization';

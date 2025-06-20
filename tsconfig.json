@@ -3,7 +3,6 @@
         "target": "es2022",
         "module": "es2020",
         "moduleResolution": "bundler",
-        "allowArbitraryExtensions": true,
 
         "lib": ["es2022", "dom", "WebWorker"],
         "sourceMap": true,
@@ -16,7 +15,6 @@
         "global.d.ts"
     ],
     "exclude": [
-        "src/debug.ts", // Testing file
         "dist",
         "node_modules",
         "submodules"

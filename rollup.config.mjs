@@ -64,12 +64,7 @@ const application = {
             ]
         }),
         typescript({
-            tsconfig: './tsconfig.json',
-            compilerOptions: {
-                // FIXME: Disabled type checking as non ts file imports error due to global.d.ts not
-                // being imported.
-                noCheck: true
-            }
+            tsconfig: './tsconfig.json'
         }),
         resolve(),
         image({ dom: false }),

@@ -72,8 +72,6 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 scene.camera.entity.camera.clearColor.copy(bgClr);
             }
             scene.camera.ortho = projectionMethod === 'orthographic';
-            console.log('projectionMethod', projectionMethod);
-            console.log('ortho', scene.camera.ortho);
 
             // render the next frame
             scene.forceRender = true;

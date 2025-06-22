@@ -74,6 +74,22 @@ class ImageSettingsDialog extends Container {
         resolutionRow.append(resolutionLabel);
         resolutionRow.append(resolutionValue);
 
+        // projection method
+
+        const projectionMethodLabel = new Label({ class: 'label', text: localize('image.projectionMethod') });
+        const projectionMethodSelect = new SelectInput({
+            class: 'select',
+            defaultValue: 'perspective',
+            options: [
+                { v: 'perspective', t: localize('image.perspective') },
+                { v: 'orthographic', t: localize('image.orthographic') }
+            ]
+        });
+        const projectionMethodRow = new Container({ class: 'row' });
+        projectionMethodRow.append(projectionMethodLabel);
+        projectionMethodRow.append(projectionMethodSelect);
+
+
         // transparent background
 
         const transparentBgLabel = new Label({ class: 'label', text: localize('image.transparentBg') });
@@ -95,6 +111,7 @@ class ImageSettingsDialog extends Container {
         const content = new Container({ id: 'content' });
         content.append(presetRow);
         content.append(resolutionRow);
+        content.append(projectionMethodRow);
         content.append(transparentBgRow);
         content.append(showDebugRow);
 
@@ -201,6 +218,7 @@ class ImageSettingsDialog extends Container {
                         width,
                         height,
                         transparentBg: transparentBgBoolean.value,
+                        projectionMethod: projectionMethodSelect.value,
                         showDebug: showDebugBoolean.value
                     };
 

@@ -12,6 +12,7 @@ type ImageSettings = {
     width: number;
     height: number;
     transparentBg: boolean;
+    projectionMethod: string;
     showDebug: boolean;
 };
 
@@ -61,7 +62,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
         events.fire('startSpinner');
 
         try {
-            const { width, height, transparentBg, showDebug } = imageSettings;
+            const { width, height, transparentBg, projectionMethod, showDebug } = imageSettings;
             const bgClr = events.invoke('bgClr');
 
             // start rendering to offscreen buffer only
@@ -70,6 +71,9 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             if (!transparentBg) {
                 scene.camera.entity.camera.clearColor.copy(bgClr);
             }
+            scene.camera.ortho = projectionMethod === 'orthographic';
+            console.log('projectionMethod', projectionMethod);
+            console.log('ortho', scene.camera.ortho);
 
             // render the next frame
             scene.forceRender = true;

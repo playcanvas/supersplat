@@ -208,6 +208,11 @@ const main = async () => {
         scene.forceRender = true;
     });
 
+    events.on('camera.orthographicProjection', (projection: string) => {
+        scene.camera.ortho = true;
+        scene.forceRender = true;
+    });
+
     // initialize colors from application config
     const toColor = (value: { r: number, g: number, b: number, a: number }) => {
         return new Color(value.r, value.g, value.b, value.a);

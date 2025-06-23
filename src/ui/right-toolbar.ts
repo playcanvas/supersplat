@@ -4,6 +4,7 @@ import { Events } from '../events';
 import { localize } from './localization';
 import cameraFrameSelectionSvg from './svg/camera-frame-selection.svg';
 import cameraResetSvg from './svg/camera-reset.svg';
+import orthographicProjectionSvg from './svg/orthographic-projection.svg';
 import centersSvg from './svg/centers.svg';
 import colorPanelSvg from './svg/color-panel.svg';
 import ringsSvg from './svg/rings.svg';
@@ -48,6 +49,11 @@ class RightToolbar extends Container {
             class: 'right-toolbar-button'
         });
 
+        const orthographicProjection = new Button({
+            id: 'right-toolbar-orthographic-projection',
+            class: 'right-toolbar-button'
+        });
+
         const colorPanel = new Button({
             id: 'right-toolbar-color-panel',
             class: 'right-toolbar-toggle'
@@ -68,6 +74,7 @@ class RightToolbar extends Container {
         showHideSplats.dom.appendChild(createSvg(showHideSplatsSvg));
         cameraFrameSelection.dom.appendChild(createSvg(cameraFrameSelectionSvg));
         cameraReset.dom.appendChild(createSvg(cameraResetSvg));
+        orthographicProjection.dom.appendChild(createSvg(orthographicProjectionSvg));
         colorPanel.dom.appendChild(createSvg(colorPanelSvg));
 
         this.append(ringsModeToggle);
@@ -75,6 +82,7 @@ class RightToolbar extends Container {
         this.append(new Element({ class: 'right-toolbar-separator' }));
         this.append(cameraFrameSelection);
         this.append(cameraReset);
+        this.append(orthographicProjection);
         this.append(colorPanel);
         this.append(new Element({ class: 'right-toolbar-separator' }));
         this.append(options);
@@ -83,6 +91,7 @@ class RightToolbar extends Container {
         tooltips.register(showHideSplats, localize('tooltip.show-hide'), 'left');
         tooltips.register(cameraFrameSelection, localize('tooltip.frame-selection'), 'left');
         tooltips.register(cameraReset, localize('tooltip.camera-reset'), 'left');
+        tooltips.register(orthographicProjection, localize('tooltip.orthographic-projection'), 'left');
         tooltips.register(colorPanel, localize('tooltip.color-panel'), 'left');
         tooltips.register(options, localize('tooltip.view-options'), 'left');
 
@@ -95,6 +104,7 @@ class RightToolbar extends Container {
         showHideSplats.on('click', () => events.fire('camera.toggleOverlay'));
         cameraFrameSelection.on('click', () => events.fire('camera.focus'));
         cameraReset.on('click', () => events.fire('camera.reset'));
+        orthographicProjection.on('click', () => events.fire('camera.orthographicProjection'));
         colorPanel.on('click', () => events.fire('colorPanel.toggleVisible'));
         options.on('click', () => events.fire('viewPanel.toggleVisible'));
 

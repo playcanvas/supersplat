@@ -64,9 +64,6 @@ const application = {
                 { src: 'static/env/VertebraeHDRI_v1_512.png', dest: 'static/env' }
             ]
         }),
-        typescript({
-            tsconfig: './tsconfig.json'
-        }),
         alias({
             entries: [
                 {
@@ -77,6 +74,9 @@ const application = {
                             : 'playcanvas'
                 }
             ]
+        }),
+        typescript({
+            tsconfig: './tsconfig.json'
         }),
         resolve(),
         image({ dom: false }),

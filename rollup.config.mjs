@@ -2,6 +2,7 @@ import path from 'path';
 
 import image from '@rollup/plugin-image';
 import json from '@rollup/plugin-json';
+import alias from '@rollup/plugin-alias';
 import resolve from '@rollup/plugin-node-resolve';
 import strip from '@rollup/plugin-strip';
 import terser from '@rollup/plugin-terser';
@@ -63,6 +64,17 @@ const application = {
                 { src: 'static/env/VertebraeHDRI_v1_512.png', dest: 'static/env' }
             ]
         }),
+        alias({
+            entries: [
+                {
+                    find: /^playcanvas$/,
+                    replacement:
+                        BUILD_TYPE === 'debug'
+                            ? 'playcanvas/debug'
+                            : 'playcanvas'
+                }
+            ]
+        }),
         typescript({
             tsconfig: './tsconfig.json'
         }),
@@ -74,8 +86,8 @@ const application = {
             runtime: sass,
             processor: (css) => {
                 return postcss([autoprefixer])
-                .process(css, { from: undefined })
-                .then(result => result.css);
+                    .process(css, { from: undefined })
+                    .then(result => result.css);
             },
             fileName: 'index.css',
             includePaths: [`${PCUI_DIR}/dist`],
@@ -86,10 +98,10 @@ const application = {
         }),
 
         BUILD_TYPE === 'release' &&
-            strip({
-                include: ['**/*.ts'],
-                functions: ['Debug.exec']
-            }),
+        strip({
+            include: ['**/*.ts'],
+            functions: ['Debug.exec']
+        }),
         BUILD_TYPE !== 'debug' && terser()
     ],
     treeshake: 'smallest',

@@ -116,8 +116,6 @@ void main(void) {
 
             // evaluate
             color.xyz += evalSH(sh, dir) * scale;
-
-            // color.xyz += evalSH(source, dir);
         #endif
 
         // apply tint/brightness

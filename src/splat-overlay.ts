@@ -77,6 +77,7 @@ class SplatOverlay extends Element {
             mesh.primitive[0] = {
                 type: PRIMITIVE_POINTS,
                 base: 0,
+                baseVertex: 0,
                 count: splatData.numSplats
             };
 

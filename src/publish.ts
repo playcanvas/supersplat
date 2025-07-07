@@ -1,6 +1,6 @@
 import { Events } from './events';
 import { BufferWriter, GZipWriter } from './serialize/writer';
-import { serializePlyCompressed, ExperienceSettings, SerializeSettings } from './splat-serialize';
+import { serializePlyCompressed, serializePly, ExperienceSettings, SerializeSettings } from './splat-serialize';
 import { localize } from './ui/localization';
 
 type PublishSettings = {
@@ -68,7 +68,8 @@ const publish = async (data: Uint8Array, publishSettings: PublishSettings, user:
             title: publishSettings.title,
             description: publishSettings.description,
             listed: publishSettings.listed,
-            settings: publishSettings.experienceSettings
+            settings: publishSettings.experienceSettings,
+            format: 'sogs'
         }),
         headers: {
             'Content-Type': 'application/json',
@@ -116,7 +117,8 @@ const registerPublishEvents = (events: Events) => {
             // serialize/compress
             const writer = new BufferWriter();
             const gzipWriter = new GZipWriter(writer);
-            await serializePlyCompressed(splats, publishSettings.serializeSettings, gzipWriter);
+            // await serializePlyCompressed(splats, publishSettings.serializeSettings, gzipWriter);
+            await serializePly(splats, publishSettings.serializeSettings, gzipWriter);
             await gzipWriter.close();
             const buffer = writer.close();
 

@@ -9,6 +9,7 @@ type PublishSettings = {
     listed: boolean;
     serializeSettings: SerializeSettings;
     experienceSettings: ExperienceSettings;
+    format: 'compressed.ply' | 'sogs';
 };
 
 const origin = location.origin;
@@ -29,7 +30,7 @@ const getUser = async () => {
     }
 };
 
-const publish = async (data: Uint8Array, publishSettings: PublishSettings, user: User) => {
+const publish = async (format: 'compressed.ply' | 'sogs', data: Uint8Array, publishSettings: PublishSettings, user: User) => {
     const filename = 'scene.ply';
 
     // get signed url
@@ -69,7 +70,7 @@ const publish = async (data: Uint8Array, publishSettings: PublishSettings, user:
             description: publishSettings.description,
             listed: publishSettings.listed,
             settings: publishSettings.experienceSettings,
-            format: 'sogs'
+            format
         }),
         headers: {
             'Content-Type': 'application/json',
@@ -117,13 +118,21 @@ const registerPublishEvents = (events: Events) => {
             // serialize/compress
             const writer = new BufferWriter();
             const gzipWriter = new GZipWriter(writer);
-            // await serializePlyCompressed(splats, publishSettings.serializeSettings, gzipWriter);
-            await serializePly(splats, publishSettings.serializeSettings, gzipWriter);
+
+            switch (publishSettings.format) {
+                case 'compressed.ply':
+                    await serializePlyCompressed(splats, publishSettings.serializeSettings, gzipWriter);
+                    break;
+                case 'sogs':
+                    await serializePly(splats, publishSettings.serializeSettings, gzipWriter);
+                    break;
+            }
+
             await gzipWriter.close();
             const buffer = writer.close();
 
             // publish
-            const response = await publish(buffer, publishSettings, user);
+            const response = await publish(publishSettings.format, buffer, publishSettings, user);
 
             if (!response) {
                 await events.invoke('showPopup', {

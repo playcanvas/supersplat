@@ -188,7 +188,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             filename: files[meta].filename,
             url: urls[meta],
             animationFrame,
-            mapUrl: files.length > 1 ? mapUrl  : null
+            mapUrl: files.length > 1 ? mapUrl : null
         });
 
         urls.forEach(url => URL.revokeObjectURL(url));
@@ -249,7 +249,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         fileSelector.setAttribute('accept', '.ply,.splat,meta.json,.json,.webp,.ssproj');
         fileSelector.setAttribute('multiple', 'true');
 
-        fileSelector.onchange = async () => {
+        fileSelector.onchange = () => {
             const files = [];
             for (let i = 0; i < fileSelector.files.length; i++) {
                 const file = fileSelector.files[i];
@@ -264,8 +264,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
     }
 
     // create the file drag & drop handler
-    CreateDropHandler(dropTarget, async (entries, shift) => {
-        importFiles(entries.map(e => {
+    CreateDropHandler(dropTarget, (entries, shift) => {
+        importFiles(entries.map((e) => {
             return {
                 filename: e.filename,
                 contents: e.file

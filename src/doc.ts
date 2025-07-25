@@ -190,7 +190,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     // NOTE: on chrome it's possible to get the FileSystemFileHandle from the DataTransferItem
     // (which would result in more seamless user experience), but this is not yet supported in
     // other browsers.
-    events.function('doc.dropped', async (file: File) => {
+    events.function('doc.load', async (file: File) => {
         if (!events.invoke('scene.empty') && !await getResetConfirmation()) {
             return false;
         }

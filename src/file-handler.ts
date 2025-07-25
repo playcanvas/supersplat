@@ -95,7 +95,7 @@ const isSogs = (filenames: string[]) => {
 type ImportFile = {
     filename: string;
     url?: string;
-    contents: File;
+    contents?: File;
 };
 
 const vec = new Vec3();

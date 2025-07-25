@@ -187,7 +187,7 @@ class AssetLoader {
 
             const arrayBuffer = await response.arrayBuffer();
 
-            const gsplatData = await deserializeFromSSplat(arrayBuffer);
+            const gsplatData = deserializeFromSSplat(arrayBuffer);
 
             const asset = new Asset(loadRequest.filename || loadRequest.url, 'gsplat', {
                 url: loadRequest.url,

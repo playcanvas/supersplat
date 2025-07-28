@@ -224,7 +224,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             // handle multiple files as independent imports
             for (let i = 0; i < files.length; i++) {
                 if (filenames[i].endsWith('.ssproj')) {
-                    await events.invoke('doc.load', files[i].contents);
+                    await events.invoke('doc.load', files[i].contents ?? (await fetch(files[i].url)).arrayBuffer());
                 } else if (filenames[i].endsWith('.json')) {
                     await importCameraPoses(files[i]);
                 } else if (filenames[i].endsWith('.ply') || filenames[i].endsWith('.splat')) {

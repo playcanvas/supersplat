@@ -137,6 +137,21 @@ class PublishSettingsDialog extends Container {
         bandsRow.append(bandsLabel);
         bandsRow.append(bandsSlider);
 
+        // format
+
+        const formatLabel = new Label({ class: 'label', text: localize('export.format') });
+        const formatSelect = new SelectInput({
+            class: 'select',
+            defaultValue: 'compressed.ply',
+            options: [
+                { v: 'compressed.ply', t: localize('export.format-compressed-ply') },
+                { v: 'sogs', t: localize('export.format-sogs') }
+            ]
+        });
+        const formatRow = new Container({ class: 'row' });
+        formatRow.append(formatLabel);
+        formatRow.append(formatSelect);
+
         // content
 
         const content = new Container({ id: 'content' });
@@ -148,6 +163,7 @@ class PublishSettingsDialog extends Container {
         content.append(colorRow);
         content.append(fovRow);
         content.append(bandsRow);
+        content.append(formatRow);
 
         // footer
 
@@ -212,6 +228,7 @@ class PublishSettingsDialog extends Container {
             colorPicker.value = [bgClr.r, bgClr.g, bgClr.b];
             fovSlider.value = events.invoke('camera.fov');
             bandsSlider.value = events.invoke('view.bands');
+            formatSelect.value = 'compressed.ply';
         };
 
         // function implementations
@@ -319,7 +336,8 @@ class PublishSettingsDialog extends Container {
                         description: descInput.value,
                         listed: listBoolean.value,
                         serializeSettings,
-                        experienceSettings
+                        experienceSettings,
+                        format: formatSelect.value as 'compressed.ply' | 'sogs'
                     });
                 };
             }).finally(() => {

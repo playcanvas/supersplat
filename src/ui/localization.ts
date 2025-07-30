@@ -454,6 +454,9 @@ const localizeInit = () => {
                     'export.ply-compress': 'Compress PLY',
                     'export.splats-select': 'Splats',
                     'export.splats-select.all': 'All Splats',
+                    'export.format': 'File Format',
+                    'export.format-compressed-ply': 'Compressed PLY',
+                    'export.format-sogs': 'SOGS',
 
                     // Cursor
                     'cursor.click-to-copy': 'Click to copy',

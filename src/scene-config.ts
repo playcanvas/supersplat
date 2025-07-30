@@ -40,15 +40,15 @@ const sceneConfig = {
     myx: {
         enabled: true,
         showGrid: () => { return false || !sceneConfig.myx.enabled },
-        showScenePanel:  () => { return true || !sceneConfig.myx.enabled },
+        // showScenePanel:  () => { return true || !sceneConfig.myx.enabled },
         showMenu:  () => { return false || !sceneConfig.myx.enabled },
         showBottomToolbar:  () => { return false || !sceneConfig.myx.enabled },
         showRightToolbar:  () => { return false || !sceneConfig.myx.enabled },
-        showModeToggle:  () => { return true || !sceneConfig.myx.enabled },
-        showDataPanel:  () => { return true || !sceneConfig.myx.enabled },
+        // showModeToggle:  () => { return true || !sceneConfig.myx.enabled },
+        // showDataPanel:  () => { return true || !sceneConfig.myx.enabled },
         showViewCube: () => { return true || !sceneConfig.myx.enabled },
         showTimelinePanel: () => { return false || !sceneConfig.myx.enabled },
-        showMyxPanel: () => { return true || !sceneConfig.myx.enabled },
+        // showMyxPanel: () => { return true || !sceneConfig.myx.enabled },
         scene: {
             bulkLoad: {
                 enabled: false,

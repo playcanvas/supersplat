@@ -44,9 +44,9 @@ const cameraUpdate = (scene: Scene, data: any) => {
     let dir = new Vec3(data.dir);
     dir = convertZUpToYUp(dir)
 
-    // const target = pos.clone().add(dir);
-    // scene.camera.setPose(pos, target, 0);
-
+    const target = pos.clone().add(dir);
+    scene.camera.setPose(pos, target, 0);
+ 
     const { azim, elev } = directionToAzimElev(dir);
     scene.camera.setAzimElev(azim, elev, 0);
 }

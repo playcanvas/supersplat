@@ -63,6 +63,6 @@ class Progress extends Container {
             bar.dom.style.backgroundImage = `linear-gradient(90deg, #F60 0%, #F60 ${progress}%, #00000000 ${progress}%, #00000000 100%)`;
         };
     }
-};
+}
 
 export { Progress };

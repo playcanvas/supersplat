@@ -12,6 +12,7 @@ import { Menu } from './menu';
 import { ModeToggle } from './mode-toggle';
 import logo from './playcanvas-logo.png';
 import { Popup, ShowOptions } from './popup';
+import { Progress } from './progress';
 import { PublishSettingsDialog } from './publish-settings-dialog';
 import { RightToolbar } from './right-toolbar';
 import { ScenePanel } from './scene-panel';
@@ -263,6 +264,26 @@ class EditorUI {
 
         events.on('stopSpinner', () => {
             spinner.hidden = true;
+        });
+
+        // progress
+
+        const progress = new Progress();
+
+        topContainer.append(progress);
+
+        events.on('progressStart', (header: string) => {
+            progress.hidden = false;
+            progress.setHeader(header);
+        });
+
+        events.on('progressUpdate', (options: { text: string, progress: number }) => {
+            progress.setText(options.text);
+            progress.setProgress(options.progress);
+        });
+
+        events.on('progressEnd', () => {
+            progress.hidden = true;
         });
 
         // initialize canvas to correct size before creating graphics device etc

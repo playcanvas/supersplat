@@ -1,50 +1,52 @@
+@use 'colors.scss' as *;
+
 #spinner-container {
     left: 0;
     top: 0;
     width: 100%;
     height: 100%;
+    background-color: $bcg-darken;
     pointer-events: all;
     cursor: progress;
-}
 
-.spinner::before,
-.spinner::after {
-    border: 2px solid;
-    border-left: none;
-    box-sizing: border-box;
-    content: '';
-    display: block;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translateY(-50%);
-    transform-origin: 0% 50%;
-    animation: spinner-spin 1s linear 0s infinite;
-    border-width: 3px;
-    border-color: #aaa;
-}
-
-.spinner::before {
-    width: 15px;
-    height: 30px;
-    border-radius: 0 30px 30px 0;
-}
-
-.spinner::after {
-    width: 8px;
-    height: 16px;
-    border-radius: 0 16px 16px 0;
-    animation-direction: reverse;
-}
-
-@keyframes spinner-spin {
-    0% {
-        -webkit-transform: translateY(-50%) rotate(0deg);
-        transform: translateY(-50%) rotate(0deg);
+    .spinner::before, .spinner::after {
+        border: 2px solid;
+        border-left: none;
+        box-sizing: border-box;
+        content: '';
+        display: block;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translateY(-50%);
+        transform-origin: 0% 50%;
+        animation: spinner-spin 1s linear 0s infinite;
+        border-width: 3px;
+        border-color: #aaa;
     }
 
-    100% {
-        -webkit-transform: translateY(-50%) rotate(360deg);
-        transform: translateY(-50%) rotate(360deg);
+    .spinner::before {
+        width: 15px;
+        height: 30px;
+        border-radius: 0 30px 30px 0;
+    }
+
+    .spinner::after {
+        width: 8px;
+        height: 16px;
+        border-radius: 0 16px 16px 0;
+        animation-direction: reverse;
+    }
+
+    @keyframes spinner-spin {
+        0% {
+            -webkit-transform: translateY(-50%) rotate(0deg);
+            transform: translateY(-50%) rotate(0deg);
+        }
+
+        100% {
+            -webkit-transform: translateY(-50%) rotate(360deg);
+            transform: translateY(-50%) rotate(360deg);
+        }
     }
 }

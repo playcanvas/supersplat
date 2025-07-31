@@ -30,7 +30,28 @@ const getUser = async () => {
     }
 };
 
-const publish = async (format: 'compressed.ply' | 'sogs', data: Uint8Array, publishSettings: PublishSettings, user: User) => {
+type ProgressFunc = (loaded: number, total: number) => void;
+
+const trackProgress = (xhr: XMLHttpRequest, progressFunc: ProgressFunc, byteLength?: number) => {
+    const target = xhr.upload ?? xhr;
+    const handler = (event: ProgressEvent) => {
+        const total = event.lengthComputable ? event.total : byteLength;
+        if (total) {
+            progressFunc(event.loaded, total);
+        }
+    };
+    const endHandler = (event: ProgressEvent) => {
+        handler(event);
+        target.removeEventListener('loadstart', handler);
+        target.removeEventListener('progress', handler);
+        target.removeEventListener('loadend', endHandler);
+    };
+    target.addEventListener('loadstart', handler);
+    target.addEventListener('progress', handler);
+    target.addEventListener('loadend', endHandler);
+};
+
+const publish = async (format: 'compressed.ply' | 'sogs', data: Uint8Array, publishSettings: PublishSettings, user: User, progressFunc: ProgressFunc) => {
     const filename = 'scene.ply';
 
     // get signed url
@@ -49,18 +70,34 @@ const publish = async (format: 'compressed.ply' | 'sogs', data: Uint8Array, publ
 
     const json = await urlResponse.json();
 
-    // upload the file to S3
-    const uploadResponse = await fetch(json.signedUrl, {
-        method: 'PUT',
-        body: data,
-        headers: {
-            'Content-Type': 'binary/octet-stream'
-        }
-    });
+    const uploadData = () => {
+        return new Promise<boolean>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('PUT', json.signedUrl);
+            xhr.setRequestHeader('Content-Type', 'binary/octet-stream');
+            xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 400) {
+                    resolve(true);
+                } else {
+                    reject(new Error(`Failed to upload data (${xhr.status} ${xhr.statusText})`));
+                }
+            };
+            xhr.onerror = () => {
+                reject(new Error('Network error'));
+            };
 
-    if (!uploadResponse.ok) {
-        throw new Error('failed to upload blob');
-    }
+            trackProgress(xhr, progressFunc, data.byteLength);
+
+            try {
+                xhr.send(data);
+            } catch (e) {
+                reject(e);
+            }
+        });
+
+    };
+
+    await uploadData();
 
     const publishResponse = await fetch(`${user.apiServer}/splats/publish`, {
         method: 'POST',
@@ -106,7 +143,11 @@ const registerPublishEvents = (events: Events) => {
             return false;
         }
         try {
-            events.fire('startSpinner');
+            events.fire('progressStart', 'Publishing...');
+            events.fire('progressUpdate', {
+                text: localize('publish.converting'),
+                progress: 0
+            });
 
             // delay to allow spinner to show (hopefully 10ms is enough)
             await new Promise((resolve) => {
@@ -131,8 +172,15 @@ const registerPublishEvents = (events: Events) => {
             await gzipWriter.close();
             const buffer = writer.close();
 
+            const progressFunc = (loaded: number, total: number) => {
+                events.fire('progressUpdate', {
+                    text: localize('publish.uploading'),
+                    progress: 100 * loaded / total
+                });
+            };
+
             // publish
-            const response = await publish(publishSettings.format, buffer, publishSettings, user);
+            const response = await publish(publishSettings.format, buffer, publishSettings, user, progressFunc);
 
             if (!response) {
                 await events.invoke('showPopup', {
@@ -155,7 +203,7 @@ const registerPublishEvents = (events: Events) => {
                 message: `'${error.message ?? error}'`
             });
         } finally {
-            events.fire('stopSpinner');
+            events.fire('progressEnd');
         }
     });
 };

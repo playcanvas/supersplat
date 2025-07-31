@@ -275,6 +275,8 @@ const localizeInit = () => {
                     'render.video': 'Video...',
                     'render.ok': 'Render',
                     'render.cancel': 'Cancel',
+                    'render.render-video': 'Render Video',
+                    'render.rendering': 'Rendering Frames...',
 
                     // Selection menu
                     'select': 'Select',
@@ -484,6 +486,8 @@ const localizeInit = () => {
                     'publish.succeeded': 'PUBLISH SUCCEEDED',
                     'publish.message': 'Use the link below to access your scene.',
                     'publish.please-log-in': 'Publishing to PlayCanvas requires a user account. Please log in and try again.',
+                    'publish.converting': 'Converting...',
+                    'publish.uploading': 'Uploading...',
 
                     // Image Settings Dialog
                     'image.header': 'IMAGE SETTINGS',

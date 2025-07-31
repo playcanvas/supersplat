@@ -1,0 +1,76 @@
+@use 'colors.scss' as *;
+
+#progress-container {
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: $bcg-darken;
+    pointer-events: all;
+    cursor: progress;
+
+    #dialog {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+
+        border-radius: 8px;
+        background-color: $bcg-primary;
+        filter: drop-shadow(5px 5px 10px rgba(0, 0, 0, 0.8));
+        will-change: transform;     // needed for drop-shadow to work on Safari
+
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+
+        #header {
+            height: 32px;
+            line-height: 32px;
+            margin: 0px;
+            padding: 0px 8px;
+
+            font-weight: bold;
+            color: $text-secondary;
+            background-color: $bcg-darker;
+        }
+
+        #content {
+            width: 360px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+
+            padding: 16px;
+
+            #text {
+                width: 100%;
+                text-wrap: wrap;
+                color: $text-secondary;
+            }
+
+            #bar {
+                width: 100%;
+                height: 12px;
+                margin: 16px 0px 0px 0px;
+                border: 1px solid $bcg-dark;
+                border-radius: 6px;
+                background-color: #505050;
+            }
+        }
+    }
+
+    .pulsate {
+        animation-name: color;
+        animation-duration: 1s;
+        animation-iteration-count: infinite;
+        animation-direction: alternate-reverse;
+        animation-timing-function: ease;
+    }
+
+    @keyframes color {
+        to {
+            background-color: #404040;
+        }
+    }
+}

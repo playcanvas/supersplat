@@ -1,5 +1,5 @@
 import { Events } from './events';
-import { BufferWriter, GZipWriter } from './serialize/writer';
+import { ReadableWriter, GZipWriter } from './serialize/writer';
 import { serializePlyCompressed, serializePly, ExperienceSettings, SerializeSettings } from './splat-serialize';
 import { localize } from './ui/localization';
 
@@ -51,7 +51,7 @@ const trackProgress = (xhr: XMLHttpRequest, progressFunc: ProgressFunc, byteLeng
     target.addEventListener('loadend', endHandler);
 };
 
-const publish = async (format: 'compressed.ply' | 'sogs', data: Uint8Array, publishSettings: PublishSettings, user: User, progressFunc: ProgressFunc) => {
+const publish = async (format: 'compressed.ply' | 'sogs', data: ReadableStream, publishSettings: PublishSettings, user: User, progressFunc: ProgressFunc) => {
     const filename = 'scene.ply';
 
     // get signed url
@@ -71,30 +71,37 @@ const publish = async (format: 'compressed.ply' | 'sogs', data: Uint8Array, publ
     const json = await urlResponse.json();
 
     const uploadData = () => {
-        return new Promise<boolean>((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            xhr.open('PUT', json.signedUrl);
-            xhr.setRequestHeader('Content-Type', 'binary/octet-stream');
-            xhr.onload = () => {
-                if (xhr.status >= 200 && xhr.status < 400) {
-                    resolve(true);
-                } else {
-                    reject(new Error(`Failed to upload data (${xhr.status} ${xhr.statusText})`));
-                }
-            };
-            xhr.onerror = () => {
-                reject(new Error('Network error'));
-            };
-
-            trackProgress(xhr, progressFunc, data.byteLength);
-
-            try {
-                xhr.send(data);
-            } catch (e) {
-                reject(e);
+        return fetch(json.signedUrl, {
+            method: 'PUT',
+            body: data,
+            headers: {
+                'Content-Type': 'binary/octet-stream'
             }
         });
 
+        // return new Promise<boolean>((resolve, reject) => {
+        //     const xhr = new XMLHttpRequest();
+        //     xhr.open('PUT', json.signedUrl);
+        //     xhr.setRequestHeader('Content-Type', 'binary/octet-stream');
+        //     xhr.onload = () => {
+        //         if (xhr.status >= 200 && xhr.status < 400) {
+        //             resolve(true);
+        //         } else {
+        //             reject(new Error(`Failed to upload data (${xhr.status} ${xhr.statusText})`));
+        //         }
+        //     };
+        //     xhr.onerror = () => {
+        //         reject(new Error('Network error'));
+        //     };
+
+        //     trackProgress(xhr, progressFunc, data.byteLength);
+
+        //     try {
+        //         xhr.send(data);
+        //     } catch (e) {
+        //         reject(e);
+        //     }
+        // });
     };
 
     await uploadData();
@@ -156,21 +163,9 @@ const registerPublishEvents = (events: Events) => {
 
             const splats = events.invoke('scene.splats');
 
-            // serialize/compress
-            const writer = new BufferWriter();
-            const gzipWriter = new GZipWriter(writer);
-
-            switch (publishSettings.format) {
-                case 'compressed.ply':
-                    await serializePlyCompressed(splats, publishSettings.serializeSettings, gzipWriter);
-                    break;
-                case 'sogs':
-                    await serializePly(splats, publishSettings.serializeSettings, gzipWriter);
-                    break;
-            }
-
-            await gzipWriter.close();
-            const buffer = writer.close();
+            // create the writer chain: gzip->stream->upload
+            const readableWriter = new ReadableWriter();
+            const gzipWriter = new GZipWriter(readableWriter);
 
             const progressFunc = (loaded: number, total: number) => {
                 events.fire('progressUpdate', {
@@ -180,7 +175,23 @@ const registerPublishEvents = (events: Events) => {
             };
 
             // publish
-            const response = await publish(publishSettings.format, buffer, publishSettings, user, progressFunc);
+            const publishPromise = publish(publishSettings.format, readableWriter.stream, publishSettings, user, progressFunc);
+
+            // serialize
+            let serializePromise;
+            switch (publishSettings.format) {
+                case 'compressed.ply':
+                    serializePromise = serializePlyCompressed(splats, publishSettings.serializeSettings, gzipWriter);
+                    break;
+                case 'sogs':
+                    serializePromise = serializePly(splats, publishSettings.serializeSettings, gzipWriter);
+                    break;
+            }
+
+            const [response] = await Promise.all([publishPromise, serializePromise]);
+
+            await gzipWriter.close();
+            const buffer = readableWriter.close();
 
             if (!response) {
                 await events.invoke('showPopup', {

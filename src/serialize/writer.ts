@@ -136,4 +136,25 @@ class GZipWriter implements Writer {
     }
 }
 
-export { Writer, FileStreamWriter, BufferWriter, DownloadWriter, GZipWriter };
+class ReadableWriter implements Writer {
+    write: (data: Uint8Array, finalWrite?: boolean) => void;
+    close: () => void;
+
+    stream: ReadableStream<Uint8Array>;
+
+    constructor() {
+        this.stream = new ReadableStream<Uint8Array>({
+            start: (controller) => {
+                this.write = async (data: Uint8Array, finalWrite?: boolean) => {
+                    await controller.enqueue(data);
+                };
+
+                this.close = () => {
+                    controller.close();
+                };
+            }
+        });
+    }
+}
+
+export { Writer, FileStreamWriter, BufferWriter, DownloadWriter, GZipWriter, ReadableWriter };

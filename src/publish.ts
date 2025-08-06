@@ -74,6 +74,8 @@ const publish = async (format: 'compressed.ply' | 'sogs', data: ReadableStream, 
         return fetch(json.signedUrl, {
             method: 'PUT',
             body: data,
+            // @ts-ignore
+            duplex: 'half',
             headers: {
                 'Content-Type': 'binary/octet-stream'
             }

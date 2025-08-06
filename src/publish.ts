@@ -70,8 +70,8 @@ const publish = async (format: 'compressed.ply' | 'sogs', data: ReadableStream, 
 
     const json = await urlResponse.json();
 
-    const uploadData = () => {
-        return fetch(json.signedUrl, {
+    const uploadData = async () => {
+        const response = await fetch(json.signedUrl, {
             method: 'PUT',
             body: data,
             // @ts-ignore
@@ -80,6 +80,8 @@ const publish = async (format: 'compressed.ply' | 'sogs', data: ReadableStream, 
                 'Content-Type': 'binary/octet-stream'
             }
         });
+
+        return response.ok;
 
         // return new Promise<boolean>((resolve, reject) => {
         //     const xhr = new XMLHttpRequest();

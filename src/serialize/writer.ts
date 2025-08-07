@@ -1,10 +1,10 @@
 // defines the interface for a stream writer class. all functions are async.
 interface Writer {
     // write data to the stream. if finalWrite is true then `data` may be stored directly.
-    write(data: Uint8Array, finalWrite?: boolean): void;
+    write(data: Uint8Array, finalWrite?: boolean): Promise<void> | void;
 
     // close the writing stream. return value depends on writer implementation.
-    close(): any;
+    close(): Promise<any> | any;
 }
 
 // write data to a file stream
@@ -123,6 +123,7 @@ class GZipWriter implements Writer {
         })();
 
         this.write = async (data: Uint8Array, finalWrite?: boolean) => {
+            await streamWriter.ready;
             await streamWriter.write(data);
         };
 
@@ -136,25 +137,4 @@ class GZipWriter implements Writer {
     }
 }
 
-class ReadableWriter implements Writer {
-    write: (data: Uint8Array, finalWrite?: boolean) => void;
-    close: () => void;
-
-    stream: ReadableStream<Uint8Array>;
-
-    constructor() {
-        this.stream = new ReadableStream<Uint8Array>({
-            start: (controller) => {
-                this.write = async (data: Uint8Array, finalWrite?: boolean) => {
-                    await controller.enqueue(data);
-                };
-
-                this.close = () => {
-                    controller.close();
-                };
-            }
-        });
-    }
-}
-
-export { Writer, FileStreamWriter, BufferWriter, DownloadWriter, GZipWriter, ReadableWriter };
+export { Writer, FileStreamWriter, BufferWriter, DownloadWriter, GZipWriter };

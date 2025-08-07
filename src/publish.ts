@@ -30,32 +30,11 @@ const getUser = async () => {
     }
 };
 
-type ProgressFunc = (loaded: number, total: number) => void;
-
-const trackProgress = (xhr: XMLHttpRequest, progressFunc: ProgressFunc, byteLength?: number) => {
-    const target = xhr.upload ?? xhr;
-    const handler = (event: ProgressEvent) => {
-        const total = event.lengthComputable ? event.total : byteLength;
-        if (total) {
-            progressFunc(event.loaded, total);
-        }
-    };
-    const endHandler = (event: ProgressEvent) => {
-        handler(event);
-        target.removeEventListener('loadstart', handler);
-        target.removeEventListener('progress', handler);
-        target.removeEventListener('loadend', endHandler);
-    };
-    target.addEventListener('loadstart', handler);
-    target.addEventListener('progress', handler);
-    target.addEventListener('loadend', endHandler);
-};
-
 class PublishWriter implements Writer {
     write: (data: Uint8Array, finalWrite?: boolean) => void;
     close: () => Promise<any>;
 
-    static async create(publishSettings: PublishSettings, user: User, progressFunc: ProgressFunc) {
+    static async create(publishSettings: PublishSettings, user: User) {
         const filename = 'scene.ply';
 
         // start upload
@@ -79,8 +58,6 @@ class PublishWriter implements Writer {
 
         const upload = async () => {
             if (cursor === 0) return;
-
-            console.log(`Uploading part ${partNumber} (${cursor} bytes)`);
 
             // get signed url for this part
             const urlResponse = await fetch(`${user.apiServer}/upload/signed-urls`, {
@@ -122,8 +99,6 @@ class PublishWriter implements Writer {
 
             cursor = 0;
             partNumber++;
-
-            console.log('done');
         };
 
         result.write = async (data: Uint8Array, finalWrite?: boolean) => {
@@ -236,7 +211,7 @@ const registerPublishEvents = (events: Events) => {
             };
 
             // create the writer chain: gzip->stream->upload
-            const publishWriter = await PublishWriter.create(publishSettings, user, progressFunc);
+            const publishWriter = await PublishWriter.create(publishSettings, user);
             const gzipWriter = new GZipWriter(publishWriter);
 
             const splats = events.invoke('scene.splats');
@@ -247,7 +222,7 @@ const registerPublishEvents = (events: Events) => {
                     await serializePlyCompressed(splats, publishSettings.serializeSettings, gzipWriter);
                     break;
                 case 'sogs':
-                    await serializePly(splats, publishSettings.serializeSettings, gzipWriter);
+                    await serializePly(splats, publishSettings.serializeSettings, gzipWriter, progressFunc);
                     break;
             }
 

@@ -100,7 +100,7 @@ class PublishWriter implements Writer {
 
             const urlJson = await urlResponse.json();
 
-            const uploadResponse = await fetch(`${urlJson.signedUrl}&uploadId=${startJson.uploadId}&partNumber=${partNumber}`, {
+            const uploadResponse = await fetch(urlJson.signedUrl, {
                 method: 'PUT',
                 body: uploadBuf.slice(0, cursor),
                 headers: {

@@ -73,6 +73,7 @@ class PublishWriter implements Writer {
         const result = new PublishWriter();
 
         const uploadBuf = new Uint8Array(10 * 1024 * 1024); // 10MB buffer
+        let parts: { PartNumber: number, ETag: string }[] = [];
         let partNumber = 1;
         let cursor = 0;
 
@@ -112,6 +113,11 @@ class PublishWriter implements Writer {
                 throw new Error(`failed to upload data (${uploadResponse.statusText})`);
             }
 
+            parts.push({
+                PartNumber: partNumber,
+                ETag: uploadResponse.headers.get('etag')
+            });
+
             cursor = 0;
             partNumber++;
         };
@@ -148,8 +154,8 @@ class PublishWriter implements Writer {
                 },
                 body: JSON.stringify({
                     uploadId: startJson.uploadId,
-                    parts: partNumber,
-                    key: startJson.key
+                    key: startJson.key,
+                    parts
                 })
             });
 
@@ -162,7 +168,7 @@ class PublishWriter implements Writer {
             const publishResponse = await fetch(`${user.apiServer}/splats/publish`, {
                 method: 'POST',
                 body: JSON.stringify({
-                    s3Key: urlJson.s3Key,
+                    s3Key: startJson.key,
                     title: publishSettings.title,
                     description: publishSettings.description,
                     listed: publishSettings.listed,

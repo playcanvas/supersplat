@@ -115,7 +115,7 @@ class PublishWriter implements Writer {
 
             parts.push({
                 PartNumber: partNumber,
-                ETag: uploadResponse.headers.get('etag')
+                ETag: uploadResponse.headers.get('etag').replace(/^"|"$/g, '')
             });
 
             cursor = 0;

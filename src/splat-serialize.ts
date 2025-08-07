@@ -510,9 +510,12 @@ const serializePly = async (splats: Splat[], serializeSettings: SerializeSetting
 
     const singleSplat = new SingleSplat(props.map(p => p.name), serializeSettings);
 
-    const buf = new Uint8Array(1024 * props.reduce((tot, p) => tot + DataTypeSize(p.type), 0));
+    const gaussianSizeBytes = props.reduce((tot, p) => tot + DataTypeSize(p.type), 0);
+
+    const buf = new Uint8Array(1024 * gaussianSizeBytes);
     const dataView = new DataView(buf.buffer);
     let offset = 0;
+    let bytesWritten = 0;
 
     for (let e = 0; e < splats.length; ++e) {
         const splat = splats[e];
@@ -538,8 +541,9 @@ const serializePly = async (splats: Splat[], serializeSettings: SerializeSetting
             // buffer is full, write it to the output stream
             if (offset === buf.byteLength) {
                 await writer.write(buf);
+                bytesWritten += offset;
+                progress?.(bytesWritten, totalGaussians * gaussianSizeBytes);
                 offset = 0;
-                progress?.(offset, totalGaussians * props.length * 4);
             }
         }
     }
@@ -547,7 +551,8 @@ const serializePly = async (splats: Splat[], serializeSettings: SerializeSetting
     // write the last (most likely partially filled) buf
     if (offset > 0) {
         await writer.write(new Uint8Array(buf.buffer, 0, offset));
-        progress?.(offset, totalGaussians * props.length * 4);
+        bytesWritten += offset;
+        progress?.(offset, totalGaussians * gaussianSizeBytes);
     }
 };
 

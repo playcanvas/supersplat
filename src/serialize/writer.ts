@@ -1,15 +1,15 @@
 // defines the interface for a stream writer class. all functions are async.
 interface Writer {
-    // write data to the stream. if finalWrite is true then `data` may be stored directly.
-    write(data: Uint8Array, finalWrite?: boolean): Promise<void> | void;
+    // write data to the stream
+    write(data: Uint8Array): void | Promise<void>;
 
     // close the writing stream. return value depends on writer implementation.
-    close(): Promise<any> | any;
+    close(): any | Promise<any>;
 }
 
 // write data to a file stream
 class FileStreamWriter implements Writer {
-    write: (data: Uint8Array, finalWrite?: boolean) => void;
+    write: (data: Uint8Array) => void;
     close: () => void;
 
     constructor(stream: FileSystemWritableFileStream) {
@@ -17,7 +17,7 @@ class FileStreamWriter implements Writer {
 
         stream.seek(0);
 
-        this.write = async (data: Uint8Array, finalWrite?: boolean) => {
+        this.write = async (data: Uint8Array) => {
             cursor += data.byteLength;
             await stream.write(data);
         };
@@ -25,22 +25,23 @@ class FileStreamWriter implements Writer {
         this.close = async () => {
             await stream.truncate(cursor);
             await stream.close();
+            return true;
         };
     }
 }
 
 // write data to a memory buffer
 class BufferWriter implements Writer {
-    write: (data: Uint8Array, finalWrite?: boolean) => void;
+    write: (data: Uint8Array) => void;
     close: () => Uint8Array;
 
     constructor() {
         let buffer: Uint8Array;
         let cursor = 0;
 
-        this.write = (data: Uint8Array, finalWrite?: boolean) => {
+        this.write = (data: Uint8Array) => {
             if (!buffer) {
-                buffer = finalWrite ? data : data.slice();
+                buffer = data.slice();
                 cursor = data.byteLength;
             } else {
                 if (buffer.byteLength < cursor + data.byteLength) {
@@ -65,14 +66,14 @@ class BufferWriter implements Writer {
 
 // write to a memory download buffer and trigger a browser download when closed
 class DownloadWriter implements Writer {
-    write: (data: Uint8Array, finalWrite?: boolean) => void;
+    write: (data: Uint8Array) => void;
     close: () => void;
 
     constructor(filename: string) {
         const bufferWriter = new BufferWriter();
 
-        this.write = (data: Uint8Array, finalWrite?: boolean) => {
-            bufferWriter.write(data, finalWrite);
+        this.write = (data: Uint8Array) => {
+            bufferWriter.write(data);
         };
 
         this.close = () => {
@@ -99,14 +100,16 @@ class DownloadWriter implements Writer {
             }
 
             window.URL.revokeObjectURL(url);
+
+            return true;
         };
     }
 }
 
-// compresses the stream with gzip
+// compress the incoming stream with gzip
 class GZipWriter implements Writer {
-    write: (data: Uint8Array, finalWrite?: boolean) => void;
-    close: () => void;
+    write: (data: Uint8Array) => void;
+    close: () => any | Promise<any>;
 
     constructor(writer: Writer) {
         const stream = new CompressionStream('gzip');
@@ -122,7 +125,7 @@ class GZipWriter implements Writer {
             }
         })();
 
-        this.write = async (data: Uint8Array, finalWrite?: boolean) => {
+        this.write = async (data: Uint8Array) => {
             await streamWriter.ready;
             await streamWriter.write(data);
         };
@@ -137,4 +140,27 @@ class GZipWriter implements Writer {
     }
 }
 
-export { Writer, FileStreamWriter, BufferWriter, DownloadWriter, GZipWriter };
+class ProgressWriter implements Writer {
+    write: (data: Uint8Array) => void;
+    close: () => any;
+
+    constructor(writer: Writer, totalBytes: number, progress?: (progress: number, total: number) => void) {
+        let cursor = 0;
+
+        this.write = async (data: Uint8Array) => {
+            cursor += data.byteLength;
+            await writer.write(data);
+            progress?.(cursor, totalBytes);
+        };
+
+        this.close = async () => {
+            if (cursor !== totalBytes) {
+                throw new Error(`ProgressWriter: expected ${totalBytes} bytes, but wrote ${cursor} bytes`);
+            }
+            progress?.(cursor, totalBytes);
+            return totalBytes;
+        };
+    }
+};
+
+export { Writer, FileStreamWriter, BufferWriter, DownloadWriter, GZipWriter, ProgressWriter };

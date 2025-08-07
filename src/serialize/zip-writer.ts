@@ -8,7 +8,7 @@ class ZipWriter implements Writer {
     start: (filename: string) => void;
 
     // write func
-    write: (data: Uint8Array, finalWrite?: boolean) => void;
+    write: (data: Uint8Array) => void;
 
     // finish the archive by writing the footer
     close: () => void;
@@ -63,11 +63,11 @@ class ZipWriter implements Writer {
             await writeHeader(filename);
         };
 
-        this.write = async (data: Uint8Array, finalWrite?: boolean) => {
+        this.write = async (data: Uint8Array) => {
             const file = files[files.length - 1];
             file.sizeBytes += data.length;
             file.crc.update(data);
-            await writer.write(data, finalWrite);
+            await writer.write(data);
         };
 
         this.close = async () => {

@@ -31,7 +31,7 @@ const getUser = async () => {
 };
 
 class PublishWriter implements Writer {
-    write: (data: Uint8Array, finalWrite?: boolean) => void;
+    write: (data: Uint8Array) => void;
     close: () => Promise<any>;
 
     static async create(publishSettings: PublishSettings, user: User) {
@@ -101,7 +101,7 @@ class PublishWriter implements Writer {
             partNumber++;
         };
 
-        result.write = async (data: Uint8Array, finalWrite?: boolean) => {
+        result.write = async (data: Uint8Array) => {
             let readcursor = 0;
 
             while (data.byteLength - readcursor > 0) {

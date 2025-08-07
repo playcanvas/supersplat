@@ -88,6 +88,7 @@ class PublishWriter implements Writer {
                 },
                 body: JSON.stringify({
                     uploadId: startJson.uploadId,
+                    key: startJson.key,
                     parts: 1,
                     partBase: partNumber
                 })

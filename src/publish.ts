@@ -219,7 +219,7 @@ const registerPublishEvents = (events: Events) => {
             // serialize
             switch (publishSettings.format) {
                 case 'compressed.ply':
-                    await serializePlyCompressed(splats, publishSettings.serializeSettings, gzipWriter);
+                    await serializePlyCompressed(splats, publishSettings.serializeSettings, gzipWriter, progressFunc);
                     break;
                 case 'sogs':
                     await serializePly(splats, publishSettings.serializeSettings, gzipWriter, progressFunc);

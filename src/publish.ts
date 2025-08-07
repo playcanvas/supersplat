@@ -113,6 +113,8 @@ class PublishWriter implements Writer {
                 throw new Error(`failed to upload data (${uploadResponse.statusText})`);
             }
 
+            await uploadResponse;
+
             parts.push({
                 PartNumber: partNumber,
                 ETag: uploadResponse.headers.get('etag').replace(/^"|"$/g, '')

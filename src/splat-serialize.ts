@@ -552,7 +552,7 @@ const serializePly = async (splats: Splat[], serializeSettings: SerializeSetting
     if (offset > 0) {
         await writer.write(new Uint8Array(buf.buffer, 0, offset));
         bytesWritten += offset;
-        progress?.(offset, totalGaussians * gaussianSizeBytes);
+        progress?.(bytesWritten, totalGaussians * gaussianSizeBytes);
     }
 };
 

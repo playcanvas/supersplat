@@ -80,6 +80,8 @@ class PublishWriter implements Writer {
         const upload = async () => {
             if (cursor === 0) return;
 
+            console.log(`Uploading part ${partNumber} (${cursor} bytes)`);
+
             // get signed url for this part
             const urlResponse = await fetch(`${user.apiServer}/upload/signed-urls`, {
                 method: 'POST',
@@ -113,8 +115,6 @@ class PublishWriter implements Writer {
                 throw new Error(`failed to upload data (${uploadResponse.statusText})`);
             }
 
-            await uploadResponse;
-
             parts.push({
                 PartNumber: partNumber,
                 ETag: uploadResponse.headers.get('etag').replace(/^"|"$/g, '')
@@ -122,6 +122,8 @@ class PublishWriter implements Writer {
 
             cursor = 0;
             partNumber++;
+
+            console.log('done');
         };
 
         result.write = async (data: Uint8Array, finalWrite?: boolean) => {

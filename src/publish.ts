@@ -70,25 +70,6 @@ class PublishWriter implements Writer {
 
         const startJson = await startResponse.json();
 
-        // get signed url
-        const urlResponse = await fetch(`${user.apiServer}/upload/signed-url`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${user.token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                uploadId: startJson.uploadId,
-                key: startJson.key
-            })
-        });
-
-        if (!urlResponse.ok) {
-            throw new Error(`failed to get signed url (${urlResponse.statusText})`);
-        }
-
-        const urlJson = await urlResponse.json();
-
         const result = new PublishWriter();
 
         const uploadBuf = new Uint8Array(10 * 1024 * 1024); // 10MB buffer
@@ -97,6 +78,26 @@ class PublishWriter implements Writer {
 
         const upload = async () => {
             if (cursor === 0) return;
+
+            // get signed url for this part
+            const urlResponse = await fetch(`${user.apiServer}/upload/signed-urls`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${user.token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    uploadId: startJson.uploadId,
+                    parts: 1,
+                    partBase: partNumber
+                })
+            });
+
+            if (!urlResponse.ok) {
+                throw new Error(`failed to get signed url (${urlResponse.statusText})`);
+            }
+
+            const urlJson = await urlResponse.json();
 
             const uploadResponse = await fetch(`${urlJson.signedUrl}&uploadId=${startJson.uploadId}&partNumber=${partNumber}`, {
                 method: 'PUT',

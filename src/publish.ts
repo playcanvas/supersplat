@@ -93,7 +93,7 @@ class PublishWriter implements Writer {
                     uploadId: startJson.uploadId,
                     key: startJson.key,
                     parts: 1,
-                    partBase: partNumber - 1
+                    partBase: partNumber
                 })
             });
 

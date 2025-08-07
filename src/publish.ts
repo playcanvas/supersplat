@@ -92,7 +92,7 @@ class PublishWriter implements Writer {
         const result = new PublishWriter();
 
         const uploadBuf = new Uint8Array(10 * 1024 * 1024); // 10MB buffer
-        let partNumber = 0;
+        let partNumber = 1;
         let cursor = 0;
 
         const upload = async () => {

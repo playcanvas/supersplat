@@ -230,13 +230,12 @@ const registerPublishEvents = (events: Events) => {
             const splats = events.invoke('scene.splats');
 
             // serialize
-            let serializePromise;
             switch (publishSettings.format) {
                 case 'compressed.ply':
-                    serializePromise = serializePlyCompressed(splats, publishSettings.serializeSettings, gzipWriter);
+                    await serializePlyCompressed(splats, publishSettings.serializeSettings, gzipWriter);
                     break;
                 case 'sogs':
-                    serializePromise = serializePly(splats, publishSettings.serializeSettings, gzipWriter);
+                    await serializePly(splats, publishSettings.serializeSettings, gzipWriter);
                     break;
             }
 

@@ -36,7 +36,7 @@ class BufferWriter implements Writer {
     close: () => Uint8Array[];
 
     constructor() {
-        let buffers: Uint8Array[] = [];
+        const buffers: Uint8Array[] = [];
         let buffer: Uint8Array;
         let cursor = 0;
 
@@ -167,7 +167,7 @@ class ProgressWriter implements Writer {
             progress?.(cursor, totalBytes);
         };
 
-        this.close = async () => {
+        this.close = () => {
             if (cursor !== totalBytes) {
                 throw new Error(`ProgressWriter: expected ${totalBytes} bytes, but wrote ${cursor} bytes`);
             }
@@ -175,6 +175,6 @@ class ProgressWriter implements Writer {
             return totalBytes;
         };
     }
-};
+}
 
 export { Writer, FileStreamWriter, BufferWriter, DownloadWriter, GZipWriter, ProgressWriter };

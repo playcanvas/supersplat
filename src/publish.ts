@@ -52,7 +52,7 @@ class PublishWriter implements Writer {
         const result = new PublishWriter();
 
         const uploadBuf = new Uint8Array(10 * 1024 * 1024); // 10MB buffer
-        let parts: { PartNumber: number, ETag: string }[] = [];
+        const parts: { PartNumber: number, ETag: string }[] = [];
         let partNumber = 1;
         let cursor = 0;
 
@@ -177,7 +177,7 @@ class PublishWriter implements Writer {
 
         return result;
     }
-};
+}
 
 const registerPublishEvents = (events: Events) => {
 

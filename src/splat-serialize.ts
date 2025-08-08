@@ -993,10 +993,10 @@ const serializePlyCompressed = async (splats: Splat[], options: SerializeSetting
             singleSplatSH.read(splats[index.splatIndex], index.i);
 
             // quantize and write sh data
-            let off = j * outputSHCoeffs * 3;
+            const offset = j * outputSHCoeffs * 3;
             for (let k = 0; k < outputSHCoeffs * 3; ++k) {
                 const nvalue = singleSplatSH.data[shNames[k]] / 8 + 0.5;
-                shData[off + k] = Math.max(0, Math.min(255, Math.trunc(nvalue * 256)));
+                shData[offset + k] = Math.max(0, Math.min(255, Math.trunc(nvalue * 256)));
             }
         }
 

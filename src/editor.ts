@@ -421,13 +421,13 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             selected: true
         }, writer);
 
-        const buffer = writer.close();
+        const buffers = writer.close();
 
-        if (buffer) {
+        if (buffers) {
             const splat = splats[0];
 
             // wrap PLY in a blob and load it
-            const blob = new Blob([buffer], { type: 'octet/stream' });
+            const blob = new Blob(buffers, { type: 'octet/stream' });
             const url = URL.createObjectURL(blob);
             const { filename } = splat;
             const copy = await scene.assetLoader.loadPly({ url, filename });

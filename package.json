@@ -35,8 +35,8 @@
         "@rollup/plugin-terser": "^0.4.4",
         "@rollup/plugin-typescript": "12.1.4",
         "@types/wicg-file-system-access": "^2023.10.6",
-        "@typescript-eslint/eslint-plugin": "^8.38.0",
-        "@typescript-eslint/parser": "^8.38.0",
+        "@typescript-eslint/eslint-plugin": "^8.39.0",
+        "@typescript-eslint/parser": "^8.39.0",
         "autoprefixer": "^10.4.21",
         "concurrently": "^9.2.0",
         "cors": "^2.8.5",
@@ -48,14 +48,14 @@
         "i18next-browser-languagedetector": "^8.2.0",
         "jszip": "^3.10.1",
         "mp4-muxer": "^5.2.2",
-        "playcanvas": "^2.10.3",
+        "playcanvas": "^2.10.5",
         "postcss": "^8.5.6",
         "rollup": "^4.46.2",
         "rollup-plugin-scss": "^4.0.1",
         "rollup-plugin-string": "^3.0.0",
-        "sass": "^1.89.2",
+        "sass": "^1.90.0",
         "serve": "^14.2.4",
         "tslib": "^2.8.1",
-        "typescript": "^5.8.3"
+        "typescript": "^5.9.2"
     }
 }

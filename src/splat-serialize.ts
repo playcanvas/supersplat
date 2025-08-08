@@ -1062,11 +1062,14 @@ const serializeSplat = async (splats: Splat[], options: SerializeSettings, write
     await writer.write(result);
 };
 
-const encodeBase64 = (bytes: Uint8Array) => {
+const encodeBase64 = (bytes: Uint8Array[]) => {
     let binary = '';
-    const len = bytes.byteLength;
-    for (let i = 0; i < len; i++) {
-        binary += String.fromCharCode(bytes[i]);
+    for (let i = 0; i < bytes.length; i++) {
+        const thisBytes = bytes[i];
+        const thisLen = thisBytes.byteLength;
+        for (let j = 0; j < thisLen; j++) {
+            binary += String.fromCharCode(thisBytes[j]);
+        }
     }
     return window.btoa(binary);
 };
@@ -1077,7 +1080,7 @@ const serializeViewer = async (splats: Splat[], serializeSettings: SerializeSett
     // create compressed PLY data
     const plyWriter = new BufferWriter();
     await serializePlyCompressed(splats, serializeSettings, plyWriter);
-    const plyBuffer = plyWriter.close();
+    const plyBuffers = plyWriter.close();
 
     if (options.type === 'html') {
         const pad = (text: string, spaces: number) => {
@@ -1094,7 +1097,7 @@ const serializeViewer = async (splats: Splat[], serializeSettings: SerializeSett
         .replace(style, `<style>\n${pad(indexCss, 12)}\n        </style>`)
         .replace(script, `<script type="module">\n${pad(indexJs, 12)}\n        </script>`)
         .replace(settings, `settings: ${JSON.stringify(experienceSettings)}`)
-        .replace(content, `fetch("data:application/ply;base64,${encodeBase64(plyBuffer)}")`);
+        .replace(content, `fetch("data:application/ply;base64,${encodeBase64(plyBuffers)}")`);
 
         await writer.write(new TextEncoder().encode(html));
     } else {
@@ -1103,7 +1106,7 @@ const serializeViewer = async (splats: Splat[], serializeSettings: SerializeSett
         await zipWriter.file('index.css', indexCss);
         await zipWriter.file('index.js', indexJs);
         await zipWriter.file('settings.json', JSON.stringify(experienceSettings, null, 4));
-        await zipWriter.file('scene.compressed.ply', plyBuffer);
+        await zipWriter.file('scene.compressed.ply', plyBuffers);
         await zipWriter.close();
     }
 };

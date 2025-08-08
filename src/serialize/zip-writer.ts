@@ -14,12 +14,20 @@ class ZipWriter implements Writer {
     close: () => void;
 
     // helper function to start and write file contents
-    async file(filename: string, content: string | Uint8Array) {
+    async file(filename: string, content: string | Uint8Array | Uint8Array[]) {
         // start a new file
         await this.start(filename);
 
-        // write file contents
-        await this.write(typeof content === 'string' ? new TextEncoder().encode(content) : content);
+        // write file content
+        if (typeof content === 'string') {
+            await this.write(new TextEncoder().encode(content));
+        } else if (content instanceof Uint8Array) {
+            await this.write(content);
+        } else {
+            for (let i = 0; i < content.length; i++) {
+                await this.write(content[i]);
+            }
+        }
     }
 
     // write uncompressed data to a zip file using the passed-in writer

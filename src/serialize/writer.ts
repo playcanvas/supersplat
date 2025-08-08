@@ -33,33 +33,47 @@ class FileStreamWriter implements Writer {
 // write data to a memory buffer
 class BufferWriter implements Writer {
     write: (data: Uint8Array) => void;
-    close: () => Uint8Array;
+    close: () => Uint8Array[];
 
     constructor() {
+        let buffers: Uint8Array[] = [];
         let buffer: Uint8Array;
         let cursor = 0;
 
         this.write = (data: Uint8Array) => {
-            if (!buffer) {
-                buffer = data.slice();
-                cursor = data.byteLength;
-            } else {
-                if (buffer.byteLength < cursor + data.byteLength) {
-                    let newSize = buffer.byteLength * 2;
-                    while (newSize < cursor + data.byteLength) {
-                        newSize *= 2;
-                    }
-                    const newData = new Uint8Array(newSize);
-                    newData.set(buffer);
-                    buffer = newData;
+            let readcursor = 0;
+
+            while (readcursor < data.byteLength) {
+                const readSize = data.byteLength - readcursor;
+
+                // allocate buffer
+                if (!buffer) {
+                    buffer = new Uint8Array(Math.max(5 * 1024 * 1024, readSize));
                 }
-                buffer.set(data, cursor);
-                cursor += data.byteLength;
+
+                const writeSize = buffer.byteLength - cursor;
+                const copySize = Math.min(readSize, writeSize);
+
+                buffer.set(data.subarray(readcursor, readcursor + copySize), cursor);
+
+                readcursor += copySize;
+                cursor += copySize;
+
+                if (cursor === buffer.byteLength) {
+                    buffers.push(buffer);
+                    buffer = null;
+                    cursor = 0;
+                }
             }
         };
 
         this.close = () => {
-            return cursor === buffer.buffer.byteLength ? buffer : new Uint8Array(buffer.buffer, 0, cursor);
+            if (buffer) {
+                buffers.push(new Uint8Array(buffer.buffer, 0, cursor));
+                buffer = null;
+                cursor = 0;
+            }
+            return buffers;
         };
     }
 }
@@ -77,10 +91,10 @@ class DownloadWriter implements Writer {
         };
 
         this.close = () => {
-            const buffer = bufferWriter.close();
+            const buffers = bufferWriter.close();
 
             // download file to client
-            const blob = new Blob([buffer], { type: 'octet/stream' });
+            const blob = new Blob(buffers, { type: 'octet/stream' });
             const url = window.URL.createObjectURL(blob);
 
             const lnk = document.createElement('a');

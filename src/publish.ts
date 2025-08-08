@@ -109,7 +109,7 @@ class PublishWriter implements Writer {
                 const writeSize = uploadBuf.byteLength - cursor;
                 const copySize = Math.min(readSize, writeSize);
 
-                uploadBuf.set(data.slice(readcursor, readcursor + copySize), cursor);
+                uploadBuf.set(data.subarray(readcursor, readcursor + copySize), cursor);
 
                 readcursor += copySize;
                 cursor += copySize;

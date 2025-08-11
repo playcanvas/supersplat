@@ -275,7 +275,7 @@ const main = async () => {
             for (const file of launchParams.files) {
                 await events.invoke('import', [{
                     filename: file.name,
-                    contents: file
+                    contents: await file.getFile()
                 }]);
             }
         });

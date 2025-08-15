@@ -109,6 +109,27 @@ const registerCameraPosesEvents = (events: Events) => {
         });
     });
 
+    events.on('timeline.move', (frameFrom: number, frameTo: number) => {
+        if (frameFrom === frameTo) return;
+
+        if (frameTo !== undefined) {
+            const pose = poses.find(p => p.frame === frameTo);
+            if (pose) {
+                const index = poses.indexOf(pose);
+                removePose(index);
+            }
+        }
+
+        const pose = poses.find(p => p.frame === frameFrom);
+        if (pose) {
+            const index = poses.indexOf(pose);
+            pose.frame = frameTo;
+            rebuildSpline();
+            events.fire('timeline.setKey', index, frameTo);
+            events.fire('timeline.frame', frameTo);
+        }
+    });
+
     events.on('timeline.remove', (index: number) => {
         removePose(index);
     });

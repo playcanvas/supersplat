@@ -126,7 +126,7 @@ const registerCameraPosesEvents = (events: Events) => {
             pose.frame = frameTo;
             rebuildSpline();
             events.fire('timeline.setKey', index, frameTo);
-            events.fire('timeline.frame', frameTo);
+            events.fire('timeline.setFrame', frameTo);
         }
     });
 

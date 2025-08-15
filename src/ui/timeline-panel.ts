@@ -62,6 +62,37 @@ class Ticks extends Container {
                 const label = document.createElement('div');
                 label.classList.add('time-label', 'key');
                 label.style.left = `${offsetFromFrame(value)}px`;
+                let scrubbing = false;
+
+                label.addEventListener('pointerdown', (event) => {
+                    const frameFromIndex = keys.indexOf(label);
+                    const frameFrom = events.invoke('timeline.keys')[frameFromIndex];
+                    events.fire('timeline.setFrame', frameFrom);
+                    label.setPointerCapture(event.pointerId);
+                    scrubbing = true;
+                    event.stopPropagation();
+                });
+
+                label.addEventListener('pointermove', (event: PointerEvent) => {
+                    if (scrubbing) {
+                        const frame = frameFromOffset(parseInt(label.style.left) + event.offsetX);
+                        label.style.left = `${offsetFromFrame(frame)}px`;
+                    }
+                });
+
+                label.addEventListener('pointerup', (event: PointerEvent) => {
+                    if (scrubbing && event.isPrimary) {
+                        label.releasePointerCapture(event.pointerId);
+                        scrubbing = false;
+                        const frameFromIndex = keys.indexOf(label);
+                        const frameFrom = events.invoke('timeline.keys')[frameFromIndex];
+                        const frameTo = frameFromOffset(parseInt(label.style.left) + event.offsetX);
+                        if (frameFrom !== frameTo) {
+                            events.fire('timeline.move', frameFrom, frameTo);
+                        }
+                    }
+                });
+
                 workArea.dom.appendChild(label);
                 keys.push(label);
             };

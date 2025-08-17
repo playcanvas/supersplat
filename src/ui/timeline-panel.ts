@@ -69,6 +69,7 @@ class Ticks extends Container {
                     const frameFrom = events.invoke('timeline.keys')[frameFromIndex];
                     events.fire('timeline.setFrame', frameFrom);
                     label.setPointerCapture(event.pointerId);
+                    label.classList.add('scrubbing');
                     scrubbing = true;
                     event.stopPropagation();
                 });
@@ -83,6 +84,7 @@ class Ticks extends Container {
                 label.addEventListener('pointerup', (event: PointerEvent) => {
                     if (scrubbing && event.isPrimary) {
                         label.releasePointerCapture(event.pointerId);
+                        label.classList.remove('scrubbing');
                         scrubbing = false;
                         const frameFromIndex = keys.indexOf(label);
                         const frameFrom = events.invoke('timeline.keys')[frameFromIndex];

@@ -89,6 +89,19 @@ const registerCameraPosesEvents = (events: Events) => {
         events.fire('timeline.removeKey', index);
     };
 
+    const movePose = (index: number, frame: number) => {
+        // remove target frame pose
+        const toIndex = poses.findIndex(p => p.frame === frame);
+        if (toIndex !== -1) {
+            removePose(toIndex);
+        }
+
+        // move pose
+        poses[index].frame = frame;
+        rebuildSpline();
+        events.fire('timeline.setKey', index, frame);
+    };
+
     events.function('camera.poses', () => {
         return poses;
     });
@@ -107,6 +120,15 @@ const registerCameraPosesEvents = (events: Events) => {
             position: pose.position,
             target: pose.target
         });
+    });
+
+    events.on('timeline.move', (frameFrom: number, frameTo: number) => {
+        if (frameFrom === frameTo) return;
+
+        const index = poses.findIndex(p => p.frame === frameFrom);
+        if (index !== -1) {
+            movePose(index, frameTo);
+        }
     });
 
     events.on('timeline.remove', (index: number) => {

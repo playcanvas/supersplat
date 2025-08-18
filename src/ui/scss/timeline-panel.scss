@@ -119,6 +119,11 @@
                     // circle shape
                     // border-radius: 50%;
                     cursor: pointer;
+                    pointer-events: auto;
+                }
+
+                &.dragging {
+                    cursor: ew-resize;
                 }
             }
         }

@@ -63,18 +63,21 @@ class Ticks extends Container {
                 label.classList.add('time-label', 'key');
                 label.style.left = `${offsetFromFrame(value)}px`;
                 let dragging = false;
+                let toFrame = -1;
 
                 label.addEventListener('pointerdown', (event) => {
-                    dragging = true;
-                    label.classList.add('dragging');
-                    label.setPointerCapture(event.pointerId);
-                    event.stopPropagation();
+                    if (!dragging && event.isPrimary) {
+                        dragging = true;
+                        label.classList.add('dragging');
+                        label.setPointerCapture(event.pointerId);
+                        event.stopPropagation();
+                    }
                 });
 
                 label.addEventListener('pointermove', (event: PointerEvent) => {
                     if (dragging) {
-                        const frame = frameFromOffset(parseInt(label.style.left) + event.offsetX);
-                        label.style.left = `${offsetFromFrame(frame)}px`;
+                        toFrame = frameFromOffset(parseInt(label.style.left, 10) + event.offsetX);
+                        label.style.left = `${offsetFromFrame(toFrame)}px`;
                     }
                 });
 
@@ -82,7 +85,6 @@ class Ticks extends Container {
                     if (dragging && event.isPrimary) {
                         const fromIndex = keys.indexOf(label);
                         const fromFrame = events.invoke('timeline.keys')[fromIndex];
-                        const toFrame = frameFromOffset(parseInt(label.style.left) + event.offsetX);
                         if (fromFrame !== toFrame) {
                             events.fire('timeline.move', fromFrame, toFrame);
                             events.fire('timeline.frame', events.invoke('timeline.frame'));
@@ -340,6 +342,7 @@ class TimelinePanel extends Container {
             const index = events.invoke('timeline.keys').indexOf(events.invoke('timeline.frame'));
             if (index !== -1) {
                 events.fire('timeline.remove', index);
+                events.fire('timeline.frame', events.invoke('timeline.frame'));
             }
         });
 

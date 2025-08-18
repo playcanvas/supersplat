@@ -120,21 +120,10 @@
                     // border-radius: 50%;
                     cursor: pointer;
                     pointer-events: auto;
+                }
 
-                    &.scrubbing {
-                        clip-path: polygon(
-                            0% 50%,
-                            30% 0%,
-                            30% 35%,
-                            70% 35%,
-                            70% 0%,
-                            100% 50%,
-                            70% 100%,
-                            70% 65%,
-                            30% 65%,
-                            30% 100%
-                        );
-                    }
+                &.dragging {
+                    cursor: ew-resize;
                 }
             }
         }

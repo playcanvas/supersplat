@@ -62,36 +62,35 @@ class Ticks extends Container {
                 const label = document.createElement('div');
                 label.classList.add('time-label', 'key');
                 label.style.left = `${offsetFromFrame(value)}px`;
-                let scrubbing = false;
+                let dragging = false;
 
                 label.addEventListener('pointerdown', (event) => {
-                    const frameFromIndex = keys.indexOf(label);
-                    const frameFrom = events.invoke('timeline.keys')[frameFromIndex];
-                    events.fire('timeline.setFrame', frameFrom);
+                    dragging = true;
+                    label.classList.add('dragging');
                     label.setPointerCapture(event.pointerId);
-                    label.classList.add('scrubbing');
-                    scrubbing = true;
                     event.stopPropagation();
                 });
 
                 label.addEventListener('pointermove', (event: PointerEvent) => {
-                    if (scrubbing) {
+                    if (dragging) {
                         const frame = frameFromOffset(parseInt(label.style.left) + event.offsetX);
                         label.style.left = `${offsetFromFrame(frame)}px`;
                     }
                 });
 
                 label.addEventListener('pointerup', (event: PointerEvent) => {
-                    if (scrubbing && event.isPrimary) {
-                        label.releasePointerCapture(event.pointerId);
-                        label.classList.remove('scrubbing');
-                        scrubbing = false;
-                        const frameFromIndex = keys.indexOf(label);
-                        const frameFrom = events.invoke('timeline.keys')[frameFromIndex];
-                        const frameTo = frameFromOffset(parseInt(label.style.left) + event.offsetX);
-                        if (frameFrom !== frameTo) {
-                            events.fire('timeline.move', frameFrom, frameTo);
+                    if (dragging && event.isPrimary) {
+                        const fromIndex = keys.indexOf(label);
+                        const fromFrame = events.invoke('timeline.keys')[fromIndex];
+                        const toFrame = frameFromOffset(parseInt(label.style.left) + event.offsetX);
+                        if (fromFrame !== toFrame) {
+                            events.fire('timeline.move', fromFrame, toFrame);
+                            events.fire('timeline.frame', events.invoke('timeline.frame'));
                         }
+
+                        label.releasePointerCapture(event.pointerId);
+                        label.classList.remove('dragging');
+                        dragging = false;
                     }
                 });
 

@@ -5,13 +5,13 @@ import { Writer } from './writer';
 
 class ZipWriter implements Writer {
     // start a new file
-    start: (filename: string) => void;
+    start: (filename: string) => Promise<void>;
 
     // write func
-    write: (data: Uint8Array) => void;
+    write: (data: Uint8Array) => Promise<void>;
 
     // finish the archive by writing the footer
-    close: () => void;
+    close: () => Promise<void>;
 
     // helper function to start and write file contents
     async file(filename: string, content: string | Uint8Array | Uint8Array[]) {
@@ -35,14 +35,24 @@ class ZipWriter implements Writer {
         const textEncoder = new TextEncoder();
         const files: { filename: Uint8Array, crc: Crc, sizeBytes: number }[] = [];
 
+        const date = new Date();
+        const dosTime = (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2);
+        const dosDate = ((date.getFullYear() - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate();
+
         const writeHeader = async (filename: string) => {
-            const header = new Uint8Array(30 + filename.length);
-            const view = new DataView(header.buffer);
             const filenameBuf = textEncoder.encode(filename);
+            const nameLen = filenameBuf.length;
+
+            const header = new Uint8Array(30 + nameLen);
+            const view = new DataView(header.buffer);
 
             view.setUint32(0, 0x04034b50, true);
-            view.setUint16(6, 0x8, true);               // indicate crc and size comes after
-            view.setUint16(26, filename.length, true);
+            view.setUint16(4, 20, true);            // version needed to extract = 2.0
+            view.setUint16(6, 0x8 | 0x800, true);   // indicate crc and size comes after, utf-8 encoding
+            view.setUint16(8, 0, true);             // method = 0 (store)
+            view.setUint16(10, dosTime, true);
+            view.setUint16(12, dosDate, true);
+            view.setUint16(26, nameLen, true);
             header.set(filenameBuf, 30);
 
             await writer.write(header);
@@ -84,26 +94,30 @@ class ZipWriter implements Writer {
 
             // write cd records
             let offset = 0;
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
+            for (const file of files) {
                 const { filename, crc, sizeBytes } = file;
+                const nameLen = filename.length;
 
-                const cdr = new Uint8Array(46 + filename.length);
+                const cdr = new Uint8Array(46 + nameLen);
                 const view = new DataView(cdr.buffer);
-
                 view.setUint32(0, 0x02014b50, true);
+                view.setUint16(4, 20, true);
+                view.setUint16(6, 20, true);
+                view.setUint16(8, 0x8 | 0x800, true);
+                view.setUint16(10, 0, true);
+                view.setUint16(12, dosTime, true);
+                view.setUint16(14, dosDate, true);
                 view.setUint32(16, crc.value(), true);
                 view.setUint32(20, sizeBytes, true);
                 view.setUint32(24, sizeBytes, true);
-                view.setUint16(28, filename.length, true);
+                view.setUint16(28, nameLen, true);
                 view.setUint32(42, offset, true);
                 cdr.set(filename, 46);
 
                 await writer.write(cdr);
 
-                offset += 30 + filename.length + sizeBytes + 16;
+                offset += 30 + nameLen + sizeBytes + 16; // 30 local header + name + data + 16 descriptor
             }
-
             const filenameLength = files.reduce((tot, file) => tot + file.filename.length, 0);
             const dataLength = files.reduce((tot, file) => tot + file.sizeBytes, 0);
 

@@ -21,9 +21,9 @@ if (process.env.BUILD_TYPE === 'prod') {
 }
 // debug, profile, release
 const BUILD_TYPE = process.env.BUILD_TYPE || 'release';
-const HREF = process.env.BASE_HREF || '';
-
+const ENGINE_DIR = path.resolve(`node_modules/playcanvas/build/playcanvas${BUILD_TYPE === 'debug' ? '.dbg' : ''}/src/index.js`);
 const PCUI_DIR = path.resolve('node_modules/@playcanvas/pcui');
+const HREF = process.env.BASE_HREF || '';
 
 const outputHeader = () => {
     const BLUE_OUT = '\x1b[34m';
@@ -65,15 +65,10 @@ const application = {
             ]
         }),
         alias({
-            entries: [
-                {
-                    find: /^playcanvas$/,
-                    replacement:
-                        BUILD_TYPE === 'debug'
-                            ? 'playcanvas/debug'
-                            : 'playcanvas'
-                }
-            ]
+            entries: {
+                'playcanvas': ENGINE_DIR,
+                '@playcanvas/pcui': PCUI_DIR
+            },
         }),
         typescript({
             tsconfig: './tsconfig.json'

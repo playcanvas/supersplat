@@ -65,10 +65,10 @@ const application = {
             ]
         }),
         alias({
-            entries: [{
-                find: /^playcanvas$/,
-                replacement: ENGINE_DIR
-            }],
+            entries: {
+                'playcanvas': ENGINE_DIR,
+                '@playcanvas/pcui': PCUI_DIR
+            },
         }),
         typescript({
             tsconfig: './tsconfig.json'

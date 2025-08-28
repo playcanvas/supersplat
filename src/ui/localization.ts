@@ -120,7 +120,7 @@ const localizeInit = () => {
                     'data.totals': 'Summe',
                     'data.totals.splats': 'Splats',
                     'data.totals.selected': 'Selektiert',
-                    'data.totals.hidden': 'Ausgeblendet',
+                    'data.totals.locked': 'Gesperrt',
                     'data.totals.deleted': 'Gelöscht',
 
                     // Shortcuts panel
@@ -373,7 +373,7 @@ const localizeInit = () => {
                     'data.totals': 'Totals',
                     'data.totals.splats': 'Splats',
                     'data.totals.selected': 'Selected',
-                    'data.totals.hidden': 'Hidden',
+                    'data.totals.locked': 'Locked',
                     'data.totals.deleted': 'Deleted',
 
                     // Shortcuts panel
@@ -626,7 +626,7 @@ const localizeInit = () => {
                     'data.totals': 'Totaux',
                     'data.totals.splats': 'Splats',
                     'data.totals.selected': 'Selectionné',
-                    'data.totals.hidden': 'Caché',
+                    'data.totals.locked': 'Verrouillé',
                     'data.totals.deleted': 'Supprimé',
 
                     // Shortcuts panel
@@ -868,7 +868,7 @@ const localizeInit = () => {
                     'data.totals': '合計',
                     'data.totals.splats': 'スプラット数',
                     'data.totals.selected': '選択中',
-                    'data.totals.hidden': '非表示',
+                    'data.totals.locked': 'ロック中',
                     'data.totals.deleted': '削除',
 
                     // Shortcuts panel
@@ -1109,7 +1109,7 @@ const localizeInit = () => {
                     'data.totals': '합계',
                     'data.totals.splats': 'Splat',
                     'data.totals.selected': '선택',
-                    'data.totals.hidden': '숨겨진',
+                    'data.totals.locked': '잠금',
                     'data.totals.deleted': '삭제된',
 
                     // Shortcuts panel
@@ -1351,7 +1351,7 @@ const localizeInit = () => {
                     'data.totals': '总计',
                     'data.totals.splats': 'Splat',
                     'data.totals.selected': '选择',
-                    'data.totals.hidden': '隐藏',
+                    'data.totals.locked': '锁定',
                     'data.totals.deleted': '删除',
 
                     // Shortcuts panel

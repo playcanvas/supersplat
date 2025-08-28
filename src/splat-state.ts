@@ -1,6 +1,6 @@
 enum State {
     selected = 1,
-    hidden = 2,     // locked
+    locked = 2,
     deleted = 4
 }
 

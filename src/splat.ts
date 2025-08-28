@@ -49,7 +49,7 @@ class Splat extends Element {
     splatData: GSplatData;
     numSplats = 0;
     numDeleted = 0;
-    numHidden = 0;
+    numLocked = 0;
     numSelected = 0;
     entity: Entity;
     changedCounter = 0;
@@ -116,7 +116,7 @@ class Splat extends Element {
         // added per-splat state channel
         // bit 1: selected
         // bit 2: deleted
-        // bit 3: hidden
+        // bit 3: locked
         if (!this.splatData.getProp('state')) {
             this.splatData.getElement('vertex').properties.push({
                 type: 'uchar',
@@ -205,22 +205,22 @@ class Splat extends Element {
         this.stateTexture.unlock();
 
         let numSelected = 0;
-        let numHidden = 0;
+        let numLocked = 0;
         let numDeleted = 0;
 
         for (let i = 0; i < state.length; ++i) {
             const s = state[i];
             if (s & State.deleted) {
                 numDeleted++;
-            } else if (s & State.hidden) {
-                numHidden++;
+            } else if (s & State.locked) {
+                numLocked++;
             } else if (s & State.selected) {
                 numSelected++;
             }
         }
 
         this.numSplats = state.length - numDeleted;
-        this.numHidden = numHidden;
+        this.numLocked = numLocked;
         this.numSelected = numSelected;
         this.numDeleted = numDeleted;
 

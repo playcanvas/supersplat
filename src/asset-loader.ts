@@ -204,10 +204,10 @@ class AssetLoader {
 
     loadModel(loadRequest: ModelLoadRequest) {
         const filename = (loadRequest.filename || loadRequest.url).toLowerCase();
-        if (filename.endsWith('.ply') || filename === 'meta.json') {
-            return this.loadPly(loadRequest);
-        } else if (filename.endsWith('.splat')) {
+        if (filename.endsWith('.splat')) {
             return this.loadSplat(loadRequest);
+        } else {
+            return this.loadPly(loadRequest);
         }
     }
 }

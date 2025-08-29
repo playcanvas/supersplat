@@ -31,7 +31,7 @@ const fragmentShader = /* glsl */ `
             // read splat state
             uint state = uint(texelFetch(splatState, splatUV, 0).r * 255.0);
 
-            // skip deleted or hidden splats
+            // skip deleted or locked splats
             if (((mode == 0u) && (state != 1u)) || ((mode == 1u) && ((state & 4u) != 0u))) {
                 continue;
             }

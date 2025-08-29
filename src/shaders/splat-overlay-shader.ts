@@ -27,7 +27,7 @@ const vertexShader = /* glsl */ `
         uint splatState = uint(texelFetch(splatState, splatUV, 0).r * 255.0);
 
         if ((splatState & 6u) != 0u) {
-            // deleted or hidden (4 or 2)
+            // deleted or locked (4 or 2)
             gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
             gl_PointSize = 0.0;
         } else {

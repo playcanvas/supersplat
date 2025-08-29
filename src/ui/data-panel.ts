@@ -156,7 +156,7 @@ class DataPanel extends Panel {
 
         const splatsValue = dataLabel(controls, localize('data.totals.splats'));
         const selectedValue = dataLabel(controls, localize('data.totals.selected'));
-        const hiddenValue = dataLabel(controls, localize('data.totals.hidden'));
+        const lockedValue = dataLabel(controls, localize('data.totals.locked'));
         const deletedValue = dataLabel(controls, localize('data.totals.deleted'));
 
         controlsContainer.append(controls);
@@ -252,7 +252,7 @@ class DataPanel extends Panel {
             if (state) {
                 splatsValue.text = (state.length - splat.numDeleted).toString();
                 selectedValue.text = splat.numSelected.toString();
-                hiddenValue.text = splat.numHidden.toString();
+                lockedValue.text = splat.numLocked.toString();
                 deletedValue.text = splat.numDeleted.toString();
 
                 // update histogram

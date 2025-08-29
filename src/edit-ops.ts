@@ -109,7 +109,7 @@ class SelectInvertOp extends StateOp {
 
     constructor(splat: Splat) {
         super(splat,
-            state => (state & (State.hidden | State.deleted)) === 0,
+            state => (state & (State.locked | State.deleted)) === 0,
             state => state ^ State.selected,
             state => state ^ State.selected
         );
@@ -148,9 +148,9 @@ class HideSelectionOp extends StateOp {
     constructor(splat: Splat) {
         super(splat,
             state => state === State.selected,
-            state => state | State.hidden,
-            state => state & (~State.hidden),
-            State.hidden
+            state => state | State.locked,
+            state => state & (~State.locked),
+            State.locked
         );
     }
 }
@@ -160,10 +160,10 @@ class UnhideAllOp extends StateOp {
 
     constructor(splat: Splat) {
         super(splat,
-            state => (state & (State.hidden | State.deleted)) === State.hidden,
-            state => state & (~State.hidden),
-            state => state | State.hidden,
-            State.hidden
+            state => (state & (State.locked | State.deleted)) === State.locked,
+            state => state & (~State.locked),
+            state => state | State.locked,
+            State.locked
         );
     }
 }

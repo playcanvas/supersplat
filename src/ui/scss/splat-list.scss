@@ -3,72 +3,78 @@
 .splat-list {
     min-height: 80px;
     padding: 4px 0px;
-}
 
-.splat-item {
-    display: flex;
-    flex-direction: row;
-    padding: 2px;
+    .splat-item {
+        display: flex;
+        flex-direction: row;
+        padding: 2px;
 
-    &:hover:not(.selected).visible {
-        cursor: pointer;
-    }
-
-    &.selected {
-        background-color: $bcg-darker;
-    }
-}
-
-.splat-item-text {
-    flex-grow: 1;
-    flex-shrink: 1;
-
-    .visible & {
-        &:hover:not(.selected) {
-            color: $text-primary;
+        &:hover:not(.selected).visible {
+            cursor: pointer;
         }
-    }
 
-    .selected & {
-        color: $text-primary;
-    }
-}
+        &.selected {
+            background-color: $bcg-darker;
+        }
 
-.splat-item-visible {
-    flex-grow: 0;
-    flex-shrink: 0;
+        #splat-edit {
+            margin: 0;
+            flex-grow: 1;
+            flex-shrink: 1;
+        }
 
-    width: 24px;
-    height: 24px;
-    line-height: 24px;
+        .splat-item-text {
+            flex-grow: 1;
+            flex-shrink: 1;
 
-    color: $text-secondary;
+            .visible & {
+                &:hover:not(.selected) {
+                    color: $text-primary;
+                }
+            }
 
-    cursor: pointer;
+            .selected & {
+                color: $text-primary;
+            }
+        }
 
-    .visible & {
-        color: $text-secondary;
-    }
+        .splat-item-visible {
+            flex-grow: 0;
+            flex-shrink: 0;
 
-    &:hover {
-        color: $text-primary;
-    }
-}
+            width: 24px;
+            height: 24px;
+            line-height: 24px;
 
-.splat-item-delete {
-    flex-grow: 0;
-    flex-shrink: 0;
+            color: $text-secondary;
 
-    padding: 4px;
-    width: 16px;
-    height: 16px;
-    line-height: 16px;
+            cursor: pointer;
 
-    color: $text-secondary;
+            .visible & {
+                color: $text-secondary;
+            }
 
-    cursor: pointer;
+            &:hover {
+                color: $text-primary;
+            }
+        }
 
-    &:hover {
-        color: $text-primary;
+        .splat-item-delete {
+            flex-grow: 0;
+            flex-shrink: 0;
+
+            padding: 4px;
+            width: 16px;
+            height: 16px;
+            line-height: 16px;
+
+            color: $text-secondary;
+
+            cursor: pointer;
+
+            &:hover {
+                color: $text-primary;
+            }
+        }
     }
 }

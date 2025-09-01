@@ -10,7 +10,6 @@ import sceneExport from './svg/export.svg';
 import sceneImport from './svg/import.svg';
 import sceneNew from './svg/new.svg';
 import sceneOpen from './svg/open.svg';
-import logoSvg from './svg/playcanvas-logo.svg';
 import scenePublish from './svg/publish.svg';
 import sceneSave from './svg/save.svg';
 import selectAll from './svg/select-all.svg';
@@ -20,6 +19,7 @@ import selectLock from './svg/select-lock.svg';
 import selectNone from './svg/select-none.svg';
 import selectSeparate from './svg/select-separate.svg';
 import selectUnlock from './svg/select-unlock.svg';
+import logoSvg from './svg/supersplat-logo.svg';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -48,12 +48,14 @@ class Menu extends Container {
         const iconDom = document.createElement('img');
         iconDom.src = logoSvg;
         iconDom.setAttribute('id', 'app-icon');
-        iconDom.addEventListener('pointerdown', (event) => {
-            window.open('https://playcanvas.com', '_blank').focus();
-        });
+
+        const aDom = document.createElement('a');
+        aDom.href = new URL(window.location.href).origin;
+        aDom.target = '_blank';
+        aDom.appendChild(iconDom);
 
         const icon = new Element({
-            dom: iconDom
+            dom: aDom
         });
 
         const scene = new Label({

@@ -105,17 +105,11 @@ const main = async () => {
     // url
     const url = new URL(window.location.href);
 
-    // decode remote storage details
-    let remoteStorageDetails;
-    try {
-        remoteStorageDetails = JSON.parse(decodeURIComponent(url.searchParams.get('remoteStorage')));
-    } catch (e) { }
-
     // edit history
     const editHistory = new EditHistory(events);
 
     // editor ui
-    const editorUI = new EditorUI(events, !!remoteStorageDetails);
+    const editorUI = new EditorUI(events);
 
     // create the graphics device
     const graphicsDevice = await createGraphicsDevice(editorUI.canvas, {

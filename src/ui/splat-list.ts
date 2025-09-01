@@ -1,5 +1,6 @@
 import { Container, Label, Element as PcuiElement, TextInput } from '@playcanvas/pcui';
 
+import { SplatRenameOp } from '../edit-ops';
 import { Element, ElementType } from '../element';
 import { Events } from '../events';
 import { Splat } from '../splat';
@@ -198,7 +199,7 @@ class SplatList extends Container {
                     splat.visible = false;
                 });
                 item.on('rename', (value: string) => {
-                    splat.name = value;
+                    events.fire('edit.add', new SplatRenameOp(splat, value));
                 });
             }
         });

@@ -10,7 +10,7 @@ import sceneExport from './svg/export.svg';
 import sceneImport from './svg/import.svg';
 import sceneNew from './svg/new.svg';
 import sceneOpen from './svg/open.svg';
-import logoSvg from './svg/playcanvas-logo.svg';
+import logoSvg from './svg/supersplat-logo.svg';
 import scenePublish from './svg/publish.svg';
 import sceneSave from './svg/save.svg';
 import selectAll from './svg/select-all.svg';
@@ -49,7 +49,7 @@ class Menu extends Container {
         iconDom.src = logoSvg;
         iconDom.setAttribute('id', 'app-icon');
         iconDom.addEventListener('pointerdown', (event) => {
-            window.open('https://playcanvas.com', '_blank').focus();
+            window.open('https://superspl.at', '_blank').focus();
         });
 
         const icon = new Element({

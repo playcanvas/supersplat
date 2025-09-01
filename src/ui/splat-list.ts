@@ -1,4 +1,4 @@
-import { Container, Label, Element as PcuiElement } from '@playcanvas/pcui';
+import { Container, Label, Element as PcuiElement, TextInput } from '@playcanvas/pcui';
 
 import { Element, ElementType } from '../element';
 import { Events } from '../events';
@@ -21,7 +21,7 @@ class SplatItem extends Container {
     setVisible: (value: boolean) => void;
     destroy: () => void;
 
-    constructor(name: string, args = {}) {
+    constructor(name: string, edit: TextInput, args = {}) {
         args = {
             ...args,
             class: ['splat-item', 'visible']
@@ -107,6 +107,25 @@ class SplatItem extends Container {
             this.emit('removeClicked', this);
         };
 
+        // rename on double click
+        text.dom.addEventListener('dblclick', (event: MouseEvent) => {
+            event.stopPropagation();
+
+            const onblur = () => {
+                this.remove(edit);
+                this.emit('rename', edit.value);
+                edit.input.removeEventListener('blur', onblur);
+                text.hidden = false;
+            };
+
+            text.hidden = true;
+
+            this.appendAfter(edit, text);
+            edit.value = text.value;
+            edit.input.addEventListener('blur', onblur);
+            edit.focus();
+        });
+
         // handle clicks
         visible.dom.addEventListener('click', toggleVisible);
         invisible.dom.addEventListener('click', toggleVisible);
@@ -155,10 +174,15 @@ class SplatList extends Container {
 
         const items = new Map<Splat, SplatItem>();
 
+        // edit input used during renames
+        const edit = new TextInput({
+            id: 'splat-edit'
+        });
+
         events.on('scene.elementAdded', (element: Element) => {
             if (element.type === ElementType.splat) {
                 const splat = element as Splat;
-                const item = new SplatItem(splat.name);
+                const item = new SplatItem(splat.name, edit);
                 this.append(item);
                 items.set(splat, item);
 
@@ -172,6 +196,9 @@ class SplatList extends Container {
                 });
                 item.on('invisible', () => {
                     splat.visible = false;
+                });
+                item.on('rename', (value: string) => {
+                    splat.name = value;
                 });
             }
         });

@@ -48,12 +48,14 @@ class Menu extends Container {
         const iconDom = document.createElement('img');
         iconDom.src = logoSvg;
         iconDom.setAttribute('id', 'app-icon');
-        iconDom.addEventListener('pointerdown', (event) => {
-            window.open('https://superspl.at', '_blank').focus();
-        });
+
+        const aDom = document.createElement('a');
+        aDom.href = new URL(window.location.href).origin;
+        aDom.target = '_blank';
+        aDom.appendChild(iconDom);
 
         const icon = new Element({
-            dom: iconDom
+            dom: aDom
         });
 
         const scene = new Label({

@@ -64,15 +64,17 @@ class CubicSpline {
         }
     }
 
-    // create cubic spline data from a set of control points to be interpolated
+    // calculate cubic spline knots from points
     // times: time values for each control point
     // points: control point values to be interpolated (n dimensional)
-    // tension: level of smoothness, 0 = smooth, 1 = linear interpolation
-    static fromPoints(times: number[], points: number[], tension = 0) {
-        const dim = points.length / times.length;
-        const knots = new Array<number>(times.length * dim * 3);
+    // smoothness: 0 = linear, 1 = smooth
+    static calcKnots(times: number[], points: number[], smoothness = 1) {
+        const n = times.length;
+        const dim = points.length / n;
+        const knots = new Array<number>(n * dim * 3);
+        const last = n - 1;
 
-        for (let i = 0; i < times.length; i++) {
+        for (let i = 0; i < n; i++) {
             const t = times[i];
 
             for (let j = 0; j < dim; j++) {
@@ -82,7 +84,7 @@ class CubicSpline {
                 let tangent;
                 if (i === 0) {
                     tangent = (points[idx + dim] - p) / (times[i + 1] - t);
-                } else if (i === times.length - 1) {
+                } else if (i === last) {
                     tangent = (p - points[idx - dim]) / (t - times[i - 1]);
                 } else {
                     // finite difference tangents
@@ -92,22 +94,27 @@ class CubicSpline {
                     // tangent = (points[idx + dim] - points[idx - dim]) / (times[i + 1] - times[i - 1]);
                 }
 
-                // apply tension
-                tangent *= (1.0 - tension);
+                // convert to derivatives w.r.t normalized segment parameter
+                const inScale = i > 0 ? (times[i] - times[i - 1]) : (times[1] - times[0]);
+                const outScale = i < last ? (times[i + 1] - times[i]) : (times[i] - times[i - 1]);
 
-                knots[idx * 3] = tangent;
-                knots[idx * 3 + 1] = p;
-                knots[idx * 3 + 2] = tangent;
+                knots[idx * 3] = tangent * inScale * smoothness;        // in-tangent (for segment ending at i)
+                knots[idx * 3 + 1] = p;                                 // value
+                knots[idx * 3 + 2] = tangent * outScale * smoothness;   // out-tangent (for segment starting at i)
             }
         }
 
-        return new CubicSpline(times, knots);
+        return knots;
+    }
+
+    static fromPoints(times: number[], points: number[], smoothness = 1) {
+        return new CubicSpline(times, CubicSpline.calcKnots(times, points, smoothness));
     }
 
     // create a looping spline by duplicating animation points at the end and beginning
-    static fromPointsLooping(length: number, times: number[], points: number[], tension = 0) {
+    static fromPointsLooping(length: number, times: number[], points: number[], smoothness = 1) {
         if (times.length < 2) {
-            return CubicSpline.fromPoints(times, points, tension);
+            return CubicSpline.fromPoints(times, points, smoothness);
         }
 
         const dim = points.length / times.length;
@@ -122,7 +129,7 @@ class CubicSpline {
         newTimes.splice(0, 0, times[times.length - 2] - length, times[times.length - 1] - length);
         newPoints.splice(0, 0, ...points.slice(points.length - dim * 2));
 
-        return CubicSpline.fromPoints(newTimes, newPoints, tension);
+        return CubicSpline.fromPoints(newTimes, newPoints, smoothness);
     }
 }
 

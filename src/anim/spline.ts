@@ -72,7 +72,6 @@ class CubicSpline {
         const n = times.length;
         const dim = points.length / n;
         const knots = new Array<number>(n * dim * 3);
-        const last = n - 1;
 
         for (let i = 0; i < n; i++) {
             const t = times[i];
@@ -84,7 +83,7 @@ class CubicSpline {
                 let tangent;
                 if (i === 0) {
                     tangent = (points[idx + dim] - p) / (times[i + 1] - t);
-                } else if (i === last) {
+                } else if (i === n - 1) {
                     tangent = (p - points[idx - dim]) / (t - times[i - 1]);
                 } else {
                     // finite difference tangents
@@ -96,7 +95,7 @@ class CubicSpline {
 
                 // convert to derivatives w.r.t normalized segment parameter
                 const inScale = i > 0 ? (times[i] - times[i - 1]) : (times[1] - times[0]);
-                const outScale = i < last ? (times[i + 1] - times[i]) : (times[i] - times[i - 1]);
+                const outScale = i < n - 1 ? (times[i + 1] - times[i]) : (times[i] - times[i - 1]);
 
                 knots[idx * 3] = tangent * inScale * smoothness;        // in-tangent (for segment ending at i)
                 knots[idx * 3 + 1] = p;                                 // value

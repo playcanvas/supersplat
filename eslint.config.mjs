@@ -41,9 +41,5 @@ export default [
         rules: {
             'import/no-unresolved': 'off'
         }
-    }, {
-        ignores: [
-            'submodules/'
-        ]
     }
 ];

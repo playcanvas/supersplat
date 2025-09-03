@@ -219,9 +219,8 @@ class AssetLoader {
         const filename = (loadRequest.filename || loadRequest.url).toLowerCase();
         if (filename.endsWith('.splat')) {
             return this.loadSplat(loadRequest);
-        } else {
-            return this.loadPly(loadRequest);
         }
+        return this.loadPly(loadRequest);
     }
 }
 

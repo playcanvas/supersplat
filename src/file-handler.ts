@@ -141,7 +141,7 @@ const loadCameraPoses = async (file: ImportFile, events: Events) => {
 // initialize file handler events
 const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) => {
 
-    const showLoadEror = async (message: string, filename: string) => {
+    const showLoadError = async (message: string, filename: string) => {
         await events.invoke('showPopup', {
             type: 'error',
             header: localize('popup.error-loading'),
@@ -161,7 +161,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             scene.add(model);
             return model;
         } catch (error) {
-            await showLoadEror(error.message ?? error, file.filename);
+            await showLoadError(error.message ?? error, file.filename);
         }
     };
 
@@ -216,7 +216,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             for (let i = 0; i < filenames.length; i++) {
                 const filename = filenames[i];
                 if (!filename.endsWith('.ssproj') && !filename.endsWith('.json') && !filename.endsWith('.ply') && !filename.endsWith('.splat') && !filename.endsWith('.sog') && !filename.endsWith('.webp')) {
-                    await showLoadEror('Unrecognized file type', filename);
+                    await showLoadError('Unrecognized file type', filename);
                     return;
                 }
             }

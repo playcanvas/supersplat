@@ -10,7 +10,7 @@ class ScaleTool extends TransformTool {
 
         // disable everything except uniform scale
         ['x', 'y', 'z', 'yz', 'xz', 'xy'].forEach((axis) => {
-            gizmo.enableShape(axis, false);
+            gizmo.enableShape(axis as 'x' | 'y' | 'z' | 'yz' | 'xz' | 'xy', false);
         });
 
         super(gizmo, events, scene);

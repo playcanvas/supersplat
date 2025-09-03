@@ -49,7 +49,7 @@ class TransformTool {
         };
 
         events.on('tool.coordSpace', (coordSpace: string) => {
-            gizmo.coordSpace = coordSpace;
+            gizmo.coordSpace = coordSpace as 'local' | 'world';
             scene.forceRender = true;
         });
 

@@ -84,8 +84,7 @@ const application = {
                 .then(result => result.css);
             },
             fileName: 'index.css',
-            includePaths: [`${PCUI_DIR}/dist`],
-            exclude: ['submodules/**']
+            includePaths: [`${PCUI_DIR}/dist`]
         }),
         BUILD_TYPE === 'release' &&
         strip({

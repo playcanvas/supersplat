@@ -17,7 +17,6 @@
     "exclude": [
         "src/debug.ts", // Testing file
         "dist",
-        "node_modules",
-        "submodules"
+        "node_modules"
     ]
 }

@@ -1,8 +1,8 @@
 import path from 'path';
 
+import alias from '@rollup/plugin-alias';
 import image from '@rollup/plugin-image';
 import json from '@rollup/plugin-json';
-import alias from '@rollup/plugin-alias';
 import resolve from '@rollup/plugin-node-resolve';
 import strip from '@rollup/plugin-strip';
 import terser from '@rollup/plugin-terser';
@@ -10,7 +10,6 @@ import typescript from '@rollup/plugin-typescript';
 import autoprefixer from 'autoprefixer';
 import postcss from 'postcss';
 import scss from 'rollup-plugin-scss';
-import { string } from 'rollup-plugin-string';
 import sass from 'sass';
 
 import copyAndWatch from './copy-and-watch.mjs';
@@ -68,7 +67,7 @@ const application = {
             entries: {
                 'playcanvas': ENGINE_DIR,
                 '@playcanvas/pcui': PCUI_DIR
-            },
+            }
         }),
         typescript({
             tsconfig: './tsconfig.json'
@@ -81,17 +80,13 @@ const application = {
             runtime: sass,
             processor: (css) => {
                 return postcss([autoprefixer])
-                    .process(css, { from: undefined })
-                    .then(result => result.css);
+                .process(css, { from: undefined })
+                .then(result => result.css);
             },
             fileName: 'index.css',
             includePaths: [`${PCUI_DIR}/dist`],
             exclude: ['submodules/**']
         }),
-        string({
-            include: ['submodules/supersplat-viewer/dist/*']
-        }),
-
         BUILD_TYPE === 'release' &&
         strip({
             include: ['**/*.ts'],

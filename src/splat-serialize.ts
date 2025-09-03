@@ -1,3 +1,4 @@
+import { html as indexHtml, css as indexCss, js as indexJs } from '@playcanvas/supersplat-viewer';
 import {
     Color,
     GSplatData,
@@ -13,10 +14,6 @@ import { State } from './splat-state';
 import { version } from '../package.json';
 import { BufferWriter, ProgressWriter, Writer } from './serialize/writer';
 import { ZipWriter } from './serialize/zip-writer';
-import indexCss from '../submodules/supersplat-viewer/dist/index.css';
-import indexHtml from '../submodules/supersplat-viewer/dist/index.html';
-// eslint-disable-next-line import/default
-import indexJs from '../submodules/supersplat-viewer/dist/index.js';
 
 type SerializeSettings = {
     maxSHBands?: number;            // specifies the maximum number of bands to be exported

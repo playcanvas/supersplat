@@ -27,7 +27,7 @@ class CubicSpline {
             while (time >= times[seg + 1]) {
                 seg++;
             }
-            return this.evaluateSegment(seg, (time - times[seg]) / (times[seg + 1] - times[seg]), result);
+            this.evaluateSegment(seg, (time - times[seg]) / (times[seg + 1] - times[seg]), result);
         }
     }
 
@@ -68,7 +68,7 @@ class CubicSpline {
     // times: time values for each control point
     // points: control point values to be interpolated (n dimensional)
     // smoothness: 0 = linear, 1 = smooth
-    static calcKnots(times: number[], points: number[], smoothness = 1) {
+    static calcKnots(times: number[], points: number[]) {
         const n = times.length;
         const dim = points.length / n;
         const knots = new Array<number>(n * dim * 3);
@@ -97,23 +97,23 @@ class CubicSpline {
                 const inScale = i > 0 ? (times[i] - times[i - 1]) : (times[1] - times[0]);
                 const outScale = i < n - 1 ? (times[i + 1] - times[i]) : (times[i] - times[i - 1]);
 
-                knots[idx * 3] = tangent * inScale * smoothness;        // in-tangent (for segment ending at i)
-                knots[idx * 3 + 1] = p;                                 // value
-                knots[idx * 3 + 2] = tangent * outScale * smoothness;   // out-tangent (for segment starting at i)
+                knots[idx * 3] = tangent * inScale;
+                knots[idx * 3 + 1] = p;
+                knots[idx * 3 + 2] = tangent * outScale;
             }
         }
 
         return knots;
     }
 
-    static fromPoints(times: number[], points: number[], smoothness = 1) {
-        return new CubicSpline(times, CubicSpline.calcKnots(times, points, smoothness));
+    static fromPoints(times: number[], points: number[]) {
+        return new CubicSpline(times, CubicSpline.calcKnots(times, points));
     }
 
     // create a looping spline by duplicating animation points at the end and beginning
-    static fromPointsLooping(length: number, times: number[], points: number[], smoothness = 1) {
+    static fromPointsLooping(length: number, times: number[], points: number[]) {
         if (times.length < 2) {
-            return CubicSpline.fromPoints(times, points, smoothness);
+            return CubicSpline.fromPoints(times, points);
         }
 
         const dim = points.length / times.length;
@@ -128,7 +128,7 @@ class CubicSpline {
         newTimes.splice(0, 0, times[times.length - 2] - length, times[times.length - 1] - length);
         newPoints.splice(0, 0, ...points.slice(points.length - dim * 2));
 
-        return CubicSpline.fromPoints(newTimes, newPoints, smoothness);
+        return CubicSpline.fromPoints(newTimes, newPoints);
     }
 }
 

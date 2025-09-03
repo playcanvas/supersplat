@@ -33,7 +33,7 @@ class EditorUI {
     canvas: HTMLCanvasElement;
     popup: Popup;
 
-    constructor(events: Events, remoteStorageMode: boolean) {
+    constructor(events: Events) {
         localizeInit();
 
         // favicon

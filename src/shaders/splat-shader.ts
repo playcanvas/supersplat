@@ -48,19 +48,19 @@ void main(void) {
         }
     #elif PICK_PASS
         if (pickMode == 0u) {
-            // add: skip deleted, hidden and selected splats
+            // add: skip deleted, locked and selected splats
             if (vertexState != 0u) {
                 gl_Position = discardVec;
                 return;
             }
         } else if (pickMode == 1u) {
-            // remove: skip deleted, hidden and unselected splats
+            // remove: skip deleted, locked and unselected splats
             if (vertexState != 1u) {
                 gl_Position = discardVec;
                 return;
             }
         } else {
-            // set: skip deleted and hidden splats
+            // set: skip deleted and locked splats
             if ((vertexState & 6u) != 0u) {
                 gl_Position = discardVec;
                 return;

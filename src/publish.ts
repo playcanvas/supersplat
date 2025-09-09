@@ -84,7 +84,7 @@ class PublishWriter implements Writer {
                 method: 'PUT',
                 body: uploadBuf.slice(0, cursor),
                 headers: {
-                    'Content-Type': 'binary/octet-stream'
+                    'Content-Type': 'application/octet-stream'
                 }
             });
 

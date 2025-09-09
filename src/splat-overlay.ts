@@ -65,7 +65,7 @@ class SplatOverlay extends Element {
 
             const vertexBuffer = new VertexBuffer(device, vertexFormat, splatData.numSplats, {
                 usage: BUFFER_STATIC,
-                data: vertexData
+                data: vertexData.buffer
             });
 
             if (mesh.vertexBuffer) {

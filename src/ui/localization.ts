@@ -250,7 +250,8 @@ const localizeInit = () => {
                     'timeline.add-key': 'Key hinzufügen',
                     'timeline.remove-key': 'Key entfernen',
                     'timeline.frame-rate': 'Bildrate',
-                    'timeline.total-frames': 'Gesamtanzahl der Frames'
+                    'timeline.total-frames': 'Gesamtanzahl der Frames',
+                    'timeline.smoothness': 'Weichheit'
                 }
             },
             en: {
@@ -514,7 +515,8 @@ const localizeInit = () => {
                     'timeline.add-key': 'Add Key',
                     'timeline.remove-key': 'Remove Key',
                     'timeline.frame-rate': 'Frame Rate',
-                    'timeline.total-frames': 'Total Frames'
+                    'timeline.total-frames': 'Total Frames',
+                    'timeline.smoothness': 'Smoothness'
                 }
             },
             fr: {
@@ -756,7 +758,8 @@ const localizeInit = () => {
                     'timeline.add-key': 'Ajouter une clé',
                     'timeline.remove-key': 'Supprimer une clé',
                     'timeline.frame-rate': 'Fréquence d\'image',
-                    'timeline.total-frames': 'Nombre total de frames'
+                    'timeline.total-frames': 'Nombre total de frames',
+                    'timeline.smoothness': 'Douceur'
                 }
             },
             ja: {
@@ -998,7 +1001,8 @@ const localizeInit = () => {
                     'timeline.add-key': 'キーフレームを追加',
                     'timeline.remove-key': 'キーフレームを削除',
                     'timeline.frame-rate': 'フレームレート',
-                    'timeline.total-frames': '総フレーム数'
+                    'timeline.total-frames': '総フレーム数',
+                    'timeline.smoothness': 'スムーズさ'
                 }
             },
             ko: {
@@ -1239,7 +1243,8 @@ const localizeInit = () => {
                     'timeline.add-key': '키 추가',
                     'timeline.remove-key': '키 제거',
                     'timeline.frame-rate': '프레임 속도',
-                    'timeline.total-frames': '총 프레임 수'
+                    'timeline.total-frames': '총 프레임 수',
+                    'timeline.smoothness': '부드러움'
                 }
             },
             'zh-CN': {
@@ -1481,7 +1486,8 @@ const localizeInit = () => {
                     'timeline.add-key': '添加关键帧',
                     'timeline.remove-key': '删除关键帧',
                     'timeline.frame-rate': '帧率',
-                    'timeline.total-frames': '总帧数'
+                    'timeline.total-frames': '总帧数',
+                    'timeline.smoothness': '平滑度'
                 }
             }
         },

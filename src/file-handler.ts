@@ -35,10 +35,10 @@ const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
             'application/ply': ['.ply']
         }
     },
-    'sogs': {
-        description: 'SOGS Scene',
+    'sog': {
+        description: 'SOG Scene',
         accept: {
-            'application/x-gaussian-splat': ['.json'],
+            'application/x-gaussian-splat': ['.json', '.sog'],
             'image/webp': ['.webp']
         }
     },
@@ -86,8 +86,8 @@ const isPlySequence = (filenames: string[]) => {
     return true;
 };
 
-// sogs comprises a single meta.json file and zero or more .webp files
-const isSogs = (filenames: string[]) => {
+// sog comprises a single meta.json file and zero or more .webp files
+const isSog = (filenames: string[]) => {
     const count = (extension: string) => filenames.reduce((sum, f) => sum + (f.endsWith(extension) ? 1 : 0), 0);
     return count('meta.json') === 1;
 };
@@ -141,7 +141,7 @@ const loadCameraPoses = async (file: ImportFile, events: Events) => {
 // initialize file handler events
 const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) => {
 
-    const showLoadEror = async (message: string, filename: string) => {
+    const showLoadError = async (message: string, filename: string) => {
         await events.invoke('showPopup', {
             type: 'error',
             header: localize('popup.error-loading'),
@@ -161,7 +161,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             scene.add(model);
             return model;
         } catch (error) {
-            await showLoadEror(error.message ?? error, file.filename);
+            await showLoadError(error.message ?? error, file.filename);
         }
     };
 
@@ -169,7 +169,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         await loadCameraPoses(file, events);
     };
 
-    const importSogs = async (files: ImportFile[], animationFrame: boolean) => {
+    const importSog = async (files: ImportFile[], animationFrame: boolean) => {
         const meta = files.findIndex(f => f.filename.toLowerCase() === 'meta.json');
         const urls = files.map(file => (file.contents && URL.createObjectURL(file.contents)) ?? file.url ?? file.filename);
 
@@ -198,7 +198,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         return model;
     };
 
-    // figure out what the set of files are (ply sequence, document, sogs set, ply) and then import them
+    // figure out what the set of files are (ply sequence, document, sog set, ply) and then import them
     const importFiles = async (files: ImportFile[], animationFrame = false) => {
         const filenames = files.map(f => f.filename.toLocaleLowerCase());
 
@@ -208,15 +208,15 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             // handle ply sequence
             events.fire('plysequence.setFrames', files.map(f => f.contents));
             events.fire('timeline.frame', 0);
-        } else if (isSogs(filenames)) {
-            // import sogs files
-            result.push(await importSogs(files, animationFrame));
+        } else if (isSog(filenames)) {
+            // import sog files
+            result.push(await importSog(files, animationFrame));
         } else {
             // check for unrecognized file types
             for (let i = 0; i < filenames.length; i++) {
                 const filename = filenames[i];
-                if (!filename.endsWith('.ssproj') && !filename.endsWith('.json') && !filename.endsWith('.ply') && !filename.endsWith('.splat')) {
-                    await showLoadEror('Unrecognized file type', filename);
+                if (!filename.endsWith('.ssproj') && !filename.endsWith('.json') && !filename.endsWith('.ply') && !filename.endsWith('.splat') && !filename.endsWith('.sog') && !filename.endsWith('.webp')) {
+                    await showLoadError('Unrecognized file type', filename);
                     return;
                 }
             }
@@ -227,7 +227,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                     await events.invoke('doc.load', files[i].contents ?? (await fetch(files[i].url)).arrayBuffer());
                 } else if (filenames[i].endsWith('.json')) {
                     await importCameraPoses(files[i]);
-                } else if (filenames[i].endsWith('.ply') || filenames[i].endsWith('.splat')) {
+                } else if (filenames[i].endsWith('.ply') || filenames[i].endsWith('.splat') || filenames[i].endsWith('.sog')) {
                     result.push(await importFile(files[i], animationFrame));
                 }
             }
@@ -246,7 +246,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         fileSelector = document.createElement('input');
         fileSelector.setAttribute('id', 'file-selector');
         fileSelector.setAttribute('type', 'file');
-        fileSelector.setAttribute('accept', '.ply,.splat,meta.json,.json,.webp,.ssproj');
+        fileSelector.setAttribute('accept', '.ply,.splat,meta.json,.json,.webp,.ssproj,.sog');
         fileSelector.setAttribute('multiple', 'true');
 
         fileSelector.onchange = () => {
@@ -303,7 +303,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                     types: [
                         filePickerTypes.ply,
                         filePickerTypes.splat,
-                        filePickerTypes.sogs
+                        filePickerTypes.sog
                     ]
                 });
 

@@ -84,6 +84,8 @@ const deserializeFromSSplat = (data: ArrayBufferLike) => {
     }]);
 };
 
+let assetId = 0;
+
 // handles loading gltf container assets
 class AssetLoader {
     app: AppBase;
@@ -102,13 +104,24 @@ class AssetLoader {
             this.events.fire('startSpinner');
         }
 
-        const contents = loadRequest.contents && (loadRequest.contents instanceof Response ? loadRequest.contents : new Response(loadRequest.contents));
+        let file;
 
-        const file = {
-            url: loadRequest.url ?? loadRequest.filename,
-            filename: loadRequest.filename,
-            contents
-        };
+        const isSog = loadRequest.filename.toLowerCase().endsWith('.sog');
+        if (isSog) {
+            // sog expects contents to be an arrayBuffer
+            file = {
+                url: URL.createObjectURL(loadRequest.contents),
+                filename: loadRequest.filename
+            };
+        } else {
+            const contents = loadRequest.contents && (loadRequest.contents instanceof Response ? loadRequest.contents : new Response(loadRequest.contents));
+            file = {
+                // we must construct a unique url if contents is provided
+                url: contents ? `local-asset-${assetId++}` : loadRequest.url ?? loadRequest.filename,
+                filename: loadRequest.filename,
+                contents
+            };
+        }
 
         const data = {
             // decompress data on load
@@ -204,11 +217,10 @@ class AssetLoader {
 
     loadModel(loadRequest: ModelLoadRequest) {
         const filename = (loadRequest.filename || loadRequest.url).toLowerCase();
-        if (filename.endsWith('.ply') || filename === 'meta.json') {
-            return this.loadPly(loadRequest);
-        } else if (filename.endsWith('.splat')) {
+        if (filename.endsWith('.splat')) {
             return this.loadSplat(loadRequest);
         }
+        return this.loadPly(loadRequest);
     }
 }
 

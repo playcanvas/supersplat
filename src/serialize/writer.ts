@@ -19,7 +19,7 @@ class FileStreamWriter implements Writer {
 
         this.write = async (data: Uint8Array) => {
             cursor += data.byteLength;
-            await stream.write(data);
+            await stream.write(data as unknown as ArrayBuffer);
         };
 
         this.close = async () => {
@@ -94,7 +94,7 @@ class DownloadWriter implements Writer {
             const buffers = bufferWriter.close();
 
             // download file to client
-            const blob = new Blob(buffers, { type: 'octet/stream' });
+            const blob = new Blob(buffers as unknown as ArrayBuffer[], { type: 'application/octet-stream' });
             const url = window.URL.createObjectURL(blob);
 
             const lnk = document.createElement('a');
@@ -141,7 +141,7 @@ class GZipWriter implements Writer {
 
         this.write = async (data: Uint8Array) => {
             await streamWriter.ready;
-            await streamWriter.write(data);
+            await streamWriter.write(data as unknown as ArrayBuffer);
         };
 
         this.close = async () => {

@@ -31,7 +31,7 @@ const removeExtension = (filename: string) => {
 };
 
 const downloadFile = (arrayBuffer: ArrayBuffer, filename: string) => {
-    const blob = new Blob([arrayBuffer], { type: 'octet/stream' });
+    const blob = new Blob([arrayBuffer], { type: 'application/octet-stream' });
     const url = window.URL.createObjectURL(blob);
     const el = document.createElement('a');
     el.download = filename;

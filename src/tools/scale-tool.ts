@@ -14,7 +14,7 @@ class ScaleTool extends TransformTool {
         });
 
         // set lower bound on scale
-        gizmo.lowerBoundScale.set(0.001, 0.001, 0.001);
+        gizmo.lowerBoundScale.set(1e-6, 1e-6, 1e-6);
 
         super(gizmo, events, scene);
     }

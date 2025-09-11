@@ -1,6 +1,7 @@
 import { Button, Container, NumericInput, SelectInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
+import { localize } from './localization';
 import { Tooltips } from './tooltips';
 
 class Ticks extends Container {
@@ -259,11 +260,30 @@ class TimelinePanel extends Container {
             frames.value = framesIn;
         });
 
+        // smoothness
+
+        const smoothness = new NumericInput({
+            id: 'smoothness',
+            min: 0,
+            max: 1,
+            step: 0.05,
+            value: 1
+        });
+
+        smoothness.on('change', (value: number) => {
+            events.fire('timeline.setSmoothness', value);
+        });
+
+        events.on('timeline.smoothness', (smoothnessIn: number) => {
+            smoothness.value = smoothnessIn;
+        });
+
         const settingsControls = new Container({
             id: 'settings-controls'
         });
         settingsControls.append(speed);
         settingsControls.append(frames);
+        settingsControls.append(smoothness);
 
         // append control groups
 
@@ -366,6 +386,16 @@ class TimelinePanel extends Container {
                 // stop
             }
         });
+
+        // tooltips
+        tooltips.register(prev, localize('timeline.prev-key'), 'top');
+        tooltips.register(play, localize('timeline.play'), 'top');
+        tooltips.register(next, localize('timeline.next-key'), 'top');
+        tooltips.register(addKey, localize('timeline.add-key'), 'top');
+        tooltips.register(removeKey, localize('timeline.remove-key'), 'top');
+        tooltips.register(speed, localize('timeline.frame-rate'), 'top');
+        tooltips.register(frames, localize('timeline.total-frames'), 'top');
+        tooltips.register(smoothness, localize('timeline.smoothness'), 'top');
     }
 }
 

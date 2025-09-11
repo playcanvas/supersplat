@@ -236,6 +236,7 @@ class PublishSettingsDialog extends Container {
         this.show = () => {
             const frames = events.invoke('timeline.frames');
             const frameRate = events.invoke('timeline.frameRate');
+            const smoothness = events.invoke('timeline.smoothness');
 
             // get poses
             const orderedPoses = (events.invoke('camera.poses') as Pose[])
@@ -300,6 +301,7 @@ class PublishSettingsDialog extends Container {
                                 target: 'camera',
                                 loopMode: 'repeat',
                                 interpolation: 'spline',
+                                smoothness,
                                 keyframes: {
                                     times,
                                     values: { position, target }

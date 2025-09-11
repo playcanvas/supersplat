@@ -35,7 +35,7 @@ const registerCameraPosesEvents = (events: Events) => {
 
         if (orderedPoses.length > 1) {
             // interpolate camera positions and camera target positions
-            const spline = CubicSpline.fromPointsLooping(duration, times, points, -1);
+            const spline = CubicSpline.fromPointsLooping(duration, times, points, events.invoke('timeline.smoothness'));
             const result: number[] = [];
             const pose = { position: new Vec3(), target: new Vec3() };
 
@@ -63,6 +63,18 @@ const registerCameraPosesEvents = (events: Events) => {
     events.on('timeline.frame', (frame: number) => {
         onTimelineChange?.(frame);
     });
+
+    events.on('timeline.frames', () => {
+        rebuildSpline();
+        events.fire('timeline.time', events.invoke('timeline.frame'));
+    });
+
+    events.on('timeline.smoothness', () => {
+        rebuildSpline();
+        events.fire('timeline.time', events.invoke('timeline.frame'));
+    });
+
+    // poses
 
     const addPose = (pose: Pose) => {
         if (pose.frame === undefined) {

@@ -387,6 +387,7 @@ class ExportPopup extends Container {
         this.show = (exportType: ExportType, splatNames: string[], showFilenameEdit: boolean) => {
             const frames = events.invoke('timeline.frames');
             const frameRate = events.invoke('timeline.frameRate');
+            const smoothness = events.invoke('timeline.smoothness');
             const orderedPoses = (events.invoke('camera.poses') as Pose[])
             .slice()
             .filter(p => p.frame >= 0 && p.frame < frames)
@@ -465,6 +466,7 @@ class ExportPopup extends Container {
                             target: 'camera',
                             loopMode: 'repeat',
                             interpolation: 'spline',
+                            smoothness,
                             keyframes: {
                                 times,
                                 values: { position, target }

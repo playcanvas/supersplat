@@ -3,8 +3,11 @@ import { EventHandle } from 'playcanvas';
 import { Events } from './events';
 
 const registerTimelineEvents = (events: Events) => {
-    // frames
     let frames = 180;
+    let frameRate = 30;
+    let smoothness = 1;
+
+    // frames
 
     const setFrames = (value: number) => {
         if (value !== frames) {
@@ -22,7 +25,6 @@ const registerTimelineEvents = (events: Events) => {
     });
 
     // frame rate
-    let frameRate = 30;
 
     const setFrameRate = (value: number) => {
         if (value !== frameRate) {
@@ -37,6 +39,23 @@ const registerTimelineEvents = (events: Events) => {
 
     events.on('timeline.setFrameRate', (value: number) => {
         setFrameRate(value);
+    });
+
+    // smoothness
+
+    const setSmoothness = (value: number) => {
+        if (value !== smoothness) {
+            smoothness = value;
+            events.fire('timeline.smoothness', smoothness);
+        }
+    };
+
+    events.function('timeline.smoothness', () => {
+        return smoothness;
+    });
+
+    events.on('timeline.setSmoothness', (value: number) => {
+        setSmoothness(value);
     });
 
     // current frame
@@ -130,7 +149,8 @@ const registerTimelineEvents = (events: Events) => {
         return {
             frames,
             frameRate,
-            frame
+            frame,
+            smoothness
         };
     });
 
@@ -138,6 +158,7 @@ const registerTimelineEvents = (events: Events) => {
         events.fire('timeline.setFrames', data.frames ?? 180);
         events.fire('timeline.setFrameRate', data.frameRate ?? 30);
         events.fire('timeline.setFrame', data.frame ?? 0);
+        events.fire('timeline.setSmoothness', data.smoothness ?? 0);
     });
 };
 

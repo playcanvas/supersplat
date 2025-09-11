@@ -35,6 +35,7 @@ type AnimTrack = {
     target: 'camera',
     loopMode: 'none' | 'repeat' | 'pingpong',
     interpolation: 'step' | 'spline',
+    smoothness: number,
     keyframes: {
         times: number[],
         values: {

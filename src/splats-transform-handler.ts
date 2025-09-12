@@ -152,8 +152,6 @@ class SplatsTransformHandler implements TransformHandler {
         });
 
         this.splat.makeSelectionBoundDirty();
-
-        this.splat.scene.forceRender = true;
     }
 
     end() {

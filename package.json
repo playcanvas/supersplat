@@ -24,7 +24,7 @@
     "devDependencies": {
         "@playcanvas/eslint-config": "^2.1.0",
         "@playcanvas/pcui": "^5.2.2",
-        "@playcanvas/supersplat-viewer": "^1.4.0",
+        "@playcanvas/supersplat-viewer": "^1.4.1",
         "@rollup/plugin-alias": "^5.1.1",
         "@rollup/plugin-image": "^3.0.3",
         "@rollup/plugin-json": "^6.1.0",
@@ -46,7 +46,7 @@
         "i18next-browser-languagedetector": "^8.2.0",
         "jszip": "^3.10.1",
         "mp4-muxer": "^5.2.2",
-        "playcanvas": "^2.11.4",
+        "playcanvas": "^2.11.5",
         "postcss": "^8.5.6",
         "rollup": "^4.50.1",
         "rollup-plugin-scss": "^4.0.1",

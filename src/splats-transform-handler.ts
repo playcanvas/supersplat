@@ -152,6 +152,8 @@ class SplatsTransformHandler implements TransformHandler {
         });
 
         this.splat.makeSelectionBoundDirty();
+
+        this.splat.scene.forceRender = true;
     }
 
     end() {
@@ -170,7 +172,6 @@ class SplatsTransformHandler implements TransformHandler {
             transform: transform.clone(),
             paletteMap: new Map(paletteMap)
         });
-
 
         // create op for pivot placement
         const pivot = this.events.invoke('pivot') as Pivot;

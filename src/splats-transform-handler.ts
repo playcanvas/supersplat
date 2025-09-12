@@ -171,7 +171,6 @@ class SplatsTransformHandler implements TransformHandler {
             paletteMap: new Map(paletteMap)
         });
 
-
         // create op for pivot placement
         const pivot = this.events.invoke('pivot') as Pivot;
         const oldt = this.pivotStart.clone();

@@ -277,14 +277,14 @@ class SplatsTransformOp {
             inverseMap.set(newIdx, oldIdx);
         });
 
-        splat.transformTexture.unlock();
-
         // restore the original transform indices
         for (let i = 0; i < state.length; ++i) {
             if (state[i] === State.selected) {
                 indices[i] = inverseMap.get(indices[i]);
             }
         }
+
+        splat.transformTexture.unlock();
 
         splat.transformPalette.free(paletteMap.size);
 

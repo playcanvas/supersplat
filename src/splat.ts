@@ -382,7 +382,7 @@ class Splat extends Element {
         if (this.visible && selected) {
             // render bounding box
             if (events.invoke('camera.bound')) {
-                const bound = this.localBound;
+                const bound = this.selectionBound;
                 const scale = new Mat4().setTRS(bound.center, Quat.IDENTITY, bound.halfExtents);
                 scale.mul2(this.entity.getWorldTransform(), scale);
 

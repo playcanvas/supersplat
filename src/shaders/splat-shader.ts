@@ -11,6 +11,7 @@ uniform vec4 clrScale;
 
 varying mediump vec3 texCoordIsLocked;          // store locked flat in z
 varying mediump vec4 color;
+varying mediump vec4 otherColor;
 
 #if PICK_PASS
     uniform uint pickMode;                      // 0: add, 1: remove, 2: set
@@ -95,7 +96,7 @@ void main(void) {
 
     #if UNDERLAY_PASS
         color = readColor(source);
-        color.xyz = mix(color.xyz, selectedClr.xyz * 0.2, selectedClr.a) * selectedClr.a;
+        otherColor = mix(color, selectedClr * 0.2, selectedClr.a) * selectedClr.a;
     #elif PICK_PASS
         uvec3 bits = (uvec3(source.id) >> uvec3(0u, 8u, 16u)) & uvec3(255u);
         color = vec4(vec3(bits) / 255.0, readColor(source).a);
@@ -133,10 +134,12 @@ void main(void) {
         // apply locked/selected colors
         if ((vertexState & 2u) != 0u) {
             // locked
-            color *= lockedClr;
+            otherColor = color * lockedClr;
         } else if ((vertexState & 1u) != 0u) {
             // selected
-            color.xyz = mix(color.xyz, selectedClr.xyz * 0.8, selectedClr.a);
+            otherColor = mix(color, selectedClr * 0.8, selectedClr.a);
+        } else {
+            otherColor = color;
         }
     
     #endif
@@ -146,6 +149,7 @@ void main(void) {
 const fragmentShader = /* glsl*/`
 varying mediump vec3 texCoordIsLocked;
 varying mediump vec4 color;
+varying mediump vec4 otherColor;
 
 uniform int mode;               // 0: centers, 1: rings
 uniform float pickerAlpha;
@@ -161,13 +165,14 @@ void main(void) {
     #if OUTLINE_PASS
         gl_FragColor = vec4(1.0, 1.0, 1.0, mode == 0 ? exp(-A * 4.0) * color.a : 1.0);
     #else
-        mediump float alpha = exp(-A * 4.0) * color.a;
+        vec4 c = ((uint(gl_FragCoord.x * 0.5) + uint(gl_FragCoord.y * 0.5)) & 1u) == 0u ? color : otherColor;
+        mediump float alpha = exp(-A * 4.0) * c.a;
 
         #ifdef PICK_PASS
             if (alpha < pickerAlpha) {
                 discard;
             }
-            gl_FragColor = vec4(color.xyz, 0.0);
+            gl_FragColor = vec4(c.xyz, 0.0);
         #else
             if (texCoordIsLocked.z == 0.0 && ringSize > 0.0) {
                 // rings mode
@@ -178,7 +183,7 @@ void main(void) {
                 }
             }
 
-            gl_FragColor = vec4(color.xyz * alpha, alpha);
+            gl_FragColor = vec4(c.xyz * alpha, alpha);
         #endif
     #endif
 }

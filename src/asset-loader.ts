@@ -110,7 +110,7 @@ class AssetLoader {
         if (isSog) {
             // sog expects contents to be an arrayBuffer
             file = {
-                url: URL.createObjectURL(loadRequest.contents),
+                url: loadRequest.contents ? URL.createObjectURL(loadRequest.contents) : loadRequest.url ?? loadRequest.filename,
                 filename: loadRequest.filename
             };
         } else {

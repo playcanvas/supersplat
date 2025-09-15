@@ -515,8 +515,8 @@ class Camera extends Element {
     }
 
     // intersect the scene at the given screen coordinate and focus the camera on this location
-    pickFocalPoint(screenX: number, screenY: number) {
-        const scene = this.scene;
+    intersect(screenX: number, screenY: number) {
+        const { scene } = this;
         const cameraPos = this.entity.getPosition();
 
         const target = scene.canvas;
@@ -565,13 +565,28 @@ class Camera extends Element {
             }
         }
 
-        if (closestSplat) {
-            this.setFocalPoint(closestP);
-            this.setDistance(closestD / this.sceneRadius * this.fovFactor);
+        if (!closestSplat) {
+            return null;
+        }
+
+        return {
+            splat: closestSplat,
+            position: closestP,
+            distance: closestD
+        };
+    }
+
+    pickFocalPoint(screenX: number, screenY: number) {
+        const result = this.intersect(screenX, screenY);
+        if (result) {
+            const { scene } = this;
+
+            this.setFocalPoint(result.position);
+            this.setDistance(result.distance / this.sceneRadius * this.fovFactor);
             scene.events.fire('camera.focalPointPicked', {
                 camera: this,
-                splat: closestSplat,
-                position: closestP
+                splat: result.splat,
+                position: result.position
             });
         }
     }

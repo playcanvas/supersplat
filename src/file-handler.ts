@@ -259,6 +259,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                 });
             }
             importFiles(files);
+            fileSelector.value = '';
         };
         document.body.append(fileSelector);
     }

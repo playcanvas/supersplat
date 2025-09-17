@@ -112,6 +112,7 @@ export class MeasureTool {
             const distance = this.calculateDistance(this.startPoint, this.endPoint);
             this.updateDistanceDisplay(distance);
         } else {
+            this.events.fire('measure.reset');
             this.clearMeasurement();
             this.startPoint = position.clone();
             this.startSplat = splat;

@@ -1,5 +1,5 @@
 import { Container, Element, Label, NumericInput } from '@playcanvas/pcui';
-import { Vec3 } from 'playcanvas';
+import { Vec3, EventHandle } from 'playcanvas';
 
 import { Events } from '../events';
 import { localize } from './localization';
@@ -122,43 +122,72 @@ class ScenePanel extends Container {
 
         this.append(measureContainer);
 
+        let originalDistance = 0;
+        let isUpdatingFromPivot = false;
+        let distanceSetHandler: EventHandle | null = null;
+        let pivotMovedHandler: EventHandle | null = null;
+
         events.on('measure.activate', () => {
             measureContainer.hidden = false;
+
+            originalDistance = 0;
+            distanceInput.value = 0;
+
+            if (distanceSetHandler) {
+                distanceSetHandler.off();
+            }
+            if (pivotMovedHandler) {
+                pivotMovedHandler.off();
+            }
+
+            distanceSetHandler = events.on('measure.distanceSet', (distance: number) => {
+                originalDistance = distance;
+                distanceInput.value = distance;
+            });
+
+            events.on('measure.reset', () => {
+                originalDistance = 0;
+                distanceInput.value = 0;
+            });
+
+            pivotMovedHandler = events.on('pivot.moved', (pivot: any) => {
+                if (originalDistance > 0 && !measureContainer.hidden) {
+                    isUpdatingFromPivot = true;
+                    const currentScale = pivot.transform.scale.x;
+                    const newDistance = originalDistance * currentScale;
+                    distanceInput.value = newDistance;
+                    events.fire('measure.scaleChanged', currentScale);
+                    isUpdatingFromPivot = false;
+                }
+            });
         });
 
         events.on('measure.deactivate', () => {
             measureContainer.hidden = true;
-        });
 
-        let originalDistance = 0;
-        let isUpdatingFromScale = false;
+            distanceInput.value = 0;
+            originalDistance = 0;
 
-        events.on('measure.distanceSet', (distance: number) => {
-            originalDistance = distance;
-            isUpdatingFromScale = true;
-            distanceInput.value = distance;
-            isUpdatingFromScale = false;
-        });
-
-        events.on('pivot.moved', (pivot: any) => {
-            if (originalDistance > 0 && !measureContainer.hidden && !isUpdatingFromScale) {
-                const currentScale = pivot.transform.scale.x;
-                const newDistance = originalDistance * currentScale;
-                isUpdatingFromScale = true;
-                distanceInput.value = newDistance;
-                isUpdatingFromScale = false;
-                events.fire('measure.scaleChanged', currentScale);
+            if (distanceSetHandler) {
+                distanceSetHandler.off();
+                distanceSetHandler = null;
+            }
+            if (pivotMovedHandler) {
+                pivotMovedHandler.off();
+                pivotMovedHandler = null;
             }
         });
 
         distanceInput.on('change', (newDistance: number) => {
-            if (!isUpdatingFromScale && originalDistance > 0 && newDistance > 0 && !measureContainer.hidden) {
+            if (isUpdatingFromPivot) {
+                return;
+            }
 
+            if (originalDistance > 0 && newDistance > 0 && !measureContainer.hidden) {
                 const targetScale = newDistance / originalDistance;
 
                 const pivot = events.invoke('pivot');
                 if (pivot) {
-
                     pivot.start();
 
                     const currentTransform = pivot.transform;

@@ -77,6 +77,14 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         scene.forceRender = true;
     });
 
+    events.on('selection.changed', () => {
+        scene.forceRender = true;
+    });
+
+    events.on('tool.coordSpace', () => {
+        scene.forceRender = true;
+    });
+
     // grid.visible
 
     const setGridVisible = (visible: boolean) => {

@@ -1,4 +1,5 @@
-import { Container, Element, Label } from '@playcanvas/pcui';
+import { Container, Element, Label, NumericInput } from '@playcanvas/pcui';
+import { Vec3 } from 'playcanvas';
 
 import { Events } from '../events';
 import { localize } from './localization';
@@ -96,6 +97,84 @@ class ScenePanel extends Container {
         this.append(splatListContainer);
         this.append(transformHeader);
         this.append(new Transform(events));
+
+        const measureContainer = new Container({
+            id: 'distance-measure-container',
+            class: 'measure-panel',
+            hidden: true
+        });
+
+        const measureLabel = new Label({
+            text: localize('measure.distance'),
+            class: 'measure-label'
+        });
+
+        const distanceInput = new NumericInput({
+            class: 'distance-input',
+            placeholder: '0.00',
+            precision: 2,
+            step: 0.01,
+            min: 0.01
+        });
+
+        measureContainer.append(measureLabel);
+        measureContainer.append(distanceInput);
+
+        this.append(measureContainer);
+
+        events.on('measure.activate', () => {
+            measureContainer.hidden = false;
+        });
+
+        events.on('measure.deactivate', () => {
+            measureContainer.hidden = true;
+        });
+
+        let originalDistance = 0;
+        let isUpdatingFromScale = false;
+
+        events.on('measure.distanceSet', (distance: number) => {
+            originalDistance = distance;
+            isUpdatingFromScale = true;
+            distanceInput.value = distance;
+            isUpdatingFromScale = false;
+        });
+
+        events.on('pivot.moved', (pivot: any) => {
+            if (originalDistance > 0 && !measureContainer.hidden && !isUpdatingFromScale) {
+                const currentScale = pivot.transform.scale.x;
+                const newDistance = originalDistance * currentScale;
+                isUpdatingFromScale = true;
+                distanceInput.value = newDistance;
+                isUpdatingFromScale = false;
+                events.fire('measure.scaleChanged', currentScale);
+            }
+        });
+
+        distanceInput.on('change', (newDistance: number) => {
+            if (!isUpdatingFromScale && originalDistance > 0 && newDistance > 0 && !measureContainer.hidden) {
+
+                const targetScale = newDistance / originalDistance;
+
+                const pivot = events.invoke('pivot');
+                if (pivot) {
+
+                    pivot.start();
+
+                    const currentTransform = pivot.transform;
+                    const newPosition = currentTransform.position.clone();
+                    const newRotation = currentTransform.rotation.clone();
+                    const newScale = new Vec3(targetScale, targetScale, targetScale);
+
+                    pivot.moveTRS(newPosition, newRotation, newScale);
+
+                    pivot.end();
+
+                    events.fire('measure.scaleChanged', targetScale);
+                }
+            }
+        });
+
         this.append(new Element({
             class: 'panel-header',
             height: 20

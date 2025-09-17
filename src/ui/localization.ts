@@ -186,6 +186,10 @@ const localizeInit = () => {
                     'tooltip.scale': 'Skalieren ( 3 )',
                     'tooltip.local-space': 'Gizmo in local-space',
                     'tooltip.bound-center': 'Mittelpunkt verwenden',
+                    'tooltip.measure-distance': 'Entfernung messen ( M )',
+
+                    // Measure tool
+                    'measure.distance': 'Entfernung (m):',
 
                     // Viewer Export
                     'export.header': 'EXPORTIEREN',
@@ -440,6 +444,10 @@ const localizeInit = () => {
                     'tooltip.scale': 'Scale ( 3 )',
                     'tooltip.local-space': 'Use Local Orientation',
                     'tooltip.bound-center': 'Use Bound Center',
+                    'tooltip.measure-distance': 'Measure Distance ( M )',
+
+                    // Measure tool
+                    'measure.distance': 'Distance (m):',
 
                     // Viewer Export
                     'export.header': 'EXPORT',
@@ -694,6 +702,10 @@ const localizeInit = () => {
                     'tooltip.scale': 'Échelle ( 3 )',
                     'tooltip.local-space': 'Espace local gizmo',
                     'tooltip.bound-center': 'Utiliser le centre de la limite',
+                    'tooltip.measure-distance': 'Mesurer la distance',
+
+                    // Measure Tool
+                    'measure.distance': 'Distance',
 
                     // Viewer Export
                     'export.header': 'EXPORTER',
@@ -937,6 +949,10 @@ const localizeInit = () => {
                     'tooltip.scale': 'スケール ( 3 )',
                     'tooltip.local-space': 'ローカル座標へ切り替え',
                     'tooltip.bound-center': 'バウンディングボックスの中心を使用',
+                    'tooltip.measure-distance': '距離を測定',
+
+                    // Measure Tool
+                    'measure.distance': '距離',
 
                     // Viewer Export
                     'export.header': 'エクスポート',
@@ -1179,6 +1195,10 @@ const localizeInit = () => {
                     'tooltip.scale': '크기 조정 ( 3 )',
                     'tooltip.local-space': '로컬 공간',
                     'tooltip.bound-center': '바운드 중심 사용',
+                    'tooltip.measure-distance': '거리 측정',
+
+                    // Measure Tool
+                    'measure.distance': '거리',
 
                     // Viewer Export
                     'export.header': '내보내기',
@@ -1422,6 +1442,10 @@ const localizeInit = () => {
                     'tooltip.scale': '缩放 ( 3 )',
                     'tooltip.local-space': '局部坐标系',
                     'tooltip.bound-center': '使用边界中心',
+                    'tooltip.measure-distance': '测距',
+
+                    // Measure Tool
+                    'measure.distance': '距离',
 
                     // Viewer Export
                     'export.header': '导出',

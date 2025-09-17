@@ -23,6 +23,7 @@ import { RectSelection } from './tools/rect-selection';
 import { RotateTool } from './tools/rotate-tool';
 import { ScaleTool } from './tools/scale-tool';
 import { SphereSelection } from './tools/sphere-selection';
+import { MeasureTool } from './tools/measure-tool';
 import { ToolManager } from './tools/tool-manager';
 import { registerTransformHandlerEvents } from './transform-handler';
 import { EditorUI } from './ui/editor';
@@ -233,6 +234,7 @@ const main = async () => {
     toolManager.register('move', new MoveTool(events, scene));
     toolManager.register('rotate', new RotateTool(events, scene));
     toolManager.register('scale', new ScaleTool(events, scene));
+    toolManager.register('measure', new MeasureTool(events, scene, editorUI.toolsContainer.dom));
 
     editorUI.toolsContainer.dom.appendChild(maskCanvas);
 

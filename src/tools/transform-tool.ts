@@ -28,6 +28,7 @@ class TransformTool {
 
         gizmo.on('transform:move', () => {
             pivot.moveTRS(pivotEntity.getLocalPosition(), pivotEntity.getLocalRotation(), pivotEntity.getLocalScale());
+            scene.forceRender = true;
         });
 
         gizmo.on('transform:end', () => {
@@ -38,7 +39,9 @@ class TransformTool {
         // reattach the gizmo to the pivot
         const reattach = () => {
             if (!active || !events.invoke('selection')) {
-                gizmo.detach();
+                if (gizmo.enabled) {
+                    gizmo.detach();
+                }
             } else if (!dragging) {
                 pivot = events.invoke('pivot') as Pivot;
                 pivotEntity.setLocalPosition(pivot.transform.position);
@@ -50,12 +53,7 @@ class TransformTool {
 
         events.on('tool.coordSpace', (coordSpace: string) => {
             gizmo.coordSpace = coordSpace as 'local' | 'world';
-            scene.forceRender = true;
         });
-
-        events.on('pivot.placed', reattach);
-        events.on('pivot.moved', reattach);
-        events.on('selection.changed', reattach);
 
         // set the gizmo size to remain a constant size in screen space.
         // called in response to changes in canvas size
@@ -73,12 +71,21 @@ class TransformTool {
 
         this.activate = () => {
             active = true;
+
             reattach();
+
+            events.on('pivot.placed', reattach);
+            events.on('pivot.moved', reattach);
+            events.on('selection.changed', reattach);
         };
 
         this.deactivate = () => {
             active = false;
             reattach();
+
+            events.off('pivot.placed', reattach);
+            events.off('pivot.moved', reattach);
+            events.off('selection.changed', reattach);
         };
 
         // initialize coodinate space

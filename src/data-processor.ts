@@ -3,7 +3,6 @@ import {
     PIXELFORMAT_RGBA8,
     PIXELFORMAT_RGBA32F,
     SEMANTIC_POSITION,
-    createShaderFromCode,
     drawQuadWithShader,
     BoundingBox,
     GraphicsDevice,
@@ -12,6 +11,7 @@ import {
     RenderTarget,
     ScopeSpace,
     Shader,
+    ShaderUtils,
     Texture,
     Vec3,
     WebglGraphicsDevice,
@@ -114,8 +114,13 @@ class DataProcessor {
 
             return (width: number, numSplats: number) => {
                 if (!shader) {
-                    shader = createShaderFromCode(device, intersectionVS, intersectionFS, 'intersectByMaskShader', {
-                        vertex_position: SEMANTIC_POSITION
+                    shader = ShaderUtils.createShader(device, {
+                        uniqueName: 'intersectByMaskShader',
+                        attributes: {
+                            vertex_position: SEMANTIC_POSITION
+                        },
+                        vertexGLSL: intersectionVS,
+                        fragmentGLSL: intersectionFS
                     });
                 }
 
@@ -155,8 +160,13 @@ class DataProcessor {
 
             return (width: number) => {
                 if (!shader) {
-                    shader = createShaderFromCode(device, boundVS, boundFS, 'calcBoundShader', {
-                        vertex_position: SEMANTIC_POSITION
+                    shader = ShaderUtils.createShader(device, {
+                        uniqueName: 'calcBoundShader',
+                        attributes: {
+                            vertex_position: SEMANTIC_POSITION
+                        },
+                        vertexGLSL: boundVS,
+                        fragmentGLSL: boundFS
                     });
                 }
 
@@ -205,8 +215,13 @@ class DataProcessor {
 
             return (width: number, height: number, numSplats: number) => {
                 if (!shader) {
-                    shader = createShaderFromCode(device, positionVS, positionFS, 'calcPositionShader', {
-                        vertex_position: SEMANTIC_POSITION
+                    shader = ShaderUtils.createShader(device, {
+                        uniqueName: 'calcPositionShader',
+                        attributes: {
+                            vertex_position: SEMANTIC_POSITION
+                        },
+                        vertexGLSL: positionVS,
+                        fragmentGLSL: positionFS
                     });
                 }
 

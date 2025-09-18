@@ -228,7 +228,7 @@ class PublishSettingsDialog extends Container {
             colorPicker.value = [bgClr.r, bgClr.g, bgClr.b];
             fovSlider.value = events.invoke('camera.fov');
             bandsSlider.value = events.invoke('view.bands');
-            formatSelect.value = 'compressed.ply';
+            formatSelect.value = 'sog';
         };
 
         // function implementations

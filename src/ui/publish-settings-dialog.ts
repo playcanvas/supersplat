@@ -142,10 +142,10 @@ class PublishSettingsDialog extends Container {
         const formatLabel = new Label({ class: 'label', text: localize('export.format') });
         const formatSelect = new SelectInput({
             class: 'select',
-            defaultValue: 'compressed.ply',
+            defaultValue: 'sogs',
             options: [
-                { v: 'compressed.ply', t: localize('export.format-compressed-ply') },
-                { v: 'sogs', t: localize('export.format-sogs') }
+                { v: 'sogs', t: localize('export.format-sog') },
+                { v: 'compressed.ply', t: localize('export.format-compressed-ply') }
             ]
         });
         const formatRow = new Container({ class: 'row' });

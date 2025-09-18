@@ -716,7 +716,7 @@ const localizeInit = () => {
                     'export.splats-select.all': 'Tous les Splats',
                     'export.format': 'Format de fichier',
                     'export.format-compressed-ply': 'PLY compressé',
-                    'export.format-sogs': 'SOG',
+                    'export.format-sog': 'SOG',
 
                     // Cursor
                     'cursor.click-to-copy': 'Cliquez pour copier',
@@ -959,7 +959,7 @@ const localizeInit = () => {
                     'export.splats-select.all': 'すべてのSplat',
                     'export.format': 'ファイル形式',
                     'export.format-compressed-ply': '圧縮PLY',
-                    'export.format-sogs': 'SOG',
+                    'export.format-sog': 'SOG',
 
                     // Cursor
                     'cursor.click-to-copy': 'クリックしてコピー',
@@ -1201,7 +1201,7 @@ const localizeInit = () => {
                     'export.splats-select.all': '모든 Splat',
                     'export.format': '파일 형식',
                     'export.format-compressed-ply': '압축된 PLY',
-                    'export.format-sogs': 'SOG',
+                    'export.format-sog': 'SOG',
 
                     // Cursor
                     'cursor.click-to-copy': '클릭하여 복사',

@@ -96,25 +96,32 @@ export class MeasureTool {
     }
 
     handleSplatPointPicked(splat: Splat, position: Vec3) {
+        // Get current scale to convert picked position to unscaled coordinates
+        const currentScale = this.getCurrentScale();
+        const unscaledPosition = position.clone().divScalar(currentScale);
+
         if (!this.startPoint) {
-            this.startPoint = position.clone();
+            this.startPoint = unscaledPosition;
             this.startSplat = splat;
             this.createPointMarker(position, 'start');
             this.events.fire('measure.startPoint', this.startPoint);
         } else if (!this.endPoint) {
-            this.endPoint = position.clone();
+            this.endPoint = unscaledPosition;
             this.endSplat = splat;
             this.createPointMarker(position, 'end');
             this.events.fire('measure.endPoint', this.endPoint);
 
             this.createMeasureLine();
 
-            const distance = this.calculateDistance(this.startPoint, this.endPoint);
-            this.updateDistanceDisplay(distance);
+            // Calculate the actual scaled distance for display
+            const currentScale = this.getCurrentScale();
+            const unscaledDistance = this.calculateDistance(this.startPoint, this.endPoint);
+            const scaledDistance = unscaledDistance * currentScale;
+            this.updateDistanceDisplay(scaledDistance);
         } else {
             this.events.fire('measure.reset');
             this.clearMeasurement();
-            this.startPoint = position.clone();
+            this.startPoint = unscaledPosition;
             this.startSplat = splat;
             this.createPointMarker(position, 'start');
             this.events.fire('measure.startPoint', this.startPoint);
@@ -140,6 +147,7 @@ export class MeasureTool {
 
     updateDistanceDisplay(distance: number) {
         this.currentDistance = distance;
+        // Always fire the actual measured distance (which may be at current scale)
         this.events.fire('measure.distanceSet', distance);
     }
 
@@ -222,9 +230,14 @@ export class MeasureTool {
             material: material
         });
 
-        const midPoint = new Vec3().add2(this.startPoint, this.endPoint).mulScalar(0.5);
-        const distance = this.calculateDistance(this.startPoint, this.endPoint);
-        const direction = new Vec3().sub2(this.endPoint, this.startPoint).normalize();
+        // Scale the points to current scale for visual positioning
+        const currentScale = this.getCurrentScale();
+        const scaledStartPoint = this.startPoint.clone().mulScalar(currentScale);
+        const scaledEndPoint = this.endPoint.clone().mulScalar(currentScale);
+
+        const midPoint = new Vec3().add2(scaledStartPoint, scaledEndPoint).mulScalar(0.5);
+        const distance = this.calculateDistance(scaledStartPoint, scaledEndPoint);
+        const direction = new Vec3().sub2(scaledEndPoint, scaledStartPoint).normalize();
 
         this.lineEntity.setPosition(midPoint);
 
@@ -235,12 +248,11 @@ export class MeasureTool {
             const right = new Vec3(1, 0, 0);
             this.lineEntity.lookAt(direction.x > 0 ? right : new Vec3(-1, 0, 0));
         } else {
-            this.lineEntity.lookAt(this.endPoint);
+            this.lineEntity.lookAt(scaledEndPoint);
         }
 
         this.lineEntity.rotateLocal(90, 0, 0);
 
-        const currentScale = this.getCurrentScale();
         const lineThickness = 0.02 * Math.pow(currentScale, 0.3);
         this.lineEntity.setLocalScale(lineThickness, distance, lineThickness);
 

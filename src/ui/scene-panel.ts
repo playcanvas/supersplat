@@ -141,7 +141,12 @@ class ScenePanel extends Container {
             }
 
             distanceSetHandler = events.on('measure.distanceSet', (distance: number) => {
-                originalDistance = distance;
+                // Get current scale to calculate the original unscaled distance
+                const pivot = events.invoke('pivot');
+                const currentScale = pivot?.transform?.scale?.x || 1;
+
+                // Store the unscaled original distance
+                originalDistance = distance / currentScale;
                 distanceInput.value = distance;
             });
 

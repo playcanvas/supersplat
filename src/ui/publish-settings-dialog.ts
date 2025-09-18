@@ -142,9 +142,9 @@ class PublishSettingsDialog extends Container {
         const formatLabel = new Label({ class: 'label', text: localize('export.format') });
         const formatSelect = new SelectInput({
             class: 'select',
-            defaultValue: 'sogs',
+            defaultValue: 'sog',
             options: [
-                { v: 'sogs', t: localize('export.format-sog') },
+                { v: 'sog', t: localize('export.format-sog') },
                 { v: 'compressed.ply', t: localize('export.format-compressed-ply') }
             ]
         });
@@ -339,7 +339,7 @@ class PublishSettingsDialog extends Container {
                         listed: listBoolean.value,
                         serializeSettings,
                         experienceSettings,
-                        format: formatSelect.value as 'compressed.ply' | 'sogs'
+                        format: formatSelect.value as 'compressed.ply' | 'sog'
                     });
                 };
             }).finally(() => {

@@ -3,10 +3,9 @@ import { BooleanInput, Button, ColorPicker, Container, Element, Label, SelectInp
 import { Pose } from '../camera-poses';
 import { Events } from '../events';
 import { localize } from './localization';
-import { PublishSettings } from '../publish';
+import { PublishSettings, UserStatus } from '../publish';
 import { AnimTrack, ExperienceSettings } from '../splat-serialize';
 import sceneExport from './svg/export.svg';
-import { UserStatus } from '../publish';
 
 const createSvg = (svgString: string, args = {}) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -239,7 +238,7 @@ class PublishSettingsDialog extends Container {
             const bgClr = events.invoke('bgClr');
 
             overwriteSelect.options = [{
-                v: '0', t: localize('publish.new-scene'),
+                v: '0', t: localize('publish.new-scene')
             }].concat(overwriteList.map((s, i) => ({ v: (i + 1).toString(), t: s })));
 
             overwriteSelect.value = '0';

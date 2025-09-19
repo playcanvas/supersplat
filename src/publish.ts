@@ -3,25 +3,40 @@ import { Writer, GZipWriter } from './serialize/writer';
 import { serializePlyCompressed, serializePly, ExperienceSettings, SerializeSettings } from './splat-serialize';
 import { localize } from './ui/localization';
 
-type PublishSettings = {
-    title: string;
-    description: string;
-    listed: boolean;
-    serializeSettings: SerializeSettings;
-    experienceSettings: ExperienceSettings;
-    format: 'compressed.ply' | 'sog';
-};
-
-const origin = location.origin;
-
 type User = {
     id: string;
     token: string;
     apiServer: string;
 };
 
+type Scene = {
+    id: string;
+    hash: string;
+    title: string;
+    description: string;
+    format: string;
+};
+
+type UserStatus = {
+    user: User;
+    scenes: Scene[];
+};
+
+type PublishSettings = {
+    user: User;
+    title: string;
+    description: string;
+    listed: boolean;
+    serializeSettings: SerializeSettings;
+    experienceSettings: ExperienceSettings;
+    format: 'compressed.ply' | 'sog';
+    overwriteId?: string;   // for republishing an existing scene
+};
+
+const origin = location.origin;
+
 // check whether user is logged in
-const getUser = async () => {
+const fetchUser = async () => {
     try {
         const urlResponse = await fetch(`${origin}/api/id`);
         return urlResponse.ok && (await urlResponse.json() as User);
@@ -30,11 +45,28 @@ const getUser = async () => {
     }
 };
 
+const fetchSceneList = async (user: User) => {
+    const response = await fetch(`${user.apiServer}/splats?limit=128`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${user.token}`
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error(`failed to get scene list (${response.statusText})`);
+    }
+
+    return (await response.json()).result as Scene[];
+};
+
 class PublishWriter implements Writer {
     write: (data: Uint8Array) => void;
     close: () => Promise<any>;
 
-    static async create(publishSettings: PublishSettings, user: User) {
+    static async create(publishSettings: PublishSettings) {
+        const { user } = publishSettings;
+
         const filename = 'scene.ply';
 
         // start upload
@@ -144,7 +176,7 @@ class PublishWriter implements Writer {
 
             const completeJson = await completeResult.json();
 
-            const publishResponse = await fetch(`${user.apiServer}/splats/publish`, {
+            const doPublish = () => fetch(`${user.apiServer}/splats/publish`, {
                 method: 'POST',
                 body: JSON.stringify({
                     s3Key: startJson.key,
@@ -159,6 +191,21 @@ class PublishWriter implements Writer {
                     'Content-Type': 'application/json'
                 }
             });
+
+            const doRepublish = () => fetch(`${user.apiServer}/splats/${publishSettings.overwriteId}/republish`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    s3Key: startJson.key,
+                    settings: publishSettings.experienceSettings,
+                    format: publishSettings.format
+                }),
+                headers: {
+                    'Authorization': `Bearer ${user.token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const publishResponse = await (publishSettings.overwriteId ? doRepublish() : doPublish());
 
             if (!publishResponse.ok) {
                 let msg;
@@ -181,16 +228,16 @@ class PublishWriter implements Writer {
 
 const registerPublishEvents = (events: Events) => {
 
-    events.function('publish.enabled', async () => {
-        return !!(await getUser());
+    events.function('publish.userStatus', async () => {
+        const user = await fetchUser();
+        if (!user) {
+            return null;
+        }
+        const scenes = await fetchSceneList(user);
+        return { user, scenes };
     });
 
     events.function('scene.publish', async (publishSettings: PublishSettings) => {
-        const user = await getUser();
-
-        if (!user || !publishSettings) {
-            return false;
-        }
         try {
             events.fire('progressStart', 'Publishing...');
             events.fire('progressUpdate', {
@@ -211,7 +258,7 @@ const registerPublishEvents = (events: Events) => {
             };
 
             // create the writer chain: gzip->stream->upload
-            const publishWriter = await PublishWriter.create(publishSettings, user);
+            const publishWriter = await PublishWriter.create(publishSettings);
             const gzipWriter = new GZipWriter(publishWriter);
 
             const splats = events.invoke('scene.splats');
@@ -255,4 +302,4 @@ const registerPublishEvents = (events: Events) => {
     });
 };
 
-export { PublishSettings, registerPublishEvents };
+export { PublishSettings, UserStatus, registerPublishEvents };

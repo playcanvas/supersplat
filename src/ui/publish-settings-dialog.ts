@@ -3,7 +3,7 @@ import { BooleanInput, Button, ColorPicker, Container, Element, Label, SelectInp
 import { Pose } from '../camera-poses';
 import { Events } from '../events';
 import { localize } from './localization';
-import { PublishSettings } from '../publish';
+import { PublishSettings, UserStatus } from '../publish';
 import { AnimTrack, ExperienceSettings } from '../splat-serialize';
 import sceneExport from './svg/export.svg';
 
@@ -16,7 +16,7 @@ const createSvg = (svgString: string, args = {}) => {
 };
 
 class PublishSettingsDialog extends Container {
-    show: () => Promise<PublishSettings | null>;
+    show: (userStatus: UserStatus) => Promise<PublishSettings | null>;
     hide: () => void;
     destroy: () => void;
 
@@ -42,6 +42,17 @@ class PublishSettingsDialog extends Container {
         const header = new Container({ id: 'header' });
         header.append(headerIcon);
         header.append(headerText);
+
+        // overwrite
+
+        const overwriteLabel = new Label({ class: 'label', text: localize('publish.to') });
+        const overwriteSelect = new SelectInput({
+            class: 'select'
+        });
+
+        const overwriteRow = new Container({ class: 'row' });
+        overwriteRow.append(overwriteLabel);
+        overwriteRow.append(overwriteSelect);
 
         // title
 
@@ -155,6 +166,7 @@ class PublishSettingsDialog extends Container {
         // content
 
         const content = new Container({ id: 'content' });
+        content.append(overwriteRow);
         content.append(titleRow);
         content.append(descRow);
         content.append(listRow);
@@ -210,14 +222,26 @@ class PublishSettingsDialog extends Container {
             }
         };
 
+        overwriteSelect.on('change', () => {
+            const isNew = overwriteSelect.value === '0';
+            titleInput.disabled = !isNew;
+            descInput.disabled = !isNew;
+            listBoolean.disabled = !isNew;
+        });
+
         // reset UI and configure for current state
-        const reset = (hasPoses: boolean) => {
+        const reset = (hasPoses: boolean, overwriteList: string[]) => {
             const splats = events.invoke('scene.splats');
             const filename = splats[0].filename;
             const dot = splats[0].filename.lastIndexOf('.');
 
             const bgClr = events.invoke('bgClr');
 
+            overwriteSelect.options = [{
+                v: '0', t: localize('publish.new-scene')
+            }].concat(overwriteList.map((s, i) => ({ v: (i + 1).toString(), t: s })));
+
+            overwriteSelect.value = '0';
             titleInput.value = filename.slice(0, dot > 0 ? dot : undefined);
             descInput.value = '';
             listBoolean.value = true;
@@ -233,7 +257,7 @@ class PublishSettingsDialog extends Container {
 
         // function implementations
 
-        this.show = () => {
+        this.show = (userStatus: UserStatus) => {
             const frames = events.invoke('timeline.frames');
             const frameRate = events.invoke('timeline.frameRate');
             const smoothness = events.invoke('timeline.smoothness');
@@ -244,8 +268,13 @@ class PublishSettingsDialog extends Container {
             .filter(p => p.frame >= 0 && p.frame < frames)
             .sort((a, b) => a.frame - b.frame);
 
+            // overwrite options
+            const overwriteList = userStatus.scenes.map((s) => {
+                return `${s.hash} - ${s.title}`;
+            });
+
             // reset UI
-            reset(orderedPoses.length > 0);
+            reset(orderedPoses.length > 0, overwriteList);
 
             this.hidden = false;
             this.dom.addEventListener('keydown', keydown);
@@ -334,12 +363,14 @@ class PublishSettingsDialog extends Container {
                     };
 
                     resolve({
+                        user: userStatus.user,
                         title: titleInput.value,
                         description: descInput.value,
                         listed: listBoolean.value,
                         serializeSettings,
                         experienceSettings,
-                        format: formatSelect.value as 'compressed.ply' | 'sog'
+                        format: formatSelect.value as 'compressed.ply' | 'sog',
+                        overwriteId: overwriteSelect.value !== '0' ? userStatus.scenes[parseInt(overwriteSelect.value, 10) - 1].id : undefined
                     });
                 };
             }).finally(() => {

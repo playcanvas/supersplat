@@ -108,9 +108,9 @@ class AssetLoader {
 
         const isSog = loadRequest.filename.toLowerCase().endsWith('.sog');
         if (isSog) {
-            // sog expects contents to be an arrayBuffer
+            const contents = loadRequest.contents;
             file = {
-                url: URL.createObjectURL(loadRequest.contents),
+                url: contents ? URL.createObjectURL(contents) : loadRequest.url,
                 filename: loadRequest.filename
             };
         } else {

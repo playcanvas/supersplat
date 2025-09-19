@@ -34,6 +34,28 @@ class EditHistory {
         this.redo(suppressOp);
     }
 
+    removeBySplat(element: Element) {
+        function isRelatedToSplat(editOp: EditOp): boolean {
+            if (editOp?.splat === element) return true;
+            // 处理 MultiOp
+            if ((editOp as any).ops instanceof Array) {
+                return (editOp as any).ops.some(isRelatedToSplat);
+            }
+            return false;
+        }
+        this.history = this.history.filter((editOp) => {
+            if (isRelatedToSplat(editOp)) {
+                editOp.destroy?.();
+                return false;
+            }
+            return true;
+        });
+        if (this.cursor > this.history.length) {
+            this.cursor = this.history.length;
+        }
+        this.fireEvents();
+    }
+
     canUndo() {
         return this.cursor > 0;
     }

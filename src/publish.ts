@@ -9,7 +9,7 @@ type PublishSettings = {
     listed: boolean;
     serializeSettings: SerializeSettings;
     experienceSettings: ExperienceSettings;
-    format: 'compressed.ply' | 'sogs';
+    format: 'compressed.ply' | 'sog';
 };
 
 const origin = location.origin;
@@ -221,7 +221,7 @@ const registerPublishEvents = (events: Events) => {
                 case 'compressed.ply':
                     await serializePlyCompressed(splats, publishSettings.serializeSettings, gzipWriter, progressFunc);
                     break;
-                case 'sogs':
+                case 'sog':
                     await serializePly(splats, publishSettings.serializeSettings, gzipWriter, progressFunc);
                     break;
             }

@@ -655,7 +655,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.on('scene.elementRemoved', (element: Element) => {
         // After deleting an element, need to clear the record of the element in history
         editHistory.removeBySplat(element);
-    })
+    });
 
 };
 

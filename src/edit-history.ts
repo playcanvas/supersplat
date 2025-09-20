@@ -1,5 +1,7 @@
-import { EditOp } from './edit-ops';
+import { EditOp, MultiOp } from './edit-ops';
 import { Events } from './events';
+import { Splat } from './splat';
+
 
 class EditHistory {
     history: EditOp[] = [];
@@ -35,14 +37,16 @@ class EditHistory {
     }
 
     removeBySplat(element: Element) {
-        function isRelatedToSplat(editOp: EditOp): boolean {
-            if (editOp?.splat === element) return true;
-            // 处理 MultiOp
-            if ((editOp as any).ops instanceof Array) {
-                return (editOp as any).ops.some(isRelatedToSplat);
+        const isRelatedToSplat = (editOp: EditOp): boolean => {
+
+            if ('splat' in editOp && editOp.splat === (element as unknown as Splat)) return true;
+
+            if ('ops' in editOp && Array.isArray((editOp as MultiOp).ops)) {
+                return (editOp as MultiOp).ops.some(isRelatedToSplat);
             }
             return false;
-        }
+        };
+
         this.history = this.history.filter((editOp) => {
             if (isRelatedToSplat(editOp)) {
                 editOp.destroy?.();

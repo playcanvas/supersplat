@@ -84,9 +84,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             const { colorBuffer } = renderTarget;
 
             // read the rendered frame
-            console.time('read pixels');
             await colorBuffer.read(0, 0, width, height, { renderTarget, data });
-            console.timeEnd('read pixels');
 
             // the render buffer contains premultiplied alpha. so apply background color.
             if (!transparentBg) {
@@ -239,9 +237,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 const { colorBuffer } = renderTarget;
 
                 // read the rendered frame
-                console.time('read pixels');
                 await colorBuffer.read(0, 0, width, height, { renderTarget, data });
-                console.timeEnd('read pixels');
 
                 // flip the buffer vertically
                 for (let y = 0; y < height / 2; y++) {
@@ -269,22 +265,16 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
             for (let frameTime = 0; frameTime <= duration; frameTime += 1.0 / frameRate) {
                 // special case the first frame
-                console.time('prepare frame');
                 await prepareFrame(startFrame + frameTime * animFrameRate);
-                console.timeEnd('prepare frame');
                 
                 // render a frame
                 scene.lockedRender = true;
 
                 // wait for render to finish
-                console.time('render frame');
                 await postRender();
-                console.timeEnd('render frame');
 
                 // wait for capture
-                console.time('capture frame');
                 await captureFrame(frameTime);
-                console.timeEnd('capture frame');
 
                 events.fire('progressUpdate', {
                     text: localize('render.rendering'),

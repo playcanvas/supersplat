@@ -1,5 +1,5 @@
 import { Muxer, ArrayBufferTarget } from 'mp4-muxer';
-import { path } from 'playcanvas';
+import { path, Vec3 } from 'playcanvas';
 
 import { ElementType } from './element';
 import { Events } from './events';
@@ -84,7 +84,9 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             const { colorBuffer } = renderTarget;
 
             // read the rendered frame
+            console.time('read pixels');
             await colorBuffer.read(0, 0, width, height, { renderTarget, data });
+            console.timeEnd('read pixels');
 
             // the render buffer contains premultiplied alpha. so apply background color.
             if (!transparentBg) {
@@ -183,12 +185,27 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             // get the list of visible splats
             const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
 
+            // remember last camera position so we can skip sorting if the camera didn't move
+            var last_pos = new Vec3(0,0,0);
+            var last_forward = new Vec3(1,0,0);
+
             // prepare the frame for rendering
             const prepareFrame = async (frameTime: number) => {
                 events.fire('timeline.time', frameTime);
 
                 // manually update the camera so position and rotation are correct
                 scene.camera.onUpdate(0);
+
+                // if the camera didn't move, don't sort
+                const pos = scene.camera.entity.getPosition();
+                const forward = scene.camera.entity.forward;
+                if (last_pos.equals(pos) && last_forward.equals(forward)) {
+                    console.log('camera did not move, skipping sort');
+                    return;
+                } else {
+                    last_pos.copy(pos);
+                    last_forward.copy(forward);
+                }
 
                 // wait for sorting to complete
                 await Promise.all(splats.map((splat) => {
@@ -222,7 +239,9 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 const { colorBuffer } = renderTarget;
 
                 // read the rendered frame
+                console.time('read pixels');
                 await colorBuffer.read(0, 0, width, height, { renderTarget, data });
+                console.timeEnd('read pixels');
 
                 // flip the buffer vertically
                 for (let y = 0; y < height / 2; y++) {
@@ -250,16 +269,22 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
             for (let frameTime = 0; frameTime <= duration; frameTime += 1.0 / frameRate) {
                 // special case the first frame
+                console.time('prepare frame');
                 await prepareFrame(startFrame + frameTime * animFrameRate);
-
+                console.timeEnd('prepare frame');
+                
                 // render a frame
                 scene.lockedRender = true;
 
                 // wait for render to finish
+                console.time('render frame');
                 await postRender();
+                console.timeEnd('render frame');
 
                 // wait for capture
+                console.time('capture frame');
                 await captureFrame(frameTime);
+                console.timeEnd('capture frame');
 
                 events.fire('progressUpdate', {
                     text: localize('render.rendering'),

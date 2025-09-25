@@ -208,7 +208,7 @@ const localizeInit = () => {
                     'export.splats-select.all': 'Alle Splats',
                     'export.format': 'Format',
                     'export.format-compressed-ply': 'Komprimiertes PLY',
-                    'export.format-sogs': 'SOGS',
+                    'export.format-sog': 'SOG',
 
                     // Cursor
                     'cursor.click-to-copy': 'Klicken zum kopieren',
@@ -233,6 +233,10 @@ const localizeInit = () => {
                     'publish.succeeded': 'VERÖFFENTLICHEN ERFOLGREICH',
                     'publish.message': 'Verwenden Sie den Link unten, um auf Ihre Szene zuzugreifen.',
                     'publish.please-log-in': 'Das Veröffentlichen in PlayCanvas erfordert ein Benutzerkonto. Bitte melden Sie sich an und versuchen Sie es erneut.',
+                    'publish.converting': 'Konvertieren...',
+                    'publish.uploading': 'Hochladen...',
+                    'publish.to': 'Veröffentlichen in',
+                    'publish.new-scene': 'Neue Szene',
 
                     // Video Settings Dialog
                     'video.header': 'VIDEO EINSTELLUNGEN',
@@ -462,7 +466,7 @@ const localizeInit = () => {
                     'export.splats-select.all': 'All Splats',
                     'export.format': 'File Format',
                     'export.format-compressed-ply': 'Compressed PLY',
-                    'export.format-sogs': 'SOGS',
+                    'export.format-sog': 'SOG',
 
                     // Cursor
                     'cursor.click-to-copy': 'Click to copy',
@@ -489,6 +493,8 @@ const localizeInit = () => {
                     'publish.please-log-in': 'Publishing to PlayCanvas requires a user account. Please log in and try again.',
                     'publish.converting': 'Converting...',
                     'publish.uploading': 'Uploading...',
+                    'publish.to': 'Publish to',
+                    'publish.new-scene': 'New Scene',
 
                     // Image Settings Dialog
                     'image.header': 'IMAGE SETTINGS',
@@ -716,7 +722,7 @@ const localizeInit = () => {
                     'export.splats-select.all': 'Tous les Splats',
                     'export.format': 'Format de fichier',
                     'export.format-compressed-ply': 'PLY compressé',
-                    'export.format-sogs': 'SOGS',
+                    'export.format-sog': 'SOG',
 
                     // Cursor
                     'cursor.click-to-copy': 'Cliquez pour copier',
@@ -741,6 +747,10 @@ const localizeInit = () => {
                     'publish.succeeded': 'PUBLICATION RÉUSSIE',
                     'publish.message': 'Utilisez le lien ci-dessous pour accéder à votre scène.',
                     'publish.please-log-in': 'La publication sur PlayCanvas nécessite un compte utilisateur. Veuillez vous connecter et réessayer.',
+                    'publish.converting': 'Conversion...',
+                    'publish.uploading': 'Téléchargement...',
+                    'publish.to': 'Publier sur',
+                    'publish.new-scene': 'Nouvelle scène',
 
                     // Video Settings Dialog
                     'video.header': 'PARAMETRES VIDEO',
@@ -959,7 +969,7 @@ const localizeInit = () => {
                     'export.splats-select.all': 'すべてのSplat',
                     'export.format': 'ファイル形式',
                     'export.format-compressed-ply': '圧縮PLY',
-                    'export.format-sogs': 'SOGS',
+                    'export.format-sog': 'SOG',
 
                     // Cursor
                     'cursor.click-to-copy': 'クリックしてコピー',
@@ -984,6 +994,10 @@ const localizeInit = () => {
                     'publish.succeeded': '公開に成功',
                     'publish.message': '以下のリンクを使用してシーンにアクセスしてください。',
                     'publish.please-log-in': 'PlayCanvasに公開するにはユーザーアカウントが必要です。ログインしてもう一度お試しください。',
+                    'publish.converting': '変換中...',
+                    'publish.uploading': 'アップロード中...',
+                    'publish.to': 'に公開',
+                    'publish.new-scene': '新しいシーン',
 
                     // Video Settings Dialog
                     'video.header': 'ビデオ設定',
@@ -1201,7 +1215,7 @@ const localizeInit = () => {
                     'export.splats-select.all': '모든 Splat',
                     'export.format': '파일 형식',
                     'export.format-compressed-ply': '압축된 PLY',
-                    'export.format-sogs': 'SOGS',
+                    'export.format-sog': 'SOG',
 
                     // Cursor
                     'cursor.click-to-copy': '클릭하여 복사',
@@ -1226,6 +1240,10 @@ const localizeInit = () => {
                     'publish.succeeded': '게시 성공',
                     'publish.message': '아래 링크를 사용하여 장면에 액세스하십시오.',
                     'publish.please-log-in': 'PlayCanvas에 게시하려면 사용자 계정이 필요합니다. 로그인하고 다시 시도하십시오.',
+                    'publish.converting': '변환 중...',
+                    'publish.uploading': '업로드 중...',
+                    'publish.to': '다음에 게시',
+                    'publish.new-scene': '새 장면',
 
                     // Video Settings Dialog
                     'video.header': '비디오 설정',
@@ -1444,7 +1462,7 @@ const localizeInit = () => {
                     'export.splats-select.all': '所有Splat',
                     'export.format': '文件格式',
                     'export.format-compressed-ply': '压缩 PLY',
-                    'export.format-sogs': 'SOGS',
+                    'export.format-sog': 'SOG',
 
                     // Cursor
                     'cursor.click-to-copy': '点击复制',
@@ -1469,6 +1487,10 @@ const localizeInit = () => {
                     'publish.succeeded': '发布成功',
                     'publish.message': '请使用以下链接访问场景。',
                     'publish.please-log-in': '要在 PlayCanvas 上发布，需要用户帐户。请登录并重试。',
+                    'publish.converting': '转换中...',
+                    'publish.uploading': '上传中...',
+                    'publish.to': '发布到',
+                    'publish.new-scene': '新场景',
 
                     // Video Settings Dialog
                     'video.header': '视频设置',

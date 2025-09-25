@@ -205,8 +205,8 @@ class EditorUI {
 
         events.function('show.publishSettingsDialog', async () => {
             // show popup if user isn't logged in
-            const canPublish = await events.invoke('publish.enabled');
-            if (!canPublish) {
+            const userStatus = await events.invoke('publish.userStatus');
+            if (!userStatus) {
                 await events.invoke('showPopup', {
                     type: 'error',
                     header: localize('popup.error'),
@@ -216,7 +216,7 @@ class EditorUI {
             }
 
             // get user publish settings
-            const publishSettings = await publishSettingsDialog.show();
+            const publishSettings = await publishSettingsDialog.show(userStatus);
 
             // do publish
             if (publishSettings) {

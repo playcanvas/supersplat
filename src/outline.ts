@@ -1,13 +1,13 @@
 import {
     CULLFACE_NONE,
     SEMANTIC_POSITION,
-    createShaderFromCode,
     BlendState,
     DepthState,
     Color,
     Entity,
     Layer,
     Shader,
+    ShaderUtils,
     QuadRender,
     WebglGraphicsDevice
 } from 'playcanvas';
@@ -50,8 +50,13 @@ class Outline extends Element {
         this.entity.camera.layers = [layerId];
         this.scene.camera.entity.addChild(this.entity);
 
-        this.shader = createShaderFromCode(device, vertexShader, fragmentShader, 'apply-outline', {
-            vertex_position: SEMANTIC_POSITION
+        this.shader = ShaderUtils.createShader(device, {
+            uniqueName: 'apply-outline',
+            attributes: {
+                vertex_position: SEMANTIC_POSITION
+            },
+            vertexGLSL: vertexShader,
+            fragmentGLSL: fragmentShader
         });
 
         this.quadRender = new QuadRender(this.shader);

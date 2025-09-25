@@ -28,6 +28,7 @@ class TransformTool {
 
         gizmo.on('transform:move', () => {
             pivot.moveTRS(pivotEntity.getLocalPosition(), pivotEntity.getLocalRotation(), pivotEntity.getLocalScale());
+            scene.forceRender = true;
         });
 
         gizmo.on('transform:end', () => {

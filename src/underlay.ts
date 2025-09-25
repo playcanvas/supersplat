@@ -3,12 +3,12 @@ import {
     BLENDMODE_ONE,
     BLENDMODE_ZERO,
     SEMANTIC_POSITION,
-    createShaderFromCode,
     BlendState,
     Color,
     Entity,
     Layer,
     Shader,
+    ShaderUtils,
     QuadRender,
     WebglGraphicsDevice
 } from 'playcanvas';
@@ -37,8 +37,13 @@ class Underlay extends Element {
         this.entity.camera.layers = [this.scene.overlayLayer.id];
         this.scene.camera.entity.addChild(this.entity);
 
-        this.shader = createShaderFromCode(device, vertexShader, fragmentShader, 'apply-underlay', {
-            vertex_position: SEMANTIC_POSITION
+        this.shader = ShaderUtils.createShader(device, {
+            uniqueName: 'apply-underlay',
+            attributes: {
+                vertex_position: SEMANTIC_POSITION
+            },
+            vertexGLSL: vertexShader,
+            fragmentGLSL: fragmentShader
         });
 
         this.quadRender = new QuadRender(this.shader);

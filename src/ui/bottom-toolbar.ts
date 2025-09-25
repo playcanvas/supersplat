@@ -96,10 +96,10 @@ class BottomToolbar extends Container {
             icon: 'E112'
         });
 
-        const rescale = new Button({
-            id: 'bottom-toolbar-rescale',
+        const measure = new Button({
+            id: 'bottom-toolbar-measure',
             class: 'bottom-toolbar-tool',
-            icon: 'E524'
+            icon: 'E358'
         });
 
         const coordSpace = new Button({
@@ -139,7 +139,8 @@ class BottomToolbar extends Container {
         this.append(translate);
         this.append(rotate);
         this.append(scale);
-        this.append(rescale);
+        this.append(new Element({ class: 'bottom-toolbar-separator' }));
+        this.append(measure);
         this.append(coordSpace);
         this.append(origin);
 
@@ -154,7 +155,7 @@ class BottomToolbar extends Container {
         translate.dom.addEventListener('click', () => events.fire('tool.move'));
         rotate.dom.addEventListener('click', () => events.fire('tool.rotate'));
         scale.dom.addEventListener('click', () => events.fire('tool.scale'));
-        rescale.dom.addEventListener('click', () => events.fire('tool.rescale'));
+        measure.dom.addEventListener('click', () => events.fire('tool.measure'));
         coordSpace.dom.addEventListener('click', () => events.fire('tool.toggleCoordSpace'));
         origin.dom.addEventListener('click', () => events.fire('pivot.toggleOrigin'));
 
@@ -175,7 +176,7 @@ class BottomToolbar extends Container {
             translate.class[toolName === 'move' ? 'add' : 'remove']('active');
             rotate.class[toolName === 'rotate' ? 'add' : 'remove']('active');
             scale.class[toolName === 'scale' ? 'add' : 'remove']('active');
-            rescale.class[toolName === 'rescale' ? 'add' : 'remove']('active');
+            measure.class[toolName === 'measure' ? 'add' : 'remove']('active');
         });
 
         events.on('tool.coordSpace', (space: 'local' | 'world') => {
@@ -199,7 +200,7 @@ class BottomToolbar extends Container {
         tooltips.register(translate, localize('tooltip.translate'));
         tooltips.register(rotate, localize('tooltip.rotate'));
         tooltips.register(scale, localize('tooltip.scale'));
-        tooltips.register(rescale, localize('tooltip.rescale'));
+        tooltips.register(measure, localize('tooltip.measure'));
         tooltips.register(coordSpace, localize('tooltip.local-space'));
         tooltips.register(origin, localize('tooltip.bound-center'));
     }

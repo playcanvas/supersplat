@@ -1,6 +1,7 @@
 import { Color, createGraphicsDevice } from 'playcanvas';
 
 import { registerCameraPosesEvents } from './camera-poses';
+import { registerSplatAnimEvents } from './splat-anim'; 
 import { registerDocEvents } from './doc';
 import { EditHistory } from './edit-history';
 import { registerEditorEvents } from './editor';
@@ -242,6 +243,7 @@ const main = async () => {
     registerSelectionEvents(events, scene);
     registerTimelineEvents(events);
     registerCameraPosesEvents(events);
+    registerSplatAnimEvents(events);
     registerTransformHandlerEvents(events);
     registerPlySequenceEvents(events);
     registerPublishEvents(events);

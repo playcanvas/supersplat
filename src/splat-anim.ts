@@ -97,6 +97,12 @@ const registerSplatAnimEvents = (events: Events) => {
         };
     };
 
+    // clear all splat transforms on scene clear
+    events.on('scene.clear', () => {
+        transforms.clear();
+        onTimelineChange = null;
+    });
+
     events.on('timeline.time', (time: number) => {
         onTimelineChange?.(time);
     });

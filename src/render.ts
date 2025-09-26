@@ -198,7 +198,6 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 const pos = scene.camera.entity.getPosition();
                 const forward = scene.camera.entity.forward;
                 if (last_pos.equals(pos) && last_forward.equals(forward)) {
-                    console.log('camera did not move, skipping sort');
                     return;
                 } else {
                     last_pos.copy(pos);

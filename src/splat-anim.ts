@@ -38,7 +38,6 @@ const registerSplatAnimEvents = (events: Events) => {
         // construct the spline points to be interpolated
         const splines: Map<Splat, CubicSpline> = new Map();
         orderedTransforms.forEach((fts, splat) => {
-            console.log('rebuildSpline with frame:', fts.length);
             if (fts.length < 2) {
                 onTimelineChange = null;
                 return;
@@ -156,7 +155,6 @@ const registerSplatAnimEvents = (events: Events) => {
     // timeline events
 
     events.on('timeline.add', (frame: number) => {
-        console.log('splatanime.timeline.add', frame);
         // get the selected splat
         const splat = events.invoke('selection') as Splat;
         if (!splat) {
@@ -168,7 +166,6 @@ const registerSplatAnimEvents = (events: Events) => {
 
     events.on('timeline.move', (frameFrom: number, frameTo: number) => {
         if (frameFrom === frameTo) return;
-        console.log('splatanime.timeline.move', frameFrom, frameTo);
         transforms.forEach((fts) => {
             const fromIndex = fts.findIndex(p => p.frame === frameFrom);
             if (fromIndex === -1) {

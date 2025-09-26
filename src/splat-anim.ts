@@ -197,7 +197,56 @@ const registerSplatAnimEvents = (events: Events) => {
     });
 
     // doc
-    // todo:
+    events.function('docSerialize.splatTransforms', (splats: Splat[]): any[] => {
+        const pack3 = (v: Vec3) => [v.x, v.y, v.z];
+
+        if (transforms.size === 0) {
+            return [];
+        }
+
+        return [...transforms.entries()].map(([splat, fts]) => {
+            const index = splats.indexOf(splat)
+            return {
+                name: splat.name,
+                index: index,
+                transforms: fts.map(ft => ({
+                    frame: ft.frame,
+                    position: pack3(ft.transform.position),
+                    rotation: pack3(ft.transform.rotation.getEulerAngles()),
+                    scale: pack3(ft.transform.scale)
+                }))
+            };
+        });
+    });
+
+    events.function('docDeserialize.splatTransforms', (splats: Splat[], splatTransforms: any[]) => {
+        if (splatTransforms.length === 0) {
+            return;
+        }
+
+        const fps = events.invoke('timeline.frameRate');
+
+        splatTransforms.forEach((docSplat: any) => {
+            const splat = splats[docSplat.index];
+            if (!splat) {
+                return;
+            }
+
+            transforms.set(splat, []);
+            docSplat.transforms.forEach((docTransform: any, index: number) => {
+                transforms.get(splat).push({
+                    frame: docTransform.frame ?? (index * fps),
+                    transform: new Transform(
+                        new Vec3(docTransform.position),
+                        new Quat().setFromEulerAngles(docTransform.rotation[0], docTransform.rotation[1], docTransform.rotation[2]),
+                        new Vec3(docTransform.scale)
+                    )
+                });
+            });
+        });
+        
+        rebuildSpline();
+    });
 };
 
 export { registerSplatAnimEvents };

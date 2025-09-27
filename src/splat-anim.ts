@@ -37,9 +37,9 @@ const registerSplatAnimEvents = (events: Events) => {
 
         // construct the spline points to be interpolated
         const splines: Map<Splat, CubicSpline> = new Map();
+        const quats: Map<Splat, Quat[]> = new Map();
         orderedTransforms.forEach((fts, splat) => {
             if (fts.length < 2) {
-                onTimelineChange = null;
                 return;
             }
             const times = fts.map(p => p.frame);
@@ -47,16 +47,14 @@ const registerSplatAnimEvents = (events: Events) => {
             for (let i = 0; i < fts.length; ++i) {
                 const p = fts[i];
                 points.push(p.transform.position.x, p.transform.position.y, p.transform.position.z);
-                // use euler angles for interpolation
-                const rotation = new Vec3();
-                p.transform.rotation.getEulerAngles(rotation);
-                points.push(rotation.x, rotation.y, rotation.z);
+                // points.push(p.transform.rotation.x, p.transform.rotation.y, p.transform.rotation.z, p.transform.rotation.w);
                 points.push(p.transform.scale.x, p.transform.scale.y, p.transform.scale.z);
             }
 
-            // interpolate camera positions and camera target positions
+            // interpolate splat positions, rotations and scales
             const spline = CubicSpline.fromPointsLooping(duration, times, points, events.invoke('timeline.smoothness'));
             splines.set(splat, spline);
+            quats.set(splat, fts.map(p => p.transform.rotation));
         });
 
         // handle application update tick
@@ -66,6 +64,8 @@ const registerSplatAnimEvents = (events: Events) => {
             // update all splats with transforms
             transforms.forEach((fts, splat) => {
                 const spline = splines.get(splat);
+                const quat = quats.get(splat);
+
                 if (!spline) {
                     return;
                 }
@@ -84,8 +84,20 @@ const registerSplatAnimEvents = (events: Events) => {
 
                 // set splat transform
                 pos.set(result[0], result[1], result[2]);
-                rot.setFromEulerAngles(result[3], result[4], result[5]);
-                scale.set(result[6], result[7], result[8]);
+                scale.set(result[3], result[4], result[5]);
+                
+                // interpolate rotation. TODO: move this into the spline?
+                if (time <= fts[0].frame || time >= fts[fts.length - 1].frame) {
+                    rot.slerp(quat[0], quat[quat.length - 1], time <= fts[0].frame ? (time - fts[0].frame) / (duration + fts[0].frame - fts[fts.length - 1].frame) : 1 - (time - fts[fts.length - 1].frame) / (duration - fts[fts.length - 1].frame + fts[0].frame));
+                } else {
+                    // use spherical linear interpolation (slerp) for rotation
+                    let seg = 0;
+                    while (fts[seg + 1] && time >= fts[seg + 1].frame) {
+                        seg++;
+                    }
+                    const t = (time - fts[seg].frame) / (fts[seg + 1].frame - fts[seg].frame);
+                    rot.slerp(quat[seg], quat[seg + 1], t);
+                }
 
                 splat.move(pos, rot, scale);
                 if (splat === selected) {
@@ -244,7 +256,7 @@ const registerSplatAnimEvents = (events: Events) => {
                 });
             });
         });
-        
+
         rebuildSpline();
     });
 };

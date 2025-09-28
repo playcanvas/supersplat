@@ -1,4 +1,4 @@
-import { Container, Element, Label, Menu } from '@playcanvas/pcui';
+import { Container, Element, Label } from '@playcanvas/pcui';
 
 type Direction = 'left' | 'right' | 'top' | 'bottom';
 

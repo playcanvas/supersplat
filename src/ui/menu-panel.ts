@@ -47,9 +47,7 @@ const isString = (value: any) => {
 };
 
 // Detect if we're on a touch device
-const isTouchDevice = () => {
-    return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-};
+const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
 class MenuPanel extends Container {
     parentPanel: MenuPanel | null = null;
@@ -144,10 +142,9 @@ class MenuPanel extends Container {
 
             if (row) {
                 let timer = -1;
-                const isTouch = isTouchDevice();
 
                 // For desktop: use hover behavior
-                if (!isTouch) {
+                if (!isTouchDevice) {
                     row.dom.addEventListener('pointerenter', () => {
                         timer = window.setTimeout(() => {
                             if (deactivate) {
@@ -177,7 +174,7 @@ class MenuPanel extends Container {
                     if (!row.disabled) {
                         // Handle submenu items differently on touch devices
                         if (menuItem.subMenu) {
-                            if (isTouch) {
+                            if (isTouchDevice) {
                                 // On touch devices: tap to open/close submenu
                                 if (menuItem.subMenu.hidden) {
                                     // Close other submenus in this panel first

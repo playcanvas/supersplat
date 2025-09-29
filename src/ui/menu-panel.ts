@@ -1,4 +1,4 @@
-import { Container, Element, Label, Menu } from '@playcanvas/pcui';
+import { Container, Element, Label } from '@playcanvas/pcui';
 
 type Direction = 'left' | 'right' | 'top' | 'bottom';
 
@@ -45,6 +45,9 @@ const arrange = (element: HTMLElement, target: HTMLElement, direction: Direction
 const isString = (value: any) => {
     return !value || typeof value === 'string' || value instanceof String;
 };
+
+// Detect if we're on a touch device
+const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
 class MenuPanel extends Container {
     parentPanel: MenuPanel | null = null;
@@ -140,23 +143,26 @@ class MenuPanel extends Container {
             if (row) {
                 let timer = -1;
 
-                row.dom.addEventListener('pointerenter', () => {
-                    timer = window.setTimeout(() => {
-                        if (deactivate) {
-                            deactivate();
-                        }
-                        if (activate) {
-                            activate();
-                        }
-                    }, 250);
-                });
+                // For desktop: use hover behavior
+                if (!isTouchDevice) {
+                    row.dom.addEventListener('pointerenter', () => {
+                        timer = window.setTimeout(() => {
+                            if (deactivate) {
+                                deactivate();
+                            }
+                            if (activate) {
+                                activate();
+                            }
+                        }, 250);
+                    });
 
-                row.dom.addEventListener('pointerleave', () => {
-                    if (timer !== -1) {
-                        clearTimeout(timer);
-                        timer = -1;
-                    }
-                });
+                    row.dom.addEventListener('pointerleave', () => {
+                        if (timer !== -1) {
+                            clearTimeout(timer);
+                            timer = -1;
+                        }
+                    });
+                }
 
                 row.dom.addEventListener('pointerdown', (event: PointerEvent) => {
                     event.stopPropagation();
@@ -165,9 +171,30 @@ class MenuPanel extends Container {
                 row.dom.addEventListener('pointerup', (event: PointerEvent) => {
                     event.stopPropagation();
 
-                    if (!row.disabled && menuItem.onSelect) {
-                        this.rootPanel.hidden = true;
-                        menuItem.onSelect();
+                    if (!row.disabled) {
+                        // Handle submenu items differently on touch devices
+                        if (menuItem.subMenu) {
+                            if (isTouchDevice) {
+                                // On touch devices: tap to open/close submenu
+                                if (menuItem.subMenu.hidden) {
+                                    // Close other submenus in this panel first
+                                    if (deactivate) {
+                                        deactivate();
+                                    }
+                                    if (activate) {
+                                        activate();
+                                    }
+                                } else {
+                                    // Close the submenu if it's already open
+                                    menuItem.subMenu.hidden = true;
+                                }
+                            }
+                            // On desktop, submenus are handled by hover, so don't close the root panel
+                        } else if (menuItem.onSelect) {
+                            // Regular menu item: execute action and close menu
+                            this.rootPanel.hidden = true;
+                            menuItem.onSelect();
+                        }
                     }
                 });
 

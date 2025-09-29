@@ -76,6 +76,7 @@ class Splat extends Element {
     _transparency = 1;
 
     measurePoints: Vec3[] = [];
+    measureSelection = -1;
 
     rebuildMaterial: (bands: number) => void;
 

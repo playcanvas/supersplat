@@ -42,15 +42,19 @@ class SphereShape extends Element {
             fragmentGLSL: fragmentShader
         });
         material.cull = CULLFACE_FRONT;
-        material.blendState = new BlendState(
-            true,
-            BLENDEQUATION_ADD, BLENDMODE_SRC_ALPHA, BLENDMODE_ONE_MINUS_SRC_ALPHA,
-            BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE_MINUS_SRC_ALPHA
-        );
+        // material.blendState = new BlendState(
+        //     true,
+        //     BLENDEQUATION_ADD, BLENDMODE_SRC_ALPHA, BLENDMODE_ONE_MINUS_SRC_ALPHA,
+        //     BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE_MINUS_SRC_ALPHA
+        // );
+        material.blendState = BlendState.NOBLEND;
         material.update();
 
         this.pivot.render.meshInstances[0].material = material;
-        this.pivot.render.layers = [this.scene.debugLayer.id, this.scene.overlayLayer.id];
+        this.pivot.render.layers = [
+            this.scene.overlayLayer.id,
+            this.scene.debugLayer.id
+        ];
 
         this.material = material;
 

@@ -88,7 +88,11 @@ const fragmentShader = /* glsl */ `
         bool back = strips(backPos - sphere.xyz);
 
         if (front) {
-            gl_FragColor = vec4(1.0, 1.0, 1.0, 0.6);
+        #if UNDERLAY_PASS
+            gl_FragColor = vec4(0.6, 0.3, 0.0, 1.0);
+        #else
+            gl_FragColor = vec4(0.4, 0.7, 1.0, 1.0);
+        #endif
             gl_FragDepth = writeDepth(0.6) ? calcDepth(frontPos, matrix_viewProjection) : 1.0;
         } else if (back) {
             gl_FragColor = vec4(0.0, 0.0, 0.0, 0.6);

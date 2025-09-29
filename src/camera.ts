@@ -514,6 +514,23 @@ class Camera extends Element {
         return Math.sin(fov * 0.5);
     }
 
+    getRay(screenX: number, screenY: number, ray: Ray) {
+        const { entity, ortho, scene } = this;
+        const cameraPos = this.entity.getPosition();
+
+        // create the pick ray in world space
+        if (ortho) {
+            entity.camera.screenToWorld(screenX, screenY, -1.0, vec);
+            entity.camera.screenToWorld(screenX, screenY, 1.0, vecb);
+            vecb.sub(vec).normalize();
+            ray.set(vec, vecb);
+        } else {
+            entity.camera.screenToWorld(screenX, screenY, 1.0, vec);
+            vec.sub(cameraPos).normalize();
+            ray.set(cameraPos, vec);
+        }
+    }
+
     // intersect the scene at the given screen coordinate and focus the camera on this location
     intersect(screenX: number, screenY: number) {
         const { scene } = this;
@@ -522,6 +539,8 @@ class Camera extends Element {
         const target = scene.canvas;
         const sx = screenX / target.clientWidth * scene.targetSize.width;
         const sy = screenY / target.clientHeight * scene.targetSize.height;
+
+        this.getRay(screenX, screenY, ray);
 
         const splats = scene.getElementsByType(ElementType.splat);
 
@@ -540,18 +559,6 @@ class Camera extends Element {
 
                 // create a plane at the world position facing perpendicular to the camera
                 plane.setFromPointNormal(vec, this.entity.forward);
-
-                // create the pick ray in world space
-                if (this.ortho) {
-                    this.entity.camera.screenToWorld(screenX, screenY, -1.0, vec);
-                    this.entity.camera.screenToWorld(screenX, screenY, 1.0, vecb);
-                    vecb.sub(vec).normalize();
-                    ray.set(vec, vecb);
-                } else {
-                    this.entity.camera.screenToWorld(screenX, screenY, 1.0, vec);
-                    vec.sub(cameraPos).normalize();
-                    ray.set(cameraPos, vec);
-                }
 
                 // find intersection
                 if (plane.intersectsRay(ray, vec)) {

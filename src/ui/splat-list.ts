@@ -264,6 +264,8 @@ class SplatList extends Container {
             });
 
             if (result?.action === 'yes') {
+                // remove the splat from timeline animation list
+                events.fire('splat.removeTransform', splat);
                 splat.destroy();
             }
         });

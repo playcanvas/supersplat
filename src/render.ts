@@ -184,8 +184,8 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
 
             // remember last camera position so we can skip sorting if the camera didn't move
-            let last_pos = new Vec3(0,0,0);
-            let last_forward = new Vec3(1,0,0);
+            let last_pos = new Vec3(0, 0, 0);
+            let last_forward = new Vec3(1, 0, 0);
 
             // prepare the frame for rendering
             const prepareFrame = async (frameTime: number) => {
@@ -199,10 +199,11 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 const forward = scene.camera.entity.forward;
                 if (last_pos.equals(pos) && last_forward.equals(forward)) {
                     return;
-                } else {
-                    last_pos.copy(pos);
-                    last_forward.copy(forward);
                 }
+
+                // update remembered position
+                last_pos.copy(pos);
+                last_forward.copy(forward);
 
                 // wait for sorting to complete
                 await Promise.all(splats.map((splat) => {
@@ -265,7 +266,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             for (let frameTime = 0; frameTime <= duration; frameTime += 1.0 / frameRate) {
                 // special case the first frame
                 await prepareFrame(startFrame + frameTime * animFrameRate);
-                
+
                 // render a frame
                 scene.lockedRender = true;
 

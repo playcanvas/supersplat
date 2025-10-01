@@ -1,3 +1,4 @@
+
 import { Container, Element, Label } from '@playcanvas/pcui';
 
 import { Events } from '../events';
@@ -121,6 +122,21 @@ class Menu extends Container {
             isEnabled: () => !events.invoke('scene.empty'),
             onSelect: () => events.invoke('scene.export', 'splat')
         }, {
+            text: localize('file.export.json-camera'),
+            icon: createSvg(sceneExport),
+            isEnabled: () => {
+                try {
+                    if (!events.functions.has('camera.poses')) {
+                        return false;
+                    }
+                    const poses = events.invoke('camera.poses') || [];
+                    return poses.length > 0;
+                } catch (error) {
+                    return false;
+                }
+            },
+            onSelect: () => events.fire('camera.export')
+        }, {
             // separator
         }, {
             text: localize('file.export.viewer'),
@@ -159,6 +175,12 @@ class Menu extends Container {
             icon: createSvg(sceneImport),
             onSelect: async () => {
                 await events.invoke('scene.import');
+            }
+        }, {
+            text: localize('file.import.json-camera'),
+            icon: createSvg(sceneImport),
+            onSelect: () => {
+                events.invoke('scene.importJsonCamera').catch((err: any) => console.error('JSON Camera import error:', err));
             }
         }, {
             text: localize('file.export'),

@@ -22,6 +22,7 @@ const shortcutList = [
     { header: 'show' },
     { key: 'H', action: 'hide-selected-splats' },
     { key: 'U', action: 'unhide-all-splats' },
+    { key: 'O', action: 'toggle-ui-overlay' },
     { key: 'D', action: 'toggle-data-panel' },
     { header: 'other' },
     { key: 'Tab', action: 'select-next-splat' },

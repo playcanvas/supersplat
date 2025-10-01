@@ -5,6 +5,11 @@ import { localize } from './localization';
 import { Tooltips } from './tooltips';
 
 class Ticks extends Container {
+    private zoomLevel: number = 1.0;
+    private zoomCenter: number = 0.5; // 0-1, center of zoom
+    private minZoom: number = 0.1;
+    private maxZoom: number = 10.0;
+    
     constructor(events: Events, tooltips: Tooltips, args = {}) {
         args = {
             ...args,
@@ -33,36 +38,55 @@ class Ticks extends Container {
             const currentFrame = events.invoke('timeline.frame');
 
             const padding = 20;
-            const width = this.dom.getBoundingClientRect().width - padding * 2;
-            const labelStep = Math.max(1, Math.floor(numFrames / Math.max(1, Math.floor(width / 50))));
-            const numLabels = Math.max(1, Math.ceil(numFrames / labelStep));
+            const totalWidth = this.dom.getBoundingClientRect().width - padding * 2;
+            
+            // Calculate zoom parameters
+            const zoomedFrames = Math.max(1, numFrames / this.zoomLevel);
+            const startFrame = Math.max(0, Math.min(numFrames - zoomedFrames, 
+                Math.floor((numFrames - zoomedFrames) * this.zoomCenter)));
+            const endFrame = Math.min(numFrames - 1, startFrame + zoomedFrames - 1);
+            const visibleFrames = endFrame - startFrame + 1;
+            
+            const labelStep = Math.max(1, Math.floor(visibleFrames / Math.max(1, Math.floor(totalWidth / 50))));
+            const numLabels = Math.max(1, Math.ceil(visibleFrames / labelStep));
 
             const offsetFromFrame = (frame: number) => {
-                return padding + Math.floor(frame / (numFrames - 1) * width);
+                if (frame < startFrame || frame > endFrame) return -1; // outside visible range
+                return padding + Math.floor((frame - startFrame) / visibleFrames * totalWidth);
             };
 
             frameFromOffset = (offset: number) => {
-                return Math.max(0, Math.min(numFrames - 1, Math.floor((offset - padding) / width * (numFrames - 1))));
+                const normalizedOffset = Math.max(0, Math.min(1, (offset - padding) / totalWidth));
+                return Math.max(startFrame, Math.min(endFrame, 
+                    Math.floor(startFrame + normalizedOffset * visibleFrames)));
             };
 
             // timeline labels
 
             for (let i = 0; i < numLabels; i++) {
-                const thisFrame = Math.floor(i * labelStep);
-                const label = document.createElement('div');
-                label.classList.add('time-label');
-                label.style.left = `${offsetFromFrame(thisFrame)}px`;
-                label.textContent = thisFrame.toString();
-                workArea.dom.appendChild(label);
+                const thisFrame = Math.floor(startFrame + i * labelStep);
+                if (thisFrame <= endFrame) {
+                    const offset = offsetFromFrame(thisFrame);
+                    if (offset >= 0) {
+                        const label = document.createElement('div');
+                        label.classList.add('time-label');
+                        label.style.left = `${offset}px`;
+                        label.textContent = thisFrame.toString();
+                        workArea.dom.appendChild(label);
+                    }
+                }
             }
 
             // keys
 
             const keys: HTMLElement[] = [];
             const createKey = (value: number) => {
+                const offset = offsetFromFrame(value);
+                if (offset < 0) return; // key is outside visible range
+                
                 const label = document.createElement('div');
                 label.classList.add('time-label', 'key');
-                label.style.left = `${offsetFromFrame(value)}px`;
+                label.style.left = `${offset}px`;
                 let dragging = false;
                 let toFrame = -1;
 
@@ -170,7 +194,57 @@ class Ticks extends Container {
         events.on('timeline.keyRemoved', (index: number) => {
             removeKey(index);
         });
+        
+        // Add zoom control methods
+        this.zoomIn = () => {
+            this.zoomLevel = Math.min(this.maxZoom, this.zoomLevel * 1.5);
+            rebuild();
+        };
+        
+        this.zoomOut = () => {
+            this.zoomLevel = Math.max(this.minZoom, this.zoomLevel / 1.5);
+            rebuild();
+        };
+        
+        this.zoomFit = () => {
+            this.zoomLevel = 1.0;
+            this.zoomCenter = 0.5;
+            rebuild();
+        };
+        
+        this.setZoomCenter = (centerRatio: number) => {
+            this.zoomCenter = Math.max(0, Math.min(1, centerRatio));
+            rebuild();
+        };
+        
+        // Add mouse wheel zoom support
+        workArea.dom.addEventListener('wheel', (event: WheelEvent) => {
+            if (event.ctrlKey || event.metaKey) {
+                event.preventDefault();
+                
+                // Calculate zoom center based on mouse position
+                const rect = workArea.dom.getBoundingClientRect();
+                const mouseX = event.clientX - rect.left;
+                const totalWidth = rect.width - 40; // account for padding
+                this.zoomCenter = Math.max(0, Math.min(1, (mouseX - 20) / totalWidth));
+                
+                // Zoom in/out based on wheel direction
+                if (event.deltaY < 0) {
+                    this.zoomLevel = Math.min(this.maxZoom, this.zoomLevel * 1.2);
+                } else {
+                    this.zoomLevel = Math.max(this.minZoom, this.zoomLevel / 1.2);
+                }
+                
+                rebuild();
+            }
+        }, { passive: false });
     }
+    
+    // Expose zoom methods
+    zoomIn: () => void;
+    zoomOut: () => void;
+    zoomFit: () => void;
+    setZoomCenter: (centerRatio: number) => void;
 }
 
 class TimelinePanel extends Container {
@@ -183,6 +257,11 @@ class TimelinePanel extends Container {
         super(args);
 
         // play controls
+
+        const firstFrame = new Button({
+            class: 'button',
+            text: '≪'  // double left angle for first frame
+        });
 
         const prev = new Button({
             class: 'button',
@@ -199,6 +278,11 @@ class TimelinePanel extends Container {
             text: '\uE164'
         });
 
+        const lastFrame = new Button({
+            class: 'button',
+            text: '≫'  // double right angle for last frame
+        });
+
         // key controls
 
         const addKey = new Button({
@@ -212,14 +296,41 @@ class TimelinePanel extends Container {
             enabled: false
         });
 
+        // zoom controls
+        const zoomOut = new Button({
+            class: ['button', 'zoom-button'],
+            text: '−'  // minus symbol for zoom out
+        });
+
+        const zoomIn = new Button({
+            class: ['button', 'zoom-button'],
+            text: '+'  // plus symbol for zoom in
+        });
+
+        const zoomFit = new Button({
+            class: ['button', 'zoom-button'],
+            text: '⬜'  // square symbol for fit
+        });
+
         const buttonControls = new Container({
             id: 'button-controls'
         });
+        buttonControls.append(firstFrame);
         buttonControls.append(prev);
         buttonControls.append(play);
         buttonControls.append(next);
+        buttonControls.append(lastFrame);
         buttonControls.append(addKey);
         buttonControls.append(removeKey);
+        
+        // Add separator and zoom controls
+        const separator = document.createElement('div');
+        separator.className = 'button-separator';
+        buttonControls.dom.appendChild(separator);
+        
+        buttonControls.append(zoomOut);
+        buttonControls.append(zoomIn);
+        buttonControls.append(zoomFit);
 
         // settings
 
@@ -308,6 +419,19 @@ class TimelinePanel extends Container {
 
         this.append(controlsWrap);
         this.append(ticks);
+        
+        // Connect zoom buttons to ticks zoom methods
+        zoomIn.on('click', () => {
+            ticks.zoomIn();
+        });
+        
+        zoomOut.on('click', () => {
+            ticks.zoomOut();
+        });
+        
+        zoomFit.on('click', () => {
+            ticks.zoomFit();
+        });
 
         // ui handlers
 
@@ -336,6 +460,12 @@ class TimelinePanel extends Container {
             }
         };
 
+        firstFrame.on('click', () => {
+            // Go to frame 0 and center view at the beginning
+            events.fire('timeline.setFrame', 0);
+            ticks.setZoomCenter(0.0); // Show beginning of timeline
+        });
+
         prev.on('click', () => {
             skip('back');
         });
@@ -352,6 +482,13 @@ class TimelinePanel extends Container {
 
         next.on('click', () => {
             skip('forward');
+        });
+
+        lastFrame.on('click', () => {
+            // Go to last frame and center view at the end
+            const totalFrames = events.invoke('timeline.frames') || 180;
+            events.fire('timeline.setFrame', totalFrames - 1);
+            ticks.setZoomCenter(1.0); // Show end of timeline
         });
 
         addKey.on('click', () => {
@@ -388,11 +525,16 @@ class TimelinePanel extends Container {
         });
 
         // tooltips
+        tooltips.register(firstFrame, 'Go to First Frame (0)', 'top');
         tooltips.register(prev, localize('timeline.prev-key'), 'top');
         tooltips.register(play, localize('timeline.play'), 'top');
         tooltips.register(next, localize('timeline.next-key'), 'top');
+        tooltips.register(lastFrame, 'Go to Last Frame', 'top');
         tooltips.register(addKey, localize('timeline.add-key'), 'top');
         tooltips.register(removeKey, localize('timeline.remove-key'), 'top');
+        tooltips.register(zoomOut, 'Zoom Out (Ctrl+Wheel)', 'top');
+        tooltips.register(zoomIn, 'Zoom In (Ctrl+Wheel)', 'top');
+        tooltips.register(zoomFit, 'Zoom to Fit', 'top');
         tooltips.register(speed, localize('timeline.frame-rate'), 'top');
         tooltips.register(frames, localize('timeline.total-frames'), 'top');
         tooltips.register(smoothness, localize('timeline.smoothness'), 'top');

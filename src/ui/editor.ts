@@ -1,7 +1,10 @@
 import { Container, Label } from '@playcanvas/pcui';
 import { Mat4, Vec3 } from 'playcanvas';
 
+import { CameraPosesPanel } from './camera-poses-panel';
+import { CameraInfoPanel } from './camera-info-panel';
 import { DataPanel } from './data-panel';
+import { MeasurementPanel } from './measurement-panel';
 import { Events } from '../events';
 import { BottomToolbar } from './bottom-toolbar';
 import { ColorPanel } from './color-panel';
@@ -30,8 +33,11 @@ class EditorUI {
     topContainer: Container;
     canvasContainer: Container;
     toolsContainer: Container;
+    mainContainer: Container;
+    tooltipsContainer: Container;
     canvas: HTMLCanvasElement;
     popup: Popup;
+    uiHidden = false;
 
     constructor(events: Events) {
         localizeInit();
@@ -56,6 +62,7 @@ class EditorUI {
         const tooltipsContainer = new Container({
             id: 'tooltips-container'
         });
+        this.tooltipsContainer = tooltipsContainer;
 
         // top container
         const topContainer = new Container({
@@ -144,13 +151,22 @@ class EditorUI {
         const mainContainer = new Container({
             id: 'main-container'
         });
+        this.mainContainer = mainContainer;
 
         const timelinePanel = new TimelinePanel(events, tooltips);
         const dataPanel = new DataPanel(events);
+        const cameraPosesPanel = new CameraPosesPanel(events);
+        const cameraInfoPanel = new CameraInfoPanel(events);
+        const measurementPanel = new MeasurementPanel(events);
+        
+        // Add overlays to canvas container
+        canvasContainer.append(cameraInfoPanel);
+        canvasContainer.append(measurementPanel);
 
         mainContainer.append(canvasContainer);
         mainContainer.append(timelinePanel);
         mainContainer.append(dataPanel);
+        mainContainer.append(cameraPosesPanel);
 
         editorContainer.append(mainContainer);
 
@@ -194,6 +210,15 @@ class EditorUI {
 
         document.body.appendChild(appContainer.dom);
         document.body.setAttribute('tabIndex', '-1');
+
+        // Toggle full-canvas overlay visibility with 'u'
+        events.on('ui.toggleOverlay', () => {
+            this.uiHidden = !this.uiHidden;
+            this.setGuiHidden(this.uiHidden);
+        });
+        events.function('ui.hidden', () => {
+            return this.uiHidden;
+        });
 
         events.on('show.shortcuts', () => {
             shortcutsPopup.hidden = false;
@@ -305,6 +330,59 @@ class EditorUI {
                 document.body.focus();
             }
         }, true);
+    }
+
+    setGuiHidden(hidden: boolean) {
+        const hideEl = (el: HTMLElement, hide: boolean) => {
+            if (!el) return;
+            if (hide) {
+                if (!el.dataset.prevDisplay) {
+                    el.dataset.prevDisplay = el.style.display || '';
+                }
+                el.style.display = 'none';
+            } else {
+                const prev = el.dataset.prevDisplay;
+                el.style.display = prev !== undefined ? prev : '';
+                if (el.dataset.prevDisplay !== undefined) {
+                    delete el.dataset.prevDisplay;
+                }
+            }
+        };
+
+        // Hide everything in app container except the editor shell
+        const appDom = this.appContainer.dom;
+        const editorDom = document.getElementById('editor-container') as HTMLElement;
+        Array.from(appDom.children).forEach((child: Element) => {
+            const childEl = child as HTMLElement;
+            if (childEl !== editorDom) {
+                hideEl(childEl, hidden);
+            }
+        });
+
+        // Hide overlays and dialogs explicitly
+        hideEl(this.topContainer.dom, hidden);
+        const tooltipsDom = document.getElementById('tooltips-container') as HTMLElement;
+        if (tooltipsDom) hideEl(tooltipsDom, hidden);
+
+        // Within the editor, hide all panels except the canvas container
+        const mainDom = this.mainContainer?.dom as HTMLElement;
+        if (mainDom) {
+            Array.from(mainDom.children).forEach((child: Element) => {
+                const childEl = child as HTMLElement;
+                if (childEl.id !== 'canvas-container') {
+                    hideEl(childEl, hidden);
+                }
+            });
+        }
+
+        // Within the canvas container, hide all children except the canvas element itself
+        const canvasDom = this.canvasContainer.dom;
+        Array.from(canvasDom.children).forEach((child: Element) => {
+            const childEl = child as HTMLElement;
+            if (childEl !== this.canvas) {
+                hideEl(childEl, hidden);
+            }
+        });
     }
 }
 

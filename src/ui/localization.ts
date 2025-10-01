@@ -25,6 +25,7 @@ const localizeInit = () => {
                     'file.export': 'Exportieren',
                     'file.export.splat': 'Splat',
                     'file.export.viewer': 'Viewer App...',
+                    'file.import.json-camera': 'JSON Kamera...',
 
                     // Render menu
                     'render': 'Rendern',
@@ -272,7 +273,9 @@ const localizeInit = () => {
                     'file.export': 'Export',
                     'file.export.ply': 'PLY (.ply)',
                     'file.export.splat': 'Splat file (.splat)',
+                    'file.export.json-camera': 'JSON Camera (.json)',
                     'file.export.viewer': 'Viewer App...',
+                    'file.import.json-camera': 'JSON Camera...',
 
                     // Render menu
                     'render': 'Render',
@@ -402,7 +405,8 @@ const localizeInit = () => {
                     'shortcuts.show': 'SHOW',
                     'shortcuts.hide-selected-splats': 'Hide Selected Splats',
                     'shortcuts.unhide-all-splats': 'Unhide All Splats',
-                    'shortcuts.toggle-data-panel': 'Toggle Data Panel',
+'shortcuts.toggle-data-panel': 'Toggle Data Panel',
+                    'shortcuts.toggle-ui-overlay': 'Toggle GUI Overlay',
                     'shortcuts.other': 'OTHER',
                     'shortcuts.select-next-splat': 'Select Next Splat',
                     'shortcuts.undo': 'Undo',
@@ -539,6 +543,7 @@ const localizeInit = () => {
                     'file.export': 'Exporter',
                     'file.export.splat': 'Fichier splat',
                     'file.export.viewer': 'Application de visualisation...',
+                    'file.import.json-camera': 'Caméra JSON...',
 
                     // Render menu
                     'render': 'Rendu',

@@ -184,8 +184,8 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
 
             // remember last camera position so we can skip sorting if the camera didn't move
-            var last_pos = new Vec3(0,0,0);
-            var last_forward = new Vec3(1,0,0);
+            let last_pos = new Vec3(0,0,0);
+            let last_forward = new Vec3(1,0,0);
 
             // prepare the frame for rendering
             const prepareFrame = async (frameTime: number) => {
@@ -198,7 +198,6 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 const pos = scene.camera.entity.getPosition();
                 const forward = scene.camera.entity.forward;
                 if (last_pos.equals(pos) && last_forward.equals(forward)) {
-                    console.log('camera did not move, skipping sort');
                     return;
                 } else {
                     last_pos.copy(pos);

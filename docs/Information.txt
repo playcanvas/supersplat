@@ -1,0 +1,46 @@
+
+Black Background
+Camera info (i) 
+Clean Screen (o)
+Measure Tool (z) - & clean screen while you are measuring)
+	Edit Point 1
+	Edit Point 2
+	Redo
+	exit
+
+File
+	Import Json Format of poses/FOV(lens.length)/time	
+	Export> Json Camera
+	
+Camera Poses - Panel	
+	Refresh - need to confirm what this one did as it seems to be a 'dead' button (use update)
+	Clear All - clear all poses on the time line(fixed)
+	Sort by Frame - sorts by Frame Number - some of my edits made the panel get out of order & this just resorts
+	Copy to last - any selected pose will be copied to the last frame
+	Mode interpolate using Liner/circular(Jury is still out on this one - needs further testing)
+	Record Camera movements at set interval (ms) to make cameraP	
+	Stretch Poses all existing poses are stretched so you can record or make close frames of 20 frames and then 'equally' stretch to 360
+	Read cameraP from timeline into Editor panel
+	Update cameraP to timeline after editing
+	Export Camera (Poses) in Json Format of poses/FOV(lens.length)/time
+
+	Edit can change Cam xyx, target xyz and FOV
+	Edit can Copy Poses
+
+	Edit Camera Rotations - (There is a bit of Duplication here so some need to go)
+		ZUp -> Yup
+		Invert Y
+		Blender->SS
+		Reset Coords - this was supposed to reset to the 'read file' but doesn't seem to do anything at the moment
+	
+	
+TimeLine
+	added << jump to 0
+	added >> jump to end
+	added - zoom out on timeline
+	added + zoom out on timeline
+	added [] zoom to fit timeline
+	There is also a ctrl-mouse to zoom in/out on the timeline: but its quite finicky as to exactly where you have the mouse pointer.
+	
+	
++ I also have the Blender plugin and a standalone json creator for complex camera pose creation.

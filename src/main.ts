@@ -4,6 +4,8 @@ import { registerCameraPosesEvents } from './camera-poses';
 import { registerDocEvents } from './doc';
 import { EditHistory } from './edit-history';
 import { registerEditorEvents } from './editor';
+import { MeasurementTool } from './measurement-tool';
+import { MeasurementVisual } from './measurement-visual';
 import { Events } from './events';
 import { initFileHandler } from './file-handler';
 import { registerPlySequenceEvents } from './ply-sequence';
@@ -87,6 +89,7 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['I', 'i'], { event: 'select.invert', ctrl: true });
     shortcuts.register(['H', 'h'], { event: 'select.hide' });
     shortcuts.register(['U', 'u'], { event: 'select.unhide' });
+    shortcuts.register(['O', 'o'], { event: 'ui.toggleOverlay' });
     shortcuts.register(['['], { event: 'tool.brushSelection.smaller' });
     shortcuts.register([']'], { event: 'tool.brushSelection.bigger' });
     shortcuts.register(['Z', 'z'], { event: 'edit.undo', ctrl: true, capture: true });
@@ -94,6 +97,8 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['M', 'm'], { event: 'camera.toggleMode' });
     shortcuts.register(['D', 'd'], { event: 'dataPanel.toggle' });
     shortcuts.register([' '], { event: 'camera.toggleOverlay' });
+    shortcuts.register(['I', 'i'], { event: 'camera.info.toggle' });
+    shortcuts.register(['Z', 'z'], { event: 'measurement.toggle' });
 
     return shortcuts;
 };
@@ -242,6 +247,10 @@ const main = async () => {
     registerSelectionEvents(events, scene);
     registerTimelineEvents(events);
     registerCameraPosesEvents(events);
+    
+    // Initialize measurement systems
+    const measurementTool = new MeasurementTool(events, scene);
+    const measurementVisual = new MeasurementVisual(events, scene, editorUI.canvas);
     registerTransformHandlerEvents(events);
     registerPlySequenceEvents(events);
     registerPublishEvents(events);

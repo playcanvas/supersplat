@@ -49,6 +49,14 @@ self.addEventListener('activate', () => {
 self.addEventListener('fetch', (event) => {
     event.respondWith(
         caches.match(event.request)
-        .then(response => response ?? fetch(event.request))
+        .then(response => {
+            if (response) {
+                return response;
+            }
+            return fetch(event.request).catch(() => {
+                // Return a basic response if fetch fails
+                return new Response('Network error', { status: 408 });
+            });
+        })
     );
 });

@@ -172,7 +172,9 @@ class PointerController {
             ArrowUp: 0,
             ArrowDown: 0,
             ArrowLeft: 0,
-            ArrowRight: 0
+            ArrowRight: 0,
+            End: 0,        // Move down (vertical)
+            PageDown: 0    // Move up (vertical)
         };
 
         const keydown = (event: KeyboardEvent) => {
@@ -190,13 +192,15 @@ class PointerController {
         this.update = (deltaTime: number) => {
             const x = keys.ArrowRight - keys.ArrowLeft;
             const z = keys.ArrowDown - keys.ArrowUp;
+            const y = keys.PageDown - keys.End; // PageDown = up, End = down
 
-            if (x || z) {
+            if (x || z || y) {
                 const factor = deltaTime * camera.flySpeed;
                 const worldTransform = camera.entity.getWorldTransform();
                 const xAxis = worldTransform.getX().mulScalar(x * factor);
                 const zAxis = worldTransform.getZ().mulScalar(z * factor);
-                const p = camera.focalPoint.add(xAxis).add(zAxis);
+                const yAxis = worldTransform.getY().mulScalar(y * factor); // Vertical movement
+                const p = camera.focalPoint.add(xAxis).add(zAxis).add(yAxis);
                 camera.setFocalPoint(p);
             }
         };

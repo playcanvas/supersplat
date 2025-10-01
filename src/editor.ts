@@ -613,8 +613,131 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         };
     });
 
-    events.on('camera.setPose', (pose: { position: Vec3, target: Vec3 }, speed = 1) => {
+    events.on('camera.setPose', (pose: { position: Vec3, target: Vec3, fov?: number }, speed = 1) => {
         scene.camera.setPose(pose.position, pose.target, speed);
+        if (pose.fov !== undefined) {
+            setCameraFov(pose.fov);
+        }
+        // Fire camera update event for info panel
+        events.fire('camera.updated');
+    });
+
+    // camera export
+    events.on('camera.export', async () => {
+        try {
+            // Get current poses and timeline settings
+            if (!events.functions.has('camera.poses')) {
+                events.invoke('showPopup', {
+                    type: 'error',
+                    header: 'Camera System Not Ready',
+                    message: 'Camera poses system is not initialized yet. Please try again.'
+                });
+                return;
+            }
+            const poses = events.invoke('camera.poses') || [];
+            const totalFrames = events.invoke('timeline.frames') || 180;
+            const frameRate = events.invoke('timeline.frameRate') || 30;
+            
+            if (poses.length === 0) {
+                console.warn('No camera poses to export');
+                events.invoke('showPopup', {
+                    type: 'info',
+                    header: 'No Camera Poses',
+                    message: 'Please add some camera poses to export.'
+                });
+                return;
+            }
+            
+            // Create export data structure in Blender-compatible format
+            const sortedPoses = poses.map((pose: any) => ({
+                frame: pose.frame,
+                name: pose.name || `keyframe_${pose.frame}`,
+                position: [
+                    parseFloat(pose.position.x.toFixed(6)),
+                    parseFloat(pose.position.y.toFixed(6)),
+                    parseFloat(pose.position.z.toFixed(6))
+                ],
+                target: [
+                    parseFloat(pose.target.x.toFixed(6)),
+                    parseFloat(pose.target.y.toFixed(6)),
+                    parseFloat(pose.target.z.toFixed(6))
+                ],
+                // Export both FOV and focal length for compatibility
+                fov: parseFloat((pose.fov || 65).toFixed(6)), // Direct FOV export
+                focal_length: parseFloat((50 / Math.tan((pose.fov || 65) * Math.PI / 360)).toFixed(2)), // Converted focal length
+                time: pose.frame / frameRate
+            })).sort((a: any, b: any) => a.frame - b.frame);
+            
+            const exportData = {
+                camera_name: 'SuperSplat_Camera',
+                frame_rate: frameRate,
+                frame_start: sortedPoses.length > 0 ? sortedPoses[0].frame : 0,
+                frame_end: sortedPoses.length > 0 ? sortedPoses[sortedPoses.length - 1].frame : totalFrames - 1,
+                coordinate_system: 'SUPERSPLAT',
+                total_frames: totalFrames,
+                poses: sortedPoses,
+                // Additional metadata
+                export_timestamp: new Date().toISOString(),
+                coordinate_precision: 6,
+                tool: 'SuperSplat',
+                keyframeCount: poses.length
+            };
+            
+            const jsonString = JSON.stringify(exportData, null, 2);
+            const hasFilePicker = !!window.showSaveFilePicker;
+            
+            if (hasFilePicker) {
+                // Use file picker for save location
+                try {
+                    const fileHandle = await window.showSaveFilePicker({
+                        id: 'SuperSplatCameraExport',
+                        types: [{
+                            description: 'JSON Camera Animation',
+                            accept: {
+                                'application/json': ['.json']
+                            }
+                        }],
+                        suggestedName: `camera_animation_${Date.now()}.json`
+                    });
+                    
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(jsonString);
+                    await writable.close();
+                    
+                    console.log(`Exported ${poses.length} camera keyframes to ${fileHandle.name}`);
+                    
+                } catch (error: any) {
+                    if (error.name !== 'AbortError') {
+                        console.error('File picker export failed:', error);
+                        throw error;
+                    }
+                }
+            } else {
+                // Fallback to direct download
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                const url = window.URL.createObjectURL(blob);
+                
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `camera_animation_${Date.now()}.json`;
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                window.URL.revokeObjectURL(url);
+                
+                console.log(`Exported ${poses.length} camera keyframes to JSON`);
+            }
+            
+        } catch (error: any) {
+            console.error('Failed to export camera animation:', error);
+            events.invoke('showPopup', {
+                type: 'error',
+                header: 'Export Failed',
+                message: `Failed to export camera animation: ${error.message}`
+            });
+        }
     });
 
     // hack: fire events to initialize UI

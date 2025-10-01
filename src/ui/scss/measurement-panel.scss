@@ -1,0 +1,340 @@
+@use 'colors.scss' as *;
+
+.measurement-panel {
+    position: absolute;
+    bottom: 80px;
+    right: 20px;
+    z-index: 1000;
+    min-width: 320px;
+    
+    // Panel styling
+    background: rgba(0, 0, 0, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+    
+    // Panel header
+    .pcui-panel-header {
+        background: rgba(100, 255, 100, 0.2);
+        color: #fff;
+        font-weight: bold;
+        font-size: 12px;
+        padding: 8px 12px;
+        border-radius: 6px 6px 0 0;
+        text-align: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    // Panel content
+    .pcui-panel-content {
+        padding: 12px;
+    }
+    
+    // Instructions
+    .measurement-instructions {
+        color: #aaa;
+        font-size: 11px;
+        text-align: center;
+        margin-bottom: 12px;
+        font-style: italic;
+    }
+    
+    // Measurement rows
+    .measurement-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        
+        &:last-child {
+            margin-bottom: 0;
+        }
+        
+        .measurement-label {
+            color: #ccc;
+            font-size: 11px;
+            font-weight: bold;
+            min-width: 70px;
+        }
+        
+        .measurement-value {
+            color: #fff;
+            font-size: 11px;
+            font-family: 'Courier New', monospace;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 4px 8px;
+            border-radius: 3px;
+            text-align: right;
+            min-width: 180px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            
+            &.measurement-empty {
+                color: #666;
+                font-style: italic;
+            }
+            
+            // Point 1 coordinates - RED background
+            &.measurement-point1 {
+                background: rgba(255, 100, 100, 0.2);
+                border-color: rgba(255, 100, 100, 0.4);
+                color: #fff;
+            }
+            
+            // Point 2 coordinates - GREEN background
+            &.measurement-point2 {
+                background: rgba(100, 255, 100, 0.2);
+                border-color: rgba(100, 255, 100, 0.4);
+                color: #fff;
+            }
+        }
+    }
+    
+    // Distance row special styling
+    .measurement-distance-row {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        
+        .measurement-distance-label {
+            color: #87CEEB; // Sky blue
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .measurement-distance-value {
+            background: rgba(100, 150, 255, 0.1); // BLUE background
+            border-color: rgba(100, 150, 255, 0.3);
+            font-weight: bold;
+            font-size: 12px;
+            
+            &.measurement-complete {
+                color: #87CEEB; // Sky blue
+                background: rgba(100, 150, 255, 0.2);
+                border-color: rgba(100, 150, 255, 0.5);
+            }
+        }
+    }
+    
+    // Buttons container
+    .measurement-buttons {
+        display: flex;
+        gap: 6px;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        
+        .measurement-button {
+            flex: 1;
+            font-size: 11px;
+            padding: 6px 8px;
+            border-radius: 4px;
+            
+            &.measurement-clear-button {
+                background: rgba(255, 150, 100, 0.2);
+                border: 1px solid rgba(255, 150, 100, 0.3);
+                
+                &:hover {
+                    background: rgba(255, 150, 100, 0.3);
+                    border-color: rgba(255, 150, 100, 0.5);
+                }
+            }
+            
+            &.measurement-redo1-button {
+                background: rgba(255, 100, 100, 0.2); // RED - matches first point
+                border: 1px solid rgba(255, 100, 100, 0.3);
+                
+                &:hover {
+                    background: rgba(255, 100, 100, 0.3);
+                    border-color: rgba(255, 100, 100, 0.5);
+                }
+            }
+            
+            &.measurement-redo2-button {
+                background: rgba(100, 255, 100, 0.2); // GREEN - matches second point
+                border: 1px solid rgba(100, 255, 100, 0.3);
+                
+                &:hover {
+                    background: rgba(100, 255, 100, 0.3);
+                    border-color: rgba(100, 255, 100, 0.5);
+                }
+            }
+            
+            &.measurement-exit-button {
+                background: rgba(255, 255, 100, 0.2); // YELLOW for visibility
+                border: 1px solid rgba(255, 255, 100, 0.3);
+                
+                &:hover {
+                    background: rgba(255, 255, 100, 0.3);
+                    border-color: rgba(255, 255, 100, 0.5);
+                }
+            }
+        }
+    }
+    
+    // Hover effects
+    &:hover {
+        background: rgba(0, 0, 0, 0.95);
+        border-color: rgba(255, 255, 255, 0.4);
+    }
+    
+    // Hide by default
+    display: none;
+}
+
+// Light theme adjustments
+.pcui-light .measurement-panel {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(0, 0, 0, 0.3);
+    
+    .pcui-panel-header {
+        background: rgba(100, 255, 100, 0.3);
+        color: #333;
+    }
+    
+    .measurement-instructions {
+        color: #666;
+    }
+    
+    .measurement-row {
+        .measurement-label {
+            color: #555;
+        }
+        
+        .measurement-value {
+            color: #333;
+            background: rgba(0, 0, 0, 0.05);
+            border-color: rgba(0, 0, 0, 0.2);
+            
+            &.measurement-empty {
+                color: #999;
+            }
+            
+            // Point 1 coordinates - RED background (light theme)
+            &.measurement-point1 {
+                background: rgba(255, 100, 100, 0.3);
+                border-color: rgba(255, 100, 100, 0.5);
+                color: #333;
+            }
+            
+            // Point 2 coordinates - GREEN background (light theme)
+            &.measurement-point2 {
+                background: rgba(100, 255, 100, 0.3);
+                border-color: rgba(100, 255, 100, 0.5);
+                color: #333;
+            }
+        }
+    }
+    
+    .measurement-distance-row {
+        border-top-color: rgba(0, 0, 0, 0.1);
+        
+        .measurement-distance-label {
+            color: #4682B4; // Steel blue
+        }
+        
+        .measurement-distance-value {
+            background: rgba(100, 150, 255, 0.2); // BLUE background
+            border-color: rgba(100, 150, 255, 0.4);
+            
+            &.measurement-complete {
+                color: #4682B4; // Steel blue
+                background: rgba(100, 150, 255, 0.3);
+                border-color: rgba(100, 150, 255, 0.6);
+            }
+        }
+    }
+    
+    .measurement-buttons {
+        border-top-color: rgba(0, 0, 0, 0.1);
+        
+        .measurement-button {
+            &.measurement-clear-button {
+                background: rgba(255, 150, 100, 0.3);
+                border-color: rgba(255, 150, 100, 0.4);
+                
+                &:hover {
+                    background: rgba(255, 150, 100, 0.4);
+                    border-color: rgba(255, 150, 100, 0.6);
+                }
+            }
+            
+            &.measurement-redo1-button {
+                background: rgba(255, 100, 100, 0.3); // RED - matches first point
+                border-color: rgba(255, 100, 100, 0.4);
+                
+                &:hover {
+                    background: rgba(255, 100, 100, 0.4);
+                    border-color: rgba(255, 100, 100, 0.6);
+                }
+            }
+            
+            &.measurement-redo2-button {
+                background: rgba(100, 255, 100, 0.3); // GREEN - matches second point
+                border-color: rgba(100, 255, 100, 0.4);
+                
+                &:hover {
+                    background: rgba(100, 255, 100, 0.4);
+                    border-color: rgba(100, 255, 100, 0.6);
+                }
+            }
+            
+            &.measurement-exit-button {
+                background: rgba(255, 255, 100, 0.3); // YELLOW for visibility
+                border-color: rgba(255, 255, 100, 0.4);
+                
+                &:hover {
+                    background: rgba(255, 255, 100, 0.4);
+                    border-color: rgba(255, 255, 100, 0.6);
+                }
+            }
+        }
+    }
+    
+    &:hover {
+        background: rgba(255, 255, 255, 0.98);
+        border-color: rgba(0, 0, 0, 0.4);
+    }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+    .measurement-panel {
+        bottom: 10px;
+        right: 10px;
+        min-width: 280px;
+        
+        .pcui-panel-content {
+            padding: 8px;
+        }
+        
+        .measurement-row {
+            .measurement-label {
+                min-width: 60px;
+                font-size: 10px;
+            }
+            
+            .measurement-value {
+                min-width: 150px;
+                font-size: 10px;
+                padding: 3px 6px;
+            }
+        }
+        
+        .measurement-buttons {
+            .measurement-button {
+                font-size: 10px;
+                padding: 4px 6px;
+            }
+        }
+    }
+}
+
+// Measurement overlay canvas styling
+#measurement-overlay {
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 999;
+}

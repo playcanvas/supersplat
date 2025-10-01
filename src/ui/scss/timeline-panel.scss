@@ -42,6 +42,21 @@
                     box-shadow: none;
                     border-color: #ff990088;
                 }
+                
+                &.zoom-button {
+                    background-color: rgba(100, 150, 255, 0.1);
+                    
+                    &:hover {
+                        background-color: rgba(100, 150, 255, 0.2);
+                    }
+                }
+            }
+            
+            .button-separator {
+                width: 1px;
+                height: 20px;
+                background-color: rgba(255, 255, 255, 0.2);
+                margin: 0 4px;
             }
         }
 

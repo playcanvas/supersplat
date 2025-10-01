@@ -1,0 +1,126 @@
+@use 'colors.scss' as *;
+
+.camera-info-panel {
+    position: absolute;
+    top: 20px;
+    left: 520px;
+    z-index: 1000;
+    
+    // Panel styling
+    background: rgba(0, 0, 0, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    
+    // Panel header
+    .pcui-panel-header {
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+        font-weight: bold;
+        font-size: 11px;
+        padding: 6px 12px;
+        border-radius: 6px 6px 0 0;
+        text-align: center;
+    }
+    
+    // Panel content
+    .pcui-panel-content {
+        padding: 8px 12px;
+        min-width: 280px;
+    }
+    
+    // Info rows
+    .camera-info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 6px;
+        
+        &:last-child {
+            margin-bottom: 0;
+        }
+        
+        .camera-info-label {
+            color: #aaa;
+            font-size: 11px;
+            font-weight: bold;
+            min-width: 60px;
+        }
+        
+        .camera-info-value {
+            color: #fff;
+            font-size: 11px;
+            font-family: 'Courier New', monospace;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 3px 6px;
+            border-radius: 3px;
+            text-align: right;
+            min-width: 160px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    }
+    
+    // Hover effects
+    &:hover {
+        background: rgba(0, 0, 0, 0.9);
+        border-color: rgba(255, 255, 255, 0.3);
+    }
+    
+    // Hide by default
+    display: none;
+}
+
+// Light theme adjustments
+.pcui-light .camera-info-panel {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(0, 0, 0, 0.3);
+    
+    .pcui-panel-header {
+        background: rgba(0, 0, 0, 0.1);
+        color: #333;
+    }
+    
+    .camera-info-row {
+        .camera-info-label {
+            color: #666;
+        }
+        
+        .camera-info-value {
+            color: #333;
+            background: rgba(0, 0, 0, 0.05);
+            border-color: rgba(0, 0, 0, 0.1);
+        }
+    }
+    
+    &:hover {
+        background: rgba(255, 255, 255, 0.95);
+        border-color: rgba(0, 0, 0, 0.4);
+    }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+    .camera-info-panel {
+        top: 10px;
+        left: 10px;
+        
+        .pcui-panel-content {
+            min-width: 240px;
+            padding: 6px 8px;
+        }
+        
+        .camera-info-row {
+            .camera-info-label {
+                min-width: 50px;
+                font-size: 10px;
+            }
+            
+            .camera-info-value {
+                min-width: 140px;
+                font-size: 10px;
+                padding: 2px 4px;
+            }
+        }
+    }
+}

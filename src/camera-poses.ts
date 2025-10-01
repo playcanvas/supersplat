@@ -285,9 +285,13 @@ const registerCameraPosesEvents = (events: Events) => {
     });
 
     events.on('camera.clear-poses', () => {
+        // Remove all keys from timeline first (in reverse order to avoid index issues)
+        for (let i = poses.length - 1; i >= 0; i--) {
+            events.fire('timeline.removeKey', i);
+        }
+        
         poses.length = 0; // Clear all poses
         rebuildSpline();
-        events.fire('timeline.frames', 0); // Reset timeline
     });
 
     // doc

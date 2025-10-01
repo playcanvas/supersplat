@@ -28,6 +28,7 @@ class MeasurementTool {
     private clickHandler: (event: MouseEvent) => void;
     private lastButtonClickTime: number = 0;
     private clicksDisabled: boolean = false;
+    private panelsWereHiddenBeforeMeasurement: boolean = false;
 
     constructor(events: Events, scene: Scene) {
         this.events = events;
@@ -85,15 +86,41 @@ class MeasurementTool {
         if (this.state === MeasurementState.INACTIVE) {
             console.log('🎯 Measurement tool activated');
             
+            // Store current UI visibility state
+            this.panelsWereHiddenBeforeMeasurement = this.events.invoke('ui.hidden') || false;
+            
+            // Create clean screen like O key, then show measurement panel
+            if (!this.panelsWereHiddenBeforeMeasurement) {
+                console.log('🧹 Creating clean screen (same as O key)...');
+                this.events.fire('ui.toggleOverlay');
+            }
+            
+            // Show measurement panel 1ms later on clean screen
+            setTimeout(() => {
+                console.log('📏 Showing measurement panel on clean screen...');
+                this.events.fire('measurement.show');
+                
+                // Force measurement panel to be visible even after ui.toggleOverlay
+                const measurementPanel = document.querySelector('.measurement-panel') as HTMLElement;
+                if (measurementPanel) {
+                    measurementPanel.style.display = 'block';
+                    console.log('🔥 Forced measurement panel to display: block');
+                }
+                
+                // Force measurement overlay canvas to be visible too
+                const measurementOverlay = document.querySelector('#measurement-overlay') as HTMLElement;
+                if (measurementOverlay) {
+                    measurementOverlay.style.display = 'block';
+                    console.log('🎨 Forced measurement overlay canvas to display: block');
+                }
+            }, 1);
+            
             // Deactivate other tools first
             console.log('🚫 Deactivating other selection tools...');
             this.events.fire('tool.deactivate');
             
             this.state = MeasurementState.WAITING_FIRST_POINT;
             
-            // Show the measurement panel
-            console.log('📜 Showing measurement panel...');
-            this.events.fire('measurement.show');
             
             // Add click listener to canvas
             const canvas = this.scene.canvas;
@@ -143,6 +170,33 @@ class MeasurementTool {
     public deactivate() {
         if (this.state !== MeasurementState.INACTIVE) {
             console.log('🎯 Measurement tool deactivated');
+            
+            // Restore original screen state (reverse the O key effect)
+            if (!this.panelsWereHiddenBeforeMeasurement) {
+                console.log('📱 Restoring original screen (reversing O key effect)...');
+                this.events.fire('ui.toggleOverlay');
+            }
+            
+            // Hide measurement panel AFTER restoring other panels
+            setTimeout(() => {
+                console.log('📱 Hiding measurement panel after panel restoration...');
+                this.events.fire('measurement.hide');
+                
+                // Force measurement panel to be hidden
+                const measurementPanel = document.querySelector('.measurement-panel') as HTMLElement;
+                if (measurementPanel) {
+                    measurementPanel.style.display = 'none';
+                    console.log('💫 Forced measurement panel to display: none');
+                }
+                
+                // Also hide measurement overlay canvas
+                const measurementOverlay = document.querySelector('#measurement-overlay') as HTMLElement;
+                if (measurementOverlay) {
+                    measurementOverlay.style.display = 'none';
+                    console.log('🎨 Forced measurement overlay canvas to display: none');
+                }
+            }, 2);
+            
             this.state = MeasurementState.INACTIVE;
             
             // Reset click filtering flags
@@ -165,9 +219,6 @@ class MeasurementTool {
             
             // Reset cursor
             canvas.style.cursor = 'default';
-            
-            // Hide the measurement panel
-            this.events.fire('measurement.hide');
             
             // Clear visual overlays
             this.events.fire('measurement.visual.clear');

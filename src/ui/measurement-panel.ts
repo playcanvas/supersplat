@@ -27,8 +27,7 @@ class MeasurementPanel extends Panel {
             headerText: 'MEASUREMENT TOOL',
             collapsible: false,
             collapsed: false,
-            removable: false,
-            resizable: ''
+            removable: false
         });
 
         this.events = events;

@@ -17,8 +17,7 @@ class CameraInfoPanel extends Panel {
             headerText: 'CAMERA INFO',
             collapsible: false,
             collapsed: false,
-            removable: false,
-            resizable: ''
+            removable: false
         });
 
         this.events = events;

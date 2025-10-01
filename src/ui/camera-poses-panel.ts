@@ -22,7 +22,7 @@ class CameraPosesPanel extends Panel {
             ...args,
             headerText: 'CAMERA POSES',
             collapsible: true,
-            collapsed: false,
+            collapsed: true,
             class: 'camera-poses-panel'
         };
 

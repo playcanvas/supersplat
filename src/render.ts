@@ -184,8 +184,8 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
 
             // remember last camera position so we can skip sorting if the camera didn't move
-            let last_pos = new Vec3(0, 0, 0);
-            let last_forward = new Vec3(1, 0, 0);
+            const last_pos = new Vec3(0, 0, 0);
+            const last_forward = new Vec3(1, 0, 0);
 
             // prepare the frame for rendering
             const prepareFrame = async (frameTime: number) => {

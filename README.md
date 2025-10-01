@@ -23,8 +23,8 @@ To initialize a local development environment for SuperSplat, ensure you have [N
 1. Clone the repository:
 
    ```sh
-   git clone https://github.com/playcanvas/supersplat.git
-   cd supersplat
+   git clone https://github.com/bgofish/MySuperSplat.git
+   cd MySupersplat
    ```
 
 2. Install dependencies:

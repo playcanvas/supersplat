@@ -236,22 +236,22 @@ class MeasurementPanel extends Panel {
         if (data.point1) {
             this.point1Label.text = `${data.point1.x.toFixed(3)}, ${data.point1.y.toFixed(3)}, ${data.point1.z.toFixed(3)}`;
             this.point1Label.class.remove('measurement-empty');
-            this.point1Label.class.add('measurement-point1'); // RED background
+            this.point1Label.class.add('measurement-point2'); // GREEN background (swapped)
         } else {
             this.point1Label.text = '--- , --- , ---';
             this.point1Label.class.add('measurement-empty');
-            this.point1Label.class.remove('measurement-point1');
+            this.point1Label.class.remove('measurement-point2');
         }
 
         // Update Point 2
         if (data.point2) {
             this.point2Label.text = `${data.point2.x.toFixed(3)}, ${data.point2.y.toFixed(3)}, ${data.point2.z.toFixed(3)}`;
             this.point2Label.class.remove('measurement-empty');
-            this.point2Label.class.add('measurement-point2'); // GREEN background
+            this.point2Label.class.add('measurement-point1'); // RED background (swapped)
         } else {
             this.point2Label.text = '--- , --- , ---';
             this.point2Label.class.add('measurement-empty');
-            this.point2Label.class.remove('measurement-point2');
+            this.point2Label.class.remove('measurement-point1');
         }
 
         // Update Distance

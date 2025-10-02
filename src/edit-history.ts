@@ -1,5 +1,7 @@
-import { EditOp } from './edit-ops';
+import { EditOp, MultiOp } from './edit-ops';
 import { Events } from './events';
+import { Splat } from './splat';
+
 
 class EditHistory {
     history: EditOp[] = [];
@@ -32,6 +34,30 @@ class EditHistory {
         }
         this.history.push(editOp);
         this.redo(suppressOp);
+    }
+
+    removeBySplat(element: Element) {
+        const isRelatedToSplat = (editOp: EditOp): boolean => {
+
+            if ('splat' in editOp && editOp.splat === (element as unknown as Splat)) return true;
+
+            if ('ops' in editOp && Array.isArray((editOp as MultiOp).ops)) {
+                return (editOp as MultiOp).ops.some(isRelatedToSplat);
+            }
+            return false;
+        };
+
+        this.history = this.history.filter((editOp) => {
+            if (isRelatedToSplat(editOp)) {
+                editOp.destroy?.();
+                return false;
+            }
+            return true;
+        });
+        if (this.cursor > this.history.length) {
+            this.cursor = this.history.length;
+        }
+        this.fireEvents();
     }
 
     canUndo() {

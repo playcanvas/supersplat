@@ -148,18 +148,18 @@ class MeasurementVisual {
         
         console.log('📍 Screen points:', { screenPoint1, screenPoint2 });
 
-        // Draw point 1 if it exists (RED for start point)
+        // Draw point 1 if it exists (GREEN for start point)
         if (screenPoint1) {
-            console.log(`🔴 Drawing point 1 (START - RED) at: ${screenPoint1.x.toFixed(1)}, ${screenPoint1.y.toFixed(1)}`);
-            this.drawPoint(ctx, screenPoint1.x, screenPoint1.y, '#ff0000', 6); // Red dot, 6px diameter
+            console.log(`🟢 Drawing point 1 (START - GREEN) at: ${screenPoint1.x.toFixed(1)}, ${screenPoint1.y.toFixed(1)}`);
+            this.drawPoint(ctx, screenPoint1.x, screenPoint1.y, '#00ff00', 6); // Green dot, 6px diameter
         } else {
             console.log('❌ No screen point 1 to draw');
         }
 
-        // Draw point 2 if it exists (GREEN for end point)
+        // Draw point 2 if it exists (RED for end point)
         if (screenPoint2) {
-            console.log(`🔵 Drawing point 2 (END - GREEN) at: ${screenPoint2.x.toFixed(1)}, ${screenPoint2.y.toFixed(1)}`);
-            this.drawPoint(ctx, screenPoint2.x, screenPoint2.y, '#00ff00', 6); // Green dot, 6px diameter
+            console.log(`🔴 Drawing point 2 (END - RED) at: ${screenPoint2.x.toFixed(1)}, ${screenPoint2.y.toFixed(1)}`);
+            this.drawPoint(ctx, screenPoint2.x, screenPoint2.y, '#ff0000', 6); // Red dot, 6px diameter
         } else {
             console.log('❌ No screen point 2 to draw');
         }

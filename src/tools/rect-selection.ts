@@ -20,6 +20,7 @@ class RectSelection {
         const end = { x: 0, y: 0 };
         let dragId: number | undefined;
         let dragMoved = false;
+        let operation = 'set';
 
         const updateRect = () => {
             const x = Math.min(start.x, end.x);
@@ -99,11 +100,22 @@ class RectSelection {
             }
         };
 
+        const updateKeyState = (e: KeyboardEvent) => {
+            const op = e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set');
+            if (op !== operation) {
+                parent.classList.remove(operation);
+                parent.classList.add(op);
+                operation = op;
+            }
+        };
+
         this.activate = () => {
             parent.style.display = 'block';
             parent.addEventListener('pointerdown', pointerdown);
             parent.addEventListener('pointermove', pointermove);
             parent.addEventListener('pointerup', pointerup);
+            window.addEventListener('keydown', updateKeyState);
+            window.addEventListener('keyup', updateKeyState);
         };
 
         this.deactivate = () => {
@@ -114,6 +126,8 @@ class RectSelection {
             parent.removeEventListener('pointerdown', pointerdown);
             parent.removeEventListener('pointermove', pointermove);
             parent.removeEventListener('pointerup', pointerup);
+            window.removeEventListener('keydown', updateKeyState);
+            window.removeEventListener('keyup', updateKeyState);
         };
 
         parent.appendChild(svg);

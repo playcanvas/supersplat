@@ -1,5 +1,5 @@
 import { Muxer, ArrayBufferTarget } from 'mp4-muxer';
-import { path } from 'playcanvas';
+import { path, Vec3 } from 'playcanvas';
 
 import { ElementType } from './element';
 import { Events } from './events';
@@ -183,12 +183,27 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             // get the list of visible splats
             const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
 
+            // remember last camera position so we can skip sorting if the camera didn't move
+            const last_pos = new Vec3(0, 0, 0);
+            const last_forward = new Vec3(1, 0, 0);
+
             // prepare the frame for rendering
             const prepareFrame = async (frameTime: number) => {
                 events.fire('timeline.time', frameTime);
 
                 // manually update the camera so position and rotation are correct
                 scene.camera.onUpdate(0);
+
+                // if the camera didn't move, don't sort
+                const pos = scene.camera.entity.getPosition();
+                const forward = scene.camera.entity.forward;
+                if (last_pos.equals(pos) && last_forward.equals(forward)) {
+                    return;
+                }
+
+                // update remembered position
+                last_pos.copy(pos);
+                last_forward.copy(forward);
 
                 // wait for sorting to complete
                 await Promise.all(splats.map((splat) => {

@@ -9,6 +9,7 @@ class PolygonSelection {
     constructor(events: Events, parent: HTMLElement, mask: { canvas: HTMLCanvasElement, context: CanvasRenderingContext2D }) {
         let points: Point[] = [];
         let currentPoint: Point = null;
+        let operation = 'set';
 
         // create svg
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -109,6 +110,15 @@ class PolygonSelection {
             }
         };
 
+        const updateKeyState = (e: KeyboardEvent) => {
+            const op = e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set');
+            if (op !== operation) {
+                parent.classList.remove(operation);
+                parent.classList.add(op);
+                operation = op;
+            }
+        };
+
         this.activate = () => {
             svg.style.display = 'inline';
             parent.style.display = 'block';
@@ -116,6 +126,8 @@ class PolygonSelection {
             parent.addEventListener('pointermove', pointermove);
             parent.addEventListener('pointerup', pointerup);
             parent.addEventListener('dblclick', dblclick);
+            window.addEventListener('keydown', updateKeyState);
+            window.addEventListener('keyup', updateKeyState);
         };
 
         this.deactivate = () => {
@@ -126,6 +138,8 @@ class PolygonSelection {
             parent.removeEventListener('pointermove', pointermove);
             parent.removeEventListener('pointerup', pointerup);
             parent.removeEventListener('dblclick', dblclick);
+            window.removeEventListener('keydown', updateKeyState);
+            window.removeEventListener('keyup', updateKeyState);
             points = [];
             paint();
         };

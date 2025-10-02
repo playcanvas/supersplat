@@ -10,6 +10,7 @@ class LassoSelection {
         let points: Point[] = [];
         let currentPoint: Point = null;
         let lastPointTime = 0;
+        let operation = 'set';
 
         // create svg
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -129,12 +130,23 @@ class LassoSelection {
             }
         };
 
+        const updateKeyState = (e: KeyboardEvent) => {
+            const op = e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set');
+            if (op !== operation) {
+                parent.classList.remove(operation);
+                parent.classList.add(op);
+                operation = op;
+            }
+        };
+
         this.activate = () => {
             svg.style.display = 'inline';
             parent.style.display = 'block';
             parent.addEventListener('pointerdown', pointerdown);
             parent.addEventListener('pointermove', pointermove);
             parent.addEventListener('pointerup', pointerup);
+            window.addEventListener('keydown', updateKeyState);
+            window.addEventListener('keyup', updateKeyState);
         };
 
         this.deactivate = () => {
@@ -147,6 +159,8 @@ class LassoSelection {
             parent.removeEventListener('pointerdown', pointerdown);
             parent.removeEventListener('pointermove', pointermove);
             parent.removeEventListener('pointerup', pointerup);
+            window.removeEventListener('keydown', updateKeyState);
+            window.removeEventListener('keyup', updateKeyState);
         };
 
         svg.appendChild(polygon);

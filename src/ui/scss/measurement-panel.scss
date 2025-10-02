@@ -141,22 +141,22 @@
             }
             
             &.measurement-redo1-button {
-                background: rgba(255, 100, 100, 0.2); // RED - matches first point
-                border: 1px solid rgba(255, 100, 100, 0.3);
-                
-                &:hover {
-                    background: rgba(255, 100, 100, 0.3);
-                    border-color: rgba(255, 100, 100, 0.5);
-                }
-            }
-            
-            &.measurement-redo2-button {
-                background: rgba(100, 255, 100, 0.2); // GREEN - matches second point
+                background: rgba(100, 255, 100, 0.2); // GREEN - matches first point (swapped)
                 border: 1px solid rgba(100, 255, 100, 0.3);
                 
                 &:hover {
                     background: rgba(100, 255, 100, 0.3);
                     border-color: rgba(100, 255, 100, 0.5);
+                }
+            }
+            
+            &.measurement-redo2-button {
+                background: rgba(255, 100, 100, 0.2); // RED - matches second point (swapped)
+                border: 1px solid rgba(255, 100, 100, 0.3);
+                
+                &:hover {
+                    background: rgba(255, 100, 100, 0.3);
+                    border-color: rgba(255, 100, 100, 0.5);
                 }
             }
             
@@ -260,22 +260,22 @@
             }
             
             &.measurement-redo1-button {
-                background: rgba(255, 100, 100, 0.3); // RED - matches first point
-                border-color: rgba(255, 100, 100, 0.4);
-                
-                &:hover {
-                    background: rgba(255, 100, 100, 0.4);
-                    border-color: rgba(255, 100, 100, 0.6);
-                }
-            }
-            
-            &.measurement-redo2-button {
-                background: rgba(100, 255, 100, 0.3); // GREEN - matches second point
+                background: rgba(100, 255, 100, 0.3); // GREEN - matches first point (swapped)
                 border-color: rgba(100, 255, 100, 0.4);
                 
                 &:hover {
                     background: rgba(100, 255, 100, 0.4);
                     border-color: rgba(100, 255, 100, 0.6);
+                }
+            }
+            
+            &.measurement-redo2-button {
+                background: rgba(255, 100, 100, 0.3); // RED - matches second point (swapped)
+                border-color: rgba(255, 100, 100, 0.4);
+                
+                &:hover {
+                    background: rgba(255, 100, 100, 0.4);
+                    border-color: rgba(255, 100, 100, 0.6);
                 }
             }
             

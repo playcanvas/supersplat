@@ -14,6 +14,7 @@ class PointerController {
     destroy: () => void;
 
     constructor(camera: Camera, target: HTMLElement) {
+        let mouseCapture: undefined|true|false;
 
         const orbit = (dx: number, dy: number) => {
             const azim = camera.azim - dx * camera.scene.config.controls.orbitSensitivity;
@@ -51,7 +52,7 @@ class PointerController {
         const pointerdown = (event: PointerEvent) => {
             if (event.pointerType === 'mouse') {
                 if (buttons.every(b => !b)) {
-                    target.setPointerCapture(event.pointerId);
+                    mouseCapture = false;
                 }
                 buttons[event.button] = true;
                 x = event.offsetX;
@@ -77,9 +78,10 @@ class PointerController {
         const pointerup = (event: PointerEvent) => {
             if (event.pointerType === 'mouse') {
                 buttons[event.button] = false;
-                if (buttons.every(b => !b)) {
+                if (buttons.every(b => !b) && mouseCapture) {
                     target.releasePointerCapture(event.pointerId);
                 }
+                mouseCapture = undefined;
             } else {
                 touches = touches.filter(touch => touch.id !== event.pointerId);
                 if (touches.length === 0) {
@@ -90,6 +92,10 @@ class PointerController {
 
         const pointermove = (event: PointerEvent) => {
             if (event.pointerType === 'mouse') {
+                if (mouseCapture === false) {
+                    target.setPointerCapture(event.pointerId);
+                    mouseCapture = true;
+                }
                 const dx = event.offsetX - x;
                 const dy = event.offsetY - y;
                 x = event.offsetX;

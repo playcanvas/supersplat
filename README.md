@@ -4,7 +4,9 @@
 
 *Timeline & Camera Pose Tools   - added 1/8/25   
 
-*SOR (statistical Outlier Removal) for floater removal   - added 4/10/25  
+*SOR (statistical Outlier Removal) for floater removal   - added 4/10/25
+*SOR Dialog Text layout adjustment 4/10/25
+
 -------------------------------------------------------------------------
 
 [(https://img.shields.io/github/v/release/playcanvas/supersplat)](https://github.com/playcanvas/supersplat/releases)

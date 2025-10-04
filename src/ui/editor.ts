@@ -20,6 +20,7 @@ import { PublishSettingsDialog } from './publish-settings-dialog';
 import { RightToolbar } from './right-toolbar';
 import { ScenePanel } from './scene-panel';
 import { ShortcutsPopup } from './shortcuts-popup';
+import { SORCleanupDialog } from './sor-cleanup-dialog';
 import { Spinner } from './spinner';
 import { TimelinePanel } from './timeline-panel';
 import { Tooltips } from './tooltips';
@@ -190,11 +191,15 @@ class EditorUI {
         // video settings
         const videoSettingsDialog = new VideoSettingsDialog(events);
 
+        // SOR cleanup dialog
+        const sorCleanupDialog = new SORCleanupDialog(events, tooltips);
+
         topContainer.append(popup);
         topContainer.append(exportPopup);
         topContainer.append(publishSettingsDialog);
         topContainer.append(imageSettingsDialog);
         topContainer.append(videoSettingsDialog);
+        topContainer.append(sorCleanupDialog);
 
         appContainer.append(editorContainer);
         appContainer.append(topContainer);
@@ -309,6 +314,15 @@ class EditorUI {
 
         events.on('progressEnd', () => {
             progress.hidden = true;
+        });
+
+        // SOR cleanup events
+        events.on('sor.showDialog', () => {
+            sorCleanupDialog.show();
+        });
+        
+        events.on('sor.closeDialog', () => {
+            sorCleanupDialog.hide();
         });
 
         // initialize canvas to correct size before creating graphics device etc

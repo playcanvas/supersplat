@@ -20,6 +20,7 @@ import selectLock from './svg/select-lock.svg';
 import selectNone from './svg/select-none.svg';
 import selectSeparate from './svg/select-separate.svg';
 import selectUnlock from './svg/select-unlock.svg';
+import sorCleanup from './svg/sor-cleanup.svg';
 import logoSvg from './svg/supersplat-logo.svg';
 
 const createSvg = (svgString: string) => {
@@ -230,6 +231,13 @@ class Menu extends Container {
         }, {
             text: localize('select.reset'),
             onSelect: () => events.fire('scene.reset')
+        }, {
+            // separator
+        }, {
+            text: 'SOR Cleanup',
+            icon: createSvg(sorCleanup),
+            isEnabled: () => !events.invoke('scene.empty'),
+            onSelect: () => events.fire('sor.showDialog')
         }, {
             // separator
         }, {

@@ -1,0 +1,29 @@
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g fill="currentColor">
+    <!-- Main point cloud representation -->
+    <circle cx="3" cy="3" r="0.8" opacity="0.8"/>
+    <circle cx="7" cy="2" r="0.8" opacity="0.8"/>
+    <circle cx="12" cy="4" r="0.8" opacity="0.8"/>
+    <circle cx="2" cy="7" r="0.8" opacity="0.8"/>
+    <circle cx="6" cy="6" r="0.8" opacity="0.8"/>
+    <circle cx="11" cy="8" r="0.8" opacity="0.8"/>
+    <circle cx="4" cy="11" r="0.8" opacity="0.8"/>
+    <circle cx="8" cy="12" r="0.8" opacity="0.8"/>
+    <circle cx="13" cy="11" r="0.8" opacity="0.8"/>
+    
+    <!-- Outliers with X marks -->
+    <g opacity="0.6">
+        <path d="M1 13 L3 15 M3 13 L1 15" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+        <path d="M13 1 L15 3 M15 1 L13 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+    </g>
+    
+    <!-- Statistical analysis lines connecting some points -->
+    <g opacity="0.3" stroke="currentColor" stroke-width="0.5">
+        <line x1="6" y1="6" x2="7" y2="2"/>
+        <line x1="6" y1="6" x2="2" y2="7"/>
+        <line x1="6" y1="6" x2="11" y2="8"/>
+        <line x1="11" y1="8" x2="12" y2="4"/>
+        <line x1="11" y1="8" x2="13" y2="11"/>
+    </g>
+</g>
+</svg>

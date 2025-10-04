@@ -261,6 +261,13 @@ class SORCleanupDialog extends Container {
             enabled: true
         });
 
+        // New: Select Outliers (does not delete – just selects the outlier set)
+        const selectButton = new Button({
+            class: ['sor-cleanup-button', 'select-outliers'],
+            text: 'Select Outliers',
+            enabled: true
+        });
+
         const separateButton = new Button({
             class: ['sor-cleanup-button', 'separate'],
             text: 'Separate Outliers',
@@ -270,11 +277,12 @@ class SORCleanupDialog extends Container {
         buttonContainer.append(cancelButton);
         buttonContainer.append(previewButton);
         buttonContainer.append(applyButton);
+        buttonContainer.append(selectButton);
         buttonContainer.append(separateButton);
         
         // Style buttons with proper white text and hover effects
         setTimeout(() => {
-            [cancelButton, previewButton, applyButton, separateButton].forEach(button => {
+            [cancelButton, previewButton, applyButton, selectButton, separateButton].forEach(button => {
                 if (button.dom) {
                     button.dom.style.color = 'white';
                     button.dom.style.backgroundColor = '#505050';
@@ -332,6 +340,17 @@ class SORCleanupDialog extends Container {
                     previewButton.dom.style.backgroundColor = '#cc5500';
                 });
             }
+
+            // Special styling for select outliers button (teal)
+            if (selectButton.dom) {
+                selectButton.dom.style.backgroundColor = '#00a3b4';
+                selectButton.dom.addEventListener('mouseenter', () => {
+                    selectButton.dom.style.backgroundColor = '#008c99';
+                });
+                selectButton.dom.addEventListener('mouseleave', () => {
+                    selectButton.dom.style.backgroundColor = '#00a3b4';
+                });
+            }
             
             // Special styling for separate button
             if (separateButton.dom) {
@@ -379,6 +398,10 @@ class SORCleanupDialog extends Container {
 
         separateButton.on('click', () => {
             this.separateOutliers();
+        });
+
+        selectButton.on('click', () => {
+            this.selectOutliers();
         });
 
         // Update mode selection based on current selection
@@ -453,6 +476,12 @@ class SORCleanupDialog extends Container {
     private separateOutliers() {
         const options = this.getOptions();
         this.events.fire('sor.separate', options);
+        this.hide();
+    }
+
+    private selectOutliers() {
+        const options = this.getOptions();
+        this.events.fire('sor.selectOutliers', options);
         this.hide();
     }
 }

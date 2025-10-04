@@ -301,6 +301,63 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
         // Previews are automatically cleared when splats are destroyed
     });
     
+    // Select SOR outliers (no deletion, just set current selection to outliers)
+    events.on('sor.selectOutliers', async (options: SORCleanupOptions) => {
+        const selection = events.invoke('selection') as Splat;
+        if (!selection) {
+            await events.invoke('showPopup', {
+                type: 'error',
+                header: 'SOR Select Error',
+                message: 'No splat selected. Please select a splat to select SOR outliers.'
+            });
+            return;
+        }
+
+        try {
+            // Clear any preview state and restore colors
+            if (originalLockedColor !== null) {
+                events.fire('setLockedClr', originalLockedColor);
+                originalLockedColor = null;
+            }
+            SORCleanup.clearPreview(selection);
+
+            const result = SORCleanup.identifyOutliers(selection, options);
+            const outlierSet = new Set(result.outlierIndices);
+            const filter = (i: number) => outlierSet.has(i);
+
+            // Apply selection
+            events.fire('edit.add', new SelectOp(selection, 'set', filter));
+
+            await events.invoke('showPopup', {
+                type: 'success',
+                header: 'SOR Select Outliers',
+                message: `Selected ${result.totalOutliers.toLocaleString()} outliers out of ${result.totalProcessed.toLocaleString()} processed points.`
+            });
+
+            // Move popup bottom-right (SOR specific)
+            setTimeout(() => {
+                const popupDialog = document.getElementById('popup-dialog');
+                const popupHeader = document.getElementById('popup-header');
+                if (popupDialog && popupHeader && popupHeader.textContent?.includes('SOR')) {
+                    popupDialog.style.position = 'fixed';
+                    popupDialog.style.bottom = '20px';
+                    popupDialog.style.right = '20px';
+                    popupDialog.style.top = 'auto';
+                    popupDialog.style.left = 'auto';
+                    popupDialog.style.transform = 'none';
+                    popupDialog.style.maxWidth = '400px';
+                    popupDialog.setAttribute('data-sor-popup', 'true');
+                }
+            }, 10);
+        } catch (error: any) {
+            await events.invoke('showPopup', {
+                type: 'error',
+                header: 'SOR Select Error',
+                message: `Failed to select SOR outliers: ${error.message || error}`
+            });
+        }
+    });
+
     // Separate SOR outliers into a new splat
     events.on('sor.separate', async (options: SORCleanupOptions) => {
         const selection = events.invoke('selection') as Splat;

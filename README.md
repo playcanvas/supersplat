@@ -1,11 +1,13 @@
 # SuperSplat - 3D Gaussian Splat Editor With Additional Functionality !
------------------------------------------------------------------------
-1/8/25   *Measurement
-1/8/25   *Timeline & Camera Pose Tools
-4/10/25  *SOR (statistical Outlier Removal) for floater removal
------------------------------------------------------------------------
 
-[![Github Release](https://img.shields.io/github/v/release/playcanvas/supersplat)](https://github.com/playcanvas/supersplat/releases)
+*Measurement   -   added 1/8/25  
+
+*Timeline & Camera Pose Tools   - added 1/8/25   
+
+*SOR (statistical Outlier Removal) for floater removal   - added 4/10/25  
+-------------------------------------------------------------------------
+
+[(https://img.shields.io/github/v/release/playcanvas/supersplat)](https://github.com/playcanvas/supersplat/releases)
 [![License](https://img.shields.io/github/license/playcanvas/supersplat)](https://github.com/playcanvas/supersplat/blob/main/LICENSE)
 [![Discord](https://img.shields.io/badge/Discord-5865F2?style=flat&logo=discord&logoColor=white&color=black)](https://discord.gg/RSaMRzg)
 [![Reddit](https://img.shields.io/badge/Reddit-FF4500?style=flat&logo=reddit&logoColor=white&color=black)](https://www.reddit.com/r/PlayCanvas)

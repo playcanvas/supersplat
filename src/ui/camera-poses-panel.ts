@@ -816,7 +816,7 @@ class CameraPosesPanel extends Panel {
                 console.warn('⚠️ No poses were recorded! Check console for errors.');
                 alert('No camera poses were recorded. Check the console for error details.');
             } else {
-                console.log('✅ Successfully recorded poses:', allPoses.map(p => `Frame ${p.frame}: ${p.name}`));
+                console.log('✅ Successfully recorded poses:', allPoses.map((p: any) => `Frame ${p.frame}: ${p.name}`));
             }
         } catch (e) {
             console.error('Error getting final pose count:', e);

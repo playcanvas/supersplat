@@ -33,7 +33,7 @@ To initialize a local development environment for SuperSplat, ensure you have [N
 
    ```sh
    git clone https://github.com/jacobvanbeets/My2ndSuperSplat.git
-   cd MySupersplat
+   cd My2ndSupersplat
    ```
 
 2. Install dependencies:

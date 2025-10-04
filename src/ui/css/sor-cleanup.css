@@ -1,0 +1,128 @@
+/* SOR Cleanup Dialog Styles */
+.sor-cleanup-dialog {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sor-cleanup-content {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    padding: 20px;
+    max-width: 500px;
+    min-width: 400px;
+    gap: 15px;
+    margin: 20px;
+}
+
+.sor-cleanup-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.sor-cleanup-description {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.4;
+    margin-bottom: 20px;
+}
+
+.sor-cleanup-option {
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.sor-cleanup-label {
+    font-weight: 500;
+    min-width: 80px;
+    font-size: 13px;
+}
+
+.sor-cleanup-select,
+.sor-cleanup-input {
+    flex: 1;
+    max-width: 120px;
+}
+
+.sor-cleanup-help {
+    font-size: 11px;
+    color: #888;
+    margin-left: 90px;
+    margin-bottom: 15px;
+    line-height: 1.3;
+}
+
+.sor-cleanup-buttons {
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.sor-cleanup-button {
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.sor-cleanup-button.cancel,
+.cancel.sor-cleanup-button {
+    background: #f5f5f5;
+    border-color: #ccc;
+    color: #666;
+}
+
+.sor-cleanup-button.cancel:hover,
+.cancel.sor-cleanup-button:hover {
+    background: #e0e0e0;
+    border-color: #999;
+}
+
+.sor-cleanup-button.preview,
+.preview.sor-cleanup-button {
+    background: #fff;
+    border-color: #007acc;
+    color: #007acc;
+}
+
+.sor-cleanup-button.preview:hover,
+.preview.sor-cleanup-button:hover {
+    background: #f0f8ff;
+    border-color: #005999;
+}
+
+.sor-cleanup-button.apply,
+.apply.sor-cleanup-button {
+    background: #007acc;
+    border-color: #007acc;
+    color: white;
+}
+
+.sor-cleanup-button.apply:hover,
+.apply.sor-cleanup-button:hover {
+    background: #005999;
+    border-color: #005999;
+}
+
+/* Disabled state for mode selection */
+.sor-cleanup-select option:disabled {
+    color: #ccc;
+    font-style: italic;
+}

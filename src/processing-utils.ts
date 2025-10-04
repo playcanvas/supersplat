@@ -5,6 +5,8 @@
 export class ProcessingManager {
     private static originalCursor: string = '';
     private static isProcessing: boolean = false;
+    private static cursorStyleElement: HTMLStyleElement | null = null;
+    private static cursorEnforcementInterval: number | null = null;
 
     /**
      * Start processing mode - change cursor to hourglass and prepare for intensive operation
@@ -12,7 +14,55 @@ export class ProcessingManager {
     static startProcessing(): void {
         if (!this.isProcessing) {
             this.originalCursor = document.body.style.cursor || 'default';
+            
+            // Create a style element that forces wait cursor on all elements
+            this.cursorStyleElement = document.createElement('style');
+            this.cursorStyleElement.id = 'processing-cursor-override';
+            this.cursorStyleElement.textContent = `
+                /* Global cursor override with maximum specificity */
+                *, *::before, *::after, *:hover, *:focus, *:active {
+                    cursor: wait !important;
+                }
+                html, body {
+                    cursor: wait !important;
+                }
+                /* Specific UI elements */
+                canvas, div, span, button, input, select, textarea, a, label {
+                    cursor: wait !important;
+                }
+                /* PCUI specific elements */
+                .pcui-container, .pcui-panel, .pcui-element, .pcui-button {
+                    cursor: wait !important;
+                }
+                /* Canvas and application areas */
+                #canvas-container, #canvas, #application-canvas, #app {
+                    cursor: wait !important;
+                }
+                /* Override any pointer cursors */
+                [style*="cursor: pointer"], [style*="cursor: default"], [style*="cursor: grab"] {
+                    cursor: wait !important;
+                }
+            `;
+            document.head.appendChild(this.cursorStyleElement);
+            
+            // Also set on body as fallback
             document.body.style.cursor = 'wait';
+            document.documentElement.style.cursor = 'wait';
+            
+            // Add a JavaScript fallback that continuously enforces the cursor
+            this.cursorEnforcementInterval = window.setInterval(() => {
+                if (this.isProcessing) {
+                    document.body.style.cursor = 'wait';
+                    document.documentElement.style.cursor = 'wait';
+                    
+                    // Also apply to any canvas elements that might reset their cursor
+                    const canvases = document.querySelectorAll('canvas');
+                    canvases.forEach((canvas) => {
+                        (canvas as HTMLElement).style.cursor = 'wait';
+                    });
+                }
+            }, 100);
+            
             this.isProcessing = true;
         }
     }
@@ -22,7 +72,28 @@ export class ProcessingManager {
      */
     static endProcessing(): void {
         if (this.isProcessing) {
+            // Clear the cursor enforcement interval
+            if (this.cursorEnforcementInterval !== null) {
+                clearInterval(this.cursorEnforcementInterval);
+                this.cursorEnforcementInterval = null;
+            }
+            
+            // Remove the global cursor style
+            if (this.cursorStyleElement) {
+                document.head.removeChild(this.cursorStyleElement);
+                this.cursorStyleElement = null;
+            }
+            
+            // Restore original cursors
             document.body.style.cursor = this.originalCursor;
+            document.documentElement.style.cursor = '';
+            
+            // Clear cursor on canvas elements
+            const canvases = document.querySelectorAll('canvas');
+            canvases.forEach((canvas) => {
+                (canvas as HTMLElement).style.cursor = '';
+            });
+            
             this.isProcessing = false;
         }
     }

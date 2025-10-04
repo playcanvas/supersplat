@@ -1,4 +1,4 @@
-import { Button, Container, NumericInput } from '@playcanvas/pcui';
+import { BooleanInput, Button, Container, Label, LabelGroup, NumericInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 
@@ -21,6 +21,7 @@ class FloodSelection {
 
         let threshold = 0.2;
         let point: Pt|undefined;
+        let immediateMode = false;
 
         // ui
         const selectToolbar = new Container({
@@ -43,11 +44,19 @@ class FloodSelection {
             min: 0.0,
             max: 1.0
         });
+        const immediateModeInput = new BooleanInput({
+            value: immediateMode
+        });
+        const immediateModeLabel = new Label({
+            value: 'Immediate Mode'
+        });
 
         selectToolbar.append(setButton);
         selectToolbar.append(addButton);
         selectToolbar.append(removeButton);
         selectToolbar.append(thresholdInput);
+        selectToolbar.append(immediateModeInput);
+        selectToolbar.append(immediateModeLabel);
 
         canvasContainer.append(selectToolbar);
 
@@ -123,15 +132,27 @@ class FloodSelection {
             refreshSelection();
         });
 
+        immediateModeInput.on('change', () => {
+            immediateMode = immediateModeInput.value;
+            initCanvas();
+            setButton.enabled = !immediateMode;
+            addButton.enabled = !immediateMode;
+            removeButton.enabled = !immediateMode;
+        });
+
         const pointerdown = (e: PointerEvent) => {
-            e.preventDefault();
-            e.stopPropagation();
+            if (!immediateMode) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
         };
 
 
-        const pointerup = (e: PointerEvent) => {
-            e.preventDefault();
-            e.stopPropagation();
+        const pointerup = async (e: PointerEvent) => {
+            if (!immediateMode) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
 
             const { offsetX, offsetY } = e;
             point = {
@@ -139,19 +160,26 @@ class FloodSelection {
                 y: Math.floor(offsetY)
             };
 
-            refreshSelection();
+            await refreshSelection();
+
+            if (immediateMode) {
+                apply(e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'));
+                initCanvas();
+            }
         };
 
         const wheel = (e: WheelEvent) => {
+            if (immediateMode) return;
             e.preventDefault();
             e.stopPropagation();
             const { deltaX, deltaY } = e;
             const value = (Math.abs(deltaX) > Math.abs(deltaY) ? deltaX : deltaY) > 0 ? 0.05 : -0.05;
 
             thresholdInput.value = threshold + value;
+        };
 
-            e.preventDefault();
-            e.stopPropagation();
+        const resize = () => {
+            initCanvas();
         };
 
         this.activate = () => {
@@ -161,6 +189,7 @@ class FloodSelection {
             parent.addEventListener('pointerdown', pointerdown);
             parent.addEventListener('pointerup', pointerup);
             parent.addEventListener('wheel', wheel);
+            window.addEventListener('resize', resize);
             initCanvas();
         };
 
@@ -171,6 +200,7 @@ class FloodSelection {
             parent.removeEventListener('pointerdown', pointerdown);
             parent.removeEventListener('pointerup', pointerup);
             parent.removeEventListener('wheel', wheel);
+            window.removeEventListener('resize', resize);
             point = undefined;
         };
     }

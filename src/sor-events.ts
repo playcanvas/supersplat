@@ -7,6 +7,7 @@ import { Splat } from './splat';
 import { SORCleanupOptions } from './ui/sor-cleanup-dialog';
 import { BufferWriter } from './serialize/writer';
 import { serializePly } from './splat-serialize';
+import { ProcessingManager } from './processing-utils';
 
 /**
  * Perform SOR separate operation with custom filename for outliers
@@ -125,13 +126,22 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
         }
 
         try {
+            // Start processing mode (hourglass cursor)
+            ProcessingManager.startProcessing();
+            
             // Store original locked color and set it to red for preview
             if (originalLockedColor === null) {
                 originalLockedColor = events.invoke('lockedClr');
             }
             events.fire('setLockedClr', { r: 1, g: 0, b: 0, a: 0.8 }); // Red with some transparency
             
-            const result = SORCleanup.previewOutliers(selection, options);
+            // Yield to UI to show cursor change before intensive operation
+            await ProcessingManager.yieldToUI();
+            
+            const result = await SORCleanup.previewOutliers(selection, options);
+            
+            // End processing mode
+            ProcessingManager.endProcessing();
             
             const popupResult = await events.invoke('showPopup', {
                 type: 'info',
@@ -155,6 +165,9 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
                 }
             }, 10);
         } catch (error: any) {
+            // Make sure to end processing mode on error
+            ProcessingManager.endProcessing();
+            
             await events.invoke('showPopup', {
                 type: 'error',
                 header: 'SOR Preview Error',
@@ -176,6 +189,9 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
         }
 
         try {
+            // Start processing mode (hourglass cursor)
+            ProcessingManager.startProcessing();
+            
             // Restore original locked color if it was changed
             if (originalLockedColor !== null) {
                 events.fire('setLockedClr', originalLockedColor);
@@ -185,8 +201,14 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
             // Clear any preview state first
             SORCleanup.clearPreview(selection);
             
+            // Yield to UI to show cursor change before intensive operation
+            await ProcessingManager.yieldToUI();
+            
             // Create and execute the SOR cleanup operation
-            const sorOp = new SORCleanupOp(selection, options);
+            const sorOp = await SORCleanupOp.create(selection, options);
+            
+            // End processing mode
+            ProcessingManager.endProcessing();
             
             if (sorOp.indices.length === 0) {
                 const noOutliersResult = await events.invoke('showPopup', {
@@ -243,6 +265,9 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
             // Close the SOR dialog after successful apply
             events.fire('sor.closeDialog');
         } catch (error: any) {
+            // Make sure to end processing mode on error
+            ProcessingManager.endProcessing();
+            
             await events.invoke('showPopup', {
                 type: 'error',
                 header: 'SOR Apply Error',
@@ -289,6 +314,9 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
         }
 
         try {
+            // Start processing mode (hourglass cursor)
+            ProcessingManager.startProcessing();
+            
             // Restore original locked color if it was changed
             if (originalLockedColor !== null) {
                 events.fire('setLockedClr', originalLockedColor);
@@ -298,10 +326,16 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
             // Clear any preview state first
             SORCleanup.clearPreview(selection);
             
+            // Yield to UI to show cursor change before intensive operation
+            await ProcessingManager.yieldToUI();
+            
             // Find the outlier indices
-            const result = SORCleanup.previewOutliers(selection, options);
+            const result = await SORCleanup.previewOutliers(selection, options);
             
             if (result.outlierIndices.length === 0) {
+                // End processing mode before showing popup
+                ProcessingManager.endProcessing();
+                
                 const noOutliersResult = await events.invoke('showPopup', {
                     type: 'info',
                     header: 'SOR Separate Complete',
@@ -340,6 +374,9 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
             // Perform custom separate operation with modified filename
             await performSORSeparate(selection, scene, editHistory);
             
+            // End processing mode before showing success popup
+            ProcessingManager.endProcessing();
+            
             const separatePercentage = ((result.totalOutliers / result.totalProcessed) * 100).toFixed(1);
             
             const separateResult = await events.invoke('showPopup', {
@@ -365,6 +402,9 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
             }, 10);
             
         } catch (error: any) {
+            // Make sure to end processing mode on error
+            ProcessingManager.endProcessing();
+            
             await events.invoke('showPopup', {
                 type: 'error',
                 header: 'SOR Separate Error',

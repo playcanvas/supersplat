@@ -3,6 +3,7 @@ import { Vec3 } from 'playcanvas';
 import { Splat } from './splat';
 import { State } from './splat-state';
 import { SORCleanupOptions } from './ui/sor-cleanup-dialog';
+import { ProcessingManager } from './processing-utils';
 
 interface SORResult {
     outlierIndices: number[];
@@ -114,7 +115,7 @@ export class SORCleanup {
      * @param options SOR parameters
      * @returns Result containing outlier indices and statistics
      */
-    static identifyOutliers(splat: Splat, options: SORCleanupOptions): SORResult {
+    static async identifyOutliers(splat: Splat, options: SORCleanupOptions): Promise<SORResult> {
         const { nbNeighbors, stdRatio, mode } = options;
         const splatData = splat.splatData;
         const state = splatData.getProp('state') as Uint8Array;
@@ -167,6 +168,11 @@ export class SORCleanup {
             const currentPoint = positions[i];
             const originalIndex = validIndices[i];
             
+            // Yield every 500 iterations to prevent page unresponsive warnings
+            if (i % 500 === 0 && i > 0) {
+                await ProcessingManager.yieldToUI();
+            }
+            
             // Find k nearest neighbors (excluding the point itself)
             const neighbors = kdTree.findKNearest(currentPoint, nbNeighbors, i);
             
@@ -214,11 +220,11 @@ export class SORCleanup {
      * @param options SOR parameters
      * @returns Result containing outlier statistics
      */
-    static previewOutliers(splat: Splat, options: SORCleanupOptions): SORResult {
+    static async previewOutliers(splat: Splat, options: SORCleanupOptions): Promise<SORResult> {
         // First, clear any existing preview by unlocking all points
         this.clearPreview(splat);
 
-        const result = this.identifyOutliers(splat, options);
+        const result = await this.identifyOutliers(splat, options);
         
         if (result.outlierIndices.length > 0) {
             const state = splat.splatData.getProp('state') as Uint8Array;
@@ -262,8 +268,8 @@ export class SORCleanup {
      * @param options SOR parameters
      * @returns Array of indices that were marked as deleted
      */
-    static applyCleanup(splat: Splat, options: SORCleanupOptions): number[] {
-        const result = this.identifyOutliers(splat, options);
+    static async applyCleanup(splat: Splat, options: SORCleanupOptions): Promise<number[]> {
+        const result = await this.identifyOutliers(splat, options);
         
         if (result.outlierIndices.length > 0) {
             const state = splat.splatData.getProp('state') as Uint8Array;

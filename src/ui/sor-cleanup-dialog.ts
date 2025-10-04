@@ -41,8 +41,9 @@ class SORCleanupDialog extends Container {
                 content.dom.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.5)';
                 content.dom.style.border = '1px solid #444';
                 content.dom.style.padding = '20px';
-                content.dom.style.minWidth = '350px';
-                content.dom.style.maxWidth = '400px';
+                // widen default size to prevent text truncation
+                content.dom.style.minWidth = '420px';
+                content.dom.style.maxWidth = '560px';
                 // Ensure content is interactive
                 content.dom.style.pointerEvents = 'auto';
                 content.dom.style.userSelect = 'auto';
@@ -283,6 +284,22 @@ class SORCleanupDialog extends Container {
                     button.dom.style.margin = '0 4px';
                     button.dom.style.cursor = 'pointer';
                     button.dom.style.transition = 'background-color 0.2s';
+
+                    // Center label text vertically & horizontally
+                    button.dom.style.display = 'inline-flex';
+                    (button.dom.style as any).alignItems = 'center';
+                    (button.dom.style as any).justifyContent = 'center';
+                    button.dom.style.lineHeight = '1';
+
+                    const inner = button.dom.querySelector('.pcui-button-content, .pcui-label') as HTMLElement | null;
+                    if (inner) {
+                        inner.style.display = 'flex';
+                        (inner.style as any).alignItems = 'center';
+                        (inner.style as any).justifyContent = 'center';
+                        inner.style.height = '100%';
+                        inner.style.width = '100%';
+                        inner.style.transform = 'translateY(-0.75px)';
+                    }
                     
                     // Add hover effects
                     button.dom.addEventListener('mouseenter', () => {
@@ -391,7 +408,7 @@ class SORCleanupDialog extends Container {
             this.dom.style.top = '20px';
             this.dom.style.right = '20px';
             this.dom.style.zIndex = '10000';
-            this.dom.style.maxWidth = '400px';
+            this.dom.style.maxWidth = '560px';
             this.dom.style.pointerEvents = 'auto';
             this.dom.style.userSelect = 'auto';
             

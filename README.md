@@ -6,7 +6,7 @@
 
 *SOR (statistical Outlier Removal) for floater removal   - added 4/10/25
 *SOR Dialog Text layout adjustment 4/10/25
-
+*SOR Select outliers added
 -------------------------------------------------------------------------
 
 [(https://img.shields.io/github/v/release/playcanvas/supersplat)](https://github.com/playcanvas/supersplat/releases)

@@ -32,7 +32,7 @@ To initialize a local development environment for SuperSplat, ensure you have [N
 1. Clone the repository:
 
    ```sh
-   git clone https://github.com/bgofish/MySuperSplat.git
+   git clone https://github.com/jacobvanbeets/My2ndSuperSplat.git
    cd MySupersplat
    ```
 

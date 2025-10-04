@@ -129,7 +129,9 @@ class FloodSelection {
 
         thresholdInput.on('change', () => {
             threshold = thresholdInput.value;
-            refreshSelection();
+            if (!immediateMode) {
+                refreshSelection();
+            }
         });
 
         immediateModeInput.on('change', () => {
@@ -165,6 +167,7 @@ class FloodSelection {
             if (immediateMode) {
                 apply(e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'));
                 initCanvas();
+                point = undefined;
             }
         };
 

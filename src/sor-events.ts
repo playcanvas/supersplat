@@ -314,6 +314,9 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
         }
 
         try {
+            // Start processing mode (hourglass cursor)
+            ProcessingManager.startProcessing();
+            
             // Clear any preview state and restore colors
             if (originalLockedColor !== null) {
                 events.fire('setLockedClr', originalLockedColor);
@@ -321,7 +324,19 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
             }
             SORCleanup.clearPreview(selection);
 
-            const result = SORCleanup.identifyOutliers(selection, options);
+            // Yield to UI to show cursor change before intensive operation
+            await ProcessingManager.yieldToUI();
+            
+            const result = await SORCleanup.identifyOutliers(selection, options);
+            
+            // End processing mode
+            ProcessingManager.endProcessing();
+            
+            // Safety check for result object
+            if (!result || typeof result.totalOutliers === 'undefined' || typeof result.totalProcessed === 'undefined') {
+                throw new Error('Invalid result from SOR outlier detection');
+            }
+            
             const outlierSet = new Set(result.outlierIndices);
             const filter = (i: number) => outlierSet.has(i);
 
@@ -350,6 +365,9 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
                 }
             }, 10);
         } catch (error: any) {
+            // Make sure to end processing mode on error
+            ProcessingManager.endProcessing();
+            
             await events.invoke('showPopup', {
                 type: 'error',
                 header: 'SOR Select Error',

@@ -1,8 +1,8 @@
 # SuperSplat - 3D Gaussian Splat Editor With Additional Functionality !
 
-*Measurement   -   added 1/8/25  
+*Measurement   -   added 1/10/25  
 
-*Timeline & Camera Pose Tools   - added 1/8/25   
+*Timeline & Camera Pose Tools   - added 1/10/25   
 
 *SOR (statistical Outlier Removal) for floater removal   - added 4/10/25
 *SOR Dialog Text layout adjustment 4/10/25

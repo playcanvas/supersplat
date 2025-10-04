@@ -2,9 +2,11 @@ import { Color, Mat4 } from 'playcanvas';
 
 import { Pivot } from './pivot';
 import { Scene } from './scene';
+import { SORCleanup } from './sor-cleanup';
 import { Splat } from './splat';
 import { State } from './splat-state';
 import { Transform } from './transform';
+import { SORCleanupOptions } from './ui/sor-cleanup-dialog';
 
 interface EditOp {
     name: string;
@@ -430,6 +432,34 @@ class SplatRenameOp {
     }
 }
 
+class SORCleanupOp extends StateOp {
+    name = 'sorCleanup';
+    options: SORCleanupOptions;
+    totalProcessed: number;
+    totalOutliers: number;
+
+    constructor(splat: Splat, options: SORCleanupOptions) {
+        // First identify the outliers to create the proper state filter
+        const result = SORCleanup.identifyOutliers(splat, options);
+        const outlierSet = new Set(result.outlierIndices);
+        
+        // Create a StateOp that will mark identified outliers as deleted
+        super(splat,
+            (state: number, index: number) => {
+                // Only process points that are not already deleted and are outliers
+                return !(state & State.deleted) && outlierSet.has(index);
+            },
+            state => state | State.deleted,
+            state => state & (~State.deleted),
+            State.deleted
+        );
+        
+        this.options = options;
+        this.totalProcessed = result.totalProcessed;
+        this.totalOutliers = result.totalOutliers;
+    }
+}
+
 export {
     EditOp,
     SelectAllOp,
@@ -447,5 +477,6 @@ export {
     SetSplatColorAdjustmentOp,
     MultiOp,
     AddSplatOp,
-    SplatRenameOp
+    SplatRenameOp,
+    SORCleanupOp
 };

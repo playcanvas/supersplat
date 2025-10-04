@@ -15,6 +15,7 @@ import { Scene } from './scene';
 import { getSceneConfig } from './scene-config';
 import { registerSelectionEvents } from './selection';
 import { Shortcuts } from './shortcuts';
+import { registerSOREvents } from './sor-events';
 import { registerTimelineEvents } from './timeline';
 import { BoxSelection } from './tools/box-selection';
 import { BrushSelection } from './tools/brush-selection';
@@ -247,6 +248,7 @@ const main = async () => {
     registerSelectionEvents(events, scene);
     registerTimelineEvents(events);
     registerCameraPosesEvents(events);
+    registerSOREvents(events, editHistory, scene);
     
     // Initialize measurement systems
     const measurementTool = new MeasurementTool(events, scene);

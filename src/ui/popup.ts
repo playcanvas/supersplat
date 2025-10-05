@@ -140,6 +140,24 @@ class Popup extends Container {
             yesButton.hidden = type !== 'yesno';
             noButton.hidden = type !== 'yesno';
             this.hidden = false;
+            
+            // Special handling for SOR popups - position in bottom-right
+            if (options.header && options.header.includes('SOR')) {
+                console.log('🔧 POPUP.TS: Detected SOR popup, applying bottom-right positioning...');
+                
+                // Set attributes for CSS targeting
+                dialog.dom.setAttribute('data-sor-popup', 'true');
+                dialog.dom.classList.add('sor-popup-positioned');
+                
+                // Also apply monospace styling to the text content
+                text.dom.style.fontFamily = 'Consolas, Monaco, "Courier New", monospace';
+                text.dom.style.fontSize = '12px';
+                text.dom.style.lineHeight = '1.4';
+                text.dom.style.textAlign = 'left';
+                text.dom.style.whiteSpace = 'pre-line';
+                
+                console.log('🔧 POPUP.TS: SOR popup attributes and styling applied');
+            }
 
             linkRow.hidden = link === undefined;
             if (link !== undefined) {

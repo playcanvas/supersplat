@@ -119,5 +119,27 @@
                 }
             }
         }
+        
+        // Special positioning for SOR popups
+        &[data-sor-popup="true"],
+        &.sor-popup-positioned {
+            position: fixed !important;
+            bottom: 20px !important;
+            right: 20px !important;
+            top: auto !important;
+            left: auto !important;
+            transform: none !important;
+            max-width: 450px !important;
+            min-width: 350px !important;
+            z-index: 10000 !important;
+            
+            #popup-text {
+                white-space: pre-line !important;
+                font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
+                font-size: 12px !important;
+                line-height: 1.4 !important;
+                text-align: left !important;
+            }
+        }
     }
 }

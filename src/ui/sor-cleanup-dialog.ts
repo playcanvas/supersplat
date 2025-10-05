@@ -404,24 +404,15 @@ class SORCleanupDialog extends Container {
             this.selectOutliers();
         });
 
-        // Update mode selection based on current selection
+        // Update mode selection based on current selection with selected points
         events.on('selection.changed', () => {
-            const hasSelection = events.invoke('selection') !== null;
-            if (!hasSelection && this.modeSelect.value === 'selection') {
-                this.modeSelect.value = 'all';
-            }
+            this.updateModeBasedOnSelection();
         });
     }
 
     show() {
-        // Check if there's a current selection
-        const hasSelection = this.events.invoke('selection') !== null;
-        
-        if (!hasSelection) {
-            this.modeSelect.value = 'all';
-            // Show a message if no selection is available
-            console.log('SOR Dialog: No selection available, defaulting to "All Points" mode');
-        }
+        // Update mode based on current selection state
+        this.updateModeBasedOnSelection();
 
         this.hidden = false;
         
@@ -452,6 +443,34 @@ class SORCleanupDialog extends Container {
 
     hide() {
         this.hidden = true;
+    }
+
+    /**
+     * Check if there's an active selection with selected points
+     * @returns true if there's a selected splat with selected points (numSelected > 0)
+     */
+    private hasActiveSelection(): boolean {
+        const selection = this.events.invoke('selection');
+        return selection && selection.numSelected > 0;
+    }
+
+    /**
+     * Update the mode selection based on current selection state
+     * Defaults to 'Selection Only' when there are selected points,
+     * or 'All Points' when there are no selected points or no selection
+     */
+    private updateModeBasedOnSelection(): void {
+        const hasActiveSelection = this.hasActiveSelection();
+        
+        if (hasActiveSelection) {
+            // There are selected points, default to 'Selection Only'
+            this.modeSelect.value = 'selection';
+            console.log('SOR Dialog: Active selection detected, defaulting to "Selection Only" mode');
+        } else {
+            // No selection or no selected points, default to 'All Points'
+            this.modeSelect.value = 'all';
+            console.log('SOR Dialog: No active selection, defaulting to "All Points" mode');
+        }
     }
 
     private getOptions(): SORCleanupOptions {

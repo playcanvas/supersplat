@@ -90,9 +90,14 @@ const resetPopupPositionIfNotSOR = () => {
  * @param scene The scene containing splats
  */
 const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scene) => {
+    // Log version info to help identify when latest build is loaded
+    console.log('🔧 SOR Events registered - Build timestamp: 2025-10-05T09:57:00Z - POPUP.TS DIRECT FIX');
+    
     let originalLockedColor: any = null;
     
-    // Set up MutationObserver to detect popup changes and reset position for non-SOR popups
+    // TEMPORARILY DISABLED: MutationObserver to test if it's interfering
+    console.log('🔧 MutationObserver DISABLED for debugging');
+    /*
     const popupContainer = document.getElementById('popup');
     if (popupContainer) {
         const observer = new MutationObserver((mutations) => {
@@ -112,6 +117,7 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
             attributeFilter: ['class']
         });
     }
+    */
     
     // Preview SOR outliers by temporarily marking them as locked and changing color to red
     events.on('sor.preview', async (options: SORCleanupOptions) => {
@@ -146,24 +152,11 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
             const popupResult = await events.invoke('showPopup', {
                 type: 'info',
                 header: 'SOR Preview Results',
-                message: `Preview Mode: ${options.mode}\n\nProcessed Points: ${result.totalProcessed.toLocaleString()}\nOutliers Found: ${result.totalOutliers.toLocaleString()}\n\nParameters:\n• Neighbors: ${options.nbNeighbors}\n• Std Ratio: ${options.stdRatio}\n\nOutliers are highlighted in RED. Use "Apply Cleanup" to permanently remove them, or close the dialog to cancel.`
+                message: `Preview Mode: ${options.mode}\nProcessed Points: ${result.totalProcessed.toLocaleString()}\nOutliers Found: ${result.totalOutliers.toLocaleString()}\n\nParameters:\nNeighbors: ${options.nbNeighbors}\nStd Ratio: ${options.stdRatio}\n\nOutliers are highlighted in RED.\n\nNext Actions:\n• Apply Cleanup - permanently remove\n• Select Outliers - select outlier points\n• Separate Outliers - move to new splat\n• Close dialog to cancel preview`
             });
             
-            // Move the popup dialog to bottom-right position after showing (SOR specific)
-            setTimeout(() => {
-                const popupDialog = document.getElementById('popup-dialog');
-                const popupHeader = document.getElementById('popup-header');
-                if (popupDialog && popupHeader && popupHeader.textContent?.includes('SOR')) {
-                    popupDialog.style.position = 'fixed';
-                    popupDialog.style.bottom = '20px';
-                    popupDialog.style.right = '20px';
-                    popupDialog.style.top = 'auto';
-                    popupDialog.style.left = 'auto';
-                    popupDialog.style.transform = 'none';
-                    popupDialog.style.maxWidth = '400px';
-                    popupDialog.setAttribute('data-sor-popup', 'true');
-                }
-            }, 10);
+            // SOR popup positioning is now handled directly in popup.ts
+            console.log('🔧 SOR popup positioning delegated to popup.ts');
         } catch (error: any) {
             // Make sure to end processing mode on error
             ProcessingManager.endProcessing();
@@ -214,14 +207,19 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
                 const noOutliersResult = await events.invoke('showPopup', {
                     type: 'info',
                     header: 'SOR Cleanup Complete',
-                    message: 'No outliers found with the current parameters. No points were removed.'
+                    message: 'No outliers found with the current parameters.\n\nNo points were removed.'
                 });
                 
-            // Move the popup dialog to bottom-right position after showing (SOR specific)
-            setTimeout(() => {
+                // Move the popup dialog to bottom-right position immediately (SOR specific)
                 const popupDialog = document.getElementById('popup-dialog');
                 const popupHeader = document.getElementById('popup-header');
+                const popupContent = document.getElementById('popup-content');
+                
                 if (popupDialog && popupHeader && popupHeader.textContent?.includes('SOR')) {
+                    // Set data attribute immediately to prevent reset by observer
+                    popupDialog.setAttribute('data-sor-popup', 'true');
+                    
+                    // Apply positioning and styling immediately
                     popupDialog.style.position = 'fixed';
                     popupDialog.style.bottom = '20px';
                     popupDialog.style.right = '20px';
@@ -229,9 +227,15 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
                     popupDialog.style.left = 'auto';
                     popupDialog.style.transform = 'none';
                     popupDialog.style.maxWidth = '400px';
-                    popupDialog.setAttribute('data-sor-popup', 'true');
+                    
+                    // Apply content styling for better formatting
+                    if (popupContent) {
+                        popupContent.style.whiteSpace = 'pre-line';
+                        popupContent.style.fontFamily = 'monospace';
+                        popupContent.style.fontSize = '12px';
+                        popupContent.style.lineHeight = '1.4';
+                    }
                 }
-            }, 10);
                 return;
             }
             
@@ -243,24 +247,36 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
             const applyResult = await events.invoke('showPopup', {
                 type: 'success',
                 header: 'SOR Cleanup Complete',
-                message: `Successfully removed statistical outliers!\n\nMode: ${options.mode}\nProcessed Points: ${sorOp.totalProcessed.toLocaleString()}\nRemoved Points: ${sorOp.totalOutliers.toLocaleString()} (${removalPercentage}%)\n\nParameters:\n• Neighbors: ${options.nbNeighbors}\n• Std Ratio: ${options.stdRatio}\n\nUse Ctrl+Z to undo if needed.`
+                message: `Successfully removed statistical outliers!\n\nMode:...................................${options.mode}\nProcessed Points:.......................${sorOp.totalProcessed.toLocaleString()}\nRemoved Points:.........................${sorOp.totalOutliers.toLocaleString()} (${removalPercentage}%)\n\nParameters:\nNeighbors:..............................${options.nbNeighbors}\nStd Ratio:..............................${options.stdRatio}\n\nUse Ctrl+Z to undo if needed.`
             });
             
-            // Move the popup dialog to bottom-right position after showing (SOR specific)
-            setTimeout(() => {
-                const popupDialog = document.getElementById('popup-dialog');
-                const popupHeader = document.getElementById('popup-header');
-                if (popupDialog && popupHeader && popupHeader.textContent?.includes('SOR')) {
-                    popupDialog.style.position = 'fixed';
-                    popupDialog.style.bottom = '20px';
-                    popupDialog.style.right = '20px';
-                    popupDialog.style.top = 'auto';
-                    popupDialog.style.left = 'auto';
-                    popupDialog.style.transform = 'none';
-                    popupDialog.style.maxWidth = '400px';
-                    popupDialog.setAttribute('data-sor-popup', 'true');
+            // Move the popup dialog to bottom-right position immediately (SOR specific)
+            const popupDialog = document.getElementById('popup-dialog');
+            const popupHeader = document.getElementById('popup-header');
+            const popupContent = document.getElementById('popup-content');
+            
+            if (popupDialog && popupHeader && popupHeader.textContent?.includes('SOR')) {
+                // Set data attribute immediately to prevent reset by observer
+                popupDialog.setAttribute('data-sor-popup', 'true');
+                
+                // Apply positioning and styling immediately
+                popupDialog.style.position = 'fixed';
+                popupDialog.style.bottom = '20px';
+                popupDialog.style.right = '20px';
+                popupDialog.style.top = 'auto';
+                popupDialog.style.left = 'auto';
+                popupDialog.style.transform = 'none';
+                popupDialog.style.maxWidth = '450px';
+                popupDialog.style.minWidth = '350px';
+                
+                // Apply content styling for better formatting
+                if (popupContent) {
+                    popupContent.style.whiteSpace = 'pre-line';
+                    popupContent.style.fontFamily = 'monospace';
+                    popupContent.style.fontSize = '12px';
+                    popupContent.style.lineHeight = '1.4';
                 }
-            }, 10);
+            }
             
             // Close the SOR dialog after successful apply
             events.fire('sor.closeDialog');
@@ -346,10 +362,10 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
             await events.invoke('showPopup', {
                 type: 'success',
                 header: 'SOR Select Outliers',
-                message: `Selected ${result.totalOutliers.toLocaleString()} outliers out of ${result.totalProcessed.toLocaleString()} processed points.`
+                message: `Selected outliers successfully!\n\nProcessed Points:.......................${result.totalProcessed.toLocaleString()}\nSelected Outliers:......................${result.totalOutliers.toLocaleString()}\n\nThe outlier points are now selected and ready for further operations.`
             });
 
-            // Move popup bottom-right (SOR specific)
+            // Move popup bottom-right immediately (SOR specific)
             setTimeout(() => {
                 const popupDialog = document.getElementById('popup-dialog');
                 const popupHeader = document.getElementById('popup-header');
@@ -361,9 +377,10 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
                     popupDialog.style.left = 'auto';
                     popupDialog.style.transform = 'none';
                     popupDialog.style.maxWidth = '400px';
+                    popupDialog.style.whiteSpace = 'pre-line'; // Respect line breaks
                     popupDialog.setAttribute('data-sor-popup', 'true');
                 }
-            }, 10);
+            }, 1);
         } catch (error: any) {
             // Make sure to end processing mode on error
             ProcessingManager.endProcessing();
@@ -414,10 +431,10 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
                 const noOutliersResult = await events.invoke('showPopup', {
                     type: 'info',
                     header: 'SOR Separate Complete',
-                    message: 'No outliers found with the current parameters. No points were separated.'
+                    message: 'No outliers found with the current parameters.\n\nNo points were separated.'
                 });
                 
-                // Move popup to bottom-right
+                // Move popup to bottom-right immediately
                 setTimeout(() => {
                     const popupDialog = document.getElementById('popup-dialog');
                     if (popupDialog) {
@@ -428,8 +445,10 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
                         popupDialog.style.left = 'auto';
                         popupDialog.style.transform = 'none';
                         popupDialog.style.maxWidth = '400px';
+                        popupDialog.style.whiteSpace = 'pre-line'; // Respect line breaks
+                        popupDialog.setAttribute('data-sor-popup', 'true');
                     }
-                }, 10);
+                }, 1);
                 return;
             }
             
@@ -457,10 +476,10 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
             const separateResult = await events.invoke('showPopup', {
                 type: 'success',
                 header: 'SOR Separate Complete',
-                message: `Successfully separated statistical outliers into a new splat!\n\nMode: ${options.mode}\nProcessed Points: ${result.totalProcessed.toLocaleString()}\nSeparated Points: ${result.totalOutliers.toLocaleString()} (${separatePercentage}%)\n\nParameters:\n• Neighbors: ${options.nbNeighbors}\n• Std Ratio: ${options.stdRatio}\n\nOutliers are now in a separate splat. Use Ctrl+Z to undo if needed.`
+                message: `Successfully separated statistical outliers into a new splat!\n\nMode:...................................${options.mode}\nProcessed Points:.......................${result.totalProcessed.toLocaleString()}\nSeparated Points:.......................${result.totalOutliers.toLocaleString()} (${separatePercentage}%)\n\nParameters:\nNeighbors:..............................${options.nbNeighbors}\nStd Ratio:..............................${options.stdRatio}\n\nOutliers are now in a separate splat.\nUse Ctrl+Z to undo if needed.`
             });
             
-            // Move popup to bottom-right (SOR specific)
+            // Move popup to bottom-right immediately (SOR specific)
             setTimeout(() => {
                 const popupDialog = document.getElementById('popup-dialog');
                 const popupHeader = document.getElementById('popup-header');
@@ -472,9 +491,10 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
                     popupDialog.style.left = 'auto';
                     popupDialog.style.transform = 'none';
                     popupDialog.style.maxWidth = '400px';
+                    popupDialog.style.whiteSpace = 'pre-line'; // Respect line breaks
                     popupDialog.setAttribute('data-sor-popup', 'true');
                 }
-            }, 10);
+            }, 1);
             
         } catch (error: any) {
             // Make sure to end processing mode on error

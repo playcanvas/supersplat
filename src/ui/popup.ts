@@ -157,6 +157,22 @@ class Popup extends Container {
                 text.dom.style.whiteSpace = 'pre-line';
                 
                 console.log('🔧 POPUP.TS: SOR popup attributes and styling applied');
+            } else {
+                // This is NOT a SOR popup - ensure SOR attributes are cleared
+                console.log('🔧 POPUP.TS: Non-SOR popup detected, clearing SOR attributes...');
+                
+                // Remove SOR attributes to ensure normal centering
+                dialog.dom.removeAttribute('data-sor-popup');
+                dialog.dom.classList.remove('sor-popup-positioned');
+                
+                // Reset text styling to defaults
+                text.dom.style.fontFamily = '';
+                text.dom.style.fontSize = '';
+                text.dom.style.lineHeight = '';
+                text.dom.style.textAlign = '';
+                text.dom.style.whiteSpace = '';
+                
+                console.log('🔧 POPUP.TS: SOR attributes cleared for normal popup');
             }
 
             linkRow.hidden = link === undefined;

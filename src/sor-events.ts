@@ -91,7 +91,7 @@ const resetPopupPositionIfNotSOR = () => {
  */
 const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scene) => {
     // Log version info to help identify when latest build is loaded
-    console.log('🔧 SOR Events registered - Build timestamp: 2025-10-05T09:57:00Z - POPUP.TS DIRECT FIX');
+    console.log('🔧 SOR Events registered - Build timestamp: 2025-10-05T19:04:00Z - ATTRIBUTE CLEARING FIX');
     
     let originalLockedColor: any = null;
     

@@ -281,7 +281,13 @@ class ExportPopup extends Container {
             text: localize('file.export')
         });
 
+        const previewButton = new Button({
+            class: 'button',
+            text: localize('file.export.preview')
+        });
+
         footer.append(cancelButton);
+        footer.append(previewButton);
         footer.append(exportButton);
 
         dialog.append(header);
@@ -294,9 +300,11 @@ class ExportPopup extends Container {
 
         let onCancel: () => void;
         let onExport: () => void;
+        let onPreview: () => void;
 
         cancelButton.on('click', () => onCancel());
         exportButton.on('click', () => onExport());
+        previewButton.on('click', () => onPreview());
 
         const keydown = (e: KeyboardEvent) => {
             switch (e.key) {
@@ -402,26 +410,28 @@ class ExportPopup extends Container {
             this.dom.addEventListener('keydown', keydown);
             this.dom.focus();
 
-            const assemblePlyOptions = () : SceneExportOptions => {
+            const assemblePlyOptions = (action: 'export' | 'preview') : SceneExportOptions => {
                 return {
                     filename: filenameEntry.value,
                     splatIdx: splatsSelect.value === 'all' ? 'all' : splatsSelect.value,
                     serializeSettings: {
                         maxSHBands: bandsSlider.value
                     },
-                    compressedPly: compressBoolean.value
+                    compressedPly: compressBoolean.value,
+                    action
                 };
             };
 
-            const assembleSplatOptions = () : SceneExportOptions => {
+            const assembleSplatOptions = (action: 'export' | 'preview') : SceneExportOptions => {
                 return {
                     filename: filenameEntry.value,
                     splatIdx: splatsSelect.value === 'all' ? 'all' : splatsSelect.value,
-                    serializeSettings: { }
+                    serializeSettings: { },
+                    action
                 };
             };
 
-            const assembleViewerOptions = () : SceneExportOptions => {
+            const assembleViewerOptions = (action: 'export' | 'preview') : SceneExportOptions => {
                 // extract camera starting pos
                 let pose;
                 switch (startSelect.value) {
@@ -500,7 +510,8 @@ class ExportPopup extends Container {
                     viewerExportSettings: {
                         type: viewerTypeSelect.value,
                         experienceSettings
-                    }
+                    },
+                    action
                 };
             };
 
@@ -509,16 +520,30 @@ class ExportPopup extends Container {
                     resolve(null);
                 };
 
+                onPreview = () => {
+                    switch (exportType) {
+                        case 'ply':
+                            resolve(assemblePlyOptions('preview'));
+                            break;
+                        case 'splat':
+                            resolve(assembleSplatOptions('preview'));
+                            break;
+                        case 'viewer':
+                            resolve(assembleViewerOptions('preview'));
+                            break;
+                    }
+                };
+
                 onExport = () => {
                     switch (exportType) {
                         case 'ply':
-                            resolve(assemblePlyOptions());
+                            resolve(assemblePlyOptions('export'));
                             break;
                         case 'splat':
-                            resolve(assembleSplatOptions());
+                            resolve(assembleSplatOptions('export'));
                             break;
                         case 'viewer':
-                            resolve(assembleViewerOptions());
+                            resolve(assembleViewerOptions('export'));
                             break;
                     }
                 };

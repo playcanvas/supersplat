@@ -60,7 +60,18 @@ const application = {
                 { src: 'static/images', dest: 'static' },
                 { src: 'static/icons', dest: 'static' },
                 { src: 'static/lib', dest: 'static' },
-                { src: 'static/env/VertebraeHDRI_v1_512.png', dest: 'static/env' }
+                { src: 'static/env/VertebraeHDRI_v1_512.png', dest: 'static/env' },
+                {
+                    src: 'node_modules/@playcanvas/supersplat-viewer/public',
+                    dest: 'preview',
+                    destFilename: './',
+                    transform: (contents, filename) => {
+                        if (filename.endsWith('/index.html') && HREF) {
+                            return contents.toString().replace('<base href="">', `<base href="${HREF}preview/">`);
+                        }
+                        return contents;
+                    }
+                }
             ]
         }),
         alias({

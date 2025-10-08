@@ -405,7 +405,7 @@ const localizeInit = () => {
                     'shortcuts.show': 'SHOW',
                     'shortcuts.hide-selected-splats': 'Hide Selected Splats',
                     'shortcuts.unhide-all-splats': 'Unhide All Splats',
-'shortcuts.toggle-data-panel': 'Toggle Data Panel',
+                    'shortcuts.toggle-data-panel': 'Toggle Data Panel',
                     'shortcuts.toggle-ui-overlay': 'Toggle GUI Overlay',
                     'shortcuts.other': 'OTHER',
                     'shortcuts.select-next-splat': 'Select Next Splat',

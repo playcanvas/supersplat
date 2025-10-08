@@ -9,7 +9,7 @@ class Ticks extends Container {
     private zoomCenter: number = 0.5; // 0-1, center of zoom
     private minZoom: number = 0.1;
     private maxZoom: number = 10.0;
-    
+
     constructor(events: Events, tooltips: Tooltips, args = {}) {
         args = {
             ...args,
@@ -39,14 +39,14 @@ class Ticks extends Container {
 
             const padding = 20;
             const totalWidth = this.dom.getBoundingClientRect().width - padding * 2;
-            
+
             // Calculate zoom parameters
             const zoomedFrames = Math.max(1, numFrames / this.zoomLevel);
-            const startFrame = Math.max(0, Math.min(numFrames - zoomedFrames, 
+            const startFrame = Math.max(0, Math.min(numFrames - zoomedFrames,
                 Math.floor((numFrames - zoomedFrames) * this.zoomCenter)));
             const endFrame = Math.min(numFrames - 1, startFrame + zoomedFrames - 1);
             const visibleFrames = endFrame - startFrame + 1;
-            
+
             const labelStep = Math.max(1, Math.floor(visibleFrames / Math.max(1, Math.floor(totalWidth / 50))));
             const numLabels = Math.max(1, Math.ceil(visibleFrames / labelStep));
 
@@ -57,7 +57,7 @@ class Ticks extends Container {
 
             frameFromOffset = (offset: number) => {
                 const normalizedOffset = Math.max(0, Math.min(1, (offset - padding) / totalWidth));
-                return Math.max(startFrame, Math.min(endFrame, 
+                return Math.max(startFrame, Math.min(endFrame,
                     Math.floor(startFrame + normalizedOffset * visibleFrames)));
             };
 
@@ -83,7 +83,7 @@ class Ticks extends Container {
             const createKey = (value: number) => {
                 const offset = offsetFromFrame(value);
                 if (offset < 0) return; // key is outside visible range
-                
+
                 const label = document.createElement('div');
                 label.classList.add('time-label', 'key');
                 label.style.left = `${offset}px`;
@@ -194,52 +194,52 @@ class Ticks extends Container {
         events.on('timeline.keyRemoved', (index: number) => {
             removeKey(index);
         });
-        
+
         // Add zoom control methods
         this.zoomIn = () => {
             this.zoomLevel = Math.min(this.maxZoom, this.zoomLevel * 1.5);
             rebuild();
         };
-        
+
         this.zoomOut = () => {
             this.zoomLevel = Math.max(this.minZoom, this.zoomLevel / 1.5);
             rebuild();
         };
-        
+
         this.zoomFit = () => {
             this.zoomLevel = 1.0;
             this.zoomCenter = 0.5;
             rebuild();
         };
-        
+
         this.setZoomCenter = (centerRatio: number) => {
             this.zoomCenter = Math.max(0, Math.min(1, centerRatio));
             rebuild();
         };
-        
+
         // Add mouse wheel zoom support
         workArea.dom.addEventListener('wheel', (event: WheelEvent) => {
             if (event.ctrlKey || event.metaKey) {
                 event.preventDefault();
-                
+
                 // Calculate zoom center based on mouse position
                 const rect = workArea.dom.getBoundingClientRect();
                 const mouseX = event.clientX - rect.left;
                 const totalWidth = rect.width - 40; // account for padding
                 this.zoomCenter = Math.max(0, Math.min(1, (mouseX - 20) / totalWidth));
-                
+
                 // Zoom in/out based on wheel direction
                 if (event.deltaY < 0) {
                     this.zoomLevel = Math.min(this.maxZoom, this.zoomLevel * 1.2);
                 } else {
                     this.zoomLevel = Math.max(this.minZoom, this.zoomLevel / 1.2);
                 }
-                
+
                 rebuild();
             }
         }, { passive: false });
     }
-    
+
     // Expose zoom methods
     zoomIn: () => void;
     zoomOut: () => void;
@@ -322,12 +322,12 @@ class TimelinePanel extends Container {
         buttonControls.append(lastFrame);
         buttonControls.append(addKey);
         buttonControls.append(removeKey);
-        
+
         // Add separator and zoom controls
         const separator = document.createElement('div');
         separator.className = 'button-separator';
         buttonControls.dom.appendChild(separator);
-        
+
         buttonControls.append(zoomOut);
         buttonControls.append(zoomIn);
         buttonControls.append(zoomFit);
@@ -419,16 +419,16 @@ class TimelinePanel extends Container {
 
         this.append(controlsWrap);
         this.append(ticks);
-        
+
         // Connect zoom buttons to ticks zoom methods
         zoomIn.on('click', () => {
             ticks.zoomIn();
         });
-        
+
         zoomOut.on('click', () => {
             ticks.zoomOut();
         });
-        
+
         zoomFit.on('click', () => {
             ticks.zoomFit();
         });

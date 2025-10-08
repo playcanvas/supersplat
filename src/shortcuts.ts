@@ -7,6 +7,7 @@ interface ShortcutOptions {
     capture?: boolean;      // use capture phase - i.e. handle the events before anyone else
     func?: () => void;
     event?: string;
+    condition?: () => boolean;  // optional condition to check before executing
 }
 
 class Shortcuts {
@@ -30,6 +31,11 @@ class Shortcuts {
 
                     e.stopPropagation();
                     e.preventDefault();
+
+                    // check condition if provided
+                    if (options.condition && !options.condition()) {
+                        return;
+                    }
 
                     // handle sticky shortcuts
                     if (options.sticky) {

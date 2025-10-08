@@ -49,7 +49,7 @@ self.addEventListener('activate', () => {
 self.addEventListener('fetch', (event) => {
     event.respondWith(
         caches.match(event.request)
-        .then(response => {
+        .then((response) => {
             if (response) {
                 return response;
             }

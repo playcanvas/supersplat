@@ -167,4 +167,3 @@ const getSceneConfig = (overrides: any[]) => {
 };
 
 export { SceneConfig, getSceneConfig };
-

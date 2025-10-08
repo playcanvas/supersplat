@@ -33,18 +33,18 @@ class MeasurementPanel extends Panel {
         this.events = events;
         this.createUI();
         this.bindEvents();
-        
+
         // Add test click handler to the panel itself
         console.log('🧪 Adding test click handler to panel');
         this.dom.addEventListener('click', (e) => {
             console.log('🧪 PANEL CLICK TEST - Panel was clicked!', e.target);
         });
-        
+
         // Start hidden and keep hidden at startup
         this.dom.style.display = 'none';
         this.visible = false;
         console.log('🙈 Measurement panel hidden at startup');
-        
+
         // Try delayed event binding after UI is fully created
         setTimeout(() => {
             console.log('⏱️ Attempting delayed button event binding...');
@@ -163,7 +163,7 @@ class MeasurementPanel extends Panel {
             e.stopPropagation();
             this.redo1Measurement();
         });
-        
+
         this.redo2Button = new Button({
             text: 'Redo2',
             size: 'small',
@@ -279,7 +279,7 @@ class MeasurementPanel extends Panel {
         this.events.fire('measurement.disable.temporary');
         this.events.fire('measurement.redo.first');
     }
-    
+
     private redo2Measurement() {
         console.log('🔄 Redo2 button clicked - clearing second point only');
         // Temporarily disable measurement tool clicks
@@ -306,7 +306,7 @@ class MeasurementPanel extends Panel {
         if (!this.visible) {
             this.visible = true;
             this.dom.style.display = 'block';
-            
+
             // Fire event
             this.events.fire('measurement.panel.visible', true);
             console.log('Measurement panel shown');
@@ -317,7 +317,7 @@ class MeasurementPanel extends Panel {
         if (this.visible) {
             this.visible = false;
             this.dom.style.display = 'none';
-            
+
             // Fire event
             this.events.fire('measurement.panel.visible', false);
             console.log('Measurement panel hidden');
@@ -327,14 +327,14 @@ class MeasurementPanel extends Panel {
     public get isVisible(): boolean {
         return this.visible;
     }
-    
+
     private bindButtonEvents() {
         console.log('🔗 DELAYED: Binding button events...');
-        
+
         // Clear button
         if (this.clearButton && this.clearButton.dom) {
             console.log('🔗 DELAYED: Clear button exists, adding listeners');
-            
+
             // Remove any existing listeners
             const clearHandler = (e: Event) => {
                 console.log('🧹 DELAYED CLEAR: Button clicked!');
@@ -342,52 +342,52 @@ class MeasurementPanel extends Panel {
                 e.preventDefault();
                 this.clearMeasurement();
             };
-            
+
             this.clearButton.dom.addEventListener('click', clearHandler, true);
             this.clearButton.dom.addEventListener('mousedown', clearHandler, true);
         }
-        
-        // Redo1 button  
+
+        // Redo1 button
         if (this.redo1Button && this.redo1Button.dom) {
             console.log('🔗 DELAYED: Redo1 button exists, adding listeners');
-            
+
             const redo1Handler = (e: Event) => {
                 console.log('🔄 DELAYED REDO1: Button clicked!');
                 e.stopPropagation();
                 e.preventDefault();
                 this.redo1Measurement();
             };
-            
+
             this.redo1Button.dom.addEventListener('click', redo1Handler, true);
             this.redo1Button.dom.addEventListener('mousedown', redo1Handler, true);
         }
-        
-        // Redo2 button  
+
+        // Redo2 button
         if (this.redo2Button && this.redo2Button.dom) {
             console.log('🔗 DELAYED: Redo2 button exists, adding listeners');
-            
+
             const redo2Handler = (e: Event) => {
                 console.log('🔄 DELAYED REDO2: Button clicked!');
                 e.stopPropagation();
                 e.preventDefault();
                 this.redo2Measurement();
             };
-            
+
             this.redo2Button.dom.addEventListener('click', redo2Handler, true);
             this.redo2Button.dom.addEventListener('mousedown', redo2Handler, true);
         }
-        
+
         // Close button
         if (this.exitButton && this.exitButton.dom) {
             console.log('🔗 DELAYED: Close button exists, adding listeners');
-            
+
             const closeHandler = (e: Event) => {
                 console.log('🚪 DELAYED CLOSE: Button clicked!');
                 e.stopPropagation();
                 e.preventDefault();
                 this.exitMeasurement();
             };
-            
+
             this.exitButton.dom.addEventListener('click', closeHandler, true);
             this.exitButton.dom.addEventListener('mousedown', closeHandler, true);
         }

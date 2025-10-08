@@ -36,19 +36,19 @@ class MeasurementVisual {
         this.overlayCanvas.style.left = '0';
         this.overlayCanvas.style.pointerEvents = 'none'; // Allow clicks to pass through
         this.overlayCanvas.style.zIndex = '999'; // Above canvas but below UI
-        
+
         // Set canvas size to match main canvas
         this.updateCanvasSize();
-        
+
         // Get 2D context
         this.overlayContext = this.overlayCanvas.getContext('2d')!;
-        
+
         // Add to canvas container
         const canvasContainer = this.canvas.parentElement;
         if (canvasContainer) {
             canvasContainer.appendChild(this.overlayCanvas);
         }
-        
+
         // Listen for canvas resize
         window.addEventListener('resize', () => {
             this.updateCanvasSize();
@@ -98,7 +98,7 @@ class MeasurementVisual {
         }
 
         console.log('🎨 Starting visual animation...');
-        
+
         const animate = () => {
             if (this.currentData) {
                 this.render();
@@ -145,7 +145,7 @@ class MeasurementVisual {
         console.log('📏 Converting points to screen coordinates...');
         const screenPoint1 = this.worldToScreen(this.currentData.point1);
         const screenPoint2 = this.worldToScreen(this.currentData.point2);
-        
+
         console.log('📍 Screen points:', { screenPoint1, screenPoint2 });
 
         // Draw point 1 if it exists (GREEN for start point)
@@ -179,28 +179,28 @@ class MeasurementVisual {
         try {
             const camera = this.scene.camera;
             const screenVec = new Vec3();
-            
+
             console.log(`🌍 Converting world point to screen: ${worldPoint.x.toFixed(3)}, ${worldPoint.y.toFixed(3)}, ${worldPoint.z.toFixed(3)}`);
-            
+
             camera.worldToScreen(worldPoint, screenVec);
-            
+
             console.log(`📺 Screen coordinates (pixels): ${screenVec.x.toFixed(3)}, ${screenVec.y.toFixed(3)}`);
-            
+
             // The worldToScreen method already returns pixel coordinates, not normalized coordinates
             const canvasRect = this.overlayCanvas.getBoundingClientRect();
             const x = screenVec.x;
             const y = screenVec.y;
-            
+
             console.log(`🎯 Final screen coordinates: ${x.toFixed(1)}, ${y.toFixed(1)} (canvas: ${canvasRect.width}x${canvasRect.height})`);
-            
+
             // Check if point is within screen bounds (with some tolerance)
             if (x >= -50 && x <= canvasRect.width + 50 && y >= -50 && y <= canvasRect.height + 50) {
                 return { x, y };
-            } else {
-                console.log(`⚠️ Point outside screen bounds: ${x.toFixed(1)}, ${y.toFixed(1)}`);
-                return { x, y }; // Still return it, let the drawing handle clipping
             }
-            
+            console.log(`⚠️ Point outside screen bounds: ${x.toFixed(1)}, ${y.toFixed(1)}`);
+            return { x, y }; // Still return it, let the drawing handle clipping
+
+
         } catch (error) {
             console.warn('❌ Error converting world to screen coordinates:', error);
             return null;
@@ -209,32 +209,32 @@ class MeasurementVisual {
 
     private drawPoint(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, diameter: number) {
         ctx.save();
-        
+
         // Draw outer ring for better visibility
         ctx.beginPath();
         ctx.arc(x, y, diameter / 2 + 1, 0, 2 * Math.PI);
         ctx.fillStyle = '#000000';
         ctx.fill();
-        
+
         // Draw main dot
         ctx.beginPath();
         ctx.arc(x, y, diameter / 2, 0, 2 * Math.PI);
         ctx.fillStyle = color;
         ctx.fill();
-        
+
         // Draw inner highlight
         ctx.beginPath();
         ctx.arc(x, y, diameter / 4, 0, 2 * Math.PI);
         ctx.fillStyle = '#ffffff';
         ctx.globalAlpha = 0.8;
         ctx.fill();
-        
+
         ctx.restore();
     }
 
     private drawLine(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, color: string, width: number) {
         ctx.save();
-        
+
         // Draw outer line for better visibility
         ctx.beginPath();
         ctx.moveTo(x1, y1);
@@ -242,7 +242,7 @@ class MeasurementVisual {
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = width + 2;
         ctx.stroke();
-        
+
         // Draw main line
         ctx.beginPath();
         ctx.moveTo(x1, y1);
@@ -250,7 +250,7 @@ class MeasurementVisual {
         ctx.strokeStyle = color;
         ctx.lineWidth = width;
         ctx.stroke();
-        
+
         ctx.restore();
     }
 
@@ -262,12 +262,12 @@ class MeasurementVisual {
     public destroy() {
         this.stopAnimation();
         this.clearVisual();
-        
+
         // Remove overlay canvas
         if (this.overlayCanvas.parentElement) {
             this.overlayCanvas.parentElement.removeChild(this.overlayCanvas);
         }
-        
+
         // Remove event listeners
         window.removeEventListener('resize', () => {
             this.updateCanvasSize();

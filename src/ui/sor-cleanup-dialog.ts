@@ -15,7 +15,7 @@ class SORCleanupDialog extends Container {
     modeSelect: SelectInput;
     nbNeighborsInput: NumericInput;
     stdRatioInput: NumericInput;
-    
+
     constructor(events: Events, tooltips?: Tooltips) {
         super({
             id: 'sor-cleanup-dialog',
@@ -31,7 +31,7 @@ class SORCleanupDialog extends Container {
             flex: true,
             flexDirection: 'column'
         });
-        
+
         // Apply inline styling to content for dark theme panel
         setTimeout(() => {
             if (content.dom) {
@@ -48,7 +48,7 @@ class SORCleanupDialog extends Container {
                 content.dom.style.pointerEvents = 'auto';
                 content.dom.style.userSelect = 'auto';
             }
-            
+
             // Style all text elements to be white while preserving interactivity
             const allElements = content.dom?.querySelectorAll('*');
             allElements?.forEach((el: Element) => {
@@ -96,7 +96,7 @@ class SORCleanupDialog extends Container {
             flex: true,
             flexDirection: 'row'
         });
-        
+
         const modeLabel = new Label({
             class: 'sor-cleanup-label',
             text: 'Process:'
@@ -134,7 +134,7 @@ class SORCleanupDialog extends Container {
             precision: 0,
             step: 1
         });
-        
+
         // Ensure numeric input is enabled and styled with white text
         this.nbNeighborsInput.enabled = true;
         setTimeout(() => {
@@ -144,7 +144,7 @@ class SORCleanupDialog extends Container {
                 this.nbNeighborsInput.dom.style.border = '1px solid #666 !important';
                 this.nbNeighborsInput.dom.style.pointerEvents = 'auto';
                 this.nbNeighborsInput.dom.style.userSelect = 'auto';
-                
+
                 // Find and style the actual input element
                 const input = this.nbNeighborsInput.dom.querySelector('input');
                 if (input) {
@@ -184,13 +184,13 @@ class SORCleanupDialog extends Container {
             precision: 1,
             step: 0.1
         });
-        
+
         // Ensure std ratio input is enabled and styled with white text
         this.stdRatioInput.enabled = true;
-        
+
         // Ensure select is enabled
         this.modeSelect.enabled = true;
-        
+
         setTimeout(() => {
             if (this.stdRatioInput.dom) {
                 this.stdRatioInput.dom.style.color = 'white !important';
@@ -198,7 +198,7 @@ class SORCleanupDialog extends Container {
                 this.stdRatioInput.dom.style.border = '1px solid #666 !important';
                 this.stdRatioInput.dom.style.pointerEvents = 'auto';
                 this.stdRatioInput.dom.style.userSelect = 'auto';
-                
+
                 // Find and style the actual input element
                 const input = this.stdRatioInput.dom.querySelector('input');
                 if (input) {
@@ -208,7 +208,7 @@ class SORCleanupDialog extends Container {
                     (input as HTMLElement).style.pointerEvents = 'auto';
                 }
             }
-            
+
             // Style select dropdown and ensure it's interactive
             if (this.modeSelect.dom) {
                 this.modeSelect.dom.style.color = 'white !important';
@@ -216,7 +216,7 @@ class SORCleanupDialog extends Container {
                 this.modeSelect.dom.style.border = '1px solid #666 !important';
                 this.modeSelect.dom.style.pointerEvents = 'auto';
                 this.modeSelect.dom.style.userSelect = 'auto';
-                
+
                 // Find and style the actual select element
                 const select = this.modeSelect.dom.querySelector('select');
                 if (select) {
@@ -279,10 +279,10 @@ class SORCleanupDialog extends Container {
         buttonContainer.append(applyButton);
         buttonContainer.append(selectButton);
         buttonContainer.append(separateButton);
-        
+
         // Style buttons with proper white text and hover effects
         setTimeout(() => {
-            [cancelButton, previewButton, applyButton, selectButton, separateButton].forEach(button => {
+            [cancelButton, previewButton, applyButton, selectButton, separateButton].forEach((button) => {
                 if (button.dom) {
                     button.dom.style.color = 'white';
                     button.dom.style.backgroundColor = '#505050';
@@ -308,7 +308,7 @@ class SORCleanupDialog extends Container {
                         inner.style.width = '100%';
                         inner.style.transform = 'translateY(-0.75px)';
                     }
-                    
+
                     // Add hover effects
                     button.dom.addEventListener('mouseenter', () => {
                         button.dom.style.backgroundColor = '#606060';
@@ -318,7 +318,7 @@ class SORCleanupDialog extends Container {
                     });
                 }
             });
-            
+
             // Special styling for apply button (primary action)
             if (applyButton.dom) {
                 applyButton.dom.style.backgroundColor = '#007acc';
@@ -329,7 +329,7 @@ class SORCleanupDialog extends Container {
                     applyButton.dom.style.backgroundColor = '#007acc';
                 });
             }
-            
+
             // Special styling for preview button
             if (previewButton.dom) {
                 previewButton.dom.style.backgroundColor = '#cc5500';
@@ -351,7 +351,7 @@ class SORCleanupDialog extends Container {
                     selectButton.dom.style.backgroundColor = '#00a3b4';
                 });
             }
-            
+
             // Special styling for separate button
             if (separateButton.dom) {
                 separateButton.dom.style.backgroundColor = '#7d4cdb';
@@ -415,7 +415,7 @@ class SORCleanupDialog extends Container {
         this.updateModeBasedOnSelection();
 
         this.hidden = false;
-        
+
         // Apply inline styling to position dialog in top-right
         if (this.dom) {
             this.dom.style.position = 'fixed';
@@ -425,13 +425,13 @@ class SORCleanupDialog extends Container {
             this.dom.style.maxWidth = '560px';
             this.dom.style.pointerEvents = 'auto';
             this.dom.style.userSelect = 'auto';
-            
+
             // Force re-enable all inputs and selects after a slight delay
             setTimeout(() => {
                 this.modeSelect.enabled = true;
                 this.nbNeighborsInput.enabled = true;
                 this.stdRatioInput.enabled = true;
-                
+
                 // Focus the first interactive element to confirm it's working
                 const firstInput = this.dom.querySelector('input, select');
                 if (firstInput) {
@@ -447,7 +447,7 @@ class SORCleanupDialog extends Container {
 
     /**
      * Check if there's an active selection with selected points
-     * @returns true if there's a selected splat with selected points (numSelected > 0)
+     * @returns {boolean} true if there's a selected splat with selected points (numSelected > 0)
      */
     private hasActiveSelection(): boolean {
         const selection = this.events.invoke('selection');
@@ -461,7 +461,7 @@ class SORCleanupDialog extends Container {
      */
     private updateModeBasedOnSelection(): void {
         const hasActiveSelection = this.hasActiveSelection();
-        
+
         if (hasActiveSelection) {
             // There are selected points, default to 'Selection Only'
             this.modeSelect.value = 'selection';

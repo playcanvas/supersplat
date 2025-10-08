@@ -15,7 +15,7 @@ const calculateCircularInterpolation = (poses: Pose[], totalFrames: number): { t
     center.mulScalar(1 / poses.length);
 
     // Calculate radius and angles for each pose
-    const poseData = poses.map(pose => {
+    const poseData = poses.map((pose) => {
         const toCamera = new Vec3().copy(pose.position).sub(center);
         const radius = toCamera.length();
         const angle = Math.atan2(toCamera.z, toCamera.x);
@@ -33,13 +33,13 @@ const calculateCircularInterpolation = (poses: Pose[], totalFrames: number): { t
 
     // Add more intermediate points for smoother circular motion
     const frameStep = Math.max(1, Math.floor(totalFrames / (poses.length * 8))); // More points for smoother arcs
-    
+
     for (let frame = 0; frame < totalFrames; frame += frameStep) {
         // Find the two poses to interpolate between
         let beforePose = poseData[0];
         let afterPose = poseData[1];
         let t = 0;
-        
+
         for (let i = 0; i < poseData.length - 1; i++) {
             if (frame >= poseData[i].frame && frame <= poseData[i + 1].frame) {
                 beforePose = poseData[i];
@@ -48,7 +48,7 @@ const calculateCircularInterpolation = (poses: Pose[], totalFrames: number): { t
                 break;
             }
         }
-        
+
         // Handle looping
         if (frame > poseData[poseData.length - 1].frame) {
             beforePose = poseData[poseData.length - 1];
@@ -79,7 +79,7 @@ const calculateCircularInterpolation = (poses: Pose[], totalFrames: number): { t
             beforePose.target.y + (afterPose.target.y - beforePose.target.y) * t,
             beforePose.target.z + (afterPose.target.z - beforePose.target.z) * t
         );
-        
+
         const newFov = beforePose.fov + ((afterPose.fov || 65) - (beforePose.fov || 65)) * t;
 
         interpolatedTimes.push(frame);
@@ -155,9 +155,9 @@ const registerCameraPosesEvents = (events: Events) => {
                 pose.position.set(result[0], result[1], result[2]);
                 pose.target.set(result[3], result[4], result[5]);
                 pose.fov = result[6] || 65; // Extract interpolated FOV
-                
+
                 events.fire('camera.setPose', pose, 0);
-                
+
                 // Set the camera FOV separately if needed
                 events.fire('camera.setFov', pose.fov);
             };
@@ -289,7 +289,7 @@ const registerCameraPosesEvents = (events: Events) => {
         for (let i = poses.length - 1; i >= 0; i--) {
             events.fire('timeline.removeKey', i);
         }
-        
+
         poses.length = 0; // Clear all poses
         rebuildSpline();
     });
@@ -338,4 +338,3 @@ const registerCameraPosesEvents = (events: Events) => {
 };
 
 export { registerCameraPosesEvents, Pose };
-

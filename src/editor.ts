@@ -637,7 +637,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             const poses = events.invoke('camera.poses') || [];
             const totalFrames = events.invoke('timeline.frames') || 180;
             const frameRate = events.invoke('timeline.frameRate') || 30;
-            
+
             if (poses.length === 0) {
                 console.warn('No camera poses to export');
                 events.invoke('showPopup', {
@@ -647,7 +647,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 });
                 return;
             }
-            
+
             // Create export data structure in Blender-compatible format
             const sortedPoses = poses.map((pose: any) => ({
                 frame: pose.frame,
@@ -667,7 +667,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 focal_length: parseFloat((50 / Math.tan((pose.fov || 65) * Math.PI / 360)).toFixed(2)), // Converted focal length
                 time: pose.frame / frameRate
             })).sort((a: any, b: any) => a.frame - b.frame);
-            
+
             const exportData = {
                 camera_name: 'SuperSplat_Camera',
                 frame_rate: frameRate,
@@ -682,10 +682,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 tool: 'SuperSplat',
                 keyframeCount: poses.length
             };
-            
+
             const jsonString = JSON.stringify(exportData, null, 2);
             const hasFilePicker = !!window.showSaveFilePicker;
-            
+
             if (hasFilePicker) {
                 // Use file picker for save location
                 try {
@@ -699,13 +699,13 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                         }],
                         suggestedName: `camera_animation_${Date.now()}.json`
                     });
-                    
+
                     const writable = await fileHandle.createWritable();
                     await writable.write(jsonString);
                     await writable.close();
-                    
+
                     console.log(`Exported ${poses.length} camera keyframes to ${fileHandle.name}`);
-                    
+
                 } catch (error: any) {
                     if (error.name !== 'AbortError') {
                         console.error('File picker export failed:', error);
@@ -716,20 +716,20 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 // Fallback to direct download
                 const blob = new Blob([jsonString], { type: 'application/json' });
                 const url = window.URL.createObjectURL(blob);
-                
+
                 const link = document.createElement('a');
                 link.href = url;
                 link.download = `camera_animation_${Date.now()}.json`;
-                
+
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                
+
                 window.URL.revokeObjectURL(url);
-                
+
                 console.log(`Exported ${poses.length} camera keyframes to JSON`);
             }
-            
+
         } catch (error: any) {
             console.error('Failed to export camera animation:', error);
             events.invoke('showPopup', {

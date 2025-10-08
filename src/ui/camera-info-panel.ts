@@ -23,19 +23,19 @@ class CameraInfoPanel extends Panel {
         this.events = events;
         this.createUI();
         this.bindEvents();
-        
+
         // Start visible and immediately responsive
         this.visible = true;
         this.dom.style.display = 'block';
-        
+
         // Start regular updates immediately (60 FPS for smooth updates)
         this.updateInterval = window.setInterval(() => {
             this.updateFromCurrentCamera();
         }, 1000 / 60);
-        
+
         // Initial update
         this.updateFromCurrentCamera();
-        
+
         console.log('Camera info panel started visible and responsive');
     }
 
@@ -145,17 +145,17 @@ class CameraInfoPanel extends Panel {
         if (!this.visible) {
             this.visible = true;
             this.dom.style.display = 'block';
-            
+
             // Update immediately when shown
             this.updateFromCurrentCamera();
-            
+
             // Start regular updates if not already running
             if (!this.updateInterval) {
                 this.updateInterval = window.setInterval(() => {
                     this.updateFromCurrentCamera();
                 }, 1000 / 60);
             }
-            
+
             // Fire event
             this.events.fire('camera.info.visible', true);
             console.log('Camera info panel shown');
@@ -166,13 +166,13 @@ class CameraInfoPanel extends Panel {
         if (this.visible) {
             this.visible = false;
             this.dom.style.display = 'none';
-            
+
             // Stop regular updates
             if (this.updateInterval) {
                 clearInterval(this.updateInterval);
                 this.updateInterval = null;
             }
-            
+
             // Fire event
             this.events.fire('camera.info.visible', false);
             console.log('Camera info panel hidden');

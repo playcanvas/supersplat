@@ -106,16 +106,62 @@ type ImportFile = {
 
 const vec = new Vec3();
 
+const loadBlenderCameraPoses = (jsonData: any, events: Events) => {
+    try {
+        // Set timeline frame count
+        const maxFrame = Math.max(...jsonData.poses.map((pose: any) => pose.frame));
+        const minFrame = Math.min(...jsonData.poses.map((pose: any) => pose.frame));
+        const totalFrames = maxFrame - minFrame + 1;
+
+        events.fire('timeline.setFrames', totalFrames);
+
+        // Set frame rate if available
+        if (jsonData.frame_rate) {
+            events.fire('timeline.setFrameRate', jsonData.frame_rate);
+        }
+
+        // Convert Blender coordinates if needed
+        // Blender uses Z-up, SuperSplat typically uses Y-up
+        const convertCoordinates = (pos: number[], useZup: boolean = true) => {
+            if (useZup) {
+                // Convert from Blender Z-up to Y-up: [x, y, z] -> [x, z, -y]
+                return new Vec3(pos[0], pos[2], -pos[1]);
+            }
+            // Use coordinates as-is
+            return new Vec3(pos[0], pos[1], pos[2]);
+        };
+
+        // Add poses to timeline
+        jsonData.poses.forEach((poseData: any, index: number) => {
+            // Convert coordinates (try Z-up first, can be adjusted via the debug panel)
+            const position = convertCoordinates(poseData.position, true);
+            const target = convertCoordinates(poseData.target, true);
+
+            events.fire('camera.addPose', {
+                name: poseData.name || `${jsonData.camera_name}_frame_${poseData.frame}`,
+                frame: poseData.frame - minFrame, // Normalize to start at 0
+                position: position,
+                target: target,
+                fov: poseData.fov || 65, // Import FOV from Blender export
+                focalLength: poseData.focal_length // Store focal length for potential future use
+            });
+        });
+    } catch (error) {
+        console.error('Failed to load Blender camera poses:', error);
+        throw new Error(`Failed to load Blender camera poses: ${error.message}`);
+    }
+};
+
 const loadCameraPoses = async (file: ImportFile, events: Events) => {
     const response = new Response(file.contents);
     const json = await response.json();
-    
+
     // Check if this is a Blender camera export format
     if (json.poses && json.camera_name) {
-        await loadBlenderCameraPoses(json, events);
+        loadBlenderCameraPoses(json, events);
         return;
     }
-    
+
     // Handle legacy format
     if (json.length > 0) {
         // calculate the average position of the camera poses
@@ -152,58 +198,6 @@ const loadCameraPoses = async (file: ImportFile, events: Events) => {
     }
 };
 
-const loadBlenderCameraPoses = async (jsonData: any, events: Events) => {
-    try {
-        
-        // Set timeline frame count
-        const maxFrame = Math.max(...jsonData.poses.map((pose: any) => pose.frame));
-        const minFrame = Math.min(...jsonData.poses.map((pose: any) => pose.frame));
-        const totalFrames = maxFrame - minFrame + 1;
-        
-        events.fire('timeline.setFrames', totalFrames);
-        
-        // Set frame rate if available
-        if (jsonData.frame_rate) {
-            events.fire('timeline.setFrameRate', jsonData.frame_rate);
-        }
-        
-        // Convert Blender coordinates if needed
-        // Blender uses Z-up, SuperSplat typically uses Y-up
-        const convertCoordinates = (pos: number[], useZup: boolean = true) => {
-            if (useZup) {
-                // Convert from Blender Z-up to Y-up: [x, y, z] -> [x, z, -y]
-                return new Vec3(pos[0], pos[2], -pos[1]);
-            } else {
-                // Use coordinates as-is
-                return new Vec3(pos[0], pos[1], pos[2]);
-            }
-        };
-        
-        // Add poses to timeline
-        jsonData.poses.forEach((poseData: any, index: number) => {
-            // Convert coordinates (try Z-up first, can be adjusted via the debug panel)
-            const position = convertCoordinates(poseData.position, true);
-            const target = convertCoordinates(poseData.target, true);
-            
-            
-            events.fire('camera.addPose', {
-                name: poseData.name || `${jsonData.camera_name}_frame_${poseData.frame}`,
-                frame: poseData.frame - minFrame, // Normalize to start at 0
-                position: position,
-                target: target,
-                fov: poseData.fov || 65, // Import FOV from Blender export
-                focalLength: poseData.focal_length // Store focal length for potential future use
-            });
-        });
-        
-        
-    } catch (error) {
-        console.error('Failed to load Blender camera poses:', error);
-        throw new Error(`Failed to load Blender camera poses: ${error.message}`);
-    }
-};
-
-
 // initialize file handler events
 const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) => {
 
@@ -234,7 +228,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
     const importCameraPoses = async (file: ImportFile) => {
         await loadCameraPoses(file, events);
     };
-    
+
 
     const importSog = async (files: ImportFile[], animationFrame: boolean) => {
         const meta = files.findIndex(f => f.filename.toLowerCase() === 'meta.json');

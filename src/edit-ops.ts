@@ -440,7 +440,7 @@ class SORCleanupOp extends StateOp {
 
     private constructor(splat: Splat, options: SORCleanupOptions, result: any) {
         const outlierSet = new Set(result.outlierIndices);
-        
+
         // Create a StateOp that will mark identified outliers as deleted
         super(splat,
             (state: number, index: number) => {
@@ -451,7 +451,7 @@ class SORCleanupOp extends StateOp {
             state => state & (~State.deleted),
             State.deleted
         );
-        
+
         this.options = options;
         this.totalProcessed = result.totalProcessed;
         this.totalOutliers = result.totalOutliers;
@@ -459,6 +459,9 @@ class SORCleanupOp extends StateOp {
 
     /**
      * Factory method to create SORCleanupOp asynchronously
+     * @param {Splat} splat - The splat to clean up
+     * @param {SORCleanupOptions} options - Cleanup options
+     * @returns {Promise<SORCleanupOp>} Promise that resolves to the SORCleanupOp
      */
     static async create(splat: Splat, options: SORCleanupOptions): Promise<SORCleanupOp> {
         // First identify the outliers to create the proper state filter

@@ -1,16 +1,17 @@
 import { Container, Label } from '@playcanvas/pcui';
 import { Mat4, Vec3 } from 'playcanvas';
 
-import { CameraPosesPanel } from './camera-poses-panel';
-import { CameraInfoPanel } from './camera-info-panel';
-import { DataPanel } from './data-panel';
-import { MeasurementPanel } from './measurement-panel';
+import { AreaMeasurementPanel } from './area-measurement-panel';
 import { Events } from '../events';
 import { BottomToolbar } from './bottom-toolbar';
+import { CameraInfoPanel } from './camera-info-panel';
+import { CameraPosesPanel } from './camera-poses-panel';
 import { ColorPanel } from './color-panel';
+import { DataPanel } from './data-panel';
 import { ExportPopup } from './export-popup';
 import { ImageSettingsDialog } from './image-settings-dialog';
 import { localize, localizeInit } from './localization';
+import { MeasurementPanel } from './measurement-panel';
 import { Menu } from './menu';
 import { ModeToggle } from './mode-toggle';
 import logo from './playcanvas-logo.png';
@@ -159,10 +160,12 @@ class EditorUI {
         const cameraPosesPanel = new CameraPosesPanel(events);
         const cameraInfoPanel = new CameraInfoPanel(events);
         const measurementPanel = new MeasurementPanel(events);
-        
+        const areaMeasurementPanel = new AreaMeasurementPanel(events);
+
         // Add overlays to canvas container
         canvasContainer.append(cameraInfoPanel);
         canvasContainer.append(measurementPanel);
+        canvasContainer.append(areaMeasurementPanel);
 
         mainContainer.append(canvasContainer);
         mainContainer.append(timelinePanel);
@@ -320,7 +323,7 @@ class EditorUI {
         events.on('sor.showDialog', () => {
             sorCleanupDialog.show();
         });
-        
+
         events.on('sor.closeDialog', () => {
             sorCleanupDialog.hide();
         });

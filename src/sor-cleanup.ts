@@ -1,9 +1,9 @@
 import { Vec3 } from 'playcanvas';
 
+import { ProcessingManager } from './processing-utils';
 import { Splat } from './splat';
 import { State } from './splat-state';
 import { SORCleanupOptions } from './ui/sor-cleanup-dialog';
-import { ProcessingManager } from './processing-utils';
 
 interface SORResult {
     outlierIndices: number[];
@@ -58,9 +58,9 @@ class KDTree {
 
     findKNearest(target: Vec3, k: number, excludeIndex: number = -1): { point: Vec3; index: number; distance: number }[] {
         const best: { point: Vec3; index: number; distance: number }[] = [];
-        
+
         this.searchKNN(this.root, target, k, best, excludeIndex);
-        
+
         return best.sort((a, b) => a.distance - b.distance).slice(0, k);
     }
 
@@ -81,7 +81,7 @@ class KDTree {
         // Calculate distance to current node
         if (node.index !== excludeIndex) {
             const distance = target.distance(node.point);
-            
+
             if (best.length < k) {
                 best.push({ point: node.point, index: node.index, distance });
             } else if (distance < best[best.length - 1].distance) {
@@ -111,9 +111,9 @@ class KDTree {
 export class SORCleanup {
     /**
      * Identify statistical outliers in point cloud data
-     * @param splat The splat to process
-     * @param options SOR parameters
-     * @returns Result containing outlier indices and statistics
+     * @param {Splat} splat - The splat to process
+     * @param {SORCleanupOptions} options - SOR parameters
+     * @returns {Promise<SORResult>} Result containing outlier indices and statistics
      */
     static async identifyOutliers(splat: Splat, options: SORCleanupOptions): Promise<SORResult> {
         const { nbNeighbors, stdRatio, mode } = options;
@@ -129,7 +129,7 @@ export class SORCleanup {
         // Extract valid points based on mode and current state
         for (let i = 0; i < numSplats; i++) {
             const currentState = state[i];
-            
+
             // Skip deleted points
             if (currentState & State.deleted) continue;
 
@@ -140,7 +140,7 @@ export class SORCleanup {
                 const x = positionsData[i * 4];
                 const y = positionsData[i * 4 + 1];
                 const z = positionsData[i * 4 + 2];
-                
+
                 // Skip invalid positions
                 if (isFinite(x) && isFinite(y) && isFinite(z)) {
                     positions.push(new Vec3(x, y, z));
@@ -160,27 +160,27 @@ export class SORCleanup {
 
         // Build KD-tree for efficient nearest neighbor search
         const kdTree = new KDTree(positions);
-        
+
         // Calculate distances to neighbors for each point
         const meanDistances: number[] = [];
-        
+
         for (let i = 0; i < positions.length; i++) {
             const currentPoint = positions[i];
             const originalIndex = validIndices[i];
-            
+
             // Yield every 500 iterations to prevent page unresponsive warnings
             if (i % 500 === 0 && i > 0) {
                 await ProcessingManager.yieldToUI();
             }
-            
+
             // Find k nearest neighbors (excluding the point itself)
             const neighbors = kdTree.findKNearest(currentPoint, nbNeighbors, i);
-            
+
             if (neighbors.length === 0) {
                 meanDistances.push(0);
                 continue;
             }
-            
+
             // Calculate mean distance to neighbors
             const totalDistance = neighbors.reduce((sum, neighbor) => sum + neighbor.distance, 0);
             const meanDistance = totalDistance / neighbors.length;
@@ -189,7 +189,7 @@ export class SORCleanup {
 
         // Calculate global mean and standard deviation of distances
         const globalMean = meanDistances.reduce((sum, dist) => sum + dist, 0) / meanDistances.length;
-        
+
         let variance = 0;
         for (const dist of meanDistances) {
             variance += (dist - globalMean) * (dist - globalMean);
@@ -216,26 +216,26 @@ export class SORCleanup {
 
     /**
      * Preview outliers by temporarily marking them as locked
-     * @param splat The splat to preview
-     * @param options SOR parameters
-     * @returns Result containing outlier statistics
+     * @param {Splat} splat - The splat to preview
+     * @param {SORCleanupOptions} options - SOR parameters
+     * @returns {Promise<SORResult>} Result containing outlier statistics
      */
     static async previewOutliers(splat: Splat, options: SORCleanupOptions): Promise<SORResult> {
         // First, clear any existing preview by unlocking all points
         this.clearPreview(splat);
 
         const result = await this.identifyOutliers(splat, options);
-        
+
         if (result.outlierIndices.length > 0) {
             const state = splat.splatData.getProp('state') as Uint8Array;
-            
+
             // Mark outliers as locked for preview
             for (const index of result.outlierIndices) {
                 if (!(state[index] & State.deleted)) {
                     state[index] |= State.locked;
                 }
             }
-            
+
             splat.updateState(State.locked);
         }
 
@@ -244,7 +244,7 @@ export class SORCleanup {
 
     /**
      * Clear preview by unlocking all non-deleted points
-     * @param splat The splat to clear preview for
+     * @param {Splat} splat - The splat to clear preview for
      */
     static clearPreview(splat: Splat): void {
         const state = splat.splatData.getProp('state') as Uint8Array;
@@ -264,23 +264,23 @@ export class SORCleanup {
 
     /**
      * Apply SOR cleanup by marking outliers as deleted
-     * @param splat The splat to clean up
-     * @param options SOR parameters
-     * @returns Array of indices that were marked as deleted
+     * @param {Splat} splat - The splat to clean up
+     * @param {SORCleanupOptions} options - SOR parameters
+     * @returns {Promise<number[]>} Array of indices that were marked as deleted
      */
     static async applyCleanup(splat: Splat, options: SORCleanupOptions): Promise<number[]> {
         const result = await this.identifyOutliers(splat, options);
-        
+
         if (result.outlierIndices.length > 0) {
             const state = splat.splatData.getProp('state') as Uint8Array;
-            
+
             // Mark outliers as deleted
             for (const index of result.outlierIndices) {
                 if (!(state[index] & State.deleted)) {
                     state[index] |= State.deleted;
                 }
             }
-            
+
             splat.updateState(State.deleted);
         }
 

@@ -1,3 +1,5 @@
+/* eslint-disable no-alert */
+/* eslint-disable no-promise-executor-return */
 import { Button, Container, Label, NumericInput, Panel, SelectInput } from '@playcanvas/pcui';
 import { Vec3 } from 'playcanvas';
 
@@ -9,7 +11,7 @@ class CameraPosesPanel extends Panel {
     private posesContainer: Container;
     private poses: any[] = [];
     private interpolationModeSelect: SelectInput | null = null;
-    
+
     // Recording state
     private isRecording: boolean = false;
     private recordingInterval: number | null = null;
@@ -31,11 +33,11 @@ class CameraPosesPanel extends Panel {
 
         this.createUI();
         this.bindEvents();
-        
+
         // Delay initial refresh to ensure camera poses system is initialized
         setTimeout(() => this.refresh(), 500);
     }
-    
+
     destroy() {
         // Clean up recording if active
         if (this.isRecording) {
@@ -218,7 +220,7 @@ class CameraPosesPanel extends Panel {
         if (!this.events.functions.has('camera.poses')) {
             console.warn('camera.poses function not registered yet, retrying in 1 second...');
             this.poses = [];
-            
+
             // Retry after a delay
             setTimeout(() => {
                 if (this.events.functions.has('camera.poses')) {
@@ -227,10 +229,10 @@ class CameraPosesPanel extends Panel {
                     console.error('camera.poses function still not available after retry');
                 }
             }, 1000);
-            
+
             return;
         }
-        
+
         // Get current poses
         try {
             this.poses = this.events.invoke('camera.poses') || [];
@@ -264,7 +266,7 @@ class CameraPosesPanel extends Panel {
         const poseHeader = new Container({
             class: 'camera-pose-header'
         });
-        
+
         const poseTitle = new Label({
             text: `Frame ${pose.frame} - ${pose.name || 'Unnamed'}`,
             class: 'camera-pose-title'
@@ -292,7 +294,7 @@ class CameraPosesPanel extends Panel {
         const positionContainer = new Container({
             class: 'camera-pose-coords'
         });
-        
+
         const positionLabel = new Label({
             text: 'Position:',
             class: 'camera-pose-label'
@@ -331,7 +333,7 @@ class CameraPosesPanel extends Panel {
         const targetContainer = new Container({
             class: 'camera-pose-coords'
         });
-        
+
         const targetLabel = new Label({
             text: 'Target:',
             class: 'camera-pose-label'
@@ -370,7 +372,7 @@ class CameraPosesPanel extends Panel {
         const fovContainer = new Container({
             class: 'camera-pose-coords'
         });
-        
+
         const fovLabel = new Label({
             text: 'FOV:',
             class: 'camera-pose-label'
@@ -405,10 +407,10 @@ class CameraPosesPanel extends Panel {
 
     private updatePosePosition(poseIndex: number, axis: 'x' | 'y' | 'z', value: number) {
         if (poseIndex >= this.poses.length) return;
-        
+
         const pose = this.poses[poseIndex];
         pose.position[axis] = value;
-        
+
         // Update the pose in the system
         this.events.fire('camera.addPose', {
             name: pose.name,
@@ -421,10 +423,10 @@ class CameraPosesPanel extends Panel {
 
     private updatePoseTarget(poseIndex: number, axis: 'x' | 'y' | 'z', value: number) {
         if (poseIndex >= this.poses.length) return;
-        
+
         const pose = this.poses[poseIndex];
         pose.target[axis] = value;
-        
+
         // Update the pose in the system
         this.events.fire('camera.addPose', {
             name: pose.name,
@@ -437,10 +439,10 @@ class CameraPosesPanel extends Panel {
 
     private updatePoseFov(poseIndex: number, value: number) {
         if (poseIndex >= this.poses.length) return;
-        
+
         const pose = this.poses[poseIndex];
         pose.fov = value;
-        
+
         // Update the pose in the system
         this.events.fire('camera.addPose', {
             name: pose.name,
@@ -453,10 +455,10 @@ class CameraPosesPanel extends Panel {
 
     private deletePose(poseIndex: number) {
         if (poseIndex >= this.poses.length) return;
-        
+
         // Remove pose from timeline
         this.events.fire('timeline.remove', poseIndex);
-        
+
         // Refresh the UI
         setTimeout(() => this.refresh(), 100);
     }
@@ -464,16 +466,16 @@ class CameraPosesPanel extends Panel {
     private clearAllPoses() {
         // Clear all poses
         this.events.fire('camera.clear-poses');
-        
+
         // Refresh the UI
         this.refresh();
     }
 
     private applyCoordinateConversion(type: 'zup-to-yup' | 'invert-y' | 'blender-to-supersplat' | 'reset') {
-        this.poses.forEach(pose => {
+        this.poses.forEach((pose) => {
             const pos = pose.position;
             const tar = pose.target;
-            
+
             if (type === 'zup-to-yup') {
                 // Convert from Z-up to Y-up: [x, y, z] -> [x, z, -y]
                 pose.position = new Vec3(pos.x, pos.z, -pos.y);
@@ -491,7 +493,7 @@ class CameraPosesPanel extends Panel {
                 console.log('Reset coordinates - please re-import your file to restore original values');
                 return; // Don't modify anything
             }
-            
+
             // Update the pose in the system
             this.events.fire('camera.addPose', {
                 name: pose.name,
@@ -501,7 +503,7 @@ class CameraPosesPanel extends Panel {
                 fov: pose.fov || 65 // Preserve FOV during coordinate conversion
             });
         });
-        
+
         // Refresh the UI to show updated values
         setTimeout(() => this.refresh(), 100);
     }
@@ -511,14 +513,14 @@ class CameraPosesPanel extends Panel {
         try {
             // Get current camera poses from the system
             const currentPoses = this.events.invoke('camera.poses') || [];
-            
+
             // Get current camera state for reference
             const currentCamera = this.events.invoke('camera.getPose');
             const currentFov = this.events.invoke('camera.fov') || 65;
-            
+
             console.log(`Read ${currentPoses.length} keyframes from timeline`);
             console.log('Current camera FOV:', currentFov);
-            
+
             // Refresh to show any updated data
             this.refresh();
         } catch (error) {
@@ -531,11 +533,11 @@ class CameraPosesPanel extends Panel {
         try {
             // Force a rebuild of the spline with current poses
             this.events.fire('camera.poses-updated');
-            
+
             // Trigger timeline refresh
             const currentFrame = this.events.invoke('timeline.frame') || 0;
             this.events.fire('timeline.frame', currentFrame);
-            
+
             console.log('Updated timeline keyframes with manual edits');
         } catch (error) {
             console.warn('Could not update timeline keyframes:', error);
@@ -555,33 +557,33 @@ class CameraPosesPanel extends Panel {
                 return;
             }
             const poses = this.events.invoke('camera.poses') || [];
-            
+
             if (poses.length === 0) {
                 console.log('No camera poses to sort');
                 return;
             }
-            
+
             if (poses.length === 1) {
                 console.log('Only one pose exists, no sorting needed');
                 return;
             }
-            
+
             // Check if poses are already sorted
             const isAlreadySorted = poses.every((pose: any, index: number) => {
                 return index === 0 || poses[index - 1].frame <= pose.frame;
             });
-            
+
             if (isAlreadySorted) {
                 console.log('Camera poses are already sorted by frame number');
                 return;
             }
-            
+
             // Create a copy and sort poses by frame number
             const sortedPoses = [...poses].sort((a: any, b: any) => a.frame - b.frame);
-            
+
             // Clear all existing poses from the system
             this.events.fire('camera.clear-poses');
-            
+
             // Re-add poses in sorted order
             sortedPoses.forEach((pose: any) => {
                 this.events.fire('camera.addPose', {
@@ -592,12 +594,12 @@ class CameraPosesPanel extends Panel {
                     fov: pose.fov || 65
                 });
             });
-            
+
             // Refresh the UI to show sorted poses
             setTimeout(() => this.refresh(), 100);
-            
+
             console.log(`Sorted ${poses.length} camera poses by frame number`);
-            
+
         } catch (error) {
             console.error('Failed to sort camera poses:', error);
         }
@@ -610,36 +612,36 @@ class CameraPosesPanel extends Panel {
                 return;
             }
             const poses = this.events.invoke('camera.poses') || [];
-            
+
             if (poseIndex >= poses.length) {
                 console.warn('Invalid pose index for copy');
                 return;
             }
-            
+
             const originalPose = poses[poseIndex];
             const totalFrames = this.events.invoke('timeline.frames') || 180;
-            
+
             // Find next available frame number
             const usedFrames = poses.map((p: any) => p.frame);
             let newFrame = originalPose.frame + 1;
-            
+
             // Find the next available frame
             while (usedFrames.includes(newFrame) && newFrame < totalFrames) {
                 newFrame++;
             }
-            
+
             if (newFrame >= totalFrames) {
                 // If no space, ask user for frame number
                 const userFrame = prompt(`Enter frame number to copy pose to (0-${totalFrames - 1}):`, newFrame.toString());
                 if (userFrame === null) return; // User cancelled
-                
+
                 newFrame = parseInt(userFrame, 10);
                 if (isNaN(newFrame) || newFrame < 0 || newFrame >= totalFrames) {
                     alert('Invalid frame number');
                     return;
                 }
             }
-            
+
             // Create copy of the pose
             const copiedPose = {
                 name: `${originalPose.name}_copy`,
@@ -656,15 +658,15 @@ class CameraPosesPanel extends Panel {
                 },
                 fov: originalPose.fov || 65
             };
-            
+
             // Add the copied pose
             this.events.fire('camera.addPose', copiedPose);
-            
+
             // Refresh the UI
             setTimeout(() => this.refresh(), 100);
-            
+
             console.log(`Copied pose from frame ${originalPose.frame} to frame ${newFrame}`);
-            
+
         } catch (error) {
             console.error('Failed to copy pose:', error);
         }
@@ -677,25 +679,25 @@ class CameraPosesPanel extends Panel {
                 return;
             }
             const poses = this.events.invoke('camera.poses') || [];
-            
+
             if (poses.length === 0) {
                 console.warn('No poses to copy');
                 return;
             }
-            
+
             // Sort poses to find the actual first frame
             const sortedPoses = [...poses].sort((a: any, b: any) => a.frame - b.frame);
             const firstPose = sortedPoses[0];
             const totalFrames = this.events.invoke('timeline.frames') || 180;
             const lastFrame = totalFrames - 1;
-            
+
             // Check if there's already a pose at the last frame
             const existingLastPose = poses.find((p: any) => p.frame === lastFrame);
             if (existingLastPose) {
                 const overwrite = confirm(`There's already a pose at frame ${lastFrame}. Overwrite it?`);
                 if (!overwrite) return;
             }
-            
+
             // Create copy of the first pose at the last frame
             const loopPose = {
                 name: `${firstPose.name}_loop`,
@@ -712,15 +714,15 @@ class CameraPosesPanel extends Panel {
                 },
                 fov: firstPose.fov || 65
             };
-            
+
             // Add the loop pose
             this.events.fire('camera.addPose', loopPose);
-            
+
             // Refresh the UI
             setTimeout(() => this.refresh(), 100);
-            
+
             console.log(`Copied first frame (${firstPose.frame}) to last frame (${lastFrame}) for seamless looping`);
-            
+
         } catch (error) {
             console.error('Failed to copy first to last frame:', error);
         }
@@ -740,36 +742,36 @@ class CameraPosesPanel extends Panel {
         if (this.isRecording) return;
 
         console.log(`🔴 Starting camera pose recording with ${intervalMs}ms interval`);
-        
+
         // Debug: Check if camera poses system is available
         if (!this.events.functions.has('camera.poses')) {
             console.error('❌ Camera poses system not available!');
             alert('Camera poses system not ready. Please wait and try again.');
             return;
         }
-        
+
         if (!this.events.functions.has('camera.getPose')) {
             console.error('❌ Camera getPose function not available!');
             alert('Camera system not ready. Please wait and try again.');
             return;
         }
-        
+
         this.isRecording = true;
         this.recordingStartFrame = this.events.invoke('timeline.frame') || 0;
         this.recordingCount = 0; // Reset counter
-        
+
         console.log(`📍 Starting from frame: ${this.recordingStartFrame}`);
-        
+
         // Update button text and style
         if (this.recordButton) {
             this.recordButton.text = 'Stop Recording';
             this.recordButton.class.add('recording');
         }
-        
+
         // Record current pose immediately
         console.log('📸 Recording initial pose...');
         this.recordCurrentPose();
-        
+
         // Set up interval recording
         this.recordingInterval = window.setInterval(() => {
             console.log(`⏰ Interval timer fired. Recording state: ${this.isRecording}`);
@@ -784,7 +786,7 @@ class CameraPosesPanel extends Panel {
                 }
             }
         }, intervalMs);
-        
+
         console.log('✅ Camera pose recording started successfully');
     }
 
@@ -792,26 +794,26 @@ class CameraPosesPanel extends Panel {
         if (!this.isRecording) return;
 
         console.log('🛑 Stopping camera pose recording');
-        
+
         this.isRecording = false;
-        
+
         // Clear interval
         if (this.recordingInterval) {
             clearInterval(this.recordingInterval);
             this.recordingInterval = null;
         }
-        
+
         // Update button text and style
         if (this.recordButton) {
             this.recordButton.text = 'Record';
             this.recordButton.class.remove('recording');
         }
-        
+
         // Get final pose count
         try {
             const allPoses = this.events.invoke('camera.poses') || [];
             console.log(`📊 Recording session complete. Total poses: ${allPoses.length}`);
-            
+
             if (allPoses.length === 0) {
                 console.warn('⚠️ No poses were recorded! Check console for errors.');
                 alert('No camera poses were recorded. Check the console for error details.');
@@ -821,46 +823,46 @@ class CameraPosesPanel extends Panel {
         } catch (e) {
             console.error('Error getting final pose count:', e);
         }
-        
+
         // Refresh to show recorded poses
         this.refresh();
-        
+
         console.log('✅ Camera pose recording stopped');
     }
 
     private recordCurrentPose() {
         try {
             console.log('📸 Starting pose recording...');
-            
+
             // Get current camera state
             const currentPose = this.events.invoke('camera.getPose');
             const currentFov = this.events.invoke('camera.fov') || 65;
-            
+
             // Use incremental frame numbers instead of timeline frame
             // This prevents poses from overwriting each other
             const recordingFrame = this.recordingStartFrame + this.recordingCount;
-            
+
             console.log('🎥 Camera state:', {
                 currentPose: currentPose,
                 currentFov: currentFov,
                 recordingFrame: recordingFrame,
                 recordingCount: this.recordingCount
             });
-            
+
             if (!currentPose) {
                 console.error('❌ Could not get current camera pose for recording!');
                 console.log('Available functions:', Array.from(this.events.functions.keys()));
                 return;
             }
-            
+
             if (!currentPose.position || !currentPose.target) {
                 console.error('❌ Camera pose missing position or target:', currentPose);
                 return;
             }
-            
+
             // Increment recording counter
             this.recordingCount++;
-            
+
             // Create pose data with better naming
             const poseData = {
                 name: `recorded_${this.recordingCount.toString().padStart(3, '0')}`,
@@ -869,46 +871,46 @@ class CameraPosesPanel extends Panel {
                 target: new Vec3(currentPose.target.x, currentPose.target.y, currentPose.target.z),
                 fov: currentFov
             };
-            
+
             console.log('📦 Creating pose data:', poseData);
-            
+
             // Add pose to system
             console.log('➕ Firing camera.addPose event...');
             this.events.fire('camera.addPose', poseData);
-            
+
             // Verify the pose was added
             setTimeout(() => {
                 try {
                     const allPoses = this.events.invoke('camera.poses') || [];
                     console.log(`✅ Pose recorded! Total poses now: ${allPoses.length}`);
                     console.log('Last pose:', allPoses[allPoses.length - 1]);
-                    
+
                     // Force refresh UI
                     this.refresh();
                 } catch (e) {
                     console.error('Error verifying pose:', e);
                 }
             }, 100);
-            
-            console.log(`📍 Recorded camera pose #${this.recordingCount} at frame ${recordingFrame}:`, 
-                `${poseData.name} pos=[${poseData.position.x.toFixed(2)}, ${poseData.position.y.toFixed(2)}, ${poseData.position.z.toFixed(2)}]`, 
+
+            console.log(`📍 Recorded camera pose #${this.recordingCount} at frame ${recordingFrame}:`,
+                `${poseData.name} pos=[${poseData.position.x.toFixed(2)}, ${poseData.position.y.toFixed(2)}, ${poseData.position.z.toFixed(2)}]`,
                 `fov=${poseData.fov.toFixed(1)}°`);
-            
+
             console.log(`🔄 Recording state check: isRecording=${this.isRecording}, interval=${this.recordingInterval ? 'active' : 'null'}`);
-            
+
             console.log(`📍 Pose assigned to frame: ${recordingFrame} (start=${this.recordingStartFrame} + count=${this.recordingCount})`);
-            
+
             // Optional: You can manually advance timeline by commenting out the above
             // and uncommenting the lines below:
-            /*
-            const totalFrames = this.events.invoke('timeline.frames') || 180;
-            const nextFrame = Math.min(currentFrame + 1, totalFrames - 1);
-            if (nextFrame !== currentFrame) {
-                console.log(`⏭️ Advancing timeline from frame ${currentFrame} to ${nextFrame}`);
-                this.events.fire('timeline.frame', nextFrame);
-            }
-            */
-            
+            //
+            // const totalFrames = this.events.invoke('timeline.frames') || 180;
+            // const nextFrame = Math.min(currentFrame + 1, totalFrames - 1);
+            // if (nextFrame !== currentFrame) {
+            //     console.log(`⏭️ Advancing timeline from frame ${currentFrame} to ${nextFrame}`);
+            //     this.events.fire('timeline.frame', nextFrame);
+            // }
+            //
+
         } catch (error) {
             console.error('❌ Failed to record camera pose:', error);
             console.error('Error details:', error.stack);
@@ -919,33 +921,33 @@ class CameraPosesPanel extends Panel {
         try {
             // Get current poses
             const poses = this.events.invoke('camera.poses') || [];
-            
+
             if (poses.length === 0) {
                 alert('No poses to stretch. Record some poses first.');
                 return;
             }
-            
+
             if (poses.length < 2) {
-                alert('Need at least 2 poses to stretch. Current poses: ' + poses.length);
+                alert(`Need at least 2 poses to stretch. Current poses: ${poses.length}`);
                 return;
             }
-            
+
             // Sort poses by frame to ensure correct order
             const sortedPoses = [...poses].sort((a, b) => a.frame - b.frame);
-            
+
             // Get original frame range
             const firstFrame = sortedPoses[0].frame;
             const lastFrame = sortedPoses[sortedPoses.length - 1].frame;
             const originalRange = lastFrame - firstFrame;
-            
+
             if (originalRange <= 0) {
                 alert('Invalid frame range. Poses must have different frame numbers.');
                 return;
             }
-            
+
             console.log(`🔄 Stretching ${poses.length} poses from range ${originalRange + 1} frames to ${targetFrames} frames`);
             console.log(`Original range: frames ${firstFrame} to ${lastFrame}`);
-            
+
             // Clear existing poses one by one (more reliable than clear-poses)
             console.log('🗑️ Clearing existing poses...');
             // Remove all poses starting from the last index to avoid index shifting issues
@@ -953,25 +955,25 @@ class CameraPosesPanel extends Panel {
                 console.log(`🗑️ Removing pose ${i}: ${poses[i].name}`);
                 this.events.fire('timeline.remove', i);
             }
-            
+
             // Wait a moment for all removals to complete
             await new Promise(resolve => setTimeout(resolve, 100));
-            
+
             // Calculate new frame positions
             const stretchedPoses = sortedPoses.map((pose, index) => {
                 // Calculate the position as a ratio (0 to 1) in the original sequence
                 const positionRatio = (pose.frame - firstFrame) / originalRange;
-                
+
                 // Apply the ratio to the new target range
                 const newFrame = Math.round(positionRatio * (targetFrames - 1));
-                
+
                 return {
                     ...pose,
                     name: `stretched_${(index + 1).toString().padStart(3, '0')}`,
                     frame: newFrame
                 };
             });
-            
+
             // Add stretched poses back with delays for reliability
             console.log('➕ Adding stretched poses...');
             for (let i = 0; i < stretchedPoses.length; i++) {
@@ -983,33 +985,32 @@ class CameraPosesPanel extends Panel {
                     await new Promise(resolve => setTimeout(resolve, 50));
                 }
             }
-            
+
             // Update timeline frames to match target if needed
             const currentTimelineFrames = this.events.invoke('timeline.frames') || 180;
             if (targetFrames > currentTimelineFrames) {
                 console.log(`📏 Updating timeline from ${currentTimelineFrames} to ${targetFrames} frames`);
                 this.events.fire('timeline.setFrames', targetFrames);
             }
-            
+
             // Verify the operation worked
             await new Promise(resolve => setTimeout(resolve, 200));
             const finalPoses = this.events.invoke('camera.poses') || [];
             console.log(`🔍 Verification: Expected ${stretchedPoses.length} poses, found ${finalPoses.length}`);
-            
+
             // Refresh UI
             setTimeout(() => this.refresh(), 300);
-            
+
             console.log(`✅ Successfully stretched ${poses.length} poses across ${targetFrames} frames`);
             console.log('New frame distribution:', stretchedPoses.map(p => `${p.name}: frame ${p.frame}`));
-            
+
             alert(`Successfully stretched ${poses.length} poses from ${originalRange + 1} frames to ${targetFrames} frames!\nOriginal poses cleared and ${stretchedPoses.length} new poses created.`);
-            
+
         } catch (error) {
             console.error('❌ Failed to stretch poses:', error);
             alert('Failed to stretch poses. Check console for details.');
         }
     }
-
 }
 
 export { CameraPosesPanel };

@@ -14,7 +14,7 @@ export class ProcessingManager {
     static startProcessing(): void {
         if (!this.isProcessing) {
             this.originalCursor = document.body.style.cursor || 'default';
-            
+
             // Create a style element that forces wait cursor on all elements
             this.cursorStyleElement = document.createElement('style');
             this.cursorStyleElement.id = 'processing-cursor-override';
@@ -44,17 +44,17 @@ export class ProcessingManager {
                 }
             `;
             document.head.appendChild(this.cursorStyleElement);
-            
+
             // Also set on body as fallback
             document.body.style.cursor = 'wait';
             document.documentElement.style.cursor = 'wait';
-            
+
             // Add a JavaScript fallback that continuously enforces the cursor
             this.cursorEnforcementInterval = window.setInterval(() => {
                 if (this.isProcessing) {
                     document.body.style.cursor = 'wait';
                     document.documentElement.style.cursor = 'wait';
-                    
+
                     // Also apply to any canvas elements that might reset their cursor
                     const canvases = document.querySelectorAll('canvas');
                     canvases.forEach((canvas) => {
@@ -62,7 +62,7 @@ export class ProcessingManager {
                     });
                 }
             }, 100);
-            
+
             this.isProcessing = true;
         }
     }
@@ -77,23 +77,23 @@ export class ProcessingManager {
                 clearInterval(this.cursorEnforcementInterval);
                 this.cursorEnforcementInterval = null;
             }
-            
+
             // Remove the global cursor style
             if (this.cursorStyleElement) {
                 document.head.removeChild(this.cursorStyleElement);
                 this.cursorStyleElement = null;
             }
-            
+
             // Restore original cursors
             document.body.style.cursor = this.originalCursor;
             document.documentElement.style.cursor = '';
-            
+
             // Clear cursor on canvas elements
             const canvases = document.querySelectorAll('canvas');
             canvases.forEach((canvas) => {
                 (canvas as HTMLElement).style.cursor = '';
             });
-            
+
             this.isProcessing = false;
         }
     }
@@ -101,9 +101,10 @@ export class ProcessingManager {
     /**
      * Yield control to browser to prevent "page unresponsive" warnings
      * Use this in intensive loops to allow browser to update UI
+     * @returns {Promise<void>} A promise that resolves after yielding control
      */
-    static async yieldToUI(): Promise<void> {
-        return new Promise(resolve => {
+    static yieldToUI(): Promise<void> {
+        return new Promise((resolve) => {
             if (typeof requestAnimationFrame !== 'undefined') {
                 requestAnimationFrame(() => resolve());
             } else {
@@ -114,15 +115,16 @@ export class ProcessingManager {
 
     /**
      * Execute a function with processing indicators and yielding
-     * @param operation - The intensive operation to perform
-     * @param yieldInterval - How often to yield (default: every 1000 iterations)
+     * @param {(yieldCallback: () => Promise<void>) => Promise<T>} operation - The intensive operation to perform
+     * @param {number} yieldInterval - How often to yield (default: every 1000 iterations)
+     * @returns {Promise<T>} The result of the operation
      */
     static async executeWithYielding<T>(
         operation: (yieldCallback: () => Promise<void>) => Promise<T>,
         yieldInterval: number = 1000
     ): Promise<T> {
         this.startProcessing();
-        
+
         try {
             let iterationCount = 0;
             const yieldCallback = async () => {
@@ -141,15 +143,16 @@ export class ProcessingManager {
 
     /**
      * Wrap a synchronous intensive operation to be async with yielding
-     * @param syncOperation - Synchronous operation that takes a yield callback
-     * @param yieldInterval - How often to yield
+     * @param {(yieldCallback: () => Promise<void>) => T} syncOperation - Synchronous operation that takes a yield callback
+     * @param {number} yieldInterval - How often to yield
+     * @returns {Promise<T>} The result of the operation
      */
     static async makeYielding<T>(
         syncOperation: (yieldCallback: () => Promise<void>) => T,
         yieldInterval: number = 1000
     ): Promise<T> {
-        return this.executeWithYielding(async (yieldCallback) => {
-            return syncOperation(yieldCallback);
+        return await this.executeWithYielding((yieldCallback) => {
+            return Promise.resolve(syncOperation(yieldCallback));
         }, yieldInterval);
     }
 }

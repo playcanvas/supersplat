@@ -1,4 +1,3 @@
-
 import { Container, Element, Label } from '@playcanvas/pcui';
 
 import { Events } from '../events';

@@ -99,6 +99,7 @@ class PointerController {
                 }
 
                 // Verify the button we're tracking is still pressed
+                // 1 = left button, 4 = middle button, 2 = right button
                 const buttonMask = [1, 4, 2][pressedButton];
                 if ((event.buttons & buttonMask) === 0) {
                     // Button is no longer pressed, clean up

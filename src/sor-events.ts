@@ -91,9 +91,7 @@ const resetPopupPositionIfNotSOR = () => {
  */
 const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scene) => {
     // Log version info to help identify when latest build is loaded
-    console.log('🔧 SOR Events registered - Build timestamp: 2025-10-05T19:04:00Z - ATTRIBUTE CLEARING FIX');
-
-    let originalLockedColor: any = null;
+    console.log('🔧 SOR Events registered - Build timestamp: 2025-10-09T01:49:00Z - OUTLIER STATE IMPLEMENTATION');
 
     // TEMPORARILY DISABLED: MutationObserver to test if it's interfering
     console.log('🔧 MutationObserver DISABLED for debugging');
@@ -119,7 +117,7 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
     // }
     //
 
-    // Preview SOR outliers by temporarily marking them as locked and changing color to red
+    // Preview SOR outliers by temporarily marking them with outlier state
     events.on('sor.preview', async (options: SORCleanupOptions) => {
         const selection = events.invoke('selection') as Splat;
         if (!selection) {
@@ -135,11 +133,7 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
             // Start processing mode (hourglass cursor)
             ProcessingManager.startProcessing();
 
-            // Store original locked color and set it to red for preview
-            if (originalLockedColor === null) {
-                originalLockedColor = events.invoke('lockedClr');
-            }
-            events.fire('setLockedClr', { r: 1, g: 0, b: 0, a: 0.8 }); // Red with some transparency
+            // No need to change locked color anymore - outliers use dedicated outlier state
 
             // Yield to UI to show cursor change before intensive operation
             await ProcessingManager.yieldToUI();
@@ -184,12 +178,6 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
         try {
             // Start processing mode (hourglass cursor)
             ProcessingManager.startProcessing();
-
-            // Restore original locked color if it was changed
-            if (originalLockedColor !== null) {
-                events.fire('setLockedClr', originalLockedColor);
-                originalLockedColor = null;
-            }
 
             // Clear any preview state first
             SORCleanup.clearPreview(selection);
@@ -294,12 +282,6 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
 
     // Clear SOR preview when selection changes
     events.on('selection.changed', () => {
-        // Restore original locked color if it was changed
-        if (originalLockedColor !== null) {
-            events.fire('setLockedClr', originalLockedColor);
-            originalLockedColor = null;
-        }
-
         const selection = events.invoke('selection') as Splat;
         if (selection) {
             // Clear any existing SOR previews on the selected splat
@@ -309,11 +291,6 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
 
     // Clear SOR preview when scene is cleared
     events.on('scene.clear', () => {
-        // Restore original locked color if it was changed
-        if (originalLockedColor !== null) {
-            events.fire('setLockedClr', originalLockedColor);
-            originalLockedColor = null;
-        }
         // Previews are automatically cleared when splats are destroyed
     });
 
@@ -333,11 +310,7 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
             // Start processing mode (hourglass cursor)
             ProcessingManager.startProcessing();
 
-            // Clear any preview state and restore colors
-            if (originalLockedColor !== null) {
-                events.fire('setLockedClr', originalLockedColor);
-                originalLockedColor = null;
-            }
+            // Clear any preview state
             SORCleanup.clearPreview(selection);
 
             // Yield to UI to show cursor change before intensive operation
@@ -408,12 +381,6 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
         try {
             // Start processing mode (hourglass cursor)
             ProcessingManager.startProcessing();
-
-            // Restore original locked color if it was changed
-            if (originalLockedColor !== null) {
-                events.fire('setLockedClr', originalLockedColor);
-                originalLockedColor = null;
-            }
 
             // Clear any preview state first
             SORCleanup.clearPreview(selection);
@@ -510,14 +477,8 @@ const registerSOREvents = (events: Events, editHistory: EditHistory, scene: Scen
         }
     });
 
-    // Handle cancel preview to restore colors
+    // Handle cancel preview
     events.on('sor.cancelPreview', () => {
-        // Restore original locked color if it was changed
-        if (originalLockedColor !== null) {
-            events.fire('setLockedClr', originalLockedColor);
-            originalLockedColor = null;
-        }
-
         // Clear any existing previews
         const selection = events.invoke('selection') as Splat;
         if (selection) {

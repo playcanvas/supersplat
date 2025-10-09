@@ -92,6 +92,7 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['I', 'i'], { event: 'select.invert', ctrl: true });
     shortcuts.register(['H', 'h'], { event: 'select.hide' });
     shortcuts.register(['U', 'u'], { event: 'select.unhide' });
+    shortcuts.register(['U', 'u'], { event: 'select.unhideAll', shift: true });
     shortcuts.register(['O', 'o'], {
         event: 'ui.toggleOverlay',
         condition: () => {
@@ -160,6 +161,7 @@ const main = async () => {
     const selectedClr = new Color();
     const unselectedClr = new Color();
     const lockedClr = new Color();
+    const outlierClr = new Color();
 
     const setClr = (target: Color, value: Color, event: string) => {
         if (!target.equals(value)) {
@@ -180,6 +182,9 @@ const main = async () => {
     const setLockedClr = (clr: Color) => {
         setClr(lockedClr, clr, 'lockedClr');
     };
+    const setOutlierClr = (clr: Color) => {
+        setClr(outlierClr, clr, 'outlierClr');
+    };
 
     events.on('setBgClr', (clr: Color) => {
         setBgClr(clr);
@@ -193,6 +198,9 @@ const main = async () => {
     events.on('setLockedClr', (clr: Color) => {
         setLockedClr(clr);
     });
+    events.on('setOutlierClr', (clr: Color) => {
+        setOutlierClr(clr);
+    });
 
     events.function('bgClr', () => {
         return bgClr;
@@ -205,6 +213,9 @@ const main = async () => {
     });
     events.function('lockedClr', () => {
         return lockedClr;
+    });
+    events.function('outlierClr', () => {
+        return outlierClr;
     });
 
     events.on('bgClr', (clr: Color) => {
@@ -220,6 +231,9 @@ const main = async () => {
     events.on('lockedClr', (clr: Color) => {
         scene.forceRender = true;
     });
+    events.on('outlierClr', (clr: Color) => {
+        scene.forceRender = true;
+    });
 
     // initialize colors from application config
     const toColor = (value: { r: number, g: number, b: number, a: number }) => {
@@ -229,6 +243,7 @@ const main = async () => {
     setSelectedClr(toColor(sceneConfig.selectedClr));
     setUnselectedClr(toColor(sceneConfig.unselectedClr));
     setLockedClr(toColor(sceneConfig.lockedClr));
+    setOutlierClr(toColor(sceneConfig.outlierClr));
 
     // create the mask selection canvas
     const maskCanvas = document.createElement('canvas');

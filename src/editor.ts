@@ -2,6 +2,7 @@ import { Color, Mat4, Texture, Vec3, Vec4 } from 'playcanvas';
 
 import { EditHistory } from './edit-history';
 import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp, MultiOp, AddSplatOp } from './edit-ops';
+import { ElementType } from './element';
 import { Events } from './events';
 import { Scene } from './scene';
 import { BufferWriter } from './serialize/writer';
@@ -409,6 +410,15 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('select.unhide', () => {
         selectedSplats().forEach((splat) => {
+            events.fire('edit.add', new UnhideAllOp(splat));
+        });
+    });
+
+    // Unlock all splats (not just selected ones)
+    events.on('select.unhideAll', () => {
+        // Get all splats in the scene, not just selected ones
+        const allSplats = scene.getElementsByType(ElementType.splat) as Splat[];
+        allSplats.forEach((splat) => {
             events.fire('edit.add', new UnhideAllOp(splat));
         });
     });

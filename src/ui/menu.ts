@@ -222,6 +222,11 @@ class Menu extends Container {
             extra: 'U',
             onSelect: () => events.fire('select.unhide')
         }, {
+            text: 'Unlock All Splats',
+            icon: createSvg(selectUnlock),
+            extra: 'Shift + U',
+            onSelect: () => events.fire('select.unhideAll')
+        }, {
             text: localize('select.delete'),
             icon: createSvg(selectDelete),
             extra: 'Delete',

@@ -75,6 +75,10 @@ class Splat extends Element {
     _whitePoint = 1;
     _transparency = 1;
 
+    // SOR preview functionality
+    sorPreviewOutliers?: Set<number>;
+    sorOriginalStates?: Map<number, number>;
+
     rebuildMaterial: (bands: number) => void;
 
     constructor(asset: Asset) {
@@ -360,9 +364,11 @@ class Splat extends Element {
         const selectedClr = events.invoke('selectedClr');
         const unselectedClr = events.invoke('unselectedClr');
         const lockedClr = events.invoke('lockedClr');
+        const outlierClr = events.invoke('outlierClr');
         material.setParameter('selectedClr', [selectedClr.r, selectedClr.g, selectedClr.b, selectedClr.a * selectionAlpha]);
         material.setParameter('unselectedClr', [unselectedClr.r, unselectedClr.g, unselectedClr.b, unselectedClr.a]);
         material.setParameter('lockedClr', [lockedClr.r, lockedClr.g, lockedClr.b, lockedClr.a]);
+        material.setParameter('outlierClr', [outlierClr.r, outlierClr.g, outlierClr.b, outlierClr.a]);
 
         // combine black pointer, white point and brightness
         const offset = -this.blackPoint + this.brightness;

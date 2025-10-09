@@ -127,16 +127,20 @@ export class SORCleanup {
         const validIndices: number[] = [];
 
         // Extract valid points based on mode and current state
+        // NOTE: Locked splats are INCLUDED in calculations to help determine outliers,
+        // but will be protected from being marked as outliers themselves
         for (let i = 0; i < numSplats; i++) {
             const currentState = state[i];
 
             // Skip deleted points
             if (currentState & State.deleted) continue;
 
-            // Filter based on mode
+            // Filter based on mode (include locked splats in calculations)
             const isSelected = currentState & State.selected;
-            if (mode === 'selection' && !isSelected) continue;
-            if (mode === 'all' || isSelected) {
+            const isLocked = currentState & State.locked;
+
+            if (mode === 'selection' && !isSelected && !isLocked) continue;
+            if (mode === 'all' || isSelected || isLocked) {
                 const x = positionsData[i * 4];
                 const y = positionsData[i * 4 + 1];
                 const z = positionsData[i * 4 + 2];
@@ -197,13 +201,19 @@ export class SORCleanup {
         variance /= meanDistances.length;
         const stdDev = Math.sqrt(variance);
 
-        // Identify outliers
+        // Identify outliers (but protect locked splats)
         const threshold = globalMean + stdRatio * stdDev;
         const outlierIndices: number[] = [];
 
         for (let i = 0; i < meanDistances.length; i++) {
             if (meanDistances[i] > threshold) {
-                outlierIndices.push(validIndices[i]);
+                const originalIndex = validIndices[i];
+                const currentState = state[originalIndex];
+
+                // Protect locked splats - they help with calculations but can't be outliers
+                if (!(currentState & State.locked)) {
+                    outlierIndices.push(originalIndex);
+                }
             }
         }
 
@@ -215,50 +225,62 @@ export class SORCleanup {
     }
 
     /**
-     * Preview outliers by temporarily marking them as locked
+     * Preview outliers by temporarily marking them with outlier state
      * @param {Splat} splat - The splat to preview
      * @param {SORCleanupOptions} options - SOR parameters
-     * @returns {Promise<SORResult>} Result containing outlier statistics
+     * @returns {Promise<SORResult>} Result containing outlier indices and statistics
      */
     static async previewOutliers(splat: Splat, options: SORCleanupOptions): Promise<SORResult> {
-        // First, clear any existing preview by unlocking all points
+        // First, clear any existing preview outliers
         this.clearPreview(splat);
 
         const result = await this.identifyOutliers(splat, options);
 
         if (result.outlierIndices.length > 0) {
             const state = splat.splatData.getProp('state') as Uint8Array;
-
-            // Mark outliers as locked for preview
+            
+            // Mark outliers with outlier state for preview (no need to store original states)
             for (const index of result.outlierIndices) {
                 if (!(state[index] & State.deleted)) {
-                    state[index] |= State.locked;
+                    state[index] |= State.outlier;
                 }
             }
 
-            splat.updateState(State.locked);
+            splat.updateState(State.outlier);
+
+            // Store the preview outlier indices
+            splat.sorPreviewOutliers = new Set(result.outlierIndices);
         }
 
         return result;
     }
 
     /**
-     * Clear preview by unlocking all non-deleted points
+     * Clear preview by removing outlier state from preview points
      * @param {Splat} splat - The splat to clear preview for
      */
     static clearPreview(splat: Splat): void {
         const state = splat.splatData.getProp('state') as Uint8Array;
         let modified = false;
 
-        for (let i = 0; i < state.length; i++) {
-            if (!(state[i] & State.deleted) && (state[i] & State.locked)) {
-                state[i] &= ~State.locked;
-                modified = true;
+        // Clear outlier state from preview outliers
+        if (splat.sorPreviewOutliers) {
+            for (const index of splat.sorPreviewOutliers) {
+                if (!(state[index] & State.deleted) && (state[index] & State.outlier)) {
+                    state[index] &= ~State.outlier;
+                    modified = true;
+                }
             }
+            delete splat.sorPreviewOutliers;
+        }
+
+        // Clean up legacy data if it exists
+        if (splat.sorOriginalStates) {
+            delete splat.sorOriginalStates;
         }
 
         if (modified) {
-            splat.updateState(State.locked);
+            splat.updateState(State.outlier);
         }
     }
 
@@ -274,9 +296,9 @@ export class SORCleanup {
         if (result.outlierIndices.length > 0) {
             const state = splat.splatData.getProp('state') as Uint8Array;
 
-            // Mark outliers as deleted
+            // Mark outliers as deleted (with additional locked protection)
             for (const index of result.outlierIndices) {
-                if (!(state[index] & State.deleted)) {
+                if (!(state[index] & State.deleted) && !(state[index] & State.locked)) {
                     state[index] |= State.deleted;
                 }
             }

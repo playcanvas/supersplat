@@ -5,6 +5,7 @@ uniform sampler2D splatState;
 
 uniform vec4 selectedClr;
 uniform vec4 lockedClr;
+uniform vec4 outlierClr;
 
 uniform vec3 clrOffset;
 uniform vec4 clrScale;
@@ -34,7 +35,7 @@ void main(void) {
     }
 
     // get per-gaussian edit state, discard if deleted
-    uint vertexState = uint(texelFetch(splatState, source.uv, 0).r * 255.0 + 0.5) & 7u;
+    uint vertexState = uint(texelFetch(splatState, source.uv, 0).r * 255.0 + 0.5) & 15u;
 
     #if OUTLINE_PASS
         if (vertexState != 1u) {
@@ -48,20 +49,20 @@ void main(void) {
         }
     #elif PICK_PASS
         if (pickMode == 0u) {
-            // add: skip deleted, locked and selected splats
+            // add: skip deleted, locked, selected and outlier splats
             if (vertexState != 0u) {
                 gl_Position = discardVec;
                 return;
             }
         } else if (pickMode == 1u) {
-            // remove: skip deleted, locked and unselected splats
+            // remove: skip deleted, locked, outlier and unselected splats
             if (vertexState != 1u) {
                 gl_Position = discardVec;
                 return;
             }
         } else {
-            // set: skip deleted and locked splats
-            if ((vertexState & 6u) != 0u) {
+            // set: skip deleted, locked and outlier splats
+            if ((vertexState & 14u) != 0u) {
                 gl_Position = discardVec;
                 return;
             }
@@ -130,12 +131,15 @@ void main(void) {
         // apply tonemapping
         color = vec4(prepareOutputFromGamma(max(color.xyz, 0.0)), color.w);
 
-        // apply locked/selected colors
-        if ((vertexState & 2u) != 0u) {
-            // locked
+        // apply state colors (outlier > locked > selected priority)
+        if ((vertexState & 8u) != 0u) {
+            // outlier - highest priority (SOR preview)
+            color *= outlierClr;
+        } else if ((vertexState & 2u) != 0u) {
+            // locked - takes priority over selected
             color *= lockedClr;
         } else if ((vertexState & 1u) != 0u) {
-            // selected
+            // selected - lowest priority
             color.xyz = mix(color.xyz, selectedClr.xyz * 0.8, selectedClr.a);
         }
     

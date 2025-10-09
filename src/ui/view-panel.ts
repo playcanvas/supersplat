@@ -75,12 +75,21 @@ class ViewPanel extends Container {
             channels: 4
         });
 
+        const outlierClrPicker = new ColorPicker({
+            class: 'view-panel-row-picker',
+            channels: 4
+        });
+
         const toArray = (clr: Color) => {
             return [clr.r, clr.g, clr.b, clr.a];
         };
 
+        const toArray3 = (clr: Color) => {
+            return [clr.r, clr.g, clr.b];
+        };
+
         events.on('bgClr', (clr: Color) => {
-            bgClrPicker.value = toArray(clr);
+            bgClrPicker.value = toArray3(clr);
         });
 
         events.on('selectedClr', (clr: Color) => {
@@ -95,10 +104,15 @@ class ViewPanel extends Container {
             lockedClrPicker.value = toArray(clr);
         });
 
+        events.on('outlierClr', (clr: Color) => {
+            outlierClrPicker.value = toArray(clr);
+        });
+
         clrPickers.append(bgClrPicker);
         clrPickers.append(selectedClrPicker);
         clrPickers.append(unselectedClrPicker);
         clrPickers.append(lockedClrPicker);
+        clrPickers.append(outlierClrPicker);
 
         clrRow.append(clrLabel);
         clrRow.append(clrPickers);
@@ -396,6 +410,10 @@ class ViewPanel extends Container {
             events.fire('setLockedClr', new Color(value[0], value[1], value[2], value[3]));
         });
 
+        outlierClrPicker.on('change', (value: number[]) => {
+            events.fire('setOutlierClr', new Color(value[0], value[1], value[2], value[3]));
+        });
+
         // camera fov
 
         events.on('camera.fov', (fov: number) => {
@@ -421,6 +439,22 @@ class ViewPanel extends Container {
         tooltips.register(selectedClrPicker, localize('options.selected-color'), 'top');
         tooltips.register(unselectedClrPicker, localize('options.unselected-color'), 'top');
         tooltips.register(lockedClrPicker, localize('options.locked-color'), 'top');
+        tooltips.register(outlierClrPicker, localize('options.outlier-color'), 'top');
+
+        // Force initial color update after a short delay to ensure events system is ready
+        setTimeout(() => {
+            const currentBgClr = events.invoke('bgClr');
+            const currentSelectedClr = events.invoke('selectedClr');
+            const currentUnselectedClr = events.invoke('unselectedClr');
+            const currentLockedClr = events.invoke('lockedClr');
+            const currentOutlierClr = events.invoke('outlierClr');
+
+            if (currentBgClr) bgClrPicker.value = toArray3(currentBgClr);
+            if (currentSelectedClr) selectedClrPicker.value = toArray(currentSelectedClr);
+            if (currentUnselectedClr) unselectedClrPicker.value = toArray(currentUnselectedClr);
+            if (currentLockedClr) lockedClrPicker.value = toArray(currentLockedClr);
+            if (currentOutlierClr) outlierClrPicker.value = toArray(currentOutlierClr);
+        }, 100);
     }
 }
 

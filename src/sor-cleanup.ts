@@ -238,7 +238,7 @@ export class SORCleanup {
 
         if (result.outlierIndices.length > 0) {
             const state = splat.splatData.getProp('state') as Uint8Array;
-            
+
             // Mark outliers with outlier state for preview (no need to store original states)
             for (const index of result.outlierIndices) {
                 if (!(state[index] & State.deleted)) {
@@ -309,3 +309,4 @@ export class SORCleanup {
         return result.outlierIndices;
     }
 }
+

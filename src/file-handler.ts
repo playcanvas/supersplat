@@ -4,10 +4,12 @@ import { CreateDropHandler } from './drop-handler';
 import { ElementType } from './element';
 import { Events } from './events';
 import { Scene } from './scene';
-import { DownloadWriter, FileStreamWriter } from './serialize/writer';
+import { BufferWriter, DownloadWriter, FileStreamWriter } from './serialize/writer';
 import { Splat } from './splat';
 import { serializePly, serializePlyCompressed, SerializeSettings, serializeSplat, serializeViewer, ViewerExportSettings } from './splat-serialize';
 import { localize } from './ui/localization';
+import { version as appVersion } from '../package.json';
+const cacheName = `superSplat-v${appVersion}`;
 
 // ts compiler and vscode find this type, but eslint does not
 type FilePickerAcceptType = unknown;
@@ -26,6 +28,8 @@ interface SceneExportOptions {
 
     // viewer
     viewerExportSettings?: ViewerExportSettings;
+
+    action: 'export' | 'preview';
 }
 
 const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
@@ -371,6 +375,11 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             (exportType === 'viewer') ? (options.viewerExportSettings.type === 'zip' ? 'packageViewer' : 'htmlViewer') :
                 (exportType === 'ply') ? (options.compressedPly ? 'compressedPly' : 'ply') : 'splat';
 
+        if (options.action === 'preview') {
+            await events.invoke('scene.preview', options);
+            return;
+        }
+
         if (hasFilePicker) {
             try {
                 const fileHandle = await window.showSaveFilePicker({
@@ -435,6 +444,23 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         } finally {
             events.fire('stopSpinner');
         }
+    });
+
+    events.function('scene.preview', async (options) => {
+        const { serializeSettings, viewerExportSettings: { experienceSettings: settings } } = options;
+        const splats = getSplats();
+        const plyWriter = new BufferWriter();
+
+        // compressed.ply
+        await serializePlyCompressed(splats, serializeSettings, plyWriter);
+        const plyBuffers = plyWriter.close();
+
+        // Previewing ply data through the cache
+        const cache = await caches.open(cacheName);
+        await cache.put('./preview/scene.compressed.ply', new Response(new Blob(plyBuffers as unknown as ArrayBuffer[], { type: 'application/octet-stream' })));
+        await cache.put('./preview/settings.json', new Response(JSON.stringify(settings)));
+
+        window.open('./preview/', '_blank', 'noopener');
     });
 };
 

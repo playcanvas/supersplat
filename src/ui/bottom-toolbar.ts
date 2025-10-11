@@ -10,6 +10,7 @@ import polygonSvg from './svg/select-poly.svg';
 import sphereSvg from './svg/select-sphere.svg';
 import boxSvg from './svg/show-hide-splats.svg';
 import undoSvg from './svg/undo.svg';
+import measureSvg from './svg/measure.svg';
 import { Tooltips } from './tooltips';
 // import cropSvg from './svg/crop.svg';
 
@@ -108,6 +109,11 @@ class BottomToolbar extends Container {
             icon: 'E189'
         });
 
+        const measure = new Button({
+            id: 'bottom-toolbar-measure',
+            class: 'bottom-toolbar-tool'
+        });
+
         undo.dom.appendChild(createSvg(undoSvg));
         redo.dom.appendChild(createSvg(redoSvg));
         picker.dom.appendChild(createSvg(pickerSvg));
@@ -116,6 +122,7 @@ class BottomToolbar extends Container {
         sphere.dom.appendChild(createSvg(sphereSvg));
         box.dom.appendChild(createSvg(boxSvg));
         lasso.dom.appendChild(createSvg(lassoSvg));
+        measure.dom.appendChild(createSvg(measureSvg));
         // crop.dom.appendChild(createSvg(cropSvg));
 
         this.append(undo);
@@ -129,6 +136,8 @@ class BottomToolbar extends Container {
         this.append(sphere);
         this.append(box);
         // this.append(crop);
+        this.append(new Element({ class: 'bottom-toolbar-separator' }));
+        this.append(measure);
         this.append(new Element({ class: 'bottom-toolbar-separator' }));
         this.append(translate);
         this.append(rotate);
@@ -144,6 +153,7 @@ class BottomToolbar extends Container {
         picker.dom.addEventListener('click', () => events.fire('tool.rectSelection'));
         sphere.dom.addEventListener('click', () => events.fire('tool.sphereSelection'));
         box.dom.addEventListener('click', () => events.fire('tool.boxSelection'));
+        measure.dom.addEventListener('click', () => events.fire('tool.measure'));
         translate.dom.addEventListener('click', () => events.fire('tool.move'));
         rotate.dom.addEventListener('click', () => events.fire('tool.rotate'));
         scale.dom.addEventListener('click', () => events.fire('tool.scale'));
@@ -164,6 +174,7 @@ class BottomToolbar extends Container {
             lasso.class[toolName === 'lassoSelection' ? 'add' : 'remove']('active');
             sphere.class[toolName === 'sphereSelection' ? 'add' : 'remove']('active');
             box.class[toolName === 'boxSelection' ? 'add' : 'remove']('active');
+            measure.class[toolName === 'measure' ? 'add' : 'remove']('active');
             translate.class[toolName === 'move' ? 'add' : 'remove']('active');
             rotate.class[toolName === 'rotate' ? 'add' : 'remove']('active');
             scale.class[toolName === 'scale' ? 'add' : 'remove']('active');
@@ -187,6 +198,7 @@ class BottomToolbar extends Container {
         tooltips.register(sphere, localize('tooltip.sphere'));
         tooltips.register(box, localize('tooltip.box'));
         // tooltips.register(crop, 'Crop');
+        tooltips.register(measure, localize('tooltip.measure-distance'));
         tooltips.register(translate, localize('tooltip.translate'));
         tooltips.register(rotate, localize('tooltip.rotate'));
         tooltips.register(scale, localize('tooltip.scale'));

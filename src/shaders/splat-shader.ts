@@ -20,6 +20,7 @@ varying mediump vec4 color;
 mediump vec4 discardVec = vec4(0.0, 0.0, 2.0, 1.0);
 
 uniform float saturation;
+uniform float splatSize;
 
 vec3 applySaturation(vec3 color) {
     vec3 grey = vec3(dot(color, vec3(0.299, 0.587, 0.114)));
@@ -89,7 +90,7 @@ void main(void) {
         return;
     }
 
-    gl_Position = center.proj + vec4(corner.offset, 0.0, 0.0);
+    gl_Position = center.proj + vec4(corner.offset * splatSize, 0.0, 0.0);
 
     // store texture coord and locked state
     texCoordIsLocked = vec3(corner.uv, (vertexState & 2u) != 0u ? 1.0 : 0.0);

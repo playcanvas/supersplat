@@ -18,6 +18,9 @@ import { getSceneConfig } from './scene-config';
 import { registerSelectionEvents } from './selection';
 import { Shortcuts } from './shortcuts';
 import { registerSOREvents } from './sor-events';
+import { registerSplatSizeAnimationEvents } from './splat-size-animation';
+import { registerSplatSizeManagerEvents } from './splat-size-manager';
+import { testSplatSize } from './splat-size-test';
 import { registerTimelineEvents } from './timeline';
 import { BoxSelection } from './tools/box-selection';
 import { BrushSelection } from './tools/brush-selection';
@@ -110,6 +113,7 @@ const initShortcuts = (events: Events) => {
     shortcuts.register([' '], { event: 'camera.toggleOverlay' });
     shortcuts.register(['I', 'i'], { event: 'camera.info.toggle' });
     shortcuts.register(['Z', 'z'], { event: 'measurement.toggle' });
+    shortcuts.register(['S', 's'], { event: 'splatSizePanel.toggle' });
     // Area measurement tool toggle with plain 'A' key
     shortcuts.register(['A', 'a'], { event: 'area.measure.toggle' });
     // Close polygon shortcut if panel is not visible
@@ -276,6 +280,8 @@ const main = async () => {
     registerSelectionEvents(events, scene);
     registerTimelineEvents(events);
     registerCameraPosesEvents(events);
+    registerSplatSizeManagerEvents(events, scene);
+    registerSplatSizeAnimationEvents(events);
     registerSOREvents(events, editHistory, scene);
 
     // Initialize measurement systems
@@ -294,6 +300,12 @@ const main = async () => {
 
     // load async models
     scene.start();
+
+    // Test splat size functionality after a short delay - REMOVED
+    // This was creating unwanted keyframes at frames 30 and 60
+    // setTimeout(() => {
+    //     testSplatSize(events);
+    // }, 2000);
 
     // handle load params
     const loadList = url.searchParams.getAll('load');

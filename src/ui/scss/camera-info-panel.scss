@@ -5,6 +5,8 @@
     top: 20px;
     left: 520px;
     z-index: 1000;
+    pointer-events: auto;
+    user-select: text;
     
     // Panel styling
     background: rgba(0, 0, 0, 0.85);

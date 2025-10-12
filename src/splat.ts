@@ -74,6 +74,7 @@ class Splat extends Element {
     _blackPoint = 0;
     _whitePoint = 1;
     _transparency = 1;
+    _splatSize = 1;
 
     // SOR preview functionality
     sorPreviewOutliers?: Set<number>;
@@ -344,7 +345,7 @@ class Splat extends Element {
         serializer.pack(this.changedCounter);
         serializer.pack(this.visible);
         serializer.pack(this.tintClr.r, this.tintClr.g, this.tintClr.b);
-        serializer.pack(this.temperature, this.saturation, this.brightness, this.blackPoint, this.whitePoint, this.transparency);
+        serializer.pack(this.temperature, this.saturation, this.brightness, this.blackPoint, this.whitePoint, this.transparency, this.splatSize);
     }
 
     onPreRender() {
@@ -383,6 +384,11 @@ class Splat extends Element {
         ]);
 
         material.setParameter('saturation', this.saturation);
+        // Debug: log splat size value
+        if (this.splatSize !== 1.0) {
+            console.log(`Setting splatSize to ${this.splatSize} for splat ${this.name}`);
+        }
+        material.setParameter('splatSize', this.splatSize);
         material.setParameter('transformPalette', this.transformPalette.texture);
 
         if (this.visible && selected) {
@@ -573,6 +579,18 @@ class Splat extends Element {
         return this._transparency;
     }
 
+    set splatSize(value: number) {
+        if (value !== this._splatSize) {
+            this._splatSize = value;
+            this.scene.forceRender = true;
+            this.scene.events.fire('splat.splatSize', this);
+        }
+    }
+
+    get splatSize() {
+        return this._splatSize;
+    }
+
     getPivot(mode: 'center' | 'boundCenter', selection: boolean, result: Transform) {
         const { entity } = this;
         switch (mode) {
@@ -602,12 +620,13 @@ class Splat extends Element {
             brightness: this.brightness,
             blackPoint: this.blackPoint,
             whitePoint: this.whitePoint,
-            transparency: this.transparency
+            transparency: this.transparency,
+            splatSize: this.splatSize
         };
     }
 
     docDeserialize(doc: any) {
-        const { name, position, rotation, scale, visible, tintClr, temperature, saturation, brightness, blackPoint, whitePoint, transparency } = doc;
+        const { name, position, rotation, scale, visible, tintClr, temperature, saturation, brightness, blackPoint, whitePoint, transparency, splatSize } = doc;
 
         this.name = name;
         this.move(new Vec3(position), new Quat(rotation), new Vec3(scale));
@@ -619,6 +638,7 @@ class Splat extends Element {
         this.blackPoint = blackPoint;
         this.whitePoint = whitePoint;
         this.transparency = transparency;
+        this.splatSize = splatSize ?? 1;
     }
 }
 

@@ -120,6 +120,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
 
             events.invoke('docDeserialize.timeline', document.timeline);
             events.invoke('docDeserialize.poseSets', document.poseSets);
+            events.invoke('docDeserialize.splatSizeKeyframes', document.splatSizeKeyframes || []);
             events.invoke('docDeserialize.view', document.view);
             scene.camera.docDeserialize(document.camera);
         } catch (error) {
@@ -144,6 +145,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 camera: scene.camera.docSerialize(),
                 view: events.invoke('docSerialize.view'),
                 poseSets: events.invoke('docSerialize.poseSets'),
+                splatSizeKeyframes: events.invoke('docSerialize.splatSizeKeyframes'),
                 timeline: events.invoke('docSerialize.timeline'),
                 splats: splats.map(s => s.docSerialize())
             };

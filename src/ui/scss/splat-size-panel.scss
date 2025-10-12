@@ -1,0 +1,119 @@
+#splat-size-panel {
+    display: none;
+    position: absolute;
+    top: 10px;
+    right: 75px;
+    width: 280px;
+    max-height: 500px;
+    background-color: var(--pcui-bg-color);
+    border: 1px solid var(--pcui-element-border-color);
+    border-radius: var(--pcui-element-border-radius);
+    overflow-y: auto;
+    z-index: 1000;
+    
+    &:not(.pcui-hidden) {
+        display: block;
+    }
+    
+    .panel-header {
+        display: flex;
+        align-items: center;
+        padding: 8px 12px;
+        background-color: var(--pcui-element-bg-color-hover);
+        border-bottom: 1px solid var(--pcui-element-border-color);
+        font-weight: bold;
+        
+        .panel-header-icon {
+            margin-right: 8px;
+            font-size: 16px;
+        }
+        
+        .panel-header-label {
+            flex-grow: 1;
+        }
+    }
+    
+    .splat-size-row {
+        display: flex;
+        align-items: center;
+        padding: 8px 12px;
+        gap: 8px;
+        
+        .splat-size-label {
+            min-width: 40px;
+            font-size: 12px;
+        }
+        
+        .splat-size-slider {
+            flex-grow: 1;
+        }
+        
+        .splat-size-input {
+            width: 60px;
+        }
+    }
+    
+    .splat-size-keyframe-row {
+        display: flex;
+        align-items: center;
+        padding: 4px 12px;
+        gap: 8px;
+        border-bottom: 1px solid var(--pcui-element-border-color);
+        
+        .splat-size-button {
+            padding: 4px 8px;
+            font-size: 11px;
+        }
+    }
+    
+    .splat-size-keyframes-label {
+        padding: 8px 12px 4px 12px;
+        font-size: 11px;
+        font-weight: bold;
+        color: var(--pcui-text-color-secondary);
+    }
+    
+    .splat-size-keyframes {
+        max-height: 200px;
+        overflow-y: auto;
+    }
+    
+    .splat-size-keyframe-item {
+        display: flex;
+        align-items: center;
+        padding: 4px 12px;
+        gap: 8px;
+        border-bottom: 1px solid var(--pcui-element-border-color-light);
+        
+        &:last-child {
+            border-bottom: none;
+        }
+        
+        .splat-size-keyframe-label {
+            min-width: 60px;
+            font-size: 11px;
+        }
+        
+        .splat-size-keyframe-input {
+            flex-grow: 1;
+        }
+        
+        .splat-size-keyframe-delete {
+            width: 20px;
+            height: 20px;
+            padding: 0;
+            font-size: 12px;
+            line-height: 1;
+            color: var(--pcui-text-color-error);
+            
+            &:hover {
+                background-color: var(--pcui-bg-color-error);
+            }
+        }
+    }
+}
+
+/* Make sure the panel is visible when needed */
+body.splat-size-panel-visible #splat-size-panel {
+    display: block !important;
+}

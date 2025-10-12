@@ -23,6 +23,7 @@ import { ScenePanel } from './scene-panel';
 import { ShortcutsPopup } from './shortcuts-popup';
 import { SORCleanupDialog } from './sor-cleanup-dialog';
 import { Spinner } from './spinner';
+import { SplatSizePanel } from './splat-size-panel';
 import { TimelinePanel } from './timeline-panel';
 import { Tooltips } from './tooltips';
 import { VideoSettingsDialog } from './video-settings-dialog';
@@ -161,6 +162,7 @@ class EditorUI {
         const cameraInfoPanel = new CameraInfoPanel(events);
         const measurementPanel = new MeasurementPanel(events);
         const areaMeasurementPanel = new AreaMeasurementPanel(events);
+        const splatSizePanel = new SplatSizePanel(events, tooltips);
 
         // Add overlays to canvas container
         canvasContainer.append(cameraInfoPanel);
@@ -171,6 +173,7 @@ class EditorUI {
         mainContainer.append(timelinePanel);
         mainContainer.append(dataPanel);
         mainContainer.append(cameraPosesPanel);
+        mainContainer.append(splatSizePanel);
 
         editorContainer.append(mainContainer);
 

@@ -222,7 +222,7 @@ class AssetLoader {
         this.events.fire('startSpinner');
 
         try {
-            const getResponse = async (contents: File, filename:string| undefined, url:string| undefined) => {
+            const getResponse = async (contents: File, filename: string | undefined, url: string | undefined) => {
                 const c = contents && (contents instanceof Response ? contents : new Response(contents));
                 const response = await (c ?? fetch(url || filename));
 
@@ -237,9 +237,9 @@ class AssetLoader {
             const text:string = await response.text();
             const meta = JSON.parse(text);
 
-            const isHasSH : boolean =  meta.fileType === 'Quality' || !!(loadRequest.mapFile('shcoef.bin'));
-            const compressInfo:CompressInfo = parseMeta(meta);
-            const splats : number[] = meta.splats;
+            const isHasSH: boolean =  meta.fileType === 'Quality' || !!(loadRequest.mapFile('shcoef.bin'));
+            const compressInfo: CompressInfo = parseMeta(meta);
+            const splats: number[] = meta.splats;
 
             // select a lod level
             let targetLod =  splats.findIndex(value => value < LCC_LOD_MAX_SPLATS);

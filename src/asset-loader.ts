@@ -1,6 +1,7 @@
 import { AppBase, Asset, GSplatData, GSplatResource } from 'playcanvas';
 
 import { Events } from './events';
+import { CompressInfo, deserializeFromLcc, LCC_LOD_MAX_SPLATS, LccUnitInfo, parseIndexBin, parseMeta } from './lcc';
 import { Splat } from './splat';
 
 interface ModelLoadRequest {
@@ -9,6 +10,7 @@ interface ModelLoadRequest {
     contents?: File;
     animationFrame?: boolean;                   // animations disable morton re-ordering at load time for faster loading
     mapUrl?: (name: string) => string;          // function to map texture names to URLs
+    mapFile?: (name: string) => {filename: string, contents: File}|undefined; // function to map names to files
 }
 
 // ideally this function would stream data directly into GSplatData buffers.
@@ -215,11 +217,88 @@ class AssetLoader {
         }
     }
 
+
+    async loadLcc(loadRequest: ModelLoadRequest) {
+        this.events.fire('startSpinner');
+
+        try {
+            const getResponse = async (contents: File, filename: string | undefined, url: string | undefined) => {
+                const c = contents && (contents instanceof Response ? contents : new Response(contents));
+                const response = await (c ?? fetch(url || filename));
+
+                if (!response || !response.ok || !response.body) {
+                    throw new Error('Failed to fetch splat data');
+                }
+                return response;
+            };
+
+            // .lcc
+            const response:Response = await getResponse(loadRequest.contents, loadRequest.filename, loadRequest.url);
+            const text:string = await response.text();
+            const meta = JSON.parse(text);
+
+            const isHasSH: boolean =  meta.fileType === 'Quality' || !!(loadRequest.mapFile('shcoef.bin'));
+            const compressInfo: CompressInfo = parseMeta(meta);
+            const splats: number[] = meta.splats;
+
+            // select a lod level
+            let targetLod =  splats.findIndex(value => value < LCC_LOD_MAX_SPLATS);
+            if (targetLod < 0) {
+                targetLod = splats.length - 1;
+            }
+            const totalSplats = splats[targetLod];
+
+            // check files
+            const indexFile = loadRequest.mapFile('index.bin');
+            const dataFile = loadRequest.mapFile('data.bin');
+            const shFile = isHasSH ? loadRequest.mapFile('shcoef.bin') : null;
+            if (!indexFile?.contents) {
+                throw new Error('Failed to fetch index.bin!');
+            }
+            if (!dataFile?.contents) {
+                throw new Error('Failed to fetch data.bin!');
+            }
+            if (isHasSH && !shFile?.contents) {
+                throw new Error('Failed to fetch shcoef.bin!');
+            }
+
+            // index.bin
+            const indexRes = await getResponse(indexFile.contents, indexFile.filename, undefined);
+            const indexArrayBuffer = await indexRes.arrayBuffer();
+            const unitInfos: LccUnitInfo[] = parseIndexBin(indexArrayBuffer, meta);
+
+            // data.bin + shcoef.bin -> gsplatData
+            const gsplatData = await deserializeFromLcc({
+                totalSplats,
+                unitInfos,
+                targetLod,
+                isHasSH,
+                dataFileContent: dataFile.contents,
+                shFileContent: shFile?.contents,
+                compressInfo
+            });
+
+            const asset = new Asset(loadRequest.filename || loadRequest.url, 'gsplat', {
+                url: loadRequest.url,
+                filename: loadRequest.filename
+            });
+            this.app.assets.add(asset);
+            asset.resource = new GSplatResource(this.app.graphicsDevice, gsplatData);
+
+            return new Splat(asset);
+        } finally {
+            this.events.fire('stopSpinner');
+        }
+    }
+
     loadModel(loadRequest: ModelLoadRequest) {
         const filename = (loadRequest.filename || loadRequest.url).toLowerCase();
         if (filename.endsWith('.splat')) {
             return this.loadSplat(loadRequest);
+        } else if (filename.endsWith('.lcc')) {
+            return this.loadLcc(loadRequest);
         }
+
         return this.loadPly(loadRequest);
     }
 }

@@ -487,7 +487,7 @@ class MergeSplatsOp {
 
     static async create(scene: Scene, splats: Splat[]): Promise<MergeSplatsOp> {
         console.log('MergeSplatsOp.create: Starting with', splats.length, 'splats');
-        
+
         // Serialize all splats into a single PLY (compressed) and reload as a new Splat
         console.log('MergeSplatsOp.create: Serializing to PLY...');
         const writer = new BufferWriter();
@@ -498,7 +498,7 @@ class MergeSplatsOp {
         const blob = new Blob(buffers as unknown as ArrayBuffer[], { type: 'application/octet-stream' });
         const url = URL.createObjectURL(blob);
         const filename = `${(splats[0].asset.file as any)?.filename || splats[0].name || 'merged'}.ply`;
-        
+
         console.log('MergeSplatsOp.create: Loading merged PLY as new asset...');
         const mergedSplat = await scene.assetLoader.loadPly({ url, filename });
         URL.revokeObjectURL(url);
@@ -517,11 +517,11 @@ class MergeSplatsOp {
         console.log('MergeSplatsOp.do: Adding merged splat');
         // Add merged, remove originals
         this.scene.add(this.merged);
-        
+
         // Now that it's in the scene, we can set the name
         this.merged.name = this.mergedName;
         console.log('MergeSplatsOp.do: Set merged name to:', this.merged.name);
-        
+
         console.log('MergeSplatsOp.do: Removing', this.originals.length, 'original splats');
         for (const s of this.originals) {
             console.log('MergeSplatsOp.do: Removing splat:', s.name);

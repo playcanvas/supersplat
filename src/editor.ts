@@ -614,7 +614,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     });
 
     // depth visualization
-    
+
     let depthVisualization = false;
     let depthMin = 1;
     let depthMax = 50;

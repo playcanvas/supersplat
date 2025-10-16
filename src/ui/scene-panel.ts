@@ -101,17 +101,17 @@ class ScenePanel extends Container {
                 if (result?.action === 'yes') {
                     try {
                         console.log('Starting merge of', checkedSplats.length, 'splats');
-                        
+
                         // We need to get the scene from the window global or from events
                         const scene = (window as any).scene;
                         if (!scene) {
                             throw new Error('Scene not found');
                         }
-                        
+
                         console.log('Creating merge operation...');
                         const mergeOp = await MergeSplatsOp.create(scene, checkedSplats);
                         console.log('Merge operation created, executing...');
-                        
+
                         events.fire('edit.add', mergeOp);
                         console.log('Merge operation added to edit history');
 

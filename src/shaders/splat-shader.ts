@@ -97,8 +97,8 @@ void main(void) {
         color = readColor(source);
         color.xyz = mix(color.xyz, selectedClr.xyz * 0.2, selectedClr.a) * selectedClr.a;
     #elif PICK_PASS
-        uvec3 bits = (uvec3(source.id) >> uvec3(0u, 8u, 16u)) & uvec3(255u);
-        color = vec4(vec3(bits) / 255.0, readColor(source).a);
+        uvec4 bits = (uvec4(source.id) >> uvec4(0u, 8u, 16u, 24u)) & uvec4(255u);
+        color = vec4(bits) / 255.0;
     // handle splat color
     #elif FORWARD_PASS
         // read color
@@ -161,14 +161,11 @@ void main(void) {
     #if OUTLINE_PASS
         gl_FragColor = vec4(1.0, 1.0, 1.0, mode == 0 ? exp(-A * 4.0) * color.a : 1.0);
     #else
-        mediump float alpha = exp(-A * 4.0) * color.a;
-
         #ifdef PICK_PASS
-            if (alpha < pickerAlpha) {
-                discard;
-            }
-            gl_FragColor = vec4(color.xyz, 0.0);
+            gl_FragColor = color;
         #else
+            mediump float alpha = exp(-A * 4.0) * color.a;
+
             if (texCoordIsLocked.z == 0.0 && ringSize > 0.0) {
                 // rings mode
                 if (A < 1.0 - ringSize) {

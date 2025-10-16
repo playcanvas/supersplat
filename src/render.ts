@@ -81,10 +81,12 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             const data = new Uint8Array(width * height * 4);
 
             const { renderTarget } = scene.camera.entity.camera;
-            const { colorBuffer } = renderTarget;
+            const { workRenderTarget } = scene.camera;
+
+            scene.dataProcessor.copyRt(renderTarget, workRenderTarget);
 
             // read the rendered frame
-            await colorBuffer.read(0, 0, width, height, { renderTarget, data });
+            await workRenderTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workRenderTarget, data });
 
             // the render buffer contains premultiplied alpha. so apply background color.
             if (!transparentBg) {
@@ -108,8 +110,8 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
             const arrayBuffer = await compressor.compress(
                 new Uint32Array(data.buffer),
-                colorBuffer.width,
-                colorBuffer.height
+                width,
+                height
             );
 
             // construct filename
@@ -234,10 +236,12 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             // capture the current video frame
             const captureFrame = async (frameTime: number) => {
                 const { renderTarget } = scene.camera.entity.camera;
-                const { colorBuffer } = renderTarget;
+                const { workRenderTarget } = scene.camera;
+
+                scene.dataProcessor.copyRt(renderTarget, workRenderTarget);
 
                 // read the rendered frame
-                await colorBuffer.read(0, 0, width, height, { renderTarget, data });
+                await workRenderTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workRenderTarget, data });
 
                 // flip the buffer vertically
                 for (let y = 0; y < height / 2; y++) {

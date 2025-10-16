@@ -6,6 +6,7 @@ class BrushSelection {
 
     constructor(events: Events, parent: HTMLElement, mask: { canvas: HTMLCanvasElement, context: CanvasRenderingContext2D }) {
         let radius = 40;
+        let operation = 'set';
 
         // create svg
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -113,6 +114,15 @@ class BrushSelection {
             }
         };
 
+        const updateKeyState = (e: KeyboardEvent) => {
+            const op = e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set');
+            if (op !== operation) {
+                parent.classList.remove(operation);
+                parent.classList.add(op);
+                operation = op;
+            }
+        };
+
         this.activate = () => {
             svg.style.display = 'inline';
             parent.style.display = 'block';
@@ -120,6 +130,8 @@ class BrushSelection {
             parent.addEventListener('pointermove', pointermove);
             parent.addEventListener('pointerup', pointerup);
             parent.addEventListener('wheel', wheel);
+            window.addEventListener('keydown', updateKeyState);
+            window.addEventListener('keyup', updateKeyState);
         };
 
         this.deactivate = () => {
@@ -133,6 +145,8 @@ class BrushSelection {
             parent.removeEventListener('pointermove', pointermove);
             parent.removeEventListener('pointerup', pointerup);
             parent.removeEventListener('wheel', wheel);
+            window.removeEventListener('keydown', updateKeyState);
+            window.removeEventListener('keyup', updateKeyState);
         };
 
         events.on('tool.brushSelection.smaller', () => {

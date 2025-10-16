@@ -165,7 +165,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
     // import a single file, .ply, .splat or meta.json
     const importFile = async (file: ImportFile, animationFrame: boolean) => {
         try {
-            const model = await scene.assetLoader.loadModel({
+            const model = await scene.assetLoader.load({
                 contents: file.contents,
                 filename: file.filename,
                 url: file.url,
@@ -197,7 +197,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             return name;
         };
 
-        const model = await scene.assetLoader.loadModel({
+        const model = await scene.assetLoader.load({
             filename: files[meta].filename,
             url: urls[meta],
             animationFrame,
@@ -227,7 +227,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             };
 
 
-            const model = await scene.assetLoader.loadModel({
+            const model = await scene.assetLoader.load({
                 filename: files[meta].filename,
                 contents: files[meta].contents,
                 animationFrame,

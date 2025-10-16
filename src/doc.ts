@@ -101,7 +101,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 // construct the splat asset
                 const contents = await zip.file(`splat_${i}.ply`).async('blob');
                 const url = URL.createObjectURL(contents);
-                const splat = await scene.assetLoader.loadModel({
+                const splat = await scene.assetLoader.load({
                     url,
                     filename
                 });

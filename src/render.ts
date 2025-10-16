@@ -73,10 +73,12 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             const data = new Uint8Array(width * height * 4);
 
             const { renderTarget } = scene.camera.entity.camera;
-            const { colorBuffer } = renderTarget;
+            const { workRenderTarget } = scene.camera;
+
+            scene.dataProcessor.copyRt(renderTarget, workRenderTarget);
 
             // read the rendered frame
-            await colorBuffer.read(0, 0, width, height, { renderTarget, data });
+            await workRenderTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workRenderTarget, data });
 
             // flip y positions to have 0,0 at the top
             let line = new Uint8Array(width * 4);

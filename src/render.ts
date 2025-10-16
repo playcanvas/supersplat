@@ -57,6 +57,45 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
         });
     };
 
+    events.function('render.offscreen', async (width: number, height: number): Promise<Uint8Array> => {
+        try {
+            // start rendering to offscreen buffer only
+            scene.camera.startOffscreenMode(width, height);
+            scene.camera.renderOverlays = false;
+
+            // render the next frame
+            scene.forceRender = true;
+
+            // for render to finish
+            await postRender();
+
+            // cpu-side buffer to read pixels into
+            const data = new Uint8Array(width * height * 4);
+
+            const { renderTarget } = scene.camera.entity.camera;
+            const { workRenderTarget } = scene.camera;
+
+            scene.dataProcessor.copyRt(renderTarget, workRenderTarget);
+
+            // read the rendered frame
+            await workRenderTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workRenderTarget, data });
+
+            // flip y positions to have 0,0 at the top
+            let line = new Uint8Array(width * 4);
+            for (let y = 0; y < height / 2; y++) {
+                line = data.slice(y * width * 4, (y + 1) * width * 4);
+                data.copyWithin(y * width * 4, (height - y - 1) * width * 4, (height - y) * width * 4);
+                data.set(line, (height - y - 1) * width * 4);
+            }
+
+            return data;
+        } finally {
+            scene.camera.endOffscreenMode();
+            scene.camera.renderOverlays = true;
+            scene.camera.entity.camera.clearColor.set(0, 0, 0, 0);
+        }
+    });
+
     events.function('render.image', async (imageSettings: ImageSettings) => {
         events.fire('startSpinner');
 

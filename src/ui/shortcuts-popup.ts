@@ -9,6 +9,7 @@ const shortcutList = [
     { key: '3', action: 'scale' },
     { key: 'R', action: 'rect-selection' },
     { key: 'B', action: 'brush-selection' },
+    { key: 'O', action: 'flood-selection' },
     { key: 'P', action: 'picker-selection' },
     { key: '[ ]', action: 'brush-size' },
     { key: 'Esc', action: 'deactivate-tool' },

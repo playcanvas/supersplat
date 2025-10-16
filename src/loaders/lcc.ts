@@ -4,7 +4,7 @@
 
 import { GSplatData, Vec3 } from 'playcanvas';
 
-import { ModelLoadRequest } from './model-load-request.js';
+import { ModelLoadRequest } from './model-load-request';
 
 // The LCC_LOD_MAX_SPLATS can be adjusted according to the situation
 const LCC_LOD_MAX_SPLATS = 20_000_000;
@@ -359,7 +359,7 @@ const loadLcc = async (loadRequest: ModelLoadRequest) => {
     const text:string = await response.text();
     const meta = JSON.parse(text);
 
-    const isHasSH: boolean =  meta.fileType === 'Quality' || !!(loadRequest.mapFile('shcoef.bin'));
+    const isHasSH: boolean = meta.fileType === 'Quality' || !!(loadRequest.mapFile('shcoef.bin'));
     const compressInfo: CompressInfo = parseMeta(meta);
     const splats: number[] = meta.splats;
 

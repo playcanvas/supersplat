@@ -292,6 +292,86 @@ class ViewPanel extends Container {
         showBoundRow.append(showBoundLabel);
         showBoundRow.append(showBoundToggle);
 
+        // depth visualization
+        const depthVisualizationRow = new Container({
+            class: 'view-panel-row'
+        });
+
+        const depthVisualizationLabel = new Label({
+            text: localize('options.depth-visualization'),
+            class: 'view-panel-row-label'
+        });
+
+        const depthVisualizationToggle = new BooleanInput({
+            type: 'toggle',
+            class: 'view-panel-row-toggle',
+            value: false
+        });
+
+        depthVisualizationRow.append(depthVisualizationLabel);
+        depthVisualizationRow.append(depthVisualizationToggle);
+
+        // depth min
+        const depthMinRow = new Container({
+            class: 'view-panel-row'
+        });
+
+        const depthMinLabel = new Label({
+            text: localize('options.depth-min'),
+            class: 'view-panel-row-label'
+        });
+
+        const depthMinSlider = new SliderInput({
+            class: 'view-panel-row-slider',
+            min: 0.1,
+            max: 100,
+            precision: 1,
+            value: 1
+        });
+
+        depthMinRow.append(depthMinLabel);
+        depthMinRow.append(depthMinSlider);
+
+        // depth max
+        const depthMaxRow = new Container({
+            class: 'view-panel-row'
+        });
+
+        const depthMaxLabel = new Label({
+            text: localize('options.depth-max'),
+            class: 'view-panel-row-label'
+        });
+
+        const depthMaxSlider = new SliderInput({
+            class: 'view-panel-row-slider',
+            min: 1,
+            max: 1000,
+            precision: 1,
+            value: 50
+        });
+
+        depthMaxRow.append(depthMaxLabel);
+        depthMaxRow.append(depthMaxSlider);
+
+        // depth reverse
+        const depthReverseRow = new Container({
+            class: 'view-panel-row'
+        });
+
+        const depthReverseLabel = new Label({
+            text: localize('options.depth-reverse'),
+            class: 'view-panel-row-label'
+        });
+
+        const depthReverseToggle = new BooleanInput({
+            type: 'toggle',
+            class: 'view-panel-row-toggle',
+            value: false
+        });
+
+        depthReverseRow.append(depthReverseLabel);
+        depthReverseRow.append(depthReverseToggle);
+
         this.append(header);
         this.append(clrRow);
         this.append(tonemappingRow);
@@ -302,6 +382,10 @@ class ViewPanel extends Container {
         this.append(outlineSelectionRow);
         this.append(showGridRow);
         this.append(showBoundRow);
+        this.append(depthVisualizationRow);
+        this.append(depthMinRow);
+        this.append(depthMaxRow);
+        this.append(depthReverseRow);
 
         // handle panel visibility
 
@@ -432,6 +516,42 @@ class ViewPanel extends Container {
 
         tonemappingSelection.on('change', (value: string) => {
             events.fire('camera.setTonemapping', value);
+        });
+
+        // depth visualization
+        events.on('view.depthVisualization', (enabled: boolean) => {
+            depthVisualizationToggle.value = enabled;
+        });
+
+        depthVisualizationToggle.on('change', (value: boolean) => {
+            events.fire('view.setDepthVisualization', value);
+        });
+
+        // depth min
+        events.on('view.depthMin', (value: number) => {
+            depthMinSlider.value = value;
+        });
+
+        depthMinSlider.on('change', (value: number) => {
+            events.fire('view.setDepthMin', value);
+        });
+
+        // depth max
+        events.on('view.depthMax', (value: number) => {
+            depthMaxSlider.value = value;
+        });
+
+        depthMaxSlider.on('change', (value: number) => {
+            events.fire('view.setDepthMax', value);
+        });
+
+        // depth reverse
+        events.on('view.depthReverse', (enabled: boolean) => {
+            depthReverseToggle.value = enabled;
+        });
+
+        depthReverseToggle.on('change', (value: boolean) => {
+            events.fire('view.setDepthReverse', value);
         });
 
         // tooltips

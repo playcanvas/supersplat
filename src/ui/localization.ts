@@ -86,6 +86,10 @@ const localizeInit = () => {
                     'options.show-grid': 'Raster anzeigen',
                     'options.show-bound': 'Objektbox anzeigen',
                     'options.camera-fly-speed': 'Kamera Geschwindigkeit',
+                    'options.depth-visualization': 'Tiefendarstellung',
+                    'options.depth-min': 'Tiefe Min (Weiß)',
+                    'options.depth-max': 'Tiefe Max (Schwarz)',
+                    'options.depth-reverse': 'Tiefe umkehren',
 
                     // Camera panel
                     'camera': 'KAMERA POSEN',
@@ -347,6 +351,10 @@ const localizeInit = () => {
                     'options.show-grid': 'Show Grid',
                     'options.show-bound': 'Show Bound',
                     'options.camera-fly-speed': 'Fly Speed',
+                    'options.depth-visualization': 'Depth Visualization',
+                    'options.depth-min': 'Depth Min (White)',
+                    'options.depth-max': 'Depth Max (Black)',
+                    'options.depth-reverse': 'Reverse Depth',
                     'options.tonemapping': 'Tonemapping',
                     'options.tonemapping-none': 'None',
                     'options.tonemapping-linear': 'Linear',

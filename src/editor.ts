@@ -613,6 +613,77 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         setViewBands(value);
     });
 
+    // depth visualization
+    
+    let depthVisualization = false;
+    let depthMin = 1;
+    let depthMax = 50;
+    let depthReverse = false;
+
+    const setDepthVisualization = (value: boolean) => {
+        if (value !== depthVisualization) {
+            depthVisualization = value;
+            scene.forceRender = true;
+            events.fire('view.depthVisualization', depthVisualization);
+        }
+    };
+
+    const setDepthMin = (value: number) => {
+        if (value !== depthMin) {
+            depthMin = value;
+            scene.forceRender = true;
+            events.fire('view.depthMin', depthMin);
+        }
+    };
+
+    const setDepthMax = (value: number) => {
+        if (value !== depthMax) {
+            depthMax = value;
+            scene.forceRender = true;
+            events.fire('view.depthMax', depthMax);
+        }
+    };
+
+    const setDepthReverse = (value: boolean) => {
+        if (value !== depthReverse) {
+            depthReverse = value;
+            scene.forceRender = true;
+            events.fire('view.depthReverse', depthReverse);
+        }
+    };
+
+    events.function('view.depthVisualization', () => {
+        return depthVisualization;
+    });
+
+    events.function('view.depthMin', () => {
+        return depthMin;
+    });
+
+    events.function('view.depthMax', () => {
+        return depthMax;
+    });
+
+    events.function('view.depthReverse', () => {
+        return depthReverse;
+    });
+
+    events.on('view.setDepthVisualization', (value: boolean) => {
+        setDepthVisualization(value);
+    });
+
+    events.on('view.setDepthMin', (value: number) => {
+        setDepthMin(value);
+    });
+
+    events.on('view.setDepthMax', (value: number) => {
+        setDepthMax(value);
+    });
+
+    events.on('view.setDepthReverse', (value: boolean) => {
+        setDepthReverse(value);
+    });
+
     events.function('camera.getPose', () => {
         const camera = scene.camera;
         const position = camera.entity.getPosition();

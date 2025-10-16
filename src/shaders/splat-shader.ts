@@ -10,8 +10,15 @@ uniform vec4 outlierClr;
 uniform vec3 clrOffset;
 uniform vec4 clrScale;
 
+// depth visualization uniforms
+uniform int depthVisualization;
+uniform float depthMin;
+uniform float depthMax;
+uniform int depthReverse;
+
 varying mediump vec3 texCoordIsLocked;          // store locked flat in z
 varying mediump vec4 color;
+varying mediump float viewDepth;                // depth in view space
 
 #if PICK_PASS
     uniform uint pickMode;                      // 0: add, 1: remove, 2: set
@@ -94,6 +101,9 @@ void main(void) {
 
     // store texture coord and locked state
     texCoordIsLocked = vec3(corner.uv, (vertexState & 2u) != 0u ? 1.0 : 0.0);
+    
+    // store depth for depth visualization
+    viewDepth = -center.view.z;
 
     #if UNDERLAY_PASS
         color = readColor(source);
@@ -143,6 +153,15 @@ void main(void) {
             // selected - lowest priority
             color.xyz = mix(color.xyz, selectedClr.xyz * 0.8, selectedClr.a);
         }
+        
+        // apply depth visualization if enabled
+        if (depthVisualization == 1) {
+            float normalizedDepth = clamp((viewDepth - depthMin) / (depthMax - depthMin), 0.0, 1.0);
+            if (depthReverse == 1) {
+                normalizedDepth = 1.0 - normalizedDepth;
+            }
+            color.xyz = vec3(normalizedDepth);
+        }
     
     #endif
 }
@@ -151,6 +170,7 @@ void main(void) {
 const fragmentShader = /* glsl*/`
 varying mediump vec3 texCoordIsLocked;
 varying mediump vec4 color;
+varying mediump float viewDepth;
 
 uniform int mode;               // 0: centers, 1: rings
 uniform float pickerAlpha;

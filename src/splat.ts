@@ -390,6 +390,17 @@ class Splat extends Element {
         }
         material.setParameter('splatSize', this.splatSize);
         material.setParameter('transformPalette', this.transformPalette.texture);
+        
+        // depth visualization parameters
+        const depthVisualization = events.invoke('view.depthVisualization');
+        const depthMin = events.invoke('view.depthMin');
+        const depthMax = events.invoke('view.depthMax');
+        const depthReverse = events.invoke('view.depthReverse');
+        
+        material.setParameter('depthVisualization', depthVisualization ? 1 : 0);
+        material.setParameter('depthMin', depthMin);
+        material.setParameter('depthMax', depthMax);
+        material.setParameter('depthReverse', depthReverse ? 1 : 0);
 
         if (this.visible && selected) {
             // render bounding box

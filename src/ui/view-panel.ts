@@ -234,7 +234,7 @@ class ViewPanel extends Container {
             class: 'view-panel-row-toggle',
             value: true
         });
-        
+
         highPrecisionRow.append(highPrecisionLabel);
         highPrecisionRow.append(highPrecisionToggle);
 

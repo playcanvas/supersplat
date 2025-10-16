@@ -79,6 +79,7 @@ class DataProcessor {
     dummyTexture: Texture;
     viewProjectionMat = new Mat4();
     splatParams = new Int32Array(3);
+    copyShader: Shader;
 
     getIntersectResources: (width: number, numSplats: number) => IntersectResources;
     getBoundResources: (splatTextureWidth: number) => BoundResources;
@@ -103,6 +104,26 @@ class DataProcessor {
                 addressV: ADDRESS_CLAMP_TO_EDGE
             });
         };
+
+        this.copyShader = ShaderUtils.createShader(device, {
+            uniqueName: 'copyShader',
+            attributes: {
+                vertex_position: SEMANTIC_POSITION
+            },
+            vertexGLSL: `
+                attribute vec2 vertex_position;
+                void main(void) {
+                    gl_Position = vec4(vertex_position, 0.0, 1.0);
+                }
+            `,
+            fragmentGLSL: `
+                uniform sampler2D colorTex;
+                void main(void) {
+                    ivec2 texel = ivec2(gl_FragCoord.xy);
+                    gl_FragColor = texelFetch(colorTex, texel, 0);
+                }
+            `
+        });
 
         // intersection test
 
@@ -450,6 +471,17 @@ class DataProcessor {
         );
 
         return resources.data;
+    }
+
+    copyRt(source: RenderTarget, dest: RenderTarget) {
+        const { device } = this;
+
+        resolve(device.scope, {
+            colorTex: source.colorBuffer
+        });
+
+        device.setBlendState(BlendState.NOBLEND);
+        drawQuadWithShader(device, dest, this.copyShader);
     }
 }
 

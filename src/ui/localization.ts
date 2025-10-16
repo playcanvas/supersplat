@@ -81,6 +81,7 @@ const localizeInit = () => {
                     'options.show-grid': 'Raster anzeigen',
                     'options.show-bound': 'Objektbox anzeigen',
                     'options.camera-fly-speed': 'Kamera Geschwindigkeit',
+                    'options.high-precision': 'High Precision Rendering',
 
                     // Camera panel
                     'camera': 'KAMERA POSEN',
@@ -331,6 +332,8 @@ const localizeInit = () => {
                     'options.show-grid': 'Show Grid',
                     'options.show-bound': 'Show Bound',
                     'options.camera-fly-speed': 'Fly Speed',
+                    'options.high-precision': 'High Precision Rendering',
+
                     'options.tonemapping': 'Tonemapping',
                     'options.tonemapping-none': 'None',
                     'options.tonemapping-linear': 'Linear',
@@ -595,6 +598,7 @@ const localizeInit = () => {
                     'options.show-grid': 'Afficher la grille',
                     'options.show-bound': 'Afficher limites',
                     'options.camera-fly-speed': 'Vitesse de vol',
+                    'options.high-precision': 'Rendu haute précision',
 
                     // Camera panel
                     'camera': 'POSES DE LA CAMERA',
@@ -842,6 +846,7 @@ const localizeInit = () => {
                     'options.show-grid': 'グリッド',
                     'options.show-bound': 'バウンディングボックス',
                     'options.camera-fly-speed': 'カメラの移動速度',
+                    'options.high-precision': '高精度レンダリング',
 
                     // Camera panel
                     'camera': 'カメラポーズ',
@@ -1089,6 +1094,7 @@ const localizeInit = () => {
                     'options.show-grid': '그리드 표시',
                     'options.show-bound': '경계 표시',
                     'options.camera-fly-speed': '카메라 이동 속도',
+                    'options.high-precision': '고정밀 렌더링',
 
                     // Camera panel
                     'camera': '카메라 포즈',
@@ -1335,6 +1341,7 @@ const localizeInit = () => {
                     'options.show-grid': '显示网格',
                     'options.show-bound': '显示边界',
                     'options.camera-fly-speed': '相机飞行速度',
+                    'options.high-precision': '高精度渲染',
 
                     // Camera panel
                     'camera': '相机姿势',

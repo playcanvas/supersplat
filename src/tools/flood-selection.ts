@@ -1,8 +1,8 @@
-import { BooleanInput, Button, Container, Label, LabelGroup, NumericInput } from '@playcanvas/pcui';
+import { Container, NumericInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 
-type Pt = {x: number, y: number};
+type Pt = {x : number, y: number };
 
 const RED = 0;
 const GREEN = 1;
@@ -20,8 +20,8 @@ class FloodSelection {
         const { canvas, context } = mask;
 
         let threshold = 0.2;
-        let point: Pt|undefined;
-        let immediateMode = false;
+        let point: Pt;
+        let imageData: ImageData;
 
         // ui
         const selectToolbar = new Container({
@@ -33,30 +33,15 @@ class FloodSelection {
             e.stopPropagation();
         });
 
-        const setButton = new Button({ text: 'Set', class: 'select-toolbar-button' });
-        const addButton = new Button({ text: 'Add', class: 'select-toolbar-button' });
-        const removeButton = new Button({ text: 'Remove', class: 'select-toolbar-button' });
         const thresholdInput = new NumericInput({
             value: threshold,
             placeholder: 'Threshold',
             width: 120,
-            precision: 2,
-            min: 0.0,
-            max: 1.0
+            precision: 3,
+            min: 0.001,
+            max: 0.999
         });
-        const immediateModeInput = new BooleanInput({
-            value: immediateMode
-        });
-        const immediateModeLabel = new Label({
-            value: 'Immediate Mode'
-        });
-
-        selectToolbar.append(setButton);
-        selectToolbar.append(addButton);
-        selectToolbar.append(removeButton);
         selectToolbar.append(thresholdInput);
-        selectToolbar.append(immediateModeInput);
-        selectToolbar.append(immediateModeLabel);
 
         canvasContainer.append(selectToolbar);
 
@@ -69,29 +54,17 @@ class FloodSelection {
             );
         };
 
-        setButton.dom.addEventListener('pointerdown', (e) => {
-            e.stopPropagation(); apply('set');
-        });
-        addButton.dom.addEventListener('pointerdown', (e) => {
-            e.stopPropagation(); apply('add');
-        });
-        removeButton.dom.addEventListener('pointerdown', (e) => {
-            e.stopPropagation(); apply('remove');
-        });
-
-        const initCanvas = () => {
-            canvas.width = parent.clientWidth;
-            canvas.height = parent.clientHeight;
-
-            // clear canvas
-            context.clearRect(0, 0, canvas.width, canvas.height);
-        };
-
         const refreshSelection = async () => {
             if (!point) return;
 
             const width = parent.clientWidth;
             const height = parent.clientHeight;
+
+            if (!imageData || canvas.width !== width || canvas.height !== height) {
+                canvas.width = width;
+                canvas.height = height;
+                imageData = context.createImageData(width, height);
+            }
 
             const data = await (events.invoke('render.offscreen', width, height) as Promise<Uint8Array>);
             let current: Pt = {
@@ -103,8 +76,8 @@ class FloodSelection {
             const pickedOpacity = data[idx + ALPHA];
 
             const testPixels: Pt[] = [current];
-            const imageData = context.createImageData(width, height);
             const d = imageData.data;
+
             d.fill(102);
 
             while (testPixels.length > 0) {
@@ -129,81 +102,53 @@ class FloodSelection {
 
         thresholdInput.on('change', () => {
             threshold = thresholdInput.value;
-            if (!immediateMode) {
-                refreshSelection();
-            }
-        });
+        }); 
 
-        immediateModeInput.on('change', () => {
-            immediateMode = immediateModeInput.value;
-            initCanvas();
-            setButton.enabled = !immediateMode;
-            addButton.enabled = !immediateMode;
-            removeButton.enabled = !immediateMode;
-        });
+        const isPrimary = (e: PointerEvent) => e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary;
+
+        let clicked = false;
 
         const pointerdown = (e: PointerEvent) => {
-            if (!immediateMode) {
-                e.preventDefault();
-                e.stopPropagation();
+            if (!clicked && isPrimary(e)) {
+                clicked = true;
             }
         };
 
+        const pointermove = (e: PointerEvent) => {
+            clicked = false;
+        };
 
         const pointerup = async (e: PointerEvent) => {
-            if (!immediateMode) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
+            if (clicked && isPrimary(e)) {
+                clicked = false;
 
-            const { offsetX, offsetY } = e;
-            point = {
-                x: Math.floor(offsetX),
-                y: Math.floor(offsetY)
-            };
+                point = {
+                    x: Math.floor(e.offsetX),
+                    y: Math.floor(e.offsetY)
+                };
 
-            await refreshSelection();
+                await refreshSelection();
 
-            if (immediateMode) {
                 apply(e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'));
-                initCanvas();
-                point = undefined;
+
+                context.clearRect(0, 0, canvas.width, canvas.height);
             }
-        };
-
-        const wheel = (e: WheelEvent) => {
-            if (immediateMode) return;
-            e.preventDefault();
-            e.stopPropagation();
-            const { deltaX, deltaY } = e;
-            const value = (Math.abs(deltaX) > Math.abs(deltaY) ? deltaX : deltaY) > 0 ? 0.05 : -0.05;
-
-            thresholdInput.value = threshold + value;
-        };
-
-        const resize = () => {
-            initCanvas();
         };
 
         this.activate = () => {
             parent.style.display = 'block';
-            canvas.style.display = 'inline';
             selectToolbar.hidden = false;
-            parent.addEventListener('pointerdown', pointerdown);
-            parent.addEventListener('pointerup', pointerup);
-            parent.addEventListener('wheel', wheel);
-            window.addEventListener('resize', resize);
-            initCanvas();
+            canvasContainer.dom.addEventListener('pointerdown', pointerdown);
+            canvasContainer.dom.addEventListener('pointermove', pointermove);
+            canvasContainer.dom.addEventListener('pointerup', pointerup, true);
         };
 
         this.deactivate = () => {
             parent.style.display = 'none';
-            canvas.style.display = 'none';
             selectToolbar.hidden = true;
-            parent.removeEventListener('pointerdown', pointerdown);
-            parent.removeEventListener('pointerup', pointerup);
-            parent.removeEventListener('wheel', wheel);
-            window.removeEventListener('resize', resize);
+            canvasContainer.dom.removeEventListener('pointerdown', pointerdown);
+            canvasContainer.dom.removeEventListener('pointermove', pointermove);
+            canvasContainer.dom.removeEventListener('pointerup', pointerup);
             point = undefined;
         };
     }

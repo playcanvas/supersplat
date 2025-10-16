@@ -14,6 +14,7 @@ class PointerController {
     destroy: () => void;
 
     constructor(camera: Camera, target: HTMLElement) {
+
         const orbit = (dx: number, dy: number) => {
             const azim = camera.azim - dx * camera.scene.config.controls.orbitSensitivity;
             const elev = camera.elevation - dy * camera.scene.config.controls.orbitSensitivity;
@@ -40,7 +41,6 @@ class PointerController {
         };
 
         // mouse state
-        let mouseCapture: undefined | true | false;
         let pressedButton = -1;  // no button pressed, otherwise 0, 1, or 2
         let x: number, y: number;
 
@@ -52,9 +52,9 @@ class PointerController {
             if (event.pointerType === 'mouse') {
                 // If a button is already pressed, ignore this press
                 if (pressedButton !== -1) {
-                    mouseCapture = false;
                     return;
                 }
+                target.setPointerCapture(event.pointerId);
                 pressedButton = event.button;
                 x = event.offsetX;
                 y = event.offsetY;
@@ -81,11 +81,8 @@ class PointerController {
                 // Only release if this is the button that was initially pressed
                 if (event.button === pressedButton) {
                     pressedButton = -1;
-                    if (mouseCapture) {
-                        target.releasePointerCapture(event.pointerId);
-                    }
+                    target.releasePointerCapture(event.pointerId);
                 }
-                mouseCapture = undefined;
             } else {
                 touches = touches.filter(touch => touch.id !== event.pointerId);
                 if (touches.length === 0) {
@@ -96,11 +93,6 @@ class PointerController {
 
         const pointermove = (event: PointerEvent) => {
             if (event.pointerType === 'mouse') {
-                if (mouseCapture === false) {
-                    target.setPointerCapture(event.pointerId);
-                    mouseCapture = true;
-                }
-
                 // Only process if we're tracking a button
                 if (pressedButton === -1) {
                     return;

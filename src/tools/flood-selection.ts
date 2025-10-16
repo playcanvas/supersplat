@@ -102,9 +102,11 @@ class FloodSelection {
 
         thresholdInput.on('change', () => {
             threshold = thresholdInput.value;
-        }); 
+        });
 
-        const isPrimary = (e: PointerEvent) => e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary;
+        const isPrimary = (e: PointerEvent) => {
+            return e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary;
+        };
 
         let clicked = false;
 

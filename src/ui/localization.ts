@@ -63,6 +63,9 @@ const localizeInit = () => {
 
                     // Scene panel
                     'scene-manager': 'SZENEN MANAGER',
+                    'merge-splats': 'Splats zusammenführen',
+                    'merge-splats-tooltip': 'Ausgewählte Splats zu einem zusammenführen',
+                    'merge-splats-confirm': 'Sind Sie sicher, dass Sie {{count}} Splats zusammenführen möchten? Dieser Vorgang kann rückgängig gemacht werden.',
                     'transform': 'TRANSFORMATION',
                     'position': 'Position',
                     'rotation': 'Rotation',
@@ -321,6 +324,9 @@ const localizeInit = () => {
 
                     // Scene panel
                     'scene-manager': 'SCENE MANAGER',
+                    'merge-splats': 'Merge Splats',
+                    'merge-splats-tooltip': 'Merge selected splats into one',
+                    'merge-splats-confirm': 'Are you sure you want to merge {{count}} splats? This operation can be undone.',
                     'transform': 'TRANSFORM',
                     'position': 'Position',
                     'rotation': 'Rotation',
@@ -593,6 +599,9 @@ const localizeInit = () => {
 
                     // Scene panel
                     'scene-manager': 'GESTIONNAIRE DE SCENE',
+                    'merge-splats': 'Fusionner les splats',
+                    'merge-splats-tooltip': 'Fusionner les splats sélectionnés en un seul',
+                    'merge-splats-confirm': 'Êtes-vous sûr de vouloir fusionner {{count}} splats? Cette opération peut être annulée.',
                     'transform': 'TRANSFORMATION',
                     'position': 'Position',
                     'rotation': 'Rotation',
@@ -845,6 +854,9 @@ const localizeInit = () => {
 
                     // Scene panel
                     'scene-manager': 'シーンマネージャー',
+                    'merge-splats': 'スプラットを結合',
+                    'merge-splats-tooltip': '選択したスプラットを一つに結合',
+                    'merge-splats-confirm': '{{count}}個のスプラットを結合しますか？この操作は元に戻すことができます。',
                     'transform': 'トランスフォーム',
                     'position': '位置',
                     'rotation': '回転',
@@ -1097,6 +1109,9 @@ const localizeInit = () => {
 
                     // Scene panel
                     'scene-manager': '장면 관리자',
+                    'merge-splats': 'Splat 병합',
+                    'merge-splats-tooltip': '선택된 Splat들을 하나로 병합',
+                    'merge-splats-confirm': '{{count}}개의 Splat을 병합하시겠습니까? 이 작업은 실행 취소할 수 있습니다.',
                     'transform': '변환',
                     'position': '위치',
                     'rotation': '회전',
@@ -1348,6 +1363,9 @@ const localizeInit = () => {
 
                     // Scene panel
                     'scene-manager': '场景管理器',
+                    'merge-splats': '合并 Splat',
+                    'merge-splats-tooltip': '将选中的 Splat 合并为一个',
+                    'merge-splats-confirm': '确定要合并 {{count}} 个 Splat 吗？此操作可以撤销。',
                     'transform': '变换',
                     'position': '位置',
                     'rotation': '旋转',

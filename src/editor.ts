@@ -1,7 +1,7 @@
 import { Color, Mat4, Texture, Vec3, Vec4 } from 'playcanvas';
 
 import { EditHistory } from './edit-history';
-import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp, MultiOp, AddSplatOp } from './edit-ops';
+import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp, MultiOp, AddSplatOp, MergeSplatsOp } from './edit-ops';
 import { ElementType } from './element';
 import { Events } from './events';
 import { Scene } from './scene';

@@ -1,5 +1,6 @@
-import { Container, Element, Label } from '@playcanvas/pcui';
+import { Container, Element, Label, Button } from '@playcanvas/pcui';
 
+import { MergeSplatsOp } from '../edit-ops';
 import { Events } from '../events';
 import { localize } from './localization';
 import { SplatList } from './splat-list';
@@ -70,10 +71,70 @@ class ScenePanel extends Container {
 
         const splatList = new SplatList(events);
 
+        const mergeButton = new Button({
+            text: localize('merge-splats'),
+            class: 'merge-button',
+            enabled: false
+        });
+
         const splatListContainer = new Container({
             class: 'splat-list-container'
         });
         splatListContainer.append(splatList);
+        splatListContainer.append(mergeButton);
+
+        // Handle splat selection changes
+        splatList.on('selectionChanged', (checkedSplats: Set<any>) => {
+            mergeButton.enabled = checkedSplats.size >= 2;
+        });
+
+        // Handle merge button click
+        mergeButton.on('click', async () => {
+            const checkedSplats = splatList.getCheckedSplats();
+            if (checkedSplats.length >= 2) {
+                const result = await events.invoke('showPopup', {
+                    type: 'yesno',
+                    header: localize('merge-splats'),
+                    message: localize('merge-splats-confirm').replace('{{count}}', checkedSplats.length.toString())
+                });
+
+                if (result?.action === 'yes') {
+                    try {
+                        console.log('Starting merge of', checkedSplats.length, 'splats');
+                        
+                        // We need to get the scene from the window global or from events
+                        const scene = (window as any).scene;
+                        if (!scene) {
+                            throw new Error('Scene not found');
+                        }
+                        
+                        console.log('Creating merge operation...');
+                        const mergeOp = await MergeSplatsOp.create(scene, checkedSplats);
+                        console.log('Merge operation created, executing...');
+                        
+                        events.fire('edit.add', mergeOp);
+                        console.log('Merge operation added to edit history');
+
+                        // Uncheck all items after merge
+                        splatList.checkedItems.clear();
+                        for (const [splat, item] of splatList.items) {
+                            item.checked = false;
+                        }
+                        mergeButton.enabled = false;
+                        console.log('Merge completed successfully');
+                    } catch (error) {
+                        console.error('Merge failed:', error);
+                        events.invoke('showPopup', {
+                            type: 'error',
+                            header: 'Merge Failed',
+                            message: `Failed to merge splats: ${error.message}`
+                        });
+                    }
+                }
+            }
+        });
+
+        tooltips.register(mergeButton, localize('merge-splats-tooltip'), 'top');
 
         const transformHeader = new Container({
             class: 'panel-header'

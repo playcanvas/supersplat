@@ -2,8 +2,10 @@ import { Color, Mat4 } from 'playcanvas';
 
 import { Pivot } from './pivot';
 import { Scene } from './scene';
+import { BufferWriter } from './serialize/writer';
 import { SORCleanup } from './sor-cleanup';
 import { Splat } from './splat';
+import { serializePlyCompressed } from './splat-serialize';
 import { State } from './splat-state';
 import { Transform } from './transform';
 import { SORCleanupOptions } from './ui/sor-cleanup-dialog';
@@ -470,6 +472,83 @@ class SORCleanupOp extends StateOp {
     }
 }
 
+class MergeSplatsOp {
+    name = 'mergeSplats';
+    scene: Scene;
+    originals: Splat[];
+    merged: Splat;
+    mergedName: string;
+
+    private constructor(scene: Scene, originals: Splat[], merged: Splat) {
+        this.scene = scene;
+        this.originals = originals;
+        this.merged = merged;
+    }
+
+    static async create(scene: Scene, splats: Splat[]): Promise<MergeSplatsOp> {
+        console.log('MergeSplatsOp.create: Starting with', splats.length, 'splats');
+        
+        // Serialize all splats into a single PLY (compressed) and reload as a new Splat
+        console.log('MergeSplatsOp.create: Serializing to PLY...');
+        const writer = new BufferWriter();
+        await serializePlyCompressed(splats, { maxSHBands: 3, selected: false }, writer);
+        const buffers = writer.close();
+        console.log('MergeSplatsOp.create: Serialized', buffers.length, 'buffers');
+
+        const blob = new Blob(buffers as unknown as ArrayBuffer[], { type: 'application/octet-stream' });
+        const url = URL.createObjectURL(blob);
+        const filename = `${(splats[0].asset.file as any)?.filename || splats[0].name || 'merged'}.ply`;
+        
+        console.log('MergeSplatsOp.create: Loading merged PLY as new asset...');
+        const mergedSplat = await scene.assetLoader.loadPly({ url, filename });
+        URL.revokeObjectURL(url);
+        console.log('MergeSplatsOp.create: Merged splat loaded');
+
+        // Don't set the name yet - we'll do it after adding to scene
+        const mergedName = `Merged (${splats.map(s => s.name).join(', ')})`;
+        console.log('MergeSplatsOp.create: Will set merged name to:', mergedName);
+
+        const op = new MergeSplatsOp(scene, splats, mergedSplat);
+        op.mergedName = mergedName;
+        return op;
+    }
+
+    do() {
+        console.log('MergeSplatsOp.do: Adding merged splat');
+        // Add merged, remove originals
+        this.scene.add(this.merged);
+        
+        // Now that it's in the scene, we can set the name
+        this.merged.name = this.mergedName;
+        console.log('MergeSplatsOp.do: Set merged name to:', this.merged.name);
+        
+        console.log('MergeSplatsOp.do: Removing', this.originals.length, 'original splats');
+        for (const s of this.originals) {
+            console.log('MergeSplatsOp.do: Removing splat:', s.name);
+            this.scene.remove(s);
+        }
+        console.log('MergeSplatsOp.do: Merge operation completed');
+    }
+
+    undo() {
+        // Remove merged, add back originals
+        this.scene.remove(this.merged);
+        for (const s of this.originals) {
+            this.scene.add(s);
+        }
+    }
+
+    destroy() {
+        // Destroy merged asset to free resources
+        if (this.merged) {
+            this.merged.destroy();
+        }
+        this.scene = null;
+        this.originals = null;
+        this.merged = null;
+    }
+}
+
 export {
     EditOp,
     SelectAllOp,
@@ -488,5 +567,6 @@ export {
     MultiOp,
     AddSplatOp,
     SplatRenameOp,
-    SORCleanupOp
+    SORCleanupOp,
+    MergeSplatsOp
 };

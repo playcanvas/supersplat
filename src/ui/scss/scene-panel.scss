@@ -12,3 +12,25 @@
     max-height: 300px;
     overflow: auto;
 }
+
+.merge-button {
+    margin: 8px 4px 4px 4px;
+    padding: 8px 12px;
+    background-color: #2c3e50;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    
+    &:hover:not(:disabled) {
+        background-color: #34495e;
+    }
+    
+    &:disabled {
+        background-color: #7f8c8d;
+        color: #bdc3c7;
+        cursor: not-allowed;
+    }
+}

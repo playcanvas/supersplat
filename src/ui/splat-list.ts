@@ -1,4 +1,4 @@
-import { Container, Label, Element as PcuiElement, TextInput } from '@playcanvas/pcui';
+import { Container, Label, Element as PcuiElement, TextInput, BooleanInput } from '@playcanvas/pcui';
 
 import { SplatRenameOp } from '../edit-ops';
 import { Element, ElementType } from '../element';
@@ -20,7 +20,10 @@ class SplatItem extends Container {
     setSelected: (value: boolean) => void;
     getVisible: () => boolean;
     setVisible: (value: boolean) => void;
+    getChecked: () => boolean;
+    setChecked: (value: boolean) => void;
     destroy: () => void;
+    checkbox: BooleanInput;
 
     constructor(name: string, edit: TextInput, args = {}) {
         args = {
@@ -29,6 +32,10 @@ class SplatItem extends Container {
         };
 
         super(args);
+
+        this.checkbox = new BooleanInput({
+            class: 'splat-item-checkbox'
+        });
 
         const text = new Label({
             class: 'splat-item-text',
@@ -51,6 +58,7 @@ class SplatItem extends Container {
             class: 'splat-item-delete'
         });
 
+        this.append(this.checkbox);
         this.append(text);
         this.append(visible);
         this.append(invisible);
@@ -98,6 +106,17 @@ class SplatItem extends Container {
             }
         };
 
+        this.getChecked = () => {
+            return this.checkbox.value;
+        };
+
+        this.setChecked = (value: boolean) => {
+            if (value !== this.checked) {
+                this.checkbox.value = value;
+                this.emit('checkChanged', this, value);
+            }
+        };
+
         const toggleVisible = (event: MouseEvent) => {
             event.stopPropagation();
             this.visible = !this.visible;
@@ -106,6 +125,10 @@ class SplatItem extends Container {
         const handleRemove = (event: MouseEvent) => {
             event.stopPropagation();
             this.emit('removeClicked', this);
+        };
+
+        const handleCheckboxChange = () => {
+            this.emit('checkChanged', this, this.checkbox.value);
         };
 
         // rename on double click
@@ -131,11 +154,13 @@ class SplatItem extends Container {
         visible.dom.addEventListener('click', toggleVisible);
         invisible.dom.addEventListener('click', toggleVisible);
         remove.dom.addEventListener('click', handleRemove);
+        this.checkbox.on('change', handleCheckboxChange);
 
         this.destroy = () => {
             visible.dom.removeEventListener('click', toggleVisible);
             invisible.dom.removeEventListener('click', toggleVisible);
             remove.dom.removeEventListener('click', handleRemove);
+            // Note: PCUI BooleanInput doesn't have an off method, so we rely on destroy
         };
     }
 
@@ -162,9 +187,19 @@ class SplatItem extends Container {
     get visible() {
         return this.getVisible();
     }
+
+    set checked(value) {
+        this.setChecked(value);
+    }
+
+    get checked() {
+        return this.getChecked();
+    }
 }
 
 class SplatList extends Container {
+    checkedItems: Set<Splat> = new Set();
+    items: Map<Splat, SplatItem> = new Map();
     constructor(events: Events, args = {}) {
         args = {
             ...args,
@@ -173,7 +208,7 @@ class SplatList extends Container {
 
         super(args);
 
-        const items = new Map<Splat, SplatItem>();
+        const items = this.items;
 
         // edit input used during renames
         const edit = new TextInput({
@@ -280,6 +315,26 @@ class SplatList extends Container {
             element.on('removeClicked', () => {
                 this.emit('removeClicked', element);
             });
+
+            element.on('checkChanged', (item: SplatItem, checked: boolean) => {
+                // Find the corresponding splat
+                let splat: Splat | null = null;
+                for (const [key, value] of this.items) {
+                    if (item === value) {
+                        splat = key;
+                        break;
+                    }
+                }
+
+                if (splat) {
+                    if (checked) {
+                        this.checkedItems.add(splat);
+                    } else {
+                        this.checkedItems.delete(splat);
+                    }
+                    this.emit('selectionChanged', this.checkedItems);
+                }
+            });
         }
     }
 
@@ -287,9 +342,22 @@ class SplatList extends Container {
         if (element instanceof SplatItem) {
             element.unbind('click');
             element.unbind('removeClicked');
+            element.unbind('checkChanged');
+
+            // Remove from checked items if it was checked
+            for (const [splat, item] of this.items) {
+                if (item === element) {
+                    this.checkedItems.delete(splat);
+                    break;
+                }
+            }
         }
 
         super._onRemoveChild(element);
+    }
+
+    getCheckedSplats(): Splat[] {
+        return Array.from(this.checkedItems);
     }
 }
 

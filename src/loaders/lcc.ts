@@ -4,15 +4,16 @@
 
 import { GSplatData, Vec3 } from 'playcanvas';
 
+import { ModelLoadRequest } from './model-load-request';
 
 // The LCC_LOD_MAX_SPLATS can be adjusted according to the situation
-export const LCC_LOD_MAX_SPLATS = 20_000_000;
+const LCC_LOD_MAX_SPLATS = 20_000_000;
 const kSH_C0 = 0.28209479177387814;
 const SQRT_2 = 1.414213562373095;
 const SQRT_2_INV = 0.7071067811865475;
 
 // lod data in data.bin
-export interface LccLod{
+interface LccLod{
     points: number;     // number of splats
     offset: bigint;     // offset
     size: number;       // data size
@@ -20,14 +21,14 @@ export interface LccLod{
 
 // The scene uses a quadtree for spatial partitioning,
 // with each unit having its own xy index (starting from 0) and multiple layers of lod data
-export interface LccUnitInfo {
+interface LccUnitInfo {
     x: number;          // x index
     y: number;          // y index
     lods: Array<LccLod>;    //  lods
 }
 
 // Used to decompress scale in data.bin and sh in shcoef.bin
-export interface CompressInfo {
+interface CompressInfo {
     compressedScaleMin: Vec3;   // min scale
     compressedScaleMax: Vec3;   // max scale
     compressedSHMin: Vec3;      // min sh
@@ -35,7 +36,7 @@ export interface CompressInfo {
 }
 
 // parameters used to convert LCC data into GSplatData
-export interface LccParam{
+interface LccParam{
     totalSplats: number;
     targetLod: number;
     isHasSH: boolean;
@@ -58,7 +59,7 @@ interface ProcessUnitContext {
 }
 
 // parse .lcc files, such as meta.lcc
-export const parseMeta = (obj: any) : CompressInfo => {
+const parseMeta = (obj: any) : CompressInfo => {
     const attributes: { [key: string]: any } = {};
     obj.attributes.forEach((attr: any) => {
         attributes[attr.name] = attr;
@@ -78,7 +79,7 @@ export const parseMeta = (obj: any) : CompressInfo => {
     return compressInfo;
 };
 
-export const parseIndexBin = (raw: ArrayBuffer, meta:any): Array<LccUnitInfo> => {
+const parseIndexBin = (raw: ArrayBuffer, meta:any): Array<LccUnitInfo> => {
     let offset = 0;
 
     const buff = new DataView(raw);
@@ -122,7 +123,6 @@ export const parseIndexBin = (raw: ArrayBuffer, meta:any): Array<LccUnitInfo> =>
 
     return infos;
 };
-
 
 const InvSigmoid = (v: number): number => {
     return -Math.log((1.0 - v) / v);
@@ -187,7 +187,9 @@ const floatProps = [
     'f_dc_0', 'f_dc_1', 'f_dc_2',
     'scale_0', 'scale_1', 'scale_2'
 ];
+
 const createStorage = (length: number) => new Float32Array(length);
+
 const initProperties = (length: number): Record<string, Float32Array> => {
     const props: Record<string, Float32Array> = {};
     for (const key of floatProps) {
@@ -293,9 +295,8 @@ const processUnit = async (ctx: ProcessUnitContext): Promise<number> => {
     return propertyOffset + unitSplats;
 };
 
-
 // this function would stream data directly into GSplatData buffers
-export const deserializeFromLcc = async (param:LccParam) => {
+const deserializeFromLcc = async (param:LccParam) => {
     const { totalSplats, unitInfos, targetLod, isHasSH, dataFileContent, shFileContent, compressInfo } = param;
 
     // properties to GSplatData
@@ -341,3 +342,63 @@ export const deserializeFromLcc = async (param:LccParam) => {
 
     return gsplatData;
 };
+
+const loadLcc = async (loadRequest: ModelLoadRequest) => {
+    const getResponse = async (contents: File, filename: string | undefined, url: string | undefined) => {
+        const c = contents && (contents instanceof Response ? contents : new Response(contents));
+        const response = await (c ?? fetch(url || filename));
+
+        if (!response || !response.ok || !response.body) {
+            throw new Error('Failed to fetch splat data');
+        }
+        return response;
+    };
+
+    // .lcc
+    const response:Response = await getResponse(loadRequest.contents, loadRequest.filename, loadRequest.url);
+    const text:string = await response.text();
+    const meta = JSON.parse(text);
+
+    const isHasSH: boolean = meta.fileType === 'Quality' || !!(loadRequest.mapFile('shcoef.bin'));
+    const compressInfo: CompressInfo = parseMeta(meta);
+    const splats: number[] = meta.splats;
+
+    // select a lod level
+    let targetLod =  splats.findIndex(value => value < LCC_LOD_MAX_SPLATS);
+    if (targetLod < 0) {
+        targetLod = splats.length - 1;
+    }
+    const totalSplats = splats[targetLod];
+
+    // check files
+    const indexFile = loadRequest.mapFile('index.bin');
+    const dataFile = loadRequest.mapFile('data.bin');
+    const shFile = isHasSH ? loadRequest.mapFile('shcoef.bin') : null;
+    if (!indexFile?.contents) {
+        throw new Error('Failed to fetch index.bin!');
+    }
+    if (!dataFile?.contents) {
+        throw new Error('Failed to fetch data.bin!');
+    }
+    if (isHasSH && !shFile?.contents) {
+        throw new Error('Failed to fetch shcoef.bin!');
+    }
+
+    // index.bin
+    const indexRes = await getResponse(indexFile.contents, indexFile.filename, undefined);
+    const indexArrayBuffer = await indexRes.arrayBuffer();
+    const unitInfos: LccUnitInfo[] = parseIndexBin(indexArrayBuffer, meta);
+
+    // data.bin + shcoef.bin -> gsplatData
+    return await deserializeFromLcc({
+        totalSplats,
+        unitInfos,
+        targetLod,
+        isHasSH,
+        dataFileContent: dataFile.contents,
+        shFileContent: shFile?.contents,
+        compressInfo
+    });
+};
+
+export { loadLcc };

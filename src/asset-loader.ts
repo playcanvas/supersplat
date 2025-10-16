@@ -1,92 +1,11 @@
 import { AppBase, Asset, GSplatData, GSplatResource } from 'playcanvas';
 
 import { Events } from './events';
-import { CompressInfo, deserializeFromLcc, LCC_LOD_MAX_SPLATS, LccUnitInfo, parseIndexBin, parseMeta } from './lcc';
+import { loadLcc } from './loaders/lcc';
+import { ModelLoadRequest } from './loaders/model-load-request';
+import { loadPly } from './loaders/ply';
+import { loadSplat } from './loaders/splat';
 import { Splat } from './splat';
-
-interface ModelLoadRequest {
-    filename?: string;
-    url?: string;
-    contents?: File;
-    animationFrame?: boolean;                   // animations disable morton re-ordering at load time for faster loading
-    mapUrl?: (name: string) => string;          // function to map texture names to URLs
-    mapFile?: (name: string) => {filename: string, contents: File}|undefined; // function to map names to files
-}
-
-// ideally this function would stream data directly into GSplatData buffers.
-// unfortunately the .splat file format has no header specifying total number
-// of splats so filesize must be known in order to allocate the correct amount
-// of memory.
-const deserializeFromSSplat = (data: ArrayBufferLike) => {
-    const totalSplats = data.byteLength / 32;
-    const dataView = new DataView(data);
-
-    const storage_x = new Float32Array(totalSplats);
-    const storage_y = new Float32Array(totalSplats);
-    const storage_z = new Float32Array(totalSplats);
-    const storage_opacity = new Float32Array(totalSplats);
-    const storage_rot_0 = new Float32Array(totalSplats);
-    const storage_rot_1 = new Float32Array(totalSplats);
-    const storage_rot_2 = new Float32Array(totalSplats);
-    const storage_rot_3 = new Float32Array(totalSplats);
-    const storage_f_dc_0 = new Float32Array(totalSplats);
-    const storage_f_dc_1 = new Float32Array(totalSplats);
-    const storage_f_dc_2 = new Float32Array(totalSplats);
-    const storage_scale_0 = new Float32Array(totalSplats);
-    const storage_scale_1 = new Float32Array(totalSplats);
-    const storage_scale_2 = new Float32Array(totalSplats);
-    const storage_state = new Uint8Array(totalSplats);
-
-
-    const SH_C0 = 0.28209479177387814;
-    let off;
-
-    for (let i = 0; i < totalSplats; i++) {
-        off = i * 32;
-        storage_x[i] = dataView.getFloat32(off + 0, true);
-        storage_y[i] = dataView.getFloat32(off + 4, true);
-        storage_z[i] = dataView.getFloat32(off + 8, true);
-
-        storage_scale_0[i] = Math.log(dataView.getFloat32(off + 12, true));
-        storage_scale_1[i] = Math.log(dataView.getFloat32(off + 16, true));
-        storage_scale_2[i] = Math.log(dataView.getFloat32(off + 20, true));
-
-        storage_f_dc_0[i] = (dataView.getUint8(off + 24) / 255 - 0.5) / SH_C0;
-        storage_f_dc_1[i] = (dataView.getUint8(off + 25) / 255 - 0.5) / SH_C0;
-        storage_f_dc_2[i] = (dataView.getUint8(off + 26) / 255 - 0.5) / SH_C0;
-
-        storage_opacity[i] = -Math.log(255 / dataView.getUint8(off + 27) - 1);
-
-        storage_rot_0[i] = (dataView.getUint8(off + 28) - 128) / 128;
-        storage_rot_1[i] = (dataView.getUint8(off + 29) - 128) / 128;
-        storage_rot_2[i] = (dataView.getUint8(off + 30) - 128) / 128;
-        storage_rot_3[i] = (dataView.getUint8(off + 31) - 128) / 128;
-    }
-
-    return new GSplatData([{
-        name: 'vertex',
-        count: totalSplats,
-        properties: [
-            { type: 'float', name: 'x', storage: storage_x, byteSize: 4 },
-            { type: 'float', name: 'y', storage: storage_y, byteSize: 4 },
-            { type: 'float', name: 'z', storage: storage_z, byteSize: 4 },
-            { type: 'float', name: 'opacity', storage: storage_opacity, byteSize: 4 },
-            { type: 'float', name: 'rot_0', storage: storage_rot_0, byteSize: 4 },
-            { type: 'float', name: 'rot_1', storage: storage_rot_1, byteSize: 4 },
-            { type: 'float', name: 'rot_2', storage: storage_rot_2, byteSize: 4 },
-            { type: 'float', name: 'rot_3', storage: storage_rot_3, byteSize: 4 },
-            { type: 'float', name: 'f_dc_0', storage: storage_f_dc_0, byteSize: 4 },
-            { type: 'float', name: 'f_dc_1', storage: storage_f_dc_1, byteSize: 4 },
-            { type: 'float', name: 'f_dc_2', storage: storage_f_dc_2, byteSize: 4 },
-            { type: 'float', name: 'scale_0', storage: storage_scale_0, byteSize: 4 },
-            { type: 'float', name: 'scale_1', storage: storage_scale_1, byteSize: 4 },
-            { type: 'float', name: 'scale_2', storage: storage_scale_2, byteSize: 4 },
-            { type: 'float', name: 'state', storage: storage_state, byteSize: 4 }
-        ]
-    }]);
-};
-
-let assetId = 0;
 
 // handles loading gltf container assets
 class AssetLoader {
@@ -101,205 +20,40 @@ class AssetLoader {
         this.defaultAnisotropy = defaultAnisotropy || 1;
     }
 
-    loadPly(loadRequest: ModelLoadRequest) {
+    async load(loadRequest: ModelLoadRequest) {
+        const wrap = (gsplatData: GSplatData) => {
+            const asset = new Asset(loadRequest.filename || loadRequest.url, 'gsplat', {
+                url: loadRequest.contents ? `local-asset-${Date.now()}` : loadRequest.url ?? loadRequest.filename,
+                filename: loadRequest.filename
+            });
+            this.app.assets.add(asset);
+            asset.resource = new GSplatResource(this.app.graphicsDevice, gsplatData);
+            return asset;
+        };
+
         if (!loadRequest.animationFrame) {
             this.events.fire('startSpinner');
         }
 
-        let file;
+        try {
+            const filename = (loadRequest.filename || loadRequest.url).toLowerCase();
 
-        const isSog = loadRequest.filename.toLowerCase().endsWith('.sog');
-        if (isSog) {
-            const contents = loadRequest.contents;
-            file = {
-                url: contents ? URL.createObjectURL(contents) : loadRequest.url,
-                filename: loadRequest.filename
-            };
-        } else {
-            const contents = loadRequest.contents && (loadRequest.contents instanceof Response ? loadRequest.contents : new Response(loadRequest.contents));
-            file = {
-                // we must construct a unique url if contents is provided
-                url: contents ? `local-asset-${assetId++}` : loadRequest.url ?? loadRequest.filename,
-                filename: loadRequest.filename,
-                contents
-            };
-        }
+            let asset;
 
-        const data = {
-            // decompress data on load
-            decompress: true,
-            // disable morton re-ordering when loading animation frames
-            reorder: !(loadRequest.animationFrame ?? false),
-            mapUrl: loadRequest.mapUrl
-        };
+            if (filename.endsWith('.splat')) {
+                asset = wrap(await loadSplat(loadRequest));
+            } else if (filename.endsWith('.lcc')) {
+                asset = wrap(await loadLcc(loadRequest));
+            } else {
+                asset = await loadPly(this.app.assets, loadRequest);
+            }
 
-        const options = {
-            mapUrl: loadRequest.mapUrl
-        };
-
-        return new Promise<Splat>((resolve, reject) => {
-            const asset = new Asset(
-                loadRequest.filename || loadRequest.url,
-                'gsplat',
-                // @ts-ignore
-                file,
-                data,
-                options
-            );
-
-            asset.on('load:data', (data: GSplatData) => {
-                // support loading 2d splats by adding scale_2 property with almost 0 scale
-                if (data instanceof GSplatData && data.getProp('scale_0') && data.getProp('scale_1') && !data.getProp('scale_2')) {
-                    const scale2 = new Float32Array(data.numSplats).fill(Math.log(1e-6));
-                    data.addProp('scale_2', scale2);
-
-                    // place the new scale_2 property just after scale_1
-                    const props = data.getElement('vertex').properties;
-                    props.splice(props.findIndex((prop: any) => prop.name === 'scale_1') + 1, 0, props.splice(props.length - 1, 1)[0]);
-                }
-            });
-
-            asset.on('load', () => {
-                // check the PLY contains minimal set of we expect
-                const required = [
-                    'x', 'y', 'z',
-                    'scale_0', 'scale_1', 'scale_2',
-                    'rot_0', 'rot_1', 'rot_2', 'rot_3',
-                    'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity'
-                ];
-                const splatData = (asset.resource as GSplatResource).gsplatData as GSplatData;
-                const missing = required.filter(x => !splatData.getProp(x));
-                if (missing.length > 0) {
-                    reject(new Error(`This file does not contain gaussian splatting data. The following properties are missing: ${missing.join(', ')}`));
-                } else {
-                    resolve(new Splat(asset));
-                }
-            });
-
-            asset.on('error', (err: string) => {
-                reject(err);
-            });
-
-            this.app.assets.add(asset);
-            this.app.assets.load(asset);
-        }).finally(() => {
+            return new Splat(asset);
+        } finally {
             if (!loadRequest.animationFrame) {
                 this.events.fire('stopSpinner');
             }
-        });
-    }
-
-    async loadSplat(loadRequest: ModelLoadRequest) {
-        this.events.fire('startSpinner');
-
-        try {
-            const contents = loadRequest.contents && (loadRequest.contents instanceof Response ? loadRequest.contents : new Response(loadRequest.contents));
-            const response = await (contents ?? fetch(loadRequest.url || loadRequest.filename)) as Response;
-
-            if (!response || !response.ok || !response.body) {
-                throw new Error('Failed to fetch splat data');
-            }
-
-            const arrayBuffer = await response.arrayBuffer();
-
-            const gsplatData = deserializeFromSSplat(arrayBuffer);
-
-            const asset = new Asset(loadRequest.filename || loadRequest.url, 'gsplat', {
-                url: loadRequest.url,
-                filename: loadRequest.filename
-            });
-            this.app.assets.add(asset);
-            asset.resource = new GSplatResource(this.app.graphicsDevice, gsplatData);
-
-            return new Splat(asset);
-        } finally {
-            this.events.fire('stopSpinner');
         }
-    }
-
-
-    async loadLcc(loadRequest: ModelLoadRequest) {
-        this.events.fire('startSpinner');
-
-        try {
-            const getResponse = async (contents: File, filename: string | undefined, url: string | undefined) => {
-                const c = contents && (contents instanceof Response ? contents : new Response(contents));
-                const response = await (c ?? fetch(url || filename));
-
-                if (!response || !response.ok || !response.body) {
-                    throw new Error('Failed to fetch splat data');
-                }
-                return response;
-            };
-
-            // .lcc
-            const response:Response = await getResponse(loadRequest.contents, loadRequest.filename, loadRequest.url);
-            const text:string = await response.text();
-            const meta = JSON.parse(text);
-
-            const isHasSH: boolean =  meta.fileType === 'Quality' || !!(loadRequest.mapFile('shcoef.bin'));
-            const compressInfo: CompressInfo = parseMeta(meta);
-            const splats: number[] = meta.splats;
-
-            // select a lod level
-            let targetLod =  splats.findIndex(value => value < LCC_LOD_MAX_SPLATS);
-            if (targetLod < 0) {
-                targetLod = splats.length - 1;
-            }
-            const totalSplats = splats[targetLod];
-
-            // check files
-            const indexFile = loadRequest.mapFile('index.bin');
-            const dataFile = loadRequest.mapFile('data.bin');
-            const shFile = isHasSH ? loadRequest.mapFile('shcoef.bin') : null;
-            if (!indexFile?.contents) {
-                throw new Error('Failed to fetch index.bin!');
-            }
-            if (!dataFile?.contents) {
-                throw new Error('Failed to fetch data.bin!');
-            }
-            if (isHasSH && !shFile?.contents) {
-                throw new Error('Failed to fetch shcoef.bin!');
-            }
-
-            // index.bin
-            const indexRes = await getResponse(indexFile.contents, indexFile.filename, undefined);
-            const indexArrayBuffer = await indexRes.arrayBuffer();
-            const unitInfos: LccUnitInfo[] = parseIndexBin(indexArrayBuffer, meta);
-
-            // data.bin + shcoef.bin -> gsplatData
-            const gsplatData = await deserializeFromLcc({
-                totalSplats,
-                unitInfos,
-                targetLod,
-                isHasSH,
-                dataFileContent: dataFile.contents,
-                shFileContent: shFile?.contents,
-                compressInfo
-            });
-
-            const asset = new Asset(loadRequest.filename || loadRequest.url, 'gsplat', {
-                url: loadRequest.url,
-                filename: loadRequest.filename
-            });
-            this.app.assets.add(asset);
-            asset.resource = new GSplatResource(this.app.graphicsDevice, gsplatData);
-
-            return new Splat(asset);
-        } finally {
-            this.events.fire('stopSpinner');
-        }
-    }
-
-    loadModel(loadRequest: ModelLoadRequest) {
-        const filename = (loadRequest.filename || loadRequest.url).toLowerCase();
-        if (filename.endsWith('.splat')) {
-            return this.loadSplat(loadRequest);
-        } else if (filename.endsWith('.lcc')) {
-            return this.loadLcc(loadRequest);
-        }
-
-        return this.loadPly(loadRequest);
     }
 }
 

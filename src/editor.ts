@@ -438,7 +438,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             const blob = new Blob(buffers as unknown as ArrayBuffer[], { type: 'application/octet-stream' });
             const url = URL.createObjectURL(blob);
             const { filename } = splat;
-            const copy = await scene.assetLoader.loadPly({ url, filename });
+            const copy = await scene.assetLoader.load({ url, filename });
 
             if (func === 'separate') {
                 editHistory.add(new MultiOp([

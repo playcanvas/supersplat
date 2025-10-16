@@ -14,8 +14,6 @@ class PointerController {
     destroy: () => void;
 
     constructor(camera: Camera, target: HTMLElement) {
-        let mouseCapture: undefined|true|false;
-
         const orbit = (dx: number, dy: number) => {
             const azim = camera.azim - dx * camera.scene.config.controls.orbitSensitivity;
             const elev = camera.elevation - dy * camera.scene.config.controls.orbitSensitivity;
@@ -42,7 +40,8 @@ class PointerController {
         };
 
         // mouse state
-        const buttons = [false, false, false];
+        let mouseCapture: undefined | true | false;
+        let pressedButton = -1;  // no button pressed, otherwise 0, 1, or 2
         let x: number, y: number;
 
         // touch state
@@ -51,10 +50,12 @@ class PointerController {
 
         const pointerdown = (event: PointerEvent) => {
             if (event.pointerType === 'mouse') {
-                if (buttons.every(b => !b)) {
+                // If a button is already pressed, ignore this press
+                if (pressedButton !== -1) {
                     mouseCapture = false;
+                    return;
                 }
-                buttons[event.button] = true;
+                pressedButton = event.button;
                 x = event.offsetX;
                 y = event.offsetY;
             } else if (event.pointerType === 'touch') {
@@ -77,9 +78,12 @@ class PointerController {
 
         const pointerup = (event: PointerEvent) => {
             if (event.pointerType === 'mouse') {
-                buttons[event.button] = false;
-                if (buttons.every(b => !b) && mouseCapture) {
-                    target.releasePointerCapture(event.pointerId);
+                // Only release if this is the button that was initially pressed
+                if (event.button === pressedButton) {
+                    pressedButton = -1;
+                    if (mouseCapture) {
+                        target.releasePointerCapture(event.pointerId);
+                    }
                 }
                 mouseCapture = undefined;
             } else {
@@ -96,22 +100,37 @@ class PointerController {
                     target.setPointerCapture(event.pointerId);
                     mouseCapture = true;
                 }
+
+                // Only process if we're tracking a button
+                if (pressedButton === -1) {
+                    return;
+                }
+
+                // Verify the button we're tracking is still pressed
+                // 1 = left button, 4 = middle button, 2 = right button
+                const buttonMask = [1, 4, 2][pressedButton];
+                if ((event.buttons & buttonMask) === 0) {
+                    // Button is no longer pressed, clean up
+                    pressedButton = -1;
+                    return;
+                }
+
                 const dx = event.offsetX - x;
                 const dy = event.offsetY - y;
                 x = event.offsetX;
                 y = event.offsetY;
 
                 // right button can be used to orbit with ctrl key and to zoom with alt | meta key
-                const mod = buttons[2] ?
+                const mod = pressedButton === 2 ?
                     (event.shiftKey || event.ctrlKey ? 'orbit' :
                         (event.altKey || event.metaKey ? 'zoom' : null)) :
                     null;
 
-                if (mod === 'orbit' || (mod === null && buttons[0])) {
+                if (mod === 'orbit' || (mod === null && pressedButton === 0)) {
                     orbit(dx, dy);
-                } else if (mod === 'zoom' || (mod === null && buttons[1])) {
+                } else if (mod === 'zoom' || (mod === null && pressedButton === 1)) {
                     zoom(dy * -0.02);
-                } else if (mod === 'pan' || (mod === null && buttons[2])) {
+                } else if (mod === 'pan' || (mod === null && pressedButton === 2)) {
                     pan(x, y, dx, dy);
                 }
             } else {

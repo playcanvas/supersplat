@@ -8,6 +8,7 @@ import { DownloadWriter, FileStreamWriter } from './serialize/writer';
 import { Splat } from './splat';
 import { serializePly, serializePlyCompressed, SerializeSettings, serializeSplat, serializeViewer, ViewerExportSettings } from './splat-serialize';
 import { localize } from './ui/localization';
+import { AssetSource } from './loaders/asset-source';
 
 // ts compiler and vscode find this type, but eslint does not
 type FilePickerAcceptType = unknown;
@@ -214,7 +215,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
     const importLcc = async (files: ImportFile[], animationFrame: boolean) => {
         try {
             const meta = files.findIndex(f => f.filename.toLowerCase().endsWith('.lcc'));
-            const mapFile = (name: string) => {
+
+            const mapFile = (name: string): AssetSource | null => {
                 const lowerName = name.toLowerCase();
                 const idx = files.findIndex(f => f.filename.toLowerCase() === lowerName);
                 if (idx >= 0) {
@@ -222,18 +224,22 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                         filename: files[idx].filename,
                         contents: files[idx].contents
                     };
+                } else if (files[meta].url) {
+                    return {
+                        filename: name,
+                        contents: fetch(new URL(name, files[meta].url).toString())
+                    };
                 }
-                return undefined;
+                return null;
             };
-
 
             const model = await scene.assetLoader.load({
                 filename: files[meta].filename,
+                url: files[meta].url,
                 contents: files[meta].contents,
                 animationFrame,
                 mapFile
             });
-
 
             scene.add(model);
 

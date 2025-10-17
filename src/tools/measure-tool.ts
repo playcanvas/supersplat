@@ -136,51 +136,50 @@ class MeasureTool {
             }
         });
 
-        const pointerdown = (e: PointerEvent) => {
-            if (splat && e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary) {
-                const { camera } = scene;
+        const handleClick = (offsetX: number, offsetY: number) => {
+            if (!splat) {
+                return;
+            }
 
-                // intersect sphere
-                camera.getRay(e.offsetX, e.offsetY, ray);
+            const { camera } = scene;
 
-                let closest = Number.MAX_VALUE;
-                let closestIndex = -1;
-                const intersect = { t0: 0, t1: 0 };
+            // intersect sphere
+            camera.getRay(offsetX, offsetY, ray);
 
-                // test for intersection with existing spheres
-                for (let i = 0; i < splat.measurePoints.length; i++) {
-                    // transform to world space
-                    splat.worldTransform.transformPoint(splat.measurePoints[i], p);
-                    // intersect with sphere
-                    if (intersectRaySphere(intersect, ray.origin, ray.direction, p, 0.1)) {
-                        if (closestIndex === -1 || intersect.t1 < closest) {
-                            closestIndex = i;
-                            closest = intersect.t1;
-                        }
+            let closest = Number.MAX_VALUE;
+            let closestIndex = -1;
+            const intersect = { t0: 0, t1: 0 };
+
+            // test for intersection with existing spheres
+            for (let i = 0; i < splat.measurePoints.length; i++) {
+                // transform to world space
+                splat.worldTransform.transformPoint(splat.measurePoints[i], p);
+                // intersect with sphere
+                if (intersectRaySphere(intersect, ray.origin, ray.direction, p, 0.1)) {
+                    if (closestIndex === -1 || intersect.t1 < closest) {
+                        closestIndex = i;
+                        closest = intersect.t1;
                     }
                 }
+            }
 
-                if (closestIndex !== -1) {
-                    splat.measureSelection = closestIndex;
-                    updateSpheres();
-                    return;
+            if (closestIndex !== -1) {
+                splat.measureSelection = closestIndex;
+                updateSpheres();
+                return;
+            }
+
+            const result = scene.camera.intersect(offsetX, offsetY);
+            if (result) {
+                mat.invert(splat.worldTransform);
+                mat.transformPoint(result.position, p);
+
+                if (splat.measurePoints.length < 3) {
+                    splat.measureSelection = splat.measurePoints.length;
+                    splat.measurePoints.push(p.clone());
                 }
 
-                const result = scene.camera.intersect(e.offsetX, e.offsetY);
-                if (result) {
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    mat.invert(splat.worldTransform);
-                    mat.transformPoint(result.position, p);
-
-                    if (splat.measurePoints.length < 3) {
-                        splat.measureSelection = splat.measurePoints.length;
-                        splat.measurePoints.push(p.clone());
-                    }
-
-                    updateSpheres();
-                }
+                updateSpheres();
             }
         };
 
@@ -246,10 +245,37 @@ class MeasureTool {
             }
         });
 
+        const isPrimary = (e: PointerEvent) => {
+            return e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary;
+        };
+
+        let clicked = false;
+
+        const pointerdown = (e: PointerEvent) => {
+            if (!clicked && isPrimary(e)) {
+                clicked = true;
+            }
+        };
+
+        const pointermove = (e: PointerEvent) => {
+            clicked = false;
+        };
+
+        const pointerup = (e: PointerEvent) => {
+            if (clicked && isPrimary(e)) {
+                clicked = false;
+                handleClick(e.offsetX, e.offsetY);
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        };
+
         this.activate = () => {
             active = true;
             updateSpheres();
             canvasContainer.dom.addEventListener('pointerdown', pointerdown);
+            canvasContainer.dom.addEventListener('pointermove', pointermove);
+            canvasContainer.dom.addEventListener('pointerup', pointerup, true);
             selectToolbar.hidden = false;
         };
 
@@ -257,6 +283,8 @@ class MeasureTool {
             active = false;
             updateSpheres();
             canvasContainer.dom.removeEventListener('pointerdown', pointerdown);
+            canvasContainer.dom.removeEventListener('pointermove', pointermove);
+            canvasContainer.dom.removeEventListener('pointerup', pointerup);
             selectToolbar.hidden = true;
         };
 

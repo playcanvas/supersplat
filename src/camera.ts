@@ -533,10 +533,9 @@ class Camera extends Element {
         }
     }
 
-    // intersect the scene at the given screen coordinate and focus the camera on this location
+    // intersect the scene at the given screen coordinate
     intersect(screenX: number, screenY: number) {
         const { scene } = this;
-        const cameraPos = this.entity.getPosition();
 
         const target = scene.canvas;
         const sx = screenX / target.clientWidth * scene.targetSize.width;
@@ -585,6 +584,7 @@ class Camera extends Element {
         };
     }
 
+    // intersect the scene at the screen location and focus the camera on this location
     pickFocalPoint(screenX: number, screenY: number) {
         const result = this.intersect(screenX, screenY);
         if (result) {

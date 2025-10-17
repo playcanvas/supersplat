@@ -257,8 +257,17 @@ class EditorUI {
                     });
 
                     await events.invoke('render.video', videoSettings, fileHandle && await fileHandle.createWritable());
-                } catch (err) {
+                } catch (error) {
+                    if (error instanceof DOMException && error.name === 'AbortError') {
+                        // user cancelled save dialog
+                        return;
+                    }
 
+                    await events.invoke('showPopup', {
+                        type: 'error',
+                        header: 'Failed to render video',
+                        message: `'${error.message ?? error}'`
+                    });
                 }
             }
         });

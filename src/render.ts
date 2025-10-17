@@ -1,4 +1,4 @@
-import { Muxer, ArrayBufferTarget } from 'mp4-muxer';
+import { BufferTarget, EncodedPacket, EncodedVideoPacketSource, Mp4OutputFormat, Output } from 'mediabunny';
 import { path, Vec3 } from 'playcanvas';
 
 import { ElementType } from './element';
@@ -182,20 +182,25 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
         try {
             const { startFrame, endFrame, frameRate, width, height, bitrate, transparentBg, showDebug } = videoSettings;
 
-            const muxer = new Muxer({
-                target: new ArrayBufferTarget(),
-                video: {
-                    codec: 'avc',
-                    width,
-                    height
-                },
-                fastStart: 'in-memory',
-                firstTimestampBehavior: 'offset'
+            const output = new Output({
+                format: new Mp4OutputFormat({
+                    fastStart: 'in-memory'
+                }),
+                target: new BufferTarget()
             });
 
+            const videoSource = new EncodedVideoPacketSource('avc');
+            output.addVideoTrack(videoSource, {
+                rotation: 0,
+                frameRate
+            });
+
+            await output.start();
+
             const encoder = new VideoEncoder({
-                output: (chunk, meta) => {
-                    muxer.addVideoChunk(chunk, meta);
+                output: async (chunk, meta) => {
+                    const encodedPacket = EncodedPacket.fromEncodedChunk(chunk);
+                    await videoSource.add(encodedPacket, meta);
                 },
                 error: (error) => {
                     console.log(error);
@@ -325,12 +330,12 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 });
             }
 
-            // Flush and finalize muxer
+            // Flush and finalize output
             await encoder.flush();
-            muxer.finalize();
+            await output.finalize();
 
             // Download
-            downloadFile(muxer.target.buffer, `${removeExtension(splats[0]?.name ?? 'SuperSplat')}-video.mp4`);
+            downloadFile(output.target.buffer, `${removeExtension(splats[0]?.name ?? 'SuperSplat')}-video.mp4`);
 
             // Free resources
             encoder.close();

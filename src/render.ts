@@ -1,5 +1,5 @@
 import { Muxer, ArrayBufferTarget } from 'mp4-muxer';
-import { path } from 'playcanvas';
+import { path, Vec3 } from 'playcanvas';
 
 import { ElementType } from './element';
 import { Events } from './events';
@@ -57,6 +57,45 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
         });
     };
 
+    events.function('render.offscreen', async (width: number, height: number): Promise<Uint8Array> => {
+        try {
+            // start rendering to offscreen buffer only
+            scene.camera.startOffscreenMode(width, height);
+            scene.camera.renderOverlays = false;
+
+            // render the next frame
+            scene.forceRender = true;
+
+            // for render to finish
+            await postRender();
+
+            // cpu-side buffer to read pixels into
+            const data = new Uint8Array(width * height * 4);
+
+            const { renderTarget } = scene.camera.entity.camera;
+            const { workRenderTarget } = scene.camera;
+
+            scene.dataProcessor.copyRt(renderTarget, workRenderTarget);
+
+            // read the rendered frame
+            await workRenderTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workRenderTarget, data });
+
+            // flip y positions to have 0,0 at the top
+            let line = new Uint8Array(width * 4);
+            for (let y = 0; y < height / 2; y++) {
+                line = data.slice(y * width * 4, (y + 1) * width * 4);
+                data.copyWithin(y * width * 4, (height - y - 1) * width * 4, (height - y) * width * 4);
+                data.set(line, (height - y - 1) * width * 4);
+            }
+
+            return data;
+        } finally {
+            scene.camera.endOffscreenMode();
+            scene.camera.renderOverlays = true;
+            scene.camera.entity.camera.clearColor.set(0, 0, 0, 0);
+        }
+    });
+
     events.function('render.image', async (imageSettings: ImageSettings) => {
         events.fire('startSpinner');
 
@@ -81,10 +120,12 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             const data = new Uint8Array(width * height * 4);
 
             const { renderTarget } = scene.camera.entity.camera;
-            const { colorBuffer } = renderTarget;
+            const { workRenderTarget } = scene.camera;
+
+            scene.dataProcessor.copyRt(renderTarget, workRenderTarget);
 
             // read the rendered frame
-            await colorBuffer.read(0, 0, width, height, { renderTarget, data });
+            await workRenderTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workRenderTarget, data });
 
             // the render buffer contains premultiplied alpha. so apply background color.
             if (!transparentBg) {
@@ -108,8 +149,8 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
             const arrayBuffer = await compressor.compress(
                 new Uint32Array(data.buffer),
-                colorBuffer.width,
-                colorBuffer.height
+                width,
+                height
             );
 
             // construct filename
@@ -183,12 +224,27 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             // get the list of visible splats
             const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
 
+            // remember last camera position so we can skip sorting if the camera didn't move
+            const last_pos = new Vec3(0, 0, 0);
+            const last_forward = new Vec3(1, 0, 0);
+
             // prepare the frame for rendering
             const prepareFrame = async (frameTime: number) => {
                 events.fire('timeline.time', frameTime);
 
                 // manually update the camera so position and rotation are correct
                 scene.camera.onUpdate(0);
+
+                // if the camera didn't move, don't sort
+                const pos = scene.camera.entity.getPosition();
+                const forward = scene.camera.entity.forward;
+                if (last_pos.equals(pos) && last_forward.equals(forward)) {
+                    return;
+                }
+
+                // update remembered position
+                last_pos.copy(pos);
+                last_forward.copy(forward);
 
                 // wait for sorting to complete
                 await Promise.all(splats.map((splat) => {
@@ -219,10 +275,12 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             // capture the current video frame
             const captureFrame = async (frameTime: number) => {
                 const { renderTarget } = scene.camera.entity.camera;
-                const { colorBuffer } = renderTarget;
+                const { workRenderTarget } = scene.camera;
+
+                scene.dataProcessor.copyRt(renderTarget, workRenderTarget);
 
                 // read the rendered frame
-                await colorBuffer.read(0, 0, width, height, { renderTarget, data });
+                await workRenderTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workRenderTarget, data });
 
                 // flip the buffer vertically
                 for (let y = 0; y < height / 2; y++) {

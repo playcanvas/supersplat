@@ -104,12 +104,12 @@ const registerCameraPosesEvents = (events: Events) => {
     const movePose = (index: number, frame: number) => {
         // remove target frame pose
         const toIndex = poses.findIndex(p => p.frame === frame);
+        // move pose
+        poses[index].frame = frame;
         if (toIndex !== -1) {
             removePose(toIndex);
         }
 
-        // move pose
-        poses[index].frame = frame;
         rebuildSpline();
         events.fire('timeline.setKey', index, frame);
     };

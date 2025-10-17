@@ -77,6 +77,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         scene.forceRender = true;
     });
 
+    events.on('camera.highPrecision', () => {
+        scene.forceRender = true;
+    });
+
     events.on('selection.changed', () => {
         scene.forceRender = true;
     });
@@ -156,6 +160,25 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('camera.toggleBound', () => {
         setBoundVisible(!events.invoke('camera.bound'));
+    });
+
+    // camera.highPrecision
+
+    let highPrecision = scene.config.camera.highPrecision;
+
+    const sethighPrecision = (enabled: boolean) => {
+        if (enabled !== highPrecision) {
+            highPrecision = enabled;
+            events.fire('camera.highPrecision', highPrecision);
+        }
+    };
+
+    events.function('camera.highPrecision', () => {
+        return highPrecision;
+    });
+
+    events.on('camera.sethighPrecision', (value: boolean) => {
+        sethighPrecision(value);
     });
 
     // camera.focus
@@ -438,7 +461,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             const blob = new Blob(buffers as unknown as ArrayBuffer[], { type: 'application/octet-stream' });
             const url = URL.createObjectURL(blob);
             const { filename } = splat;
-            const copy = await scene.assetLoader.loadPly({ url, filename });
+            const copy = await scene.assetLoader.load({ url, filename });
 
             if (func === 'separate') {
                 editHistory.add(new MultiOp([

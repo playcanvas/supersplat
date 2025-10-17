@@ -336,7 +336,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
             // Download
             if (!fileStream) {
-                downloadFile(output.target.buffer, `${removeExtension(splats[0]?.name ?? 'SuperSplat')}-video.mp4`);
+                downloadFile((output.target as BufferTarget).buffer, `${removeExtension(splats[0]?.name ?? 'SuperSplat')}-video.mp4`);
             }
 
             // Free resources

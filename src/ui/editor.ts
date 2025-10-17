@@ -243,7 +243,7 @@ class EditorUI {
 
                 try {
                     const docName = events.invoke('doc.name');
-                    const suggested = `${removeExtension(docName ?? 'SuperSplat')}-video.mp4`
+                    const suggested = `${removeExtension(docName ?? 'SuperSplat')}-video.mp4`;
 
                     const fileHandle = window.showSaveFilePicker && await window.showSaveFilePicker({
                         id: 'SuperSplatVideoFileExport',

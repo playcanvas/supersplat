@@ -1,10 +1,12 @@
 @use 'colors.scss' as *;
 
-#view-panel {
+#depth-visualization-panel {
+    position: absolute;
     top: 50%;
     transform: translate(0, -50%);
     right: 102px;
     width: 320px;
+    min-height: 400px;
     max-height: 90vh;
     flex-direction: column;
     overflow-y: auto;
@@ -33,18 +35,18 @@
         display: flex;
     }
 
-    & > .view-panel-row {
+    & > .depth-panel-row {
         display: flex;
         flex-direction: row;
-        padding: 1px 2px;
-        height: 26px;
+        padding: 4px 8px;
+        height: 36px;
         align-items: center;
 
-        & > .view-panel-row-label {
+        & > .depth-panel-row-label {
             flex-grow: 1;
         }
 
-        & > .view-panel-row-toggle {
+        & > .depth-panel-row-toggle {
             background-color: $bcg-dark;
 
             &::after {
@@ -60,7 +62,7 @@
             }
         }
 
-        & > .view-panel-row-slider {
+        & > .depth-panel-row-slider {
             margin: 0px;
 
             & > .pcui-slider-container {
@@ -73,30 +75,11 @@
             }
         }
 
-        & > .view-panel-row-pickers {
-            display: flex;
-            flex-direction: row;
-            margin: 2px 2px;
-            width: 185px;
-            justify-content: space-between;
-
-            & > .view-panel-row-picker {
-                margin: 0px 0px;
-                padding: 0px;
-                height: 24px;
-            }
-        }
-
-        & > .view-panel-row-select {
-            width: 187px;
-            margin: 0;
-        }
-
-        & > .view-panel-button {
-            margin: 1px 2px;
-            padding: 3px 6px;
-            font-size: 10px;
-            height: 22px;
+        & > .depth-panel-button {
+            margin: 2px 4px;
+            padding: 6px 10px;
+            font-size: 11px;
+            height: 28px;
             background-color: $bcg-dark;
             border: 1px solid $clr-default;
             border-radius: 4px;
@@ -116,7 +99,7 @@
                 cursor: not-allowed;
             }
             
-            &.view-panel-button-danger {
+            &.depth-panel-button-danger {
                 border-color: #d73a49;
                 color: #d73a49;
                 
@@ -129,6 +112,47 @@
                     border-color: #6a1b1b;
                     color: #6a1b1b;
                 }
+            }
+        }
+    }
+    
+    // Styles for axis toggle container and items
+    .depth-panel-axis-container {
+        display: flex;
+        flex-direction: row;
+        gap: 8px;
+        align-items: center;
+    }
+    
+    .depth-panel-axis-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+    }
+    
+    .depth-panel-axis-label {
+        font-size: 10px;
+        font-weight: bold;
+        color: $text-primary;
+        margin: 0;
+        line-height: 1;
+    }
+    
+    .depth-panel-axis-toggle {
+        width: 24px;
+        height: 14px;
+        background-color: $bcg-dark;
+        
+        &::after {
+            background-color: $clr-default;
+        }
+        
+        &.pcui-boolean-input-ticked {
+            background-color: $clr-hilight;
+            
+            &::after {
+                background-color: $clr-active;
             }
         }
     }

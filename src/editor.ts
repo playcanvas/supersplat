@@ -478,6 +478,43 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
     });
 
+    // Scale all splats uniformly
+    events.on('measurement.scale.splats', (scaleFactor: number) => {
+        console.log(`📐 Scaling all splats by factor: ${scaleFactor}`);
+
+        // Get all splats in the scene
+        const allSplats = scene.getElementsByType(ElementType.splat) as Splat[];
+
+        allSplats.forEach((splat) => {
+            // Get current scale
+            const currentScale = splat.entity.getLocalScale();
+
+            console.log(`🔍 Current scale for ${splat.name}: ${currentScale.x.toFixed(6)}, ${currentScale.y.toFixed(6)}, ${currentScale.z.toFixed(6)}`);
+
+            // CHANGED: Apply scale factor to the CURRENT scale (not original)
+            // This allows for iterative refinement
+            const newScale = new Vec3(
+                currentScale.x * scaleFactor,
+                currentScale.y * scaleFactor,
+                currentScale.z * scaleFactor
+            );
+
+            console.log(`✨ New scale for ${splat.name}: ${newScale.x.toFixed(6)}, ${newScale.y.toFixed(6)}, ${newScale.z.toFixed(6)}`);
+            console.log(`📈 Scale multiplier applied: ${scaleFactor.toFixed(6)}`);
+
+            // Apply the new scale
+            splat.entity.setLocalScale(newScale);
+
+            // Mark bounds as dirty to update scene bounds
+            splat.makeWorldBoundDirty();
+        });
+
+        // Force scene re-render
+        scene.forceRender = true;
+
+        console.log(`✅ Scaled ${allSplats.length} splats by factor ${scaleFactor} relative to current size`);
+    });
+
     const setAllData = (value: boolean) => {
         if (value !== scene.assetLoader.loadAllData) {
             scene.assetLoader.loadAllData = value;
@@ -619,6 +656,12 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     let depthMin = 1;
     let depthMax = 50;
     let depthReverse = false;
+    let depthXMode = false;
+    let depthYMode = false;
+    let depthZMode = false;
+    let depthBlend = 1;
+    let depthColorRamp = 'grayscale';
+    let customColorScheme: any = null;
 
     const setDepthVisualization = (value: boolean) => {
         if (value !== depthVisualization) {
@@ -652,6 +695,52 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     };
 
+    const setDepthXMode = (value: boolean) => {
+        if (value !== depthXMode) {
+            depthXMode = value;
+            scene.forceRender = true;
+            events.fire('view.depthXMode', depthXMode);
+        }
+    };
+
+    const setDepthYMode = (value: boolean) => {
+        if (value !== depthYMode) {
+            depthYMode = value;
+            scene.forceRender = true;
+            events.fire('view.depthYMode', depthYMode);
+        }
+    };
+
+    const setDepthZMode = (value: boolean) => {
+        if (value !== depthZMode) {
+            depthZMode = value;
+            scene.forceRender = true;
+            events.fire('view.depthZMode', depthZMode);
+        }
+    };
+
+    const setDepthBlend = (value: number) => {
+        if (value !== depthBlend) {
+            depthBlend = value;
+            scene.forceRender = true;
+            events.fire('view.depthBlend', depthBlend);
+        }
+    };
+
+    const setDepthColorRamp = (value: string) => {
+        if (value !== depthColorRamp) {
+            depthColorRamp = value;
+            scene.forceRender = true;
+            events.fire('view.depthColorRamp', depthColorRamp);
+        }
+    };
+
+    const setCustomColorScheme = (scheme: any) => {
+        customColorScheme = scheme;
+        scene.forceRender = true;
+        events.fire('view.customColorScheme', customColorScheme);
+    };
+
     events.function('view.depthVisualization', () => {
         return depthVisualization;
     });
@@ -668,6 +757,30 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         return depthReverse;
     });
 
+    events.function('view.depthXMode', () => {
+        return depthXMode;
+    });
+
+    events.function('view.depthYMode', () => {
+        return depthYMode;
+    });
+
+    events.function('view.depthZMode', () => {
+        return depthZMode;
+    });
+
+    events.function('view.depthBlend', () => {
+        return depthBlend;
+    });
+
+    events.function('view.depthColorRamp', () => {
+        return depthColorRamp;
+    });
+
+    events.function('view.customColorScheme', () => {
+        return customColorScheme;
+    });
+
     events.on('view.setDepthVisualization', (value: boolean) => {
         setDepthVisualization(value);
     });
@@ -682,6 +795,30 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('view.setDepthReverse', (value: boolean) => {
         setDepthReverse(value);
+    });
+
+    events.on('view.setDepthXMode', (value: boolean) => {
+        setDepthXMode(value);
+    });
+
+    events.on('view.setDepthYMode', (value: boolean) => {
+        setDepthYMode(value);
+    });
+
+    events.on('view.setDepthZMode', (value: boolean) => {
+        setDepthZMode(value);
+    });
+
+    events.on('view.setDepthBlend', (value: number) => {
+        setDepthBlend(value);
+    });
+
+    events.on('view.setDepthColorRamp', (value: string) => {
+        setDepthColorRamp(value);
+    });
+
+    events.on('view.setCustomColorScheme', (scheme: any) => {
+        setCustomColorScheme(scheme);
     });
 
     events.function('camera.getPose', () => {
@@ -825,6 +962,15 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.fire('camera.fov', scene.camera.fov);
     events.fire('camera.overlay', cameraOverlay);
     events.fire('view.bands', viewBands);
+
+    // initialize depth visualization values
+    events.fire('view.depthVisualization', depthVisualization);
+    events.fire('view.depthMin', depthMin);
+    events.fire('view.depthMax', depthMax);
+    events.fire('view.depthReverse', depthReverse);
+    events.fire('view.depthYMode', depthYMode);
+    events.fire('view.depthBlend', depthBlend);
+    events.fire('view.depthColorRamp', depthColorRamp);
 
     // doc serialization
     events.function('docSerialize.view', () => {

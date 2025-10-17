@@ -6,6 +6,7 @@ import {
     FILTER_NEAREST,
     PIXELFORMAT_R8,
     PIXELFORMAT_R16U,
+    PIXELFORMAT_RGB8,
     Asset,
     BlendState,
     BoundingBox,
@@ -45,6 +46,7 @@ const boundingPoints =
     }).flat(3);
 
 class Splat extends Element {
+    _dummyTexture: Texture | null = null;
     asset: Asset;
     splatData: GSplatData;
     numSplats = 0;
@@ -192,6 +194,91 @@ class Splat extends Element {
         instance.sorter.on('updated', () => {
             this.changedCounter++;
         });
+    }
+
+    // Create a 1D texture from custom color scheme
+    createCustomColorTexture(colorScheme: any): Texture {
+        const device = this.scene.graphicsDevice;
+        const resolution = 256; // 1D texture resolution
+        const data = new Uint8Array(resolution * 3); // RGB data
+
+        // Interpolate colors across the texture
+        for (let i = 0; i < resolution; i++) {
+            const t = i / (resolution - 1);
+            const color = this.interpolateColorScheme(colorScheme, t);
+
+            data[i * 3 + 0] = Math.round(color[0] * 255);
+            data[i * 3 + 1] = Math.round(color[1] * 255);
+            data[i * 3 + 2] = Math.round(color[2] * 255);
+        }
+
+        const texture = new Texture(device, {
+            name: 'customColorRamp',
+            width: resolution,
+            height: 1,
+            format: PIXELFORMAT_RGB8,
+            mipmaps: false,
+            minFilter: FILTER_NEAREST,
+            magFilter: FILTER_NEAREST,
+            addressU: ADDRESS_CLAMP_TO_EDGE,
+            addressV: ADDRESS_CLAMP_TO_EDGE
+        });
+
+        // Upload texture data
+        const textureData = texture.lock();
+        textureData.set(data);
+        texture.unlock();
+
+        return texture;
+    }
+
+    // Create a 1x1 dummy texture
+    private createDummyTexture(): Texture {
+        const device = this.scene.graphicsDevice;
+        const data = new Uint8Array([255, 255, 255]); // white pixel
+        const texture = new Texture(device, {
+            name: 'dummyColorRamp',
+            width: 1,
+            height: 1,
+            format: PIXELFORMAT_RGB8,
+            mipmaps: false,
+            minFilter: FILTER_NEAREST,
+            magFilter: FILTER_NEAREST,
+            addressU: ADDRESS_CLAMP_TO_EDGE,
+            addressV: ADDRESS_CLAMP_TO_EDGE
+        });
+        const texData = texture.lock();
+        texData.set(data);
+        texture.unlock();
+        return texture;
+    }
+
+    // Interpolate color from custom color scheme
+    private interpolateColorScheme(colorScheme: any, t: number): [number, number, number] {
+        const colors = colorScheme.colors;
+        t = Math.max(0, Math.min(1, t));
+
+        // Find the two colors to interpolate between
+        let i = 0;
+        while (i < colors.length - 1 && colors[i + 1].position <= t) {
+            i++;
+        }
+
+        if (i === colors.length - 1) {
+            // At or beyond the last color
+            return colors[i].color;
+        }
+
+        // Interpolate between colors[i] and colors[i+1]
+        const c1 = colors[i];
+        const c2 = colors[i + 1];
+        const factor = (t - c1.position) / (c2.position - c1.position);
+
+        return [
+            c1.color[0] + (c2.color[0] - c1.color[0]) * factor,
+            c1.color[1] + (c2.color[1] - c1.color[1]) * factor,
+            c1.color[2] + (c2.color[2] - c1.color[2]) * factor
+        ];
     }
 
     destroy() {
@@ -396,11 +483,55 @@ class Splat extends Element {
         const depthMin = events.invoke('view.depthMin');
         const depthMax = events.invoke('view.depthMax');
         const depthReverse = events.invoke('view.depthReverse');
+        const depthXMode = events.invoke('view.depthXMode');
+        const depthYMode = events.invoke('view.depthYMode');
+        const depthZMode = events.invoke('view.depthZMode');
+        const depthBlend = events.invoke('view.depthBlend');
+        const depthColorRamp = events.invoke('view.depthColorRamp') || 'grayscale';
+
+        // Convert color ramp string to integer for shader
+        const colorRampMap: { [key: string]: number } = {
+            'grayscale': 0,
+            'viridis': 1,
+            'plasma': 2,
+            'inferno': 3,
+            'turbo': 4,
+            'jet': 5,
+            'custom': 6
+        };
+
+        // Handle custom color scheme
+        let customColorTexture = null;
+        let hasCustomColorScheme = 0;
+        if (depthColorRamp === 'custom') {
+            const customScheme = events.invoke('view.customColorScheme');
+            if (customScheme) {
+                customColorTexture = this.createCustomColorTexture(customScheme);
+                hasCustomColorScheme = 1;
+            }
+        }
 
         material.setParameter('depthVisualization', depthVisualization ? 1 : 0);
         material.setParameter('depthMin', depthMin);
         material.setParameter('depthMax', depthMax);
         material.setParameter('depthReverse', depthReverse ? 1 : 0);
+        material.setParameter('depthXMode', depthXMode ? 1 : 0);
+        material.setParameter('depthYMode', depthYMode ? 1 : 0);
+        material.setParameter('depthZMode', depthZMode ? 1 : 0);
+        material.setParameter('depthBlend', depthBlend);
+        material.setParameter('depthColorRamp', colorRampMap[depthColorRamp] || 0);
+        material.setParameter('hasCustomColorScheme', hasCustomColorScheme);
+
+        // Always provide customColorTexture parameter to prevent shader errors
+        if (customColorTexture) {
+            material.setParameter('customColorTexture', customColorTexture);
+        } else {
+            // Create a minimal 1x1 dummy texture if no custom texture is provided
+            if (!this._dummyTexture) {
+                this._dummyTexture = this.createDummyTexture();
+            }
+            material.setParameter('customColorTexture', this._dummyTexture);
+        }
 
         if (this.visible && selected) {
             // render bounding box

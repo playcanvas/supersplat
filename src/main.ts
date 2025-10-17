@@ -3,6 +3,7 @@ import { Color, createGraphicsDevice } from 'playcanvas';
 import { AreaMeasurementTool } from './area-measurement-tool';
 import { AreaMeasurementVisual } from './area-measurement-visual';
 import { registerCameraPosesEvents } from './camera-poses';
+import { registerDepthVisualizationAnimationEvents } from './depth-visualization-animation';
 import { registerDocEvents } from './doc';
 import { EditHistory } from './edit-history';
 import { registerEditorEvents } from './editor';
@@ -114,6 +115,12 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['I', 'i'], { event: 'camera.info.toggle' });
     shortcuts.register(['Z', 'z'], { event: 'measurement.toggle' });
     shortcuts.register(['S', 's'], { event: 'splatSizePanel.toggle' });
+    shortcuts.register(['V', 'v'], { event: 'depthVisualizationPanel.toggle' });
+
+    // Register the event handler for the depth visualization panel toggle
+    events.on('depthVisualizationPanel.toggle', () => {
+        events.fire('depthVisualizationPanel.toggleVisible');
+    });
     // Area measurement tool toggle with plain 'A' key
     shortcuts.register(['A', 'a'], { event: 'area.measure.toggle' });
     // Close polygon shortcut if panel is not visible
@@ -282,6 +289,7 @@ const main = async () => {
     registerCameraPosesEvents(events);
     registerSplatSizeManagerEvents(events, scene);
     registerSplatSizeAnimationEvents(events);
+    registerDepthVisualizationAnimationEvents(events);
     registerSOREvents(events, editHistory, scene);
 
     // Initialize measurement systems

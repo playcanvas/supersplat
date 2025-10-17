@@ -15,6 +15,13 @@ uniform int depthVisualization;
 uniform float depthMin;
 uniform float depthMax;
 uniform int depthReverse;
+uniform int depthXMode;
+uniform int depthYMode;
+uniform int depthZMode;
+uniform float depthBlend;
+uniform int depthColorRamp; // 0=grayscale, 1=viridis, 2=plasma, 3=inferno, 4=turbo, 5=jet, 6=custom
+uniform sampler2D customColorTexture; // 1D texture for custom color scheme
+uniform int hasCustomColorScheme; // 0=no custom scheme, 1=has custom scheme
 
 varying mediump vec3 texCoordIsLocked;          // store locked flat in z
 varying mediump vec4 color;
@@ -32,6 +39,94 @@ uniform float splatSize;
 vec3 applySaturation(vec3 color) {
     vec3 grey = vec3(dot(color, vec3(0.299, 0.587, 0.114)));
     return grey + (color - grey) * saturation;
+}
+
+// Color ramp functions for depth visualization
+vec3 viridis(float t) {
+    const vec3 c0 = vec3(0.2777273, 0.0052783, 0.3316909);
+    const vec3 c1 = vec3(0.1050930, 1.4040960, 0.2043850);
+    const vec3 c2 = vec3(-0.3308618, 0.2145140, 1.1239070);
+    const vec3 c3 = vec3(-4.6340690, -5.7998060, -19.3348440);
+    const vec3 c4 = vec3(6.2289120, 14.1791960, 56.6953780);
+    const vec3 c5 = vec3(4.7767370, -13.7452020, -65.3531610);
+    const vec3 c6 = vec3(-5.4356700, 4.6450700, 26.3124390);
+    
+    t = clamp(t, 0.0, 1.0);
+    return c0 + t*(c1 + t*(c2 + t*(c3 + t*(c4 + t*(c5 + t*c6)))));
+}
+
+vec3 plasma(float t) {
+    const vec3 c0 = vec3(0.0585208, 0.0323289, 0.5273100);
+    const vec3 c1 = vec3(0.3328530, 0.7781420, 0.8736040);
+    const vec3 c2 = vec3(-0.3322410, -0.1366890, -1.7184720);
+    const vec3 c3 = vec3(-4.6424300, -2.2620800, -0.8968210);
+    const vec3 c4 = vec3(2.9212100, 8.9642600, 3.0119200);
+    const vec3 c5 = vec3(2.2451100, -18.4747300, -5.2737900);
+    const vec3 c6 = vec3(-5.1948000, 8.4228100, 5.3846000);
+    
+    t = clamp(t, 0.0, 1.0);
+    return c0 + t*(c1 + t*(c2 + t*(c3 + t*(c4 + t*(c5 + t*c6)))));
+}
+
+vec3 inferno(float t) {
+    const vec3 c0 = vec3(0.0002189, 0.0013130, 0.0141700);
+    const vec3 c1 = vec3(0.1065400, 0.5668440, 1.3932990);
+    const vec3 c2 = vec3(11.6023100, -3.9724510, -15.9423300);
+    const vec3 c3 = vec3(-41.7035350, 17.4381280, 44.3619810);
+    const vec3 c4 = vec3(77.1625850, -56.1648330, -65.1068280);
+    const vec3 c5 = vec3(-71.3175700, 61.2160200, 51.4895040);
+    const vec3 c6 = vec3(25.1307400, -20.4738850, -13.7077050);
+    
+    t = clamp(t, 0.0, 1.0);
+    return c0 + t*(c1 + t*(c2 + t*(c3 + t*(c4 + t*(c5 + t*c6)))));
+}
+
+vec3 turbo(float t) {
+    const vec3 c0 = vec3(0.1140890, 0.0622070, 0.7575950);
+    const vec3 c1 = vec3(6.7159360, 5.1715420, -8.6936720);
+    const vec3 c2 = vec3(-66.0934530, -43.9741570, 52.1793450);
+    const vec3 c3 = vec3(228.6411900, 150.0471500, -85.8961940);
+    const vec3 c4 = vec3(-334.1838400, -233.1776100, 67.5275460);
+    const vec3 c5 = vec3(218.7637200, 158.7188200, -24.8729690);
+    const vec3 c6 = vec3(-52.8813800, -40.4414800, 4.4760300);
+    
+    t = clamp(t, 0.0, 1.0);
+    return c0 + t*(c1 + t*(c2 + t*(c3 + t*(c4 + t*(c5 + t*c6)))));
+}
+
+vec3 jet(float t) {
+    t = clamp(t, 0.0, 1.0);
+    if (t < 0.125) {
+        return vec3(0.0, 0.0, 4.0 * t + 0.5);
+    } else if (t < 0.375) {
+        return vec3(0.0, 4.0 * (t - 0.125), 1.0);
+    } else if (t < 0.625) {
+        return vec3(4.0 * (t - 0.375), 1.0, 1.0 - 4.0 * (t - 0.375));
+    } else if (t < 0.875) {
+        return vec3(1.0, 1.0 - 4.0 * (t - 0.625), 0.0);
+    } else {
+        return vec3(1.0 - 4.0 * (t - 0.875), 0.0, 0.0);
+    }
+}
+
+vec3 applyColorRamp(float t, int rampType) {
+    if (rampType == 6 && hasCustomColorScheme == 1) {
+        // Use custom color scheme from texture
+        return texture2D(customColorTexture, vec2(clamp(t, 0.0, 1.0), 0.5)).rgb;
+    } else if (rampType == 1) {
+        return viridis(t);
+    } else if (rampType == 2) {
+        return plasma(t);
+    } else if (rampType == 3) {
+        return inferno(t);
+    } else if (rampType == 4) {
+        return turbo(t);
+    } else if (rampType == 5) {
+        return jet(t);
+    } else {
+        // Default grayscale
+        return vec3(t);
+    }
 }
 
 void main(void) {
@@ -102,8 +197,16 @@ void main(void) {
     // store texture coord and locked state
     texCoordIsLocked = vec3(corner.uv, (vertexState & 2u) != 0u ? 1.0 : 0.0);
     
-    // store depth for depth visualization
-    viewDepth = -center.view.z;
+    // store depth for depth visualization (coordinate mode or view depth)
+    if (depthXMode == 1) {
+        viewDepth = modelCenter.x;
+    } else if (depthYMode == 1) {
+        viewDepth = modelCenter.y;
+    } else if (depthZMode == 1) {
+        viewDepth = modelCenter.z;
+    } else {
+        viewDepth = -center.view.z;  // Default: view depth (camera distance)
+    }
 
     #if UNDERLAY_PASS
         color = readColor(source);
@@ -156,11 +259,16 @@ void main(void) {
         
         // apply depth visualization if enabled
         if (depthVisualization == 1) {
-            float normalizedDepth = clamp((viewDepth - depthMin) / (depthMax - depthMin), 0.0, 1.0);
+            float depthValue = viewDepth;  // Use the depth calculated in vertex shader
+            
+            float normalizedDepth = clamp((depthValue - depthMin) / (depthMax - depthMin), 0.0, 1.0);
             if (depthReverse == 1) {
                 normalizedDepth = 1.0 - normalizedDepth;
             }
-            color.xyz = vec3(normalizedDepth);
+            
+            // Apply selected color ramp
+            vec3 depthColor = applyColorRamp(normalizedDepth, depthColorRamp);
+            color.xyz = mix(color.xyz, depthColor, depthBlend);
         }
     
     #endif

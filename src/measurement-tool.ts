@@ -1,6 +1,7 @@
 import { Vec3 } from 'playcanvas';
 
 import { Events } from './events';
+import { MeasurementPointGizmo } from './measurement-point-gizmo';
 import { Scene } from './scene';
 import { MeasurementData } from './ui/measurement-panel';
 
@@ -29,6 +30,10 @@ class MeasurementTool {
     private lastButtonClickTime: number = 0;
     private clicksDisabled: boolean = false;
     private panelsWereHiddenBeforeMeasurement: boolean = false;
+    private lastToggleTime: number = 0;
+    private isActivating: boolean = false;
+    private point1Gizmo: MeasurementPointGizmo | null = null;
+    private point2Gizmo: MeasurementPointGizmo | null = null;
 
     constructor(events: Events, scene: Scene) {
         this.events = events;
@@ -72,19 +77,53 @@ class MeasurementTool {
         this.events.on('measurement.exit', () => {
             this.deactivate();
         });
+
+        // Register function to expose measurement data
+        this.events.function('measurement.getCurrentData', () => {
+            return this.getCurrentData();
+        });
+
+        // Handle gizmo enable/disable events
+        this.events.on('measurement.enable', () => {
+            this.clicksDisabled = false;
+            console.log('📐 Re-enabled measurement clicks after gizmo interaction');
+        });
     }
 
     public toggle() {
+        const now = Date.now();
+        const timeSinceLastToggle = now - this.lastToggleTime;
+
+        console.log('🔄 TOGGLE called - current state:', this.state, stateNames[this.state]);
+        console.log('🔄 Time since last toggle:', timeSinceLastToggle, 'ms');
+
+        // Prevent rapid toggling (less than 500ms apart)
+        if (timeSinceLastToggle < 500) {
+            console.log('⚠️ Ignoring toggle - too soon after last toggle');
+            return;
+        }
+
+        // Prevent toggling while activation is in progress
+        if (this.isActivating) {
+            console.log('⚠️ Ignoring toggle - activation in progress');
+            return;
+        }
+
+        this.lastToggleTime = now;
+
         if (this.state === MeasurementState.INACTIVE) {
+            console.log('🚀 State is INACTIVE, calling activate()');
             this.activate();
         } else {
+            console.log('🛑 State is NOT inactive, calling deactivate()');
             this.deactivate();
         }
     }
 
     public activate() {
-        if (this.state === MeasurementState.INACTIVE) {
+        if (this.state === MeasurementState.INACTIVE && !this.isActivating) {
             console.log('🎯 Measurement tool activated');
+            this.isActivating = true;
 
             // Store current UI visibility state
             this.panelsWereHiddenBeforeMeasurement = this.events.invoke('ui.hidden') || false;
@@ -113,6 +152,10 @@ class MeasurementTool {
                     measurementOverlay.style.display = 'block';
                     console.log('🎨 Forced measurement overlay canvas to display: block');
                 }
+
+                // Complete activation process
+                this.isActivating = false;
+                console.log('✅ Activation process completed');
             }, 1);
 
             // Deactivate other tools first
@@ -170,6 +213,7 @@ class MeasurementTool {
     public deactivate() {
         if (this.state !== MeasurementState.INACTIVE) {
             console.log('🎯 Measurement tool deactivated');
+            console.log('🔍 Deactivation called from:', new Error().stack);
 
             // Restore original screen state (reverse the O key effect)
             if (!this.panelsWereHiddenBeforeMeasurement) {
@@ -202,6 +246,7 @@ class MeasurementTool {
             // Reset click filtering flags
             this.clicksDisabled = false;
             this.lastButtonClickTime = 0;
+            this.isActivating = false;
 
             // Remove all click listeners
             const canvas = this.scene.canvas;
@@ -222,6 +267,9 @@ class MeasurementTool {
 
             // Clear visual overlays
             this.events.fire('measurement.visual.clear');
+
+            // Destroy all gizmos
+            this.destroyAllGizmos();
 
             console.log('🧙 Measurement tool cleanup complete');
         }
@@ -391,6 +439,9 @@ class MeasurementTool {
     private setFirstPoint(point: Vec3) {
         this.point1 = point.clone();
 
+        // Create/update gizmo for point 1
+        this.createOrUpdateGizmo(1, this.point1);
+
         // Check if we already have a second point (from redo1 operation)
         if (this.point2) {
             console.log('🔄 First point updated, keeping existing second point');
@@ -434,6 +485,10 @@ class MeasurementTool {
 
     private setSecondPoint(point: Vec3) {
         this.point2 = point.clone();
+
+        // Create/update gizmo for point 2
+        this.createOrUpdateGizmo(2, this.point2);
+
         this.calculateDistance();
         this.state = MeasurementState.MEASUREMENT_COMPLETE;
 
@@ -483,6 +538,9 @@ class MeasurementTool {
 
     public clearMeasurement() {
         console.log('🧹 Clearing measurement');
+
+        // Destroy all gizmos
+        this.destroyAllGizmos();
 
         this.point1 = null;
         this.point2 = null;
@@ -624,6 +682,71 @@ class MeasurementTool {
                 this.clicksDisabled = false;
             }
         }, 600);
+    }
+
+    private createOrUpdateGizmo(pointIndex: 1 | 2, position: Vec3) {
+        console.log(`📐 Creating/updating gizmo for point ${pointIndex}`);
+
+        // Destroy existing gizmo if it exists
+        if (pointIndex === 1 && this.point1Gizmo) {
+            this.point1Gizmo.destroy();
+            this.point1Gizmo = null;
+        } else if (pointIndex === 2 && this.point2Gizmo) {
+            this.point2Gizmo.destroy();
+            this.point2Gizmo = null;
+        }
+
+        // Create new gizmo
+        const gizmo = new MeasurementPointGizmo(this.events, this.scene, {
+            position: position,
+            pointIndex: pointIndex,
+            onPositionChanged: this.onGizmoPositionChanged.bind(this)
+        });
+
+        // Store reference
+        if (pointIndex === 1) {
+            this.point1Gizmo = gizmo;
+        } else {
+            this.point2Gizmo = gizmo;
+        }
+    }
+
+    private onGizmoPositionChanged(newPosition: Vec3, pointIndex: 1 | 2) {
+        console.log(`📐 Gizmo position changed for point ${pointIndex}:`, newPosition);
+
+        // Update the measurement point
+        if (pointIndex === 1) {
+            this.point1 = newPosition.clone();
+        } else {
+            this.point2 = newPosition.clone();
+        }
+
+        // Recalculate distance if both points exist
+        if (this.point1 && this.point2) {
+            this.calculateDistance();
+        }
+
+        // Update visual overlays
+        this.events.fire('measurement.visual.update', {
+            point1: this.point1,
+            point2: this.point2,
+            state: (this.point1 && this.point2) ? 'complete' : 'waiting_second'
+        });
+
+        // Update measurement data
+        this.updateMeasurementData();
+    }
+
+    private destroyAllGizmos() {
+        if (this.point1Gizmo) {
+            this.point1Gizmo.destroy();
+            this.point1Gizmo = null;
+        }
+        if (this.point2Gizmo) {
+            this.point2Gizmo.destroy();
+            this.point2Gizmo = null;
+        }
+        console.log('📐 Destroyed all measurement gizmos');
     }
 }
 

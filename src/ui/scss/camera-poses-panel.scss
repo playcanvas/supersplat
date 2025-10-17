@@ -59,6 +59,24 @@
                 background: rgba(150, 100, 255, 0.4);
             }
         }
+        
+        .camera-csv-export-button {
+            background: rgba(0, 150, 100, 0.2);
+            
+            &:hover {
+                background: rgba(0, 150, 100, 0.4);
+            }
+            
+            &.recording {
+                background: rgba(255, 100, 100, 0.3);
+                color: #fff;
+                animation: pulse-recording 1.5s infinite;
+                
+                &:hover {
+                    background: rgba(255, 100, 100, 0.5);
+                }
+            }
+        }
     }
     
     

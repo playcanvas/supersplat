@@ -4,7 +4,7 @@ import { CubicSpline } from './anim/spline';
 import { Events } from './events';
 
 // Helper function to calculate circular interpolation points
-const calculateCircularInterpolation = (poses: Pose[], totalFrames: number): { times: number[], points: number[] } => {
+const calculateCircularInterpolation = (poses: any[], totalFrames: number): { times: number[], points: number[] } => {
     if (poses.length < 2) {
         return { times: [], points: [] };
     }
@@ -93,6 +93,113 @@ const calculateCircularInterpolation = (poses: Pose[], totalFrames: number): { t
     return { times: interpolatedTimes, points: interpolatedPoints };
 };
 
+// CSV Export functionality
+class CameraCsvExporter {
+    private data: any[] = [];
+    private isRecording: boolean = false;
+    private events: Events;
+    private frameRate: number = 30;
+
+    constructor(events: Events) {
+        this.events = events;
+    }
+
+    async recordFullSequence(interpolationMode: 'spline' | 'circular'): Promise<string> {
+        this.data = [];
+        this.frameRate = this.events.invoke('timeline.frameRate') || 30;
+        const totalFrames = this.events.invoke('timeline.frames') || 180;
+
+        console.log(`📊 Recording full sequence: frames 0-${totalFrames - 1} using ${interpolationMode} mode`);
+
+        // Check if we have camera poses
+        const poses = this.events.invoke('camera.poses') || [];
+        if (poses.length === 0) {
+            throw new Error('No camera poses found. Please add some camera poses first.');
+        }
+
+        // Use the exact same logic as rebuildSpline() in the camera poses system
+        const orderedPoses = poses.slice()
+        .filter((a: any) => a.frame < totalFrames)
+        .sort((a: any, b: any) => a.frame - b.frame);
+
+        if (orderedPoses.length < 2) {
+            throw new Error('Need at least 2 camera poses for animation.');
+        }
+
+        let times: number[];
+        let points: number[];
+
+        if (interpolationMode === 'circular' && orderedPoses.length >= 3) {
+            // Use circular interpolation for 3 or more poses
+            const circularData = calculateCircularInterpolation(orderedPoses, totalFrames);
+            times = circularData.times;
+            points = circularData.points;
+            console.log(`Using circular interpolation with ${times.length} interpolated points`);
+        } else {
+            // Use standard spline interpolation
+            times = orderedPoses.map((p: any) => p.frame);
+            points = [];
+            for (let i = 0; i < orderedPoses.length; ++i) {
+                const p = orderedPoses[i];
+                points.push(p.position.x, p.position.y, p.position.z);
+                points.push(p.target.x, p.target.y, p.target.z);
+                points.push(p.fov || 65);
+            }
+            console.log(`Using spline interpolation with ${times.length} control points`);
+        }
+
+        const { CubicSpline } = await import('./anim/spline');
+        const spline = CubicSpline.fromPointsLooping(totalFrames, times, points, this.events.invoke('timeline.smoothness'));
+
+        // Record every frame from 0 to totalFrames-1
+        const result: number[] = [];
+        for (let frame = 0; frame < totalFrames; frame++) {
+            spline.evaluate(frame, result);
+
+            this.data.push({
+                frame,
+                time: frame / this.frameRate,
+                position_x: parseFloat(result[0].toFixed(6)),
+                position_z: parseFloat(result[2].toFixed(6)),
+                position_y: parseFloat(result[1].toFixed(6)),
+                target_x: parseFloat(result[3].toFixed(6)),
+                target_z: parseFloat(result[5].toFixed(6)),
+                target_y: parseFloat(result[4].toFixed(6)),
+                fov: parseFloat((result[6] || 65).toFixed(3))
+            });
+        }
+
+        console.log(`📊 Recorded ${this.data.length} frames using ${interpolationMode} interpolation`);
+        return this.generateCsv();
+    }
+
+    private generateCsv(): string {
+        // Explicitly define column order
+        const headers = ['frame', 'time', 'position_x', 'position_z', 'position_y', 'target_x', 'target_z', 'target_y', 'fov'];
+
+        if (this.data.length === 0) {
+            return `${headers.join(',')}\n`;
+        }
+
+        let csv = `${headers.join(',')}\n`;
+
+        for (const row of this.data) {
+            csv += `${headers.map(header => row[header]).join(',')}\n`;
+        }
+
+        return csv;
+    }
+
+    get isExporting(): boolean {
+        return this.isRecording;
+    }
+
+    get recordedFrameCount(): number {
+        return this.data.length;
+    }
+}
+
+
 type Pose = {
     name: string,
     frame: number,
@@ -103,7 +210,8 @@ type Pose = {
 
 const registerCameraPosesEvents = (events: Events) => {
     const poses: Pose[] = [];
-    let interpolationMode: 'linear' | 'circular' = 'linear';
+    let interpolationMode: 'spline' | 'circular' = 'spline';
+    const csvExporter = new CameraCsvExporter(events);
 
     let onTimelineChange: (frame: number) => void;
 
@@ -127,7 +235,7 @@ const registerCameraPosesEvents = (events: Events) => {
                 points = circularData.points;
                 console.log(`Using circular interpolation with ${times.length} interpolated points`);
             } else {
-                // Use standard linear interpolation
+                // Use standard spline interpolation
                 times = orderedPoses.map(p => p.frame);
                 points = [];
                 for (let i = 0; i < orderedPoses.length; ++i) {
@@ -136,7 +244,7 @@ const registerCameraPosesEvents = (events: Events) => {
                     points.push(p.target.x, p.target.y, p.target.z);
                     points.push(p.fov || 65); // Default FOV if not specified
                 }
-                console.log(`Using linear interpolation with ${times.length} control points`);
+                console.log(`Using spline interpolation with ${times.length} control points`);
             }
 
             // interpolate camera positions, camera target positions, and FOV
@@ -233,7 +341,7 @@ const registerCameraPosesEvents = (events: Events) => {
         return interpolationMode;
     });
 
-    events.on('camera.setInterpolationMode', (mode: 'linear' | 'circular') => {
+    events.on('camera.setInterpolationMode', (mode: 'spline' | 'circular') => {
         interpolationMode = mode;
         rebuildSpline(); // Rebuild with new interpolation mode
         events.fire('timeline.time', events.invoke('timeline.frame'));
@@ -292,6 +400,56 @@ const registerCameraPosesEvents = (events: Events) => {
 
         poses.length = 0; // Clear all poses
         rebuildSpline();
+    });
+
+    // CSV Export events - now automatically records full sequence
+    events.on('camera.exportCsv', async () => {
+        try {
+            events.fire('camera.csvExportStarted');
+            const currentInterpolationMode = interpolationMode; // Use the current interpolation mode
+            const csvData = await csvExporter.recordFullSequence(currentInterpolationMode);
+
+            // Check if File System Access API is available
+            if ('showSaveFilePicker' in window) {
+                const fileHandle = await (window as any).showSaveFilePicker({
+                    types: [{
+                        description: 'CSV files',
+                        accept: {
+                            'text/csv': ['.csv']
+                        }
+                    }],
+                    suggestedName: `camera-animation-${new Date().toISOString().split('T')[0]}.csv`
+                });
+
+                const writable = await fileHandle.createWritable();
+                await writable.write(csvData);
+                await writable.close();
+
+                console.log(`📊 CSV exported to ${fileHandle.name}`);
+            } else {
+                // Fallback for browsers without File System Access API
+                const blob = new Blob([csvData], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `camera-animation-${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                console.log('📊 CSV downloaded successfully');
+            }
+
+            const totalFrames = events.invoke('timeline.frames') || 180;
+            events.fire('camera.csvExportCompleted', totalFrames);
+
+        } catch (error: any) {
+            if (error.name !== 'AbortError') {
+                console.error('Failed to export CSV:', error);
+                events.fire('camera.csvExportFailed', error.message);
+            }
+        }
     });
 
     // doc

@@ -18,6 +18,7 @@ class CameraPosesPanel extends Panel {
     private recordingStartFrame: number = 0;
     private recordingCount: number = 0;
     private recordButton: Button | null = null;
+    private csvExportButton: Button | null = null;
 
     constructor(events: Events, args = {}) {
         args = {
@@ -107,6 +108,16 @@ class CameraPosesPanel extends Panel {
         });
         exportCameraButton.on('click', () => this.exportCameraAnimation());
 
+        const csvExportButton = new Button({
+            text: 'Export CSV',
+            size: 'small',
+            class: 'camera-csv-export-button'
+        });
+        csvExportButton.on('click', () => this.exportCsv());
+
+        // Store reference for state management
+        this.csvExportButton = csvExportButton;
+
         const sortButton = new Button({
             text: 'Sort by Frame',
             size: 'small'
@@ -159,10 +170,10 @@ class CameraPosesPanel extends Panel {
 
         const interpolationModeSelect = new SelectInput({
             options: [
-                { v: 'linear', t: 'Linear' },
+                { v: 'spline', t: 'Spline' },
                 { v: 'circular', t: 'Circular' }
             ],
-            value: 'linear',
+            value: 'spline',
             class: 'camera-interpolation-select'
         });
         interpolationModeSelect.on('change', (value: string) => {
@@ -183,6 +194,7 @@ class CameraPosesPanel extends Panel {
         headerControls.append(readKeyframesButton);
         headerControls.append(updateKeyframesButton);
         headerControls.append(exportCameraButton);
+        headerControls.append(csvExportButton);
         headerControls.append(applyYUpButton);
         headerControls.append(invertYButton);
         headerControls.append(blenderToSupersplatButton);
@@ -213,6 +225,33 @@ class CameraPosesPanel extends Panel {
                 this.interpolationModeSelect.value = currentMode;
             }
         }, 500);
+
+        // CSV export event handlers
+        this.events.on('camera.csvExportStarted', () => {
+            if (this.csvExportButton) {
+                this.csvExportButton.text = 'Exporting...';
+                this.csvExportButton.enabled = false;
+                this.csvExportButton.class.add('recording');
+            }
+        });
+
+        this.events.on('camera.csvExportCompleted', (frameCount: number) => {
+            if (this.csvExportButton) {
+                this.csvExportButton.text = 'Export CSV';
+                this.csvExportButton.enabled = true;
+                this.csvExportButton.class.remove('recording');
+            }
+            console.log(`📊 CSV export completed with ${frameCount} frames`);
+        });
+
+        this.events.on('camera.csvExportFailed', (error: string) => {
+            if (this.csvExportButton) {
+                this.csvExportButton.text = 'Export CSV';
+                this.csvExportButton.enabled = true;
+                this.csvExportButton.class.remove('recording');
+            }
+            console.error('📊 CSV export failed:', error);
+        });
     }
 
     private refresh() {
@@ -547,6 +586,33 @@ class CameraPosesPanel extends Panel {
     private exportCameraAnimation() {
         // Use the centralized camera export event
         this.events.fire('camera.export');
+    }
+
+    private exportCsv() {
+        try {
+            // Check if animation is available
+            if (!this.events.functions.has('camera.poses')) {
+                console.warn('Camera poses system not available');
+                alert('Camera poses system not ready. Please add some camera poses first.');
+                return;
+            }
+
+            const poses = this.events.invoke('camera.poses') || [];
+            if (poses.length < 2) {
+                alert('Need at least 2 camera poses to export CSV animation data.');
+                return;
+            }
+
+            const totalFrames = this.events.invoke('timeline.frames') || 180;
+            console.log(`📊 Exporting full camera animation sequence (${totalFrames} frames)`);
+
+            // Trigger the automatic CSV export
+            this.events.fire('camera.exportCsv');
+
+        } catch (error) {
+            console.error('Failed to export CSV:', error);
+            alert('Failed to export CSV. Check the console for details.');
+        }
     }
 
     private sortPoses() {

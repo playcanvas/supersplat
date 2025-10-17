@@ -1,0 +1,13 @@
+{
+  "name": "Ocean Depths",
+  "type": "gradient",
+  "description": "A custom color scheme inspired by ocean depths, transitioning from dark blue through cyan to bright yellow",
+  "colors": [
+    {"position": 0.0, "color": [0.0, 0.1, 0.4]},
+    {"position": 0.2, "color": [0.0, 0.3, 0.7]},
+    {"position": 0.4, "color": [0.0, 0.6, 0.9]},
+    {"position": 0.6, "color": [0.2, 0.8, 0.8]},
+    {"position": 0.8, "color": [0.8, 1.0, 0.6]},
+    {"position": 1.0, "color": [1.0, 1.0, 0.2]}
+  ]
+}

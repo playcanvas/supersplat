@@ -245,18 +245,24 @@ class EditorUI {
                     const docName = events.invoke('doc.name');
                     const suggested = `${removeExtension(docName ?? 'SuperSplat')}-video.mp4`;
 
-                    const fileHandle = window.showSaveFilePicker && await window.showSaveFilePicker({
-                        id: 'SuperSplatVideoFileExport',
-                        types: [{
-                            description: 'MP4 Video',
-                            accept: {
-                                'video/mp4': ['.mp4']
-                            }
-                        }],
-                        suggestedName: suggested
-                    });
+                    let writable;
 
-                    await events.invoke('render.video', videoSettings, fileHandle && await fileHandle.createWritable());
+                    if (window.showSaveFilePicker) {
+                        const fileHandle = await window.showSaveFilePicker({
+                            id: 'SuperSplatVideoFileExport',
+                            types: [{
+                                description: 'MP4 Video',
+                                accept: {
+                                    'video/mp4': ['.mp4']
+                                }
+                            }],
+                            suggestedName: suggested
+                        });
+
+                        writable = await fileHandle.createWritable();
+                    }
+
+                    await events.invoke('render.video', videoSettings, writable);
                 } catch (error) {
                     if (error instanceof DOMException && error.name === 'AbortError') {
                         // user cancelled save dialog

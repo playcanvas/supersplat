@@ -182,11 +182,13 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
         try {
             const { startFrame, endFrame, frameRate, width, height, bitrate, transparentBg, showDebug } = videoSettings;
 
+            const target = fileStream ? new StreamTarget(fileStream) : new BufferTarget();
+
             const output = new Output({
                 format: new Mp4OutputFormat({
                     fastStart: 'in-memory'
                 }),
-                target: fileStream ? new StreamTarget(fileStream) : new BufferTarget()
+                target
             });
 
             const videoSource = new EncodedVideoPacketSource('avc');
@@ -334,13 +336,13 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             await encoder.flush();
             await output.finalize();
 
+            // Free resources
+            encoder.close();
+
             // Download
             if (!fileStream) {
                 downloadFile((output.target as BufferTarget).buffer, `${removeExtension(splats[0]?.name ?? 'SuperSplat')}-video.mp4`);
             }
-
-            // Free resources
-            encoder.close();
 
             return true;
         } catch (error) {

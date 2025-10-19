@@ -1,4 +1,4 @@
-import { BufferTarget, EncodedPacket, EncodedVideoPacketSource, Mp4OutputFormat, Output } from 'mediabunny';
+import { BufferTarget, EncodedPacket, EncodedVideoPacketSource, Mp4OutputFormat, Output, StreamTarget } from 'mediabunny';
 import { path, Vec3 } from 'playcanvas';
 
 import { ElementType } from './element';
@@ -176,17 +176,19 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
         }
     });
 
-    events.function('render.video', async (videoSettings: VideoSettings) => {
+    events.function('render.video', async (videoSettings: VideoSettings, fileStream: FileSystemWritableFileStream) => {
         events.fire('progressStart', localize('render.render-video'));
 
         try {
             const { startFrame, endFrame, frameRate, width, height, bitrate, transparentBg, showDebug } = videoSettings;
 
+            const target = fileStream ? new StreamTarget(fileStream) : new BufferTarget();
+
             const output = new Output({
                 format: new Mp4OutputFormat({
                     fastStart: 'in-memory'
                 }),
-                target: new BufferTarget()
+                target
             });
 
             const videoSource = new EncodedVideoPacketSource('avc');
@@ -334,11 +336,13 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             await encoder.flush();
             await output.finalize();
 
-            // Download
-            downloadFile(output.target.buffer, `${removeExtension(splats[0]?.name ?? 'SuperSplat')}-video.mp4`);
-
             // Free resources
             encoder.close();
+
+            // Download
+            if (!fileStream) {
+                downloadFile((output.target as BufferTarget).buffer, `${removeExtension(splats[0]?.name ?? 'SuperSplat')}-video.mp4`);
+            }
 
             return true;
         } catch (error) {

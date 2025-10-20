@@ -370,10 +370,10 @@ const loadLcc = async (assetSource: AssetSource) => {
         throw new Error('Failed to fetch data.bin');
     }
 
+    const shFile = isHasSH && assetSource.mapFile('shcoef.bin');
+
     const indexBuffer = await fetchArrayBuffer(indexFile!);
     const dataBuffer = await fetchArrayBuffer(dataFile);
-
-    const shFile = isHasSH && assetSource.mapFile('shcoef.bin');
     const shBuffer = shFile && (await fetchArrayBuffer(shFile));
 
     const unitInfos: LccUnitInfo[] = parseIndexBin(indexBuffer, meta);

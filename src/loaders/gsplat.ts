@@ -1,17 +1,17 @@
 import { Asset, AssetRegistry, GSplatData, GSplatResource } from 'playcanvas';
 
-import { ModelLoadRequest } from './model-load-request';
+import { AssetSource, fetchArrayBuffer } from './asset-source';
 
 let assetId = 0;
 
-const loadPly = (assets: AssetRegistry, loadRequest: ModelLoadRequest) => {
-
-    const contents = loadRequest.contents && (loadRequest.contents instanceof Response ? loadRequest.contents : new Response(loadRequest.contents));
+// use the engine to load a gsplat asset (ply, compressed.ply, sog, sog-bundle)
+const loadGsplat = (assets: AssetRegistry, assetSource: AssetSource) => {
+    const contents = assetSource.contents && (assetSource.contents instanceof Response ? assetSource.contents : new Response(assetSource.contents));
 
     const file = {
         // we must construct a unique url if contents is provided
-        url: contents ? `local-asset-${assetId++}` : loadRequest.url ?? loadRequest.filename,
-        filename: loadRequest.filename,
+        url: contents ? `local-asset-${assetId++}` : assetSource.url ?? assetSource.filename,
+        filename: assetSource.filename,
         contents
     };
 
@@ -19,17 +19,16 @@ const loadPly = (assets: AssetRegistry, loadRequest: ModelLoadRequest) => {
         // decompress data on load
         decompress: true,
         // disable morton re-ordering when loading animation frames
-        reorder: !(loadRequest.animationFrame ?? false),
-        mapUrl: loadRequest.mapUrl
+        reorder: !(assetSource.animationFrame ?? false)
     };
 
     const options = {
-        mapUrl: loadRequest.mapUrl
+        mapUrl: assetSource.mapUrl
     };
 
     return new Promise<Asset>((resolve, reject) => {
         const asset = new Asset(
-            loadRequest.filename || loadRequest.url,
+            assetSource.filename || assetSource.url,
             'gsplat',
             // @ts-ignore
             file,
@@ -75,4 +74,4 @@ const loadPly = (assets: AssetRegistry, loadRequest: ModelLoadRequest) => {
     });
 };
 
-export { loadPly };
+export { loadGsplat };

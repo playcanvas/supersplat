@@ -1,4 +1,4 @@
-import { Muxer, ArrayBufferTarget } from 'mp4-muxer';
+import { BufferTarget, EncodedPacket, EncodedVideoPacketSource, Mp4OutputFormat, Output, StreamTarget } from 'mediabunny';
 import { path, Vec3 } from 'playcanvas';
 
 import { ElementType } from './element';
@@ -176,26 +176,33 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
         }
     });
 
-    events.function('render.video', async (videoSettings: VideoSettings) => {
+    events.function('render.video', async (videoSettings: VideoSettings, fileStream: FileSystemWritableFileStream) => {
         events.fire('progressStart', localize('render.render-video'));
 
         try {
             const { startFrame, endFrame, frameRate, width, height, bitrate, transparentBg, showDebug } = videoSettings;
 
-            const muxer = new Muxer({
-                target: new ArrayBufferTarget(),
-                video: {
-                    codec: 'avc',
-                    width,
-                    height
-                },
-                fastStart: 'in-memory',
-                firstTimestampBehavior: 'offset'
+            const target = fileStream ? new StreamTarget(fileStream) : new BufferTarget();
+
+            const output = new Output({
+                format: new Mp4OutputFormat({
+                    fastStart: 'in-memory'
+                }),
+                target
             });
 
+            const videoSource = new EncodedVideoPacketSource('avc');
+            output.addVideoTrack(videoSource, {
+                rotation: 0,
+                frameRate
+            });
+
+            await output.start();
+
             const encoder = new VideoEncoder({
-                output: (chunk, meta) => {
-                    muxer.addVideoChunk(chunk, meta);
+                output: async (chunk, meta) => {
+                    const encodedPacket = EncodedPacket.fromEncodedChunk(chunk);
+                    await videoSource.add(encodedPacket, meta);
                 },
                 error: (error) => {
                     console.log(error);
@@ -325,15 +332,17 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 });
             }
 
-            // Flush and finalize muxer
+            // Flush and finalize output
             await encoder.flush();
-            muxer.finalize();
-
-            // Download
-            downloadFile(muxer.target.buffer, `${removeExtension(splats[0]?.name ?? 'SuperSplat')}-video.mp4`);
+            await output.finalize();
 
             // Free resources
             encoder.close();
+
+            // Download
+            if (!fileStream) {
+                downloadFile((output.target as BufferTarget).buffer, `${removeExtension(splats[0]?.name ?? 'SuperSplat')}-video.mp4`);
+            }
 
             return true;
         } catch (error) {

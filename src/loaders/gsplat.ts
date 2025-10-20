@@ -6,7 +6,7 @@ let assetId = 0;
 
 // use the engine to load a gsplat asset (ply, compressed.ply, sog, sog-bundle)
 const loadGsplat = (assets: AssetRegistry, assetSource: AssetSource) => {
-    const contents = fetchArrayBuffer(assetSource);
+    const contents = assetSource.contents && (assetSource.contents instanceof Response ? assetSource.contents : new Response(assetSource.contents));
 
     const file = {
         // we must construct a unique url if contents is provided

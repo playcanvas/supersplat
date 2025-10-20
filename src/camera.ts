@@ -325,6 +325,27 @@ class Camera extends Element {
             set('far_x', va.sub2(points[4], points[7]));
             set('far_y', va.sub2(points[6], points[7]));
         };
+
+        // temp control of camera start
+        const url = new URL(location.href);
+        const focal = url.searchParams.get('focal');
+        if (focal) {
+            const parts = focal.toString().split(',');
+            if (parts.length === 3) {
+                this.setFocalPoint(new Vec3(parseFloat(parts[0]), parseFloat(parts[1]), parseFloat(parts[2])), 0);
+            }
+        }
+        const angles = url.searchParams.get('angles');
+        if (angles) {
+            const parts = angles.toString().split(',');
+            if (parts.length === 2) {
+                this.setAzimElev(parseFloat(parts[0]), parseFloat(parts[1]), 0);
+            }
+        }
+        const distance = url.searchParams.get('distance');
+        if (distance) {
+            this.setDistance(parseFloat(distance), 0);
+        }
     }
 
     remove() {

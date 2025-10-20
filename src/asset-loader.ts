@@ -1,9 +1,9 @@
 import { AppBase, Asset, GSplatData, GSplatResource, Vec3 } from 'playcanvas';
 
 import { Events } from './events';
+import { AssetSource } from './loaders/asset-source';
+import { loadGsplat } from './loaders/gsplat';
 import { loadLcc } from './loaders/lcc';
-import { ModelLoadRequest } from './loaders/model-load-request';
-import { loadPly } from './loaders/ply';
 import { loadSplat } from './loaders/splat';
 import { Splat } from './splat';
 
@@ -23,39 +23,39 @@ class AssetLoader {
         this.defaultAnisotropy = defaultAnisotropy || 1;
     }
 
-    async load(loadRequest: ModelLoadRequest) {
+    async load(assetSource: AssetSource) {
         const wrap = (gsplatData: GSplatData) => {
-            const asset = new Asset(loadRequest.filename || loadRequest.url, 'gsplat', {
-                url: loadRequest.contents ? `local-asset-${Date.now()}` : loadRequest.url ?? loadRequest.filename,
-                filename: loadRequest.filename
+            const asset = new Asset(assetSource.filename || assetSource.url, 'gsplat', {
+                url: assetSource.contents ? `local-asset-${Date.now()}` : assetSource.url ?? assetSource.filename,
+                filename: assetSource.filename
             });
             this.app.assets.add(asset);
             asset.resource = new GSplatResource(this.app.graphicsDevice, gsplatData);
             return asset;
         };
 
-        if (!loadRequest.animationFrame) {
+        if (!assetSource.animationFrame) {
             this.events.fire('startSpinner');
         }
 
         try {
-            const filename = (loadRequest.filename || loadRequest.url).toLowerCase();
+            const filename = (assetSource.filename || assetSource.url).toLowerCase();
 
             let asset;
             let orientation = defaultOrientation;
 
             if (filename.endsWith('.splat')) {
-                asset = wrap(await loadSplat(loadRequest));
+                asset = wrap(await loadSplat(assetSource));
             } else if (filename.endsWith('.lcc')) {
-                asset = wrap(await loadLcc(loadRequest));
+                asset = wrap(await loadLcc(assetSource));
                 orientation = lccOrientation;
             } else {
-                asset = await loadPly(this.app.assets, loadRequest);
+                asset = await loadGsplat(this.app.assets, assetSource);
             }
 
             return new Splat(asset, orientation);
         } finally {
-            if (!loadRequest.animationFrame) {
+            if (!assetSource.animationFrame) {
                 this.events.fire('stopSpinner');
             }
         }

@@ -51,5 +51,15 @@
             // stroke-width: 2;
             // stroke-dasharray: 5, 5;
         }
+
+        >#measure-line-bottom {
+            stroke: black;
+            stroke-width: 4;
+        }
+
+        >#measure-line-top {
+            stroke: white;
+            stroke-width: 2;
+        }
     }
 }

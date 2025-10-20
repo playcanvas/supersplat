@@ -47,9 +47,25 @@ class MeasureTool {
         svg.id = 'measure-tool-svg';
         parent.appendChild(svg);
 
+        // create defs node
+        const defs = document.createElementNS(svg.namespaceURI, 'defs');
+        svg.appendChild(defs);
+
         // create line element
         const line = document.createElementNS(svg.namespaceURI, 'line') as SVGLineElement;
-        svg.appendChild(line);
+        line.id = 'measure-line';
+        defs.appendChild(line);
+
+        const lineBottom = document.createElementNS(svg.namespaceURI, 'use') as SVGUseElement;
+        lineBottom.id = 'measure-line-bottom';
+        lineBottom.setAttribute('href', '#measure-line');
+
+        const lineTop = document.createElementNS(svg.namespaceURI, 'use') as SVGUseElement;
+        lineTop.id = 'measure-line-top';
+        lineTop.setAttribute('href', '#measure-line');
+
+        svg.appendChild(lineBottom);
+        svg.appendChild(lineTop);
 
         // ui
         const lengthInput = new NumericInput({

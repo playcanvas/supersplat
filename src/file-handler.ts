@@ -227,7 +227,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                 } else if (files[meta].url) {
                     return {
                         filename: name,
-                        contents: fetch(new URL(name, files[meta].url).toString())
+                        url: new URL(name, files[meta].url).toString()
                     };
                 }
                 return null;

@@ -361,9 +361,16 @@ const loadLcc = async (assetSource: AssetSource) => {
 
     // check files
     const indexFile = assetSource.mapFile('index.bin');
-    const indexBuffer = await fetchArrayBuffer(indexFile!);
+    if (!indexFile) {
+        throw new Error('Failed to fetch index.bin');
+    }
 
-    const dataFile = assetSource.mapFile('data.bin');
+    const dataFile = assetSource.mapFile('data.bin');  
+    if (!dataFile) {
+        throw new Error('Failed to fetch data.bin');
+    }
+
+    const indexBuffer = await fetchArrayBuffer(indexFile!);
     const dataBuffer = await fetchArrayBuffer(dataFile);
 
     const shFile = isHasSH && assetSource.mapFile('shcoef.bin');

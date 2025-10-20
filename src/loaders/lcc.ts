@@ -296,7 +296,7 @@ const processUnit = (ctx: ProcessUnitContext) => {
 };
 
 // this function would stream data directly into GSplatData buffers
-const deserializeFromLcc = async (param:LccParam) => {
+const deserializeFromLcc = (param:LccParam) => {
     const { totalSplats, unitInfos, targetLod, isHasSH, dataFileContent, shFileContent, compressInfo } = param;
 
     // properties to GSplatData

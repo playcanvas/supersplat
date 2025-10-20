@@ -41,6 +41,16 @@ class MeasureTool {
     deactivate: () => void;
 
     constructor(events: Events, scene: Scene, parent: HTMLElement, canvasContainer: Container) {
+        // create svg
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.classList.add('tool-svg');
+        svg.id = 'measure-tool-svg';
+        parent.appendChild(svg);
+
+        // create line element
+        const line = document.createElementNS(svg.namespaceURI, 'line') as SVGLineElement;
+        svg.appendChild(line);
+
         // ui
         const lengthInput = new NumericInput({
             width: 120,
@@ -270,6 +280,25 @@ class MeasureTool {
             }
         };
 
+        events.on('postrender', () => {
+            if (splat && splat.measurePoints.length === 2) {
+                const camera = scene.camera;
+
+                splat.worldTransform.transformPoint(splat.measurePoints[0], p0);
+                splat.worldTransform.transformPoint(splat.measurePoints[1], p1);
+
+                camera.worldToScreen(p0, p0);
+                camera.worldToScreen(p1, p1);
+
+                line.setAttribute('x1', (p0.x * svg.clientWidth).toString());
+                line.setAttribute('y1', (p0.y * svg.clientHeight).toString());
+                line.setAttribute('x2', (p1.x * svg.clientWidth).toString());
+                line.setAttribute('y2', (p1.y * svg.clientHeight).toString());
+
+                line.style.display = 'block';
+            }
+        });
+
         this.activate = () => {
             active = true;
             updateSpheres();
@@ -277,6 +306,8 @@ class MeasureTool {
             canvasContainer.dom.addEventListener('pointermove', pointermove);
             canvasContainer.dom.addEventListener('pointerup', pointerup, true);
             selectToolbar.hidden = false;
+            parent.style.display = 'block';
+            svg.classList.remove('hidden');
         };
 
         this.deactivate = () => {
@@ -286,6 +317,8 @@ class MeasureTool {
             canvasContainer.dom.removeEventListener('pointermove', pointermove);
             canvasContainer.dom.removeEventListener('pointerup', pointerup);
             selectToolbar.hidden = true;
+            parent.style.display = 'none';
+            svg.classList.add('hidden');
         };
 
         const updateGizmoSize = () => {

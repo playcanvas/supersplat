@@ -20,6 +20,7 @@
 @use 'progress.scss';
 @use 'export-popup.scss';
 @use 'timeline-panel.scss';
+@use 'tool.scss';
 
 * {
     font-size: 12px;
@@ -135,13 +136,6 @@ body {
         border: 1px solid $clr-hilight;
         background-color: rgba(0, 0, 0, 0.25);
     }
-}
-
-.select-svg {
-    display: none;
-    position: absolute;
-    width: 100%;
-    height: 100%;
 }
 
 #view-cube-container {

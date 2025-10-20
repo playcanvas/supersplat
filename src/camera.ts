@@ -16,12 +16,14 @@ import {
     TONEMAP_NEUTRAL,
     BoundingBox,
     Entity,
+    Mat4,
     Picker,
     Plane,
     Ray,
     RenderTarget,
     Texture,
     Vec3,
+    Vec4,
     WebglGraphicsDevice
 } from 'playcanvas';
 
@@ -50,6 +52,8 @@ const ray = new Ray();
 const vec = new Vec3();
 const vecb = new Vec3();
 const va = new Vec3();
+const m = new Mat4();
+const v4 = new Vec4();
 
 // modulo dealing with negative numbers
 const mod = (n: number, m: number) => ((n % m) + m) % m;
@@ -230,9 +234,17 @@ class Camera extends Element {
         this.setDistance(l / this.sceneRadius * this.fovFactor, dampingFactorFactor);
     }
 
-    // convert world to screen coordinate
+    // transform the world space coordinate to normalized screen coordinate
     worldToScreen(world: Vec3, screen: Vec3) {
-        this.entity.camera.worldToScreen(world, screen);
+        const { camera } = this.entity.camera;
+        m.mul2(camera.projectionMatrix, camera.viewMatrix);
+
+        v4.set(world.x, world.y, world.z, 1);
+        m.transformVec4(v4, v4);
+
+        screen.x = v4.x / v4.w * 0.5 + 0.5;
+        screen.y = 1.0 - (v4.y / v4.w * 0.5 + 0.5);
+        screen.z = v4.z / v4.w;
     }
 
     add() {

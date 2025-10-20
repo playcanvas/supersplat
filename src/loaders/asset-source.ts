@@ -1,4 +1,3 @@
-
 interface AssetSource {
     filename?: string;
     url?: string;

@@ -254,7 +254,7 @@ const decodeSplat = (
     }
 };
 
-const processUnit = async (ctx: ProcessUnitContext): Promise<number> => {
+const processUnit = (ctx: ProcessUnitContext) => {
     const {
         info,
         targetLod,
@@ -305,7 +305,7 @@ const deserializeFromLcc = async (param:LccParam) => {
 
     let propertyOffset = 0;
     for (const info of unitInfos) {
-        propertyOffset = await processUnit({
+        propertyOffset = processUnit({
             info,
             targetLod,
             isHasSH,
@@ -365,7 +365,7 @@ const loadLcc = async (assetSource: AssetSource) => {
         throw new Error('Failed to fetch index.bin');
     }
 
-    const dataFile = assetSource.mapFile('data.bin');  
+    const dataFile = assetSource.mapFile('data.bin');
     if (!dataFile) {
         throw new Error('Failed to fetch data.bin');
     }

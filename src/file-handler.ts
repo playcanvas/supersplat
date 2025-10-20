@@ -3,12 +3,12 @@ import { Vec3 } from 'playcanvas';
 import { CreateDropHandler } from './drop-handler';
 import { ElementType } from './element';
 import { Events } from './events';
+import { AssetSource } from './loaders/asset-source';
 import { Scene } from './scene';
 import { DownloadWriter, FileStreamWriter } from './serialize/writer';
 import { Splat } from './splat';
 import { serializePly, serializePlyCompressed, SerializeSettings, serializeSplat, serializeViewer, ViewerExportSettings } from './splat-serialize';
 import { localize } from './ui/localization';
-import { AssetSource } from './loaders/asset-source';
 
 // ts compiler and vscode find this type, but eslint does not
 type FilePickerAcceptType = unknown;

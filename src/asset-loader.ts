@@ -1,9 +1,9 @@
 import { AppBase, Asset, GSplatData, GSplatResource, Vec3 } from 'playcanvas';
 
 import { Events } from './events';
-import { loadLcc } from './loaders/lcc';
 import { AssetSource } from './loaders/asset-source';
 import { loadGsplat } from './loaders/gsplat';
+import { loadLcc } from './loaders/lcc';
 import { loadSplat } from './loaders/splat';
 import { Splat } from './splat';
 

@@ -16,12 +16,14 @@ import {
     TONEMAP_NEUTRAL,
     BoundingBox,
     Entity,
+    Mat4,
     Picker,
     Plane,
     Ray,
     RenderTarget,
     Texture,
     Vec3,
+    Vec4,
     WebglGraphicsDevice
 } from 'playcanvas';
 
@@ -50,6 +52,8 @@ const ray = new Ray();
 const vec = new Vec3();
 const vecb = new Vec3();
 const va = new Vec3();
+const m = new Mat4();
+const v4 = new Vec4();
 
 // modulo dealing with negative numbers
 const mod = (n: number, m: number) => ((n % m) + m) % m;
@@ -230,9 +234,17 @@ class Camera extends Element {
         this.setDistance(l / this.sceneRadius * this.fovFactor, dampingFactorFactor);
     }
 
-    // convert world to screen coordinate
+    // transform the world space coordinate to normalized screen coordinate
     worldToScreen(world: Vec3, screen: Vec3) {
-        this.entity.camera.worldToScreen(world, screen);
+        const { camera } = this.entity.camera;
+        m.mul2(camera.projectionMatrix, camera.viewMatrix);
+
+        v4.set(world.x, world.y, world.z, 1);
+        m.transformVec4(v4, v4);
+
+        screen.x = v4.x / v4.w * 0.5 + 0.5;
+        screen.y = 1.0 - (v4.y / v4.w * 0.5 + 0.5);
+        screen.z = v4.z / v4.w;
     }
 
     add() {
@@ -537,14 +549,32 @@ class Camera extends Element {
         return Math.sin(fov * 0.5);
     }
 
-    // intersect the scene at the given screen coordinate and focus the camera on this location
-    pickFocalPoint(screenX: number, screenY: number) {
-        const scene = this.scene;
+    getRay(screenX: number, screenY: number, ray: Ray) {
+        const { entity, ortho, scene } = this;
         const cameraPos = this.entity.getPosition();
+
+        // create the pick ray in world space
+        if (ortho) {
+            entity.camera.screenToWorld(screenX, screenY, -1.0, vec);
+            entity.camera.screenToWorld(screenX, screenY, 1.0, vecb);
+            vecb.sub(vec).normalize();
+            ray.set(vec, vecb);
+        } else {
+            entity.camera.screenToWorld(screenX, screenY, 1.0, vec);
+            vec.sub(cameraPos).normalize();
+            ray.set(cameraPos, vec);
+        }
+    }
+
+    // intersect the scene at the given screen coordinate
+    intersect(screenX: number, screenY: number) {
+        const { scene } = this;
 
         const target = scene.canvas;
         const sx = screenX / target.clientWidth * scene.targetSize.width;
         const sy = screenY / target.clientHeight * scene.targetSize.height;
+
+        this.getRay(screenX, screenY, ray);
 
         const splats = scene.getElementsByType(ElementType.splat);
 
@@ -564,18 +594,6 @@ class Camera extends Element {
                 // create a plane at the world position facing perpendicular to the camera
                 plane.setFromPointNormal(vec, this.entity.forward);
 
-                // create the pick ray in world space
-                if (this.ortho) {
-                    this.entity.camera.screenToWorld(screenX, screenY, -1.0, vec);
-                    this.entity.camera.screenToWorld(screenX, screenY, 1.0, vecb);
-                    vecb.sub(vec).normalize();
-                    ray.set(vec, vecb);
-                } else {
-                    this.entity.camera.screenToWorld(screenX, screenY, 1.0, vec);
-                    vec.sub(cameraPos).normalize();
-                    ray.set(cameraPos, vec);
-                }
-
                 // find intersection
                 if (plane.intersectsRay(ray, vec)) {
                     const distance = vecb.sub2(vec, ray.origin).length();
@@ -588,13 +606,29 @@ class Camera extends Element {
             }
         }
 
-        if (closestSplat) {
-            this.setFocalPoint(closestP);
-            this.setDistance(closestD / this.sceneRadius * this.fovFactor);
+        if (!closestSplat) {
+            return null;
+        }
+
+        return {
+            splat: closestSplat,
+            position: closestP,
+            distance: closestD
+        };
+    }
+
+    // intersect the scene at the screen location and focus the camera on this location
+    pickFocalPoint(screenX: number, screenY: number) {
+        const result = this.intersect(screenX, screenY);
+        if (result) {
+            const { scene } = this;
+
+            this.setFocalPoint(result.position);
+            this.setDistance(result.distance / this.sceneRadius * this.fovFactor);
             scene.events.fire('camera.focalPointPicked', {
                 camera: this,
-                splat: closestSplat,
-                position: closestP
+                splat: result.splat,
+                position: result.position
             });
         }
     }

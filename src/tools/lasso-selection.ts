@@ -7,24 +7,20 @@ class LassoSelection {
     deactivate: () => void;
 
     constructor(events: Events, parent: HTMLElement, mask: { canvas: HTMLCanvasElement, context: CanvasRenderingContext2D }) {
-        let points: Point[] = [];
-        let currentPoint: Point = null;
-        let lastPointTime = 0;
-
         // create svg
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.classList.add('tool-svg', 'hidden');
         svg.id = 'lasso-select-svg';
-        svg.classList.add('select-svg');
+        parent.appendChild(svg);
 
         // create polygon element
         const polygon = document.createElementNS(svg.namespaceURI, 'polygon') as SVGPolygonElement;
-        polygon.setAttribute('fill', 'none');
-        polygon.setAttribute('stroke-width', '1');
-        polygon.setAttribute('stroke-dasharray', '5, 5');
-        polygon.setAttribute('stroke-dashoffset', '0');
+        svg.appendChild(polygon);
 
-        // create canvas
         const { canvas, context } = mask;
+        let points: Point[] = [];
+        let currentPoint: Point = null;
+        let lastPointTime = 0;
 
         const dist = (a: Point, b: Point) => {
             return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
@@ -130,7 +126,7 @@ class LassoSelection {
         };
 
         this.activate = () => {
-            svg.style.display = 'inline';
+            svg.classList.remove('hidden');
             parent.style.display = 'block';
             parent.addEventListener('pointerdown', pointerdown);
             parent.addEventListener('pointermove', pointermove);
@@ -142,15 +138,12 @@ class LassoSelection {
             if (dragId !== undefined) {
                 dragEnd();
             }
-            svg.style.display = 'none';
+            svg.classList.add('hidden');
             parent.style.display = 'none';
             parent.removeEventListener('pointerdown', pointerdown);
             parent.removeEventListener('pointermove', pointermove);
             parent.removeEventListener('pointerup', pointerup);
         };
-
-        svg.appendChild(polygon);
-        parent.appendChild(svg);
     }
 }
 

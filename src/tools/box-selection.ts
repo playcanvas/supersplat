@@ -27,7 +27,7 @@ class BoxSelection {
 
         // ui
         const selectToolbar = new Container({
-            id: 'select-toolbar',
+            class: 'select-toolbar',
             hidden: true
         });
 
@@ -78,13 +78,16 @@ class BoxSelection {
         };
 
         setButton.dom.addEventListener('pointerdown', (e) => {
-            e.stopPropagation(); apply('set');
+            e.stopPropagation();
+            apply('set');
         });
         addButton.dom.addEventListener('pointerdown', (e) => {
-            e.stopPropagation(); apply('add');
+            e.stopPropagation();
+            apply('add');
         });
         removeButton.dom.addEventListener('pointerdown', (e) => {
-            e.stopPropagation(); apply('remove');
+            e.stopPropagation();
+            apply('remove');
         });
         lenX.on('change', () => {
             box.lenX = lenX.value;

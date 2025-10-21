@@ -5,16 +5,15 @@ class RectSelection {
     deactivate: () => void;
 
     constructor(events: Events, parent: HTMLElement) {
+        // create svg
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.classList.add('tool-svg', 'hidden');
         svg.id = 'rect-select-svg';
-        svg.classList.add('select-svg');
+        parent.appendChild(svg);
 
         // create rect element
         const rect = document.createElementNS(svg.namespaceURI, 'rect') as SVGRectElement;
-        rect.setAttribute('fill', 'none');
-        rect.setAttribute('stroke', '#f60');
-        rect.setAttribute('stroke-width', '1');
-        rect.setAttribute('stroke-dasharray', '5, 5');
+        svg.appendChild(rect);
 
         const start = { x: 0, y: 0 };
         const end = { x: 0, y: 0 };
@@ -47,7 +46,7 @@ class RectSelection {
 
                 updateRect();
 
-                svg.style.display = 'inline';
+                svg.classList.remove('hidden');
             }
         };
 
@@ -67,7 +66,7 @@ class RectSelection {
         const dragEnd = () => {
             parent.releasePointerCapture(dragId);
             dragId = undefined;
-            svg.style.display = 'none';
+            svg.classList.add('hidden');
         };
 
         const pointerup = (e: PointerEvent) => {
@@ -115,9 +114,6 @@ class RectSelection {
             parent.removeEventListener('pointermove', pointermove);
             parent.removeEventListener('pointerup', pointerup);
         };
-
-        parent.appendChild(svg);
-        svg.appendChild(rect);
     }
 
     destroy() {

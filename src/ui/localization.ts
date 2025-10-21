@@ -185,6 +185,7 @@ const localizeInit = () => {
                     'tooltip.translate': 'Verschieben ( 1 )',
                     'tooltip.rotate': 'Drehen ( 2 )',
                     'tooltip.scale': 'Skalieren ( 3 )',
+                    'tooltip.measure': 'Messung',
                     'tooltip.local-space': 'Gizmo in local-space',
                     'tooltip.bound-center': 'Mittelpunkt verwenden',
 
@@ -447,6 +448,7 @@ const localizeInit = () => {
                     'tooltip.translate': 'Translate ( 1 )',
                     'tooltip.rotate': 'Rotate ( 2 )',
                     'tooltip.scale': 'Scale ( 3 )',
+                    'tooltip.measure': 'Measurement',
                     'tooltip.local-space': 'Use Local Orientation',
                     'tooltip.bound-center': 'Use Bound Center',
 
@@ -704,6 +706,7 @@ const localizeInit = () => {
                     'tooltip.translate': 'Translation ( 1 )',
                     'tooltip.rotate': 'Rotation ( 2 )',
                     'tooltip.scale': 'Échelle ( 3 )',
+                    'tooltip.measure': 'Mesure',
                     'tooltip.local-space': 'Espace local gizmo',
                     'tooltip.bound-center': 'Utiliser le centre de la limite',
 
@@ -952,6 +955,7 @@ const localizeInit = () => {
                     'tooltip.translate': '移動 ( 1 )',
                     'tooltip.rotate': '回転 ( 2 )',
                     'tooltip.scale': 'スケール ( 3 )',
+                    'tooltip.measure': '測定',
                     'tooltip.local-space': 'ローカル座標へ切り替え',
                     'tooltip.bound-center': 'バウンディングボックスの中心を使用',
 
@@ -1199,6 +1203,7 @@ const localizeInit = () => {
                     'tooltip.translate': '이동 ( 1 )',
                     'tooltip.rotate': '회전 ( 2 )',
                     'tooltip.scale': '크기 조정 ( 3 )',
+                    'tooltip.measure': '측정',
                     'tooltip.local-space': '로컬 공간',
                     'tooltip.bound-center': '바운드 중심 사용',
 
@@ -1447,6 +1452,7 @@ const localizeInit = () => {
                     'tooltip.translate': '移动 ( 1 )',
                     'tooltip.rotate': '旋转 ( 2 )',
                     'tooltip.scale': '缩放 ( 3 )',
+                    'tooltip.measure': '测量',
                     'tooltip.local-space': '局部坐标系',
                     'tooltip.bound-center': '使用边界中心',
 

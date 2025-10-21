@@ -19,13 +19,8 @@ const s = new Vec3();
 const t = new Transform();
 
 class MeasureTransformHandler {
-    activate() {
-
-    }
-
-    deactivate() {
-
-    }
+    activate() {}
+    deactivate() {}
 };
 
 class MeasureTool {
@@ -157,7 +152,8 @@ class MeasureTool {
         events.on('selection.changed', (selection: Splat) => {
             splat = selection;
             if (active) {
-                updateVisuals();
+                // for now we always deactive the tool so the current transform handler remains in place
+                events.fire('tool.deactivate');
             }
         });
 
@@ -180,6 +176,7 @@ class MeasureTool {
             }
         });
 
+        const origTransform = new Mat4();
         const origP = new Vec3();
         const origR = new Quat();
         const origS = new Vec3();
@@ -191,6 +188,7 @@ class MeasureTool {
                 return;
             }
 
+            origTransform.copy(splat.worldTransform);
             origP.copy(splat.entity.getLocalPosition());
             origR.copy(splat.entity.getLocalRotation());
             origS.copy(splat.entity.getLocalScale());
@@ -212,8 +210,6 @@ class MeasureTool {
                 return;
             }
 
-            console.log(`applying length=${newLength}`);
-
             const scale = newLength / startLen;
 
             // calculate mid point
@@ -224,7 +220,7 @@ class MeasureTool {
             mat2.setScale(scale, scale, scale);
             mat3.setTranslate(p.x, p.y, p.z);
 
-            mat.mul2(mat1, splat.worldTransform);
+            mat.mul2(mat1, origTransform);
             mat.mul2(mat2, mat);
             mat.mul2(mat3, mat);
 

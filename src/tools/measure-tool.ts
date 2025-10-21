@@ -1,5 +1,6 @@
-import { Entity, Mat4, Quat, TranslateGizmo, Vec3 } from 'playcanvas';
 import { Container, NumericInput } from '@playcanvas/pcui';
+import { Entity, Mat4, Quat, TranslateGizmo, Vec3 } from 'playcanvas';
+
 import { EntityTransformOp } from '../edit-ops';
 import { Events } from '../events';
 import { Scene } from '../scene';
@@ -21,7 +22,7 @@ const t = new Transform();
 class MeasureTransformHandler {
     activate() {}
     deactivate() {}
-};
+}
 
 class MeasureTool {
     activate: () => void;
@@ -341,7 +342,7 @@ class MeasureTool {
                             lineStart.setAttribute('cy', y);
 
                             lineStart.setAttribute('visibility', 'visible');
-                        } else if (i == 1) {
+                        } else if (i === 1) {
                             line.setAttribute('x2', x);
                             line.setAttribute('y2', y);
                             lineEnd.setAttribute('cx', x);

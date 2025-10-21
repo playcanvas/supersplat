@@ -30,7 +30,7 @@ class MeasureTool {
     constructor(events: Events, scene: Scene, parent: HTMLElement, canvasContainer: Container) {
         // create svg
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.classList.add('tool-svg');
+        svg.classList.add('tool-svg', 'hidden');
         svg.id = 'measure-tool-svg';
         parent.appendChild(svg);
 
@@ -76,7 +76,7 @@ class MeasureTool {
         let supressUI = 0;
 
         const selectToolbar = new Container({
-            id: 'select-toolbar',
+            class: 'select-toolbar',
             hidden: true
         });
 
@@ -121,8 +121,6 @@ class MeasureTool {
                 getPoint(0, p0);
                 getPoint(1, p1);
                 const len = p0.distance(p1);
-
-                console.log(`setting len=${len}`);
 
                 supressUI++;
                 lengthInput.value = len;
@@ -193,15 +191,11 @@ class MeasureTool {
             origR.copy(splat.entity.getLocalRotation());
             origS.copy(splat.entity.getLocalScale());
 
-            console.log(`p=${origP.toString()}, r=${origR.toString()}, s=${origS.toString()}`);
-
             getPoint(0, p0);
             getPoint(1, p1);
             mid.sub2(p1, p0);
             startLen = mid.length();
             mid.mulScalar(0.5).add(p0);
-
-            console.log(`stared len=${startLen}`);
         };
 
         // position and scale the splat according to the new length

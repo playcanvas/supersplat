@@ -9,7 +9,7 @@ class LassoSelection {
     constructor(events: Events, parent: HTMLElement, mask: { canvas: HTMLCanvasElement, context: CanvasRenderingContext2D }) {
         // create svg
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.classList.add('tool-svg');
+        svg.classList.add('tool-svg', 'hidden');
         svg.id = 'lasso-select-svg';
         parent.appendChild(svg);
 

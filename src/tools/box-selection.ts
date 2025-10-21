@@ -27,7 +27,7 @@ class BoxSelection {
 
         // ui
         const selectToolbar = new Container({
-            id: 'select-toolbar',
+            class: 'select-toolbar',
             hidden: true
         });
 

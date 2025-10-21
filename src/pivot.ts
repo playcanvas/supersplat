@@ -48,11 +48,6 @@ class Pivot {
         this.end = () => {
             events.fire('pivot.ended', this);
         };
-
-        events.on('pivot.place', this.place);
-        events.on('pivot.start', this.start);
-        events.on('pivot.moveTRS', this.moveTRS);
-        events.on('pivot.end', this.end);
     }
 }
 

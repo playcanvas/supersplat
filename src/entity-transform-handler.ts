@@ -59,7 +59,7 @@ class EntityTransformHandler implements TransformHandler {
         // place initial pivot point
         const origin = this.events.invoke('pivot.origin');
         this.splat.getPivot(origin === 'center' ? 'center' : 'boundCenter', false, transform);
-        this.events.fire('pivot.place', transform);
+        this.events.invoke('pivot').place(transform);
     }
 
     activate() {

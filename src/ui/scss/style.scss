@@ -168,6 +168,9 @@ body {
     width: 100%;
     height: 100%;
     cursor: crosshair;
+    &.noevents {
+        pointer-events: none;
+    }
 }
 
 #canvas {

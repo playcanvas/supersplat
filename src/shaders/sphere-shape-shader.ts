@@ -54,8 +54,6 @@ const fragmentShader = /* glsl */ `
 
     uniform vec2 targetSize;
 
-    uniform float stripSize;
-
     bool writeDepth(float alpha) {
         vec2 uv = fract(gl_FragCoord.xy / 32.0);
         float noise = texture2DLod(blueNoiseTex32, uv, 0.0).y;
@@ -64,9 +62,11 @@ const fragmentShader = /* glsl */ `
 
     bool strips(vec3 lp) {
         vec2 ae = calcAzimuthElev(normalize(lp));
+
         float spacing = 180.0 / (2.0 * 3.14159 * sphere.w);
-        return fract(ae.x / spacing) < stripSize ||
-               fract(ae.y / spacing) < stripSize;
+        float size = 0.03;
+        return fract(ae.x / spacing) < size ||
+               fract(ae.y / spacing) < size;
     }
 
     void main() {
@@ -88,11 +88,7 @@ const fragmentShader = /* glsl */ `
         bool back = strips(backPos - sphere.xyz);
 
         if (front) {
-        #if UNDERLAY_PASS
-            gl_FragColor = vec4(0.6, 0.3, 0.0, 1.0);
-        #else
-            gl_FragColor = vec4(0.4, 0.7, 1.0, 1.0);
-        #endif
+            gl_FragColor = vec4(1.0, 1.0, 1.0, 0.6);
             gl_FragDepth = writeDepth(0.6) ? calcDepth(frontPos, matrix_viewProjection) : 1.0;
         } else if (back) {
             gl_FragColor = vec4(0.0, 0.0, 0.0, 0.6);

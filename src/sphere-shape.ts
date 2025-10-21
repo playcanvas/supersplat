@@ -20,7 +20,6 @@ const bound = new BoundingBox();
 
 class SphereShape extends Element {
     _radius = 1;
-    stripSize = 0.03;
     pivot: Entity;
     material: ShaderMaterial;
 
@@ -42,19 +41,15 @@ class SphereShape extends Element {
             fragmentGLSL: fragmentShader
         });
         material.cull = CULLFACE_FRONT;
-        // material.blendState = new BlendState(
-        //     true,
-        //     BLENDEQUATION_ADD, BLENDMODE_SRC_ALPHA, BLENDMODE_ONE_MINUS_SRC_ALPHA,
-        //     BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE_MINUS_SRC_ALPHA
-        // );
-        material.blendState = BlendState.NOBLEND;
+        material.blendState = new BlendState(
+            true,
+            BLENDEQUATION_ADD, BLENDMODE_SRC_ALPHA, BLENDMODE_ONE_MINUS_SRC_ALPHA,
+            BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE_MINUS_SRC_ALPHA
+        );
         material.update();
 
         this.pivot.render.meshInstances[0].material = material;
-        this.pivot.render.layers = [
-            this.scene.overlayLayer.id,
-            this.scene.debugLayer.id
-        ];
+        this.pivot.render.layers = [this.scene.debugLayer.id];
 
         this.material = material;
 
@@ -83,7 +78,6 @@ class SphereShape extends Element {
 
         const device = this.scene.graphicsDevice;
         device.scope.resolve('targetSize').setValue([device.width, device.height]);
-        device.scope.resolve('stripSize').setValue(this.stripSize);
     }
 
     moved() {

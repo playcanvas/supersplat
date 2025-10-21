@@ -18,11 +18,11 @@ const localizeInit = () => {
                     'file.new': 'Neu',
                     'file.open': 'Öffnen',
                     'file.import': 'Importieren...',
-                    'file.load-all-data': 'PLY-Daten vollständig laden',
                     'file.save': 'Speichern',
                     'file.save-as': 'Speichern als...',
                     'file.publish': 'Veröffentlichen...',
                     'file.export': 'Exportieren',
+                    'file.export.ply': 'PLY (.ply)',
                     'file.export.splat': 'Splat',
                     'file.export.viewer': 'Viewer App...',
 
@@ -32,6 +32,8 @@ const localizeInit = () => {
                     'render.video': 'Video...',
                     'render.ok': 'Rendern',
                     'render.cancel': 'Abbrechen',
+                    'render.render-video': 'Video rendern',
+                    'render.rendering': 'Frames werden gerendert...',
 
                     // Selection menu
                     'select': 'Auswahl',
@@ -132,6 +134,7 @@ const localizeInit = () => {
                     'shortcuts.scale': 'Skalieren',
                     'shortcuts.rect-selection': 'Rechteckselektion',
                     'shortcuts.brush-selection': 'Pinselselektion',
+                    'shortcuts.flood-selection': 'Füllselektion',
                     'shortcuts.picker-selection': 'Einzelselektion',
                     'shortcuts.brush-size': 'Pinsel Verkleinern/Vergrößern',
                     'shortcuts.deactivate-tool': 'Werkzeug deaktivieren',
@@ -180,6 +183,7 @@ const localizeInit = () => {
                     'tooltip.picker': 'Einzelselektion ( R )',
                     'tooltip.polygon': 'Polygonselektion ( P )',
                     'tooltip.brush': 'Pinselselektion ( B )',
+                    'tooltip.flood': 'Füllselektion ( O )',
                     'tooltip.sphere': 'Kugelselektion',
                     'tooltip.box': 'Kastenselektion',
                     'tooltip.translate': 'Verschieben ( 1 )',
@@ -240,6 +244,15 @@ const localizeInit = () => {
                     'publish.to': 'Veröffentlichen in',
                     'publish.new-scene': 'Neue Szene',
 
+                    // Image Settings Dialog
+                    'image.header': 'BILD EINSTELLUNGEN',
+                    'image.preset': 'Vorgabe',
+                    'image.resolution': 'Auflösung',
+                    'image.transparentBg': 'Transparenter Hintergrund',
+                    'image.showDebug': 'Debug-Überlagerungen anzeigen',
+                    'image.resolutionCurrent': 'Aktuell',
+                    'image.resolutionCustom': 'Benutzerdefiniert',
+
                     // Video Settings Dialog
                     'video.header': 'VIDEO EINSTELLUNGEN',
                     'video.resolution': 'Auflösung',
@@ -267,7 +280,6 @@ const localizeInit = () => {
                     'file.new': 'New',
                     'file.open': 'Open',
                     'file.import': 'Import...',
-                    'file.load-all-data': 'Load all PLY data',
                     'file.save': 'Save',
                     'file.save-as': 'Save As...',
                     'file.publish': 'Publish...',
@@ -539,11 +551,11 @@ const localizeInit = () => {
                     'file.new': 'Créer',
                     'file.open': 'Ouvrir',
                     'file.import': 'Importer...',
-                    'file.load-all-data': 'Charger toutes les données ply',
                     'file.save': 'Enregistrer',
                     'file.save-as': 'Enregistrer sous...',
                     'file.publish': 'Publier...',
                     'file.export': 'Exporter',
+                    'file.export.ply': 'PLY (.ply)',
                     'file.export.splat': 'Fichier splat',
                     'file.export.viewer': 'Application de visualisation...',
 
@@ -553,6 +565,8 @@ const localizeInit = () => {
                     'render.video': 'Vidéo...',
                     'render.ok': 'Rendu',
                     'render.cancel': 'Annuler',
+                    'render.render-video': 'Rendre la Vidéo',
+                    'render.rendering': 'Rendu des Frames...',
 
                     // Selection menu
                     'select': 'Sélection',
@@ -653,6 +667,7 @@ const localizeInit = () => {
                     'shortcuts.scale': 'Changer l\'échelle',
                     'shortcuts.rect-selection': 'Sélection avec rectangle',
                     'shortcuts.brush-selection': 'Sélection avec pinceau',
+                    'shortcuts.flood-selection': 'Sélection par remplissage',
                     'shortcuts.picker-selection': 'Sélection avec pipette',
                     'shortcuts.brush-size': 'Augmenter/Diminuer la taille du pinceau',
                     'shortcuts.deactivate-tool': 'Désactiver l\'outil',
@@ -701,6 +716,7 @@ const localizeInit = () => {
                     'tooltip.picker': 'Sélection avec pipette ( R )',
                     'tooltip.polygon': 'Sélection avec polygone ( P )',
                     'tooltip.brush': 'Sélection avec pinceau ( B )',
+                    'tooltip.flood': 'Sélection par remplissage ( O )',
                     'tooltip.sphere': 'Sélection avec sphère',
                     'tooltip.box': 'Sélection de boîte',
                     'tooltip.translate': 'Translation ( 1 )',
@@ -761,6 +777,15 @@ const localizeInit = () => {
                     'publish.to': 'Publier sur',
                     'publish.new-scene': 'Nouvelle scène',
 
+                    // Image Settings Dialog
+                    'image.header': 'PARAMETRES IMAGE',
+                    'image.preset': 'Préréglage',
+                    'image.resolution': 'Résolution',
+                    'image.transparentBg': 'Fond transparent',
+                    'image.showDebug': 'Afficher les superpositions de débogage',
+                    'image.resolutionCurrent': 'Actuelle',
+                    'image.resolutionCustom': 'Personnalisée',
+
                     // Video Settings Dialog
                     'video.header': 'PARAMETRES VIDEO',
                     'video.resolution': 'Résolution',
@@ -788,11 +813,11 @@ const localizeInit = () => {
                     'file.new': '新規作成',
                     'file.open': '開く',
                     'file.import': 'インポート...',
-                    'file.load-all-data': '全てのPLYデータを読み込む',
                     'file.save': '保存',
                     'file.save-as': '名前を付けて保存',
                     'file.publish': '公開...',
                     'file.export': 'エクスポート',
+                    'file.export.ply': 'PLY (.ply)',
                     'file.export.splat': 'Splat (.splat)',
                     'file.export.viewer': 'Viewer App...',
 
@@ -802,6 +827,8 @@ const localizeInit = () => {
                     'render.video': '動画...',
                     'render.ok': 'レンダリング',
                     'render.cancel': 'キャンセル',
+                    'render.render-video': 'ビデオをレンダリング',
+                    'render.rendering': 'フレームをレンダリング中...',
 
                     // Selection menu
                     'select': '選択',
@@ -902,6 +929,7 @@ const localizeInit = () => {
                     'shortcuts.scale': 'スケール',
                     'shortcuts.rect-selection': '四角形選択',
                     'shortcuts.brush-selection': 'ブラシ選択',
+                    'shortcuts.flood-selection': 'フラッド選択',
                     'shortcuts.picker-selection': 'ピッカー選択',
                     'shortcuts.brush-size': 'ブラシサイズの増減',
                     'shortcuts.deactivate-tool': 'ツールの非アクティブ化',
@@ -950,6 +978,7 @@ const localizeInit = () => {
                     'tooltip.picker': 'ピッカー選択 ( R )',
                     'tooltip.polygon': 'ポリゴン選択 ( P )',
                     'tooltip.brush': 'ブラシ選択 ( B )',
+                    'tooltip.flood': 'フラッド選択 ( O )',
                     'tooltip.sphere': '球で選択',
                     'tooltip.box': '箱で選択',
                     'tooltip.translate': '移動 ( 1 )',
@@ -1010,6 +1039,15 @@ const localizeInit = () => {
                     'publish.to': 'に公開',
                     'publish.new-scene': '新しいシーン',
 
+                    // Image Settings Dialog
+                    'image.header': '画像設定',
+                    'image.preset': 'プリセット',
+                    'image.resolution': '解像度',
+                    'image.transparentBg': '透明な背景',
+                    'image.showDebug': 'デバッグオーバーレイを表示',
+                    'image.resolutionCurrent': '現在',
+                    'image.resolutionCustom': 'カスタム',
+
                     // Video Settings Dialog
                     'video.header': 'ビデオ設定',
                     'video.resolution': '解像度',
@@ -1037,11 +1075,11 @@ const localizeInit = () => {
                     'file.new': '새로 만들기',
                     'file.open': '열기',
                     'file.import': '가져오기...',
-                    'file.load-all-data': '모든 PLY 데이터 불러오기',
                     'file.save': '저장',
                     'file.save-as': '다른 이름으로 저장...',
                     'file.publish': '게시...',
                     'file.export': '내보내기',
+                    'file.export.ply': 'PLY (.ply)',
                     'file.export.splat': 'Splat 파일',
                     'file.export.viewer': '뷰어 앱...',
 
@@ -1051,6 +1089,8 @@ const localizeInit = () => {
                     'render.video': '비디오...',
                     'render.ok': '렌더링',
                     'render.cancel': '취소',
+                    'render.render-video': '비디오 렌더링',
+                    'render.rendering': '프레임 렌더링 중...',
 
                     // Selection menu
                     'select': '선택',
@@ -1114,6 +1154,7 @@ const localizeInit = () => {
                     'colors': '색상',
                     'colors.tint': '색조',
                     'colors.temperature': '온도',
+                    'colors.saturation': '채도',
                     'colors.brightness': '밝기',
                     'colors.blackPoint': '검은 점',
                     'colors.whitePoint': '흰 점',
@@ -1150,6 +1191,7 @@ const localizeInit = () => {
                     'shortcuts.scale': '크기 조정',
                     'shortcuts.rect-selection': '사각형 선택',
                     'shortcuts.brush-selection': '브러시 선택',
+                    'shortcuts.flood-selection': '플러드 선택',
                     'shortcuts.picker-selection': '피커 선택',
                     'shortcuts.brush-size': '브러시 크기 조정',
                     'shortcuts.deactivate-tool': '도구 비활성화',
@@ -1198,6 +1240,7 @@ const localizeInit = () => {
                     'tooltip.picker': '피커 선택 ( R )',
                     'tooltip.polygon': '다각형 선택 ( P )',
                     'tooltip.brush': '브러시 선택 ( B )',
+                    'tooltip.flood': '플러드 선택 ( O )',
                     'tooltip.sphere': '구 선택',
                     'tooltip.box': '상자 선택',
                     'tooltip.translate': '이동 ( 1 )',
@@ -1258,6 +1301,15 @@ const localizeInit = () => {
                     'publish.to': '다음에 게시',
                     'publish.new-scene': '새 장면',
 
+                    // Image Settings Dialog
+                    'image.header': '이미지 설정',
+                    'image.preset': '프리셋',
+                    'image.resolution': '해상도',
+                    'image.transparentBg': '투명 배경',
+                    'image.showDebug': '디버그 오버레이 표시',
+                    'image.resolutionCurrent': '현재',
+                    'image.resolutionCustom': '사용자 정의',
+
                     // Video Settings Dialog
                     'video.header': '비디오 설정',
                     'video.resolution': '해상도',
@@ -1285,11 +1337,11 @@ const localizeInit = () => {
                     'file.new': '新建',
                     'file.open': '打开',
                     'file.import': '导入...',
-                    'file.load-all-data': '加载所有 PLY 数据',
                     'file.save': '保存',
                     'file.save-as': '另存为...',
                     'file.publish': '发布...',
                     'file.export': '导出',
+                    'file.export.ply': 'PLY (.ply)',
                     'file.export.splat': 'Splat 文件',
                     'file.export.viewer': '查看器应用...',
 
@@ -1299,6 +1351,8 @@ const localizeInit = () => {
                     'render.video': '视频...',
                     'render.ok': '渲染',
                     'render.cancel': '取消',
+                    'render.render-video': '渲染视频',
+                    'render.rendering': '正在渲染帧...',
 
                     // Selection menu
                     'select': '选择',
@@ -1399,6 +1453,7 @@ const localizeInit = () => {
                     'shortcuts.scale': '缩放',
                     'shortcuts.rect-selection': '矩形选择',
                     'shortcuts.brush-selection': '画笔选择',
+                    'shortcuts.flood-selection': '填充选择',
                     'shortcuts.picker-selection': '拾取选择',
                     'shortcuts.brush-size': '减小/增大画笔大小',
                     'shortcuts.deactivate-tool': '停用工具',
@@ -1447,6 +1502,7 @@ const localizeInit = () => {
                     'tooltip.picker': '选择器 ( R )',
                     'tooltip.polygon': '多边形选择 ( P )',
                     'tooltip.brush': '画笔 ( B )',
+                    'tooltip.flood': '填充选择 ( O )',
                     'tooltip.sphere': '球选择',
                     'tooltip.box': '盒选择',
                     'tooltip.translate': '移动 ( 1 )',
@@ -1506,6 +1562,15 @@ const localizeInit = () => {
                     'publish.uploading': '上传中...',
                     'publish.to': '发布到',
                     'publish.new-scene': '新场景',
+
+                    // Image Settings Dialog
+                    'image.header': '图像设置',
+                    'image.preset': '预设',
+                    'image.resolution': '分辨率',
+                    'image.transparentBg': '透明背景',
+                    'image.showDebug': '显示调试覆盖',
+                    'image.resolutionCurrent': '当前',
+                    'image.resolutionCustom': '自定义',
 
                     // Video Settings Dialog
                     'video.header': '视频设置',

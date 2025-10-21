@@ -74,7 +74,7 @@ class MeasureTool {
             min: 0.0001,
             value: 0
         });
-        let supressUI = 0;
+        let suppressUI = 0;
 
         const selectToolbar = new Container({
             class: 'select-toolbar',
@@ -123,10 +123,10 @@ class MeasureTool {
                 getPoint(1, p1);
                 const len = p0.distance(p1);
 
-                supressUI++;
+                suppressUI++;
                 lengthInput.value = len;
                 lengthInput.enabled = true;
-                supressUI--;
+                suppressUI--;
             } else {
                 lengthInput.enabled = false;
             }
@@ -151,7 +151,7 @@ class MeasureTool {
         events.on('selection.changed', (selection: Splat) => {
             splat = selection;
             if (active) {
-                // for now we always deactive the tool so the current transform handler remains in place
+                // for now we always deactivate the tool so the current transform handler remains in place
                 events.fire('tool.deactivate');
             }
         });
@@ -251,7 +251,7 @@ class MeasureTool {
         lengthInput.on('change', (value) => {
             if (dragging) {
                 applyLength(value);
-            } else if (!supressUI) {
+            } else if (!suppressUI) {
                 startScale();
                 applyLength(value);
                 endScale();
@@ -290,20 +290,20 @@ class MeasureTool {
             if (splat && clicked && isPrimary(e)) {
                 clicked = false;
 
-                let closesIdx = -1;
+                let closestIdx = -1;
 
-                // check for interesection with existing point
+                // check for intersection with existing point
                 for (let i = 0; i < splat.measurePoints.length; i++) {
                     getPoint2d(i, p);
 
                     if (Math.abs(p.x - e.offsetX) < 8 && Math.abs(p.y - e.offsetY) < 8) {
-                        closesIdx = i;
+                        closestIdx = i;
                         break;
                     }
                 }
 
-                if (closesIdx >= 0) {
-                    splat.measureSelection = closesIdx;
+                if (closestIdx >= 0) {
+                    splat.measureSelection = closestIdx;
                     updateVisuals();
                     return;
                 }

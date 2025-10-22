@@ -5,7 +5,6 @@ import { localize } from './ui/localization';
 
 type User = {
     id: string;
-    username: string;
     token: string;
     apiServer: string;
 };
@@ -231,7 +230,7 @@ const registerPublishEvents = (events: Events) => {
 
     events.function('publish.userStatus', async () => {
         const user = await fetchUser();
-        if (!user || !user.username) {
+        if (!user) {
             return null;
         }
         const scenes = await fetchSceneList(user);

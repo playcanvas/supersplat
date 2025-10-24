@@ -170,6 +170,8 @@ const loadImagesTxt = async (file: ImportFile, events: Events) => {
     .filter((_, i) => i % 2 === 0) // only need the first line of each pair
     .map((line, i) => {
         const parts = line.split(' ');
+        const name = parts[9];
+        const order = parseInt(removeExtension(name).match(/\d+$/)?.[0], 10);
         return parts.length === 10 && {
             w: parseFloat(parts[1]),
             x: parseFloat(parts[2]),
@@ -178,8 +180,8 @@ const loadImagesTxt = async (file: ImportFile, events: Events) => {
             tx: parseFloat(parts[5]),
             ty: parseFloat(parts[6]),
             tz: parseFloat(parts[7]),
-            name: parts[9] ?? `${file.filename}_${i}`,
-            order: parseInt(removeExtension(parts[9]).match(/\d*$/)?.[0] ?? i.toString(), 10)
+            name: name ?? `${file.filename}_${i}`,
+            order: isFinite(order) ? order : i
         };
     })
     .filter(entry => !!entry)
@@ -303,7 +305,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
 
     // figure out what the set of files are (ply sequence, document, sog set, ply) and then import them
     const importFiles = async (files: ImportFile[], animationFrame = false) => {
-        const filenames = files.map(f => f.filename.toLocaleLowerCase());
+        const filenames = files.map(f => f.filename.toLowerCase());
 
         const result = [];
 
@@ -320,7 +322,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         } else {
             // check for unrecognized file types
             for (let i = 0; i < filenames.length; i++) {
-                const filename = filenames[i].toLocaleLowerCase();
+                const filename = filenames[i].toLowerCase();
                 if (['.ssproj', '.ply', '.splat', '.sog', '.webp', 'images.txt', '.json'].every(ext => !filename.endsWith(ext))) {
                     await showLoadError('Unrecognized file type', filename);
                     return;

@@ -1,4 +1,5 @@
 import { EditOp, MultiOp } from './edit-ops';
+import { Element } from './element';
 import { Events } from './events';
 import { Splat } from './splat';
 
@@ -26,6 +27,11 @@ class EditHistory {
         events.on('edit.add', (editOp: EditOp, suppressOp = false) => {
             this.add(editOp, suppressOp);
         });
+
+        // listen to scene element removal event, automatically clean up related history
+        events.on('scene.elementRemoved', (element: Element) => {
+            this.removeByElement(element);
+        });
     }
 
     add(editOp: EditOp, suppressOp = false) {
@@ -36,19 +42,9 @@ class EditHistory {
         this.redo(suppressOp);
     }
 
-    removeBySplat(element: Element) {
-        const isRelatedToSplat = (editOp: EditOp): boolean => {
-
-            if ('splat' in editOp && editOp.splat === (element as unknown as Splat)) return true;
-
-            if ('ops' in editOp && Array.isArray((editOp as MultiOp).ops)) {
-                return (editOp as MultiOp).ops.some(isRelatedToSplat);
-            }
-            return false;
-        };
-
+    removeByElement(element: Element) {
         this.history = this.history.filter((editOp) => {
-            if (isRelatedToSplat(editOp)) {
+            if (editOp.isRelatedToElement?.(element)) {
                 editOp.destroy?.();
                 return false;
             }

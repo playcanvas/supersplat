@@ -1,4 +1,4 @@
-import { Vec3 } from 'playcanvas';
+import { path, Quat, Vec3 } from 'playcanvas';
 
 import { CreateDropHandler } from './drop-handler';
 import { ElementType } from './element';
@@ -114,9 +114,11 @@ type ImportFile = {
 
 const vec = new Vec3();
 
+// load inria camera poses from json file
 const loadCameraPoses = async (file: ImportFile, events: Events) => {
     const response = new Response(file.contents);
     const json = await response.json();
+
     if (json.length > 0) {
         // calculate the average position of the camera poses
         const ave = new Vec3(0, 0, 0);
@@ -152,6 +154,59 @@ const loadCameraPoses = async (file: ImportFile, events: Events) => {
     }
 };
 
+const removeExtension = (filename: string) => {
+    return filename.substring(0, filename.length - path.getExtension(filename).length);
+};
+
+// https://colmap.github.io/format.html#images-txt
+const loadImagesTxt = async (file: ImportFile, events: Events) => {
+    const response = new Response(file.contents);
+    const text = await response.text();
+
+    // split into lines, remove comments and empty lines
+    const poses = text.split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0 && !line.startsWith('#'))
+    .filter((_, i) => i % 2 === 0) // only need the first line of each pair
+    .map((line, i)=> {
+        const parts = line.split(' ');
+        return parts.length === 10 && {
+            w: parseFloat(parts[1]),
+            x: parseFloat(parts[2]),
+            y: parseFloat(parts[3]),
+            z: parseFloat(parts[4]),
+            tx: parseFloat(parts[5]),
+            ty: parseFloat(parts[6]),
+            tz: parseFloat(parts[7]),
+            name: parts[9] ?? `${file.filename}_${i}`,
+            order: parseInt(removeExtension(parts[9]).match(/\d*$/)?.[0] ?? i.toString(), 10)
+        };
+    })
+    .filter(entry => !!entry)
+    .sort((a, b) => (a.order < b.order ? -1 : 1));
+
+    const q = new Quat();
+    const t = new Vec3();
+
+    poses.forEach((pose, i) => {
+        const { w, x, y, z, tx, ty, tz } = pose;
+
+        q.set(x, y, z, w).normalize().invert();
+        t.set(-tx, -ty, -tz);
+        q.transformVector(t, t);
+
+        q.transformVector(Vec3.BACK, vec);
+        vec.mulScalar(10).add(t);
+
+        events.fire('camera.addPose', {
+            name: pose.name,
+            frame: i,
+            position: new Vec3(-t.x, -t.y, t.z),
+            target: new Vec3(-vec.x, -vec.y, vec.z)
+        });
+    });
+};
+
 // initialize file handler events
 const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) => {
 
@@ -177,10 +232,6 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         } catch (error) {
             await showLoadError(error.message ?? error, file.filename);
         }
-    };
-
-    const importCameraPoses = async (file: ImportFile) => {
-        await loadCameraPoses(file, events);
     };
 
     const importSog = async (files: ImportFile[], animationFrame: boolean) => {
@@ -261,7 +312,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             events.fire('plysequence.setFrames', files.map(f => f.contents));
             events.fire('timeline.frame', 0);
         } else if (isSog(filenames)) {
-            // import sog files
+            // import unbundled sog model
             result.push(await importSog(files, animationFrame));
         }  else if (isLcc(filenames)) {
             // import lcc files
@@ -269,8 +320,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         } else {
             // check for unrecognized file types
             for (let i = 0; i < filenames.length; i++) {
-                const filename = filenames[i];
-                if (!filename.endsWith('.ssproj') && !filename.endsWith('.json') && !filename.endsWith('.ply') && !filename.endsWith('.splat') && !filename.endsWith('.sog') && !filename.endsWith('.webp')) {
+                const filename = filenames[i].toLocaleLowerCase();
+                if (['.ssproj', '.ply', '.splat', '.sog', '.webp', 'images.txt', '.json'].every(ext => !filename.endsWith(ext))) {
                     await showLoadError('Unrecognized file type', filename);
                     return;
                 }
@@ -278,12 +329,20 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
 
             // handle multiple files as independent imports
             for (let i = 0; i < files.length; i++) {
-                if (filenames[i].endsWith('.ssproj')) {
+                const filename = filenames[i].toLowerCase();
+
+                if (filename.endsWith('.ssproj')) {
+                    // load ssproj document
                     await events.invoke('doc.load', files[i].contents ?? (await fetch(files[i].url)).arrayBuffer());
-                } else if (filenames[i].endsWith('.json')) {
-                    await importCameraPoses(files[i]);
-                } else if (filenames[i].endsWith('.ply') || filenames[i].endsWith('.splat') || filenames[i].endsWith('.sog')) {
+                } else if (['.ply', '.splat', '.sog'].some(ext => filename.endsWith(ext))) {
+                    // load gaussian splat model
                     result.push(await importFile(files[i], animationFrame));
+                } else if (filename.endsWith('images.txt')) {
+                    // load colmap frames
+                    await loadImagesTxt(files[i], events);
+                } else if (filename.endsWith('.json')) {
+                    // load inria camera poses
+                    await loadCameraPoses(files[i], events);
                 }
             }
         }

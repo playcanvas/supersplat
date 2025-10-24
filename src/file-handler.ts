@@ -168,7 +168,7 @@ const loadImagesTxt = async (file: ImportFile, events: Events) => {
     .map(line => line.trim())
     .filter(line => line.length > 0 && !line.startsWith('#'))
     .filter((_, i) => i % 2 === 0) // only need the first line of each pair
-    .map((line, i)=> {
+    .map((line, i) => {
         const parts = line.split(' ');
         return parts.length === 10 && {
             w: parseFloat(parts[1]),

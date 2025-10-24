@@ -36,6 +36,12 @@ const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
             'application/ply': ['.ply']
         }
     },
+    'compressedPly': {
+        description: 'Compressed Gaussian Splat PLY File',
+        accept: {
+            'application/ply': ['.compressed.ply']
+        }
+    },
     'sog': {
         description: 'SOG Scene',
         accept: {
@@ -56,6 +62,12 @@ const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
             'application/x-gaussian-splat': ['.splat']
         }
     },
+    'indexTxt': {
+        description: 'Colmap Poses (Images.txt)',
+        accept: {
+            'text/plain': ['.txt']
+        }
+    },
     'htmlViewer': {
         description: 'Viewer HTML',
         accept: {
@@ -67,6 +79,18 @@ const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
         accept: {
             'application/zip': ['.zip']
         }
+    }
+};
+
+const allImportTypes = {
+    description: 'Supported files',
+    accept: {
+        'application/ply': ['.ply'],
+        'application/x-gaussian-splat': ['.json', '.sog', '.splat'],
+        'image/webp': ['.webp'],
+        'application/json': ['.lcc'],
+        'application/octet-stream': ['.bin'],
+        'text/plain': ['.txt']
     }
 };
 
@@ -362,7 +386,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         fileSelector = document.createElement('input');
         fileSelector.setAttribute('id', 'file-selector');
         fileSelector.setAttribute('type', 'file');
-        fileSelector.setAttribute('accept', '.ply,.splat,meta.json,.json,.webp,.ssproj,.sog,.lcc,.bin');
+        fileSelector.setAttribute('accept', '.ply,.splat,meta.json,.json,.webp,.ssproj,.sog,.lcc,.bin,.txt');
         fileSelector.setAttribute('multiple', 'true');
 
         fileSelector.onchange = () => {
@@ -417,11 +441,15 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                 const handles = await window.showOpenFilePicker({
                     id: 'SuperSplatFileImport',
                     multiple: true,
+                    excludeAcceptAllOption: false,
                     types: [
+                        allImportTypes,
                         filePickerTypes.ply,
+                        filePickerTypes.compressedPly,
                         filePickerTypes.splat,
                         filePickerTypes.sog,
-                        filePickerTypes.lcc
+                        filePickerTypes.lcc,
+                        filePickerTypes.indexTxt
                     ]
                 });
 

@@ -39,7 +39,7 @@ const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
     'compressedPly': {
         description: 'Compressed Gaussian Splat PLY File',
         accept: {
-            'application/ply': ['.compressed.ply']
+            'application/ply': ['.ply']
         }
     },
     'sog': {
@@ -83,7 +83,7 @@ const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
 };
 
 const allImportTypes = {
-    description: 'Supported files',
+    description: 'Supported Files',
     accept: {
         'application/ply': ['.ply'],
         'application/x-gaussian-splat': ['.json', '.sog', '.splat'],

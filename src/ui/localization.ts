@@ -25,6 +25,7 @@ const localizeInit = () => {
                     'file.export.ply': 'PLY (.ply)',
                     'file.export.splat': 'Splat',
                     'file.export.viewer': 'Viewer App...',
+                    'file.export.preview': 'Vorschau',
 
                     // Render menu
                     'render': 'Rendern',
@@ -175,6 +176,7 @@ const localizeInit = () => {
                     'tooltip.frame-selection': 'Rechteckselektion ( F )',
                     'tooltip.camera-reset': 'Kamera zurücksetzen',
                     'tooltip.color-panel': 'Farben',
+                    'tooltip.keyframe-panel': 'Keyframe',
                     'tooltip.view-options': 'Anzeige Optionen',
 
                     // Bottom toolbar
@@ -270,7 +272,12 @@ const localizeInit = () => {
                     'timeline.remove-key': 'Key entfernen',
                     'timeline.frame-rate': 'Bildrate',
                     'timeline.total-frames': 'Gesamtanzahl der Frames',
-                    'timeline.smoothness': 'Weichheit'
+                    'timeline.smoothness': 'Weichheit',
+
+                    // Keyframe Panel
+                    'keyframe': 'KEYFRAME',
+                    'keyframe.title': 'Titel',
+                    'keyframe.description': 'Beschreibung'
                 }
             },
             en: {
@@ -287,6 +294,7 @@ const localizeInit = () => {
                     'file.export.ply': 'PLY (.ply)',
                     'file.export.splat': 'Splat file (.splat)',
                     'file.export.viewer': 'Viewer App...',
+                    'file.export.preview': 'Preview',
 
                     // Render menu
                     'render': 'Render',
@@ -446,6 +454,7 @@ const localizeInit = () => {
                     'tooltip.frame-selection': 'Frame Selection ( F )',
                     'tooltip.camera-reset': 'Reset Camera',
                     'tooltip.color-panel': 'Colors',
+                    'tooltip.keyframe-panel': 'Keyframe',
                     'tooltip.view-options': 'View Options',
 
                     // Bottom toolbar
@@ -541,7 +550,12 @@ const localizeInit = () => {
                     'timeline.remove-key': 'Remove Key',
                     'timeline.frame-rate': 'Frame Rate',
                     'timeline.total-frames': 'Total Frames',
-                    'timeline.smoothness': 'Smoothness'
+                    'timeline.smoothness': 'Smoothness',
+
+                    // Keyframe Panel
+                    'keyframe': 'KEYFRAME',
+                    'keyframe.title': 'Title',
+                    'keyframe.description': 'Description'
                 }
             },
             fr: {
@@ -558,6 +572,7 @@ const localizeInit = () => {
                     'file.export.ply': 'PLY (.ply)',
                     'file.export.splat': 'Fichier splat',
                     'file.export.viewer': 'Application de visualisation...',
+                    'file.export.preview': 'Aperçu',
 
                     // Render menu
                     'render': 'Rendu',
@@ -708,6 +723,7 @@ const localizeInit = () => {
                     'tooltip.frame-selection': 'Cadrer la sélection ( F )',
                     'tooltip.camera-reset': 'Réinitialiser la caméra',
                     'tooltip.color-panel': 'Couleurs',
+                    'tooltip.keyframe-panel': 'Keyframe',
                     'tooltip.view-options': 'Options d\'affichage',
 
                     // Bottom toolbar
@@ -803,7 +819,12 @@ const localizeInit = () => {
                     'timeline.remove-key': 'Supprimer une clé',
                     'timeline.frame-rate': 'Fréquence d\'image',
                     'timeline.total-frames': 'Nombre total de frames',
-                    'timeline.smoothness': 'Douceur'
+                    'timeline.smoothness': 'Douceur',
+
+                    // Keyframe Panel
+                    'keyframe': 'KEYFRAME',
+                    'keyframe.title': 'Titre',
+                    'keyframe.description': 'Description'
                 }
             },
             ja: {
@@ -820,6 +841,7 @@ const localizeInit = () => {
                     'file.export.ply': 'PLY (.ply)',
                     'file.export.splat': 'Splat (.splat)',
                     'file.export.viewer': 'Viewer App...',
+                    'file.export.preview': 'プレビュー',
 
                     // Render menu
                     'render': 'レンダリング',
@@ -970,6 +992,7 @@ const localizeInit = () => {
                     'tooltip.frame-selection': '選択をフレームイン ( F )',
                     'tooltip.camera-reset': 'カメラをリセット',
                     'tooltip.color-panel': '色',
+                    'tooltip.keyframe-panel': 'キーフレーム',
                     'tooltip.view-options': '表示オプション',
 
                     // Bottom toolbar
@@ -1065,7 +1088,12 @@ const localizeInit = () => {
                     'timeline.remove-key': 'キーフレームを削除',
                     'timeline.frame-rate': 'フレームレート',
                     'timeline.total-frames': '総フレーム数',
-                    'timeline.smoothness': 'スムーズさ'
+                    'timeline.smoothness': 'スムーズさ',
+
+                    // Keyframe Panel
+                    'keyframe': 'キーフレーム',
+                    'keyframe.title': 'タイトル',
+                    'keyframe.description': '説明'
                 }
             },
             ko: {
@@ -1082,6 +1110,7 @@ const localizeInit = () => {
                     'file.export.ply': 'PLY (.ply)',
                     'file.export.splat': 'Splat 파일',
                     'file.export.viewer': '뷰어 앱...',
+                    'file.export.preview': '미리보기',
 
                     // Render menu
                     'render': '렌더링',
@@ -1232,6 +1261,7 @@ const localizeInit = () => {
                     'tooltip.frame-selection': '프레임 선택 ( F )',
                     'tooltip.camera-reset': '카메라 재설정',
                     'tooltip.color-panel': '색상',
+                    'tooltip.keyframe-panel': '키프레임',
                     'tooltip.view-options': '보기 옵션',
 
                     // Bottom toolbar
@@ -1327,7 +1357,12 @@ const localizeInit = () => {
                     'timeline.remove-key': '키 제거',
                     'timeline.frame-rate': '프레임 속도',
                     'timeline.total-frames': '총 프레임 수',
-                    'timeline.smoothness': '부드러움'
+                    'timeline.smoothness': '부드러움',
+
+                    // Keyframe Panel
+                    'keyframe': '키프레임',
+                    'keyframe.title': '제목',
+                    'keyframe.description': '설명'
                 }
             },
             'zh-CN': {
@@ -1344,6 +1379,7 @@ const localizeInit = () => {
                     'file.export.ply': 'PLY (.ply)',
                     'file.export.splat': 'Splat 文件',
                     'file.export.viewer': '查看器应用...',
+                    'file.export.preview': '预览',
 
                     // Render menu
                     'render': '渲染',
@@ -1494,6 +1530,7 @@ const localizeInit = () => {
                     'tooltip.frame-selection': '框选 ( F )',
                     'tooltip.camera-reset': '重置相机',
                     'tooltip.color-panel': '颜色',
+                    'tooltip.keyframe-panel': '关键帧',
                     'tooltip.view-options': '视图选项',
 
                     // Bottom toolbar
@@ -1589,7 +1626,12 @@ const localizeInit = () => {
                     'timeline.remove-key': '删除关键帧',
                     'timeline.frame-rate': '帧率',
                     'timeline.total-frames': '总帧数',
-                    'timeline.smoothness': '平滑度'
+                    'timeline.smoothness': '平滑度',
+
+                    // Keyframe Panel
+                    'keyframe': '关键帧',
+                    'keyframe.title': '标题',
+                    'keyframe.description': '描述'
                 }
             }
         },

@@ -151,6 +151,17 @@ const registerCameraPosesEvents = (events: Events) => {
         rebuildSpline();
     });
 
+    events.on('scene.clear', () => {
+        // remove all timeline keys in reverse order to maintain correct indices
+        while (poses.length > 0) {
+            removePose(poses.length - 1);
+        }
+        onTimelineChange = null;
+
+        // reset timeline to frame 0
+        events.fire('timeline.setFrame', 0);
+    });
+
     // doc
 
     events.function('docSerialize.poseSets', (): any[] => {

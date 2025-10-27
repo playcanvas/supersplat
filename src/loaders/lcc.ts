@@ -13,7 +13,7 @@ const SQRT_2 = 1.414213562373095;
 const SQRT_2_INV = 0.7071067811865475;
 
 // lod data in data.bin
-interface LccLod{
+interface LccLod {
     points: number;     // number of splats
     offset: bigint;     // offset
     size: number;       // data size
@@ -36,7 +36,7 @@ interface CompressInfo {
 }
 
 // parameters used to convert LCC data into GSplatData
-interface LccParam{
+interface LccParam {
     totalSplats: number;
     targetLod: number;
     isHasSH: boolean;
@@ -47,19 +47,19 @@ interface LccParam{
 }
 
 interface ProcessUnitContext {
-  info: LccUnitInfo;
-  targetLod: number;
-  isHasSH: boolean;
-  dataFileContent: ArrayBuffer;
-  shFileContent: ArrayBuffer;
-  compressInfo: CompressInfo;
-  propertyOffset: number;
-  properties: Record<string, Float32Array>;
-  properties_f_rest: Float32Array[] | null;
+    info: LccUnitInfo;
+    targetLod: number;
+    isHasSH: boolean;
+    dataFileContent: ArrayBuffer;
+    shFileContent: ArrayBuffer;
+    compressInfo: CompressInfo;
+    propertyOffset: number;
+    properties: Record<string, Float32Array>;
+    properties_f_rest: Float32Array[] | null;
 }
 
 // parse .lcc files, such as meta.lcc
-const parseMeta = (obj: any) : CompressInfo => {
+const parseMeta = (obj: any): CompressInfo => {
     const attributes: { [key: string]: any } = {};
     obj.attributes.forEach((attr: any) => {
         attributes[attr.name] = attr;
@@ -69,7 +69,7 @@ const parseMeta = (obj: any) : CompressInfo => {
     const shMin = attributes.shcoef.min;
     const shMax = attributes.shcoef.max;
 
-    const compressInfo:CompressInfo = {
+    const compressInfo: CompressInfo = {
         compressedScaleMin: new Vec3(scaleMin[0], scaleMin[1], scaleMin[2]),
         compressedScaleMax: new Vec3(scaleMax[0], scaleMax[1], scaleMax[2]),
         compressedSHMin: new Vec3(shMin[0], shMin[1], shMin[2]),
@@ -79,7 +79,7 @@ const parseMeta = (obj: any) : CompressInfo => {
     return compressInfo;
 };
 
-const parseIndexBin = (raw: ArrayBuffer, meta:any): Array<LccUnitInfo> => {
+const parseIndexBin = (raw: ArrayBuffer, meta: any): Array<LccUnitInfo> => {
     let offset = 0;
 
     const buff = new DataView(raw);
@@ -94,7 +94,7 @@ const parseIndexBin = (raw: ArrayBuffer, meta:any): Array<LccUnitInfo> => {
         const y = buff.getInt16(offset, true);
         offset += 2;
 
-        const lods:Array<LccLod> = [];
+        const lods: Array<LccLod> = [];
         for (let i = 0; i < meta.totalLevel; i++) {
             const ldPoints = buff.getInt32(offset, true);
             offset += 4;
@@ -112,7 +112,7 @@ const parseIndexBin = (raw: ArrayBuffer, meta:any): Array<LccUnitInfo> => {
             });
 
         }
-        const info:LccUnitInfo = {
+        const info: LccUnitInfo = {
             x,
             y,
             lods
@@ -140,7 +140,7 @@ const mix = (min: number, max: number, s: number): number => {
     return (1.0 - s) * min + s * max;
 };
 
-const mixVec3 = (min:Vec3, max:Vec3, v:Vec3):Vec3 => {
+const mixVec3 = (min: Vec3, max: Vec3, v: Vec3): Vec3 => {
     return new Vec3(
         mix(min.x, max.x, v.x),
         mix(min.y, max.y, v.y),
@@ -155,7 +155,7 @@ const DecodePacked_11_10_11 = (enc: number): Vec3 => {
         ((enc >> 21) & 0x7FF) / 2047.0);
 };
 
-const decodeRotation = (v:number) => {
+const decodeRotation = (v: number) => {
     const d0 = (v & 1023) / 1023.0;
     const d1 = ((v >> 10) & 1023) / 1023.0;
     const d2 = ((v >> 20) & 1023) / 1023.0;
@@ -221,8 +221,8 @@ const decodeSplat = (
     unitProperties.property_opacity[i] = InvSigmoid(dataView.getUint8(off + 15) / 255.0);
 
     // decode scale
-    const scaleMin:Vec3 = compressInfo.compressedScaleMin;
-    const scaleMax:Vec3 = compressInfo.compressedScaleMax;
+    const scaleMin: Vec3 = compressInfo.compressedScaleMin;
+    const scaleMax: Vec3 = compressInfo.compressedScaleMax;
     unitProperties.property_scale_0[i] = InvLinearScale(mix(scaleMin.x, scaleMax.x, dataView.getUint16(off + 16, true) / 65535.0));
     unitProperties.property_scale_1[i] = InvLinearScale(mix(scaleMin.y, scaleMax.y, dataView.getUint16(off + 18, true) / 65535.0));
     unitProperties.property_scale_2[i] = InvLinearScale(mix(scaleMin.z, scaleMax.z, dataView.getUint16(off + 20, true) / 65535.0));
@@ -296,7 +296,7 @@ const processUnit = (ctx: ProcessUnitContext) => {
 };
 
 // this function would stream data directly into GSplatData buffers
-const deserializeFromLcc = (param:LccParam) => {
+const deserializeFromLcc = (param: LccParam) => {
     const { totalSplats, unitInfos, targetLod, isHasSH, dataFileContent, shFileContent, compressInfo } = param;
 
     // properties to GSplatData
@@ -353,7 +353,7 @@ const loadLcc = async (assetSource: AssetSource) => {
     const splats: number[] = meta.splats;
 
     // select a lod level
-    let targetLod =  splats.findIndex(value => value < LCC_LOD_MAX_SPLATS);
+    let targetLod = splats.findIndex(value => value < LCC_LOD_MAX_SPLATS);
     if (targetLod < 0) {
         targetLod = splats.length - 1;
     }

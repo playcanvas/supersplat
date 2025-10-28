@@ -282,11 +282,11 @@ const processUnit = async (ctx: ProcessUnitContext) => {
     let shDataView: DataView;
 
     if (isHasSH) {
-        const shRangeStart = offset * 2;
-        const shRangeSize = unitSplats * 60;
+        const start = offset * 2;
+        const end = start + size * 2 - 1;
         const response = await fetch(shFile.url, {
             headers: {
-                'Range': `bytes=${shRangeStart}-${shRangeStart + shRangeSize - 1}`
+                'Range': `bytes=${start}-${end}`
             }
         });
         const assetSource = new ReaderAssetSource(response);
@@ -297,7 +297,7 @@ const processUnit = async (ctx: ProcessUnitContext) => {
     const unitProperties_f_rest = isHasSH ? Array.from({ length: 45 }, () => new Float32Array(unitSplats)) : null;
 
     for (let i = 0; i < unitSplats; i++) {
-        await decodeSplat(dataView, shDataView, i, compressInfo, unitProperties, unitProperties_f_rest, isHasSH);
+        decodeSplat(dataView, shDataView, i, compressInfo, unitProperties, unitProperties_f_rest, isHasSH);
     }
 
     for (const key of floatProps) {

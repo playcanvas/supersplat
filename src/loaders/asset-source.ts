@@ -9,7 +9,7 @@ interface AssetSource {
     mapFile?: (name: string) => AssetSource | null;             // function to map names to files
 }
 
-// create a range request on either a File or a URL endpoint
+// create a read source, optionally as a range request (on either URL or File)
 const createReadSource = async (assetSource: AssetSource, start?: number, end?: number) => {
     let source;
     if (start === undefined || end === undefined) {

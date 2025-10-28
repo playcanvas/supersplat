@@ -44,7 +44,7 @@ interface LccParam {
     isHasSH: boolean;
     compressInfo: CompressInfo;
     unitInfos: Array<LccUnitInfo>;
-    dataFileContent: ArrayBuffer;
+    dataFile: AssetSource;
     shFile?: AssetSource;
 }
 
@@ -52,7 +52,7 @@ interface ProcessUnitContext {
     info: LccUnitInfo;
     targetLod: number;
     isHasSH: boolean;
-    dataFileContent: ArrayBuffer;
+    dataFile: AssetSource;
     shFile: AssetSource;
     compressInfo: CompressInfo;
     propertyOffset: number;
@@ -200,7 +200,7 @@ const initProperties = (length: number): Record<string, Float32Array> => {
     return props;
 };
 
-const decodeSplat = async (
+const decodeSplat = (
     dataView: DataView,
     shDataView: DataView | null,
     i: number,
@@ -256,12 +256,22 @@ const decodeSplat = async (
     }
 };
 
+const createRangeSource = async (assetSource: AssetSource, start: number, end: number) => {
+    let source;
+    if (assetSource.contents) {
+        source = assetSource.contents.slice(start, end);
+    } else {
+        source = await fetch(assetSource.url, { headers: { 'Range': `bytes=${start}-${end - 1}` } });
+    }
+    return new ReadSource(source);
+};
+
 const processUnit = async (ctx: ProcessUnitContext) => {
     const {
         info,
         targetLod,
         isHasSH,
-        dataFileContent,
+        dataFile,
         shFile,
         compressInfo,
         propertyOffset,
@@ -278,19 +288,15 @@ const processUnit = async (ctx: ProcessUnitContext) => {
         return propertyOffset;
     }
 
-    const dataView = new DataView(dataFileContent.slice(offset, offset + size));
-    let shDataView: DataView;
+    // load data
+    const dataSource = await createRangeSource(dataFile, offset, offset + size);
+    const dataView = new DataView(await dataSource.arrayBuffer());
 
+    // load sh data
+    let shDataView: DataView;
     if (isHasSH) {
-        const start = offset * 2;
-        const end = start + size * 2 - 1;
-        const response = await fetch(shFile.url, {
-            headers: {
-                'Range': `bytes=${start}-${end}`
-            }
-        });
-        const assetSource = new ReadSource(response);
-        shDataView = new DataView(await assetSource.arrayBuffer());
+        const shSource = await createRangeSource(shFile, offset * 2, offset * 2 + size * 2);
+        shDataView = new DataView(await shSource.arrayBuffer());
     }
 
     const unitProperties = initProperties(unitSplats);
@@ -315,7 +321,7 @@ const processUnit = async (ctx: ProcessUnitContext) => {
 
 // this function would stream data directly into GSplatData buffers
 const deserializeFromLcc = async (param: LccParam) => {
-    const { totalSplats, unitInfos, targetLod, isHasSH, dataFileContent, shFile, compressInfo } = param;
+    const { totalSplats, unitInfos, targetLod, isHasSH, dataFile, shFile, compressInfo } = param;
 
     // properties to GSplatData
     const properties: Record<string, Float32Array> = initProperties(totalSplats);
@@ -327,7 +333,7 @@ const deserializeFromLcc = async (param: LccParam) => {
             info,
             targetLod,
             isHasSH,
-            dataFileContent,
+            dataFile,
             shFile,
             compressInfo,
             propertyOffset,
@@ -386,12 +392,6 @@ const loadLcc = async (assetSource: AssetSource) => {
     const indexBuffer = await indexSource.arrayBuffer();
 
     const dataFile = assetSource.mapFile('data.bin');
-    if (!dataFile) {
-        throw new Error('Failed to fetch data.bin');
-    }
-    const dataSource = new ReadSource(dataFile.contents ?? dataFile.url ?? dataFile.filename);
-    const dataBuffer = await dataSource.arrayBuffer();
-
     const shFile = isHasSH && assetSource.mapFile('shcoef.bin');
     const unitInfos: LccUnitInfo[] = parseIndexBin(indexBuffer, meta);
 
@@ -401,7 +401,7 @@ const loadLcc = async (assetSource: AssetSource) => {
         unitInfos,
         targetLod,
         isHasSH: isHasSH && !!shFile,
-        dataFileContent: dataBuffer,
+        dataFile,
         shFile,
         compressInfo
     });

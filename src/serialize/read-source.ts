@@ -3,7 +3,7 @@ type PullFunc = (target: Uint8Array) => Promise<number>;
 
 class ReadStream {
     readBytes: number;
-    totalBytes: number
+    totalBytes: number;
     pull: PullFunc;
 
     constructor(totalBytes: number, pull: PullFunc) {
@@ -16,7 +16,7 @@ class ReadStream {
             return result;
         };
     }
-};
+}
 
 const wrapReadableStream = (contentLength: number, stream: ReadableStream<Uint8Array>): ReadStream => {
     const incoming: Uint8Array[] = [];
@@ -57,7 +57,7 @@ const wrapReadableStream = (contentLength: number, stream: ReadableStream<Uint8A
     };
 
     return new ReadStream(contentLength, pull);
-}
+};
 
 const createArrayBufferStream = (buffer: ArrayBuffer): ReadableStream<Uint8Array> => {
     const chunkSize = 65536;
@@ -90,23 +90,23 @@ class ReadSource {
             return wrapReadableStream(source.byteLength, createArrayBufferStream(source));
         } else if (source instanceof Blob) {
             return wrapReadableStream(source.size, source.stream());
-        } else {
-            const response = (source instanceof Response) ?
-                source :
-                    await fetch((source instanceof Request) ? source : new Request(source));
-
-            if (!response.ok) {
-                throw new Error(`Failed to fetch asset: ${response.status} ${response.statusText}`);
-            }
-
-            if (!response.body) {
-                throw new Error(`Response has no body`);
-            }
-
-            const contentLength = response.headers.get('Content-Length');
-
-            return wrapReadableStream(contentLength ? parseInt(contentLength, 10) : 0, response.body);
         }
+        const response = (source instanceof Response) ?
+            source :
+            await fetch((source instanceof Request) ? source : new Request(source));
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch asset: ${response.status} ${response.statusText}`);
+        }
+
+        if (!response.body) {
+            throw new Error('Response has no body');
+        }
+
+        const contentLength = response.headers.get('Content-Length');
+
+        return wrapReadableStream(contentLength ? parseInt(contentLength, 10) : 0, response.body);
+
     }
 
     async arrayBuffer(): Promise<ArrayBuffer> {
@@ -116,18 +116,18 @@ class ReadSource {
             return source;
         } else if (source instanceof Blob) {
             return await source.arrayBuffer();
-        } else {
-            const response = (source instanceof Response) ?
-                source :
-                    await fetch((source instanceof Request) ? source : new Request(source));
-
-            if (!response.ok) {
-                throw new Error(`Failed to fetch asset: ${response.status} ${response.statusText}`);
-            }
-
-            return await response.arrayBuffer();
         }
+        const response = (source instanceof Response) ?
+            source :
+            await fetch((source instanceof Request) ? source : new Request(source));
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch asset: ${response.status} ${response.statusText}`);
+        }
+
+        return await response.arrayBuffer();
+
     }
-};
+}
 
 export { ReadStream, ReadSource };

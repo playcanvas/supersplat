@@ -5,7 +5,6 @@
 import { GSplatData, Vec3 } from 'playcanvas';
 
 import { AssetSource, createReadSource } from './asset-source';
-
 import { ReadSource } from '../serialize/read-source';
 
 // The LCC_LOD_MAX_SPLATS can be adjusted according to the situation

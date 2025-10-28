@@ -243,7 +243,7 @@ const decodeSplat = async (
 
     // SH
     if (isHasSH && shDataView && unitProperties_f_rest) {
-        const shOff = i * 15;
+        const shOff = off * 2;
         const SHValues = Array.from({ length: 15 }, (_, idx) => shDataView.getUint32(shOff + idx * 4, true));
         const { compressedSHMin, compressedSHMax } = compressInfo;
         const vecSHValues = SHValues.map(sh => mixVec3(compressedSHMin, compressedSHMax, DecodePacked_11_10_11(sh)));
@@ -275,7 +275,7 @@ const processUnit = async (ctx: ProcessUnitContext) => {
     const size = lod.size;
 
     if (unitSplats === 0) {
-        return;
+        return propertyOffset;
     }
 
     const dataView = new DataView(dataFileContent.slice(offset, offset + size));
@@ -392,7 +392,6 @@ const loadLcc = async (assetSource: AssetSource) => {
 
     const indexBuffer = await fetchArrayBuffer(indexFile!);
     const dataBuffer = await fetchArrayBuffer(dataFile);
-    // const shBuffer = shFile && (await fetchArrayBuffer(shFile));
 
     const unitInfos: LccUnitInfo[] = parseIndexBin(indexBuffer, meta);
 

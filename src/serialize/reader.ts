@@ -1,5 +1,5 @@
 type AssetSourceType = ArrayBuffer | Blob | Response | Request | string;
-type PullFunc = (target: Uint8Array) => Promise<void>;
+type PullFunc = (target: Uint8Array) => Promise<number>;
 
 class ReadStream {
     readBytes: number;
@@ -10,7 +10,7 @@ class ReadStream {
         this.readBytes = 0;
         this.totalBytes = totalBytes;
 
-        this.pull = async (target: Uint8Array): Promise<void> => {
+        this.pull = async (target: Uint8Array): Promise<number> => {
             const result = await pull(target);
             this.readBytes += target.byteLength;
             return result;
@@ -18,16 +18,18 @@ class ReadStream {
     }
 };
 
-const wrapReadableStream = (contentLength: number, reader: ReadableStreamDefaultReader<Uint8Array>): ReadStream => {
+const wrapReadableStream = (contentLength: number, stream: ReadableStream<Uint8Array>): ReadStream => {
     const incoming: Uint8Array[] = [];
     let incomingBytes = 0;
 
-    const pull = async (target: Uint8Array): Promise<void> => {
+    const reader = stream.getReader();
+
+    const pull = async (target: Uint8Array): Promise<number> => {
         // read the next result.byteLength bytes into result
         while (incomingBytes < target.byteLength) {
             const { done, value } = await reader.read();
             if (done) {
-                throw new Error('Unexpected end of stream');
+                break;
             }
             incoming.push(value);
             incomingBytes += value.byteLength;
@@ -50,10 +52,29 @@ const wrapReadableStream = (contentLength: number, reader: ReadableStreamDefault
                 incoming.shift();
             }
         }
+
+        return offset;
     };
 
     return new ReadStream(contentLength, pull);
 }
+
+const createArrayBufferStream = (buffer: ArrayBuffer): ReadableStream<Uint8Array> => {
+    const chunkSize = 65536;
+    let cursor = 0;
+    return new ReadableStream({
+        pull(controller) {
+            if (cursor < buffer.byteLength) {
+                const end = Math.min(cursor + chunkSize, buffer.byteLength);
+                const chunk = new Uint8Array(buffer, cursor, end - cursor);
+                controller.enqueue(chunk);
+                cursor = end;
+            } else {
+                controller.close();
+            }
+        }
+    });
+};
 
 class AssetSource {
     source: AssetSourceType;
@@ -66,9 +87,9 @@ class AssetSource {
         const { source } = this;
 
         if (source instanceof ArrayBuffer) {
-            
+            return wrapReadableStream(source.byteLength, createArrayBufferStream(source));
         } else if (source instanceof Blob) {
-            // TODO
+            return wrapReadableStream(source.size, source.stream());
         } else {
             const response = (source instanceof Response) ?
                 source :
@@ -83,9 +104,8 @@ class AssetSource {
             }
 
             const contentLength = response.headers.get('Content-Length');
-            const reader = response.body.getReader();
 
-            return wrapReadableStream(contentLength ? parseInt(contentLength, 10) : 0, reader);
+            return wrapReadableStream(contentLength ? parseInt(contentLength, 10) : 0, response.body);
         }
     }
 

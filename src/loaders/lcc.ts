@@ -4,7 +4,8 @@
 
 import { GSplatData, Vec3 } from 'playcanvas';
 
-import { AssetSource, fetchArrayBuffer, fetchText } from './asset-source';
+import { AssetSource, createReadSource } from './asset-source';
+import { ReadSource } from '../serialize/read-source';
 
 // The LCC_LOD_MAX_SPLATS can be adjusted according to the situation
 const LCC_LOD_MAX_SPLATS = 20_000_000;
@@ -13,7 +14,7 @@ const SQRT_2 = 1.414213562373095;
 const SQRT_2_INV = 0.7071067811865475;
 
 // lod data in data.bin
-interface LccLod{
+interface LccLod {
     points: number;     // number of splats
     offset: bigint;     // offset
     size: number;       // data size
@@ -36,30 +37,30 @@ interface CompressInfo {
 }
 
 // parameters used to convert LCC data into GSplatData
-interface LccParam{
+interface LccParam {
     totalSplats: number;
     targetLod: number;
     isHasSH: boolean;
     compressInfo: CompressInfo;
     unitInfos: Array<LccUnitInfo>;
-    dataFileContent: ArrayBuffer;
-    shFileContent?: ArrayBuffer;
+    dataFile: AssetSource;
+    shFile?: AssetSource;
 }
 
 interface ProcessUnitContext {
-  info: LccUnitInfo;
-  targetLod: number;
-  isHasSH: boolean;
-  dataFileContent: ArrayBuffer;
-  shFileContent: ArrayBuffer;
-  compressInfo: CompressInfo;
-  propertyOffset: number;
-  properties: Record<string, Float32Array>;
-  properties_f_rest: Float32Array[] | null;
+    info: LccUnitInfo;
+    targetLod: number;
+    isHasSH: boolean;
+    dataFile: AssetSource;
+    shFile: AssetSource;
+    compressInfo: CompressInfo;
+    propertyOffset: number;
+    properties: Record<string, Float32Array>;
+    properties_f_rest: Float32Array[] | null;
 }
 
 // parse .lcc files, such as meta.lcc
-const parseMeta = (obj: any) : CompressInfo => {
+const parseMeta = (obj: any): CompressInfo => {
     const attributes: { [key: string]: any } = {};
     obj.attributes.forEach((attr: any) => {
         attributes[attr.name] = attr;
@@ -69,7 +70,7 @@ const parseMeta = (obj: any) : CompressInfo => {
     const shMin = attributes.shcoef.min;
     const shMax = attributes.shcoef.max;
 
-    const compressInfo:CompressInfo = {
+    const compressInfo: CompressInfo = {
         compressedScaleMin: new Vec3(scaleMin[0], scaleMin[1], scaleMin[2]),
         compressedScaleMax: new Vec3(scaleMax[0], scaleMax[1], scaleMax[2]),
         compressedSHMin: new Vec3(shMin[0], shMin[1], shMin[2]),
@@ -79,7 +80,7 @@ const parseMeta = (obj: any) : CompressInfo => {
     return compressInfo;
 };
 
-const parseIndexBin = (raw: ArrayBuffer, meta:any): Array<LccUnitInfo> => {
+const parseIndexBin = (raw: ArrayBuffer, meta: any): Array<LccUnitInfo> => {
     let offset = 0;
 
     const buff = new DataView(raw);
@@ -94,7 +95,7 @@ const parseIndexBin = (raw: ArrayBuffer, meta:any): Array<LccUnitInfo> => {
         const y = buff.getInt16(offset, true);
         offset += 2;
 
-        const lods:Array<LccLod> = [];
+        const lods: Array<LccLod> = [];
         for (let i = 0; i < meta.totalLevel; i++) {
             const ldPoints = buff.getInt32(offset, true);
             offset += 4;
@@ -112,7 +113,7 @@ const parseIndexBin = (raw: ArrayBuffer, meta:any): Array<LccUnitInfo> => {
             });
 
         }
-        const info:LccUnitInfo = {
+        const info: LccUnitInfo = {
             x,
             y,
             lods
@@ -140,7 +141,7 @@ const mix = (min: number, max: number, s: number): number => {
     return (1.0 - s) * min + s * max;
 };
 
-const mixVec3 = (min:Vec3, max:Vec3, v:Vec3):Vec3 => {
+const mixVec3 = (min: Vec3, max: Vec3, v: Vec3): Vec3 => {
     return new Vec3(
         mix(min.x, max.x, v.x),
         mix(min.y, max.y, v.y),
@@ -155,7 +156,7 @@ const DecodePacked_11_10_11 = (enc: number): Vec3 => {
         ((enc >> 21) & 0x7FF) / 2047.0);
 };
 
-const decodeRotation = (v:number) => {
+const decodeRotation = (v: number) => {
     const d0 = (v & 1023) / 1023.0;
     const d1 = ((v >> 10) & 1023) / 1023.0;
     const d2 = ((v >> 20) & 1023) / 1023.0;
@@ -221,8 +222,8 @@ const decodeSplat = (
     unitProperties.property_opacity[i] = InvSigmoid(dataView.getUint8(off + 15) / 255.0);
 
     // decode scale
-    const scaleMin:Vec3 = compressInfo.compressedScaleMin;
-    const scaleMax:Vec3 = compressInfo.compressedScaleMax;
+    const scaleMin: Vec3 = compressInfo.compressedScaleMin;
+    const scaleMax: Vec3 = compressInfo.compressedScaleMax;
     unitProperties.property_scale_0[i] = InvLinearScale(mix(scaleMin.x, scaleMax.x, dataView.getUint16(off + 16, true) / 65535.0));
     unitProperties.property_scale_1[i] = InvLinearScale(mix(scaleMin.y, scaleMax.y, dataView.getUint16(off + 18, true) / 65535.0));
     unitProperties.property_scale_2[i] = InvLinearScale(mix(scaleMin.z, scaleMax.z, dataView.getUint16(off + 20, true) / 65535.0));
@@ -254,13 +255,13 @@ const decodeSplat = (
     }
 };
 
-const processUnit = (ctx: ProcessUnitContext) => {
+const processUnit = async (ctx: ProcessUnitContext) => {
     const {
         info,
         targetLod,
         isHasSH,
-        dataFileContent,
-        shFileContent,
+        dataFile,
+        shFile,
         compressInfo,
         propertyOffset,
         properties,
@@ -272,8 +273,20 @@ const processUnit = (ctx: ProcessUnitContext) => {
     const offset = Number(lod.offset);
     const size = lod.size;
 
-    const dataView = new DataView(dataFileContent.slice(offset, offset + size));
-    const shDataView = isHasSH ? new DataView(shFileContent.slice(offset * 2, offset * 2 + size * 2)) : null;
+    if (unitSplats === 0) {
+        return propertyOffset;
+    }
+
+    // load data
+    const dataSource = await createReadSource(dataFile, offset, offset + size);
+    const dataView = new DataView(await dataSource.arrayBuffer());
+
+    // load sh data
+    let shDataView: DataView;
+    if (isHasSH) {
+        const shSource = await createReadSource(shFile, offset * 2, offset * 2 + size * 2);
+        shDataView = new DataView(await shSource.arrayBuffer());
+    }
 
     const unitProperties = initProperties(unitSplats);
     const unitProperties_f_rest = isHasSH ? Array.from({ length: 45 }, () => new Float32Array(unitSplats)) : null;
@@ -296,8 +309,8 @@ const processUnit = (ctx: ProcessUnitContext) => {
 };
 
 // this function would stream data directly into GSplatData buffers
-const deserializeFromLcc = (param:LccParam) => {
-    const { totalSplats, unitInfos, targetLod, isHasSH, dataFileContent, shFileContent, compressInfo } = param;
+const deserializeFromLcc = async (param: LccParam) => {
+    const { totalSplats, unitInfos, targetLod, isHasSH, dataFile, shFile, compressInfo } = param;
 
     // properties to GSplatData
     const properties: Record<string, Float32Array> = initProperties(totalSplats);
@@ -305,12 +318,12 @@ const deserializeFromLcc = (param:LccParam) => {
 
     let propertyOffset = 0;
     for (const info of unitInfos) {
-        propertyOffset = processUnit({
+        propertyOffset = await processUnit({
             info,
             targetLod,
             isHasSH,
-            dataFileContent,
-            shFileContent,
+            dataFile,
+            shFile,
             compressInfo,
             propertyOffset,
             properties,
@@ -345,15 +358,16 @@ const deserializeFromLcc = (param:LccParam) => {
 
 const loadLcc = async (assetSource: AssetSource) => {
     // .lcc
-    const text = await fetchText(assetSource);
+    const textSource = await createReadSource(assetSource);
+    const text = new TextDecoder().decode(await textSource.arrayBuffer());
     const meta = JSON.parse(text);
 
-    const isHasSH: boolean = meta.fileType === 'Quality' || !!(assetSource.mapFile('shcoef.bin'));
+    const isHasSH: boolean = meta.fileType === 'Quality' && !!(assetSource.mapFile('shcoef.bin'));
     const compressInfo: CompressInfo = parseMeta(meta);
     const splats: number[] = meta.splats;
 
     // select a lod level
-    let targetLod =  splats.findIndex(value => value < LCC_LOD_MAX_SPLATS);
+    let targetLod = splats.findIndex(value => value < LCC_LOD_MAX_SPLATS);
     if (targetLod < 0) {
         targetLod = splats.length - 1;
     }
@@ -364,18 +378,11 @@ const loadLcc = async (assetSource: AssetSource) => {
     if (!indexFile) {
         throw new Error('Failed to fetch index.bin');
     }
+    const indexSource = new ReadSource(indexFile.contents ?? indexFile.url ?? indexFile.filename);
+    const indexBuffer = await indexSource.arrayBuffer();
 
     const dataFile = assetSource.mapFile('data.bin');
-    if (!dataFile) {
-        throw new Error('Failed to fetch data.bin');
-    }
-
     const shFile = isHasSH && assetSource.mapFile('shcoef.bin');
-
-    const indexBuffer = await fetchArrayBuffer(indexFile!);
-    const dataBuffer = await fetchArrayBuffer(dataFile);
-    const shBuffer = shFile && (await fetchArrayBuffer(shFile));
-
     const unitInfos: LccUnitInfo[] = parseIndexBin(indexBuffer, meta);
 
     // data.bin + shcoef.bin -> gsplatData
@@ -383,9 +390,9 @@ const loadLcc = async (assetSource: AssetSource) => {
         totalSplats,
         unitInfos,
         targetLod,
-        isHasSH: isHasSH && !!shBuffer,
-        dataFileContent: dataBuffer,
-        shFileContent: shBuffer,
+        isHasSH: isHasSH && !!shFile,
+        dataFile,
+        shFile,
         compressInfo
     });
 };

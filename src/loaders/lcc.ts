@@ -256,6 +256,7 @@ const decodeSplat = (
     }
 };
 
+// create a range request on either a File or a URL endpoint
 const createRangeSource = async (assetSource: AssetSource, start: number, end: number) => {
     let source;
     if (assetSource.contents) {

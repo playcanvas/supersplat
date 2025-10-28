@@ -12,7 +12,7 @@ class ReadStream {
 
         this.pull = async (target: Uint8Array): Promise<number> => {
             const result = await pull(target);
-            this.readBytes += target.byteLength;
+            this.readBytes += result;
             return result;
         };
     }
@@ -37,7 +37,7 @@ const wrapReadableStream = (contentLength: number, stream: ReadableStream<Uint8A
 
         // copy data into result
         let offset = 0;
-        while (offset < target.byteLength) {
+        while (offset < target.byteLength && incoming.length > 0) {
             const chunk = incoming[0];
             const copyBytes = Math.min(chunk.byteLength, target.byteLength - offset);
             target.set(chunk.subarray(0, copyBytes), offset);

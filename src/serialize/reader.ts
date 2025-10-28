@@ -1,25 +1,19 @@
-type PullFunc = (target?: Uint8Array) => Promise<Uint8Array | void>;
-type SkipFunc = (bytes: number) => Promise<void>;
+type AssetSourceType = ArrayBuffer | Blob | Response | Request | string;
+type PullFunc = (target: Uint8Array) => Promise<void>;
 
 class ReadStream {
     readBytes: number;
     totalBytes: number
     pull: PullFunc;
-    skip: SkipFunc;
 
-    constructor(totalBytes: number, pull: PullFunc, skip: SkipFunc) {
+    constructor(totalBytes: number, pull: PullFunc) {
         this.readBytes = 0;
         this.totalBytes = totalBytes;
 
-        this.pull = async (target?: Uint8Array): Promise<Uint8Array | void> => {
+        this.pull = async (target: Uint8Array): Promise<void> => {
             const result = await pull(target);
-            this.readBytes += target?.byteLength ?? (result && result.byteLength) ?? 0;
+            this.readBytes += target.byteLength;
             return result;
-        };
-
-        this.skip = async (bytes: number): Promise<void> => {
-            await skip(bytes);
-            this.readBytes += bytes;
         };
     }
 };
@@ -28,26 +22,7 @@ const wrapReadableStream = (contentLength: number, reader: ReadableStreamDefault
     const incoming: Uint8Array[] = [];
     let incomingBytes = 0;
 
-    const pull = async (target?: Uint8Array): Promise<Uint8Array | void> => {
-        // read the entire rest of the stream and return it
-        if (!target) {
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                incoming.push(value);
-                incomingBytes += value.byteLength;
-            }
-
-            // concatenate incoming chunks
-            const result = new Uint8Array(incomingBytes);
-            let offset = 0;
-            for (const chunk of incoming) {
-                result.set(chunk, offset);
-                offset += chunk.byteLength;
-            }
-            return result;
-        }
-
+    const pull = async (target: Uint8Array): Promise<void> => {
         // read the next result.byteLength bytes into result
         while (incomingBytes < target.byteLength) {
             const { done, value } = await reader.read();
@@ -77,38 +52,62 @@ const wrapReadableStream = (contentLength: number, reader: ReadableStreamDefault
         }
     };
 
-    // FIXME: inefficient skip implementation
-    const skip = async (bytes: number): Promise<void> => {
-        const tmp = new Uint8Array(bytes);
-        await pull(tmp);
-    };
+    return new ReadStream(contentLength, pull);
+}
 
-    return new ReadStream(contentLength, pull, skip);
-};
+class AssetSource {
+    source: AssetSourceType;
 
-const createReadStream = async (source: ArrayBuffer | Blob | Response | Request | string): Promise<ReadStream> => {
-    if (source instanceof ArrayBuffer) {
-        
-    } else if (source instanceof Blob) {
+    constructor(source: AssetSourceType) {
+        this.source = source;
+    }
 
-    } else {
-        const response = (source instanceof Response) ?
-            source :
-                await fetch((source instanceof Request) ? source : new Request(source));
+    async getReadStream(): Promise<ReadStream> {
+        const { source } = this;
 
-        if (!response.ok) {
-            throw new Error(`Failed to fetch asset: ${response.status} ${response.statusText}`);
+        if (source instanceof ArrayBuffer) {
+            
+        } else if (source instanceof Blob) {
+            // TODO
+        } else {
+            const response = (source instanceof Response) ?
+                source :
+                    await fetch((source instanceof Request) ? source : new Request(source));
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch asset: ${response.status} ${response.statusText}`);
+            }
+
+            if (!response.body) {
+                throw new Error(`Response has no body`);
+            }
+
+            const contentLength = response.headers.get('Content-Length');
+            const reader = response.body.getReader();
+
+            return wrapReadableStream(contentLength ? parseInt(contentLength, 10) : 0, reader);
         }
+    }
 
-        if (!response.body) {
-            throw new Error(`Response has no body`);
+    async arrayBuffer(): Promise<ArrayBuffer> {
+        const { source } = this;
+
+        if (source instanceof ArrayBuffer) {
+            return source;
+        } else if (source instanceof Blob) {
+            return await source.arrayBuffer();
+        } else {
+            const response = (source instanceof Response) ?
+                source :
+                    await fetch((source instanceof Request) ? source : new Request(source));
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch asset: ${response.status} ${response.statusText}`);
+            }
+
+            return await response.arrayBuffer();
         }
-
-        const contentLength = response.headers.get('Content-Length');
-        const reader = response.body.getReader();
-
-        return wrapReadableStream(contentLength ? parseInt(contentLength, 10) : 0, reader);
     }
 };
 
-export { ReadStream, createReadStream };
+export { ReadStream, AssetSource };

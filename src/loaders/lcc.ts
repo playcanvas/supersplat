@@ -6,7 +6,7 @@ import { GSplatData, Vec3 } from 'playcanvas';
 
 import { AssetSource, fetchArrayBuffer, fetchText } from './asset-source';
 
-import { ReadStream, createReadStream } from '../serialize/reader';
+import { ReadStream, AssetSource as ReaderAssetSource } from '../serialize/reader';
 
 // The LCC_LOD_MAX_SPLATS can be adjusted according to the situation
 const LCC_LOD_MAX_SPLATS = 20_000_000;
@@ -200,12 +200,9 @@ const initProperties = (length: number): Record<string, Float32Array> => {
     return props;
 };
 
-const shData = new Uint32Array(15);
-const shData8 = new Uint8Array(shData.buffer);
-
 const decodeSplat = async (
     dataView: DataView,
-    shDataStream: ReadStream | null,
+    shDataView: DataView | null,
     i: number,
     compressInfo: CompressInfo,
     unitProperties: Record<string, Float32Array>,
@@ -245,10 +242,9 @@ const decodeSplat = async (
     unitProperties.property_nz[i] = dataView.getUint16(off + 30, true);
 
     // SH
-    if (isHasSH && shDataStream && unitProperties_f_rest) {
-        await shDataStream.pull(shData8);
-
-        const SHValues = Array.from(shData);
+    if (isHasSH && shDataView && unitProperties_f_rest) {
+        const shOff = i * 15;
+        const SHValues = Array.from({ length: 15 }, (_, idx) => shDataView.getUint32(shOff + idx * 4, true));
         const { compressedSHMin, compressedSHMax } = compressInfo;
         const vecSHValues = SHValues.map(sh => mixVec3(compressedSHMin, compressedSHMax, DecodePacked_11_10_11(sh)));
 
@@ -278,23 +274,30 @@ const processUnit = async (ctx: ProcessUnitContext) => {
     const offset = Number(lod.offset);
     const size = lod.size;
 
-    const dataView = new DataView(dataFileContent.slice(offset, offset + size));
-    // const shDataView = isHasSH ? new DataView(shFileContent.slice(offset * 2, offset * 2 + size * 2)) : null;
+    if (unitSplats === 0) {
+        return;
+    }
 
-    const shRangeStart = offset * 2;
-    const shRangeSize = unitSplats * 60;
-    const response = await fetch(shFile.url, {
-        headers: {
-            'Range': `bytes=${shRangeStart}-${shRangeStart + shRangeSize - 1}`
-        }
-    });
-    const shDataStream = await createReadStream(response);
+    const dataView = new DataView(dataFileContent.slice(offset, offset + size));
+    let shDataView: DataView;
+
+    if (isHasSH) {
+        const shRangeStart = offset * 2;
+        const shRangeSize = unitSplats * 60;
+        const response = await fetch(shFile.url, {
+            headers: {
+                'Range': `bytes=${shRangeStart}-${shRangeStart + shRangeSize - 1}`
+            }
+        });
+        const assetSource = new ReaderAssetSource(response);
+        shDataView = new DataView(await assetSource.arrayBuffer());
+    }
 
     const unitProperties = initProperties(unitSplats);
     const unitProperties_f_rest = isHasSH ? Array.from({ length: 45 }, () => new Float32Array(unitSplats)) : null;
 
     for (let i = 0; i < unitSplats; i++) {
-        await decodeSplat(dataView, shDataStream, i, compressInfo, unitProperties, unitProperties_f_rest, isHasSH);
+        await decodeSplat(dataView, shDataView, i, compressInfo, unitProperties, unitProperties_f_rest, isHasSH);
     }
 
     for (const key of floatProps) {

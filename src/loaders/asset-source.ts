@@ -17,7 +17,7 @@ const createReadSource = async (assetSource: AssetSource, start?: number, end?: 
     } else if (assetSource.contents) {
         source = assetSource.contents.slice(start, end);
     } else {
-        source = await fetch(assetSource.url, { headers: { 'Range': `bytes=${start}-${end - 1}` } });
+        source = await fetch(assetSource.url ?? assetSource.filename, { headers: { 'Range': `bytes=${start}-${end - 1}` } });
     }
     return new ReadSource(source);
 };

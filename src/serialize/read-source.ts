@@ -1,4 +1,4 @@
-type AssetSourceType = ArrayBuffer | Blob | Response | Request | string;
+type ReadSourceType = ArrayBuffer | Blob | Response | Request | string;
 type PullFunc = (target: Uint8Array) => Promise<number>;
 
 class ReadStream {
@@ -76,10 +76,10 @@ const createArrayBufferStream = (buffer: ArrayBuffer): ReadableStream<Uint8Array
     });
 };
 
-class AssetSource {
-    source: AssetSourceType;
+class ReadSource {
+    source: ReadSourceType;
 
-    constructor(source: AssetSourceType) {
+    constructor(source: ReadSourceType) {
         this.source = source;
     }
 
@@ -130,4 +130,4 @@ class AssetSource {
     }
 };
 
-export { ReadStream, AssetSource };
+export { ReadStream, ReadSource };

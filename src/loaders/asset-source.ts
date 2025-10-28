@@ -1,3 +1,5 @@
+import { ReadSource } from '../serialize/read-source';
+
 interface AssetSource {
     filename?: string;
     url?: string;
@@ -12,20 +14,8 @@ const fetchRequest = async (assetSource: AssetSource) : Promise<Response | File 
 };
 
 const fetchArrayBuffer = async (assetSource: AssetSource) : Promise<ArrayBuffer> | null => {
-    const response = await fetchRequest(assetSource);
-
-    if (response instanceof Response) {
-        if (!response.ok) {
-            return null;
-        }
-        return await response.arrayBuffer();
-    }
-
-    if (response instanceof File) {
-        return await response.arrayBuffer();
-    }
-
-    return response;
+    const source = new ReadSource(assetSource.contents ?? assetSource.url ?? assetSource.filename);
+    return await source.arrayBuffer();
 };
 
 const fetchText = async (assetSource: AssetSource) : Promise<string> | null => {

@@ -4,9 +4,9 @@
 
 import { GSplatData, Vec3 } from 'playcanvas';
 
-import { AssetSource, fetchArrayBuffer, fetchText } from './asset-source';
+import { AssetSource, fetchText } from './asset-source';
 
-import { ReadStream, AssetSource as ReaderAssetSource } from '../serialize/reader';
+import { ReadSource } from '../serialize/read-source';
 
 // The LCC_LOD_MAX_SPLATS can be adjusted according to the situation
 const LCC_LOD_MAX_SPLATS = 20_000_000;
@@ -289,7 +289,7 @@ const processUnit = async (ctx: ProcessUnitContext) => {
                 'Range': `bytes=${start}-${end}`
             }
         });
-        const assetSource = new ReaderAssetSource(response);
+        const assetSource = new ReadSource(response);
         shDataView = new DataView(await assetSource.arrayBuffer());
     }
 
@@ -382,17 +382,17 @@ const loadLcc = async (assetSource: AssetSource) => {
     if (!indexFile) {
         throw new Error('Failed to fetch index.bin');
     }
+    const indexSource = new ReadSource(indexFile.contents ?? indexFile.url ?? indexFile.filename);
+    const indexBuffer = await indexSource.arrayBuffer();
 
     const dataFile = assetSource.mapFile('data.bin');
     if (!dataFile) {
         throw new Error('Failed to fetch data.bin');
     }
+    const dataSource = new ReadSource(dataFile.contents ?? dataFile.url ?? dataFile.filename);
+    const dataBuffer = await dataSource.arrayBuffer();
 
     const shFile = isHasSH && assetSource.mapFile('shcoef.bin');
-
-    const indexBuffer = await fetchArrayBuffer(indexFile!);
-    const dataBuffer = await fetchArrayBuffer(dataFile);
-
     const unitInfos: LccUnitInfo[] = parseIndexBin(indexBuffer, meta);
 
     // data.bin + shcoef.bin -> gsplatData

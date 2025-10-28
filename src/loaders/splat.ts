@@ -1,6 +1,6 @@
 import { GSplatData } from 'playcanvas';
 
-import { AssetSource, fetchArrayBuffer } from './asset-source';
+import { AssetSource, createReadSource } from './asset-source';
 
 // ideally this function would stream data directly into GSplatData buffers.
 // unfortunately the .splat file format has no header specifying total number
@@ -76,7 +76,8 @@ const deserializeFromSSplat = (data: ArrayBufferLike) => {
 };
 
 const loadSplat = async (assetSource: AssetSource) => {
-    return deserializeFromSSplat(await fetchArrayBuffer(assetSource));
+    const source = await createReadSource(assetSource);
+    return deserializeFromSSplat(await source.arrayBuffer());
 };
 
 export { loadSplat };

@@ -9,32 +9,19 @@ interface AssetSource {
     mapFile?: (name: string) => AssetSource | null;             // function to map names to files
 }
 
-const fetchRequest = async (assetSource: AssetSource) : Promise<Response | File | null> => {
-    return await (assetSource.contents ?? fetch(assetSource.url || assetSource.filename)) as Response;
-};
-
-const fetchArrayBuffer = async (assetSource: AssetSource) : Promise<ArrayBuffer> | null => {
-    const source = new ReadSource(assetSource.contents ?? assetSource.url ?? assetSource.filename);
-    return await source.arrayBuffer();
-};
-
-const fetchText = async (assetSource: AssetSource) : Promise<string> | null => {
-    const response = await fetchRequest(assetSource);
-
-    if (response instanceof Response) {
-        if (!response.ok) {
-            return null;
-        }
-        return await response.text();
+// create a range request on either a File or a URL endpoint
+const createReadSource = async (assetSource: AssetSource, start?: number, end?: number) => {
+    let source;
+    if (start === undefined || end === undefined) {
+        source = assetSource.contents ?? assetSource.url ?? assetSource.filename;
+    } else if (assetSource.contents) {
+        source = assetSource.contents.slice(start, end);
+    } else {
+        source = await fetch(assetSource.url, { headers: { 'Range': `bytes=${start}-${end - 1}` } });
     }
-
-    if (response instanceof File) {
-        return await response.text();
-    }
-
-    return response;
+    return new ReadSource(source);
 };
 
 export type { AssetSource };
 
-export { fetchArrayBuffer, fetchText };
+export { createReadSource };

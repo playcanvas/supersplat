@@ -4,7 +4,7 @@
 
 import { GSplatData, Vec3 } from 'playcanvas';
 
-import { AssetSource, fetchText } from './asset-source';
+import { AssetSource, createReadSource } from './asset-source';
 
 import { ReadSource } from '../serialize/read-source';
 
@@ -256,17 +256,6 @@ const decodeSplat = (
     }
 };
 
-// create a range request on either a File or a URL endpoint
-const createRangeSource = async (assetSource: AssetSource, start: number, end: number) => {
-    let source;
-    if (assetSource.contents) {
-        source = assetSource.contents.slice(start, end);
-    } else {
-        source = await fetch(assetSource.url, { headers: { 'Range': `bytes=${start}-${end - 1}` } });
-    }
-    return new ReadSource(source);
-};
-
 const processUnit = async (ctx: ProcessUnitContext) => {
     const {
         info,
@@ -290,13 +279,13 @@ const processUnit = async (ctx: ProcessUnitContext) => {
     }
 
     // load data
-    const dataSource = await createRangeSource(dataFile, offset, offset + size);
+    const dataSource = await createReadSource(dataFile, offset, offset + size);
     const dataView = new DataView(await dataSource.arrayBuffer());
 
     // load sh data
     let shDataView: DataView;
     if (isHasSH) {
-        const shSource = await createRangeSource(shFile, offset * 2, offset * 2 + size * 2);
+        const shSource = await createReadSource(shFile, offset * 2, offset * 2 + size * 2);
         shDataView = new DataView(await shSource.arrayBuffer());
     }
 
@@ -370,7 +359,8 @@ const deserializeFromLcc = async (param: LccParam) => {
 
 const loadLcc = async (assetSource: AssetSource) => {
     // .lcc
-    const text = await fetchText(assetSource);
+    const textSource = await createReadSource(assetSource);
+    const text = new TextDecoder().decode(await textSource.arrayBuffer());
     const meta = JSON.parse(text);
 
     const isHasSH: boolean = meta.fileType === 'Quality' || !!(assetSource.mapFile('shcoef.bin'));

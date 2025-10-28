@@ -1,6 +1,6 @@
 import { Asset, AssetRegistry, GSplatData, GSplatResource } from 'playcanvas';
 
-import { AssetSource, fetchArrayBuffer } from './asset-source';
+import { AssetSource } from './asset-source';
 
 let assetId = 0;
 

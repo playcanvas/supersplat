@@ -93,7 +93,8 @@ const registerDocEvents = (scene: Scene, events: Events) => {
             await zip.loadAsync(file);
             const document = JSON.parse(await zip.file('document.json').async('text'));
 
-            // run through each splat and load it
+            // load all splats first
+            const splats = [];
             for (let i = 0; i < document.splats.length; ++i) {
                 const filename = `splat_${i}.ply`;
                 const splatSettings = document.splats[i];
@@ -107,8 +108,13 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 });
                 URL.revokeObjectURL(url);
 
-                scene.add(splat);
+                splats.push({ splat, splatSettings });
+            }
 
+            // then add them to scene and deserialize
+            // (add first so splat.scene is set, then deserialize to set the transform)
+            for (const { splat, splatSettings } of splats) {
+                scene.add(splat);
                 splat.docDeserialize(splatSettings);
             }
 
@@ -122,6 +128,15 @@ const registerDocEvents = (scene: Scene, events: Events) => {
             events.invoke('docDeserialize.poseSets', document.poseSets);
             events.invoke('docDeserialize.view', document.view);
             scene.camera.docDeserialize(document.camera);
+            
+            // refresh the pivot to reflect the loaded transform
+            const currentSelection = events.invoke('selection');
+            if (currentSelection) {
+                const pivot = events.invoke('pivot');
+                const transform = new (await import('./transform')).Transform();
+                currentSelection.getPivot(events.invoke('pivot.origin') || 'boundCenter', false, transform);
+                pivot.place(transform);
+            }
         } catch (error) {
             await events.invoke('showPopup', {
                 type: 'error',

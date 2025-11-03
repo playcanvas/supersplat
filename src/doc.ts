@@ -95,7 +95,6 @@ const registerDocEvents = (scene: Scene, events: Events) => {
             const document = JSON.parse(await zip.file('document.json').async('text'));
 
             // load all splats first
-            const splats = [];
             for (let i = 0; i < document.splats.length; ++i) {
                 const filename = `splat_${i}.ply`;
                 const splatSettings = document.splats[i];
@@ -108,15 +107,9 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                     filename
                 });
                 URL.revokeObjectURL(url);
+            scene.add(splat);
+            splat.docDeserialize(splatSettings);
 
-                splats.push({ splat, splatSettings });
-            }
-
-            // after loading all the splats, add them to scene and deserialize
-            // (add first so splat.scene is set, then deserialize to set the transform)
-            for (const { splat, splatSettings } of splats) {
-                scene.add(splat);
-                splat.docDeserialize(splatSettings);
             }
 
             // FIXME: trigger scene bound calc in a better way
@@ -135,7 +128,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
             if (currentSelection) {
                 const pivot = events.invoke('pivot');
                 const transform = new Transform();
-                const pivotOrigin = events.invoke('pivot.origin') || 'boundCenter';
+                const pivotOrigin = events.invoke('pivot.origin');
                 currentSelection.getPivot(pivotOrigin, false, transform);
                 pivot.place(transform);
             }

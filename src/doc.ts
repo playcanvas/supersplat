@@ -107,9 +107,10 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                     filename
                 });
                 URL.revokeObjectURL(url);
-                scene.add(splat);
-                splat.docDeserialize(splatSettings);
 
+                scene.add(splat);
+                
+                splat.docDeserialize(splatSettings);
             }
 
             // FIXME: trigger scene bound calc in a better way

@@ -5,6 +5,7 @@ import { ZipWriter } from './serialize/zip-writer';
 import { Splat } from './splat';
 import { serializePly } from './splat-serialize';
 import { localize } from './ui/localization';
+import { Transform } from './transform';
 
 // ts compiler and vscode find this type, but eslint does not
 type FilePickerAcceptType = unknown;
@@ -111,7 +112,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 splats.push({ splat, splatSettings });
             }
 
-            // then add them to scene and deserialize
+            // after loading all the splats, add them to scene and deserialize
             // (add first so splat.scene is set, then deserialize to set the transform)
             for (const { splat, splatSettings } of splats) {
                 scene.add(splat);
@@ -133,8 +134,9 @@ const registerDocEvents = (scene: Scene, events: Events) => {
             const currentSelection = events.invoke('selection');
             if (currentSelection) {
                 const pivot = events.invoke('pivot');
-                const transform = new (await import('./transform')).Transform();
-                currentSelection.getPivot(events.invoke('pivot.origin') || 'boundCenter', false, transform);
+                const transform = new Transform();
+                const pivotOrigin = events.invoke('pivot.origin') || 'boundCenter';
+                currentSelection.getPivot(pivotOrigin, false, transform);
                 pivot.place(transform);
             }
         } catch (error) {

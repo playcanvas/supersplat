@@ -94,7 +94,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
             await zip.loadAsync(file);
             const document = JSON.parse(await zip.file('document.json').async('text'));
 
-            // load all splats first
+            // run through each splat and load it
             for (let i = 0; i < document.splats.length; ++i) {
                 const filename = `splat_${i}.ply`;
                 const splatSettings = document.splats[i];
@@ -107,8 +107,8 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                     filename
                 });
                 URL.revokeObjectURL(url);
-            scene.add(splat);
-            splat.docDeserialize(splatSettings);
+                scene.add(splat);
+                splat.docDeserialize(splatSettings);
 
             }
 

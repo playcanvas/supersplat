@@ -5,6 +5,7 @@ import { ZipWriter } from './serialize/zip-writer';
 import { Splat } from './splat';
 import { serializePly } from './splat-serialize';
 import { localize } from './ui/localization';
+import { Transform } from './transform';
 
 // ts compiler and vscode find this type, but eslint does not
 type FilePickerAcceptType = unknown;
@@ -122,6 +123,16 @@ const registerDocEvents = (scene: Scene, events: Events) => {
             events.invoke('docDeserialize.poseSets', document.poseSets);
             events.invoke('docDeserialize.view', document.view);
             scene.camera.docDeserialize(document.camera);
+            
+            // refresh the pivot to reflect the loaded transform
+            const currentSelection = events.invoke('selection');
+            if (currentSelection) {
+                const pivot = events.invoke('pivot');
+                const transform = new Transform();
+                const pivotOrigin = events.invoke('pivot.origin');
+                currentSelection.getPivot(pivotOrigin, false, transform);
+                pivot.place(transform);
+            }
         } catch (error) {
             await events.invoke('showPopup', {
                 type: 'error',

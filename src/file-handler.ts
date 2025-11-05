@@ -187,16 +187,34 @@ const loadImagesTxt = async (file: ImportFile, events: Events) => {
     const response = new Response(file.contents);
     const text = await response.text();
 
-    // split into lines, remove comments and empty lines
-    const poses = text.split('\n')
-    .map(line => line.trim())
-    .filter(line => line.length > 0 && !line.startsWith('#'))
-    .filter((_, i) => i % 2 === 0) // only need the first line of each pair
-    .map((line, i) => {
-        const parts = line.split(' ');
-        const name = parts[9];
-        const order = parseInt(removeExtension(name).match(/\d+$/)?.[0], 10);
-        return parts.length === 10 && {
+    const lines = text.split('\n');
+    const poses: {
+        w: number;
+        x: number;
+        y: number;
+        z: number;
+        tx: number;
+        ty: number;
+        tz: number;
+        name: string;
+        order: number;
+    }[] = [];
+    for (let i = 0; i < lines.length;) {
+        const line = lines[i].trim();
+        i += 1;
+        if (!line || line.startsWith('#')) {
+            continue;
+        }
+
+        const parts = line.split(/\s+/);
+        if (parts.length < 10) {
+            continue;
+        }
+
+        const name = parts.slice(9).join(' ');
+        const fallbackIndex = poses.length;
+        const orderMatch = removeExtension(name).match(/\d+$/)?.[0];
+        poses.push({
             w: parseFloat(parts[1]),
             x: parseFloat(parts[2]),
             y: parseFloat(parts[3]),
@@ -204,12 +222,16 @@ const loadImagesTxt = async (file: ImportFile, events: Events) => {
             tx: parseFloat(parts[5]),
             ty: parseFloat(parts[6]),
             tz: parseFloat(parts[7]),
-            name: name ?? `${file.filename}_${i}`,
-            order: isFinite(order) ? order : i
-        };
-    })
-    .filter(entry => !!entry)
-    .sort((a, b) => (a.order < b.order ? -1 : 1));
+            name: name || `${file.filename}_${fallbackIndex}`,
+            order: orderMatch ? parseInt(orderMatch, 10) : fallbackIndex
+        });
+
+        if (i < lines.length) {
+            i += 1; // skip the POINTS2D line
+        }
+    }
+
+    poses.sort((a, b) => (a.order < b.order ? -1 : 1));
 
     const q = new Quat();
     const t = new Vec3();

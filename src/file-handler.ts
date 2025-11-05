@@ -190,12 +190,16 @@ const loadImagesTxt = async (file: ImportFile, events: Events) => {
     // split into lines, remove comments and empty lines
     const poses = text.split('\n')
     .map(line => line.trim())
-    .filter(line => line.length > 0 && !line.startsWith('#'))
+    .filter(line => !line.startsWith('#'))      // remove comments
+    .filter((_, i) => i % 2 === 0)              // remove every second line
     .map((line, i) => {
         const parts = line.split(' ');
+        if (parts.length !== 10) {
+            return null;
+        }
         const name = parts[9];
         const order = parseInt(removeExtension(name).match(/\d+$/)?.[0], 10);
-        return parts.length === 10 && {
+        return {
             w: parseFloat(parts[1]),
             x: parseFloat(parts[2]),
             y: parseFloat(parts[3]),

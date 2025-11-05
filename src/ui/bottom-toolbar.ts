@@ -4,6 +4,7 @@ import { Events } from '../events';
 import { localize } from './localization';
 import redoSvg from './svg/redo.svg';
 import brushSvg from './svg/select-brush.svg';
+import floodSvg from './svg/select-flood.svg';
 import lassoSvg from './svg/select-lasso.svg';
 import pickerSvg from './svg/select-picker.svg';
 import polygonSvg from './svg/select-poly.svg';
@@ -58,6 +59,11 @@ class BottomToolbar extends Container {
             class: 'bottom-toolbar-tool'
         });
 
+        const flood = new Button({
+            id: 'bottom-toolbar-flood',
+            class: 'bottom-toolbar-tool'
+        });
+
         const lasso = new Button({
             id: 'bottom-toolbar-lasso',
             class: 'bottom-toolbar-tool'
@@ -96,6 +102,12 @@ class BottomToolbar extends Container {
             icon: 'E112'
         });
 
+        const measure = new Button({
+            id: 'bottom-toolbar-measure',
+            class: 'bottom-toolbar-tool',
+            icon: 'E358'
+        });
+
         const coordSpace = new Button({
             id: 'bottom-toolbar-coord-space',
             class: 'bottom-toolbar-toggle',
@@ -113,6 +125,7 @@ class BottomToolbar extends Container {
         picker.dom.appendChild(createSvg(pickerSvg));
         polygon.dom.appendChild(createSvg(polygonSvg));
         brush.dom.appendChild(createSvg(brushSvg));
+        flood.dom.appendChild(createSvg(floodSvg));
         sphere.dom.appendChild(createSvg(sphereSvg));
         box.dom.appendChild(createSvg(boxSvg));
         lasso.dom.appendChild(createSvg(lassoSvg));
@@ -125,6 +138,7 @@ class BottomToolbar extends Container {
         this.append(lasso);
         this.append(polygon);
         this.append(brush);
+        this.append(flood);
         this.append(new Element({ class: 'bottom-toolbar-separator' }));
         this.append(sphere);
         this.append(box);
@@ -133,6 +147,8 @@ class BottomToolbar extends Container {
         this.append(translate);
         this.append(rotate);
         this.append(scale);
+        this.append(new Element({ class: 'bottom-toolbar-separator' }));
+        this.append(measure);
         this.append(coordSpace);
         this.append(origin);
 
@@ -141,12 +157,14 @@ class BottomToolbar extends Container {
         polygon.dom.addEventListener('click', () => events.fire('tool.polygonSelection'));
         lasso.dom.addEventListener('click', () => events.fire('tool.lassoSelection'));
         brush.dom.addEventListener('click', () => events.fire('tool.brushSelection'));
+        flood.dom.addEventListener('click', () => events.fire('tool.floodSelection'));
         picker.dom.addEventListener('click', () => events.fire('tool.rectSelection'));
         sphere.dom.addEventListener('click', () => events.fire('tool.sphereSelection'));
         box.dom.addEventListener('click', () => events.fire('tool.boxSelection'));
         translate.dom.addEventListener('click', () => events.fire('tool.move'));
         rotate.dom.addEventListener('click', () => events.fire('tool.rotate'));
         scale.dom.addEventListener('click', () => events.fire('tool.scale'));
+        measure.dom.addEventListener('click', () => events.fire('tool.measure'));
         coordSpace.dom.addEventListener('click', () => events.fire('tool.toggleCoordSpace'));
         origin.dom.addEventListener('click', () => events.fire('pivot.toggleOrigin'));
 
@@ -160,6 +178,7 @@ class BottomToolbar extends Container {
         events.on('tool.activated', (toolName: string) => {
             picker.class[toolName === 'rectSelection' ? 'add' : 'remove']('active');
             brush.class[toolName === 'brushSelection' ? 'add' : 'remove']('active');
+            flood.class[toolName === 'floodSelection' ? 'add' : 'remove']('active');
             polygon.class[toolName === 'polygonSelection' ? 'add' : 'remove']('active');
             lasso.class[toolName === 'lassoSelection' ? 'add' : 'remove']('active');
             sphere.class[toolName === 'sphereSelection' ? 'add' : 'remove']('active');
@@ -167,6 +186,7 @@ class BottomToolbar extends Container {
             translate.class[toolName === 'move' ? 'add' : 'remove']('active');
             rotate.class[toolName === 'rotate' ? 'add' : 'remove']('active');
             scale.class[toolName === 'scale' ? 'add' : 'remove']('active');
+            measure.class[toolName === 'measure' ? 'add' : 'remove']('active');
         });
 
         events.on('tool.coordSpace', (space: 'local' | 'world') => {
@@ -182,6 +202,7 @@ class BottomToolbar extends Container {
         tooltips.register(redo, localize('tooltip.redo'));
         tooltips.register(picker, localize('tooltip.picker'));
         tooltips.register(brush, localize('tooltip.brush'));
+        tooltips.register(flood, localize('tooltip.flood'));
         tooltips.register(polygon, localize('tooltip.polygon'));
         tooltips.register(lasso, 'Lasso Select');
         tooltips.register(sphere, localize('tooltip.sphere'));
@@ -190,6 +211,7 @@ class BottomToolbar extends Container {
         tooltips.register(translate, localize('tooltip.translate'));
         tooltips.register(rotate, localize('tooltip.rotate'));
         tooltips.register(scale, localize('tooltip.scale'));
+        tooltips.register(measure, localize('tooltip.measure'));
         tooltips.register(coordSpace, localize('tooltip.local-space'));
         tooltips.register(origin, localize('tooltip.bound-center'));
     }

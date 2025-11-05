@@ -1,5 +1,5 @@
 import { Container, Label } from '@playcanvas/pcui';
-import { Mat4, Vec3 } from 'playcanvas';
+import { Mat4, path, Vec3 } from 'playcanvas';
 
 import { DataPanel } from './data-panel';
 import { Events } from '../events';
@@ -24,6 +24,10 @@ import { VideoSettingsDialog } from './video-settings-dialog';
 import { ViewCube } from './view-cube';
 import { ViewPanel } from './view-panel';
 import { version } from '../../package.json';
+
+const removeExtension = (filename: string) => {
+    return filename.substring(0, filename.length - path.getExtension(filename).length);
+};
 
 class EditorUI {
     appContainer: Container;
@@ -205,8 +209,8 @@ class EditorUI {
 
         events.function('show.publishSettingsDialog', async () => {
             // show popup if user isn't logged in
-            const canPublish = await events.invoke('publish.enabled');
-            if (!canPublish) {
+            const userStatus = await events.invoke('publish.userStatus');
+            if (!userStatus) {
                 await events.invoke('showPopup', {
                     type: 'error',
                     header: localize('popup.error'),
@@ -216,7 +220,7 @@ class EditorUI {
             }
 
             // get user publish settings
-            const publishSettings = await publishSettingsDialog.show();
+            const publishSettings = await publishSettingsDialog.show(userStatus);
 
             // do publish
             if (publishSettings) {
@@ -236,7 +240,41 @@ class EditorUI {
             const videoSettings = await videoSettingsDialog.show();
 
             if (videoSettings) {
-                await events.invoke('render.video', videoSettings);
+
+                try {
+                    const docName = events.invoke('doc.name');
+                    const suggested = `${removeExtension(docName ?? 'SuperSplat')}-video.mp4`;
+
+                    let writable;
+
+                    if (window.showSaveFilePicker) {
+                        const fileHandle = await window.showSaveFilePicker({
+                            id: 'SuperSplatVideoFileExport',
+                            types: [{
+                                description: 'MP4 Video',
+                                accept: {
+                                    'video/mp4': ['.mp4']
+                                }
+                            }],
+                            suggestedName: suggested
+                        });
+
+                        writable = await fileHandle.createWritable();
+                    }
+
+                    await events.invoke('render.video', videoSettings, writable);
+                } catch (error) {
+                    if (error instanceof DOMException && error.name === 'AbortError') {
+                        // user cancelled save dialog
+                        return;
+                    }
+
+                    await events.invoke('showPopup', {
+                        type: 'error',
+                        header: 'Failed to render video',
+                        message: `'${error.message ?? error}'`
+                    });
+                }
             }
         });
 

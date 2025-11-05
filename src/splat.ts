@@ -75,9 +75,12 @@ class Splat extends Element {
     _whitePoint = 1;
     _transparency = 1;
 
+    measurePoints: Vec3[] = [];
+    measureSelection = -1;
+
     rebuildMaterial: (bands: number) => void;
 
-    constructor(asset: Asset) {
+    constructor(asset: Asset, orientation: Vec3) {
         super(ElementType.splat);
 
         const splatResource = asset.resource as GSplatResource;
@@ -90,7 +93,7 @@ class Splat extends Element {
         this.numSplats = splatData.numSplats;
 
         this.entity = new Entity('splatEntitiy');
-        this.entity.setEulerAngles(0, 0, 180);
+        this.entity.setEulerAngles(orientation);
         this.entity.addComponent('gsplat', { asset });
 
         const instance = this.entity.gsplat.instance;

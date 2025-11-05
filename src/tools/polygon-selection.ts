@@ -7,23 +7,21 @@ class PolygonSelection {
     deactivate: () => void;
 
     constructor(events: Events, parent: HTMLElement, mask: { canvas: HTMLCanvasElement, context: CanvasRenderingContext2D }) {
-        let points: Point[] = [];
-        let currentPoint: Point = null;
-
         // create svg
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.classList.add('tool-svg', 'hidden');
         svg.id = 'polygon-select-svg';
-        svg.classList.add('select-svg');
+        parent.appendChild(svg);
 
         // create polyline element
         const polyline = document.createElementNS(svg.namespaceURI, 'polyline') as SVGPolylineElement;
-        polyline.setAttribute('fill', 'none');
-        polyline.setAttribute('stroke-width', '1');
-        polyline.setAttribute('stroke-dasharray', '5, 5');
-        polyline.setAttribute('stroke-dashoffset', '0');
+        svg.appendChild(polyline);
 
         // create canvas
         const { canvas, context } = mask;
+
+        let points: Point[] = [];
+        let currentPoint: Point = null;
 
         const dist = (a: Point, b: Point) => {
             return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
@@ -110,7 +108,7 @@ class PolygonSelection {
         };
 
         this.activate = () => {
-            svg.style.display = 'inline';
+            svg.classList.remove('hidden');
             parent.style.display = 'block';
             parent.addEventListener('pointerdown', pointerdown);
             parent.addEventListener('pointermove', pointermove);
@@ -120,7 +118,7 @@ class PolygonSelection {
 
         this.deactivate = () => {
             // cancel active operation
-            svg.style.display = 'none';
+            svg.classList.add('hidden');
             parent.style.display = 'none';
             parent.removeEventListener('pointerdown', pointerdown);
             parent.removeEventListener('pointermove', pointermove);
@@ -129,9 +127,6 @@ class PolygonSelection {
             points = [];
             paint();
         };
-
-        svg.appendChild(polyline);
-        parent.appendChild(svg);
     }
 }
 

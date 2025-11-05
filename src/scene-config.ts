@@ -18,7 +18,8 @@ const sceneConfig = {
         exposure: 1.0,
         toneMapping: 'linear',
         debugRender: '',
-        overlay: true
+        overlay: true,
+        highPrecision: true
     },
     show: {
         grid: true,

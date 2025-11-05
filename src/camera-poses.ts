@@ -104,12 +104,12 @@ const registerCameraPosesEvents = (events: Events) => {
     const movePose = (index: number, frame: number) => {
         // remove target frame pose
         const toIndex = poses.findIndex(p => p.frame === frame);
+        // move pose
+        poses[index].frame = frame;
         if (toIndex !== -1) {
             removePose(toIndex);
         }
 
-        // move pose
-        poses[index].frame = frame;
         rebuildSpline();
         events.fire('timeline.setKey', index, frame);
     };
@@ -149,6 +149,17 @@ const registerCameraPosesEvents = (events: Events) => {
 
     events.on('timeline.frames', () => {
         rebuildSpline();
+    });
+
+    events.on('scene.clear', () => {
+        // remove all timeline keys in reverse order to maintain correct indices
+        while (poses.length > 0) {
+            removePose(poses.length - 1);
+        }
+        onTimelineChange = null;
+
+        // reset timeline to frame 0
+        events.fire('timeline.setFrame', 0);
     });
 
     // doc

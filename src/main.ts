@@ -16,7 +16,9 @@ import { Shortcuts } from './shortcuts';
 import { registerTimelineEvents } from './timeline';
 import { BoxSelection } from './tools/box-selection';
 import { BrushSelection } from './tools/brush-selection';
+import { FloodSelection } from './tools/flood-selection';
 import { LassoSelection } from './tools/lasso-selection';
+import { MeasureTool } from './tools/measure-tool';
 import { MoveTool } from './tools/move-tool';
 import { PolygonSelection } from './tools/polygon-selection';
 import { RectSelection } from './tools/rect-selection';
@@ -82,6 +84,7 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['P', 'p'], { event: 'tool.polygonSelection', sticky: true });
     shortcuts.register(['L', 'l'], { event: 'tool.lassoSelection', sticky: true });
     shortcuts.register(['B', 'b'], { event: 'tool.brushSelection', sticky: true });
+    shortcuts.register(['O', 'o'], { event: 'tool.floodSelection', sticky: true });
     shortcuts.register(['A', 'a'], { event: 'select.all', ctrl: true });
     shortcuts.register(['A', 'a'], { event: 'select.none', shift: true });
     shortcuts.register(['I', 'i'], { event: 'select.invert', ctrl: true });
@@ -226,6 +229,7 @@ const main = async () => {
     const toolManager = new ToolManager(events);
     toolManager.register('rectSelection', new RectSelection(events, editorUI.toolsContainer.dom));
     toolManager.register('brushSelection', new BrushSelection(events, editorUI.toolsContainer.dom, mask));
+    toolManager.register('floodSelection', new FloodSelection(events, editorUI.toolsContainer.dom, mask, editorUI.canvasContainer));
     toolManager.register('polygonSelection', new PolygonSelection(events, editorUI.toolsContainer.dom, mask));
     toolManager.register('lassoSelection', new LassoSelection(events, editorUI.toolsContainer.dom, mask));
     toolManager.register('sphereSelection', new SphereSelection(events, scene, editorUI.canvasContainer));
@@ -233,6 +237,7 @@ const main = async () => {
     toolManager.register('move', new MoveTool(events, scene));
     toolManager.register('rotate', new RotateTool(events, scene));
     toolManager.register('scale', new ScaleTool(events, scene));
+    toolManager.register('measure', new MeasureTool(events, scene, editorUI.toolsContainer.dom, editorUI.canvasContainer));
 
     editorUI.toolsContainer.dom.appendChild(maskCanvas);
 

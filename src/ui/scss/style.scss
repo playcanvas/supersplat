@@ -20,6 +20,7 @@
 @use 'progress.scss';
 @use 'export-popup.scss';
 @use 'timeline-panel.scss';
+@use 'tool.scss';
 
 * {
     font-size: 12px;
@@ -137,13 +138,6 @@ body {
     }
 }
 
-.select-svg {
-    display: none;
-    position: absolute;
-    width: 100%;
-    height: 100%;
-}
-
 #view-cube-container {
     position: absolute;
     width: 140px;
@@ -174,6 +168,9 @@ body {
     width: 100%;
     height: 100%;
     cursor: crosshair;
+    &.noevents {
+        pointer-events: none;
+    }
 }
 
 #canvas {

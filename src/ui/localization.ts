@@ -18,11 +18,11 @@ const localizeInit = () => {
                     'file.new': 'Neu',
                     'file.open': 'Öffnen',
                     'file.import': 'Importieren...',
-                    'file.load-all-data': 'PLY-Daten vollständig laden',
                     'file.save': 'Speichern',
                     'file.save-as': 'Speichern als...',
                     'file.publish': 'Veröffentlichen...',
                     'file.export': 'Exportieren',
+                    'file.export.ply': 'PLY (.ply)',
                     'file.export.splat': 'Splat',
                     'file.export.viewer': 'Viewer App...',
 
@@ -32,6 +32,8 @@ const localizeInit = () => {
                     'render.video': 'Video...',
                     'render.ok': 'Rendern',
                     'render.cancel': 'Abbrechen',
+                    'render.render-video': 'Video rendern',
+                    'render.rendering': 'Frames werden gerendert...',
 
                     // Selection menu
                     'select': 'Auswahl',
@@ -81,6 +83,7 @@ const localizeInit = () => {
                     'options.show-grid': 'Raster anzeigen',
                     'options.show-bound': 'Objektbox anzeigen',
                     'options.camera-fly-speed': 'Kamera Geschwindigkeit',
+                    'options.high-precision': 'High Precision Rendering',
 
                     // Camera panel
                     'camera': 'KAMERA POSEN',
@@ -131,6 +134,7 @@ const localizeInit = () => {
                     'shortcuts.scale': 'Skalieren',
                     'shortcuts.rect-selection': 'Rechteckselektion',
                     'shortcuts.brush-selection': 'Pinselselektion',
+                    'shortcuts.flood-selection': 'Füllselektion',
                     'shortcuts.picker-selection': 'Einzelselektion',
                     'shortcuts.brush-size': 'Pinsel Verkleinern/Vergrößern',
                     'shortcuts.deactivate-tool': 'Werkzeug deaktivieren',
@@ -179,11 +183,13 @@ const localizeInit = () => {
                     'tooltip.picker': 'Einzelselektion ( R )',
                     'tooltip.polygon': 'Polygonselektion ( P )',
                     'tooltip.brush': 'Pinselselektion ( B )',
+                    'tooltip.flood': 'Füllselektion ( O )',
                     'tooltip.sphere': 'Kugelselektion',
                     'tooltip.box': 'Kastenselektion',
                     'tooltip.translate': 'Verschieben ( 1 )',
                     'tooltip.rotate': 'Drehen ( 2 )',
                     'tooltip.scale': 'Skalieren ( 3 )',
+                    'tooltip.measure': 'Messung',
                     'tooltip.local-space': 'Gizmo in local-space',
                     'tooltip.bound-center': 'Mittelpunkt verwenden',
 
@@ -233,6 +239,19 @@ const localizeInit = () => {
                     'publish.succeeded': 'VERÖFFENTLICHEN ERFOLGREICH',
                     'publish.message': 'Verwenden Sie den Link unten, um auf Ihre Szene zuzugreifen.',
                     'publish.please-log-in': 'Das Veröffentlichen in PlayCanvas erfordert ein Benutzerkonto. Bitte melden Sie sich an und versuchen Sie es erneut.',
+                    'publish.converting': 'Konvertieren...',
+                    'publish.uploading': 'Hochladen...',
+                    'publish.to': 'Veröffentlichen in',
+                    'publish.new-scene': 'Neue Szene',
+
+                    // Image Settings Dialog
+                    'image.header': 'BILD EINSTELLUNGEN',
+                    'image.preset': 'Vorgabe',
+                    'image.resolution': 'Auflösung',
+                    'image.transparentBg': 'Transparenter Hintergrund',
+                    'image.showDebug': 'Debug-Überlagerungen anzeigen',
+                    'image.resolutionCurrent': 'Aktuell',
+                    'image.resolutionCustom': 'Benutzerdefiniert',
 
                     // Video Settings Dialog
                     'video.header': 'VIDEO EINSTELLUNGEN',
@@ -261,7 +280,6 @@ const localizeInit = () => {
                     'file.new': 'New',
                     'file.open': 'Open',
                     'file.import': 'Import...',
-                    'file.load-all-data': 'Load all PLY data',
                     'file.save': 'Save',
                     'file.save-as': 'Save As...',
                     'file.publish': 'Publish...',
@@ -327,6 +345,8 @@ const localizeInit = () => {
                     'options.show-grid': 'Show Grid',
                     'options.show-bound': 'Show Bound',
                     'options.camera-fly-speed': 'Fly Speed',
+                    'options.high-precision': 'High Precision Rendering',
+
                     'options.tonemapping': 'Tonemapping',
                     'options.tonemapping-none': 'None',
                     'options.tonemapping-linear': 'Linear',
@@ -385,6 +405,7 @@ const localizeInit = () => {
                     'shortcuts.scale': 'Scale',
                     'shortcuts.rect-selection': 'Rect Selection',
                     'shortcuts.brush-selection': 'Brush Selection',
+                    'shortcuts.flood-selection': 'Flood Selection',
                     'shortcuts.picker-selection': 'Picker Selection',
                     'shortcuts.brush-size': 'Decrease/Increase brush size',
                     'shortcuts.deactivate-tool': 'Deactivate Tool',
@@ -433,11 +454,13 @@ const localizeInit = () => {
                     'tooltip.picker': 'Picker Select ( R )',
                     'tooltip.polygon': 'Polygon Select ( P )',
                     'tooltip.brush': 'Brush Select ( B )',
+                    'tooltip.flood': 'Flood Select ( O )',
                     'tooltip.sphere': 'Sphere Select',
                     'tooltip.box': 'Box Select',
                     'tooltip.translate': 'Translate ( 1 )',
                     'tooltip.rotate': 'Rotate ( 2 )',
                     'tooltip.scale': 'Scale ( 3 )',
+                    'tooltip.measure': 'Measurement',
                     'tooltip.local-space': 'Use Local Orientation',
                     'tooltip.bound-center': 'Use Bound Center',
 
@@ -489,6 +512,8 @@ const localizeInit = () => {
                     'publish.please-log-in': 'Publishing to PlayCanvas requires a user account. Please log in and try again.',
                     'publish.converting': 'Converting...',
                     'publish.uploading': 'Uploading...',
+                    'publish.to': 'Publish to',
+                    'publish.new-scene': 'New Scene',
 
                     // Image Settings Dialog
                     'image.header': 'IMAGE SETTINGS',
@@ -526,11 +551,11 @@ const localizeInit = () => {
                     'file.new': 'Créer',
                     'file.open': 'Ouvrir',
                     'file.import': 'Importer...',
-                    'file.load-all-data': 'Charger toutes les données ply',
                     'file.save': 'Enregistrer',
                     'file.save-as': 'Enregistrer sous...',
                     'file.publish': 'Publier...',
                     'file.export': 'Exporter',
+                    'file.export.ply': 'PLY (.ply)',
                     'file.export.splat': 'Fichier splat',
                     'file.export.viewer': 'Application de visualisation...',
 
@@ -540,6 +565,8 @@ const localizeInit = () => {
                     'render.video': 'Vidéo...',
                     'render.ok': 'Rendu',
                     'render.cancel': 'Annuler',
+                    'render.render-video': 'Rendre la Vidéo',
+                    'render.rendering': 'Rendu des Frames...',
 
                     // Selection menu
                     'select': 'Sélection',
@@ -589,6 +616,7 @@ const localizeInit = () => {
                     'options.show-grid': 'Afficher la grille',
                     'options.show-bound': 'Afficher limites',
                     'options.camera-fly-speed': 'Vitesse de vol',
+                    'options.high-precision': 'Rendu haute précision',
 
                     // Camera panel
                     'camera': 'POSES DE LA CAMERA',
@@ -639,6 +667,7 @@ const localizeInit = () => {
                     'shortcuts.scale': 'Changer l\'échelle',
                     'shortcuts.rect-selection': 'Sélection avec rectangle',
                     'shortcuts.brush-selection': 'Sélection avec pinceau',
+                    'shortcuts.flood-selection': 'Sélection par remplissage',
                     'shortcuts.picker-selection': 'Sélection avec pipette',
                     'shortcuts.brush-size': 'Augmenter/Diminuer la taille du pinceau',
                     'shortcuts.deactivate-tool': 'Désactiver l\'outil',
@@ -687,11 +716,13 @@ const localizeInit = () => {
                     'tooltip.picker': 'Sélection avec pipette ( R )',
                     'tooltip.polygon': 'Sélection avec polygone ( P )',
                     'tooltip.brush': 'Sélection avec pinceau ( B )',
+                    'tooltip.flood': 'Sélection par remplissage ( O )',
                     'tooltip.sphere': 'Sélection avec sphère',
                     'tooltip.box': 'Sélection de boîte',
                     'tooltip.translate': 'Translation ( 1 )',
                     'tooltip.rotate': 'Rotation ( 2 )',
                     'tooltip.scale': 'Échelle ( 3 )',
+                    'tooltip.measure': 'Mesure',
                     'tooltip.local-space': 'Espace local gizmo',
                     'tooltip.bound-center': 'Utiliser le centre de la limite',
 
@@ -741,6 +772,19 @@ const localizeInit = () => {
                     'publish.succeeded': 'PUBLICATION RÉUSSIE',
                     'publish.message': 'Utilisez le lien ci-dessous pour accéder à votre scène.',
                     'publish.please-log-in': 'La publication sur PlayCanvas nécessite un compte utilisateur. Veuillez vous connecter et réessayer.',
+                    'publish.converting': 'Conversion...',
+                    'publish.uploading': 'Téléchargement...',
+                    'publish.to': 'Publier sur',
+                    'publish.new-scene': 'Nouvelle scène',
+
+                    // Image Settings Dialog
+                    'image.header': 'PARAMETRES IMAGE',
+                    'image.preset': 'Préréglage',
+                    'image.resolution': 'Résolution',
+                    'image.transparentBg': 'Fond transparent',
+                    'image.showDebug': 'Afficher les superpositions de débogage',
+                    'image.resolutionCurrent': 'Actuelle',
+                    'image.resolutionCustom': 'Personnalisée',
 
                     // Video Settings Dialog
                     'video.header': 'PARAMETRES VIDEO',
@@ -769,11 +813,11 @@ const localizeInit = () => {
                     'file.new': '新規作成',
                     'file.open': '開く',
                     'file.import': 'インポート...',
-                    'file.load-all-data': '全てのPLYデータを読み込む',
                     'file.save': '保存',
                     'file.save-as': '名前を付けて保存',
                     'file.publish': '公開...',
                     'file.export': 'エクスポート',
+                    'file.export.ply': 'PLY (.ply)',
                     'file.export.splat': 'Splat (.splat)',
                     'file.export.viewer': 'Viewer App...',
 
@@ -783,6 +827,8 @@ const localizeInit = () => {
                     'render.video': '動画...',
                     'render.ok': 'レンダリング',
                     'render.cancel': 'キャンセル',
+                    'render.render-video': 'ビデオをレンダリング',
+                    'render.rendering': 'フレームをレンダリング中...',
 
                     // Selection menu
                     'select': '選択',
@@ -832,6 +878,7 @@ const localizeInit = () => {
                     'options.show-grid': 'グリッド',
                     'options.show-bound': 'バウンディングボックス',
                     'options.camera-fly-speed': 'カメラの移動速度',
+                    'options.high-precision': '高精度レンダリング',
 
                     // Camera panel
                     'camera': 'カメラポーズ',
@@ -882,6 +929,7 @@ const localizeInit = () => {
                     'shortcuts.scale': 'スケール',
                     'shortcuts.rect-selection': '四角形選択',
                     'shortcuts.brush-selection': 'ブラシ選択',
+                    'shortcuts.flood-selection': 'フラッド選択',
                     'shortcuts.picker-selection': 'ピッカー選択',
                     'shortcuts.brush-size': 'ブラシサイズの増減',
                     'shortcuts.deactivate-tool': 'ツールの非アクティブ化',
@@ -930,11 +978,13 @@ const localizeInit = () => {
                     'tooltip.picker': 'ピッカー選択 ( R )',
                     'tooltip.polygon': 'ポリゴン選択 ( P )',
                     'tooltip.brush': 'ブラシ選択 ( B )',
+                    'tooltip.flood': 'フラッド選択 ( O )',
                     'tooltip.sphere': '球で選択',
                     'tooltip.box': '箱で選択',
                     'tooltip.translate': '移動 ( 1 )',
                     'tooltip.rotate': '回転 ( 2 )',
                     'tooltip.scale': 'スケール ( 3 )',
+                    'tooltip.measure': '測定',
                     'tooltip.local-space': 'ローカル座標へ切り替え',
                     'tooltip.bound-center': 'バウンディングボックスの中心を使用',
 
@@ -984,6 +1034,19 @@ const localizeInit = () => {
                     'publish.succeeded': '公開に成功',
                     'publish.message': '以下のリンクを使用してシーンにアクセスしてください。',
                     'publish.please-log-in': 'PlayCanvasに公開するにはユーザーアカウントが必要です。ログインしてもう一度お試しください。',
+                    'publish.converting': '変換中...',
+                    'publish.uploading': 'アップロード中...',
+                    'publish.to': 'に公開',
+                    'publish.new-scene': '新しいシーン',
+
+                    // Image Settings Dialog
+                    'image.header': '画像設定',
+                    'image.preset': 'プリセット',
+                    'image.resolution': '解像度',
+                    'image.transparentBg': '透明な背景',
+                    'image.showDebug': 'デバッグオーバーレイを表示',
+                    'image.resolutionCurrent': '現在',
+                    'image.resolutionCustom': 'カスタム',
 
                     // Video Settings Dialog
                     'video.header': 'ビデオ設定',
@@ -1012,11 +1075,11 @@ const localizeInit = () => {
                     'file.new': '새로 만들기',
                     'file.open': '열기',
                     'file.import': '가져오기...',
-                    'file.load-all-data': '모든 PLY 데이터 불러오기',
                     'file.save': '저장',
                     'file.save-as': '다른 이름으로 저장...',
                     'file.publish': '게시...',
                     'file.export': '내보내기',
+                    'file.export.ply': 'PLY (.ply)',
                     'file.export.splat': 'Splat 파일',
                     'file.export.viewer': '뷰어 앱...',
 
@@ -1026,6 +1089,8 @@ const localizeInit = () => {
                     'render.video': '비디오...',
                     'render.ok': '렌더링',
                     'render.cancel': '취소',
+                    'render.render-video': '비디오 렌더링',
+                    'render.rendering': '프레임 렌더링 중...',
 
                     // Selection menu
                     'select': '선택',
@@ -1075,6 +1140,7 @@ const localizeInit = () => {
                     'options.show-grid': '그리드 표시',
                     'options.show-bound': '경계 표시',
                     'options.camera-fly-speed': '카메라 이동 속도',
+                    'options.high-precision': '고정밀 렌더링',
 
                     // Camera panel
                     'camera': '카메라 포즈',
@@ -1088,6 +1154,7 @@ const localizeInit = () => {
                     'colors': '색상',
                     'colors.tint': '색조',
                     'colors.temperature': '온도',
+                    'colors.saturation': '채도',
                     'colors.brightness': '밝기',
                     'colors.blackPoint': '검은 점',
                     'colors.whitePoint': '흰 점',
@@ -1124,6 +1191,7 @@ const localizeInit = () => {
                     'shortcuts.scale': '크기 조정',
                     'shortcuts.rect-selection': '사각형 선택',
                     'shortcuts.brush-selection': '브러시 선택',
+                    'shortcuts.flood-selection': '플러드 선택',
                     'shortcuts.picker-selection': '피커 선택',
                     'shortcuts.brush-size': '브러시 크기 조정',
                     'shortcuts.deactivate-tool': '도구 비활성화',
@@ -1172,11 +1240,13 @@ const localizeInit = () => {
                     'tooltip.picker': '피커 선택 ( R )',
                     'tooltip.polygon': '다각형 선택 ( P )',
                     'tooltip.brush': '브러시 선택 ( B )',
+                    'tooltip.flood': '플러드 선택 ( O )',
                     'tooltip.sphere': '구 선택',
                     'tooltip.box': '상자 선택',
                     'tooltip.translate': '이동 ( 1 )',
                     'tooltip.rotate': '회전 ( 2 )',
                     'tooltip.scale': '크기 조정 ( 3 )',
+                    'tooltip.measure': '측정',
                     'tooltip.local-space': '로컬 공간',
                     'tooltip.bound-center': '바운드 중심 사용',
 
@@ -1226,6 +1296,19 @@ const localizeInit = () => {
                     'publish.succeeded': '게시 성공',
                     'publish.message': '아래 링크를 사용하여 장면에 액세스하십시오.',
                     'publish.please-log-in': 'PlayCanvas에 게시하려면 사용자 계정이 필요합니다. 로그인하고 다시 시도하십시오.',
+                    'publish.converting': '변환 중...',
+                    'publish.uploading': '업로드 중...',
+                    'publish.to': '다음에 게시',
+                    'publish.new-scene': '새 장면',
+
+                    // Image Settings Dialog
+                    'image.header': '이미지 설정',
+                    'image.preset': '프리셋',
+                    'image.resolution': '해상도',
+                    'image.transparentBg': '투명 배경',
+                    'image.showDebug': '디버그 오버레이 표시',
+                    'image.resolutionCurrent': '현재',
+                    'image.resolutionCustom': '사용자 정의',
 
                     // Video Settings Dialog
                     'video.header': '비디오 설정',
@@ -1254,11 +1337,11 @@ const localizeInit = () => {
                     'file.new': '新建',
                     'file.open': '打开',
                     'file.import': '导入...',
-                    'file.load-all-data': '加载所有 PLY 数据',
                     'file.save': '保存',
                     'file.save-as': '另存为...',
                     'file.publish': '发布...',
                     'file.export': '导出',
+                    'file.export.ply': 'PLY (.ply)',
                     'file.export.splat': 'Splat 文件',
                     'file.export.viewer': '查看器应用...',
 
@@ -1268,6 +1351,8 @@ const localizeInit = () => {
                     'render.video': '视频...',
                     'render.ok': '渲染',
                     'render.cancel': '取消',
+                    'render.render-video': '渲染视频',
+                    'render.rendering': '正在渲染帧...',
 
                     // Selection menu
                     'select': '选择',
@@ -1317,6 +1402,7 @@ const localizeInit = () => {
                     'options.show-grid': '显示网格',
                     'options.show-bound': '显示边界',
                     'options.camera-fly-speed': '相机飞行速度',
+                    'options.high-precision': '高精度渲染',
 
                     // Camera panel
                     'camera': '相机姿势',
@@ -1367,6 +1453,7 @@ const localizeInit = () => {
                     'shortcuts.scale': '缩放',
                     'shortcuts.rect-selection': '矩形选择',
                     'shortcuts.brush-selection': '画笔选择',
+                    'shortcuts.flood-selection': '填充选择',
                     'shortcuts.picker-selection': '拾取选择',
                     'shortcuts.brush-size': '减小/增大画笔大小',
                     'shortcuts.deactivate-tool': '停用工具',
@@ -1415,11 +1502,13 @@ const localizeInit = () => {
                     'tooltip.picker': '选择器 ( R )',
                     'tooltip.polygon': '多边形选择 ( P )',
                     'tooltip.brush': '画笔 ( B )',
+                    'tooltip.flood': '填充选择 ( O )',
                     'tooltip.sphere': '球选择',
                     'tooltip.box': '盒选择',
                     'tooltip.translate': '移动 ( 1 )',
                     'tooltip.rotate': '旋转 ( 2 )',
                     'tooltip.scale': '缩放 ( 3 )',
+                    'tooltip.measure': '测量',
                     'tooltip.local-space': '局部坐标系',
                     'tooltip.bound-center': '使用边界中心',
 
@@ -1469,6 +1558,19 @@ const localizeInit = () => {
                     'publish.succeeded': '发布成功',
                     'publish.message': '请使用以下链接访问场景。',
                     'publish.please-log-in': '要在 PlayCanvas 上发布，需要用户帐户。请登录并重试。',
+                    'publish.converting': '转换中...',
+                    'publish.uploading': '上传中...',
+                    'publish.to': '发布到',
+                    'publish.new-scene': '新场景',
+
+                    // Image Settings Dialog
+                    'image.header': '图像设置',
+                    'image.preset': '预设',
+                    'image.resolution': '分辨率',
+                    'image.transparentBg': '透明背景',
+                    'image.showDebug': '显示调试覆盖',
+                    'image.resolutionCurrent': '当前',
+                    'image.resolutionCustom': '自定义',
 
                     // Video Settings Dialog
                     'video.header': '视频设置',

@@ -5,22 +5,21 @@ class BrushSelection {
     deactivate: () => void;
 
     constructor(events: Events, parent: HTMLElement, mask: { canvas: HTMLCanvasElement, context: CanvasRenderingContext2D }) {
-        let radius = 40;
-
         // create svg
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.classList.add('tool-svg', 'hidden');
         svg.id = 'brush-select-svg';
-        svg.classList.add('select-svg');
+        parent.appendChild(svg);
 
         // create circle element
         const circle = document.createElementNS(svg.namespaceURI, 'circle') as SVGCircleElement;
-        circle.setAttribute('r', radius.toString());
-        circle.setAttribute('fill', 'rgba(255, 102, 0, 0.2)');
-        circle.setAttribute('stroke', '#f60');
-        circle.setAttribute('stroke-width', '1');
-        circle.setAttribute('stroke-dasharray', '5, 5');
+        svg.appendChild(circle);
 
         const { canvas, context } = mask;
+
+        let radius = 40;
+
+        circle.setAttribute('r', radius.toString());
 
         const prev = { x: 0, y: 0 };
         let dragId: number | undefined;
@@ -114,7 +113,7 @@ class BrushSelection {
         };
 
         this.activate = () => {
-            svg.style.display = 'inline';
+            svg.classList.remove('hidden');
             parent.style.display = 'block';
             parent.addEventListener('pointerdown', pointerdown);
             parent.addEventListener('pointermove', pointermove);
@@ -127,7 +126,7 @@ class BrushSelection {
             if (dragId !== undefined) {
                 dragEnd();
             }
-            svg.style.display = 'none';
+            svg.classList.add('hidden');
             parent.style.display = 'none';
             parent.removeEventListener('pointerdown', pointerdown);
             parent.removeEventListener('pointermove', pointermove);
@@ -144,9 +143,6 @@ class BrushSelection {
             radius = Math.min(500, radius * 1.05);
             circle.setAttribute('r', radius.toString());
         });
-
-        svg.appendChild(circle);
-        parent.appendChild(svg);
     }
 }
 

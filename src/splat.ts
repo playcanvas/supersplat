@@ -401,13 +401,6 @@ class Splat extends Element {
         }
 
         this.entity.enabled = this.visible;
-
-        // Temp hack: override the splat viewport size because we're rendering to an offscreen
-        // render target and the engine currently always takes the backbuffer size.
-        // this workaround can be removed once https://github.com/playcanvas/engine/pull/7425 is
-        // available
-        const rt = this.scene.camera.entity.camera.renderTarget;
-        this.entity.gsplat.instance.meshInstance.setParameter('viewport', [rt.width, rt.height]);
     }
 
     focalPoint() {

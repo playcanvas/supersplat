@@ -1087,13 +1087,13 @@ const serializeViewer = async (splats: Splat[], serializeSettings: SerializeSett
         };
 
         const style = '<link rel="stylesheet" href="./index.css">';
-        const script = '<script type="module" src="./index.js"></script>';
+        const script = 'import { main } from \'./index.js\';';
         const settings = 'settings: fetch(settingsUrl).then(response => response.json())';
         const content = 'fetch(contentUrl)';
 
         const html = indexHtml
         .replace(style, `<style>\n${pad(indexCss, 12)}\n        </style>`)
-        .replace(script, `<script type="module">\n${pad(indexJs, 12)}\n        </script>`)
+        .replace(script, indexJs)
         .replace(settings, `settings: ${JSON.stringify(experienceSettings)}`)
         .replace(content, `fetch("data:application/ply;base64,${encodeBase64(plyBuffers)}")`);
 

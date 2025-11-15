@@ -25,6 +25,9 @@ import { ViewCube } from './view-cube';
 import { ViewPanel } from './view-panel';
 import { version } from '../../package.json';
 
+// ts compiler and vscode find this type, but eslint does not
+type FilePickerAcceptType = unknown;
+
 const removeExtension = (filename: string) => {
     return filename.substring(0, filename.length - path.getExtension(filename).length);
 };

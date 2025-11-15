@@ -243,12 +243,12 @@ class EditorUI {
 
                 try {
                     const docName = events.invoke('doc.name');
-                    
+
                     // Determine file extension and mime type based on format
                     let fileExtension: string;
                     let mimeType: string;
                     let description: string;
-                    
+
                     if (videoSettings.format === 'webm-vp9') {
                         fileExtension = '.webm';
                         mimeType = 'video/webm';
@@ -262,7 +262,7 @@ class EditorUI {
                         mimeType = 'video/mp4';
                         description = 'MP4 Video';
                     }
-                    
+
                     const suggested = `${removeExtension(docName ?? 'SuperSplat')}-video${fileExtension}`;
 
                     let writable;

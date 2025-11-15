@@ -243,7 +243,27 @@ class EditorUI {
 
                 try {
                     const docName = events.invoke('doc.name');
-                    const suggested = `${removeExtension(docName ?? 'SuperSplat')}-video.mp4`;
+                    
+                    // Determine file extension and mime type based on format
+                    let fileExtension: string;
+                    let mimeType: string;
+                    let description: string;
+                    
+                    if (videoSettings.format === 'webm-vp9') {
+                        fileExtension = '.webm';
+                        mimeType = 'video/webm';
+                        description = 'WebM Video (VP9)';
+                    } else if (videoSettings.format === 'webm-av1') {
+                        fileExtension = '.webm';
+                        mimeType = 'video/webm';
+                        description = 'WebM Video (AV1)';
+                    } else {
+                        fileExtension = '.mp4';
+                        mimeType = 'video/mp4';
+                        description = 'MP4 Video';
+                    }
+                    
+                    const suggested = `${removeExtension(docName ?? 'SuperSplat')}-video${fileExtension}`;
 
                     let writable;
 
@@ -251,9 +271,9 @@ class EditorUI {
                         const fileHandle = await window.showSaveFilePicker({
                             id: 'SuperSplatVideoFileExport',
                             types: [{
-                                description: 'MP4 Video',
+                                description: description,
                                 accept: {
-                                    'video/mp4': ['.mp4']
+                                    [mimeType]: [fileExtension]
                                 }
                             }],
                             suggestedName: suggested

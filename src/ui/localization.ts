@@ -253,6 +253,7 @@ const localizeInit = () => {
                     // Video Settings Dialog
                     'video.header': 'VIDEO EINSTELLUNGEN',
                     'video.resolution': 'Auflösung',
+                    'video.format': 'Format',
                     'video.frameRate': 'Bildrate',
                     'video.bitrate': 'Bitrate',
                     'video.portrait': 'Hochformat',
@@ -521,6 +522,7 @@ const localizeInit = () => {
                     // Video Settings Dialog
                     'video.header': 'VIDEO SETTINGS',
                     'video.resolution': 'Resolution',
+                    'video.format': 'Format',
                     'video.frameRate': 'Frame Rate',
                     'video.bitrate': 'Bitrate',
                     'video.portrait': 'Portrait Mode',
@@ -780,6 +782,7 @@ const localizeInit = () => {
                     // Video Settings Dialog
                     'video.header': 'PARAMETRES VIDEO',
                     'video.resolution': 'Résolution',
+                    'video.format': 'Format',
                     'video.frameRate': 'Fréquence d\'image',
                     'video.bitrate': 'Débit binaire',
                     'video.portrait': 'Mode portrait',
@@ -1039,6 +1042,7 @@ const localizeInit = () => {
                     // Video Settings Dialog
                     'video.header': 'ビデオ設定',
                     'video.resolution': '解像度',
+                    'video.format': 'フォーマット',
                     'video.frameRate': 'フレームレート',
                     'video.bitrate': 'ビットレート',
                     'video.portrait': 'ポートレートモード',
@@ -1298,6 +1302,7 @@ const localizeInit = () => {
                     // Video Settings Dialog
                     'video.header': '비디오 설정',
                     'video.resolution': '해상도',
+                    'video.format': '형식',
                     'video.frameRate': '프레임 속도',
                     'video.bitrate': '비트 전송률',
                     'video.portrait': '세로 모드',
@@ -1557,6 +1562,7 @@ const localizeInit = () => {
                     // Video Settings Dialog
                     'video.header': '视频设置',
                     'video.resolution': '分辨率',
+                    'video.format': '格式',
                     'video.frameRate': '帧率',
                     'video.bitrate': '比特率',
                     'video.portrait': '纵向模式',

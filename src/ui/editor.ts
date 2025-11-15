@@ -25,6 +25,9 @@ import { ViewCube } from './view-cube';
 import { ViewPanel } from './view-panel';
 import { version } from '../../package.json';
 
+// ts compiler and vscode find this type, but eslint does not
+type FilePickerAcceptType = unknown;
+
 const removeExtension = (filename: string) => {
     return filename.substring(0, filename.length - path.getExtension(filename).length);
 };
@@ -243,19 +246,43 @@ class EditorUI {
 
                 try {
                     const docName = events.invoke('doc.name');
-                    const suggested = `${removeExtension(docName ?? 'SuperSplat')}-video.mp4`;
+
+                    // Determine file extension and mime type based on format
+                    let fileExtension: string;
+                    let filePickerTypes: FilePickerAcceptType[];
+                    let description: string;
+
+                    if (videoSettings.format === 'webm-vp9') {
+                        fileExtension = '.webm';
+                        description = 'WebM Video (VP9)';
+                        filePickerTypes = [{
+                            description: 'WebM Video (VP9)',
+                            accept: { 'video/webm': ['.webm'] }
+                        }];
+                    } else if (videoSettings.format === 'webm-av1') {
+                        fileExtension = '.webm';
+                        description = 'WebM Video (AV1)';
+                        filePickerTypes = [{
+                            description: 'WebM Video (AV1)',
+                            accept: { 'video/webm': ['.webm'] }
+                        }];
+                    } else {
+                        fileExtension = '.mp4';
+                        description = 'MP4 Video';
+                        filePickerTypes = [{
+                            description: 'MP4 Video',
+                            accept: { 'video/mp4': ['.mp4'] }
+                        }];
+                    }
+
+                    const suggested = `${removeExtension(docName ?? 'supersplat')}${fileExtension}`;
 
                     let writable;
 
                     if (window.showSaveFilePicker) {
                         const fileHandle = await window.showSaveFilePicker({
                             id: 'SuperSplatVideoFileExport',
-                            types: [{
-                                description: 'MP4 Video',
-                                accept: {
-                                    'video/mp4': ['.mp4']
-                                }
-                            }],
+                            types: filePickerTypes,
                             suggestedName: suggested
                         });
 

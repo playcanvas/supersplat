@@ -1,4 +1,4 @@
-import { BufferTarget, EncodedPacket, EncodedVideoPacketSource, Mp4OutputFormat, Output, StreamTarget } from 'mediabunny';
+import { BufferTarget, EncodedPacket, EncodedVideoPacketSource, Mp4OutputFormat, Output, StreamTarget, WebMOutputFormat } from 'mediabunny';
 import { path, Vec3 } from 'playcanvas';
 
 import { ElementType } from './element';
@@ -24,6 +24,7 @@ type VideoSettings = {
     bitrate: number;
     transparentBg: boolean;
     showDebug: boolean;
+    format: 'mp4' | 'webm-vp9' | 'webm-av1';
 };
 
 const removeExtension = (filename: string) => {
@@ -180,18 +181,41 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
         events.fire('progressStart', localize('render.render-video'));
 
         try {
-            const { startFrame, endFrame, frameRate, width, height, bitrate, transparentBg, showDebug } = videoSettings;
+            const { startFrame, endFrame, frameRate, width, height, bitrate, transparentBg, showDebug, format } = videoSettings;
 
             const target = fileStream ? new StreamTarget(fileStream) : new BufferTarget();
 
-            const output = new Output({
-                format: new Mp4OutputFormat({
+            // Configure output format and codec based on selection
+            let outputFormat: Mp4OutputFormat | WebMOutputFormat;
+            let codecType: 'avc' | 'vp9' | 'av1';
+            let codec: string;
+            let fileExtension: string;
+
+            if (format === 'webm-vp9') {
+                outputFormat = new WebMOutputFormat();
+                codecType = 'vp9';
+                codec = 'vp09.00.10.08'; // VP9 profile 0
+                fileExtension = 'webm';
+            } else if (format === 'webm-av1') {
+                outputFormat = new WebMOutputFormat();
+                codecType = 'av1';
+                codec = 'av01.0.05M.08'; // AV1 Main profile, level 3.1
+                fileExtension = 'webm';
+            } else {
+                outputFormat = new Mp4OutputFormat({
                     fastStart: 'in-memory'
-                }),
+                });
+                codecType = 'avc';
+                codec = height < 1080 ? 'avc1.420028' : 'avc1.640033'; // H.264 profile low : high
+                fileExtension = 'mp4';
+            }
+
+            const output = new Output({
+                format: outputFormat,
                 target
             });
 
-            const videoSource = new EncodedVideoPacketSource('avc');
+            const videoSource = new EncodedVideoPacketSource(codecType);
             output.addVideoTrack(videoSource, {
                 rotation: 0,
                 frameRate
@@ -210,7 +234,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             });
 
             encoder.configure({
-                codec: height < 1080 ? 'avc1.420028' : 'avc1.640033', // H.264 profile low : high
+                codec,
                 width,
                 height,
                 bitrate
@@ -341,7 +365,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
             // Download
             if (!fileStream) {
-                downloadFile((output.target as BufferTarget).buffer, `${removeExtension(splats[0]?.name ?? 'SuperSplat')}-video.mp4`);
+                downloadFile((output.target as BufferTarget).buffer, `${removeExtension(splats[0]?.name ?? 'supersplat')}.${fileExtension}`);
             }
 
             return true;

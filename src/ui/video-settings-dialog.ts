@@ -59,6 +59,22 @@ class VideoSettingsDialog extends Container {
         resolutionRow.append(resolutionLabel);
         resolutionRow.append(resolutionSelect);
 
+        // format
+
+        const formatLabel = new Label({ class: 'label', text: localize('video.format') });
+        const formatSelect = new SelectInput({
+            class: 'select',
+            defaultValue: 'mp4',
+            options: [
+                { v: 'mp4', t: 'MP4 (H.264)' },
+                { v: 'webm-vp9', t: 'WebM (VP9)' },
+                { v: 'webm-av1', t: 'WebM (AV1)' }
+            ]
+        });
+        const formatRow = new Container({ class: 'row' });
+        formatRow.append(formatLabel);
+        formatRow.append(formatSelect);
+
         // framerate
 
         const frameRateLabel = new Label({ class: 'label', text: localize('video.frameRate') });
@@ -127,6 +143,7 @@ class VideoSettingsDialog extends Container {
 
         const content = new Container({ id: 'content' });
         content.append(resolutionRow);
+        content.append(formatRow);
         content.append(frameRateRow);
         content.append(bitrateRow);
         content.append(portraitRow);
@@ -256,7 +273,8 @@ class VideoSettingsDialog extends Container {
                         height,
                         bitrate,
                         transparentBg: transparentBgBoolean.value,
-                        showDebug: showDebugBoolean.value
+                        showDebug: showDebugBoolean.value,
+                        format: formatSelect.value as 'mp4' | 'webm-vp9' | 'webm-av1'
                     };
 
                     resolve(videoSettings);

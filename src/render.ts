@@ -1,4 +1,4 @@
-import { BufferTarget, EncodedPacket, EncodedVideoPacketSource, Mp4OutputFormat, Output, StreamTarget, WebMOutputFormat } from 'mediabunny';
+import { BufferTarget, EncodedPacket, EncodedVideoPacketSource, MkvOutputFormat, MovOutputFormat, Mp4OutputFormat, Output, StreamTarget, WebMOutputFormat } from 'mediabunny';
 import { path, Vec3 } from 'playcanvas';
 
 import { ElementType } from './element';
@@ -24,7 +24,7 @@ type VideoSettings = {
     bitrate: number;
     transparentBg: boolean;
     showDebug: boolean;
-    format: 'mp4' | 'webm-vp9' | 'webm-av1';
+    format: 'mp4' | 'mov' | 'mkv' | 'webm-vp9' | 'webm-av1';
 };
 
 const removeExtension = (filename: string) => {
@@ -186,7 +186,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             const target = fileStream ? new StreamTarget(fileStream) : new BufferTarget();
 
             // Configure output format and codec based on selection
-            let outputFormat: Mp4OutputFormat | WebMOutputFormat;
+            let outputFormat: Mp4OutputFormat | MovOutputFormat | MkvOutputFormat | WebMOutputFormat;
             let codecType: 'avc' | 'vp9' | 'av1';
             let codec: string;
             let fileExtension: string;
@@ -201,6 +201,18 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 codecType = 'av1';
                 codec = 'av01.0.05M.08'; // AV1 Main profile, level 3.1
                 fileExtension = 'webm';
+            } else if (format === 'mov') {
+                outputFormat = new MovOutputFormat({
+                    fastStart: 'in-memory'
+                });
+                codecType = 'avc';
+                codec = height < 1080 ? 'avc1.420028' : 'avc1.640033'; // H.264 profile low : high
+                fileExtension = 'mov';
+            } else if (format === 'mkv') {
+                outputFormat = new MkvOutputFormat();
+                codecType = 'avc';
+                codec = height < 1080 ? 'avc1.420028' : 'avc1.640033'; // H.264 profile low : high
+                fileExtension = 'mkv';
             } else {
                 outputFormat = new Mp4OutputFormat({
                     fastStart: 'in-memory'

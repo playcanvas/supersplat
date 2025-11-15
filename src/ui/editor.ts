@@ -266,6 +266,20 @@ class EditorUI {
                             description: 'WebM Video (AV1)',
                             accept: { 'video/webm': ['.webm'] }
                         }];
+                    } else if (videoSettings.format === 'mov') {
+                        fileExtension = '.mov';
+                        description = 'MOV Video';
+                        filePickerTypes = [{
+                            description: 'MOV Video',
+                            accept: { 'video/quicktime': ['.mov'] }
+                        }];
+                    } else if (videoSettings.format === 'mkv') {
+                        fileExtension = '.mkv';
+                        description = 'MKV Video';
+                        filePickerTypes = [{
+                            description: 'MKV Video',
+                            accept: { 'video/x-matroska': ['.mkv'] }
+                        }];
                     } else {
                         fileExtension = '.mp4';
                         description = 'MP4 Video';

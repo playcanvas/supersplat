@@ -271,7 +271,7 @@ class EditorUI {
                         const fileHandle = await window.showSaveFilePicker({
                             id: 'SuperSplatVideoFileExport',
                             types: [{
-                                description: description,
+                                description,
                                 accept: {
                                     [mimeType]: [fileExtension]
                                 }

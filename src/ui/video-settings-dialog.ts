@@ -67,6 +67,8 @@ class VideoSettingsDialog extends Container {
             defaultValue: 'mp4',
             options: [
                 { v: 'mp4', t: 'MP4 (H.264)' },
+                { v: 'mov', t: 'MOV (H.264)' },
+                { v: 'mkv', t: 'MKV (H.264)' },
                 { v: 'webm-vp9', t: 'WebM (VP9)' },
                 { v: 'webm-av1', t: 'WebM (AV1)' }
             ]
@@ -274,7 +276,7 @@ class VideoSettingsDialog extends Container {
                         bitrate,
                         transparentBg: transparentBgBoolean.value,
                         showDebug: showDebugBoolean.value,
-                        format: formatSelect.value as 'mp4' | 'webm-vp9' | 'webm-av1'
+                        format: formatSelect.value as 'mp4' | 'mov' | 'mkv' | 'webm-vp9' | 'webm-av1'
                     };
 
                     resolve(videoSettings);

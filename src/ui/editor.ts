@@ -250,25 +250,33 @@ class EditorUI {
                     // Determine file extension and mime type based on format
                     let fileExtension: string;
                     let filePickerTypes: FilePickerAcceptType[];
-                    let description: string;
 
                     if (videoSettings.format === 'webm-vp9') {
                         fileExtension = '.webm';
-                        description = 'WebM Video (VP9)';
                         filePickerTypes = [{
                             description: 'WebM Video (VP9)',
                             accept: { 'video/webm': ['.webm'] }
                         }];
                     } else if (videoSettings.format === 'webm-av1') {
                         fileExtension = '.webm';
-                        description = 'WebM Video (AV1)';
                         filePickerTypes = [{
                             description: 'WebM Video (AV1)',
                             accept: { 'video/webm': ['.webm'] }
                         }];
+                    } else if (videoSettings.format === 'mov') {
+                        fileExtension = '.mov';
+                        filePickerTypes = [{
+                            description: 'MOV Video',
+                            accept: { 'video/quicktime': ['.mov'] }
+                        }];
+                    } else if (videoSettings.format === 'mkv') {
+                        fileExtension = '.mkv';
+                        filePickerTypes = [{
+                            description: 'MKV Video',
+                            accept: { 'video/x-matroska': ['.mkv'] }
+                        }];
                     } else {
                         fileExtension = '.mp4';
-                        description = 'MP4 Video';
                         filePickerTypes = [{
                             description: 'MP4 Video',
                             accept: { 'video/mp4': ['.mp4'] }

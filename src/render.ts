@@ -1,4 +1,4 @@
-import { BufferTarget, EncodedPacket, EncodedVideoPacketSource, Mp4OutputFormat, WebMOutputFormat, Output, StreamTarget } from 'mediabunny';
+import { BufferTarget, EncodedPacket, EncodedVideoPacketSource, Mp4OutputFormat, Output, StreamTarget, WebMOutputFormat } from 'mediabunny';
 import { path, Vec3 } from 'playcanvas';
 
 import { ElementType } from './element';

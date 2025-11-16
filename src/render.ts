@@ -24,7 +24,8 @@ type VideoSettings = {
     bitrate: number;
     transparentBg: boolean;
     showDebug: boolean;
-    format: 'mp4' | 'mov' | 'mkv' | 'webm-vp9' | 'webm-av1';
+    format: 'mp4' | 'webm' | 'mov' | 'mkv';
+    codec: 'h264' | 'h265' | 'vp9' | 'av1';
 };
 
 const removeExtension = (filename: string) => {
@@ -181,45 +182,51 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
         events.fire('progressStart', localize('render.render-video'));
 
         try {
-            const { startFrame, endFrame, frameRate, width, height, bitrate, transparentBg, showDebug, format } = videoSettings;
+            const { startFrame, endFrame, frameRate, width, height, bitrate, transparentBg, showDebug, format, codec: codecChoice } = videoSettings;
 
             const target = fileStream ? new StreamTarget(fileStream) : new BufferTarget();
 
-            // Configure output format and codec based on selection
+            // Configure output format based on container selection
             let outputFormat: Mp4OutputFormat | MovOutputFormat | MkvOutputFormat | WebMOutputFormat;
-            let codecType: 'avc' | 'vp9' | 'av1';
-            let codec: string;
             let fileExtension: string;
 
-            if (format === 'webm-vp9') {
+            if (format === 'webm') {
                 outputFormat = new WebMOutputFormat();
-                codecType = 'vp9';
-                codec = 'vp09.00.10.08'; // VP9 profile 0
-                fileExtension = 'webm';
-            } else if (format === 'webm-av1') {
-                outputFormat = new WebMOutputFormat();
-                codecType = 'av1';
-                codec = 'av01.0.05M.08'; // AV1 Main profile, level 3.1
                 fileExtension = 'webm';
             } else if (format === 'mov') {
                 outputFormat = new MovOutputFormat({
                     fastStart: 'in-memory'
                 });
-                codecType = 'avc';
-                codec = height < 1080 ? 'avc1.420028' : 'avc1.640033'; // H.264 profile low : high
                 fileExtension = 'mov';
             } else if (format === 'mkv') {
                 outputFormat = new MkvOutputFormat();
-                codecType = 'avc';
-                codec = height < 1080 ? 'avc1.420028' : 'avc1.640033'; // H.264 profile low : high
                 fileExtension = 'mkv';
             } else {
                 outputFormat = new Mp4OutputFormat({
                     fastStart: 'in-memory'
                 });
-                codecType = 'avc';
-                codec = height < 1080 ? 'avc1.420028' : 'avc1.640033'; // H.264 profile low : high
                 fileExtension = 'mp4';
+            }
+
+            // Configure codec based on codec selection
+            let codecType: 'avc' | 'hevc' | 'vp9' | 'av1';
+            let codec: string;
+
+            if (codecChoice === 'h264') {
+                codecType = 'avc';
+                codec = height < 1080 ? 'avc1.420028' : 'avc1.640033'; // H.264 Constrained Baseline/High profile
+            } else if (codecChoice === 'h265') {
+                codecType = 'hevc';
+                codec = 'hev1.1.6.L120.B0'; // H.265 Main profile, Level 4.0
+            } else if (codecChoice === 'vp9') {
+                codecType = 'vp9';
+                codec = 'vp09.00.10.08'; // VP9 Profile 0, Level 1.0
+            } else if (codecChoice === 'av1') {
+                codecType = 'av1';
+                codec = 'av01.0.05M.08'; // AV1 Main Profile, Level 3.1
+            } else {
+                codecType = 'avc';
+                codec = height < 1080 ? 'avc1.420028' : 'avc1.640033'; // Default: H.264 Constrained Baseline/High
             }
 
             const output = new Output({

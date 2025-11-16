@@ -251,34 +251,37 @@ class EditorUI {
                     let fileExtension: string;
                     let filePickerTypes: FilePickerAcceptType[];
 
-                    if (videoSettings.format === 'webm-vp9') {
+                    // Codec name mapping for display
+                    const codecNames: Record<string, string> = {
+                        'h264': 'H.264',
+                        'h265': 'H.265',
+                        'vp9': 'VP9',
+                        'av1': 'AV1'
+                    };
+                    const codecName = codecNames[videoSettings.codec] || videoSettings.codec.toUpperCase();
+
+                    if (videoSettings.format === 'webm') {
                         fileExtension = '.webm';
                         filePickerTypes = [{
-                            description: 'WebM Video (VP9)',
-                            accept: { 'video/webm': ['.webm'] }
-                        }];
-                    } else if (videoSettings.format === 'webm-av1') {
-                        fileExtension = '.webm';
-                        filePickerTypes = [{
-                            description: 'WebM Video (AV1)',
+                            description: `WebM Video (${codecName})`,
                             accept: { 'video/webm': ['.webm'] }
                         }];
                     } else if (videoSettings.format === 'mov') {
                         fileExtension = '.mov';
                         filePickerTypes = [{
-                            description: 'MOV Video',
+                            description: `MOV Video (${codecName})`,
                             accept: { 'video/quicktime': ['.mov'] }
                         }];
                     } else if (videoSettings.format === 'mkv') {
                         fileExtension = '.mkv';
                         filePickerTypes = [{
-                            description: 'MKV Video',
+                            description: `MKV Video (${codecName})`,
                             accept: { 'video/x-matroska': ['.mkv'] }
                         }];
                     } else {
                         fileExtension = '.mp4';
                         filePickerTypes = [{
-                            description: 'MP4 Video',
+                            description: `MP4 Video (${codecName})`,
                             accept: { 'video/mp4': ['.mp4'] }
                         }];
                     }

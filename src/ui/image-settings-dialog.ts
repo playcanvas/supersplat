@@ -160,16 +160,10 @@ class ImageSettingsDialog extends Container {
         okButton.on('click', () => onOK());
 
         const keydown = (e: KeyboardEvent) => {
-            switch (e.key) {
-                case 'Escape':
-                    onCancel();
-                    break;
-                case 'Enter':
-                    if (!e.shiftKey) onOK();
-                    break;
-                default:
-                    e.stopPropagation();
-                    break;
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                onCancel();
             }
         };
 
@@ -186,7 +180,7 @@ class ImageSettingsDialog extends Container {
             reset();
 
             this.hidden = false;
-            this.dom.addEventListener('keydown', keydown);
+            document.addEventListener('keydown', keydown);
             this.dom.focus();
 
             return new Promise<ImageSettings | null>((resolve) => {
@@ -207,7 +201,7 @@ class ImageSettingsDialog extends Container {
                     resolve(imageSettings);
                 };
             }).finally(() => {
-                this.dom.removeEventListener('keydown', keydown);
+                document.removeEventListener('keydown', keydown);
                 this.hide();
             });
         };

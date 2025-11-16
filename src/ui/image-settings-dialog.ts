@@ -62,13 +62,11 @@ class ImageSettingsDialog extends Container {
         // resolution
 
         const resolutionLabel = new Label({ class: 'label', text: localize('image.resolution') });
-        // PNG compression limit: ~450M pixels due to WASM 2GB memory constraint
-        // sqrt(450M) = ~21213, but cap at 16000 for practical reasons
         const resolutionValue = new VectorInput({
             class: 'vector-input',
             dimensions: 2,
             min: 320,
-            max: 16000,  // ~256M pixels max (16000x16000)
+            max: 16000,
             precision: 0,
             value: [1024, 768]
         });

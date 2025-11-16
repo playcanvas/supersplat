@@ -213,16 +213,10 @@ class VideoSettingsDialog extends Container {
         okButton.on('click', () => onOK());
 
         const keydown = (e: KeyboardEvent) => {
-            switch (e.key) {
-                case 'Escape':
-                    onCancel();
-                    break;
-                case 'Enter':
-                    if (!e.shiftKey) onOK();
-                    break;
-                default:
-                    e.stopPropagation();
-                    break;
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                onCancel();
             }
         };
 
@@ -239,7 +233,7 @@ class VideoSettingsDialog extends Container {
             reset();
 
             this.hidden = false;
-            this.dom.addEventListener('keydown', keydown);
+            document.addEventListener('keydown', keydown);
             this.dom.focus();
 
             return new Promise<VideoSettings | null>((resolve) => {
@@ -318,7 +312,7 @@ class VideoSettingsDialog extends Container {
                     resolve(videoSettings);
                 };
             }).finally(() => {
-                this.dom.removeEventListener('keydown', keydown);
+                document.removeEventListener('keydown', keydown);
                 this.hide();
             });
         };

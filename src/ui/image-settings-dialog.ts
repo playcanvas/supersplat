@@ -62,11 +62,13 @@ class ImageSettingsDialog extends Container {
         // resolution
 
         const resolutionLabel = new Label({ class: 'label', text: localize('image.resolution') });
+        // PNG compression limit: ~450M pixels due to WASM 2GB memory constraint
+        // sqrt(450M) = ~21213, but cap at 16000 for practical reasons
         const resolutionValue = new VectorInput({
             class: 'vector-input',
             dimensions: 2,
             min: 320,
-            max: 16000,
+            max: 16000,  // ~256M pixels max (16000x16000)
             precision: 0,
             value: [1024, 768]
         });
@@ -160,16 +162,10 @@ class ImageSettingsDialog extends Container {
         okButton.on('click', () => onOK());
 
         const keydown = (e: KeyboardEvent) => {
-            switch (e.key) {
-                case 'Escape':
-                    onCancel();
-                    break;
-                case 'Enter':
-                    if (!e.shiftKey) onOK();
-                    break;
-                default:
-                    e.stopPropagation();
-                    break;
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                onCancel();
             }
         };
 
@@ -186,7 +182,7 @@ class ImageSettingsDialog extends Container {
             reset();
 
             this.hidden = false;
-            this.dom.addEventListener('keydown', keydown);
+            document.addEventListener('keydown', keydown);
             this.dom.focus();
 
             return new Promise<ImageSettings | null>((resolve) => {
@@ -207,7 +203,7 @@ class ImageSettingsDialog extends Container {
                     resolve(imageSettings);
                 };
             }).finally(() => {
-                this.dom.removeEventListener('keydown', keydown);
+                document.removeEventListener('keydown', keydown);
                 this.hide();
             });
         };

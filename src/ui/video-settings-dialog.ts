@@ -134,7 +134,7 @@ class VideoSettingsDialog extends Container {
         // Validate frame range
         frameRangeInput.on('change', (value: number[]) => {
             if (value[0] > value[1]) {
-                frameRangeInput.value = [value[0], value[0]];
+                frameRangeInput.value = [value[1], value[0]];
             }
         });
 

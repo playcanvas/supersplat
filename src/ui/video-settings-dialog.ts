@@ -85,8 +85,11 @@ class VideoSettingsDialog extends Container {
             defaultValue: '30',
             options: [
                 { v: '12', t: '12 fps' },
+                { v: '15', t: '15 fps' },
                 { v: '24', t: '24 fps' },
+                { v: '25', t: '25 fps' },
                 { v: '30', t: '30 fps' },
+                { v: '48', t: '48 fps' },
                 { v: '60', t: '60 fps' },
                 { v: '120', t: '120 fps' }
             ]
@@ -264,8 +267,11 @@ class VideoSettingsDialog extends Container {
 
                     const frameRates: Record<string, number> = {
                         '12': 12,
+                        '15': 15,
                         '24': 24,
+                        '25': 25,
                         '30': 30,
+                        '48': 48,
                         '60': 60,
                         '120': 120
                     };

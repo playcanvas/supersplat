@@ -1,4 +1,4 @@
-import { BooleanInput, Button, Container, Element, Label, SelectInput } from '@playcanvas/pcui';
+import { BooleanInput, Button, Container, Element, Label, SelectInput, VectorInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { VideoSettings } from '../render';
@@ -113,6 +113,31 @@ class VideoSettingsDialog extends Container {
         bitrateRow.append(bitrateLabel);
         bitrateRow.append(bitrateSelect);
 
+        // frame range
+
+        const totalFrames = events.invoke('timeline.frames');
+        const frameRangeLabel = new Label({ class: 'label', text: localize('video.frameRange') });
+        const frameRangeInput = new VectorInput({
+            class: 'vector-input',
+            dimensions: 2,
+            min: 0,
+            max: totalFrames - 1,
+            // @ts-ignore
+            placeholder: [localize('video.frameRangeFirst'), localize('video.frameRangeLast')],
+            precision: 0,
+            value: [0, totalFrames - 1]
+        });
+        const frameRangeRow = new Container({ class: 'row' });
+        frameRangeRow.append(frameRangeLabel);
+        frameRangeRow.append(frameRangeInput);
+
+        // Validate frame range
+        frameRangeInput.on('change', (value: number[]) => {
+            if (value[0] > value[1]) {
+                frameRangeInput.value = [value[1], value[0]];
+            }
+        });
+
         // portrait mode
 
         const portraitLabel = new Label({ class: 'label', text: localize('video.portrait') });
@@ -148,6 +173,7 @@ class VideoSettingsDialog extends Container {
         content.append(formatRow);
         content.append(frameRateRow);
         content.append(bitrateRow);
+        content.append(frameRangeRow);
         content.append(portraitRow);
         content.append(transparentBgRow);
         content.append(showDebugRow);
@@ -199,7 +225,9 @@ class VideoSettingsDialog extends Container {
 
         // reset UI and configure for current state
         const reset = () => {
-
+            const totalFrames = events.invoke('timeline.frames');
+            frameRangeInput.max = totalFrames - 1;
+            frameRangeInput.value = [0, totalFrames - 1];
         };
 
         // function implementations
@@ -267,9 +295,11 @@ class VideoSettingsDialog extends Container {
                     // bitrate (bps) = 100m * (width × height × frame rate × bppf) / 1m
                     const bitrate = Math.floor(10 * width * height * frameRate * bppf);
 
+                    const frameRange = frameRangeInput.value as number[];
+
                     const videoSettings = {
-                        startFrame: 0,
-                        endFrame: events.invoke('timeline.frames') - 1,
+                        startFrame: frameRange[0],
+                        endFrame: frameRange[1],
                         frameRate,
                         width,
                         height,

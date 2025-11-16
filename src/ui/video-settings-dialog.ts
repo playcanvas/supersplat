@@ -66,16 +66,66 @@ class VideoSettingsDialog extends Container {
             class: 'select',
             defaultValue: 'mp4',
             options: [
-                { v: 'mp4', t: 'MP4 (H.264)' },
-                { v: 'mov', t: 'MOV (H.264)' },
-                { v: 'mkv', t: 'MKV (H.264)' },
-                { v: 'webm-vp9', t: 'WebM (VP9)' },
-                { v: 'webm-av1', t: 'WebM (AV1)' }
+                { v: 'mp4', t: 'MP4' },
+                { v: 'webm', t: 'WebM' },
+                { v: 'mov', t: 'MOV' },
+                { v: 'mkv', t: 'MKV' }
             ]
         });
         const formatRow = new Container({ class: 'row' });
         formatRow.append(formatLabel);
         formatRow.append(formatSelect);
+
+        // codec
+
+        const codecLabel = new Label({ class: 'label', text: localize('video.codec') });
+        const codecSelect = new SelectInput({
+            class: 'select',
+            defaultValue: 'h264',
+            options: [
+                { v: 'h264', t: 'H.264' },
+                { v: 'h265', t: 'H.265/HEVC' }
+            ]
+        });
+        const codecRow = new Container({ class: 'row' });
+        codecRow.append(codecLabel);
+        codecRow.append(codecSelect);
+
+        // Codec compatibility mapping
+        const codecOptions: Record<string, Array<{ v: string, t: string }>> = {
+            'mp4': [
+                { v: 'h264', t: 'H.264' },
+                { v: 'h265', t: 'H.265/HEVC' }
+            ],
+            'webm': [
+                { v: 'vp9', t: 'VP9' },
+                { v: 'av1', t: 'AV1' }
+            ],
+            'mov': [
+                { v: 'h264', t: 'H.264' },
+                { v: 'h265', t: 'H.265/HEVC' }
+            ],
+            'mkv': [
+                { v: 'h264', t: 'H.264' },
+                { v: 'h265', t: 'H.265/HEVC' },
+                { v: 'vp9', t: 'VP9' },
+                { v: 'av1', t: 'AV1' }
+            ]
+        };
+
+        // Update codec options when format changes
+        formatSelect.on('change', () => {
+            const format = formatSelect.value;
+            const options = codecOptions[format] || codecOptions.mp4;
+            codecSelect.options = options;
+
+            // Set default codec based on format
+            if (format === 'webm') {
+                codecSelect.value = 'vp9';
+            } else {
+                codecSelect.value = 'h264';
+            }
+        });
 
         // framerate
 
@@ -174,6 +224,7 @@ class VideoSettingsDialog extends Container {
         const content = new Container({ id: 'content' });
         content.append(resolutionRow);
         content.append(formatRow);
+        content.append(codecRow);
         content.append(frameRateRow);
         content.append(bitrateRow);
         content.append(frameRangeRow);
@@ -306,7 +357,8 @@ class VideoSettingsDialog extends Container {
                         bitrate,
                         transparentBg: transparentBgBoolean.value,
                         showDebug: showDebugBoolean.value,
-                        format: formatSelect.value as 'mp4' | 'mov' | 'mkv' | 'webm-vp9' | 'webm-av1'
+                        format: formatSelect.value as 'mp4' | 'webm' | 'mov' | 'mkv',
+                        codec: codecSelect.value as 'h264' | 'h265' | 'vp9' | 'av1'
                     };
 
                     resolve(videoSettings);

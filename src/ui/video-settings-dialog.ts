@@ -298,8 +298,8 @@ class VideoSettingsDialog extends Container {
                     const frameRange = frameRangeInput.value as number[];
 
                     const videoSettings = {
-                        startFrame: Math.floor(frameRange[0]),
-                        endFrame: Math.floor(frameRange[1]),
+                        startFrame: frameRange[0],
+                        endFrame: frameRange[1],
                         frameRate,
                         width,
                         height,

@@ -214,19 +214,19 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
             if (codecChoice === 'h264') {
                 codecType = 'avc';
-                codec = height < 1080 ? 'avc1.420028' : 'avc1.640033'; // H.264 baseline : high profile
+                codec = height < 1080 ? 'avc1.420028' : 'avc1.640033'; // H.264 Constrained Baseline/High profile
             } else if (codecChoice === 'h265') {
                 codecType = 'hevc';
-                codec = 'hev1.1.6.L120.B0'; // H.265/HEVC Main profile
+                codec = 'hev1.1.6.L120.B0'; // H.265 Main profile, Level 4.0
             } else if (codecChoice === 'vp9') {
                 codecType = 'vp9';
-                codec = 'vp09.00.10.08'; // VP9 profile 0
+                codec = 'vp09.00.10.08'; // VP9 Profile 0, Level 1.0
             } else if (codecChoice === 'av1') {
                 codecType = 'av1';
-                codec = 'av01.0.05M.08'; // AV1 Main profile, level 3.1
+                codec = 'av01.0.05M.08'; // AV1 Main Profile, Level 3.1
             } else {
                 codecType = 'avc';
-                codec = height < 1080 ? 'avc1.420028' : 'avc1.640033'; // Default to H.264
+                codec = height < 1080 ? 'avc1.420028' : 'avc1.640033'; // Default: H.264 Constrained Baseline/High
             }
 
             const output = new Output({

@@ -1,5 +1,4 @@
 const vertexShader = /* glsl*/`
-#include "gsplatCustomizeVS"
 #include "gsplatCommonVS"
 
 uniform sampler2D splatState;

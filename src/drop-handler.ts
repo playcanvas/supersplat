@@ -105,7 +105,7 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
 
         const files = await Promise.all(
             resolvedEntries.map((entry) => {
-                return new Promise<DroppedFile>(async (resolve, reject) => {
+                return new Promise<DroppedFile>((resolve, reject) => {
                     // Try to get FileSystemFileHandle if available
                     // @ts-ignore - getAsFileSystemHandle is not yet in all type definitions
                     let handle: FileSystemFileHandle = null;
@@ -116,10 +116,15 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
                         // For single file drops (most common for .ssproj), we can check the original items
                         const item = items.find(i => i.webkitGetAsEntry()?.name === entry.name);
                         if (item && item.getAsFileSystemHandle) {
-                            const h = await item.getAsFileSystemHandle();
-                            if (h.kind === 'file') {
-                                handle = h as FileSystemFileHandle;
-                            }
+                            item.getAsFileSystemHandle().then((h: FileSystemHandle) => {
+                                if (h.kind === 'file') {
+                                    handle = h as FileSystemFileHandle;
+                                }
+                                entry.file((entryFile: any) => {
+                                    resolve(new DroppedFile(entry.fullPath.substring(1), entryFile, handle));
+                                });
+                            });
+                            return;
                         }
                     } catch (e) {
                         console.warn('Could not get FileSystemFileHandle', e);

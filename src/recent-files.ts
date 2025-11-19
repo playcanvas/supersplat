@@ -11,8 +11,8 @@ interface RecentFile {
 class RecentFiles {
     private db: IDBDatabase | null = null;
 
-    async init() {
-        if (this.db) return;
+    init() {
+        if (this.db) return Promise.resolve();
 
         return new Promise<void>((resolve, reject) => {
             const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -83,6 +83,7 @@ class RecentFiles {
             request.onerror = () => reject(request.error);
         });
     }
+
     async count(): Promise<number> {
         if (!this.db) await this.init();
 

@@ -1,8 +1,9 @@
 import { Container, Element, Label } from '@playcanvas/pcui';
 
 import { Events } from '../events';
+import { recentFiles } from '../recent-files';
 import { localize } from './localization';
-import { MenuPanel } from './menu-panel';
+import { MenuPanel, MenuItem } from './menu-panel';
 import arrowSvg from './svg/arrow.svg';
 import collapseSvg from './svg/collapse.svg';
 import selectDelete from './svg/delete.svg';
@@ -36,6 +37,12 @@ class Menu extends Container {
         };
 
         super(args);
+
+        let recentFilesCount = 0;
+
+        recentFiles.count().then((count) => {
+            recentFilesCount = count;
+        });
 
         const menubar = new Container({
             id: 'menu-bar'
@@ -129,6 +136,33 @@ class Menu extends Container {
             onSelect: () => events.invoke('scene.export', 'viewer')
         }]);
 
+        const openRecentMenuPanel = new MenuPanel([]);
+        openRecentMenuPanel.on('show', async () => {
+            const files = await recentFiles.get();
+            const items: MenuItem[] = files.map((file) => {
+                return {
+                    text: file.name,
+                    onSelect: () => events.invoke('doc.openRecent', file.handle)
+                };
+            });
+
+            if (items.length > 0) {
+                items.push({}); // separator
+                items.push({
+                    text: localize('file.recent.clear'),
+                    icon: createSvg(selectDelete),
+                    onSelect: async () => {
+                        await recentFiles.clear();
+                        openRecentMenuPanel.hidden = true;
+                        recentFilesCount = 0;
+                    }
+                });
+            }
+
+            recentFilesCount = files.length;
+            openRecentMenuPanel.setItems(items);
+        });
+
         const fileMenuPanel = new MenuPanel([{
             text: localize('file.new'),
             icon: createSvg(sceneNew),
@@ -140,6 +174,11 @@ class Menu extends Container {
             onSelect: async () => {
                 await events.invoke('doc.open');
             }
+        }, {
+            text: localize('file.open-recent'),
+            icon: createSvg(sceneOpen),
+            subMenu: openRecentMenuPanel,
+            isEnabled: () => recentFilesCount > 0
         }, {
             // separator
         }, {
@@ -274,6 +313,7 @@ class Menu extends Container {
 
         this.append(menubar);
         this.append(fileMenuPanel);
+        this.append(openRecentMenuPanel);
         this.append(exportMenuPanel);
         this.append(selectionMenuPanel);
         this.append(renderMenuPanel);
@@ -320,6 +360,12 @@ class Menu extends Container {
             if (!this.dom.contains(event.target as Node)) {
                 options.forEach((opt) => {
                     opt.menuPanel.hidden = true;
+                });
+            } else {
+                // refresh recent files count on click on menu
+
+                recentFiles.count().then((count) => {
+                    recentFilesCount = count;
                 });
             }
         };

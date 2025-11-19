@@ -3,10 +3,12 @@ import { path } from 'playcanvas';
 class DroppedFile {
     filename: string;
     file: File;
+    handle?: FileSystemFileHandle;
 
-    constructor(filename: string, file: File) {
+    constructor(filename: string, file: File, handle?: FileSystemFileHandle) {
         this.filename = filename;
         this.file = file;
+        this.handle = handle;
     }
 }
 
@@ -91,18 +93,40 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
     const drop = async (ev: DragEvent) => {
         ev.preventDefault();
 
-        const items = Array.from(ev.dataTransfer.items)
+        const items = Array.from(ev.dataTransfer.items);
+
+        // Map to entries first
+        const entries = items
         .map(item => item.webkitGetAsEntry())
         .filter(v => v);
 
         // resolve directories to files
-        const entries = await resolveDirectories(items);
+        const resolvedEntries = await resolveDirectories(entries);
 
         const files = await Promise.all(
-            entries.map((entry) => {
-                return new Promise<DroppedFile>((resolve, reject) => {
+            resolvedEntries.map((entry) => {
+                return new Promise<DroppedFile>(async (resolve, reject) => {
+                    // Try to get FileSystemFileHandle if available
+                    // @ts-ignore - getAsFileSystemHandle is not yet in all type definitions
+                    let handle: FileSystemFileHandle = null;
+                    try {
+                        // Find the matching DataTransferItem for this entry
+                        // This is a bit fuzzy because resolveDirectories flattens the list
+                        // Ideally we'd pass handles through resolveDirectories but that's complex
+                        // For single file drops (most common for .ssproj), we can check the original items
+                        const item = items.find(i => i.webkitGetAsEntry()?.name === entry.name);
+                        if (item && item.getAsFileSystemHandle) {
+                            const h = await item.getAsFileSystemHandle();
+                            if (h.kind === 'file') {
+                                handle = h as FileSystemFileHandle;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Could not get FileSystemFileHandle', e);
+                    }
+
                     entry.file((entryFile: any) => {
-                        resolve(new DroppedFile(entry.fullPath.substring(1), entryFile));
+                        resolve(new DroppedFile(entry.fullPath.substring(1), entryFile, handle));
                     });
                 });
             })

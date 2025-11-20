@@ -134,6 +134,7 @@ type ImportFile = {
     filename: string;
     url?: string;
     contents?: File;
+    handle?: FileSystemFileHandle;
 };
 
 const vec = new Vec3();
@@ -362,7 +363,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
 
                 if (filename.endsWith('.ssproj')) {
                     // load ssproj document
-                    await events.invoke('doc.load', files[i].contents ?? (await fetch(files[i].url)).arrayBuffer());
+                    await events.invoke('doc.load', files[i].contents ?? (await fetch(files[i].url)).arrayBuffer(), files[i].handle);
                 } else if (['.ply', '.splat', '.sog'].some(ext => filename.endsWith(ext))) {
                     // load gaussian splat model
                     result.push(await importFile(files[i], animationFrame));
@@ -412,7 +413,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         importFiles(entries.map((e) => {
             return {
                 filename: e.filename,
-                contents: e.file
+                contents: e.file,
+                handle: e.handle
             };
         }));
     });

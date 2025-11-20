@@ -2,7 +2,7 @@ import { Container, Element, Label } from '@playcanvas/pcui';
 
 type Direction = 'left' | 'right' | 'top' | 'bottom';
 
-type MenuItem = {
+export type MenuItem = {
     text?: string;
     icon?: string | Element;
     extra?: string | Element;
@@ -51,6 +51,7 @@ const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
 class MenuPanel extends Container {
     parentPanel: MenuPanel | null = null;
+    menuItems: MenuItem[] = [];
 
     constructor(menuItems: MenuItem[], args = {}) {
         args = {
@@ -62,7 +63,7 @@ class MenuPanel extends Container {
         super(args);
 
         this.on('hide', () => {
-            for (const menuItem of menuItems) {
+            for (const menuItem of this.menuItems) {
                 if (menuItem.subMenu) {
                     menuItem.subMenu.hidden = true;
                 }
@@ -70,8 +71,8 @@ class MenuPanel extends Container {
         });
 
         this.on('show', () => {
-            for (let i = 0; i < menuItems.length; i++) {
-                const menuItem = menuItems[i];
+            for (let i = 0; i < this.menuItems.length; i++) {
+                const menuItem = this.menuItems[i];
                 if (menuItem.isEnabled) {
                     this.dom.children.item(i).ui.enabled = menuItem.isEnabled();
                 }
@@ -80,6 +81,13 @@ class MenuPanel extends Container {
                 }
             }
         });
+
+        this.setItems(menuItems);
+    }
+
+    setItems(menuItems: MenuItem[]) {
+        this.menuItems = menuItems;
+        this.clear();
 
         for (const menuItem of menuItems) {
             const type = menuItem.subMenu ? 'menu' : menuItem.text ? 'button' : 'separator';

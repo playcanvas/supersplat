@@ -447,6 +447,7 @@ const localizeInit = () => {
                     'tooltip.show-hide': 'Show/Hide Splats ( Space )',
                     'tooltip.frame-selection': 'Frame Selection ( F )',
                     'tooltip.camera-reset': 'Reset Camera',
+                    'tooltip.orthographic-projection': 'Orthographic Projection',
                     'tooltip.color-panel': 'Colors',
                     'tooltip.view-options': 'View Options',
 

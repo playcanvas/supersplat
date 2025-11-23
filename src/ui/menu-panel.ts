@@ -8,8 +8,8 @@ type MenuItem = {
     extra?: string | Element;
     subMenu?: MenuPanel;
 
-    isEnabled?: () => boolean;
-    isVisible?: () => boolean;
+    isEnabled?: () => boolean | Promise<boolean>;
+    isVisible?: () => boolean | Promise<boolean>;
     onSelect?: () => any;
 };
 
@@ -46,11 +46,18 @@ const isString = (value: any) => {
     return !value || typeof value === 'string' || value instanceof String;
 };
 
+const createIcon = (icon: string | Element) => {
+    return isString(icon) ?
+        new Label({ class: 'menu-row-icon', text: icon && String.fromCodePoint(parseInt(icon as string, 16)) }) :
+        icon;
+};
+
 // Detect if we're on a touch device
 const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
 class MenuPanel extends Container {
     parentPanel: MenuPanel | null = null;
+    menuItems: MenuItem[] = [];
 
     constructor(menuItems: MenuItem[], args = {}) {
         args = {
@@ -62,33 +69,34 @@ class MenuPanel extends Container {
         super(args);
 
         this.on('hide', () => {
-            for (const menuItem of menuItems) {
+            for (const menuItem of this.menuItems) {
                 if (menuItem.subMenu) {
                     menuItem.subMenu.hidden = true;
                 }
             }
         });
 
-        this.on('show', () => {
-            for (let i = 0; i < menuItems.length; i++) {
-                const menuItem = menuItems[i];
+        this.on('show', async () => {
+            for (let i = 0; i < this.menuItems.length; i++) {
+                const menuItem = this.menuItems[i];
                 if (menuItem.isEnabled) {
-                    this.dom.children.item(i).ui.enabled = menuItem.isEnabled();
+                    this.dom.children.item(i).ui.enabled = await menuItem.isEnabled();
                 }
                 if (menuItem.isVisible) {
-                    this.dom.children.item(i).ui.hidden = !menuItem.isVisible();
+                    this.dom.children.item(i).ui.hidden = !(await menuItem.isVisible());
                 }
             }
         });
 
+        this.setItems(menuItems);
+    }
+
+    setItems(menuItems: MenuItem[]) {
+        this.menuItems = menuItems;
+        this.clear();
+
         for (const menuItem of menuItems) {
             const type = menuItem.subMenu ? 'menu' : menuItem.text ? 'button' : 'separator';
-
-            const createIcon = (icon: string | Element) => {
-                return isString(menuItem.icon) ?
-                    new Label({ class: 'menu-row-icon', text: menuItem.icon && String.fromCodePoint(parseInt(menuItem.icon as string, 16)) }) :
-                    menuItem.icon;
-            };
 
             let row: Container | null = null;
             let activate: () => void | null = null;
@@ -217,4 +225,4 @@ class MenuPanel extends Container {
     }
 }
 
-export { MenuPanel };
+export { MenuItem, MenuPanel };

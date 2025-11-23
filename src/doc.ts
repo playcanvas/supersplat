@@ -1,4 +1,5 @@
 import { Events } from './events';
+import { recentFiles } from './recent-files';
 import { Scene } from './scene';
 import { DownloadWriter, FileStreamWriter } from './serialize/writer';
 import { ZipWriter } from './serialize/zip-writer';
@@ -201,7 +202,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     // NOTE: on chrome it's possible to get the FileSystemFileHandle from the DataTransferItem
     // (which would result in more seamless user experience), but this is not yet supported in
     // other browsers.
-    events.function('doc.load', async (file: File) => {
+    events.function('doc.load', async (file: File, handle?: FileSystemFileHandle) => {
         if (!events.invoke('scene.empty') && !await getResetConfirmation()) {
             return false;
         }
@@ -209,6 +210,11 @@ const registerDocEvents = (scene: Scene, events: Events) => {
         await loadDocument(file);
 
         events.fire('doc.setName', file.name);
+
+        if (handle) {
+            documentFileHandle = handle;
+            recentFiles.add(handle);
+        }
     });
 
     events.function('doc.open', async () => {
@@ -239,11 +245,42 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                     // store file handle for subsequent saves
                     documentFileHandle = fileHandle;
                     events.fire('doc.setName', fileHandle.name);
+                    recentFiles.add(fileHandle);
                 }
             } catch (error) {
                 if (error.name !== 'AbortError') {
                     console.error(error);
                 }
+            }
+        }
+    });
+
+    events.function('doc.openRecent', async (fileHandle: FileSystemFileHandle) => {
+        if (!events.invoke('scene.empty') && !await getResetConfirmation()) {
+            return false;
+        }
+
+        try {
+            if (await fileHandle.queryPermission({ mode: 'read' }) !== 'granted') {
+                if (await fileHandle.requestPermission({ mode: 'read' }) !== 'granted') {
+                    return false;
+                }
+            }
+
+            await loadDocument(await fileHandle.getFile());
+
+            // store file handle for subsequent saves
+            documentFileHandle = fileHandle;
+            events.fire('doc.setName', fileHandle.name);
+            recentFiles.add(fileHandle);
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                console.error(error);
+                await events.invoke('showPopup', {
+                    type: 'error',
+                    header: localize('popup.error-loading'),
+                    message: `${error.message ?? error}`
+                });
             }
         }
     });
@@ -277,6 +314,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 documentFileHandle = handle;
                 events.fire('doc.setName', handle.name);
                 events.fire('doc.saved');
+                recentFiles.add(handle);
             } catch (error) {
                 if (error.name !== 'AbortError') {
                     console.error(error);

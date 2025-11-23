@@ -1,8 +1,9 @@
 import { Container, Element, Label } from '@playcanvas/pcui';
 
 import { Events } from '../events';
+import { recentFiles } from '../recent-files';
 import { localize } from './localization';
-import { MenuPanel } from './menu-panel';
+import { MenuPanel, MenuItem } from './menu-panel';
 import arrowSvg from './svg/arrow.svg';
 import collapseSvg from './svg/collapse.svg';
 import selectDelete from './svg/delete.svg';
@@ -26,6 +27,27 @@ const createSvg = (svgString: string) => {
     return new Element({
         dom: new DOMParser().parseFromString(decodedStr, 'image/svg+xml').documentElement
     });
+};
+
+const getOpenRecentItems = async (events: Events) => {
+    const files = await recentFiles.get();
+    const items: MenuItem[] = files.map((file) => {
+        return {
+            text: file.name,
+            onSelect: () => events.invoke('doc.openRecent', file.handle)
+        };
+    });
+
+    if (items.length > 0) {
+        items.push({}); // separator
+        items.push({
+            text: localize('file.recent.clear'),
+            icon: createSvg(selectDelete),
+            onSelect: () => recentFiles.clear()
+        });
+    }
+
+    return items;
 };
 
 class Menu extends Container {
@@ -129,6 +151,8 @@ class Menu extends Container {
             onSelect: () => events.invoke('scene.export', 'viewer')
         }]);
 
+        const openRecentMenuPanel = new MenuPanel([]);
+
         const fileMenuPanel = new MenuPanel([{
             text: localize('file.new'),
             icon: createSvg(sceneNew),
@@ -139,6 +163,21 @@ class Menu extends Container {
             icon: createSvg(sceneOpen),
             onSelect: async () => {
                 await events.invoke('doc.open');
+            }
+        }, {
+            text: localize('file.open-recent'),
+            icon: createSvg(sceneOpen),
+            subMenu: openRecentMenuPanel,
+            isEnabled: async () => {
+                // refresh open recent menu items when the parent menu is opened
+                try {
+                    const items = await getOpenRecentItems(events);
+                    openRecentMenuPanel.setItems(items);
+                    return items.length > 0;
+                } catch (error) {
+                    console.error('Failed to load recent files:', error);
+                    return false;
+                }
             }
         }, {
             // separator
@@ -274,6 +313,7 @@ class Menu extends Container {
 
         this.append(menubar);
         this.append(fileMenuPanel);
+        this.append(openRecentMenuPanel);
         this.append(exportMenuPanel);
         this.append(selectionMenuPanel);
         this.append(renderMenuPanel);

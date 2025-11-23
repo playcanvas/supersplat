@@ -3,10 +3,12 @@ import { path } from 'playcanvas';
 class DroppedFile {
     filename: string;
     file: File;
+    handle?: FileSystemFileHandle;
 
-    constructor(filename: string, file: File) {
+    constructor(filename: string, file: File, handle?: FileSystemFileHandle) {
         this.filename = filename;
         this.file = file;
+        this.handle = handle;
     }
 }
 
@@ -91,15 +93,33 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
     const drop = async (ev: DragEvent) => {
         ev.preventDefault();
 
-        const items = Array.from(ev.dataTransfer.items)
+        const items = Array.from(ev.dataTransfer.items);
+
+        // handle single file drops so documents can propagate the filesystemfilehandle
+        if (items.length === 1) {
+            const item = items[0];
+            if (item.kind === 'file' && item.getAsFileSystemHandle) {
+                const handle = await item.getAsFileSystemHandle();
+                if (handle?.kind === 'file') {
+                    const fileHandle = handle as FileSystemFileHandle;
+                    const file = await fileHandle.getFile();
+                    const droppedFile = new DroppedFile(file.name, file, fileHandle);
+                    dropHandler([droppedFile], ev.shiftKey);
+                    return;
+                }
+            }
+        }
+
+        // Map to entries first
+        const entries = items
         .map(item => item.webkitGetAsEntry())
         .filter(v => v);
 
         // resolve directories to files
-        const entries = await resolveDirectories(items);
+        const resolvedEntries = await resolveDirectories(entries);
 
         const files = await Promise.all(
-            entries.map((entry) => {
+            resolvedEntries.map((entry) => {
                 return new Promise<DroppedFile>((resolve, reject) => {
                     entry.file((entryFile: any) => {
                         resolve(new DroppedFile(entry.fullPath.substring(1), entryFile));

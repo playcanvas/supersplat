@@ -2,14 +2,14 @@ import { Container, Element, Label } from '@playcanvas/pcui';
 
 type Direction = 'left' | 'right' | 'top' | 'bottom';
 
-export type MenuItem = {
+type MenuItem = {
     text?: string;
     icon?: string | Element;
     extra?: string | Element;
     subMenu?: MenuPanel;
 
-    isEnabled?: () => boolean;
-    isVisible?: () => boolean;
+    isEnabled?: () => boolean | Promise<boolean>;
+    isVisible?: () => boolean | Promise<boolean>;
     onSelect?: () => any;
 };
 
@@ -46,6 +46,12 @@ const isString = (value: any) => {
     return !value || typeof value === 'string' || value instanceof String;
 };
 
+const createIcon = (icon: string | Element) => {
+    return isString(icon) ?
+        new Label({ class: 'menu-row-icon', text: icon && String.fromCodePoint(parseInt(icon as string, 16)) }) :
+        icon;
+};
+
 // Detect if we're on a touch device
 const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
@@ -70,14 +76,14 @@ class MenuPanel extends Container {
             }
         });
 
-        this.on('show', () => {
+        this.on('show', async () => {
             for (let i = 0; i < this.menuItems.length; i++) {
                 const menuItem = this.menuItems[i];
                 if (menuItem.isEnabled) {
-                    this.dom.children.item(i).ui.enabled = menuItem.isEnabled();
+                    this.dom.children.item(i).ui.enabled = await menuItem.isEnabled();
                 }
                 if (menuItem.isVisible) {
-                    this.dom.children.item(i).ui.hidden = !menuItem.isVisible();
+                    this.dom.children.item(i).ui.hidden = !(await menuItem.isVisible());
                 }
             }
         });
@@ -91,12 +97,6 @@ class MenuPanel extends Container {
 
         for (const menuItem of menuItems) {
             const type = menuItem.subMenu ? 'menu' : menuItem.text ? 'button' : 'separator';
-
-            const createIcon = (icon: string | Element) => {
-                return isString(menuItem.icon) ?
-                    new Label({ class: 'menu-row-icon', text: menuItem.icon && String.fromCodePoint(parseInt(menuItem.icon as string, 16)) }) :
-                    menuItem.icon;
-            };
 
             let row: Container | null = null;
             let activate: () => void | null = null;
@@ -225,4 +225,4 @@ class MenuPanel extends Container {
     }
 }
 
-export { MenuPanel };
+export { MenuItem, MenuPanel };

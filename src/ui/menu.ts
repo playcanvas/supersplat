@@ -29,6 +29,27 @@ const createSvg = (svgString: string) => {
     });
 };
 
+const getOpenRecentItems = async (events: Events) => {
+    const files = await recentFiles.get();
+    const items: MenuItem[] = files.map((file) => {
+        return {
+            text: file.name,
+            onSelect: () => events.invoke('doc.openRecent', file.handle)
+        };
+    });
+
+    if (items.length > 0) {
+        items.push({}); // separator
+        items.push({
+            text: localize('file.recent.clear'),
+            icon: createSvg(selectDelete),
+            onSelect: () => recentFiles.clear()
+        });
+    }
+
+    return items;
+};
+
 class Menu extends Container {
     constructor(events: Events, args = {}) {
         args = {
@@ -37,12 +58,6 @@ class Menu extends Container {
         };
 
         super(args);
-
-        let recentFilesCount = 0;
-
-        recentFiles.count().then((count) => {
-            recentFilesCount = count;
-        });
 
         const menubar = new Container({
             id: 'menu-bar'
@@ -137,31 +152,6 @@ class Menu extends Container {
         }]);
 
         const openRecentMenuPanel = new MenuPanel([]);
-        openRecentMenuPanel.on('show', async () => {
-            const files = await recentFiles.get();
-            const items: MenuItem[] = files.map((file) => {
-                return {
-                    text: file.name,
-                    onSelect: () => events.invoke('doc.openRecent', file.handle)
-                };
-            });
-
-            if (items.length > 0) {
-                items.push({}); // separator
-                items.push({
-                    text: localize('file.recent.clear'),
-                    icon: createSvg(selectDelete),
-                    onSelect: async () => {
-                        await recentFiles.clear();
-                        openRecentMenuPanel.hidden = true;
-                        recentFilesCount = 0;
-                    }
-                });
-            }
-
-            recentFilesCount = files.length;
-            openRecentMenuPanel.setItems(items);
-        });
 
         const fileMenuPanel = new MenuPanel([{
             text: localize('file.new'),
@@ -178,7 +168,12 @@ class Menu extends Container {
             text: localize('file.open-recent'),
             icon: createSvg(sceneOpen),
             subMenu: openRecentMenuPanel,
-            isEnabled: () => recentFilesCount > 0
+            isEnabled: async () => {
+                // refresh open recent menu items when the parent menu is opened
+                const items = await getOpenRecentItems(events);
+                openRecentMenuPanel.setItems(items);
+                return items.length > 0;
+            }
         }, {
             // separator
         }, {
@@ -360,12 +355,6 @@ class Menu extends Container {
             if (!this.dom.contains(event.target as Node)) {
                 options.forEach((opt) => {
                     opt.menuPanel.hidden = true;
-                });
-            } else {
-                // refresh recent files count on click on menu
-
-                recentFiles.count().then((count) => {
-                    recentFilesCount = count;
                 });
             }
         };

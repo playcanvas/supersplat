@@ -19,6 +19,7 @@ const resolveDirectories = (entries: Array<FileSystemEntry>): Promise<Array<File
     const result: Array<FileSystemFileEntry> = [];
 
     entries.forEach((entry) => {
+        console.log(entry.fullPath);
         if (entry.isFile) {
             result.push(entry as FileSystemFileEntry);
         } else if (entry.isDirectory) {
@@ -95,6 +96,21 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
 
         const items = Array.from(ev.dataTransfer.items);
 
+        // handle single file drops so documents can propagate the filesystemfilehandle
+        if (items.length === 1) {
+            const item = items[0];
+            if (item.kind === 'file' && item.getAsFileSystemHandle) {
+                const handle = await item.getAsFileSystemHandle();
+                if (handle?.kind === 'file') {
+                    const fileHandle = handle as FileSystemFileHandle;
+                    const file = await fileHandle.getFile();
+                    const droppedFile = new DroppedFile(file.name, file, fileHandle);
+                    dropHandler([droppedFile], ev.shiftKey);
+                    return;
+                }
+            }
+        }
+
         // Map to entries first
         const entries = items
         .map(item => item.webkitGetAsEntry())
@@ -106,32 +122,8 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
         const files = await Promise.all(
             resolvedEntries.map((entry) => {
                 return new Promise<DroppedFile>((resolve, reject) => {
-                    // Try to get FileSystemFileHandle if available
-                    // @ts-ignore - getAsFileSystemHandle is not yet in all type definitions
-                    let handle: FileSystemFileHandle = null;
-                    try {
-                        // Find the matching DataTransferItem for this entry
-                        // This is a bit fuzzy because resolveDirectories flattens the list
-                        // Ideally we'd pass handles through resolveDirectories but that's complex
-                        // For single file drops (most common for .ssproj), we can check the original items
-                        const item = items.find(i => i.webkitGetAsEntry()?.name === entry.name);
-                        if (item && item.getAsFileSystemHandle) {
-                            item.getAsFileSystemHandle().then((h: FileSystemHandle) => {
-                                if (h.kind === 'file') {
-                                    handle = h as FileSystemFileHandle;
-                                }
-                                entry.file((entryFile: any) => {
-                                    resolve(new DroppedFile(entry.fullPath.substring(1), entryFile, handle));
-                                });
-                            });
-                            return;
-                        }
-                    } catch (e) {
-                        console.warn('Could not get FileSystemFileHandle', e);
-                    }
-
                     entry.file((entryFile: any) => {
-                        resolve(new DroppedFile(entry.fullPath.substring(1), entryFile, handle));
+                        resolve(new DroppedFile(entry.fullPath.substring(1), entryFile));
                     });
                 });
             })

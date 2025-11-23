@@ -8,95 +8,71 @@ interface RecentFile {
     date: number;
 }
 
+// wrap IDBRequest in a promise
+const wrap = (IDBRequest: IDBRequest): Promise<any> => {
+    return new Promise((resolve, reject) => {
+        IDBRequest.onsuccess = () => resolve(IDBRequest.result);
+        IDBRequest.onerror = () => {
+            console.error('IndexedDB error', IDBRequest.error);
+            reject(IDBRequest.error);
+        };
+    });
+};
+
 class RecentFiles {
-    private db: IDBDatabase | null = null;
+    db: Promise<IDBDatabase>;
 
-    init() {
-        if (this.db) return Promise.resolve();
-
-        return new Promise<void>((resolve, reject) => {
-            const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-            request.onerror = () => {
-                console.error('RecentFiles: Failed to open database');
-                reject(request.error);
-            };
-
-            request.onsuccess = () => {
-                this.db = request.result;
-                resolve();
-            };
-
-            request.onupgradeneeded = (event) => {
-                const db = (event.target as IDBOpenDBRequest).result;
-                if (!db.objectStoreNames.contains(STORE_NAME)) {
-                    db.createObjectStore(STORE_NAME, { keyPath: 'name' });
-                }
-            };
-        });
+    constructor() {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onupgradeneeded = (event) => {
+            const db = (event.target as IDBOpenDBRequest).result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME, { keyPath: 'name' });
+            }
+        };
+        this.db = wrap(request);
     }
 
     async add(handle: FileSystemFileHandle) {
-        if (!this.db) await this.init();
+        const db = await this.db;
 
-        return new Promise<void>((resolve, reject) => {
-            const transaction = this.db!.transaction([STORE_NAME], 'readwrite');
-            const store = transaction.objectStore(STORE_NAME);
-            const request = store.put({
-                handle: handle,
-                name: handle.name,
-                date: Date.now()
-            });
-
-            request.onsuccess = () => resolve();
-            request.onerror = () => reject(request.error);
+        const transaction = db.transaction([STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.put({
+            handle: handle,
+            name: handle.name,
+            date: Date.now()
         });
+
+        await wrap(request);
     }
 
     async get(): Promise<RecentFile[]> {
-        if (!this.db) await this.init();
+        const db = await this.db;
+        const transaction = db.transaction([STORE_NAME], 'readonly');
+        const store = transaction.objectStore(STORE_NAME);
+        const result = await wrap(store.getAll()) as RecentFile[];
 
-        return new Promise<RecentFile[]>((resolve, reject) => {
-            const transaction = this.db!.transaction([STORE_NAME], 'readonly');
-            const store = transaction.objectStore(STORE_NAME);
-            const request = store.getAll();
-
-            request.onsuccess = () => {
-                const result = request.result as RecentFile[];
-                // Sort by date descending
-                result.sort((a, b) => b.date - a.date);
-                resolve(result);
-            };
-            request.onerror = () => reject(request.error);
-        });
+        // Sort by date descending
+        result.sort((a, b) => b.date - a.date);
+        return result;
     }
 
     async clear() {
-        if (!this.db) await this.init();
-
-        return new Promise<void>((resolve, reject) => {
-            const transaction = this.db!.transaction([STORE_NAME], 'readwrite');
-            const store = transaction.objectStore(STORE_NAME);
-            const request = store.clear();
-
-            request.onsuccess = () => resolve();
-            request.onerror = () => reject(request.error);
-        });
+        const db = await this.db;
+        const transaction = db.transaction([STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+        await wrap(store.clear());
     }
 
     async count(): Promise<number> {
-        if (!this.db) await this.init();
-
-        return new Promise<number>((resolve, reject) => {
-            const transaction = this.db!.transaction([STORE_NAME], 'readonly');
-            const store = transaction.objectStore(STORE_NAME);
-            const request = store.count();
-
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error);
-        });
+        const db = await this.db;
+        const transaction = db.transaction([STORE_NAME], 'readonly');
+        const store = transaction.objectStore(STORE_NAME);
+        return wrap(store.count());
     }
 }
 
 const recentFiles = new RecentFiles();
+
 export { recentFiles };

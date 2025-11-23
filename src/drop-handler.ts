@@ -19,7 +19,6 @@ const resolveDirectories = (entries: Array<FileSystemEntry>): Promise<Array<File
     const result: Array<FileSystemFileEntry> = [];
 
     entries.forEach((entry) => {
-        console.log(entry.fullPath);
         if (entry.isFile) {
             result.push(entry as FileSystemFileEntry);
         } else if (entry.isDirectory) {

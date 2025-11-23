@@ -27,6 +27,10 @@ class RecentFiles {
         request.onupgradeneeded = (event) => {
             const db = (event.target as IDBOpenDBRequest).result;
             if (!db.objectStoreNames.contains(STORE_NAME)) {
+                // NOTE: for now we store by filename even though files in
+                // loaded from different directories could have the same name.
+                // We do this because we can't distinguish files from different
+                // directories anyway due to File System Access API limitations.
                 db.createObjectStore(STORE_NAME, { keyPath: 'name' });
             }
         };

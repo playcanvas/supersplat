@@ -170,9 +170,14 @@ class Menu extends Container {
             subMenu: openRecentMenuPanel,
             isEnabled: async () => {
                 // refresh open recent menu items when the parent menu is opened
-                const items = await getOpenRecentItems(events);
-                openRecentMenuPanel.setItems(items);
-                return items.length > 0;
+                try {
+                    const items = await getOpenRecentItems(events);
+                    openRecentMenuPanel.setItems(items);
+                    return items.length > 0;
+                } catch (error) {
+                    console.error('Failed to load recent files:', error);
+                    return false;
+                }
             }
         }, {
             // separator

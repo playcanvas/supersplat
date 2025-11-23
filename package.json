@@ -44,6 +44,7 @@
         "globals": "16.5.0",
         "i18next": "25.6.3",
         "i18next-browser-languagedetector": "8.2.0",
+        "i18next-http-backend": "^3.0.2",
         "jszip": "3.10.1",
         "mediabunny": "1.25.1",
         "playcanvas": "2.13.5",
@@ -54,8 +55,5 @@
         "serve": "14.2.5",
         "tslib": "2.8.1",
         "typescript": "5.9.3"
-    },
-    "dependencies": {
-        "i18next-http-backend": "^3.0.2"
     }
 }

@@ -41,8 +41,6 @@ class EditorUI {
     popup: Popup;
 
     constructor(events: Events) {
-        localizeInit();
-
         // favicon
         const link = document.createElement('link');
         link.rel = 'icon';

@@ -28,6 +28,7 @@ import { SphereSelection } from './tools/sphere-selection';
 import { ToolManager } from './tools/tool-manager';
 import { registerTransformHandlerEvents } from './transform-handler';
 import { EditorUI } from './ui/editor';
+import { localizeInit } from './ui/localization';
 
 declare global {
     interface LaunchParams {
@@ -110,6 +111,9 @@ const main = async () => {
 
     // edit history
     const editHistory = new EditHistory(events);
+
+    // init localization
+    await localizeInit();
 
     // editor ui
     const editorUI = new EditorUI(events);

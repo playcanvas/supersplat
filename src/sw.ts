@@ -18,7 +18,13 @@ const cacheUrls = [
     './static/images/screenshot-narrow.jpg',
     './static/images/screenshot-wide.jpg',
     './static/lib/lodepng/lodepng.js',
-    './static/lib/lodepng/lodepng.wasm'
+    './static/lib/lodepng/lodepng.wasm',
+    './static/locales/de.json',
+    './static/locales/en.json',
+    './static/locales/fr.json',
+    './static/locales/ja.json',
+    './static/locales/ko.json',
+    './static/locales/zh-CN.json'
 ];
 
 self.addEventListener('install', (event) => {

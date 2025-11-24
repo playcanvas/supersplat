@@ -69,7 +69,7 @@ class DataPanel extends Panel {
     constructor(events: Events, args = { }) {
         args = {
             ...args,
-            headerText: localize('panel.splat-data'),
+            headerText: localize('panel.splat-data').toUpperCase(),
             id: 'data-panel',
             resizable: 'top',
             resizeMax: 1000,

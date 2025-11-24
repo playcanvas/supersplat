@@ -64,7 +64,7 @@
     "panel.view-options.show-bound": "경계 표시",
     "panel.view-options.camera-fly-speed": "카메라 이동 속도",
     "panel.view-options.high-precision": "고정밀 렌더링",
-    "panel.splat-data": "SPLAT 데이터",
+    "panel.splat-data": "Splat 데이터",
     "panel.splat-data.distance": "거리",
     "panel.splat-data.volume": "부피",
     "panel.splat-data.surface-area": "표면적",

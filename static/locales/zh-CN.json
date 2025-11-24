@@ -64,7 +64,7 @@
     "panel.view-options.show-bound": "显示边界",
     "panel.view-options.camera-fly-speed": "相机飞行速度",
     "panel.view-options.high-precision": "高精度渲染",
-    "panel.splat-data": "SPLAT 数据",
+    "panel.splat-data": "Splat 数据",
     "panel.splat-data.distance": "距离",
     "panel.splat-data.volume": "体积",
     "panel.splat-data.surface-area": "表面积",

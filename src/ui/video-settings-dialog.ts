@@ -36,7 +36,7 @@ class VideoSettingsDialog extends Container {
         // header
 
         const headerIcon = createSvg(sceneExport, { id: 'icon' });
-        const headerText = new Label({ id: 'text', text: localize('popup.render-video.header') });
+        const headerText = new Label({ id: 'text', text: localize('popup.render-video.header').toUpperCase() });
         const header = new Container({ id: 'header' });
         header.append(headerIcon);
         header.append(headerText);

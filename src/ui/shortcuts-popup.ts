@@ -88,7 +88,7 @@ class ShortcutsPopup extends Overlay {
 
         const shortcutsPanel = new Panel({
             id: 'shortcuts-panel',
-            headerText: localize('popup.shortcuts.title')
+            headerText: localize('popup.shortcuts.title').toUpperCase()
         });
 
         shortcutsPanel.append(shortcutsContainer);

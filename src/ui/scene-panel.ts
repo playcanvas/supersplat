@@ -85,7 +85,7 @@ class ScenePanel extends Container {
         });
 
         const transformLabel = new Label({
-            text: localize('transform'),
+            text: localize('scene-manager.transform'),
             class: 'panel-header-label'
         });
 

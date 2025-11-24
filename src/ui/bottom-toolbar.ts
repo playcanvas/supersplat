@@ -198,22 +198,22 @@ class BottomToolbar extends Container {
         });
 
         // register tooltips
-        tooltips.register(undo, localize('tooltip.undo'));
-        tooltips.register(redo, localize('tooltip.redo'));
-        tooltips.register(picker, localize('tooltip.picker'));
-        tooltips.register(brush, localize('tooltip.brush'));
-        tooltips.register(flood, localize('tooltip.flood'));
-        tooltips.register(polygon, localize('tooltip.polygon'));
-        tooltips.register(lasso, 'Lasso Select');
-        tooltips.register(sphere, localize('tooltip.sphere'));
-        tooltips.register(box, localize('tooltip.box'));
+        tooltips.register(undo, localize('tooltip.toolbar.undo'));
+        tooltips.register(redo, localize('tooltip.toolbar.redo'));
+        tooltips.register(picker, localize('tooltip.toolbar.picker'));
+        tooltips.register(brush, localize('tooltip.toolbar.brush'));
+        tooltips.register(flood, localize('tooltip.toolbar.flood'));
+        tooltips.register(polygon, localize('tooltip.toolbar.polygon'));
+        tooltips.register(lasso, localize('tooltip.toolbar.lasso'));
+        tooltips.register(sphere, localize('tooltip.toolbar.sphere'));
+        tooltips.register(box, localize('tooltip.toolbar.box'));
         // tooltips.register(crop, 'Crop');
-        tooltips.register(translate, localize('tooltip.translate'));
-        tooltips.register(rotate, localize('tooltip.rotate'));
-        tooltips.register(scale, localize('tooltip.scale'));
-        tooltips.register(measure, localize('tooltip.measure'));
-        tooltips.register(coordSpace, localize('tooltip.local-space'));
-        tooltips.register(origin, localize('tooltip.bound-center'));
+        tooltips.register(translate, localize('tooltip.toolbar.translate'));
+        tooltips.register(rotate, localize('tooltip.toolbar.rotate'));
+        tooltips.register(scale, localize('tooltip.toolbar.scale'));
+        tooltips.register(measure, localize('tooltip.toolbar.measure'));
+        tooltips.register(coordSpace, localize('tooltip.toolbar.local-space'));
+        tooltips.register(origin, localize('tooltip.toolbar.bound-center'));
     }
 }
 

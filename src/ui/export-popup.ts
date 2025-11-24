@@ -58,7 +58,7 @@ class ExportPopup extends Container {
 
         const headerText = new Label({
             id: 'header',
-            text: localize('export.header')
+            text: localize('popup.export.header')
         });
 
         header.append(createSvg(sceneExport, {
@@ -79,15 +79,15 @@ class ExportPopup extends Container {
 
         const viewerTypeLabel = new Label({
             class: 'label',
-            text: localize('export.type')
+            text: localize('popup.export.type')
         });
 
         const viewerTypeSelect = new SelectInput({
             class: 'select',
             defaultValue: 'html',
             options: [
-                { v: 'html', t: localize('export.html') },
-                { v: 'zip', t: localize('export.package') }
+                { v: 'html', t: localize('popup.export.html') },
+                { v: 'zip', t: localize('popup.export.package') }
             ]
         });
 
@@ -102,16 +102,16 @@ class ExportPopup extends Container {
 
         const startLabel = new Label({
             class: 'label',
-            text: localize('export.start-position')
+            text: localize('popup.export.start-position')
         });
 
         const startSelect = new SelectInput({
             class: 'select',
             defaultValue: 'viewport',
             options: [
-                { v: 'default', t: localize('export.default') },
-                { v: 'viewport', t: localize('export.viewport') },
-                { v: 'pose', t: localize('export.pose-camera') }
+                { v: 'default', t: localize('popup.export.default') },
+                { v: 'viewport', t: localize('popup.export.viewport') },
+                { v: 'pose', t: localize('popup.export.pose-camera') }
             ]
         });
 
@@ -120,13 +120,13 @@ class ExportPopup extends Container {
 
         // viewer: animation
 
-        const animationLabel = new Label({ class: 'label', text: localize('export.animation') });
+        const animationLabel = new Label({ class: 'label', text: localize('popup.export.animation') });
         const animationSelect = new SelectInput({
             class: 'select',
             defaultValue: 'none',
             options: [
-                { v: 'none', t: localize('export.animation-none') },
-                { v: 'track', t: localize('export.animation-track') }
+                { v: 'none', t: localize('popup.export.animation-none') },
+                { v: 'track', t: localize('popup.export.animation-track') }
             ]
         });
         const animationRow = new Container({ class: 'row' });
@@ -141,7 +141,7 @@ class ExportPopup extends Container {
 
         const colorLabel = new Label({
             class: 'label',
-            text: localize('export.background-color')
+            text: localize('popup.export.background-color')
         });
 
         const colorPicker = new ColorPicker({
@@ -160,7 +160,7 @@ class ExportPopup extends Container {
 
         const fovLabel = new Label({
             class: 'label',
-            text: localize('export.fov')
+            text: localize('popup.export.fov')
         });
 
         const fovSlider = new SliderInput({
@@ -182,7 +182,7 @@ class ExportPopup extends Container {
 
         const compressLabel = new Label({
             class: 'label',
-            text: localize('export.ply-compress')
+            text: localize('popup.export.ply-compress')
         });
 
         const compressBoolean = new BooleanInput({
@@ -201,14 +201,14 @@ class ExportPopup extends Container {
 
         const splatsLabel = new Label({
             class: 'label',
-            text: localize('export.splats-select')
+            text: localize('popup.export.splats-select')
         });
 
         const splatsSelect = new SelectInput({
             class: 'select',
             defaultValue: 'ply',
             options: [
-                { v: 'all', t: localize('export.splats-select.all') }
+                { v: 'all', t: localize('popup.export.splats-select.all') }
             ]
         });
 
@@ -223,7 +223,7 @@ class ExportPopup extends Container {
 
         const bandsLabel = new Label({
             class: 'label',
-            text: localize('export.sh-bands')
+            text: localize('popup.export.sh-bands')
         });
 
         const bandsSlider = new SliderInput({
@@ -245,7 +245,7 @@ class ExportPopup extends Container {
 
         const filenameLabel = new Label({
             class: 'label',
-            text: localize('export.filename')
+            text: localize('popup.export.filename')
         });
 
         const filenameEntry = new TextInput({
@@ -278,7 +278,7 @@ class ExportPopup extends Container {
 
         const exportButton = new Button({
             class: 'button',
-            text: localize('file.export')
+            text: localize('popup.export')
         });
 
         footer.append(cancelButton);
@@ -343,7 +343,7 @@ class ExportPopup extends Container {
             splatsSelect.options = [
                 {
                     v: 'all',
-                    t: localize('export.splats-select.all')
+                    t: localize('popup.export.splats-select.all')
                 },
                 ...splatNames.map((s, i) => ({ v: i.toFixed(0), t: s }))
             ];

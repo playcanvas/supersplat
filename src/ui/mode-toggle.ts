@@ -33,12 +33,12 @@ class ModeToggle extends Container {
 
         const centersText = new Label({
             id: 'centers-text',
-            text: localize('mode.centers')
+            text: localize('panel.mode.centers')
         });
 
         const ringsText = new Label({
             id: 'rings-text',
-            text: localize('mode.rings')
+            text: localize('panel.mode.rings')
         });
 
         this.append(centersIcon);
@@ -57,7 +57,7 @@ class ModeToggle extends Container {
             this.class[mode === 'rings' ? 'add' : 'remove']('rings-mode');
         });
 
-        tooltips.register(this, localize('tooltip.splat-mode'));
+        tooltips.register(this, localize('tooltip.right-toolbar.splat-mode'));
     }
 }
 

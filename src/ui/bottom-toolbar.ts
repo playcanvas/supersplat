@@ -198,22 +198,21 @@ class BottomToolbar extends Container {
         });
 
         // register tooltips
-        tooltips.register(undo, localize('tooltip.undo'));
-        tooltips.register(redo, localize('tooltip.redo'));
-        tooltips.register(picker, localize('tooltip.picker'));
-        tooltips.register(brush, localize('tooltip.brush'));
-        tooltips.register(flood, localize('tooltip.flood'));
-        tooltips.register(polygon, localize('tooltip.polygon'));
-        tooltips.register(lasso, 'Lasso Select');
-        tooltips.register(sphere, localize('tooltip.sphere'));
-        tooltips.register(box, localize('tooltip.box'));
-        // tooltips.register(crop, 'Crop');
-        tooltips.register(translate, localize('tooltip.translate'));
-        tooltips.register(rotate, localize('tooltip.rotate'));
-        tooltips.register(scale, localize('tooltip.scale'));
-        tooltips.register(measure, localize('tooltip.measure'));
-        tooltips.register(coordSpace, localize('tooltip.local-space'));
-        tooltips.register(origin, localize('tooltip.bound-center'));
+        tooltips.register(undo, localize('tooltip.bottom-toolbar.undo'));
+        tooltips.register(redo, localize('tooltip.bottom-toolbar.redo'));
+        tooltips.register(picker, localize('tooltip.bottom-toolbar.picker'));
+        tooltips.register(lasso, localize('tooltip.bottom-toolbar.lasso'));
+        tooltips.register(polygon, localize('tooltip.bottom-toolbar.polygon'));
+        tooltips.register(brush, localize('tooltip.bottom-toolbar.brush'));
+        tooltips.register(flood, localize('tooltip.bottom-toolbar.flood'));
+        tooltips.register(sphere, localize('tooltip.bottom-toolbar.sphere'));
+        tooltips.register(box, localize('tooltip.bottom-toolbar.box'));
+        tooltips.register(translate, localize('tooltip.bottom-toolbar.translate'));
+        tooltips.register(rotate, localize('tooltip.bottom-toolbar.rotate'));
+        tooltips.register(scale, localize('tooltip.bottom-toolbar.scale'));
+        tooltips.register(measure, localize('tooltip.bottom-toolbar.measure'));
+        tooltips.register(coordSpace, localize('tooltip.bottom-toolbar.local-space'));
+        tooltips.register(origin, localize('tooltip.bottom-toolbar.bound-center'));
     }
 }
 

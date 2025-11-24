@@ -69,7 +69,7 @@ class DataPanel extends Panel {
     constructor(events: Events, args = { }) {
         args = {
             ...args,
-            headerText: localize('data'),
+            headerText: localize('panel.splat-data').toUpperCase(),
             id: 'data-panel',
             resizable: 'top',
             resizeMax: 1000,
@@ -102,19 +102,19 @@ class DataPanel extends Panel {
                 x: 'X',
                 y: 'Y',
                 z: 'Z',
-                distance: localize('data.distance'),
-                volume: localize('data.volume'),
-                'surface-area': localize('data.surface-area'),
-                scale_0: localize('data.scale-x'),
-                scale_1: localize('data.scale-y'),
-                scale_2: localize('data.scale-z'),
-                f_dc_0: localize('data.red'),
-                f_dc_1: localize('data.green'),
-                f_dc_2: localize('data.blue'),
-                opacity: localize('data.opacity'),
-                hue: localize('data.hue'),
-                saturation: localize('data.saturation'),
-                value: localize('data.value')
+                distance: localize('panel.splat-data.distance'),
+                volume: localize('panel.splat-data.volume'),
+                'surface-area': localize('panel.splat-data.surface-area'),
+                scale_0: localize('panel.splat-data.scale-x'),
+                scale_1: localize('panel.splat-data.scale-y'),
+                scale_2: localize('panel.splat-data.scale-z'),
+                f_dc_0: localize('panel.splat-data.red'),
+                f_dc_1: localize('panel.splat-data.green'),
+                f_dc_2: localize('panel.splat-data.blue'),
+                opacity: localize('panel.splat-data.opacity'),
+                hue: localize('panel.splat-data.hue'),
+                saturation: localize('panel.splat-data.saturation'),
+                value: localize('panel.splat-data.value')
             };
 
             const dataProps = splat.splatData.getElement('vertex').properties.map(p => p.name);
@@ -138,7 +138,7 @@ class DataPanel extends Panel {
 
         const logScaleLabel = new Label({
             class: 'control-label',
-            text: localize('data.log-scale')
+            text: localize('panel.splat-data.log-scale')
         });
 
         const logScaleValue = new BooleanInput({
@@ -152,12 +152,12 @@ class DataPanel extends Panel {
         controls.append(dataSelector);
         controls.append(logScale);
 
-        controls.append(sepLabel(localize('data.totals')));
+        controls.append(sepLabel(localize('panel.splat-data.totals')));
 
-        const splatsValue = dataLabel(controls, localize('data.totals.splats'));
-        const selectedValue = dataLabel(controls, localize('data.totals.selected'));
-        const lockedValue = dataLabel(controls, localize('data.totals.locked'));
-        const deletedValue = dataLabel(controls, localize('data.totals.deleted'));
+        const splatsValue = dataLabel(controls, localize('panel.splat-data.totals.splats'));
+        const selectedValue = dataLabel(controls, localize('panel.splat-data.totals.selected'));
+        const lockedValue = dataLabel(controls, localize('panel.splat-data.totals.locked'));
+        const deletedValue = dataLabel(controls, localize('panel.splat-data.totals.deleted'));
 
         controlsContainer.append(controls);
 

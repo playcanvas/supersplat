@@ -36,23 +36,23 @@ class ImageSettingsDialog extends Container {
         // header
 
         const headerIcon = createSvg(sceneExport, { id: 'icon' });
-        const headerText = new Label({ id: 'text', text: localize('image.header') });
+        const headerText = new Label({ id: 'text', text: localize('popup.render-image.header').toUpperCase() });
         const header = new Container({ id: 'header' });
         header.append(headerIcon);
         header.append(headerText);
 
         // preset
 
-        const presetLabel = new Label({ class: 'label', text: localize('image.preset') });
+        const presetLabel = new Label({ class: 'label', text: localize('popup.render-image.preset') });
         const presetSelect = new SelectInput({
             class: 'select',
             defaultValue: 'viewport',
             options: [
-                { v: 'viewport', t: localize('image.resolutionCurrent') },
+                { v: 'viewport', t: localize('popup.render-image.resolution-current') },
                 { v: 'HD', t: 'HD' },
                 { v: 'QHD', t: 'QHD' },
                 { v: '4K', t: '4K' },
-                { v: 'custom', t: localize('image.resolutionCustom') }
+                { v: 'custom', t: localize('popup.render-image.resolution-custom') }
             ]
         });
         const presetRow = new Container({ class: 'row' });
@@ -61,7 +61,7 @@ class ImageSettingsDialog extends Container {
 
         // resolution
 
-        const resolutionLabel = new Label({ class: 'label', text: localize('image.resolution') });
+        const resolutionLabel = new Label({ class: 'label', text: localize('popup.render-image.resolution') });
         const resolutionValue = new VectorInput({
             class: 'vector-input',
             dimensions: 2,
@@ -76,7 +76,7 @@ class ImageSettingsDialog extends Container {
 
         // transparent background
 
-        const transparentBgLabel = new Label({ class: 'label', text: localize('image.transparentBg') });
+        const transparentBgLabel = new Label({ class: 'label', text: localize('popup.render-image.transparent-bg') });
         const transparentBgBoolean = new BooleanInput({ class: 'boolean', value: false });
         const transparentBgRow = new Container({ class: 'row' });
         transparentBgRow.append(transparentBgLabel);
@@ -84,7 +84,7 @@ class ImageSettingsDialog extends Container {
 
         // show debug overlays
 
-        const showDebugLabel = new Label({ class: 'label', text: localize('image.showDebug') });
+        const showDebugLabel = new Label({ class: 'label', text: localize('popup.render-image.show-debug') });
         const showDebugBoolean = new BooleanInput({ class: 'boolean', value: false });
         const showDebugRow = new Container({ class: 'row' });
         showDebugRow.append(showDebugLabel);
@@ -104,12 +104,12 @@ class ImageSettingsDialog extends Container {
 
         const cancelButton = new Button({
             class: 'button',
-            text: localize('render.cancel')
+            text: localize('panel.render.cancel')
         });
 
         const okButton = new Button({
             class: 'button',
-            text: localize('render.ok')
+            text: localize('panel.render.ok')
         });
 
         footer.append(cancelButton);

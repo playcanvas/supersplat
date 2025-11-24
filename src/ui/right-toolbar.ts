@@ -79,12 +79,12 @@ class RightToolbar extends Container {
         this.append(new Element({ class: 'right-toolbar-separator' }));
         this.append(options);
 
-        tooltips.register(ringsModeToggle, localize('tooltip.splat-mode'), 'left');
-        tooltips.register(showHideSplats, localize('tooltip.show-hide'), 'left');
-        tooltips.register(cameraFrameSelection, localize('tooltip.frame-selection'), 'left');
-        tooltips.register(cameraReset, localize('tooltip.camera-reset'), 'left');
-        tooltips.register(colorPanel, localize('tooltip.color-panel'), 'left');
-        tooltips.register(options, localize('tooltip.view-options'), 'left');
+        tooltips.register(ringsModeToggle, localize('tooltip.right-toolbar.splat-mode'), 'left');
+        tooltips.register(showHideSplats, localize('tooltip.right-toolbar.show-hide'), 'left');
+        tooltips.register(cameraFrameSelection, localize('tooltip.right-toolbar.frame-selection'), 'left');
+        tooltips.register(cameraReset, localize('tooltip.right-toolbar.reset-camera'), 'left');
+        tooltips.register(colorPanel, localize('tooltip.right-toolbar.colors'), 'left');
+        tooltips.register(options, localize('tooltip.right-toolbar.view-options'), 'left');
 
         // add event handlers
 

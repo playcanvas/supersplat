@@ -57,7 +57,7 @@ class ModeToggle extends Container {
             this.class[mode === 'rings' ? 'add' : 'remove']('rings-mode');
         });
 
-        tooltips.register(this, localize('tooltip.splat-mode'));
+        tooltips.register(this, localize('tooltip.right-toolbar.splat-mode'));
     }
 }
 

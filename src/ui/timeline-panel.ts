@@ -388,14 +388,14 @@ class TimelinePanel extends Container {
         });
 
         // tooltips
-        tooltips.register(prev, localize('timeline.prev-key'), 'top');
-        tooltips.register(play, localize('timeline.play'), 'top');
-        tooltips.register(next, localize('timeline.next-key'), 'top');
-        tooltips.register(addKey, localize('timeline.add-key'), 'top');
-        tooltips.register(removeKey, localize('timeline.remove-key'), 'top');
-        tooltips.register(speed, localize('timeline.frame-rate'), 'top');
-        tooltips.register(frames, localize('timeline.total-frames'), 'top');
-        tooltips.register(smoothness, localize('timeline.smoothness'), 'top');
+        tooltips.register(prev, localize('tooltip.timeline.prev-key'), 'top');
+        tooltips.register(play, localize('tooltip.timeline.play'), 'top');
+        tooltips.register(next, localize('tooltip.timeline.next-key'), 'top');
+        tooltips.register(addKey, localize('tooltip.timeline.add-key'), 'top');
+        tooltips.register(removeKey, localize('tooltip.timeline.remove-key'), 'top');
+        tooltips.register(speed, localize('tooltip.timeline.frame-rate'), 'top');
+        tooltips.register(frames, localize('tooltip.timeline.total-frames'), 'top');
+        tooltips.register(smoothness, localize('tooltip.timeline.smoothness'), 'top');
     }
 }
 

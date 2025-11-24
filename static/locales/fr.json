@@ -3,7 +3,7 @@
     "menu.file.new": "Créer",
     "menu.file.open": "Ouvrir",
     "menu.file.open-recent": "Récemment ouverts",
-    "menu.file.recent.clear": "Effacer l'historique",
+    "menu.file.open-recent.clear": "Effacer l'historique",
     "menu.file.import": "Importer...",
     "menu.file.save": "Enregistrer",
     "menu.file.save-as": "Enregistrer sous...",

@@ -3,7 +3,7 @@
     "menu.file.new": "New",
     "menu.file.open": "Open",
     "menu.file.open-recent": "Open Recent",
-    "menu.file.recent.clear": "Clear Recent",
+    "menu.file.open-recent.clear": "Clear Recent",
     "menu.file.import": "Import...",
     "menu.file.save": "Save",
     "menu.file.save-as": "Save As...",

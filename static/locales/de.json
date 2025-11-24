@@ -3,7 +3,7 @@
     "menu.file.new": "Neu",
     "menu.file.open": "Öffnen",
     "menu.file.open-recent": "Zuletzt geöffnet",
-    "menu.file.recent.clear": "Liste leeren",
+    "menu.file.open-recent.clear": "Liste leeren",
     "menu.file.import": "Importieren...",
     "menu.file.save": "Speichern",
     "menu.file.save-as": "Speichern als...",

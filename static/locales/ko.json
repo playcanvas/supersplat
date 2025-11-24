@@ -3,7 +3,7 @@
     "menu.file.new": "새로 만들기",
     "menu.file.open": "열기",
     "menu.file.open-recent": "최근 파일 열기",
-    "menu.file.recent.clear": "기록 지우기",
+    "menu.file.open-recent.clear": "기록 지우기",
     "menu.file.import": "가져오기...",
     "menu.file.save": "저장",
     "menu.file.save-as": "다른 이름으로 저장...",

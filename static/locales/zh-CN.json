@@ -3,7 +3,7 @@
     "menu.file.new": "新建",
     "menu.file.open": "打开",
     "menu.file.open-recent": "打开最近",
-    "menu.file.recent.clear": "清除最近",
+    "menu.file.open-recent.clear": "清除最近",
     "menu.file.import": "导入...",
     "menu.file.save": "保存",
     "menu.file.save-as": "另存为...",

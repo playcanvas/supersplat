@@ -41,7 +41,7 @@ const getOpenRecentItems = async (events: Events) => {
     if (items.length > 0) {
         items.push({}); // separator
         items.push({
-            text: localize('menu.file.recent.clear'),
+            text: localize('menu.file.open-recent.clear'),
             icon: createSvg(selectDelete),
             onSelect: () => recentFiles.clear()
         });

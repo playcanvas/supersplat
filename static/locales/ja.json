@@ -3,7 +3,7 @@
     "menu.file.new": "新規作成",
     "menu.file.open": "開く",
     "menu.file.open-recent": "最近開いたファイル",
-    "menu.file.recent.clear": "履歴を消去",
+    "menu.file.open-recent.clear": "履歴を消去",
     "menu.file.import": "インポート...",
     "menu.file.save": "保存",
     "menu.file.save-as": "名前を付けて保存",

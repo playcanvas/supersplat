@@ -179,7 +179,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
     });
 
     events.function('render.video', async (videoSettings: VideoSettings, fileStream: FileSystemWritableFileStream) => {
-        events.fire('progressStart', localize('render.render-video'));
+        events.fire('progressStart', localize('panel.render.render-video'));
 
         try {
             const { startFrame, endFrame, frameRate, width, height, bitrate, transparentBg, showDebug, format, codec: codecChoice } = videoSettings;
@@ -370,7 +370,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 await captureFrame(frameTime);
 
                 events.fire('progressUpdate', {
-                    text: localize('render.rendering'),
+                    text: localize('panel.render.rendering'),
                     progress: 100 * frameTime / duration
                 });
             }

@@ -215,7 +215,7 @@ class EditorUI {
                 await events.invoke('showPopup', {
                     type: 'error',
                     header: localize('popup.error'),
-                    message: localize('publish.please-log-in')
+                    message: localize('popup.publish.please-log-in')
                 });
                 return false;
             }

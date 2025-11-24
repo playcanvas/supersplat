@@ -33,12 +33,12 @@ class ModeToggle extends Container {
 
         const centersText = new Label({
             id: 'centers-text',
-            text: localize('mode.centers')
+            text: localize('panel.mode.centers')
         });
 
         const ringsText = new Label({
             id: 'rings-text',
-            text: localize('mode.rings')
+            text: localize('panel.mode.rings')
         });
 
         this.append(centersIcon);

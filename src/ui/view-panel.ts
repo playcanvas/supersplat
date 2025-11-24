@@ -33,7 +33,7 @@ class ViewPanel extends Container {
         });
 
         const label = new Label({
-            text: localize('options'),
+            text: localize('panel.view-options'),
             class: 'panel-header-label'
         });
 
@@ -47,7 +47,7 @@ class ViewPanel extends Container {
         });
 
         const clrLabel = new Label({
-            text: localize('options.colors'),
+            text: localize('panel.view-options.colors'),
             class: 'view-panel-row-label'
         });
 
@@ -110,7 +110,7 @@ class ViewPanel extends Container {
         });
 
         const tonemappingLabel = new Label({
-            text: localize('options.tonemapping'),
+            text: localize('panel.view-options.tonemapping'),
             class: 'view-panel-row-label'
         });
 
@@ -118,13 +118,13 @@ class ViewPanel extends Container {
             class: 'view-panel-row-select',
             defaultValue: 'none',
             options: [
-                { v: 'none', t: localize('options.tonemapping-none') },
-                { v: 'linear', t: localize('options.tonemapping-linear') },
-                { v: 'neutral', t: localize('options.tonemapping-neutral') },
-                { v: 'aces', t: localize('options.tonemapping-aces') },
-                { v: 'aces2', t: localize('options.tonemapping-aces2') },
-                { v: 'filmic', t: localize('options.tonemapping-filmic') },
-                { v: 'hejl', t: localize('options.tonemapping-hejl') }
+                { v: 'none', t: localize('panel.view-options.tonemapping-none') },
+                { v: 'linear', t: localize('panel.view-options.tonemapping-linear') },
+                { v: 'neutral', t: localize('panel.view-options.tonemapping-neutral') },
+                { v: 'aces', t: localize('panel.view-options.tonemapping-aces') },
+                { v: 'aces2', t: localize('panel.view-options.tonemapping-aces2') },
+                { v: 'filmic', t: localize('panel.view-options.tonemapping-filmic') },
+                { v: 'hejl', t: localize('panel.view-options.tonemapping-hejl') }
             ]
         });
 
@@ -138,7 +138,7 @@ class ViewPanel extends Container {
         });
 
         const fovLabel = new Label({
-            text: localize('options.fov'),
+            text: localize('panel.view-options.fov'),
             class: 'view-panel-row-label'
         });
 
@@ -159,7 +159,7 @@ class ViewPanel extends Container {
         });
 
         const shBandsLabel = new Label({
-            text: localize('options.sh-bands'),
+            text: localize('panel.view-options.sh-bands'),
             class: 'view-panel-row-label'
         });
 
@@ -181,7 +181,7 @@ class ViewPanel extends Container {
         });
 
         const centersSizeLabel = new Label({
-            text: localize('options.centers-size'),
+            text: localize('panel.view-options.centers-size'),
             class: 'view-panel-row-label'
         });
 
@@ -203,7 +203,7 @@ class ViewPanel extends Container {
         });
 
         const cameraFlySpeedLabel = new Label({
-            text: localize('options.camera-fly-speed'),
+            text: localize('panel.view-options.camera-fly-speed'),
             class: 'view-panel-row-label'
         });
 
@@ -225,7 +225,7 @@ class ViewPanel extends Container {
         });
 
         const highPrecisionLabel = new Label({
-            text: localize('options.high-precision'),
+            text: localize('panel.view-options.high-precision'),
             class: 'view-panel-row-label'
         });
 
@@ -245,7 +245,7 @@ class ViewPanel extends Container {
         });
 
         const outlineSelectionLabel = new Label({
-            text: localize('options.outline-selection'),
+            text: localize('panel.view-options.outline-selection'),
             class: 'view-panel-row-label'
         });
 
@@ -265,7 +265,7 @@ class ViewPanel extends Container {
         });
 
         const showGridLabel = new Label({
-            text: localize('options.show-grid'),
+            text: localize('panel.view-options.show-grid'),
             class: 'view-panel-row-label'
         });
 
@@ -285,7 +285,7 @@ class ViewPanel extends Container {
         });
 
         const showBoundLabel = new Label({
-            text: localize('options.show-bound'),
+            text: localize('panel.view-options.show-bound'),
             class: 'view-panel-row-label'
         });
 
@@ -448,10 +448,10 @@ class ViewPanel extends Container {
         });
 
         // tooltips
-        tooltips.register(bgClrPicker, localize('options.bg-color'), 'left');
-        tooltips.register(selectedClrPicker, localize('options.selected-color'), 'top');
-        tooltips.register(unselectedClrPicker, localize('options.unselected-color'), 'top');
-        tooltips.register(lockedClrPicker, localize('options.locked-color'), 'top');
+        tooltips.register(bgClrPicker, localize('panel.view-options.bg-color'), 'left');
+        tooltips.register(selectedClrPicker, localize('panel.view-options.selected-color'), 'top');
+        tooltips.register(unselectedClrPicker, localize('panel.view-options.unselected-color'), 'top');
+        tooltips.register(lockedClrPicker, localize('panel.view-options.locked-color'), 'top');
     }
 }
 

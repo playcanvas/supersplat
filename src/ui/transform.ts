@@ -52,7 +52,7 @@ class Transform extends Container {
 
         const positionLabel = new Label({
             class: 'transform-label',
-            text: localize('scene-manager.position')
+            text: localize('panel.scene-manager.transform.position')
         });
 
         const positionVector = new VectorInput({
@@ -73,7 +73,7 @@ class Transform extends Container {
 
         const rotationLabel = new Label({
             class: 'transform-label',
-            text: localize('scene-manager.rotation')
+            text: localize('panel.scene-manager.transform.rotation')
         });
 
         const rotationVector = new VectorInput({
@@ -94,7 +94,7 @@ class Transform extends Container {
 
         const scaleLabel = new Label({
             class: 'transform-label',
-            text: localize('scene-manager.scale')
+            text: localize('panel.scene-manager.transform.scale')
         });
 
         const scaleInput = new NumericInput({

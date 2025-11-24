@@ -38,14 +38,14 @@ class PublishSettingsDialog extends Container {
         // header
 
         const headerIcon = createSvg(sceneExport, { id: 'icon' });
-        const headerText = new Label({ id: 'text', text: localize('publish.header') });
+        const headerText = new Label({ id: 'text', text: localize('popup.publish.header') });
         const header = new Container({ id: 'header' });
         header.append(headerIcon);
         header.append(headerText);
 
         // overwrite
 
-        const overwriteLabel = new Label({ class: 'label', text: localize('publish.to') });
+        const overwriteLabel = new Label({ class: 'label', text: localize('popup.publish.to') });
         const overwriteSelect = new SelectInput({
             class: 'select'
         });
@@ -56,7 +56,7 @@ class PublishSettingsDialog extends Container {
 
         // title
 
-        const titleLabel = new Label({ class: 'label', text: localize('publish.title') });
+        const titleLabel = new Label({ class: 'label', text: localize('popup.publish.title') });
         const titleInput = new TextInput({ class: 'text-input' });
         const titleRow = new Container({ class: 'row' });
         titleRow.append(titleLabel);
@@ -64,7 +64,7 @@ class PublishSettingsDialog extends Container {
 
         // description
 
-        const descLabel = new Label({ class: 'label', text: localize('publish.description') });
+        const descLabel = new Label({ class: 'label', text: localize('popup.publish.description') });
         const descInput = new TextAreaInput({ class: 'text-area' });
         const descRow = new Container({ class: 'row' });
         descRow.append(descLabel);
@@ -72,7 +72,7 @@ class PublishSettingsDialog extends Container {
 
         // listed
 
-        const listLabel = new Label({ class: 'label', text: localize('publish.listed') });
+        const listLabel = new Label({ class: 'label', text: localize('popup.publish.listed') });
         const listBoolean = new BooleanInput({ class: 'boolean', value: true });
         const listRow = new Container({ class: 'row' });
         listRow.append(listLabel);
@@ -80,14 +80,14 @@ class PublishSettingsDialog extends Container {
 
         // start position
 
-        const startLabel = new Label({ class: 'label', text: localize('export.start-position') });
+        const startLabel = new Label({ class: 'label', text: localize('popup.export.start-position') });
         const startSelect = new SelectInput({
             class: 'select',
             defaultValue: 'viewport',
             options: [
-                { v: 'default', t: localize('export.default') },
-                { v: 'viewport', t: localize('export.viewport') },
-                { v: 'pose', t: localize('export.pose-camera') }
+                { v: 'default', t: localize('popup.export.default') },
+                { v: 'viewport', t: localize('popup.export.viewport') },
+                { v: 'pose', t: localize('popup.export.pose-camera') }
             ]
         });
         const startRow = new Container({ class: 'row' });
@@ -96,13 +96,13 @@ class PublishSettingsDialog extends Container {
 
         // animation
 
-        const animationLabel = new Label({ class: 'label', text: localize('export.animation') });
+        const animationLabel = new Label({ class: 'label', text: localize('popup.export.animation') });
         const animationSelect = new SelectInput({
             class: 'select',
             defaultValue: 'none',
             options: [
-                { v: 'none', t: localize('export.animation-none') },
-                { v: 'track', t: localize('export.animation-track') }
+                { v: 'none', t: localize('popup.export.animation-none') },
+                { v: 'track', t: localize('popup.export.animation-track') }
             ]
         });
         const animationRow = new Container({ class: 'row' });
@@ -111,7 +111,7 @@ class PublishSettingsDialog extends Container {
 
         // clear color
 
-        const colorLabel = new Label({ class: 'label', text: localize('export.background-color') });
+        const colorLabel = new Label({ class: 'label', text: localize('popup.export.background-color') });
         const colorPicker = new ColorPicker({
             class: 'color-picker',
             value: [1, 1, 1, 1]
@@ -122,7 +122,7 @@ class PublishSettingsDialog extends Container {
 
         // fov
 
-        const fovLabel = new Label({ class: 'label', text: localize('export.fov') });
+        const fovLabel = new Label({ class: 'label', text: localize('popup.export.fov') });
         const fovSlider = new SliderInput({
             class: 'slider',
             min: 10,
@@ -136,7 +136,7 @@ class PublishSettingsDialog extends Container {
 
         // bands
 
-        const bandsLabel = new Label({ class: 'label', text: localize('export.sh-bands') });
+        const bandsLabel = new Label({ class: 'label', text: localize('popup.export.sh-bands') });
         const bandsSlider = new SliderInput({
             class: 'slider',
             min: 0,
@@ -167,12 +167,12 @@ class PublishSettingsDialog extends Container {
 
         const cancelButton = new Button({
             class: 'button',
-            text: localize('publish.cancel')
+            text: localize('popup.publish.cancel')
         });
 
         const okButton = new Button({
             class: 'button',
-            text: localize('publish.ok')
+            text: localize('popup.publish.ok')
         });
 
         footer.append(cancelButton);
@@ -222,7 +222,7 @@ class PublishSettingsDialog extends Container {
             const bgClr = events.invoke('bgClr');
 
             overwriteSelect.options = [{
-                v: '0', t: localize('publish.new-scene')
+                v: '0', t: localize('popup.publish.new-scene')
             }].concat(overwriteList.map((s, i) => ({ v: (i + 1).toString(), t: s })));
 
             overwriteSelect.value = '0';

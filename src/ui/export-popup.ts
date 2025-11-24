@@ -278,7 +278,7 @@ class ExportPopup extends Container {
 
         const exportButton = new Button({
             class: 'button',
-            text: localize('file.export')
+            text: localize('popup.export')
         });
 
         footer.append(cancelButton);

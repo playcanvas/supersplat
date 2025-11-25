@@ -27,9 +27,9 @@ interface LocalizeOptions {
 
 const localize = (key: string, options?: LocalizeOptions): string => {
     let text = i18next.t(key);
-    
+
     if (options?.ellipsis) text += '...';
-    
+
     return text;
 };
 

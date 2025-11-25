@@ -145,7 +145,7 @@ class Menu extends Container {
         }, {
             // separator
         }, {
-            text: localize('menu.file.export.viewer'),
+            text: localize('menu.file.export.viewer', { ellipsis: true }),
             icon: createSvg(sceneExport),
             isEnabled: () => !events.invoke('scene.empty'),
             onSelect: () => events.invoke('scene.export', 'viewer')
@@ -187,14 +187,14 @@ class Menu extends Container {
             isEnabled: () => events.invoke('doc.name'),
             onSelect: async () => await events.invoke('doc.save')
         }, {
-            text: localize('menu.file.save-as'),
+            text: localize('menu.file.save-as', { ellipsis: true }),
             icon: createSvg(sceneSave),
             isEnabled: () => !events.invoke('scene.empty'),
             onSelect: async () => await events.invoke('doc.saveAs')
         }, {
             // separator
         }, {
-            text: localize('menu.file.import'),
+            text: localize('menu.file.import', { ellipsis: true }),
             icon: createSvg(sceneImport),
             onSelect: async () => {
                 await events.invoke('scene.import');
@@ -204,7 +204,7 @@ class Menu extends Container {
             icon: createSvg(sceneExport),
             subMenu: exportMenuPanel
         }, {
-            text: localize('menu.file.publish'),
+            text: localize('menu.file.publish', { ellipsis: true }),
             icon: createSvg(scenePublish),
             isEnabled: () => !events.invoke('scene.empty'),
             onSelect: async () => await events.invoke('show.publishSettingsDialog')
@@ -262,11 +262,11 @@ class Menu extends Container {
         }]);
 
         const renderMenuPanel = new MenuPanel([{
-            text: localize('menu.render.image'),
+            text: localize('menu.render.image', { ellipsis: true }),
             icon: createSvg(sceneExport),
             onSelect: async () => await events.invoke('show.imageSettingsDialog')
         }, {
-            text: localize('menu.render.video'),
+            text: localize('menu.render.video', { ellipsis: true }),
             icon: createSvg(sceneExport),
             onSelect: async () => await events.invoke('show.videoSettingsDialog')
         }]);

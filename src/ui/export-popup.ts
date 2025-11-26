@@ -182,7 +182,7 @@ class ExportPopup extends Container {
 
         const compressLabel = new Label({
             class: 'label',
-            text: localize('popup.export.ply-compress')
+            text: localize('popup.export.compress-ply')
         });
 
         const compressBoolean = new BooleanInput({

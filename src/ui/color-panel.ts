@@ -147,7 +147,7 @@ class ColorPanel extends Container {
         });
 
         const blackPointLabel = new Label({
-            text: localize('panel.colors.blackPoint'),
+            text: localize('panel.colors.black-point'),
             class: 'color-panel-row-label'
         });
 
@@ -169,7 +169,7 @@ class ColorPanel extends Container {
         });
 
         const whitePointLabel = new Label({
-            text: localize('panel.colors.whitePoint'),
+            text: localize('panel.colors.white-point'),
             class: 'color-panel-row-label'
         });
 

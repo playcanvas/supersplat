@@ -98,7 +98,7 @@ class DataPanel extends Panel {
         });
 
         const populateDataSelector = (splat: Splat) => {
-            const localisations: any = {
+            const localizations: any = {
                 x: 'X',
                 y: 'Y',
                 z: 'Z',
@@ -125,7 +125,7 @@ class DataPanel extends Panel {
             const options = allProps.map((prop) => {
                 return {
                     v: prop,
-                    t: localisations[prop] ?? prop
+                    t: localizations[prop] ?? prop
                 };
             });
 

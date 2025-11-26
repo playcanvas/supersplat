@@ -175,7 +175,6 @@ class VideoSettingsDialog extends Container {
             dimensions: 2,
             min: 0,
             max: totalFrames - 1,
-            // @ts-ignore
             placeholder: [localize('popup.render-video.frame-range-first'), localize('popup.render-video.frame-range-last')],
             precision: 0,
             value: [0, totalFrames - 1]

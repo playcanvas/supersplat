@@ -242,7 +242,7 @@ const registerPublishEvents = (events: Events) => {
         try {
             events.fire('progressStart', 'Publishing...');
             events.fire('progressUpdate', {
-                text: localize('popup.publish.converting'),
+                text: localize('popup.publish.converting', { ellipsis: true }),
                 progress: 0
             });
 
@@ -253,7 +253,7 @@ const registerPublishEvents = (events: Events) => {
 
             const progressFunc = (loaded: number, total: number) => {
                 events.fire('progressUpdate', {
-                    text: localize('popup.publish.uploading'),
+                    text: localize('popup.publish.uploading', { ellipsis: true }),
                     progress: 100 * loaded / total
                 });
             };

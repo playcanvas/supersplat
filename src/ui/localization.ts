@@ -21,8 +21,17 @@ const localizeInit = () => {
     });
 };
 
-const localize = (key: string) => {
-    return i18next.t(key);
+interface LocalizeOptions {
+    ellipsis?: boolean;
+}
+
+const localize = (key: string, options?: LocalizeOptions): string => {
+    let text = i18next.t(key);
+
+    if (options?.ellipsis) text += '...';
+
+    return text;
 };
 
 export { localizeInit, localize };
+export type { LocalizeOptions };

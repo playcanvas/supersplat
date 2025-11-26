@@ -370,7 +370,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 await captureFrame(frameTime);
 
                 events.fire('progressUpdate', {
-                    text: localize('panel.render.rendering'),
+                    text: localize('panel.render.rendering', { ellipsis: true }),
                     progress: 100 * frameTime / duration
                 });
             }

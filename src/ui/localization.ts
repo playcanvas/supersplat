@@ -13,7 +13,7 @@ const localizeInit = () => {
         backend: {
             loadPath: './static/locales/{{lng}}.json'
         },
-        supportedLngs: ['de', 'en', 'fr', 'ja', 'ko', 'zh-CN'],
+        supportedLngs: ['de', 'en', 'es', 'fr', 'ja', 'ko', 'ru', 'zh-CN'],
         fallbackLng: 'en',
         interpolation: {
             escapeValue: false

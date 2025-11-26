@@ -5,7 +5,7 @@ import { Splat } from '../splat';
 import { rgb2hsv } from './color';
 import { Histogram } from './histogram';
 import { State } from '../splat-state';
-import { localize } from './localization';
+import { localize, formatInteger } from './localization';
 
 const SH_C0 = 0.28209479177387814;
 
@@ -98,7 +98,7 @@ class DataPanel extends Panel {
         });
 
         const populateDataSelector = (splat: Splat) => {
-            const localisations: any = {
+            const localizations: any = {
                 x: 'X',
                 y: 'Y',
                 z: 'Z',
@@ -125,7 +125,7 @@ class DataPanel extends Panel {
             const options = allProps.map((prop) => {
                 return {
                     v: prop,
-                    t: localisations[prop] ?? prop
+                    t: localizations[prop] ?? prop
                 };
             });
 
@@ -250,10 +250,10 @@ class DataPanel extends Panel {
 
             const state = splat.splatData.getProp('state') as Uint8Array;
             if (state) {
-                splatsValue.text = (state.length - splat.numDeleted).toString();
-                selectedValue.text = splat.numSelected.toString();
-                lockedValue.text = splat.numLocked.toString();
-                deletedValue.text = splat.numDeleted.toString();
+                splatsValue.text = formatInteger(state.length - splat.numDeleted);
+                selectedValue.text = formatInteger(splat.numSelected);
+                lockedValue.text = formatInteger(splat.numLocked);
+                deletedValue.text = formatInteger(splat.numDeleted);
 
                 // update histogram
                 const func = getValueFunc();

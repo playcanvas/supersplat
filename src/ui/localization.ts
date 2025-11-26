@@ -33,5 +33,15 @@ const localize = (key: string, options?: LocalizeOptions): string => {
     return text;
 };
 
-export { localizeInit, localize };
+const getLocale = (): string => {
+    return i18next.language || 'en';
+};
+
+const formatInteger = (value: number): string => {
+    return new Intl.NumberFormat(getLocale(), {
+        maximumFractionDigits: 0
+    }).format(Math.round(value));
+};
+
+export { localizeInit, localize, formatInteger };
 export type { LocalizeOptions };

@@ -30,7 +30,6 @@ class Transform extends Container {
             class: 'transform-expand',
             precision: 3,
             dimensions: 3,
-            // @ts-expect-error - placeholder property exists at runtime but VectorInput type definition does not allow string arrays
             placeholder: ['X', 'Y', 'Z'],
             value: [0, 0, 0],
             enabled: false
@@ -53,7 +52,6 @@ class Transform extends Container {
             class: 'transform-expand',
             precision: 2,
             dimensions: 3,
-            // @ts-expect-error - placeholder property exists at runtime but VectorInput type definition does not allow string arrays
             placeholder: ['X', 'Y', 'Z'],
             value: [0, 0, 0],
             enabled: false

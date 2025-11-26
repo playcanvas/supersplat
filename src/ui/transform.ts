@@ -30,7 +30,7 @@ class Transform extends Container {
             class: 'transform-expand',
             precision: 3,
             dimensions: 3,
-            // @ts-ignore
+            // @ts-expect-error - placeholder property exists at runtime but is missing from VectorInput type definition
             placeholder: ['X', 'Y', 'Z'],
             value: [0, 0, 0],
             enabled: false

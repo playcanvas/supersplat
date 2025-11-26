@@ -33,18 +33,10 @@ const localize = (key: string, options?: LocalizeOptions): string => {
     return text;
 };
 
-/**
- * Get the current locale code (e.g., 'en', 'de', 'fr')
- */
 const getLocale = (): string => {
     return i18next.language || 'en';
 };
 
-/**
- * Format an integer according to the current locale
- * @param value - The number to format
- * @returns Formatted integer string with thousands separators
- */
 const formatInteger = (value: number): string => {
     return new Intl.NumberFormat(getLocale(), {
         maximumFractionDigits: 0

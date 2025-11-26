@@ -98,7 +98,7 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
         // handle single file drops so documents can propagate the filesystemfilehandle
         if (items.length === 1) {
             const item = items[0];
-            if (item.kind === 'file' && item.getAsFileSystemHandle) {
+            if (item.getAsFileSystemHandle && item.webkitGetAsEntry().isFile) {
                 const handle = await item.getAsFileSystemHandle();
                 if (handle?.kind === 'file') {
                     const fileHandle = handle as FileSystemFileHandle;

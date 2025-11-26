@@ -1,4 +1,4 @@
-import { Color, Mat4, Texture, Vec3, Vec4 } from 'playcanvas';
+import { Color, Mat4, path, Texture, Vec3, Vec4 } from 'playcanvas';
 
 import { EditHistory } from './edit-history';
 import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp, MultiOp, AddSplatOp } from './edit-ops';
@@ -7,6 +7,10 @@ import { Scene } from './scene';
 import { BufferWriter } from './serialize/writer';
 import { Splat } from './splat';
 import { serializePly } from './splat-serialize';
+
+const removeExtension = (filename: string) => {
+    return filename.substring(0, filename.length - path.getExtension(filename).length);
+};
 
 // register for editor and scene events
 const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: Scene) => {
@@ -460,7 +464,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             // wrap PLY in a blob and load it
             const blob = new Blob(buffers as unknown as ArrayBuffer[], { type: 'application/octet-stream' });
             const url = URL.createObjectURL(blob);
-            const { filename } = splat;
+            const filename = `${removeExtension(splat.filename)}.ply`;
             const copy = await scene.assetLoader.load({ url, filename });
 
             if (func === 'separate') {

@@ -6,7 +6,7 @@
 
     background-color: $bcg-primary;
 
-    padding: 0px 6px 12px 6px;
+    padding: 6px;
 }
 
 .transform-row {
@@ -24,10 +24,6 @@
     flex-shrink: 0;
     flex-grow: 0;
     margin: 0px;
-}
-
-.transform-axis-label {
-    text-align: center;
 }
 
 .transform-expand {

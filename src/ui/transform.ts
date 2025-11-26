@@ -16,35 +16,6 @@ class Transform extends Container {
 
         super(args);
 
-        const axis = new Container({
-            class: 'transform-row'
-        });
-
-        const axisLabel = new Label({
-            class: 'transform-label',
-            text: ''
-        });
-
-        const xLabel = new Label({
-            class: ['transform-expand', 'transform-label', 'transform-axis-label'],
-            text: 'x'
-        });
-
-        const yLabel = new Label({
-            class: ['transform-expand', 'transform-label', 'transform-axis-label'],
-            text: 'y'
-        });
-
-        const zLabel = new Label({
-            class: ['transform-expand', 'transform-label', 'transform-axis-label'],
-            text: 'z'
-        });
-
-        axis.append(axisLabel);
-        axis.append(xLabel);
-        axis.append(yLabel);
-        axis.append(zLabel);
-
         // position
         const position = new Container({
             class: 'transform-row'
@@ -59,6 +30,8 @@ class Transform extends Container {
             class: 'transform-expand',
             precision: 3,
             dimensions: 3,
+            // @ts-expect-error - placeholder property exists at runtime but VectorInput type definition does not allow string arrays
+            placeholder: ['X', 'Y', 'Z'],
             value: [0, 0, 0],
             enabled: false
         });
@@ -80,6 +53,8 @@ class Transform extends Container {
             class: 'transform-expand',
             precision: 2,
             dimensions: 3,
+            // @ts-expect-error - placeholder property exists at runtime but VectorInput type definition does not allow string arrays
+            placeholder: ['X', 'Y', 'Z'],
             value: [0, 0, 0],
             enabled: false
         });
@@ -109,7 +84,6 @@ class Transform extends Container {
         scale.append(scaleLabel);
         scale.append(scaleInput);
 
-        this.append(axis);
         this.append(position);
         this.append(rotation);
         this.append(scale);

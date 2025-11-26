@@ -101,8 +101,8 @@ class PublishSettingsDialog extends Container {
             class: 'select',
             defaultValue: 'none',
             options: [
-                { v: 'none', t: localize('popup.export.animation-none') },
-                { v: 'track', t: localize('popup.export.animation-track') }
+                { v: 'none', t: localize('popup.export.animation.none') },
+                { v: 'track', t: localize('popup.export.animation.track') }
             ]
         });
         const animationRow = new Container({ class: 'row' });

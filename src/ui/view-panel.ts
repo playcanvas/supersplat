@@ -118,13 +118,13 @@ class ViewPanel extends Container {
             class: 'view-panel-row-select',
             defaultValue: 'none',
             options: [
-                { v: 'none', t: localize('panel.view-options.tonemapping-none') },
-                { v: 'linear', t: localize('panel.view-options.tonemapping-linear') },
-                { v: 'neutral', t: localize('panel.view-options.tonemapping-neutral') },
-                { v: 'aces', t: localize('panel.view-options.tonemapping-aces') },
-                { v: 'aces2', t: localize('panel.view-options.tonemapping-aces2') },
-                { v: 'filmic', t: localize('panel.view-options.tonemapping-filmic') },
-                { v: 'hejl', t: localize('panel.view-options.tonemapping-hejl') }
+                { v: 'none', t: localize('panel.view-options.tonemapping.none') },
+                { v: 'linear', t: localize('panel.view-options.tonemapping.linear') },
+                { v: 'neutral', t: localize('panel.view-options.tonemapping.neutral') },
+                { v: 'aces', t: localize('panel.view-options.tonemapping.aces') },
+                { v: 'aces2', t: localize('panel.view-options.tonemapping.aces2') },
+                { v: 'filmic', t: localize('panel.view-options.tonemapping.filmic') },
+                { v: 'hejl', t: localize('panel.view-options.tonemapping.hejl') }
             ]
         });
 
@@ -203,7 +203,7 @@ class ViewPanel extends Container {
         });
 
         const cameraFlySpeedLabel = new Label({
-            text: localize('panel.view-options.camera-fly-speed'),
+            text: localize('panel.view-options.fly-speed'),
             class: 'view-panel-row-label'
         });
 
@@ -448,7 +448,7 @@ class ViewPanel extends Container {
         });
 
         // tooltips
-        tooltips.register(bgClrPicker, localize('panel.view-options.bg-color'), 'left');
+        tooltips.register(bgClrPicker, localize('panel.view-options.background-color'), 'left');
         tooltips.register(selectedClrPicker, localize('panel.view-options.selected-color'), 'top');
         tooltips.register(unselectedClrPicker, localize('panel.view-options.unselected-color'), 'top');
         tooltips.register(lockedClrPicker, localize('panel.view-options.locked-color'), 'top');

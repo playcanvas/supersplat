@@ -90,7 +90,7 @@
     "panel.splat-data.totals": "Totais",
     "panel.splat-data.totals.splats": "Splats",
     "panel.splat-data.totals.selected": "Selecionado",
-    "panel.splat-data.totals.locked": "Definido",
+    "panel.splat-data.totals.locked": "Bloqueado",
     "panel.splat-data.totals.deleted": "Excluído",
     "panel.render.ok": "Renderizar",
     "panel.render.cancel": "Cancelar",

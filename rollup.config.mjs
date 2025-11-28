@@ -85,7 +85,8 @@ const application = {
                 .then(result => result.css);
             },
             fileName: 'index.css',
-            includePaths: [`${PCUI_DIR}/dist`]
+            includePaths: [`${PCUI_DIR}/dist`],
+            watch: 'src/ui/scss'
         }),
         BUILD_TYPE === 'release' &&
         strip({

@@ -57,22 +57,26 @@ class ViewPanel extends Container {
 
         const bgClrPicker = new ColorPicker({
             class: 'view-panel-row-picker',
-            channels: 3
+            channels: 3,
+            value: [0, 0, 0]
         });
 
         const selectedClrPicker = new ColorPicker({
             class: 'view-panel-row-picker',
-            channels: 4
+            channels: 4,
+            value: [0, 0, 0, 1]
         });
 
         const unselectedClrPicker = new ColorPicker({
             class: 'view-panel-row-picker',
-            channels: 4
+            channels: 4,
+            value: [0, 0, 0, 1]
         });
 
         const lockedClrPicker = new ColorPicker({
             class: 'view-panel-row-picker',
-            channels: 4
+            channels: 4,
+            value: [0, 0, 0, 1]
         });
 
         const toArray = (clr: Color) => {

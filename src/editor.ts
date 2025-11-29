@@ -18,6 +18,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     const vec2 = new Vec3();
     const vec4 = new Vec4();
     const mat = new Mat4();
+    const SH_C0 = 0.28209479177387814;
+
+    const decodeColorChannel = (value: number) => {
+        return Math.min(1, Math.max(0, 0.5 + value * SH_C0));
+    };
 
     // get the list of selected splats (currently limited to just a single one)
     const selectedSplats = () => {
@@ -425,6 +430,62 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
                 events.fire('edit.add', new SelectOp(splat, op, filter));
             }
+        });
+    });
+
+    // Eyedropper selection with SelectOp so undo/redo and selection state updates remain consistent.
+    // Threshold acts as a per-channel absolute difference: 0 only matches identical colors while 1 matches everything.
+    // TO DO:
+    // -  alternative distance metrics such as HSV.
+    // -  alternative UI for threshold, two handles for min/max?
+    events.on('select.colorMatch', (op: 'add'|'remove'|'set', point: { x: number, y: number }, threshold = 0) => {
+        const splats = selectedSplats();
+        const targetSize = scene.targetSize;
+        if (!splats.length || !targetSize || !point) {
+            return;
+        }
+
+        const { width, height } = targetSize;
+        if (!width || !height) {
+            return;
+        }
+
+        const px = Math.max(0, Math.min(width - 1, Math.floor(point.x * width)));
+        const py = Math.max(0, Math.min(height - 1, Math.floor(point.y * height)));
+        const colorThreshold = Math.min(1, Math.max(0, Number.isFinite(threshold) ? threshold : 0));
+
+        splats.forEach((splat) => {
+            scene.camera.pickPrep(splat, 'set');
+            const pickBuffer = scene.camera.pickRect(px, py, 1, 1);
+            const pickId = pickBuffer?.[0];
+            if (pickId === undefined || pickId === -1) {
+                return;
+            }
+
+            const reds = splat.splatData.getProp('f_dc_0') as Float32Array;
+            const greens = splat.splatData.getProp('f_dc_1') as Float32Array;
+            const blues = splat.splatData.getProp('f_dc_2') as Float32Array;
+            // validate pickId and color channels exist
+            if (!reds || !greens || !blues || pickId < 0 || pickId >= reds.length) {
+                return;
+            }
+            // decode color channels for the reference pixel
+            const reference = [
+                decodeColorChannel(reds[pickId]),
+                decodeColorChannel(greens[pickId]),
+                decodeColorChannel(blues[pickId])
+            ];
+            // Check if a value is within the color threshold of the reference
+            const withinThreshold = (value: number, ref: number) => Math.abs(value - ref) <= colorThreshold;
+
+            // filter to select pixels within the color threshold
+            const filter = (i: number) => {
+                return withinThreshold(decodeColorChannel(reds[i]), reference[0]) &&
+                    withinThreshold(decodeColorChannel(greens[i]), reference[1]) &&
+                    withinThreshold(decodeColorChannel(blues[i]), reference[2]);
+            };
+
+            events.fire('edit.add', new SelectOp(splat, op, filter));
         });
     });
 

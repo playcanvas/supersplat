@@ -1,0 +1,42 @@
+<svg
+   width="38"
+   height="38"
+   viewBox="0 0 38 38"
+   fill="none"
+   version="1.1"
+   id="svg6"
+   sodipodi:docname="select-flood.svg"
+   inkscape:version="1.1.2 (b8e25be833, 2022-02-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview8"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     showgrid="false"
+     inkscape:zoom="22.973684"
+     inkscape:cx="19"
+     inkscape:cy="18.978236"
+     inkscape:window-width="3840"
+     inkscape:window-height="2071"
+     inkscape:window-x="3831"
+     inkscape:window-y="-9"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg6" />
+  <defs
+     id="defs10" />
+
+ <path style="fill:none;fill-opacity:1;stroke:currentColor;stroke-width:0.53494;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:1;stroke-dasharray:none;stroke-opacity:1" id="path3661" d="M8.9,28c-2.1,1.3.5,2.2,5.8,2.1,5.9,0,5.4-2.2-.1-2.9" />
+  
+<path style="fill:currentColor;fill-opacity:1;stroke:currentColor;stroke-width:0.53494;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" id="path4426" class="st1" d="M11.5,22.6s-2.3,4.9.2,4.9c2.7,0-.2-4.9-.2-4.9Z"/>
+  
+<path style="fill:currentColor;fill-opacity:1;stroke:currentColor;stroke-width:0.53494;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" d="M29.7,6.1c.3,2-2.7,3.5-3.8,4.9l.9,1.3c0,.3-1,1-1.3,1.3s-.1,1-.7.8-1.2-1.4-1.4-1.4c-.5,0-6,6-7,6.6-1.1.2-3,2.6-3.9,1.4s1.4-2.5,1.6-3.7l7-6.6c.2-.6-1.8-1.6-1.1-2.1s.5,0,.7-.2c1.2-.8,1-2,2.4-.2h.2c.9-.8,3-3.4,4.2-3.6s2.1.4,2.2,1.4ZM12.6,20.9c.8.8,2.6-1.4,3.6-1.5l6.8-6.5c.1-.3-1.5-1.7-1.8-2l-7.1,6.7c-.1,1-2.4,2.4-1.6,3.3Z"/>
+  
+ 
+</svg>

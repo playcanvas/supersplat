@@ -678,6 +678,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         events.fire('camera.setBound', docView.showBound);
         events.fire('camera.setFlySpeed', docView.flySpeed);
     });
+
 };
 
 export { registerEditorEvents };

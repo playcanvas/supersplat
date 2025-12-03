@@ -13,7 +13,6 @@ const shortcutList = [
     { key: 'B', action: 'brush-selection' },
     { key: 'O', action: 'flood-selection' },
     { key: 'E', action: 'eyedropper-selection' },
-    { key: 'P', action: 'polygon-selection' },
     { key: '[ ]', action: 'brush-size' },
     { key: 'Esc', action: 'deactivate-tool' },
     { header: 'selection' },

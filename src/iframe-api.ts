@@ -15,8 +15,7 @@ const isSceneDirtyQuery = (data: any): data is IsSceneDirtyQuery => {
     return (
         data &&
         typeof data === 'object' &&
-        data.type === IS_SCENE_DIRTY &&
-        !('result' in data)
+        data.type === IS_SCENE_DIRTY
     );
 };
 

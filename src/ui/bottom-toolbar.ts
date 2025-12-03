@@ -210,7 +210,7 @@ class BottomToolbar extends Container {
         // register tooltips
         tooltips.register(undo, localize('tooltip.bottom-toolbar.undo'));
         tooltips.register(redo, localize('tooltip.bottom-toolbar.redo'));
-        tooltips.register(picker, localize('tooltip.bottom-toolbar.picker'));
+        tooltips.register(picker, localize('tooltip.bottom-toolbar.rect'));
         tooltips.register(lasso, localize('tooltip.bottom-toolbar.lasso'));
         tooltips.register(polygon, localize('tooltip.bottom-toolbar.polygon'));
         tooltips.register(brush, localize('tooltip.bottom-toolbar.brush'));

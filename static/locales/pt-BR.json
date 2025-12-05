@@ -216,6 +216,7 @@
     "tooltip.bottom-toolbar.rotate": "Rotacionar ( 2 )",
     "tooltip.bottom-toolbar.scale": "Escalar ( 3 )",
     "tooltip.bottom-toolbar.measure": "Medir",
+    "measure.length": "Comprimento",
     "tooltip.bottom-toolbar.local-space": "Usar Orientação Local",
     "tooltip.bottom-toolbar.bound-center": "Usar Centro da Cena",
     "tooltip.timeline.prev-key": "Ir para o Quadro Anterior",

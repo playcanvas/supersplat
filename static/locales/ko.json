@@ -216,6 +216,7 @@
     "tooltip.bottom-toolbar.rotate": "회전 ( 2 )",
     "tooltip.bottom-toolbar.scale": "크기 조정 ( 3 )",
     "tooltip.bottom-toolbar.measure": "측정",
+    "measure.length": "길이",
     "tooltip.bottom-toolbar.local-space": "로컬 공간",
     "tooltip.bottom-toolbar.bound-center": "바운드 중심 사용",
     "tooltip.timeline.prev-key": "이전 키로 이동",

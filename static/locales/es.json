@@ -216,6 +216,7 @@
     "tooltip.bottom-toolbar.rotate": "Rotar ( 2 )",
     "tooltip.bottom-toolbar.scale": "Escalar ( 3 )",
     "tooltip.bottom-toolbar.measure": "Medición",
+    "measure.length": "Longitud",
     "tooltip.bottom-toolbar.local-space": "Usar orientación local",
     "tooltip.bottom-toolbar.bound-center": "Usar centro de límites",
     "tooltip.timeline.prev-key": "Saltar al fotograma clave anterior",

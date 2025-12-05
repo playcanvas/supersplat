@@ -216,6 +216,7 @@
     "tooltip.bottom-toolbar.rotate": "Rotation ( 2 )",
     "tooltip.bottom-toolbar.scale": "Échelle ( 3 )",
     "tooltip.bottom-toolbar.measure": "Mesure",
+    "measure.length": "Longueur",
     "tooltip.bottom-toolbar.local-space": "Espace local gizmo",
     "tooltip.bottom-toolbar.bound-center": "Utiliser le centre de la limite",
     "tooltip.timeline.prev-key": "Aller à la clé précédente",

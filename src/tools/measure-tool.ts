@@ -1,4 +1,4 @@
-import { Container, NumericInput } from '@playcanvas/pcui';
+import { Container, Label, NumericInput } from '@playcanvas/pcui';
 import { Entity, Mat4, Quat, TranslateGizmo, Vec3 } from 'playcanvas';
 
 import { EntityTransformOp } from '../edit-ops';
@@ -6,6 +6,7 @@ import { Events } from '../events';
 import { Scene } from '../scene';
 import { Splat } from '../splat';
 import { Transform } from '../transform';
+import { localize } from '../ui/localization';
 
 const mat = new Mat4();
 const mat1 = new Mat4();
@@ -67,9 +68,13 @@ class MeasureTool {
         svg.appendChild(lineEnd);
 
         // ui
+        const lengthLabel = new Label({
+            text: localize('measure.length')
+        });
+
         const lengthInput = new NumericInput({
-            width: 120,
-            placeholder: 'Length',
+            width: 90,
+            placeholder: 'm',
             precision: 2,
             min: 0.0001,
             value: 0
@@ -85,6 +90,7 @@ class MeasureTool {
             e.stopPropagation();
         });
 
+        selectToolbar.append(lengthLabel);
         selectToolbar.append(lengthInput);
         canvasContainer.append(selectToolbar);
 

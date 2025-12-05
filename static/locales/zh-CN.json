@@ -216,6 +216,7 @@
     "tooltip.bottom-toolbar.rotate": "旋转 ( 2 )",
     "tooltip.bottom-toolbar.scale": "缩放 ( 3 )",
     "tooltip.bottom-toolbar.measure": "测量",
+    "measure.length": "长度",
     "tooltip.bottom-toolbar.local-space": "局部坐标系",
     "tooltip.bottom-toolbar.bound-center": "使用边界中心",
     "tooltip.timeline.prev-key": "上一个关键帧",

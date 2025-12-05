@@ -216,6 +216,7 @@
     "tooltip.bottom-toolbar.rotate": "回転 ( 2 )",
     "tooltip.bottom-toolbar.scale": "スケール ( 3 )",
     "tooltip.bottom-toolbar.measure": "測定",
+    "measure.length": "長さ",
     "tooltip.bottom-toolbar.local-space": "ローカル座標へ切り替え",
     "tooltip.bottom-toolbar.bound-center": "バウンディングボックスの中心を使用",
     "tooltip.timeline.prev-key": "前のキーフレームに移動",

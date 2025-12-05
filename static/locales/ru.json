@@ -216,6 +216,7 @@
     "tooltip.bottom-toolbar.rotate": "Вращение ( 2 )",
     "tooltip.bottom-toolbar.scale": "Масштабирование ( 3 )",
     "tooltip.bottom-toolbar.measure": "Измерение",
+    "measure.length": "Длина",
     "tooltip.bottom-toolbar.local-space": "Использовать локальную ориентацию",
     "tooltip.bottom-toolbar.bound-center": "Использовать центр границ",
     "tooltip.timeline.prev-key": "Перейти к предыдущему ключевому кадру",

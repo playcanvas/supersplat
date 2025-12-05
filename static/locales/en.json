@@ -216,6 +216,7 @@
     "tooltip.bottom-toolbar.rotate": "Rotate ( 2 )",
     "tooltip.bottom-toolbar.scale": "Scale ( 3 )",
     "tooltip.bottom-toolbar.measure": "Measurement",
+    "measure.length": "Length",
     "tooltip.bottom-toolbar.local-space": "Use Local Orientation",
     "tooltip.bottom-toolbar.bound-center": "Use Bound Center",
     "tooltip.timeline.prev-key": "Jump to Previous Keyframe",

@@ -352,7 +352,6 @@ class PublishSettingsDialog extends Container {
                         listed: listBoolean.value,
                         serializeSettings,
                         experienceSettings,
-                        format: 'sog',
                         overwriteId: overwriteSelect.value !== '0' ? userStatus.scenes[parseInt(overwriteSelect.value, 10) - 1].id : undefined
                     });
                 };

@@ -30,7 +30,6 @@ type PublishSettings = {
     listed: boolean;
     serializeSettings: SerializeSettings;
     experienceSettings: ExperienceSettings;
-    format: 'compressed.ply' | 'sog';
     overwriteId?: string;   // for republishing an existing scene
 };
 
@@ -185,7 +184,8 @@ class PublishWriter implements Writer {
                     description: publishSettings.description,
                     listed: publishSettings.listed,
                     settings: publishSettings.experienceSettings,
-                    format: publishSettings.format
+                    sourceFormat: 'ply',
+                    publishFormat: 'sog'
                 }),
                 headers: {
                     'Authorization': `Bearer ${user.token}`,
@@ -198,7 +198,8 @@ class PublishWriter implements Writer {
                 body: JSON.stringify({
                     s3Key: startJson.key,
                     settings: publishSettings.experienceSettings,
-                    format: publishSettings.format
+                    sourceFormat: 'ply',
+                    publishFormat: 'sog'
                 }),
                 headers: {
                     'Authorization': `Bearer ${user.token}`,
@@ -265,14 +266,7 @@ const registerPublishEvents = (events: Events) => {
             const splats = events.invoke('scene.splats');
 
             // serialize
-            switch (publishSettings.format) {
-                case 'compressed.ply':
-                    await serializePlyCompressed(splats, publishSettings.serializeSettings, gzipWriter, progressFunc);
-                    break;
-                case 'sog':
-                    await serializePly(splats, publishSettings.serializeSettings, gzipWriter, progressFunc);
-                    break;
-            }
+            await serializePly(splats, publishSettings.serializeSettings, gzipWriter, progressFunc);
 
             await gzipWriter.close();
             const response = await publishWriter.close();

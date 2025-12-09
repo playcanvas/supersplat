@@ -449,6 +449,7 @@ class Camera extends Element {
         });
 
         // set picker render target
+        // @ts-ignore
         this.picker.renderTarget = this.workRenderTarget;
 
         this.scene.events.fire('camera.resize', { width, height });
@@ -670,8 +671,10 @@ class Camera extends Element {
         const pixels = new Uint8Array(width * height * 4);
 
         // read pixels
+        // @ts-ignore
         device.setRenderTarget(this.picker.renderTarget);
         device.updateBegin();
+        // @ts-ignore
         device.readPixels(x, this.picker.renderTarget.height - y - height, width, height, pixels);
         device.updateEnd();
 

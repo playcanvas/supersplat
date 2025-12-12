@@ -12,12 +12,12 @@ interface ShortcutOptions {
 class Shortcuts {
     shortcuts: { keys: string[], options: ShortcutOptions, toggled: boolean }[] = [];
 
-    constructor(events: Events) {
+    constructor(events: Events, container: HTMLElement) {
         const shortcuts = this.shortcuts;
 
         const handleEvent = (e: KeyboardEvent, down: boolean, capture: boolean) => {
             // skip keys in input fields
-            if (!capture && e.target !== document.body) return;
+            if (!capture && e.target !== container) return;
 
             for (let i = 0; i < shortcuts.length; i++) {
                 const shortcut  = shortcuts[i];

@@ -71,8 +71,8 @@ const getURLArgs = () => {
     return config;
 };
 
-const initShortcuts = (events: Events) => {
-    const shortcuts = new Shortcuts(events);
+const initShortcuts = (events: Events, container: HTMLElement) => {
+    const shortcuts = new Shortcuts(events, container);
 
     shortcuts.register(['Delete', 'Backspace'], { event: 'select.delete' });
     shortcuts.register(['Escape'], { event: 'tool.deactivate' });
@@ -105,9 +105,19 @@ const initShortcuts = (events: Events) => {
     return shortcuts;
 };
 
-const main = async () => {
+const main = async (container?: HTMLElement) => {
+    // use provided container or default to body
+    if (!container) {
+        container = document.body;
+    }
+
     // root events object
     const events = new Events();
+
+    // store container reference for access across the app
+    events.function('container', () => {
+        return container;
+    });
 
     // url
     const url = new URL(window.location.href);
@@ -119,7 +129,7 @@ const main = async () => {
     await localizeInit();
 
     // editor ui
-    const editorUI = new EditorUI(events);
+    const editorUI = new EditorUI(events, container);
 
     // create the graphics device
     const graphicsDevice = await createGraphicsDevice(editorUI.canvas, {
@@ -200,7 +210,7 @@ const main = async () => {
 
     events.on('bgClr', (clr: Color) => {
         const cnv = (v: number) => `${Math.max(0, Math.min(255, (v * 255))).toFixed(0)}`;
-        document.body.style.backgroundColor = `rgba(${cnv(clr.r)},${cnv(clr.g)},${cnv(clr.b)},1)`;
+        container.style.backgroundColor = `rgba(${cnv(clr.r)},${cnv(clr.g)},${cnv(clr.b)},1)`;
     });
     events.on('selectedClr', (clr: Color) => {
         scene.forceRender = true;
@@ -261,7 +271,7 @@ const main = async () => {
     registerDocEvents(scene, events);
     registerRenderEvents(scene, events);
     registerIframeApi(events);
-    initShortcuts(events);
+    initShortcuts(events, container);
     initFileHandler(scene, events, editorUI.appContainer.dom);
 
     // load async models

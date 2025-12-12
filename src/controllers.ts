@@ -13,7 +13,7 @@ class PointerController {
     update: (deltaTime: number) => void;
     destroy: () => void;
 
-    constructor(camera: Camera, target: HTMLElement) {
+    constructor(camera: Camera, target: HTMLElement, container: HTMLElement) {
 
         const orbit = (dx: number, dy: number) => {
             const azim = camera.azim - dx * camera.scene.config.controls.orbitSensitivity;
@@ -193,7 +193,7 @@ class PointerController {
         };
 
         const keydown = (event: KeyboardEvent) => {
-            if (keys.hasOwnProperty(event.key) && event.target === document.body) {
+            if (keys.hasOwnProperty(event.key) && event.target === container) {
                 keys[event.key] = event.shiftKey ? 10 : (event.ctrlKey || event.metaKey || event.altKey ? 0.1 : 1);
             }
         };

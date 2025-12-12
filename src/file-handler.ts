@@ -405,7 +405,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             importFiles(files);
             fileSelector.value = '';
         };
-        document.body.append(fileSelector);
+        const container = events.invoke('container') as HTMLElement;
+        container.append(fileSelector);
     }
 
     // create the file drag & drop handler

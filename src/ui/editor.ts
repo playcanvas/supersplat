@@ -39,8 +39,10 @@ class EditorUI {
     toolsContainer: Container;
     canvas: HTMLCanvasElement;
     popup: Popup;
+    container: HTMLElement;
 
-    constructor(events: Events) {
+    constructor(events: Events, container: HTMLElement) {
+        this.container = container;
         // favicon
         const link = document.createElement('link');
         link.rel = 'icon';
@@ -124,7 +126,7 @@ class EditorUI {
         const bottomToolbar = new BottomToolbar(events, tooltips);
         const rightToolbar = new RightToolbar(events, tooltips);
         const modeToggle = new ModeToggle(events, tooltips);
-        const menu = new Menu(events);
+        const menu = new Menu(events, container);
 
         canvasContainer.dom.appendChild(canvas);
         canvasContainer.append(appLabel);
@@ -197,8 +199,8 @@ class EditorUI {
         this.canvas = canvas;
         this.popup = popup;
 
-        document.body.appendChild(appContainer.dom);
-        document.body.setAttribute('tabIndex', '-1');
+        container.appendChild(appContainer.dom);
+        container.setAttribute('tabIndex', '-1');
 
         events.on('show.shortcuts', () => {
             shortcutsPopup.hidden = false;
@@ -373,10 +375,10 @@ class EditorUI {
 
         // whenever the canvas container is clicked, set keyboard focus on the body
         canvasContainer.dom.addEventListener('pointerdown', (event: PointerEvent) => {
-            // set focus on the body if user is busy pressing on the canvas or a child of the tools
+            // set focus on the container if user is busy pressing on the canvas or a child of the tools
             // element
             if (event.target === canvas || toolsContainer.dom.contains(event.target as Node)) {
-                document.body.focus();
+                container.focus();
             }
         }, true);
     }

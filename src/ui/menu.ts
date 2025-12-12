@@ -50,7 +50,7 @@ const getOpenRecentItems = async (events: Events) => {
 };
 
 class Menu extends Container {
-    constructor(events: Events, args = {}) {
+    constructor(events: Events, container: HTMLElement, args = {}) {
         args = {
             ...args,
             id: 'menu'
@@ -87,11 +87,11 @@ class Menu extends Container {
         });
 
         const toggleCollapsed = () => {
-            document.body.classList.toggle('collapsed');
+            container.classList.toggle('collapsed');
         };
 
         // collapse menu on mobile
-        if (document.body.clientWidth < 600) {
+        if (container.clientWidth < 600) {
             toggleCollapsed();
         }
 

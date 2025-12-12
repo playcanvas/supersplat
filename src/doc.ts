@@ -25,14 +25,14 @@ type FileSelectorCallback = (fileList: File) => void;
 class FileSelector {
     show: (callbackFunc: FileSelectorCallback) => void;
 
-    constructor() {
+    constructor(container: HTMLElement) {
         const fileSelector = document.createElement('input');
         fileSelector.setAttribute('id', 'document-file-selector');
         fileSelector.setAttribute('type', 'file');
         fileSelector.setAttribute('accept', '.ssproj');
         fileSelector.setAttribute('multiple', 'false');
 
-        document.body.append(fileSelector);
+        container.append(fileSelector);
 
         let callbackFunc: FileSelectorCallback = null;
 
@@ -53,7 +53,8 @@ class FileSelector {
 
 const registerDocEvents = (scene: Scene, events: Events) => {
     // construct the file selector
-    const fileSelector = window.showOpenFilePicker ? null : new FileSelector();
+    const container = events.invoke('container') as HTMLElement;
+    const fileSelector = window.showOpenFilePicker ? null : new FileSelector(container);
 
     // this file handle is updated as the current document is loaded and saved
     let documentFileHandle: FileSystemFileHandle = null;

@@ -260,8 +260,9 @@ class Camera extends Element {
         }
 
         const target = document.getElementById('canvas-container');
+        const container = this.scene.events.invoke('container') as HTMLElement;
 
-        this.controller = new PointerController(this, target);
+        this.controller = new PointerController(this, target, container);
 
         // apply scene config
         const config = this.scene.config;

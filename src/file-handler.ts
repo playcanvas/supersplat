@@ -5,7 +5,7 @@ import { ElementType } from './element';
 import { Events } from './events';
 import { AssetSource } from './loaders/asset-source';
 import { Scene } from './scene';
-import { DownloadWriter, FileStreamWriter } from './serialize/writer';
+import { BufferWriter, DownloadWriter, FileStreamWriter } from './serialize/writer';
 import { Splat } from './splat';
 import { serializePly, serializePlyCompressed, SerializeSettings, serializeSplat, serializeViewer, ViewerExportSettings } from './splat-serialize';
 import { localize } from './ui/localization';
@@ -586,6 +586,31 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         } finally {
             events.fire('stopSpinner');
         }
+    });
+
+    // Function to get PLY as Blob (no download, no file picker)
+    events.function('scene.exportToBlob', async (
+        format: 'ply' | 'compressedPly' = 'ply',
+        splatIdx: 'all' | number = 'all'
+    ): Promise<Blob> => {
+        const splats = splatIdx === 'all' ? getSplats() : [getSplats()[splatIdx]];
+
+        const writer = new BufferWriter();
+
+        const serializeSettings: SerializeSettings = {
+        maxSHBands: 3
+        };
+
+        if (format === 'compressedPly') {
+        serializeSettings.minOpacity = 1 / 255;
+        serializeSettings.removeInvalid = true;
+        await serializePlyCompressed(splats, serializeSettings, writer);
+        } else {
+        await serializePly(splats, serializeSettings, writer);
+        }
+
+        const buffers = writer.close();
+        return new Blob(buffers as unknown as ArrayBuffer[], { type: 'application/octet-stream' });
     });
 };
 

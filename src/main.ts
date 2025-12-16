@@ -114,6 +114,9 @@ const main = async (container?: HTMLElement) => {
     // root events object
     const events = new Events();
 
+    // Expose events globally to communicate with the main app
+    (window as any).supersplatEvents = events;
+
     // store container reference for access across the app
     events.function('container', () => {
         return container;

@@ -69,6 +69,35 @@ class PublishWriter implements Writer {
 
         const filename = 'scene.ply';
 
+        // Helper function to retry fetch requests with exponential backoff
+        const fetchWithRetry = async (
+            url: string,
+            options: any,
+            maxRetries = 3
+        ): Promise<Response> => {
+            let lastError: Error;
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.ok) return response;
+                    // Don't retry client errors (4xx), only server errors (5xx)
+                    if (response.status < 500) {
+                        throw new Error(`Request failed (${response.statusText})`);
+                    }
+                    lastError = new Error(`Request failed (${response.statusText})`);
+                } catch (e) {
+                    lastError = e;
+                }
+                // Exponential backoff: 1s, 2s, 4s
+                if (attempt < maxRetries - 1) {
+                    await new Promise<void>((resolve) => {
+                        setTimeout(resolve, 1000 * Math.pow(2, attempt));
+                    });
+                }
+            }
+            throw lastError;
+        };
+
         // start upload
         const startResponse = await fetch(`${user.apiServer}/upload/start-upload`, {
             method: 'POST',
@@ -88,31 +117,45 @@ class PublishWriter implements Writer {
         let partNumber = 1;
         let cursor = 0;
 
+        // It's hard to know beforehand how many parts will be needed (due to streaming), but we can reduce the
+        // number of round trips by batching the signed URLs.
+        const SIGNED_URLS_BATCH_SIZE = 100;
+        let signedUrls: string[] = [];
+        let urlIndex = 0;
+
+        const getSignedUrl = async () => {
+            if (urlIndex >= signedUrls.length) {
+                const urlResponse = await fetchWithRetry(`${user.apiServer}/upload/signed-urls`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${user.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        uploadId: startJson.uploadId,
+                        key: startJson.key,
+                        parts: SIGNED_URLS_BATCH_SIZE,
+                        partBase: partNumber
+                    })
+                });
+
+                if (!urlResponse.ok) {
+                    throw new Error(`failed to get signed url (${urlResponse.statusText})`);
+                }
+
+                const urlJson = await urlResponse.json();
+                signedUrls = urlJson.signedUrls;
+                urlIndex = 0;
+            }
+            return signedUrls[urlIndex++];
+        };
+
         const upload = async () => {
             if (cursor === 0) return;
 
-            // get signed url for this part
-            const urlResponse = await fetch(`${user.apiServer}/upload/signed-urls`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${user.token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    uploadId: startJson.uploadId,
-                    key: startJson.key,
-                    parts: 1,
-                    partBase: partNumber
-                })
-            });
+            const signedUrl = await getSignedUrl();
 
-            if (!urlResponse.ok) {
-                throw new Error(`failed to get signed url (${urlResponse.statusText})`);
-            }
-
-            const urlJson = await urlResponse.json();
-
-            const uploadResponse = await fetch(urlJson.signedUrls[0], {
+            const uploadResponse = await fetchWithRetry(signedUrl, {
                 method: 'PUT',
                 body: uploadBuf.slice(0, cursor),
                 headers: {

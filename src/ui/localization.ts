@@ -11,7 +11,7 @@ const localizeInit = () => {
             order: ['querystring', /* 'cookie', 'localStorage', 'sessionStorage',*/ 'navigator', 'htmlTag']
         },
         backend: {
-            loadPath: './static/locales/{{lng}}.json'
+            loadPath: '/supersplat/static/locales/{{lng}}.json'
         },
         supportedLngs: ['de', 'en', 'es', 'fr', 'ja', 'ko', 'pt-BR', 'ru', 'zh-CN'],
         fallbackLng: 'en',

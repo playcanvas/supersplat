@@ -269,13 +269,19 @@ const main = async () => {
 
     // handle load params
     const loadList = url.searchParams.getAll('load');
-    for (const value of loadList) {
+    const filenameList = url.searchParams.getAll('filename');
+    for (const [i, value] of loadList.entries()) {
         const decoded = decodeURIComponent(value);
+        const filename = i < filenameList.length 
+            ? decodeURIComponent(filenameList[i])
+            : decoded.split('/').pop();
+
         await events.invoke('import', [{
-            filename: decoded.split('/').pop(),
+            filename,
             url: decoded
         }]);
     }
+
 
     // handle OS-based file association in PWA mode
     if ('launchQueue' in window) {

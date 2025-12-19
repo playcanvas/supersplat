@@ -272,9 +272,9 @@ const main = async () => {
     const filenameList = url.searchParams.getAll('filename');
     for (const [i, value] of loadList.entries()) {
         const decoded = decodeURIComponent(value);
-        const filename = i < filenameList.length 
-            ? decodeURIComponent(filenameList[i])
-            : decoded.split('/').pop();
+        const filename = i < filenameList.length ?
+            decodeURIComponent(filenameList[i]) :
+            decoded.split('/').pop();
 
         await events.invoke('import', [{
             filename,

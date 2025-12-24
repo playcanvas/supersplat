@@ -111,14 +111,12 @@ class GaussianFilter {
                 const { splatData } = splat;
 
                 // check if any property of the gaussian is NaN/Infinity
-                for (let j = 0; j < splatData.elements.length; ++j) {
-                    const element = splatData.elements[j];
-                    for (let k = 0; k < element.properties.length; ++k) {
-                        const prop = element.properties[k];
-                        const { storage } = prop;
-                        if (storage && !Number.isFinite(storage[i])) {
-                            return false;
-                        }
+                const element = splatData.getElement('vertex');
+                for (let k = 0; k < element.properties.length; ++k) {
+                    const prop = element.properties[k];
+                    const { storage } = prop;
+                    if (storage && !Number.isFinite(storage[i])) {
+                        return false;
                     }
                 }
             }

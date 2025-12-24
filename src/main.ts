@@ -131,6 +131,10 @@ const main = async (container?: HTMLElement) => {
     // init localization
     await localizeInit();
 
+    // Register timeline events BEFORE creating EditorUI
+    // because TimelinePanel (created by EditorUI) needs these functions
+    registerTimelineEvents(events);
+
     // editor ui
     const editorUI = new EditorUI(events, container);
 
@@ -266,7 +270,7 @@ const main = async (container?: HTMLElement) => {
 
     registerEditorEvents(events, editHistory, scene);
     registerSelectionEvents(events, scene);
-    registerTimelineEvents(events);
+    // registerTimelineEvents already called before EditorUI creation
     registerCameraPosesEvents(events);
     registerTransformHandlerEvents(events);
     registerPlySequenceEvents(events);

@@ -145,14 +145,6 @@ const loadCameraPoses = async (file: ImportFile, events: Events) => {
     const json = await response.json();
 
     if (json.length > 0) {
-        // calculate the average position of the camera poses
-        const ave = new Vec3(0, 0, 0);
-        json.forEach((pose: any) => {
-            vec.set(pose.position[0], pose.position[1], pose.position[2]);
-            ave.add(vec);
-        });
-        ave.mulScalar(1 / json.length);
-
         // sort entries by trailing number if it exists
         const sorter = (a: any, b: any) => {
             const avalue = a.id ?? a.img_name?.match(/\d*$/)?.[0];
@@ -165,8 +157,8 @@ const loadCameraPoses = async (file: ImportFile, events: Events) => {
                 const p = new Vec3(pose.position);
                 const z = new Vec3(pose.rotation[0][2], pose.rotation[1][2], pose.rotation[2][2]);
 
-                const dot = vec.sub2(ave, p).dot(z);
-                vec.copy(z).mulScalar(dot).add(p);
+                // Use fixed offset along Z-axis direction instead of variable dot product
+                vec.copy(z).mulScalar(10).add(p);
 
                 events.fire('camera.addPose', {
                     name: pose.img_name ?? `${file.filename}_${i}`,

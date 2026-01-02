@@ -11,6 +11,7 @@
     "menu.file.export": "Exportar",
     "menu.file.export.ply": "PLY (.ply)",
     "menu.file.export.splat": "Splat (.splat)",
+    "menu.file.export.sog": "SOG (.sog)",
     "menu.file.export.viewer": "Aplicación de visualización",
     "menu.select": "Seleccionar",
     "menu.select.all": "Todo",

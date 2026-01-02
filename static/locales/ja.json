@@ -11,6 +11,7 @@
     "menu.file.export": "エクスポート",
     "menu.file.export.ply": "PLY (.ply)",
     "menu.file.export.splat": "Splat (.splat)",
+    "menu.file.export.sog": "SOG (.sog)",
     "menu.file.export.viewer": "Viewer App",
     "menu.select": "選択",
     "menu.select.all": "全て",

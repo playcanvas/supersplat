@@ -256,6 +256,16 @@ class Menu extends Container {
             onSelect: async () => await events.invoke('show.videoSettingsDialog')
         }]);
 
+        const videoTutorialsMenuPanel = new MenuPanel([{
+            text: localize('menu.help.video-tutorials.basics'),
+            icon: 'E261',
+            onSelect: () => window.open('https://youtu.be/MwzaEM2I55I', '_blank').focus()
+        }, {
+            text: localize('menu.help.video-tutorials.in-depth'),
+            icon: 'E261',
+            onSelect: () => window.open('https://youtu.be/J37rTieKgJ8', '_blank').focus()
+        }]);
+
         const helpMenuPanel = new MenuPanel([{
             text: localize('menu.help.shortcuts'),
             icon: 'E136',
@@ -275,9 +285,9 @@ class Menu extends Container {
         }, {
             // separator
         }, {
-            text: localize('menu.help.basics-video'),
+            text: localize('menu.help.video-tutorials'),
             icon: 'E261',
-            onSelect: () => window.open('https://youtu.be/MwzaEM2I55I', '_blank').focus()
+            subMenu: videoTutorialsMenuPanel
         }, {
             // separator
         }, {
@@ -302,6 +312,7 @@ class Menu extends Container {
         this.append(exportMenuPanel);
         this.append(selectionMenuPanel);
         this.append(renderMenuPanel);
+        this.append(videoTutorialsMenuPanel);
         this.append(helpMenuPanel);
 
         const options: { dom: HTMLElement, menuPanel: MenuPanel }[] = [{

@@ -41,7 +41,7 @@
         "cross-env": "10.1.0",
         "eslint": "9.39.2",
         "eslint-import-resolver-typescript": "4.4.4",
-        "globals": "16.5.0",
+        "globals": "17.0.0",
         "i18next": "25.7.3",
         "i18next-browser-languagedetector": "8.2.0",
         "i18next-http-backend": "3.0.2",

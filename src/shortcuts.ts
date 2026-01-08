@@ -3,6 +3,7 @@ import { Events } from './events';
 interface ShortcutOptions {
     ctrl?: boolean;
     shift?: boolean;
+    alt?: boolean;
     sticky?: boolean;
     capture?: boolean;      // use capture phase - i.e. handle the events before anyone else
     func?: () => void;
@@ -23,10 +24,11 @@ class Shortcuts {
                 const shortcut  = shortcuts[i];
                 const options = shortcut.options;
 
-                if (shortcut.keys.includes(e.key) &&
+                if (shortcut.keys.includes(e.code) &&
                     ((options.capture ?? false) === capture) &&
                     !!options.ctrl === !!(e.ctrlKey || e.metaKey) &&
-                    !!options.shift === !!e.shiftKey) {
+                    !!options.shift === !!e.shiftKey &&
+                    !!options.alt === !!e.altKey) {
 
                     e.stopPropagation();
                     e.preventDefault();

@@ -157,6 +157,29 @@ class ViewPanel extends Container {
         fovRow.append(fovLabel);
         fovRow.append(fovSlider);
 
+        // camera control mode (orbit/fly)
+
+        const controlModeRow = new Container({
+            class: 'view-panel-row'
+        });
+
+        const controlModeLabel = new Label({
+            text: localize('panel.view-options.control-mode'),
+            class: 'view-panel-row-label'
+        });
+
+        const controlModeSelection = new SelectInput({
+            class: 'view-panel-row-select',
+            defaultValue: 'orbit',
+            options: [
+                { v: 'orbit', t: localize('panel.view-options.control-mode.orbit') },
+                { v: 'fly', t: localize('panel.view-options.control-mode.fly') }
+            ]
+        });
+
+        controlModeRow.append(controlModeLabel);
+        controlModeRow.append(controlModeSelection);
+
         // sh bands
         const shBandsRow = new Container({
             class: 'view-panel-row'
@@ -216,7 +239,7 @@ class ViewPanel extends Container {
             min: 0.1,
             max: 30,
             precision: 1,
-            value: 5
+            value: 2
         });
 
         cameraFlySpeedRow.append(cameraFlySpeedLabel);
@@ -306,6 +329,7 @@ class ViewPanel extends Container {
         this.append(clrRow);
         this.append(tonemappingRow);
         this.append(fovRow);
+        this.append(controlModeRow);
         this.append(shBandsRow);
         this.append(centersSizeRow);
         this.append(cameraFlySpeedRow);
@@ -439,6 +463,16 @@ class ViewPanel extends Container {
 
         fovSlider.on('change', (value: number) => {
             events.fire('camera.setFov', value);
+        });
+
+        // camera control mode
+
+        events.on('camera.controlMode', (mode: string) => {
+            controlModeSelection.value = mode;
+        });
+
+        controlModeSelection.on('change', (value: string) => {
+            events.fire('camera.setControlMode', value);
         });
 
         // tonemapping

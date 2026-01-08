@@ -33,17 +33,6 @@ import { Serializer } from './serializer';
 import { Splat } from './splat';
 import { TweenValue } from './tween-value';
 
-// calculate the forward vector given azimuth and elevation
-const calcForwardVec = (result: Vec3, azim: number, elev: number) => {
-    const ex = elev * math.DEG_TO_RAD;
-    const ey = azim * math.DEG_TO_RAD;
-    const s1 = Math.sin(-ex);
-    const c1 = Math.cos(-ex);
-    const s2 = Math.sin(-ey);
-    const c2 = Math.cos(-ey);
-    result.set(-c1 * s2, s1, c1 * c2);
-};
-
 // work globals
 const forwardVec = new Vec3();
 const cameraPosition = new Vec3();
@@ -59,6 +48,23 @@ const v4 = new Vec4();
 const mod = (n: number, m: number) => ((n % m) + m) % m;
 
 class Camera extends Element {
+    /**
+     * Calculate the forward vector given azimuth and elevation angles.
+     *
+     * @param {Vec3} result - The Vec3 to store the result in.
+     * @param {number} azim - Azimuth angle in degrees.
+     * @param {number} elev - Elevation angle in degrees.
+     */
+    static calcForwardVec(result: Vec3, azim: number, elev: number) {
+        const ex = elev * math.DEG_TO_RAD;
+        const ey = azim * math.DEG_TO_RAD;
+        const s1 = Math.sin(-ex);
+        const c1 = Math.cos(-ex);
+        const s2 = Math.sin(-ey);
+        const c2 = Math.cos(-ey);
+        result.set(-c1 * s2, s1, c1 * c2);
+    }
+
     controller: PointerController;
     entity: Entity;
     focalPointTween = new TweenValue({ x: 0, y: 0.5, z: 0 });
@@ -70,7 +76,9 @@ class Camera extends Element {
 
     sceneRadius = 1;
 
-    flySpeed = 5;
+    flySpeed = 2;
+
+    controlMode: 'orbit' | 'fly' = 'orbit';
 
     picker: Picker;
 
@@ -467,7 +475,7 @@ class Camera extends Element {
         const azimElev = this.azimElevTween.value;
         const distance = this.distanceTween.value;
 
-        calcForwardVec(forwardVec, azimElev.azim, azimElev.elev);
+        Camera.calcForwardVec(forwardVec, azimElev.azim, azimElev.elev);
         cameraPosition.copy(forwardVec);
         cameraPosition.mulScalar(distance.distance * this.sceneRadius / this.fovFactor);
         cameraPosition.add(this.focalPointTween.value);

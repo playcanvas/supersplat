@@ -177,6 +177,7 @@
     "popup.export.compress-ply": "Сжать PLY",
     "popup.export.splats-select": "Сплаты",
     "popup.export.splats-select.all": "Все сплаты",
+    "popup.export.iterations": "Iterations",
     "popup.publish.header": "Настройки публикации",
     "popup.publish.ok": "Опубликовать",
     "popup.publish.cancel": "Отмена",

@@ -177,6 +177,7 @@
     "popup.export.compress-ply": "Comprimir PLY",
     "popup.export.splats-select": "Splats Selecionados",
     "popup.export.splats-select.all": "Todos os Splats",
+    "popup.export.iterations": "Iterations",
     "popup.publish.header": "Configurações de Publicação",
     "popup.publish.ok": "Publicar",
     "popup.publish.cancel": "Cancelar",

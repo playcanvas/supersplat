@@ -177,6 +177,7 @@
     "popup.export.compress-ply": "PLY 압축",
     "popup.export.splats-select": "Splat",
     "popup.export.splats-select.all": "모든 Splat",
+    "popup.export.iterations": "Iterations",
     "popup.publish.header": "게시 설정",
     "popup.publish.ok": "게시",
     "popup.publish.cancel": "취소",

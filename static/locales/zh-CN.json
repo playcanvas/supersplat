@@ -177,6 +177,7 @@
     "popup.export.compress-ply": "压缩PLY",
     "popup.export.splats-select": "Splat",
     "popup.export.splats-select.all": "所有Splat",
+    "popup.export.iterations": "Iterations",
     "popup.publish.header": "发布设置",
     "popup.publish.ok": "发布",
     "popup.publish.cancel": "取消",

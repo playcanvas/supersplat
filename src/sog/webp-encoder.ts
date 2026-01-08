@@ -52,7 +52,7 @@ const initWebPModule = async (): Promise<WebPModule> => {
         return webpModule;
     })();
 
-    return modulePromise;
+    return await modulePromise;
 };
 
 /**

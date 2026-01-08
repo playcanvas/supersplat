@@ -31,6 +31,7 @@ export default [
             'jsdoc/require-param-type': 'off',
             'jsdoc/require-returns': 'off',
             'jsdoc/require-returns-type': 'off',
+            'jsdoc/check-tag-names': 'off',
             'lines-between-class-members': 'off',
             'no-await-in-loop': 'off',
             'require-atomic-updates': 'off'

@@ -206,7 +206,7 @@ const writeQuaternions = async (
         quats[ti * 4 + 3] = 252 + maxComp;
     }
 
-    return encodeWebP(quats, width, height);
+    return await encodeWebP(quats, width, height);
 };
 
 /**

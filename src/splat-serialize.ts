@@ -1,4 +1,8 @@
-import { html as indexHtml, css as indexCss, js as indexJs } from '@playcanvas/supersplat-viewer';
+import {
+    html as indexHtml,
+    css as indexCss,
+    js as indexJs
+} from '@playcanvas/supersplat-viewer';
 import {
     Color,
     GSplatData,
@@ -12,7 +16,11 @@ import { SHRotation } from './sh-utils';
 import { Splat } from './splat';
 import { State } from './splat-state';
 import { version } from '../package.json';
-import { BufferWriter, ProgressWriter, Writer } from './serialize/writer';
+import {
+    BufferWriter,
+    ProgressWriter,
+    Writer
+} from './serialize/writer';
 import { ZipWriter } from './serialize/zip-writer';
 
 type SerializeSettings = {

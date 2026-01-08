@@ -12,9 +12,6 @@ import {
     Vec3
 } from 'playcanvas';
 
-import { SHRotation } from './sh-utils';
-import { Splat } from './splat';
-import { State } from './splat-state';
 import { version } from '../package.json';
 import {
     BufferWriter,
@@ -22,6 +19,10 @@ import {
     Writer
 } from './serialize/writer';
 import { ZipWriter } from './serialize/zip-writer';
+import { SHRotation } from './sh-utils';
+import { serializeSog as serializeSogInternal } from './sog/serialize-sog';
+import { Splat } from './splat';
+import { State } from './splat-state';
 
 type SerializeSettings = {
     maxSHBands?: number;            // specifies the maximum number of bands to be exported
@@ -1116,7 +1117,6 @@ const serializeViewer = async (splats: Splat[], serializeSettings: SerializeSett
 };
 
 // Re-export serializeSog from sog module with a wrapper that uses SingleSplat
-import { serializeSog as serializeSogInternal, SogSerializeOptions } from './sog/serialize-sog';
 
 type SogSettings = SerializeSettings & {
     iterations: number;

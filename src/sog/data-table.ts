@@ -105,4 +105,3 @@ class DataTable {
 }
 
 export { Column, DataTable, TypedArray, Row };
-

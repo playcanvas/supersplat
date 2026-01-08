@@ -202,12 +202,12 @@ class GpuClustering {
             computeBindGroupFormat: this.bindGroupFormat
         });
 
-        this.interleavedPoints = this.useF16
-            ? new Uint16Array(roundUp(numColumns * this.batchSize, 2))
-            : new Float32Array(numColumns * this.batchSize);
-        this.interleavedCentroids = this.useF16
-            ? new Uint16Array(roundUp(numColumns * numCentroids, 2))
-            : new Float32Array(numColumns * numCentroids);
+        this.interleavedPoints = this.useF16 ?
+            new Uint16Array(roundUp(numColumns * this.batchSize, 2)) :
+            new Float32Array(numColumns * this.batchSize);
+        this.interleavedCentroids = this.useF16 ?
+            new Uint16Array(roundUp(numColumns * numCentroids, 2)) :
+            new Float32Array(numColumns * numCentroids);
         this.resultsData = new Uint32Array(this.batchSize);
 
         this.pointsBuffer = new StorageBuffer(
@@ -256,9 +256,9 @@ class GpuClustering {
 
             // write this batch of point data to gpu
             interleaveData(this.interleavedPoints, points, currentBatchSize, batch * this.batchSize);
-            const writeLength = this.useF16
-                ? roundUp(this.numColumns * currentBatchSize, 2)
-                : this.numColumns * currentBatchSize;
+            const writeLength = this.useF16 ?
+                roundUp(this.numColumns * currentBatchSize, 2) :
+                this.numColumns * currentBatchSize;
             this.pointsBuffer.write(0, this.interleavedPoints, 0, writeLength);
             this.compute.setParameter('numPoints', currentBatchSize);
 
@@ -282,4 +282,3 @@ class GpuClustering {
 }
 
 export { GpuClustering };
-

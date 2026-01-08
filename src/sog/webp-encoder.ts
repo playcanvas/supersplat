@@ -38,7 +38,7 @@ const initWebPModule = async (): Promise<WebPModule> => {
         const urlBase = new URL('static/lib/webp', document.baseURI).toString();
 
         // Dynamic import of the WASM module
-        const createModule = (await import(/* @vite-ignore */ `${urlBase}/webp.mjs`)).default;
+        const createModule = (await import(/** @vite-ignore */ `${urlBase}/webp.mjs`)).default;
 
         webpModule = await createModule({
             locateFile: (path: string) => {

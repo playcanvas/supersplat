@@ -137,4 +137,3 @@ const generateMortonIndices = (dataTable: DataTable): Uint32Array => {
 };
 
 export { sortMortonOrder, generateMortonIndices };
-

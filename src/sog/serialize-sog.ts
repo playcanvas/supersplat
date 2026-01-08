@@ -5,16 +5,15 @@
 
 import { WebgpuGraphicsDevice } from 'playcanvas';
 
-import { Splat } from '../splat';
-import { Writer } from '../serialize/writer';
-import { ZipWriter } from '../serialize/zip-writer';
 import { Column, DataTable } from './data-table';
 import { getGpuDevice } from './gpu-device';
 import { cluster1d, kmeans } from './k-means';
 import { generateMortonIndices } from './morton-order';
 import { encodeWebP } from './webp-encoder';
-
 import { version } from '../../package.json';
+import { Writer } from '../serialize/writer';
+import { ZipWriter } from '../serialize/zip-writer';
+import { Splat } from '../splat';
 
 // SH coefficient names
 const shNames = new Array(45).fill('').map((_, i) => `f_rest_${i}`);
@@ -168,7 +167,7 @@ const writeQuaternions = async (
 
         // normalize
         for (let j = 0; j < 4; ++j) {
-            q[j] = q[j] / l;
+            q[j] /= l;
         }
 
         // find max component
@@ -223,7 +222,7 @@ const writeScales = async (
 ): Promise<{ webp: Uint8Array; codebook: number[] }> => {
     // Create a permuted table with only the indexed rows
     const scaleNames = ['scale_0', 'scale_1', 'scale_2'];
-    const scaleColumns = scaleNames.map(name => {
+    const scaleColumns = scaleNames.map((name) => {
         const src = dataTable.getColumnByName(name)!.data;
         const dst = new Float32Array(indices.length);
         for (let i = 0; i < indices.length; ++i) {
@@ -266,7 +265,7 @@ const writeColors = async (
 ): Promise<{ webp: Uint8Array; codebook: number[] }> => {
     // Create a permuted table with only the indexed rows
     const colorNames = ['f_dc_0', 'f_dc_1', 'f_dc_2'];
-    const colorColumns = colorNames.map(name => {
+    const colorColumns = colorNames.map((name) => {
         const src = dataTable.getColumnByName(name)!.data;
         const dst = new Float32Array(indices.length);
         for (let i = 0; i < indices.length; ++i) {
@@ -328,7 +327,7 @@ const writeSH = async (
     }
 
     // Create SH table with indexed rows
-    const shColumns = shColumnNames.map(name => {
+    const shColumns = shColumnNames.map((name) => {
         const src = dataTable.getColumnByName(name)!.data;
         const dst = new Float32Array(indices.length);
         for (let i = 0; i < indices.length; ++i) {
@@ -459,9 +458,9 @@ const serializeSog = async (
     const outputSHBands = Math.min(dataSHBands, maxSHBands);
 
     // Write SH if present
-    const shN = outputSHBands > 0
-        ? await writeSH(dataTable, indices, width, height, outputSHBands, iterations, device)
-        : null;
+    const shN = outputSHBands > 0 ?
+        await writeSH(dataTable, indices, width, height, outputSHBands, iterations, device) :
+        null;
 
     if (shN) {
         await zipWriter.file('shN_centroids.webp', shN.centroidsWebp);
@@ -510,4 +509,3 @@ const serializeSog = async (
 };
 
 export { serializeSog, SogSerializeOptions };
-

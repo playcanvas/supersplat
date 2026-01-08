@@ -87,4 +87,3 @@ const destroyGpuDevice = () => {
 };
 
 export { GpuDevice, getGpuDevice, destroyGpuDevice };
-

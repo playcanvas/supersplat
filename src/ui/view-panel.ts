@@ -216,7 +216,7 @@ class ViewPanel extends Container {
             min: 0.1,
             max: 30,
             precision: 1,
-            value: 2
+            value: 1
         });
 
         cameraFlySpeedRow.append(cameraFlySpeedLabel);

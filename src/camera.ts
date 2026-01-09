@@ -76,7 +76,7 @@ class Camera extends Element {
 
     sceneRadius = 1;
 
-    flySpeed = 2;
+    flySpeed = 1;
 
     controlMode: 'orbit' | 'fly' = 'orbit';
 

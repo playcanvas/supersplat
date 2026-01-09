@@ -1,16 +1,35 @@
 import { Events } from './events';
 
 interface ShortcutOptions {
+    // for modifier keys:
+    // - true: require pressed
+    // - false: don't check (doesn't matter)
+    // - undefined (not specified): require NOT pressed
     ctrl?: boolean;
     shift?: boolean;
-    sticky?: boolean;
-    capture?: boolean;      // use capture phase - i.e. handle the events before anyone else
-    func?: () => void;
+    alt?: boolean;
+
+    // track key held state - fires on both keydown and keyup
+    held?: boolean;
+
+    // use capture phase - i.e. handle the events before anyone else
+    capture?: boolean;
+
+    // either provide a function to call, or an event name to fire
+    func?: (down?: boolean) => void;
     event?: string;
 }
 
+const checkMod = (optionValue: boolean | undefined, eventValue: boolean) => {
+    switch (optionValue) {
+        case true: return eventValue;
+        case false: return true;
+        case undefined: return !eventValue;
+    }
+};
+
 class Shortcuts {
-    shortcuts: { keys: string[], options: ShortcutOptions, toggled: boolean }[] = [];
+    shortcuts: { keys: string[], options: ShortcutOptions }[] = [];
 
     constructor(events: Events) {
         const shortcuts = this.shortcuts;
@@ -19,36 +38,40 @@ class Shortcuts {
             // skip keys in input fields
             if (!capture && e.target !== document.body) return;
 
+            const isCtrlKey = e.code.startsWith('Control');
+            const isShiftKey = e.code.startsWith('Shift');
+            const isAltKey = e.code.startsWith('Alt');
+
             for (let i = 0; i < shortcuts.length; i++) {
                 const shortcut  = shortcuts[i];
                 const options = shortcut.options;
 
-                if (shortcut.keys.includes(e.key) &&
-                    ((options.capture ?? false) === capture) &&
-                    !!options.ctrl === !!(e.ctrlKey || e.metaKey) &&
-                    !!options.shift === !!e.shiftKey) {
+                const ctrlMatch = isCtrlKey || checkMod(options.ctrl, !!(e.ctrlKey || e.metaKey));
+                const shiftMatch = isShiftKey || checkMod(options.shift, e.shiftKey);
+                const altMatch = isAltKey || checkMod(options.alt, e.altKey);
 
+                if (shortcut.keys.includes(e.code) &&
+                    ((options.capture ?? false) === capture) &&
+                    ctrlMatch && shiftMatch && altMatch) {
+
+                    // consume the event
                     e.stopPropagation();
                     e.preventDefault();
 
-                    // handle sticky shortcuts
-                    if (options.sticky) {
-                        if (down) {
-                            shortcut.toggled = e.repeat;
-                        }
-
-                        if (down === shortcut.toggled) {
+                    if (options.held) {
+                        // Skip repeated keydown events, but fire on initial down and all up events
+                        if (down && e.repeat) {
                             return;
                         }
                     } else {
-                        // ignore up events on non-sticky shortcuts
+                        // Non-held: ignore up events
                         if (!down) return;
                     }
 
                     if (shortcuts[i].options.event) {
-                        events.fire(shortcuts[i].options.event);
+                        events.fire(shortcuts[i].options.event, down);
                     } else {
-                        shortcuts[i].options.func();
+                        shortcuts[i].options.func(down);
                     }
 
                     break;
@@ -76,7 +99,7 @@ class Shortcuts {
     }
 
     register(keys: string[], options: ShortcutOptions) {
-        this.shortcuts.push({ keys, options, toggled: false });
+        this.shortcuts.push({ keys, options });
     }
 }
 

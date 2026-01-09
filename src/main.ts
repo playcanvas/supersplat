@@ -77,18 +77,18 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['Delete', 'Backspace'], { event: 'select.delete' });
     shortcuts.register(['Escape'], { event: 'tool.deactivate' });
     shortcuts.register(['Tab'], { event: 'selection.next' });
-    shortcuts.register(['Digit1'], { event: 'tool.move', sticky: true });
-    shortcuts.register(['Digit2'], { event: 'tool.rotate', sticky: true });
-    shortcuts.register(['Digit3'], { event: 'tool.scale', sticky: true });
+    shortcuts.register(['Digit1'], { event: 'tool.move' });
+    shortcuts.register(['Digit2'], { event: 'tool.rotate' });
+    shortcuts.register(['Digit3'], { event: 'tool.scale' });
     shortcuts.register(['KeyG'], { event: 'grid.toggleVisible' });
     shortcuts.register(['KeyC'], { event: 'tool.toggleCoordSpace' });
     shortcuts.register(['KeyF'], { event: 'camera.focus' });
-    shortcuts.register(['KeyR'], { event: 'tool.rectSelection', sticky: true });
-    shortcuts.register(['KeyP'], { event: 'tool.polygonSelection', sticky: true });
-    shortcuts.register(['KeyL'], { event: 'tool.lassoSelection', sticky: true });
-    shortcuts.register(['KeyB'], { event: 'tool.brushSelection', sticky: true });
-    shortcuts.register(['KeyO'], { event: 'tool.floodSelection', sticky: true });
-    shortcuts.register(['KeyE'], { event: 'tool.eyedropperSelection', sticky: true });
+    shortcuts.register(['KeyR'], { event: 'tool.rectSelection' });
+    shortcuts.register(['KeyP'], { event: 'tool.polygonSelection' });
+    shortcuts.register(['KeyL'], { event: 'tool.lassoSelection' });
+    shortcuts.register(['KeyB'], { event: 'tool.brushSelection' });
+    shortcuts.register(['KeyO'], { event: 'tool.floodSelection' });
+    shortcuts.register(['KeyE'], { event: 'tool.eyedropperSelection', alt: true });
     shortcuts.register(['KeyA'], { event: 'select.all', alt: true });
     shortcuts.register(['KeyA'], { event: 'select.none', alt: true, shift: true });
     shortcuts.register(['KeyI'], { event: 'select.invert', ctrl: true });
@@ -102,6 +102,18 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['KeyV'], { event: 'camera.toggleControlMode' });
     shortcuts.register(['Space'], { event: 'camera.toggleOverlay' });
     shortcuts.register(['KeyD'], { event: 'dataPanel.toggle', alt: true });
+
+    // Fly mode movement (held, ignore shift/ctrl so speed modifiers work)
+    shortcuts.register(['KeyW'], { event: 'camera.fly.forward', held: true, shift: false, ctrl: false });
+    shortcuts.register(['KeyS'], { event: 'camera.fly.backward', held: true, shift: false, ctrl: false });
+    shortcuts.register(['KeyA'], { event: 'camera.fly.left', held: true, shift: false, ctrl: false });
+    shortcuts.register(['KeyD'], { event: 'camera.fly.right', held: true, shift: false, ctrl: false });
+    shortcuts.register(['KeyQ'], { event: 'camera.fly.down', held: true, shift: false, ctrl: false });
+    shortcuts.register(['KeyE'], { event: 'camera.fly.up', held: true, shift: false, ctrl: false });
+
+    // Speed modifier keys (ignore other modifiers)
+    shortcuts.register(['ShiftLeft', 'ShiftRight'], { event: 'camera.modifier.shift', held: true, ctrl: false, alt: false });
+    shortcuts.register(['ControlLeft', 'ControlRight'], { event: 'camera.modifier.ctrl', held: true, shift: false, alt: false });
 
     return shortcuts;
 };

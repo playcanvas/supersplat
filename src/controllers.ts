@@ -26,9 +26,12 @@ class PointerController {
 
         // Fly mode: rotate camera around itself (keep camera position fixed)
         const look = (dx: number, dy: number) => {
-            // Capture current camera position before rotation
-            const cameraPos = camera.entity.getPosition().clone();
-            const distance = camera.distanceTween.value.distance * camera.sceneRadius / camera.fovFactor;
+            // Use TARGET values to calculate target camera position (not current interpolated)
+            const distance = camera.distance * camera.sceneRadius / camera.fovFactor;
+
+            // Calculate target camera position from target focal point and angles
+            Camera.calcForwardVec(forwardVec, camera.azim, camera.elevation);
+            const targetCameraPos = camera.focalPoint.add(forwardVec.clone().mulScalar(distance));
 
             // Calculate new azim/elev
             const azim = camera.azim - dx * camera.scene.config.controls.orbitSensitivity;
@@ -37,10 +40,10 @@ class PointerController {
             // Calculate the new forward vector based on new angles
             Camera.calcForwardVec(forwardVec, azim, elev);
 
-            // Calculate new focal point to keep camera at same position
+            // Calculate new focal point to keep camera at target position
             // Camera position = focalPoint + forwardVec * distance
             // So: focalPoint = cameraPosition - forwardVec * distance
-            const newFocalPoint = cameraPos.clone().sub(forwardVec.clone().mulScalar(distance));
+            const newFocalPoint = targetCameraPos.clone().sub(forwardVec.clone().mulScalar(distance));
 
             camera.setAzimElev(azim, elev);
             camera.setFocalPoint(newFocalPoint);
@@ -261,135 +264,120 @@ class PointerController {
             }
         };
 
-        // key state for arrow keys (orbit mode focal point movement) - uses event.code
-        const arrowKeys: Record<string, boolean> = {
-            ArrowUp: false,
-            ArrowDown: false,
-            ArrowLeft: false,
-            ArrowRight: false
-        };
+        // fly movement state (updated via shortcut events)
+        let flyForward = false;
+        let flyBackward = false;
+        let flyLeft = false;
+        let flyRight = false;
+        let flyDown = false;
+        let flyUp = false;
 
-        // key state for WASD + Q/E (fly mode movement) - uses event.code
-        const flyKeys: Record<string, boolean> = {
-            KeyW: false,
-            KeyS: false,
-            KeyA: false,
-            KeyD: false,
-            KeyQ: false,
-            KeyE: false
-        };
-
-        // track modifier keys for speed control
+        // track modifier keys for speed control (updated via shortcut events)
         let shiftDown = false;
         let ctrlDown = false;
 
-        const keydown = (event: KeyboardEvent) => {
-            // Track modifier keys globally
-            if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') {
-                shiftDown = true;
-            }
-            if (event.code === 'ControlLeft' || event.code === 'ControlRight') {
-                ctrlDown = true;
-            }
-
-            if (event.target !== document.body) return;
-
-            if (arrowKeys.hasOwnProperty(event.code)) {
-                arrowKeys[event.code] = true;
-            }
-
-            // WASD/QE keys switch to fly mode and control movement
-            // Don't capture when Alt is held (reserved for shortcuts like Alt+A select all)
-            if (flyKeys.hasOwnProperty(event.code) && !event.altKey) {
-                // Switch to fly mode when using fly keys
-                if (camera.controlMode !== 'fly') {
-                    camera.scene.events.fire('camera.setControlMode', 'fly');
-                }
-                flyKeys[event.code] = true;
-                event.preventDefault();
-                event.stopPropagation();
-            }
-        };
-
-        const keyup = (event: KeyboardEvent) => {
-            // Track modifier keys globally
-            if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') {
-                shiftDown = false;
-            }
-            if (event.code === 'ControlLeft' || event.code === 'ControlRight') {
-                ctrlDown = false;
-            }
-
-            if (arrowKeys.hasOwnProperty(event.code)) {
-                arrowKeys[event.code] = false;
-            }
-            if (flyKeys.hasOwnProperty(event.code)) {
-                flyKeys[event.code] = false;
-            }
-        };
-
         // Clear all keys when window loses focus to prevent stuck keys
         const clearAllKeys = () => {
-            for (const key in arrowKeys) {
-                arrowKeys[key] = false;
-            }
-            for (const key in flyKeys) {
-                flyKeys[key] = false;
-            }
+            flyForward = false;
+            flyBackward = false;
+            flyLeft = false;
+            flyRight = false;
+            flyDown = false;
+            flyUp = false;
             shiftDown = false;
             ctrlDown = false;
         };
 
+        // Helper to switch to fly mode when a fly key is pressed
+        const handleFlyKey = (down: boolean) => {
+            if (down && camera.controlMode !== 'fly') {
+                camera.scene.events.fire('camera.setControlMode', 'fly');
+            }
+        };
+
+        // Listen for fly movement shortcut events
+        const events = camera.scene.events;
+
+        const onFlyForward = (down: boolean) => {
+            flyForward = down;
+            handleFlyKey(down);
+        };
+        const onFlyBackward = (down: boolean) => {
+            flyBackward = down;
+            handleFlyKey(down);
+        };
+        const onFlyLeft = (down: boolean) => {
+            flyLeft = down;
+            handleFlyKey(down);
+        };
+        const onFlyRight = (down: boolean) => {
+            flyRight = down;
+            handleFlyKey(down);
+        };
+        const onFlyDown = (down: boolean) => {
+            flyDown = down;
+            handleFlyKey(down);
+        };
+        const onFlyUp = (down: boolean) => {
+            flyUp = down;
+            handleFlyKey(down);
+        };
+        const onModifierShift = (down: boolean) => {
+            shiftDown = down;
+        };
+        const onModifierCtrl = (down: boolean) => {
+            ctrlDown = down;
+        };
+
+        events.on('camera.fly.forward', onFlyForward);
+        events.on('camera.fly.backward', onFlyBackward);
+        events.on('camera.fly.left', onFlyLeft);
+        events.on('camera.fly.right', onFlyRight);
+        events.on('camera.fly.down', onFlyDown);
+        events.on('camera.fly.up', onFlyUp);
+        events.on('camera.modifier.shift', onModifierShift);
+        events.on('camera.modifier.ctrl', onModifierCtrl);
+
         this.update = (deltaTime: number) => {
-            // Calculate speed modifier based on current modifier key state
-            const speedMod = shiftDown ? 10 : (ctrlDown ? 0.1 : 1);
+            if (camera.controlMode !== 'fly') return;
 
-            if (camera.controlMode === 'fly') {
-                // Fly mode: WASD for movement, Q/E for up/down - moves focal point
-                const forward = (flyKeys.KeyW ? 1 : 0) - (flyKeys.KeyS ? 1 : 0);
-                const strafe = (flyKeys.KeyD ? 1 : 0) - (flyKeys.KeyA ? 1 : 0);
-                const vertical = (flyKeys.KeyE ? 1 : 0) - (flyKeys.KeyQ ? 1 : 0);
+            // Fly mode: WASD for movement, Q/E for up/down - moves focal point
+            const forward = (flyForward ? 1 : 0) - (flyBackward ? 1 : 0);
+            const strafe = (flyRight ? 1 : 0) - (flyLeft ? 1 : 0);
+            const vertical = (flyUp ? 1 : 0) - (flyDown ? 1 : 0);
 
-                if (forward || strafe || vertical) {
-                    const factor = deltaTime * camera.flySpeed * speedMod;
-                    const worldTransform = camera.entity.getWorldTransform();
+            if (forward || strafe || vertical) {
+                // Calculate speed modifier based on current modifier key state
+                const speedMod = shiftDown ? 10 : (ctrlDown ? 0.1 : 1);
+                const factor = deltaTime * camera.flySpeed * speedMod;
+                const worldTransform = camera.entity.getWorldTransform();
 
-                    moveVec.set(0, 0, 0);
+                moveVec.set(0, 0, 0);
 
-                    // Forward/backward along camera's forward direction
-                    if (forward) {
-                        const zAxis = worldTransform.getZ();
-                        moveVec.add(zAxis.mulScalar(-forward * factor));
-                    }
-
-                    // Strafe left/right
-                    if (strafe) {
-                        const xAxis = worldTransform.getX();
-                        moveVec.add(xAxis.mulScalar(strafe * factor));
-                    }
-
-                    // Up/down in world space
-                    if (vertical) {
-                        moveVec.y += vertical * factor;
-                    }
-
-                    // Move the focal point (camera follows due to orbit calculation)
-                    const p = camera.focalPoint.add(moveVec);
-                    camera.setFocalPoint(p);
+                // Forward/backward along horizontal forward direction (fixed Y)
+                if (forward) {
+                    const zAxis = worldTransform.getZ();
+                    zAxis.y = 0;
+                    zAxis.normalize();
+                    moveVec.add(zAxis.mulScalar(-forward * factor));
                 }
-            } else {
-                // Orbit mode: arrow keys move focal point
-                const x = (arrowKeys.ArrowRight ? 1 : 0) - (arrowKeys.ArrowLeft ? 1 : 0);
-                const z = (arrowKeys.ArrowDown ? 1 : 0) - (arrowKeys.ArrowUp ? 1 : 0);
 
-                if (x || z) {
-                    const factor = deltaTime * camera.flySpeed * speedMod;
-                    const worldTransform = camera.entity.getWorldTransform();
-                    const xAxis = worldTransform.getX().mulScalar(x * factor);
-                    const zAxis = worldTransform.getZ().mulScalar(z * factor);
-                    const p = camera.focalPoint.add(xAxis).add(zAxis);
-                    camera.setFocalPoint(p);
+                // Strafe left/right (horizontal)
+                if (strafe) {
+                    const xAxis = worldTransform.getX();
+                    xAxis.y = 0;
+                    xAxis.normalize();
+                    moveVec.add(xAxis.mulScalar(strafe * factor));
                 }
+
+                // Up/down in world space
+                if (vertical) {
+                    moveVec.y += vertical * factor;
+                }
+
+                // Move the focal point (camera follows due to orbit calculation)
+                const p = camera.focalPoint.add(moveVec);
+                camera.setFocalPoint(p);
             }
         };
 
@@ -412,11 +400,19 @@ class PointerController {
         wrap(target, 'pointermove', pointermove);
         wrap(target, 'wheel', wheel, { passive: false });
         wrap(target, 'dblclick', dblclick);
-        wrap(document, 'keydown', keydown);
-        wrap(document, 'keyup', keyup);
         wrap(window, 'blur', clearAllKeys);
 
-        this.destroy = destroy;
+        this.destroy = () => {
+            destroy?.();
+            events.off('camera.fly.forward', onFlyForward);
+            events.off('camera.fly.backward', onFlyBackward);
+            events.off('camera.fly.left', onFlyLeft);
+            events.off('camera.fly.right', onFlyRight);
+            events.off('camera.fly.down', onFlyDown);
+            events.off('camera.fly.up', onFlyUp);
+            events.off('camera.modifier.shift', onModifierShift);
+            events.off('camera.modifier.ctrl', onModifierCtrl);
+        };
     }
 }
 

@@ -1,4 +1,8 @@
-import { html as indexHtml, css as indexCss, js as indexJs } from '@playcanvas/supersplat-viewer';
+import {
+    html as indexHtml,
+    css as indexCss,
+    js as indexJs
+} from '@playcanvas/supersplat-viewer';
 import {
     Color,
     GSplatData,
@@ -8,12 +12,17 @@ import {
     Vec3
 } from 'playcanvas';
 
+import { version } from '../package.json';
+import {
+    BufferWriter,
+    ProgressWriter,
+    Writer
+} from './serialize/writer';
+import { ZipWriter } from './serialize/zip-writer';
 import { SHRotation } from './sh-utils';
+import { serializeSog as serializeSogInternal } from './sog/serialize-sog';
 import { Splat } from './splat';
 import { State } from './splat-state';
-import { version } from '../package.json';
-import { BufferWriter, ProgressWriter, Writer } from './serialize/writer';
-import { ZipWriter } from './serialize/zip-writer';
 
 type SerializeSettings = {
     maxSHBands?: number;            // specifies the maximum number of bands to be exported
@@ -1107,14 +1116,62 @@ const serializeViewer = async (splats: Splat[], serializeSettings: SerializeSett
     }
 };
 
+// Re-export serializeSog from sog module with a wrapper that uses SingleSplat
+
+type SogSettings = SerializeSettings & {
+    iterations: number;
+};
+
+const serializeSog = async (splats: Splat[], settings: SogSettings, writer: Writer): Promise<void> => {
+    const { maxSHBands = 3, iterations = 10 } = settings;
+
+    // Determine which members to extract
+    const shCoeffs = [0, 3, 8, 15][maxSHBands];
+    const memberNames = [
+        'x', 'y', 'z',
+        'scale_0', 'scale_1', 'scale_2',
+        'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity',
+        'rot_0', 'rot_1', 'rot_2', 'rot_3',
+        ...shNames.slice(0, shCoeffs * 3)
+    ];
+
+    // Create SingleSplat for data extraction
+    const singleSplat = new SingleSplat(memberNames, settings);
+
+    // Create filter
+    const filter = new GaussianFilter(settings);
+
+    // Wrapper for getSingleSplat
+    const getSingleSplat = (splat: Splat, index: number): Record<string, number> => {
+        singleSplat.read(splat, index);
+        return { ...singleSplat.data };
+    };
+
+    // Wrapper for filter
+    const filterFunc = (splat: Splat, index: number): boolean => {
+        filter.set(splat);
+        return filter.test(index);
+    };
+
+    await serializeSogInternal(
+        splats,
+        getSingleSplat,
+        filterFunc,
+        { iterations, maxSHBands },
+        writer
+    );
+};
+
 export {
     Writer,
     serializePly,
     serializePlyCompressed,
     serializeSplat,
+    serializeSog,
     serializeViewer,
     AnimTrack,
     ExperienceSettings,
     SerializeSettings,
+    SogSettings,
     ViewerExportSettings
 };

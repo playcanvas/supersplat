@@ -17,7 +17,7 @@ const createSvg = (svgString: string, args = {}) => {
 
 const removeKnownExtension = (filename: string) => {
     // remove known extensions
-    const knownExtensions = ['.compressed.ply', '.ply', '.splat', '.html', '.zip'];
+    const knownExtensions = ['.compressed.ply', '.ply', '.splat', '.sog', '.html', '.zip'];
 
     for (let i = 0; i < knownExtensions.length; ++i) {
         const ext = knownExtensions[i];
@@ -237,6 +237,28 @@ class ExportPopup extends Container {
         bandsRow.append(bandsLabel);
         bandsRow.append(bandsSlider);
 
+        // sog iterations
+
+        const iterationsRow = new Container({
+            class: 'row'
+        });
+
+        const iterationsLabel = new Label({
+            class: 'label',
+            text: localize('popup.export.iterations')
+        });
+
+        const iterationsSlider = new SliderInput({
+            class: 'slider',
+            min: 1,
+            max: 20,
+            precision: 0,
+            value: 10
+        });
+
+        iterationsRow.append(iterationsLabel);
+        iterationsRow.append(iterationsSlider);
+
         // filename
 
         const filenameRow = new Container({
@@ -265,6 +287,7 @@ class ExportPopup extends Container {
         content.append(compressRow);
         content.append(splatsRow);
         content.append(bandsRow);
+        content.append(iterationsRow);
         content.append(filenameRow);
 
         // footer
@@ -326,12 +349,13 @@ class ExportPopup extends Container {
 
         const reset = (exportType: ExportType, splatNames: string[], hasPoses: boolean) => {
             const allRows = [
-                viewerTypeRow, startRow, animationRow, colorRow, fovRow, compressRow, splatsRow, bandsRow, filenameRow
+                viewerTypeRow, startRow, animationRow, colorRow, fovRow, compressRow, splatsRow, bandsRow, iterationsRow, filenameRow
             ];
 
             const activeRows = {
                 ply: [compressRow, splatsRow, bandsRow, filenameRow],
                 splat: [splatsRow, filenameRow],
+                sog: [splatsRow, bandsRow, iterationsRow, filenameRow],
                 viewer: [viewerTypeRow, startRow, animationRow, colorRow, fovRow, splatsRow, bandsRow, filenameRow]
             }[exportType];
 
@@ -355,6 +379,9 @@ class ExportPopup extends Container {
             // ply
             compressBoolean.value = false;
 
+            // sog
+            iterationsSlider.value = 10;
+
             // filename
             filenameEntry.value = splatNames[0];
             switch (exportType) {
@@ -363,6 +390,9 @@ class ExportPopup extends Container {
                     break;
                 case 'splat':
                     updateExtension('.splat');
+                    break;
+                case 'sog':
+                    updateExtension('.sog');
                     break;
                 case 'viewer':
                     updateExtension(viewerTypeSelect.value === 'html' ? '.html' : '.zip');
@@ -418,6 +448,17 @@ class ExportPopup extends Container {
                     filename: filenameEntry.value,
                     splatIdx: splatsSelect.value === 'all' ? 'all' : splatsSelect.value,
                     serializeSettings: { }
+                };
+            };
+
+            const assembleSogOptions = () : SceneExportOptions => {
+                return {
+                    filename: filenameEntry.value,
+                    splatIdx: splatsSelect.value === 'all' ? 'all' : splatsSelect.value,
+                    serializeSettings: {
+                        maxSHBands: bandsSlider.value
+                    },
+                    sogIterations: iterationsSlider.value
                 };
             };
 
@@ -516,6 +557,9 @@ class ExportPopup extends Container {
                             break;
                         case 'splat':
                             resolve(assembleSplatOptions());
+                            break;
+                        case 'sog':
+                            resolve(assembleSogOptions());
                             break;
                         case 'viewer':
                             resolve(assembleViewerOptions());

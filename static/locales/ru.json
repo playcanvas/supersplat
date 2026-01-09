@@ -204,6 +204,8 @@
     "doc.load-failed": "Не удалось загрузить",
     "tooltip.right-toolbar.splat-mode": "Режим Splat ( M )",
     "tooltip.right-toolbar.show-hide": "Показать/Скрыть сплаты ( Пробел )",
+    "tooltip.right-toolbar.orbit-camera": "Орбитальная камера ( V )",
+    "tooltip.right-toolbar.fly-camera": "Камера полёта ( V )",
     "tooltip.right-toolbar.frame-selection": "Обрамить выделение ( F )",
     "tooltip.right-toolbar.reset-camera": "Сбросить камеру",
     "tooltip.right-toolbar.colors": "Цвета",

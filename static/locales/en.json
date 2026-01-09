@@ -204,6 +204,8 @@
     "doc.load-failed": "Failed to Load",
     "tooltip.right-toolbar.splat-mode": "Splat Mode ( M )",
     "tooltip.right-toolbar.show-hide": "Show/Hide Splats ( Space )",
+    "tooltip.right-toolbar.orbit-camera": "Orbit Camera ( V )",
+    "tooltip.right-toolbar.fly-camera": "Fly Camera ( V )",
     "tooltip.right-toolbar.frame-selection": "Frame Selection ( F )",
     "tooltip.right-toolbar.reset-camera": "Reset Camera",
     "tooltip.right-toolbar.colors": "Colors",

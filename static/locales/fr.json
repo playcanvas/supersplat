@@ -204,6 +204,8 @@
     "doc.load-failed": "ÉCHEC DU CHARGEMENT",
     "tooltip.right-toolbar.splat-mode": "Mode splat ( M )",
     "tooltip.right-toolbar.show-hide": "Afficher/cacher les splats ( Barre espace )",
+    "tooltip.right-toolbar.orbit-camera": "Caméra orbitale ( V )",
+    "tooltip.right-toolbar.fly-camera": "Caméra de vol ( V )",
     "tooltip.right-toolbar.frame-selection": "Cadrer la sélection ( F )",
     "tooltip.right-toolbar.reset-camera": "Réinitialiser la caméra",
     "tooltip.right-toolbar.colors": "Couleurs",

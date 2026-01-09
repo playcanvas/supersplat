@@ -204,6 +204,8 @@
     "doc.load-failed": "Falha ao Carregar",
     "tooltip.right-toolbar.splat-mode": "Modo Splat ( M )",
     "tooltip.right-toolbar.show-hide": "Mostrar/Ocultar Splats ( Espaço )",
+    "tooltip.right-toolbar.orbit-camera": "Câmera Orbital ( V )",
+    "tooltip.right-toolbar.fly-camera": "Câmera de Voo ( V )",
     "tooltip.right-toolbar.frame-selection": "Selecionar Quadro ( F )",
     "tooltip.right-toolbar.reset-camera": "Redefinir Câmera",
     "tooltip.right-toolbar.colors": "Cores",

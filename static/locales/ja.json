@@ -204,6 +204,8 @@
     "doc.load-failed": "読み込みに失敗",
     "tooltip.right-toolbar.splat-mode": "スプラットモード ( M )",
     "tooltip.right-toolbar.show-hide": "スプラットの表示/非表示 ( Space )",
+    "tooltip.right-toolbar.orbit-camera": "オービットカメラ ( V )",
+    "tooltip.right-toolbar.fly-camera": "フライカメラ ( V )",
     "tooltip.right-toolbar.frame-selection": "選択をフレームイン ( F )",
     "tooltip.right-toolbar.reset-camera": "カメラをリセット",
     "tooltip.right-toolbar.colors": "色",

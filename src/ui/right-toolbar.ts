@@ -6,6 +6,8 @@ import cameraFrameSelectionSvg from './svg/camera-frame-selection.svg';
 import cameraResetSvg from './svg/camera-reset.svg';
 import centersSvg from './svg/centers.svg';
 import colorPanelSvg from './svg/color-panel.svg';
+import flyCameraSvg from './svg/fly-camera.svg';
+import orbitCameraSvg from './svg/orbit-camera.svg';
 import ringsSvg from './svg/rings.svg';
 import showHideSplatsSvg from './svg/show-hide-splats.svg';
 import { Tooltips } from './tooltips';
@@ -38,6 +40,16 @@ class RightToolbar extends Container {
             class: ['right-toolbar-toggle', 'active']
         });
 
+        const orbitMode = new Button({
+            id: 'right-toolbar-orbit-mode',
+            class: ['right-toolbar-toggle', 'active']
+        });
+
+        const flyMode = new Button({
+            id: 'right-toolbar-fly-mode',
+            class: 'right-toolbar-toggle'
+        });
+
         const cameraFrameSelection = new Button({
             id: 'right-toolbar-frame-selection',
             class: 'right-toolbar-button'
@@ -66,6 +78,8 @@ class RightToolbar extends Container {
         ringsModeToggle.dom.appendChild(centersDom);
         ringsModeToggle.dom.appendChild(ringsDom);
         showHideSplats.dom.appendChild(createSvg(showHideSplatsSvg));
+        orbitMode.dom.appendChild(createSvg(orbitCameraSvg));
+        flyMode.dom.appendChild(createSvg(flyCameraSvg));
         cameraFrameSelection.dom.appendChild(createSvg(cameraFrameSelectionSvg));
         cameraReset.dom.appendChild(createSvg(cameraResetSvg));
         colorPanel.dom.appendChild(createSvg(colorPanelSvg));
@@ -73,14 +87,19 @@ class RightToolbar extends Container {
         this.append(ringsModeToggle);
         this.append(showHideSplats);
         this.append(new Element({ class: 'right-toolbar-separator' }));
+        this.append(orbitMode);
+        this.append(flyMode);
+        this.append(new Element({ class: 'right-toolbar-separator' }));
         this.append(cameraFrameSelection);
         this.append(cameraReset);
-        this.append(colorPanel);
         this.append(new Element({ class: 'right-toolbar-separator' }));
+        this.append(colorPanel);
         this.append(options);
 
         tooltips.register(ringsModeToggle, localize('tooltip.right-toolbar.splat-mode'), 'left');
         tooltips.register(showHideSplats, localize('tooltip.right-toolbar.show-hide'), 'left');
+        tooltips.register(orbitMode, localize('tooltip.right-toolbar.orbit-camera'), 'left');
+        tooltips.register(flyMode, localize('tooltip.right-toolbar.fly-camera'), 'left');
         tooltips.register(cameraFrameSelection, localize('tooltip.right-toolbar.frame-selection'), 'left');
         tooltips.register(cameraReset, localize('tooltip.right-toolbar.reset-camera'), 'left');
         tooltips.register(colorPanel, localize('tooltip.right-toolbar.colors'), 'left');
@@ -93,6 +112,8 @@ class RightToolbar extends Container {
             events.fire('camera.setOverlay', true);
         });
         showHideSplats.on('click', () => events.fire('camera.toggleOverlay'));
+        orbitMode.on('click', () => events.fire('camera.setControlMode', 'orbit'));
+        flyMode.on('click', () => events.fire('camera.setControlMode', 'fly'));
         cameraFrameSelection.on('click', () => events.fire('camera.focus'));
         cameraReset.on('click', () => events.fire('camera.reset'));
         colorPanel.on('click', () => events.fire('colorPanel.toggleVisible'));
@@ -106,6 +127,11 @@ class RightToolbar extends Container {
 
         events.on('camera.overlay', (value: boolean) => {
             showHideSplats.class[value ? 'add' : 'remove']('active');
+        });
+
+        events.on('camera.controlMode', (mode: 'orbit' | 'fly') => {
+            orbitMode.class[mode === 'orbit' ? 'add' : 'remove']('active');
+            flyMode.class[mode === 'fly' ? 'add' : 'remove']('active');
         });
 
         events.on('colorPanel.visible', (visible: boolean) => {

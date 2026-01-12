@@ -308,7 +308,7 @@ class Menu extends Container {
         }, {
             text: localize('menu.help.about'),
             icon: 'E138',
-            onSelect: () => events.invoke('show.about')
+            onSelect: () => events.fire('show.about')
         }]);
 
         this.append(menubar);

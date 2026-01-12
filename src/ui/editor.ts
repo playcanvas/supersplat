@@ -16,6 +16,7 @@ import { Progress } from './progress';
 import { PublishSettingsDialog } from './publish-settings-dialog';
 import { RightToolbar } from './right-toolbar';
 import { ScenePanel } from './scene-panel';
+import { AboutPopup } from './about-popup';
 import { ShortcutsPopup } from './shortcuts-popup';
 import { Spinner } from './spinner';
 import { TimelinePanel } from './timeline-panel';
@@ -185,10 +186,14 @@ class EditorUI {
         topContainer.append(imageSettingsDialog);
         topContainer.append(videoSettingsDialog);
 
+        // about popup
+        const aboutPopup = new AboutPopup();
+
         appContainer.append(editorContainer);
         appContainer.append(topContainer);
         appContainer.append(tooltipsContainer);
         appContainer.append(shortcutsPopup);
+        appContainer.append(aboutPopup);
 
         this.appContainer = appContainer;
         this.topContainer = topContainer;
@@ -314,12 +319,8 @@ class EditorUI {
             }
         });
 
-        events.function('show.about', () => {
-            return this.popup.show({
-                type: 'info',
-                header: 'About',
-                message: `SUPERSPLAT v${version}`
-            });
+        events.on('show.about', () => {
+            aboutPopup.hidden = false;
         });
 
         events.function('showPopup', (options: ShowOptions) => {

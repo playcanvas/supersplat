@@ -1,8 +1,30 @@
-import { Container, Label, Overlay, Panel } from '@playcanvas/pcui';
+import { Container, Label } from '@playcanvas/pcui';
 
 import { localize } from './localization';
 
 const shortcutList = [
+    { header: 'navigation' },
+    { key: 'C', action: 'reset-camera' },
+    { key: 'F', action: 'focus-camera' },
+    { key: 'V', action: 'toggle-control-mode' },
+    { header: 'camera' },
+    { key: 'W/A/S/D', action: 'fly-movement' },
+    { key: 'Q/E', action: 'fly-vertical' },
+    { key: 'Shift', action: 'fly-speed-fast' },
+    { key: 'Ctrl', action: 'fly-speed-slow' },
+    { header: 'show' },
+    { key: 'Space', action: 'toggle-splat-overlay' },
+    { key: 'M', action: 'toggle-overlay-mode' },
+    { key: 'G', action: 'toggle-grid' },
+    { key: 'H', action: 'lock-selected-splats' },
+    { key: 'Shift + H', action: 'unlock-all-splats' },
+    { header: 'selection' },
+    { key: 'Alt + A', action: 'select-all' },
+    { key: 'Alt + Shift + A', action: 'deselect-all' },
+    { key: 'Ctrl + I', action: 'invert-selection' },
+    { key: 'Shift', action: 'add-to-selection' },
+    { key: 'Ctrl', action: 'remove-from-selection' },
+    { key: 'Delete', action: 'delete-selected-splats' },
     { header: 'tools' },
     { key: '1', action: 'move' },
     { key: '2', action: 'rotate' },
@@ -12,44 +34,59 @@ const shortcutList = [
     { key: 'P', action: 'polygon-selection' },
     { key: 'B', action: 'brush-selection' },
     { key: 'O', action: 'flood-selection' },
-    { key: 'E', action: 'eyedropper-selection' },
+    { key: 'Alt + E', action: 'eyedropper-selection' },
     { key: '[ ]', action: 'brush-size' },
     { key: 'Esc', action: 'deactivate-tool' },
-    { header: 'selection' },
-    { key: 'Alt + A', action: 'select-all' },
-    { key: 'Alt + Shift + A', action: 'deselect-all' },
-    { key: 'Ctrl + I', action: 'invert-selection' },
-    { key: 'Shift', action: 'add-to-selection' },
-    { key: 'Ctrl', action: 'remove-from-selection' },
-    { key: 'Delete', action: 'delete-selected-splats' },
-    { header: 'show' },
-    { key: 'H', action: 'hide-selected-splats' },
-    { key: 'U', action: 'unhide-all-splats' },
-    { key: 'Alt + D', action: 'toggle-data-panel' },
+    { key: 'Shift + C', action: 'toggle-gizmo-coordinate-space' },
     { header: 'other' },
     { key: 'Tab', action: 'select-next-splat' },
     { key: 'Ctrl + Z', action: 'undo' },
     { key: 'Ctrl + Shift + Z', action: 'redo' },
-    { key: 'Space', action: 'toggle-splat-overlay' },
-    { key: 'F', action: 'focus-camera' },
-    { key: 'M', action: 'toggle-camera-mode' },
-    { key: 'G', action: 'toggle-grid' },
-    { key: 'C', action: 'toggle-gizmo-coordinate-space' }
+    { key: 'Alt + D', action: 'toggle-data-panel' }
 ];
 
-class ShortcutsPopup extends Overlay {
+class ShortcutsPopup extends Container {
     constructor(args = {}) {
         args = {
             ...args,
             id: 'shortcuts-popup',
-            clickable: true,
-            hidden: true
+            hidden: true,
+            tabIndex: -1
         };
 
         super(args);
 
-        const shortcutsContainer = new Container({
-            id: 'shortcuts-container'
+        // Handle keyboard events to prevent global shortcuts from firing
+        this.dom.addEventListener('keydown', (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                this.hidden = true;
+            }
+            e.stopPropagation();
+        });
+
+        // Close when clicking outside dialog
+        this.on('click', () => {
+            this.hidden = true;
+        });
+
+        const dialog = new Container({
+            id: 'dialog'
+        });
+
+        // Prevent clicks inside dialog from closing
+        dialog.on('click', (event: MouseEvent) => {
+            event.stopPropagation();
+        });
+
+        // Header
+        const header = new Label({
+            id: 'header',
+            text: localize('popup.shortcuts.title').toUpperCase()
+        });
+
+        // Content
+        const content = new Container({
+            id: 'content'
         });
 
         shortcutList.forEach((shortcut) => {
@@ -65,7 +102,7 @@ class ShortcutsPopup extends Overlay {
 
                 entry.append(label);
 
-                shortcutsContainer.append(entry);
+                content.append(entry);
             } else {
                 const key = new Label({
                     class: 'shortcut-key',
@@ -84,18 +121,26 @@ class ShortcutsPopup extends Overlay {
                 entry.append(key);
                 entry.append(action);
 
-                shortcutsContainer.append(entry);
+                content.append(entry);
             }
         });
 
-        const shortcutsPanel = new Panel({
-            id: 'shortcuts-panel',
-            headerText: localize('popup.shortcuts.title').toUpperCase()
-        });
+        dialog.append(header);
+        dialog.append(content);
 
-        shortcutsPanel.append(shortcutsContainer);
+        this.append(dialog);
+    }
 
-        this.append(shortcutsPanel);
+    set hidden(value: boolean) {
+        super.hidden = value;
+        if (!value) {
+            // Take keyboard focus so shortcuts stop working
+            this.dom.focus();
+        }
+    }
+
+    get hidden(): boolean {
+        return super.hidden;
     }
 }
 

@@ -1,0 +1,105 @@
+@use 'colors.scss' as *;
+
+#shortcuts-popup {
+    width: 100%;
+    height: 100%;
+
+    background-color: $bcg-darken;
+
+    pointer-events: all;
+
+    #dialog {
+        position: absolute;
+        width: 440px;
+        max-height: 80vh;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+
+        border-radius: 8px;
+        background-color: $bcg-primary;
+
+        filter: drop-shadow(5px 5px 10px rgba(0, 0, 0, 0.8));
+
+        // the following is needed to get drop-shadow working on safari
+        will-change: transform;
+
+        #header {
+            height: 32px;
+            min-height: 32px;
+            line-height: 32px;
+            margin: 0px;
+            padding: 0px 12px;
+
+            font-weight: bold;
+            color: $text-primary;
+            background-color: $bcg-darker;
+            text-transform: uppercase;
+        }
+
+        #content {
+            padding: 12px;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+    }
+
+    .shortcut-header {
+        margin: 8px 0 4px 0;
+        padding: 6px 8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+        &:first-child {
+            margin-top: 0;
+        }
+
+        .shortcut-header-label {
+            margin: 0;
+            font-weight: 600;
+            font-size: 10px;
+            color: $clr-hilight;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+    }
+
+    .shortcut-entry {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        padding: 6px 8px;
+        border-radius: 4px;
+
+        &:hover {
+            background-color: rgba(255, 255, 255, 0.04);
+        }
+    }
+
+    .shortcut-key {
+        min-width: 140px;
+        margin: 0;
+        padding: 4px 8px;
+
+        background-color: $bcg-darker;
+        border-radius: 4px;
+
+        font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Consolas', monospace;
+        font-size: 11px;
+        font-weight: 500;
+        color: $text-primary;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .shortcut-action {
+        flex-grow: 1;
+        margin: 0 0 0 12px;
+        color: $text-secondary;
+        font-size: 12px;
+        font-weight: 400;
+    }
+}

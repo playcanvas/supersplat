@@ -19,6 +19,7 @@
 @use 'spinner.scss';
 @use 'progress.scss';
 @use 'export-popup.scss';
+@use 'shortcuts-popup.scss';
 @use 'timeline-panel.scss';
 @use 'tool.scss';
 
@@ -92,24 +93,6 @@ body {
     padding: 6px;
     color: $text-secondary !important;
     font-size: 14px;
-}
-
-#shortcuts-panel {
-    background-color: $bcg-dark;
-}
-
-#shortcuts-container {
-    margin: 10px;
-}
-
-.shortcut-key {
-    width: 80px;
-    text-align: right;
-}
-
-.shortcut-header {
-    background-color: $bcg-darker;
-    text-transform: uppercase;
 }
 
 #app-label {

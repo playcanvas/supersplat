@@ -46,7 +46,7 @@
         "i18next-browser-languagedetector": "8.2.0",
         "i18next-http-backend": "3.0.2",
         "jszip": "3.10.1",
-        "mediabunny": "1.27.4",
+        "mediabunny": "1.27.5",
         "playcanvas": "2.15.0",
         "postcss": "8.5.6",
         "rollup": "4.55.1",

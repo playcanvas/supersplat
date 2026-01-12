@@ -81,7 +81,8 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['Digit2'], { event: 'tool.rotate' });
     shortcuts.register(['Digit3'], { event: 'tool.scale' });
     shortcuts.register(['KeyG'], { event: 'grid.toggleVisible' });
-    shortcuts.register(['KeyC'], { event: 'tool.toggleCoordSpace' });
+    shortcuts.register(['KeyC'], { event: 'tool.toggleCoordSpace', shift: true });
+    shortcuts.register(['KeyC'], { event: 'camera.reset' });
     shortcuts.register(['KeyF'], { event: 'camera.focus' });
     shortcuts.register(['KeyR'], { event: 'tool.rectSelection' });
     shortcuts.register(['KeyP'], { event: 'tool.polygonSelection' });
@@ -93,7 +94,7 @@ const initShortcuts = (events: Events) => {
     shortcuts.register(['KeyA'], { event: 'select.none', alt: true, shift: true });
     shortcuts.register(['KeyI'], { event: 'select.invert', ctrl: true });
     shortcuts.register(['KeyH'], { event: 'select.hide' });
-    shortcuts.register(['KeyU'], { event: 'select.unhide' });
+    shortcuts.register(['KeyH'], { event: 'select.unhide', shift: true });
     shortcuts.register(['BracketLeft'], { event: 'tool.brushSelection.smaller' });
     shortcuts.register(['BracketRight'], { event: 'tool.brushSelection.bigger' });
     shortcuts.register(['KeyZ'], { event: 'edit.undo', ctrl: true, capture: true });

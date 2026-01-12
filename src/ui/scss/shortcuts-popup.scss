@@ -1,0 +1,124 @@
+@use 'colors.scss' as *;
+
+#shortcuts-popup {
+    width: 100%;
+    height: 100%;
+
+    background-color: $bcg-darken;
+
+    pointer-events: all;
+
+    #shortcuts-dialog {
+        position: absolute;
+        width: 440px;
+        max-height: 80vh;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+
+        border-radius: 8px;
+        background-color: $bcg-primary;
+
+        filter: drop-shadow(5px 5px 10px rgba(0, 0, 0, 0.8));
+
+        // the following is needed to get drop-shadow working on safari
+        will-change: transform;
+    }
+
+    #shortcuts-panel {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background-color: $bcg-primary;
+
+        // Panel header styling
+        > .pcui-panel-header {
+            height: 32px;
+            min-height: 32px;
+            padding: 0 12px;
+
+            background-color: $bcg-darker;
+
+            > .pcui-panel-header-title {
+                margin: 0;
+                line-height: 32px;
+                font-weight: bold;
+                font-size: 12px;
+                color: $text-primary;
+                text-transform: uppercase;
+            }
+        }
+
+        > .pcui-panel-content {
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+    }
+
+    #shortcuts-container {
+        padding: 12px;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .shortcut-header {
+        margin: 8px 0 4px 0;
+        padding: 6px 8px;
+        background-color: $bcg-darker;
+        border-radius: 4px;
+
+        &:first-child {
+            margin-top: 0;
+        }
+
+        .shortcut-header-label {
+            margin: 0;
+            font-weight: bold;
+            font-size: 11px;
+            color: $clr-hilight;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+    }
+
+    .shortcut-entry {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        padding: 6px 8px;
+        border-radius: 4px;
+
+        &:hover {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+    }
+
+    .shortcut-key {
+        min-width: 140px;
+        margin: 0;
+        padding: 4px 8px;
+        background-color: $bcg-darker;
+        border-radius: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-bottom: 2px solid rgba(0, 0, 0, 0.3);
+
+        font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Consolas', monospace;
+        font-size: 11px;
+        font-weight: 500;
+        color: $text-primary;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .shortcut-action {
+        flex-grow: 1;
+        margin: 0 0 0 12px;
+        color: $text-secondary;
+        font-size: 12px;
+    }
+}

@@ -29,7 +29,7 @@ const logTransform = (value: number) => {
 
 // Yield to the next animation frame to ensure UI renders before heavy operations
 // Uses double-RAF pattern to guarantee a paint occurs before resuming
-const yieldToRender = () => new Promise<void>(resolve => {
+const yieldToRender = () => new Promise<void>((resolve) => {
     requestAnimationFrame(() => {
         requestAnimationFrame(() => resolve());
     });

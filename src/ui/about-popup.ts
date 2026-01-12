@@ -1,5 +1,4 @@
-import { Container, Label } from '@playcanvas/pcui';
-import { version as pcuiVersion, revision as pcuiRevision } from '@playcanvas/pcui';
+import { Container, Label, version as pcuiVersion, revision as pcuiRevision } from '@playcanvas/pcui';
 import { version as engineVersion, revision as engineRevision } from 'playcanvas';
 
 import { version as appVersion } from '../../package.json';

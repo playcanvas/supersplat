@@ -180,20 +180,20 @@ class EditorUI {
         // video settings
         const videoSettingsDialog = new VideoSettingsDialog(events);
 
+        // about popup
+        const aboutPopup = new AboutPopup();
+
         topContainer.append(popup);
         topContainer.append(exportPopup);
         topContainer.append(publishSettingsDialog);
         topContainer.append(imageSettingsDialog);
         topContainer.append(videoSettingsDialog);
         topContainer.append(shortcutsPopup);
-
-        // about popup
-        const aboutPopup = new AboutPopup();
+        topContainer.append(aboutPopup);
 
         appContainer.append(editorContainer);
         appContainer.append(topContainer);
         appContainer.append(tooltipsContainer);
-        appContainer.append(aboutPopup);
 
         this.appContainer = appContainer;
         this.topContainer = topContainer;

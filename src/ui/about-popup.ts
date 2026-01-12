@@ -1,4 +1,4 @@
-import { Container, Label, Overlay } from '@playcanvas/pcui';
+import { Container, Label } from '@playcanvas/pcui';
 import { version as pcuiVersion, revision as pcuiRevision } from '@playcanvas/pcui';
 import { version as engineVersion, revision as engineRevision } from 'playcanvas';
 
@@ -15,12 +15,11 @@ const logoSvg = `
 </svg>
 `;
 
-class AboutPopup extends Overlay {
+class AboutPopup extends Container {
     constructor(args = {}) {
         args = {
             ...args,
             id: 'about-popup',
-            clickable: true,
             hidden: true,
             tabIndex: -1
         };
@@ -35,8 +34,18 @@ class AboutPopup extends Overlay {
             e.stopPropagation();
         });
 
+        // Close when clicking outside dialog
+        this.on('click', () => {
+            this.hidden = true;
+        });
+
         const dialog = new Container({
             id: 'about-dialog'
+        });
+
+        // Prevent clicks inside dialog from closing
+        dialog.on('click', (event: MouseEvent) => {
+            event.stopPropagation();
         });
 
         // Header bar
@@ -126,17 +135,11 @@ class AboutPopup extends Overlay {
         dialog.append(content);
 
         this.append(dialog);
-    }
 
-    set hidden(value: boolean) {
-        super.hidden = value;
-        if (!value) {
+        // Focus when shown so keyboard events work
+        this.on('show', () => {
             this.dom.focus();
-        }
-    }
-
-    get hidden(): boolean {
-        return super.hidden;
+        });
     }
 }
 

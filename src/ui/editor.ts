@@ -185,6 +185,7 @@ class EditorUI {
         topContainer.append(publishSettingsDialog);
         topContainer.append(imageSettingsDialog);
         topContainer.append(videoSettingsDialog);
+        topContainer.append(shortcutsPopup);
 
         // about popup
         const aboutPopup = new AboutPopup();
@@ -192,7 +193,6 @@ class EditorUI {
         appContainer.append(editorContainer);
         appContainer.append(topContainer);
         appContainer.append(tooltipsContainer);
-        appContainer.append(shortcutsPopup);
         appContainer.append(aboutPopup);
 
         this.appContainer = appContainer;

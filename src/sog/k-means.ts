@@ -91,6 +91,8 @@ type KMeansResult = {
     labels: Uint32Array;
 };
 
+type ProgressCallback = (progress: number) => void;
+
 /**
  * Perform k-means clustering using WebGPU compute shaders.
  *
@@ -98,13 +100,15 @@ type KMeansResult = {
  * @param k - Number of clusters
  * @param iterations - Number of iterations to run
  * @param device - WebGPU graphics device
+ * @param onProgress - Optional callback for progress updates (0-100)
  * @returns Centroids and cluster assignments
  */
 const kmeans = async (
     points: DataTable,
     k: number,
     iterations: number,
-    device: WebgpuGraphicsDevice
+    device: WebgpuGraphicsDevice,
+    onProgress?: ProgressCallback
 ): Promise<KMeansResult> => {
     // too few data points
     if (points.numRows < k) {
@@ -148,6 +152,7 @@ const kmeans = async (
         }
 
         steps++;
+        onProgress?.(steps / iterations * 100);
 
         if (steps >= iterations) {
             converged = true;
@@ -166,12 +171,14 @@ const kmeans = async (
  * @param dataTable - DataTable with multiple columns to cluster
  * @param iterations - Number of k-means iterations
  * @param device - WebGPU graphics device
+ * @param onProgress - Optional callback for progress updates (0-100)
  * @returns Labels DataTable with same shape as input, and centroids array
  */
 const cluster1d = async (
     dataTable: DataTable,
     iterations: number,
-    device: WebgpuGraphicsDevice
+    device: WebgpuGraphicsDevice,
+    onProgress?: ProgressCallback
 ): Promise<{ centroids: DataTable; labels: DataTable }> => {
     const { numColumns, numRows } = dataTable;
 
@@ -183,7 +190,7 @@ const cluster1d = async (
 
     const src = new DataTable([new Column('data', data)]);
 
-    const { centroids, labels } = await kmeans(src, 256, iterations, device);
+    const { centroids, labels } = await kmeans(src, 256, iterations, device, onProgress);
 
     // order centroids smallest to largest
     const centroidsData = centroids.getColumn(0).data as Float32Array;
@@ -217,4 +224,4 @@ const cluster1d = async (
     };
 };
 
-export { kmeans, cluster1d, KMeansResult };
+export { kmeans, cluster1d, KMeansResult, ProgressCallback };

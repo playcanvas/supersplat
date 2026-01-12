@@ -23,7 +23,10 @@
         border-radius: 8px;
         background-color: $bcg-primary;
 
-        filter: drop-shadow(5px 5px 10px rgba(0, 0, 0, 0.8));
+        box-shadow: 
+            0 4px 6px rgba(0, 0, 0, 0.3),
+            0 10px 40px rgba(0, 0, 0, 0.5),
+            0 0 0 1px rgba(255, 255, 255, 0.05);
 
         // the following is needed to get drop-shadow working on safari
         will-change: transform;
@@ -41,15 +44,17 @@
             min-height: 32px;
             padding: 0 12px;
 
-            background-color: $bcg-darker;
+            background: linear-gradient(180deg, lighten($bcg-darker, 3%) 0%, $bcg-darker 100%);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.3);
 
             > .pcui-panel-header-title {
                 margin: 0;
                 line-height: 32px;
-                font-weight: bold;
+                font-weight: 600;
                 font-size: 12px;
                 color: $text-primary;
                 text-transform: uppercase;
+                letter-spacing: 1px;
             }
         }
 
@@ -69,8 +74,7 @@
     .shortcut-header {
         margin: 8px 0 4px 0;
         padding: 6px 8px;
-        background-color: $bcg-darker;
-        border-radius: 4px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 
         &:first-child {
             margin-top: 0;
@@ -78,11 +82,11 @@
 
         .shortcut-header-label {
             margin: 0;
-            font-weight: bold;
-            font-size: 11px;
+            font-weight: 600;
+            font-size: 10px;
             color: $clr-hilight;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 1.5px;
         }
     }
 
@@ -92,9 +96,10 @@
         align-items: center;
         padding: 6px 8px;
         border-radius: 4px;
+        transition: background-color 0.15s ease;
 
         &:hover {
-            background-color: rgba(255, 255, 255, 0.03);
+            background-color: rgba(255, 255, 255, 0.04);
         }
     }
 
@@ -102,10 +107,13 @@
         min-width: 140px;
         margin: 0;
         padding: 4px 8px;
-        background-color: $bcg-darker;
+        
+        background: linear-gradient(180deg, lighten($bcg-darker, 4%) 0%, $bcg-darker 100%);
         border-radius: 4px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-bottom: 2px solid rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 
+            0 1px 2px rgba(0, 0, 0, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.05);
 
         font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Consolas', monospace;
         font-size: 11px;
@@ -120,5 +128,6 @@
         margin: 0 0 0 12px;
         color: $text-secondary;
         font-size: 12px;
+        font-weight: 400;
     }
 }

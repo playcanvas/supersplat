@@ -1,4 +1,4 @@
-import { Container, Label, Overlay, Panel } from '@playcanvas/pcui';
+import { Container, Label } from '@playcanvas/pcui';
 
 import { localize } from './localization';
 
@@ -45,12 +45,11 @@ const shortcutList = [
     { key: 'Alt + D', action: 'toggle-data-panel' }
 ];
 
-class ShortcutsPopup extends Overlay {
+class ShortcutsPopup extends Container {
     constructor(args = {}) {
         args = {
             ...args,
             id: 'shortcuts-popup',
-            clickable: true,
             hidden: true,
             tabIndex: -1
         };
@@ -65,12 +64,29 @@ class ShortcutsPopup extends Overlay {
             e.stopPropagation();
         });
 
-        const dialog = new Container({
-            id: 'shortcuts-dialog'
+        // Close when clicking outside dialog
+        this.on('click', () => {
+            this.hidden = true;
         });
 
-        const shortcutsContainer = new Container({
-            id: 'shortcuts-container'
+        const dialog = new Container({
+            id: 'dialog'
+        });
+
+        // Prevent clicks inside dialog from closing
+        dialog.on('click', (event: MouseEvent) => {
+            event.stopPropagation();
+        });
+
+        // Header
+        const header = new Label({
+            id: 'header',
+            text: localize('popup.shortcuts.title').toUpperCase()
+        });
+
+        // Content
+        const content = new Container({
+            id: 'content'
         });
 
         shortcutList.forEach((shortcut) => {
@@ -86,7 +102,7 @@ class ShortcutsPopup extends Overlay {
 
                 entry.append(label);
 
-                shortcutsContainer.append(entry);
+                content.append(entry);
             } else {
                 const key = new Label({
                     class: 'shortcut-key',
@@ -105,18 +121,12 @@ class ShortcutsPopup extends Overlay {
                 entry.append(key);
                 entry.append(action);
 
-                shortcutsContainer.append(entry);
+                content.append(entry);
             }
         });
 
-        const shortcutsPanel = new Panel({
-            id: 'shortcuts-panel',
-            headerText: localize('popup.shortcuts.title').toUpperCase()
-        });
-
-        shortcutsPanel.append(shortcutsContainer);
-
-        dialog.append(shortcutsPanel);
+        dialog.append(header);
+        dialog.append(content);
 
         this.append(dialog);
     }

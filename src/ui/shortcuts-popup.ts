@@ -51,10 +51,19 @@ class ShortcutsPopup extends Overlay {
             ...args,
             id: 'shortcuts-popup',
             clickable: true,
-            hidden: true
+            hidden: true,
+            tabIndex: -1
         };
 
         super(args);
+
+        // Handle keyboard events to prevent global shortcuts from firing
+        this.dom.addEventListener('keydown', (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                this.hidden = true;
+            }
+            e.stopPropagation();
+        });
 
         const dialog = new Container({
             id: 'shortcuts-dialog'
@@ -110,6 +119,18 @@ class ShortcutsPopup extends Overlay {
         dialog.append(shortcutsPanel);
 
         this.append(dialog);
+    }
+
+    set hidden(value: boolean) {
+        super.hidden = value;
+        if (!value) {
+            // Take keyboard focus so shortcuts stop working
+            this.dom.focus();
+        }
+    }
+
+    get hidden(): boolean {
+        return super.hidden;
     }
 }
 

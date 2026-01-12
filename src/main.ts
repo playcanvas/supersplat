@@ -75,44 +75,43 @@ const initShortcuts = (events: Events) => {
     const shortcuts = new Shortcuts(events);
 
     shortcuts.register(['Delete', 'Backspace'], { event: 'select.delete' });
-    shortcuts.register(['Escape'], { event: 'tool.deactivate' });
+    shortcuts.register(['KeyA'], { event: 'select.all', alt: true });
+    shortcuts.register(['KeyA'], { event: 'select.none', alt: true, shift: true });
+    shortcuts.register(['KeyI'], { event: 'select.invert', ctrl: true });
+    shortcuts.register(['KeyH'], { event: 'select.hide' });
+    shortcuts.register(['KeyH'], { event: 'select.unhide', shift: true });
     shortcuts.register(['Tab'], { event: 'selection.next' });
+
+    shortcuts.register(['KeyZ'], { event: 'edit.undo', ctrl: true, capture: true });
+    shortcuts.register(['KeyZ'], { event: 'edit.redo', ctrl: true, shift: true, capture: true });
+    shortcuts.register(['KeyD'], { event: 'dataPanel.toggle', alt: true });
+    shortcuts.register(['KeyG'], { event: 'grid.toggleVisible' });
+
     shortcuts.register(['Digit1'], { event: 'tool.move' });
     shortcuts.register(['Digit2'], { event: 'tool.rotate' });
     shortcuts.register(['Digit3'], { event: 'tool.scale' });
-    shortcuts.register(['KeyG'], { event: 'grid.toggleVisible' });
     shortcuts.register(['KeyC'], { event: 'tool.toggleCoordSpace', shift: true });
-    shortcuts.register(['KeyC'], { event: 'camera.reset' });
-    shortcuts.register(['KeyF'], { event: 'camera.focus' });
     shortcuts.register(['KeyR'], { event: 'tool.rectSelection' });
     shortcuts.register(['KeyP'], { event: 'tool.polygonSelection' });
     shortcuts.register(['KeyL'], { event: 'tool.lassoSelection' });
     shortcuts.register(['KeyB'], { event: 'tool.brushSelection' });
     shortcuts.register(['KeyO'], { event: 'tool.floodSelection' });
     shortcuts.register(['KeyE'], { event: 'tool.eyedropperSelection', alt: true });
-    shortcuts.register(['KeyA'], { event: 'select.all', alt: true });
-    shortcuts.register(['KeyA'], { event: 'select.none', alt: true, shift: true });
-    shortcuts.register(['KeyI'], { event: 'select.invert', ctrl: true });
-    shortcuts.register(['KeyH'], { event: 'select.hide' });
-    shortcuts.register(['KeyH'], { event: 'select.unhide', shift: true });
     shortcuts.register(['BracketLeft'], { event: 'tool.brushSelection.smaller' });
     shortcuts.register(['BracketRight'], { event: 'tool.brushSelection.bigger' });
-    shortcuts.register(['KeyZ'], { event: 'edit.undo', ctrl: true, capture: true });
-    shortcuts.register(['KeyZ'], { event: 'edit.redo', ctrl: true, shift: true, capture: true });
+    shortcuts.register(['Escape'], { event: 'tool.deactivate' });
+
+    shortcuts.register(['KeyC'], { event: 'camera.reset' });
+    shortcuts.register(['KeyF'], { event: 'camera.focus' });
     shortcuts.register(['KeyM'], { event: 'camera.toggleMode' });
     shortcuts.register(['KeyV'], { event: 'camera.toggleControlMode' });
     shortcuts.register(['Space'], { event: 'camera.toggleOverlay' });
-    shortcuts.register(['KeyD'], { event: 'dataPanel.toggle', alt: true });
-
-    // Fly mode movement (held, ignore shift/ctrl so speed modifiers work)
     shortcuts.register(['KeyW'], { event: 'camera.fly.forward', held: true, shift: false, ctrl: false });
     shortcuts.register(['KeyS'], { event: 'camera.fly.backward', held: true, shift: false, ctrl: false });
     shortcuts.register(['KeyA'], { event: 'camera.fly.left', held: true, shift: false, ctrl: false });
     shortcuts.register(['KeyD'], { event: 'camera.fly.right', held: true, shift: false, ctrl: false });
     shortcuts.register(['KeyQ'], { event: 'camera.fly.down', held: true, shift: false, ctrl: false });
     shortcuts.register(['KeyE'], { event: 'camera.fly.up', held: true, shift: false, ctrl: false });
-
-    // Speed modifier keys (ignore other modifiers)
     shortcuts.register(['ShiftLeft', 'ShiftRight'], { event: 'camera.modifier.shift', held: true, ctrl: false, alt: false });
     shortcuts.register(['ControlLeft', 'ControlRight'], { event: 'camera.modifier.ctrl', held: true, shift: false, alt: false });
 

@@ -184,11 +184,11 @@ class EditorUI {
         topContainer.append(publishSettingsDialog);
         topContainer.append(imageSettingsDialog);
         topContainer.append(videoSettingsDialog);
+        topContainer.append(shortcutsPopup);
 
         appContainer.append(editorContainer);
         appContainer.append(topContainer);
         appContainer.append(tooltipsContainer);
-        appContainer.append(shortcutsPopup);
 
         this.appContainer = appContainer;
         this.topContainer = topContainer;

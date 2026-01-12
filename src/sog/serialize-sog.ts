@@ -27,6 +27,14 @@ const logTransform = (value: number) => {
     return Math.sign(value) * Math.log(Math.abs(value) + 1);
 };
 
+// Yield to the next animation frame to ensure UI renders before heavy operations
+// Uses double-RAF pattern to guarantee a paint occurs before resuming
+const yieldToRender = () => new Promise<void>((resolve) => {
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => resolve());
+    });
+});
+
 /**
  * Calculate min/max values for columns.
  */
@@ -57,12 +65,13 @@ type SogSerializeOptions = {
 /**
  * Extract splat data into a DataTable format.
  */
-const extractSplatData = (
+const extractSplatData = async (
     splats: Splat[],
     getSingleSplat: (splat: Splat, index: number) => Record<string, number>,
     filter: (splat: Splat, index: number) => boolean,
-    memberNames: string[]
-): { dataTable: DataTable; count: number } => {
+    memberNames: string[],
+    onProgress?: ProgressCallback
+): Promise<{ dataTable: DataTable; count: number }> => {
     // Count total gaussians
     let totalCount = 0;
     for (const splat of splats) {
@@ -81,8 +90,9 @@ const extractSplatData = (
     const columns = memberNames.map(name => new Column(name, new Float32Array(totalCount)));
     const dataTable = new DataTable(columns);
 
-    // Extract data
+    // Extract data with progress updates
     let idx = 0;
+    let lastProgress = -1;
     for (const splat of splats) {
         for (let i = 0; i < splat.splatData.numSplats; ++i) {
             if (!filter(splat, i)) continue;
@@ -92,6 +102,14 @@ const extractSplatData = (
                 columns[j].data[idx] = data[memberNames[j]] ?? 0;
             }
             idx++;
+
+            // Report progress every 10% and yield to allow UI updates
+            const progress = Math.floor((idx / totalCount) * 10) * 10;
+            if (progress !== lastProgress) {
+                lastProgress = progress;
+                onProgress?.(progress);
+                await yieldToRender();
+            }
         }
     }
 
@@ -413,9 +431,19 @@ const serializeSog = async (
 ): Promise<void> => {
     const { iterations, maxSHBands = 3, events } = options;
 
-    // Helper to fire progress updates
+    // Progress stage tracking
+    let currentStep = 0;
+    const totalSteps = 9; // 8 mandatory + 1 optional (SH), we'll show 9 even if SH is skipped
+
+    // Helper to fire progress updates with step indicator
     const updateProgress = (text: string, progress: number) => {
-        events?.fire('progressUpdate', { text, progress });
+        events?.fire('progressUpdate', { text: `Step ${currentStep} of ${totalSteps}: ${text}`, progress });
+    };
+
+    // Helper to advance to next step
+    const nextStep = (text: string) => {
+        currentStep++;
+        updateProgress(text, 0);
     };
 
     events?.fire('progressStart', 'Exporting SOG');
@@ -432,32 +460,38 @@ const serializeSog = async (
     const shCoeffs = [0, 3, 8, 15][maxSHBands];
     const memberNames = [...baseMembers, ...shNames.slice(0, shCoeffs * 3)];
 
-    updateProgress('Extracting data...', 0);
+    nextStep('Extracting data...');
 
-    // Extract data
-    const { dataTable, count } = extractSplatData(splats, getSingleSplat, filter, memberNames);
-
-    updateProgress('Extracting data...', 100);
+    // Extract data with progress callback
+    const extractProgress = (progress: number) => updateProgress('Extracting data...', progress);
+    const { dataTable, count } = await extractSplatData(splats, getSingleSplat, filter, memberNames, extractProgress);
 
     // Calculate texture dimensions
     const width = Math.ceil(Math.sqrt(count) / 4) * 4;
     const height = Math.ceil(count / width / 4) * 4;
 
-    updateProgress('Generating morton order...', 0);
+    nextStep('Generating morton order...');
+
+    // Yield to allow progress UI to render before heavy sync operation
+    await yieldToRender();
 
     // Generate morton-ordered indices
     const indices = generateMortonIndices(dataTable);
 
     updateProgress('Generating morton order...', 100);
 
+    nextStep('Initializing GPU...');
+
     // Get GPU device
     const gpuDevice = await getGpuDevice();
     const device = gpuDevice.device;
 
+    updateProgress('Initializing GPU...', 100);
+
     // Create zip writer
     const zipWriter = new ZipWriter(writer);
 
-    updateProgress('Writing positions...', 0);
+    nextStep('Writing positions...');
 
     // Write means (positions)
     const means = await writeMeans(dataTable, indices, width, height);
@@ -466,7 +500,7 @@ const serializeSog = async (
 
     updateProgress('Writing positions...', 100);
 
-    updateProgress('Writing quaternions...', 0);
+    nextStep('Writing quaternions...');
 
     // Write quaternions
     const quatsWebp = await writeQuaternions(dataTable, indices, width, height);
@@ -475,11 +509,13 @@ const serializeSog = async (
     updateProgress('Writing quaternions...', 100);
 
     // Write scales with progress callback
+    currentStep++;
     const scalesProgress = (progress: number) => updateProgress('Compressing scales...', progress);
     const scales = await writeScales(dataTable, indices, width, height, iterations, device, scalesProgress);
     await zipWriter.file('scales.webp', scales.webp);
 
     // Write colors with progress callback
+    currentStep++;
     const colorsProgress = (progress: number) => updateProgress('Compressing colors...', progress);
     const colors = await writeColors(dataTable, indices, width, height, iterations, device, colorsProgress);
     await zipWriter.file('sh0.webp', colors.webp);
@@ -492,6 +528,7 @@ const serializeSog = async (
     const outputSHBands = Math.min(dataSHBands, maxSHBands);
 
     // Write SH if present with progress callback
+    currentStep++;
     const shProgress = (progress: number) => updateProgress('Compressing spherical harmonics...', progress);
     const shN = outputSHBands > 0 ?
         await writeSH(dataTable, indices, width, height, outputSHBands, iterations, device, shProgress) :
@@ -502,7 +539,7 @@ const serializeSog = async (
         await zipWriter.file('shN_labels.webp', shN.labelsWebp);
     }
 
-    updateProgress('Finalizing...', 0);
+    nextStep('Finalizing...');
 
     // Construct meta.json
     const meta: Record<string, unknown> = {

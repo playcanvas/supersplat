@@ -5,40 +5,66 @@
     height: 100%;
 
     background-color: $bcg-darken;
-
     pointer-events: all;
 
     #about-dialog {
         position: absolute;
         left: 50%;
         top: 50%;
+        min-width: 320px;
         transform: translate(-50%, -50%);
 
         display: flex;
         flex-direction: column;
-        gap: 24px;
-        padding: 28px 36px;
+        overflow: hidden;
 
         border-radius: 8px;
         background-color: $bcg-primary;
 
-        box-shadow: 
-            0 4px 6px rgba(0, 0, 0, 0.3),
-            0 10px 40px rgba(0, 0, 0, 0.5),
-            0 0 0 1px rgba(255, 255, 255, 0.05);
+        filter: drop-shadow(5px 5px 10px rgba(0, 0, 0, 0.8));
 
         // the following is needed to get drop-shadow working on safari
         will-change: transform;
     }
 
-    #about-header-row {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        gap: 24px;
+    #about-header {
+        height: 32px;
+        line-height: 32px;
+        margin: 0;
+        padding: 0 8px;
+
+        font-weight: bold;
+        color: $text-primary;
+        background-color: $bcg-darker;
+        text-transform: uppercase;
     }
 
-    .about-link {
+    #about-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+        gap: 12px;
+    }
+
+    #about-logo {
+        cursor: pointer;
+        transition: opacity 0.15s ease;
+
+        &:hover {
+            opacity: 0.8;
+        }
+
+        svg {
+            display: block;
+        }
+    }
+
+    #about-app-info {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
         cursor: pointer;
         transition: opacity 0.15s ease;
 
@@ -47,50 +73,28 @@
         }
     }
 
-    #about-logo-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        flex-shrink: 0;
-
-        svg {
-            filter: drop-shadow(0 0 6px rgba(246, 102, 44, 0.3));
-        }
-    }
-
-    #about-title-container {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-    }
-
     #about-app-name {
         margin: 0;
         font-family: 'Proxima Nova Bold', 'Helvetica Neue', Arial, Helvetica, sans-serif;
-        font-size: 24px;
+        font-size: 18px;
         font-weight: 700;
         color: $text-primary;
-        letter-spacing: -0.5px;
     }
 
     #about-app-version {
         margin: 0;
         font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Consolas', monospace;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 500;
         color: $clr-hilight;
     }
 
-    #about-divider {
-        width: 100%;
-        height: 1px;
-        background-color: rgba(255, 255, 255, 0.1);
-    }
-
-    #about-deps-container {
+    #about-deps {
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        gap: 4px;
+        width: 100%;
+        margin-top: 16px;
     }
 
     .about-dep-row {
@@ -100,16 +104,11 @@
         padding: 6px 10px;
         border-radius: 4px;
         background-color: rgba(0, 0, 0, 0.2);
-        border: 1px solid rgba(255, 255, 255, 0.04);
-        transition: background-color 0.15s ease, border-color 0.15s ease;
-    }
-
-    .about-dep-link {
         cursor: pointer;
+        transition: background-color 0.15s ease;
 
         &:hover {
             background-color: rgba(246, 102, 44, 0.15);
-            border-color: rgba(246, 102, 44, 0.3);
 
             .about-dep-name {
                 color: $clr-hilight;

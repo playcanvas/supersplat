@@ -1,0 +1,144 @@
+@use 'colors.scss' as *;
+
+#about-popup {
+    width: 100%;
+    height: 100%;
+
+    background-color: $bcg-darken;
+    pointer-events: all;
+
+    #about-dialog {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        min-width: 320px;
+        transform: translate(-50%, -50%);
+
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+
+        border-radius: 8px;
+        background-color: $bcg-primary;
+
+        filter: drop-shadow(5px 5px 10px rgba(0, 0, 0, 0.8));
+
+        // the following is needed to get drop-shadow working on safari
+        will-change: transform;
+    }
+
+    #about-header {
+        height: 32px;
+        line-height: 32px;
+        margin: 0;
+        padding: 0 8px;
+
+        font-weight: bold;
+        color: $text-primary;
+        background-color: $bcg-darker;
+        text-transform: uppercase;
+    }
+
+    #about-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+        gap: 12px;
+    }
+
+    #about-logo {
+        cursor: pointer;
+        transition: opacity 0.15s ease;
+
+        &:hover {
+            opacity: 0.8;
+        }
+
+        svg {
+            display: block;
+        }
+    }
+
+    #about-app-info {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        cursor: pointer;
+        transition: opacity 0.15s ease;
+
+        &:hover {
+            opacity: 0.8;
+        }
+    }
+
+    #about-app-name {
+        margin: 0;
+        font-family: 'Proxima Nova Bold', 'Helvetica Neue', Arial, Helvetica, sans-serif;
+        font-size: 18px;
+        font-weight: 700;
+        color: $text-primary;
+    }
+
+    #about-app-version {
+        margin: 0;
+        font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Consolas', monospace;
+        font-size: 12px;
+        font-weight: 500;
+        color: $clr-hilight;
+    }
+
+    #about-deps {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        width: 100%;
+        margin-top: 16px;
+    }
+
+    .about-dep-row {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        padding: 6px 10px;
+        border-radius: 4px;
+        background-color: rgba(0, 0, 0, 0.2);
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+
+        &:hover {
+            background-color: rgba(246, 102, 44, 0.15);
+
+            .about-dep-name {
+                color: $clr-hilight;
+            }
+        }
+    }
+
+    .about-dep-name {
+        min-width: 80px;
+        margin: 0;
+        font-size: 11px;
+        font-weight: 500;
+        color: $text-secondary;
+        transition: color 0.15s ease;
+    }
+
+    .about-dep-version {
+        margin: 0;
+        font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Consolas', monospace;
+        font-size: 11px;
+        font-weight: 500;
+        color: $text-primary;
+    }
+
+    .about-dep-revision {
+        margin: 0 0 0 6px;
+        font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Consolas', monospace;
+        font-size: 10px;
+        font-weight: 400;
+        color: $text-secondary;
+        opacity: 0.7;
+    }
+}

@@ -42,15 +42,15 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'edit.redo': { keys: ['z'], ctrl: 'required', shift: 'required', capture: true },
     'dataPanel.toggle': { keys: ['d'], alt: 'required' },
 
-    // Camera fly keys - use physical positions (useCode: true) for WASD layout on non-QWERTY keyboards
-    'camera.fly.forward': { keys: ['KeyW'], held: true, shift: 'optional', ctrl: 'optional', useCode: true },
-    'camera.fly.backward': { keys: ['KeyS'], held: true, shift: 'optional', ctrl: 'optional', useCode: true },
-    'camera.fly.left': { keys: ['KeyA'], held: true, shift: 'optional', ctrl: 'optional', useCode: true },
-    'camera.fly.right': { keys: ['KeyD'], held: true, shift: 'optional', ctrl: 'optional', useCode: true },
-    'camera.fly.down': { keys: ['KeyQ'], held: true, shift: 'optional', ctrl: 'optional', useCode: true },
-    'camera.fly.up': { keys: ['KeyE'], held: true, shift: 'optional', ctrl: 'optional', useCode: true },
-    'camera.modifier.shift': { keys: ['ShiftLeft', 'ShiftRight'], held: true, ctrl: 'optional', alt: 'optional', useCode: true },
-    'camera.modifier.ctrl': { keys: ['ControlLeft', 'ControlRight'], held: true, shift: 'optional', alt: 'optional', useCode: true }
+    // Camera fly keys - use physical positions (codes) for WASD layout on non-QWERTY keyboards
+    'camera.fly.forward': { codes: ['KeyW'], held: true, shift: 'optional', ctrl: 'optional' },
+    'camera.fly.backward': { codes: ['KeyS'], held: true, shift: 'optional', ctrl: 'optional' },
+    'camera.fly.left': { codes: ['KeyA'], held: true, shift: 'optional', ctrl: 'optional' },
+    'camera.fly.right': { codes: ['KeyD'], held: true, shift: 'optional', ctrl: 'optional' },
+    'camera.fly.down': { codes: ['KeyQ'], held: true, shift: 'optional', ctrl: 'optional' },
+    'camera.fly.up': { codes: ['KeyE'], held: true, shift: 'optional', ctrl: 'optional' },
+    'camera.modifier.shift': { codes: ['ShiftLeft', 'ShiftRight'], held: true, ctrl: 'optional', alt: 'optional' },
+    'camera.modifier.ctrl': { codes: ['ControlLeft', 'ControlRight'], held: true, shift: 'optional', alt: 'optional' }
 };
 
 class ShortcutManager {
@@ -67,14 +67,15 @@ class ShortcutManager {
         const shortcuts = new Shortcuts(events);
         for (const id in this.bindings) {
             const binding = this.bindings[id];
-            shortcuts.register(binding.keys, {
+            shortcuts.register({
                 event: id,
+                keys: binding.keys,
+                codes: binding.codes,
                 ctrl: binding.ctrl,
                 shift: binding.shift,
                 alt: binding.alt,
                 held: binding.held,
-                capture: binding.capture,
-                useCode: binding.useCode
+                capture: binding.capture
             });
         }
     }
@@ -99,8 +100,10 @@ class ShortcutManager {
         if (binding.alt === 'required') parts.push('Alt');
         if (binding.shift === 'required') parts.push('Shift');
 
-        // Format the key for display
-        let keyDisplay = binding.keys[0];
+        // Get the first key or code for display
+        let keyDisplay = binding.keys?.[0] ?? binding.codes?.[0];
+        if (!keyDisplay) return '';
+
         if (keyDisplay === ' ') {
             keyDisplay = 'Space';
         } else if (keyDisplay === 'Escape') {

@@ -12,20 +12,20 @@ type ModifierState = 'required' | 'forbidden' | 'optional';
  * A shortcut binding definition.
  */
 interface ShortcutBinding {
-    keys: string[];             // e.g., ['r'] or ['KeyW'] for useCode
-    useCode?: boolean;          // true = use physical key position (e.code)
+    keys?: string[];        // list of keys
+    codes?: string[];       // list of codes
     ctrl?: ModifierState;
     shift?: ModifierState;
     alt?: ModifierState;
     held?: boolean;
-    capture?: boolean;          // whether to use capture phase for the event listener
+    capture?: boolean;      // whether to use capture phase for the event listener
 }
 
 /**
  * Options for registering a shortcut handler.
- * Extends ShortcutBinding but replaces keys with event/func.
+ * Extends ShortcutBinding with event/func handler.
  */
-interface ShortcutOptions extends Omit<ShortcutBinding, 'keys'> {
+interface ShortcutOptions extends ShortcutBinding {
     event?: string;
     func?: (down?: boolean) => void;
 }
@@ -43,7 +43,7 @@ const checkMod = (requirement: ModifierState | undefined, isPressed: boolean): b
 };
 
 class Shortcuts {
-    shortcuts: { keys: string[], options: ShortcutOptions }[] = [];
+    shortcuts: ShortcutOptions[] = [];
 
     constructor(events: Events) {
         const shortcuts = this.shortcuts;
@@ -57,16 +57,15 @@ class Shortcuts {
             const isAltKey = e.code.startsWith('Alt');
 
             for (let i = 0; i < shortcuts.length; i++) {
-                const shortcut = shortcuts[i];
-                const options = shortcut.options;
+                const options = shortcuts[i];
 
                 const ctrlMatch = isCtrlKey || checkMod(options.ctrl, !!(e.ctrlKey || e.metaKey));
                 const shiftMatch = isShiftKey || checkMod(options.shift, e.shiftKey);
                 const altMatch = isAltKey || checkMod(options.alt, e.altKey);
 
-                // match against physical key position (code) or labeled key (key) based on useCode option
-                const keyToMatch = options.useCode ? e.code : e.key.toLowerCase();
-                const keyMatches = shortcut.keys.some(k => k.toLowerCase() === keyToMatch);
+                // Match if key matches keys array OR code matches codes array
+                const keyMatches = (options.keys?.some(k => k.toLowerCase() === e.key.toLowerCase()) ||
+                                    options.codes?.some(c => c === e.code)) ?? false;
 
                 if (keyMatches &&
                     ((options.capture ?? false) === capture) &&
@@ -86,10 +85,10 @@ class Shortcuts {
                         if (!down) return;
                     }
 
-                    if (shortcuts[i].options.event) {
-                        events.fire(shortcuts[i].options.event, down);
+                    if (options.event) {
+                        events.fire(options.event, down);
                     } else {
-                        shortcuts[i].options.func(down);
+                        options.func(down);
                     }
 
                     break;
@@ -116,8 +115,8 @@ class Shortcuts {
         }, true);
     }
 
-    register(keys: string[], options: ShortcutOptions) {
-        this.shortcuts.push({ keys, options });
+    register(options: ShortcutOptions) {
+        this.shortcuts.push(options);
     }
 }
 

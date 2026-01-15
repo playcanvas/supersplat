@@ -273,8 +273,8 @@ class PointerController {
         let flyUp = false;
 
         // track modifier keys for speed control (updated via shortcut events)
-        let shiftDown = false;
-        let ctrlDown = false;
+        let fastDown = false;
+        let slowDown = false;
 
         // Clear all keys when window loses focus to prevent stuck keys
         const clearAllKeys = () => {
@@ -284,8 +284,8 @@ class PointerController {
             flyRight = false;
             flyDown = false;
             flyUp = false;
-            shiftDown = false;
-            ctrlDown = false;
+            fastDown = false;
+            slowDown = false;
         };
 
         // Helper to switch to fly mode when a fly key is pressed
@@ -322,11 +322,11 @@ class PointerController {
             flyUp = down;
             handleFlyKey(down);
         };
-        const onModifierShift = (down: boolean) => {
-            shiftDown = down;
+        const onModifierFast = (down: boolean) => {
+            fastDown = down;
         };
-        const onModifierCtrl = (down: boolean) => {
-            ctrlDown = down;
+        const onModifierSlow = (down: boolean) => {
+            slowDown = down;
         };
 
         events.on('camera.fly.forward', onFlyForward);
@@ -335,8 +335,8 @@ class PointerController {
         events.on('camera.fly.right', onFlyRight);
         events.on('camera.fly.down', onFlyDown);
         events.on('camera.fly.up', onFlyUp);
-        events.on('camera.modifier.shift', onModifierShift);
-        events.on('camera.modifier.ctrl', onModifierCtrl);
+        events.on('camera.modifier.fast', onModifierFast);
+        events.on('camera.modifier.slow', onModifierSlow);
 
         this.update = (deltaTime: number) => {
             if (camera.controlMode !== 'fly') return;
@@ -348,7 +348,7 @@ class PointerController {
 
             if (forward || strafe || vertical) {
                 // Calculate speed modifier based on current modifier key state
-                const speedMod = shiftDown ? 10 : (ctrlDown ? 0.1 : 1);
+                const speedMod = fastDown ? 10 : (slowDown ? 0.1 : 1);
                 const factor = deltaTime * camera.flySpeed * speedMod;
                 const worldTransform = camera.entity.getWorldTransform();
 
@@ -410,8 +410,8 @@ class PointerController {
             events.off('camera.fly.right', onFlyRight);
             events.off('camera.fly.down', onFlyDown);
             events.off('camera.fly.up', onFlyUp);
-            events.off('camera.modifier.shift', onModifierShift);
-            events.off('camera.modifier.ctrl', onModifierCtrl);
+            events.off('camera.modifier.fast', onModifierFast);
+            events.off('camera.modifier.slow', onModifierSlow);
         };
     }
 }

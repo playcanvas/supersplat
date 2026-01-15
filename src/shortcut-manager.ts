@@ -9,8 +9,8 @@ const isMac = platform.name === 'osx';
 // Default shortcut bindings - the source of truth for key mappings
 const defaultShortcuts: Record<string, ShortcutBinding> = {
     // Navigation
-    'camera.reset': { keys: ['f'] },
-    'camera.focus': { keys: ['f'], shift: 'required' },
+    'camera.reset': { keys: ['f'], shift: 'required' },
+    'camera.focus': { keys: ['f'] },
     'camera.toggleControlMode': { keys: ['v'] },
 
     // Show

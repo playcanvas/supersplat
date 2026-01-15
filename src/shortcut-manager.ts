@@ -48,14 +48,14 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'dataPanel.toggle': { keys: ['d'], ctrl: 'required', capture: true },
 
     // Camera fly keys - use physical positions (codes) for WASD layout on non-QWERTY keyboards
-    'camera.fly.forward': { codes: ['KeyW'], held: true, shift: 'optional', ctrl: 'optional' },
-    'camera.fly.backward': { codes: ['KeyS'], held: true, shift: 'optional', ctrl: 'optional' },
-    'camera.fly.left': { codes: ['KeyA'], held: true, shift: 'optional', ctrl: 'optional' },
-    'camera.fly.right': { codes: ['KeyD'], held: true, shift: 'optional', ctrl: 'optional' },
-    'camera.fly.down': { codes: ['KeyQ'], held: true, shift: 'optional', ctrl: 'optional' },
-    'camera.fly.up': { codes: ['KeyE'], held: true, shift: 'optional', ctrl: 'optional' },
-    'camera.modifier.shift': { codes: ['ShiftLeft', 'ShiftRight'], held: true, ctrl: 'optional' },
-    'camera.modifier.ctrl': { codes: ['ControlLeft', 'ControlRight'], held: true, shift: 'optional' }
+    'camera.fly.forward': { codes: ['KeyW'], held: true, shift: 'optional', alt: 'optional' },
+    'camera.fly.backward': { codes: ['KeyS'], held: true, shift: 'optional', alt: 'optional' },
+    'camera.fly.left': { codes: ['KeyA'], held: true, shift: 'optional', alt: 'optional' },
+    'camera.fly.right': { codes: ['KeyD'], held: true, shift: 'optional', alt: 'optional' },
+    'camera.fly.down': { codes: ['KeyQ'], held: true, shift: 'optional', alt: 'optional' },
+    'camera.fly.up': { codes: ['KeyE'], held: true, shift: 'optional', alt: 'optional' },
+    'camera.modifier.fast': { codes: ['ShiftLeft', 'ShiftRight'], held: true, alt: 'optional' },
+    'camera.modifier.slow': { codes: ['AltLeft', 'AltRight'], held: true, shift: 'optional' }
 };
 
 class ShortcutManager {

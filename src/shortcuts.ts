@@ -49,8 +49,8 @@ class Shortcuts {
         const shortcuts = this.shortcuts;
 
         const handleEvent = (e: KeyboardEvent, down: boolean, capture: boolean) => {
-            // skip keys in input fields
-            if (!capture && e.target !== document.body) return;
+            // skip if focus is elsewhere (input fields, modals, etc.)
+            if (e.target !== document.body) return;
 
             const isCtrlKey = e.code.startsWith('Control');
             const isShiftKey = e.code.startsWith('Shift');
@@ -81,8 +81,9 @@ class Shortcuts {
                             return;
                         }
                     } else {
-                        // Non-held: ignore up events
-                        if (!down) return;
+                        // Non-held: ignore up events and repeated keydown events
+                        // (prevents conflicts with held keys like WASD when adding modifiers)
+                        if (!down || e.repeat) return;
                     }
 
                     if (options.event) {

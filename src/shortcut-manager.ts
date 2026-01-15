@@ -21,8 +21,8 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'select.unhide': { keys: ['h'], shift: 'required' },
 
     // Selection
-    'select.all': { keys: ['a'], alt: 'required' },
-    'select.none': { keys: ['a'], alt: 'required', shift: 'required' },
+    'select.all': { keys: ['a'], ctrl: 'required', capture: true },
+    'select.none': { keys: ['a'], ctrl: 'required', shift: 'required', capture: true },
     'select.invert': { keys: ['i'], ctrl: 'required' },
     'select.delete': { keys: ['Delete', 'Backspace'] },
 
@@ -35,7 +35,7 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'tool.polygonSelection': { keys: ['p'] },
     'tool.brushSelection': { keys: ['b'] },
     'tool.floodSelection': { keys: ['o'] },
-    'tool.eyedropperSelection': { keys: ['e'], alt: 'required' },
+    'tool.eyedropperSelection': { keys: ['e'], ctrl: 'required', capture: true },
     'tool.brushSelection.smaller': { keys: ['['] },
     'tool.brushSelection.bigger': { keys: [']'] },
     'tool.deactivate': { keys: ['Escape'] },
@@ -45,7 +45,7 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'selection.next': { keys: ['Tab'] },
     'edit.undo': { keys: ['z'], ctrl: 'required', capture: true },
     'edit.redo': { keys: ['z'], ctrl: 'required', shift: 'required', capture: true },
-    'dataPanel.toggle': { keys: ['d'], alt: 'required' },
+    'dataPanel.toggle': { keys: ['d'], ctrl: 'required', capture: true },
 
     // Camera fly keys - use physical positions (codes) for WASD layout on non-QWERTY keyboards
     'camera.fly.forward': { codes: ['KeyW'], held: true, shift: 'optional', ctrl: 'optional' },
@@ -54,8 +54,8 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'camera.fly.right': { codes: ['KeyD'], held: true, shift: 'optional', ctrl: 'optional' },
     'camera.fly.down': { codes: ['KeyQ'], held: true, shift: 'optional', ctrl: 'optional' },
     'camera.fly.up': { codes: ['KeyE'], held: true, shift: 'optional', ctrl: 'optional' },
-    'camera.modifier.shift': { codes: ['ShiftLeft', 'ShiftRight'], held: true, ctrl: 'optional', alt: 'optional' },
-    'camera.modifier.ctrl': { codes: ['ControlLeft', 'ControlRight'], held: true, shift: 'optional', alt: 'optional' }
+    'camera.modifier.shift': { codes: ['ShiftLeft', 'ShiftRight'], held: true, ctrl: 'optional' },
+    'camera.modifier.ctrl': { codes: ['ControlLeft', 'ControlRight'], held: true, shift: 'optional' }
 };
 
 class ShortcutManager {

@@ -1,52 +1,105 @@
 import { Container, Label } from '@playcanvas/pcui';
 
+import { Events } from '../events';
+import { ShortcutManager } from '../shortcut-manager';
 import { localize } from './localization';
 
-const shortcutList = [
-    { header: 'navigation' },
-    { key: 'C', action: 'reset-camera' },
-    { key: 'F', action: 'focus-camera' },
-    { key: 'V', action: 'toggle-control-mode' },
-    { header: 'camera' },
-    { key: 'W/A/S/D', action: 'fly-movement' },
-    { key: 'Q/E', action: 'fly-vertical' },
-    { key: 'Shift', action: 'fly-speed-fast' },
-    { key: 'Ctrl', action: 'fly-speed-slow' },
-    { header: 'show' },
-    { key: 'Space', action: 'toggle-splat-overlay' },
-    { key: 'M', action: 'toggle-overlay-mode' },
-    { key: 'G', action: 'toggle-grid' },
-    { key: 'H', action: 'lock-selected-splats' },
-    { key: 'Shift + H', action: 'unlock-all-splats' },
-    { header: 'selection' },
-    { key: 'Alt + A', action: 'select-all' },
-    { key: 'Alt + Shift + A', action: 'deselect-all' },
-    { key: 'Ctrl + I', action: 'invert-selection' },
-    { key: 'Shift', action: 'add-to-selection' },
-    { key: 'Ctrl', action: 'remove-from-selection' },
-    { key: 'Delete', action: 'delete-selected-splats' },
-    { header: 'tools' },
-    { key: '1', action: 'move' },
-    { key: '2', action: 'rotate' },
-    { key: '3', action: 'scale' },
-    { key: 'R', action: 'rect-selection' },
-    { key: 'L', action: 'lasso-selection' },
-    { key: 'P', action: 'polygon-selection' },
-    { key: 'B', action: 'brush-selection' },
-    { key: 'O', action: 'flood-selection' },
-    { key: 'Alt + E', action: 'eyedropper-selection' },
-    { key: '[ ]', action: 'brush-size' },
-    { key: 'Esc', action: 'deactivate-tool' },
-    { key: 'Shift + C', action: 'toggle-gizmo-coordinate-space' },
-    { header: 'other' },
-    { key: 'Tab', action: 'select-next-splat' },
-    { key: 'Ctrl + Z', action: 'undo' },
-    { key: 'Ctrl + Shift + Z', action: 'redo' },
-    { key: 'Alt + D', action: 'toggle-data-panel' }
-];
+// Popup display configuration - maps shortcuts to categories and locale keys
+// This is separate from the shortcut bindings themselves (separation of concerns)
+interface ShortcutDisplayItem {
+    id: string;           // event ID to look up in ShortcutManager
+    localeKey: string;    // localization key for the action description
+}
+
+interface HintDisplayItem {
+    displayKey: string;   // what to show in the key column
+    localeKey: string;    // localization key for the action description
+}
+
+interface CategoryConfig {
+    localeKey: string;
+    shortcuts: ShortcutDisplayItem[];
+    hints?: HintDisplayItem[];
+}
+
+// Display configuration for the shortcuts popup
+const popupConfig: Record<string, CategoryConfig> = {
+    navigation: {
+        localeKey: 'popup.shortcuts.navigation',
+        shortcuts: [
+            { id: 'camera.reset', localeKey: 'popup.shortcuts.reset-camera' },
+            { id: 'camera.focus', localeKey: 'popup.shortcuts.focus-camera' },
+            { id: 'camera.toggleControlMode', localeKey: 'popup.shortcuts.toggle-control-mode' }
+        ]
+    },
+    camera: {
+        localeKey: 'popup.shortcuts.camera',
+        shortcuts: [],
+        hints: [
+            { displayKey: 'W / A / S / D', localeKey: 'popup.shortcuts.fly-movement' },
+            { displayKey: 'Q / E', localeKey: 'popup.shortcuts.fly-vertical' },
+            { displayKey: 'Shift', localeKey: 'popup.shortcuts.fly-speed-fast' },
+            { displayKey: 'Ctrl', localeKey: 'popup.shortcuts.fly-speed-slow' }
+        ]
+    },
+    show: {
+        localeKey: 'popup.shortcuts.show',
+        shortcuts: [
+            { id: 'camera.toggleOverlay', localeKey: 'popup.shortcuts.toggle-splat-overlay' },
+            { id: 'camera.toggleMode', localeKey: 'popup.shortcuts.toggle-overlay-mode' },
+            { id: 'grid.toggleVisible', localeKey: 'popup.shortcuts.toggle-grid' },
+            { id: 'select.hide', localeKey: 'popup.shortcuts.lock-selected-splats' },
+            { id: 'select.unhide', localeKey: 'popup.shortcuts.unlock-all-splats' }
+        ]
+    },
+    selection: {
+        localeKey: 'popup.shortcuts.selection',
+        shortcuts: [
+            { id: 'select.all', localeKey: 'popup.shortcuts.select-all' },
+            { id: 'select.none', localeKey: 'popup.shortcuts.deselect-all' },
+            { id: 'select.invert', localeKey: 'popup.shortcuts.invert-selection' },
+            { id: 'select.delete', localeKey: 'popup.shortcuts.delete-selected-splats' }
+        ],
+        hints: [
+            { displayKey: 'Shift', localeKey: 'popup.shortcuts.add-to-selection' },
+            { displayKey: 'Ctrl', localeKey: 'popup.shortcuts.remove-from-selection' }
+        ]
+    },
+    tools: {
+        localeKey: 'popup.shortcuts.tools',
+        shortcuts: [
+            { id: 'tool.move', localeKey: 'popup.shortcuts.move' },
+            { id: 'tool.rotate', localeKey: 'popup.shortcuts.rotate' },
+            { id: 'tool.scale', localeKey: 'popup.shortcuts.scale' },
+            { id: 'tool.rectSelection', localeKey: 'popup.shortcuts.rect-selection' },
+            { id: 'tool.lassoSelection', localeKey: 'popup.shortcuts.lasso-selection' },
+            { id: 'tool.polygonSelection', localeKey: 'popup.shortcuts.polygon-selection' },
+            { id: 'tool.brushSelection', localeKey: 'popup.shortcuts.brush-selection' },
+            { id: 'tool.floodSelection', localeKey: 'popup.shortcuts.flood-selection' },
+            { id: 'tool.eyedropperSelection', localeKey: 'popup.shortcuts.eyedropper-selection' },
+            { id: 'tool.deactivate', localeKey: 'popup.shortcuts.deactivate-tool' },
+            { id: 'tool.toggleCoordSpace', localeKey: 'popup.shortcuts.toggle-gizmo-coordinate-space' }
+        ],
+        hints: [
+            { displayKey: '[ ]', localeKey: 'popup.shortcuts.brush-size' }
+        ]
+    },
+    other: {
+        localeKey: 'popup.shortcuts.other',
+        shortcuts: [
+            { id: 'selection.next', localeKey: 'popup.shortcuts.select-next-splat' },
+            { id: 'edit.undo', localeKey: 'popup.shortcuts.undo' },
+            { id: 'edit.redo', localeKey: 'popup.shortcuts.redo' },
+            { id: 'dataPanel.toggle', localeKey: 'popup.shortcuts.toggle-data-panel' }
+        ]
+    }
+};
+
+// Category display order
+const categoryOrder = ['navigation', 'camera', 'show', 'selection', 'tools', 'other'];
 
 class ShortcutsPopup extends Container {
-    constructor(args = {}) {
+    constructor(events: Events, args = {}) {
         args = {
             ...args,
             id: 'shortcuts-popup',
@@ -89,29 +142,40 @@ class ShortcutsPopup extends Container {
             id: 'content'
         });
 
-        shortcutList.forEach((shortcut) => {
-            if (shortcut.header) {
-                const label = new Label({
-                    class: 'shortcut-header-label',
-                    text: localize(`popup.shortcuts.${shortcut.header}`)
-                });
+        // Get the shortcut manager from events
+        const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
 
-                const entry = new Container({
-                    class: 'shortcut-header'
-                });
+        // Build the shortcut list from the popup display configuration
+        for (const categoryId of categoryOrder) {
+            const config = popupConfig[categoryId];
+            if (!config) continue;
 
-                entry.append(label);
+            // Add category header
+            const headerLabel = new Label({
+                class: 'shortcut-header-label',
+                text: localize(config.localeKey)
+            });
 
-                content.append(entry);
-            } else {
+            const headerEntry = new Container({
+                class: 'shortcut-header'
+            });
+
+            headerEntry.append(headerLabel);
+            content.append(headerEntry);
+
+            // Add shortcuts for this category
+            for (const item of config.shortcuts) {
+                const keyText = shortcutManager.formatShortcut(item.id);
+                if (!keyText) continue;  // Skip if shortcut not found
+
                 const key = new Label({
                     class: 'shortcut-key',
-                    text: shortcut.key
+                    text: keyText
                 });
 
                 const action = new Label({
                     class: 'shortcut-action',
-                    text: localize(`popup.shortcuts.${shortcut.action}`)
+                    text: localize(item.localeKey)
                 });
 
                 const entry = new Container({
@@ -120,10 +184,32 @@ class ShortcutsPopup extends Container {
 
                 entry.append(key);
                 entry.append(action);
-
                 content.append(entry);
             }
-        });
+
+            // Add hints for this category (non-shortcut display items)
+            if (config.hints) {
+                for (const hint of config.hints) {
+                    const key = new Label({
+                        class: 'shortcut-key',
+                        text: hint.displayKey
+                    });
+
+                    const action = new Label({
+                        class: 'shortcut-action',
+                        text: localize(hint.localeKey)
+                    });
+
+                    const entry = new Container({
+                        class: 'shortcut-entry'
+                    });
+
+                    entry.append(key);
+                    entry.append(action);
+                    content.append(entry);
+                }
+            }
+        }
 
         dialog.append(header);
         dialog.append(content);

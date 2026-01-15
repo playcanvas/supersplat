@@ -1,6 +1,7 @@
 import { Button, Container, Element, Label } from '@playcanvas/pcui';
 
 import { Events } from '../events';
+import { ShortcutManager } from '../shortcut-manager';
 import { localize } from './localization';
 import cameraFrameSelectionSvg from './svg/camera-frame-selection.svg';
 import cameraResetSvg from './svg/camera-reset.svg';
@@ -96,14 +97,27 @@ class RightToolbar extends Container {
         this.append(colorPanel);
         this.append(options);
 
-        tooltips.register(ringsModeToggle, localize('tooltip.right-toolbar.splat-mode'), 'left');
-        tooltips.register(showHideSplats, localize('tooltip.right-toolbar.show-hide'), 'left');
-        tooltips.register(orbitMode, localize('tooltip.right-toolbar.orbit-camera'), 'left');
-        tooltips.register(flyMode, localize('tooltip.right-toolbar.fly-camera'), 'left');
-        tooltips.register(cameraFrameSelection, localize('tooltip.right-toolbar.frame-selection'), 'left');
-        tooltips.register(cameraReset, localize('tooltip.right-toolbar.reset-camera'), 'left');
-        tooltips.register(colorPanel, localize('tooltip.right-toolbar.colors'), 'left');
-        tooltips.register(options, localize('tooltip.right-toolbar.view-options'), 'left');
+        // Helper to compose localized tooltip text with shortcut
+        const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
+        const tooltip = (localeKey: string, shortcutId?: string) => {
+            const text = localize(localeKey);
+            if (shortcutId) {
+                const shortcut = shortcutManager.formatShortcut(shortcutId);
+                if (shortcut) {
+                    return `${text} ( ${shortcut} )`;
+                }
+            }
+            return text;
+        };
+
+        tooltips.register(ringsModeToggle, tooltip('tooltip.right-toolbar.splat-mode', 'camera.toggleMode'), 'left');
+        tooltips.register(showHideSplats, tooltip('tooltip.right-toolbar.show-hide', 'camera.toggleOverlay'), 'left');
+        tooltips.register(orbitMode, tooltip('tooltip.right-toolbar.orbit-camera', 'camera.toggleControlMode'), 'left');
+        tooltips.register(flyMode, tooltip('tooltip.right-toolbar.fly-camera', 'camera.toggleControlMode'), 'left');
+        tooltips.register(cameraFrameSelection, tooltip('tooltip.right-toolbar.frame-selection', 'camera.focus'), 'left');
+        tooltips.register(cameraReset, tooltip('tooltip.right-toolbar.reset-camera', 'camera.reset'), 'left');
+        tooltips.register(colorPanel, tooltip('tooltip.right-toolbar.colors'), 'left');
+        tooltips.register(options, tooltip('tooltip.right-toolbar.view-options'), 'left');
 
         // add event handlers
 

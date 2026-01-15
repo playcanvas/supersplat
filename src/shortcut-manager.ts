@@ -1,11 +1,16 @@
+import { platform } from 'playcanvas';
+
 import { Events } from './events';
 import { Shortcuts, ShortcutBinding } from './shortcuts';
+
+// Mac uses different symbols for modifier keys
+const isMac = platform.name === 'osx';
 
 // Default shortcut bindings - the source of truth for key mappings
 const defaultShortcuts: Record<string, ShortcutBinding> = {
     // Navigation
-    'camera.reset': { keys: ['c'] },
-    'camera.focus': { keys: ['f'] },
+    'camera.reset': { keys: ['f'] },
+    'camera.focus': { keys: ['f'], shift: 'required' },
     'camera.toggleControlMode': { keys: ['v'] },
 
     // Show
@@ -88,7 +93,7 @@ class ShortcutManager {
     }
 
     /**
-     * Format a shortcut for display (e.g., "Ctrl + Shift + Z").
+     * Format a shortcut for display (e.g., "Ctrl + Shift + Z" or "⌘⇧Z" on Mac).
      */
     formatShortcut(id: string): string {
         const binding = this.bindings[id];
@@ -96,9 +101,10 @@ class ShortcutManager {
 
         const parts: string[] = [];
 
-        if (binding.ctrl === 'required') parts.push('Ctrl');
-        if (binding.alt === 'required') parts.push('Alt');
-        if (binding.shift === 'required') parts.push('Shift');
+        // Use Mac symbols: ⌘ (Cmd), ⌥ (Option), ⇧ (Shift)
+        if (binding.ctrl === 'required') parts.push(isMac ? '⌘' : 'Ctrl');
+        if (binding.alt === 'required') parts.push(isMac ? '⌥' : 'Alt');
+        if (binding.shift === 'required') parts.push(isMac ? '⇧' : 'Shift');
 
         // Get the first key or code for display
         let keyDisplay = binding.keys?.[0] ?? binding.codes?.[0];
@@ -117,7 +123,7 @@ class ShortcutManager {
 
         parts.push(keyDisplay);
 
-        return parts.join(' + ');
+        return isMac ? parts.join(' ') : parts.join(' + ');
     }
 }
 

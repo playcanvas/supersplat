@@ -166,7 +166,7 @@ class EditorUI {
         const popup = new Popup(tooltips);
 
         // shortcuts popup
-        const shortcutsPopup = new ShortcutsPopup();
+        const shortcutsPopup = new ShortcutsPopup(events);
 
         // export popup
         const exportPopup = new ExportPopup(events);

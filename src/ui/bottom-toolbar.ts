@@ -1,6 +1,7 @@
 import { Button, Element, Container } from '@playcanvas/pcui';
 
 import { Events } from '../events';
+import { ShortcutManager } from '../shortcut-manager';
 import { localize } from './localization';
 import redoSvg from './svg/redo.svg';
 import brushSvg from './svg/select-brush.svg';
@@ -207,23 +208,36 @@ class BottomToolbar extends Container {
             origin.dom.classList[o === 'boundCenter' ? 'add' : 'remove']('active');
         });
 
+        // Helper to compose localized tooltip text with shortcut
+        const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
+        const tooltip = (localeKey: string, shortcutId?: string) => {
+            const text = localize(localeKey);
+            if (shortcutId) {
+                const shortcut = shortcutManager.formatShortcut(shortcutId);
+                if (shortcut) {
+                    return `${text} ( ${shortcut} )`;
+                }
+            }
+            return text;
+        };
+
         // register tooltips
-        tooltips.register(undo, localize('tooltip.bottom-toolbar.undo'));
-        tooltips.register(redo, localize('tooltip.bottom-toolbar.redo'));
-        tooltips.register(picker, localize('tooltip.bottom-toolbar.rect'));
-        tooltips.register(lasso, localize('tooltip.bottom-toolbar.lasso'));
-        tooltips.register(polygon, localize('tooltip.bottom-toolbar.polygon'));
-        tooltips.register(brush, localize('tooltip.bottom-toolbar.brush'));
-        tooltips.register(flood, localize('tooltip.bottom-toolbar.flood'));
-        tooltips.register(sphere, localize('tooltip.bottom-toolbar.sphere'));
-        tooltips.register(box, localize('tooltip.bottom-toolbar.box'));
-        tooltips.register(translate, localize('tooltip.bottom-toolbar.translate'));
-        tooltips.register(rotate, localize('tooltip.bottom-toolbar.rotate'));
-        tooltips.register(scale, localize('tooltip.bottom-toolbar.scale'));
-        tooltips.register(measure, localize('tooltip.bottom-toolbar.measure'));
-        tooltips.register(coordSpace, localize('tooltip.bottom-toolbar.local-space'));
-        tooltips.register(origin, localize('tooltip.bottom-toolbar.bound-center'));
-        tooltips.register(eyedropper, localize('tooltip.bottom-toolbar.eyedropper'));
+        tooltips.register(undo, tooltip('tooltip.bottom-toolbar.undo', 'edit.undo'));
+        tooltips.register(redo, tooltip('tooltip.bottom-toolbar.redo', 'edit.redo'));
+        tooltips.register(picker, tooltip('tooltip.bottom-toolbar.rect', 'tool.rectSelection'));
+        tooltips.register(lasso, tooltip('tooltip.bottom-toolbar.lasso', 'tool.lassoSelection'));
+        tooltips.register(polygon, tooltip('tooltip.bottom-toolbar.polygon', 'tool.polygonSelection'));
+        tooltips.register(brush, tooltip('tooltip.bottom-toolbar.brush', 'tool.brushSelection'));
+        tooltips.register(flood, tooltip('tooltip.bottom-toolbar.flood', 'tool.floodSelection'));
+        tooltips.register(sphere, tooltip('tooltip.bottom-toolbar.sphere'));
+        tooltips.register(box, tooltip('tooltip.bottom-toolbar.box'));
+        tooltips.register(translate, tooltip('tooltip.bottom-toolbar.translate', 'tool.move'));
+        tooltips.register(rotate, tooltip('tooltip.bottom-toolbar.rotate', 'tool.rotate'));
+        tooltips.register(scale, tooltip('tooltip.bottom-toolbar.scale', 'tool.scale'));
+        tooltips.register(measure, tooltip('tooltip.bottom-toolbar.measure'));
+        tooltips.register(coordSpace, tooltip('tooltip.bottom-toolbar.local-space', 'tool.toggleCoordSpace'));
+        tooltips.register(origin, tooltip('tooltip.bottom-toolbar.bound-center'));
+        tooltips.register(eyedropper, tooltip('tooltip.bottom-toolbar.eyedropper', 'tool.eyedropperSelection'));
     }
 }
 

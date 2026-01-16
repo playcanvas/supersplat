@@ -86,10 +86,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         scene.forceRender = true;
     });
 
-    events.on('camera.highPrecision', () => {
-        scene.forceRender = true;
-    });
-
     events.on('selection.changed', () => {
         scene.forceRender = true;
     });
@@ -169,25 +165,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('camera.toggleBound', () => {
         setBoundVisible(!events.invoke('camera.bound'));
-    });
-
-    // camera.highPrecision
-
-    let highPrecision = scene.config.camera.highPrecision;
-
-    const sethighPrecision = (enabled: boolean) => {
-        if (enabled !== highPrecision) {
-            highPrecision = enabled;
-            events.fire('camera.highPrecision', highPrecision);
-        }
-    };
-
-    events.function('camera.highPrecision', () => {
-        return highPrecision;
-    });
-
-    events.on('camera.sethighPrecision', (value: boolean) => {
-        sethighPrecision(value);
     });
 
     // camera.focus

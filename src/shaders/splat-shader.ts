@@ -14,6 +14,7 @@ varying mediump vec4 color;
 
 #if PICK_PASS
     uniform uint pickMode;                      // 0: add, 1: remove, 2: set
+    uniform int depthEstimationMode;            // 0: pick IDs, 1: depth estimation
 #endif
 
 mediump vec4 discardVec = vec4(0.0, 0.0, 2.0, 1.0);
@@ -97,8 +98,17 @@ void main(void) {
         color = readColor(source);
         color.xyz = mix(color.xyz, selectedClr.xyz * 0.2, selectedClr.a) * selectedClr.a;
     #elif PICK_PASS
-        uvec4 bits = (uvec4(source.id) >> uvec4(0u, 8u, 16u, 24u)) & uvec4(255u);
-        color = vec4(bits) / 255.0;
+        if (depthEstimationMode == 1) {
+            // depth estimation mode: read alpha and store view-space depth
+            color = readColor(source);
+            color.a = clamp(color.a, 0.0, 1.0);
+            // store view-space linear depth (negated because we look down -Z)
+            color.r = -center.view.z;
+        } else {
+            // pick ID mode
+            uvec4 bits = (uvec4(source.id) >> uvec4(0u, 8u, 16u, 24u)) & uvec4(255u);
+            color = vec4(bits) / 255.0;
+        }
     // handle splat color
     #elif FORWARD_PASS
         // read color
@@ -150,6 +160,11 @@ uniform int mode;               // 0: centers, 1: rings
 uniform float pickerAlpha;
 uniform float ringSize;
 
+#if PICK_PASS
+    uniform int depthEstimationMode;    // 0: pick IDs, 1: depth estimation
+    uniform vec4 camera_params;         // 1/far, far, near, isOrtho
+#endif
+
 const float EXP4 = exp(-4.0);
 const float INV_EXP4 = 1.0 / (1.0 - EXP4);
 
@@ -166,23 +181,33 @@ void main(void) {
 
     #if OUTLINE_PASS
         gl_FragColor = vec4(1.0, 1.0, 1.0, mode == 0 ? exp(-A * 4.0) * color.a : 1.0);
-    #else
-        #ifdef PICK_PASS
-            gl_FragColor = color;
-        #else
+    #elif PICK_PASS
+        if (depthEstimationMode == 1) {
+            // depth estimation mode: apply gaussian falloff and output alpha-weighted depth
             mediump float alpha = normExp(A) * color.a;
+            // normalize depth: (linearDepth - near) / (far - near)
+            // color.r contains view-space linear depth from vertex shader
+            float linearDepth = color.r;
+            float normalizedDepth = (linearDepth - camera_params.z) / (camera_params.y - camera_params.z);
+            // output alpha-weighted depth for accumulation
+            gl_FragColor = vec4(alpha * normalizedDepth, 0.0, 0.0, alpha);
+        } else {
+            // pick ID mode: output color directly
+            gl_FragColor = color;
+        }
+    #else
+        mediump float alpha = normExp(A) * color.a;
 
-            if (texCoordIsLocked.z == 0.0 && ringSize > 0.0) {
-                // rings mode
-                if (A < 1.0 - ringSize) {
-                    alpha = max(0.05, alpha);
-                } else {
-                    alpha = 0.6;
-                }
+        if (texCoordIsLocked.z == 0.0 && ringSize > 0.0) {
+            // rings mode
+            if (A < 1.0 - ringSize) {
+                alpha = max(0.05, alpha);
+            } else {
+                alpha = 0.6;
             }
+        }
 
-            gl_FragColor = vec4(color.xyz * alpha, alpha);
-        #endif
+        gl_FragColor = vec4(color.xyz * alpha, alpha);
     #endif
 }
 `;

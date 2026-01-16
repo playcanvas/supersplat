@@ -69,7 +69,6 @@
     "panel.view-options.show-grid": "Показать сетку",
     "panel.view-options.show-bound": "Показать границы",
     "panel.view-options.fly-speed": "Скорость полёта",
-    "panel.view-options.high-precision": "Высокоточный рендеринг",
     "panel.view-options.tonemapping": "Тональная коррекция",
     "panel.view-options.tonemapping.none": "Нет",
     "panel.view-options.tonemapping.linear": "Линейная",

@@ -69,7 +69,6 @@
     "panel.view-options.show-grid": "グリッド",
     "panel.view-options.show-bound": "バウンディングボックス",
     "panel.view-options.fly-speed": "カメラの移動速度",
-    "panel.view-options.high-precision": "高精度レンダリング",
     "panel.view-options.tonemapping": "トーンマッピング",
     "panel.view-options.tonemapping.none": "なし",
     "panel.view-options.tonemapping.linear": "リニア",

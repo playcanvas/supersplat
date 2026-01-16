@@ -75,13 +75,12 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             // cpu-side buffer to read pixels into
             const data = new Uint8Array(width * height * 4);
 
-            const { renderTarget } = scene.camera.entity.camera;
-            const { workRenderTarget } = scene.camera;
+            const { renderTarget, workTarget } = scene.camera;
 
-            scene.dataProcessor.copyRt(renderTarget, workRenderTarget);
+            scene.dataProcessor.copyRt(renderTarget, workTarget);
 
             // read the rendered frame
-            await workRenderTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workRenderTarget, data });
+            await workTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workTarget, data });
 
             // flip y positions to have 0,0 at the top
             let line = new Uint8Array(width * 4);
@@ -124,13 +123,12 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             // cpu-side buffer to read pixels into
             const data = new Uint8Array(width * height * 4);
 
-            const { renderTarget } = scene.camera.entity.camera;
-            const { workRenderTarget } = scene.camera;
+            const { renderTarget, workTarget } = scene.camera;
 
-            scene.dataProcessor.copyRt(renderTarget, workRenderTarget);
+            scene.dataProcessor.copyRt(renderTarget, workTarget);
 
             // read the rendered frame
-            await workRenderTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workRenderTarget, data });
+            await workTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workTarget, data });
 
             // the render buffer contains premultiplied alpha. so apply background color.
             if (!transparentBg) {
@@ -329,13 +327,12 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
             // capture the current video frame
             const captureFrame = async (frameTime: number) => {
-                const { renderTarget } = scene.camera.entity.camera;
-                const { workRenderTarget } = scene.camera;
+                const { renderTarget, workTarget } = scene.camera;
 
-                scene.dataProcessor.copyRt(renderTarget, workRenderTarget);
+                scene.dataProcessor.copyRt(renderTarget, workTarget);
 
                 // read the rendered frame
-                await workRenderTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workRenderTarget, data });
+                await workTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workTarget, data });
 
                 // flip the buffer vertically
                 for (let y = 0; y < height / 2; y++) {

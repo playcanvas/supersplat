@@ -223,26 +223,6 @@ class ViewPanel extends Container {
         cameraFlySpeedRow.append(cameraFlySpeedLabel);
         cameraFlySpeedRow.append(cameraFlySpeedSlider);
 
-        // high precision (render to float)
-
-        const highPrecisionRow = new Container({
-            class: 'view-panel-row'
-        });
-
-        const highPrecisionLabel = new Label({
-            text: localize('panel.view-options.high-precision'),
-            class: 'view-panel-row-label'
-        });
-
-        const highPrecisionToggle = new BooleanInput({
-            type: 'toggle',
-            class: 'view-panel-row-toggle',
-            value: true
-        });
-
-        highPrecisionRow.append(highPrecisionLabel);
-        highPrecisionRow.append(highPrecisionToggle);
-
         // outline selection
 
         const outlineSelectionRow = new Container({
@@ -310,7 +290,6 @@ class ViewPanel extends Container {
         this.append(shBandsRow);
         this.append(centersSizeRow);
         this.append(cameraFlySpeedRow);
-        this.append(highPrecisionRow);
         this.append(outlineSelectionRow);
         this.append(showGridRow);
         this.append(showBoundRow);
@@ -402,16 +381,6 @@ class ViewPanel extends Container {
 
         showBoundToggle.on('change', () => {
             events.fire('camera.setBound', showBoundToggle.value);
-        });
-
-        // high precision (render to float)
-
-        events.on('camera.highPrecision', (enabled: boolean) => {
-            highPrecisionToggle.value = enabled;
-        });
-
-        highPrecisionToggle.on('change', () => {
-            events.fire('camera.sethighPrecision', highPrecisionToggle.value);
         });
 
         // background color

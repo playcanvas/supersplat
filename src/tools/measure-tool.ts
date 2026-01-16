@@ -292,7 +292,7 @@ class MeasureTool {
             clicked = false;
         };
 
-        const pointerup = (e: PointerEvent) => {
+        const pointerup = async (e: PointerEvent) => {
             if (splat && clicked && isPrimary(e)) {
                 clicked = false;
 
@@ -315,7 +315,7 @@ class MeasureTool {
                 }
 
                 if (splat.measurePoints.length < 2) {
-                    const result = scene.camera.intersect(e.offsetX, e.offsetY);
+                    const result = await scene.camera.intersect(e.offsetX, e.offsetY);
                     if (result) {
                         mat.invert(splat.worldTransform);
                         mat.transformPoint(result.position, p);

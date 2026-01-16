@@ -17,8 +17,6 @@ import {
     BoundingBox,
     Entity,
     Mat4,
-    Picker,
-    Plane,
     Ray,
     RenderTarget,
     Texture,
@@ -29,6 +27,7 @@ import {
 
 import { PointerController } from './controllers';
 import { Element, ElementType } from './element';
+import { Picker } from './picker';
 import { Serializer } from './serializer';
 import { Splat } from './splat';
 import { TweenValue } from './tween-value';
@@ -36,7 +35,6 @@ import { TweenValue } from './tween-value';
 // work globals
 const forwardVec = new Vec3();
 const cameraPosition = new Vec3();
-const plane = new Plane();
 const ray = new Ray();
 const vec = new Vec3();
 const vecb = new Vec3();
@@ -82,7 +80,8 @@ class Camera extends Element {
 
     picker: Picker;
 
-    workRenderTarget: RenderTarget;
+    renderTarget: RenderTarget;
+    workTarget: RenderTarget;
 
     // overridden target size
     targetSize: { width: number, height: number } = null;
@@ -301,12 +300,7 @@ class Camera extends Element {
         this.setDistance(controls.initialZoom, 0);
 
         // picker
-        const { width, height } = this.scene.targetSize;
-        this.picker = new Picker(this.scene.app, width, height);
-
-        // override buffer allocation to use our render target
-        this.picker.allocateRenderTarget = () => { };
-        this.picker.releaseRenderTarget = () => { };
+        this.picker = new Picker(this.scene);
 
         this.scene.events.on('scene.boundChanged', this.onBoundChanged, this);
 
@@ -375,8 +369,7 @@ class Camera extends Element {
         this.entity.camera.layers = this.entity.camera.layers.filter(layer => layer !== this.scene.shadowLayer.id);
         this.scene.cameraRoot.removeChild(this.entity);
 
-        // destroy doesn't exist on picker?
-        // this.picker.destroy();
+        this.picker.destroy();
         this.picker = null;
 
         this.scene.events.off('scene.boundChanged', this.onBoundChanged, this);
@@ -396,70 +389,66 @@ class Camera extends Element {
         serializer.pack(
             this.fov,
             this.tonemapping,
-            this.entity.camera.renderTarget?.width,
-            this.entity.camera.renderTarget?.height
+            this.renderTarget?.width,
+            this.renderTarget?.height
         );
     }
 
     // handle the viewer canvas resizing
     rebuildRenderTargets() {
-        const device = this.scene.graphicsDevice;
         const { width, height } = this.targetSize ?? this.scene.targetSize;
-        const format = this.scene.events.invoke('camera.highPrecision') ? PIXELFORMAT_RGBA16F : PIXELFORMAT_RGBA8;
+        const { renderTarget } = this;
 
-        const rt = this.entity.camera.renderTarget;
-        if (rt && rt.width === width && rt.height === height && rt.colorBuffer.format === format) {
+        // early out if size is unchanged
+        if (renderTarget && renderTarget.width === width && renderTarget.height === height) {
             return;
         }
 
-        // out with the old
-        if (rt) {
-            rt.destroyTextureBuffers();
-            rt.destroy();
+        if (!renderTarget) {
+            // first time - construct render targets
+            const { graphicsDevice } = this.scene;
 
-            this.workRenderTarget.destroy();
-            this.workRenderTarget = null;
+            const createTexture = (name: string, width: number, height: number, format: number) => {
+                return new Texture(graphicsDevice, {
+                    name,
+                    width,
+                    height,
+                    format,
+                    mipmaps: false,
+                    minFilter: FILTER_NEAREST,
+                    magFilter: FILTER_NEAREST,
+                    addressU: ADDRESS_CLAMP_TO_EDGE,
+                    addressV: ADDRESS_CLAMP_TO_EDGE
+                });
+            };
+
+            // create main render target
+            this.renderTarget = new RenderTarget({
+                colorBuffer: createTexture('cameraColor', width, height, PIXELFORMAT_RGBA16F),
+                depthBuffer: createTexture('cameraDepth', width, height, PIXELFORMAT_DEPTH),
+                flipY: false,
+                autoResolve: false
+            });
+
+            // create work buffer
+            this.workTarget = new RenderTarget({
+                colorBuffer: createTexture('workColor', width, height, PIXELFORMAT_RGBA8),
+                depth: false,
+                autoResolve: false
+            });
+
+            // set picker render targets
+            this.entity.camera.renderTarget = this.renderTarget;
+            this.picker.setRenderTargets(this.renderTarget, this.workTarget);
+        } else {
+            // resize existing render targets
+            const { workTarget } = this;
+
+            renderTarget.resize(width, height);
+            workTarget.resize(width, height);
         }
 
-        const createTexture = (name: string, width: number, height: number, format: number) => {
-            return new Texture(device, {
-                name,
-                width,
-                height,
-                format,
-                mipmaps: false,
-                minFilter: FILTER_NEAREST,
-                magFilter: FILTER_NEAREST,
-                addressU: ADDRESS_CLAMP_TO_EDGE,
-                addressV: ADDRESS_CLAMP_TO_EDGE
-            });
-        };
-
-        // in with the new
-        const colorBuffer = createTexture('cameraColor', width, height, format);
-        const depthBuffer = createTexture('cameraDepth', width, height, PIXELFORMAT_DEPTH);
-        const renderTarget = new RenderTarget({
-            colorBuffer,
-            depthBuffer,
-            flipY: false,
-            autoResolve: false
-        });
-        this.entity.camera.renderTarget = renderTarget;
         this.entity.camera.horizontalFov = width > height;
-
-        const workColorBuffer = createTexture('workColor', width, height, PIXELFORMAT_RGBA8);
-
-        // create pick mode render target (reuse color buffer)
-        this.workRenderTarget = new RenderTarget({
-            colorBuffer: workColorBuffer,
-            depth: false,
-            autoResolve: false
-        });
-
-        // set picker render target
-        // @ts-ignore
-        this.picker.renderTarget = this.workRenderTarget;
-
         this.scene.events.fire('camera.resize', { width, height });
     }
 
@@ -515,7 +504,7 @@ class Camera extends Element {
 
     onPostRender() {
         const device = this.scene.graphicsDevice as WebglGraphicsDevice;
-        const renderTarget = this.entity.camera.renderTarget;
+        const { renderTarget } = this.entity.camera;
 
         // resolve msaa buffer
         if (renderTarget.samples > 1) {
@@ -575,60 +564,14 @@ class Camera extends Element {
         }
     }
 
-    // intersect the scene at the given screen coordinate
-    intersect(screenX: number, screenY: number) {
-        const { scene } = this;
-
-        const target = scene.canvas;
-        const sx = screenX / target.clientWidth * scene.targetSize.width;
-        const sy = screenY / target.clientHeight * scene.targetSize.height;
-
-        this.getRay(screenX, screenY, ray);
-
-        const splats = scene.getElementsByType(ElementType.splat);
-
-        let closestD = 0;
-        const closestP = new Vec3();
-        let closestSplat = null;
-
-        for (let i = 0; i < splats.length; ++i) {
-            const splat = splats[i] as Splat;
-
-            this.pickPrep(splat, 'set');
-            const pickId = this.pick(sx, sy);
-
-            if (pickId !== -1) {
-                splat.calcSplatWorldPosition(pickId, vec);
-
-                // create a plane at the world position facing perpendicular to the camera
-                plane.setFromPointNormal(vec, this.entity.forward);
-
-                // find intersection
-                if (plane.intersectsRay(ray, vec)) {
-                    const distance = vecb.sub2(vec, ray.origin).length();
-                    if (!closestSplat || distance < closestD) {
-                        closestD = distance;
-                        closestP.copy(vec);
-                        closestSplat = splat;
-                    }
-                }
-            }
-        }
-
-        if (!closestSplat) {
-            return null;
-        }
-
-        return {
-            splat: closestSplat,
-            position: closestP,
-            distance: closestD
-        };
+    // intersect the scene at the given screen coordinate using depth estimation
+    async intersect(screenX: number, screenY: number) {
+        return this.picker.pickDepth(screenX, screenY, this.entity);
     }
 
     // intersect the scene at the screen location and focus the camera on this location
-    pickFocalPoint(screenX: number, screenY: number) {
-        const result = this.intersect(screenX, screenY);
+    async pickFocalPoint(screenX: number, screenY: number) {
+        const result = await this.intersect(screenX, screenY);
         if (result) {
             const { scene } = this;
 
@@ -645,58 +588,16 @@ class Camera extends Element {
     // pick mode
 
     // render picker contents
-    pickPrep(splat: Splat, op: 'add'|'remove'|'set') {
-        const { width, height } = this.scene.targetSize;
-        const worldLayer = this.scene.app.scene.layers.getLayerByName('World');
-
-        const device = this.scene.graphicsDevice;
-        const events = this.scene.events;
-        const alpha = events.invoke('camera.mode') === 'rings' ? 0.0 : 0.2;
-
-        // hide non-selected elements
-        const splats = this.scene.getElementsByType(ElementType.splat);
-        splats.forEach((s: Splat) => {
-            s.entity.enabled = s === splat;
-        });
-
-        device.scope.resolve('pickerAlpha').setValue(alpha);
-        device.scope.resolve('pickMode').setValue(['add', 'remove', 'set'].indexOf(op));
-        this.picker.resize(width, height);
-        this.picker.prepare(this.entity.camera, this.scene.app.scene, [worldLayer]);
-
-        // re-enable all splats
-        splats.forEach((splat: Splat) => {
-            splat.entity.enabled = true;
-        });
+    pickPrep(splat: Splat, op: 'add' | 'remove' | 'set') {
+        this.picker.prepareIdPick(splat, op);
     }
 
     pick(x: number, y: number) {
-        return this.pickRect(x, y, 1, 1)[0];
+        return this.picker.pickId(x, y);
     }
 
     pickRect(x: number, y: number, width: number, height: number) {
-        const device = this.scene.graphicsDevice as WebglGraphicsDevice;
-        const pixels = new Uint8Array(width * height * 4);
-
-        // read pixels
-        // @ts-ignore
-        device.setRenderTarget(this.picker.renderTarget);
-        device.updateBegin();
-        // @ts-ignore
-        device.readPixels(x, this.picker.renderTarget.height - y - height, width, height, pixels);
-        device.updateEnd();
-
-        const result: number[] = [];
-        for (let i = 0; i < width * height; i++) {
-            result.push(
-                pixels[i * 4] |
-                (pixels[i * 4 + 1] << 8) |
-                (pixels[i * 4 + 2] << 16) |
-                (pixels[i * 4 + 3] << 24)
-            );
-        }
-
-        return result;
+        return this.picker.pickIdRect(x, y, width, height);
     }
 
     docSerialize() {

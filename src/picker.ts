@@ -62,9 +62,8 @@ class Picker {
     private depthRenderTarget: RenderTarget | null = null;
     private idRenderTarget: RenderTarget | null = null;
 
-    // Render passes
-    private depthRenderPass: RenderPassPicker;
-    private idRenderPass: RenderPassPicker;
+    // Render pass (shared for depth and ID picking)
+    private renderPass: RenderPassPicker;
 
     // Blend state for depth accumulation
     private depthBlendState: BlendState;
@@ -73,8 +72,10 @@ class Picker {
         this.scene = scene;
         this.device = scene.graphicsDevice;
 
-        // Create render pass for depth picking
-        this.depthRenderPass = new RenderPassPicker(this.device, this.scene.app.renderer);
+        // Create shared render pass for picking
+        this.renderPass = new RenderPassPicker(this.device, this.scene.app.renderer);
+
+        // Blend state for depth accumulation:
         // RGB: additive depth accumulation (ONE, ONE_MINUS_SRC_ALPHA)
         // Alpha: multiplicative transmittance (ZERO, ONE_MINUS_SRC_ALPHA) -> T = T * (1 - alpha)
         this.depthBlendState = new BlendState(
@@ -82,10 +83,6 @@ class Picker {
             BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE_MINUS_SRC_ALPHA,           // RGB blend
             BLENDEQUATION_ADD, BLENDMODE_ZERO, BLENDMODE_ONE_MINUS_SRC_ALPHA           // Alpha blend (transmittance)
         );
-        this.depthRenderPass.blendState = this.depthBlendState;
-
-        // Create render pass for ID picking
-        this.idRenderPass = new RenderPassPicker(this.device, this.scene.app.renderer);
     }
 
     // Set render targets from camera
@@ -117,9 +114,10 @@ class Picker {
 
         // Render ID picking pass
         const emptyMap = new Map();
-        this.idRenderPass.init(this.idRenderTarget);
-        this.idRenderPass.update(this.scene.camera.entity.camera, this.scene.app.scene, [worldLayer], emptyMap, false);
-        this.idRenderPass.render();
+        this.renderPass.blendState = BlendState.NOBLEND;
+        this.renderPass.init(this.idRenderTarget);
+        this.renderPass.update(this.scene.camera.entity.camera, this.scene.app.scene, [worldLayer], emptyMap, false);
+        this.renderPass.render();
 
         // Re-enable all splats
         splats.forEach((s: Splat) => {
@@ -182,10 +180,11 @@ class Picker {
         this.device.scope.resolve('pickMode').setValue(2); // 'set' mode - don't skip any visible splats
 
         // Render scene with depth pass
-        this.depthRenderPass.init(this.depthRenderTarget);
-        this.depthRenderPass.setClearColor(depthClearColor);
-        this.depthRenderPass.update(camera.camera, this.scene.app.scene, [worldLayer], emptyMap, false);
-        this.depthRenderPass.render();
+        this.renderPass.blendState = this.depthBlendState;
+        this.renderPass.init(this.depthRenderTarget);
+        this.renderPass.setClearColor(depthClearColor);
+        this.renderPass.update(camera.camera, this.scene.app.scene, [worldLayer], emptyMap, false);
+        this.renderPass.render();
 
         // Reset depth estimation mode
         this.device.scope.resolve('depthEstimationMode').setValue(0);
@@ -234,8 +233,7 @@ class Picker {
 
     // Clean up resources
     destroy() {
-        this.depthRenderPass?.destroy();
-        this.idRenderPass?.destroy();
+        this.renderPass?.destroy();
     }
 }
 

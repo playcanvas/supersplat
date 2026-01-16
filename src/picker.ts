@@ -3,26 +3,18 @@ import {
     BLENDMODE_ONE,
     BLENDMODE_ZERO,
     BLENDMODE_ONE_MINUS_SRC_ALPHA,
-    PROJECTION_ORTHOGRAPHIC,
     BlendState,
     Color,
     Entity,
     GraphicsDevice,
-    Ray,
     RenderPassPicker,
     RenderTarget,
-    Vec3,
     WebglGraphicsDevice
 } from 'playcanvas';
 
 import { ElementType } from './element';
 import { Scene } from './scene';
 import { Splat } from './splat';
-
-// Work globals
-const vec = new Vec3();
-const vecb = new Vec3();
-const ray = new Ray();
 
 // Clear color for depth pass (transmittance starts at 1)
 const depthClearColor = new Color(0, 0, 0, 1);
@@ -61,31 +53,6 @@ const half2Float = (h: number): number => {
 
     return float32[0];
 };
-
-// Get the normalized world-space ray starting at the camera position
-// facing the supplied screen position
-// Works for both perspective and orthographic cameras
-const getRay = (camera: Entity, screenX: number, screenY: number, outRay: Ray) => {
-    const cameraPos = camera.getPosition();
-
-    // Create the pick ray in world space
-    if (camera.camera.projection === PROJECTION_ORTHOGRAPHIC) {
-        camera.camera.screenToWorld(screenX, screenY, -1.0, vec);
-        camera.camera.screenToWorld(screenX, screenY, 1.0, vecb);
-        vecb.sub(vec).normalize();
-        outRay.set(vec, vecb);
-    } else {
-        camera.camera.screenToWorld(screenX, screenY, 1.0, vec);
-        vec.sub(cameraPos).normalize();
-        outRay.set(cameraPos, vec);
-    }
-};
-
-interface PickDepthResult {
-    splat: Splat | null;
-    position: Vec3;
-    distance: number;
-}
 
 class Picker {
     private device: GraphicsDevice;
@@ -127,8 +94,8 @@ class Picker {
         this.idRenderTarget = idRT;
     }
 
-    // Prepare for ID picking by rendering the scene
-    prepareIdPick(splat: Splat, op: 'add' | 'remove' | 'set') {
+    // Prepare for ID picking by rendering the specified splat
+    prepareId(splat: Splat, mode: 'add' | 'remove' | 'set') {
         if (!this.idRenderTarget) {
             return;
         }
@@ -145,7 +112,7 @@ class Picker {
 
         // Set picker uniforms
         this.device.scope.resolve('pickerAlpha').setValue(alpha);
-        this.device.scope.resolve('pickMode').setValue(['add', 'remove', 'set'].indexOf(op));
+        this.device.scope.resolve('pickMode').setValue(['add', 'remove', 'set'].indexOf(mode));
         this.device.scope.resolve('depthEstimationMode').setValue(0);
 
         // Render ID picking pass
@@ -160,13 +127,13 @@ class Picker {
         });
     }
 
-    // Pick single splat ID at screen position
-    pickId(x: number, y: number): number {
-        return this.pickIdRect(x, y, 1, 1)[0];
+    // Read single splat ID at screen position (after prepareId)
+    readId(x: number, y: number): number {
+        return this.readIds(x, y, 1, 1)[0];
     }
 
-    // Pick rectangle of splat IDs
-    pickIdRect(x: number, y: number, width: number, height: number): number[] {
+    // Read rectangle of splat IDs (after prepareId)
+    readIds(x: number, y: number, width: number, height: number): number[] {
         if (!this.idRenderTarget) {
             return [];
         }
@@ -195,60 +162,20 @@ class Picker {
         return result;
     }
 
-    // Pick depth at screen position and return world position
-    async pickDepth(screenX: number, screenY: number, cameraEntity: Entity): Promise<PickDepthResult | null> {
-        if (!this.depthRenderTarget) {
-            return null;
-        }
-
-        const { width, height } = this.depthRenderTarget;
-        const canvas = this.scene.canvas;
-
-        // Convert screen coordinates to render target coordinates
-        const sx = Math.floor(screenX / canvas.clientWidth * width);
-        const sy = Math.floor(screenY / canvas.clientHeight * height);
-
-        // Render depth pass
-        this.renderDepthPass(cameraEntity);
-
-        // Read depth at position
-        const depth = await this.readDepth(sx, sy, cameraEntity);
-
-        if (depth === null) {
-            return null;
-        }
-
-        // Construct ray from camera through screen point
-        getRay(cameraEntity, screenX, screenY, ray);
-
-        // Convert linear depth (view-space z distance) to ray distance
-        const forward = cameraEntity.forward;
-        const dotProduct = ray.direction.dot(forward);
-        const t = depth / dotProduct;
-
-        // World position = ray origin + ray direction * t
-        const position = new Vec3();
-        position.copy(ray.origin).add(vec.copy(ray.direction).mulScalar(t));
-
-        // Find which splat is at this position (for compatibility with existing API)
-        const splats = this.scene.getElementsByType(ElementType.splat);
-        const closestSplat = splats.length > 0 ? splats[0] as Splat : null;
-
-        return {
-            splat: closestSplat,
-            position: position,
-            distance: t
-        };
-    }
-
-    // Render depth pass for all splats
-    private renderDepthPass(cameraEntity: Entity) {
+    // Prepare for depth picking by rendering the specified splat
+    prepareDepth(splat: Splat, camera: Entity) {
         if (!this.depthRenderTarget) {
             return;
         }
 
         const worldLayer = this.scene.app.scene.layers.getLayerByName('World');
         const emptyMap = new Map();
+
+        // Hide non-selected elements
+        const splats = this.scene.getElementsByType(ElementType.splat);
+        splats.forEach((s: Splat) => {
+            s.entity.enabled = s === splat;
+        });
 
         // Set depth estimation mode uniform
         this.device.scope.resolve('depthEstimationMode').setValue(1);
@@ -257,21 +184,31 @@ class Picker {
         // Render scene with depth pass
         this.depthRenderPass.init(this.depthRenderTarget);
         this.depthRenderPass.setClearColor(depthClearColor);
-        this.depthRenderPass.update(cameraEntity.camera, this.scene.app.scene, [worldLayer], emptyMap, false);
+        this.depthRenderPass.update(camera.camera, this.scene.app.scene, [worldLayer], emptyMap, false);
         this.depthRenderPass.render();
 
         // Reset depth estimation mode
         this.device.scope.resolve('depthEstimationMode').setValue(0);
+
+        // Re-enable all splats
+        splats.forEach((s: Splat) => {
+            s.entity.enabled = true;
+        });
     }
 
-    // Read depth at a specific pixel and return linear depth value
-    private async readDepth(x: number, y: number, cameraEntity: Entity): Promise<number | null> {
+    // Read normalized depth (0-1) at screen position (after prepareDepth)
+    async readDepth(screenX: number, screenY: number): Promise<number | null> {
         if (!this.depthRenderTarget) {
             return null;
         }
 
         const rt = this.depthRenderTarget;
         const colorBuffer = rt.colorBuffer;
+        const canvas = this.scene.canvas;
+
+        // Convert screen coordinates to render target coordinates
+        const x = Math.floor(screenX / canvas.clientWidth * rt.width);
+        const y = Math.floor(screenY / canvas.clientHeight * rt.height);
 
         // Flip Y for texture read on WebGL (texture origin is bottom-left)
         const texY = this.device.isWebGL2 ? rt.height - y - 1 : y;
@@ -291,15 +228,8 @@ class Picker {
             return null;
         }
 
-        // Get camera near/far for denormalization
-        const near = cameraEntity.camera.nearClip;
-        const far = cameraEntity.camera.farClip;
-
-        // Divide by alpha to get normalized depth, then denormalize to linear depth
-        const normalizedDepth = r / alpha;
-        const depth = normalizedDepth * (far - near) + near;
-
-        return depth;
+        // Return normalized depth (0-1 range)
+        return r / alpha;
     }
 
     // Clean up resources
@@ -309,4 +239,4 @@ class Picker {
     }
 }
 
-export { Picker, PickDepthResult };
+export { Picker };

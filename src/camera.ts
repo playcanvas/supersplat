@@ -564,9 +564,45 @@ class Camera extends Element {
         }
     }
 
-    // intersect the scene at the given screen coordinate using depth estimation
+    // intersect the scene at the given screen coordinate using depth picking
     async intersect(screenX: number, screenY: number) {
-        return this.picker.pickDepth(screenX, screenY, this.entity);
+        const { scene } = this;
+        const splats = scene.getElementsByType(ElementType.splat);
+
+        let closestDepth = Infinity;
+        let closestSplat: Splat | null = null;
+
+        // Find the splat with the smallest depth at this screen position
+        for (let i = 0; i < splats.length; ++i) {
+            const splat = splats[i] as Splat;
+
+            this.picker.prepareDepth(splat, this.entity);
+            const normalizedDepth = await this.picker.readDepth(screenX, screenY);
+
+            if (normalizedDepth !== null && normalizedDepth < closestDepth) {
+                closestDepth = normalizedDepth;
+                closestSplat = splat;
+            }
+        }
+
+        if (!closestSplat) {
+            return null;
+        }
+
+        // Convert normalized depth to linear depth
+        const linearDepth = closestDepth * (this.far - this.near) + this.near;
+
+        // Calculate world position from ray and depth
+        this.getRay(screenX, screenY, ray);
+        const t = linearDepth / ray.direction.dot(this.entity.forward);
+        const position = new Vec3();
+        position.copy(ray.origin).add(vec.copy(ray.direction).mulScalar(t));
+
+        return {
+            splat: closestSplat,
+            position: position,
+            distance: t
+        };
     }
 
     // intersect the scene at the screen location and focus the camera on this location
@@ -588,16 +624,16 @@ class Camera extends Element {
     // pick mode
 
     // render picker contents
-    pickPrep(splat: Splat, op: 'add' | 'remove' | 'set') {
-        this.picker.prepareIdPick(splat, op);
+    pickPrep(splat: Splat, mode: 'add' | 'remove' | 'set') {
+        this.picker.prepareId(splat, mode);
     }
 
     pick(x: number, y: number) {
-        return this.picker.pickId(x, y);
+        return this.picker.readId(x, y);
     }
 
     pickRect(x: number, y: number, width: number, height: number) {
-        return this.picker.pickIdRect(x, y, width, height);
+        return this.picker.readIds(x, y, width, height);
     }
 
     docSerialize() {

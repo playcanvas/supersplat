@@ -181,7 +181,7 @@ class BrushSelection {
             parent.removeEventListener('wheel', wheel);
         };
 
-        events.on('tool.brushSelection.smaller', (down: boolean) => {
+        events.on('tool.brushSelection.smaller', (down: boolean | undefined) => {
             if (down === undefined) {
                 // fired from scroll wheel (no down parameter)
                 radius = Math.max(1, radius / 1.05);

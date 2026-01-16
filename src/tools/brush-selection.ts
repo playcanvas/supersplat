@@ -24,6 +24,42 @@ class BrushSelection {
         const prev = { x: 0, y: 0 };
         let dragId: number | undefined;
 
+        // for continuous key press handling
+        let smallerPressed = false;
+        let biggerPressed = false;
+        let animationFrameId: number | undefined;
+        let animationDelayTimeoutId: number | undefined;
+
+        const updateRadius = () => {
+            if (smallerPressed) {
+                radius = Math.max(1, radius / 1.02);
+            }
+            if (biggerPressed) {
+                radius = Math.min(500, radius * 1.02);
+            }
+            if (smallerPressed || biggerPressed) {
+                circle.setAttribute('r', radius.toString());
+                animationFrameId = requestAnimationFrame(updateRadius);
+            } else {
+                animationFrameId = undefined;
+            }
+        };
+
+        const startAnimation = () => {
+            if (animationFrameId === undefined) {
+                animationFrameId = requestAnimationFrame(updateRadius);
+            }
+        };
+
+        const applyStep = (direction: 'smaller' | 'bigger') => {
+            if (direction === 'smaller') {
+                radius = Math.max(1, radius / 1.05);
+            } else {
+                radius = Math.min(500, radius * 1.05);
+            }
+            circle.setAttribute('r', radius.toString());
+        };
+
         const update = (e: PointerEvent) => {
             const x = e.offsetX;
             const y = e.offsetY;
@@ -126,6 +162,17 @@ class BrushSelection {
             if (dragId !== undefined) {
                 dragEnd();
             }
+            // cancel animation and timeout
+            if (animationFrameId !== undefined) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = undefined;
+            }
+            if (animationDelayTimeoutId !== undefined) {
+                clearTimeout(animationDelayTimeoutId);
+                animationDelayTimeoutId = undefined;
+            }
+            smallerPressed = false;
+            biggerPressed = false;
             svg.classList.add('hidden');
             parent.style.display = 'none';
             parent.removeEventListener('pointerdown', pointerdown);
@@ -134,14 +181,56 @@ class BrushSelection {
             parent.removeEventListener('wheel', wheel);
         };
 
-        events.on('tool.brushSelection.smaller', () => {
-            radius = Math.max(1, radius / 1.05);
-            circle.setAttribute('r', radius.toString());
+        events.on('tool.brushSelection.smaller', (down: boolean) => {
+            if (down === undefined) {
+                // fired from scroll wheel (no down parameter)
+                radius = Math.max(1, radius / 1.05);
+                circle.setAttribute('r', radius.toString());
+            } else if (down) {
+                // key press: apply one step immediately, then delay before starting animation
+                if (!smallerPressed) {
+                    applyStep('smaller');
+                }
+                smallerPressed = true;
+                animationDelayTimeoutId = window.setTimeout(() => {
+                    if (smallerPressed) {
+                        startAnimation();
+                    }
+                }, 400);
+            } else {
+                // key release
+                smallerPressed = false;
+                if (animationDelayTimeoutId !== undefined) {
+                    clearTimeout(animationDelayTimeoutId);
+                    animationDelayTimeoutId = undefined;
+                }
+            }
         });
 
-        events.on('tool.brushSelection.bigger', () => {
-            radius = Math.min(500, radius * 1.05);
-            circle.setAttribute('r', radius.toString());
+        events.on('tool.brushSelection.bigger', (down: boolean) => {
+            if (down === undefined) {
+                // fired from scroll wheel (no down parameter)
+                radius = Math.min(500, radius * 1.05);
+                circle.setAttribute('r', radius.toString());
+            } else if (down) {
+                // key press: apply one step immediately, then delay before starting animation
+                if (!biggerPressed) {
+                    applyStep('bigger');
+                }
+                biggerPressed = true;
+                animationDelayTimeoutId = window.setTimeout(() => {
+                    if (biggerPressed) {
+                        startAnimation();
+                    }
+                }, 400);
+            } else {
+                // key release
+                biggerPressed = false;
+                if (animationDelayTimeoutId !== undefined) {
+                    clearTimeout(animationDelayTimeoutId);
+                    animationDelayTimeoutId = undefined;
+                }
+            }
         });
     }
 }

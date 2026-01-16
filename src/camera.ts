@@ -84,7 +84,7 @@ class Camera extends Element {
     workTarget: RenderTarget;
 
     // overridden target size
-    targetSize: { width: number, height: number } = null;
+    targetSizeOverride: { width: number, height: number } = null;
 
     suppressFinalBlit = false;
 
@@ -396,7 +396,7 @@ class Camera extends Element {
 
     // handle the viewer canvas resizing
     rebuildRenderTargets() {
-        const { width, height } = this.targetSize ?? this.scene.targetSize;
+        const { width, height } = this.targetSize;
         const { renderTarget } = this;
 
         // early out if size is unchanged
@@ -475,7 +475,10 @@ class Camera extends Element {
         this.fitClippingPlanes(this.entity.getLocalPosition(), this.entity.forward);
 
         const { camera } = this.entity;
-        camera.orthoHeight = this.distanceTween.value.distance * this.sceneRadius / this.fovFactor * (this.fov / 90) * (camera.horizontalFov ? this.scene.targetSize.height / this.scene.targetSize.width : 1);
+        const { targetSize } = this;
+
+        // update ortho height
+        camera.orthoHeight = this.distanceTween.value.distance * this.sceneRadius / this.fovFactor * (this.fov / 90) * (camera.horizontalFov ? targetSize.height / targetSize.width : 1);
         camera.camera._updateViewProjMat();
     }
 
@@ -541,7 +544,7 @@ class Camera extends Element {
     get fovFactor() {
         // we set the fov of the longer axis. here we get the fov of the other (smaller) axis so framing
         // doesn't cut off the scene.
-        const { width, height } = this.scene.targetSize;
+        const { width, height } = this.targetSize;
         const aspect = (width && height) ? this.entity.camera.horizontalFov ? height / width : width / height : 1;
         const fov = 2 * Math.atan(Math.tan(this.fov * math.DEG_TO_RAD * 0.5) * aspect);
         return Math.sin(fov * 0.5);
@@ -564,8 +567,8 @@ class Camera extends Element {
         }
     }
 
-    // intersect the scene at the given screen coordinate using depth picking
-    async intersect(screenX: number, screenY: number) {
+    // intersect the scene at the given normalized screen coordinate (0-1 range) using depth picking
+    async intersect(x: number, y: number) {
         const { scene } = this;
         const splats = scene.getElementsByType(ElementType.splat);
 
@@ -577,7 +580,7 @@ class Camera extends Element {
             const splat = splats[i] as Splat;
 
             this.picker.prepareDepth(splat, this.entity);
-            const normalizedDepth = await this.picker.readDepth(screenX, screenY);
+            const normalizedDepth = await this.picker.readDepth(x, y);
 
             if (normalizedDepth !== null && normalizedDepth < closestDepth) {
                 closestDepth = normalizedDepth;
@@ -592,6 +595,10 @@ class Camera extends Element {
         // Convert normalized depth to linear depth
         const linearDepth = closestDepth * (this.far - this.near) + this.near;
 
+        // Convert normalized coordinates to screen pixels for getRay
+        const screenX = x * scene.canvas.clientWidth;
+        const screenY = y * scene.canvas.clientHeight;
+
         // Calculate world position from ray and depth
         this.getRay(screenX, screenY, ray);
         const t = linearDepth / ray.direction.dot(this.entity.forward);
@@ -605,9 +612,9 @@ class Camera extends Element {
         };
     }
 
-    // intersect the scene at the screen location and focus the camera on this location
-    async pickFocalPoint(screenX: number, screenY: number) {
-        const result = await this.intersect(screenX, screenY);
+    // intersect the scene at the normalized screen location (0-1 range) and focus the camera on this location
+    async pickFocalPoint(x: number, y: number) {
+        const result = await this.intersect(x, y);
         if (result) {
             const { scene } = this;
 
@@ -660,13 +667,17 @@ class Camera extends Element {
     // offscreen render mode
 
     startOffscreenMode(width: number, height: number) {
-        this.targetSize = { width, height };
+        this.targetSizeOverride = { width, height };
         this.suppressFinalBlit = true;
     }
 
     endOffscreenMode() {
-        this.targetSize = null;
+        this.targetSizeOverride = null;
         this.suppressFinalBlit = false;
+    }
+
+    get targetSize() {
+        return this.targetSizeOverride ?? this.scene.targetSize;
     }
 }
 

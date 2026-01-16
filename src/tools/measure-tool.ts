@@ -315,7 +315,7 @@ class MeasureTool {
                 }
 
                 if (splat.measurePoints.length < 2) {
-                    const result = await scene.camera.intersect(e.offsetX, e.offsetY);
+                    const result = await scene.camera.intersect(e.offsetX / canvasContainer.dom.clientWidth, e.offsetY / canvasContainer.dom.clientHeight);
                     if (result) {
                         mat.invert(splat.worldTransform);
                         mat.transformPoint(result.position, p);

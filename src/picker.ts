@@ -8,8 +8,7 @@ import {
     Entity,
     GraphicsDevice,
     RenderPassPicker,
-    RenderTarget,
-    WebglGraphicsDevice
+    RenderTarget
 } from 'playcanvas';
 
 import { ElementType } from './element';
@@ -125,30 +124,43 @@ class Picker {
         });
     }
 
-    // Read single splat ID at screen position (after prepareId)
-    readId(x: number, y: number): number {
-        return this.readIds(x, y, 1, 1)[0];
+    // Read single splat ID at normalized screen position (after prepareId)
+    async readId(x: number, y: number): Promise<number> {
+        if (!this.idRenderTarget) {
+            return -1;
+        }
+        // For single pixel read, use a minimal normalized size
+        const rt = this.idRenderTarget;
+        const ids = await this.readIds(x, y, 1 / rt.width, 1 / rt.height);
+        return ids[0];
     }
 
-    // Read rectangle of splat IDs (after prepareId)
-    readIds(x: number, y: number, width: number, height: number): number[] {
+    // Read rectangle of splat IDs using normalized coordinates (0-1 range) (after prepareId)
+    async readIds(x: number, y: number, width: number, height: number): Promise<number[]> {
         if (!this.idRenderTarget) {
             return [];
         }
 
-        const device = this.device as WebglGraphicsDevice;
-        const pixels = new Uint8Array(width * height * 4);
+        const rt = this.idRenderTarget;
+        const colorBuffer = rt.colorBuffer;
 
-        // Read pixels
-        // @ts-ignore
-        device.setRenderTarget(this.idRenderTarget);
-        device.updateBegin();
-        // @ts-ignore
-        device.readPixels(x, this.idRenderTarget.height - y - height, width, height, pixels);
-        device.updateEnd();
+        // Convert normalized coordinates to render target pixels
+        const px = Math.floor(x * rt.width);
+        const py = Math.floor(y * rt.height);
+        const pw = Math.max(1, Math.ceil((x + width) * rt.width) - px);
+        const ph = Math.max(1, Math.ceil((y + height) * rt.height) - py);
+
+        // Flip Y for texture read on WebGL (texture origin is bottom-left)
+        const texY = this.device.isWebGL2 ? rt.height - py - ph : py;
+
+        // Read pixels using texture.read() API
+        const pixels = await colorBuffer.read(px, texY, pw, ph, {
+            renderTarget: rt,
+            immediate: true
+        });
 
         const result: number[] = [];
-        for (let i = 0; i < width * height; i++) {
+        for (let i = 0; i < pw * ph; i++) {
             result.push(
                 pixels[i * 4] |
                 (pixels[i * 4 + 1] << 8) |
@@ -195,25 +207,24 @@ class Picker {
         });
     }
 
-    // Read normalized depth (0-1) at screen position (after prepareDepth)
-    async readDepth(screenX: number, screenY: number): Promise<number | null> {
+    // Read normalized depth (0-1) at normalized screen position (0-1 range) (after prepareDepth)
+    async readDepth(x: number, y: number): Promise<number | null> {
         if (!this.depthRenderTarget) {
             return null;
         }
 
         const rt = this.depthRenderTarget;
         const colorBuffer = rt.colorBuffer;
-        const canvas = this.scene.canvas;
 
-        // Convert screen coordinates to render target coordinates
-        const x = Math.floor(screenX / canvas.clientWidth * rt.width);
-        const y = Math.floor(screenY / canvas.clientHeight * rt.height);
+        // Convert normalized coordinates to render target pixels
+        const px = Math.floor(x * rt.width);
+        const py = Math.floor(y * rt.height);
 
         // Flip Y for texture read on WebGL (texture origin is bottom-left)
-        const texY = this.device.isWebGL2 ? rt.height - y - 1 : y;
+        const texY = this.device.isWebGL2 ? rt.height - py - 1 : py;
 
         // Read the pixel using Texture.read() which handles RGBA16F format
-        const pixels = await colorBuffer.read(x, texY, 1, 1, { renderTarget: rt });
+        const pixels = await colorBuffer.read(px, texY, 1, 1, { renderTarget: rt });
 
         // Convert half-float values to floats
         // R channel: accumulated depth * alpha

@@ -99,11 +99,8 @@ void main(void) {
         color.xyz = mix(color.xyz, selectedClr.xyz * 0.2, selectedClr.a) * selectedClr.a;
     #elif PICK_PASS
         if (depthEstimationMode == 1) {
-            // depth estimation mode: read alpha and store view-space depth
-            color = readColor(source);
-            color.a = clamp(color.a, 0.0, 1.0);
-            // store view-space linear depth (negated because we look down -Z)
-            color.r = -center.view.z;
+            // depth estimation mode
+            color = vec4(-center.view.z, 0.0, 0.0, readColor(source).a);
         } else {
             // pick ID mode
             uvec4 bits = (uvec4(source.id) >> uvec4(0u, 8u, 16u, 24u)) & uvec4(255u);

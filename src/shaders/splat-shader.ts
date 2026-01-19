@@ -99,8 +99,10 @@ void main(void) {
         color.xyz = mix(color.xyz, selectedClr.xyz * 0.2, selectedClr.a) * selectedClr.a;
     #elif PICK_PASS
         if (depthEstimationMode == 1) {
-            // depth estimation mode
-            color = vec4(-center.view.z, 0.0, 0.0, readColor(source).a);
+            // depth estimation mode: compute normalized depth in vertex shader
+            float linearDepth = -center.view.z;
+            float normalizedDepth = (linearDepth - camera_params.z) / (camera_params.y - camera_params.z);
+            color = vec4(normalizedDepth, 0.0, 0.0, readColor(source).a);
         } else {
             // pick ID mode
             uvec4 bits = (uvec4(source.id) >> uvec4(0u, 8u, 16u, 24u)) & uvec4(255u);
@@ -159,7 +161,6 @@ uniform float ringSize;
 
 #if PICK_PASS
     uniform int depthEstimationMode;    // 0: pick IDs, 1: depth estimation
-    uniform vec4 camera_params;         // 1/far, far, near, isOrtho
 #endif
 
 const float EXP4 = exp(-4.0);
@@ -180,16 +181,11 @@ void main(void) {
         gl_FragColor = vec4(1.0, 1.0, 1.0, mode == 0 ? exp(-A * 4.0) * color.a : 1.0);
     #elif PICK_PASS
         if (depthEstimationMode == 1) {
-            // depth estimation mode: apply gaussian falloff and output alpha-weighted depth
+            // depth estimation
             mediump float alpha = normExp(A) * color.a;
-            // normalize depth: (linearDepth - near) / (far - near)
-            // color.r contains view-space linear depth from vertex shader
-            float linearDepth = color.r;
-            float normalizedDepth = (linearDepth - camera_params.z) / (camera_params.y - camera_params.z);
-            // output alpha-weighted depth for accumulation
-            gl_FragColor = vec4(alpha * normalizedDepth, 0.0, 0.0, alpha);
+            gl_FragColor = vec4(alpha * color.r, 0.0, 0.0, alpha);
         } else {
-            // pick ID mode: output color directly
+            // pick id
             gl_FragColor = color;
         }
     #else

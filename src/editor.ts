@@ -443,7 +443,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             // Use normalized coordinates with minimal size for single pixel pick
             const pickBuffer = await scene.camera.pickRect(nx, ny, 1 / width, 1 / height);
             const pickId = pickBuffer?.[0];
-            if (pickId === undefined || pickId === -1) {
+            if (pickId === undefined || pickId === 0xffffffff) {
                 continue;
             }
 

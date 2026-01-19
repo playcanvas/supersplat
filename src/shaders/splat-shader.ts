@@ -13,8 +13,8 @@ varying mediump vec3 texCoordIsLocked;          // store locked flat in z
 varying mediump vec4 color;
 
 #if PICK_PASS
-    uniform uint pickMode;                      // 0: add, 1: remove, 2: set
-    uniform int depthEstimationMode;            // 0: pick IDs, 1: depth estimation
+    uniform uint pickOp;                        // 0: add, 1: remove, 2: set
+    uniform int pickMode;                       // 0: pick id, 1: depth estimation
 #endif
 
 mediump vec4 discardVec = vec4(0.0, 0.0, 2.0, 1.0);
@@ -48,13 +48,13 @@ void main(void) {
             return;
         }
     #elif PICK_PASS
-        if (pickMode == 0u) {
+        if (pickOp == 0u) {
             // add: skip deleted, locked and selected splats
             if (vertexState != 0u) {
                 gl_Position = discardVec;
                 return;
             }
-        } else if (pickMode == 1u) {
+        } else if (pickOp == 1u) {
             // remove: skip deleted, locked and unselected splats
             if (vertexState != 1u) {
                 gl_Position = discardVec;
@@ -98,13 +98,14 @@ void main(void) {
         color = readColor(source);
         color.xyz = mix(color.xyz, selectedClr.xyz * 0.2, selectedClr.a) * selectedClr.a;
     #elif PICK_PASS
-        if (depthEstimationMode == 1) {
+        if (pickMode == 1) {
             // depth estimation mode: compute normalized depth in vertex shader
             float linearDepth = -center.view.z;
             float normalizedDepth = (linearDepth - camera_params.z) / (camera_params.y - camera_params.z);
-            color = vec4(normalizedDepth, 0.0, 0.0, readColor(source).a);
+            vec4 clr = readColor(source);
+            color = vec4(normalizedDepth * clr.a, 0.0, 0.0, clr.a);
         } else {
-            // pick ID mode
+            // pick id
             uvec4 bits = (uvec4(source.id) >> uvec4(0u, 8u, 16u, 24u)) & uvec4(255u);
             color = vec4(bits) / 255.0;
         }
@@ -155,12 +156,12 @@ const fragmentShader = /* glsl*/`
 varying mediump vec3 texCoordIsLocked;
 varying mediump vec4 color;
 
-uniform int mode;               // 0: centers, 1: rings
-uniform float pickerAlpha;
+uniform int mode;                   // 0: centers, 1: rings
 uniform float ringSize;
 
 #if PICK_PASS
-    uniform int depthEstimationMode;    // 0: pick IDs, 1: depth estimation
+    uniform float pickAlpha;
+    uniform int pickMode;           // 0: id, 1: depth estimation
 #endif
 
 const float EXP4 = exp(-4.0);
@@ -180,10 +181,9 @@ void main(void) {
     #if OUTLINE_PASS
         gl_FragColor = vec4(1.0, 1.0, 1.0, mode == 0 ? exp(-A * 4.0) * color.a : 1.0);
     #elif PICK_PASS
-        if (depthEstimationMode == 1) {
+        if (pickMode == 1) {
             // depth estimation
-            mediump float alpha = normExp(A) * color.a;
-            gl_FragColor = vec4(alpha * color.r, 0.0, 0.0, alpha);
+            gl_FragColor = color * normExp(A);
         } else {
             // pick id
             gl_FragColor = color;

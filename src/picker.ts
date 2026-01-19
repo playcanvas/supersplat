@@ -107,9 +107,9 @@ class Picker {
         });
 
         // Set picker uniforms
-        this.device.scope.resolve('pickerAlpha').setValue(alpha);
-        this.device.scope.resolve('pickMode').setValue(['add', 'remove', 'set'].indexOf(mode));
-        this.device.scope.resolve('depthEstimationMode').setValue(0);
+        this.device.scope.resolve('pickAlpha').setValue(alpha);
+        this.device.scope.resolve('pickOp').setValue(['add', 'remove', 'set'].indexOf(mode));
+        this.device.scope.resolve('pickMode').setValue(0);
 
         // Render ID picking pass
         const emptyMap = new Map();
@@ -190,8 +190,8 @@ class Picker {
         });
 
         // Set depth estimation mode uniform
-        this.device.scope.resolve('depthEstimationMode').setValue(1);
-        this.device.scope.resolve('pickMode').setValue(2); // 'set' mode - don't skip any visible splats
+        this.device.scope.resolve('pickOp').setValue(2); // 'set' mode - don't skip any visible splats
+        this.device.scope.resolve('pickMode').setValue(1);
 
         // Render scene with depth pass
         this.renderPass.blendState = this.depthBlendState;
@@ -199,9 +199,6 @@ class Picker {
         this.renderPass.setClearColor(depthClearColor);
         this.renderPass.update(camera.camera, this.scene.app.scene, [worldLayer], emptyMap, false);
         this.renderPass.render();
-
-        // Reset depth estimation mode
-        this.device.scope.resolve('depthEstimationMode').setValue(0);
 
         // Re-enable all splats
         splats.forEach((s: Splat) => {

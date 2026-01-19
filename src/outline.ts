@@ -113,7 +113,7 @@ class Outline extends Element {
         dst.orthoHeight = src.orthoHeight;
 
         this.entity.enabled = this.enabled && this.scene.events.invoke('view.outlineSelection');
-        this.entity.camera.renderTarget = this.scene.camera.workRenderTarget;
+        this.entity.camera.renderTarget = this.scene.camera.workTarget;
     }
 }
 

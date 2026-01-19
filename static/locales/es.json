@@ -69,7 +69,6 @@
     "panel.view-options.show-grid": "Mostrar cuadrícula",
     "panel.view-options.show-bound": "Mostrar límites",
     "panel.view-options.fly-speed": "Velocidad de vuelo",
-    "panel.view-options.high-precision": "Renderizado de alta precisión",
     "panel.view-options.tonemapping": "Mapeo de tonos",
     "panel.view-options.tonemapping.none": "Ninguno",
     "panel.view-options.tonemapping.linear": "Lineal",

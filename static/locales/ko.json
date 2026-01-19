@@ -69,7 +69,6 @@
     "panel.view-options.show-grid": "그리드 표시",
     "panel.view-options.show-bound": "경계 표시",
     "panel.view-options.fly-speed": "카메라 이동 속도",
-    "panel.view-options.high-precision": "고정밀 렌더링",
     "panel.view-options.tonemapping": "톤매핑",
     "panel.view-options.tonemapping.none": "없음",
     "panel.view-options.tonemapping.linear": "선형",

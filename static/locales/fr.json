@@ -69,7 +69,6 @@
     "panel.view-options.show-grid": "Afficher la grille",
     "panel.view-options.show-bound": "Afficher limites",
     "panel.view-options.fly-speed": "Vitesse de vol",
-    "panel.view-options.high-precision": "Rendu haute précision",
     "panel.view-options.tonemapping": "Mappage tonal",
     "panel.view-options.tonemapping.none": "Aucun",
     "panel.view-options.tonemapping.linear": "Linéaire",

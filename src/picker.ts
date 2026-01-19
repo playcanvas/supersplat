@@ -15,7 +15,7 @@ import { ElementType } from './element';
 import { Scene } from './scene';
 import { Splat } from './splat';
 
-// Clear color for depth pass (transmittance starts at 1)
+const idClearColor = new Color(1, 1, 1, 1);
 const depthClearColor = new Color(0, 0, 0, 1);
 
 // Shared buffer for half-to-float conversion
@@ -115,6 +115,7 @@ class Picker {
         const emptyMap = new Map();
         this.renderPass.blendState = BlendState.NOBLEND;
         this.renderPass.init(this.idRenderTarget);
+        this.renderPass.setClearColor(idClearColor);
         this.renderPass.update(this.scene.camera.entity.camera, this.scene.app.scene, [worldLayer], emptyMap, false);
         this.renderPass.render();
 
@@ -161,11 +162,12 @@ class Picker {
 
         const result: number[] = [];
         for (let i = 0; i < pw * ph; i++) {
+            // Use >>> 0 to convert signed 32-bit to unsigned (so 0xffffffff instead of -1)
             result.push(
-                pixels[i * 4] |
+                (pixels[i * 4] |
                 (pixels[i * 4 + 1] << 8) |
                 (pixels[i * 4 + 2] << 16) |
-                (pixels[i * 4 + 3] << 24)
+                (pixels[i * 4 + 3] << 24)) >>> 0
             );
         }
 

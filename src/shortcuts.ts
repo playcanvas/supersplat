@@ -18,6 +18,7 @@ interface ShortcutBinding {
     shift?: ModifierState;
     alt?: ModifierState;
     held?: boolean;
+    repeat?: boolean;       // whether to fire on keyboard repeat events (for non-held shortcuts)
     capture?: boolean;      // whether to use capture phase for the event listener
 }
 
@@ -81,9 +82,9 @@ class Shortcuts {
                             return;
                         }
                     } else {
-                        // Non-held: ignore up events and repeated keydown events
-                        // (prevents conflicts with held keys like WASD when adding modifiers)
-                        if (!down || e.repeat) return;
+                        // Non-held: ignore up events
+                        // Also ignore repeated keydown events unless repeat is explicitly allowed
+                        if (!down || (e.repeat && !options.repeat)) return;
                     }
 
                     if (options.event) {

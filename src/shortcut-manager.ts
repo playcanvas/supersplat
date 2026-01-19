@@ -36,8 +36,8 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'tool.brushSelection': { keys: ['b'] },
     'tool.floodSelection': { keys: ['o'] },
     'tool.eyedropperSelection': { keys: ['e'], ctrl: 'required', capture: true },
-    'tool.brushSelection.smaller': { keys: ['['] },
-    'tool.brushSelection.bigger': { keys: [']'] },
+    'tool.brushSelection.smaller': { keys: ['['], repeat: true },
+    'tool.brushSelection.bigger': { keys: [']'], repeat: true },
     'tool.deactivate': { keys: ['Escape'] },
     'tool.toggleCoordSpace': { keys: ['c'], shift: 'required' },
 
@@ -80,6 +80,7 @@ class ShortcutManager {
                 shift: binding.shift,
                 alt: binding.alt,
                 held: binding.held,
+                repeat: binding.repeat,
                 capture: binding.capture
             });
         }

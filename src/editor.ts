@@ -487,6 +487,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     });
 
     events.on('select.delete', () => {
+        // Don't delete gaussians when measure tool is active (backspace deletes measure points instead)
+        if (events.invoke('tool.active') === 'measure') {
+            return;
+        }
         selectedSplats().forEach((splat) => {
             editHistory.add(new DeleteSelectionOp(splat));
         });

@@ -5,7 +5,6 @@ import {
     BLENDMODE_ONE_MINUS_SRC_ALPHA,
     BlendState,
     Color,
-    Entity,
     GraphicsDevice,
     RenderPassPicker,
     RenderTarget

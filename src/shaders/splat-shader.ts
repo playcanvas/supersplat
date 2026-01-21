@@ -174,7 +174,13 @@ void main(void) {
     #if PICK_PASS
         if (pickMode == 1) {
             // depth estimation
-            gl_FragColor = color * normExp(A);
+            mediump float alpha = normExp(A);
+            if (alpha < 1.0 / 255.0) {
+                discard;
+            }
+            // we should multiply by alpha here to take into account gaussian falloff,
+            // but it results in less accurate depth for some reason
+            gl_FragColor = color;
         } else {
             // pick id
             gl_FragColor = color;

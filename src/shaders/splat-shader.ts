@@ -95,7 +95,7 @@ void main(void) {
             float linearDepth = -center.view.z;
             float normalizedDepth = (linearDepth - camera_params.z) / (camera_params.y - camera_params.z);
             vec4 clr = readColor(source);
-            color = vec4(normalizedDepth * clr.a, 0.0, 0.0, clr.a);
+            color = vec4(normalizedDepth, 0.0, 0.0, 1.0) * clr.a;
         } else {
             // pick id
             uvec4 bits = (uvec4(source.id) >> uvec4(0u, 8u, 16u, 24u)) & uvec4(255u);
@@ -153,7 +153,6 @@ uniform float ringSize;
 uniform vec4 selectedClr;
 
 #if PICK_PASS
-    uniform float pickAlpha;
     uniform int pickMode;           // 0: id, 1: depth estimation
 #endif
 
@@ -180,7 +179,7 @@ void main(void) {
             }
             // we should multiply by alpha here to take into account gaussian falloff,
             // but it results in less accurate depth for some reason
-            gl_FragColor = color;
+            gl_FragColor = color * alpha;
         } else {
             // pick id
             gl_FragColor = color;

@@ -96,8 +96,6 @@ class Picker {
         }
 
         const { splatLayer } = this.scene;
-        const events = this.scene.events;
-        const alpha = events.invoke('camera.mode') === 'rings' ? 0.0 : 0.2;
 
         // Hide non-selected elements
         const splats = this.scene.getElementsByType(ElementType.splat);
@@ -106,7 +104,6 @@ class Picker {
         });
 
         // Set picker uniforms
-        this.device.scope.resolve('pickAlpha').setValue(alpha);
         this.device.scope.resolve('pickOp').setValue(['add', 'remove', 'set'].indexOf(mode));
         this.device.scope.resolve('pickMode').setValue(0);
 

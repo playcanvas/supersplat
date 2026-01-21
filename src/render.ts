@@ -75,9 +75,9 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             // cpu-side buffer to read pixels into
             const data = new Uint8Array(width * height * 4);
 
-            const { renderTarget, workTarget } = scene.camera;
+            const { mainTarget, workTarget } = scene.camera;
 
-            scene.dataProcessor.copyRt(renderTarget, workTarget);
+            scene.dataProcessor.copyRt(mainTarget, workTarget);
 
             // read the rendered frame
             await workTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workTarget, data });
@@ -95,7 +95,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             scene.camera.endOffscreenMode();
             scene.camera.renderOverlays = true;
             scene.gizmoLayer.enabled = true;
-            scene.camera.entity.camera.clearColor.set(0, 0, 0, 0);
+            scene.camera.camera.clearColor.set(0, 0, 0, 0);
         }
     });
 
@@ -111,7 +111,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             scene.camera.renderOverlays = showDebug;
             scene.gizmoLayer.enabled = false;
             if (!transparentBg) {
-                scene.camera.entity.camera.clearColor.copy(bgClr);
+                scene.camera.camera.clearColor.copy(bgClr);
             }
 
             // render the next frame
@@ -123,9 +123,9 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             // cpu-side buffer to read pixels into
             const data = new Uint8Array(width * height * 4);
 
-            const { renderTarget, workTarget } = scene.camera;
+            const { mainTarget, workTarget } = scene.camera;
 
-            scene.dataProcessor.copyRt(renderTarget, workTarget);
+            scene.dataProcessor.copyRt(mainTarget, workTarget);
 
             // read the rendered frame
             await workTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workTarget, data });
@@ -174,7 +174,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             scene.camera.endOffscreenMode();
             scene.camera.renderOverlays = true;
             scene.gizmoLayer.enabled = true;
-            scene.camera.entity.camera.clearColor.set(0, 0, 0, 0);
+            scene.camera.camera.clearColor.set(0, 0, 0, 0);
 
             events.fire('stopSpinner');
         }
@@ -266,7 +266,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             scene.camera.renderOverlays = showDebug;
             scene.gizmoLayer.enabled = false;
             if (!transparentBg) {
-                scene.camera.entity.camera.clearColor.copy(events.invoke('bgClr'));
+                scene.camera.camera.clearColor.copy(events.invoke('bgClr'));
             }
             scene.lockedRenderMode = true;
 
@@ -289,8 +289,8 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 scene.camera.onUpdate(0);
 
                 // if the camera didn't move, don't sort
-                const pos = scene.camera.entity.getPosition();
-                const forward = scene.camera.entity.forward;
+                const pos = scene.camera.position;
+                const forward = scene.camera.forward;
                 if (last_pos.equals(pos) && last_forward.equals(forward)) {
                     return;
                 }
@@ -313,7 +313,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
                         // manually invoke sort because internally the engine sorts after render the
                         // scene call is made.
-                        instance.sort(scene.camera.entity);
+                        instance.sort(scene.camera.mainCamera);
 
                         // in cases where the camera does not move between frames the sorter won't run
                         // and we need a timeout instead. this is a hack - the engine should allow us to
@@ -327,9 +327,9 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
             // capture the current video frame
             const captureFrame = async (frameTime: number) => {
-                const { renderTarget, workTarget } = scene.camera;
+                const { mainTarget, workTarget } = scene.camera;
 
-                scene.dataProcessor.copyRt(renderTarget, workTarget);
+                scene.dataProcessor.copyRt(mainTarget, workTarget);
 
                 // read the rendered frame
                 await workTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workTarget, data });
@@ -400,7 +400,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             scene.camera.endOffscreenMode();
             scene.camera.renderOverlays = true;
             scene.gizmoLayer.enabled = true;
-            scene.camera.entity.camera.clearColor.set(0, 0, 0, 0);
+            scene.camera.camera.clearColor.set(0, 0, 0, 0);
             scene.lockedRenderMode = false;
             scene.forceRender = true;       // camera likely moved, finish with normal render
 

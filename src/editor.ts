@@ -379,7 +379,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 const z = splatData.getProp('z');
 
                 const splatSize = events.invoke('camera.splatSize');
-                const camera = scene.camera.entity.camera;
+                const camera = scene.camera.camera;
                 const sx = point.x * width;
                 const sy = point.y * height;
 
@@ -706,7 +706,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.function('camera.getPose', () => {
         const camera = scene.camera;
-        const position = camera.entity.getPosition();
+        const position = camera.position;
         const focalPoint = camera.focalPoint;
         return {
             position: { x: position.x, y: position.y, z: position.z },

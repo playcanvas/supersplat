@@ -94,7 +94,7 @@ class MeasureTool {
         selectToolbar.append(lengthInput);
         canvasContainer.append(selectToolbar);
 
-        const gizmo = new TranslateGizmo(scene.camera.entity.camera, scene.gizmoLayer);
+        const gizmo = new TranslateGizmo(scene.camera.gizmoCamera.camera, scene.gizmoLayer);
         const entity = new Entity('measureGizmoPivot');
         const transformHandler = new MeasureTransformHandler();
 

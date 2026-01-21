@@ -3,8 +3,6 @@ import {
     SEMANTIC_POSITION,
     BlendState,
     DepthState,
-    Color,
-    Entity,
     Layer,
     Shader,
     ShaderUtils,
@@ -14,41 +12,18 @@ import {
 
 import { Element, ElementType } from './element';
 import { vertexShader, fragmentShader } from './shaders/outline-shader';
-import { Splat } from './splat';
 
 class Outline extends Element {
-    entity: Entity;
     shader: Shader;
     quadRender: QuadRender;
     enabled = true;
-    clr = new Color(1, 1, 1, 0.5);
 
     constructor() {
         super(ElementType.other);
-
-        this.entity = new Entity('outlineCamera');
-        this.entity.addComponent('camera');
-        this.entity.camera.setShaderPass('OUTLINE');
-        this.entity.camera.clearColor = new Color(0, 0, 0, 0);
     }
 
     add() {
         const device = this.scene.app.graphicsDevice;
-        const layerId = this.scene.overlayLayer.id;
-
-        // add selected splat to outline layer
-        this.scene.events.on('selection.changed', (splat: Splat, prev: Splat) => {
-            if (prev) {
-                prev.entity.gsplat.layers = prev.entity.gsplat.layers.filter(id => id !== layerId);
-            }
-            if (splat) {
-                splat.entity.gsplat.layers = splat.entity.gsplat.layers.concat([layerId]);
-            }
-        });
-
-        // render overlay layer only
-        this.entity.camera.layers = [layerId];
-        this.scene.camera.entity.addChild(this.entity);
 
         this.shader = ShaderUtils.createShader(device, {
             uniqueName: 'apply-outline',
@@ -67,9 +42,16 @@ class Outline extends Element {
         const clrStorage = [1, 1, 1, 1];
         const events = this.scene.events;
 
-        // apply the outline texture to the display before gizmos render
-        this.entity.camera.on('postRenderLayer', (layer: Layer, transparent: boolean) => {
-            if (!this.entity.enabled || layer !== this.scene.overlayLayer || !transparent) {
+        // apply the outline effect after gizmo layer renders
+        // the overlay data is now in workTarget.colorBuffer (populated by MRT splat render)
+        this.scene.camera.splatCamera.camera.on('postRenderLayer', (layer: Layer, transparent: boolean) => {
+            // only apply when outline mode is enabled
+            if (!this.enabled || !events.invoke('view.outlineSelection')) {
+                return;
+            }
+
+            // apply after splat layer
+            if (layer !== this.scene.splatLayer || !transparent) {
                 return;
             }
 
@@ -84,12 +66,13 @@ class Outline extends Element {
             clrStorage[2] = selectedClr.b;
             clrStorage[3] = selectedClr.a;
 
-            outlineTextureId.setValue(this.entity.camera.renderTarget.colorBuffer);
+            // read overlay data from workTarget (populated by MRT splat render)
+            outlineTextureId.setValue(this.scene.camera.workTarget.colorBuffer);
             alphaCutoffId.setValue(events.invoke('camera.mode') === 'rings' ? 0.0 : 0.4);
             clrId.setValue(clrStorage);
 
             const glDevice = device as WebglGraphicsDevice;
-            glDevice.setRenderTarget(this.scene.camera.entity.camera.renderTarget);
+            glDevice.setRenderTarget(this.scene.camera.camera.renderTarget);
             glDevice.updateBegin();
             this.quadRender.render();
             glDevice.updateEnd();
@@ -97,23 +80,11 @@ class Outline extends Element {
     }
 
     remove() {
-        this.scene.camera.entity.removeChild(this.entity);
+        // event listeners are cleaned up when camera is destroyed
     }
 
     onPreRender() {
-        // copy camera properties
-        const src = this.scene.camera.entity.camera;
-        const dst = this.entity.camera;
-
-        dst.projection = src.projection;
-        dst.horizontalFov = src.horizontalFov;
-        dst.fov = src.fov;
-        dst.nearClip = src.nearClip;
-        dst.farClip = src.farClip;
-        dst.orthoHeight = src.orthoHeight;
-
-        this.entity.enabled = this.enabled && this.scene.events.invoke('view.outlineSelection');
-        this.entity.camera.renderTarget = this.scene.camera.workTarget;
+        // no longer need to manage a separate camera
     }
 }
 

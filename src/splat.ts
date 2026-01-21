@@ -324,6 +324,9 @@ class Splat extends Element {
         // add the entity to the scene
         this.scene.contentRoot.addChild(this.entity);
 
+        // assign splat to the dedicated splat layer (rendered by splat camera with MRT)
+        this.entity.gsplat.layers = [this.scene.splatLayer.id];
+
         this.scene.events.on('view.bands', this.rebuildMaterial, this);
         this.rebuildMaterial(this.scene.events.invoke('view.bands'));
 
@@ -395,7 +398,7 @@ class Splat extends Element {
                     scale.transformPoint(a, veca);
                     scale.transformPoint(b, vecb);
 
-                    this.scene.app.drawLine(veca, vecb, Color.WHITE, true, this.scene.debugLayer);
+                    this.scene.app.drawLine(veca, vecb, Color.WHITE, true, this.scene.worldLayer);
                 }
             }
         }

@@ -30,10 +30,8 @@ class Scene {
     config: SceneConfig;
     canvas: HTMLCanvasElement;
     app: PCApp;
-    backgroundLayer: Layer;
-    shadowLayer: Layer;
-    debugLayer: Layer;
-    overlayLayer: Layer;
+    worldLayer: Layer;
+    splatLayer: Layer;
     gizmoLayer: Layer;
     sceneState = [new SceneState(), new SceneState()];
     elements: Element[] = [];
@@ -142,33 +140,12 @@ class Scene {
             camera.fire('postRenderLayer', layer, transparent);
         });
 
-        // background layer
-        this.backgroundLayer = new Layer({
-            enabled: true,
-            name: 'Background Layer',
-            opaqueSortMode: SORTMODE_NONE,
-            transparentSortMode: SORTMODE_NONE
-        });
+        // get the world layer
+        this.worldLayer = this.app.scene.layers.getLayerByName('World');
 
-        // shadow layer
-        // this layer contains shadow caster scene mesh instances, shadow-casting
-        // virtual light, shadow catching plane geometry and the main camera.
-        this.shadowLayer = new Layer({
-            name: 'Shadow Layer'
-        });
-
-        // debug layer
-        this.debugLayer = new Layer({
-            enabled: true,
-            name: 'Debug Layer',
-            opaqueSortMode: SORTMODE_NONE,
-            transparentSortMode: SORTMODE_NONE
-        });
-
-        // overlay layer
-        this.overlayLayer = new Layer({
-            name: 'Overlay',
-            clearDepthBuffer: false,
+        // splat layer - dedicated layer for splat rendering with MRT
+        this.splatLayer = new Layer({
+            name: 'Splat',
             opaqueSortMode: SORTMODE_NONE,
             transparentSortMode: SORTMODE_NONE
         });
@@ -176,18 +153,12 @@ class Scene {
         // gizmo layer
         this.gizmoLayer = new Layer({
             name: 'Gizmo',
-            clearDepthBuffer: true,
             opaqueSortMode: SORTMODE_NONE,
             transparentSortMode: SORTMODE_NONE
         });
 
         const layers = this.app.scene.layers;
-        const worldLayer = layers.getLayerByName('World');
-        const idx = layers.getOpaqueIndex(worldLayer);
-        layers.insert(this.backgroundLayer, idx);
-        layers.insert(this.shadowLayer, idx + 1);
-        layers.insert(this.debugLayer, idx + 1);
-        layers.push(this.overlayLayer);
+        layers.push(this.splatLayer);
         layers.push(this.gizmoLayer);
 
         this.dataProcessor = new DataProcessor(this.app.graphicsDevice);
@@ -350,7 +321,7 @@ class Scene {
 
         this.forEachElement(e => e.onPreRender());
 
-        this.events.fire('prerender', this.camera.entity.getWorldTransform());
+        this.events.fire('prerender', this.camera.worldTransform);
 
         // debug - display scene bound
         if (this.config.debug.showBound) {

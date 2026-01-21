@@ -4,8 +4,6 @@ import {
     BLENDMODE_ZERO,
     SEMANTIC_POSITION,
     BlendState,
-    Color,
-    Entity,
     Layer,
     Shader,
     ShaderUtils,
@@ -17,25 +15,16 @@ import { Element, ElementType } from './element';
 import { vertexShader, fragmentShader } from './shaders/blit-shader';
 
 class Underlay extends Element {
-    entity: Entity;
     shader: Shader;
     quadRender: QuadRender;
     enabled = true;
 
     constructor() {
         super(ElementType.other);
-
-        this.entity = new Entity('underlayCamera');
-        this.entity.addComponent('camera');
-        this.entity.camera.setShaderPass('UNDERLAY');
-        this.entity.camera.clearColor = new Color(0, 0, 0, 0);
     }
 
     add() {
         const device = this.scene.app.graphicsDevice;
-
-        this.entity.camera.layers = [this.scene.overlayLayer.id];
-        this.scene.camera.entity.addChild(this.entity);
 
         this.shader = ShaderUtils.createShader(device, {
             uniqueName: 'apply-underlay',
@@ -54,17 +43,28 @@ class Underlay extends Element {
             BLENDEQUATION_ADD, BLENDMODE_ZERO, BLENDMODE_ONE
         );
 
-        this.entity.camera.on('postRenderLayer', (layer: Layer, transparent: boolean) => {
-            if (!this.entity.enabled || layer !== this.scene.overlayLayer || !transparent) {
+        const events = this.scene.events;
+
+        // apply the underlay effect after gizmo layer has rendered
+        // the overlay data is now in workTarget.colorBuffer (populated by MRT splat render)
+        this.scene.camera.splatCamera.camera.on('postRenderLayer', (layer: Layer, transparent: boolean) => {
+            // underlay is used when outline mode is disabled
+            if (!this.enabled || events.invoke('view.outlineSelection')) {
+                return;
+            }
+
+            // apply after splat layer
+            if (layer !== this.scene.splatLayer || !transparent) {
                 return;
             }
 
             device.setBlendState(blendState);
 
-            blitTextureId.setValue(this.entity.camera.renderTarget.colorBuffer);
+            // read overlay data from workTarget (populated by MRT splat render)
+            blitTextureId.setValue(this.scene.camera.workTarget.colorBuffer);
 
             const glDevice = device as WebglGraphicsDevice;
-            glDevice.setRenderTarget(this.scene.camera.entity.camera.renderTarget);
+            glDevice.setRenderTarget(this.scene.camera.camera.renderTarget);
             glDevice.updateBegin();
             this.quadRender.render();
             glDevice.updateEnd();
@@ -72,23 +72,11 @@ class Underlay extends Element {
     }
 
     remove() {
-        this.scene.camera.entity.removeChild(this.entity);
+        // event listeners are cleaned up when camera is destroyed
     }
 
     onPreRender() {
-        // copy camera properties
-        const src = this.scene.camera.entity.camera;
-        const dst = this.entity.camera;
-
-        dst.projection = src.projection;
-        dst.horizontalFov = src.horizontalFov;
-        dst.fov = src.fov;
-        dst.nearClip = src.nearClip;
-        dst.farClip = src.farClip;
-        dst.orthoHeight = src.orthoHeight;
-
-        this.entity.enabled = this.enabled && !this.scene.events.invoke('view.outlineSelection');
-        this.entity.camera.renderTarget = this.scene.camera.workTarget;
+        // no longer need to manage a separate camera
     }
 }
 

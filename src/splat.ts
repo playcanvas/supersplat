@@ -338,7 +338,7 @@ class Splat extends Element {
 
         // configure rings rendering
         const material = this.entity.gsplat.instance.material;
-        material.setParameter('mode', cameraMode === 'rings' ? 1 : 0);
+        material.setParameter('outlineMode', events.invoke('view.outlineSelection') ? 1 : 0);
         material.setParameter('ringSize', (selected && cameraOverlay && cameraMode === 'rings') ? 0.04 : 0);
 
         // configure colors
@@ -349,7 +349,7 @@ class Splat extends Element {
         if (!selected) {
             material.setParameter('selectedClr', [0, 0, 0, 0]);
         } else if (events.invoke('view.outlineSelection')) {
-            material.setParameter('selectedClr', [1, 1, 1, 1]);
+            material.setParameter('selectedClr', [0, 0, 0, 0]);
         } else {
             material.setParameter('selectedClr', [selectedClr.r, selectedClr.g, selectedClr.b, selectedClr.a * this.selectionAlpha]);
         }

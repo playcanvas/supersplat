@@ -85,8 +85,8 @@ void main(void) {
     // store texture coord and locked state
     texCoord_flags = vec4(
         corner.uv,
-        (vertexState & 2u) != 0u ? 1.0 : 0.0,
-        (vertexState & 1u) != 0u ? 1.0 : 0.0
+        (vertexState & 1u) != 0u ? 1.0 : 0.0,       // selected
+        (vertexState & 2u) != 0u ? 1.0 : 0.0        // locked
     );
 
     #if PICK_PASS
@@ -148,9 +148,8 @@ const fragmentShader = /* glsl*/`
 varying mediump vec4 texCoord_flags;
 varying mediump vec4 color;
 
-uniform int mode;                   // 0: centers, 1: rings
+uniform bool outlineMode;
 uniform float ringSize;
-uniform vec4 selectedClr;
 
 #if PICK_PASS
     uniform int pickMode;           // 0: id, 1: depth estimation
@@ -185,9 +184,10 @@ void main(void) {
             gl_FragColor = color;
         }
     #else
-        mediump float alpha = normExp(A) * color.a;
+        mediump float norm = normExp(A);
+        mediump float alpha = norm * color.a;
 
-        if (texCoord_flags.z == 0.0 && ringSize > 0.0) {
+        if (texCoord_flags.w == 0.0 && ringSize > 0.0) {
             // rings mode
             if (A < 1.0 - ringSize) {
                 alpha = max(0.05, alpha);
@@ -196,12 +196,20 @@ void main(void) {
             }
         }
 
-        // Only split to RT1 when selection overlay is active (selectedClr.a > 0)
-        float overlayEnabled = step(0.001, selectedClr.a);
-        float splitMask = texCoord_flags.w * overlayEnabled;
+        bool selected = texCoord_flags.z != 0.0;
 
-        pcFragColor0 = vec4(color.xyz * alpha * mix(1.0, 0.8, splitMask), alpha);
-        pcFragColor1 = vec4(color.xyz * alpha * mix(0.0, 0.2, splitMask), alpha * splitMask);
+        if (outlineMode) {
+            pcFragColor0 = vec4(color.xyz * alpha, alpha);
+            pcFragColor1 = vec4(0.0, 0.0, 0.0, selected ? alpha : 0.0);
+        } else {
+            if (selected) {
+                pcFragColor0 = vec4(color.xyz * alpha * 0.8, alpha);
+                pcFragColor1 = vec4(color.xyz * alpha * 0.2, alpha);
+            } else {
+                pcFragColor0 = vec4(color.xyz * alpha, alpha);
+                pcFragColor1 = vec4(0.0, 0.0, 0.0, 0.0);
+            }
+        }
     #endif
 }
 `;

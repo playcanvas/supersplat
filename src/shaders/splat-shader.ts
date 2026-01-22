@@ -9,7 +9,7 @@ uniform vec4 lockedClr;
 uniform vec3 clrOffset;
 uniform vec4 clrScale;
 
-varying mediump vec3 texCoordIsLocked;          // store locked flat in z
+varying mediump vec4 texCoord_flags;            // store locked flat in z
 varying mediump vec4 color;
 
 #if PICK_PASS
@@ -37,17 +37,7 @@ void main(void) {
     // get per-gaussian edit state, discard if deleted
     uint vertexState = uint(texelFetch(splatState, source.uv, 0).r * 255.0 + 0.5) & 7u;
 
-    #if OUTLINE_PASS
-        if (vertexState != 1u) {
-            gl_Position = discardVec;
-            return;
-        }
-    #elif UNDERLAY_PASS
-        if (vertexState != 1u) {
-            gl_Position = discardVec;
-            return;
-        }
-    #elif PICK_PASS
+    #if PICK_PASS
         if (pickOp == 0u) {
             // add: skip deleted, locked and selected splats
             if (vertexState != 0u) {
@@ -68,6 +58,7 @@ void main(void) {
             }
         }
     #else
+        // skip deleted splats
         if ((vertexState & 4u) != 0u) {
             gl_Position = discardVec;
             return;
@@ -92,18 +83,19 @@ void main(void) {
     gl_Position = center.proj + vec4(corner.offset, 0.0, 0.0);
 
     // store texture coord and locked state
-    texCoordIsLocked = vec3(corner.uv, (vertexState & 2u) != 0u ? 1.0 : 0.0);
+    texCoord_flags = vec4(
+        corner.uv,
+        (vertexState & 1u) != 0u ? 1.0 : 0.0,       // selected
+        (vertexState & 2u) != 0u ? 1.0 : 0.0        // locked
+    );
 
-    #if UNDERLAY_PASS
-        color = readColor(source);
-        color.xyz = mix(color.xyz, selectedClr.xyz * 0.2, selectedClr.a) * selectedClr.a;
-    #elif PICK_PASS
+    #if PICK_PASS
         if (pickMode == 1) {
             // depth estimation mode: compute normalized depth in vertex shader
             float linearDepth = -center.view.z;
             float normalizedDepth = (linearDepth - camera_params.z) / (camera_params.y - camera_params.z);
             vec4 clr = readColor(source);
-            color = vec4(normalizedDepth * clr.a, 0.0, 0.0, clr.a);
+            color = vec4(normalizedDepth, 0.0, 0.0, 1.0) * clr.a;
         } else {
             // pick id
             uvec4 bits = (uvec4(source.id) >> uvec4(0u, 8u, 16u, 24u)) & uvec4(255u);
@@ -146,21 +138,20 @@ void main(void) {
             color *= lockedClr;
         } else if ((vertexState & 1u) != 0u) {
             // selected
-            color.xyz = mix(color.xyz, selectedClr.xyz * 0.8, selectedClr.a);
+            color.xyz = mix(color.xyz, selectedClr.xyz, selectedClr.a);
         }
     #endif
 }
 `;
 
 const fragmentShader = /* glsl*/`
-varying mediump vec3 texCoordIsLocked;
+varying mediump vec4 texCoord_flags;
 varying mediump vec4 color;
 
-uniform int mode;                   // 0: centers, 1: rings
+uniform bool outlineMode;
 uniform float ringSize;
 
 #if PICK_PASS
-    uniform float pickAlpha;
     uniform int pickMode;           // 0: id, 1: depth estimation
 #endif
 
@@ -172,26 +163,31 @@ float normExp(float x) {
 }
 
 void main(void) {
-    mediump float A = dot(texCoordIsLocked.xy, texCoordIsLocked.xy);
+    mediump float A = dot(texCoord_flags.xy, texCoord_flags.xy);
 
     if (A > 1.0) {
         discard;
     }
 
-    #if OUTLINE_PASS
-        gl_FragColor = vec4(1.0, 1.0, 1.0, mode == 0 ? exp(-A * 4.0) * color.a : 1.0);
-    #elif PICK_PASS
+    #if PICK_PASS
         if (pickMode == 1) {
             // depth estimation
-            gl_FragColor = color * normExp(A);
+            mediump float alpha = normExp(A);
+            if (alpha < 1.0 / 255.0) {
+                discard;
+            }
+            // we should multiply by alpha here to take into account gaussian falloff,
+            // but it results in less accurate depth for some reason
+            gl_FragColor = color * alpha;
         } else {
             // pick id
             gl_FragColor = color;
         }
     #else
-        mediump float alpha = normExp(A) * color.a;
+        mediump float norm = normExp(A);
+        mediump float alpha = norm * color.a;
 
-        if (texCoordIsLocked.z == 0.0 && ringSize > 0.0) {
+        if (texCoord_flags.w == 0.0 && ringSize > 0.0) {
             // rings mode
             if (A < 1.0 - ringSize) {
                 alpha = max(0.05, alpha);
@@ -200,7 +196,20 @@ void main(void) {
             }
         }
 
-        gl_FragColor = vec4(color.xyz * alpha, alpha);
+        bool selected = texCoord_flags.z != 0.0;
+
+        if (outlineMode) {
+            pcFragColor0 = vec4(color.xyz * alpha, alpha);
+            pcFragColor1 = vec4(0.0, 0.0, 0.0, selected ? alpha : 0.0);
+        } else {
+            if (selected) {
+                pcFragColor0 = vec4(color.xyz * alpha * 0.8, alpha);
+                pcFragColor1 = vec4(color.xyz * alpha * 0.2, alpha);
+            } else {
+                pcFragColor0 = vec4(color.xyz * alpha, alpha);
+                pcFragColor1 = vec4(0.0, 0.0, 0.0, 0.0);
+            }
+        }
     #endif
 }
 `;

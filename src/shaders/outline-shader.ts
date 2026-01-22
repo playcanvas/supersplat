@@ -6,7 +6,7 @@ const vertexShader = /* glsl*/ `
 `;
 
 const fragmentShader = /* glsl*/ `
-    uniform sampler2D outlineTexture;
+    uniform sampler2D srcTexture;
     uniform float alphaCutoff;
     uniform vec4 clr;
 
@@ -14,13 +14,13 @@ const fragmentShader = /* glsl*/ `
         ivec2 texel = ivec2(gl_FragCoord.xy);
 
         // skip solid pixels
-        if (texelFetch(outlineTexture, texel, 0).a > alphaCutoff) {
+        if (texelFetch(srcTexture, texel, 0).a > alphaCutoff) {
             discard;
         }
 
         for (int x = -2; x <= 2; x++) {
             for (int y = -2; y <= 2; y++) {
-                if ((x != 0) && (y != 0) && (texelFetch(outlineTexture, texel + ivec2(x, y), 0).a > alphaCutoff)) {
+                if ((x != 0) && (y != 0) && (texelFetch(srcTexture, texel + ivec2(x, y), 0).a > alphaCutoff)) {
                     gl_FragColor = clr;
                     return;
                 }

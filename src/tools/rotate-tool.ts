@@ -6,7 +6,7 @@ import { Scene } from '../scene';
 
 class RotateTool extends TransformTool {
     constructor(events: Events, scene: Scene) {
-        const gizmo = new RotateGizmo(scene.camera.entity.camera, scene.gizmoLayer);
+        const gizmo = new RotateGizmo(scene.camera.camera, scene.gizmoLayer);
         gizmo.rotationMode = 'orbit';
 
         super(gizmo, events, scene);

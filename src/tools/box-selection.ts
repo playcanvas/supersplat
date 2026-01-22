@@ -15,7 +15,7 @@ class BoxSelection {
     constructor(events: Events, scene: Scene, canvasContainer: Container) {
         const box = new BoxShape();
 
-        const gizmo = new TranslateGizmo(scene.camera.entity.camera, scene.gizmoLayer);
+        const gizmo = new TranslateGizmo(scene.camera.camera, scene.gizmoLayer);
 
         gizmo.on('render:update', () => {
             scene.forceRender = true;

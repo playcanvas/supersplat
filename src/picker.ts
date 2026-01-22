@@ -5,7 +5,6 @@ import {
     BLENDMODE_ONE_MINUS_SRC_ALPHA,
     BlendState,
     Color,
-    Entity,
     GraphicsDevice,
     RenderPassPicker,
     RenderTarget
@@ -96,9 +95,7 @@ class Picker {
             return;
         }
 
-        const worldLayer = this.scene.app.scene.layers.getLayerByName('World');
-        const events = this.scene.events;
-        const alpha = events.invoke('camera.mode') === 'rings' ? 0.0 : 0.2;
+        const { splatLayer } = this.scene;
 
         // Hide non-selected elements
         const splats = this.scene.getElementsByType(ElementType.splat);
@@ -107,7 +104,6 @@ class Picker {
         });
 
         // Set picker uniforms
-        this.device.scope.resolve('pickAlpha').setValue(alpha);
         this.device.scope.resolve('pickOp').setValue(['add', 'remove', 'set'].indexOf(mode));
         this.device.scope.resolve('pickMode').setValue(0);
 
@@ -116,7 +112,7 @@ class Picker {
         this.renderPass.blendState = BlendState.NOBLEND;
         this.renderPass.init(this.idRenderTarget);
         this.renderPass.setClearColor(idClearColor);
-        this.renderPass.update(this.scene.camera.entity.camera, this.scene.app.scene, [worldLayer], emptyMap, false);
+        this.renderPass.update(this.scene.camera.camera, this.scene.app.scene, [splatLayer], emptyMap, false);
         this.renderPass.render();
 
         // Re-enable all splats
@@ -175,16 +171,17 @@ class Picker {
     }
 
     // Prepare for depth picking by rendering the specified splat
-    prepareDepth(splat: Splat, camera: Entity) {
+    prepareDepth(splat: Splat) {
         if (!this.depthRenderTarget) {
             return;
         }
 
-        const worldLayer = this.scene.app.scene.layers.getLayerByName('World');
+        const { scene } = this;
+        const { app, camera, splatLayer } = scene;
         const emptyMap = new Map();
 
         // Hide non-selected elements
-        const splats = this.scene.getElementsByType(ElementType.splat);
+        const splats = scene.getElementsByType(ElementType.splat);
         splats.forEach((s: Splat) => {
             s.entity.enabled = s === splat;
         });
@@ -197,7 +194,7 @@ class Picker {
         this.renderPass.blendState = this.depthBlendState;
         this.renderPass.init(this.depthRenderTarget);
         this.renderPass.setClearColor(depthClearColor);
-        this.renderPass.update(camera.camera, this.scene.app.scene, [worldLayer], emptyMap, false);
+        this.renderPass.update(camera.camera, app.scene, [splatLayer], emptyMap, false);
         this.renderPass.render();
 
         // Re-enable all splats

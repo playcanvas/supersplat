@@ -17,7 +17,6 @@ const sceneConfig = {
         fov: 75,
         exposure: 1.0,
         toneMapping: 'linear',
-        debugRender: '',
         overlay: false
     },
     show: {

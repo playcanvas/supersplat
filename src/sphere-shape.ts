@@ -49,7 +49,7 @@ class SphereShape extends Element {
         material.update();
 
         this.pivot.render.meshInstances[0].material = material;
-        this.pivot.render.layers = [this.scene.debugLayer.id];
+        this.pivot.render.layers = [this.scene.worldLayer.id];
 
         this.material = material;
 

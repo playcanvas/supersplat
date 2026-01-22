@@ -3,6 +3,7 @@ import {
     BUFFER_STATIC,
     PRIMITIVE_POINTS,
     SEMANTIC_POSITION,
+    Entity,
     GSplatResource,
     ShaderMaterial,
     Mesh,
@@ -17,6 +18,9 @@ import { vertexShader, fragmentShader } from './shaders/splat-overlay-shader';
 import { Splat } from './splat';
 
 class SplatOverlay extends Element {
+    entity: Entity;
+    mesh: Mesh;
+    material: ShaderMaterial;
     meshInstance: MeshInstance;
     splat: Splat;
 
@@ -28,99 +32,120 @@ class SplatOverlay extends Element {
         const scene = this.scene;
         const device = scene.graphicsDevice;
 
-        const material = new ShaderMaterial({
+        this.material = new ShaderMaterial({
             uniqueName: 'splatOverlayMaterial',
             attributes: { vertex_id: SEMANTIC_POSITION },
             vertexGLSL: vertexShader,
             fragmentGLSL: fragmentShader
         });
-        material.blendType = BLEND_NORMAL;
+        this.material.blendType = BLEND_NORMAL;
+        this.material.depthWrite = false;
+        this.material.depthTest = true;
+        this.material.update();
 
-        const mesh = new Mesh(device);
+        this.mesh = new Mesh(device);
+        this.meshInstance = new MeshInstance(this.mesh, this.material, null);
+        // slightly higher priority so it renders before gizmos
+        this.meshInstance.drawBucket = 128;
 
-        const meshInstance = new MeshInstance(mesh, material, null);
-
-        const events = this.scene.events;
-
-        const update = (splat: Splat) => {
-            if (!splat) {
-                meshInstance.node = null;
-                return;
-            }
-
-            const splatData = splat.splatData;
-
-            const vertexFormat = new VertexFormat(device, [{
-                semantic: SEMANTIC_POSITION,
-                components: 1,
-                type: TYPE_UINT32,
-                asInt: true
-            }]);
-
-            // TODO: make use of Splat's mapping instead of rendering all splats
-            const vertexData = new Uint32Array(splatData.numSplats);
-            for (let i = 0; i < splatData.numSplats; ++i) {
-                vertexData[i] = i;
-            }
-
-            const vertexBuffer = new VertexBuffer(device, vertexFormat, splatData.numSplats, {
-                usage: BUFFER_STATIC,
-                data: vertexData.buffer
-            });
-
-            if (mesh.vertexBuffer) {
-                mesh.vertexBuffer.destroy();
-                mesh.vertexBuffer = null;
-            }
-
-            mesh.vertexBuffer = vertexBuffer;
-            mesh.primitive[0] = {
-                type: PRIMITIVE_POINTS,
-                base: 0,
-                baseVertex: 0,
-                count: splatData.numSplats
-            };
-
-            material.setParameter('splatState', splat.stateTexture);
-            material.setParameter('splatPosition', (splat.entity.gsplat.instance.resource as GSplatResource).transformATexture);
-            material.setParameter('splatTransform', splat.transformTexture);
-            material.setParameter('texParams', [splat.stateTexture.width, splat.stateTexture.height]);
-            material.update();
-
-            meshInstance.node = splat.entity;
-            this.splat = splat;
-        };
-
-        events.on('selection.changed', (selection: Splat) => {
-            update(selection);
+        this.entity = new Entity('splatOverlay');
+        this.entity.addComponent('render', {
+            meshInstances: [this.meshInstance],
+            layers: [scene.gizmoLayer.id]
         });
 
-        this.meshInstance = meshInstance;
+        scene.events.on('selection.changed', (selection: Splat) => {
+            if (selection) {
+                this.attach(selection);
+            } else {
+                this.detach();
+            }
+        });
     }
 
     destroy() {
-        this.meshInstance.material.destroy();
-        this.meshInstance.destroy();
+        this.entity.remove();
+        this.entity.destroy();
+    }
+
+    attach(splat: Splat) {
+        const { mesh, material } = this;
+        const { graphicsDevice } = this.scene;
+
+        const splatData = splat.splatData;
+
+        // TODO: make use of Splat's mapping instead of rendering all splats
+        const vertexData = new Uint32Array(splatData.numSplats);
+        for (let i = 0; i < splatData.numSplats; ++i) {
+            vertexData[i] = i;
+        }
+
+        const vertexFormat = new VertexFormat(graphicsDevice, [{
+            semantic: SEMANTIC_POSITION,
+            components: 1,
+            type: TYPE_UINT32,
+            asInt: true
+        }]);
+
+        const vertexBuffer = new VertexBuffer(graphicsDevice, vertexFormat, splatData.numSplats, {
+            usage: BUFFER_STATIC,
+            data: vertexData.buffer
+        });
+
+        if (mesh.vertexBuffer) {
+            mesh.vertexBuffer.destroy();
+            mesh.vertexBuffer = null;
+        }
+
+        mesh.vertexBuffer = vertexBuffer;
+        mesh.primitive[0] = {
+            type: PRIMITIVE_POINTS,
+            base: 0,
+            baseVertex: 0,
+            count: splatData.numSplats
+        };
+
+        material.setParameter('splatState', splat.stateTexture);
+        material.setParameter('splatPosition', (splat.entity.gsplat.instance.resource as GSplatResource).transformATexture);
+        material.setParameter('splatTransform', splat.transformTexture);
+        material.setParameter('texParams', [splat.stateTexture.width, splat.stateTexture.height]);
+        material.update();
+
+        splat.entity.addChild(this.entity);
+        this.splat = splat;
+    }
+
+    detach() {
+        this.entity.remove();
     }
 
     onPreRender() {
-        const events = this.scene.events;
-        const splatSize = events.invoke('camera.splatSize');
+        const { enabled, scene } = this;
+        const { events } = scene;
 
-        if (this.meshInstance.node &&
-            this.scene.camera.renderOverlays &&
-            splatSize > 0 &&
-            events.invoke('camera.overlay') &&
-            events.invoke('camera.mode') === 'centers') {
+        this.entity.enabled = enabled;
+
+        if (enabled) {
+            const { material } = this;
+            const splatSize = events.invoke('camera.splatSize');
             const selectedClr = events.invoke('selectedClr');
             const unselectedClr = events.invoke('unselectedClr');
-            const { material } = this.meshInstance;
+
             material.setParameter('splatSize', splatSize * window.devicePixelRatio);
             material.setParameter('selectedClr', [selectedClr.r, selectedClr.g, selectedClr.b, selectedClr.a]);
             material.setParameter('unselectedClr', [unselectedClr.r, unselectedClr.g, unselectedClr.b, unselectedClr.a]);
             material.setParameter('transformPalette', this.splat.transformPalette.texture);
-            this.scene.app.drawMeshInstance(this.meshInstance);
+            material.update();
         }
+    }
+
+    get enabled() {
+        const { scene } = this;
+        const { events } = scene;
+        return events.invoke('camera.splatSize') > 0 &&
+            scene.camera.renderOverlays &&
+            events.invoke('camera.overlay') &&
+            events.invoke('camera.mode') === 'centers';
     }
 }
 

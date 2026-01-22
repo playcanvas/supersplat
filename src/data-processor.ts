@@ -276,7 +276,7 @@ class DataProcessor {
         const transformPalette = splat.transformPalette.texture;
 
         // update view projection matrix
-        const camera = splat.scene.camera.entity.camera;
+        const camera = splat.scene.camera.camera;
         this.viewProjectionMat.mul2(camera.projectionMatrix, camera.viewMatrix);
 
         // allocate resources

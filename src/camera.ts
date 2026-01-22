@@ -623,7 +623,7 @@ class Camera extends Element {
     }
 
     getRay(screenX: number, screenY: number, ray: Ray) {
-        const { camera, ortho, scene } = this;
+        const { camera, ortho } = this;
         const cameraPos = this.mainCamera.getPosition();
 
         // create the pick ray in world space

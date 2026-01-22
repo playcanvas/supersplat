@@ -126,7 +126,7 @@ class SplatOverlay extends Element {
         this.entity.enabled = enabled;
 
         if (enabled) {
-            const { material, meshInstance } = this;
+            const { material } = this;
             const splatSize = events.invoke('camera.splatSize');
             const selectedClr = events.invoke('selectedClr');
             const unselectedClr = events.invoke('unselectedClr');

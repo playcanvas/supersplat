@@ -1,5 +1,5 @@
 import { BufferTarget, EncodedPacket, EncodedVideoPacketSource, MkvOutputFormat, MovOutputFormat, Mp4OutputFormat, Output, StreamTarget, WebMOutputFormat } from 'mediabunny';
-import { path, Vec3 } from 'playcanvas';
+import { Color, path, Vec3 } from 'playcanvas';
 
 import { ElementType } from './element';
 import { Events } from './events';
@@ -7,6 +7,8 @@ import { PngCompressor } from './png-compressor';
 import { Scene } from './scene';
 import { Splat } from './splat';
 import { localize } from './ui/localization';
+
+const nullClr = new Color(0, 0, 0, 0);
 
 type ImageSettings = {
     width: number;
@@ -111,7 +113,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             scene.camera.renderOverlays = showDebug;
             scene.gizmoLayer.enabled = false;
             if (!transparentBg) {
-                scene.camera.camera.clearColor.copy(bgClr);
+                scene.camera.clearPass.setClearColor(events.invoke('bgClr'));
             }
 
             // render the next frame
@@ -129,21 +131,6 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
             // read the rendered frame
             await workTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workTarget, data });
-
-            // the render buffer contains premultiplied alpha. so apply background color.
-            if (!transparentBg) {
-                // @ts-ignore
-                const pixels = new Uint8ClampedArray(data.buffer);
-
-                const { r, g, b } = bgClr;
-                for (let i = 0; i < pixels.length; i += 4) {
-                    const a = 255 - pixels[i + 3];
-                    pixels[i + 0] += r * a;
-                    pixels[i + 1] += g * a;
-                    pixels[i + 2] += b * a;
-                    pixels[i + 3] = 255;
-                }
-            }
 
             // construct the png compressor
             if (!compressor) {
@@ -174,7 +161,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             scene.camera.endOffscreenMode();
             scene.camera.renderOverlays = true;
             scene.gizmoLayer.enabled = true;
-            scene.camera.camera.clearColor.set(0, 0, 0, 0);
+            scene.camera.clearPass.setClearColor(nullClr);
 
             events.fire('stopSpinner');
         }
@@ -266,7 +253,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             scene.camera.renderOverlays = showDebug;
             scene.gizmoLayer.enabled = false;
             if (!transparentBg) {
-                scene.camera.camera.clearColor.copy(events.invoke('bgClr'));
+                scene.camera.clearPass.setClearColor(events.invoke('bgClr'));
             }
             scene.lockedRenderMode = true;
 
@@ -400,7 +387,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             scene.camera.endOffscreenMode();
             scene.camera.renderOverlays = true;
             scene.gizmoLayer.enabled = true;
-            scene.camera.camera.clearColor.set(0, 0, 0, 0);
+            scene.camera.clearPass.setClearColor(nullClr);
             scene.lockedRenderMode = false;
             scene.forceRender = true;       // camera likely moved, finish with normal render
 

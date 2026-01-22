@@ -289,12 +289,12 @@ class Camera extends Element {
         this.gizmoPass = new RenderPassForward(device, composition, app.scene, renderer);
         this.finalPass = new SimpleRenderPass(device,
             new ShaderQuad(device, vertexShader, fragmentShader, 'final-blit'), {
-            vars: () => {
-                return {
-                    srcTexture: this.mainTarget.colorBuffer
-                };
-            }
-        });
+                vars: () => {
+                    return {
+                        srcTexture: this.mainTarget.colorBuffer
+                    };
+                }
+            });
 
         const target = document.getElementById('canvas-container');
         this.controller = new PointerController(this, target);

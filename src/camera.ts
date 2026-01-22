@@ -100,8 +100,6 @@ class Camera extends Element {
     // overridden target size
     targetSizeOverride: { width: number, height: number } = null;
 
-    suppressFinalBlit = false;
-
     renderOverlays = true;
 
     updateCameraUniforms: () => void;
@@ -742,12 +740,12 @@ class Camera extends Element {
 
     startOffscreenMode(width: number, height: number) {
         this.targetSizeOverride = { width, height };
-        this.suppressFinalBlit = true;
+        this.finalPass.enabled = false;
     }
 
     endOffscreenMode() {
         this.targetSizeOverride = null;
-        this.suppressFinalBlit = false;
+        this.finalPass.enabled = true;
     }
 
     get targetSize() {

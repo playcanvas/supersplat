@@ -45,9 +45,7 @@ class Underlay extends Element {
 
         const events = this.scene.events;
 
-        // apply the underlay effect after gizmo layer has rendered
-        // the overlay data is now in workTarget.colorBuffer (populated by MRT splat render)
-        this.scene.camera.splatCamera.camera.on('postRenderLayer', (layer: Layer, transparent: boolean) => {
+        this.scene.camera.camera.on('postRenderLayer', (layer: Layer, transparent: boolean) => {
             // underlay is used when outline mode is disabled
             if (!this.enabled || events.invoke('view.outlineSelection')) {
                 return;
@@ -64,7 +62,7 @@ class Underlay extends Element {
             blitTextureId.setValue(this.scene.camera.workTarget.colorBuffer);
 
             const glDevice = device as WebglGraphicsDevice;
-            glDevice.setRenderTarget(this.scene.camera.camera.renderTarget);
+            glDevice.setRenderTarget(this.scene.camera.mainTarget);
             glDevice.updateBegin();
             this.quadRender.render();
             glDevice.updateEnd();

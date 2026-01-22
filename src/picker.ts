@@ -112,7 +112,7 @@ class Picker {
         this.renderPass.blendState = BlendState.NOBLEND;
         this.renderPass.init(this.idRenderTarget);
         this.renderPass.setClearColor(idClearColor);
-        this.renderPass.update(this.scene.camera.splatCamera.camera, this.scene.app.scene, [splatLayer], emptyMap, false);
+        this.renderPass.update(this.scene.camera.camera, this.scene.app.scene, [splatLayer], emptyMap, false);
         this.renderPass.render();
 
         // Re-enable all splats
@@ -194,7 +194,7 @@ class Picker {
         this.renderPass.blendState = this.depthBlendState;
         this.renderPass.init(this.depthRenderTarget);
         this.renderPass.setClearColor(depthClearColor);
-        this.renderPass.update(camera.splatCamera.camera, app.scene, [splatLayer], emptyMap, false);
+        this.renderPass.update(camera.camera, app.scene, [splatLayer], emptyMap, false);
         this.renderPass.render();
 
         // Re-enable all splats

@@ -2,13 +2,16 @@ import {
     EVENT_POSTRENDER_LAYER,
     EVENT_PRERENDER_LAYER,
     LAYERID_DEPTH,
-    SORTMODE_NONE,
+    SORTMODE_CUSTOM,
+    SORTMODE_BACK2FRONT,
     BoundingBox,
     CameraComponent,
     Color,
     Entity,
     Layer,
-    GraphicsDevice
+    GraphicsDevice,
+    MeshInstance,
+    Vec3
 } from 'playcanvas';
 
 import { AssetLoader } from './asset-loader';
@@ -24,6 +27,45 @@ import { SceneState } from './scene-state';
 import { Splat } from './splat';
 import { SplatOverlay } from './splat-overlay';
 import { Underlay } from './underlay';
+
+// sort meshInstances by the aabb corner furthest from the camera
+const corner = new Vec3();
+const specialSort = (instances: MeshInstance[], numInstances: number, cameraPos: Vec3, cameraDir: Vec3) => {
+    const distances = new Map<MeshInstance, number>();
+
+    for (let i = 0; i < numInstances; i++) {
+        const instance = instances[i];
+        const { aabb } = instance;
+        const { center, halfExtents } = aabb;
+
+        // loop over all 8 aabb corners and find the furthest distance along the camera view direction
+        let maxDist = -Infinity;
+        for (let cx = -1; cx <= 1; cx += 2) {
+            for (let cy = -1; cy <= 1; cy += 2) {
+                for (let cz = -1; cz <= 1; cz += 2) {
+                    corner.set(
+                        center.x + cx * halfExtents.x,
+                        center.y + cy * halfExtents.y,
+                        center.z + cz * halfExtents.z
+                    );
+                    // project camera-to-corner vector onto camera direction
+                    const dist = (corner.x - cameraPos.x) * cameraDir.x +
+                                    (corner.y - cameraPos.y) * cameraDir.y +
+                                    (corner.z - cameraPos.z) * cameraDir.z;
+                    if (dist > maxDist) {
+                        maxDist = dist;
+                    }
+                }
+            }
+        }
+
+        // store in map for reuse during sort
+        distances.set(instance, maxDist);
+    }
+
+    // sort instances back-to-front by calculated distance (furthest first)
+    instances.sort((a, b) => distances.get(b) - distances.get(a));
+};
 
 class Scene {
     events: Events;
@@ -146,16 +188,19 @@ class Scene {
         // splat layer - dedicated layer for splat rendering with MRT
         this.splatLayer = new Layer({
             name: 'Splat',
-            opaqueSortMode: SORTMODE_NONE,
-            transparentSortMode: SORTMODE_NONE
+            opaqueSortMode: SORTMODE_CUSTOM,
+            transparentSortMode: SORTMODE_CUSTOM
         });
 
         // gizmo layer
         this.gizmoLayer = new Layer({
             name: 'Gizmo',
-            opaqueSortMode: SORTMODE_NONE,
-            transparentSortMode: SORTMODE_NONE
+            opaqueSortMode: SORTMODE_CUSTOM,
+            transparentSortMode: SORTMODE_CUSTOM
         });
+
+        this.splatLayer.customCalculateSortValues = specialSort;
+        this.gizmoLayer.customCalculateSortValues = specialSort;
 
         const layers = this.app.scene.layers;
         layers.push(this.splatLayer);

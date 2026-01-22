@@ -42,9 +42,9 @@ class Outline extends Element {
         const clrStorage = [1, 1, 1, 1];
         const events = this.scene.events;
 
-        // apply the outline effect after gizmo layer renders
+        // apply the outline effect after splat layer renders
         // the overlay data is now in workTarget.colorBuffer (populated by MRT splat render)
-        this.scene.camera.splatCamera.camera.on('postRenderLayer', (layer: Layer, transparent: boolean) => {
+        this.scene.camera.camera.on('postRenderLayer', (layer: Layer, transparent: boolean) => {
             // only apply when outline mode is enabled
             if (!this.enabled || !events.invoke('view.outlineSelection')) {
                 return;
@@ -72,7 +72,7 @@ class Outline extends Element {
             clrId.setValue(clrStorage);
 
             const glDevice = device as WebglGraphicsDevice;
-            glDevice.setRenderTarget(this.scene.camera.camera.renderTarget);
+            glDevice.setRenderTarget(this.scene.camera.mainTarget);
             glDevice.updateBegin();
             this.quadRender.render();
             glDevice.updateEnd();

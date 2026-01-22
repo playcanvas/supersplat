@@ -15,15 +15,17 @@ import {
     TONEMAP_LINEAR,
     TONEMAP_NEUTRAL,
     BoundingBox,
+    Color,
     Entity,
     Mat4,
     Ray,
+    RenderPass,
+    RenderPassForward,
     RenderTarget,
     Texture,
     Vec3,
     Vec4,
-    WebglGraphicsDevice,
-    CameraComponent
+    WebglGraphicsDevice
 } from 'playcanvas';
 
 import { PointerController } from './controllers';
@@ -81,12 +83,16 @@ class Camera extends Element {
     picker: Picker;
 
     mainCamera: Entity;
-    splatCamera: Entity;
-    gizmoCamera: Entity;
 
     mainTarget: RenderTarget;
     splatTarget: RenderTarget;
     workTarget: RenderTarget;
+
+    // Render passes
+    clearPass: RenderPass;
+    mainPass: RenderPassForward;
+    splatPass: RenderPassForward;
+    gizmoPass: RenderPassForward;
 
     // overridden target size
     targetSizeOverride: { width: number, height: number } = null;
@@ -102,34 +108,7 @@ class Camera extends Element {
 
         // create the camera entity
         this.mainCamera = new Entity('Camera');
-        this.mainCamera.addComponent('camera', {
-            clearColorBuffer: true,
-            clearDepthBuffer: true,
-            clearStencilBuffer: true
-        });
-        this.mainCamera.camera.clearColor.set(0, 0, 0, 0);
-
-        this.splatCamera = new Entity('SplatCamera');
-        this.splatCamera.addComponent('camera', {
-            priority: 1,
-            clearColorBuffer: false,
-            clearDepthBuffer: false,
-            clearStencilBuffer: false
-        });
-        this.mainCamera.addChild(this.splatCamera);
-
-        this.gizmoCamera = new Entity('GizmoCamera');
-        this.gizmoCamera.addComponent('camera', {
-            priority: 2,
-            clearColorBuffer: false,
-            clearDepthBuffer: true,
-            clearStencilBuffer: true
-        });
-        this.mainCamera.addChild(this.gizmoCamera);
-
-        // NOTE: this call is needed for refraction effect to work correctly, but
-        // it slows rendering and should only be made when required.
-        // this.entity.camera.requestSceneColorMap(true);
+        this.mainCamera.addComponent('camera');
     }
 
     // ortho
@@ -288,10 +267,23 @@ class Camera extends Element {
 
         scene.cameraRoot.addChild(this.mainCamera);
 
-        // configure layers
-        // this.mainCamera.camera.layers = [scene.worldLayer.id];
-        this.splatCamera.camera.layers = [scene.splatLayer.id];
-        this.gizmoCamera.camera.layers = [scene.gizmoLayer.id];
+        // configure camera to render all layers
+        this.mainCamera.camera.layers = [
+            scene.worldLayer.id,
+            scene.splatLayer.id,
+            scene.gizmoLayer.id
+        ];
+
+        // create render passes
+        const device = scene.graphicsDevice;
+        const { app } = scene;
+        const renderer = app.renderer;
+        const composition = app.scene.layers;
+
+        this.clearPass = new RenderPass(device);
+        this.mainPass = new RenderPassForward(device, composition, app.scene, renderer);
+        this.splatPass = new RenderPassForward(device, composition, app.scene, renderer);
+        this.gizmoPass = new RenderPassForward(device, composition, app.scene, renderer);
 
         const target = document.getElementById('canvas-container');
         this.controller = new PointerController(this, target);
@@ -391,9 +383,12 @@ class Camera extends Element {
         this.controller.destroy();
         this.controller = null;
 
-        // cleanup splat camera
-        this.mainCamera.removeChild(this.splatCamera);
-        this.mainCamera.removeChild(this.gizmoCamera);
+        // cleanup render passes
+        this.clearPass?.destroy();
+        this.mainPass?.destroy();
+        this.splatPass?.destroy();
+        this.gizmoPass?.destroy();
+        this.camera.renderPasses = null;
 
         scene.cameraRoot.removeChild(this.mainCamera);
 
@@ -425,7 +420,7 @@ class Camera extends Element {
     // handle the viewer canvas resizing
     rebuildRenderTargets() {
         const { width, height } = this.targetSize;
-        const { mainTarget } = this;
+        const { mainTarget, scene } = this;
 
         // early out if size is unchanged
         if (mainTarget && mainTarget.width === width && mainTarget.height === height) {
@@ -434,7 +429,7 @@ class Camera extends Element {
 
         if (!mainTarget) {
             // first time - construct render targets
-            const { graphicsDevice } = this.scene;
+            const { graphicsDevice } = scene;
 
             const createTexture = (name: string, width: number, height: number, format: number) => {
                 return new Texture(graphicsDevice, {
@@ -462,8 +457,7 @@ class Camera extends Element {
                 autoResolve: false
             });
 
-            // create MRT render target for splat camera
-            // uses shared color/depth buffers from main target, plus workTarget for overlay output
+            // create MRT render target for splat pass
             this.splatTarget = new RenderTarget({
                 colorBuffers: [
                     colorBuffer,        // RT0: main color (shared)
@@ -482,10 +476,33 @@ class Camera extends Element {
             });
 
             // set picker render targets
-            this.mainCamera.camera.renderTarget = this.mainTarget;
-            this.splatCamera.camera.renderTarget = this.splatTarget;
-            this.gizmoCamera.camera.renderTarget = this.mainTarget;
             this.picker.setRenderTargets(this.mainTarget, this.workTarget);
+
+            // clear all targets
+            this.clearPass.init(this.splatTarget);
+            this.clearPass.setClearColor(new Color(0, 0, 0, 0));
+            this.clearPass.setClearDepth(1);
+            this.clearPass.setClearStencil(0);
+
+            // configure main pass - world layer with clears
+            this.mainPass.init(this.mainTarget);
+            this.mainPass.addLayer(this.camera, scene.worldLayer, false, false);
+            this.mainPass.addLayer(this.camera, scene.worldLayer, true, false);
+
+            // configure splat pass - MRT target, no clears
+            this.splatPass.init(this.splatTarget);
+            this.splatPass.addLayer(this.camera, scene.splatLayer, false, false);
+            this.splatPass.addLayer(this.camera, scene.splatLayer, true, false);
+
+            // configure gizmo pass - clears depth/stencil only
+            this.gizmoPass.init(this.mainTarget);
+            this.gizmoPass.addLayer(this.camera, scene.gizmoLayer, false, false);
+            this.gizmoPass.addLayer(this.camera, scene.gizmoLayer, true, false);
+            this.gizmoPass.setClearDepth(1);
+            this.gizmoPass.setClearStencil(0);
+
+            // assign render passes to camera
+            this.camera.renderPasses = [this.clearPass, this.mainPass, this.splatPass, this.gizmoPass];
         } else {
             // resize existing render targets
             const { splatTarget, workTarget } = this;
@@ -496,7 +513,7 @@ class Camera extends Element {
         }
 
         this.camera.horizontalFov = width > height;
-        this.scene.events.fire('camera.resize', { width, height });
+        scene.events.fire('camera.resize', { width, height });
     }
 
     onUpdate(deltaTime: number) {
@@ -550,41 +567,15 @@ class Camera extends Element {
     onPreRender() {
         this.rebuildRenderTargets();
         this.updateCameraUniforms();
-
-        const cp = (dst: CameraComponent, src: CameraComponent) => {
-            dst.projection = src.projection;
-            dst.horizontalFov = src.horizontalFov;
-            dst.fov = src.fov;
-            dst.nearClip = src.nearClip;
-            dst.farClip = src.farClip;
-            dst.orthoHeight = src.orthoHeight;
-            dst.toneMapping = src.toneMapping;
-        };
-
-        // copy camera properties to splat camera
-        cp(this.splatCamera.camera, this.camera);
-        cp(this.gizmoCamera.camera, this.camera);
-
-        // clear the work buffer, main camera clears main and depth for now
-        const device = this.scene.graphicsDevice as WebglGraphicsDevice;
-        device.setRenderTarget(this.workTarget);
-        device.updateBegin();
-        device.clear({ color: [0, 0, 0, 0], flags: 1 });
-        device.updateEnd();
     }
 
     onPostRender() {
         const device = this.scene.graphicsDevice as WebglGraphicsDevice;
-        const { renderTarget } = this.camera;
-
-        // resolve msaa buffer
-        if (renderTarget.samples > 1) {
-            renderTarget.resolve(true, false);
-        }
+        const { mainTarget } = this;
 
         // copy render target
         if (!this.suppressFinalBlit) {
-            device.copyRenderTarget(renderTarget, null, true, false);
+            device.copyRenderTarget(mainTarget, null, true, false);
         }
     }
 

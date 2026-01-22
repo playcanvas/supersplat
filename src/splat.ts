@@ -98,24 +98,6 @@ class Splat extends Element {
 
         const instance = this.entity.gsplat.instance;
 
-        // use custom render order distance calculation for splats
-        instance.meshInstance.calculateSortDistance = (meshInstance: MeshInstance, pos: Vec3, dir: Vec3) => {
-            const bound = this.localBound;
-            const mat = this.entity.getWorldTransform();
-            let maxDist;
-            for (let i = 0; i < 8; ++i) {
-                vec.x = bound.center.x + bound.halfExtents.x * (i & 1 ? 1 : -1);
-                vec.y = bound.center.y + bound.halfExtents.y * (i & 2 ? 1 : -1);
-                vec.z = bound.center.z + bound.halfExtents.z * (i & 4 ? 1 : -1);
-                mat.transformPoint(vec, vec);
-                const dist = vec.sub(pos).dot(dir);
-                if (i === 0 || dist > maxDist) {
-                    maxDist = dist;
-                }
-            }
-            return maxDist;
-        };
-
         // added per-splat state channel
         // bit 1: selected
         // bit 2: deleted
@@ -360,13 +342,18 @@ class Splat extends Element {
         material.setParameter('mode', cameraMode === 'rings' ? 1 : 0);
         material.setParameter('ringSize', (selected && cameraOverlay && cameraMode === 'rings') ? 0.04 : 0);
 
-        const selectionAlpha = selected && !events.invoke('view.outlineSelection') ? this.selectionAlpha : 0;
-
         // configure colors
         const selectedClr = events.invoke('selectedClr');
         const unselectedClr = events.invoke('unselectedClr');
         const lockedClr = events.invoke('lockedClr');
-        material.setParameter('selectedClr', [selectedClr.r, selectedClr.g, selectedClr.b, selectedClr.a * selectionAlpha]);
+
+        if (!selected) {
+            material.setParameter('selectedClr', [0, 0, 0, 0]);
+        } else if (events.invoke('view.outlineSelection')) {
+            material.setParameter('selectedClr', [1, 1, 1, 1]);
+        } else {
+            material.setParameter('selectedClr', [selectedClr.r, selectedClr.g, selectedClr.b, selectedClr.a * this.selectionAlpha]);
+        }
         material.setParameter('unselectedClr', [unselectedClr.r, unselectedClr.g, unselectedClr.b, unselectedClr.a]);
         material.setParameter('lockedClr', [lockedClr.r, lockedClr.g, lockedClr.b, lockedClr.a]);
 

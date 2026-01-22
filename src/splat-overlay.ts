@@ -36,15 +36,17 @@ class SplatOverlay extends Element {
             uniqueName: 'splatOverlayMaterial',
             attributes: { vertex_id: SEMANTIC_POSITION },
             vertexGLSL: vertexShader,
-            fragmentGLSL: fragmentShader,
+            fragmentGLSL: fragmentShader
         });
         this.material.blendType = BLEND_NORMAL;
         this.material.depthWrite = false;
-        this.material.depthTest = false;
+        this.material.depthTest = true;
         this.material.update();
 
         this.mesh = new Mesh(device);
         this.meshInstance = new MeshInstance(this.mesh, this.material, null);
+        // slightly higher priority so it renders before gizmos
+        this.meshInstance.drawBucket = 128;
 
         this.entity = new Entity('splatOverlay');
         this.entity.addComponent('render', {
@@ -128,7 +130,7 @@ class SplatOverlay extends Element {
             const splatSize = events.invoke('camera.splatSize');
             const selectedClr = events.invoke('selectedClr');
             const unselectedClr = events.invoke('unselectedClr');
-            
+
             material.setParameter('splatSize', splatSize * window.devicePixelRatio);
             material.setParameter('selectedClr', [selectedClr.r, selectedClr.g, selectedClr.b, selectedClr.a]);
             material.setParameter('unselectedClr', [unselectedClr.r, unselectedClr.g, unselectedClr.b, unselectedClr.a]);

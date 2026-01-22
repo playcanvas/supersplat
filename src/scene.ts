@@ -3,7 +3,6 @@ import {
     EVENT_PRERENDER_LAYER,
     LAYERID_DEPTH,
     SORTMODE_CUSTOM,
-    SORTMODE_BACK2FRONT,
     BoundingBox,
     CameraComponent,
     Color,
@@ -191,16 +190,10 @@ class Scene {
             opaqueSortMode: SORTMODE_CUSTOM,
             transparentSortMode: SORTMODE_CUSTOM
         });
+        this.splatLayer.customCalculateSortValues = specialSort;
 
         // gizmo layer
-        this.gizmoLayer = new Layer({
-            name: 'Gizmo',
-            opaqueSortMode: SORTMODE_CUSTOM,
-            transparentSortMode: SORTMODE_CUSTOM
-        });
-
-        this.splatLayer.customCalculateSortValues = specialSort;
-        this.gizmoLayer.customCalculateSortValues = specialSort;
+        this.gizmoLayer = new Layer({ name: 'Gizmo' });
 
         const layers = this.app.scene.layers;
         layers.push(this.splatLayer);

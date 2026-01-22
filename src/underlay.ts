@@ -2,21 +2,17 @@ import {
     BLENDEQUATION_ADD,
     BLENDMODE_ONE,
     BLENDMODE_ZERO,
-    SEMANTIC_POSITION,
     BlendState,
-    Layer,
-    Shader,
-    ShaderUtils,
-    QuadRender,
-    WebglGraphicsDevice
+    Layer
 } from 'playcanvas';
 
 import { Element, ElementType } from './element';
 import { vertexShader, fragmentShader } from './shaders/blit-shader';
+import { ShaderQuad, SimpleRenderPass } from './utils/simple-render-pass';
 
 class Underlay extends Element {
-    shader: Shader;
-    quadRender: QuadRender;
+    shaderQuad: ShaderQuad;
+    renderPass: SimpleRenderPass;
     enabled = true;
 
     constructor() {
@@ -26,46 +22,30 @@ class Underlay extends Element {
     add() {
         const device = this.scene.app.graphicsDevice;
 
-        this.shader = ShaderUtils.createShader(device, {
-            uniqueName: 'apply-underlay',
-            attributes: {
-                vertex_position: SEMANTIC_POSITION
-            },
-            vertexGLSL: vertexShader,
-            fragmentGLSL: fragmentShader
+        this.shaderQuad = new ShaderQuad(device, vertexShader, fragmentShader, 'apply-underlay');
+        this.renderPass = new SimpleRenderPass(device, this.shaderQuad, {
+            blendState: new BlendState(true,
+                BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE,
+                BLENDEQUATION_ADD, BLENDMODE_ZERO, BLENDMODE_ONE
+            )
         });
 
-        this.quadRender = new QuadRender(this.shader);
+        const { camera, events } = this.scene;
 
-        const blitTextureId = device.scope.resolve('blitTexture');
-        const blendState = new BlendState(true,
-            BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE,
-            BLENDEQUATION_ADD, BLENDMODE_ZERO, BLENDMODE_ONE
-        );
-
-        const events = this.scene.events;
-
-        this.scene.camera.camera.on('postRenderLayer', (layer: Layer, transparent: boolean) => {
+        camera.camera.on('preRenderLayer', (layer: Layer, transparent: boolean) => {
             // underlay is used when outline mode is disabled
             if (!this.enabled || events.invoke('view.outlineSelection')) {
                 return;
             }
 
-            // apply after splat layer
-            if (layer !== this.scene.splatLayer || !transparent) {
+            // apply at the start of the gizmo layer
+            if (layer !== this.scene.gizmoLayer || transparent) {
                 return;
             }
 
-            device.setBlendState(blendState);
-
-            // read overlay data from workTarget (populated by MRT splat render)
-            blitTextureId.setValue(this.scene.camera.workTarget.colorBuffer);
-
-            const glDevice = device as WebglGraphicsDevice;
-            glDevice.setRenderTarget(this.scene.camera.mainTarget);
-            glDevice.updateBegin();
-            this.quadRender.render();
-            glDevice.updateEnd();
+            this.renderPass.execute({
+                srcTexture: camera.workTarget.colorBuffer
+            });
         });
     }
 

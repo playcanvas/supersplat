@@ -24,16 +24,17 @@ import {
     RenderTarget,
     Texture,
     Vec3,
-    Vec4,
-    WebglGraphicsDevice
+    Vec4
 } from 'playcanvas';
 
 import { PointerController } from './controllers';
 import { Element, ElementType } from './element';
 import { Picker } from './picker';
 import { Serializer } from './serializer';
+import { vertexShader, fragmentShader } from './shaders/blit-shader';
 import { Splat } from './splat';
 import { TweenValue } from './tween-value';
+import { ShaderQuad, SimpleRenderPass } from './utils/simple-render-pass';
 
 // work globals
 const forwardVec = new Vec3();
@@ -86,6 +87,7 @@ class Camera extends Element {
 
     mainTarget: RenderTarget;
     splatTarget: RenderTarget;
+    colorTarget: RenderTarget;
     workTarget: RenderTarget;
 
     // Render passes
@@ -93,6 +95,7 @@ class Camera extends Element {
     mainPass: RenderPassForward;
     splatPass: RenderPassForward;
     gizmoPass: RenderPassForward;
+    finalPass: SimpleRenderPass;
 
     // overridden target size
     targetSizeOverride: { width: number, height: number } = null;
@@ -284,6 +287,14 @@ class Camera extends Element {
         this.mainPass = new RenderPassForward(device, composition, app.scene, renderer);
         this.splatPass = new RenderPassForward(device, composition, app.scene, renderer);
         this.gizmoPass = new RenderPassForward(device, composition, app.scene, renderer);
+        this.finalPass = new SimpleRenderPass(device,
+            new ShaderQuad(device, vertexShader, fragmentShader, 'final-blit'), {
+            vars: () => {
+                return {
+                    srcTexture: this.mainTarget.colorBuffer
+                };
+            }
+        });
 
         const target = document.getElementById('canvas-container');
         this.controller = new PointerController(this, target);
@@ -388,6 +399,7 @@ class Camera extends Element {
         this.mainPass?.destroy();
         this.splatPass?.destroy();
         this.gizmoPass?.destroy();
+        this.finalPass?.destroy();
         this.camera.renderPasses = null;
 
         scene.cameraRoot.removeChild(this.mainCamera);
@@ -468,6 +480,12 @@ class Camera extends Element {
                 autoResolve: false
             });
 
+            this.colorTarget = new RenderTarget({
+                colorBuffer,
+                depth: false,
+                autoResolve: false
+            });
+
             // create work buffer (used for picking, overlay output, and other operations)
             this.workTarget = new RenderTarget({
                 colorBuffer: workBuffer,
@@ -476,7 +494,7 @@ class Camera extends Element {
             });
 
             // set picker render targets
-            this.picker.setRenderTargets(this.mainTarget, this.workTarget);
+            this.picker.setRenderTargets(this.colorTarget, this.workTarget);
 
             // clear all targets
             this.clearPass.init(this.splatTarget);
@@ -495,20 +513,23 @@ class Camera extends Element {
             this.splatPass.addLayer(this.camera, scene.splatLayer, true, false);
 
             // configure gizmo pass - clears depth/stencil only
-            this.gizmoPass.init(this.mainTarget);
+            this.gizmoPass.init(this.colorTarget);
             this.gizmoPass.addLayer(this.camera, scene.gizmoLayer, false, false);
             this.gizmoPass.addLayer(this.camera, scene.gizmoLayer, true, false);
             this.gizmoPass.setClearDepth(1);
             this.gizmoPass.setClearStencil(0);
 
+            this.finalPass.init(null);
+
             // assign render passes to camera
-            this.camera.renderPasses = [this.clearPass, this.mainPass, this.splatPass, this.gizmoPass];
+            this.camera.renderPasses = [this.clearPass, this.mainPass, this.splatPass, this.gizmoPass, this.finalPass];
         } else {
             // resize existing render targets
-            const { splatTarget, workTarget } = this;
+            const { splatTarget, colorTarget, workTarget } = this;
 
             mainTarget.resize(width, height);
             workTarget.resize(width, height);
+            colorTarget.resize(width, height);
             splatTarget.resize(width, height);
         }
 
@@ -570,13 +591,7 @@ class Camera extends Element {
     }
 
     onPostRender() {
-        const device = this.scene.graphicsDevice as WebglGraphicsDevice;
-        const { mainTarget } = this;
 
-        // copy render target
-        if (!this.suppressFinalBlit) {
-            device.copyRenderTarget(mainTarget, null, true, false);
-        }
     }
 
     focus(options?: { focalPoint: Vec3, radius: number, speed: number }) {

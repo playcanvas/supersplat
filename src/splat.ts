@@ -16,8 +16,7 @@ import {
     Mat4,
     Quat,
     Texture,
-    Vec3,
-    MeshInstance
+    Vec3
 } from 'playcanvas';
 
 import { Element, ElementType } from './element';

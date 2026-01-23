@@ -81,6 +81,9 @@ class DataProcessor {
     splatParams = new Int32Array(3);
     copyShader: Shader;
 
+    // promise for pending bound calculation (serializes all calcBound calls)
+    private calcBoundPromise: Promise<void> | null = null;
+
     getIntersectResources: (width: number, numSplats: number) => IntersectResources;
     getBoundResources: (splatTextureWidth: number) => BoundResources;
     getPositionResources: (width: number, height: number, numSplats: number) => PositionResources;
@@ -375,8 +378,22 @@ class DataProcessor {
     }
 
     // use gpu to calculate either bound of the currently selected splats or the bound of
-    // all visible splats
-    calcBound(splat: Splat, boundingBox: BoundingBox, onlySelected: boolean) {
+    // all visible splats (serialized - only one calculation runs at a time)
+    async calcBound(splat: Splat, boundingBox: BoundingBox, onlySelected: boolean): Promise<void> {
+        // await any pending calculation to serialize
+        if (this.calcBoundPromise) {
+            await this.calcBoundPromise;
+        }
+
+        // run this calculation
+        const promise = this.calcBoundInternal(splat, boundingBox, onlySelected);
+        this.calcBoundPromise = promise;
+        await promise;
+        this.calcBoundPromise = null;
+    }
+
+    // internal implementation of calcBound
+    private async calcBoundInternal(splat: Splat, boundingBox: BoundingBox, onlySelected: boolean): Promise<void> {
         const device = splat.scene.graphicsDevice;
         const { scope } = device;
 
@@ -402,19 +419,24 @@ class DataProcessor {
             mode: onlySelected ? 0 : 1
         });
 
-        const glDevice = device as WebglGraphicsDevice;
-
         device.setBlendState(BlendState.NOBLEND);
         drawQuadWithShader(device, resources.renderTarget, resources.shader);
-        glDevice.gl.readPixels(0, 0, transformA.width, 1, resources.minTexture.impl._glFormat, resources.minTexture.impl._glPixelType, resources.minData);
 
-        glDevice.setRenderTarget(resources.maxRenderTarget);
-        glDevice.updateBegin();
-        glDevice.gl.readPixels(0, 0, transformA.width, 1, resources.maxTexture.impl._glFormat, resources.maxTexture.impl._glPixelType, resources.maxData);
-        glDevice.updateEnd();
+        // read both textures asynchronously using the public texture.read() API
+        const [minData, maxData] = await Promise.all([
+            resources.minTexture.read(0, 0, transformA.width, 1, {
+                renderTarget: resources.minRenderTarget,
+                data: resources.minData,
+                immediate: true
+            }),
+            resources.maxTexture.read(0, 0, transformA.width, 1, {
+                renderTarget: resources.maxRenderTarget,
+                data: resources.maxData,
+                immediate: true
+            })
+        ]);
 
         // resolve mins/maxs
-        const { minData, maxData } = resources;
         v1.set(Infinity, Infinity, Infinity);
         v2.set(-Infinity, -Infinity, -Infinity);
 

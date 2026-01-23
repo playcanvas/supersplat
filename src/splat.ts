@@ -411,12 +411,12 @@ class Splat extends Element {
 
     // kick off async selection bound calculation
     makeSelectionBoundDirty() {
-        this.calcSelectionBoundAsync();
+        this.calcBoundsAsync();
     }
 
     // kick off async local bound calculation
     makeLocalBoundDirty() {
-        this.calcLocalBoundAsync();
+        this.calcBoundsAsync();
     }
 
     // update world bound from local bound (sync - just a matrix transform)
@@ -424,16 +424,9 @@ class Splat extends Element {
         this.updateWorldBound();
     }
 
-    // async calculation of selection bound (DataProcessor handles serialization)
-    private async calcSelectionBoundAsync() {
-        await this.scene.dataProcessor.calcBound(this, this.selectionBoundStorage, true);
-        // cascade to local bound
-        this.calcLocalBoundAsync();
-    }
-
-    // async calculation of local bound (DataProcessor handles serialization)
-    private async calcLocalBoundAsync() {
-        await this.scene.dataProcessor.calcBound(this, this.localBoundStorage, false);
+    // async calculation of both selection and local bounds in a single GPU pass
+    private async calcBoundsAsync() {
+        await this.scene.dataProcessor.calcBound(this, this.selectionBoundStorage, this.localBoundStorage);
         // update world bound and notify scene
         this.updateWorldBound();
     }
@@ -461,19 +454,19 @@ class Splat extends Element {
 
     // async getter that calculates and returns fresh selection bound
     async getSelectionBoundAsync(): Promise<BoundingBox> {
-        await this.scene.dataProcessor.calcBound(this, this.selectionBoundStorage, true);
+        await this.scene.dataProcessor.calcBound(this, this.selectionBoundStorage, this.localBoundStorage);
         return this.selectionBoundStorage;
     }
 
     // async getter that calculates and returns fresh local bound
     async getLocalBoundAsync(): Promise<BoundingBox> {
-        await this.scene.dataProcessor.calcBound(this, this.localBoundStorage, false);
+        await this.scene.dataProcessor.calcBound(this, this.selectionBoundStorage, this.localBoundStorage);
         return this.localBoundStorage;
     }
 
     // async getter that calculates and returns fresh world bound
     async getWorldBoundAsync(): Promise<BoundingBox> {
-        await this.scene.dataProcessor.calcBound(this, this.localBoundStorage, false);
+        await this.scene.dataProcessor.calcBound(this, this.selectionBoundStorage, this.localBoundStorage);
         this.updateWorldBound();
         return this.worldBoundStorage;
     }

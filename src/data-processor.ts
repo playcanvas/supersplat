@@ -41,6 +41,8 @@ type BoxOptions = {
 
 const v1 = new Vec3();
 const v2 = new Vec3();
+const v3 = new Vec3();
+const v4 = new Vec3();
 
 const resolve = (scope: ScopeSpace, values: any) => {
     for (const key in values) {
@@ -57,13 +59,19 @@ type IntersectResources = {
 
 type BoundResources = {
     shader: Shader;
-    minTexture: Texture;
-    maxTexture: Texture;
+    selectedMinTexture: Texture;
+    selectedMaxTexture: Texture;
+    visibleMinTexture: Texture;
+    visibleMaxTexture: Texture;
     renderTarget: RenderTarget;
-    minRenderTarget: RenderTarget;
-    maxRenderTarget: RenderTarget;
-    minData: Float32Array;
-    maxData: Float32Array;
+    selectedMinRenderTarget: RenderTarget;
+    selectedMaxRenderTarget: RenderTarget;
+    visibleMinRenderTarget: RenderTarget;
+    visibleMaxRenderTarget: RenderTarget;
+    selectedMinData: Float32Array;
+    selectedMaxData: Float32Array;
+    visibleMinData: Float32Array;
+    visibleMaxData: Float32Array;
 };
 
 type PositionResources = {
@@ -174,13 +182,19 @@ class DataProcessor {
 
         this.getBoundResources = (() => {
             let shader: Shader = null;
-            let minTexture: Texture = null;
-            let maxTexture: Texture = null;
+            let selectedMinTexture: Texture = null;
+            let selectedMaxTexture: Texture = null;
+            let visibleMinTexture: Texture = null;
+            let visibleMaxTexture: Texture = null;
             let renderTarget: RenderTarget = null;
-            let minRenderTarget: RenderTarget = null;
-            let maxRenderTarget: RenderTarget = null;
-            let minData: Float32Array = null;
-            let maxData: Float32Array = null;
+            let selectedMinRenderTarget: RenderTarget = null;
+            let selectedMaxRenderTarget: RenderTarget = null;
+            let visibleMinRenderTarget: RenderTarget = null;
+            let visibleMaxRenderTarget: RenderTarget = null;
+            let selectedMinData: Float32Array = null;
+            let selectedMaxData: Float32Array = null;
+            let visibleMinData: Float32Array = null;
+            let visibleMaxData: Float32Array = null;
 
             return (width: number) => {
                 if (!shader) {
@@ -194,38 +208,71 @@ class DataProcessor {
                     });
                 }
 
-                if (!minTexture || minTexture.width !== width) {
-                    if (minTexture) {
-                        minTexture.destroy();
-                        maxTexture.destroy();
+                if (!selectedMinTexture || selectedMinTexture.width !== width) {
+                    if (selectedMinTexture) {
+                        selectedMinTexture.destroy();
+                        selectedMaxTexture.destroy();
+                        visibleMinTexture.destroy();
+                        visibleMaxTexture.destroy();
                         renderTarget.destroy();
-                        minRenderTarget.destroy();
-                        maxRenderTarget.destroy();
+                        selectedMinRenderTarget.destroy();
+                        selectedMaxRenderTarget.destroy();
+                        visibleMinRenderTarget.destroy();
+                        visibleMaxRenderTarget.destroy();
                     }
 
-                    minTexture = createTexture('calcBoundMin', width, 1, PIXELFORMAT_RGBA32F);
-                    maxTexture = createTexture('calcBoundMax', width, 1, PIXELFORMAT_RGBA32F);
+                    selectedMinTexture = createTexture('calcBoundSelectedMin', width, 1, PIXELFORMAT_RGBA32F);
+                    selectedMaxTexture = createTexture('calcBoundSelectedMax', width, 1, PIXELFORMAT_RGBA32F);
+                    visibleMinTexture = createTexture('calcBoundVisibleMin', width, 1, PIXELFORMAT_RGBA32F);
+                    visibleMaxTexture = createTexture('calcBoundVisibleMax', width, 1, PIXELFORMAT_RGBA32F);
 
                     renderTarget = new RenderTarget({
-                        colorBuffers: [minTexture, maxTexture],
+                        colorBuffers: [selectedMinTexture, selectedMaxTexture, visibleMinTexture, visibleMaxTexture],
                         depth: false
                     });
 
-                    maxRenderTarget = new RenderTarget({
-                        colorBuffer: maxTexture,
+                    selectedMinRenderTarget = new RenderTarget({
+                        colorBuffer: selectedMinTexture,
                         depth: false
                     });
 
-                    minRenderTarget = new RenderTarget({
-                        colorBuffer: minTexture,
+                    selectedMaxRenderTarget = new RenderTarget({
+                        colorBuffer: selectedMaxTexture,
                         depth: false
                     });
 
-                    minData = new Float32Array(width * 4);
-                    maxData = new Float32Array(width * 4);
+                    visibleMinRenderTarget = new RenderTarget({
+                        colorBuffer: visibleMinTexture,
+                        depth: false
+                    });
+
+                    visibleMaxRenderTarget = new RenderTarget({
+                        colorBuffer: visibleMaxTexture,
+                        depth: false
+                    });
+
+                    selectedMinData = new Float32Array(width * 4);
+                    selectedMaxData = new Float32Array(width * 4);
+                    visibleMinData = new Float32Array(width * 4);
+                    visibleMaxData = new Float32Array(width * 4);
                 }
 
-                return { shader, minTexture, maxTexture, renderTarget, minRenderTarget, maxRenderTarget, minData, maxData };
+                return {
+                    shader,
+                    selectedMinTexture,
+                    selectedMaxTexture,
+                    visibleMinTexture,
+                    visibleMaxTexture,
+                    renderTarget,
+                    selectedMinRenderTarget,
+                    selectedMaxRenderTarget,
+                    visibleMinRenderTarget,
+                    visibleMaxRenderTarget,
+                    selectedMinData,
+                    selectedMaxData,
+                    visibleMinData,
+                    visibleMaxData
+                };
             };
         })();
 
@@ -377,23 +424,23 @@ class DataProcessor {
         return resources.data;
     }
 
-    // use gpu to calculate either bound of the currently selected splats or the bound of
-    // all visible splats (serialized - only one calculation runs at a time)
-    async calcBound(splat: Splat, boundingBox: BoundingBox, onlySelected: boolean): Promise<void> {
+    // use gpu to calculate both selected and visible bounds in a single pass
+    // (serialized - only one calculation runs at a time)
+    async calcBound(splat: Splat, selectionBound: BoundingBox, localBound: BoundingBox): Promise<void> {
         // await any pending calculation to serialize
         if (this.calcBoundPromise) {
             await this.calcBoundPromise;
         }
 
         // run this calculation
-        const promise = this.calcBoundInternal(splat, boundingBox, onlySelected);
+        const promise = this.calcBoundInternal(splat, selectionBound, localBound);
         this.calcBoundPromise = promise;
         await promise;
         this.calcBoundPromise = null;
     }
 
     // internal implementation of calcBound
-    private async calcBoundInternal(splat: Splat, boundingBox: BoundingBox, onlySelected: boolean): Promise<void> {
+    private async calcBoundInternal(splat: Splat, selectionBound: BoundingBox, localBound: BoundingBox): Promise<void> {
         const device = splat.scene.graphicsDevice;
         const { scope } = device;
 
@@ -415,48 +462,79 @@ class DataProcessor {
             splatTransform,
             transformPalette,
             splatState,
-            splat_params: this.splatParams,
-            mode: onlySelected ? 0 : 1
+            splat_params: this.splatParams
         });
 
         device.setBlendState(BlendState.NOBLEND);
         drawQuadWithShader(device, resources.renderTarget, resources.shader);
 
-        // read both textures asynchronously using the public texture.read() API
-        const [minData, maxData] = await Promise.all([
-            resources.minTexture.read(0, 0, transformA.width, 1, {
-                renderTarget: resources.minRenderTarget,
-                data: resources.minData,
+        // read all 4 textures asynchronously using the public texture.read() API
+        const [selectedMinData, selectedMaxData, visibleMinData, visibleMaxData] = await Promise.all([
+            resources.selectedMinTexture.read(0, 0, transformA.width, 1, {
+                renderTarget: resources.selectedMinRenderTarget,
+                data: resources.selectedMinData,
                 immediate: true
             }),
-            resources.maxTexture.read(0, 0, transformA.width, 1, {
-                renderTarget: resources.maxRenderTarget,
-                data: resources.maxData,
+            resources.selectedMaxTexture.read(0, 0, transformA.width, 1, {
+                renderTarget: resources.selectedMaxRenderTarget,
+                data: resources.selectedMaxData,
+                immediate: true
+            }),
+            resources.visibleMinTexture.read(0, 0, transformA.width, 1, {
+                renderTarget: resources.visibleMinRenderTarget,
+                data: resources.visibleMinData,
+                immediate: true
+            }),
+            resources.visibleMaxTexture.read(0, 0, transformA.width, 1, {
+                renderTarget: resources.visibleMaxRenderTarget,
+                data: resources.visibleMaxData,
                 immediate: true
             })
         ]);
 
-        // resolve mins/maxs
+        // resolve selected bounds
         v1.set(Infinity, Infinity, Infinity);
         v2.set(-Infinity, -Infinity, -Infinity);
 
         for (let i = 0; i < transformA.width; i++) {
-            const a = minData[i * 4];
-            const b = minData[i * 4 + 1];
-            const c = minData[i * 4 + 2];
+            const a = selectedMinData[i * 4];
+            const b = selectedMinData[i * 4 + 1];
+            const c = selectedMinData[i * 4 + 2];
             if (isFinite(a)) v1.x = Math.min(v1.x, a);
             if (isFinite(b)) v1.y = Math.min(v1.y, b);
             if (isFinite(c)) v1.z = Math.min(v1.z, c);
 
-            const d = maxData[i * 4];
-            const e = maxData[i * 4 + 1];
-            const f = maxData[i * 4 + 2];
+            const d = selectedMaxData[i * 4];
+            const e = selectedMaxData[i * 4 + 1];
+            const f = selectedMaxData[i * 4 + 2];
             if (isFinite(d)) v2.x = Math.max(v2.x, d);
             if (isFinite(e)) v2.y = Math.max(v2.y, e);
             if (isFinite(f)) v2.z = Math.max(v2.z, f);
         }
 
-        boundingBox.setMinMax(v1, v2);
+        selectionBound.setMinMax(v1, v2);
+
+        // resolve visible bounds
+        v3.set(Infinity, Infinity, Infinity);
+        v4.set(-Infinity, -Infinity, -Infinity);
+
+        for (let i = 0; i < transformA.width; i++) {
+            const a = visibleMinData[i * 4];
+            const b = visibleMinData[i * 4 + 1];
+            const c = visibleMinData[i * 4 + 2];
+            if (isFinite(a)) v3.x = Math.min(v3.x, a);
+            if (isFinite(b)) v3.y = Math.min(v3.y, b);
+            if (isFinite(c)) v3.z = Math.min(v3.z, c);
+
+            const d = visibleMaxData[i * 4];
+            const e = visibleMaxData[i * 4 + 1];
+            const f = visibleMaxData[i * 4 + 2];
+            if (isFinite(d)) v4.x = Math.max(v4.x, d);
+            if (isFinite(e)) v4.y = Math.max(v4.y, e);
+            if (isFinite(f)) v4.z = Math.max(v4.z, f);
+        }
+
+        localBound.setMinMax(v3, v4);
     }
 
     // calculate world-space splat positions

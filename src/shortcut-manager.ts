@@ -43,8 +43,8 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
 
     // Other
     'selection.next': { keys: ['Tab'] },
-    'edit.undo': { keys: ['z'], ctrl: 'required', capture: true },
-    'edit.redo': { keys: ['z'], ctrl: 'required', shift: 'required', capture: true },
+    'edit.undo': { keys: ['z'], ctrl: 'required', repeat: true, capture: true },
+    'edit.redo': { keys: ['z'], ctrl: 'required', shift: 'required', repeat: true, capture: true },
     'dataPanel.toggle': { keys: ['d'], ctrl: 'required', capture: true },
 
     // Camera fly keys - use physical positions (codes) for WASD layout on non-QWERTY keyboards

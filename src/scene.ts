@@ -239,11 +239,11 @@ class Scene {
     }
 
     // add a scene element
-    add(element: Element) {
+    async add(element: Element) {
         if (!element.scene) {
             // add the new element
             element.scene = this;
-            element.add();
+            await element.add();
             this.elements.push(element);
 
             // notify all elements of scene addition

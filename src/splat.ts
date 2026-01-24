@@ -174,7 +174,7 @@ class Splat extends Element {
         this.asset.unload();
     }
 
-    updateState(changedState = State.selected) {
+    async updateState(changedState = State.selected) {
         const state = this.splatData.getProp('state') as Uint8Array;
 
         // write state data to gpu texture
@@ -202,18 +202,18 @@ class Splat extends Element {
         this.numSelected = numSelected;
         this.numDeleted = numDeleted;
 
-        this.makeSelectionBoundDirty();
-
         // handle splats being added or removed
         if (changedState & State.deleted) {
-            this.updateSorting();
+            await this.updateSorting();
+        } else {
+            await this.calcBounds();
         }
 
         this.scene.forceRender = true;
         this.scene.events.fire('splat.stateChanged', this);
     }
 
-    updatePositions() {
+    async updatePositions() {
         const data = this.scene.dataProcessor.calcPositions(this);
 
         // update the splat centers which are used for render-time sorting
@@ -228,16 +228,14 @@ class Splat extends Element {
             }
         }
 
-        this.updateSorting();
+        await this.updateSorting();
 
         this.scene.forceRender = true;
         this.scene.events.fire('splat.positionsChanged', this);
     }
 
-    updateSorting() {
+    async updateSorting() {
         const state = this.splatData.getProp('state') as Uint8Array;
-
-        this.makeLocalBoundDirty();
 
         let mapping;
 
@@ -254,6 +252,9 @@ class Splat extends Element {
 
         // update sorting instance
         this.entity.gsplat.instance.sorter.setMapping(mapping);
+
+        // recalculate bounds after sorting changes
+        await this.calcBounds();
     }
 
     get worldTransform() {
@@ -295,7 +296,7 @@ class Splat extends Element {
         return true;
     }
 
-    add() {
+    async add() {
         // add the entity to the scene
         this.scene.contentRoot.addChild(this.entity);
 
@@ -306,7 +307,7 @@ class Splat extends Element {
         this.rebuildMaterial(this.scene.events.invoke('view.bands'));
 
         // we must update state in case the state data was loaded from ply
-        this.updateState();
+        await this.updateState();
     }
 
     remove() {
@@ -404,30 +405,14 @@ class Splat extends Element {
             entity.setLocalScale(scale);
         }
 
-        this.makeWorldBoundDirty();
+        this.updateWorldBound();
 
         this.scene.events.fire('splat.moved', this);
     }
 
-    // kick off async selection bound calculation
-    makeSelectionBoundDirty() {
-        this.calcBoundsAsync();
-    }
-
-    // kick off async local bound calculation
-    makeLocalBoundDirty() {
-        this.calcBoundsAsync();
-    }
-
-    // update world bound from local bound (sync - just a matrix transform)
-    makeWorldBoundDirty() {
-        this.updateWorldBound();
-    }
-
-    // async calculation of both selection and local bounds in a single GPU pass
-    private async calcBoundsAsync() {
+    // calculate both selection and local bounds (async, callers must await)
+    async calcBounds(): Promise<void> {
         await this.scene.dataProcessor.calcBound(this, this.selectionBoundStorage, this.localBoundStorage);
-        // update world bound and notify scene
         this.updateWorldBound();
     }
 
@@ -437,37 +422,18 @@ class Splat extends Element {
         this.scene.boundDirty = true;
     }
 
-    // get the selection bound (returns current storage, may be stale until async calc completes)
+    // get the selection bound
     get selectionBound() {
         return this.selectionBoundStorage;
     }
 
-    // get local space bound (returns current storage, may be stale until async calc completes)
+    // get local space bound
     get localBound() {
         return this.localBoundStorage;
     }
 
-    // get world space bound (returns current storage, may be stale until async calc completes)
+    // get world space bound
     get worldBound() {
-        return this.worldBoundStorage;
-    }
-
-    // async getter that calculates and returns fresh selection bound
-    async getSelectionBoundAsync(): Promise<BoundingBox> {
-        await this.scene.dataProcessor.calcBound(this, this.selectionBoundStorage, this.localBoundStorage);
-        return this.selectionBoundStorage;
-    }
-
-    // async getter that calculates and returns fresh local bound
-    async getLocalBoundAsync(): Promise<BoundingBox> {
-        await this.scene.dataProcessor.calcBound(this, this.selectionBoundStorage, this.localBoundStorage);
-        return this.localBoundStorage;
-    }
-
-    // async getter that calculates and returns fresh world bound
-    async getWorldBoundAsync(): Promise<BoundingBox> {
-        await this.scene.dataProcessor.calcBound(this, this.selectionBoundStorage, this.localBoundStorage);
-        this.updateWorldBound();
         return this.worldBoundStorage;
     }
 
@@ -559,17 +525,15 @@ class Splat extends Element {
         return this._transparency;
     }
 
-    // get pivot position/rotation/scale, awaiting fresh bounds if needed
-    async getPivot(mode: 'center' | 'boundCenter', selection: boolean, result: Transform) {
+    // get pivot position/rotation/scale (caller should have awaited operation that changed data)
+    getPivot(mode: 'center' | 'boundCenter', selection: boolean, result: Transform) {
         const { entity } = this;
         switch (mode) {
             case 'center':
                 result.set(entity.getLocalPosition(), entity.getLocalRotation(), entity.getLocalScale());
                 break;
             case 'boundCenter': {
-                const bound = selection
-                    ? await this.getSelectionBoundAsync()
-                    : await this.getLocalBoundAsync();
+                const bound = selection ? this.selectionBound : this.localBound;
                 entity.getLocalTransform().transformPoint(bound.center, vec);
                 result.set(vec, entity.getLocalRotation(), entity.getLocalScale());
                 break;

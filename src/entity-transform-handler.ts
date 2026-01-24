@@ -55,10 +55,10 @@ class EntityTransformHandler implements TransformHandler {
         });
     }
 
-    async placePivot() {
+    placePivot() {
         // place initial pivot point
         const origin = this.events.invoke('pivot.origin');
-        await this.splat.getPivot(origin === 'center' ? 'center' : 'boundCenter', false, transform);
+        this.splat.getPivot(origin === 'center' ? 'center' : 'boundCenter', false, transform);
         this.events.invoke('pivot').place(transform);
     }
 

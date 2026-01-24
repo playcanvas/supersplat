@@ -109,7 +109,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 });
                 URL.revokeObjectURL(url);
 
-                scene.add(splat);
+                await scene.add(splat);
 
                 splat.docDeserialize(splatSettings);
             }
@@ -131,7 +131,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 const pivot = events.invoke('pivot');
                 const transform = new Transform();
                 const pivotOrigin = events.invoke('pivot.origin');
-                await currentSelection.getPivot(pivotOrigin, false, transform);
+                currentSelection.getPivot(pivotOrigin, false, transform);
                 pivot.place(transform);
             }
         } catch (error) {

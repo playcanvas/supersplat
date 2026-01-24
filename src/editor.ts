@@ -169,13 +169,13 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     // camera.focus
 
-    events.on('camera.focus', async () => {
+    events.on('camera.focus', () => {
         const splat = selectedSplats()[0];
         if (splat) {
-            // await fresh bounds before focusing
-            const bound = splat.numSelected > 0
-                ? await splat.getSelectionBoundAsync()
-                : await splat.getLocalBoundAsync();
+            // use current bounds (caller should have awaited the operation that changed data)
+            const bound = splat.numSelected > 0 ?
+                splat.selectionBound :
+                splat.localBound;
             vec.copy(bound.center);
 
             const worldTransform = splat.worldTransform;

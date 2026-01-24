@@ -66,9 +66,9 @@ class SplatsTransformHandler implements TransformHandler {
         });
     }
 
-    async placePivot() {
+    placePivot() {
         const origin = this.events.invoke('pivot.origin');
-        await this.splat.getPivot(origin === 'center' ? 'center' : 'boundCenter', true, transform);
+        this.splat.getPivot(origin === 'center' ? 'center' : 'boundCenter', true, transform);
         this.events.invoke('pivot').place(transform);
     }
 
@@ -150,16 +150,14 @@ class SplatsTransformHandler implements TransformHandler {
             mat2.mul2(mat, mat2);
             transformPalette.setTransform(newIdx, mat2);
         });
-
-        this.splat.makeSelectionBoundDirty();
     }
 
-    end() {
+    async end() {
         const { splat, transform, paletteMap } = this;
 
         // TODO: consider moving this to update() function above so splats are sorted correctly
         // for render during drag (which is slower).
-        splat.updatePositions();
+        await splat.updatePositions();
         splat.selectionAlpha = 1;
         splat.scene.outline.enabled = true;
         splat.scene.underlay.enabled = true;

@@ -206,7 +206,7 @@ class Splat extends Element {
         if (changedState & State.deleted) {
             await this.updateSorting();
         } else {
-            await this.calcBounds();
+            await this.updateLocalBounds();
         }
 
         this.scene.forceRender = true;
@@ -254,7 +254,7 @@ class Splat extends Element {
         this.entity.gsplat.instance.sorter.setMapping(mapping);
 
         // recalculate bounds after sorting changes
-        await this.calcBounds();
+        await this.updateLocalBounds();
     }
 
     get worldTransform() {
@@ -411,7 +411,7 @@ class Splat extends Element {
     }
 
     // calculate both selection and local bounds (async, callers must await)
-    async calcBounds(): Promise<void> {
+    async updateLocalBounds(): Promise<void> {
         await this.scene.dataProcessor.calcBound(this, this.selectionBoundStorage, this.localBoundStorage);
         this.updateWorldBound();
     }

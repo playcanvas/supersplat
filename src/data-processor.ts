@@ -14,7 +14,6 @@ import {
     ShaderUtils,
     Texture,
     Vec3,
-    WebglGraphicsDevice,
     BlendState
 } from 'playcanvas';
 
@@ -316,7 +315,7 @@ class DataProcessor {
     }
 
     // calculate the intersection of a mask canvas with splat centers
-    intersect(options: MaskOptions | RectOptions | SphereOptions | BoxOptions, splat: Splat) {
+    async intersect(options: MaskOptions | RectOptions | SphereOptions | BoxOptions, splat: Splat) {
         const { device } = this;
         const { scope } = device;
 
@@ -418,10 +417,13 @@ class DataProcessor {
         device.setBlendState(BlendState.NOBLEND);
         drawQuadWithShader(device, resources.renderTarget, resources.shader);
 
-        const glDevice = device as WebglGraphicsDevice;
-        glDevice.readPixels(0, 0, resources.texture.width, resources.texture.height, resources.data);
+        const data = await resources.texture.read(0, 0, resources.texture.width, resources.texture.height, {
+            renderTarget: resources.renderTarget,
+            data: resources.data,
+            immediate: true
+        });
 
-        return resources.data;
+        return data;
     }
 
     // use gpu to calculate both selected and visible bounds in a single pass
@@ -538,7 +540,7 @@ class DataProcessor {
     }
 
     // calculate world-space splat positions
-    calcPositions(splat: Splat) {
+    async calcPositions(splat: Splat) {
         const { device } = this;
         const { scope } = device;
 
@@ -560,17 +562,13 @@ class DataProcessor {
         device.setBlendState(BlendState.NOBLEND);
         drawQuadWithShader(device, resources.renderTarget, resources.shader);
 
-        const glDevice = device as WebglGraphicsDevice;
-        glDevice.gl.readPixels(
-            0, 0,
-            resources.texture.width,
-            resources.texture.height,
-            resources.texture.impl._glFormat,
-            resources.texture.impl._glPixelType,
-            resources.data
-        );
+        const data = await resources.texture.read(0, 0, resources.texture.width, resources.texture.height, {
+            renderTarget: resources.renderTarget,
+            data: resources.data,
+            immediate: true
+        });
 
-        return resources.data;
+        return data;
     }
 
     copyRt(source: RenderTarget, dest: RenderTarget) {

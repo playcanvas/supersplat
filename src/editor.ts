@@ -245,34 +245,34 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
     });
 
-    const intersectCenters = (splat: Splat, op: 'add'|'remove'|'set', options: any) => {
-        const data = scene.dataProcessor.intersect(options, splat);
+    const intersectCenters = async (splat: Splat, op: 'add'|'remove'|'set', options: any) => {
+        const data = await scene.dataProcessor.intersect(options, splat);
         const filter = (i: number) => data[i] === 255;
         events.fire('edit.add', new SelectOp(splat, op, filter));
     };
 
-    events.on('select.bySphere', (op: 'add'|'remove'|'set', sphere: number[]) => {
-        selectedSplats().forEach((splat) => {
-            intersectCenters(splat, op, {
+    events.on('select.bySphere', async (op: 'add'|'remove'|'set', sphere: number[]) => {
+        for (const splat of selectedSplats()) {
+            await intersectCenters(splat, op, {
                 sphere: { x: sphere[0], y: sphere[1], z: sphere[2], radius: sphere[3] }
             });
-        });
+        }
     });
 
-    events.on('select.byBox', (op: 'add'|'remove'|'set', box: number[]) => {
-        selectedSplats().forEach((splat) => {
-            intersectCenters(splat, op, {
+    events.on('select.byBox', async (op: 'add'|'remove'|'set', box: number[]) => {
+        for (const splat of selectedSplats()) {
+            await intersectCenters(splat, op, {
                 box: { x: box[0], y: box[1], z: box[2], lenx: box[3], leny: box[4], lenz: box[5] }
             });
-        });
+        }
     });
 
-    events.on('select.rect', async (op: 'add'|'remove'|'set', rect: any) => {
+    events.function('select.rect', async (op: 'add'|'remove'|'set', rect: any) => {
         const mode = events.invoke('camera.mode');
 
         for (const splat of selectedSplats()) {
             if (mode === 'centers') {
-                intersectCenters(splat, op, {
+                await intersectCenters(splat, op, {
                     rect: { x1: rect.start.x, y1: rect.start.y, x2: rect.end.x, y2: rect.end.y }
                 });
             } else if (mode === 'rings') {
@@ -296,7 +296,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     let maskTexture: Texture = null;
 
-    events.on('select.byMask', async (op: 'add'|'remove'|'set', canvas: HTMLCanvasElement, context: CanvasRenderingContext2D) => {
+    events.function('select.byMask', async (op: 'add'|'remove'|'set', canvas: HTMLCanvasElement, context: CanvasRenderingContext2D) => {
         const mode = events.invoke('camera.mode');
 
         for (const splat of selectedSplats()) {
@@ -310,7 +310,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 }
                 maskTexture.setSource(canvas);
 
-                intersectCenters(splat, op, {
+                await intersectCenters(splat, op, {
                     mask: maskTexture
                 });
             } else if (mode === 'rings') {
@@ -368,7 +368,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     });
 
-    events.on('select.point', async (op: 'add'|'remove'|'set', point: { x: number, y: number }) => {
+    events.function('select.point', async (op: 'add'|'remove'|'set', point: { x: number, y: number }) => {
         const { width, height } = scene.targetSize;
         const mode = events.invoke('camera.mode');
 
@@ -423,7 +423,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // TO DO:
     // -  alternative distance metrics such as HSV.
     // -  alternative UI for threshold, two handles for min/max?
-    events.on('select.colorMatch', async (op: 'add'|'remove'|'set', point: { x: number, y: number }, threshold = 0) => {
+    events.function('select.colorMatch', async (op: 'add'|'remove'|'set', point: { x: number, y: number }, threshold = 0) => {
         const splats = selectedSplats();
         const targetSize = scene.targetSize;
         if (!splats.length || !targetSize || !point) {

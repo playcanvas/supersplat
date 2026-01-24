@@ -214,7 +214,7 @@ class Splat extends Element {
     }
 
     async updatePositions() {
-        const data = this.scene.dataProcessor.calcPositions(this);
+        const data = await this.scene.dataProcessor.calcPositions(this);
 
         // update the splat centers which are used for render-time sorting
         const state = this.splatData.getProp('state') as Uint8Array;

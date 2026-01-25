@@ -84,6 +84,14 @@ const main = async () => {
     // init localization
     await localizeInit();
 
+    // register events that only need the events object (before UI is created)
+    registerTimelineEvents(events);
+    registerCameraPosesEvents(events);
+    registerTransformHandlerEvents(events);
+    registerPlySequenceEvents(events);
+    registerPublishEvents(events);
+    registerIframeApi(events);
+
     // initialize shortcuts
     const shortcutManager = new ShortcutManager(events);
     events.function('shortcutManager', () => shortcutManager);
@@ -221,16 +229,11 @@ const main = async () => {
 
     window.scene = scene;
 
+    // register events that need scene or other dependencies
     registerEditorEvents(events, editHistory, scene);
     registerSelectionEvents(events, scene);
-    registerTimelineEvents(events);
-    registerCameraPosesEvents(events);
-    registerTransformHandlerEvents(events);
-    registerPlySequenceEvents(events);
-    registerPublishEvents(events);
     registerDocEvents(scene, events);
     registerRenderEvents(scene, events);
-    registerIframeApi(events);
     initFileHandler(scene, events, editorUI.appContainer.dom);
 
     // load async models

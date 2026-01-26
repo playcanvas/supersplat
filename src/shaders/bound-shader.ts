@@ -12,6 +12,11 @@ const fragmentShader = /* glsl */ `
     uniform sampler2D splatState;                       // per-splat state
     uniform highp ivec3 splat_params;                   // texture width, texture height, num splats
 
+    // Custom infinity check that transpiles correctly to WGSL
+    bvec3 isInf(vec3 v) {
+        return greaterThan(abs(v), vec3(1e30));
+    }
+
     // calculate min and max for a single column of splats
     // outputs both selected bounds and all visible bounds
     void main(void) {
@@ -56,16 +61,16 @@ const fragmentShader = /* glsl */ `
                 center = vec4(center, 1.0) * t;
             }
 
-            vec3 safeCenter = mix(center, vec3(1e6), isinf(center));
+            vec3 safeCenter = mix(center, vec3(1e6), isInf(center));
 
             // update visible bounds (all non-deleted splats)
             visibleMin = min(visibleMin, safeCenter);
-            visibleMax = max(visibleMax, mix(center, visibleMax, isinf(center)));
+            visibleMax = max(visibleMax, mix(center, visibleMax, isInf(center)));
 
             // update selected bounds (only exactly selected splats)
             if (state == 1u) {
                 selectedMin = min(selectedMin, safeCenter);
-                selectedMax = max(selectedMax, mix(center, selectedMax, isinf(center)));
+                selectedMax = max(selectedMax, mix(center, selectedMax, isInf(center)));
             }
         }
 

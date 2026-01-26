@@ -510,7 +510,7 @@ class Camera extends Element {
             this.splatPass.addLayer(this.camera, scene.splatLayer, false, false);
             this.splatPass.addLayer(this.camera, scene.splatLayer, true, false);
 
-            // configure gizmo pass - uses mainTarget for depth buffer support (required by WebGPU)
+            // configure gizmo pass
             this.gizmoPass.init(this.mainTarget);
             this.gizmoPass.addLayer(this.camera, scene.gizmoLayer, false, false);
             this.gizmoPass.addLayer(this.camera, scene.gizmoLayer, true, false);

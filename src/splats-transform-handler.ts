@@ -150,6 +150,8 @@ class SplatsTransformHandler implements TransformHandler {
             mat2.mul2(mat, mat2);
             transformPalette.setTransform(newIdx, mat2);
         });
+
+        this.splat.updateLocalBounds();
     }
 
     async end() {

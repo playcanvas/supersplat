@@ -104,7 +104,7 @@ class CalcPositions {
         const data = await resources.texture.read(0, 0, resources.texture.width, resources.texture.height, {
             renderTarget: resources.renderTarget,
             data: resources.data,
-            immediate: true
+            immediate: false
         });
 
         return data as Float32Array;

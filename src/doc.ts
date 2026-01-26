@@ -109,7 +109,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 });
                 URL.revokeObjectURL(url);
 
-                scene.add(splat);
+                await scene.add(splat);
 
                 splat.docDeserialize(splatSettings);
             }

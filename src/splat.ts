@@ -1,13 +1,9 @@
 import {
     ADDRESS_CLAMP_TO_EDGE,
-    BLENDEQUATION_ADD,
-    BLENDMODE_ONE,
-    BLENDMODE_ONE_MINUS_SRC_ALPHA,
     FILTER_NEAREST,
     PIXELFORMAT_R8,
     PIXELFORMAT_R16U,
     Asset,
-    BlendState,
     BoundingBox,
     Color,
     Entity,
@@ -57,9 +53,7 @@ class Splat extends Element {
     selectionBoundStorage: BoundingBox;
     localBoundStorage: BoundingBox;
     worldBoundStorage: BoundingBox;
-    selectionBoundDirty = true;
-    localBoundDirty = true;
-    worldBoundDirty = true;
+
     _visible = true;
     transformPalette: TransformPalette;
 
@@ -142,12 +136,8 @@ class Splat extends Element {
         // create the transform palette
         this.transformPalette = new TransformPalette(device);
 
-        // blend mode for splats
-        const blendState = new BlendState(true, BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE_MINUS_SRC_ALPHA);
-
         this.rebuildMaterial = (bands: number) => {
             const { material } = instance;
-            // material.blendState = blendState;
             const { glsl } = material.shaderChunks;
             glsl.set('gsplatVS', vertexShader);
             glsl.set('gsplatPS', fragmentShader);
@@ -180,7 +170,7 @@ class Splat extends Element {
         this.asset.unload();
     }
 
-    updateState(changedState = State.selected) {
+    async updateState(changedState = State.selected) {
         const state = this.splatData.getProp('state') as Uint8Array;
 
         // write state data to gpu texture
@@ -208,19 +198,19 @@ class Splat extends Element {
         this.numSelected = numSelected;
         this.numDeleted = numDeleted;
 
-        this.makeSelectionBoundDirty();
-
         // handle splats being added or removed
         if (changedState & State.deleted) {
-            this.updateSorting();
+            await this.updateSorting();
+        } else {
+            await this.updateLocalBounds();
         }
 
         this.scene.forceRender = true;
         this.scene.events.fire('splat.stateChanged', this);
     }
 
-    updatePositions() {
-        const data = this.scene.dataProcessor.calcPositions(this);
+    async updatePositions() {
+        const data = await this.scene.dataProcessor.calcPositions(this);
 
         // update the splat centers which are used for render-time sorting
         const state = this.splatData.getProp('state') as Uint8Array;
@@ -234,16 +224,14 @@ class Splat extends Element {
             }
         }
 
-        this.updateSorting();
+        await this.updateSorting();
 
         this.scene.forceRender = true;
         this.scene.events.fire('splat.positionsChanged', this);
     }
 
-    updateSorting() {
+    async updateSorting() {
         const state = this.splatData.getProp('state') as Uint8Array;
-
-        this.makeLocalBoundDirty();
 
         let mapping;
 
@@ -260,6 +248,9 @@ class Splat extends Element {
 
         // update sorting instance
         this.entity.gsplat.instance.sorter.setMapping(mapping);
+
+        // recalculate bounds after sorting changes
+        await this.updateLocalBounds();
     }
 
     get worldTransform() {
@@ -301,7 +292,7 @@ class Splat extends Element {
         return true;
     }
 
-    add() {
+    async add() {
         // add the entity to the scene
         this.scene.contentRoot.addChild(this.entity);
 
@@ -312,7 +303,7 @@ class Splat extends Element {
         this.rebuildMaterial(this.scene.events.invoke('view.bands'));
 
         // we must update state in case the state data was loaded from ply
-        this.updateState();
+        await this.updateState();
     }
 
     remove() {
@@ -410,58 +401,36 @@ class Splat extends Element {
             entity.setLocalScale(scale);
         }
 
-        this.makeWorldBoundDirty();
+        this.updateWorldBound();
 
         this.scene.events.fire('splat.moved', this);
     }
 
-    makeSelectionBoundDirty() {
-        this.selectionBoundDirty = true;
-        this.makeLocalBoundDirty();
+    // calculate both selection and local bounds (async, callers must await)
+    async updateLocalBounds(): Promise<void> {
+        await this.scene.dataProcessor.calcBound(this, this.selectionBoundStorage, this.localBoundStorage);
+        this.updateWorldBound();
     }
 
-    makeLocalBoundDirty() {
-        this.localBoundDirty = true;
-        this.makeWorldBoundDirty();
-    }
-
-    makeWorldBoundDirty() {
-        this.worldBoundDirty = true;
+    // update world bound from local bound (synchronous)
+    private updateWorldBound() {
+        this.worldBoundStorage.setFromTransformedAabb(this.localBoundStorage, this.entity.getWorldTransform());
         this.scene.boundDirty = true;
     }
 
     // get the selection bound
     get selectionBound() {
-        const selectionBound = this.selectionBoundStorage;
-        if (this.selectionBoundDirty) {
-            this.scene.dataProcessor.calcBound(this, selectionBound, true);
-            this.selectionBoundDirty = false;
-        }
-        return selectionBound;
+        return this.selectionBoundStorage;
     }
 
     // get local space bound
     get localBound() {
-        const localBound = this.localBoundStorage;
-        if (this.localBoundDirty) {
-            this.scene.dataProcessor.calcBound(this, localBound, false);
-            this.localBoundDirty = false;
-            this.entity.getWorldTransform().transformPoint(localBound.center, vec);
-        }
-        return localBound;
+        return this.localBoundStorage;
     }
 
     // get world space bound
     get worldBound() {
-        const worldBound = this.worldBoundStorage;
-        if (this.worldBoundDirty) {
-            // calculate meshinstance aabb (transformed local bound)
-            worldBound.setFromTransformedAabb(this.localBound, this.entity.getWorldTransform());
-
-            // flag scene bound as dirty
-            this.worldBoundDirty = false;
-        }
-        return worldBound;
+        return this.worldBoundStorage;
     }
 
     set visible(value: boolean) {
@@ -552,16 +521,19 @@ class Splat extends Element {
         return this._transparency;
     }
 
+    // get pivot position/rotation/scale (caller should have awaited operation that changed data)
     getPivot(mode: 'center' | 'boundCenter', selection: boolean, result: Transform) {
         const { entity } = this;
         switch (mode) {
             case 'center':
                 result.set(entity.getLocalPosition(), entity.getLocalRotation(), entity.getLocalScale());
                 break;
-            case 'boundCenter':
-                entity.getLocalTransform().transformPoint((selection ? this.selectionBound : this.localBound).center, vec);
+            case 'boundCenter': {
+                const bound = selection ? this.selectionBound : this.localBound;
+                entity.getLocalTransform().transformPoint(bound.center, vec);
                 result.set(vec, entity.getLocalRotation(), entity.getLocalScale());
                 break;
+            }
         }
     }
 

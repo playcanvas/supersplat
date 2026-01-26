@@ -87,19 +87,19 @@ class BrushSelection {
             canvas.style.display = 'none';
         };
 
-        const pointerup = (e: PointerEvent) => {
+        const pointerup = async (e: PointerEvent) => {
             if (e.pointerId === dragId) {
                 e.preventDefault();
                 e.stopPropagation();
 
-                dragEnd();
-
-                events.fire(
+                await events.invoke(
                     'select.byMask',
                     e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
                     canvas,
                     context
                 );
+
+                dragEnd();
             }
         };
 

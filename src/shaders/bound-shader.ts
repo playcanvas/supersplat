@@ -11,13 +11,20 @@ const fragmentShader = /* glsl */ `
     uniform sampler2D transformPalette;                 // palette of transforms
     uniform sampler2D splatState;                       // per-splat state
     uniform highp ivec3 splat_params;                   // texture width, texture height, num splats
-    uniform highp uint mode;                            // 0: selected, 1: visible
+
+    // Custom infinity check that transpiles correctly to WGSL
+    bvec3 isInf(vec3 v) {
+        return greaterThan(abs(v), vec3(1e30));
+    }
 
     // calculate min and max for a single column of splats
+    // outputs both selected bounds and all visible bounds
     void main(void) {
 
-        vec3 boundMin = vec3(1e6);
-        vec3 boundMax = vec3(-1e6);
+        vec3 selectedMin = vec3(1e6);
+        vec3 selectedMax = vec3(-1e6);
+        vec3 visibleMin = vec3(1e6);
+        vec3 visibleMax = vec3(-1e6);
 
         for (int id = 0; id < splat_params.y; id++) {
             // calculate splatUV
@@ -31,8 +38,8 @@ const fragmentShader = /* glsl */ `
             // read splat state
             uint state = uint(texelFetch(splatState, splatUV, 0).r * 255.0);
 
-            // skip deleted or locked splats
-            if (((mode == 0u) && (state != 1u)) || ((mode == 1u) && ((state & 4u) != 0u))) {
+            // skip deleted splats for both bounds
+            if ((state & 4u) != 0u) {
                 continue;
             }
 
@@ -54,12 +61,23 @@ const fragmentShader = /* glsl */ `
                 center = vec4(center, 1.0) * t;
             }
 
-            boundMin = min(boundMin, mix(center, boundMin, isinf(center)));
-            boundMax = max(boundMax, mix(center, boundMax, isinf(center)));
+            vec3 safeCenter = mix(center, vec3(1e6), isInf(center));
+
+            // update visible bounds (all non-deleted splats)
+            visibleMin = min(visibleMin, safeCenter);
+            visibleMax = max(visibleMax, mix(center, visibleMax, isInf(center)));
+
+            // update selected bounds (only exactly selected splats)
+            if (state == 1u) {
+                selectedMin = min(selectedMin, safeCenter);
+                selectedMax = max(selectedMax, mix(center, selectedMax, isInf(center)));
+            }
         }
 
-        pcFragColor0 = vec4(boundMin, 0.0);
-        pcFragColor1 = vec4(boundMax, 0.0);
+        pcFragColor0 = vec4(selectedMin, 0.0);
+        pcFragColor1 = vec4(selectedMax, 0.0);
+        pcFragColor2 = vec4(visibleMin, 0.0);
+        pcFragColor3 = vec4(visibleMax, 0.0);
     }
 `;
 

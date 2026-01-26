@@ -153,7 +153,7 @@ class Picker {
         // Read pixels using texture.read() API
         const pixels = await colorBuffer.read(px, texY, pw, ph, {
             renderTarget: rt,
-            immediate: true
+            immediate: false
         });
 
         const result: number[] = [];

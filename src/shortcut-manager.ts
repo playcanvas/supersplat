@@ -14,11 +14,20 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'camera.toggleControlMode': { keys: ['v'] },
 
     // Show
-    'camera.toggleOverlay': { keys: [' '] },
+    'camera.toggleOverlay': { keys: ['m'], shift: 'required' },
     'camera.toggleMode': { keys: ['m'] },
     'grid.toggleVisible': { keys: ['g'] },
     'select.hide': { keys: ['h'] },
     'select.unhide': { keys: ['h'], shift: 'required' },
+
+    // Playback
+    'timeline.togglePlay': { keys: [' '] },
+    'timeline.prevFrame': { keys: [','], repeat: true },
+    'timeline.nextFrame': { keys: ['.'], repeat: true },
+    'timeline.prevKey': { keys: ['<'], shift: 'optional', repeat: true },
+    'timeline.nextKey': { keys: ['>'], shift: 'optional', repeat: true },
+    'timeline.addKey': { keys: ['Enter'] },
+    'timeline.removeKey': { keys: ['Enter'], shift: 'required' },
 
     // Selection
     'select.all': { keys: ['a'], ctrl: 'required', capture: true },

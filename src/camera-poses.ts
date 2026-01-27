@@ -87,31 +87,29 @@ const registerCameraPosesEvents = (events: Events) => {
             poses[idx] = pose;
         } else {
             poses.push(pose);
-            events.fire('timeline.addKey', pose.frame);
         }
 
         rebuildSpline();
     };
 
     const removePose = (index: number) => {
+        if (index < 0 || index >= poses.length) {
+            return;
+        }
         poses.splice(index, 1);
-
-        // remove the timeline key
         rebuildSpline();
-        events.fire('timeline.removeKey', index);
     };
 
     const movePose = (index: number, frame: number) => {
-        // remove target frame pose
+        // remove target frame pose if one exists
         const toIndex = poses.findIndex(p => p.frame === frame);
-        // move pose
-        poses[index].frame = frame;
         if (toIndex !== -1) {
             removePose(toIndex);
         }
+        // move pose
+        poses[index].frame = frame;
 
         rebuildSpline();
-        events.fire('timeline.setKey', index, frame);
     };
 
     events.function('camera.poses', () => {
@@ -122,8 +120,8 @@ const registerCameraPosesEvents = (events: Events) => {
         addPose(pose);
     });
 
-    events.on('timeline.add', (frame: number) => {
-        // get the current camera pose
+    // When a key is added via user action, capture the current camera pose
+    events.on('timeline.keyAdded', (frame: number) => {
         const pose = events.invoke('camera.getPose');
 
         addPose({
@@ -134,16 +132,30 @@ const registerCameraPosesEvents = (events: Events) => {
         });
     });
 
-    events.on('timeline.move', (frameFrom: number, frameTo: number) => {
-        if (frameFrom === frameTo) return;
+    // When a key is updated via user action, update the pose at that frame
+    events.on('timeline.keyUpdated', (frame: number) => {
+        const pose = events.invoke('camera.getPose');
 
-        const index = poses.findIndex(p => p.frame === frameFrom);
-        if (index !== -1) {
-            movePose(index, frameTo);
+        addPose({
+            name: `camera_${poses.length}`,
+            frame,
+            position: pose.position,
+            target: pose.target
+        });
+    });
+
+    // When a key is moved, move the corresponding pose
+    events.on('timeline.keyMoved', (index: number, fromFrame: number, toFrame: number) => {
+        const poseIndex = poses.findIndex(p => p.frame === fromFrame);
+        if (poseIndex !== -1) {
+            movePose(poseIndex, toFrame);
         }
     });
 
-    events.on('timeline.remove', (index: number) => {
+    // When a key is removed, remove the corresponding pose
+    events.on('timeline.keyRemoved', (index: number) => {
+        // Find pose at the same index and remove it
+        // Note: poses and keys should be in the same order
         removePose(index);
     });
 
@@ -152,14 +164,8 @@ const registerCameraPosesEvents = (events: Events) => {
     });
 
     events.on('scene.clear', () => {
-        // remove all timeline keys in reverse order to maintain correct indices
-        while (poses.length > 0) {
-            removePose(poses.length - 1);
-        }
+        poses.length = 0;
         onTimelineChange = null;
-
-        // reset timeline to frame 0
-        events.fire('timeline.setFrame', 0);
     });
 
     // doc
@@ -190,16 +196,22 @@ const registerCameraPosesEvents = (events: Events) => {
         }
 
         const fps = events.invoke('timeline.frameRate');
+        const keys = poseSets[0].poses.map((docPose: any, index: number) => {
+            return docPose.frame ?? (index * fps);
+        });
 
         // for now, load the first poseSet
         poseSets[0].poses.forEach((docPose: any, index: number) => {
             addPose({
                 name: docPose.name,
-                frame: docPose.frame ?? (index * fps),
+                frame: keys[index],
                 position: new Vec3(docPose.position),
                 target: new Vec3(docPose.target)
             });
         });
+
+        // Load timeline keys from pose frame times
+        events.invoke('timeline.loadKeys', keys);
     });
 };
 

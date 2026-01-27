@@ -1,6 +1,7 @@
 import { Button, Container, NumericInput, SelectInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
+import { ShortcutManager } from '../shortcut-manager';
 import { localize } from './localization';
 import { Tooltips } from './tooltips';
 
@@ -87,7 +88,7 @@ class Ticks extends Container {
                         const fromIndex = keys.indexOf(label);
                         const fromFrame = events.invoke('timeline.keys')[fromIndex];
                         if (fromFrame !== toFrame) {
-                            events.fire('timeline.move', fromFrame, toFrame);
+                            events.fire('timeline.moveKey', fromFrame, toFrame);
                             events.fire('timeline.frame', events.invoke('timeline.frame'));
                         }
 
@@ -311,59 +312,33 @@ class TimelinePanel extends Container {
 
         // ui handlers
 
-        const skip = (dir: 'forward' | 'back') => {
-            const orderedKeys = (events.invoke('timeline.keys') as number[]).map((frame, index) => {
-                return { frame, index };
-            }).sort((a, b) => a.frame - b.frame);
-
-            if (orderedKeys.length > 0) {
-                const frame = events.invoke('timeline.frame');
-                const nextKey = orderedKeys.findIndex(k => (dir === 'back' ? k.frame >= frame : k.frame > frame));
-                const l = orderedKeys.length;
-
-                if (nextKey === -1) {
-                    events.fire('timeline.setFrame', orderedKeys[dir === 'back' ? l - 1 : 0].frame);
-                } else {
-                    events.fire('timeline.setFrame', orderedKeys[dir === 'back' ? (nextKey + l - 1) % l : nextKey].frame);
-                }
-            } else {
-                // if there are no keys, just to start of timeline or end
-                if (dir === 'back') {
-                    events.fire('timeline.setFrame', 0);
-                } else {
-                    events.fire('timeline.setFrame', events.invoke('timeline.frames') - 1);
-                }
-            }
-        };
-
         prev.on('click', () => {
-            skip('back');
+            events.fire('timeline.prevKey');
+        });
+
+        next.on('click', () => {
+            events.fire('timeline.nextKey');
         });
 
         play.on('click', () => {
             if (events.invoke('timeline.playing')) {
                 events.fire('timeline.setPlaying', false);
-                play.text = '\uE131';
             } else {
                 events.fire('timeline.setPlaying', true);
-                play.text = '\uE135';
             }
         });
 
-        next.on('click', () => {
-            skip('forward');
+        // Sync play button icon when playing state changes (e.g. via keyboard shortcut)
+        events.on('timeline.playing', (isPlaying: boolean) => {
+            play.text = isPlaying ? '\uE135' : '\uE131';
         });
 
         addKey.on('click', () => {
-            events.fire('timeline.add', events.invoke('timeline.frame'));
+            events.fire('timeline.addKey');
         });
 
         removeKey.on('click', () => {
-            const index = events.invoke('timeline.keys').indexOf(events.invoke('timeline.frame'));
-            if (index !== -1) {
-                events.fire('timeline.remove', index);
-                events.fire('timeline.frame', events.invoke('timeline.frame'));
-            }
+            events.fire('timeline.removeKey');
         });
 
         const canDelete = (frame: number) => events.invoke('timeline.keys').includes(frame);
@@ -388,11 +363,23 @@ class TimelinePanel extends Container {
         });
 
         // tooltips
-        tooltips.register(prev, localize('tooltip.timeline.prev-key'), 'top');
-        tooltips.register(play, localize('tooltip.timeline.play'), 'top');
-        tooltips.register(next, localize('tooltip.timeline.next-key'), 'top');
-        tooltips.register(addKey, localize('tooltip.timeline.add-key'), 'top');
-        tooltips.register(removeKey, localize('tooltip.timeline.remove-key'), 'top');
+        const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
+        const tooltip = (localeKey: string, shortcutId?: string) => {
+            const text = localize(localeKey);
+            if (shortcutId) {
+                const shortcut = shortcutManager.formatShortcut(shortcutId);
+                if (shortcut) {
+                    return `${text} ( ${shortcut} )`;
+                }
+            }
+            return text;
+        };
+
+        tooltips.register(prev, tooltip('tooltip.timeline.prev-key', 'timeline.prevKey'), 'top');
+        tooltips.register(play, tooltip('tooltip.timeline.play', 'timeline.togglePlay'), 'top');
+        tooltips.register(next, tooltip('tooltip.timeline.next-key', 'timeline.nextKey'), 'top');
+        tooltips.register(addKey, tooltip('tooltip.timeline.add-key', 'timeline.addKey'), 'top');
+        tooltips.register(removeKey, tooltip('tooltip.timeline.remove-key', 'timeline.removeKey'), 'top');
         tooltips.register(speed, localize('tooltip.timeline.frame-rate'), 'top');
         tooltips.register(frames, localize('tooltip.timeline.total-frames'), 'top');
         tooltips.register(smoothness, localize('tooltip.timeline.smoothness'), 'top');

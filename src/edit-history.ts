@@ -1,5 +1,8 @@
-import { EditOp } from './edit-ops';
+import { EditOp, MultiOp } from './edit-ops';
+import { Element } from './element';
 import { Events } from './events';
+import { Splat } from './splat';
+
 
 class EditHistory {
     history: EditOp[] = [];
@@ -24,6 +27,11 @@ class EditHistory {
         events.on('edit.add', async (editOp: EditOp, suppressOp = false) => {
             await this.add(editOp, suppressOp);
         });
+
+        // listen to scene element removal event, automatically clean up related history
+        events.on('scene.elementRemoved', (element: Element) => {
+            this.removeByElement(element);
+        });
     }
 
     async add(editOp: EditOp, suppressOp = false) {
@@ -32,6 +40,20 @@ class EditHistory {
         }
         this.history.push(editOp);
         await this.redo(suppressOp);
+    }
+
+    removeByElement(element: Element) {
+        this.history = this.history.filter((editOp) => {
+            if (editOp.isRelatedToElement?.(element)) {
+                editOp.destroy?.();
+                return false;
+            }
+            return true;
+        });
+        if (this.cursor > this.history.length) {
+            this.cursor = this.history.length;
+        }
+        this.fireEvents();
     }
 
     canUndo() {

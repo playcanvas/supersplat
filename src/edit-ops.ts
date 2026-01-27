@@ -1,5 +1,6 @@
 import { Color, Mat4 } from 'playcanvas';
 
+import { Element } from './element';
 import { Pivot } from './pivot';
 import { Scene } from './scene';
 import { Splat } from './splat';
@@ -11,6 +12,7 @@ interface EditOp {
     do(): void | Promise<void>;
     undo(): void | Promise<void>;
     destroy?(): void;
+    isRelatedToElement?(element: Element): boolean;
 }
 
 // build an index array based on a boolean predicate over indices
@@ -77,6 +79,10 @@ class StateOp {
     destroy() {
         this.splat = null;
         this.indices = null;
+    }
+
+    isRelatedToElement(element: Element): boolean {
+        return this.splat === element;
     }
 }
 
@@ -220,6 +226,11 @@ class EntityTransformOp {
         this.oldt = null;
         this.newt = null;
     }
+
+    // check if the operation is related to the specified element
+    isRelatedToElement(element: Element): boolean {
+        return this.splat === element;
+    }
 }
 
 const mat = new Mat4();
@@ -295,6 +306,10 @@ class SplatsTransformOp {
         this.transform = null;
         this.paletteMap = null;
     }
+
+    isRelatedToElement(element: Element): boolean {
+        return this.splat === element;
+    }
 }
 
 class PlacePivotOp {
@@ -365,6 +380,10 @@ class SetSplatColorAdjustmentOp {
         if (whitePoint !== null) splat.whitePoint = whitePoint;
         if (transparency !== null) splat.transparency = transparency;
     }
+
+    isRelatedToElement(element: Element): boolean {
+        return this.splat === element;
+    }
 }
 
 class MultiOp {
@@ -385,6 +404,10 @@ class MultiOp {
         for (const op of this.ops) {
             await op.undo();
         }
+    }
+
+    isRelatedToElement(element: Element): boolean {
+        return this.ops.some(op => op.isRelatedToElement?.(element) ?? false);
     }
 }
 
@@ -409,6 +432,10 @@ class AddSplatOp {
     destroy() {
         this.splat.destroy();
     }
+
+    isRelatedToElement(element: Element): boolean {
+        return this.splat === element;
+    }
 }
 
 class SplatRenameOp {
@@ -429,6 +456,10 @@ class SplatRenameOp {
 
     undo() {
         this.splat.name = this.oldName;
+    }
+
+    isRelatedToElement(element: Element): boolean {
+        return this.splat === element;
     }
 }
 

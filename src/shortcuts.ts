@@ -88,7 +88,12 @@ class Shortcuts {
                     }
 
                     if (options.event) {
-                        events.fire(options.event, down);
+                        // Only pass 'down' state for held shortcuts
+                        if (options.held) {
+                            events.fire(options.event, down);
+                        } else {
+                            events.fire(options.event);
+                        }
                     } else {
                         options.func(down);
                     }

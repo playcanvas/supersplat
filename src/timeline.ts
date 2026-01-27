@@ -172,40 +172,37 @@ const registerTimelineEvents = (events: Events) => {
         return keys;
     });
 
-    // Add a key at a specific frame
-    events.on('timeline.add', (keyFrame: number) => {
-        if (!keys.includes(keyFrame)) {
+    // Add or update a key at a specific frame (defaults to current frame)
+    events.on('timeline.addKey', (keyFrame = frame) => {
+        const isNew = !keys.includes(keyFrame);
+        if (isNew) {
             keys.push(keyFrame);
             events.fire('timeline.keyAdded', keyFrame);
+        } else {
+            events.fire('timeline.keyUpdated', keyFrame);
         }
     });
 
-    // Remove a key by index
-    events.on('timeline.remove', (index: number) => {
+    // Remove a key by index (defaults to key at current frame)
+    events.on('timeline.removeKey', (index = keys.indexOf(frame)) => {
         if (index >= 0 && index < keys.length) {
             keys.splice(index, 1);
             events.fire('timeline.keyRemoved', index);
         }
     });
 
-    // Add a key at the current frame (for keyboard shortcut / UI button)
-    events.on('timeline.addKey', () => {
-        events.fire('timeline.add', frame);
-    });
-
-    // Remove the key at the current frame if one exists (for keyboard shortcut / UI button)
-    events.on('timeline.removeKey', () => {
-        const index = keys.indexOf(frame);
-        if (index !== -1) {
-            events.fire('timeline.remove', index);
+    // Move a key from one frame to another
+    events.on('timeline.moveKey', (fromFrame: number, toFrame: number) => {
+        const index = keys.indexOf(fromFrame);
+        if (index !== -1 && fromFrame !== toFrame) {
+            keys[index] = toFrame;
+            events.fire('timeline.keyMoved', index, fromFrame, toFrame);
         }
     });
 
-    events.on('timeline.setKey', (index: number, frame: number) => {
-        if (frame !== keys[index]) {
-            keys[index] = frame;
-            events.fire('timeline.keySet', index, frame);
-        }
+    // clear all keys when scene is cleared
+    events.on('scene.clear', () => {
+        keys.length = 0;
     });
 
     // doc
@@ -215,11 +212,18 @@ const registerTimelineEvents = (events: Events) => {
             frames,
             frameRate,
             frame,
-            smoothness
+            smoothness,
+            keys: keys.slice()
         };
     });
 
     events.function('docDeserialize.timeline', (data: any = {}) => {
+        // Load keys first (before setFrames triggers rebuild)
+        keys.length = 0;
+        if (data.keys) {
+            keys.push(...data.keys);
+        }
+
         events.fire('timeline.setFrames', data.frames ?? 180);
         events.fire('timeline.setFrameRate', data.frameRate ?? 30);
         events.fire('timeline.setFrame', data.frame ?? 0);

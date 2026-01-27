@@ -88,7 +88,7 @@ class Ticks extends Container {
                         const fromIndex = keys.indexOf(label);
                         const fromFrame = events.invoke('timeline.keys')[fromIndex];
                         if (fromFrame !== toFrame) {
-                            events.fire('timeline.move', fromFrame, toFrame);
+                            events.fire('timeline.moveKey', fromFrame, toFrame);
                             events.fire('timeline.frame', events.invoke('timeline.frame'));
                         }
 

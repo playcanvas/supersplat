@@ -15,6 +15,8 @@ class EyedropperSelection {
     constructor(events: Events, parent: HTMLElement, canvasContainer: Container) {
         let pointerId: number | null = null;
         let threshold = 0.2;
+        let lastOp: PointerOp | null = null;
+        let lastPoint: NormalizedPoint | null = null;
 
         const selectToolbar = new Container({
             class: 'select-toolbar',
@@ -63,8 +65,19 @@ class EyedropperSelection {
             }
         };
 
-        thresholdInput.on('change', () => {
+        const syncThreshold = async () => {
             threshold = clamp01(thresholdInput.value ?? threshold);
+            if (lastOp && lastPoint) {
+                await events.invoke('select.colorMatch', lastOp, lastPoint, threshold);
+            }
+        };
+
+        thresholdInput.on('change', () => {
+            void syncThreshold();
+        });
+
+        thresholdInput.on('input', () => {
+            void syncThreshold();
         });
 
         const pointerdown = (event: PointerEvent) => {
@@ -88,10 +101,15 @@ class EyedropperSelection {
                 event.preventDefault();
                 event.stopPropagation();
 
+                const op = getPointerOp(event);
+                const point = toNormalizedPoint(event);
+                lastOp = op;
+                lastPoint = point;
+
                 await events.invoke(
                     'select.colorMatch',
-                    getPointerOp(event),
-                    toNormalizedPoint(event),
+                    op,
+                    point,
                     threshold
                 );
 

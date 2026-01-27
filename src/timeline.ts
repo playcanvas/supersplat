@@ -200,6 +200,14 @@ const registerTimelineEvents = (events: Events) => {
         }
     });
 
+    // Load keys directly without firing per-key events (used during document deserialization)
+    events.function('timeline.loadKeys', (keyFrames: number[]) => {
+        keys.length = 0;
+        keys.push(...keyFrames);
+        // Fire timeline.frames to trigger UI rebuild  with the loaded keys
+        events.fire('timeline.frames', frames);
+    });
+
     // clear all keys when scene is cleared
     events.on('scene.clear', () => {
         keys.length = 0;
@@ -218,11 +226,7 @@ const registerTimelineEvents = (events: Events) => {
     });
 
     events.function('docDeserialize.timeline', (data: any = {}) => {
-        // Load keys first (before frames event triggers rebuild)
         keys.length = 0;
-        if (data.keys) {
-            keys.push(...data.keys);
-        }
 
         // Set values
         frames = data.frames ?? 180;

@@ -196,16 +196,22 @@ const registerCameraPosesEvents = (events: Events) => {
         }
 
         const fps = events.invoke('timeline.frameRate');
+        const keys = poseSets[0].poses.map((docPose: any, index: number) => {
+            return docPose.frame ?? (index * fps);
+        });
 
         // for now, load the first poseSet
         poseSets[0].poses.forEach((docPose: any, index: number) => {
             addPose({
                 name: docPose.name,
-                frame: docPose.frame ?? (index * fps),
+                frame: keys[index],
                 position: new Vec3(docPose.position),
                 target: new Vec3(docPose.target)
             });
         });
+
+        // Load timeline keys from pose frame times
+        events.invoke('timeline.loadKeys', keys);
     });
 };
 

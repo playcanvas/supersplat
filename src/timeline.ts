@@ -118,22 +118,87 @@ const registerTimelineEvents = (events: Events) => {
         setPlaying(value);
     });
 
+    // shortcut handlers
+    events.on('timeline.togglePlay', () => {
+        setPlaying(!playing);
+    });
+
+    events.on('timeline.prevFrame', () => {
+        setFrame((frame - 1 + frames) % frames);
+    });
+
+    events.on('timeline.nextFrame', () => {
+        setFrame((frame + 1) % frames);
+    });
+
     // keys
 
     const keys: number[] = [];
+
+    // skip to previous/next key
+    const skipToKey = (dir: 'forward' | 'back') => {
+        const orderedKeys = keys.map((keyFrame, index) => {
+            return { frame: keyFrame, index };
+        }).sort((a, b) => a.frame - b.frame);
+
+        if (orderedKeys.length > 0) {
+            const nextKey = orderedKeys.findIndex(k => (dir === 'back' ? k.frame >= frame : k.frame > frame));
+            const l = orderedKeys.length;
+
+            if (nextKey === -1) {
+                setFrame(orderedKeys[dir === 'back' ? l - 1 : 0].frame);
+            } else {
+                setFrame(orderedKeys[dir === 'back' ? (nextKey + l - 1) % l : nextKey].frame);
+            }
+        } else {
+            // if there are no keys, go to start or end of timeline
+            if (dir === 'back') {
+                setFrame(0);
+            } else {
+                setFrame(frames - 1);
+            }
+        }
+    };
+
+    events.on('timeline.prevKey', () => {
+        skipToKey('back');
+    });
+
+    events.on('timeline.nextKey', () => {
+        skipToKey('forward');
+    });
 
     events.function('timeline.keys', () => {
         return keys;
     });
 
-    events.on('timeline.addKey', (frame: number) => {
-        keys.push(frame);
-        events.fire('timeline.keyAdded', frame);
+    // Add a key at a specific frame
+    events.on('timeline.add', (keyFrame: number) => {
+        if (!keys.includes(keyFrame)) {
+            keys.push(keyFrame);
+            events.fire('timeline.keyAdded', keyFrame);
+        }
     });
 
-    events.on('timeline.removeKey', (index: number) => {
-        keys.splice(index, 1);
-        events.fire('timeline.keyRemoved', index);
+    // Remove a key by index
+    events.on('timeline.remove', (index: number) => {
+        if (index >= 0 && index < keys.length) {
+            keys.splice(index, 1);
+            events.fire('timeline.keyRemoved', index);
+        }
+    });
+
+    // Add a key at the current frame (for keyboard shortcut / UI button)
+    events.on('timeline.addKey', () => {
+        events.fire('timeline.add', frame);
+    });
+
+    // Remove the key at the current frame if one exists (for keyboard shortcut / UI button)
+    events.on('timeline.removeKey', () => {
+        const index = keys.indexOf(frame);
+        if (index !== -1) {
+            events.fire('timeline.remove', index);
+        }
     });
 
     events.on('timeline.setKey', (index: number, frame: number) => {

@@ -84,6 +84,18 @@ const popupConfig: Record<string, CategoryConfig> = {
             { displayKey: '[ ]', localeKey: 'popup.shortcuts.brush-size' }
         ]
     },
+    playback: {
+        localeKey: 'popup.shortcuts.playback',
+        shortcuts: [
+            { id: 'timeline.togglePlay', localeKey: 'popup.shortcuts.play-pause' },
+            { id: 'timeline.prevFrame', localeKey: 'popup.shortcuts.prev-frame' },
+            { id: 'timeline.nextFrame', localeKey: 'popup.shortcuts.next-frame' },
+            { id: 'timeline.prevKey', localeKey: 'popup.shortcuts.prev-key' },
+            { id: 'timeline.nextKey', localeKey: 'popup.shortcuts.next-key' },
+            { id: 'timeline.addKey', localeKey: 'popup.shortcuts.add-key' },
+            { id: 'timeline.removeKey', localeKey: 'popup.shortcuts.remove-key' }
+        ]
+    },
     other: {
         localeKey: 'popup.shortcuts.other',
         shortcuts: [
@@ -96,7 +108,7 @@ const popupConfig: Record<string, CategoryConfig> = {
 };
 
 // Category display order
-const categoryOrder = ['navigation', 'camera', 'show', 'selection', 'tools', 'other'];
+const categoryOrder = ['navigation', 'camera', 'show', 'selection', 'tools', 'playback', 'other'];
 
 class ShortcutsPopup extends Container {
     constructor(events: Events, args = {}) {

@@ -261,55 +261,50 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             const data = new Uint8Array(width * height * 4);
             const line = new Uint8Array(width * 4);
 
-            // get the list of visible splats
-            const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
-
             // remember last camera position so we can skip sorting if the camera didn't move
             const last_pos = new Vec3(0, 0, 0);
             const last_forward = new Vec3(1, 0, 0);
 
-            // prepare the frame for rendering
-            const prepareFrame = async (frameTime: number) => {
+            // helper to sort splats and wait for completion
+            const sortAndWait = (splats: Splat[]) => {
+                return Promise.all(splats.map((splat) => {
+                    return new Promise<void>((resolve) => {
+                        const { instance } = splat.entity.gsplat;
+                        instance.sorter.once('updated', resolve);
+                        instance.sort(scene.camera.mainCamera);
+                        setTimeout(resolve, 1000);
+                    });
+                }));
+            };
+
+            // prepare the frame for rendering, returns the newly loaded splat if any
+            const prepareFrame = async (frameTime: number): Promise<Splat | null> => {
+                // Fire timeline.time for camera animation interpolation
                 events.fire('timeline.time', frameTime);
+
+                // Wait for PLY sequence to load the frame if present
+                const newSplat = await events.invoke('plysequence.setFrameAsync', Math.floor(frameTime)) as Splat | null;
 
                 // manually update the camera so position and rotation are correct
                 scene.camera.onUpdate(0);
 
-                // if the camera didn't move, don't sort
-                const pos = scene.camera.position;
-                const forward = scene.camera.forward;
-                if (last_pos.equals(pos) && last_forward.equals(forward)) {
-                    return;
+                // If a new PLY was loaded, sort and wait for completion
+                if (newSplat) {
+                    await sortAndWait([newSplat]);
+                } else {
+                    // No new PLY - sort existing splats if camera moved
+                    const pos = scene.camera.position;
+                    const forward = scene.camera.forward;
+                    if (!last_pos.equals(pos) || !last_forward.equals(forward)) {
+                        last_pos.copy(pos);
+                        last_forward.copy(forward);
+
+                        const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
+                        await sortAndWait(splats);
+                    }
                 }
 
-                // update remembered position
-                last_pos.copy(pos);
-                last_forward.copy(forward);
-
-                // wait for sorting to complete
-                await Promise.all(splats.map((splat) => {
-                    // create a promise for each splat that will resolve upon sorting complete
-                    return new Promise<void>((resolve) => {
-                        const { instance } = splat.entity.gsplat;
-
-                        // listen for the sorter to complete
-                        const handle = instance.sorter.on('updated', () => {
-                            handle.off();
-                            resolve();
-                        });
-
-                        // manually invoke sort because internally the engine sorts after render the
-                        // scene call is made.
-                        instance.sort(scene.camera.mainCamera);
-
-                        // in cases where the camera does not move between frames the sorter won't run
-                        // and we need a timeout instead. this is a hack - the engine should allow us to
-                        // know whether the sorter is running or not.
-                        setTimeout(() => {
-                            resolve();
-                        }, 1000);
-                    });
-                }));
+                return newSplat;
             };
 
             // capture the current video frame
@@ -346,7 +341,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             const duration = (endFrame - startFrame) / animFrameRate;
 
             for (let frameTime = 0; frameTime <= duration; frameTime += 1.0 / frameRate) {
-                // special case the first frame
+                // prepare the frame (loads PLY if needed, updates camera, sorts)
                 await prepareFrame(startFrame + frameTime * animFrameRate);
 
                 // render a frame
@@ -373,7 +368,8 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
             // Download
             if (!fileStream) {
-                downloadFile((output.target as BufferTarget).buffer, `${removeExtension(splats[0]?.name ?? 'supersplat')}.${fileExtension}`);
+                const currentSplats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
+                downloadFile((output.target as BufferTarget).buffer, `${removeExtension(currentSplats[0]?.name ?? 'supersplat')}.${fileExtension}`);
             }
 
             return true;

@@ -211,6 +211,7 @@ const registerTimelineEvents = (events: Events) => {
     // clear all keys when scene is cleared
     events.on('scene.clear', () => {
         keys.length = 0;
+        events.fire('timeline.frames', frames);
     });
 
     // doc

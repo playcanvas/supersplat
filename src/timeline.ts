@@ -218,16 +218,23 @@ const registerTimelineEvents = (events: Events) => {
     });
 
     events.function('docDeserialize.timeline', (data: any = {}) => {
-        // Load keys first (before setFrames triggers rebuild)
+        // Load keys first (before frames event triggers rebuild)
         keys.length = 0;
         if (data.keys) {
             keys.push(...data.keys);
         }
 
-        events.fire('timeline.setFrames', data.frames ?? 180);
-        events.fire('timeline.setFrameRate', data.frameRate ?? 30);
-        events.fire('timeline.setFrame', data.frame ?? 0);
-        events.fire('timeline.setSmoothness', data.smoothness ?? 0);
+        // Set values
+        frames = data.frames ?? 180;
+        frameRate = data.frameRate ?? 30;
+        frame = data.frame ?? 0;
+        smoothness = data.smoothness ?? 0;
+
+        // Fire events to update UI (always fire to ensure rebuild)
+        events.fire('timeline.frames', frames);
+        events.fire('timeline.frameRate', frameRate);
+        events.fire('timeline.frame', frame);
+        events.fire('timeline.smoothness', smoothness);
     });
 };
 

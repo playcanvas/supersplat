@@ -73,11 +73,11 @@ class EyedropperSelection {
         };
 
         thresholdInput.on('change', () => {
-            void syncThreshold();
+            syncThreshold().catch(() => {});
         });
 
         thresholdInput.on('input', () => {
-            void syncThreshold();
+            syncThreshold().catch(() => {});
         });
 
         const pointerdown = (event: PointerEvent) => {

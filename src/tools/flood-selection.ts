@@ -44,14 +44,6 @@ class FloodSelection {
             min: 0.001,
             max: 0.999
         });
-        const bindThresholdInput = () => {
-            const input = thresholdInput.dom.querySelector('input');
-            if (input) {
-                input.addEventListener('input', () => {
-                    void syncThreshold();
-                });
-            }
-        };
         selectToolbar.append(thresholdInput);
 
         canvasContainer.append(selectToolbar);
@@ -119,12 +111,21 @@ class FloodSelection {
             context.clearRect(0, 0, canvas.width, canvas.height);
         };
 
+        const bindThresholdInput = () => {
+            const input = thresholdInput.dom.querySelector('input');
+            if (input) {
+                input.addEventListener('input', () => {
+                    syncThreshold().catch(() => {});
+                });
+            }
+        };
+
         thresholdInput.on('change', () => {
-            void syncThreshold();
+            syncThreshold().catch(() => {});
         });
 
         thresholdInput.on('input', () => {
-            void syncThreshold();
+            syncThreshold().catch(() => {});
         });
 
         bindThresholdInput();

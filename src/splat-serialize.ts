@@ -26,7 +26,7 @@ import {
 
 import { version } from '../package.json';
 import { Events } from './events';
-import { ProgressWriter } from './serialize/writer';
+import { ProgressWriter } from './io';
 import { SHRotation } from './sh-utils';
 import { Splat } from './splat';
 import { State } from './splat-state';

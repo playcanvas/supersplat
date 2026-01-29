@@ -3,9 +3,8 @@ import { path, Quat, Vec3 } from 'playcanvas';
 import { CreateDropHandler } from './drop-handler';
 import { ElementType } from './element';
 import { Events } from './events';
-import { AssetSource } from './loaders/asset-source';
+import { BrowserFileSystem, MappedReadFileSystem } from './io';
 import { Scene } from './scene';
-import { BrowserFileSystem } from './serialize/browser-file-system';
 import { Splat } from './splat';
 import { serializePly, serializePlyCompressed, SerializeSettings, serializeSog, serializeSplat, serializeViewer, SogSettings, ViewerExportSettings } from './splat-serialize';
 import { localize } from './ui/localization';
@@ -65,6 +64,18 @@ const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
             'application/x-gaussian-splat': ['.splat']
         }
     },
+    'ksplat': {
+        description: 'KSplat File',
+        accept: {
+            'application/x-gaussian-splat': ['.ksplat']
+        }
+    },
+    'spz': {
+        description: 'SPZ File (Niantic)',
+        accept: {
+            'application/x-gaussian-splat': ['.spz']
+        }
+    },
     'indexTxt': {
         description: 'Colmap Poses (Images.txt)',
         accept: {
@@ -89,7 +100,7 @@ const allImportTypes = {
     description: 'Supported Files',
     accept: {
         'application/ply': ['.ply'],
-        'application/x-gaussian-splat': ['.json', '.sog', '.splat'],
+        'application/x-gaussian-splat': ['.json', '.sog', '.splat', '.ksplat', '.spz'],
         'image/webp': ['.webp'],
         'application/json': ['.lcc'],
         'application/octet-stream': ['.bin'],
@@ -243,87 +254,42 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         });
     };
 
-    // import a single file, .ply, .splat or meta.json
-    const importFile = async (file: ImportFile, animationFrame: boolean) => {
+    // import splat model(s) - handles single files, SOG, and LCC formats
+    const importSplatModel = async (files: ImportFile[], animationFrame: boolean) => {
         try {
-            const model = await scene.assetLoader.load({
-                contents: file.contents,
-                filename: file.filename,
-                url: file.url,
-                animationFrame
-            });
-            await scene.add(model);
-            return model;
-        } catch (error) {
-            await showLoadError(error.message ?? error, file.filename);
-        }
-    };
+            const filenames = files.map(f => f.filename.toLowerCase());
 
-    const importSog = async (files: ImportFile[], animationFrame: boolean) => {
-        const meta = files.findIndex(f => f.filename.toLowerCase() === 'meta.json');
-        const urls = files.map(file => (file.contents && URL.createObjectURL(file.contents)) ?? file.url ?? file.filename);
-
-        const mapUrl = (name: string) => {
-            const lowerName = name.toLowerCase();
-            if (lowerName.endsWith('.webp')) {
-                const idx = files.findIndex(f => f.filename.toLowerCase() === lowerName);
-                if (idx >= 0) {
-                    return urls[idx] ?? files[idx].url ?? files[idx].filename;
-                }
+            // Determine the main file based on format
+            let mainIndex: number;
+            if (filenames.some(f => f === 'meta.json')) {
+                mainIndex = filenames.findIndex(f => f === 'meta.json');
+            } else if (filenames.some(f => f.endsWith('.lcc'))) {
+                mainIndex = filenames.findIndex(f => f.endsWith('.lcc'));
+            } else {
+                mainIndex = 0;  // Single file case
             }
-            return name;
-        };
 
-        const model = await scene.assetLoader.load({
-            filename: files[meta].filename,
-            url: urls[meta],
-            animationFrame,
-            mapUrl: files.length > 1 ? mapUrl : null
-        });
+            const mainFile = files[mainIndex];
+            const baseUrl = mainFile.url ? new URL('.', mainFile.url).href : undefined;
 
-        urls.forEach(url => URL.revokeObjectURL(url));
-
-        await scene.add(model);
-
-        return model;
-    };
-
-    const importLcc = async (files: ImportFile[], animationFrame: boolean) => {
-        try {
-            const meta = files.findIndex(f => f.filename.toLowerCase().endsWith('.lcc'));
-
-            const mapFile = (name: string): AssetSource | null => {
-                const lowerName = name.toLowerCase();
-                const idx = files.findIndex(f => f.filename.toLowerCase() === lowerName);
-                if (idx >= 0) {
-                    return {
-                        filename: files[idx].filename,
-                        contents: files[idx].contents
-                    };
-                } else if (files[meta].url) {
-                    return {
-                        filename: name,
-                        url: new URL(name, files[meta].url).toString()
-                    };
-                }
-                return null;
-            };
-
-            const model = await scene.assetLoader.load({
-                filename: files[meta].filename,
-                url: files[meta].url,
-                contents: files[meta].contents,
-                animationFrame,
-                mapFile
+            // Create file system with all local files, falling back to URL loading
+            const fileSystem = new MappedReadFileSystem(baseUrl);
+            files.forEach(f => {
+                if (f.contents) fileSystem.addFile(f.filename, f.contents);
             });
 
-            await scene.add(model);
+            // For URL-only single file, use full URL as filename
+            const filename = (files.length === 1 && !mainFile.contents && mainFile.url)
+                ? mainFile.url
+                : mainFile.filename;
 
+            const model = await scene.assetLoader.load(filename, fileSystem, animationFrame);
+            await scene.add(model);
             return model;
         } catch (error) {
-            await showLoadError(error.message ?? error, 'lcc');
+            const displayName = files[0]?.filename ?? 'unknown';
+            await showLoadError(error.message ?? error, displayName);
         }
-
     };
 
     // figure out what the set of files are (ply sequence, document, sog set, ply) and then import them
@@ -336,17 +302,14 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             // handle ply sequence
             events.fire('plysequence.setFrames', files.map(f => f.contents));
             events.fire('timeline.frame', 0);
-        } else if (isSog(filenames)) {
-            // import unbundled sog model
-            result.push(await importSog(files, animationFrame));
-        }  else if (isLcc(filenames)) {
-            // import lcc files
-            result.push(await importLcc(files, animationFrame));
+        } else if (isSog(filenames) || isLcc(filenames)) {
+            // import multi-file splat model (SOG or LCC)
+            result.push(await importSplatModel(files, animationFrame));
         } else {
             // check for unrecognized file types
             for (let i = 0; i < filenames.length; i++) {
                 const filename = filenames[i].toLowerCase();
-                if (['.ssproj', '.ply', '.splat', '.sog', '.webp', 'images.txt', '.json'].every(ext => !filename.endsWith(ext))) {
+                if (['.ssproj', '.ply', '.splat', '.sog', '.webp', 'images.txt', '.json', '.ksplat', '.spz'].every(ext => !filename.endsWith(ext))) {
                     await showLoadError('Unrecognized file type', filename);
                     return;
                 }
@@ -359,9 +322,9 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                 if (filename.endsWith('.ssproj')) {
                     // load ssproj document
                     await events.invoke('doc.load', files[i].contents ?? (await fetch(files[i].url)).arrayBuffer(), files[i].handle);
-                } else if (['.ply', '.splat', '.sog'].some(ext => filename.endsWith(ext))) {
+                } else if (['.ply', '.splat', '.sog', '.ksplat', '.spz'].some(ext => filename.endsWith(ext))) {
                     // load gaussian splat model
-                    result.push(await importFile(files[i], animationFrame));
+                    result.push(await importSplatModel([files[i]], animationFrame));
                 } else if (filename.endsWith('images.txt')) {
                     // load colmap frames
                     await loadImagesTxt(files[i], events);
@@ -385,7 +348,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         fileSelector = document.createElement('input');
         fileSelector.setAttribute('id', 'file-selector');
         fileSelector.setAttribute('type', 'file');
-        fileSelector.setAttribute('accept', '.ply,.splat,meta.json,.json,.webp,.ssproj,.sog,.lcc,.bin,.txt');
+        fileSelector.setAttribute('accept', '.ply,.splat,meta.json,.json,.webp,.ssproj,.sog,.lcc,.bin,.txt,.ksplat,.spz');
         fileSelector.setAttribute('multiple', 'true');
 
         fileSelector.onchange = () => {
@@ -449,6 +412,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                         filePickerTypes.splat,
                         filePickerTypes.sog,
                         filePickerTypes.lcc,
+                        filePickerTypes.ksplat,
+                        filePickerTypes.spz,
                         filePickerTypes.indexTxt
                     ]
                 });

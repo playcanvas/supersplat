@@ -1,7 +1,7 @@
 import type { FileSystem, Writer } from '@playcanvas/splat-transform';
 
 import { Events } from './events';
-import { GZipWriter } from './serialize/writer';
+import { GZipWriter } from './io';
 import { serializePly, ExperienceSettings, SerializeSettings } from './splat-serialize';
 import { localize } from './ui/localization';
 

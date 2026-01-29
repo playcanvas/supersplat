@@ -4,6 +4,7 @@ import { Color, Mat4, path, Texture, Vec3, Vec4 } from 'playcanvas';
 import { EditHistory } from './edit-history';
 import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp, MultiOp, AddSplatOp } from './edit-ops';
 import { Events } from './events';
+import { MappedReadFileSystem } from './io';
 import { Scene } from './scene';
 import { Splat } from './splat';
 import { serializePly } from './splat-serialize';
@@ -515,9 +516,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
             // wrap PLY in a blob and load it
             const blob = new Blob([data.buffer as ArrayBuffer], { type: 'application/octet-stream' });
-            const url = URL.createObjectURL(blob);
             const filename = `${removeExtension(splat.filename)}.ply`;
-            const copy = await scene.assetLoader.load({ url, filename });
+            const fileSystem = new MappedReadFileSystem();
+            fileSystem.addFile(filename, blob);
+            const copy = await scene.assetLoader.load(filename, fileSystem);
 
             if (func === 'separate') {
                 editHistory.add(new MultiOp([
@@ -527,8 +529,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             } else {
                 editHistory.add(new AddSplatOp(scene, copy));
             }
-
-            URL.revokeObjectURL(url);
         }
     };
 

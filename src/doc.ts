@@ -1,9 +1,9 @@
 import { ZipFileSystem } from '@playcanvas/splat-transform';
 
 import { Events } from './events';
+import { BrowserFileSystem, MappedReadFileSystem } from './io';
 import { recentFiles } from './recent-files';
 import { Scene } from './scene';
-import { BrowserFileSystem } from './serialize/browser-file-system';
 import { Splat } from './splat';
 import { serializePly } from './splat-serialize';
 import { Transform } from './transform';
@@ -103,12 +103,9 @@ const registerDocEvents = (scene: Scene, events: Events) => {
 
                 // construct the splat asset
                 const contents = await zip.file(`splat_${i}.ply`).async('blob');
-                const url = URL.createObjectURL(contents);
-                const splat = await scene.assetLoader.load({
-                    url,
-                    filename
-                });
-                URL.revokeObjectURL(url);
+                const fileSystem = new MappedReadFileSystem();
+                fileSystem.addFile(filename, contents);
+                const splat = await scene.assetLoader.load(filename, fileSystem);
 
                 await scene.add(splat);
 

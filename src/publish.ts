@@ -1,7 +1,36 @@
+import type { FileSystem, Writer } from '@playcanvas/splat-transform';
+
 import { Events } from './events';
-import { Writer, GZipWriter } from './serialize/writer';
-import { serializePlyCompressed, serializePly, ExperienceSettings, SerializeSettings } from './splat-serialize';
+import { GZipWriter } from './serialize/writer';
+import { serializePly, ExperienceSettings, SerializeSettings } from './splat-serialize';
 import { localize } from './ui/localization';
+
+/**
+ * Simple FileSystem wrapper around a single Writer.
+ * Used for cases like GZip compression where we need FileSystem semantics
+ * but only have a single Writer to wrap.
+ * The wrapper makes close() a no-op since the caller manages the writer lifecycle.
+ */
+class WriterFileSystem implements FileSystem {
+    private writer: Writer;
+
+    constructor(writer: Writer) {
+        this.writer = writer;
+    }
+
+    createWriter(_filename: string): Writer {
+        // Return a wrapper that delegates write but makes close a no-op
+        // The caller is responsible for closing the underlying writer
+        return {
+            write: (data: Uint8Array) => this.writer.write(data),
+            close: () => Promise.resolve()
+        };
+    }
+
+    mkdir(_path: string): Promise<void> {
+        return Promise.resolve();
+    }
+}
 
 type User = {
     id: string;
@@ -265,8 +294,9 @@ const registerPublishEvents = (events: Events) => {
 
             const splats = events.invoke('scene.splats');
 
-            // serialize
-            await serializePly(splats, publishSettings.serializeSettings, gzipWriter, progressFunc);
+            // serialize using WriterFileSystem wrapper (close is managed by caller)
+            const fs = new WriterFileSystem(gzipWriter);
+            await serializePly(splats, publishSettings.serializeSettings, fs, 'output.ply', progressFunc);
 
             await gzipWriter.close();
             const response = await publishWriter.close();

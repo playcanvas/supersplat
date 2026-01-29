@@ -177,4 +177,6 @@ class ProgressWriter implements Writer {
     }
 }
 
-export { Writer, FileStreamWriter, BufferWriter, DownloadWriter, GZipWriter, ProgressWriter };
+// Note: FileStreamWriter, BufferWriter, DownloadWriter are kept for backward compatibility
+// but are no longer exported. Use BrowserFileSystem instead.
+export { GZipWriter, ProgressWriter };

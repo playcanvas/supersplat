@@ -3,7 +3,6 @@ import {
     DataTable,
     logger as splatTransformLogger,
     MemoryFileSystem,
-    WebPCodec,
     writeHtml,
     writeSog as writeSogInternal,
     ZipFileSystem,
@@ -1191,9 +1190,6 @@ const extractDataTable = (splats: Splat[], settings: SerializeSettings): DataTab
 const serializeViewer = async (splats: Splat[], serializeSettings: SerializeSettings, options: ViewerExportSettings, fs: FileSystem): Promise<void> => {
     const { experienceSettings } = options;
 
-    // Configure WebP WASM for browser environment (needed for SOG generation)
-    WebPCodec.wasmUrl = new URL('static/lib/webp/webp.wasm', document.baseURI).toString();
-
     // Extract splat data to DataTable
     const dataTable = extractDataTable(splats, serializeSettings);
 
@@ -1240,9 +1236,6 @@ type SogSettings = SerializeSettings & {
 
 const serializeSog = async (splats: Splat[], settings: SogSettings, fs: FileSystem): Promise<void> => {
     const { iterations = 10, events } = settings;
-
-    // Configure WebP WASM for browser environment
-    WebPCodec.wasmUrl = new URL('static/lib/webp/webp.wasm', document.baseURI).toString();
 
     // Configure splat-transform logger to bridge to supersplat's events
     const customLogger: Logger = {

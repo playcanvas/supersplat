@@ -270,7 +270,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             }
 
             const mainFile = files[mainIndex];
-            const baseUrl = mainFile.url ? new URL('.', mainFile.url).href : undefined;
+            const baseUrl = mainFile.url ? new URL('.', new URL(mainFile.url, window.location.href)).href : undefined;
 
             // Create file system with all local files, falling back to URL loading
             const fileSystem = new MappedReadFileSystem(baseUrl);

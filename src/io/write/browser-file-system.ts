@@ -3,7 +3,7 @@
  * Provides FileSystem abstraction for browser file operations.
  */
 
-import type { FileSystem, Writer } from '@playcanvas/splat-transform';
+import { MemoryFileSystem, type FileSystem, type Writer } from '@playcanvas/splat-transform';
 
 /**
  * Writer implementation for FileSystemWritableFileStream (File System Access API).
@@ -32,73 +32,56 @@ class BrowserFileWriter implements Writer {
 }
 
 /**
+ * Trigger a browser download for the given data.
+ */
+const triggerDownload = (data: Uint8Array, filename: string): void => {
+    const blob = new Blob([data], { type: 'application/octet-stream' });
+    const url = window.URL.createObjectURL(blob);
+
+    const lnk = document.createElement('a');
+    lnk.download = filename;
+    lnk.href = url;
+
+    // create a "fake" click-event to trigger the download
+    if (document.createEvent) {
+        const e = document.createEvent('MouseEvents');
+        e.initMouseEvent('click', true, true, window,
+            0, 0, 0, 0, 0, false, false, false,
+            false, 0, null);
+        lnk.dispatchEvent(e);
+    } else {
+        // @ts-ignore
+        lnk.fireEvent?.('onclick');
+    }
+
+    window.URL.revokeObjectURL(url);
+};
+
+/**
  * Writer implementation that triggers a browser download on close.
+ * Uses MemoryFileSystem internally for efficient buffer management.
  */
 class BrowserDownloadWriter implements Writer {
-    private buffers: Uint8Array[] = [];
-    private buffer: Uint8Array | null = null;
-    private cursor: number = 0;
+    private memFs: MemoryFileSystem;
+    private innerWriter: Writer;
     private filename: string;
 
     constructor(filename: string) {
         this.filename = filename;
+        this.memFs = new MemoryFileSystem();
+        this.innerWriter = this.memFs.createWriter(filename);
     }
 
     write(data: Uint8Array): void {
-        let readcursor = 0;
-
-        while (readcursor < data.byteLength) {
-            const readSize = data.byteLength - readcursor;
-
-            // allocate buffer
-            if (!this.buffer) {
-                this.buffer = new Uint8Array(Math.max(5 * 1024 * 1024, readSize));
-            }
-
-            const writeSize = this.buffer.byteLength - this.cursor;
-            const copySize = Math.min(readSize, writeSize);
-
-            this.buffer.set(data.subarray(readcursor, readcursor + copySize), this.cursor);
-
-            readcursor += copySize;
-            this.cursor += copySize;
-
-            if (this.cursor === this.buffer.byteLength) {
-                this.buffers.push(this.buffer);
-                this.buffer = null;
-                this.cursor = 0;
-            }
-        }
+        this.innerWriter.write(data);
     }
 
     close(): void {
-        if (this.buffer) {
-            this.buffers.push(new Uint8Array(this.buffer.buffer, 0, this.cursor));
-            this.buffer = null;
-            this.cursor = 0;
+        this.innerWriter.close();
+        const data = this.memFs.results.get(this.filename);
+        if (data) {
+            triggerDownload(data, this.filename);
         }
-
-        // download file to client
-        const blob = new Blob(this.buffers as unknown as ArrayBuffer[], { type: 'application/octet-stream' });
-        const url = window.URL.createObjectURL(blob);
-
-        const lnk = document.createElement('a');
-        lnk.download = this.filename;
-        lnk.href = url;
-
-        // create a "fake" click-event to trigger the download
-        if (document.createEvent) {
-            const e = document.createEvent('MouseEvents');
-            e.initMouseEvent('click', true, true, window,
-                0, 0, 0, 0, 0, false, false, false,
-                false, 0, null);
-            lnk.dispatchEvent(e);
-        } else {
-            // @ts-ignore
-            lnk.fireEvent?.('onclick');
-        }
-
-        window.URL.revokeObjectURL(url);
     }
 }
 

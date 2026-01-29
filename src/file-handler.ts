@@ -5,7 +5,7 @@ import { ElementType } from './element';
 import { Events } from './events';
 import { AssetSource } from './loaders/asset-source';
 import { Scene } from './scene';
-import { DownloadWriter, FileStreamWriter } from './serialize/writer';
+import { BrowserFileSystem } from './serialize/browser-file-system';
 import { Splat } from './splat';
 import { serializePly, serializePlyCompressed, SerializeSettings, serializeSog, serializeSplat, serializeViewer, SogSettings, ViewerExportSettings } from './splat-serialize';
 import { localize } from './ui/localization';
@@ -551,41 +551,38 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
 
             const { filename, splatIdx, serializeSettings, viewerExportSettings } = options;
 
-            const writer = stream ? new FileStreamWriter(stream) : new DownloadWriter(filename);
+            // Create FileSystem for output
+            const fs = new BrowserFileSystem(filename, stream);
 
-            try {
-                const splats = splatIdx === 'all' ? getSplats() : [getSplats()[splatIdx]];
+            const splats = splatIdx === 'all' ? getSplats() : [getSplats()[splatIdx]];
 
-                switch (fileType) {
-                    case 'ply':
-                        await serializePly(splats, serializeSettings, writer);
-                        break;
-                    case 'compressedPly':
-                        serializeSettings.minOpacity = 1 / 255;
-                        serializeSettings.removeInvalid = true;
-                        await serializePlyCompressed(splats, serializeSettings, writer);
-                        break;
-                    case 'splat':
-                        await serializeSplat(splats, serializeSettings, writer);
-                        break;
-                    case 'sog': {
-                        const sogSettings: SogSettings = {
-                            ...serializeSettings,
-                            minOpacity: 1 / 255,
-                            removeInvalid: true,
-                            iterations: options.sogIterations ?? 10,
-                            events
-                        };
-                        await serializeSog(splats, sogSettings, writer);
-                        break;
-                    }
-                    case 'htmlViewer':
-                    case 'packageViewer':
-                        await serializeViewer(splats, serializeSettings, viewerExportSettings!, writer);
-                        break;
+            switch (fileType) {
+                case 'ply':
+                    await serializePly(splats, serializeSettings, fs);
+                    break;
+                case 'compressedPly':
+                    serializeSettings.minOpacity = 1 / 255;
+                    serializeSettings.removeInvalid = true;
+                    await serializePlyCompressed(splats, serializeSettings, fs);
+                    break;
+                case 'splat':
+                    await serializeSplat(splats, serializeSettings, fs);
+                    break;
+                case 'sog': {
+                    const sogSettings: SogSettings = {
+                        ...serializeSettings,
+                        minOpacity: 1 / 255,
+                        removeInvalid: true,
+                        iterations: options.sogIterations ?? 10,
+                        events
+                    };
+                    await serializeSog(splats, sogSettings, fs);
+                    break;
                 }
-            } finally {
-                await writer.close();
+                case 'htmlViewer':
+                case 'packageViewer':
+                    await serializeViewer(splats, serializeSettings, viewerExportSettings!, fs);
+                    break;
             }
 
         } catch (error) {

@@ -23,8 +23,8 @@
     },
     "devDependencies": {
         "@playcanvas/eslint-config": "2.1.0",
+        "@playcanvas/splat-transform": "^1.2.0",
         "@playcanvas/pcui": "5.5.0",
-        "@playcanvas/supersplat-viewer": "1.11.1",
         "@rollup/plugin-alias": "6.0.0",
         "@rollup/plugin-image": "3.0.3",
         "@rollup/plugin-json": "6.1.0",

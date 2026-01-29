@@ -1,8 +1,9 @@
+import { ZipFileSystem } from '@playcanvas/splat-transform';
+
 import { Events } from './events';
 import { recentFiles } from './recent-files';
 import { Scene } from './scene';
-import { DownloadWriter, FileStreamWriter } from './serialize/writer';
-import { ZipWriter } from './serialize/zip-writer';
+import { BrowserFileSystem } from './serialize/browser-file-system';
 import { Splat } from './splat';
 import { serializePly } from './splat-serialize';
 import { Transform } from './transform';
@@ -169,15 +170,23 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 keepColorTint: true
             };
 
-            const writer = options.stream ? new FileStreamWriter(options.stream) : new DownloadWriter(options.filename);
-            const zipWriter = new ZipWriter(writer);
-            await zipWriter.file('document.json', JSON.stringify(document));
+            // Create browser filesystem and zip filesystem
+            const browserFs = new BrowserFileSystem(options.filename, options.stream);
+            const browserWriter = await browserFs.createWriter(options.filename);
+            const zipFs = new ZipFileSystem(browserWriter);
+
+            // Write document.json
+            const docWriter = await zipFs.createWriter('document.json');
+            await docWriter.write(new TextEncoder().encode(JSON.stringify(document)));
+            await docWriter.close();
+
+            // Write each splat as PLY
             for (let i = 0; i < splats.length; ++i) {
-                await zipWriter.start(`splat_${i}.ply`);
-                await serializePly([splats[i]], serializeSettings, zipWriter);
+                await serializePly([splats[i]], serializeSettings, zipFs, `splat_${i}.ply`);
             }
-            await zipWriter.close();
-            await writer.close();
+
+            // Close zip (also closes underlying browser writer)
+            await zipFs.close();
         } catch (error) {
             await events.invoke('showPopup', {
                 type: 'error',

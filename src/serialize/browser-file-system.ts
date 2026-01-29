@@ -11,18 +11,21 @@ import type { FileSystem, Writer } from '@playcanvas/splat-transform';
 class BrowserFileWriter implements Writer {
     private stream: FileSystemWritableFileStream;
     private cursor: number = 0;
+    private ready: Promise<void>;
 
     constructor(stream: FileSystemWritableFileStream) {
         this.stream = stream;
-        this.stream.seek(0);
+        this.ready = this.stream.seek(0);
     }
 
     async write(data: Uint8Array): Promise<void> {
+        await this.ready;
         this.cursor += data.byteLength;
         await this.stream.write(data as unknown as ArrayBuffer);
     }
 
     async close(): Promise<void> {
+        await this.ready;
         await this.stream.truncate(this.cursor);
         await this.stream.close();
     }

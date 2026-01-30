@@ -1256,7 +1256,6 @@ const serializeSog = async (splats: Splat[], settings: SogSettings, fs: FileSyst
                         progress: 0
                     });
 
-                    console.log(`${node.step} of ${node.totalSteps}: ${node.stepName ?? ''}`);
                     // Final step = done
                     if (node.step === node.totalSteps) {
                         events?.fire('progressEnd');
@@ -1267,7 +1266,6 @@ const serializeSog = async (splats: Splat[], settings: SogSettings, fs: FileSyst
                 events?.fire('progressUpdate', {
                     progress: 100 * node.step / node.totalSteps
                 });
-                console.log(Math.floor(100 * node.step / node.totalSteps));
             }
         }
     };

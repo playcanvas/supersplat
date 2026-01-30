@@ -274,14 +274,14 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
 
             // Create file system with all local files, falling back to URL loading
             const fileSystem = new MappedReadFileSystem(baseUrl);
-            files.forEach(f => {
+            files.forEach((f) => {
                 if (f.contents) fileSystem.addFile(f.filename, f.contents);
             });
 
             // For URL-only single file, use full URL as filename
-            const filename = (files.length === 1 && !mainFile.contents && mainFile.url)
-                ? mainFile.url
-                : mainFile.filename;
+            const filename = (files.length === 1 && !mainFile.contents && mainFile.url) ?
+                mainFile.url :
+                mainFile.filename;
 
             const model = await scene.assetLoader.load(filename, fileSystem, animationFrame);
             await scene.add(model);

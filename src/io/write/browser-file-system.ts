@@ -35,7 +35,7 @@ class BrowserFileWriter implements Writer {
  * Trigger a browser download for the given data.
  */
 const triggerDownload = (data: Uint8Array, filename: string): void => {
-    const blob = new Blob([data], { type: 'application/octet-stream' });
+    const blob = new Blob([data as BlobPart], { type: 'application/octet-stream' });
     const url = window.URL.createObjectURL(blob);
 
     const lnk = document.createElement('a');

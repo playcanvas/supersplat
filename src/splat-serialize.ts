@@ -3,7 +3,6 @@ import {
     DataTable,
     logger as splatTransformLogger,
     MemoryFileSystem,
-    WebPCodec,
     writeHtml,
     writeSog as writeSogInternal,
     ZipFileSystem,
@@ -26,7 +25,7 @@ import {
 
 import { version } from '../package.json';
 import { Events } from './events';
-import { ProgressWriter } from './serialize/writer';
+import { ProgressWriter } from './io';
 import { SHRotation } from './sh-utils';
 import { Splat } from './splat';
 import { State } from './splat-state';
@@ -1191,9 +1190,6 @@ const extractDataTable = (splats: Splat[], settings: SerializeSettings): DataTab
 const serializeViewer = async (splats: Splat[], serializeSettings: SerializeSettings, options: ViewerExportSettings, fs: FileSystem): Promise<void> => {
     const { experienceSettings } = options;
 
-    // Configure WebP WASM for browser environment (needed for SOG generation)
-    WebPCodec.wasmUrl = new URL('static/lib/webp/webp.wasm', document.baseURI).toString();
-
     // Extract splat data to DataTable
     const dataTable = extractDataTable(splats, serializeSettings);
 
@@ -1241,9 +1237,6 @@ type SogSettings = SerializeSettings & {
 const serializeSog = async (splats: Splat[], settings: SogSettings, fs: FileSystem): Promise<void> => {
     const { iterations = 10, events } = settings;
 
-    // Configure WebP WASM for browser environment
-    WebPCodec.wasmUrl = new URL('static/lib/webp/webp.wasm', document.baseURI).toString();
-
     // Configure splat-transform logger to bridge to supersplat's events
     const customLogger: Logger = {
         log: () => {},
@@ -1252,22 +1245,27 @@ const serializeSog = async (splats: Splat[], settings: SogSettings, fs: FileSyst
         debug: () => {},
         output: () => {},
         onProgress: (node: ProgressNode) => {
-            if (node.depth !== 0) return; // Only handle root-level progress
+            if (node.depth === 0) {
+                if (node.step === 0) {
+                    // begin() was called
+                    events?.fire('progressStart', 'Exporting SOG');
+                } else {
+                    // Fire update with 0% progress for this step
+                    events?.fire('progressUpdate', {
+                        text: `Step ${node.step} of ${node.totalSteps}: ${node.stepName ?? ''}`,
+                        progress: 0
+                    });
 
-            if (node.step === 0) {
-                // begin() was called
-                events?.fire('progressStart', 'Exporting SOG');
+                    // Final step = done
+                    if (node.step === node.totalSteps) {
+                        events?.fire('progressEnd');
+                    }
+                }
             } else {
-                // step() was called
+                // Nested level - update progress bar with sub-step progress
                 events?.fire('progressUpdate', {
-                    text: `Step ${node.step} of ${node.totalSteps}: ${node.stepName ?? ''}`,
                     progress: 100 * node.step / node.totalSteps
                 });
-
-                // Final step = done
-                if (node.step === node.totalSteps) {
-                    events?.fire('progressEnd');
-                }
             }
         }
     };

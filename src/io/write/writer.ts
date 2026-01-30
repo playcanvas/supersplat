@@ -1,3 +1,7 @@
+/**
+ * Writer utilities for splat serialization.
+ */
+
 import type { Writer } from '@playcanvas/splat-transform';
 
 /**

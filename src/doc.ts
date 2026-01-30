@@ -1,9 +1,9 @@
-import { ZipFileSystem } from '@playcanvas/splat-transform';
+import { ZipFileSystem, ZipReadFileSystem } from '@playcanvas/splat-transform';
 
 import { Events } from './events';
+import { BrowserFileSystem, BlobReadSource } from './io';
 import { recentFiles } from './recent-files';
 import { Scene } from './scene';
-import { BrowserFileSystem } from './serialize/browser-file-system';
 import { Splat } from './splat';
 import { serializePly } from './splat-serialize';
 import { Transform } from './transform';
@@ -85,30 +85,28 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     // load the document from the given file
     const loadDocument = async (file: File) => {
         events.fire('startSpinner');
+
+        // Create streaming ZIP reader from the file
+        const blobSource = new BlobReadSource(file);
+        const zipFs = new ZipReadFileSystem(blobSource);
+
         try {
             // reset the scene
             resetScene();
 
-            // read the document
-            /* global JSZip */
-            // @ts-ignore
-            const zip = new JSZip();
-            await zip.loadAsync(file);
-            const document = JSON.parse(await zip.file('document.json').async('text'));
+            // read document.json via streaming (only reads what's needed)
+            const docSource = await zipFs.createSource('document.json');
+            const docData = await docSource.read().readAll();
+            docSource.close();
+            const document = JSON.parse(new TextDecoder().decode(docData));
 
             // run through each splat and load it
             for (let i = 0; i < document.splats.length; ++i) {
                 const filename = `splat_${i}.ply`;
                 const splatSettings = document.splats[i];
 
-                // construct the splat asset
-                const contents = await zip.file(`splat_${i}.ply`).async('blob');
-                const url = URL.createObjectURL(contents);
-                const splat = await scene.assetLoader.load({
-                    url,
-                    filename
-                });
-                URL.revokeObjectURL(url);
+                // load splat directly from the zip filesystem (streams on-demand)
+                const splat = await scene.assetLoader.load(filename, zipFs);
 
                 await scene.add(splat);
 
@@ -142,6 +140,8 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 message: `'${error.message ?? error}'`
             });
         } finally {
+            // Clean up resources
+            zipFs.close();
             events.fire('stopSpinner');
         }
     };

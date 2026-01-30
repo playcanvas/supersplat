@@ -1245,22 +1245,29 @@ const serializeSog = async (splats: Splat[], settings: SogSettings, fs: FileSyst
         debug: () => {},
         output: () => {},
         onProgress: (node: ProgressNode) => {
-            if (node.depth !== 0) return; // Only handle root-level progress
+            if (node.depth === 0) {
+                if (node.step === 0) {
+                    // begin() was called
+                    events?.fire('progressStart', 'Exporting SOG');
+                } else {
+                    // Fire update with 0% progress for this step
+                    events?.fire('progressUpdate', {
+                        text: `Step ${node.step} of ${node.totalSteps}: ${node.stepName ?? ''}`,
+                        progress: 0
+                    });
 
-            if (node.step === 0) {
-                // begin() was called
-                events?.fire('progressStart', 'Exporting SOG');
+                    console.log(`${node.step} of ${node.totalSteps}: ${node.stepName ?? ''}`);
+                    // Final step = done
+                    if (node.step === node.totalSteps) {
+                        events?.fire('progressEnd');
+                    }
+                }
             } else {
-                // step() was called
+                // Nested level - update progress bar with sub-step progress
                 events?.fire('progressUpdate', {
-                    text: `Step ${node.step} of ${node.totalSteps}: ${node.stepName ?? ''}`,
                     progress: 100 * node.step / node.totalSteps
                 });
-
-                // Final step = done
-                if (node.step === node.totalSteps) {
-                    events?.fire('progressEnd');
-                }
+                console.log(Math.floor(100 * node.step / node.totalSteps));
             }
         }
     };

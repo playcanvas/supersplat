@@ -352,9 +352,13 @@ class EditorUI {
             progress.setHeader(header);
         });
 
-        events.on('progressUpdate', (options: { text: string, progress: number }) => {
-            progress.setText(options.text);
-            progress.setProgress(options.progress);
+        events.on('progressUpdate', (options: { text?: string, progress?: number }) => {
+            if (options.text !== undefined) {
+                progress.setText(options.text);
+            }
+            if (options.progress !== undefined) {
+                progress.setProgress(options.progress);
+            }
         });
 
         events.on('progressEnd', () => {

@@ -338,7 +338,9 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
                 // wait for encoder queue to drain if necessary (backpressure handling)
                 while (encoder.encodeQueueSize > 5) {
-                    await new Promise(resolve => setTimeout(resolve, 1));
+                    await new Promise<void>((resolve) => {
+                        setTimeout(resolve, 1);
+                    });
                 }
 
                 // check for encoder errors

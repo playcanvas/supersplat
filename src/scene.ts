@@ -200,7 +200,7 @@ class Scene {
         layers.push(this.gizmoLayer);
 
         this.dataProcessor = new DataProcessor(this.app.graphicsDevice);
-        this.assetLoader = new AssetLoader(this.app, events, this.app.graphicsDevice.maxAnisotropy);
+        this.assetLoader = new AssetLoader(this.app, events);
 
         // create root entities
         this.contentRoot = new Entity('contentRoot');

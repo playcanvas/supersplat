@@ -4,15 +4,12 @@
 
 // File system implementations
 export {
-    BlobReadStream,
     BlobReadSource,
-    BlobReadFileSystem,
     MappedReadFileSystem
 } from './file-systems';
 
 // Loading functions
 export {
-    loadWithSplatTransform,
-    dataTableToGSplatData,
+    loadGSplatData,
     validateGSplatData
 } from './loader';

@@ -547,21 +547,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
     });
 
-    const setAllData = (value: boolean) => {
-        if (value !== scene.assetLoader.loadAllData) {
-            scene.assetLoader.loadAllData = value;
-            events.fire('allData', scene.assetLoader.loadAllData);
-        }
-    };
-
-    events.function('allData', () => {
-        return scene.assetLoader.loadAllData;
-    });
-
-    events.on('toggleAllData', (value: boolean) => {
-        setAllData(!events.invoke('allData'));
-    });
-
     // camera mode (visual: centers/rings)
 
     let activeMode = 'centers';

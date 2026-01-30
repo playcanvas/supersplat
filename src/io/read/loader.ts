@@ -77,7 +77,7 @@ const dataTableToGSplatData = (dataTable: DataTable): GSplatData => {
  * @param filename - The filename to load
  * @param fileSystem - The file system to read from
  */
-const loadWithSplatTransform = async (filename: string, fileSystem: ReadFileSystem): Promise<GSplatData> => {
+const loadGSplatData = async (filename: string, fileSystem: ReadFileSystem): Promise<GSplatData> => {
     const inputFormat = getInputFormat(filename);
 
     // Handle bundled SOG (.sog extension) - wrap with ZipReadFileSystem
@@ -130,7 +130,6 @@ const validateGSplatData = (gsplatData: GSplatData): void => {
 };
 
 export {
-    loadWithSplatTransform,
-    dataTableToGSplatData,
+    loadGSplatData,
     validateGSplatData
 };

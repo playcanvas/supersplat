@@ -3,11 +3,7 @@
  */
 
 // Browser file system
-export {
-    BrowserFileSystem,
-    BrowserFileWriter,
-    BrowserDownloadWriter
-} from './browser-file-system';
+export { BrowserFileSystem } from './browser-file-system';
 
 // Writer utilities
 export {

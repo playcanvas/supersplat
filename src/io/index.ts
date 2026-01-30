@@ -4,20 +4,15 @@
 
 // Read operations
 export {
-    BlobReadStream,
     BlobReadSource,
-    BlobReadFileSystem,
     MappedReadFileSystem,
-    loadWithSplatTransform,
-    dataTableToGSplatData,
+    loadGSplatData,
     validateGSplatData
 } from './read';
 
 // Write operations
 export {
     BrowserFileSystem,
-    BrowserFileWriter,
-    BrowserDownloadWriter,
     GZipWriter,
     ProgressWriter
 } from './write';

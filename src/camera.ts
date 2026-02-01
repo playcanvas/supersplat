@@ -746,11 +746,15 @@ class Camera extends Element {
     startOffscreenMode(width: number, height: number) {
         this.targetSizeOverride = { width, height };
         this.finalPass.enabled = false;
+        this.rebuildRenderTargets();
+        this.onUpdate(0);
     }
 
     endOffscreenMode() {
         this.targetSizeOverride = null;
         this.finalPass.enabled = true;
+        this.rebuildRenderTargets();
+        this.onUpdate(0);
     }
 
     get targetSize() {

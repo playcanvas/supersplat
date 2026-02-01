@@ -1,6 +1,7 @@
 import {
     math,
     ADDRESS_CLAMP_TO_EDGE,
+    ASPECT_MANUAL,
     FILTER_NEAREST,
     PIXELFORMAT_RGBA8,
     PIXELFORMAT_RGBA16F,
@@ -275,6 +276,9 @@ class Camera extends Element {
             scene.gizmoLayer.id
         ];
 
+        // use manual aspect ratio mode so we can set it based on targetSize
+        camera.aspectRatioMode = ASPECT_MANUAL;
+
         // create render passes
         const device = scene.graphicsDevice;
         const { app } = scene;
@@ -532,6 +536,7 @@ class Camera extends Element {
         }
 
         this.camera.horizontalFov = width > height;
+        this.camera.aspectRatio = width / height;
         scene.events.fire('camera.resize', { width, height });
     }
 
@@ -741,11 +746,15 @@ class Camera extends Element {
     startOffscreenMode(width: number, height: number) {
         this.targetSizeOverride = { width, height };
         this.finalPass.enabled = false;
+        this.rebuildRenderTargets();
+        this.onUpdate(0);
     }
 
     endOffscreenMode() {
         this.targetSizeOverride = null;
         this.finalPass.enabled = true;
+        this.rebuildRenderTargets();
+        this.onUpdate(0);
     }
 
     get targetSize() {

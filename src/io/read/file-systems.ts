@@ -3,11 +3,15 @@
  */
 
 import {
+    BufferedReadStream,
     ReadFileSystem,
     ReadSource,
     ReadStream,
     UrlReadFileSystem
 } from '@playcanvas/splat-transform';
+
+// Read blob in 4MB chunks to balance async overhead vs memory usage
+const BLOB_CHUNK_SIZE = 4 * 1024 * 1024;
 
 /**
  * ReadStream implementation for reading from Blob/File.
@@ -32,8 +36,8 @@ class BlobReadStream extends ReadStream {
 
         const bytesToRead = Math.min(target.length, remaining);
         const slice = this.blob.slice(this.offset, this.offset + bytesToRead);
-        const buffer = await slice.arrayBuffer();
-        target.set(new Uint8Array(buffer));
+        const arrayBuffer = await slice.arrayBuffer();
+        target.set(new Uint8Array(arrayBuffer));
         this.offset += bytesToRead;
         this.bytesRead += bytesToRead;
         return bytesToRead;
@@ -63,7 +67,9 @@ class BlobReadSource implements ReadSource {
         const clampedStart = Math.max(0, Math.min(start, this.size));
         const clampedEnd = Math.max(clampedStart, Math.min(end, this.size));
 
-        return new BlobReadStream(this.blob, clampedStart, clampedEnd);
+        // Wrap with BufferedReadStream to reduce async overhead from blob reads
+        const raw = new BlobReadStream(this.blob, clampedStart, clampedEnd);
+        return new BufferedReadStream(raw, BLOB_CHUNK_SIZE);
     }
 
     close(): void {

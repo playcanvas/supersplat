@@ -231,13 +231,15 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
             await output.start();
 
+            let encoderError: Error | null = null;
+
             const encoder = new VideoEncoder({
                 output: async (chunk, meta) => {
                     const encodedPacket = EncodedPacket.fromEncodedChunk(chunk);
                     await videoSource.add(encodedPacket, meta);
                 },
                 error: (error) => {
-                    console.log(error);
+                    encoderError = error;
                 }
             });
 
@@ -333,6 +335,20 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     timestamp: Math.floor(1e6 * frameTime),
                     duration: Math.floor(1e6 / frameRate)
                 });
+
+                // wait for encoder queue to drain if necessary (backpressure handling)
+                while (encoder.encodeQueueSize > 5) {
+                    await new Promise<void>((resolve) => {
+                        setTimeout(resolve, 1);
+                    });
+                }
+
+                // check for encoder errors
+                if (encoderError) {
+                    videoFrame.close();
+                    throw encoderError;
+                }
+
                 encoder.encode(videoFrame);
                 videoFrame.close();
             };

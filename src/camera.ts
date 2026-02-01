@@ -1,6 +1,7 @@
 import {
     math,
     ADDRESS_CLAMP_TO_EDGE,
+    ASPECT_MANUAL,
     FILTER_NEAREST,
     PIXELFORMAT_RGBA8,
     PIXELFORMAT_RGBA16F,
@@ -275,6 +276,9 @@ class Camera extends Element {
             scene.gizmoLayer.id
         ];
 
+        // use manual aspect ratio mode so we can set it based on targetSize
+        camera.aspectRatioMode = ASPECT_MANUAL;
+
         // create render passes
         const device = scene.graphicsDevice;
         const { app } = scene;
@@ -532,6 +536,7 @@ class Camera extends Element {
         }
 
         this.camera.horizontalFov = width > height;
+        this.camera.aspectRatio = width / height;
         scene.events.fire('camera.resize', { width, height });
     }
 

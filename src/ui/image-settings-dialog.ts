@@ -65,7 +65,7 @@ class ImageSettingsDialog extends Container {
         const resolutionValue = new VectorInput({
             class: 'vector-input',
             dimensions: 2,
-            min: 320,
+            min: 4,
             max: 16000,
             precision: 0,
             value: [1024, 768]
@@ -140,7 +140,10 @@ class ImageSettingsDialog extends Container {
                 '4K': 2160
             };
 
-            resolutionValue.value = [widths[presetSelect.value], heights[presetSelect.value]];
+            resolutionValue.value = [
+                widths[presetSelect.value] ?? resolutionValue.value[0],
+                heights[presetSelect.value] ?? resolutionValue.value[1]
+            ];
         };
 
         presetSelect.on('change', () => {

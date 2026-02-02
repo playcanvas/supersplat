@@ -16,8 +16,18 @@ const createSvg = (svgString: string, args = {}) => {
 };
 
 const removeKnownExtension = (filename: string) => {
-    // remove known extensions
-    const knownExtensions = ['.compressed.ply', '.ply', '.splat', '.sog', '.html', '.zip'];
+    // remove known extensions (ordered from longest to shortest for compound extensions)
+    const knownExtensions = [
+        '.compressed.ply',
+        '.ksplat',
+        '.splat',
+        '.html',
+        '.ply',
+        '.sog',
+        '.spz',
+        '.lcc',
+        '.zip'
+    ];
 
     for (let i = 0; i < knownExtensions.length; ++i) {
         const ext = knownExtensions[i];

@@ -11,7 +11,7 @@ import {
     DataTable,
     Options,
     ReadFileSystem,
-    ZipReadFileSystem,
+    ZipReadFileSystem
 } from '@playcanvas/splat-transform';
 import { GSplatData } from 'playcanvas';
 

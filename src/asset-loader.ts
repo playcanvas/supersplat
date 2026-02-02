@@ -18,13 +18,14 @@ class AssetLoader {
         this.events = events;
     }
 
-    async load(filename: string, fileSystem: ReadFileSystem, animationFrame?: boolean) {
+    async load(filename: string, fileSystem: ReadFileSystem, animationFrame?: boolean, skipReorder?: boolean) {
         if (!animationFrame) {
             this.events.fire('startSpinner');
         }
 
         try {
-            const gsplatData = await loadGSplatData(filename, fileSystem);
+            // Skip reordering for animation frames (speed) or when explicitly requested (already ordered)
+            const gsplatData = await loadGSplatData(filename, fileSystem, skipReorder || animationFrame);
             validateGSplatData(gsplatData);
 
             const asset = new Asset(filename, 'gsplat', { url: `local-asset-${Date.now()}`, filename });

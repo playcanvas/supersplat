@@ -3,14 +3,15 @@
  */
 
 import {
-    DataTable,
+    getInputFormat,
+    readFile,
+    sortMortonOrder,
     Column,
     ColumnType,
+    DataTable,
+    Options,
     ReadFileSystem,
     ZipReadFileSystem,
-    readFile,
-    getInputFormat,
-    Options
 } from '@playcanvas/splat-transform';
 import { GSplatData } from 'playcanvas';
 
@@ -76,12 +77,14 @@ const dataTableToGSplatData = (dataTable: DataTable): GSplatData => {
  * Load a file using splat-transform and convert to GSplatData.
  * @param filename - The filename to load
  * @param fileSystem - The file system to read from
+ * @param skipReorder - Skip morton reordering (for files already in morton order or animation playback)
  */
-const loadGSplatData = async (filename: string, fileSystem: ReadFileSystem): Promise<GSplatData> => {
+const loadGSplatData = async (filename: string, fileSystem: ReadFileSystem, skipReorder?: boolean): Promise<GSplatData> => {
     const inputFormat = getInputFormat(filename);
+    const lowerFilename = filename.toLowerCase();
 
     // Handle bundled SOG (.sog extension) - wrap with ZipReadFileSystem
-    if (inputFormat === 'sog' && filename.toLowerCase().endsWith('.sog')) {
+    if (inputFormat === 'sog' && lowerFilename.endsWith('.sog')) {
         const source = await fileSystem.createSource(filename);
         const zipFs = new ZipReadFileSystem(source);
         try {
@@ -106,6 +109,21 @@ const loadGSplatData = async (filename: string, fileSystem: ReadFileSystem): Pro
         params: [],
         fileSystem
     });
+
+    // Reorder data into morton order for better render performance.
+    // Skip reordering for:
+    // - SOG format (already in morton order)
+    // - Compressed PLY (already in morton order from write-compressed-ply)
+    // - When skipReorder is true (ssproj files are already ordered, animation frames need speed)
+    const isCompressedPly = lowerFilename.endsWith('.compressed.ply');
+    if (inputFormat !== 'sog' && !isCompressedPly && !skipReorder) {
+        const indices = new Uint32Array(tables[0].numRows);
+        for (let i = 0; i < indices.length; i++) {
+            indices[i] = i;
+        }
+        sortMortonOrder(tables[0], indices);
+        tables[0].permuteRowsInPlace(indices);
+    }
 
     // Convert to GSplatData (use first table, as most formats return single table)
     // LCC may return multiple tables for different LOD levels - we use the first (highest detail)

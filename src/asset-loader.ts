@@ -5,8 +5,16 @@ import { Events } from './events';
 import { loadGSplatData, validateGSplatData } from './io';
 import { Splat } from './splat';
 
-const defaultOrientation = new Vec3(0, 0, 180);
-const lccOrientation = new Vec3(90, 0, 180);
+const getOrientation = (filename: string) => {
+    switch (getInputFormat(filename)) {
+        case 'spz':
+            return new Vec3(0, 0, 0);
+        case 'lcc':
+            return new Vec3(90, 0, 180);
+        default:
+            return new Vec3(0, 0, 180);
+    }
+};
 
 // handles loading gsplat assets using splat-transform
 class AssetLoader {
@@ -32,8 +40,7 @@ class AssetLoader {
             this.app.assets.add(asset);
             asset.resource = new GSplatResource(this.app.graphicsDevice, gsplatData);
 
-            const orientation = getInputFormat(filename.toLowerCase()) === 'lcc' ? lccOrientation : defaultOrientation;
-            return new Splat(asset, orientation);
+            return new Splat(asset, getOrientation(filename));
         } finally {
             if (!animationFrame) {
                 this.events.fire('stopSpinner');

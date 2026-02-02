@@ -327,18 +327,24 @@ class EditorUI {
             return this.popup.show(options);
         });
 
-        // spinner
-
+        // spinner with reference counting to handle nested operations
         const spinner = new Spinner();
-
         topContainer.append(spinner);
 
+        let spinnerCount = 0;
+
         events.on('startSpinner', () => {
-            spinner.hidden = false;
+            spinnerCount++;
+            if (spinnerCount === 1) {
+                spinner.hidden = false;
+            }
         });
 
         events.on('stopSpinner', () => {
-            spinner.hidden = true;
+            spinnerCount = Math.max(0, spinnerCount - 1);
+            if (spinnerCount === 0) {
+                spinner.hidden = true;
+            }
         });
 
         // progress

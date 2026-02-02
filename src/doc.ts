@@ -106,7 +106,8 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 const splatSettings = document.splats[i];
 
                 // load splat directly from the zip filesystem (streams on-demand)
-                const splat = await scene.assetLoader.load(filename, zipFs);
+                // skipReorder=true because ssproj PLY files are already in morton order
+                const splat = await scene.assetLoader.load(filename, zipFs, false, true);
 
                 await scene.add(splat);
 

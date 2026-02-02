@@ -77,6 +77,7 @@ type ExperienceSettings = {
 type ViewerExportSettings = {
     type: 'html' | 'zip';
     experienceSettings: ExperienceSettings;
+    events?: Events;
 };
 
 type ProgressFunc = (loaded: number, total: number) => void;
@@ -1187,8 +1188,43 @@ const extractDataTable = (splats: Splat[], settings: SerializeSettings): DataTab
     return dataTable;
 };
 
+// Create a logger that bridges splat-transform progress to supersplat's events
+const createProgressLogger = (header: string, events?: Events): Logger => ({
+    log: () => {},
+    warn: console.warn,
+    error: console.error,
+    debug: () => {},
+    output: () => {},
+    onProgress: (node: ProgressNode) => {
+        if (node.depth === 0) {
+            if (node.step === 0) {
+                // begin() was called
+                events?.fire('progressStart', header);
+            } else {
+                // Fire update with 0% progress for this step
+                events?.fire('progressUpdate', {
+                    text: `Step ${node.step} of ${node.totalSteps}: ${node.stepName ?? ''}`,
+                    progress: 0
+                });
+
+                // Final step = done
+                if (node.step === node.totalSteps) {
+                    events?.fire('progressEnd');
+                }
+            }
+        } else {
+            // Nested level - update progress bar with sub-step progress
+            events?.fire('progressUpdate', {
+                progress: 100 * node.step / node.totalSteps
+            });
+        }
+    }
+});
+
 const serializeViewer = async (splats: Splat[], serializeSettings: SerializeSettings, options: ViewerExportSettings, fs: FileSystem): Promise<void> => {
-    const { experienceSettings } = options;
+    const { experienceSettings, events } = options;
+
+    splatTransformLogger.setLogger(createProgressLogger('Exporting HTML', events));
 
     // Extract splat data to DataTable
     const dataTable = extractDataTable(splats, serializeSettings);
@@ -1237,39 +1273,7 @@ type SogSettings = SerializeSettings & {
 const serializeSog = async (splats: Splat[], settings: SogSettings, fs: FileSystem): Promise<void> => {
     const { iterations = 10, events } = settings;
 
-    // Configure splat-transform logger to bridge to supersplat's events
-    const customLogger: Logger = {
-        log: () => {},
-        warn: console.warn,
-        error: console.error,
-        debug: () => {},
-        output: () => {},
-        onProgress: (node: ProgressNode) => {
-            if (node.depth === 0) {
-                if (node.step === 0) {
-                    // begin() was called
-                    events?.fire('progressStart', 'Exporting SOG');
-                } else {
-                    // Fire update with 0% progress for this step
-                    events?.fire('progressUpdate', {
-                        text: `Step ${node.step} of ${node.totalSteps}: ${node.stepName ?? ''}`,
-                        progress: 0
-                    });
-
-                    // Final step = done
-                    if (node.step === node.totalSteps) {
-                        events?.fire('progressEnd');
-                    }
-                }
-            } else {
-                // Nested level - update progress bar with sub-step progress
-                events?.fire('progressUpdate', {
-                    progress: 100 * node.step / node.totalSteps
-                });
-            }
-        }
-    };
-    splatTransformLogger.setLogger(customLogger);
+    splatTransformLogger.setLogger(createProgressLogger('Exporting SOG', events));
 
     // Extract splat data to DataTable
     const dataTable = extractDataTable(splats, settings);

@@ -121,9 +121,8 @@ class ViewPanel extends Container {
 
         const tonemappingSelection = new SelectInput({
             class: 'view-panel-row-select',
-            defaultValue: 'none',
+            defaultValue: 'linear',
             options: [
-                { v: 'none', t: localize('panel.view-options.tonemapping.none') },
                 { v: 'linear', t: localize('panel.view-options.tonemapping.linear') },
                 { v: 'neutral', t: localize('panel.view-options.tonemapping.neutral') },
                 { v: 'aces', t: localize('panel.view-options.tonemapping.aces') },

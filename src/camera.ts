@@ -8,7 +8,6 @@ import {
     PIXELFORMAT_DEPTH,
     PROJECTION_ORTHOGRAPHIC,
     PROJECTION_PERSPECTIVE,
-    TONEMAP_NONE,
     TONEMAP_ACES,
     TONEMAP_ACES2,
     TONEMAP_FILMIC,
@@ -137,7 +136,6 @@ class Camera extends Element {
     // tonemapping
     set tonemapping(value: string) {
         const mapping: Record<string, number> = {
-            none: TONEMAP_NONE,
             linear: TONEMAP_LINEAR,
             neutral: TONEMAP_NEUTRAL,
             aces: TONEMAP_ACES,
@@ -156,7 +154,6 @@ class Camera extends Element {
 
     get tonemapping() {
         switch (this.camera.toneMapping) {
-            case TONEMAP_NONE: return 'none';
             case TONEMAP_LINEAR: return 'linear';
             case TONEMAP_NEUTRAL: return 'neutral';
             case TONEMAP_ACES: return 'aces';
@@ -164,7 +161,7 @@ class Camera extends Element {
             case TONEMAP_FILMIC: return 'filmic';
             case TONEMAP_HEJL: return 'hejl';
         }
-        return 'none';
+        return 'linear';
     }
 
     // near clip

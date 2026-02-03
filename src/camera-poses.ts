@@ -101,13 +101,17 @@ const registerCameraPosesEvents = (events: Events) => {
     };
 
     const movePose = (index: number, frame: number) => {
+        // save reference before array modification
+        const pose = poses[index];
+
         // remove target frame pose if one exists
         const toIndex = poses.findIndex(p => p.frame === frame);
         if (toIndex !== -1) {
             removePose(toIndex);
         }
+
         // move pose
-        poses[index].frame = frame;
+        pose.frame = frame;
 
         rebuildSpline();
     };

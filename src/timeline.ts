@@ -195,6 +195,18 @@ const registerTimelineEvents = (events: Events) => {
     events.on('timeline.moveKey', (fromFrame: number, toFrame: number) => {
         const index = keys.indexOf(fromFrame);
         if (index !== -1 && fromFrame !== toFrame) {
+            // remove existing key at target frame if one exists
+            const existingIndex = keys.indexOf(toFrame);
+            if (existingIndex !== -1) {
+                keys.splice(existingIndex, 1);
+                events.fire('timeline.keyRemoved', existingIndex);
+                // adjust index if the removed key was before the moving key
+                if (existingIndex < index) {
+                    keys[index - 1] = toFrame;
+                    events.fire('timeline.keyMoved', index - 1, fromFrame, toFrame);
+                    return;
+                }
+            }
             keys[index] = toFrame;
             events.fire('timeline.keyMoved', index, fromFrame, toFrame);
         }

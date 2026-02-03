@@ -154,7 +154,6 @@
     "popup.shortcuts.unlock-all-splats": "すべてロック解除",
     "popup.shortcuts.toggle-data-panel": "データパネルの切り替え",
     "popup.shortcuts.other": "その他",
-    "popup.shortcuts.select-next-splat": "次のスプラットを選択",
     "popup.shortcuts.undo": "元に戻す",
     "popup.shortcuts.redo": "やり直し",
     "popup.shortcuts.toggle-splat-overlay": "スプラットオーバーレイの切り替え",

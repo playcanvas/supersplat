@@ -154,7 +154,6 @@
     "popup.shortcuts.unlock-all-splats": "Déverrouiller tous les splats",
     "popup.shortcuts.toggle-data-panel": "Afficher/Cacher l'onglet données",
     "popup.shortcuts.other": "Autres",
-    "popup.shortcuts.select-next-splat": "Sélectionner le splat suivant",
     "popup.shortcuts.undo": "Annuler",
     "popup.shortcuts.redo": "Rétablir",
     "popup.shortcuts.toggle-splat-overlay": "Basculer affichage splat",

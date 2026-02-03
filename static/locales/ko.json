@@ -154,7 +154,6 @@
     "popup.shortcuts.unlock-all-splats": "모든 Splat 잠금 해제",
     "popup.shortcuts.toggle-data-panel": "데이터 패널 전환",
     "popup.shortcuts.other": "기타",
-    "popup.shortcuts.select-next-splat": "다음 Splat 선택",
     "popup.shortcuts.undo": "실행 취소",
     "popup.shortcuts.redo": "다시 실행",
     "popup.shortcuts.toggle-splat-overlay": "Splat 오버레이 전환",

@@ -154,7 +154,6 @@
     "popup.shortcuts.unlock-all-splats": "解锁全部 Splat",
     "popup.shortcuts.toggle-data-panel": "切换数据面板",
     "popup.shortcuts.other": "其他",
-    "popup.shortcuts.select-next-splat": "选择下一个 Splat",
     "popup.shortcuts.undo": "撤销",
     "popup.shortcuts.redo": "重做",
     "popup.shortcuts.toggle-splat-overlay": "切换 Splat 叠加",

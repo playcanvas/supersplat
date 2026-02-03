@@ -99,7 +99,6 @@ const popupConfig: Record<string, CategoryConfig> = {
     other: {
         localeKey: 'popup.shortcuts.other',
         shortcuts: [
-            { id: 'selection.next', localeKey: 'popup.shortcuts.select-next-splat' },
             { id: 'edit.undo', localeKey: 'popup.shortcuts.undo' },
             { id: 'edit.redo', localeKey: 'popup.shortcuts.redo' },
             { id: 'dataPanel.toggle', localeKey: 'popup.shortcuts.toggle-data-panel' }

@@ -3,6 +3,7 @@ import { Color, Mat4, path, Texture, Vec3, Vec4 } from 'playcanvas';
 
 import { EditHistory } from './edit-history';
 import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp, MultiOp, AddSplatOp } from './edit-ops';
+import { Element, ElementType } from './element';
 import { Events } from './events';
 import { MappedReadFileSystem } from './io';
 import { Scene } from './scene';
@@ -53,6 +54,13 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         scene.clear();
         editHistory.clear();
         lastExportCursor = 0;
+    });
+
+    // When a splat is removed from the scene, remove all edit operations that reference it
+    events.on('scene.elementRemoved', (element: Element) => {
+        if (element.type === ElementType.splat) {
+            editHistory.removeForSplat(element as Splat);
+        }
     });
 
     events.function('scene.dirty', () => {

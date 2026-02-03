@@ -14,7 +14,7 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'camera.toggleControlMode': { keys: ['v'] },
 
     // Show
-    'camera.toggleOverlay': { keys: ['m'], shift: 'required' },
+    'camera.toggleOverlay': { keys: ['Tab'] },
     'camera.toggleMode': { keys: ['m'] },
     'grid.toggleVisible': { keys: ['g'] },
     'select.hide': { keys: ['h'] },
@@ -51,7 +51,6 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'tool.toggleCoordSpace': { keys: ['c'], shift: 'required' },
 
     // Other
-    'selection.next': { keys: ['Tab'] },
     'edit.undo': { keys: ['z'], ctrl: 'required', repeat: true, capture: true },
     'edit.redo': { keys: ['z'], ctrl: 'required', shift: 'required', repeat: true, capture: true },
     'dataPanel.toggle': { keys: ['d'], ctrl: 'required', capture: true },

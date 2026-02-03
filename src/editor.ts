@@ -78,7 +78,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         'view.centersUseGaussianColor', 'view.bands', 'camera.bound', 'selection.changed',
         'tool.coordSpace'
     ].forEach((eventName) => {
-        events.on(eventName, () => scene.forceRender = true);
+        events.on(eventName, () => {
+            scene.forceRender = true;
+        });
     });
 
     // grid.visible

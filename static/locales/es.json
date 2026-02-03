@@ -65,6 +65,7 @@
     "panel.view-options.control-mode.fly": "Volar",
     "panel.view-options.sh-bands": "Bandas SH",
     "panel.view-options.centers-size": "Tamaño de centros",
+    "panel.view-options.centers-gaussian-color": "Centros de Color",
     "panel.view-options.outline-selection": "Contorno de selección",
     "panel.view-options.show-grid": "Mostrar cuadrícula",
     "panel.view-options.show-bound": "Mostrar límites",

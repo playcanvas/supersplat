@@ -65,6 +65,7 @@
     "panel.view-options.control-mode.fly": "飞行",
     "panel.view-options.sh-bands": "SH 带",
     "panel.view-options.centers-size": "中心大小",
+    "panel.view-options.centers-gaussian-color": "颜色中心",
     "panel.view-options.outline-selection": "轮廓选择",
     "panel.view-options.show-grid": "显示网格",
     "panel.view-options.show-bound": "显示边界",

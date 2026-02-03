@@ -65,6 +65,7 @@
     "panel.view-options.control-mode.fly": "비행",
     "panel.view-options.sh-bands": "SH 밴드",
     "panel.view-options.centers-size": "센터 크기",
+    "panel.view-options.centers-gaussian-color": "컬러 센터",
     "panel.view-options.outline-selection": "선택 윤곽선",
     "panel.view-options.show-grid": "그리드 표시",
     "panel.view-options.show-bound": "경계 표시",

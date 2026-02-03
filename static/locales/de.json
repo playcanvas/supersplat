@@ -65,6 +65,7 @@
     "panel.view-options.control-mode.fly": "Fliegen",
     "panel.view-options.sh-bands": "SH Bänder",
     "panel.view-options.centers-size": "Punktgrößen",
+    "panel.view-options.centers-gaussian-color": "Farbzentren",
     "panel.view-options.outline-selection": "Umriss Selektion",
     "panel.view-options.show-grid": "Raster anzeigen",
     "panel.view-options.show-bound": "Objektbox anzeigen",

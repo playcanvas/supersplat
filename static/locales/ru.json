@@ -65,6 +65,7 @@
     "panel.view-options.control-mode.fly": "Полёт",
     "panel.view-options.sh-bands": "Полосы SH",
     "panel.view-options.centers-size": "Размер центров",
+    "panel.view-options.centers-gaussian-color": "Цветные центры",
     "panel.view-options.outline-selection": "Контур выделения",
     "panel.view-options.show-grid": "Показать сетку",
     "panel.view-options.show-bound": "Показать границы",

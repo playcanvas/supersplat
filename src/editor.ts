@@ -71,36 +71,16 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         lastExportCursor = editHistory.cursor;
     });
 
-    events.on('camera.mode', () => {
-        scene.forceRender = true;
-    });
+    // force render on some events
 
-    events.on('camera.overlay', () => {
-        scene.forceRender = true;
-    });
-
-    events.on('camera.splatSize', () => {
-        scene.forceRender = true;
-    });
-
-    events.on('view.outlineSelection', () => {
-        scene.forceRender = true;
-    });
-
-    events.on('view.bands', (bands: number) => {
-        scene.forceRender = true;
-    });
-
-    events.on('camera.bound', () => {
-        scene.forceRender = true;
-    });
-
-    events.on('selection.changed', () => {
-        scene.forceRender = true;
-    });
-
-    events.on('tool.coordSpace', () => {
-        scene.forceRender = true;
+    [
+        'camera.mode', 'camera.overlay', 'camera.splatSize', 'view.outlineSelection',
+        'view.centersUseGaussianColor', 'view.bands', 'camera.bound', 'selection.changed',
+        'tool.coordSpace'
+    ].forEach((eventName) => {
+        events.on(eventName, () => {
+            scene.forceRender = true;
+        });
     });
 
     // grid.visible
@@ -697,6 +677,14 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('view.setBands', (value: number) => {
         setViewBands(value);
+    });
+
+    // centers gaussian color toggle
+    let centersUseGaussianColor = false;
+    events.function('view.centersUseGaussianColor', () => centersUseGaussianColor);
+    events.on('view.setCentersUseGaussianColor', (value: boolean) => {
+        centersUseGaussianColor = value;
+        events.fire('view.centersUseGaussianColor', value);
     });
 
     events.function('camera.getPose', () => {

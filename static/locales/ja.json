@@ -65,6 +65,7 @@
     "panel.view-options.control-mode.fly": "フライ",
     "panel.view-options.sh-bands": "球面調和関数のバンド",
     "panel.view-options.centers-size": "センターサイズ",
+    "panel.view-options.centers-gaussian-color": "カラーセンター",
     "panel.view-options.outline-selection": "選択のアウトライン",
     "panel.view-options.show-grid": "グリッド",
     "panel.view-options.show-bound": "バウンディングボックス",

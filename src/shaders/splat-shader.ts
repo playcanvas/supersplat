@@ -200,7 +200,7 @@ void main(void) {
 
         if (outlineMode) {
             pcFragColor0 = vec4(color.xyz * alpha, alpha);
-            pcFragColor1 = vec4(0.0, 0.0, 0.0, selected ? alpha : 0.0);
+            pcFragColor1 = vec4(0.0, 0.0, 0.0, selected ? norm : 0.0);
         } else {
             if (selected) {
                 pcFragColor0 = vec4(color.xyz * alpha * 0.8, alpha);

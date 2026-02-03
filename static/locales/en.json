@@ -65,6 +65,7 @@
     "panel.view-options.control-mode.fly": "Fly",
     "panel.view-options.sh-bands": "SH Bands",
     "panel.view-options.centers-size": "Centers Size",
+    "panel.view-options.centers-gaussian-color": "Color Centers",
     "panel.view-options.outline-selection": "Outline Selection",
     "panel.view-options.show-grid": "Show Grid",
     "panel.view-options.show-bound": "Show Bound",

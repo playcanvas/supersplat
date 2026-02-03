@@ -65,6 +65,7 @@
     "panel.view-options.control-mode.fly": "Vol",
     "panel.view-options.sh-bands": "Ordres d'HS",
     "panel.view-options.centers-size": "Échelle des centres",
+    "panel.view-options.centers-gaussian-color": "Centres de Couleur",
     "panel.view-options.outline-selection": "Contour de la sélection",
     "panel.view-options.show-grid": "Afficher la grille",
     "panel.view-options.show-bound": "Afficher limites",

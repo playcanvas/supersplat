@@ -1,5 +1,16 @@
-import { EditOp } from './edit-ops';
+import { EditOp, MultiOp } from './edit-ops';
 import { Events } from './events';
+import { Splat } from './splat';
+
+// Check if an operation references a specific splat
+const opReferencesSplat = (op: EditOp, splat: Splat): boolean => {
+    // Handle MultiOp by checking nested operations
+    if (op instanceof MultiOp) {
+        return op.ops.some(nestedOp => opReferencesSplat(nestedOp, splat));
+    }
+    // Check for splat property on the operation
+    return (op as any).splat === splat;
+};
 
 class EditHistory {
     history: EditOp[] = [];
@@ -69,6 +80,31 @@ class EditHistory {
         });
         this.history = [];
         this.cursor = 0;
+    }
+
+    // Remove all operations that reference a specific splat
+    removeForSplat(splat: Splat) {
+        let newCursor = 0;
+        const newHistory: EditOp[] = [];
+
+        for (let i = 0; i < this.history.length; i++) {
+            const op = this.history[i];
+            if (opReferencesSplat(op, splat)) {
+                // Destroy the operation being removed
+                op.destroy?.();
+            } else {
+                // Keep this operation
+                newHistory.push(op);
+                // Track cursor position (count kept operations before original cursor)
+                if (i < this.cursor) {
+                    newCursor++;
+                }
+            }
+        }
+
+        this.history = newHistory;
+        this.cursor = newCursor;
+        this.fireEvents();
     }
 }
 

@@ -9,7 +9,7 @@ uniform vec4 lockedClr;
 uniform vec3 clrOffset;
 uniform vec4 clrScale;
 
-varying mediump vec4 texCoord_flags;            // store locked flat in z
+varying mediump vec4 texCoord_flags;            // xy: texCoord, z: selected, w: locked
 varying mediump vec4 color;
 
 #if PICK_PASS
@@ -198,7 +198,7 @@ void main(void) {
             }
         }
 
-        bool selected = texCoord_flags.z != 0.0;
+        bool selected = texCoord_flags.z != 0.0 && texCoord_flags.w == 0.0;
 
         if (outlineMode) {
             pcFragColor0 = vec4(color.xyz * alpha, alpha);

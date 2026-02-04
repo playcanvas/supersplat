@@ -90,21 +90,21 @@ class SplatOverlay extends Element {
         // set up other uniforms
         const resource = instance.resource as GSplatResource;
         material.setParameter('splatState', splat.stateTexture);
-        material.setParameter('splatPosition', resource.transformATexture);
+        material.setParameter('splatPosition', (resource as any).getTexture('transformA'));
         material.setParameter('splatTransform', splat.transformTexture);
-        material.setParameter('splatColor', resource.colorTexture);
+        material.setParameter('splatColor', (resource as any).getTexture('splatColor'));
         material.setParameter('texParams', [splat.stateTexture.width, splat.stateTexture.height]);
 
         // set up SH textures and define based on SH bands
         const shBands = resource.shBands;
         material.setDefine('SH_BANDS', `${shBands}`);
         if (shBands > 0) {
-            material.setParameter('splatSH_1to3', resource.sh1to3Texture);
+            material.setParameter('splatSH_1to3', (resource as any).getTexture('splatSH_1to3'));
             if (shBands > 1) {
-                material.setParameter('splatSH_4to7', resource.sh4to7Texture);
-                material.setParameter('splatSH_8to11', resource.sh8to11Texture);
+                material.setParameter('splatSH_4to7', (resource as any).getTexture('splatSH_4to7'));
+                material.setParameter('splatSH_8to11', (resource as any).getTexture('splatSH_8to11'));
                 if (shBands > 2) {
-                    material.setParameter('splatSH_12to15', resource.sh12to15Texture);
+                    material.setParameter('splatSH_12to15', (resource as any).getTexture('splatSH_12to15'));
                 }
             }
         }

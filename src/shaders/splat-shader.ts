@@ -35,7 +35,7 @@ void main(void) {
     }
 
     // get per-gaussian edit state, discard if deleted
-    uint vertexState = uint(texelFetch(splatState, source.uv, 0).r * 255.0 + 0.5) & 7u;
+    uint vertexState = uint(texelFetch(splatState, splat.uv, 0).r * 255.0 + 0.5) & 7u;
 
     #if PICK_PASS
         if (pickOp == 0u) {
@@ -66,10 +66,12 @@ void main(void) {
     #endif
 
     // get center
-    vec3 modelCenter = readCenter(source);
+    vec3 modelCenter = getCenter();
 
     SplatCenter center;
-    if (!initCenter(source, modelCenter, center)) {
+    center.modelCenterOriginal = modelCenter;
+    center.modelCenterModified = modelCenter;
+    if (!initCenter(modelCenter, center)) {
         gl_Position = discardVec;
         return;
     }
@@ -80,7 +82,7 @@ void main(void) {
         return;
     }
 
-    gl_Position = center.proj + vec4(corner.offset, 0.0, 0.0);
+    gl_Position = center.proj + vec4(corner.offset, 0.0);
 
     // store texture coord and locked state
     texCoord_flags = vec4(
@@ -94,17 +96,17 @@ void main(void) {
             // depth estimation mode: compute normalized depth in vertex shader
             float linearDepth = -center.view.z;
             float normalizedDepth = (linearDepth - camera_params.z) / (camera_params.y - camera_params.z);
-            vec4 clr = readColor(source);
+            vec4 clr = getColor();
             color = vec4(normalizedDepth, 0.0, 0.0, 1.0) * clr.a;
         } else {
             // pick id
-            uvec4 bits = (uvec4(source.id) >> uvec4(0u, 8u, 16u, 24u)) & uvec4(255u);
+            uvec4 bits = (uvec4(splat.index) >> uvec4(0u, 8u, 16u, 24u)) & uvec4(255u);
             color = vec4(bits) / 255.0;
         }
     // handle splat color
     #elif FORWARD_PASS
         // read color
-        color = readColor(source);
+        color = getColor();
 
         // evaluate spherical harmonics
         #if SH_BANDS > 0
@@ -114,7 +116,7 @@ void main(void) {
             // read sh coefficients
             vec3 sh[SH_COEFFS];
             float scale;
-            readSHData(source, sh, scale);
+            readSHData(sh, scale);
 
             // evaluate
             color.xyz += evalSH(sh, dir) * scale;
@@ -218,8 +220,8 @@ const gsplatCenter = /* glsl*/`
 uniform highp usampler2D splatTransform;        // per-splat index into transform palette
 uniform sampler2D transformPalette;             // palette of transform matrices
 
-mat4 applyPaletteTransform(SplatSource source, mat4 model) {
-    uint transformIndex = texelFetch(splatTransform, source.uv, 0).r;
+mat4 applyPaletteTransform(mat4 model) {
+    uint transformIndex = texelFetch(splatTransform, splat.uv, 0).r;
     if (transformIndex == 0u) {
         return model;
     }
@@ -245,8 +247,8 @@ uniform mat4 matrix_view;
 #endif
 
 // project the model space gaussian center to view and clip space
-bool initCenter(SplatSource source, vec3 modelCenter, inout SplatCenter center) {
-    mat4 modelView = matrix_view * applyPaletteTransform(source, matrix_model);
+bool initCenter(vec3 modelCenter, inout SplatCenter center) {
+    mat4 modelView = matrix_view * applyPaletteTransform(matrix_model);
     vec4 centerView = modelView * vec4(modelCenter, 1.0);
 
     #ifndef GSPLAT_CENTER_NOPROJ

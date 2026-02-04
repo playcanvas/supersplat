@@ -4,7 +4,6 @@ import {
     SEMANTIC_POSITION,
     drawQuadWithShader,
     GraphicsDevice,
-    GSplatResource,
     RenderTarget,
     ScopeSpace,
     Shader,
@@ -84,7 +83,7 @@ class CalcPositions {
         const { scope } = device;
 
         const numSplats = splat.splatData.numSplats;
-        const transformA = (splat.entity.gsplat.instance.resource as GSplatResource).transformATexture;
+        const transformA = (splat.entity.gsplat.instance.resource as any).getTexture('transformA');
         const splatTransform = splat.transformTexture;
         const transformPalette = splat.transformPalette.texture;
 

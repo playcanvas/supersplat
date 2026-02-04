@@ -112,7 +112,7 @@ class Splat extends Element {
             byteSize: 2
         });
 
-        const { width, height } = splatResource.colorTexture;
+        const { x: width, y: height } = (splatResource as any).textureDimensions;
 
         // pack spherical harmonic data
         const createTexture = (name: string, format: number) => {

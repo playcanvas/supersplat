@@ -251,5 +251,11 @@
     "tooltip.timeline.remove-key": "Remove Key",
     "tooltip.timeline.frame-rate": "Frame Rate",
     "tooltip.timeline.total-frames": "Total Frames",
-    "tooltip.timeline.smoothness": "Smoothness"
+    "tooltip.timeline.smoothness": "Smoothness",
+    "status-bar.splats": "Splats",
+    "status-bar.selected": "Selected",
+    "status-bar.locked": "Locked",
+    "status-bar.deleted": "Deleted",
+    "status-bar.timeline": "Timeline",
+    "status-bar.splat-data": "Splat Data"
 }

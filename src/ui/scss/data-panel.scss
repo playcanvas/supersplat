@@ -3,6 +3,21 @@
 #data-panel {
     width: 100%;
     height: 320px;
+    border-top: 1px solid $bcg-light;
+
+    &:not(.pcui-hidden) {
+        display: flex;
+    }
+}
+
+#data-panel-resize-handle {
+    position: absolute;
+    top: -4px;
+    left: 0;
+    right: 0;
+    height: 8px;
+    cursor: ns-resize;
+    z-index: 10;
 }
 
 #data-panel-popup-container {
@@ -20,18 +35,28 @@
     width: 256px;
     flex-grow: 0;
     flex-shrink: 0;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    background-color: $bcg-darker;
+    border-right: 1px solid $bcg-lighter;
 }
 
 #data-controls {
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
 }
 
 .control-parent {
     width: 100%;
     display: flex;
     flex-direction: row;
-    flex-grow: 1;
+    flex-grow: 0;
+    flex-shrink: 0;
+    padding: 2px 0;
+    background-color: $bcg-primary;
+    border-bottom: 1px solid $bcg-lighter;
 }
 
 .control-label {
@@ -40,6 +65,7 @@
     flex-grow: 0;
     line-height: 32px;
     margin: 0px 6px 0px 6px;
+    color: $text-primary;
 }
 
 .control-element {
@@ -53,6 +79,30 @@
 
 .control-element.pcui-boolean-input {
     margin-top: 10px;
+}
+
+#data-list-box {
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+.data-list-item {
+    padding: 4px 8px;
+    cursor: pointer;
+    color: $text-secondary;
+    font-size: 12px;
+    border-left: 3px solid transparent;
+
+    &:hover {
+        color: $text-primary;
+        background-color: $bcg-primary;
+    }
+
+    &.active {
+        color: $clr-hilight;
+        background-color: $bcg-primary;
+        border-left-color: $clr-hilight;
+    }
 }
 
 #histogram-container {

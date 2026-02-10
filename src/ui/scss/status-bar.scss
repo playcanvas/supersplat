@@ -1,0 +1,93 @@
+@use 'colors.scss' as *;
+
+#status-bar {
+    width: 100%;
+    height: 32px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    background-color: $bcg-dark;
+    flex-shrink: 0;
+    border-top: 1px solid $bcg-light;
+    padding: 0 4px;
+    position: relative;
+}
+
+// hide the status bar top border when a panel is open above it
+#timeline-panel:not(.pcui-hidden) ~ #status-bar,
+#data-panel:not(.pcui-hidden) ~ #status-bar {
+    border-top: none;
+}
+
+// panel trigger label
+.status-bar-panel-trigger {
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: bold !important;
+    color: $text-secondary;
+    width: 110px;
+    text-align: center;
+    height: 100%;
+    line-height: 32px;
+    white-space: nowrap;
+    overflow: visible;
+
+    &::before {
+        content: '\25B4';
+        margin-right: 6px;
+        font-size: 9px;
+    }
+
+    &:hover {
+        color: $text-primary;
+        background-color: $bcg-darkest;
+    }
+}
+
+// menu panel positioned above the status bar
+#status-bar > .menu-panel {
+    bottom: 100%;
+    left: 0;
+    margin-bottom: 2px;
+    border-radius: 8px 8px 8px 0;
+
+    .menu-row {
+        min-width: 110px;
+        height: 26px;
+        justify-content: center;
+        padding: 0 8px;
+    }
+
+    .menu-row-text {
+        flex-grow: 0;
+        font-size: 11px;
+        text-align: center;
+    }
+}
+
+.status-bar-stats {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin-left: auto;
+    height: 100%;
+    padding-right: 8px;
+}
+
+.status-bar-stat {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 8px;
+}
+
+.status-bar-stat-label {
+    color: $text-secondary;
+    font-size: 11px;
+    margin-right: 4px;
+}
+
+.status-bar-stat-value {
+    color: $text-primary;
+    font-size: 11px;
+}

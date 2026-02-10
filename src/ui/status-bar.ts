@@ -36,20 +36,13 @@ class StatusBar extends Container {
             events.fire('statusBar.panelChanged', panel || null);
         };
 
-        const panelMenu = new MenuPanel([
-            {
-                text: 'NONE',
-                onSelect: () => setActivePanel('')
-            },
-            {
-                text: localize('status-bar.timeline').toUpperCase(),
-                onSelect: () => setActivePanel('timeline')
-            },
-            {
-                text: localize('status-bar.splat-data').toUpperCase(),
-                onSelect: () => setActivePanel('splatData')
-            }
-        ]);
+        const allPanelOptions = [
+            { key: '', text: 'NONE', onSelect: () => setActivePanel('') },
+            { key: 'timeline', text: localize('status-bar.timeline').toUpperCase(), onSelect: () => setActivePanel('timeline') },
+            { key: 'splatData', text: localize('status-bar.splat-data').toUpperCase(), onSelect: () => setActivePanel('splatData') }
+        ];
+
+        const panelMenu = new MenuPanel([]);
 
         // Right section: stats
         const statsContainer = new Container({
@@ -89,6 +82,13 @@ class StatusBar extends Container {
             if (!panelMenu.hidden) {
                 panelMenu.hidden = true;
             } else {
+                // Rebuild menu items excluding the current selection
+                panelMenu.setItems(
+                    allPanelOptions
+                        .filter(opt => opt.key !== activePanel)
+                        .map(opt => ({ text: opt.text, onSelect: opt.onSelect }))
+                );
+
                 // Position the menu above the trigger
                 const triggerRect = panelTrigger.dom.getBoundingClientRect();
                 const parentRect = this.dom.getBoundingClientRect();

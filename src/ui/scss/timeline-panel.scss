@@ -2,7 +2,7 @@
 
 #timeline-panel {
     flex-direction: column;
-    border-top: 1px solid $bcg-light;
+    border-top: none;
 
     &:not(.pcui-hidden) {
         display: flex;

@@ -8,15 +8,9 @@
     align-items: center;
     background-color: $bcg-dark;
     flex-shrink: 0;
-    border-top: 1px solid $bcg-light;
+    border-top: 1px solid $bcg-primary;
     padding: 0 4px;
     position: relative;
-}
-
-// hide the status bar top border when a panel is open above it
-#timeline-panel:not(.pcui-hidden) ~ #status-bar,
-#data-panel:not(.pcui-hidden) ~ #status-bar {
-    border-top: none;
 }
 
 // toggle buttons for panels

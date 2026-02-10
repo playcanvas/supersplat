@@ -1,15 +1,8 @@
-import { Container, Label } from '@playcanvas/pcui';
+import { Button, Container, Label } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { Splat } from '../splat';
 import { localize, formatInteger } from './localization';
-import { MenuPanel } from './menu-panel';
-
-const getPanelLabel = (panel: string) => {
-    if (panel === 'timeline') return localize('status-bar.timeline').toUpperCase();
-    if (panel === 'splatData') return localize('status-bar.splat-data').toUpperCase();
-    return 'NONE';
-};
 
 class StatusBar extends Container {
     constructor(events: Events, args = {}) {
@@ -23,26 +16,32 @@ class StatusBar extends Container {
         // Track the currently active panel
         let activePanel = '';
 
-        // Left section: panel trigger label + menu
-        const panelTrigger = new Label({
-            class: 'status-bar-panel-trigger',
-            text: getPanelLabel(activePanel)
+        // Toggle buttons for panels
+        const timelineButton = new Button({
+            class: 'status-bar-toggle',
+            text: localize('status-bar.timeline').toUpperCase()
+        });
+
+        const splatDataButton = new Button({
+            class: 'status-bar-toggle',
+            text: localize('status-bar.splat-data').toUpperCase()
         });
 
         // Panel toggle logic
         const setActivePanel = (panel: string) => {
             activePanel = panel;
-            panelTrigger.text = getPanelLabel(panel);
+            timelineButton.dom.classList[panel === 'timeline' ? 'add' : 'remove']('active');
+            splatDataButton.dom.classList[panel === 'splatData' ? 'add' : 'remove']('active');
             events.fire('statusBar.panelChanged', panel || null);
         };
 
-        const allPanelOptions = [
-            { key: '', text: 'NONE', onSelect: () => setActivePanel('') },
-            { key: 'timeline', text: localize('status-bar.timeline').toUpperCase(), onSelect: () => setActivePanel('timeline') },
-            { key: 'splatData', text: localize('status-bar.splat-data').toUpperCase(), onSelect: () => setActivePanel('splatData') }
-        ];
+        timelineButton.on('click', () => {
+            setActivePanel(activePanel === 'timeline' ? '' : 'timeline');
+        });
 
-        const panelMenu = new MenuPanel([]);
+        splatDataButton.on('click', () => {
+            setActivePanel(activePanel === 'splatData' ? '' : 'splatData');
+        });
 
         // Right section: stats
         const statsContainer = new Container({
@@ -72,45 +71,9 @@ class StatusBar extends Container {
         const lockedValue = createStat(localize('status-bar.locked'));
         const deletedValue = createStat(localize('status-bar.deleted'));
 
-        this.append(panelTrigger);
-        this.append(panelMenu);
+        this.append(timelineButton);
+        this.append(splatDataButton);
         this.append(statsContainer);
-
-        // Toggle menu on trigger click
-        panelTrigger.dom.addEventListener('pointerdown', (event: PointerEvent) => {
-            event.stopPropagation();
-            if (!panelMenu.hidden) {
-                panelMenu.hidden = true;
-            } else {
-                // Rebuild menu items excluding the current selection
-                panelMenu.setItems(
-                    allPanelOptions
-                        .filter(opt => opt.key !== activePanel)
-                        .map(opt => ({ text: opt.text, onSelect: opt.onSelect }))
-                );
-
-                // Position the menu above the trigger
-                const triggerRect = panelTrigger.dom.getBoundingClientRect();
-                const parentRect = this.dom.getBoundingClientRect();
-                panelMenu.dom.style.left = `${triggerRect.left - parentRect.left}px`;
-                panelMenu.dom.style.bottom = `${parentRect.bottom - triggerRect.top + 2}px`;
-                panelMenu.dom.style.top = '';
-                panelMenu.hidden = false;
-            }
-        });
-
-        // Close menu on click outside
-        window.addEventListener('pointerdown', (event: PointerEvent) => {
-            if (!this.dom.contains(event.target as Node)) {
-                panelMenu.hidden = true;
-            }
-        }, true);
-
-        window.addEventListener('pointerup', (event: PointerEvent) => {
-            if (!this.dom.contains(event.target as Node)) {
-                panelMenu.hidden = true;
-            }
-        }, true);
 
         // Handle keyboard shortcuts for panel toggles
         events.on('dataPanel.toggle', () => {

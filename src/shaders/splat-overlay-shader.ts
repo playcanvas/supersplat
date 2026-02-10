@@ -33,6 +33,7 @@ const vertexShader = /* glsl */ `
     uniform vec4 unselectedClr;
 
     varying vec4 varying_color;
+    varying vec2 vZW;
 
     // calculate the current splat index and uv
     ivec2 calcSplatUV(uint index, uint width) {
@@ -151,6 +152,13 @@ const vertexShader = /* glsl */ `
             varying_color = vec4(mix(gaussianClr, selectedClr.xyz, (splatState == 1u) ? selectedClr.w : 0.0), unselectedClr.w);
 
             gl_Position = matrix_viewProjection * model * vec4(center, 1.0);
+
+            // store z/w for later use in fragment shader
+            vZW = gl_Position.zw;
+
+            // disable depth clipping
+            gl_Position.z = 0.0;
+
             gl_PointSize = splatSize;
         }
     }
@@ -158,9 +166,13 @@ const vertexShader = /* glsl */ `
 
 const fragmentShader = /* glsl */ `
     varying vec4 varying_color;
+    varying vec2 vZW;
 
     void main(void) {
         gl_FragColor = varying_color;
+
+        // clamp depth in Z to [0, 1] range
+        gl_FragDepth = max(0.0, min(1.0, (vZW.x / vZW.y + 1.0) * 0.5));
     }
 `;
 

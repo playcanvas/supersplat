@@ -1,11 +1,13 @@
 import { Button, Container, Label } from '@playcanvas/pcui';
 
 import { Events } from '../events';
+import { ShortcutManager } from '../shortcut-manager';
 import { Splat } from '../splat';
 import { localize, formatInteger } from './localization';
+import { Tooltips } from './tooltips';
 
 class StatusBar extends Container {
-    constructor(events: Events, args = {}) {
+    constructor(events: Events, tooltips: Tooltips, args = {}) {
         args = {
             ...args,
             id: 'status-bar'
@@ -74,6 +76,22 @@ class StatusBar extends Container {
         this.append(timelineButton);
         this.append(splatDataButton);
         this.append(statsContainer);
+
+        // register tooltips
+        const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
+        const tooltip = (localeKey: string, shortcutId?: string) => {
+            const text = localize(localeKey);
+            if (shortcutId) {
+                const shortcut = shortcutManager.formatShortcut(shortcutId);
+                if (shortcut) {
+                    return `${text} ( ${shortcut} )`;
+                }
+            }
+            return text;
+        };
+
+        tooltips.register(timelineButton, tooltip('tooltip.status-bar.timeline', 'timelinePanel.toggle'), 'top');
+        tooltips.register(splatDataButton, tooltip('tooltip.status-bar.splat-data', 'dataPanel.toggle'), 'top');
 
         // Handle keyboard shortcuts for panel toggles
         events.on('dataPanel.toggle', () => {

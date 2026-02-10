@@ -251,5 +251,13 @@
     "tooltip.timeline.remove-key": "Eliminar clave",
     "tooltip.timeline.frame-rate": "Velocidad de fotogramas",
     "tooltip.timeline.total-frames": "Fotogramas totales",
-    "tooltip.timeline.smoothness": "Suavidad"
+    "tooltip.timeline.smoothness": "Suavidad",
+    "status-bar.splats": "Splats",
+    "status-bar.selected": "Seleccionados",
+    "status-bar.locked": "Bloqueados",
+    "status-bar.deleted": "Eliminados",
+    "status-bar.timeline": "Línea de tiempo",
+    "status-bar.splat-data": "Datos de Splat",
+    "tooltip.status-bar.timeline": "Alternar panel de Línea de tiempo",
+    "tooltip.status-bar.splat-data": "Alternar panel de Datos de Splat"
 }

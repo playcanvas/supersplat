@@ -251,5 +251,13 @@
     "tooltip.timeline.remove-key": "キーフレームを削除",
     "tooltip.timeline.frame-rate": "フレームレート",
     "tooltip.timeline.total-frames": "総フレーム数",
-    "tooltip.timeline.smoothness": "スムーズさ"
+    "tooltip.timeline.smoothness": "スムーズさ",
+    "status-bar.splats": "スプラット",
+    "status-bar.selected": "選択済み",
+    "status-bar.locked": "ロック済み",
+    "status-bar.deleted": "削除済み",
+    "status-bar.timeline": "タイムライン",
+    "status-bar.splat-data": "スプラットデータ",
+    "tooltip.status-bar.timeline": "タイムラインパネルの切り替え",
+    "tooltip.status-bar.splat-data": "スプラットデータパネルの切り替え"
 }

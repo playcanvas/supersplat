@@ -251,5 +251,13 @@
     "tooltip.timeline.remove-key": "Supprimer une clé",
     "tooltip.timeline.frame-rate": "Fréquence d'image",
     "tooltip.timeline.total-frames": "Nombre total de frames",
-    "tooltip.timeline.smoothness": "Douceur"
+    "tooltip.timeline.smoothness": "Douceur",
+    "status-bar.splats": "Splats",
+    "status-bar.selected": "Sélectionnés",
+    "status-bar.locked": "Verrouillés",
+    "status-bar.deleted": "Supprimés",
+    "status-bar.timeline": "Chronologie",
+    "status-bar.splat-data": "Données Splat",
+    "tooltip.status-bar.timeline": "Afficher/Masquer le panneau Chronologie",
+    "tooltip.status-bar.splat-data": "Afficher/Masquer le panneau Données Splat"
 }

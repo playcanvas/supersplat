@@ -251,5 +251,13 @@
     "tooltip.timeline.remove-key": "Key entfernen",
     "tooltip.timeline.frame-rate": "Bildrate",
     "tooltip.timeline.total-frames": "Gesamtanzahl der Frames",
-    "tooltip.timeline.smoothness": "Weichheit"
+    "tooltip.timeline.smoothness": "Weichheit",
+    "status-bar.splats": "Splats",
+    "status-bar.selected": "Ausgewählt",
+    "status-bar.locked": "Gesperrt",
+    "status-bar.deleted": "Gelöscht",
+    "status-bar.timeline": "Zeitleiste",
+    "status-bar.splat-data": "Splat-Daten",
+    "tooltip.status-bar.timeline": "Zeitleisten-Panel umschalten",
+    "tooltip.status-bar.splat-data": "Splat-Daten-Panel umschalten"
 }

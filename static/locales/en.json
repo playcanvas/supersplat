@@ -257,5 +257,7 @@
     "status-bar.locked": "Locked",
     "status-bar.deleted": "Deleted",
     "status-bar.timeline": "Timeline",
-    "status-bar.splat-data": "Splat Data"
+    "status-bar.splat-data": "Splat Data",
+    "tooltip.status-bar.timeline": "Toggle Timeline Panel",
+    "tooltip.status-bar.splat-data": "Toggle Splat Data Panel"
 }

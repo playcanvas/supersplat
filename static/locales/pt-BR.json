@@ -251,5 +251,13 @@
     "tooltip.timeline.remove-key": "Remover Quadro",
     "tooltip.timeline.frame-rate": "Taxa de Quadros",
     "tooltip.timeline.total-frames": "Total de Quadros",
-    "tooltip.timeline.smoothness": "Suavidade"
+    "tooltip.timeline.smoothness": "Suavidade",
+    "status-bar.splats": "Splats",
+    "status-bar.selected": "Selecionados",
+    "status-bar.locked": "Bloqueados",
+    "status-bar.deleted": "Excluídos",
+    "status-bar.timeline": "Linha do Tempo",
+    "status-bar.splat-data": "Dados de Splat",
+    "tooltip.status-bar.timeline": "Alternar painel de Linha do Tempo",
+    "tooltip.status-bar.splat-data": "Alternar painel de Dados de Splat"
 }

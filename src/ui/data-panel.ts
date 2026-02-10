@@ -128,7 +128,7 @@ class DataPanel extends Container {
                         el.classList.remove('active');
                     });
                     item.classList.add('active');
-                    updateHistogram();
+                    updateHistogram(); // eslint-disable-line no-use-before-define
                 });
 
                 dataListBox.dom.appendChild(item);

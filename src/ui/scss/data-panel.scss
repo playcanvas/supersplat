@@ -46,17 +46,17 @@
     display: flex;
     flex-direction: column;
     flex-grow: 1;
+    background-color: $bcg-primary;
 }
 
 .control-parent {
-    width: 100%;
     display: flex;
     flex-direction: row;
     flex-grow: 0;
     flex-shrink: 0;
     padding: 2px 0;
+    margin: 4px 4px 0;
     background-color: $bcg-primary;
-    border-bottom: 1px solid $bcg-lighter;
 }
 
 .control-label {
@@ -84,6 +84,12 @@
 #data-list-box {
     overflow-y: auto;
     flex-grow: 1;
+    margin: 8px;
+    background-color: $bcg-darker;
+    border-radius: 2px;
+    border: 1px solid $bcg-darkest;
+
+    overflow-y: auto;
 }
 
 .data-list-item {
@@ -99,6 +105,7 @@
     }
 
     &.active {
+        font-weight: bold;
         color: $clr-hilight;
         background-color: $bcg-primary;
         border-left-color: $clr-hilight;

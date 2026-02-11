@@ -92,7 +92,12 @@
     "panel.splat-data.hue": "Тон",
     "panel.splat-data.saturation": "Насыщенность",
     "panel.splat-data.value": "Значение",
+    "panel.splat-data.position": "Position",
+    "panel.splat-data.quat": "Quat",
+    "panel.splat-data.normal": "Normal",
+    "panel.splat-data.sh": "SH",
     "panel.splat-data.log-scale": "Логарифмическая шкала",
+    "panel.splat-data.show-all": "Show All",
     "panel.splat-data.totals": "Итого",
     "panel.splat-data.totals.splats": "Сплаты",
     "panel.splat-data.totals.selected": "Выбрано",
@@ -251,5 +256,13 @@
     "tooltip.timeline.remove-key": "Удалить ключ",
     "tooltip.timeline.frame-rate": "Частота кадров",
     "tooltip.timeline.total-frames": "Всего кадров",
-    "tooltip.timeline.smoothness": "Плавность"
+    "tooltip.timeline.smoothness": "Плавность",
+    "status-bar.splats": "Сплаты",
+    "status-bar.selected": "Выбрано",
+    "status-bar.locked": "Заблокировано",
+    "status-bar.deleted": "Удалено",
+    "status-bar.timeline": "Временная шкала",
+    "status-bar.splat-data": "Данные сплатов",
+    "tooltip.status-bar.timeline": "Переключить панель временной шкалы",
+    "tooltip.status-bar.splat-data": "Переключить панель данных сплатов"
 }

@@ -92,7 +92,12 @@
     "panel.splat-data.hue": "Teinte",
     "panel.splat-data.saturation": "Saturation",
     "panel.splat-data.value": "Luminosité",
+    "panel.splat-data.position": "Position",
+    "panel.splat-data.quat": "Quat",
+    "panel.splat-data.normal": "Normal",
+    "panel.splat-data.sh": "SH",
     "panel.splat-data.log-scale": "Échelle logarithmique",
+    "panel.splat-data.show-all": "Show All",
     "panel.splat-data.totals": "Totaux",
     "panel.splat-data.totals.splats": "Splats",
     "panel.splat-data.totals.selected": "Selectionné",
@@ -251,5 +256,13 @@
     "tooltip.timeline.remove-key": "Supprimer une clé",
     "tooltip.timeline.frame-rate": "Fréquence d'image",
     "tooltip.timeline.total-frames": "Nombre total de frames",
-    "tooltip.timeline.smoothness": "Douceur"
+    "tooltip.timeline.smoothness": "Douceur",
+    "status-bar.splats": "Splats",
+    "status-bar.selected": "Sélectionnés",
+    "status-bar.locked": "Verrouillés",
+    "status-bar.deleted": "Supprimés",
+    "status-bar.timeline": "Chronologie",
+    "status-bar.splat-data": "Données Splat",
+    "tooltip.status-bar.timeline": "Afficher/Masquer le panneau Chronologie",
+    "tooltip.status-bar.splat-data": "Afficher/Masquer le panneau Données Splat"
 }

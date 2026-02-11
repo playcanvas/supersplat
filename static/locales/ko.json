@@ -92,7 +92,12 @@
     "panel.splat-data.hue": "색조",
     "panel.splat-data.saturation": "채도",
     "panel.splat-data.value": "명도",
+    "panel.splat-data.position": "Position",
+    "panel.splat-data.quat": "Quat",
+    "panel.splat-data.normal": "Normal",
+    "panel.splat-data.sh": "SH",
     "panel.splat-data.log-scale": "로그 크기",
+    "panel.splat-data.show-all": "Show All",
     "panel.splat-data.totals": "합계",
     "panel.splat-data.totals.splats": "Splat",
     "panel.splat-data.totals.selected": "선택",
@@ -251,5 +256,13 @@
     "tooltip.timeline.remove-key": "키 제거",
     "tooltip.timeline.frame-rate": "프레임 속도",
     "tooltip.timeline.total-frames": "총 프레임 수",
-    "tooltip.timeline.smoothness": "부드러움"
+    "tooltip.timeline.smoothness": "부드러움",
+    "status-bar.splats": "스플랫",
+    "status-bar.selected": "선택됨",
+    "status-bar.locked": "잠김",
+    "status-bar.deleted": "삭제됨",
+    "status-bar.timeline": "타임라인",
+    "status-bar.splat-data": "스플랫 데이터",
+    "tooltip.status-bar.timeline": "타임라인 패널 전환",
+    "tooltip.status-bar.splat-data": "스플랫 데이터 패널 전환"
 }

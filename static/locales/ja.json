@@ -92,7 +92,12 @@
     "panel.splat-data.hue": "色相",
     "panel.splat-data.saturation": "彩度",
     "panel.splat-data.value": "明度",
+    "panel.splat-data.position": "Position",
+    "panel.splat-data.quat": "Quat",
+    "panel.splat-data.normal": "Normal",
+    "panel.splat-data.sh": "SH",
     "panel.splat-data.log-scale": "対数スケール",
+    "panel.splat-data.show-all": "Show All",
     "panel.splat-data.totals": "合計",
     "panel.splat-data.totals.splats": "スプラット数",
     "panel.splat-data.totals.selected": "選択中",
@@ -251,5 +256,13 @@
     "tooltip.timeline.remove-key": "キーフレームを削除",
     "tooltip.timeline.frame-rate": "フレームレート",
     "tooltip.timeline.total-frames": "総フレーム数",
-    "tooltip.timeline.smoothness": "スムーズさ"
+    "tooltip.timeline.smoothness": "スムーズさ",
+    "status-bar.splats": "スプラット",
+    "status-bar.selected": "選択済み",
+    "status-bar.locked": "ロック済み",
+    "status-bar.deleted": "削除済み",
+    "status-bar.timeline": "タイムライン",
+    "status-bar.splat-data": "スプラットデータ",
+    "tooltip.status-bar.timeline": "タイムラインパネルの切り替え",
+    "tooltip.status-bar.splat-data": "スプラットデータパネルの切り替え"
 }

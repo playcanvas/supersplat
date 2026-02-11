@@ -92,7 +92,12 @@
     "panel.splat-data.hue": "Hue",
     "panel.splat-data.saturation": "Saturation",
     "panel.splat-data.value": "Value",
+    "panel.splat-data.position": "Position",
+    "panel.splat-data.quat": "Quat",
+    "panel.splat-data.normal": "Normal",
+    "panel.splat-data.sh": "SH",
     "panel.splat-data.log-scale": "Log Scale",
+    "panel.splat-data.show-all": "Show All",
     "panel.splat-data.totals": "Totals",
     "panel.splat-data.totals.splats": "Splats",
     "panel.splat-data.totals.selected": "Selected",
@@ -251,5 +256,13 @@
     "tooltip.timeline.remove-key": "Remove Key",
     "tooltip.timeline.frame-rate": "Frame Rate",
     "tooltip.timeline.total-frames": "Total Frames",
-    "tooltip.timeline.smoothness": "Smoothness"
+    "tooltip.timeline.smoothness": "Smoothness",
+    "status-bar.splats": "Splats",
+    "status-bar.selected": "Selected",
+    "status-bar.locked": "Locked",
+    "status-bar.deleted": "Deleted",
+    "status-bar.timeline": "Timeline",
+    "status-bar.splat-data": "Splat Data",
+    "tooltip.status-bar.timeline": "Toggle Timeline Panel",
+    "tooltip.status-bar.splat-data": "Toggle Splat Data Panel"
 }

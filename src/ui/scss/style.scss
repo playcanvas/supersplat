@@ -22,6 +22,7 @@
 @use 'shortcuts-popup.scss';
 @use 'about-popup.scss';
 @use 'timeline-panel.scss';
+@use 'status-bar.scss';
 @use 'tool.scss';
 
 * {
@@ -201,16 +202,16 @@ body {
     height: 8px;
 }
 ::-webkit-scrollbar-track {
-    background: #20292b;
+    background: $bcg-darkest;
 }
 ::-webkit-scrollbar-thumb {
-    background: #5b7073;
+    background: $bcg-lighter;
 }
 ::-webkit-scrollbar-thumb:hover {
-    background: #f60;
+    background: $clr-hilight;
 }
 ::-webkit-scrollbar-corner {
-    background: #2c393c;
+    background: $bcg-darkest;
 }
 
 .font-thin {

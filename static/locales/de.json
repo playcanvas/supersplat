@@ -92,7 +92,12 @@
     "panel.splat-data.hue": "Farbe",
     "panel.splat-data.saturation": "Sättigung",
     "panel.splat-data.value": "Helligkeit",
+    "panel.splat-data.position": "Position",
+    "panel.splat-data.quat": "Quat",
+    "panel.splat-data.normal": "Normal",
+    "panel.splat-data.sh": "SH",
     "panel.splat-data.log-scale": "Logarithmische Skala",
+    "panel.splat-data.show-all": "Show All",
     "panel.splat-data.totals": "Summe",
     "panel.splat-data.totals.splats": "Splats",
     "panel.splat-data.totals.selected": "Selektiert",
@@ -251,5 +256,13 @@
     "tooltip.timeline.remove-key": "Key entfernen",
     "tooltip.timeline.frame-rate": "Bildrate",
     "tooltip.timeline.total-frames": "Gesamtanzahl der Frames",
-    "tooltip.timeline.smoothness": "Weichheit"
+    "tooltip.timeline.smoothness": "Weichheit",
+    "status-bar.splats": "Splats",
+    "status-bar.selected": "Ausgewählt",
+    "status-bar.locked": "Gesperrt",
+    "status-bar.deleted": "Gelöscht",
+    "status-bar.timeline": "Zeitleiste",
+    "status-bar.splat-data": "Splat-Daten",
+    "tooltip.status-bar.timeline": "Zeitleisten-Panel umschalten",
+    "tooltip.status-bar.splat-data": "Splat-Daten-Panel umschalten"
 }

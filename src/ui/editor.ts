@@ -19,6 +19,7 @@ import { RightToolbar } from './right-toolbar';
 import { ScenePanel } from './scene-panel';
 import { ShortcutsPopup } from './shortcuts-popup';
 import { Spinner } from './spinner';
+import { StatusBar } from './status-bar';
 import { TimelinePanel } from './timeline-panel';
 import { Tooltips } from './tooltips';
 import { VideoSettingsDialog } from './video-settings-dialog';
@@ -153,10 +154,20 @@ class EditorUI {
 
         const timelinePanel = new TimelinePanel(events, tooltips);
         const dataPanel = new DataPanel(events);
+        const statusBar = new StatusBar(events, tooltips);
+
+        timelinePanel.hidden = true;
 
         mainContainer.append(canvasContainer);
         mainContainer.append(timelinePanel);
         mainContainer.append(dataPanel);
+        mainContainer.append(statusBar);
+
+        // Wire up status bar panel toggles
+        events.on('statusBar.panelChanged', (panel: string | null) => {
+            timelinePanel.hidden = panel !== 'timeline';
+            dataPanel.hidden = panel !== 'splatData';
+        });
 
         editorContainer.append(mainContainer);
 

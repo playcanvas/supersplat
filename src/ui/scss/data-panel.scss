@@ -49,36 +49,34 @@
     background-color: $bcg-primary;
 }
 
-.control-parent {
-    display: flex;
-    flex-direction: row;
-    flex-grow: 0;
+.data-panel-toggle-row {
+    height: 28px;
+    min-height: 28px;
     flex-shrink: 0;
-    padding: 2px 0;
-    margin: 4px 4px 0;
-    background-color: $bcg-primary;
+    padding: 0px;
+    margin: 0 4px;
+    align-items: center;
 }
 
-.control-label {
-    width: 100px;
-    flex-shrink: 0;
-    flex-grow: 0;
-    line-height: 32px;
-    margin: 0px 6px 0px 6px;
-    color: $text-primary;
-}
-
-.control-element {
-    flex-shrink: 0;
-    flex-grow: 0;
-}
-
-.control-element-expand {
+.data-panel-toggle-label {
     flex-grow: 1;
 }
 
-.control-element.pcui-boolean-input {
-    margin-top: 10px;
+.data-panel-toggle {
+    flex-shrink: 0;
+    background-color: $bcg-dark;
+
+    &::after {
+        background-color: $clr-default;
+    }
+
+    &.pcui-boolean-input-ticked {
+        background-color: $clr-hilight;
+
+        &::after {
+            background-color: $clr-active;
+        }
+    }
 }
 
 #data-list-box {

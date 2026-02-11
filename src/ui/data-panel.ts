@@ -86,30 +86,101 @@ class DataPanel extends Container {
             id: 'data-list-box'
         });
 
+        const logScale = new Container({
+            class: 'data-panel-toggle-row',
+            flex: true,
+            flexDirection: 'row'
+        });
+
+        const logScaleLabel = new Label({
+            class: 'data-panel-toggle-label',
+            text: localize('panel.splat-data.log-scale')
+        });
+
+        const logScaleValue = new BooleanInput({
+            type: 'toggle',
+            class: 'data-panel-toggle',
+            value: false
+        });
+
+        logScale.append(logScaleLabel);
+        logScale.append(logScaleValue);
+
+        const showAll = new Container({
+            class: 'data-panel-toggle-row',
+            flex: true,
+            flexDirection: 'row'
+        });
+
+        const showAllLabel = new Label({
+            class: 'data-panel-toggle-label',
+            text: localize('panel.splat-data.show-all')
+        });
+
+        const showAllValue = new BooleanInput({
+            type: 'toggle',
+            class: 'data-panel-toggle',
+            value: false
+        });
+
+        showAll.append(showAllLabel);
+        showAll.append(showAllValue);
+
         const populateDataSelector = (splat: Splat) => {
+            // default prop localizations - order defines display order
             const localizations: any = {
-                x: 'X',
-                y: 'Y',
-                z: 'Z',
-                distance: localize('panel.splat-data.distance'),
-                volume: localize('panel.splat-data.volume'),
-                'surface-area': localize('panel.splat-data.surface-area'),
-                scale_0: localize('panel.splat-data.scale-x'),
-                scale_1: localize('panel.splat-data.scale-y'),
-                scale_2: localize('panel.splat-data.scale-z'),
+                x: `${localize('panel.splat-data.position')} X`,
+                y: `${localize('panel.splat-data.position')} Y`,
+                z: `${localize('panel.splat-data.position')} Z`,
+                opacity: localize('panel.splat-data.opacity'),
                 f_dc_0: localize('panel.splat-data.red'),
                 f_dc_1: localize('panel.splat-data.green'),
                 f_dc_2: localize('panel.splat-data.blue'),
-                opacity: localize('panel.splat-data.opacity'),
+                scale_0: localize('panel.splat-data.scale-x'),
+                scale_1: localize('panel.splat-data.scale-y'),
+                scale_2: localize('panel.splat-data.scale-z'),
+                rot_0: `${localize('panel.splat-data.quat')} W`,
+                rot_1: `${localize('panel.splat-data.quat')} X`,
+                rot_2: `${localize('panel.splat-data.quat')} Y`,
+                rot_3: `${localize('panel.splat-data.quat')} Z`,
+                distance: localize('panel.splat-data.distance'),
+                volume: localize('panel.splat-data.volume'),
+                'surface-area': localize('panel.splat-data.surface-area'),
                 hue: localize('panel.splat-data.hue'),
                 saturation: localize('panel.splat-data.saturation'),
                 value: localize('panel.splat-data.value')
             };
 
+            // extra prop localizations - shown when "Show All" is enabled
+            const extras: any = {
+                nx: `${localize('panel.splat-data.normal')} X`,
+                ny: `${localize('panel.splat-data.normal')} Y`,
+                nz: `${localize('panel.splat-data.normal')} Z`
+            };
+
+            for (let i = 0; i < 45; i++) {
+                extras[`f_rest_${i}`] = `${localize('panel.splat-data.sh')} ${i}`;
+            }
+
             const dataProps = splat.splatData.getElement('vertex').properties.map(p => p.name);
             const derivedProps = ['distance', 'volume', 'surface-area', 'hue', 'saturation', 'value'];
-            const suppressedProps = ['state', 'transform'].concat(new Array(45).fill('').map((_, i) => `f_rest_${i}`));
-            const allProps = dataProps.concat(derivedProps).filter(p => !suppressedProps.includes(p));
+            const availableProps = new Set(dataProps.concat(derivedProps));
+
+            // build ordered default props from localizations keys, filtered to available
+            const defaultProps = Object.keys(localizations).filter(p => availableProps.has(p));
+
+            // build ordered extra props from extras keys, filtered to available
+            const extraProps = showAllValue.value ?
+                Object.keys(extras).filter(p => availableProps.has(p)) :
+                [];
+
+            // collect any remaining un-localized props (except state/transform and already listed ones)
+            const listedProps = new Set([...defaultProps, ...extraProps, 'state', 'transform']);
+            const remainingProps = showAllValue.value ?
+                dataProps.filter(p => !listedProps.has(p)) :
+                [];
+
+            const allProps = [...defaultProps, ...extraProps, ...remainingProps];
 
             // clear existing items
             dataListBox.dom.innerHTML = '';
@@ -120,7 +191,7 @@ class DataPanel extends Container {
                 if (prop === selectedDataProp) {
                     item.classList.add('active');
                 }
-                item.textContent = localizations[prop] ?? prop;
+                item.textContent = localizations[prop] ?? extras[prop] ?? prop;
 
                 item.addEventListener('click', () => {
                     selectedDataProp = prop;
@@ -135,24 +206,8 @@ class DataPanel extends Container {
             });
         };
 
-        const logScale = new Container({
-            class: 'control-parent'
-        });
-
-        const logScaleLabel = new Label({
-            class: 'control-label',
-            text: localize('panel.splat-data.log-scale')
-        });
-
-        const logScaleValue = new BooleanInput({
-            class: 'control-element',
-            value: false
-        });
-
-        logScale.append(logScaleLabel);
-        logScale.append(logScaleValue);
-
         controls.append(logScale);
+        controls.append(showAll);
         controls.append(dataListBox);
 
         controlsContainer.append(controls);
@@ -287,6 +342,12 @@ class DataPanel extends Container {
         });
 
         logScaleValue.on('change', updateHistogram);
+
+        showAllValue.on('change', () => {
+            if (splat) {
+                populateDataSelector(splat);
+            }
+        });
 
         const popupContainer = new Container({
             id: 'data-panel-popup-container',

@@ -1,5 +1,6 @@
 import { Color, Mat4 } from 'playcanvas';
 
+import { IndexRanges, sortedPredicate } from './index-ranges';
 import { Pivot } from './pivot';
 import { Scene } from './scene';
 import { Splat } from './splat';
@@ -13,70 +14,59 @@ interface EditOp {
     destroy?(): void;
 }
 
-// build an index array based on a boolean predicate over indices
-const buildIndex = (total: number, pred: (i: number) => boolean) => {
-    let num = 0;
-    for (let i = 0; i < total; ++i) {
-        if (pred(i)) num++;
-    }
-
-    const result = new Uint32Array(num);
-    let idx = 0;
-    for (let i = 0; i < total; ++i) {
-        if (pred(i)) {
-            result[idx++] = i;
-        }
-    }
-
-    return result;
-};
-
-type filterFunc = (state: number, index: number) => boolean;
-type doFunc = (state: number) => number;
-type undoFunc = (state: number) => number;
+const enum BitOp {
+    SET,
+    CLEAR,
+    TOGGLE
+}
 
 class StateOp {
     splat: Splat;
-    indices: Uint32Array;
-    doIt: doFunc;
-    undoIt: undoFunc;
+    ranges: IndexRanges;
+    mask: number;
+    op: BitOp;
     updateFlags: number;
 
-    constructor(splat: Splat, filter: filterFunc, doIt: doFunc, undoIt: undoFunc, updateFlags = State.selected) {
-        const splatData = splat.splatData;
-        const state = splatData.getProp('state') as Uint8Array;
-        const indices = buildIndex(splatData.numSplats, i => filter(state[i], i));
-
+    constructor(splat: Splat, ranges: IndexRanges, mask: number, op: BitOp, updateFlags = State.selected) {
         this.splat = splat;
-        this.indices = indices;
-        this.doIt = doIt;
-        this.undoIt = undoIt;
+        this.ranges = ranges;
+        this.mask = mask;
+        this.op = op;
         this.updateFlags = updateFlags;
     }
 
-    async do() {
-        const splatData = this.splat.splatData;
-        const state = splatData.getProp('state') as Uint8Array;
-        for (let i = 0; i < this.indices.length; ++i) {
-            const idx = this.indices[i];
-            state[idx] = this.doIt(state[idx]);
+    private apply(op: BitOp) {
+        const state = this.splat.splatData.getProp('state') as Uint8Array;
+        const { mask } = this;
+
+        switch (op) {
+            case BitOp.SET:
+                this.ranges.forEach(i => { state[i] |= mask; });
+                break;
+            case BitOp.CLEAR:
+                this.ranges.forEach(i => { state[i] &= ~mask; });
+                break;
+            case BitOp.TOGGLE:
+                this.ranges.forEach(i => { state[i] ^= mask; });
+                break;
         }
+    }
+
+    async do() {
+        this.apply(this.op);
         await this.splat.updateState(this.updateFlags);
     }
 
     async undo() {
-        const splatData = this.splat.splatData;
-        const state = splatData.getProp('state') as Uint8Array;
-        for (let i = 0; i < this.indices.length; ++i) {
-            const idx = this.indices[i];
-            state[idx] = this.undoIt(state[idx]);
-        }
+        const undoOp = this.op === BitOp.TOGGLE ? BitOp.TOGGLE
+            : this.op === BitOp.SET ? BitOp.CLEAR : BitOp.SET;
+        this.apply(undoOp);
         await this.splat.updateState(this.updateFlags);
     }
 
     destroy() {
         this.splat = null;
-        this.indices = null;
+        this.ranges = null;
     }
 }
 
@@ -84,11 +74,8 @@ class SelectAllOp extends StateOp {
     name = 'selectAll';
 
     constructor(splat: Splat) {
-        super(splat,
-            state => state === 0,
-            state => state | State.selected,
-            state => state & (~State.selected)
-        );
+        const state = splat.splatData.getProp('state') as Uint8Array;
+        super(splat, IndexRanges.fromPredicate(splat.splatData.numSplats, i => state[i] === 0), State.selected, BitOp.SET);
     }
 }
 
@@ -96,11 +83,8 @@ class SelectNoneOp extends StateOp {
     name = 'selectNone';
 
     constructor(splat: Splat) {
-        super(splat,
-            state => state === State.selected,
-            state => state & (~State.selected),
-            state => state | State.selected
-        );
+        const state = splat.splatData.getProp('state') as Uint8Array;
+        super(splat, IndexRanges.fromPredicate(splat.splatData.numSplats, i => state[i] === State.selected), State.selected, BitOp.CLEAR);
     }
 }
 
@@ -108,37 +92,29 @@ class SelectInvertOp extends StateOp {
     name = 'selectInvert';
 
     constructor(splat: Splat) {
-        super(splat,
-            state => (state & (State.locked | State.deleted)) === 0,
-            state => state ^ State.selected,
-            state => state ^ State.selected
-        );
+        const state = splat.splatData.getProp('state') as Uint8Array;
+        super(splat, IndexRanges.fromPredicate(splat.splatData.numSplats, i => (state[i] & (State.locked | State.deleted)) === 0), State.selected, BitOp.TOGGLE);
     }
 }
 
 class SelectOp extends StateOp {
     name = 'selectOp';
 
-    constructor(splat: Splat, op: 'add'|'remove'|'set', filter: (i: number) => boolean) {
-        const filterFunc = {
-            add: (state: number, index: number) => (state === 0) && filter(index),
-            remove: (state: number, index: number) => (state === State.selected) && filter(index),
-            set: (state: number, index: number) => (state === State.selected) !== filter(index)
+    constructor(splat: Splat, op: 'add' | 'remove' | 'set', filter: ((i: number) => boolean) | Uint32Array) {
+        const splatData = splat.splatData;
+        const state = splatData.getProp('state') as Uint8Array;
+        const bitOp = op === 'add' ? BitOp.SET : op === 'remove' ? BitOp.CLEAR : BitOp.TOGGLE;
+
+        // wrap sorted IDs in a cursor-based predicate
+        const pred = filter instanceof Uint32Array ? sortedPredicate(filter) : filter;
+
+        const preds = {
+            add: (i: number) => pred(i) && state[i] === 0,
+            remove: (i: number) => pred(i) && state[i] === State.selected,
+            set: (i: number) => (state[i] === State.selected) !== pred(i)
         };
 
-        const doIt = {
-            add: (state: number) => state | State.selected,
-            remove: (state: number) => state & (~State.selected),
-            set: (state: number) => state ^ State.selected
-        };
-
-        const undoIt = {
-            add: (state: number) => state & (~State.selected),
-            remove: (state: number) => state | State.selected,
-            set: (state: number) => state ^ State.selected
-        };
-
-        super(splat, filterFunc[op], doIt[op], undoIt[op]);
+        super(splat, IndexRanges.fromPredicate(splatData.numSplats, preds[op]), State.selected, bitOp);
     }
 }
 
@@ -146,12 +122,8 @@ class HideSelectionOp extends StateOp {
     name = 'hideSelection';
 
     constructor(splat: Splat) {
-        super(splat,
-            state => state === State.selected,
-            state => state | State.locked,
-            state => state & (~State.locked),
-            State.locked
-        );
+        const state = splat.splatData.getProp('state') as Uint8Array;
+        super(splat, IndexRanges.fromPredicate(splat.splatData.numSplats, i => state[i] === State.selected), State.locked, BitOp.SET, State.locked);
     }
 }
 
@@ -159,12 +131,8 @@ class UnhideAllOp extends StateOp {
     name = 'unhideAll';
 
     constructor(splat: Splat) {
-        super(splat,
-            state => (state & (State.locked | State.deleted)) === State.locked,
-            state => state & (~State.locked),
-            state => state | State.locked,
-            State.locked
-        );
+        const state = splat.splatData.getProp('state') as Uint8Array;
+        super(splat, IndexRanges.fromPredicate(splat.splatData.numSplats, i => (state[i] & (State.locked | State.deleted)) === State.locked), State.locked, BitOp.CLEAR, State.locked);
     }
 }
 
@@ -172,12 +140,8 @@ class DeleteSelectionOp extends StateOp {
     name = 'deleteSelection';
 
     constructor(splat: Splat) {
-        super(splat,
-            state => state === State.selected,
-            state => state | State.deleted,
-            state => state & (~State.deleted),
-            State.deleted
-        );
+        const state = splat.splatData.getProp('state') as Uint8Array;
+        super(splat, IndexRanges.fromPredicate(splat.splatData.numSplats, i => state[i] === State.selected), State.deleted, BitOp.SET, State.deleted);
     }
 }
 
@@ -185,12 +149,8 @@ class ResetOp extends StateOp {
     name = 'reset';
 
     constructor(splat: Splat) {
-        super(splat,
-            state => (state & State.deleted) !== 0,
-            state => state & (~State.deleted),
-            state => state | State.deleted,
-            State.deleted
-        );
+        const state = splat.splatData.getProp('state') as Uint8Array;
+        super(splat, IndexRanges.fromPredicate(splat.splatData.numSplats, i => (state[i] & State.deleted) !== 0), State.deleted, BitOp.CLEAR, State.deleted);
     }
 }
 

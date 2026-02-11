@@ -92,14 +92,14 @@ class BrushSelection {
                 e.preventDefault();
                 e.stopPropagation();
 
+                dragEnd();
+
                 await events.invoke(
                     'select.byMask',
                     e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
                     canvas,
                     context
                 );
-
-                dragEnd();
             }
         };
 

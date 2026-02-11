@@ -273,12 +273,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     rect.end.y - rect.start.y
                 );
 
-                const selected = new Set<number>(pick);
-                const filter = (i: number) => {
-                    return selected.has(i);
-                };
-
-                events.fire('edit.add', new SelectOp(splat, op, filter));
+                const sortedIds = new Uint32Array(new Set(pick)).sort();
+                events.fire('edit.add', new SelectOp(splat, op, sortedIds));
             }
         }
     });
@@ -348,11 +344,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     }
                 }
 
-                const filter = (i: number) => {
-                    return selected.has(i);
-                };
-
-                events.fire('edit.add', new SelectOp(splat, op, filter));
+                const sortedIds = new Uint32Array(selected).sort();
+                events.fire('edit.add', new SelectOp(splat, op, sortedIds));
             }
         }
     });
@@ -397,12 +390,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     1 / height
                 );
                 const pickId = pickResult[0];
-
-                const filter = (i: number) => {
-                    return i === pickId;
-                };
-
-                events.fire('edit.add', new SelectOp(splat, op, filter));
+                events.fire('edit.add', new SelectOp(splat, op, new Uint32Array([pickId])));
             }
         }
     });

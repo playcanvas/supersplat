@@ -65,8 +65,11 @@ class DataPanel extends Container {
         resizeHandle.addEventListener('pointerup', (event: PointerEvent) => {
             if (resizing && event.isPrimary) {
                 resizeHandle.releasePointerCapture(event.pointerId);
-                resizing = false;
             }
+        });
+
+        resizeHandle.addEventListener('lostpointercapture', () => {
+            resizing = false;
         });
 
         // build the data controls

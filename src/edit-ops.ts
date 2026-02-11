@@ -41,13 +41,19 @@ class StateOp {
 
         switch (op) {
             case BitOp.SET:
-                this.ranges.forEach(i => { state[i] |= mask; });
+                this.ranges.forEach((i) => {
+                    state[i] |= mask;
+                });
                 break;
             case BitOp.CLEAR:
-                this.ranges.forEach(i => { state[i] &= ~mask; });
+                this.ranges.forEach((i) => {
+                    state[i] &= ~mask;
+                });
                 break;
             case BitOp.TOGGLE:
-                this.ranges.forEach(i => { state[i] ^= mask; });
+                this.ranges.forEach((i) => {
+                    state[i] ^= mask;
+                });
                 break;
         }
     }
@@ -58,8 +64,8 @@ class StateOp {
     }
 
     async undo() {
-        const undoOp = this.op === BitOp.TOGGLE ? BitOp.TOGGLE
-            : this.op === BitOp.SET ? BitOp.CLEAR : BitOp.SET;
+        const undoOp = this.op === BitOp.TOGGLE ? BitOp.TOGGLE :
+            this.op === BitOp.SET ? BitOp.CLEAR : BitOp.SET;
         this.apply(undoOp);
         await this.splat.updateState(this.updateFlags);
     }

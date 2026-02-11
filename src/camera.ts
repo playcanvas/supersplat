@@ -616,12 +616,9 @@ class Camera extends Element {
     }
 
     get fovFactor() {
-        // we set the fov of the longer axis. here we get the fov of the other (smaller) axis so framing
-        // doesn't cut off the scene.
-        const { width, height } = this.targetSize;
-        const aspect = (width && height) ? this.camera.horizontalFov ? height / width : width / height : 1;
-        const fov = 2 * Math.atan(Math.tan(this.fov * math.DEG_TO_RAD * 0.5) * aspect);
-        return Math.sin(fov * 0.5);
+        // use the larger axis fov (which is always this.fov) so camera distance
+        // stays constant regardless of viewport aspect ratio.
+        return Math.sin(this.fov * math.DEG_TO_RAD * 0.5);
     }
 
     getRay(screenX: number, screenY: number, ray: Ray) {

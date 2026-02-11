@@ -159,6 +159,7 @@
     "popup.shortcuts.lock-selected-splats": "Ausgewählte Splats sperren",
     "popup.shortcuts.unlock-all-splats": "Alle Splats entsperren",
     "popup.shortcuts.toggle-data-panel": "Splat Daten Panel anzeigen",
+    "popup.shortcuts.toggle-timeline-panel": "Zeitleiste anzeigen",
     "popup.shortcuts.other": "Weitere",
     "popup.shortcuts.undo": "Rückgängig",
     "popup.shortcuts.redo": "Wiederholen",

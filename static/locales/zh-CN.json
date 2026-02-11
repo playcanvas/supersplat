@@ -159,6 +159,7 @@
     "popup.shortcuts.lock-selected-splats": "锁定选择的 Splat",
     "popup.shortcuts.unlock-all-splats": "解锁全部 Splat",
     "popup.shortcuts.toggle-data-panel": "切换数据面板",
+    "popup.shortcuts.toggle-timeline-panel": "切换时间轴面板",
     "popup.shortcuts.other": "其他",
     "popup.shortcuts.undo": "撤销",
     "popup.shortcuts.redo": "重做",

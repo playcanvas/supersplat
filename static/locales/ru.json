@@ -159,6 +159,7 @@
     "popup.shortcuts.lock-selected-splats": "Заблокировать выделенные сплаты",
     "popup.shortcuts.unlock-all-splats": "Разблокировать все сплаты",
     "popup.shortcuts.toggle-data-panel": "Переключить панель данных",
+    "popup.shortcuts.toggle-timeline-panel": "Переключить панель временной шкалы",
     "popup.shortcuts.other": "Прочее",
     "popup.shortcuts.undo": "Отменить",
     "popup.shortcuts.redo": "Повторить",

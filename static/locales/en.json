@@ -159,6 +159,7 @@
     "popup.shortcuts.lock-selected-splats": "Lock Selected Splats",
     "popup.shortcuts.unlock-all-splats": "Unlock All Splats",
     "popup.shortcuts.toggle-data-panel": "Toggle Data Panel",
+    "popup.shortcuts.toggle-timeline-panel": "Toggle Timeline Panel",
     "popup.shortcuts.other": "Other",
     "popup.shortcuts.undo": "Undo",
     "popup.shortcuts.redo": "Redo",

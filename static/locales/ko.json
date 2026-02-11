@@ -159,6 +159,7 @@
     "popup.shortcuts.lock-selected-splats": "선택된 Splat 잠금",
     "popup.shortcuts.unlock-all-splats": "모든 Splat 잠금 해제",
     "popup.shortcuts.toggle-data-panel": "데이터 패널 전환",
+    "popup.shortcuts.toggle-timeline-panel": "타임라인 패널 전환",
     "popup.shortcuts.other": "기타",
     "popup.shortcuts.undo": "실행 취소",
     "popup.shortcuts.redo": "다시 실행",

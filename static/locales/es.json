@@ -159,6 +159,7 @@
     "popup.shortcuts.lock-selected-splats": "Bloquear Splats seleccionados",
     "popup.shortcuts.unlock-all-splats": "Desbloquear todos los Splats",
     "popup.shortcuts.toggle-data-panel": "Alternar panel de datos",
+    "popup.shortcuts.toggle-timeline-panel": "Alternar panel de línea de tiempo",
     "popup.shortcuts.other": "Otros",
     "popup.shortcuts.undo": "Deshacer",
     "popup.shortcuts.redo": "Rehacer",

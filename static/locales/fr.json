@@ -159,6 +159,7 @@
     "popup.shortcuts.lock-selected-splats": "Verrouiller les splats sélectionnés",
     "popup.shortcuts.unlock-all-splats": "Déverrouiller tous les splats",
     "popup.shortcuts.toggle-data-panel": "Afficher/Cacher l'onglet données",
+    "popup.shortcuts.toggle-timeline-panel": "Afficher/Cacher la timeline",
     "popup.shortcuts.other": "Autres",
     "popup.shortcuts.undo": "Annuler",
     "popup.shortcuts.redo": "Rétablir",

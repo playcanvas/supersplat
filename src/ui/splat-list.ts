@@ -16,13 +16,15 @@ const createSvg = (svgString: string) => {
 class SplatItem extends Container {
     getName: () => string;
     setName: (value: string) => void;
+    getSplatCount: () => number;
+    setSplatCount: (value: number) => void;
     getSelected: () => boolean;
     setSelected: (value: boolean) => void;
     getVisible: () => boolean;
     setVisible: (value: boolean) => void;
     destroy: () => void;
 
-    constructor(name: string, edit: TextInput, args = {}) {
+    constructor(name: string, splatCount: number, edit: TextInput, args = {}) {
         args = {
             ...args,
             class: ['splat-item', 'visible']
@@ -33,6 +35,11 @@ class SplatItem extends Container {
         const text = new Label({
             class: 'splat-item-text',
             text: name
+        });
+
+        const splatSize = new Label({
+            class: 'splat-item-size',
+            text: String(splatCount)
         });
 
         const visible = new PcuiElement({
@@ -52,6 +59,7 @@ class SplatItem extends Container {
         });
 
         this.append(text);
+        this.append(splatSize);
         this.append(visible);
         this.append(invisible);
         this.append(remove);
@@ -62,6 +70,14 @@ class SplatItem extends Container {
 
         this.setName = (value: string) => {
             text.value = value;
+        };
+
+        this.getSplatCount = () => {
+            return parseInt(splatSize.value, 10);
+        };
+
+        this.setSplatCount = (value: number) => {
+            splatSize.value = String(value);
         };
 
         this.getSelected = () => {
@@ -183,7 +199,7 @@ class SplatList extends Container {
         events.on('scene.elementAdded', (element: Element) => {
             if (element.type === ElementType.splat) {
                 const splat = element as Splat;
-                const item = new SplatItem(splat.name, edit);
+                const item = new SplatItem(splat.name, splat.numSplats, edit);
                 this.append(item);
                 items.set(splat, item);
 
@@ -200,6 +216,12 @@ class SplatList extends Container {
                 });
                 item.on('rename', (value: string) => {
                     events.fire('edit.add', new SplatRenameOp(splat, value));
+                });
+
+                events.on('splat.stateChanged', (changedSplat: Splat) => {
+                    if (changedSplat === splat) {
+                        item.setSplatCount(changedSplat.numSplats);
+                    }
                 });
             }
         });

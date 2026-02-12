@@ -9,24 +9,28 @@ interface AnimTrack {
     /**
      * Add a keyframe at the specified frame, capturing current state.
      * If a key already exists at this frame, it will be updated.
+     * @returns true if the track was modified, false if the operation was a no-op.
      */
-    addKey(frame: number): void;
+    addKey(frame: number): boolean;
 
     /**
      * Remove the keyframe at the specified frame.
+     * @returns true if the track was modified, false if the operation was a no-op.
      */
-    removeKey(frame: number): void;
+    removeKey(frame: number): boolean;
 
     /**
      * Move a keyframe from one frame to another.
+     * @returns true if the track was modified, false if the operation was a no-op.
      */
-    moveKey(fromFrame: number, toFrame: number): void;
+    moveKey(fromFrame: number, toFrame: number): boolean;
 
     /**
      * Copy a keyframe from one frame to another.
      * The original keyframe remains in place.
+     * @returns true if the track was modified, false if the operation was a no-op.
      */
-    copyKey(fromFrame: number, toFrame: number): void;
+    copyKey(fromFrame: number, toFrame: number): boolean;
 
     /**
      * Clear all keyframes.

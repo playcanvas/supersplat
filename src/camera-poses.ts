@@ -54,9 +54,9 @@ class CameraAnimTrack implements AnimTrack {
         return this.poses.map(p => p.frame);
     }
 
-    addKey(frame: number): void {
+    addKey(frame: number): boolean {
         const pose = this.events.invoke('camera.getPose');
-        if (!pose) return;
+        if (!pose) return false;
 
         const existingIndex = this.poses.findIndex(p => p.frame === frame);
 
@@ -77,22 +77,23 @@ class CameraAnimTrack implements AnimTrack {
             this.rebuildSpline();
             this.events.fire('track.keyUpdated', frame);
         }
+        return true;
     }
 
-    removeKey(frame: number): void {
+    removeKey(frame: number): boolean {
         const index = this.poses.findIndex(p => p.frame === frame);
-        if (index !== -1) {
-            this.poses.splice(index, 1);
-            this.rebuildSpline();
-            this.events.fire('track.keyRemoved', frame);
-        }
+        if (index === -1) return false;
+        this.poses.splice(index, 1);
+        this.rebuildSpline();
+        this.events.fire('track.keyRemoved', frame);
+        return true;
     }
 
-    moveKey(fromFrame: number, toFrame: number): void {
-        if (fromFrame === toFrame) return;
+    moveKey(fromFrame: number, toFrame: number): boolean {
+        if (fromFrame === toFrame) return false;
 
         const index = this.poses.findIndex(p => p.frame === fromFrame);
-        if (index === -1) return;
+        if (index === -1) return false;
 
         // Remove any existing pose at the target frame
         const toIndex = this.poses.findIndex(p => p.frame === toFrame);
@@ -105,13 +106,14 @@ class CameraAnimTrack implements AnimTrack {
         this.poses[movedIndex].frame = toFrame;
         this.rebuildSpline();
         this.events.fire('track.keyMoved', fromFrame, toFrame);
+        return true;
     }
 
-    copyKey(fromFrame: number, toFrame: number): void {
-        if (fromFrame === toFrame) return;
+    copyKey(fromFrame: number, toFrame: number): boolean {
+        if (fromFrame === toFrame) return false;
 
         const source = this.poses.find(p => p.frame === fromFrame);
-        if (!source) return;
+        if (!source) return false;
 
         // Remove any existing pose at the target frame
         const toIndex = this.poses.findIndex(p => p.frame === toFrame);
@@ -129,6 +131,7 @@ class CameraAnimTrack implements AnimTrack {
 
         this.rebuildSpline();
         this.events.fire('track.keyAdded', toFrame);
+        return true;
     }
 
     evaluate(frame: number): void {

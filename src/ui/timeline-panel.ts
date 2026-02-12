@@ -347,12 +347,20 @@ class TimelinePanel extends Container {
 
         // ui handlers
 
-        prev.on('click', () => {
-            events.fire('timeline.prevKey');
+        prev.on('click', (evt: MouseEvent) => {
+            if (evt.shiftKey) {
+                events.fire('timeline.prevKey');
+            } else {
+                events.fire('timeline.prevFrame');
+            }
         });
 
-        next.on('click', () => {
-            events.fire('timeline.nextKey');
+        next.on('click', (evt: MouseEvent) => {
+            if (evt.shiftKey) {
+                events.fire('timeline.nextKey');
+            } else {
+                events.fire('timeline.nextFrame');
+            }
         });
 
         play.on('click', () => {
@@ -439,9 +447,9 @@ class TimelinePanel extends Container {
             return text;
         };
 
-        tooltips.register(prev, tooltip('tooltip.timeline.prev-key', 'timeline.prevKey'), 'top');
+        tooltips.register(prev, tooltip('tooltip.timeline.prev-frame', 'timeline.prevFrame'), 'top');
         tooltips.register(play, tooltip('tooltip.timeline.play', 'timeline.togglePlay'), 'top');
-        tooltips.register(next, tooltip('tooltip.timeline.next-key', 'timeline.nextKey'), 'top');
+        tooltips.register(next, tooltip('tooltip.timeline.next-frame', 'timeline.nextFrame'), 'top');
         tooltips.register(addKey, tooltip('tooltip.timeline.add-key', 'track.addKey'), 'top');
         tooltips.register(removeKey, tooltip('tooltip.timeline.remove-key', 'track.removeKey'), 'top');
         tooltips.register(speed, localize('tooltip.timeline.frame-rate'), 'top');

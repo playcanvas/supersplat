@@ -138,7 +138,7 @@ const registerTimelineEvents = (events: Events) => {
 
     // Key navigation - delegates to active track's keys
     const skipToKey = (dir: 'forward' | 'back') => {
-        const keys = events.invoke('track.keys') as number[];
+        const keys = events.invoke('track.keys') as number[] ?? [];
 
         if (keys.length > 0) {
             const orderedKeys = keys.slice().sort((a, b) => a - b);

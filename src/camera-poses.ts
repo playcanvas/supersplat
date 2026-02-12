@@ -176,11 +176,13 @@ class CameraAnimTrack implements AnimTrack {
         const idx = this.poses.findIndex(p => p.frame === pose.frame);
         if (idx !== -1) {
             this.poses[idx] = pose;
+            this.rebuildSpline();
+            this.events.fire('track.keyUpdated', pose.frame);
         } else {
             this.poses.push(pose);
+            this.rebuildSpline();
+            this.events.fire('track.keyAdded', pose.frame);
         }
-
-        this.rebuildSpline();
     }
 
     /**

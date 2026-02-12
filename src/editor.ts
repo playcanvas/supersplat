@@ -353,8 +353,12 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
                 // Calculate actual pixel dimensions for iteration
                 const { width, height } = scene.targetSize;
-                const pw = Math.max(1, Math.floor(nw * width));
-                const ph = Math.max(1, Math.floor(nh * height));
+
+                // Convert normalized coordinates to render target pixels
+                const px = Math.floor(nx0 * width);
+                const py = Math.floor(ny0 * height);
+                const pw = Math.max(1, Math.ceil((nx0 + nw) * width) - px);
+                const ph = Math.max(1, Math.ceil((ny0 + nh) * height) - py);
 
                 const selected = new Set<number>();
                 for (let y = 0; y < ph; ++y) {

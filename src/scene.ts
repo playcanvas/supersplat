@@ -15,6 +15,7 @@ import {
 
 import { AssetLoader } from './asset-loader';
 import { Camera } from './camera';
+import { CameraPoseGizmos } from './camera-pose-gizmos';
 import { DataProcessor } from './data-processor';
 import { Element, ElementType, ElementTypeList } from './element';
 import { Events } from './events';
@@ -92,6 +93,7 @@ class Scene {
     dataProcessor: DataProcessor;
     assetLoader: AssetLoader;
     camera: Camera;
+    cameraPoseGizmos: CameraPoseGizmos;
     splatOverlay: SplatOverlay;
     grid: Grid;
     outline: Outline;
@@ -212,6 +214,9 @@ class Scene {
         // create elements
         this.camera = new Camera();
         this.add(this.camera);
+
+        this.cameraPoseGizmos = new CameraPoseGizmos();
+        this.add(this.cameraPoseGizmos);
 
         this.splatOverlay = new SplatOverlay();
         this.add(this.splatOverlay);

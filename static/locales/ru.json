@@ -69,6 +69,7 @@
     "panel.view-options.outline-selection": "Контур выделения",
     "panel.view-options.show-grid": "Показать сетку",
     "panel.view-options.show-bound": "Показать границы",
+    "panel.view-options.show-camera-poses": "Показать камеры",
     "panel.view-options.fly-speed": "Скорость полёта",
     "panel.view-options.tonemapping": "Тональная коррекция",
     "panel.view-options.tonemapping.none": "Нет",

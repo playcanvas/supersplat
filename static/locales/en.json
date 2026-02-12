@@ -69,6 +69,7 @@
     "panel.view-options.outline-selection": "Outline Selection",
     "panel.view-options.show-grid": "Show Grid",
     "panel.view-options.show-bound": "Show Bound",
+    "panel.view-options.show-camera-poses": "Show Cameras",
     "panel.view-options.fly-speed": "Fly Speed",
     "panel.view-options.tonemapping": "Tonemapping",
     "panel.view-options.tonemapping.none": "None",

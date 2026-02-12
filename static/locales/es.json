@@ -69,6 +69,7 @@
     "panel.view-options.outline-selection": "Contorno de selección",
     "panel.view-options.show-grid": "Mostrar cuadrícula",
     "panel.view-options.show-bound": "Mostrar límites",
+    "panel.view-options.show-camera-poses": "Mostrar cámaras",
     "panel.view-options.fly-speed": "Velocidad de vuelo",
     "panel.view-options.tonemapping": "Mapeo de tonos",
     "panel.view-options.tonemapping.none": "Ninguno",

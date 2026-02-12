@@ -69,6 +69,7 @@
     "panel.view-options.outline-selection": "選択のアウトライン",
     "panel.view-options.show-grid": "グリッド",
     "panel.view-options.show-bound": "バウンディングボックス",
+    "panel.view-options.show-camera-poses": "カメラを表示",
     "panel.view-options.fly-speed": "カメラの移動速度",
     "panel.view-options.tonemapping": "トーンマッピング",
     "panel.view-options.tonemapping.none": "なし",

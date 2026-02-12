@@ -38,23 +38,23 @@ const registerTrackManagerEvents = (events: Events) => {
     // Add key to active track
     events.on('track.addKey', (frame?: number) => {
         const keyFrame = frame ?? events.invoke('timeline.frame');
-        trackEdit('addKey', (track) => track.addKey(keyFrame));
+        trackEdit('addKey', track => track.addKey(keyFrame));
     });
 
     // Remove key from active track
     events.on('track.removeKey', (frame?: number) => {
         const keyFrame = frame ?? events.invoke('timeline.frame');
-        trackEdit('removeKey', (track) => track.removeKey(keyFrame));
+        trackEdit('removeKey', track => track.removeKey(keyFrame));
     });
 
     // Move key in active track
     events.on('track.moveKey', (fromFrame: number, toFrame: number) => {
-        trackEdit('moveKey', (track) => track.moveKey(fromFrame, toFrame));
+        trackEdit('moveKey', track => track.moveKey(fromFrame, toFrame));
     });
 
     // Copy key in active track
     events.on('track.copyKey', (fromFrame: number, toFrame: number) => {
-        trackEdit('copyKey', (track) => track.copyKey(fromFrame, toFrame));
+        trackEdit('copyKey', track => track.copyKey(fromFrame, toFrame));
     });
 };
 

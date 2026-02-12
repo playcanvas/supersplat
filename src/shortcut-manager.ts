@@ -26,8 +26,8 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'timeline.nextFrame': { keys: ['.'], repeat: true },
     'timeline.prevKey': { keys: ['<'], shift: 'optional', repeat: true },
     'timeline.nextKey': { keys: ['>'], shift: 'optional', repeat: true },
-    'timeline.addKey': { keys: ['Enter'] },
-    'timeline.removeKey': { keys: ['Enter'], shift: 'required' },
+    'track.addKey': { keys: ['Enter'] },
+    'track.removeKey': { keys: ['Enter'], shift: 'required' },
 
     // Selection
     'select.all': { keys: ['a'], ctrl: 'required', capture: true },

@@ -131,6 +131,10 @@
                 &.dragging {
                     cursor: ew-resize;
                 }
+
+                &.copying {
+                    cursor: copy;
+                }
             }
         }
     }

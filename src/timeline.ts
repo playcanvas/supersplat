@@ -2,6 +2,11 @@ import { EventHandle } from 'playcanvas';
 
 import { Events } from './events';
 
+/**
+ * Register global timeline events.
+ * The timeline manages playback state (frames, frameRate, current frame, playing).
+ * Key management is delegated to individual animation tracks via track.* events.
+ */
 const registerTimelineEvents = (events: Events) => {
     let frames = 180;
     let frameRate = 30;
@@ -131,32 +136,23 @@ const registerTimelineEvents = (events: Events) => {
         setFrame((frame + 1) % frames);
     });
 
-    // keys
-
-    const keys: number[] = [];
-
-    // skip to previous/next key
+    // Key navigation - delegates to active track's keys
     const skipToKey = (dir: 'forward' | 'back') => {
-        const orderedKeys = keys.map((keyFrame, index) => {
-            return { frame: keyFrame, index };
-        }).sort((a, b) => a.frame - b.frame);
+        const keys = events.invoke('track.keys') as number[];
 
-        if (orderedKeys.length > 0) {
-            const nextKey = orderedKeys.findIndex(k => (dir === 'back' ? k.frame >= frame : k.frame > frame));
+        if (keys.length > 0) {
+            const orderedKeys = keys.slice().sort((a, b) => a - b);
             const l = orderedKeys.length;
 
-            if (nextKey === -1) {
-                setFrame(orderedKeys[dir === 'back' ? l - 1 : 0].frame);
+            const nextKeyIndex = orderedKeys.findIndex(k => (dir === 'back' ? k >= frame : k > frame));
+
+            if (nextKeyIndex === -1) {
+                setFrame(orderedKeys[dir === 'back' ? l - 1 : 0]);
             } else {
-                setFrame(orderedKeys[dir === 'back' ? (nextKey + l - 1) % l : nextKey].frame);
+                setFrame(orderedKeys[dir === 'back' ? (nextKeyIndex + l - 1) % l : nextKeyIndex]);
             }
         } else {
-            // if there are no keys, go to start or end of timeline
-            if (dir === 'back') {
-                setFrame(0);
-            } else {
-                setFrame(frames - 1);
-            }
+            setFrame(dir === 'back' ? 0 : frames - 1);
         }
     };
 
@@ -168,84 +164,28 @@ const registerTimelineEvents = (events: Events) => {
         skipToKey('forward');
     });
 
-    events.function('timeline.keys', () => {
-        return keys;
-    });
-
-    // Add or update a key at a specific frame (defaults to current frame)
-    events.on('timeline.addKey', (keyFrame = frame) => {
-        const isNew = !keys.includes(keyFrame);
-        if (isNew) {
-            keys.push(keyFrame);
-            events.fire('timeline.keyAdded', keyFrame);
-        } else {
-            events.fire('timeline.keyUpdated', keyFrame);
-        }
-    });
-
-    // Remove a key by index (defaults to key at current frame)
-    events.on('timeline.removeKey', (index = keys.indexOf(frame)) => {
-        if (index >= 0 && index < keys.length) {
-            keys.splice(index, 1);
-            events.fire('timeline.keyRemoved', index);
-        }
-    });
-
-    // Move a key from one frame to another
-    events.on('timeline.moveKey', (fromFrame: number, toFrame: number) => {
-        const index = keys.indexOf(fromFrame);
-        if (index !== -1 && fromFrame !== toFrame) {
-            // remove existing key at target frame if one exists
-            const existingIndex = keys.indexOf(toFrame);
-            if (existingIndex !== -1) {
-                keys.splice(existingIndex, 1);
-                events.fire('timeline.keyRemoved', existingIndex);
-                // adjust index if the removed key was before the moving key
-                if (existingIndex < index) {
-                    keys[index - 1] = toFrame;
-                    events.fire('timeline.keyMoved', index - 1, fromFrame, toFrame);
-                    return;
-                }
-            }
-            keys[index] = toFrame;
-            events.fire('timeline.keyMoved', index, fromFrame, toFrame);
-        }
-    });
-
-    // Load keys directly without firing per-key events (used during document deserialization)
-    events.function('timeline.loadKeys', (keyFrames: number[]) => {
-        keys.length = 0;
-        keys.push(...keyFrames);
-        // Fire timeline.frames to trigger UI rebuild  with the loaded keys
-        events.fire('timeline.frames', frames);
-    });
-
-    // clear all keys when scene is cleared
+    // clear timeline state when scene is cleared
     events.on('scene.clear', () => {
-        keys.length = 0;
         events.fire('timeline.frames', frames);
     });
 
-    // doc
+    // Serialization - only global state, keys are owned by tracks
 
     events.function('docSerialize.timeline', () => {
         return {
             frames,
             frameRate,
             frame,
-            smoothness,
-            keys: keys.slice()
+            smoothness
         };
     });
 
     events.function('docDeserialize.timeline', (data: any = {}) => {
-        keys.length = 0;
-
         // Set values
         frames = data.frames ?? 180;
         frameRate = data.frameRate ?? 30;
         frame = data.frame ?? 0;
-        smoothness = data.smoothness ?? 0;
+        smoothness = data.smoothness ?? 1;
 
         // Fire events to update UI (always fire to ensure rebuild)
         events.fire('timeline.frames', frames);

@@ -92,8 +92,8 @@ const popupConfig: Record<string, CategoryConfig> = {
             { id: 'timeline.nextFrame', localeKey: 'popup.shortcuts.next-frame' },
             { id: 'timeline.prevKey', localeKey: 'popup.shortcuts.prev-key' },
             { id: 'timeline.nextKey', localeKey: 'popup.shortcuts.next-key' },
-            { id: 'timeline.addKey', localeKey: 'popup.shortcuts.add-key' },
-            { id: 'timeline.removeKey', localeKey: 'popup.shortcuts.remove-key' }
+            { id: 'track.addKey', localeKey: 'popup.shortcuts.add-key' },
+            { id: 'track.removeKey', localeKey: 'popup.shortcuts.remove-key' }
         ]
     },
     other: {

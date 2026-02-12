@@ -1,5 +1,6 @@
 import { Color, Mat4 } from 'playcanvas';
 
+import { AnimTrack } from './anim-track';
 import { IndexRanges, sortedPredicate } from './index-ranges';
 import { Pivot } from './pivot';
 import { Scene } from './scene';
@@ -333,6 +334,30 @@ class SetSplatColorAdjustmentOp {
     }
 }
 
+// Snapshot-based undo/redo for animation track edits.
+// Captures the full track state before and after a mutation.
+class AnimTrackEditOp {
+    name: string;
+    track: AnimTrack;
+    before: unknown;
+    after: unknown;
+
+    constructor(name: string, track: AnimTrack, before: unknown, after: unknown) {
+        this.name = name;
+        this.track = track;
+        this.before = before;
+        this.after = after;
+    }
+
+    do() {
+        this.track.restore(this.after);
+    }
+
+    undo() {
+        this.track.restore(this.before);
+    }
+}
+
 class MultiOp {
     name = 'multiOp';
     ops: EditOp[];
@@ -413,6 +438,7 @@ export {
     PlacePivotOp,
     ColorAdjustment,
     SetSplatColorAdjustmentOp,
+    AnimTrackEditOp,
     MultiOp,
     AddSplatOp,
     SplatRenameOp

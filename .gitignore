@@ -4,3 +4,4 @@ dist
 .npmrc
 .vscode
 .cursor
+.idea

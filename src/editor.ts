@@ -366,7 +366,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                         const mx = Math.floor((nx0 + x / width) * mask.width);
                         const my = Math.floor((ny0 + y / height) * mask.height);
                         if (mask.data[(my * mask.width + mx) * 4] === 255) {
-                            selected.add(pick[(ph - y) * pw + x]);
+                            selected.add(pick[(ph - 1 - y) * pw + x]);
                         }
                     }
                 }

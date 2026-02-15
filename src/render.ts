@@ -168,7 +168,12 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
     });
 
     events.function('render.video', async (videoSettings: VideoSettings, fileStream: FileSystemWritableFileStream) => {
-        events.fire('progressStart', localize('panel.render.render-video'));
+        events.fire('progressStart', localize('panel.render.render-video'), true);
+
+        let cancelled = false;
+        const cancelHandler = events.on('progressCancel', () => {
+            cancelled = true;
+        });
 
         try {
             const { startFrame, endFrame, frameRate, width, height, bitrate, transparentBg, showDebug, format, codec: codecChoice } = videoSettings;
@@ -357,6 +362,9 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             const duration = (endFrame - startFrame) / animFrameRate;
 
             for (let frameTime = 0; frameTime <= duration; frameTime += 1.0 / frameRate) {
+                // check for cancellation
+                if (cancelled) break;
+
                 // prepare the frame (loads PLY if needed, updates camera, sorts)
                 await prepareFrame(startFrame + frameTime * animFrameRate);
 
@@ -378,24 +386,25 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             // Flush and finalize output
             await encoder.flush();
             await output.finalize();
-
-            // Free resources
             encoder.close();
 
-            // Download
-            if (!fileStream) {
+            // Download (skip if cancelled -- the caller will delete the file)
+            if (!cancelled && !fileStream) {
                 const currentSplats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
                 downloadFile((output.target as BufferTarget).buffer, `${removeExtension(currentSplats[0]?.name ?? 'supersplat')}.${fileExtension}`);
             }
 
-            return true;
+            return !cancelled;
         } catch (error) {
             await events.invoke('showPopup', {
                 type: 'error',
                 header: localize('panel.render.failed'),
-                message: `'${error.message ?? error}'`
+                message: `'${(error as any).message ?? error}'`
             });
+            return false;
         } finally {
+            cancelHandler.off();
+
             scene.camera.endOffscreenMode();
             scene.camera.renderOverlays = true;
             scene.gizmoLayer.enabled = true;

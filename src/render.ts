@@ -20,9 +20,9 @@ const FORMAT_CONFIG: Record<string, { create: () => Mp4OutputFormat | MovOutputF
 
 const CODEC_CONFIG: Record<string, { type: 'avc' | 'hevc' | 'vp9' | 'av1'; codec: (height: number) => string }> = {
     h264: { type: 'avc', codec: h => (h < 1080 ? 'avc1.420028' : 'avc1.640033') }, // H.264 Constrained Baseline/High profile
-    h265: { type: 'hevc', codec: () => 'hev1.1.6.L120.B0' },                        // H.265 Main profile, Level 4.0
-    vp9: { type: 'vp9', codec: () => 'vp09.00.10.08' },                           // VP9 Profile 0, Level 1.0
-    av1: { type: 'av1', codec: () => 'av01.0.05M.08' }                            // AV1 Main Profile, Level 3.1
+    h265: { type: 'hevc', codec: () => 'hev1.1.6.L120.B0' },                       // H.265 Main profile, Level 4.0
+    vp9: { type: 'vp9', codec: () => 'vp09.00.10.08' },                            // VP9 Profile 0, Level 1.0
+    av1: { type: 'av1', codec: () => 'av01.0.05M.08' }                             // AV1 Main Profile, Level 3.1
 };
 
 type ImageSettings = {

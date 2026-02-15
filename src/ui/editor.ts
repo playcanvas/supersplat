@@ -303,9 +303,10 @@ class EditorUI {
                     const suggested = `${removeExtension(docName ?? 'supersplat')}${fileExtension}`;
 
                     let writable;
+                    let fileHandle: FileSystemFileHandle | undefined;
 
                     if (window.showSaveFilePicker) {
-                        const fileHandle = await window.showSaveFilePicker({
+                        fileHandle = await window.showSaveFilePicker({
                             id: 'SuperSplatVideoFileExport',
                             types: filePickerTypes,
                             suggestedName: suggested
@@ -314,7 +315,12 @@ class EditorUI {
                         writable = await fileHandle.createWritable();
                     }
 
-                    await events.invoke('render.video', videoSettings, writable);
+                    const result = await events.invoke('render.video', videoSettings, writable);
+
+                    // if the render was cancelled, remove the empty file left on disk
+                    if (result === false && fileHandle) {
+                        await fileHandle.remove();
+                    }
                 } catch (error) {
                     if (error instanceof DOMException && error.name === 'AbortError') {
                         // user cancelled save dialog
@@ -364,9 +370,11 @@ class EditorUI {
 
         topContainer.append(progress);
 
-        events.on('progressStart', (header: string) => {
+        events.on('progressStart', (header: string, cancellable?: boolean) => {
             progress.hidden = false;
             progress.setHeader(header);
+            progress.showCancelButton(!!cancellable);
+            progress.onCancel = cancellable ? () => events.fire('progressCancel') : null;
         });
 
         events.on('progressUpdate', (options: { text?: string, progress?: number }) => {
@@ -380,6 +388,8 @@ class EditorUI {
 
         events.on('progressEnd', () => {
             progress.hidden = true;
+            progress.showCancelButton(false);
+            progress.onCancel = null;
         });
 
         // initialize canvas to correct size before creating graphics device etc

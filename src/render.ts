@@ -176,6 +176,8 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 cancelled = true;
             });
 
+            let encoder: VideoEncoder | null = null;
+
             try {
                 const { startFrame, endFrame, frameRate, width, height, bitrate, transparentBg, showDebug, format, codec: codecChoice } = videoSettings;
 
@@ -255,7 +257,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     return enc;
                 };
 
-                let encoder = createEncoder();
+                encoder = createEncoder();
 
                 // start rendering to offscreen buffer only
                 scene.camera.startOffscreenMode(width, height);
@@ -394,7 +396,6 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 // Flush and finalize output
                 await encoder.flush();
                 await output.finalize();
-                encoder.close();
 
                 // Download (skip if cancelled -- the caller will delete the file)
                 if (!cancelled && !fileStream) {
@@ -411,6 +412,9 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 });
                 return false;
             } finally {
+                if (encoder && encoder.state !== 'closed') {
+                    encoder.close();
+                }
                 cancelHandler.off();
 
                 scene.camera.endOffscreenMode();

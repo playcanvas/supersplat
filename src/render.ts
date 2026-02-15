@@ -399,8 +399,9 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             await events.invoke('showPopup', {
                 type: 'error',
                 header: localize('render.failed'),
-                message: `'${error.message ?? error}'`
+                message: `'${(error as any).message ?? error}'`
             });
+            return false;
         } finally {
             cancelHandler.off();
 

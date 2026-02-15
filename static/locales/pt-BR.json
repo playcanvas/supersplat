@@ -108,6 +108,7 @@
     "panel.render.cancel": "Cancelar",
     "panel.render.render-video": "Renderizar Vídeo",
     "panel.render.rendering": "Renderizando Quadros",
+    "panel.render.failed": "Falha ao renderizar",
     "popup.ok": "OK",
     "popup.cancel": "Cancelar",
     "popup.yes": "Sim",

@@ -108,6 +108,7 @@
     "panel.render.cancel": "Отмена",
     "panel.render.render-video": "Рендерить видео",
     "panel.render.rendering": "Рендеринг кадров",
+    "panel.render.failed": "Ошибка рендеринга",
     "popup.ok": "ОК",
     "popup.cancel": "Отмена",
     "popup.yes": "Да",

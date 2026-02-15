@@ -108,6 +108,7 @@
     "panel.render.cancel": "取消",
     "panel.render.render-video": "渲染视频",
     "panel.render.rendering": "渲染帧中",
+    "panel.render.failed": "渲染失败",
     "popup.ok": "确定",
     "popup.cancel": "取消",
     "popup.yes": "是",

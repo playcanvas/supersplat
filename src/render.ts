@@ -167,253 +167,270 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
         }
     });
 
-    events.function('render.video', async (videoSettings: VideoSettings, fileStream: FileSystemWritableFileStream) => {
-        events.fire('progressStart', localize('panel.render.render-video'), true);
+    events.function('render.video', (videoSettings: VideoSettings, fileStream: FileSystemWritableFileStream) => {
+        const renderImpl = async () => {
+            events.fire('progressStart', localize('panel.render.render-video'), true);
 
-        let cancelled = false;
-        const cancelHandler = events.on('progressCancel', () => {
-            cancelled = true;
-        });
-
-        try {
-            const { startFrame, endFrame, frameRate, width, height, bitrate, transparentBg, showDebug, format, codec: codecChoice } = videoSettings;
-
-            const target = fileStream ? new StreamTarget(fileStream) : new BufferTarget();
-
-            // Configure output format based on container selection
-            let outputFormat: Mp4OutputFormat | MovOutputFormat | MkvOutputFormat | WebMOutputFormat;
-            let fileExtension: string;
-
-            if (format === 'webm') {
-                outputFormat = new WebMOutputFormat();
-                fileExtension = 'webm';
-            } else if (format === 'mov') {
-                outputFormat = new MovOutputFormat({
-                    fastStart: 'in-memory'
-                });
-                fileExtension = 'mov';
-            } else if (format === 'mkv') {
-                outputFormat = new MkvOutputFormat();
-                fileExtension = 'mkv';
-            } else {
-                outputFormat = new Mp4OutputFormat({
-                    fastStart: 'in-memory'
-                });
-                fileExtension = 'mp4';
-            }
-
-            // Configure codec based on codec selection
-            let codecType: 'avc' | 'hevc' | 'vp9' | 'av1';
-            let codec: string;
-
-            if (codecChoice === 'h264') {
-                codecType = 'avc';
-                codec = height < 1080 ? 'avc1.420028' : 'avc1.640033'; // H.264 Constrained Baseline/High profile
-            } else if (codecChoice === 'h265') {
-                codecType = 'hevc';
-                codec = 'hev1.1.6.L120.B0'; // H.265 Main profile, Level 4.0
-            } else if (codecChoice === 'vp9') {
-                codecType = 'vp9';
-                codec = 'vp09.00.10.08'; // VP9 Profile 0, Level 1.0
-            } else if (codecChoice === 'av1') {
-                codecType = 'av1';
-                codec = 'av01.0.05M.08'; // AV1 Main Profile, Level 3.1
-            } else {
-                codecType = 'avc';
-                codec = height < 1080 ? 'avc1.420028' : 'avc1.640033'; // Default: H.264 Constrained Baseline/High
-            }
-
-            const output = new Output({
-                format: outputFormat,
-                target
+            let cancelled = false;
+            const cancelHandler = events.on('progressCancel', () => {
+                cancelled = true;
             });
 
-            const videoSource = new EncodedVideoPacketSource(codecType);
-            output.addVideoTrack(videoSource, {
-                rotation: 0,
-                frameRate
-            });
+            try {
+                const { startFrame, endFrame, frameRate, width, height, bitrate, transparentBg, showDebug, format, codec: codecChoice } = videoSettings;
 
-            await output.start();
+                const target = fileStream ? new StreamTarget(fileStream) : new BufferTarget();
 
-            let encoderError: Error | null = null;
+                // Configure output format based on container selection
+                let outputFormat: Mp4OutputFormat | MovOutputFormat | MkvOutputFormat | WebMOutputFormat;
+                let fileExtension: string;
 
-            const encoder = new VideoEncoder({
-                output: async (chunk, meta) => {
-                    const encodedPacket = EncodedPacket.fromEncodedChunk(chunk);
-                    await videoSource.add(encodedPacket, meta);
-                },
-                error: (error) => {
-                    encoderError = error;
-                }
-            });
-
-            encoder.configure({
-                codec,
-                width,
-                height,
-                bitrate
-            });
-
-            // start rendering to offscreen buffer only
-            scene.camera.startOffscreenMode(width, height);
-            scene.camera.renderOverlays = showDebug;
-            scene.gizmoLayer.enabled = false;
-            if (!transparentBg) {
-                scene.camera.clearPass.setClearColor(events.invoke('bgClr'));
-            }
-            scene.lockedRenderMode = true;
-
-            // cpu-side buffer to read pixels into
-            const data = new Uint8Array(width * height * 4);
-            const line = new Uint8Array(width * 4);
-
-            // remember last camera position so we can skip sorting if the camera didn't move
-            const last_pos = new Vec3(0, 0, 0);
-            const last_forward = new Vec3(1, 0, 0);
-
-            // helper to sort splats and wait for completion
-            const sortAndWait = (splats: Splat[]) => {
-                return Promise.all(splats.map((splat) => {
-                    return new Promise<void>((resolve) => {
-                        const { instance } = splat.entity.gsplat;
-                        instance.sorter.once('updated', resolve);
-                        instance.sort(scene.camera.mainCamera);
-                        setTimeout(resolve, 1000);
+                if (format === 'webm') {
+                    outputFormat = new WebMOutputFormat();
+                    fileExtension = 'webm';
+                } else if (format === 'mov') {
+                    outputFormat = new MovOutputFormat({
+                        fastStart: 'in-memory'
                     });
-                }));
-            };
-
-            // prepare the frame for rendering, returns the newly loaded splat if any
-            const prepareFrame = async (frameTime: number): Promise<Splat | null> => {
-                // Fire timeline.time for camera animation interpolation
-                events.fire('timeline.time', frameTime);
-
-                // Wait for PLY sequence to load the frame if present
-                const newSplat = await events.invoke('plysequence.setFrameAsync', Math.floor(frameTime)) as Splat | null;
-
-                // manually update the camera so position and rotation are correct
-                scene.camera.onUpdate(0);
-
-                // If a new PLY was loaded, sort and wait for completion
-                if (newSplat) {
-                    await sortAndWait([newSplat]);
+                    fileExtension = 'mov';
+                } else if (format === 'mkv') {
+                    outputFormat = new MkvOutputFormat();
+                    fileExtension = 'mkv';
                 } else {
-                    // No new PLY - sort existing splats if camera moved
-                    const pos = scene.camera.position;
-                    const forward = scene.camera.forward;
-                    if (!last_pos.equals(pos) || !last_forward.equals(forward)) {
-                        last_pos.copy(pos);
-                        last_forward.copy(forward);
-
-                        const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
-                        await sortAndWait(splats);
-                    }
+                    outputFormat = new Mp4OutputFormat({
+                        fastStart: 'in-memory'
+                    });
+                    fileExtension = 'mp4';
                 }
 
-                return newSplat;
-            };
+                // Configure codec based on codec selection
+                let codecType: 'avc' | 'hevc' | 'vp9' | 'av1';
+                let codec: string;
 
-            // capture the current video frame
-            const captureFrame = async (frameTime: number) => {
-                const { mainTarget, workTarget } = scene.camera;
-
-                scene.dataProcessor.copyRt(mainTarget, workTarget);
-
-                // read the rendered frame
-                await workTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workTarget, data });
-
-                // flip the buffer vertically
-                for (let y = 0; y < height / 2; y++) {
-                    const top = y * width * 4;
-                    const bottom = (height - y - 1) * width * 4;
-                    line.set(data.subarray(top, top + width * 4));
-                    data.copyWithin(top, bottom, bottom + width * 4);
-                    data.set(line, bottom);
+                if (codecChoice === 'h264') {
+                    codecType = 'avc';
+                    codec = height < 1080 ? 'avc1.420028' : 'avc1.640033'; // H.264 Constrained Baseline/High profile
+                } else if (codecChoice === 'h265') {
+                    codecType = 'hevc';
+                    codec = 'hev1.1.6.L120.B0'; // H.265 Main profile, Level 4.0
+                } else if (codecChoice === 'vp9') {
+                    codecType = 'vp9';
+                    codec = 'vp09.00.10.08'; // VP9 Profile 0, Level 1.0
+                } else if (codecChoice === 'av1') {
+                    codecType = 'av1';
+                    codec = 'av01.0.05M.08'; // AV1 Main Profile, Level 3.1
+                } else {
+                    codecType = 'avc';
+                    codec = height < 1080 ? 'avc1.420028' : 'avc1.640033'; // Default: H.264 Constrained Baseline/High
                 }
 
-                // construct the video frame
-                const videoFrame = new VideoFrame(data, {
-                    format: 'RGBA',
-                    codedWidth: width,
-                    codedHeight: height,
-                    timestamp: Math.floor(1e6 * frameTime),
-                    duration: Math.floor(1e6 / frameRate)
+                const output = new Output({
+                    format: outputFormat,
+                    target
                 });
 
-                // wait for encoder queue to drain if necessary (backpressure handling)
-                while (encoder.encodeQueueSize > 5) {
-                    await new Promise<void>((resolve) => {
-                        setTimeout(resolve, 1);
+                const videoSource = new EncodedVideoPacketSource(codecType);
+                output.addVideoTrack(videoSource, {
+                    rotation: 0,
+                    frameRate
+                });
+
+                await output.start();
+
+                let encoderError: Error | null = null;
+
+                // helper to create and configure a VideoEncoder instance
+                const createEncoder = () => {
+                    encoderError = null;
+                    const enc = new VideoEncoder({
+                        output: async (chunk, meta) => {
+                            const encodedPacket = EncodedPacket.fromEncodedChunk(chunk);
+                            await videoSource.add(encodedPacket, meta);
+                        },
+                        error: (error) => {
+                            encoderError = error;
+                        }
+                    });
+                    enc.configure({ codec, width, height, bitrate });
+                    return enc;
+                };
+
+                let encoder = createEncoder();
+
+                // start rendering to offscreen buffer only
+                scene.camera.startOffscreenMode(width, height);
+                scene.camera.renderOverlays = showDebug;
+                scene.gizmoLayer.enabled = false;
+                if (!transparentBg) {
+                    scene.camera.clearPass.setClearColor(events.invoke('bgClr'));
+                }
+                scene.lockedRenderMode = true;
+
+                // cpu-side buffer to read pixels into
+                const data = new Uint8Array(width * height * 4);
+                const line = new Uint8Array(width * 4);
+
+                // remember last camera position so we can skip sorting if the camera didn't move
+                const last_pos = new Vec3(0, 0, 0);
+                const last_forward = new Vec3(1, 0, 0);
+
+                // helper to sort splats and wait for completion
+                const sortAndWait = (splats: Splat[]) => {
+                    return Promise.all(splats.map((splat) => {
+                        return new Promise<void>((resolve) => {
+                            const { instance } = splat.entity.gsplat;
+                            instance.sorter.once('updated', resolve);
+                            instance.sort(scene.camera.mainCamera);
+                            setTimeout(resolve, 1000);
+                        });
+                    }));
+                };
+
+                // prepare the frame for rendering, returns the newly loaded splat if any
+                const prepareFrame = async (frameTime: number): Promise<Splat | null> => {
+                    // Fire timeline.time for camera animation interpolation
+                    events.fire('timeline.time', frameTime);
+
+                    // Wait for PLY sequence to load the frame if present
+                    const newSplat = await events.invoke('plysequence.setFrameAsync', Math.floor(frameTime)) as Splat | null;
+
+                    // manually update the camera so position and rotation are correct
+                    scene.camera.onUpdate(0);
+
+                    // If a new PLY was loaded, sort and wait for completion
+                    if (newSplat) {
+                        await sortAndWait([newSplat]);
+                    } else {
+                        // No new PLY - sort existing splats if camera moved
+                        const pos = scene.camera.position;
+                        const forward = scene.camera.forward;
+                        if (!last_pos.equals(pos) || !last_forward.equals(forward)) {
+                            last_pos.copy(pos);
+                            last_forward.copy(forward);
+
+                            const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
+                            await sortAndWait(splats);
+                        }
+                    }
+
+                    return newSplat;
+                };
+
+                // capture the current video frame
+                const captureFrame = async (frameTime: number) => {
+                    const { mainTarget, workTarget } = scene.camera;
+
+                    scene.dataProcessor.copyRt(mainTarget, workTarget);
+
+                    // read the rendered frame
+                    await workTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workTarget, data });
+
+                    // flip the buffer vertically
+                    for (let y = 0; y < height / 2; y++) {
+                        const top = y * width * 4;
+                        const bottom = (height - y - 1) * width * 4;
+                        line.set(data.subarray(top, top + width * 4));
+                        data.copyWithin(top, bottom, bottom + width * 4);
+                        data.set(line, bottom);
+                    }
+
+                    // construct the video frame
+                    const videoFrame = new VideoFrame(data, {
+                        format: 'RGBA',
+                        codedWidth: width,
+                        codedHeight: height,
+                        timestamp: Math.floor(1e6 * frameTime),
+                        duration: Math.floor(1e6 / frameRate)
+                    });
+
+                    // if the codec was reclaimed (e.g. browser backgrounded the tab),
+                    // recreate the encoder and continue
+                    if (encoder.state === 'closed' && encoderError?.message?.includes('reclaimed')) {
+                        encoder = createEncoder();
+                    }
+
+                    // wait for encoder queue to drain if necessary (backpressure handling)
+                    while (encoder.encodeQueueSize > 5) {
+                        await new Promise<void>((resolve) => {
+                            setTimeout(resolve, 1);
+                        });
+                    }
+
+                    // check for encoder errors
+                    if (encoderError) {
+                        videoFrame.close();
+                        throw encoderError;
+                    }
+
+                    encoder.encode(videoFrame);
+                    videoFrame.close();
+                };
+
+                const animFrameRate = events.invoke('timeline.frameRate');
+                const duration = (endFrame - startFrame) / animFrameRate;
+
+                for (let frameTime = 0; frameTime <= duration; frameTime += 1.0 / frameRate) {
+                    // check for cancellation
+                    if (cancelled) break;
+
+                    // prepare the frame (loads PLY if needed, updates camera, sorts)
+                    await prepareFrame(startFrame + frameTime * animFrameRate);
+
+                    // render a frame
+                    scene.lockedRender = true;
+
+                    // wait for render to finish
+                    await postRender();
+
+                    // wait for capture
+                    await captureFrame(frameTime);
+
+                    events.fire('progressUpdate', {
+                        text: localize('panel.render.rendering', { ellipsis: true }),
+                        progress: 100 * frameTime / duration
                     });
                 }
 
-                // check for encoder errors
-                if (encoderError) {
-                    videoFrame.close();
-                    throw encoderError;
+                // Flush and finalize output
+                await encoder.flush();
+                await output.finalize();
+                encoder.close();
+
+                // Download (skip if cancelled -- the caller will delete the file)
+                if (!cancelled && !fileStream) {
+                    const currentSplats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
+                    downloadFile((output.target as BufferTarget).buffer, `${removeExtension(currentSplats[0]?.name ?? 'supersplat')}.${fileExtension}`);
                 }
 
-                encoder.encode(videoFrame);
-                videoFrame.close();
-            };
-
-            const animFrameRate = events.invoke('timeline.frameRate');
-            const duration = (endFrame - startFrame) / animFrameRate;
-
-            for (let frameTime = 0; frameTime <= duration; frameTime += 1.0 / frameRate) {
-                // check for cancellation
-                if (cancelled) break;
-
-                // prepare the frame (loads PLY if needed, updates camera, sorts)
-                await prepareFrame(startFrame + frameTime * animFrameRate);
-
-                // render a frame
-                scene.lockedRender = true;
-
-                // wait for render to finish
-                await postRender();
-
-                // wait for capture
-                await captureFrame(frameTime);
-
-                events.fire('progressUpdate', {
-                    text: localize('panel.render.rendering', { ellipsis: true }),
-                    progress: 100 * frameTime / duration
+                return !cancelled;
+            } catch (error) {
+                await events.invoke('showPopup', {
+                    type: 'error',
+                    header: localize('panel.render.failed'),
+                    message: `'${(error as any).message ?? error}'`
                 });
+                return false;
+            } finally {
+                cancelHandler.off();
+
+                scene.camera.endOffscreenMode();
+                scene.camera.renderOverlays = true;
+                scene.gizmoLayer.enabled = true;
+                scene.camera.clearPass.setClearColor(nullClr);
+                scene.lockedRenderMode = false;
+                scene.forceRender = true;       // camera likely moved, finish with normal render
+
+                events.fire('progressEnd');
             }
+        };
 
-            // Flush and finalize output
-            await encoder.flush();
-            await output.finalize();
-            encoder.close();
-
-            // Download (skip if cancelled -- the caller will delete the file)
-            if (!cancelled && !fileStream) {
-                const currentSplats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
-                downloadFile((output.target as BufferTarget).buffer, `${removeExtension(currentSplats[0]?.name ?? 'supersplat')}.${fileExtension}`);
-            }
-
-            return !cancelled;
-        } catch (error) {
-            await events.invoke('showPopup', {
-                type: 'error',
-                header: localize('panel.render.failed'),
-                message: `'${(error as any).message ?? error}'`
-            });
-            return false;
-        } finally {
-            cancelHandler.off();
-
-            scene.camera.endOffscreenMode();
-            scene.camera.renderOverlays = true;
-            scene.gizmoLayer.enabled = true;
-            scene.camera.clearPass.setClearColor(nullClr);
-            scene.lockedRenderMode = false;
-            scene.forceRender = true;       // camera likely moved, finish with normal render
-
-            events.fire('progressEnd');
+        // Acquire a Web Lock during encoding to signal the browser that this tab is
+        // actively working, which helps prevent aggressive background throttling and
+        // codec reclamation.
+        if (navigator.locks) {
+            return navigator.locks.request('supersplat-video-render', renderImpl);
         }
+        return renderImpl();
     });
 };
 

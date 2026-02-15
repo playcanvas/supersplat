@@ -11,10 +11,10 @@ import { localize } from './ui/localization';
 const nullClr = new Color(0, 0, 0, 0);
 
 // Lookup maps for video output format and codec configuration
-const FORMAT_CONFIG: Record<string, { create: () => Mp4OutputFormat | MovOutputFormat | MkvOutputFormat | WebMOutputFormat; extension: string }> = {
-    mp4: { create: () => new Mp4OutputFormat({ fastStart: 'in-memory' }), extension: 'mp4' },
+const FORMAT_CONFIG: Record<string, { create: (streaming: boolean) => Mp4OutputFormat | MovOutputFormat | MkvOutputFormat | WebMOutputFormat; extension: string }> = {
+    mp4: { create: streaming => new Mp4OutputFormat({ fastStart: streaming ? false : 'in-memory' }), extension: 'mp4' },
     webm: { create: () => new WebMOutputFormat(), extension: 'webm' },
-    mov: { create: () => new MovOutputFormat({ fastStart: 'in-memory' }), extension: 'mov' },
+    mov: { create: streaming => new MovOutputFormat({ fastStart: streaming ? false : 'in-memory' }), extension: 'mov' },
     mkv: { create: () => new MkvOutputFormat(), extension: 'mkv' }
 };
 
@@ -200,7 +200,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
                 // Configure output format and codec from lookup maps (default to mp4/h264)
                 const formatConfig = FORMAT_CONFIG[format] ?? FORMAT_CONFIG.mp4;
-                const outputFormat = formatConfig.create();
+                const outputFormat = formatConfig.create(!!fileStream);
                 const fileExtension = formatConfig.extension;
 
                 const codecConfig = CODEC_CONFIG[codecChoice] ?? CODEC_CONFIG.h264;

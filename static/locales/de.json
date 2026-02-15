@@ -108,6 +108,7 @@
     "panel.render.cancel": "Abbrechen",
     "panel.render.render-video": "Video rendern",
     "panel.render.rendering": "Frames werden gerendert",
+    "panel.render.failed": "Rendern fehlgeschlagen",
     "popup.ok": "OK",
     "popup.cancel": "Abbrechen",
     "popup.yes": "Ja",

@@ -108,6 +108,7 @@
     "panel.render.cancel": "Annuler",
     "panel.render.render-video": "Rendu vidéo",
     "panel.render.rendering": "Rendu des images",
+    "panel.render.failed": "Échec du rendu",
     "popup.ok": "OK",
     "popup.cancel": "Annuler",
     "popup.yes": "Oui",

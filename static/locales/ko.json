@@ -108,6 +108,7 @@
     "panel.render.cancel": "취소",
     "panel.render.render-video": "비디오 렌더링",
     "panel.render.rendering": "프레임 렌더링 중",
+    "panel.render.failed": "렌더링 실패",
     "popup.ok": "확인",
     "popup.cancel": "취소",
     "popup.yes": "예",

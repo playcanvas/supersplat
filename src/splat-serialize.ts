@@ -107,6 +107,11 @@ class GaussianFilter {
         const minOpacity = serializeSettings.minOpacity ?? 0;
         const removeInvalid = serializeSettings.removeInvalid ?? false;
 
+        // properties where +Infinity and -Infinity are valid values
+        const infOk = new Set(['opacity']);
+        // properties where -Infinity is a valid value
+        const negInfOk = new Set(['scale_0', 'scale_1', 'scale_2']);
+
         this.test = (i: number) => {
             // splat is deleted, always removed
             if ((state[i] & State.deleted) !== 0) {
@@ -130,8 +135,10 @@ class GaussianFilter {
                 const element = splatData.getElement('vertex');
                 for (let k = 0; k < element.properties.length; ++k) {
                     const prop = element.properties[k];
-                    const { storage } = prop;
+                    const { storage, name } = prop;
                     if (storage && !Number.isFinite(storage[i])) {
+                        if (storage[i] === -Infinity && (infOk.has(name) || negInfOk.has(name))) continue;
+                        if (storage[i] === Infinity && infOk.has(name)) continue;
                         return false;
                     }
                 }

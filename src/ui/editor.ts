@@ -373,6 +373,8 @@ class EditorUI {
         events.on('progressStart', (header: string, cancellable?: boolean) => {
             progress.hidden = false;
             progress.setHeader(header);
+            progress.setText('');
+            progress.setProgress(0);
             progress.showCancelButton(!!cancellable);
             progress.onCancel = cancellable ? () => events.fire('progressCancel') : null;
         });

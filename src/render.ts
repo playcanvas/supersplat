@@ -345,12 +345,6 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                         duration: Math.floor(1e6 / frameRate)
                     });
 
-                    // if the codec was reclaimed (e.g. browser backgrounded the tab),
-                    // recreate the encoder and continue
-                    if (encoder.state === 'closed' && encoderError?.message?.includes('reclaimed')) {
-                        encoder = createEncoder();
-                    }
-
                     // wait for encoder queue to drain if necessary (backpressure handling)
                     while (encoder.encodeQueueSize > 5) {
                         await new Promise<void>((resolve) => {
@@ -358,7 +352,13 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                         });
                     }
 
-                    // check for encoder errors
+                    // if the codec was reclaimed (e.g. browser backgrounded the tab),
+                    // recreate the encoder and continue
+                    if (encoder.state === 'closed' && encoderError?.message?.includes('reclaimed')) {
+                        encoder = createEncoder();
+                    }
+
+                    // check for non-recoverable encoder errors
                     if (encoderError) {
                         videoFrame.close();
                         throw encoderError;

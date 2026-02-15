@@ -10,6 +10,21 @@ import { localize } from './ui/localization';
 
 const nullClr = new Color(0, 0, 0, 0);
 
+// Lookup maps for video output format and codec configuration
+const FORMAT_CONFIG: Record<string, { create: () => Mp4OutputFormat | MovOutputFormat | MkvOutputFormat | WebMOutputFormat; extension: string }> = {
+    mp4:  { create: () => new Mp4OutputFormat({ fastStart: 'in-memory' }), extension: 'mp4' },
+    webm: { create: () => new WebMOutputFormat(), extension: 'webm' },
+    mov:  { create: () => new MovOutputFormat({ fastStart: 'in-memory' }), extension: 'mov' },
+    mkv:  { create: () => new MkvOutputFormat(), extension: 'mkv' }
+};
+
+const CODEC_CONFIG: Record<string, { type: 'avc' | 'hevc' | 'vp9' | 'av1'; codec: (height: number) => string }> = {
+    h264: { type: 'avc',  codec: (h) => h < 1080 ? 'avc1.420028' : 'avc1.640033' }, // H.264 Constrained Baseline/High profile
+    h265: { type: 'hevc', codec: () => 'hev1.1.6.L120.B0' },                        // H.265 Main profile, Level 4.0
+    vp9:  { type: 'vp9',  codec: () => 'vp09.00.10.08' },                           // VP9 Profile 0, Level 1.0
+    av1:  { type: 'av1',  codec: () => 'av01.0.05M.08' }                            // AV1 Main Profile, Level 3.1
+};
+
 type ImageSettings = {
     width: number;
     height: number;
@@ -183,48 +198,14 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
                 const target = fileStream ? new StreamTarget(fileStream) : new BufferTarget();
 
-                // Configure output format based on container selection
-                let outputFormat: Mp4OutputFormat | MovOutputFormat | MkvOutputFormat | WebMOutputFormat;
-                let fileExtension: string;
+                // Configure output format and codec from lookup maps (default to mp4/h264)
+                const formatConfig = FORMAT_CONFIG[format] ?? FORMAT_CONFIG.mp4;
+                const outputFormat = formatConfig.create();
+                const fileExtension = formatConfig.extension;
 
-                if (format === 'webm') {
-                    outputFormat = new WebMOutputFormat();
-                    fileExtension = 'webm';
-                } else if (format === 'mov') {
-                    outputFormat = new MovOutputFormat({
-                        fastStart: 'in-memory'
-                    });
-                    fileExtension = 'mov';
-                } else if (format === 'mkv') {
-                    outputFormat = new MkvOutputFormat();
-                    fileExtension = 'mkv';
-                } else {
-                    outputFormat = new Mp4OutputFormat({
-                        fastStart: 'in-memory'
-                    });
-                    fileExtension = 'mp4';
-                }
-
-                // Configure codec based on codec selection
-                let codecType: 'avc' | 'hevc' | 'vp9' | 'av1';
-                let codec: string;
-
-                if (codecChoice === 'h264') {
-                    codecType = 'avc';
-                    codec = height < 1080 ? 'avc1.420028' : 'avc1.640033'; // H.264 Constrained Baseline/High profile
-                } else if (codecChoice === 'h265') {
-                    codecType = 'hevc';
-                    codec = 'hev1.1.6.L120.B0'; // H.265 Main profile, Level 4.0
-                } else if (codecChoice === 'vp9') {
-                    codecType = 'vp9';
-                    codec = 'vp09.00.10.08'; // VP9 Profile 0, Level 1.0
-                } else if (codecChoice === 'av1') {
-                    codecType = 'av1';
-                    codec = 'av01.0.05M.08'; // AV1 Main Profile, Level 3.1
-                } else {
-                    codecType = 'avc';
-                    codec = height < 1080 ? 'avc1.420028' : 'avc1.640033'; // Default: H.264 Constrained Baseline/High
-                }
+                const codecConfig = CODEC_CONFIG[codecChoice] ?? CODEC_CONFIG.h264;
+                const codecType = codecConfig.type;
+                const codec = codecConfig.codec(height);
 
                 const output = new Output({
                     format: outputFormat,

@@ -318,7 +318,7 @@ class EditorUI {
                     const result = await events.invoke('render.video', videoSettings, writable);
 
                     // if the render was cancelled, remove the empty file left on disk
-                    if (result === false && fileHandle) {
+                    if (result === false && fileHandle?.remove) {
                         await fileHandle.remove();
                     }
                 } catch (error) {

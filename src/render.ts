@@ -354,8 +354,10 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
                     // if the codec was reclaimed (e.g. browser backgrounded the tab),
                     // recreate the encoder and continue
+                    let forceKeyFrame = false;
                     if (encoder.state === 'closed' && encoderError?.message?.includes('reclaimed')) {
                         encoder = createEncoder();
+                        forceKeyFrame = true;
                     }
 
                     // check for non-recoverable encoder errors
@@ -364,7 +366,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                         throw encoderError;
                     }
 
-                    encoder.encode(videoFrame);
+                    encoder.encode(videoFrame, { keyFrame: forceKeyFrame });
                     videoFrame.close();
                 };
 

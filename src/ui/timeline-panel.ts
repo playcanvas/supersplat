@@ -102,14 +102,9 @@ class Ticks extends Container {
                 label.addEventListener('pointerup', (event: PointerEvent) => {
                     if (dragging && event.isPrimary) {
                         const fromFrame = parseInt(label.dataset.frame, 10);
-                        if (fromFrame !== toFrame && toFrame >= 0) {
-                            if (copying) {
-                                events.fire('track.copyKey', fromFrame, toFrame);
-                            } else {
-                                events.fire('track.moveKey', fromFrame, toFrame);
-                            }
-                        }
 
+                        // Clean up DOM state before firing events, since event
+                        // handlers may call rebuild() which clears workArea.
                         if (copying) {
                             workArea.dom.removeChild(clone);
                             clone = null;
@@ -119,6 +114,15 @@ class Ticks extends Container {
                         }
 
                         label.releasePointerCapture(event.pointerId);
+
+                        if (fromFrame !== toFrame && toFrame >= 0) {
+                            if (copying) {
+                                events.fire('track.copyKey', fromFrame, toFrame);
+                            } else {
+                                events.fire('track.moveKey', fromFrame, toFrame);
+                            }
+                        }
+
                         copying = false;
                         dragging = false;
                     }

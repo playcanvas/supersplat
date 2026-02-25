@@ -260,7 +260,7 @@
     "tooltip.timeline.frame-rate": "フレームレート",
     "tooltip.timeline.total-frames": "総フレーム数",
     "tooltip.timeline.smoothness": "スムーズさ",
-    "tooltip.scene.solo": "Solo Selected",
+    "tooltip.scene.solo": "選択をソロ表示",
     "status-bar.splats": "スプラット",
     "status-bar.selected": "選択済み",
     "status-bar.locked": "ロック済み",

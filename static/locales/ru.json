@@ -260,6 +260,7 @@
     "tooltip.timeline.frame-rate": "Частота кадров",
     "tooltip.timeline.total-frames": "Всего кадров",
     "tooltip.timeline.smoothness": "Плавность",
+    "tooltip.scene.solo": "Solo Selected",
     "status-bar.splats": "Сплаты",
     "status-bar.selected": "Выбрано",
     "status-bar.locked": "Заблокировано",

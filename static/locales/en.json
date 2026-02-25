@@ -260,6 +260,7 @@
     "tooltip.timeline.frame-rate": "Frame Rate",
     "tooltip.timeline.total-frames": "Total Frames",
     "tooltip.timeline.smoothness": "Smoothness",
+    "tooltip.scene.solo": "Solo Selected",
     "status-bar.splats": "Splats",
     "status-bar.selected": "Selected",
     "status-bar.locked": "Locked",

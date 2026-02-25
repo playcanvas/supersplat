@@ -42,7 +42,9 @@
 
         border-radius: 4px;
 
-        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
 
         svg {
             color: $clr-hilight;

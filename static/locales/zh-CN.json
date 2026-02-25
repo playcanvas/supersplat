@@ -260,6 +260,7 @@
     "tooltip.timeline.frame-rate": "帧率",
     "tooltip.timeline.total-frames": "总帧数",
     "tooltip.timeline.smoothness": "平滑度",
+    "tooltip.scene.solo": "Solo Selected",
     "status-bar.splats": "高斯点",
     "status-bar.selected": "已选择",
     "status-bar.locked": "已锁定",

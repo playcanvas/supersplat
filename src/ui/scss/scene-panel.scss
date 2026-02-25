@@ -1,3 +1,5 @@
+@use 'colors.scss' as *;
+
 #scene-panel {
     top: 102px;
     left: 24px;
@@ -6,6 +8,15 @@
 
 .collapsed #scene-panel {
     display: none;
+}
+
+.panel-header-button.active,
+.panel-header-button.active:hover {
+    background-color: $clr-hilight;
+
+    svg {
+        color: $clr-active;
+    }
 }
 
 .splat-list-container {

@@ -66,6 +66,18 @@ class RightToolbar extends Container {
             class: 'right-toolbar-toggle'
         });
 
+        const particleBtn = new Button({
+            id: 'right-toolbar-particles',
+            class: 'right-toolbar-toggle',
+            icon: 'E366'
+        });
+
+        const gestureBtn = new Button({
+            id: 'right-toolbar-gesture',
+            class: 'right-toolbar-toggle',
+            icon: 'E321'
+        });
+
         const options = new Button({
             id: 'right-toolbar-options',
             class: 'right-toolbar-toggle',
@@ -95,6 +107,8 @@ class RightToolbar extends Container {
         this.append(cameraReset);
         this.append(new Element({ class: 'right-toolbar-separator' }));
         this.append(colorPanel);
+        this.append(particleBtn);
+        this.append(gestureBtn);
         this.append(options);
 
         // Helper to compose localized tooltip text with shortcut
@@ -131,6 +145,8 @@ class RightToolbar extends Container {
         cameraFrameSelection.on('click', () => events.fire('camera.focus'));
         cameraReset.on('click', () => events.fire('camera.reset'));
         colorPanel.on('click', () => events.fire('colorPanel.toggleVisible'));
+        particleBtn.on('click', () => events.fire('particlePanel.toggleVisible'));
+        gestureBtn.on('click', () => events.fire('gesture.toggle'));
         options.on('click', () => events.fire('viewPanel.toggleVisible'));
 
         events.on('camera.mode', (mode: string) => {
@@ -150,6 +166,14 @@ class RightToolbar extends Container {
 
         events.on('colorPanel.visible', (visible: boolean) => {
             colorPanel.class[visible ? 'add' : 'remove']('active');
+        });
+
+        events.on('particlePanel.visible', (visible: boolean) => {
+            particleBtn.class[visible ? 'add' : 'remove']('active');
+        });
+
+        events.on('gesture.active', (active: boolean) => {
+            gestureBtn.class[active ? 'add' : 'remove']('active');
         });
 
         events.on('viewPanel.visible', (visible: boolean) => {

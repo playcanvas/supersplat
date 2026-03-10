@@ -47,7 +47,6 @@ type AnimTrack = {
     name: string,
     duration: number,
     frameRate: number,
-    target: 'camera',
     loopMode: 'none' | 'repeat' | 'pingpong',
     interpolation: 'step' | 'spline',
     smoothness: number,
@@ -56,22 +55,82 @@ type AnimTrack = {
         values: {
             position: number[],
             target: number[],
+            fov: number[],
         }
     }
 };
 
+type CameraPose = {
+    position: [number, number, number],
+    target: [number, number, number],
+    fov: number
+};
+
+type Camera = {
+    initial: CameraPose,
+};
+
+type Annotation = {
+    position: [number, number, number],
+    title: string,
+    text: string,
+    extras: any,
+    camera: Camera
+};
+
+type PostEffectSettings = {
+    sharpness: {
+        enabled: boolean,
+        amount: number,
+    },
+    bloom: {
+        enabled: boolean,
+        intensity: number,
+        blurLevel: number,
+    },
+    grading: {
+        enabled: boolean,
+        brightness: number,
+        contrast: number,
+        saturation: number,
+        tint: [number, number, number],
+    },
+    vignette: {
+        enabled: boolean,
+        intensity: number,
+        inner: number,
+        outer: number,
+        curvature: number,
+    },
+    fringing: {
+        enabled: boolean,
+        intensity: number
+    }
+};
+
+const defaultPostEffectSettings: PostEffectSettings = {
+    sharpness: { enabled: false, amount: 0 },
+    bloom: { enabled: false, intensity: 1, blurLevel: 2 },
+    grading: { enabled: false, brightness: 0, contrast: 1, saturation: 1, tint: [1, 1, 1] },
+    vignette: { enabled: false, intensity: 0.5, inner: 0.3, outer: 0.75, curvature: 1 },
+    fringing: { enabled: false, intensity: 0.5 }
+};
+
 type ExperienceSettings = {
-    camera: {
-        fov?: number,
-        position?: number[],
-        target?: number[],
-        startAnim: 'none' | 'orbit' | 'animTrack',
-        animTrack: string
-    },
+    version: 2,
+    tonemapping: 'none' | 'linear' | 'filmic' | 'hejl' | 'aces' | 'aces2' | 'neutral',
+    highPrecisionRendering: boolean,
+    soundUrl?: string,
     background: {
-        color?: number[]
+        color: [number, number, number],
+        skyboxUrl?: string
     },
-    animTracks: AnimTrack[]
+    postEffectSettings: PostEffectSettings,
+    animTracks: AnimTrack[],
+    cameras: Camera[],
+    annotations: Annotation[],
+    startMode: 'default' | 'animTrack' | 'annotation',
+    hasStartPose?: boolean
 };
 
 type ViewerExportSettings = {
@@ -1303,6 +1362,11 @@ export {
     serializeSog,
     serializeViewer,
     AnimTrack,
+    CameraPose,
+    Camera,
+    Annotation,
+    PostEffectSettings,
+    defaultPostEffectSettings,
     ExperienceSettings,
     SerializeSettings,
     SogSettings,

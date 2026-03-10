@@ -708,12 +708,17 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         const focalPoint = camera.focalPoint;
         return {
             position: { x: position.x, y: position.y, z: position.z },
-            target: { x: focalPoint.x, y: focalPoint.y, z: focalPoint.z }
+            target: { x: focalPoint.x, y: focalPoint.y, z: focalPoint.z },
+            fov: camera.fov
         };
     });
 
-    events.on('camera.setPose', (pose: { position: Vec3, target: Vec3 }, speed = 1) => {
+    events.on('camera.setPose', (pose: { position: Vec3, target: Vec3, fov?: number }, speed = 1) => {
         scene.camera.setPose(pose.position, pose.target, speed);
+        if (pose.fov !== undefined) {
+            scene.camera.fov = pose.fov;
+            events.fire('camera.fov', pose.fov);
+        }
     });
 
     // hack: fire events to initialize UI

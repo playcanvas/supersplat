@@ -81,6 +81,10 @@ class Camera extends Element {
 
     controlMode: 'orbit' | 'fly' = 'orbit';
 
+    // during fly-mode look, stores the camera position that must stay fixed
+    // while the azim/elev tween smoothly converges
+    lookCameraPos: Vec3 | null = null;
+
     picker: Picker;
 
     mainCamera: Entity;
@@ -206,7 +210,27 @@ class Camera extends Element {
     }
 
     setFocalPoint(point: Vec3, dampingFactorFactor: number = 1) {
+        this.lookCameraPos = null;
         this.focalPointTween.goto(point, dampingFactorFactor * this.scene.config.controls.dampingFactor);
+    }
+
+    // Fly mode: rotate camera around itself, keeping the camera position fixed
+    look(dx: number, dy: number) {
+        const sensitivity = this.scene.config.controls.orbitSensitivity;
+        const d = this.distance * this.sceneRadius / this.fovFactor;
+
+        Camera.calcForwardVec(forwardVec, this.azim, this.elevation);
+        const cameraPos = this.focalPoint.add(forwardVec.clone().mulScalar(d));
+
+        const azim = this.azim - dx * sensitivity;
+        const elev = this.elevation - dy * sensitivity;
+
+        Camera.calcForwardVec(forwardVec, azim, elev);
+        const focalPoint = cameraPos.clone().sub(forwardVec.clone().mulScalar(d));
+
+        this.setAzimElev(azim, elev);
+        this.focalPointTween.goto(focalPoint, this.scene.config.controls.dampingFactor);
+        this.lookCameraPos = cameraPos;
     }
 
     setAzimElev(azim: number, elev: number, dampingFactorFactor: number = 1) {
@@ -229,6 +253,8 @@ class Camera extends Element {
     }
 
     setDistance(distance: number, dampingFactorFactor: number = 1) {
+        this.lookCameraPos = null;
+
         const controls = this.scene.config.controls;
 
         // clamp
@@ -550,9 +576,17 @@ class Camera extends Element {
         const distance = this.distanceTween.value;
 
         Camera.calcForwardVec(forwardVec, azimElev.azim, azimElev.elev);
-        cameraPosition.copy(forwardVec);
-        cameraPosition.mulScalar(distance.distance * this.sceneRadius / this.fovFactor);
-        cameraPosition.add(this.focalPointTween.value);
+
+        if (this.lookCameraPos) {
+            cameraPosition.copy(this.lookCameraPos);
+            if (this.azimElevTween.timer >= this.azimElevTween.transitionTime) {
+                this.lookCameraPos = null;
+            }
+        } else {
+            cameraPosition.copy(forwardVec);
+            cameraPosition.mulScalar(distance.distance * this.sceneRadius / this.fovFactor);
+            cameraPosition.add(this.focalPointTween.value);
+        }
 
         this.mainCamera.setLocalPosition(cameraPosition);
         this.mainCamera.setLocalEulerAngles(azimElev.elev, azimElev.azim, 0);

@@ -108,12 +108,9 @@ class CameraPoseGizmos extends Element {
             return;
         }
 
-        const boundSize = this.scene.bound.halfExtents.length();
-        const iconScale = boundSize > 0 ? boundSize * 0.04 : 0.2;
-
-        const depth = iconScale * 2;
-        const halfW = iconScale * 1.2;
-        const halfH = iconScale * 0.9;
+        const depth = 0.08;
+        const halfW = 0.06;
+        const halfH = 0.04;
 
         const numVerts = poses.length * VERTS_PER_CAMERA;
         const positions: number[] = [];

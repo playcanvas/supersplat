@@ -112,8 +112,8 @@ class SplatOverlay extends Element {
         material.update();
 
         // subscribe to sorter updates for dynamic count
-        this.onSorterUpdated = (count: number) => {
-            mesh.primitive[0].count = count;
+        this.onSorterUpdated = () => {
+            mesh.primitive[0].count = instance.sorter.pendingSorted?.count ?? mesh.primitive[0].count;
         };
         instance.sorter.on('updated', this.onSorterUpdated);
 

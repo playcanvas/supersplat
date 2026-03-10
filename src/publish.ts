@@ -59,7 +59,7 @@ type PublishSettings = {
     listed: boolean;
     serializeSettings: SerializeSettings;
     experienceSettings: ExperienceSettings;
-    overwriteId?: string;   // for republishing an existing scene
+    overwriteId?: string;
 };
 
 const origin = location.origin;
@@ -312,7 +312,7 @@ const registerPublishEvents = (events: Events) => {
                     type: 'info',
                     header: localize('popup.publish.succeeded'),
                     message: localize('popup.publish.message'),
-                    link: response.url
+                    link: `${origin}/scene/${response.hash}/edit`
                 });
             }
         } catch (error) {

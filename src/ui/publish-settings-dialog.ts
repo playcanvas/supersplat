@@ -4,8 +4,16 @@ import { Pose } from '../camera-poses';
 import { Events } from '../events';
 import { localize } from './localization';
 import { PublishSettings, UserStatus } from '../publish';
-import { AnimTrack, ExperienceSettings } from '../splat-serialize';
+import { AnimTrack, ExperienceSettings, PostEffectSettings } from '../splat-serialize';
 import sceneExport from './svg/export.svg';
+
+const defaultPostEffectSettings: PostEffectSettings = {
+    sharpness: { enabled: false, amount: 0 },
+    bloom: { enabled: false, intensity: 1, blurLevel: 2 },
+    grading: { enabled: false, brightness: 0, contrast: 1, saturation: 1, tint: [1, 1, 1] },
+    vignette: { enabled: false, intensity: 0.5, inner: 0.3, outer: 0.75, curvature: 1 },
+    fringing: { enabled: false, intensity: 0.5 }
+};
 
 const createSvg = (svgString: string, args = {}) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -70,46 +78,31 @@ class PublishSettingsDialog extends Container {
         descRow.append(descLabel);
         descRow.append(descInput);
 
-        // listed
-
-        const listLabel = new Label({ class: 'label', text: localize('popup.publish.listed') });
-        const listBoolean = new BooleanInput({ class: 'boolean', value: true });
-        const listRow = new Container({ class: 'row' });
-        listRow.append(listLabel);
-        listRow.append(listBoolean);
-
-        // start position
-
-        const startLabel = new Label({ class: 'label', text: localize('popup.export.start-position') });
-        const startSelect = new SelectInput({
-            class: 'select',
-            defaultValue: 'viewport',
-            options: [
-                { v: 'default', t: localize('popup.export.default') },
-                { v: 'viewport', t: localize('popup.export.viewport') },
-                { v: 'pose', t: localize('popup.export.pose-camera') }
-            ]
-        });
-        const startRow = new Container({ class: 'row' });
-        startRow.append(startLabel);
-        startRow.append(startSelect);
-
         // animation
 
         const animationLabel = new Label({ class: 'label', text: localize('popup.export.animation') });
-        const animationSelect = new SelectInput({
-            class: 'select',
-            defaultValue: 'none',
-            options: [
-                { v: 'none', t: localize('popup.export.animation.none') },
-                { v: 'track', t: localize('popup.export.animation.track') }
-            ]
-        });
+        const animationToggle = new BooleanInput({ class: 'boolean', type: 'toggle', value: false });
         const animationRow = new Container({ class: 'row' });
         animationRow.append(animationLabel);
-        animationRow.append(animationSelect);
+        animationRow.append(animationToggle);
 
-        // clear color
+        // loop mode
+
+        const loopLabel = new Label({ class: 'label', text: localize('popup.export.loop-mode') });
+        const loopSelect = new SelectInput({
+            class: 'select',
+            defaultValue: 'repeat',
+            options: [
+                { v: 'none', t: localize('popup.export.loop-mode.none') },
+                { v: 'repeat', t: localize('popup.export.loop-mode.repeat') },
+                { v: 'pingpong', t: localize('popup.export.loop-mode.pingpong') }
+            ]
+        });
+        const loopRow = new Container({ class: 'row' });
+        loopRow.append(loopLabel);
+        loopRow.append(loopSelect);
+
+        // background color
 
         const colorLabel = new Label({ class: 'label', text: localize('popup.export.background-color') });
         const colorPicker = new ColorPicker({
@@ -154,9 +147,8 @@ class PublishSettingsDialog extends Container {
         content.append(overwriteRow);
         content.append(titleRow);
         content.append(descRow);
-        content.append(listRow);
-        content.append(startRow);
         content.append(animationRow);
+        content.append(loopRow);
         content.append(colorRow);
         content.append(fovRow);
         content.append(bandsRow);
@@ -210,7 +202,10 @@ class PublishSettingsDialog extends Container {
             const isNew = overwriteSelect.value === '0';
             titleInput.disabled = !isNew;
             descInput.disabled = !isNew;
-            listBoolean.disabled = !isNew;
+        });
+
+        animationToggle.on('change', (value: boolean) => {
+            loopSelect.enabled = value;
         });
 
         // reset UI and configure for current state
@@ -218,7 +213,6 @@ class PublishSettingsDialog extends Container {
             const splats = events.invoke('scene.splats');
             const filename = splats[0].filename;
             const dot = splats[0].filename.lastIndexOf('.');
-
             const bgClr = events.invoke('bgClr');
 
             overwriteSelect.options = [{
@@ -228,11 +222,10 @@ class PublishSettingsDialog extends Container {
             overwriteSelect.value = '0';
             titleInput.value = filename.slice(0, dot > 0 ? dot : undefined);
             descInput.value = '';
-            listBoolean.value = true;
-            startSelect.value = hasPoses ? 'pose' : 'viewport';
-            startSelect.disabledOptions = hasPoses ? { } : { pose: startSelect.options[2].t };
-            animationSelect.value = hasPoses ? 'track' : 'none';
-            animationSelect.disabledOptions = hasPoses ? { } : { track: animationSelect.options[1].t };
+            animationToggle.value = hasPoses;
+            animationToggle.enabled = hasPoses;
+            loopSelect.value = 'repeat';
+            loopSelect.enabled = hasPoses;
             colorPicker.value = [bgClr.r, bgClr.g, bgClr.b];
             fovSlider.value = events.invoke('camera.fov');
             bandsSlider.value = events.invoke('view.bands');
@@ -269,87 +262,79 @@ class PublishSettingsDialog extends Container {
                 };
 
                 onOK = () => {
-                    // extract camera starting position
-                    let pose;
-                    switch (startSelect.value) {
-                        case 'pose':
-                            pose = orderedPoses?.[0];
-                            break;
-                        case 'viewport':
-                            pose = events.invoke('camera.getPose');
-                            break;
-                    }
+                    const fov = fovSlider.value;
+
+                    // use current viewport as start pose
+                    const pose = events.invoke('camera.getPose');
                     const p = pose?.position;
                     const t = pose?.target;
+                    const hasStartPose = !!(p && t);
 
-                    const startAnim = (() => {
-                        switch (animationSelect.value) {
-                            case 'none': return 'none';
-                            case 'track': return 'animTrack';
+                    const cameras = hasStartPose ? [{
+                        initial: {
+                            position: [p.x, p.y, p.z] as [number, number, number],
+                            target: [t.x, t.y, t.z] as [number, number, number],
+                            fov
                         }
-                    })();
+                    }] : [];
 
                     // extract camera animation
+                    const includeAnimation = animationToggle.value;
                     const animTracks: AnimTrack[] = [];
-                    switch (startAnim) {
-                        case 'none':
-                            break;
-                        case 'animTrack': {
-                            // use camera poses
-                            const times = [];
-                            const position = [];
-                            const target = [];
-                            for (let i = 0; i < orderedPoses.length; ++i) {
-                                const p = orderedPoses[i];
-                                times.push(p.frame);
-                                position.push(p.position.x, p.position.y, p.position.z);
-                                target.push(p.target.x, p.target.y, p.target.z);
-                            }
 
-                            animTracks.push({
-                                name: 'cameraAnim',
-                                duration: frames / frameRate,
-                                frameRate,
-                                target: 'camera',
-                                loopMode: 'repeat',
-                                interpolation: 'spline',
-                                smoothness,
-                                keyframes: {
-                                    times,
-                                    values: { position, target }
-                                }
-                            });
-
-                            break;
+                    if (includeAnimation && orderedPoses.length > 0) {
+                        const times: number[] = [];
+                        const position: number[] = [];
+                        const target: number[] = [];
+                        const fovKeys: number[] = [];
+                        for (let i = 0; i < orderedPoses.length; ++i) {
+                            const op = orderedPoses[i];
+                            times.push(op.frame);
+                            position.push(op.position.x, op.position.y, op.position.z);
+                            target.push(op.target.x, op.target.y, op.target.z);
+                            fovKeys.push(op.fov);
                         }
+
+                        animTracks.push({
+                            name: 'cameraAnim',
+                            duration: frames / frameRate,
+                            frameRate,
+                            loopMode: loopSelect.value as 'none' | 'repeat' | 'pingpong',
+                            interpolation: 'spline',
+                            smoothness,
+                            keyframes: {
+                                times,
+                                values: { position, target, fov: fovKeys }
+                            }
+                        });
                     }
 
-                    // build experience details
+                    const bgColor = colorPicker.value.slice(0, 3) as [number, number, number];
+
                     const experienceSettings: ExperienceSettings = {
-                        camera: {
-                            fov: fovSlider.value,
-                            position: p ? [p.x, p.y, p.z] : null,
-                            target: t ? [t.x, t.y, t.z] : null,
-                            startAnim,
-                            animTrack: startAnim === 'animTrack' ? 'cameraAnim' : null
-                        },
-                        background: {
-                            color: colorPicker.value.slice()
-                        },
-                        animTracks
+                        version: 2,
+                        tonemapping: 'none',
+                        highPrecisionRendering: false,
+                        background: { color: bgColor },
+                        postEffectSettings: defaultPostEffectSettings,
+                        animTracks,
+                        cameras,
+                        annotations: [],
+                        startMode: includeAnimation ? 'animTrack' : 'default',
+                        hasStartPose
                     };
 
                     const serializeSettings = {
                         maxSHBands: bandsSlider.value,
-                        minOpacity: 1 / 255,                    // remove completely semitransparent splats
-                        removeInvalid: true                     // remove gaussians with any NaN data
+                        minOpacity: 1 / 255,
+                        removeInvalid: true
                     };
 
                     resolve({
                         user: userStatus.user,
                         title: titleInput.value,
                         description: descInput.value,
-                        listed: listBoolean.value,
+                        listed: false,
                         serializeSettings,
                         experienceSettings,
                         overwriteId: overwriteSelect.value !== '0' ? userStatus.scenes[parseInt(overwriteSelect.value, 10) - 1].id : undefined

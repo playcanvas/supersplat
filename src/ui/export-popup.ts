@@ -4,16 +4,8 @@ import { Pose } from '../camera-poses';
 import { localize } from './localization';
 import { Events } from '../events';
 import { ExportType, SceneExportOptions } from '../file-handler';
-import { AnimTrack, ExperienceSettings, PostEffectSettings } from '../splat-serialize';
+import { AnimTrack, ExperienceSettings, defaultPostEffectSettings } from '../splat-serialize';
 import sceneExport from './svg/export.svg';
-
-const defaultPostEffectSettings: PostEffectSettings = {
-    sharpness: { enabled: false, amount: 0 },
-    bloom: { enabled: false, intensity: 1, blurLevel: 2 },
-    grading: { enabled: false, brightness: 0, contrast: 1, saturation: 1, tint: [1, 1, 1] },
-    vignette: { enabled: false, intensity: 0.5, inner: 0.3, outer: 0.75, curvature: 1 },
-    fringing: { enabled: false, intensity: 0.5 }
-};
 
 const createSvg = (svgString: string, args = {}) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));

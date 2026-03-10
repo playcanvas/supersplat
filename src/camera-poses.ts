@@ -9,7 +9,7 @@ type Pose = {
     frame: number,
     position: Vec3,
     target: Vec3,
-    fov: number
+    fov?: number
 };
 
 /**

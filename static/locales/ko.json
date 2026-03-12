@@ -115,6 +115,7 @@
     "popup.no": "아니요",
     "popup.error": "오류",
     "popup.error-loading": "파일 로드 오류",
+    "popup.lcc-upload-warning": "superspl.at에 더 나은 게시를 위해 업로드 페이지를 통해 LCC 파일을 직접 업로드하세요.",
     "popup.export": "내보내기",
     "popup.copy-to-clipboard": "클립 보드에 링크 복사",
     "popup.render-image.header": "이미지 설정",

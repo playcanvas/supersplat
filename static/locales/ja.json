@@ -115,6 +115,7 @@
     "popup.no": "いいえ",
     "popup.error": "エラー",
     "popup.error-loading": "ファイルの読み込みエラー",
+    "popup.lcc-upload-warning": "superspl.atへの公開には、アップロードページから直接LCCファイルをアップロードすることをお勧めします。",
     "popup.export": "エクスポート",
     "popup.copy-to-clipboard": "リンクをクリップボードにコピー",
     "popup.render-image.header": "画像設定",

@@ -115,6 +115,7 @@
     "popup.no": "Нет",
     "popup.error": "Ошибка",
     "popup.error-loading": "Ошибка загрузки файла",
+    "popup.lcc-upload-warning": "Для лучшей публикации на superspl.at загрузите LCC-файл напрямую через страницу загрузки.",
     "popup.export": "Экспорт",
     "popup.copy-to-clipboard": "Скопировать ссылку в буфер обмена",
     "popup.render-image.header": "Настройки изображения",

@@ -312,7 +312,17 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             events.fire('plysequence.setFrames', files.map(f => f.contents));
             events.fire('timeline.frame', 0);
         } else if (isSog(filenames) || isLcc(filenames)) {
-            // import multi-file splat model (SOG or LCC)
+            if (isLcc(filenames)) {
+                const response = await events.invoke('showPopup', {
+                    type: 'okcancel',
+                    header: 'LCC',
+                    message: localize('popup.lcc-upload-warning'),
+                    link: `${window.location.origin}/upload`
+                });
+                if (response.action === 'cancel') {
+                    return result;
+                }
+            }
             result.push(await importSplatModel(files, animationFrame));
         } else {
             // check for unrecognized file types

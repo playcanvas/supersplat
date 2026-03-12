@@ -115,6 +115,7 @@
     "popup.no": "No",
     "popup.error": "Error",
     "popup.error-loading": "Error al cargar archivo",
+    "popup.lcc-upload-warning": "Para una mejor publicación en superspl.at, suba su archivo LCC directamente a través de la página de carga.",
     "popup.export": "Exportar",
     "popup.copy-to-clipboard": "Copiar enlace al portapapeles",
     "popup.render-image.header": "Configuración de imagen",

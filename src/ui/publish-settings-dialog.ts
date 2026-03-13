@@ -260,9 +260,7 @@ class PublishSettingsDialog extends Container {
                     const pose = events.invoke('camera.getPose');
                     const p = pose?.position;
                     const t = pose?.target;
-                    const hasStartPose = !!(p && t);
-
-                    const cameras = hasStartPose ? [{
+                    const cameras = (p && t) ? [{
                         initial: {
                             position: [p.x, p.y, p.z] as [number, number, number],
                             target: [t.x, t.y, t.z] as [number, number, number],
@@ -312,8 +310,7 @@ class PublishSettingsDialog extends Container {
                         animTracks,
                         cameras,
                         annotations: [],
-                        startMode: includeAnimation ? 'animTrack' : 'default',
-                        hasStartPose
+                        startMode: includeAnimation ? 'animTrack' : 'default'
                     };
 
                     const serializeSettings = {

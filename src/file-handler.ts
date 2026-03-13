@@ -305,7 +305,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
     const importFiles = async (files: ImportFile[], animationFrame = false) => {
         const filenames = files.map(f => f.filename.toLowerCase());
 
-        const result = [];
+        const result: Splat[] = [];
 
         if (isPlySequence(filenames)) {
             // handle ply sequence
@@ -323,7 +323,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                     return result;
                 }
             }
-            result.push(await importSplatModel(files, animationFrame));
+            const model = await importSplatModel(files, animationFrame);
+            if (model) result.push(model);
         } else {
             // check for unrecognized file types
             for (let i = 0; i < filenames.length; i++) {
@@ -343,7 +344,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                     await events.invoke('doc.load', files[i].contents ?? (await fetch(files[i].url)).arrayBuffer(), files[i].handle);
                 } else if (['.ply', '.splat', '.sog', '.ksplat', '.spz'].some(ext => filename.endsWith(ext))) {
                     // load gaussian splat model
-                    result.push(await importSplatModel([files[i]], animationFrame));
+                    const model = await importSplatModel([files[i]], animationFrame);
+                    if (model) result.push(model);
                 } else if (filename.endsWith('images.txt')) {
                     // load colmap frames
                     await loadImagesTxt(files[i], events);

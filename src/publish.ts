@@ -312,7 +312,8 @@ const registerPublishEvents = (events: Events) => {
                 setTimeout(resolve, 10);
             });
 
-            const { overwriteId, overwriteHash, overrideModel, overrideAnimation } = publishSettings;
+            const { overwriteId, overwriteHash, overrideAnimation } = publishSettings;
+            const overrideModel = publishSettings.overrideModel ?? true;
 
             const mergeAnimation = (target: ExperienceSettings, source: ExperienceSettings) => {
                 target.animTracks = source.animTracks;
@@ -320,12 +321,14 @@ const registerPublishEvents = (events: Events) => {
             };
 
             if (overwriteId && !overrideModel) {
-                // animation-only update: fetch existing settings, merge animation, PUT settings
-                if (overrideAnimation) {
-                    const existingSettings = await fetchSceneSettings(publishSettings.user, overwriteId);
-                    mergeAnimation(existingSettings, publishSettings.experienceSettings);
-                    await updateSceneSettings(publishSettings.user, overwriteId, existingSettings);
+                if (!overrideAnimation) {
+                    throw new Error('No overrides selected');
                 }
+
+                // animation-only update: fetch existing settings, merge animation, PUT settings
+                const existingSettings = await fetchSceneSettings(publishSettings.user, overwriteId);
+                mergeAnimation(existingSettings, publishSettings.experienceSettings);
+                await updateSceneSettings(publishSettings.user, overwriteId, existingSettings);
 
                 await events.invoke('showPopup', {
                     type: 'info',

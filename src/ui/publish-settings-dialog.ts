@@ -185,7 +185,7 @@ class PublishSettingsDialog extends Container {
                     onCancel();
                     break;
                 case 'Enter':
-                    if (!e.shiftKey) onOK();
+                    if (!e.shiftKey && !okButton.disabled) onOK();
                     break;
                 default:
                     e.stopPropagation();

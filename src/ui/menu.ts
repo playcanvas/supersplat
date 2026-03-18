@@ -273,6 +273,14 @@ class Menu extends Container {
             text: localize('menu.help.video-tutorials.in-depth'),
             icon: 'E261',
             onSelect: () => window.open('https://youtu.be/J37rTieKgJ8', '_blank')?.focus()
+        }, {
+            text: localize('menu.help.video-tutorials.cleaning-up-floaters'),
+            icon: 'E261',
+            onSelect: () => window.open('https://youtu.be/8qaLfwkkSdU', '_blank')?.focus()
+        }, {
+            text: localize('menu.help.video-tutorials.scaling'),
+            icon: 'E261',
+            onSelect: () => window.open('https://youtu.be/fRK1vVMg_EU', '_blank')?.focus()
         }]);
 
         const helpMenuPanel = new MenuPanel([{

@@ -225,6 +225,8 @@
     "popup.publish.uploading": "Téléchargement",
     "popup.publish.to": "Publier sur",
     "popup.publish.new-scene": "Nouvelle scène",
+    "popup.publish.override-model": "Remplacer le modèle",
+    "popup.publish.override-animation": "Remplacer l'animation",
     "cursor.click-to-copy": "Cliquez pour copier",
     "cursor.copied": "Copié!",
     "doc.reset": "Réinitialiser la Scène",

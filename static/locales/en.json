@@ -225,6 +225,8 @@
     "popup.publish.uploading": "Uploading",
     "popup.publish.to": "Publish To",
     "popup.publish.new-scene": "New Scene",
+    "popup.publish.override-model": "Override Model",
+    "popup.publish.override-animation": "Override Animation",
     "cursor.click-to-copy": "Click to Copy",
     "cursor.copied": "Copied!",
     "doc.reset": "Reset Scene",

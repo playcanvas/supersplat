@@ -225,6 +225,8 @@
     "popup.publish.uploading": "업로드 중",
     "popup.publish.to": "다음에 게시",
     "popup.publish.new-scene": "새 장면",
+    "popup.publish.override-model": "모델 덮어쓰기",
+    "popup.publish.override-animation": "애니메이션 덮어쓰기",
     "cursor.click-to-copy": "클릭하여 복사",
     "cursor.copied": "복사됨!",
     "doc.reset": "장면 재설정",

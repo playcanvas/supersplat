@@ -225,6 +225,8 @@
     "popup.publish.uploading": "Загрузка",
     "popup.publish.to": "Опубликовать в",
     "popup.publish.new-scene": "Новая сцена",
+    "popup.publish.override-model": "Заменить модель",
+    "popup.publish.override-animation": "Заменить анимацию",
     "cursor.click-to-copy": "Нажмите, чтобы скопировать",
     "cursor.copied": "Скопировано!",
     "doc.reset": "Сбросить сцену",

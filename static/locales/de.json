@@ -225,6 +225,8 @@
     "popup.publish.uploading": "Hochladen",
     "popup.publish.to": "Veröffentlichen in",
     "popup.publish.new-scene": "Neue Szene",
+    "popup.publish.override-model": "Modell überschreiben",
+    "popup.publish.override-animation": "Animation überschreiben",
     "cursor.click-to-copy": "Klicken zum Kopieren",
     "cursor.copied": "Kopiert!",
     "doc.reset": "Szene Zurücksetzen",

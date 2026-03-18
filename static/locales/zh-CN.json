@@ -225,6 +225,8 @@
     "popup.publish.uploading": "上传中",
     "popup.publish.to": "发布到",
     "popup.publish.new-scene": "新场景",
+    "popup.publish.override-model": "覆盖模型",
+    "popup.publish.override-animation": "覆盖动画",
     "cursor.click-to-copy": "点击复制",
     "cursor.copied": "已复制!",
     "doc.reset": "重置场景",

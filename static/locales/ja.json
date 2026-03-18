@@ -225,6 +225,8 @@
     "popup.publish.uploading": "アップロード中",
     "popup.publish.to": "公開先",
     "popup.publish.new-scene": "新規シーンを作成",
+    "popup.publish.override-model": "モデルを上書き",
+    "popup.publish.override-animation": "アニメーションを上書き",
     "cursor.click-to-copy": "クリックしてコピー",
     "cursor.copied": "コピーしました！",
     "doc.reset": "シーンをリセット",

@@ -274,7 +274,7 @@ class Menu extends Container {
             icon: 'E261',
             onSelect: () => window.open('https://youtu.be/J37rTieKgJ8', '_blank')?.focus()
         }, {
-            text: localize('menu.help.video-tutorials.cleaning-up-floaters'),
+            text: localize('menu.help.video-tutorials.deleting-floaters'),
             icon: 'E261',
             onSelect: () => window.open('https://youtu.be/8qaLfwkkSdU', '_blank')?.focus()
         }, {

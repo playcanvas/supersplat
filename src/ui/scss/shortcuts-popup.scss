@@ -23,7 +23,7 @@
         border-radius: 8px;
         background-color: $bcg-primary;
 
-        filter: drop-shadow(5px 5px 10px rgba(0, 0, 0, 0.8));
+        filter: drop-shadow(5px 5px 10px rgba(0, 0, 0, 0.15));
 
         // the following is needed to get drop-shadow working on safari
         will-change: transform;
@@ -51,7 +51,7 @@
     .shortcut-header {
         margin: 8px 0 4px 0;
         padding: 6px 8px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 
         &:first-child {
             margin-top: 0;
@@ -75,7 +75,7 @@
         border-radius: 4px;
 
         &:hover {
-            background-color: rgba(255, 255, 255, 0.04);
+            background-color: rgba(0, 0, 0, 0.04);
         }
     }
 

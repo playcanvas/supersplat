@@ -5,7 +5,7 @@
     border-radius: 8px;
     overflow: hidden;
 
-    background-color: $bcg-primary;
+    background-color: $bcg-secondary;
 
     & > .panel-header {
         display: flex;
@@ -13,7 +13,7 @@
         align-items: center;
         padding: 2px;
 
-        background-color: $bcg-dark;
+        background-color: $bcg-primary;
 
         & > .panel-header-icon {
             font-family: pc-icon;
@@ -49,8 +49,8 @@
         }
     
         &:hover {
-            color: #ff9900;
-            background-color: $bcg-darkest;
+            color: $clr-hilight;
+            background-color: $bg-light-hover;
             cursor: pointer;
         }
     }

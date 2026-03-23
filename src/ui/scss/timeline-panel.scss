@@ -37,10 +37,10 @@
                 line-height: 24px;
 
                 &:hover {
-                    color: #ff9900;
+                    color: $clr-hilight;
                     cursor: pointer;
                     box-shadow: none;
-                    border-color: #ff990088;
+                    border-color: rgba(0, 0, 0, 0.3);
                 }
             }
         }

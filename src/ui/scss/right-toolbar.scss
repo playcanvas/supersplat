@@ -86,7 +86,7 @@
     &>.right-toolbar-toggle.active {
         // highlight icon
         &::before {
-            color: $clr-hilight;
+            color: $bcg-primary;
         }
 
         svg {

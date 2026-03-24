@@ -8,8 +8,8 @@
     pointer-events: auto;
     z-index: 10;
     height: 32px;
-    padding: 0 18px;
-    border-radius: 10px;
+    padding: 0 40px;
+    border-radius: 5px;
     background-color: $bcg-darker;
     color: $text-secondary;
     border: 1px solid rgba(0, 0, 0, 0.1);
@@ -21,9 +21,7 @@
     transition: all 0.2s ease;
 
     &:hover:not(:disabled) {
-        color: $text-primary;
-        background-color: $clr-hilight;
-        border-color: rgba(0, 0, 0, 0.2);
+        opacity: 0.7;
     }
 
     &:disabled {
@@ -33,9 +31,17 @@
 }
 
 #cancel-splat-button {
-    left: calc(50% - 90px);
+    left: calc(50% - 110px);
+    background-color: $bg-light-active;
+    color: $text-light;
+    font-weight: bold;
+    border-width: 1px;
+    border-color: $bcg-primary;
 }
 
 #submit-splat-button {
-    left: calc(50% + 30px);
+    left: calc(50% + 20px);
+    background-color: $bcg-primary;
+    color: $text-primary;
+    font-weight: bold;
 }

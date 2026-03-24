@@ -21,7 +21,7 @@ const isInIframe = (): boolean => {
 const createIframeControls = (events: Events, scene: Scene): { submit: HTMLButtonElement, cancel: HTMLButtonElement } => {
     const submitButton = document.createElement('button');
     submitButton.id = 'submit-splat-button';
-    submitButton.textContent = 'Submit';
+    submitButton.textContent = 'Upload';
     submitButton.className = 'iframe-control-button';
 
     const cancelButton = document.createElement('button');

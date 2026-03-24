@@ -24,6 +24,7 @@
 @use 'timeline-panel.scss';
 @use 'tool.scss';
 @use 'iframe-controls.scss';
+@use 'render-sub-panel.scss';
 
 * {
     font-size: 12px;
@@ -301,7 +302,7 @@ body {
         background-color: $bg-light-hover !important;
         color: $text-primary !important;
         border-width: px !important;
-        box-shadow: 0 0 0 2px $bcg-primary !important;
+        box-shadow: 0 0 0 2px $bg-light-hover !important;
     }
 
 }

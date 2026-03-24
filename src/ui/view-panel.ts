@@ -313,33 +313,6 @@ class ViewPanel extends Container {
         this.append(showGridRow);
         this.append(showBoundRow);
 
-        // handle panel visibility
-
-        const setVisible = (visible: boolean) => {
-            if (visible === this.hidden) {
-                this.hidden = !visible;
-                events.fire('viewPanel.visible', visible);
-            }
-        };
-
-        events.function('viewPanel.visible', () => {
-            return !this.hidden;
-        });
-
-        events.on('viewPanel.setVisible', (visible: boolean) => {
-            setVisible(visible);
-        });
-
-        events.on('viewPanel.toggleVisible', () => {
-            setVisible(this.hidden);
-        });
-
-        events.on('colorPanel.visible', (visible: boolean) => {
-            if (visible) {
-                setVisible(false);
-            }
-        });
-
         // sh bands
 
         events.on('view.bands', (bands: number) => {

@@ -310,15 +310,31 @@ class Menu extends Container {
         this.append(videoTutorialsMenuPanel);
         this.append(helpMenuPanel);
 
+        // Track render sub panel state
+        let renderSubPanelOpen = false;
+
+        // Render menu click toggles the RenderSubPanel (Edit/Views/Annotation tabs)
+        render.dom.addEventListener('pointerdown', (event: PointerEvent) => {
+            event.stopPropagation();
+            // close any open menu panels
+            [fileMenuPanel, selectionMenuPanel, renderMenuPanel, helpMenuPanel].forEach(p => p.hidden = true);
+            renderSubPanelOpen = !renderSubPanelOpen;
+            events.fire('renderSubPanel.setVisible', renderSubPanelOpen);
+            render.dom.classList.toggle('active', renderSubPanelOpen);
+        });
+
+        // Sync active class when panel is hidden by other means
+        events.on('renderSubPanel.visibilityChanged', (visible: boolean) => {
+            renderSubPanelOpen = visible;
+            render.dom.classList.toggle('active', visible);
+        });
+
         const options: { dom: HTMLElement, menuPanel: MenuPanel }[] = [{
             dom: scene.dom,
             menuPanel: fileMenuPanel
         }, {
             dom: selection.dom,
             menuPanel: selectionMenuPanel
-        }, {
-            dom: render.dom,
-            menuPanel: renderMenuPanel
         }, {
             dom: help.dom,
             menuPanel: helpMenuPanel
@@ -330,6 +346,8 @@ class Menu extends Container {
                 options.forEach((opt) => {
                     opt.menuPanel.hidden = opt !== option;
                 });
+                // Hide render sub panel when a dropdown menu opens
+                events.fire('renderSubPanel.setVisible', false);
             };
 
             option.dom.addEventListener('pointerdown', (event: PointerEvent) => {

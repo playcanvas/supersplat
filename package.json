@@ -16,7 +16,7 @@
     "scripts": {
         "build": "rollup -c",
         "watch": "rollup -c -w",
-        "serve": "serve dist -C",
+        "serve": "serve dist -C -l 8000",
         "develop": "cross-env BUILD_TYPE=debug concurrently --kill-others \"npm run watch\" \"npm run serve\"",
         "develop:auto-launch": "concurrently --kill-others \"xdg-open 'http://localhost:3000/'\" \"npm run watch\" \"npm run serve\"",
         "lint": "eslint src"

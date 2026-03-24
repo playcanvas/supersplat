@@ -33,6 +33,7 @@ import { ToolManager } from './tools/tool-manager';
 import { registerTransformHandlerEvents } from './transform-handler';
 import { EditorUI } from './ui/editor';
 import { localizeInit } from './ui/localization';
+import { ViewManager } from './view-manager';
 
 declare global {
     interface LaunchParams {
@@ -233,6 +234,9 @@ const main = async () => {
     editorUI.toolsContainer.dom.appendChild(maskCanvas);
 
     window.scene = scene;
+
+    // view manager for saving/restoring camera views
+    new ViewManager(events);
 
     // register events that need scene or other dependencies
     registerEditorEvents(events, editHistory, scene);

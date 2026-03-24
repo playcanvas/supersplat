@@ -195,6 +195,14 @@ export const initIframeIntegration = (events: Events, scene: Scene) => {
             throw new Error('Failed to export PLY');
         }
 
+        // Collect saved views
+        let views = null;
+        try {
+            views = events.invoke('views.list');
+        } catch (error) {
+            console.error('[IframeIntegration] Error getting views:', error);
+        }
+
         // Send data to parent window
         window.parent.postMessage({
             type: 'splat-editor-submit',
@@ -202,7 +210,8 @@ export const initIframeIntegration = (events: Events, scene: Scene) => {
                 thumbnail: thumbnail,
                 plyFile: plyData.data,
                 filename: plyData.filename,
-                cameraPose: cameraPose
+                cameraPose: cameraPose,
+                views: views
             }
         }, '*');
 
@@ -234,8 +243,30 @@ export const initIframeIntegration = (events: Events, scene: Scene) => {
 
     // Listen for messages from parent
     window.addEventListener('message', async (e) => {
-        if (e.data?.type === 'supersplat:import') {
+        if (e.data?.type === 'supersplat:load-views') {
+            console.log('[IframeIntegration] Load views message received');
+            const views = e.data.views;
+            if (views && Array.isArray(views)) {
+                try {
+                    events.invoke('views.load', views);
+                    console.log('[IframeIntegration] Successfully loaded views:', views.length);
+                } catch (error) {
+                    console.error('[IframeIntegration] Failed to load views:', error);
+                }
+            }
+        } else if (e.data?.type === 'supersplat:import') {
             console.log('[IframeIntegration] Import message received:', e.data);
+
+            // Load views if included in the import message
+            if (e.data.views && Array.isArray(e.data.views)) {
+                try {
+                    events.invoke('views.load', e.data.views);
+                    console.log('[IframeIntegration] Loaded views from import message:', e.data.views.length);
+                } catch (error) {
+                    console.error('[IframeIntegration] Failed to load views from import:', error);
+                }
+            }
+
             const files = e.data.files;
 
             if (files && files.length > 0) {

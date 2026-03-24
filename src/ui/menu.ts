@@ -12,7 +12,6 @@ import sceneExport from './svg/export.svg';
 import sceneImport from './svg/import.svg';
 import sceneNew from './svg/new.svg';
 import sceneOpen from './svg/open.svg';
-import scenePublish from './svg/publish.svg';
 import sceneSave from './svg/save.svg';
 import selectAll from './svg/select-all.svg';
 import selectDuplicate from './svg/select-duplicate.svg';
@@ -197,11 +196,6 @@ class Menu extends Container {
             text: localize('menu.file.export'),
             icon: createSvg(sceneExport),
             subMenu: exportMenuPanel
-        }, {
-            text: localize('menu.file.publish', { ellipsis: true }),
-            icon: createSvg(scenePublish),
-            isEnabled: () => !events.invoke('scene.empty'),
-            onSelect: async () => await events.invoke('show.publishSettingsDialog')
         }]);
 
         const selectionMenuPanel = new MenuPanel([{
@@ -292,21 +286,13 @@ class Menu extends Container {
         }, {
             text: localize('menu.help.discord'),
             icon: 'E233',
-            onSelect: () => window.open('https://discord.gg/T3pnhRTTAY', '_blank')?.focus()
-        }, {
-            text: localize('menu.help.forum'),
-            icon: 'E432',
-            onSelect: () => window.open('https://forum.playcanvas.com', '_blank')?.focus()
+            onSelect: () => window.open('https://discord.com/tMER99295V', '_blank')?.focus()
         }, {
             // separator
         }, {
-            text: localize('menu.help.github-repo'),
-            icon: 'E259',
-            onSelect: () => window.open('https://github.com/playcanvas/supersplat', '_blank')?.focus()
-        }, {
             text: localize('menu.help.log-issue'),
             icon: 'E336',
-            onSelect: () => window.open('https://github.com/playcanvas/supersplat/issues', '_blank')?.focus()
+            onSelect: () => window.open('mailto:will@braintrance.net')
         }, {
             // separator
         }, {

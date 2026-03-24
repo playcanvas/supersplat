@@ -2,6 +2,12 @@ import { Button, Container, Label, TextInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { View } from '../view-manager';
+import deleteSvg from './svg/delete.svg';
+
+const createSvg = (svgString: string) => {
+    const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
+    return new DOMParser().parseFromString(decodedStr, 'image/svg+xml').documentElement;
+};
 
 class ViewsPanel extends Container {
     constructor(events: Events, args = {}) {
@@ -67,23 +73,37 @@ class ViewsPanel extends Container {
                     class: 'views-item-edit'
                 });
 
+                let activeInput: TextInput | null = null;
+
+                const cleanupEdit = () => {
+                    if (activeInput) {
+                        activeInput.dom.remove();
+                        activeInput.destroy();
+                        activeInput = null;
+                        nameLabel.hidden = false;
+                    }
+                };
+
                 editButton.on('click', () => {
-                    // Replace name label with text input for inline editing
+                    if (activeInput) return;
+
                     const input = new TextInput({
                         value: view.name,
                         class: 'views-item-name-input'
                     });
+                    activeInput = input;
 
                     nameLabel.hidden = true;
                     row.dom.insertBefore(input.dom, editButton.dom);
 
                     const finishEdit = () => {
+                        if (activeInput !== input) return;
                         const newName = input.value.trim();
                         if (newName && newName !== view.name) {
+                            cleanupEdit();
                             events.invoke('views.rename', index, newName);
                         } else {
-                            nameLabel.hidden = false;
-                            input.destroy();
+                            cleanupEdit();
                         }
                     };
 
@@ -94,8 +114,7 @@ class ViewsPanel extends Container {
                         if (e.key === 'Enter') {
                             finishEdit();
                         } else if (e.key === 'Escape') {
-                            nameLabel.hidden = false;
-                            input.destroy();
+                            cleanupEdit();
                         }
                     });
 
@@ -105,9 +124,10 @@ class ViewsPanel extends Container {
                 });
 
                 const deleteButton = new Button({
-                    text: '\uE107',
                     class: 'views-item-delete'
                 });
+
+                deleteButton.dom.appendChild(createSvg(deleteSvg));
 
                 deleteButton.on('click', () => {
                     events.invoke('views.remove', index);

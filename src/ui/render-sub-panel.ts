@@ -1,9 +1,18 @@
-import { Button, Container } from '@playcanvas/pcui';
+import { Button, Container, Element, Label } from '@playcanvas/pcui';
 
 import { Events } from '../events';
+import { localize } from './localization';
+import { SplatList } from './splat-list';
+import sceneImportSvg from './svg/import.svg';
+import sceneNewSvg from './svg/new.svg';
 import { Tooltips } from './tooltips';
-import { ViewPanel } from './view-panel';
+import { Transform } from './transform';
 import { ViewsPanel } from './views-panel';
+
+const createSvg = (svgString: string) => {
+    const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
+    return new DOMParser().parseFromString(decodedStr, 'image/svg+xml').documentElement;
+};
 
 class RenderSubPanel extends Container {
     constructor(events: Events, tooltips: Tooltips, args = {}) {
@@ -47,12 +56,85 @@ class RenderSubPanel extends Container {
         tabBar.append(viewsTab);
         tabBar.append(annotationTab);
 
-        // tab content
-        const editContent = new ViewPanel(events, tooltips, {
+        // tab content - Scene Manager UI for Edit tab
+        const editContent = new Container({
             id: 'render-sub-edit-content',
             class: 'render-sub-content',
             hidden: false
         });
+
+        const sceneHeader = new Container({
+            class: 'panel-header'
+        });
+
+        const sceneIcon = new Label({
+            text: '\uE344',
+            class: 'panel-header-icon'
+        });
+
+        const sceneLabel = new Label({
+            text: localize('panel.scene-manager'),
+            class: 'panel-header-label'
+        });
+
+        const sceneImport = new Container({
+            class: 'panel-header-button'
+        });
+        sceneImport.dom.appendChild(createSvg(sceneImportSvg));
+
+        const sceneNew = new Container({
+            class: 'panel-header-button'
+        });
+        sceneNew.dom.appendChild(createSvg(sceneNewSvg));
+
+        sceneHeader.append(sceneIcon);
+        sceneHeader.append(sceneLabel);
+        sceneHeader.append(sceneImport);
+        sceneHeader.append(sceneNew);
+
+        sceneImport.on('click', async () => {
+            await events.invoke('scene.import');
+        });
+
+        sceneNew.on('click', () => {
+            events.invoke('doc.new');
+        });
+
+        tooltips.register(sceneImport, 'Import Scene', 'top');
+        tooltips.register(sceneNew, 'New Scene', 'top');
+
+        const splatList = new SplatList(events);
+
+        const splatListContainer = new Container({
+            class: 'splat-list-container'
+        });
+        splatListContainer.append(splatList);
+
+        const transformHeader = new Container({
+            class: 'panel-header'
+        });
+
+        const transformIcon = new Label({
+            text: '\uE111',
+            class: 'panel-header-icon'
+        });
+
+        const transformLabel = new Label({
+            text: localize('panel.scene-manager.transform'),
+            class: 'panel-header-label'
+        });
+
+        transformHeader.append(transformIcon);
+        transformHeader.append(transformLabel);
+
+        editContent.append(sceneHeader);
+        editContent.append(splatListContainer);
+        editContent.append(transformHeader);
+        editContent.append(new Transform(events));
+        editContent.append(new Element({
+            class: 'panel-header',
+            height: 20
+        }));
 
         const viewsContent = new ViewsPanel(events, {
             class: 'render-sub-content',

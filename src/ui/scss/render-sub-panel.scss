@@ -16,6 +16,29 @@
         border-radius: 0 0 10px 10px;
         overflow: visible;
         background-color: rgba(251, 252, 255, 0.95);
+
+        // Re-apply panel-header flex styles since these are not direct children of .panel
+        > .panel-header {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            padding: 2px;
+            background-color: $bcg-primary;
+
+            > .panel-header-icon {
+                font-family: pc-icon;
+                font-weight: bold;
+                font-size: 13px;
+                color: $clr-hilight;
+            }
+
+            > .panel-header-label {
+                color: $text-primary;
+                font-weight: bold;
+                flex-grow: 1;
+                text-transform: uppercase;
+            }
+        }
     }
 }
 

@@ -1,6 +1,7 @@
 import { Button, Container, Element, Label } from '@playcanvas/pcui';
 
 import { Events } from '../events';
+import { AnnotationsPanel } from './annotations-panel';
 import { localize } from './localization';
 import { SplatList } from './splat-list';
 import sceneImportSvg from './svg/import.svg';
@@ -20,14 +21,42 @@ class RenderSubPanel extends Container {
             ...args,
             id: 'render-sub-panel',
             class: 'panel',
-            hidden: true
+            hidden: false
         };
 
         super(args);
 
-        // stop pointer events bubbling
-        ['pointerdown', 'pointerup', 'pointermove', 'wheel', 'dblclick'].forEach((eventName) => {
-            this.dom.addEventListener(eventName, (event: Event) => event.stopPropagation());
+        // stop pointer events bubbling (but allow drag handle events through for SortableJS)
+        let isDraggingSort = false;
+
+        this.dom.addEventListener('pointerdown', (event: Event) => {
+            const target = event.target as HTMLElement;
+            if (target?.closest('.views-item-drag, .annotations-item-drag')) {
+                isDraggingSort = true;
+                return;
+            }
+            event.stopPropagation();
+        });
+
+        this.dom.addEventListener('pointerup', (event: Event) => {
+            if (isDraggingSort) {
+                isDraggingSort = false;
+                return;
+            }
+            event.stopPropagation();
+        });
+
+        this.dom.addEventListener('pointermove', (event: Event) => {
+            if (isDraggingSort) {
+                return;
+            }
+            event.stopPropagation();
+        });
+
+        ['wheel', 'dblclick'].forEach((eventName) => {
+            this.dom.addEventListener(eventName, (event: Event) => {
+                event.stopPropagation();
+            });
         });
 
         // tab bar
@@ -141,13 +170,10 @@ class RenderSubPanel extends Container {
             hidden: true
         });
 
-        const annotationContent = new Container({
+        const annotationContent = new AnnotationsPanel(events, {
             class: 'render-sub-content',
             hidden: true
         });
-
-        // annotation placeholder
-        // (will be implemented later)
 
         this.append(tabBar);
         this.append(editContent);
@@ -174,47 +200,9 @@ class RenderSubPanel extends Container {
         viewsTab.on('click', () => activateTab(1));
         annotationTab.on('click', () => activateTab(2));
 
-        // handle panel visibility
-        const setVisible = (visible: boolean) => {
-            if (visible === this.hidden) {
-                this.hidden = !visible;
-                // Fire events for compatibility with right toolbar and menu
-                events.fire('viewPanel.visible', visible);
-                events.fire('renderSubPanel.visibilityChanged', visible);
-            }
-        };
-
-        events.function('viewPanel.visible', () => {
-            return !this.hidden;
-        });
-
-        events.function('renderSubPanel.visible', () => {
-            return !this.hidden;
-        });
-
-        // Respond to existing viewPanel events from right toolbar
-        events.on('viewPanel.setVisible', (visible: boolean) => {
-            setVisible(visible);
-        });
-
-        events.on('viewPanel.toggleVisible', () => {
-            setVisible(this.hidden);
-        });
-
-        events.on('renderSubPanel.setVisible', (visible: boolean) => {
-            setVisible(visible);
-        });
-
-        events.on('renderSubPanel.toggleVisible', () => {
-            setVisible(this.hidden);
-        });
-
-        // Hide when color panel opens
-        events.on('colorPanel.visible', (visible: boolean) => {
-            if (visible) {
-                setVisible(false);
-            }
-        });
+        // Panel is always visible — register query functions for compatibility
+        events.function('viewPanel.visible', () => true);
+        events.function('renderSubPanel.visible', () => true);
     }
 }
 

@@ -1,6 +1,7 @@
 import { WebPCodec } from '@playcanvas/splat-transform';
 import { Color, createGraphicsDevice } from 'playcanvas';
 
+import { AnnotationManager } from './annotation-manager';
 import { registerCameraPosesEvents } from './camera-poses';
 import { registerDocEvents } from './doc';
 import { EditHistory } from './edit-history';
@@ -31,6 +32,7 @@ import { ScaleTool } from './tools/scale-tool';
 import { SphereSelection } from './tools/sphere-selection';
 import { ToolManager } from './tools/tool-manager';
 import { registerTransformHandlerEvents } from './transform-handler';
+import { AnnotationOverlay } from './ui/annotation-overlay';
 import { EditorUI } from './ui/editor';
 import { localizeInit } from './ui/localization';
 import { ViewManager } from './view-manager';
@@ -237,6 +239,12 @@ const main = async () => {
 
     // view manager for saving/restoring camera views
     new ViewManager(events);
+
+    // annotation manager for 3D annotations
+    new AnnotationManager(events);
+
+    // annotation overlay for rendering annotation markers on canvas
+    new AnnotationOverlay(events, scene, editorUI.canvasContainer.dom);
 
     // register events that need scene or other dependencies
     registerEditorEvents(events, editHistory, scene);

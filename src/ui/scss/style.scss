@@ -1,6 +1,7 @@
 @use 'pcui-theme-grey.scss';
 @use 'colors.scss' as *;
 @use 'tooltips.scss';
+
 @use 'panel.scss';
 @use 'menu-panel.scss';
 @use 'menu.scss';
@@ -25,8 +26,10 @@
 @use 'tool.scss';
 @use 'iframe-controls.scss';
 @use 'render-sub-panel.scss';
+@use 'annotation-overlay.scss';
 
 * {
+    font-family: 'Rajdhani', sans-serif;
     font-size: 12px;
     user-select: none;
     overscroll-behavior: none;
@@ -216,26 +219,26 @@ body {
 }
 
 .font-thin {
-    font-family: 'Proxima Nova Thin', 'Helvetica Neue', Arial, Helvetica, sans-serif;
-    font-weight: 100;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 300;
     font-style: normal;
 }
 
 .font-light {
-    font-family: 'Proxima Nova Light', 'Helvetica Neue', Arial, Helvetica, sans-serif;
-    font-weight: 200;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 400;
     font-style: normal;
 }
 
 .font-regular {
-    font-family: 'Proxima Nova Regular', 'Helvetica Neue', Arial, Helvetica, sans-serif;
-    font-weight: normal;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 500;
     font-style: normal;
 }
 
 .font-bold {
-    font-family: 'Proxima Nova Bold', 'Helvetica Neue', Arial, Helvetica, sans-serif;
-    font-weight: bold;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
     font-style: normal;
 }
 

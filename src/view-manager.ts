@@ -68,6 +68,14 @@ class ViewManager {
             events.fire('views.changed', this.views);
         });
 
+        events.function('views.reorder', (fromIndex: number, toIndex: number) => {
+            if (fromIndex >= 0 && fromIndex < this.views.length && toIndex >= 0 && toIndex < this.views.length && fromIndex !== toIndex) {
+                const [item] = this.views.splice(fromIndex, 1);
+                this.views.splice(toIndex, 0, item);
+                events.fire('views.changed', this.views);
+            }
+        });
+
         events.function('views.update', (index: number) => {
             if (index >= 0 && index < this.views.length) {
                 const pose = events.invoke('camera.getPose');

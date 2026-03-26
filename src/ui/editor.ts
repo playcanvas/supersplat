@@ -134,10 +134,8 @@ class EditorUI {
         canvasContainer.append(rightToolbar);
         canvasContainer.append(menu);
 
-        // Hide scene panel when render sub panel is open, show when closed
-        events.on('renderSubPanel.visibilityChanged', (visible: boolean) => {
-            scenePanel.hidden = visible;
-        });
+        // Render sub panel is always visible, so hide the scene panel permanently
+        scenePanel.hidden = true;
 
         // view axes container
         const viewCube = new ViewCube(events);

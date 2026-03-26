@@ -1,4 +1,5 @@
 import { Button, Container, Label, TextInput } from '@playcanvas/pcui';
+import Sortable from 'sortablejs';
 
 import { Events } from '../events';
 import { View } from '../view-manager';
@@ -46,13 +47,31 @@ class ViewsPanel extends Container {
         this.append(listContainer);
         this.append(createButton);
 
+        let sortableInstance: Sortable | null = null;
+        let isReordering = false;
+
         const rebuildList = (views: View[]) => {
+            // Skip rebuild if we're in the middle of a SortableJS reorder
+            // (SortableJS already moved the DOM elements)
+            if (isReordering) {
+                isReordering = false;
+                return;
+            }
+
+            // Destroy previous sortable instance
+            if (sortableInstance) {
+                sortableInstance.destroy();
+                sortableInstance = null;
+            }
+
             listContainer.clear();
 
             views.forEach((view, index) => {
                 const row = new Container({
                     class: 'views-list-item'
                 });
+
+                row.dom.dataset.index = String(index);
 
                 const dragHandle = new Label({
                     text: '\u2237',
@@ -140,6 +159,27 @@ class ViewsPanel extends Container {
 
                 listContainer.append(row);
             });
+
+            // Initialize SortableJS
+            if (views.length > 1) {
+                sortableInstance = Sortable.create(listContainer.dom, {
+                    handle: '.views-item-drag',
+                    animation: 150,
+                    forceFallback: true,
+                    fallbackClass: 'sortable-fallback',
+                    ghostClass: 'sortable-ghost',
+                    chosenClass: 'sortable-chosen',
+                    dragClass: 'sortable-drag',
+                    onEnd: (evt) => {
+                        const oldIndex = evt.oldIndex;
+                        const newIndex = evt.newIndex;
+                        if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
+                            isReordering = true;
+                            events.invoke('views.reorder', oldIndex, newIndex);
+                        }
+                    }
+                });
+            }
         };
 
         events.on('views.changed', (views: View[]) => {

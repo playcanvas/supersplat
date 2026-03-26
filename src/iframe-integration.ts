@@ -203,6 +203,14 @@ export const initIframeIntegration = (events: Events, scene: Scene) => {
             console.error('[IframeIntegration] Error getting views:', error);
         }
 
+        // Collect saved annotations
+        let annotations = null;
+        try {
+            annotations = events.invoke('annotations.list');
+        } catch (error) {
+            console.error('[IframeIntegration] Error getting annotations:', error);
+        }
+
         // Send data to parent window
         window.parent.postMessage({
             type: 'splat-editor-submit',
@@ -211,7 +219,8 @@ export const initIframeIntegration = (events: Events, scene: Scene) => {
                 plyFile: plyData.data,
                 filename: plyData.filename,
                 cameraPose: cameraPose,
-                views: views
+                views: views,
+                annotations: annotations
             }
         }, '*');
 
@@ -254,6 +263,17 @@ export const initIframeIntegration = (events: Events, scene: Scene) => {
                     console.error('[IframeIntegration] Failed to load views:', error);
                 }
             }
+        } else if (e.data?.type === 'supersplat:load-annotations') {
+            console.log('[IframeIntegration] Load annotations message received');
+            const annotations = e.data.annotations;
+            if (annotations && Array.isArray(annotations)) {
+                try {
+                    events.invoke('annotations.load', annotations);
+                    console.log('[IframeIntegration] Successfully loaded annotations:', annotations.length);
+                } catch (error) {
+                    console.error('[IframeIntegration] Failed to load annotations:', error);
+                }
+            }
         } else if (e.data?.type === 'supersplat:import') {
             console.log('[IframeIntegration] Import message received:', e.data);
 
@@ -264,6 +284,16 @@ export const initIframeIntegration = (events: Events, scene: Scene) => {
                     console.log('[IframeIntegration] Loaded views from import message:', e.data.views.length);
                 } catch (error) {
                     console.error('[IframeIntegration] Failed to load views from import:', error);
+                }
+            }
+
+            // Load annotations if included in the import message
+            if (e.data.annotations && Array.isArray(e.data.annotations)) {
+                try {
+                    events.invoke('annotations.load', e.data.annotations);
+                    console.log('[IframeIntegration] Loaded annotations from import message:', e.data.annotations.length);
+                } catch (error) {
+                    console.error('[IframeIntegration] Failed to load annotations from import:', error);
                 }
             }
 

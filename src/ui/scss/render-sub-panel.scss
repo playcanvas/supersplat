@@ -133,9 +133,35 @@
 .views-item-drag {
     cursor: grab;
     color: $text-darkest !important;
-    font-size: 14px !important;
-    padding: 0 2px;
+    font-size: 16px !important;
+    padding: 4px 8px;
     flex-shrink: 0;
+    user-select: none;
+    touch-action: none;
+
+    &:active {
+        cursor: grabbing;
+    }
+}
+
+.views-list-item.sortable-ghost {
+    opacity: 0.3;
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.views-list-item.sortable-chosen {
+    background-color: $bcg-primary;
+}
+
+.views-list-item.sortable-fallback {
+    opacity: 0.9;
+    background-color: $bcg-primary;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+}
+
+.views-list-item.sortable-drag {
+    opacity: 0 !important;
 }
 
 .views-item-name {

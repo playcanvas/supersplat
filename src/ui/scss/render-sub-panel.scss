@@ -13,8 +13,8 @@
         top: auto;
         left: auto;
         width: auto;
-        border-radius: 0 0 10px 10px;
-        overflow: visible;
+        border-radius: 5px;
+        overflow: hidden;
         background-color: rgba(251, 252, 255, 0.95);
 
         // Re-apply panel-header flex styles since these are not direct children of .panel

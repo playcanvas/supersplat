@@ -12,6 +12,7 @@ import { Menu } from './menu';
 import logo from './playcanvas-logo.png';
 import { Popup, ShowOptions } from './popup';
 import { Progress } from './progress';
+import { RenderSubPanel } from './render-sub-panel';
 import { RightToolbar } from './right-toolbar';
 import { ScenePanel } from './scene-panel';
 import { ShortcutsPopup } from './shortcuts-popup';
@@ -20,7 +21,7 @@ import { TimelinePanel } from './timeline-panel';
 import { Tooltips } from './tooltips';
 import { VideoSettingsDialog } from './video-settings-dialog';
 import { ViewCube } from './view-cube';
-import { RenderSubPanel } from './render-sub-panel';
+import { ViewPanel } from './view-panel';
 import { version } from '../../package.json';
 
 // ts compiler and vscode find this type, but eslint does not
@@ -118,6 +119,7 @@ class EditorUI {
         // bottom toolbar
         const scenePanel = new ScenePanel(events, tooltips);
         const renderSubPanel = new RenderSubPanel(events, tooltips);
+        const viewPanel = new ViewPanel(events, tooltips);
         const colorPanel = new ColorPanel(events, tooltips);
         const bottomToolbar = new BottomToolbar(events, tooltips);
         const rightToolbar = new RightToolbar(events, tooltips);
@@ -129,6 +131,7 @@ class EditorUI {
         canvasContainer.append(toolsContainer);
         canvasContainer.append(scenePanel);
         canvasContainer.append(renderSubPanel);
+        canvasContainer.append(viewPanel);
         canvasContainer.append(colorPanel);
         canvasContainer.append(bottomToolbar);
         canvasContainer.append(rightToolbar);

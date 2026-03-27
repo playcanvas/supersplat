@@ -430,6 +430,33 @@ class ViewPanel extends Container {
         tooltips.register(selectedClrPicker, localize('panel.view-options.selected-color'), 'top');
         tooltips.register(unselectedClrPicker, localize('panel.view-options.unselected-color'), 'top');
         tooltips.register(lockedClrPicker, localize('panel.view-options.locked-color'), 'top');
+
+        // visibility
+
+        const setVisible = (visible: boolean) => {
+            if (visible === this.hidden) {
+                this.hidden = !visible;
+                events.fire('viewPanel.visible', visible);
+            }
+        };
+
+        events.function('viewPanel.visible', () => {
+            return !this.hidden;
+        });
+
+        events.on('viewPanel.setVisible', (visible: boolean) => {
+            setVisible(visible);
+        });
+
+        events.on('viewPanel.toggleVisible', () => {
+            setVisible(this.hidden);
+        });
+
+        events.on('colorPanel.visible', (visible: boolean) => {
+            if (visible) {
+                setVisible(false);
+            }
+        });
     }
 }
 

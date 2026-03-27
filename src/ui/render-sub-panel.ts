@@ -200,8 +200,7 @@ class RenderSubPanel extends Container {
         viewsTab.on('click', () => activateTab(1));
         annotationTab.on('click', () => activateTab(2));
 
-        // Panel is always visible — register query functions for compatibility
-        events.function('viewPanel.visible', () => true);
+        // Panel is always visible — register query function for compatibility
         events.function('renderSubPanel.visible', () => true);
     }
 }

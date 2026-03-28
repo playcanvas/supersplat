@@ -159,6 +159,12 @@ export const initIframeIntegration = (events: Events, scene: Scene) => {
 
     const { submit, cancel } = createIframeControls(events, scene);
 
+    // Track whether the user explicitly changed the background color
+    let bgColorUserChanged = false;
+    events.on('setBgClr', () => {
+        bgColorUserChanged = true;
+    });
+
     // Handle Cancel button
     cancel.addEventListener('click', () => {
         console.log('[IframeIntegration] Cancel clicked');
@@ -211,6 +217,27 @@ export const initIframeIntegration = (events: Events, scene: Scene) => {
             console.error('[IframeIntegration] Error getting annotations:', error);
         }
 
+        // Collect reveal effect
+        let revealEffect = null;
+        try {
+            revealEffect = events.invoke('revealEffect');
+        } catch (error) {
+            console.error('[IframeIntegration] Error getting revealEffect:', error);
+        }
+
+        // Collect background color only if user explicitly changed it
+        let bgColor = null;
+        if (bgColorUserChanged) {
+            try {
+                const clr = events.invoke('bgClr');
+                if (clr) {
+                    bgColor = [clr.r, clr.g, clr.b, clr.a];
+                }
+            } catch (error) {
+                console.error('[IframeIntegration] Error getting bgColor:', error);
+            }
+        }
+
         // Send data to parent window
         window.parent.postMessage({
             type: 'splat-editor-submit',
@@ -220,7 +247,9 @@ export const initIframeIntegration = (events: Events, scene: Scene) => {
                 filename: plyData.filename,
                 cameraPose: cameraPose,
                 views: views,
-                annotations: annotations
+                annotations: annotations,
+                revealEffect: revealEffect,
+                bgColor: bgColor
             }
         }, '*');
 
@@ -274,6 +303,17 @@ export const initIframeIntegration = (events: Events, scene: Scene) => {
                     console.error('[IframeIntegration] Failed to load annotations:', error);
                 }
             }
+        } else if (e.data?.type === 'supersplat:load-revealEffect') {
+            console.log('[IframeIntegration] Load revealEffect message received');
+            const revealEffect = e.data.revealEffect;
+            if (revealEffect && typeof revealEffect === 'string') {
+                try {
+                    events.fire('revealEffect.set', revealEffect);
+                    console.log('[IframeIntegration] Successfully loaded revealEffect:', revealEffect);
+                } catch (error) {
+                    console.error('[IframeIntegration] Failed to load revealEffect:', error);
+                }
+            }
         } else if (e.data?.type === 'supersplat:import') {
             console.log('[IframeIntegration] Import message received:', e.data);
 
@@ -284,6 +324,16 @@ export const initIframeIntegration = (events: Events, scene: Scene) => {
                     console.log('[IframeIntegration] Loaded views from import message:', e.data.views.length);
                 } catch (error) {
                     console.error('[IframeIntegration] Failed to load views from import:', error);
+                }
+            }
+
+            // Load revealEffect if included in the import message
+            if (e.data.revealEffect && typeof e.data.revealEffect === 'string') {
+                try {
+                    events.fire('revealEffect.set', e.data.revealEffect);
+                    console.log('[IframeIntegration] Loaded revealEffect from import message:', e.data.revealEffect);
+                } catch (error) {
+                    console.error('[IframeIntegration] Failed to load revealEffect from import:', error);
                 }
             }
 

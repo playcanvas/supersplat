@@ -14,7 +14,7 @@
         left: auto;
         width: auto;
         border-radius: 5px;
-        overflow: hidden;
+        overflow: visible;
         background-color: rgba(251, 252, 255, 0.95);
 
         // Re-apply panel-header flex styles since these are not direct children of .panel
@@ -210,6 +210,17 @@
 
     &:hover {
         background-color: rgba(204, 51, 51, 0.1) !important;
+    }
+}
+
+.reveal-effect-select {
+    width: 100px;
+    border-width: 0px;
+
+    &, &:focus, &:active, &.pcui-open {
+        border-color: transparent !important;
+        outline: none !important;
+        box-shadow: none !important;
     }
 }
 

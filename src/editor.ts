@@ -708,6 +708,20 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         events.fire('view.centersUseGaussianColor', value);
     });
 
+    // reveal effect
+    let revealEffect = 'magic';
+
+    events.function('revealEffect', () => {
+        return revealEffect;
+    });
+
+    events.on('revealEffect.set', (value: string) => {
+        if (value !== revealEffect) {
+            revealEffect = value;
+            events.fire('revealEffect.changed', revealEffect);
+        }
+    });
+
     events.function('camera.getPose', () => {
         const camera = scene.camera;
         const position = camera.position;
@@ -744,6 +758,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
       showGrid: events.invoke("grid.visible"),
       showBound: events.invoke("camera.bound"),
       flySpeed: events.invoke("camera.flySpeed"),
+      revealEffect: events.invoke("revealEffect"),
     };
   });
 
@@ -758,6 +773,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.fire("grid.setVisible", docView.showGrid);
     events.fire("camera.setBound", docView.showBound);
     events.fire("camera.setFlySpeed", docView.flySpeed);
+    if (docView.revealEffect) {
+      events.fire("revealEffect.set", docView.revealEffect);
+    }
   });
 };
 

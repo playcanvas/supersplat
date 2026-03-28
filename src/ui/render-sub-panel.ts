@@ -1,4 +1,4 @@
-import { Button, Container, Element, Label } from '@playcanvas/pcui';
+import { Button, Container, Element, Label, SelectInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { AnnotationsPanel } from './annotations-panel';
@@ -160,10 +160,42 @@ class RenderSubPanel extends Container {
         editContent.append(splatListContainer);
         editContent.append(transformHeader);
         editContent.append(new Transform(events));
-        editContent.append(new Element({
-            class: 'panel-header',
-            height: 20
-        }));
+
+        // Reveal Effect section
+        const revealHeader = new Container({
+            class: 'panel-header'
+        });
+
+        const revealLabel = new Label({
+            text: 'Reveal Effect',
+            class: 'panel-header-label'
+        });
+
+        const revealSelect = new SelectInput({
+            class: 'reveal-effect-select',
+            defaultValue: 'magic',
+            options: [
+                { v: 'magic', t: 'Magic' },
+                { v: 'spread', t: 'Spread' },
+                { v: 'unroll', t: 'Unroll' },
+                { v: 'twister', t: 'Twister' },
+                { v: 'rain', t: 'Rain' }
+            ]
+        });
+
+        revealHeader.append(revealLabel);
+        revealHeader.append(revealSelect);
+
+        editContent.append(revealHeader);
+
+        // Sync reveal effect with events
+        revealSelect.on('change', (value: string) => {
+            events.fire('revealEffect.set', value);
+        });
+
+        events.on('revealEffect.changed', (value: string) => {
+            revealSelect.value = value;
+        });
 
         const viewsContent = new ViewsPanel(events, {
             class: 'render-sub-content',

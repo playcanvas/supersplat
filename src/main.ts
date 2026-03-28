@@ -259,6 +259,12 @@ const main = async () => {
     // initialize iframe integration if running in iframe
     initIframeIntegration(events, scene);
 
+    // handle revealEffect query param
+    const revealEffectParam = url.searchParams.get('revealEffect');
+    if (revealEffectParam) {
+        events.fire('revealEffect.set', revealEffectParam);
+    }
+
     // handle load params
     const loadList = url.searchParams.getAll('load');
     const filenameList = url.searchParams.getAll('filename');

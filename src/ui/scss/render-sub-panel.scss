@@ -15,6 +15,15 @@
         width: auto;
         border-radius: 5px;
         overflow: visible;
+
+        > :first-child {
+            border-radius: 5px 5px 0 0;
+            overflow: hidden;
+        }
+
+        > :last-child {
+            border-radius: 0 0 5px 5px;
+        }
         background-color: rgba(251, 252, 255, 0.95);
 
         // Re-apply panel-header flex styles since these are not direct children of .panel
@@ -221,6 +230,14 @@
         border-color: transparent !important;
         outline: none !important;
         box-shadow: none !important;
+    }
+
+    .pcui-select-input-shadow {
+        box-shadow: none !important;
+    }
+
+    &.pcui-open .pcui-select-input-shadow {
+        box-shadow: 0 0 2px 1px rgba(180, 180, 180, 0.3) !important;
     }
 }
 

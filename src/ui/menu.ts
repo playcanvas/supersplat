@@ -310,9 +310,6 @@ class Menu extends Container {
         this.append(videoTutorialsMenuPanel);
         this.append(helpMenuPanel);
 
-        // Render button stays active since the sub-panel is always visible
-        render.dom.classList.add('active');
-
         const options: { dom: HTMLElement, menuPanel: MenuPanel }[] = [{
             dom: scene.dom,
             menuPanel: fileMenuPanel
@@ -327,18 +324,20 @@ class Menu extends Container {
             menuPanel: helpMenuPanel
         }];
 
-        // For File, Select, Help — standard dropdown behavior
-        [options[0], options[1], options[3]].forEach((option) => {
+        // Standard dropdown behavior for all menu buttons
+        options.forEach((option) => {
             const activate = () => {
                 option.menuPanel.position(option.dom, 'bottom', 2);
                 options.forEach((opt) => {
                     opt.menuPanel.hidden = opt !== option;
+                    opt.dom.classList.toggle('active', opt === option);
                 });
             };
 
             option.dom.addEventListener('pointerdown', (event: PointerEvent) => {
                 if (!option.menuPanel.hidden) {
                     option.menuPanel.hidden = true;
+                    option.dom.classList.remove('active');
                 } else {
                     activate();
                 }
@@ -355,6 +354,7 @@ class Menu extends Container {
             if (!this.dom.contains(event.target as Node)) {
                 options.forEach((opt) => {
                     opt.menuPanel.hidden = true;
+                    opt.dom.classList.remove('active');
                 });
             }
         };

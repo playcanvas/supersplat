@@ -33,7 +33,7 @@ class BrushSelection {
 
             if (dragId !== undefined) {
                 context.beginPath();
-                context.strokeStyle = '#f60';
+                context.strokeStyle = '#fff';
                 context.lineCap = 'round';
                 context.lineWidth = radius * 2;
                 context.moveTo(prev.x, prev.y);

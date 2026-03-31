@@ -92,11 +92,11 @@
     &>.right-toolbar-toggle.active {
         // highlight icon
         &::before {
-            color: $bcg-primary;
+            color: $clr-active;
         }
 
         svg {
-            color: $clr-hilight;
+            color: $clr-active;
         }
     }
 }

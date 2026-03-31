@@ -74,10 +74,10 @@
 
 .bottom-toolbar-toggle.active {
     &::before {
-        color: $clr-hilight;
+        color: $clr-active;
     }
 
     svg {
-        color: $clr-hilight;
+        color: $clr-active;
     }
 }

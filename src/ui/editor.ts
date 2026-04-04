@@ -11,6 +11,7 @@ import { ImageSettingsDialog } from './image-settings-dialog';
 import { localize, localizeInit } from './localization';
 import { Menu } from './menu';
 import { ModeToggle } from './mode-toggle';
+import { ParticlePanel } from './particle-panel';
 import logo from './playcanvas-logo.png';
 import { Popup, ShowOptions } from './popup';
 import { Progress } from './progress';
@@ -127,6 +128,7 @@ class EditorUI {
         const rightToolbar = new RightToolbar(events, tooltips);
         const modeToggle = new ModeToggle(events, tooltips);
         const menu = new Menu(events);
+        const particlePanel = new ParticlePanel(events);
 
         canvasContainer.dom.appendChild(canvas);
         canvasContainer.append(appLabel);
@@ -135,10 +137,22 @@ class EditorUI {
         canvasContainer.append(scenePanel);
         canvasContainer.append(viewPanel);
         canvasContainer.append(colorPanel);
+        canvasContainer.append(particlePanel);
         canvasContainer.append(bottomToolbar);
         canvasContainer.append(rightToolbar);
         canvasContainer.append(modeToggle);
         canvasContainer.append(menu);
+
+        // toggle particle panel
+        events.on('particlePanel.toggleVisible', () => {
+            particlePanel.hidden = !particlePanel.hidden;
+            events.fire('particlePanel.visible', !particlePanel.hidden);
+        });
+
+        events.on('particlePanel.setVisible', (visible: boolean) => {
+            particlePanel.hidden = !visible;
+            events.fire('particlePanel.visible', visible);
+        });
 
         // view axes container
         const viewCube = new ViewCube(events);

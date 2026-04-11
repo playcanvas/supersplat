@@ -142,7 +142,7 @@ class SplatOverlay extends Element {
     detach() {
         // unsubscribe from sorter updates
         if (this.splat && this.onSorterUpdated) {
-            this.splat.entity.gsplat.instance.sorter.off('updated', this.onSorterUpdated);
+            this.splat.entity.gsplat?.instance.sorter.off('updated', this.onSorterUpdated);
             this.onSorterUpdated = null;
         }
 

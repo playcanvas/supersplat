@@ -4,7 +4,7 @@
     display: flex;
     flex-direction: column;
 
-    background-color: $bcg-primary;
+    background-color: $bcg-secondary;
 
     padding: 6px;
 }
@@ -47,6 +47,7 @@ $height: 22px;
         padding: 0px;
         margin: 0px 0px 0px 4px;
         height: $height;
+        background-color: $bcg-primary;
     }
 }
 
@@ -54,10 +55,12 @@ $height: 22px;
     margin: 0px;
     height: $height;
     line-height: $height;
+    background-color: $bcg-primary !important;
 
     & > input {
         padding: 0px;
         margin: 0px 0px 0px 4px;
         height: $height;
+        background-color: $bcg-primary;
     }
 }

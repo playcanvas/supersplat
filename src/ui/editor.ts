@@ -1,7 +1,6 @@
 import { Container, Label } from '@playcanvas/pcui';
 import { Mat4, path, Vec3 } from 'playcanvas';
 
-import { DataPanel } from './data-panel';
 import { Events } from '../events';
 import { AboutPopup } from './about-popup';
 import { BottomToolbar } from './bottom-toolbar';
@@ -10,11 +9,10 @@ import { ExportPopup } from './export-popup';
 import { ImageSettingsDialog } from './image-settings-dialog';
 import { localize, localizeInit } from './localization';
 import { Menu } from './menu';
-import { ModeToggle } from './mode-toggle';
 import logo from './playcanvas-logo.png';
 import { Popup, ShowOptions } from './popup';
 import { Progress } from './progress';
-import { PublishSettingsDialog } from './publish-settings-dialog';
+import { RenderSubPanel } from './render-sub-panel';
 import { RightToolbar } from './right-toolbar';
 import { ScenePanel } from './scene-panel';
 import { ShortcutsPopup } from './shortcuts-popup';
@@ -120,11 +118,11 @@ class EditorUI {
 
         // bottom toolbar
         const scenePanel = new ScenePanel(events, tooltips);
+        const renderSubPanel = new RenderSubPanel(events, tooltips);
         const viewPanel = new ViewPanel(events, tooltips);
         const colorPanel = new ColorPanel(events, tooltips);
         const bottomToolbar = new BottomToolbar(events, tooltips);
         const rightToolbar = new RightToolbar(events, tooltips);
-        const modeToggle = new ModeToggle(events, tooltips);
         const menu = new Menu(events);
 
         canvasContainer.dom.appendChild(canvas);
@@ -132,12 +130,15 @@ class EditorUI {
         canvasContainer.append(cursorLabel);
         canvasContainer.append(toolsContainer);
         canvasContainer.append(scenePanel);
+        canvasContainer.append(renderSubPanel);
         canvasContainer.append(viewPanel);
         canvasContainer.append(colorPanel);
         canvasContainer.append(bottomToolbar);
         canvasContainer.append(rightToolbar);
-        canvasContainer.append(modeToggle);
         canvasContainer.append(menu);
+
+        // Render sub panel is always visible, so hide the scene panel permanently
+        scenePanel.hidden = true;
 
         // view axes container
         const viewCube = new ViewCube(events);
@@ -152,11 +153,9 @@ class EditorUI {
         });
 
         const timelinePanel = new TimelinePanel(events, tooltips);
-        const dataPanel = new DataPanel(events);
 
         mainContainer.append(canvasContainer);
         mainContainer.append(timelinePanel);
-        mainContainer.append(dataPanel);
 
         editorContainer.append(mainContainer);
 
@@ -171,9 +170,6 @@ class EditorUI {
         // export popup
         const exportPopup = new ExportPopup(events);
 
-        // publish settings
-        const publishSettingsDialog = new PublishSettingsDialog(events);
-
         // image settings
         const imageSettingsDialog = new ImageSettingsDialog(events);
 
@@ -185,7 +181,6 @@ class EditorUI {
 
         topContainer.append(popup);
         topContainer.append(exportPopup);
-        topContainer.append(publishSettingsDialog);
         topContainer.append(imageSettingsDialog);
         topContainer.append(videoSettingsDialog);
         topContainer.append(shortcutsPopup);
@@ -211,27 +206,6 @@ class EditorUI {
 
         events.function('show.exportPopup', (exportType, splatNames: [string], showFilenameEdit: boolean) => {
             return exportPopup.show(exportType, splatNames, showFilenameEdit);
-        });
-
-        events.function('show.publishSettingsDialog', async () => {
-            // show popup if user isn't logged in
-            const userStatus = await events.invoke('publish.userStatus');
-            if (!userStatus) {
-                await events.invoke('showPopup', {
-                    type: 'error',
-                    header: localize('popup.error'),
-                    message: localize('popup.publish.please-log-in')
-                });
-                return false;
-            }
-
-            // get user publish settings
-            const publishSettings = await publishSettingsDialog.show(userStatus);
-
-            // do publish
-            if (publishSettings) {
-                await events.invoke('scene.publish', publishSettings);
-            }
         });
 
         events.function('show.imageSettingsDialog', async () => {

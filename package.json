@@ -16,22 +16,24 @@
     "scripts": {
         "build": "rollup -c",
         "watch": "rollup -c -w",
-        "serve": "serve dist -C",
+        "serve": "serve dist -C -l 8000",
         "develop": "cross-env BUILD_TYPE=debug concurrently --kill-others \"npm run watch\" \"npm run serve\"",
         "develop:auto-launch": "concurrently --kill-others \"xdg-open 'http://localhost:3000/'\" \"npm run watch\" \"npm run serve\"",
         "lint": "eslint src"
     },
     "devDependencies": {
         "@playcanvas/eslint-config": "2.1.0",
-        "@playcanvas/splat-transform": "1.6.0",
         "@playcanvas/pcui": "5.5.0",
+        "@playcanvas/splat-transform": "1.6.0",
         "@rollup/plugin-alias": "6.0.0",
         "@rollup/plugin-image": "3.0.3",
         "@rollup/plugin-json": "6.1.0",
         "@rollup/plugin-node-resolve": "16.0.3",
+        "@rollup/plugin-replace": "^6.0.3",
         "@rollup/plugin-strip": "3.0.4",
         "@rollup/plugin-terser": "0.4.4",
         "@rollup/plugin-typescript": "12.3.0",
+        "@types/sortablejs": "^1.15.9",
         "@types/wicg-file-system-access": "2023.10.7",
         "@typescript-eslint/eslint-plugin": "8.54.0",
         "@typescript-eslint/parser": "8.54.0",
@@ -54,5 +56,8 @@
         "serve": "14.2.5",
         "tslib": "2.8.1",
         "typescript": "5.9.3"
+    },
+    "dependencies": {
+        "sortablejs": "^1.15.7"
     }
 }

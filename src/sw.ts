@@ -3,7 +3,9 @@ import { version as appVersion } from '../package.json';
 // export default null
 declare let self: ServiceWorkerGlobalScope;
 
-const cacheName = `superSplat-v${appVersion}`;
+// BUILD_HASH is injected at build time by rollup-plugin-replace to bust the SW cache on every build
+const buildHash = '__BUILD_HASH__';
+const cacheName = `superSplat-v${appVersion}-${buildHash}`;
 
 const cacheUrls = [
     './',

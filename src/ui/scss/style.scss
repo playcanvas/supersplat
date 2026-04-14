@@ -1,6 +1,7 @@
 @use 'pcui-theme-grey.scss';
 @use 'colors.scss' as *;
 @use 'tooltips.scss';
+
 @use 'panel.scss';
 @use 'menu-panel.scss';
 @use 'menu.scss';
@@ -24,8 +25,11 @@
 @use 'timeline-panel.scss';
 @use 'tool.scss';
 @use 'iframe-controls.scss';
+@use 'render-sub-panel.scss';
+@use 'annotation-overlay.scss';
 
 * {
+    font-family: 'Rajdhani', sans-serif;
     font-size: 12px;
     user-select: none;
     overscroll-behavior: none;
@@ -75,12 +79,12 @@ body {
 }
 
 #sep-container > span {
-    color: white;
+    color: $text-primary;
 }
 
 #coord-space-toggle.active {
-    background-color: $bcg-dark !important;
-    color: #f60;
+    background-color: $clr-hilight !important;
+    color: $clr-active;
 }
 
 #file-selector {
@@ -202,38 +206,187 @@ body {
     height: 8px;
 }
 ::-webkit-scrollbar-track {
-    background: #20292b;
+    background: #f0f0f0;
 }
 ::-webkit-scrollbar-thumb {
-    background: #5b7073;
+    background: #c0c0c0;
 }
 ::-webkit-scrollbar-thumb:hover {
-    background: #f60;
+    background: #999999;
 }
 ::-webkit-scrollbar-corner {
-    background: #2c393c;
+    background: #f0f0f0;
 }
 
 .font-thin {
-    font-family: 'Proxima Nova Thin', 'Helvetica Neue', Arial, Helvetica, sans-serif;
-    font-weight: 100;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 300;
     font-style: normal;
 }
 
 .font-light {
-    font-family: 'Proxima Nova Light', 'Helvetica Neue', Arial, Helvetica, sans-serif;
-    font-weight: 200;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 400;
     font-style: normal;
 }
 
 .font-regular {
-    font-family: 'Proxima Nova Regular', 'Helvetica Neue', Arial, Helvetica, sans-serif;
-    font-weight: normal;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 500;
     font-style: normal;
 }
 
 .font-bold {
-    font-family: 'Proxima Nova Bold', 'Helvetica Neue', Arial, Helvetica, sans-serif;
-    font-weight: bold;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
     font-style: normal;
+}
+
+/* PCUI light theme overrides */
+.pcui-panel {
+    background-color: rgba(251, 252, 255, 0.95) !important;
+    color: $text-primary !important;
+}
+
+.pcui-container {
+    color: $text-primary !important;
+}
+
+.pcui-element {
+    color: $text-primary !important;
+}
+
+.pcui-input-element {
+    background-color: $bcg-primary !important;
+    border-color: #d0d0d0 !important;
+    color: $text-primary !important;
+
+    > input {
+        color: $text-primary !important;
+    }
+
+    &.pcui-disabled {
+        color: rgba(0, 0, 0, 0.4) !important;
+
+        > input {
+            color: rgba(0, 0, 0, 0.4) !important;
+        }
+    }
+
+    &[placeholder]::after {
+        color: #666666 !important;
+        background-color: $bcg-primary !important;
+
+    }
+}
+
+.pcui-numeric-input-slider-control {
+    background-color: #d0d0d0 !important;
+    color: $text-primary !important;
+
+    &::after {
+        background-color: rgba(0, 0, 0, 0.08) !important;
+    }
+}
+
+.pcui-label {
+    color: $text-primary !important;
+}
+
+.pcui-button {
+    background-color: $bcg-primary !important;
+    color: $text-primary !important;
+    border-color: #d0d0d0 !important;
+    border-radius: 5px;
+    border-width: 0px !important;
+
+    &:hover,
+    &:focus {
+        background-color: $bg-light-hover !important;
+        color: $text-primary !important;
+        border-width: px !important;
+        box-shadow: 0 0 0 2px $bg-light-hover !important;
+    }
+
+}
+
+// Toolbar buttons: white default, gray hover, black active
+.bottom-toolbar-button.pcui-button,
+.bottom-toolbar-tool.pcui-button,
+.bottom-toolbar-toggle.pcui-button,
+.right-toolbar-button.pcui-button,
+.right-toolbar-tool.pcui-button,
+.right-toolbar-toggle.pcui-button {
+    background-color: white !important;
+    border: none !important;
+    border-radius: 5px !important;
+
+    &:hover:not(.active):not(.disabled) {
+        background-color: #e8e8e8 !important;
+    }
+
+    &.active {
+        background-color: $clr-hilight !important;
+        color: $clr-active !important;
+
+        svg {
+            color: $clr-active !important;
+        }
+    }
+}
+
+.pcui-boolean-input {
+    background-color: #d0d0d0 !important;
+
+    &.pcui-boolean-input-ticked {
+        background-color: $clr-hilight !important;
+    }
+}
+
+.pcui-slider-bar {
+    background-color: #e0e0e0 !important;
+
+    .pcui-slider-handle {
+        background-color: #999999 !important;
+    }
+
+    .pcui-slider-active-bar {
+        background-color: #999999 !important;
+    }
+}
+
+.pcui-select-input {
+    background-color: $bcg-primary !important;
+    .pcui-select-input-container-value {
+        color: $text-primary !important;
+        background-color: $bcg-primary !important;
+    }
+
+    &.pcui-open .pcui-select-input-value {
+        background-color: $bg-light-hover !important;
+    }
+
+    &:not(.pcui-disabled, .pcui-readonly) .pcui-select-input-value:hover {
+        background-color: $bg-light-hover !important;
+    }
+
+    .pcui-select-input-list > *:hover {
+        background-color: $bg-light-hover !important;
+    }
+    .pcui-select-input-list > span {
+        background-color: $bcg-primary !important;
+    }
+}
+
+.pcui-select-list {
+    background-color: #f5f5f5 !important;
+    border-color: #d0d0d0 !important;
+
+    .pcui-select-list-item {
+        color: $text-primary !important;
+
+        &:hover, &.pcui-selected {
+            background-color: #e0e0e0 !important;
+        }
+    }
 }

@@ -7,9 +7,9 @@
     height: 54px;
     transform: translate(-50%, 0);
     padding: 0px 8px;
-    border-radius: 8px;
+    border-radius: 5px;
 
-    background-color: $bcg-dark;
+    background-color: $bcg-primary;
 
     display: flex;
     flex-direction: row;
@@ -38,7 +38,7 @@
     width: 2px;
     height: 38px;
     margin: 0px 10px;
-    background-color: $bcg-primary;
+    background-color: $bg-light-tertiary;
 }
 
 .bottom-toolbar-button {
@@ -74,10 +74,10 @@
 
 .bottom-toolbar-toggle.active {
     &::before {
-        color: $clr-hilight;
+        color: $clr-active;
     }
 
     svg {
-        color: $clr-hilight;
+        color: $clr-active;
     }
 }

@@ -21,7 +21,7 @@
         border-radius: 8px;
         background-color: $bcg-primary;
 
-        filter: drop-shadow(5px 5px 10px rgba(0, 0, 0, 0.8));
+        filter: drop-shadow(5px 5px 10px rgba(0, 0, 0, 0.15));
 
         // the following is needed to get drop-shadow working on safari
         will-change: transform;
@@ -75,7 +75,7 @@
 
     #about-app-name {
         margin: 0;
-        font-family: 'Proxima Nova Bold', 'Helvetica Neue', Arial, Helvetica, sans-serif;
+        font-family: 'Rajdhani', sans-serif;
         font-size: 18px;
         font-weight: 700;
         color: $text-primary;
@@ -103,12 +103,12 @@
         align-items: center;
         padding: 6px 10px;
         border-radius: 4px;
-        background-color: rgba(0, 0, 0, 0.2);
+        background-color: rgba(0, 0, 0, 0.05);
         cursor: pointer;
         transition: background-color 0.15s ease;
 
         &:hover {
-            background-color: rgba(246, 102, 44, 0.15);
+            background-color: rgba(0, 0, 0, 0.1);
 
             .about-dep-name {
                 color: $clr-hilight;

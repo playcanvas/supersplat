@@ -21,7 +21,7 @@ const isInIframe = (): boolean => {
 const createIframeControls = (events: Events, scene: Scene): { submit: HTMLButtonElement, cancel: HTMLButtonElement } => {
     const submitButton = document.createElement('button');
     submitButton.id = 'submit-splat-button';
-    submitButton.textContent = 'Submit';
+    submitButton.textContent = 'Upload';
     submitButton.className = 'iframe-control-button';
 
     const cancelButton = document.createElement('button');
@@ -159,6 +159,12 @@ export const initIframeIntegration = (events: Events, scene: Scene) => {
 
     const { submit, cancel } = createIframeControls(events, scene);
 
+    // Track whether the user explicitly changed the background color
+    let bgColorUserChanged = false;
+    events.on('setBgClr', () => {
+        bgColorUserChanged = true;
+    });
+
     // Handle Cancel button
     cancel.addEventListener('click', () => {
         console.log('[IframeIntegration] Cancel clicked');
@@ -195,6 +201,43 @@ export const initIframeIntegration = (events: Events, scene: Scene) => {
             throw new Error('Failed to export PLY');
         }
 
+        // Collect saved views
+        let views = null;
+        try {
+            views = events.invoke('views.list');
+        } catch (error) {
+            console.error('[IframeIntegration] Error getting views:', error);
+        }
+
+        // Collect saved annotations
+        let annotations = null;
+        try {
+            annotations = events.invoke('annotations.list');
+        } catch (error) {
+            console.error('[IframeIntegration] Error getting annotations:', error);
+        }
+
+        // Collect reveal effect
+        let revealEffect = null;
+        try {
+            revealEffect = events.invoke('revealEffect');
+        } catch (error) {
+            console.error('[IframeIntegration] Error getting revealEffect:', error);
+        }
+
+        // Collect background color only if user explicitly changed it
+        let bgColor = null;
+        if (bgColorUserChanged) {
+            try {
+                const clr = events.invoke('bgClr');
+                if (clr) {
+                    bgColor = [clr.r, clr.g, clr.b, clr.a];
+                }
+            } catch (error) {
+                console.error('[IframeIntegration] Error getting bgColor:', error);
+            }
+        }
+
         // Send data to parent window
         window.parent.postMessage({
             type: 'splat-editor-submit',
@@ -202,7 +245,11 @@ export const initIframeIntegration = (events: Events, scene: Scene) => {
                 thumbnail: thumbnail,
                 plyFile: plyData.data,
                 filename: plyData.filename,
-                cameraPose: cameraPose
+                cameraPose: cameraPose,
+                views: views,
+                annotations: annotations,
+                revealEffect: revealEffect,
+                bgColor: bgColor
             }
         }, '*');
 
@@ -234,8 +281,72 @@ export const initIframeIntegration = (events: Events, scene: Scene) => {
 
     // Listen for messages from parent
     window.addEventListener('message', async (e) => {
-        if (e.data?.type === 'supersplat:import') {
+        if (e.data?.type === 'supersplat:load-views') {
+            console.log('[IframeIntegration] Load views message received');
+            const views = e.data.views;
+            if (views && Array.isArray(views)) {
+                try {
+                    events.invoke('views.load', views);
+                    console.log('[IframeIntegration] Successfully loaded views:', views.length);
+                } catch (error) {
+                    console.error('[IframeIntegration] Failed to load views:', error);
+                }
+            }
+        } else if (e.data?.type === 'supersplat:load-annotations') {
+            console.log('[IframeIntegration] Load annotations message received');
+            const annotations = e.data.annotations;
+            if (annotations && Array.isArray(annotations)) {
+                try {
+                    events.invoke('annotations.load', annotations);
+                    console.log('[IframeIntegration] Successfully loaded annotations:', annotations.length);
+                } catch (error) {
+                    console.error('[IframeIntegration] Failed to load annotations:', error);
+                }
+            }
+        } else if (e.data?.type === 'supersplat:load-revealEffect') {
+            console.log('[IframeIntegration] Load revealEffect message received');
+            const revealEffect = e.data.revealEffect;
+            if (revealEffect && typeof revealEffect === 'string') {
+                try {
+                    events.fire('revealEffect.set', revealEffect);
+                    console.log('[IframeIntegration] Successfully loaded revealEffect:', revealEffect);
+                } catch (error) {
+                    console.error('[IframeIntegration] Failed to load revealEffect:', error);
+                }
+            }
+        } else if (e.data?.type === 'supersplat:import') {
             console.log('[IframeIntegration] Import message received:', e.data);
+
+            // Load views if included in the import message
+            if (e.data.views && Array.isArray(e.data.views)) {
+                try {
+                    events.invoke('views.load', e.data.views);
+                    console.log('[IframeIntegration] Loaded views from import message:', e.data.views.length);
+                } catch (error) {
+                    console.error('[IframeIntegration] Failed to load views from import:', error);
+                }
+            }
+
+            // Load revealEffect if included in the import message
+            if (e.data.revealEffect && typeof e.data.revealEffect === 'string') {
+                try {
+                    events.fire('revealEffect.set', e.data.revealEffect);
+                    console.log('[IframeIntegration] Loaded revealEffect from import message:', e.data.revealEffect);
+                } catch (error) {
+                    console.error('[IframeIntegration] Failed to load revealEffect from import:', error);
+                }
+            }
+
+            // Load annotations if included in the import message
+            if (e.data.annotations && Array.isArray(e.data.annotations)) {
+                try {
+                    events.invoke('annotations.load', e.data.annotations);
+                    console.log('[IframeIntegration] Loaded annotations from import message:', e.data.annotations.length);
+                } catch (error) {
+                    console.error('[IframeIntegration] Failed to load annotations from import:', error);
+                }
+            }
+
             const files = e.data.files;
 
             if (files && files.length > 0) {

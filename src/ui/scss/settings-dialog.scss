@@ -22,7 +22,7 @@
         border-radius: 8px;
         background-color: $bcg-primary;
 
-        filter: drop-shadow(5px 5px 10px rgba(0, 0, 0, 0.8));
+        filter: drop-shadow(5px 5px 10px rgba(0, 0, 0, 0.15));
 
         // the following is needed to get drop-shadow working on safari
         will-change: transform;

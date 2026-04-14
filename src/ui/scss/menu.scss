@@ -11,7 +11,7 @@
     top: 24px;
     left: 24px;
     height: 50px;
-    border-radius: 8px;
+    border-radius: 5px;
 
     overflow: hidden;
 
@@ -35,6 +35,9 @@
     display: flex;
     flex-direction: row;
     flex-grow: 1;
+    align-items: center;
+    padding: 0px 10px;
+
 }
 
 .menu-icon {
@@ -58,6 +61,9 @@
     flex-grow: 1;
     text-align: center;
     text-overflow: clip;
+    height: 36px;
+    display: flex;
+    align-items: center;
 
     background-color: $bcg-primary;
 
@@ -65,7 +71,14 @@
 
     &:hover {
         color: $text-primary;
-        background-color: $bcg-dark;
+        background-color: $bg-light-hover;
+        border-radius: 5px;
+    }
+
+    &.active {
+        color: white !important;
+        background-color: $bg-light-active;
+        border-radius: 5px;
     }
 }
 

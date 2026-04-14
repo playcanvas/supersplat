@@ -1,6 +1,6 @@
 @use 'colors.scss' as *;
 
-// Iframe Submit/Cancel buttons styling - sleek and elegant
+// Iframe Submit/Cancel buttons styling
 #cancel-splat-button,
 #submit-splat-button {
     position: absolute;
@@ -8,23 +8,16 @@
     pointer-events: auto;
     z-index: 10;
     height: 32px;
-    padding: 0 18px;
-    border-radius: 10px;
-    background-color: $bcg-darker;
-    color: $text-secondary;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0 40px;
+    border-radius: 5px;
+    border: 1px solid white;
     cursor: pointer;
     font-size: 12px;
+    font-weight: bold;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
-
-    &:hover:not(:disabled) {
-        color: $text-primary;
-        background-color: $clr-hilight;
-        border-color: rgba(255, 255, 255, 0.2);
-    }
+    transition: background-color 0.2s ease, color 0.2s ease;
 
     &:disabled {
         opacity: 0.5;
@@ -33,9 +26,33 @@
 }
 
 #cancel-splat-button {
-    left: calc(50% - 90px);
+    left: calc(50% - 110px);
+    background-color: rgba(0, 0, 0, 1);
+    color: rgba(255, 255, 255, 1);
+
+    &:hover:not(:disabled) {
+        background-color: rgba(234, 234, 234, 1);
+        color: rgba(0, 0, 0, 1);
+    }
+
+    &:active:not(:disabled) {
+        background-color: rgba(255, 255, 255, 1);
+        color: rgba(0, 0, 0, 1);
+    }
 }
 
 #submit-splat-button {
-    left: calc(50% + 30px);
+    left: calc(50% + 20px);
+    background-color: rgba(255, 255, 255, 1);
+    color: rgba(0, 0, 0, 1);
+
+    &:hover:not(:disabled) {
+        background-color: rgba(0, 0, 0, 1);
+        color: rgba(255, 255, 255, 1);
+    }
+
+    &:active:not(:disabled) {
+        background-color: rgba(234, 234, 234, 1);
+        color: rgba(0, 0, 0, 1);
+    }
 }

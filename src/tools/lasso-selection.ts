@@ -32,7 +32,7 @@ class LassoSelection {
 
         const paint = () => {
             polygon.setAttribute('points', [...points, currentPoint].reduce((prev, current) => `${prev}${current.x}, ${current.y} `, ''));
-            polygon.setAttribute('stroke', isClosed() ? '#fa6' : '#f60');
+            polygon.setAttribute('stroke', '#fff');
         };
 
         let dragId: number | undefined;
@@ -65,7 +65,7 @@ class LassoSelection {
             context.clearRect(0, 0, canvas.width, canvas.height);
 
             context.beginPath();
-            context.fillStyle = '#f60';
+            context.fillStyle = '#fff';
             context.beginPath();
             points.forEach((p, idx) => {
                 if (idx === 0) {

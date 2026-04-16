@@ -167,91 +167,72 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 splat.localBound;
             vec.copy(bound.center);
 
-      const worldTransform = splat.worldTransform;
-      worldTransform.transformPoint(vec, vec);
-      worldTransform.getScale(vec2);
+            const worldTransform = splat.worldTransform;
+            worldTransform.transformPoint(vec, vec);
+            worldTransform.getScale(vec2);
 
-      scene.camera.focus({
-        focalPoint: vec,
-        radius: bound.halfExtents.length() * vec2.x,
-        speed: 1,
-      });
-    }
-  });
-
-  events.on("camera.reset", () => {
-    const { initialAzim, initialElev, initialZoom } = scene.config.controls;
-    const x =
-      Math.sin((initialAzim * Math.PI) / 180) *
-      Math.cos((initialElev * Math.PI) / 180);
-    const y = -Math.sin((initialElev * Math.PI) / 180);
-    const z =
-      Math.cos((initialAzim * Math.PI) / 180) *
-      Math.cos((initialElev * Math.PI) / 180);
-    const zoom = initialZoom;
-
-    scene.camera.setPose(
-      new Vec3(x * zoom, y * zoom, z * zoom),
-      new Vec3(0, 0, 0),
-    );
-  });
-
-  // handle camera align events
-  events.on("camera.align", (axis: string) => {
-    switch (axis) {
-      case "px":
-        scene.camera.setAzimElev(90, 0);
-        break;
-      case "py":
-        scene.camera.setAzimElev(0, -90);
-        break;
-      case "pz":
-        scene.camera.setAzimElev(0, 0);
-        break;
-      case "nx":
-        scene.camera.setAzimElev(270, 0);
-        break;
-      case "ny":
-        scene.camera.setAzimElev(0, 90);
-        break;
-      case "nz":
-        scene.camera.setAzimElev(180, 0);
-        break;
-    }
-
-    // switch to ortho mode
-    scene.camera.ortho = true;
-  });
-
-  // returns true if the selected splat has selected gaussians
-  events.function("selection.splats", () => {
-    const splat = events.invoke("selection") as Splat;
-    return splat?.numSelected > 0;
-  });
-
-  events.on("select.all", () => {
-    selectedSplats().forEach((splat) => {
-      events.fire("edit.add", new SelectAllOp(splat));
+            scene.camera.focus({
+                focalPoint: vec,
+                radius: bound.halfExtents.length() * vec2.x,
+                speed: 1
+            });
+        }
     });
-  });
 
-  events.on("select.none", () => {
-    selectedSplats().forEach((splat) => {
-      events.fire("edit.add", new SelectNoneOp(splat));
-    });
-  });
+    events.on('camera.reset', () => {
+        const { initialAzim, initialElev, initialZoom } = scene.config.controls;
+        const x = Math.sin(initialAzim * Math.PI / 180) * Math.cos(initialElev * Math.PI / 180);
+        const y = -Math.sin(initialElev * Math.PI / 180);
+        const z = Math.cos(initialAzim * Math.PI / 180) * Math.cos(initialElev * Math.PI / 180);
+        const zoom = initialZoom;
 
-  events.on("select.invert", () => {
-    selectedSplats().forEach((splat) => {
-      events.fire("edit.add", new SelectInvertOp(splat));
+        scene.camera.setPose(new Vec3(x * zoom, y * zoom, z * zoom), new Vec3(0, 0, 0));
     });
-  });
 
-  events.on("select.pred", (op, pred: (i: number) => boolean) => {
-    selectedSplats().forEach((splat) => {
-      events.fire("edit.add", new SelectOp(splat, op, pred));
+    // handle camera align events
+    events.on('camera.align', (axis: string) => {
+        switch (axis) {
+            case 'px': scene.camera.setAzimElev(90, 0); break;
+            case 'py': scene.camera.setAzimElev(0, -90); break;
+            case 'pz': scene.camera.setAzimElev(0, 0); break;
+            case 'nx': scene.camera.setAzimElev(270, 0); break;
+            case 'ny': scene.camera.setAzimElev(0, 90); break;
+            case 'nz': scene.camera.setAzimElev(180, 0); break;
+        }
+
+        // switch to ortho mode
+        scene.camera.ortho = true;
     });
-  });
+
+    // returns true if the selected splat has selected gaussians
+    events.function('selection.splats', () => {
+        const splat = events.invoke('selection') as Splat;
+        return splat?.numSelected > 0;
+    });
+
+    events.on('select.all', () => {
+        selectedSplats().forEach((splat) => {
+            events.fire('edit.add', new SelectAllOp(splat));
+        });
+    });
+
+    events.on('select.none', () => {
+        selectedSplats().forEach((splat) => {
+            events.fire('edit.add', new SelectNoneOp(splat));
+        });
+    });
+
+    events.on('select.invert', () => {
+        selectedSplats().forEach((splat) => {
+            events.fire('edit.add', new SelectInvertOp(splat));
+        });
+    });
+
+    events.on('select.pred', (op, pred: (i: number) => boolean) => {
+        selectedSplats().forEach((splat) => {
+            events.fire('edit.add', new SelectOp(splat, op, pred));
+        });
+    });
 
     const intersectCenters = async (splat: Splat, op: 'add'|'remove'|'set', options: any) => {
         const data = await scene.dataProcessor.intersect(options, splat);

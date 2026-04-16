@@ -4,7 +4,7 @@ import { Pose } from '../camera-poses';
 import { Events } from '../events';
 import { localize } from './localization';
 import { PublishSettings, UserStatus } from '../publish';
-import { AnimTrack, ExperienceSettings } from '../splat-serialize';
+import { AnimTrack, ExperienceSettings, defaultPostEffectSettings } from '../splat-serialize';
 import sceneExport from './svg/export.svg';
 
 const createSvg = (svgString: string, args = {}) => {
@@ -70,46 +70,47 @@ class PublishSettingsDialog extends Container {
         descRow.append(descLabel);
         descRow.append(descInput);
 
-        // listed
+        // override model
 
-        const listLabel = new Label({ class: 'label', text: localize('popup.publish.listed') });
-        const listBoolean = new BooleanInput({ class: 'boolean', value: true });
-        const listRow = new Container({ class: 'row' });
-        listRow.append(listLabel);
-        listRow.append(listBoolean);
+        const overrideModelLabel = new Label({ class: 'label', text: localize('popup.publish.override-model') });
+        const overrideModelToggle = new BooleanInput({ class: 'boolean', type: 'toggle', value: true });
+        const overrideModelRow = new Container({ class: 'row', hidden: true });
+        overrideModelRow.append(overrideModelLabel);
+        overrideModelRow.append(overrideModelToggle);
 
-        // start position
+        // override animation
 
-        const startLabel = new Label({ class: 'label', text: localize('popup.export.start-position') });
-        const startSelect = new SelectInput({
-            class: 'select',
-            defaultValue: 'viewport',
-            options: [
-                { v: 'default', t: localize('popup.export.default') },
-                { v: 'viewport', t: localize('popup.export.viewport') },
-                { v: 'pose', t: localize('popup.export.pose-camera') }
-            ]
-        });
-        const startRow = new Container({ class: 'row' });
-        startRow.append(startLabel);
-        startRow.append(startSelect);
+        const overrideAnimationLabel = new Label({ class: 'label', text: localize('popup.publish.override-animation') });
+        const overrideAnimationToggle = new BooleanInput({ class: 'boolean', type: 'toggle', value: true });
+        const overrideAnimationRow = new Container({ class: 'row', hidden: true });
+        overrideAnimationRow.append(overrideAnimationLabel);
+        overrideAnimationRow.append(overrideAnimationToggle);
 
         // animation
 
         const animationLabel = new Label({ class: 'label', text: localize('popup.export.animation') });
-        const animationSelect = new SelectInput({
-            class: 'select',
-            defaultValue: 'none',
-            options: [
-                { v: 'none', t: localize('popup.export.animation.none') },
-                { v: 'track', t: localize('popup.export.animation.track') }
-            ]
-        });
+        const animationToggle = new BooleanInput({ class: 'boolean', type: 'toggle', value: false });
         const animationRow = new Container({ class: 'row' });
         animationRow.append(animationLabel);
-        animationRow.append(animationSelect);
+        animationRow.append(animationToggle);
 
-        // clear color
+        // loop mode
+
+        const loopLabel = new Label({ class: 'label', text: localize('popup.export.loop-mode') });
+        const loopSelect = new SelectInput({
+            class: 'select',
+            defaultValue: 'repeat',
+            options: [
+                { v: 'none', t: localize('popup.export.loop-mode.none') },
+                { v: 'repeat', t: localize('popup.export.loop-mode.repeat') },
+                { v: 'pingpong', t: localize('popup.export.loop-mode.pingpong') }
+            ]
+        });
+        const loopRow = new Container({ class: 'row' });
+        loopRow.append(loopLabel);
+        loopRow.append(loopSelect);
+
+        // background color
 
         const colorLabel = new Label({ class: 'label', text: localize('popup.export.background-color') });
         const colorPicker = new ColorPicker({
@@ -134,32 +135,18 @@ class PublishSettingsDialog extends Container {
         fovRow.append(fovLabel);
         fovRow.append(fovSlider);
 
-        // bands
-
-        const bandsLabel = new Label({ class: 'label', text: localize('popup.export.sh-bands') });
-        const bandsSlider = new SliderInput({
-            class: 'slider',
-            min: 0,
-            max: 3,
-            precision: 0,
-            value: 3
-        });
-        const bandsRow = new Container({ class: 'row' });
-        bandsRow.append(bandsLabel);
-        bandsRow.append(bandsSlider);
-
         // content
 
         const content = new Container({ id: 'content' });
         content.append(overwriteRow);
         content.append(titleRow);
         content.append(descRow);
-        content.append(listRow);
-        content.append(startRow);
-        content.append(animationRow);
+        content.append(overrideModelRow);
+        content.append(overrideAnimationRow);
         content.append(colorRow);
         content.append(fovRow);
-        content.append(bandsRow);
+        content.append(animationRow);
+        content.append(loopRow);
 
         // footer
 
@@ -198,7 +185,7 @@ class PublishSettingsDialog extends Container {
                     onCancel();
                     break;
                 case 'Enter':
-                    if (!e.shiftKey) onOK();
+                    if (!e.shiftKey && !okButton.disabled) onOK();
                     break;
                 default:
                     e.stopPropagation();
@@ -206,19 +193,48 @@ class PublishSettingsDialog extends Container {
             }
         };
 
-        overwriteSelect.on('change', () => {
+        let hasPosesState = false;
+
+        const updateLayout = () => {
             const isNew = overwriteSelect.value === '0';
-            titleInput.disabled = !isNew;
-            descInput.disabled = !isNew;
-            listBoolean.disabled = !isNew;
-        });
+            const modelOn = overrideModelToggle.value;
+            const animOn = overrideAnimationToggle.value;
+
+            // new-scene vs existing-scene row visibility
+            titleRow.hidden = !isNew;
+            descRow.hidden = !isNew;
+            colorRow.hidden = !isNew;
+            fovRow.hidden = !isNew;
+            animationRow.hidden = !isNew;
+            overrideModelRow.hidden = isNew;
+            overrideAnimationRow.hidden = isNew;
+
+            if (isNew) {
+                animationToggle.enabled = hasPosesState;
+                loopRow.hidden = false;
+                loopSelect.enabled = hasPosesState && animationToggle.value;
+            } else {
+                overrideAnimationToggle.enabled = hasPosesState;
+                loopRow.hidden = false;
+                loopSelect.enabled = animOn && hasPosesState;
+            }
+
+            // disable publish when existing scene with no overrides selected
+            okButton.disabled = !isNew && !modelOn && !animOn;
+        };
+
+        overwriteSelect.on('change', updateLayout);
+        overrideModelToggle.on('change', updateLayout);
+        overrideAnimationToggle.on('change', updateLayout);
+        animationToggle.on('change', updateLayout);
 
         // reset UI and configure for current state
         const reset = (hasPoses: boolean, overwriteList: string[]) => {
+            hasPosesState = hasPoses;
+
             const splats = events.invoke('scene.splats');
             const filename = splats[0].filename;
             const dot = splats[0].filename.lastIndexOf('.');
-
             const bgClr = events.invoke('bgClr');
 
             overwriteSelect.options = [{
@@ -228,14 +244,14 @@ class PublishSettingsDialog extends Container {
             overwriteSelect.value = '0';
             titleInput.value = filename.slice(0, dot > 0 ? dot : undefined);
             descInput.value = '';
-            listBoolean.value = true;
-            startSelect.value = hasPoses ? 'pose' : 'viewport';
-            startSelect.disabledOptions = hasPoses ? { } : { pose: startSelect.options[2].t };
-            animationSelect.value = hasPoses ? 'track' : 'none';
-            animationSelect.disabledOptions = hasPoses ? { } : { track: animationSelect.options[1].t };
+            overrideModelToggle.value = true;
+            overrideAnimationToggle.value = hasPoses;
+            animationToggle.value = hasPoses;
+            loopSelect.value = 'repeat';
             colorPicker.value = [bgClr.r, bgClr.g, bgClr.b];
             fovSlider.value = events.invoke('camera.fov');
-            bandsSlider.value = events.invoke('view.bands');
+
+            updateLayout();
         };
 
         // function implementations
@@ -269,90 +285,84 @@ class PublishSettingsDialog extends Container {
                 };
 
                 onOK = () => {
-                    // extract camera starting position
-                    let pose;
-                    switch (startSelect.value) {
-                        case 'pose':
-                            pose = orderedPoses?.[0];
-                            break;
-                        case 'viewport':
-                            pose = events.invoke('camera.getPose');
-                            break;
-                    }
-                    const p = pose?.position;
-                    const t = pose?.target;
-
-                    const startAnim = (() => {
-                        switch (animationSelect.value) {
-                            case 'none': return 'none';
-                            case 'track': return 'animTrack';
-                        }
-                    })();
+                    const isNew = overwriteSelect.value === '0';
+                    const selectedScene = !isNew ? userStatus.scenes[parseInt(overwriteSelect.value, 10) - 1] : null;
 
                     // extract camera animation
+                    const includeAnimation = isNew ? animationToggle.value : overrideAnimationToggle.value;
                     const animTracks: AnimTrack[] = [];
-                    switch (startAnim) {
-                        case 'none':
-                            break;
-                        case 'animTrack': {
-                            // use camera poses
-                            const times = [];
-                            const position = [];
-                            const target = [];
-                            for (let i = 0; i < orderedPoses.length; ++i) {
-                                const p = orderedPoses[i];
-                                times.push(p.frame);
-                                position.push(p.position.x, p.position.y, p.position.z);
-                                target.push(p.target.x, p.target.y, p.target.z);
-                            }
 
-                            animTracks.push({
-                                name: 'cameraAnim',
-                                duration: frames / frameRate,
-                                frameRate,
-                                target: 'camera',
-                                loopMode: 'repeat',
-                                interpolation: 'spline',
-                                smoothness,
-                                keyframes: {
-                                    times,
-                                    values: { position, target }
-                                }
-                            });
-
-                            break;
+                    if (includeAnimation && orderedPoses.length > 0) {
+                        const times: number[] = [];
+                        const position: number[] = [];
+                        const target: number[] = [];
+                        const fovKeys: number[] = [];
+                        for (let i = 0; i < orderedPoses.length; ++i) {
+                            const op = orderedPoses[i];
+                            times.push(op.frame);
+                            position.push(op.position.x, op.position.y, op.position.z);
+                            target.push(op.target.x, op.target.y, op.target.z);
+                            fovKeys.push(op.fov);
                         }
+
+                        animTracks.push({
+                            name: 'cameraAnim',
+                            duration: frames / frameRate,
+                            frameRate,
+                            loopMode: loopSelect.value as 'none' | 'repeat' | 'pingpong',
+                            interpolation: 'spline',
+                            smoothness,
+                            keyframes: {
+                                times,
+                                values: { position, target, fov: fovKeys }
+                            }
+                        });
                     }
 
-                    // build experience details
+                    const fov = fovSlider.value;
+                    const bgColor = colorPicker.value.slice(0, 3) as [number, number, number];
+
+                    // use current viewport as start pose
+                    const pose = events.invoke('camera.getPose');
+                    const p = pose?.position;
+                    const t = pose?.target;
+                    const cameras = (p && t) ? [{
+                        initial: {
+                            position: [p.x, p.y, p.z] as [number, number, number],
+                            target: [t.x, t.y, t.z] as [number, number, number],
+                            fov
+                        }
+                    }] : [];
+
                     const experienceSettings: ExperienceSettings = {
-                        camera: {
-                            fov: fovSlider.value,
-                            position: p ? [p.x, p.y, p.z] : null,
-                            target: t ? [t.x, t.y, t.z] : null,
-                            startAnim,
-                            animTrack: startAnim === 'animTrack' ? 'cameraAnim' : null
-                        },
-                        background: {
-                            color: colorPicker.value.slice()
-                        },
-                        animTracks
+                        version: 2,
+                        tonemapping: 'none',
+                        highPrecisionRendering: false,
+                        background: { color: bgColor },
+                        postEffectSettings: defaultPostEffectSettings,
+                        animTracks,
+                        cameras,
+                        annotations: [],
+                        startMode: includeAnimation ? 'animTrack' : 'default'
                     };
 
                     const serializeSettings = {
-                        maxSHBands: bandsSlider.value,
-                        minOpacity: 1 / 255,                    // remove completely semitransparent splats
-                        removeInvalid: true                     // remove gaussians with any NaN data
+                        maxSHBands: 3,
+                        minOpacity: 1 / 255,
+                        removeInvalid: true
                     };
 
                     resolve({
                         user: userStatus.user,
                         title: titleInput.value,
                         description: descInput.value,
-                        listed: listBoolean.value,
+                        listed: false,
                         serializeSettings,
                         experienceSettings,
-                        overwriteId: overwriteSelect.value !== '0' ? userStatus.scenes[parseInt(overwriteSelect.value, 10) - 1].id : undefined
+                        overwriteId: selectedScene?.id,
+                        overwriteHash: selectedScene?.hash,
+                        overrideModel: isNew || overrideModelToggle.value,
+                        overrideAnimation: !isNew && overrideAnimationToggle.value
                     });
                 };
             }).finally(() => {

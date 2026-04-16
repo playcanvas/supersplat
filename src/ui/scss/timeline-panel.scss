@@ -2,6 +2,7 @@
 
 #timeline-panel {
     flex-direction: column;
+    border-top: none;
 
     &:not(.pcui-hidden) {
         display: flex;
@@ -129,6 +130,10 @@
 
                 &.dragging {
                     cursor: ew-resize;
+                }
+
+                &.copying {
+                    cursor: copy;
                 }
             }
         }

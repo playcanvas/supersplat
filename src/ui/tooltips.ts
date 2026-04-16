@@ -58,6 +58,14 @@ class Tooltips extends Container {
 
                 text.text = textString;
                 style.display = 'inline';
+
+                // clamp to viewport so tooltip doesn't go off-screen
+                const tooltipRect = this.dom.getBoundingClientRect();
+                if (tooltipRect.left < 0) {
+                    style.left = `${parseFloat(style.left) - tooltipRect.left}px`;
+                } else if (tooltipRect.right > window.innerWidth) {
+                    style.left = `${parseFloat(style.left) - (tooltipRect.right - window.innerWidth)}px`;
+                }
             };
 
             const startTimer = (fn: () => void) => {

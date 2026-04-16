@@ -26,29 +26,29 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         return Math.min(1, Math.max(0, 0.5 + value * SH_C0));
     };
 
-  // get the list of selected splats (currently limited to just a single one)
-  const selectedSplats = () => {
-    const selected = events.invoke("selection") as Splat;
-    return selected?.visible ? [selected] : [];
-  };
+    // get the list of selected splats (currently limited to just a single one)
+    const selectedSplats = () => {
+        const selected = events.invoke('selection') as Splat;
+        return selected?.visible ? [selected] : [];
+    };
 
-  let lastExportCursor = 0;
+    let lastExportCursor = 0;
 
-  // add unsaved changes warning message.
-  window.addEventListener("beforeunload", (e) => {
-    if (!events.invoke("scene.dirty")) {
-      // if the undo cursor matches last export, then we have no unsaved changes
-      return undefined;
-    }
+    // add unsaved changes warning message.
+    window.addEventListener('beforeunload', (e) => {
+        if (!events.invoke('scene.dirty')) {
+            // if the undo cursor matches last export, then we have no unsaved changes
+            return undefined;
+        }
 
-    const msg = "You have unsaved changes. Are you sure you want to leave?";
-    e.returnValue = msg;
-    return msg;
-  });
+        const msg = 'You have unsaved changes. Are you sure you want to leave?';
+        e.returnValue = msg;
+        return msg;
+    });
 
-  events.function("targetSize", () => {
-    return scene.targetSize;
-  });
+    events.function('targetSize', () => {
+        return scene.targetSize;
+    });
 
     events.on('scene.clear', () => {
         scene.clear();
@@ -63,100 +63,123 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     });
 
-  events.function("scene.dirty", () => {
-    return editHistory.cursor !== lastExportCursor;
-  });
+    events.function('scene.dirty', () => {
+        return editHistory.cursor !== lastExportCursor;
+    });
 
-  events.on("doc.saved", () => {
-    lastExportCursor = editHistory.cursor;
-  });
+    events.on('doc.saved', () => {
+        lastExportCursor = editHistory.cursor;
+    });
 
     // force render on some events
 
     [
         'camera.mode', 'camera.overlay', 'camera.splatSize', 'view.outlineSelection',
-        'view.centersUseGaussianColor', 'view.bands', 'camera.bound', 'selection.changed',
-        'tool.coordSpace'
+        'view.centersUseGaussianColor', 'view.bands', 'camera.bound', 'camera.showPoses',
+        'selection.changed', 'tool.coordSpace'
     ].forEach((eventName) => {
         events.on(eventName, () => {
             scene.forceRender = true;
         });
     });
 
-  // grid.visible
+    // grid.visible
 
-  const setGridVisible = (visible: boolean) => {
-    if (visible !== scene.grid.visible) {
-      scene.grid.visible = visible;
-      events.fire("grid.visible", visible);
-    }
-  };
+    const setGridVisible = (visible: boolean) => {
+        if (visible !== scene.grid.visible) {
+            scene.grid.visible = visible;
+            events.fire('grid.visible', visible);
+        }
+    };
 
-  events.function("grid.visible", () => {
-    return scene.grid.visible;
-  });
+    events.function('grid.visible', () => {
+        return scene.grid.visible;
+    });
 
-  events.on("grid.setVisible", (visible: boolean) => {
-    setGridVisible(visible);
-  });
+    events.on('grid.setVisible', (visible: boolean) => {
+        setGridVisible(visible);
+    });
 
-  events.on("grid.toggleVisible", () => {
-    setGridVisible(!scene.grid.visible);
-  });
+    events.on('grid.toggleVisible', () => {
+        setGridVisible(!scene.grid.visible);
+    });
 
-  setGridVisible(scene.config.show.grid);
+    setGridVisible(scene.config.show.grid);
 
-  // camera.fov
+    // camera.fov
 
-  const setCameraFov = (fov: number) => {
-    if (fov !== scene.camera.fov) {
-      scene.camera.fov = fov;
-      events.fire("camera.fov", scene.camera.fov);
-    }
-  };
+    const setCameraFov = (fov: number) => {
+        if (fov !== scene.camera.fov) {
+            scene.camera.fov = fov;
+            events.fire('camera.fov', scene.camera.fov);
+        }
+    };
 
-  events.function("camera.fov", () => {
-    return scene.camera.fov;
-  });
+    events.function('camera.fov', () => {
+        return scene.camera.fov;
+    });
 
-  events.on("camera.setFov", (fov: number) => {
-    setCameraFov(fov);
-  });
+    events.on('camera.setFov', (fov: number) => {
+        setCameraFov(fov);
+    });
 
-  // camera.tonemapping
+    // camera.tonemapping
 
-  events.function("camera.tonemapping", () => {
-    return scene.camera.tonemapping;
-  });
+    events.function('camera.tonemapping', () => {
+        return scene.camera.tonemapping;
+    });
 
-  events.on("camera.setTonemapping", (value: string) => {
-    scene.camera.tonemapping = value;
-  });
+    events.on('camera.setTonemapping', (value: string) => {
+        scene.camera.tonemapping = value;
+    });
 
-  // camera.bound
+    // camera.bound
 
-  let bound = scene.config.show.bound;
+    let bound = scene.config.show.bound;
 
-  const setBoundVisible = (visible: boolean) => {
-    if (visible !== bound) {
-      bound = visible;
-      events.fire("camera.bound", bound);
-    }
-  };
+    const setBoundVisible = (visible: boolean) => {
+        if (visible !== bound) {
+            bound = visible;
+            events.fire('camera.bound', bound);
+        }
+    };
 
-  events.function("camera.bound", () => {
-    return bound;
-  });
+    events.function('camera.bound', () => {
+        return bound;
+    });
 
-  events.on("camera.setBound", (value: boolean) => {
-    setBoundVisible(value);
-  });
+    events.on('camera.setBound', (value: boolean) => {
+        setBoundVisible(value);
+    });
 
     events.on('camera.toggleBound', () => {
         setBoundVisible(!events.invoke('camera.bound'));
     });
 
-  // camera.focus
+    // camera.showPoses
+
+    let showPoses = scene.config.show.cameraPoses;
+
+    const setShowPoses = (visible: boolean) => {
+        if (visible !== showPoses) {
+            showPoses = visible;
+            events.fire('camera.showPoses', showPoses);
+        }
+    };
+
+    events.function('camera.showPoses', () => {
+        return showPoses;
+    });
+
+    events.on('camera.setShowPoses', (value: boolean) => {
+        setShowPoses(value);
+    });
+
+    events.on('camera.toggleShowPoses', () => {
+        setShowPoses(!events.invoke('camera.showPoses'));
+    });
+
+    // camera.focus
 
     events.on('camera.focus', () => {
         const splat = selectedSplats()[0];
@@ -273,17 +296,13 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     rect.end.y - rect.start.y
                 );
 
-        const selected = new Set<number>(pick);
-        const filter = (i: number) => {
-          return selected.has(i);
-        };
-
-                events.fire('edit.add', new SelectOp(splat, op, filter));
+                const sortedIds = new Uint32Array(new Set(pick)).sort();
+                events.fire('edit.add', new SelectOp(splat, op, sortedIds));
             }
         }
     });
 
-  let maskTexture: Texture = null;
+    let maskTexture: Texture = null;
 
     events.function('select.byMask', async (op: 'add'|'remove'|'set', canvas: HTMLCanvasElement, context: CanvasRenderingContext2D) => {
         const mode = events.invoke('camera.mode');
@@ -305,21 +324,21 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             } else if (mode === 'rings') {
                 const mask = context.getImageData(0, 0, canvas.width, canvas.height);
 
-          // calculate mask bound so we limit pixel operations
-          let mx0 = mask.width - 1;
-          let my0 = mask.height - 1;
-          let mx1 = 0;
-          let my1 = 0;
-          for (let y = 0; y < mask.height; ++y) {
-            for (let x = 0; x < mask.width; ++x) {
-              if (mask.data[(y * mask.width + x) * 4 + 3] === 255) {
-                mx0 = Math.min(mx0, x);
-                my0 = Math.min(my0, y);
-                mx1 = Math.max(mx1, x);
-                my1 = Math.max(my1, y);
-              }
-            }
-          }
+                // calculate mask bound so we limit pixel operations
+                let mx0 = mask.width - 1;
+                let my0 = mask.height - 1;
+                let mx1 = 0;
+                let my1 = 0;
+                for (let y = 0; y < mask.height; ++y) {
+                    for (let x = 0; x < mask.width; ++x) {
+                        if (mask.data[(y * mask.width + x) * 4 + 3] === 255) {
+                            mx0 = Math.min(mx0, x);
+                            my0 = Math.min(my0, y);
+                            mx1 = Math.max(mx1, x);
+                            my1 = Math.max(my1, y);
+                        }
+                    }
+                }
 
                 // Convert mask bounds to normalized coordinates
                 const nx0 = mx0 / mask.width;
@@ -334,8 +353,12 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
                 // Calculate actual pixel dimensions for iteration
                 const { width, height } = scene.targetSize;
-                const pw = Math.max(1, Math.floor(nw * width));
-                const ph = Math.max(1, Math.floor(nh * height));
+
+                // Convert normalized coordinates to render target pixels
+                const px = Math.floor(nx0 * width);
+                const py = Math.floor(ny0 * height);
+                const pw = Math.max(1, Math.ceil((nx0 + nw) * width) - px);
+                const ph = Math.max(1, Math.ceil((ny0 + nh) * height) - py);
 
                 const selected = new Set<number>();
                 for (let y = 0; y < ph; ++y) {
@@ -343,16 +366,13 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                         const mx = Math.floor((nx0 + x / width) * mask.width);
                         const my = Math.floor((ny0 + y / height) * mask.height);
                         if (mask.data[(my * mask.width + mx) * 4] === 255) {
-                            selected.add(pick[(ph - y) * pw + x]);
+                            selected.add(pick[(ph - 1 - y) * pw + x]);
                         }
                     }
                 }
 
-          const filter = (i: number) => {
-            return selected.has(i);
-          };
-
-                events.fire('edit.add', new SelectOp(splat, op, filter));
+                const sortedIds = new Uint32Array(selected).sort();
+                events.fire('edit.add', new SelectOp(splat, op, sortedIds));
             }
         }
     });
@@ -364,32 +384,32 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         for (const splat of selectedSplats()) {
             const splatData = splat.splatData;
 
-        if (mode === "centers") {
-          const x = splatData.getProp("x");
-          const y = splatData.getProp("y");
-          const z = splatData.getProp("z");
+            if (mode === 'centers') {
+                const x = splatData.getProp('x');
+                const y = splatData.getProp('y');
+                const z = splatData.getProp('z');
 
                 const splatSize = events.invoke('camera.splatSize');
                 const camera = scene.camera.camera;
                 const sx = point.x * width;
                 const sy = point.y * height;
 
-          // calculate final matrix
-          mat.mul2(camera.camera._viewProjMat, splat.worldTransform);
+                // calculate final matrix
+                mat.mul2(camera.camera._viewProjMat, splat.worldTransform);
 
-          const filter = (i: number) => {
-            vec4.set(x[i], y[i], z[i], 1.0);
-            mat.transformVec4(vec4, vec4);
-            const px = ((vec4.x / vec4.w) * 0.5 + 0.5) * width;
-            const py = ((-vec4.y / vec4.w) * 0.5 + 0.5) * height;
-            return (
-              Math.abs(px - sx) < splatSize && Math.abs(py - sy) < splatSize
-            );
-          };
+                const filter = (i: number) => {
+                    vec4.set(x[i], y[i], z[i], 1.0);
+                    mat.transformVec4(vec4, vec4);
+                    const px = ((vec4.x / vec4.w) * 0.5 + 0.5) * width;
+                    const py = ((-vec4.y / vec4.w) * 0.5 + 0.5) * height;
+                    return (
+                        Math.abs(px - sx) < splatSize && Math.abs(py - sy) < splatSize
+                    );
+                };
 
-          events.fire("edit.add", new SelectOp(splat, op, filter));
-        } else if (mode === "rings") {
-          scene.camera.pickPrep(splat, op);
+                events.fire('edit.add', new SelectOp(splat, op, filter));
+            } else if (mode === 'rings') {
+                scene.camera.pickPrep(splat, op);
 
                 // Use normalized coordinates with minimal size for single pixel pick
                 const pickResult = await scene.camera.pickRect(
@@ -399,12 +419,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     1 / height
                 );
                 const pickId = pickResult[0];
-
-          const filter = (i: number) => {
-            return i === pickId;
-          };
-
-                events.fire('edit.add', new SelectOp(splat, op, filter));
+                events.fire('edit.add', new SelectOp(splat, op, new Uint32Array([pickId])));
             }
         }
     });
@@ -467,17 +482,17 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     });
 
-  events.on("select.hide", () => {
-    selectedSplats().forEach((splat) => {
-      events.fire("edit.add", new HideSelectionOp(splat));
+    events.on('select.hide', () => {
+        selectedSplats().forEach((splat) => {
+            events.fire('edit.add', new HideSelectionOp(splat));
+        });
     });
-  });
 
-  events.on("select.unhide", () => {
-    selectedSplats().forEach((splat) => {
-      events.fire("edit.add", new UnhideAllOp(splat));
+    events.on('select.unhide', () => {
+        selectedSplats().forEach((splat) => {
+            events.fire('edit.add', new UnhideAllOp(splat));
+        });
     });
-  });
 
     events.on('select.delete', () => {
         // Don't delete gaussians when measure tool is active (backspace deletes measure points instead)
@@ -489,8 +504,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
     });
 
-  const performSelectionFunc = async (func: "duplicate" | "separate") => {
-    const splats = selectedSplats();
+    const performSelectionFunc = async (func: 'duplicate' | 'separate') => {
+        const splats = selectedSplats();
 
         const memFs = new MemoryFileSystem();
 
@@ -522,39 +537,39 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     };
 
-  // duplicate the current selection
-  events.on("select.duplicate", async () => {
-    await performSelectionFunc("duplicate");
-  });
-
-  events.on("select.separate", async () => {
-    await performSelectionFunc("separate");
-  });
-
-  events.on("scene.reset", () => {
-    selectedSplats().forEach((splat) => {
-      editHistory.add(new ResetOp(splat));
+    // duplicate the current selection
+    events.on('select.duplicate', async () => {
+        await performSelectionFunc('duplicate');
     });
-  });
+
+    events.on('select.separate', async () => {
+        await performSelectionFunc('separate');
+    });
+
+    events.on('scene.reset', () => {
+        selectedSplats().forEach((splat) => {
+            editHistory.add(new ResetOp(splat));
+        });
+    });
 
     // camera mode (visual: centers/rings)
 
-  let activeMode = "centers";
+    let activeMode = 'centers';
 
-  const setCameraMode = (mode: string) => {
-    if (mode !== activeMode) {
-      activeMode = mode;
-      events.fire("camera.mode", activeMode);
-    }
-  };
+    const setCameraMode = (mode: string) => {
+        if (mode !== activeMode) {
+            activeMode = mode;
+            events.fire('camera.mode', activeMode);
+        }
+    };
 
-  events.function("camera.mode", () => {
-    return activeMode;
-  });
+    events.function('camera.mode', () => {
+        return activeMode;
+    });
 
-  events.on("camera.setMode", (mode: string) => {
-    setCameraMode(mode);
-  });
+    events.on('camera.setMode', (mode: string) => {
+        setCameraMode(mode);
+    });
 
     events.on('camera.toggleMode', () => {
         setCameraMode(events.invoke('camera.mode') === 'centers' ? 'rings' : 'centers');
@@ -584,98 +599,98 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         setControlMode(controlMode === 'orbit' ? 'fly' : 'orbit');
     });
 
-  // camera overlay
+    // camera overlay
 
-  let cameraOverlay = scene.config.camera.overlay;
+    let cameraOverlay = scene.config.camera.overlay;
 
-  const setCameraOverlay = (enabled: boolean) => {
-    if (enabled !== cameraOverlay) {
-      cameraOverlay = enabled;
-      events.fire("camera.overlay", cameraOverlay);
-    }
-  };
+    const setCameraOverlay = (enabled: boolean) => {
+        if (enabled !== cameraOverlay) {
+            cameraOverlay = enabled;
+            events.fire('camera.overlay', cameraOverlay);
+        }
+    };
 
-  events.function("camera.overlay", () => {
-    return cameraOverlay;
-  });
+    events.function('camera.overlay', () => {
+        return cameraOverlay;
+    });
 
-  events.on("camera.setOverlay", (value: boolean) => {
-    setCameraOverlay(value);
-  });
+    events.on('camera.setOverlay', (value: boolean) => {
+        setCameraOverlay(value);
+    });
 
-  events.on("camera.toggleOverlay", () => {
-    setCameraOverlay(!events.invoke("camera.overlay"));
-  });
+    events.on('camera.toggleOverlay', () => {
+        setCameraOverlay(!events.invoke('camera.overlay'));
+    });
 
-  // splat size
+    // splat size
 
-  let splatSize = 2;
+    let splatSize = 2;
 
-  const setSplatSize = (value: number) => {
-    if (value !== splatSize) {
-      splatSize = value;
-      events.fire("camera.splatSize", splatSize);
-    }
-  };
+    const setSplatSize = (value: number) => {
+        if (value !== splatSize) {
+            splatSize = value;
+            events.fire('camera.splatSize', splatSize);
+        }
+    };
 
-  events.function("camera.splatSize", () => {
-    return splatSize;
-  });
+    events.function('camera.splatSize', () => {
+        return splatSize;
+    });
 
-  events.on("camera.setSplatSize", (value: number) => {
-    setSplatSize(value);
-  });
+    events.on('camera.setSplatSize', (value: number) => {
+        setSplatSize(value);
+    });
 
-  // camera fly speed
+    // camera fly speed
 
-  const setFlySpeed = (value: number) => {
-    if (value !== scene.camera.flySpeed) {
-      scene.camera.flySpeed = value;
-      events.fire("camera.flySpeed", value);
-    }
-  };
+    const setFlySpeed = (value: number) => {
+        if (value !== scene.camera.flySpeed) {
+            scene.camera.flySpeed = value;
+            events.fire('camera.flySpeed', value);
+        }
+    };
 
-  events.function("camera.flySpeed", () => {
-    return scene.camera.flySpeed;
-  });
+    events.function('camera.flySpeed', () => {
+        return scene.camera.flySpeed;
+    });
 
-  events.on("camera.setFlySpeed", (value: number) => {
-    setFlySpeed(value);
-  });
+    events.on('camera.setFlySpeed', (value: number) => {
+        setFlySpeed(value);
+    });
 
-  // outline selection
+    // outline selection
 
-  let outlineSelection = false;
+    let outlineSelection = false;
 
-  const setOutlineSelection = (value: boolean) => {
-    if (value !== outlineSelection) {
-      outlineSelection = value;
-      events.fire("view.outlineSelection", outlineSelection);
-    }
-  };
+    const setOutlineSelection = (value: boolean) => {
+        if (value !== outlineSelection) {
+            outlineSelection = value;
+            events.fire('view.outlineSelection', outlineSelection);
+        }
+    };
 
-  events.function("view.outlineSelection", () => {
-    return outlineSelection;
-  });
+    events.function('view.outlineSelection', () => {
+        return outlineSelection;
+    });
 
-  events.on("view.setOutlineSelection", (value: boolean) => {
-    setOutlineSelection(value);
-  });
+    events.on('view.setOutlineSelection', (value: boolean) => {
+        setOutlineSelection(value);
+    });
 
-  // view spherical harmonic bands
+    // view spherical harmonic bands
 
-  let viewBands = scene.config.show.shBands;
+    let viewBands = scene.config.show.shBands;
 
-  const setViewBands = (value: number) => {
-    if (value !== viewBands) {
-      viewBands = value;
-      events.fire("view.bands", viewBands);
-    }
-  };
+    const setViewBands = (value: number) => {
+        if (value !== viewBands) {
+            viewBands = value;
+            events.fire('view.bands', viewBands);
+        }
+    };
 
-  events.function("view.bands", () => {
-    return viewBands;
-  });
+    events.function('view.bands', () => {
+        return viewBands;
+    });
 
     events.on('view.setBands', (value: number) => {
         setViewBands(value);
@@ -709,55 +724,59 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         const focalPoint = camera.focalPoint;
         return {
             position: { x: position.x, y: position.y, z: position.z },
-            target: { x: focalPoint.x, y: focalPoint.y, z: focalPoint.z }
+            target: { x: focalPoint.x, y: focalPoint.y, z: focalPoint.z },
+            fov: camera.fov
         };
     });
 
-  events.on(
-    "camera.setPose",
-    (pose: { position: Vec3; target: Vec3 }, speed = 1) => {
-      scene.camera.setPose(pose.position, pose.target, speed);
-    },
-  );
+    events.on('camera.setPose', (pose: { position: Vec3, target: Vec3, fov?: number }, speed = 1) => {
+        scene.camera.setPose(pose.position, pose.target, speed);
+        if (pose.fov !== undefined) {
+            scene.camera.fov = pose.fov;
+            events.fire('camera.fov', pose.fov);
+        }
+    });
 
-  // hack: fire events to initialize UI
-  events.fire("camera.fov", scene.camera.fov);
-  events.fire("camera.overlay", cameraOverlay);
-  events.fire("view.bands", viewBands);
+    // hack: fire events to initialize UI
+    events.fire('camera.fov', scene.camera.fov);
+    events.fire('camera.overlay', cameraOverlay);
+    events.fire('view.bands', viewBands);
 
-  // doc serialization
-  events.function("docSerialize.view", () => {
-    const packC = (c: Color) => [c.r, c.g, c.b, c.a];
-    return {
-      bgColor: packC(events.invoke("bgClr")),
-      selectedColor: packC(events.invoke("selectedClr")),
-      unselectedColor: packC(events.invoke("unselectedClr")),
-      lockedColor: packC(events.invoke("lockedClr")),
-      shBands: events.invoke("view.bands"),
-      centersSize: events.invoke("camera.splatSize"),
-      outlineSelection: events.invoke("view.outlineSelection"),
-      showGrid: events.invoke("grid.visible"),
-      showBound: events.invoke("camera.bound"),
-      flySpeed: events.invoke("camera.flySpeed"),
-      revealEffect: events.invoke("revealEffect"),
-    };
-  });
+    // doc serialization
+    events.function('docSerialize.view', () => {
+        const packC = (c: Color) => [c.r, c.g, c.b, c.a];
+        return {
+            bgColor: packC(events.invoke('bgClr')),
+            selectedColor: packC(events.invoke('selectedClr')),
+            unselectedColor: packC(events.invoke('unselectedClr')),
+            lockedColor: packC(events.invoke('lockedClr')),
+            shBands: events.invoke('view.bands'),
+            centersSize: events.invoke('camera.splatSize'),
+            outlineSelection: events.invoke('view.outlineSelection'),
+            showGrid: events.invoke('grid.visible'),
+            showBound: events.invoke('camera.bound'),
+            showCameraPoses: events.invoke('camera.showPoses'),
+            flySpeed: events.invoke('camera.flySpeed'),
+            revealEffect: events.invoke('revealEffect')
+        };
+    });
 
-  events.function("docDeserialize.view", (docView: any) => {
-    events.fire("setBgClr", new Color(docView.bgColor));
-    events.fire("setSelectedClr", new Color(docView.selectedColor));
-    events.fire("setUnselectedClr", new Color(docView.unselectedColor));
-    events.fire("setLockedClr", new Color(docView.lockedColor));
-    events.fire("view.setBands", docView.shBands);
-    events.fire("camera.setSplatSize", docView.centersSize);
-    events.fire("view.setOutlineSelection", docView.outlineSelection);
-    events.fire("grid.setVisible", docView.showGrid);
-    events.fire("camera.setBound", docView.showBound);
-    events.fire("camera.setFlySpeed", docView.flySpeed);
-    if (docView.revealEffect) {
-      events.fire("revealEffect.set", docView.revealEffect);
-    }
-  });
+    events.function('docDeserialize.view', (docView: any) => {
+        events.fire('setBgClr', new Color(docView.bgColor));
+        events.fire('setSelectedClr', new Color(docView.selectedColor));
+        events.fire('setUnselectedClr', new Color(docView.unselectedColor));
+        events.fire('setLockedClr', new Color(docView.lockedColor));
+        events.fire('view.setBands', docView.shBands);
+        events.fire('camera.setSplatSize', docView.centersSize);
+        events.fire('view.setOutlineSelection', docView.outlineSelection);
+        events.fire('grid.setVisible', docView.showGrid);
+        events.fire('camera.setBound', docView.showBound);
+        events.fire('camera.setShowPoses', docView.showCameraPoses ?? false);
+        events.fire('camera.setFlySpeed', docView.flySpeed);
+        if (docView.revealEffect) {
+            events.fire('revealEffect.set', docView.revealEffect);
+        }
+    });
 };
 
 export { registerEditorEvents };

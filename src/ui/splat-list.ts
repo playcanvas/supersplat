@@ -174,6 +174,8 @@ class SplatList extends Container {
         super(args);
 
         const items = new Map<Splat, SplatItem>();
+        let soloMode = false;
+        const savedVisibility = new Map<Splat, boolean>();
 
         // edit input used during renames
         const edit = new TextInput({
@@ -186,6 +188,11 @@ class SplatList extends Container {
                 const item = new SplatItem(splat.name, edit);
                 this.append(item);
                 items.set(splat, item);
+
+                if (soloMode) {
+                    savedVisibility.set(splat, splat.visible);
+                    splat.visible = false;
+                }
 
                 item.on('visible', () => {
                     splat.visible = true;
@@ -212,13 +219,41 @@ class SplatList extends Container {
                     this.remove(item);
                     items.delete(splat);
                 }
+                savedVisibility.delete(splat);
             }
         });
 
-        events.on('selection.changed', (selection: Splat) => {
+        events.on('selection.changed', (selection: Splat, prev: Splat) => {
             items.forEach((value, key) => {
                 value.selected = key === selection;
             });
+
+            if (soloMode) {
+                if (prev) {
+                    prev.visible = false;
+                }
+                if (selection) {
+                    selection.visible = true;
+                }
+            }
+        });
+
+        events.on('scene.solo', (value: boolean) => {
+            soloMode = value;
+            const selection = events.invoke('selection') as Splat;
+
+            if (soloMode) {
+                items.forEach((item, splat) => {
+                    savedVisibility.set(splat, splat.visible);
+                    splat.visible = splat === selection;
+                });
+            } else {
+                items.forEach((item, splat) => {
+                    const wasVisible = savedVisibility.get(splat);
+                    splat.visible = wasVisible !== undefined ? wasVisible : true;
+                });
+                savedVisibility.clear();
+            }
         });
 
         events.on('splat.name', (splat: Splat) => {
@@ -238,6 +273,9 @@ class SplatList extends Container {
         this.on('click', (item: SplatItem) => {
             for (const [key, value] of items) {
                 if (item === value) {
+                    if (soloMode && !key.visible) {
+                        key.visible = true;
+                    }
                     events.fire('selection', key);
                     break;
                 }

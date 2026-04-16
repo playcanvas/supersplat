@@ -1,9 +1,13 @@
-import { Container, Element, Label } from '@playcanvas/pcui';
+import { Button, Container, Element, Label } from '@playcanvas/pcui';
+
+import { localize } from './localization';
 
 class Progress extends Container {
     setHeader: (headerText: string) => void;
     setText: (text: string) => void;
     setProgress: (progress: number) => void;
+    showCancelButton: (show: boolean) => void;
+    onCancel: (() => void) | null;
 
     constructor(args = {}) {
         args = {
@@ -13,6 +17,8 @@ class Progress extends Container {
         };
 
         super(args);
+
+        this.onCancel = null;
 
         this.dom.tabIndex = 0;
 
@@ -31,11 +37,22 @@ class Progress extends Container {
             class: 'pulsate'
         });
 
+        const cancelButton = new Button({
+            id: 'cancel-button',
+            text: localize('panel.render.cancel'),
+            hidden: true
+        });
+
+        cancelButton.on('click', () => {
+            if (this.onCancel) this.onCancel();
+        });
+
         const content = new Container({
             id: 'content'
         });
         content.append(text);
         content.append(bar);
+        content.append(cancelButton);
 
         const dialog = new Container({
             id: 'dialog'
@@ -61,6 +78,10 @@ class Progress extends Container {
 
         this.setProgress = (progress: number) => {
             bar.dom.style.backgroundImage = `linear-gradient(90deg, #F60 0%, #F60 ${progress}%, #00000000 ${progress}%, #00000000 100%)`;
+        };
+
+        this.showCancelButton = (show: boolean) => {
+            cancelButton.hidden = !show;
         };
     }
 }

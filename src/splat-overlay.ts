@@ -1,12 +1,16 @@
 import {
     BLEND_NORMAL,
     PRIMITIVE_POINTS,
+    SEMANTIC_POSITION,
+    TYPE_FLOAT32,
     Color,
     Entity,
     GSplatResource,
     ShaderMaterial,
     Mesh,
-    MeshInstance
+    MeshInstance,
+    VertexBuffer,
+    VertexFormat
 } from 'playcanvas';
 
 import { ElementType, Element } from './element';
@@ -42,6 +46,17 @@ class SplatOverlay extends Element {
         this.material.update();
 
         this.mesh = new Mesh(device);
+
+        // dummy 1-vertex VB so the engine caches the VAO (avoids creating a new one every frame)
+        const format = new VertexFormat(device, [
+            { semantic: SEMANTIC_POSITION, components: 1, type: TYPE_FLOAT32 }
+        ]);
+        format.instancing = true;
+        const vb = new VertexBuffer(device, format, 1);
+        vb.lock();
+        vb.unlock();
+        this.mesh.vertexBuffer = vb;
+
         this.mesh.primitive[0] = {
             baseVertex: 0,
             type: PRIMITIVE_POINTS,
@@ -112,8 +127,8 @@ class SplatOverlay extends Element {
         material.update();
 
         // subscribe to sorter updates for dynamic count
-        this.onSorterUpdated = (count: number) => {
-            mesh.primitive[0].count = count;
+        this.onSorterUpdated = () => {
+            mesh.primitive[0].count = instance.sorter.pendingSorted?.count ?? mesh.primitive[0].count;
         };
         instance.sorter.on('updated', this.onSorterUpdated);
 
@@ -127,7 +142,7 @@ class SplatOverlay extends Element {
     detach() {
         // unsubscribe from sorter updates
         if (this.splat && this.onSorterUpdated) {
-            this.splat.entity.gsplat.instance.sorter.off('updated', this.onSorterUpdated);
+            this.splat.entity.gsplat?.instance?.sorter?.off('updated', this.onSorterUpdated);
             this.onSorterUpdated = null;
         }
 
@@ -157,8 +172,6 @@ class SplatOverlay extends Element {
             // pass camera position for SH evaluation
             const camPos = scene.camera.mainCamera.getPosition();
             material.setParameter('view_position', [camPos.x, camPos.y, camPos.z]);
-
-            material.update();
         }
     }
 

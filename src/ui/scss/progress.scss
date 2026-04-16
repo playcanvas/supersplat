@@ -40,6 +40,7 @@
             height: 100%;
             display: flex;
             flex-direction: column;
+            gap: 16px;
 
             padding: 16px;
 
@@ -52,10 +53,14 @@
             #bar {
                 width: 100%;
                 height: 12px;
-                margin: 16px 0px 0px 0px;
                 border: 1px solid $bcg-dark;
                 border-radius: 6px;
                 background-color: #505050;
+            }
+
+            #cancel-button {
+                align-self: center;
+                margin: 0px;
             }
         }
     }

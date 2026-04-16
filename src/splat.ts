@@ -436,7 +436,7 @@ class Splat extends Element {
     set visible(value: boolean) {
         if (value !== this.visible) {
             this._visible = value;
-            this.scene.events.fire('splat.visibility', this);
+            this.scene?.events.fire('splat.visibility', this);
         }
     }
 

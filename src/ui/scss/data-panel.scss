@@ -3,6 +3,21 @@
 #data-panel {
     width: 100%;
     height: 320px;
+    border-top: 1px solid $bcg-lighter;
+
+    &:not(.pcui-hidden) {
+        display: flex;
+    }
+}
+
+#data-panel-resize-handle {
+    position: absolute;
+    top: -4px;
+    left: 0;
+    right: 0;
+    height: 8px;
+    cursor: ns-resize;
+    z-index: 10;
 }
 
 #data-panel-popup-container {
@@ -20,39 +35,77 @@
     width: 256px;
     flex-grow: 0;
     flex-shrink: 0;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    background-color: $bcg-darker;
+    border-right: 1px solid $bcg-lighter;
 }
 
 #data-controls {
     width: 100%;
-}
-
-.control-parent {
-    width: 100%;
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
+    flex-grow: 1;
+    background-color: $bcg-primary;
+}
+
+.data-panel-toggle-row {
+    height: 28px;
+    min-height: 28px;
+    flex-shrink: 0;
+    padding: 0px;
+    margin: 0 4px;
+    align-items: center;
+}
+
+.data-panel-toggle-label {
     flex-grow: 1;
 }
 
-.control-label {
-    width: 100px;
+.data-panel-toggle {
     flex-shrink: 0;
-    flex-grow: 0;
-    line-height: 32px;
-    margin: 0px 6px 0px 6px;
+    background-color: $bcg-dark;
+
+    &::after {
+        background-color: $clr-default;
+    }
+
+    &.pcui-boolean-input-ticked {
+        background-color: $clr-hilight;
+
+        &::after {
+            background-color: $clr-active;
+        }
+    }
 }
 
-.control-element {
-    flex-shrink: 0;
-    flex-grow: 0;
-}
-
-.control-element-expand {
+#data-list-box {
+    overflow-y: auto;
     flex-grow: 1;
+    margin: 8px;
+    background-color: $bcg-darker;
+    border-radius: 2px;
+    border: 1px solid $bcg-darkest;
 }
 
-.control-element.pcui-boolean-input {
-    margin-top: 10px;
+.data-list-item {
+    padding: 4px 8px;
+    cursor: pointer;
+    color: $text-secondary;
+    font-size: 12px;
+    border-left: 3px solid transparent;
+
+    &:hover {
+        color: $text-primary;
+        background-color: $bcg-primary;
+    }
+
+    &.active {
+        font-weight: bold;
+        color: $clr-hilight;
+        background-color: $bcg-primary;
+        border-left-color: $clr-hilight;
+    }
 }
 
 #histogram-container {

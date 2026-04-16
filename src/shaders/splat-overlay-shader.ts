@@ -151,6 +151,10 @@ const vertexShader = /* glsl */ `
             varying_color = vec4(mix(gaussianClr, selectedClr.xyz, (splatState == 1u) ? selectedClr.w : 0.0), unselectedClr.w);
 
             gl_Position = matrix_viewProjection * model * vec4(center, 1.0);
+
+            // disable depth clipping
+            gl_Position.z = 0.0;
+
             gl_PointSize = splatSize;
         }
     }

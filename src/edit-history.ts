@@ -89,10 +89,8 @@ class EditHistory {
 
         for (let i = 0; i < this.history.length; i++) {
             const op = this.history[i];
-            if (opReferencesSplat(op, splat)) {
-                // Destroy the operation being removed
-                op.destroy?.();
-            } else {
+            // Skip ops referencing the splat; don't destroy them since the caller handles that
+            if (!opReferencesSplat(op, splat)) {
                 // Keep this operation
                 newHistory.push(op);
                 // Track cursor position (count kept operations before original cursor)

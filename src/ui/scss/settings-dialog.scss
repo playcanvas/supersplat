@@ -39,6 +39,8 @@
                 color: $clr-icon-hilight;
             }
 
+            text-transform: uppercase;
+
             #text {
                 margin: 0;
                 padding: 0px 12px;
@@ -74,7 +76,7 @@
                 }
 
                 .boolean {
-                    margin: 5px 0 0 0;
+                    margin: 5px 0 0 auto;
                     flex-grow: 0;
                 }
 

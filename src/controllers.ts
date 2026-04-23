@@ -95,11 +95,8 @@ class PointerController {
             if (event.pointerType === 'mouse') {
                 // Only release if this is the button that was initially pressed
                 if (event.button === pressedButton) {
-                    // MMB tap (no significant movement) -> focus on cursor point
-                    if (pressedButton === 1 && !mmbDragged) {
-                        if (camera.controlMode === 'fly') {
-                            camera.scene.events.fire('camera.setControlMode', 'orbit');
-                        }
+                    // MMB tap (no significant movement) -> focus on cursor point (orbit only; fly uses MMB for zoom)
+                    if (pressedButton === 1 && camera.controlMode === 'orbit' && !mmbDragged) {
                         camera.pickFocalPoint(event.offsetX / target.clientWidth, event.offsetY / target.clientHeight);
                     }
                     pressedButton = -1;

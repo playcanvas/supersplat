@@ -50,6 +50,10 @@ class PointerController {
         let pressedButton = -1;  // no button pressed, otherwise 0, 1, or 2
         let x: number, y: number;
 
+        // middle-mouse click-vs-drag tracking (for MMB single-click to focus)
+        const CLICK_DRAG_THRESHOLD = 4;
+        let mmbStartX = 0, mmbStartY = 0, mmbDragged = false;
+
         // touch state
         let touches: { id: number, x: number, y: number}[] = [];
         let midx: number, midy: number, midlen: number;
@@ -64,6 +68,11 @@ class PointerController {
                 pressedButton = event.button;
                 x = event.offsetX;
                 y = event.offsetY;
+                if (pressedButton === 1) {
+                    mmbStartX = x;
+                    mmbStartY = y;
+                    mmbDragged = false;
+                }
             } else if (event.pointerType === 'touch') {
                 if (touches.length === 0) {
                     target.setPointerCapture(event.pointerId);
@@ -86,6 +95,13 @@ class PointerController {
             if (event.pointerType === 'mouse') {
                 // Only release if this is the button that was initially pressed
                 if (event.button === pressedButton) {
+                    // MMB tap (no significant movement) -> focus on cursor point
+                    if (pressedButton === 1 && !mmbDragged) {
+                        if (camera.controlMode === 'fly') {
+                            camera.scene.events.fire('camera.setControlMode', 'orbit');
+                        }
+                        camera.pickFocalPoint(event.offsetX / target.clientWidth, event.offsetY / target.clientHeight);
+                    }
                     pressedButton = -1;
                     target.releasePointerCapture(event.pointerId);
                 }
@@ -138,18 +154,34 @@ class PointerController {
                         }
                     }
                 } else {
-                    // Orbit mode: existing behavior
-                    // right button can be used to orbit with ctrl key and to zoom with alt | meta key
-                    const mod = pressedButton === 2 ?
-                        (event.shiftKey || event.ctrlKey ? 'orbit' :
-                            (event.altKey || event.metaKey ? 'zoom' : null)) :
-                        null;
+                    // Orbit mode:
+                    // - left button: orbit
+                    // - middle button (Blender-style): orbit, Shift -> pan, Ctrl -> zoom
+                    //   (gated on a small drag threshold so a tap can be used to focus on release)
+                    // - right button: pan, Shift/Ctrl -> orbit, Alt/Meta -> zoom
+                    if (pressedButton === 1 && !mmbDragged) {
+                        if (dist(event.offsetX, event.offsetY, mmbStartX, mmbStartY) < CLICK_DRAG_THRESHOLD) {
+                            return;
+                        }
+                        mmbDragged = true;
+                    }
 
-                    if (mod === 'orbit' || (mod === null && pressedButton === 0)) {
+                    let mod: 'orbit' | 'pan' | 'zoom';
+                    if (pressedButton === 2) {
+                        mod = event.shiftKey || event.ctrlKey ? 'orbit' :
+                            (event.altKey || event.metaKey ? 'zoom' : 'pan');
+                    } else if (pressedButton === 1) {
+                        mod = event.shiftKey ? 'pan' :
+                            (event.ctrlKey ? 'zoom' : 'orbit');
+                    } else {
+                        mod = 'orbit';
+                    }
+
+                    if (mod === 'orbit') {
                         orbit(dx, dy);
-                    } else if (mod === 'zoom' || (mod === null && pressedButton === 1)) {
+                    } else if (mod === 'zoom') {
                         zoom(dy * -0.02);
-                    } else if (mod === 'pan' || (mod === null && pressedButton === 2)) {
+                    } else {
                         pan(x, y, dx, dy);
                     }
                 }

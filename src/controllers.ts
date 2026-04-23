@@ -236,22 +236,30 @@ class PointerController {
         let burstIsWheel = false;
 
         const classifyWheel = (event: WheelEvent) => {
-            // Line/page-mode events are always physical wheels (Firefox).
+            // Firefox: physical wheels report line/page mode; trackpads report
+            // pixel mode. Firefox doesn't expose wheelDelta* so this is the
+            // only reliable signal on Firefox.
             if (event.deltaMode !== WheelEvent.DOM_DELTA_PIXEL) {
                 return true;
             }
+            // Chrome / Safari: the non-standard wheelDelta{X,Y} properties
+            // preserve the raw wheel-tick value (always multiples of ±120 per
+            // notch) regardless of macOS scroll smoothing applied to
+            // delta{X,Y}. Trackpads and Magic Mouse emit arbitrary values
+            // that are essentially never aligned to 120.
+            const e = event as WheelEvent & { wheelDeltaX?: number, wheelDeltaY?: number };
+            if (typeof e.wheelDeltaY === 'number' && e.wheelDeltaY !== 0) {
+                return e.wheelDeltaY % 120 === 0;
+            }
+            if (typeof e.wheelDeltaX === 'number' && e.wheelDeltaX !== 0) {
+                return e.wheelDeltaX % 120 === 0;
+            }
+            // Last-resort fallback for browsers without wheelDelta*.
             const { deltaX, deltaY } = event;
-            // Trackpads regularly scroll on both axes simultaneously; real
-            // wheels emit single-axis motion per notch.
             if (deltaX !== 0 && deltaY !== 0) {
                 return false;
             }
-            // Trackpads (and Magic Mouse) emit fractional pixel deltas;
-            // physical wheels emit integer pixel deltas.
-            if (!Number.isInteger(deltaX) || !Number.isInteger(deltaY)) {
-                return false;
-            }
-            return true;
+            return Number.isInteger(deltaX) && Number.isInteger(deltaY);
         };
 
         const wheel = (event: WheelEvent) => {

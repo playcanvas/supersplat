@@ -271,19 +271,21 @@ class PointerController {
 
             const { deltaX, deltaY } = event;
 
+            // Some browsers (notably Safari/Firefox on macOS) remap a vertical
+            // mouse wheel to deltaX when Shift is held. Use whichever axis
+            // carries motion so shift+wheel still produces movement.
+            const wheelDelta = deltaY || deltaX;
+
             if (camera.controlMode === 'fly') {
                 // Fly mode: wheel moves forward/backward by moving focal point
                 const factor = camera.flySpeed * 0.01;
                 const worldTransform = camera.mainCamera.getWorldTransform();
                 const zAxis = worldTransform.getZ();
-                moveVec.copy(zAxis).mulScalar(deltaY * factor);
+                moveVec.copy(zAxis).mulScalar(wheelDelta * factor);
                 const p = camera.focalPoint.add(moveVec);
                 camera.setFocalPoint(p);
             } else if (burstIsWheel) {
-                // Some browsers (notably Safari/Firefox on macOS) remap a
-                // vertical mouse wheel to deltaX when Shift is held. Use
-                // whichever axis carries motion so shift+wheel still zooms.
-                zoom((deltaY || deltaX) * -0.002);
+                zoom(wheelDelta * -0.002);
             } else if (event.ctrlKey || event.metaKey) {
                 zoom(deltaY * -0.02);
             } else if (event.shiftKey) {

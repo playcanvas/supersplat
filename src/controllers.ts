@@ -224,14 +224,43 @@ class PointerController {
             }
         };
 
-        // fuzzy detection of mouse wheel events vs trackpad events
-        const isMouseEvent = (deltaX: number, deltaY: number) => {
-            return (Math.abs(deltaX) > 50 && deltaY === 0) ||
-                   (Math.abs(deltaY) > 50 && deltaX === 0) ||
-                   (deltaX === 0 && deltaY !== 0) && !Number.isInteger(deltaY);
+        // Distinguish a physical mouse wheel from a trackpad two-finger
+        // scroll. A single wheel event is unreliable (Magic Mouse, hi-res
+        // mice, and macOS Shift-remapping all confuse per-event heuristics),
+        // so we classify on the first event of a burst and let the rest of
+        // the burst inherit that label. A burst is a run of wheel events
+        // separated by less than BURST_GAP_MS - trackpads stream at ~60Hz
+        // (~16ms), wheels emit one event per notch (typically >>50ms apart).
+        const BURST_GAP_MS = 80;
+        let lastWheelTime = 0;
+        let burstIsWheel = false;
+
+        const classifyWheel = (event: WheelEvent) => {
+            // Line/page-mode events are always physical wheels (Firefox).
+            if (event.deltaMode !== WheelEvent.DOM_DELTA_PIXEL) {
+                return true;
+            }
+            const { deltaX, deltaY } = event;
+            // Trackpads regularly scroll on both axes simultaneously; real
+            // wheels emit single-axis motion per notch.
+            if (deltaX !== 0 && deltaY !== 0) {
+                return false;
+            }
+            // Trackpads (and Magic Mouse) emit fractional pixel deltas;
+            // physical wheels emit integer pixel deltas.
+            if (!Number.isInteger(deltaX) || !Number.isInteger(deltaY)) {
+                return false;
+            }
+            return true;
         };
 
         const wheel = (event: WheelEvent) => {
+            const now = performance.now();
+            if (now - lastWheelTime > BURST_GAP_MS) {
+                burstIsWheel = classifyWheel(event);
+            }
+            lastWheelTime = now;
+
             const { deltaX, deltaY } = event;
 
             if (camera.controlMode === 'fly') {
@@ -242,17 +271,17 @@ class PointerController {
                 moveVec.copy(zAxis).mulScalar(deltaY * factor);
                 const p = camera.focalPoint.add(moveVec);
                 camera.setFocalPoint(p);
+            } else if (burstIsWheel) {
+                // Some browsers (notably Safari/Firefox on macOS) remap a
+                // vertical mouse wheel to deltaX when Shift is held. Use
+                // whichever axis carries motion so shift+wheel still zooms.
+                zoom((deltaY || deltaX) * -0.002);
+            } else if (event.ctrlKey || event.metaKey) {
+                zoom(deltaY * -0.02);
+            } else if (event.shiftKey) {
+                pan(event.offsetX, event.offsetY, deltaX, deltaY);
             } else {
-                // Orbit mode: existing behavior
-                if (isMouseEvent(deltaX, deltaY)) {
-                    zoom(deltaY * -0.002);
-                } else if (event.ctrlKey || event.metaKey) {
-                    zoom(deltaY * -0.02);
-                } else if (event.shiftKey) {
-                    pan(event.offsetX, event.offsetY, deltaX, deltaY);
-                } else {
-                    orbit(deltaX, deltaY);
-                }
+                orbit(deltaX, deltaY);
             }
 
             event.preventDefault();

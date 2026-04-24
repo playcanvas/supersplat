@@ -79,17 +79,23 @@ class EditHistory {
     }
 
     private async _undo() {
-        const editOp = this.history[--this.cursor];
+        // only advance the cursor after a successful undo so a thrown editOp leaves
+        // history in a consistent state for subsequent undo/redo.
+        const editOp = this.history[this.cursor - 1];
         await editOp.undo();
+        this.cursor--;
         this.events.fire('edit.apply', editOp);
         this.fireEvents();
     }
 
     private async _redo(suppressOp = false) {
-        const editOp = this.history[this.cursor++];
+        // only advance the cursor after a successful redo so a thrown editOp leaves
+        // history in a consistent state for subsequent undo/redo.
+        const editOp = this.history[this.cursor];
         if (!suppressOp) {
             await editOp.do();
         }
+        this.cursor++;
         this.events.fire('edit.apply', editOp);
         this.fireEvents();
     }
@@ -108,6 +114,7 @@ class EditHistory {
             });
             this.history = [];
             this.cursor = 0;
+            this.fireEvents();
             return Promise.resolve();
         });
     }

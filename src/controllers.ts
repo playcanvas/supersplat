@@ -224,35 +224,76 @@ class PointerController {
             }
         };
 
-        // fuzzy detection of mouse wheel events vs trackpad events
-        const isMouseEvent = (deltaX: number, deltaY: number) => {
-            return (Math.abs(deltaX) > 50 && deltaY === 0) ||
-                   (Math.abs(deltaY) > 50 && deltaX === 0) ||
-                   (deltaX === 0 && deltaY !== 0) && !Number.isInteger(deltaY);
+        // Distinguish a physical mouse wheel from a trackpad two-finger
+        // scroll. A single wheel event is unreliable (Magic Mouse, hi-res
+        // mice, and macOS Shift-remapping all confuse per-event heuristics),
+        // so we classify on the first event of a burst and let the rest of
+        // the burst inherit that label. A burst is a run of wheel events
+        // separated by less than BURST_GAP_MS - trackpads stream at ~60Hz
+        // (~16ms), wheels emit one event per notch (typically >>50ms apart).
+        const BURST_GAP_MS = 80;
+        let lastWheelTime = -Infinity;
+        let burstIsWheel = false;
+
+        const classifyWheel = (event: WheelEvent) => {
+            // Firefox: physical wheels report line/page mode; trackpads report
+            // pixel mode. Firefox doesn't expose wheelDelta* so this is the
+            // only reliable signal on Firefox.
+            if (event.deltaMode !== WheelEvent.DOM_DELTA_PIXEL) {
+                return true;
+            }
+            // Chrome / Safari: the non-standard wheelDelta{X,Y} properties
+            // preserve the raw wheel-tick value (always multiples of ±120 per
+            // notch) regardless of macOS scroll smoothing applied to
+            // delta{X,Y}. Trackpads and Magic Mouse emit arbitrary values
+            // that are essentially never aligned to 120.
+            const e = event as WheelEvent & { wheelDeltaX?: number, wheelDeltaY?: number };
+            if (typeof e.wheelDeltaY === 'number' && e.wheelDeltaY !== 0) {
+                return e.wheelDeltaY % 120 === 0;
+            }
+            if (typeof e.wheelDeltaX === 'number' && e.wheelDeltaX !== 0) {
+                return e.wheelDeltaX % 120 === 0;
+            }
+            // Last-resort fallback for browsers without wheelDelta*.
+            const { deltaX, deltaY } = event;
+            if (deltaX !== 0 && deltaY !== 0) {
+                return false;
+            }
+            return Number.isInteger(deltaX) && Number.isInteger(deltaY);
         };
 
         const wheel = (event: WheelEvent) => {
+            const now = performance.now();
+            if (now - lastWheelTime > BURST_GAP_MS) {
+                burstIsWheel = classifyWheel(event);
+            }
+            lastWheelTime = now;
+
             const { deltaX, deltaY } = event;
+
+            // Some browsers (notably Safari/Firefox on macOS) remap a vertical
+            // mouse wheel to deltaX when Shift is held. Only fall back to
+            // deltaX for that remapped case so horizontal-only scrolling
+            // (tilt wheel, horizontal trackpad swipe) is not treated as
+            // zoom / fly movement.
+            const wheelDelta = event.shiftKey && deltaY === 0 ? deltaX : deltaY;
 
             if (camera.controlMode === 'fly') {
                 // Fly mode: wheel moves forward/backward by moving focal point
                 const factor = camera.flySpeed * 0.01;
                 const worldTransform = camera.mainCamera.getWorldTransform();
                 const zAxis = worldTransform.getZ();
-                moveVec.copy(zAxis).mulScalar(deltaY * factor);
+                moveVec.copy(zAxis).mulScalar(wheelDelta * factor);
                 const p = camera.focalPoint.add(moveVec);
                 camera.setFocalPoint(p);
+            } else if (burstIsWheel) {
+                zoom(wheelDelta * -0.002);
+            } else if (event.ctrlKey || event.metaKey) {
+                zoom(deltaY * -0.02);
+            } else if (event.shiftKey) {
+                pan(event.offsetX, event.offsetY, deltaX, deltaY);
             } else {
-                // Orbit mode: existing behavior
-                if (isMouseEvent(deltaX, deltaY)) {
-                    zoom(deltaY * -0.002);
-                } else if (event.ctrlKey || event.metaKey) {
-                    zoom(deltaY * -0.02);
-                } else if (event.shiftKey) {
-                    pan(event.offsetX, event.offsetY, deltaX, deltaY);
-                } else {
-                    orbit(deltaX, deltaY);
-                }
+                orbit(deltaX, deltaY);
             }
 
             event.preventDefault();

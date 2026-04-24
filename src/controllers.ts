@@ -272,9 +272,11 @@ class PointerController {
             const { deltaX, deltaY } = event;
 
             // Some browsers (notably Safari/Firefox on macOS) remap a vertical
-            // mouse wheel to deltaX when Shift is held. Use whichever axis
-            // carries motion so shift+wheel still produces movement.
-            const wheelDelta = deltaY || deltaX;
+            // mouse wheel to deltaX when Shift is held. Only fall back to
+            // deltaX for that remapped case so horizontal-only scrolling
+            // (tilt wheel, horizontal trackpad swipe) is not treated as
+            // zoom / fly movement.
+            const wheelDelta = event.shiftKey && deltaY === 0 ? deltaX : deltaY;
 
             if (camera.controlMode === 'fly') {
                 // Fly mode: wheel moves forward/backward by moving focal point

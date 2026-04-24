@@ -714,11 +714,12 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     });
 
     events.on('camera.setPose', (pose: { position: Vec3, target: Vec3, fov?: number }, speed = 1) => {
-        scene.camera.setPose(pose.position, pose.target, speed);
+        // assign fov before setPose so distance is computed using the new fovFactor
         if (pose.fov !== undefined) {
             scene.camera.fov = pose.fov;
             events.fire('camera.fov', pose.fov);
         }
+        scene.camera.setPose(pose.position, pose.target, speed);
     });
 
     // hack: fire events to initialize UI

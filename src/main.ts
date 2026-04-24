@@ -83,6 +83,10 @@ const main = async () => {
     // edit history
     const editHistory = new EditHistory(events);
 
+    // expose edit history queue so subsystems (e.g. transform handlers) can serialize their
+    // own async work onto the same chain that gates add/undo/redo.
+    events.function('edit.queue', (fn: () => Promise<void>) => editHistory.queue(fn));
+
     // init localization
     await localizeInit();
 

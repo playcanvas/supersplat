@@ -102,12 +102,13 @@ class EditHistory {
     clear() {
         // route through the queue so any in-flight add/undo/redo finishes before we wipe
         // history, preventing queued ops from running against a cleared state.
-        return this.queue(async () => {
+        return this.queue(() => {
             this.history.forEach((editOp) => {
                 editOp.destroy?.();
             });
             this.history = [];
             this.cursor = 0;
+            return Promise.resolve();
         });
     }
 
@@ -115,7 +116,7 @@ class EditHistory {
     removeForSplat(splat: Splat) {
         // serialize with the chain so we don't reshape history while a queued op is mid-flight
         // (which could leave queued undo/redo pointing at indices that no longer exist).
-        return this.queue(async () => {
+        return this.queue(() => {
             let newCursor = 0;
             const newHistory: EditOp[] = [];
 
@@ -135,6 +136,7 @@ class EditHistory {
             this.history = newHistory;
             this.cursor = newCursor;
             this.fireEvents();
+            return Promise.resolve();
         });
     }
 }

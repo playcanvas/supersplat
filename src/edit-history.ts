@@ -26,39 +26,22 @@ class EditHistory {
     constructor(events: Events) {
         this.events = events;
 
-        events.on('edit.undo', () => {
-            this.queue(async () => {
-                if (this.canUndo()) {
-                    await this.undo();
-                }
-            });
-        });
-
-        events.on('edit.redo', () => {
-            this.queue(async () => {
-                if (this.canRedo()) {
-                    await this.redo();
-                }
-            });
-        });
-
-        events.on('edit.add', (editOp: EditOp, suppressOp = false) => {
-            this.queue(() => this.add(editOp, suppressOp));
-        });
+        events.on('edit.undo', () => this.undo());
+        events.on('edit.redo', () => this.redo());
+        events.on('edit.add', (editOp: EditOp, suppressOp = false) => this.add(editOp, suppressOp));
     }
 
-    private queue(fn: () => Promise<void>) {
+    // enqueue arbitrary async work onto the serialized history chain. exposed so external
+    // callers (e.g. transform handlers) can serialize their own GPU readbacks alongside
+    // history mutations and avoid the same race conditions.
+    queue(fn: () => Promise<void>) {
         const next = this.chain.then(fn);
         this.chain = next.catch(() => {});
         return next;
     }
 
-    async add(editOp: EditOp, suppressOp = false) {
-        while (this.cursor < this.history.length) {
-            this.history.pop().destroy?.();
-        }
-        this.history.push(editOp);
-        await this.redo(suppressOp);
+    add(editOp: EditOp, suppressOp = false) {
+        return this.queue(() => this._add(editOp, suppressOp));
     }
 
     canUndo() {
@@ -69,14 +52,38 @@ class EditHistory {
         return this.cursor < this.history.length;
     }
 
-    async undo() {
+    undo() {
+        return this.queue(async () => {
+            if (this.canUndo()) {
+                await this._undo();
+            }
+        });
+    }
+
+    redo(suppressOp = false) {
+        return this.queue(async () => {
+            if (this.canRedo()) {
+                await this._redo(suppressOp);
+            }
+        });
+    }
+
+    private async _add(editOp: EditOp, suppressOp = false) {
+        while (this.cursor < this.history.length) {
+            this.history.pop().destroy?.();
+        }
+        this.history.push(editOp);
+        await this._redo(suppressOp);
+    }
+
+    private async _undo() {
         const editOp = this.history[--this.cursor];
         await editOp.undo();
         this.events.fire('edit.apply', editOp);
         this.fireEvents();
     }
 
-    async redo(suppressOp = false) {
+    private async _redo(suppressOp = false) {
         const editOp = this.history[this.cursor++];
         if (!suppressOp) {
             await editOp.do();

@@ -177,9 +177,11 @@ class SplatsTransformHandler implements TransformHandler {
         // the undo will revert this translate rather than the prior selection op.
         this.events.fire('edit.add', new MultiOp([top, pop]), true);
 
+        // enqueue the GPU readback onto the same serialized chain so any subsequent
+        // undo/redo waits for it to finish before mutating the sorter's centers buffer.
         // TODO: consider moving this to update() function above so splats are sorted correctly
         // for render during drag (which is slower).
-        await splat.updatePositions();
+        await this.events.invoke('edit.queue', () => splat.updatePositions());
 
         splat.selectionAlpha = 1;
         splat.scene.outline.enabled = true;

@@ -36,7 +36,9 @@ class EditHistory {
     // history mutations and avoid the same race conditions.
     queue(fn: () => Promise<void>) {
         const next = this.chain.then(fn);
-        this.chain = next.catch(() => {});
+        this.chain = next.catch((err) => {
+            console.error('EditHistory queued operation failed', err);
+        });
         return next;
     }
 
@@ -98,34 +100,42 @@ class EditHistory {
     }
 
     clear() {
-        this.history.forEach((editOp) => {
-            editOp.destroy?.();
+        // route through the queue so any in-flight add/undo/redo finishes before we wipe
+        // history, preventing queued ops from running against a cleared state.
+        return this.queue(async () => {
+            this.history.forEach((editOp) => {
+                editOp.destroy?.();
+            });
+            this.history = [];
+            this.cursor = 0;
         });
-        this.history = [];
-        this.cursor = 0;
     }
 
     // Remove all operations that reference a specific splat
     removeForSplat(splat: Splat) {
-        let newCursor = 0;
-        const newHistory: EditOp[] = [];
+        // serialize with the chain so we don't reshape history while a queued op is mid-flight
+        // (which could leave queued undo/redo pointing at indices that no longer exist).
+        return this.queue(async () => {
+            let newCursor = 0;
+            const newHistory: EditOp[] = [];
 
-        for (let i = 0; i < this.history.length; i++) {
-            const op = this.history[i];
-            // Skip ops referencing the splat; don't destroy them since the caller handles that
-            if (!opReferencesSplat(op, splat)) {
-                // Keep this operation
-                newHistory.push(op);
-                // Track cursor position (count kept operations before original cursor)
-                if (i < this.cursor) {
-                    newCursor++;
+            for (let i = 0; i < this.history.length; i++) {
+                const op = this.history[i];
+                // Skip ops referencing the splat; don't destroy them since the caller handles that
+                if (!opReferencesSplat(op, splat)) {
+                    // Keep this operation
+                    newHistory.push(op);
+                    // Track cursor position (count kept operations before original cursor)
+                    if (i < this.cursor) {
+                        newCursor++;
+                    }
                 }
             }
-        }
 
-        this.history = newHistory;
-        this.cursor = newCursor;
-        this.fireEvents();
+            this.history = newHistory;
+            this.cursor = newCursor;
+            this.fireEvents();
+        });
     }
 }
 

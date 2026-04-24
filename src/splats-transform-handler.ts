@@ -174,7 +174,7 @@ class SplatsTransformHandler implements TransformHandler {
         // events.fire synchronously enqueues the add onto EditHistory's serialized chain, so
         // any subsequent undo/redo event (e.g. user pressing Ctrl+Z while updatePositions
         // is still resolving) is guaranteed to land AFTER this op on the chain — which means
-        // the undo will revert this translate rather than the prior selection op.
+        // the undo will revert this transform operation rather than the prior selection op.
         this.events.fire('edit.add', new MultiOp([top, pop]), true);
 
         // enqueue the GPU readback onto the same serialized chain so any subsequent

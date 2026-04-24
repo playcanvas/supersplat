@@ -132,7 +132,7 @@ void main(void) {
         color.a = clamp(color.a, 0.0, 1.0);
 
         // apply tonemapping
-        color = vec4(prepareOutputFromGamma(max(color.xyz, 0.0)), color.w);
+        color = vec4(prepareOutputFromGamma(max(color.xyz, 0.0), -center.view.z), color.w);
 
         // apply locked/selected colors
         if ((vertexState & 2u) != 0u) {

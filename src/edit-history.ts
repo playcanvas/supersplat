@@ -17,24 +17,40 @@ class EditHistory {
     cursor = 0;
     events: Events;
 
+    // serialize all history-modifying operations so an in-flight op (including its async GPU
+    // readback in updatePositions) completes before the next add/undo/redo begins. without this,
+    // rapid Ctrl+Z / Ctrl+Shift+Z events race with pending updatePositions calls and corrupt the
+    // sorter's centers buffer in centers-overlay mode.
+    private chain: Promise<void> = Promise.resolve();
+
     constructor(events: Events) {
         this.events = events;
 
-        events.on('edit.undo', async () => {
-            if (this.canUndo()) {
-                await this.undo();
-            }
+        events.on('edit.undo', () => {
+            this.queue(async () => {
+                if (this.canUndo()) {
+                    await this.undo();
+                }
+            });
         });
 
-        events.on('edit.redo', async () => {
-            if (this.canRedo()) {
-                await this.redo();
-            }
+        events.on('edit.redo', () => {
+            this.queue(async () => {
+                if (this.canRedo()) {
+                    await this.redo();
+                }
+            });
         });
 
-        events.on('edit.add', async (editOp: EditOp, suppressOp = false) => {
-            await this.add(editOp, suppressOp);
+        events.on('edit.add', (editOp: EditOp, suppressOp = false) => {
+            this.queue(() => this.add(editOp, suppressOp));
         });
+    }
+
+    private queue(fn: () => Promise<void>) {
+        const next = this.chain.then(fn);
+        this.chain = next.catch(() => {});
+        return next;
     }
 
     async add(editOp: EditOp, suppressOp = false) {

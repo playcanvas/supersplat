@@ -425,7 +425,7 @@ class Camera extends Element {
         this.splatPass?.destroy();
         this.gizmoPass?.destroy();
         this.finalPass?.destroy();
-        this.camera.renderPasses = null;
+        this.camera.framePasses = null;
 
         scene.cameraRoot.removeChild(this.mainCamera);
 
@@ -547,7 +547,7 @@ class Camera extends Element {
             this.finalPass.init(null);
 
             // assign render passes to camera
-            this.camera.renderPasses = [this.clearPass, this.mainPass, this.splatPass, this.gizmoPass, this.finalPass];
+            this.camera.framePasses = [this.clearPass, this.mainPass, this.splatPass, this.gizmoPass, this.finalPass];
         } else {
             // resize existing render targets
             const { splatTarget, colorTarget, workTarget } = this;

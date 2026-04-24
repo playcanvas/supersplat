@@ -232,7 +232,7 @@ class PointerController {
         // separated by less than BURST_GAP_MS - trackpads stream at ~60Hz
         // (~16ms), wheels emit one event per notch (typically >>50ms apart).
         const BURST_GAP_MS = 80;
-        let lastWheelTime = 0;
+        let lastWheelTime = -Infinity;
         let burstIsWheel = false;
 
         const classifyWheel = (event: WheelEvent) => {

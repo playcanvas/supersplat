@@ -246,8 +246,45 @@ uniform mat4 matrix_view;
     uniform mat4 matrix_projection;
 #endif
 
+// particle effect uniforms
+uniform float u_particleEffect;       // 0=none, 1=explode, 2=dissolve, 4=gravity
+uniform float u_particleProgress;     // 0..1
+uniform vec3 u_particleCenter;        // world-space center
+uniform float u_particleSceneSize;    // scene scale
+
+float particleHash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+}
+
+vec3 applyParticleEffect(vec3 pos) {
+    float p = u_particleProgress;
+    if (u_particleEffect < 0.5 || p <= 0.0) return pos;
+
+    float scale = u_particleSceneSize;
+
+    // use position components as independent seeds for truly random directions
+    float seedX = particleHash(vec2(pos.x * 12.9898, pos.y * 78.233));
+    float seedY = particleHash(vec2(pos.y * 39.346, pos.z * 91.127));
+    float seedZ = particleHash(vec2(pos.z * 45.164, pos.x * 63.542));
+
+    // DISSOLVE
+    float phase = particleHash(vec2(seedX * 53.1, seedY * 97.3));
+    float localP = smoothstep(phase * 0.5, phase * 0.5 + 0.5, p);
+    vec3 randDir = normalize(vec3(
+        seedX - 0.5,
+        seedY - 0.5,
+        seedZ - 0.5
+    ));
+    pos += randDir * localP * scale * 0.6;
+
+    return pos;
+}
+
 // project the model space gaussian center to view and clip space
 bool initCenter(vec3 modelCenter, inout SplatCenter center) {
+    // apply particle effect in model space
+    modelCenter = applyParticleEffect(modelCenter);
+
     mat4 modelView = matrix_view * applyPaletteTransform(matrix_model);
     vec4 centerView = modelView * vec4(modelCenter, 1.0);
 

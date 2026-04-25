@@ -5,6 +5,8 @@ import { registerCameraPosesEvents } from './camera-poses';
 import { registerDocEvents } from './doc';
 import { EditHistory } from './edit-history';
 import { registerEditorEvents } from './editor';
+import { GestureController } from './gesture-controller';
+import { ParticleEffects } from './particle-effects';
 import { Events } from './events';
 import { initFileHandler } from './file-handler';
 import { registerIframeApi } from './iframe-api';
@@ -238,6 +240,12 @@ const main = async () => {
     editorUI.toolsContainer.dom.appendChild(maskCanvas);
 
     window.scene = scene;
+
+    // particle effects
+    const particleEffects = new ParticleEffects(events, scene);
+
+    // gesture controller
+    const gestureController = new GestureController(events);
 
     // register events that need scene or other dependencies
     registerEditorEvents(events, editHistory, scene);

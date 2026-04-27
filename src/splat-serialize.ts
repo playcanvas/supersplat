@@ -3,6 +3,7 @@ import {
     DataTable,
     logger as splatTransformLogger,
     MemoryFileSystem,
+    Transform,
     writeHtml,
     writeSog as writeSogInternal,
     ZipFileSystem,
@@ -1230,9 +1231,13 @@ const extractDataTable = (splats: Splat[], settings: SerializeSettings): DataTab
         throw new Error('No gaussians to export');
     }
 
-    // Create DataTable columns
+    // Create DataTable columns. Tag the table with Transform.PLY because
+    // SingleSplat.read pre-applies the PLY-style 180° Z flip (see
+    // SplatTransformCache.getMat), so the column data is in PLY space.
+    // Without this, splat-transform writers (writeSog, writeHtml) would apply
+    // the flip a second time and produce upside-down output.
     const columns = memberNames.map(name => new Column(name, new Float32Array(totalCount)));
-    const dataTable = new DataTable(columns);
+    const dataTable = new DataTable(columns, Transform.PLY);
 
     // Extract data into DataTable
     let idx = 0;

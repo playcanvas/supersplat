@@ -1253,7 +1253,7 @@ const extractDataTable = (splats: Splat[], settings: SerializeSettings): DataTab
     return dataTable;
 };
 
-// Bridge splat-transform v2 progress events to supersplat's events
+// Bridge splat-transform progress events to supersplat's events.
 const createProgressRenderer = (header: string, events?: Events): Renderer => ({
     handle: (event: LogEvent) => {
         switch (event.kind) {
@@ -1269,6 +1269,11 @@ const createProgressRenderer = (header: string, events?: Events): Renderer => ({
                     });
                 }
                 break;
+            case 'scopeEnd':
+                if (event.depth === 0) {
+                    events?.fire('progressEnd');
+                }
+                break;
             case 'barStart':
                 events?.fire('progressUpdate', { text: event.name, progress: 0 });
                 break;
@@ -1279,11 +1284,6 @@ const createProgressRenderer = (header: string, events?: Events): Renderer => ({
                 break;
             case 'barEnd':
                 events?.fire('progressUpdate', { progress: 100 });
-                break;
-            case 'scopeEnd':
-                if (event.depth === 0) {
-                    events?.fire('progressEnd');
-                }
                 break;
             case 'message':
                 if (event.level === 'error') console.error(event.text);
@@ -1301,37 +1301,47 @@ const serializeViewer = async (splats: Splat[], serializeSettings: SerializeSett
     // Extract splat data to DataTable
     const dataTable = extractDataTable(splats, serializeSettings);
 
-    if (options.type === 'html') {
-        // Bundled HTML - writeHtml handles everything
-        await writeHtml({
-            filename: 'output.html',
-            dataTable,
-            viewerSettingsJson: experienceSettings,
-            bundle: true,
-            iterations: 10,
-            createDevice: createGpuDevice
-        }, fs);
-    } else {
-        // Package - use unbundled mode into a MemoryFileSystem, then ZIP
-        const memFs = new MemoryFileSystem();
-        await writeHtml({
-            filename: 'index.html',
-            dataTable,
-            viewerSettingsJson: experienceSettings,
-            bundle: false,
-            iterations: 10,
-            createDevice: createGpuDevice
-        }, memFs);
+    // splat-transform's writers leave their top-level scope open on error
+    // (their contract is for the caller to unwind), so we explicitly
+    // unwind here to deliver a matching depth-0 `scopeEnd(failed)` to the
+    // renderer. That fires `progressEnd` and dismisses the dialog before
+    // any error popup is shown.
+    try {
+        if (options.type === 'html') {
+            // Bundled HTML - writeHtml handles everything
+            await writeHtml({
+                filename: 'output.html',
+                dataTable,
+                viewerSettingsJson: experienceSettings,
+                bundle: true,
+                iterations: 10,
+                createDevice: createGpuDevice
+            }, fs);
+        } else {
+            // Package - use unbundled mode into a MemoryFileSystem, then ZIP
+            const memFs = new MemoryFileSystem();
+            await writeHtml({
+                filename: 'index.html',
+                dataTable,
+                viewerSettingsJson: experienceSettings,
+                bundle: false,
+                iterations: 10,
+                createDevice: createGpuDevice
+            }, memFs);
 
-        // Create ZIP from memory filesystem results
-        const zipWriter = await fs.createWriter('output.zip');
-        const zipFs = new ZipFileSystem(zipWriter);
-        for (const [filename, data] of memFs.results.entries()) {
-            const writer = await zipFs.createWriter(filename);
-            await writer.write(data);
-            await writer.close();
+            // Create ZIP from memory filesystem results
+            const zipWriter = await fs.createWriter('output.zip');
+            const zipFs = new ZipFileSystem(zipWriter);
+            for (const [filename, data] of memFs.results.entries()) {
+                const writer = await zipFs.createWriter(filename);
+                await writer.write(data);
+                await writer.close();
+            }
+            await zipFs.close();
         }
-        await zipFs.close();
+    } catch (err) {
+        splatTransformLogger.unwindAll(true);
+        throw err;
     }
 };
 
@@ -1350,14 +1360,23 @@ const serializeSog = async (splats: Splat[], settings: SogSettings, fs: FileSyst
     // Extract splat data to DataTable
     const dataTable = extractDataTable(splats, settings);
 
-    // Call splat-transform's writeSog
-    await writeSogInternal({
-        filename: 'output.sog',
-        dataTable,
-        bundle: true,
-        iterations,
-        createDevice: createGpuDevice
-    }, fs);
+    // splat-transform's writers leave their top-level scope open on error
+    // (their contract is for the caller to unwind), so we explicitly
+    // unwind here to deliver a matching depth-0 `scopeEnd(failed)` to the
+    // renderer. That fires `progressEnd` and dismisses the dialog before
+    // any error popup is shown.
+    try {
+        await writeSogInternal({
+            filename: 'output.sog',
+            dataTable,
+            bundle: true,
+            iterations,
+            createDevice: createGpuDevice
+        }, fs);
+    } catch (err) {
+        splatTransformLogger.unwindAll(true);
+        throw err;
+    }
 };
 
 export {

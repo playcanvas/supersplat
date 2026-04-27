@@ -1293,6 +1293,11 @@ const createProgressRenderer = (header: string, events?: Events): Renderer => ({
             case 'message':
                 if (event.level === 'error') console.error(event.text);
                 else if (event.level === 'warn') console.warn(event.text);
+                else if (event.level === 'info') console.info(event.text);
+                else if (event.level === 'debug') console.debug(event.text);
+                break;
+            case 'output':
+                console.log(event.text);
                 break;
         }
     }

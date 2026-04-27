@@ -7,8 +7,8 @@ import {
     writeSog as writeSogInternal,
     ZipFileSystem,
     type FileSystem,
-    type Logger,
-    type ProgressNode,
+    type LogEvent,
+    type Renderer,
     type Writer
 } from '@playcanvas/splat-transform';
 import {
@@ -584,7 +584,7 @@ const serializePly = async (splats: Splat[], serializeSettings: SerializeSetting
 
     const singleSplat = new SingleSplat(props.map(p => p.name), serializeSettings);
 
-    const gaussianSizeBytes = props.reduce((tot, p) => tot + DataTypeSize(p.type), 0);
+    const gaussianSizeBytes = props.reduce((tot, p) => tot + DataTypeSize(p.type as DataType), 0);
 
     const buf = new Uint8Array(1024 * gaussianSizeBytes);
     const dataView = new DataView(buf.buffer);
@@ -1253,35 +1253,42 @@ const extractDataTable = (splats: Splat[], settings: SerializeSettings): DataTab
     return dataTable;
 };
 
-// Create a logger that bridges splat-transform progress to supersplat's events
-const createProgressLogger = (header: string, events?: Events): Logger => ({
-    log: () => {},
-    warn: console.warn,
-    error: console.error,
-    debug: () => {},
-    output: () => {},
-    onProgress: (node: ProgressNode) => {
-        if (node.depth === 0) {
-            if (node.step === 0) {
-                // begin() was called
-                events?.fire('progressStart', header);
-            } else {
-                // Fire update with 0% progress for this step
+// Bridge splat-transform v2 progress events to supersplat's events
+const createProgressRenderer = (header: string, events?: Events): Renderer => ({
+    handle: (event: LogEvent) => {
+        switch (event.kind) {
+            case 'scopeStart':
+                if (event.depth === 0) {
+                    events?.fire('progressStart', header);
+                } else {
+                    events?.fire('progressUpdate', {
+                        text: event.index !== undefined && event.total !== undefined ?
+                            `Step ${event.index} of ${event.total}: ${event.name}` :
+                            event.name,
+                        progress: 0
+                    });
+                }
+                break;
+            case 'barStart':
+                events?.fire('progressUpdate', { text: event.name, progress: 0 });
+                break;
+            case 'barTick':
                 events?.fire('progressUpdate', {
-                    text: `Step ${node.step} of ${node.totalSteps}: ${node.stepName ?? ''}`,
-                    progress: 0
+                    progress: event.total > 0 ? 100 * event.current / event.total : 0
                 });
-
-                // Final step = done
-                if (node.step === node.totalSteps) {
+                break;
+            case 'barEnd':
+                events?.fire('progressUpdate', { progress: 100 });
+                break;
+            case 'scopeEnd':
+                if (event.depth === 0) {
                     events?.fire('progressEnd');
                 }
-            }
-        } else {
-            // Nested level - update progress bar with sub-step progress
-            events?.fire('progressUpdate', {
-                progress: 100 * node.step / node.totalSteps
-            });
+                break;
+            case 'message':
+                if (event.level === 'error') console.error(event.text);
+                else if (event.level === 'warn') console.warn(event.text);
+                break;
         }
     }
 });
@@ -1289,7 +1296,7 @@ const createProgressLogger = (header: string, events?: Events): Logger => ({
 const serializeViewer = async (splats: Splat[], serializeSettings: SerializeSettings, options: ViewerExportSettings, fs: FileSystem): Promise<void> => {
     const { experienceSettings, events } = options;
 
-    splatTransformLogger.setLogger(createProgressLogger('Exporting HTML', events));
+    splatTransformLogger.setRenderer(createProgressRenderer('Exporting HTML', events));
 
     // Extract splat data to DataTable
     const dataTable = extractDataTable(splats, serializeSettings);
@@ -1338,7 +1345,7 @@ type SogSettings = SerializeSettings & {
 const serializeSog = async (splats: Splat[], settings: SogSettings, fs: FileSystem): Promise<void> => {
     const { iterations = 10, events } = settings;
 
-    splatTransformLogger.setLogger(createProgressLogger('Exporting SOG', events));
+    splatTransformLogger.setRenderer(createProgressRenderer('Exporting SOG', events));
 
     // Extract splat data to DataTable
     const dataTable = extractDataTable(splats, settings);

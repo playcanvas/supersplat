@@ -18,6 +18,10 @@ class BrowserFileWriter implements Writer {
         this.ready = this.stream.seek(0);
     }
 
+    get bytesWritten(): number {
+        return this.cursor;
+    }
+
     async write(data: Uint8Array): Promise<void> {
         await this.ready;
         this.cursor += data.byteLength;
@@ -70,6 +74,10 @@ class BrowserDownloadWriter implements Writer {
         this.filename = filename;
         this.memFs = new MemoryFileSystem();
         this.innerWriter = this.memFs.createWriter(filename);
+    }
+
+    get bytesWritten(): number {
+        return this.innerWriter.bytesWritten;
     }
 
     write(data: Uint8Array): void {

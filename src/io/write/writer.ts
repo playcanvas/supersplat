@@ -11,6 +11,12 @@ class GZipWriter implements Writer {
     write: (data: Uint8Array) => Promise<void>;
     close: () => Promise<void>;
 
+    private cursor = 0;
+
+    get bytesWritten(): number {
+        return this.cursor;
+    }
+
     constructor(writer: Writer) {
         const stream = new CompressionStream('gzip');
         const streamWriter = stream.writable.getWriter();
@@ -26,6 +32,7 @@ class GZipWriter implements Writer {
         })();
 
         this.write = async (data: Uint8Array) => {
+            this.cursor += data.byteLength;
             await streamWriter.ready;
             await streamWriter.write(data as unknown as ArrayBuffer);
         };
@@ -47,20 +54,24 @@ class ProgressWriter implements Writer {
     write: (data: Uint8Array) => Promise<void>;
     close: () => void;
 
-    constructor(writer: Writer, totalBytes: number, progress?: (progress: number, total: number) => void) {
-        let cursor = 0;
+    private cursor = 0;
 
+    get bytesWritten(): number {
+        return this.cursor;
+    }
+
+    constructor(writer: Writer, totalBytes: number, progress?: (progress: number, total: number) => void) {
         this.write = async (data: Uint8Array) => {
-            cursor += data.byteLength;
+            this.cursor += data.byteLength;
             await writer.write(data);
-            progress?.(cursor, totalBytes);
+            progress?.(this.cursor, totalBytes);
         };
 
         this.close = () => {
-            if (cursor !== totalBytes) {
-                throw new Error(`ProgressWriter: expected ${totalBytes} bytes, but wrote ${cursor} bytes`);
+            if (this.cursor !== totalBytes) {
+                throw new Error(`ProgressWriter: expected ${totalBytes} bytes, but wrote ${this.cursor} bytes`);
             }
-            progress?.(cursor, totalBytes);
+            progress?.(this.cursor, totalBytes);
         };
     }
 }

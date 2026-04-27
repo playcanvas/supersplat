@@ -98,8 +98,8 @@ class Picker {
         const { splatLayer } = this.scene;
 
         // Hide non-selected elements
-        const splats = this.scene.getElementsByType(ElementType.splat);
-        splats.forEach((s: Splat) => {
+        const splats = this.scene.getElementsByType(ElementType.splat) as Splat[];
+        splats.forEach((s) => {
             s.entity.enabled = s === splat;
         });
 
@@ -116,7 +116,7 @@ class Picker {
         this.renderPass.render();
 
         // Re-enable all splats
-        splats.forEach((s: Splat) => {
+        splats.forEach((s) => {
             s.entity.enabled = true;
         });
     }
@@ -181,8 +181,8 @@ class Picker {
         const emptyMap = new Map();
 
         // Hide non-selected elements
-        const splats = scene.getElementsByType(ElementType.splat);
-        splats.forEach((s: Splat) => {
+        const splats = scene.getElementsByType(ElementType.splat) as Splat[];
+        splats.forEach((s) => {
             s.entity.enabled = s === splat;
         });
 
@@ -198,7 +198,7 @@ class Picker {
         this.renderPass.render();
 
         // Re-enable all splats
-        splats.forEach((s: Splat) => {
+        splats.forEach((s) => {
             s.entity.enabled = true;
         });
     }

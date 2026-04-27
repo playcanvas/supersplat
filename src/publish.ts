@@ -21,8 +21,12 @@ class WriterFileSystem implements FileSystem {
     createWriter(_filename: string): Writer {
         // Return a wrapper that delegates write but makes close a no-op
         // The caller is responsible for closing the underlying writer
+        const inner = this.writer;
         return {
-            write: (data: Uint8Array) => this.writer.write(data),
+            get bytesWritten() {
+                return inner.bytesWritten;
+            },
+            write: (data: Uint8Array) => inner.write(data),
             close: () => Promise.resolve()
         };
     }
@@ -124,6 +128,12 @@ class PublishWriter implements Writer {
     write: (data: Uint8Array) => void;
     close: () => Promise<any>;
 
+    private cursor = 0;
+
+    get bytesWritten(): number {
+        return this.cursor;
+    }
+
     static async create(publishSettings: PublishSettings) {
         const { user } = publishSettings;
 
@@ -210,6 +220,7 @@ class PublishWriter implements Writer {
                     await upload();
                 }
             }
+            result.cursor += data.byteLength;
         };
 
         result.close = async () => {

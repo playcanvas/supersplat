@@ -36,7 +36,7 @@ class PolygonSelection {
             polyline.setAttribute('stroke', isClosed() ? '#fa6' : '#f60');
         };
 
-        const commitSelection = async (e: PointerEvent) => {
+        const commitSelection = async (e: MouseEvent) => {
             // initialize canvas
             if (canvas.width !== parent.clientWidth || canvas.height !== parent.clientHeight) {
                 canvas.width = parent.clientWidth;
@@ -100,7 +100,7 @@ class PolygonSelection {
             }
         };
 
-        const dblclick = async (e: PointerEvent) => {
+        const dblclick = async (e: MouseEvent) => {
             e.preventDefault();
             e.stopPropagation();
 

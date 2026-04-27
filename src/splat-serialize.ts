@@ -1339,15 +1339,20 @@ const serializeViewer = async (splats: Splat[], serializeSettings: SerializeSett
                 createDevice: createGpuDevice
             }, memFs);
 
-            // Create ZIP from memory filesystem results
+            // Create ZIP from memory filesystem results. The try/finally
+            // ensures zipFs (and its underlying writer) is closed even if a
+            // write throws partway through, so we don't leak the output file.
             const zipWriter = await fs.createWriter('output.zip');
             const zipFs = new ZipFileSystem(zipWriter);
-            for (const [filename, data] of memFs.results.entries()) {
-                const writer = await zipFs.createWriter(filename);
-                await writer.write(data);
-                await writer.close();
+            try {
+                for (const [filename, data] of memFs.results.entries()) {
+                    const writer = await zipFs.createWriter(filename);
+                    await writer.write(data);
+                    await writer.close();
+                }
+            } finally {
+                await zipFs.close();
             }
-            await zipFs.close();
         }
     } catch (err) {
         splatTransformLogger.unwindAll(true);

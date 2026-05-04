@@ -1,11 +1,12 @@
 import { BufferTarget, EncodedPacket, EncodedVideoPacketSource, MkvOutputFormat, MovOutputFormat, Mp4OutputFormat, Output, StreamTarget, WebMOutputFormat } from 'mediabunny';
-import { Color, path, Vec3 } from 'playcanvas';
+import { Color, Vec3 } from 'playcanvas';
 
 import { ElementType } from './element';
 import { Events } from './events';
 import { PngCompressor } from './png-compressor';
+import { getRenderFilename } from './render-filename';
 import { Scene } from './scene';
-import { Splat } from './splat';
+import type { Splat } from './splat';
 import { localize } from './ui/localization';
 
 const nullClr = new Color(0, 0, 0, 0);
@@ -45,10 +46,6 @@ type VideoSettings = {
     codec: 'h264' | 'h265' | 'vp9' | 'av1';
 };
 
-const removeExtension = (filename: string) => {
-    return filename.substring(0, filename.length - path.getExtension(filename).length);
-};
-
 const downloadFile = (arrayBuffer: ArrayBuffer, filename: string) => {
     const blob = new Blob([arrayBuffer], { type: 'application/octet-stream' });
     const url = window.URL.createObjectURL(blob);
@@ -61,6 +58,7 @@ const downloadFile = (arrayBuffer: ArrayBuffer, filename: string) => {
 
 const registerRenderEvents = (scene: Scene, events: Events) => {
     let compressor: PngCompressor;
+    const getCurrentSplats = () => scene.getElementsByType(ElementType.splat) as Splat[];
 
     // wait for postrender to fire
     const postRender = () => {
@@ -116,12 +114,11 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
         }
     });
 
-    events.function('render.image', async (imageSettings: ImageSettings) => {
+    events.function('render.image', async (imageSettings: ImageSettings, fileStream?: FileSystemWritableFileStream) => {
         events.fire('startSpinner');
 
         try {
             const { width, height, transparentBg, showDebug } = imageSettings;
-            const bgClr = events.invoke('bgClr');
 
             // start rendering to offscreen buffer only
             scene.camera.startOffscreenMode(width, height);
@@ -158,12 +155,12 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 height
             );
 
-            // construct filename
-            const selected = events.invoke('selection') as Splat;
-            const filename = `${removeExtension(selected?.name ?? 'SuperSplat')}-image.png`;
-
-            // download
-            downloadFile(arrayBuffer, filename);
+            if (fileStream) {
+                await fileStream.write(new Uint8Array(arrayBuffer));
+                await fileStream.close();
+            } else {
+                downloadFile(arrayBuffer, getRenderFilename(getCurrentSplats(), '.png'));
+            }
 
             return true;
         } catch (error) {
@@ -172,6 +169,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 header: localize('panel.render.failed'),
                 message: `'${error.message ?? error}'`
             });
+            return false;
         } finally {
             scene.camera.endOffscreenMode();
             scene.camera.renderOverlays = true;
@@ -182,7 +180,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
         }
     });
 
-    events.function('render.video', (videoSettings: VideoSettings, fileStream: FileSystemWritableFileStream) => {
+    events.function('render.video', (videoSettings: VideoSettings, fileStream?: FileSystemWritableFileStream) => {
         const renderImpl = async () => {
             events.fire('progressStart', localize('panel.render.render-video'), true);
 
@@ -382,8 +380,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
                 // Download (skip if cancelled -- the caller will delete the file)
                 if (!cancelled && !fileStream) {
-                    const currentSplats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
-                    downloadFile((output.target as BufferTarget).buffer, `${removeExtension(currentSplats[0]?.name ?? 'supersplat')}.${fileExtension}`);
+                    downloadFile((output.target as BufferTarget).buffer, getRenderFilename(getCurrentSplats(), fileExtension));
                 }
 
                 return !cancelled;

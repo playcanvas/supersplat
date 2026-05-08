@@ -171,6 +171,10 @@ class MeasureTool {
                 const p = events.invoke('pivot').transform.position;
                 mat.invert(splat.worldTransform);
                 mat.transformPoint(p, splat.measurePoints[splat.measureSelection]);
+                
+                // Update localStorage
+                const point = splat.measurePoints[splat.measureSelection];
+                localStorage.setItem('lastPointPosition', JSON.stringify({ x: point.x, y: point.y, z: point.z }));
             }
             scene.forceRender = true;
         });
@@ -178,6 +182,9 @@ class MeasureTool {
         events.on('pivot.ended', () => {
             if (active && splat && splat.measureSelection >= 0 && splat.measureSelection < splat.measurePoints.length) {
                 updateVisuals();
+                // Update localStorage with new position
+                const point = splat.measurePoints[splat.measureSelection];
+                localStorage.setItem('lastPointPosition', JSON.stringify({ x: point.x, y: point.y, z: point.z }));
             }
         });
 
@@ -310,6 +317,8 @@ class MeasureTool {
 
                 if (closestIdx >= 0) {
                     splat.measureSelection = closestIdx;
+                    const selectedPoint = splat.measurePoints[closestIdx];
+                    localStorage.setItem('lastPointPosition', JSON.stringify({ x: selectedPoint.x, y: selectedPoint.y, z: selectedPoint.z }));
                     updateVisuals();
                     return;
                 }
@@ -321,6 +330,8 @@ class MeasureTool {
                         mat.transformPoint(result.position, p);
                         splat.measureSelection = splat.measurePoints.length;
                         splat.measurePoints.push(p.clone());
+                        localStorage.setItem('lastPointPosition', JSON.stringify({ x: p.x, y: p.y, z: p.z }));
+                        events.fire('measure.pointSet', p.clone());
                         updateVisuals();
                     }
                 }
@@ -337,6 +348,12 @@ class MeasureTool {
                 for (let i = 0; i < 2; i++) {
                     if (i < splat.measurePoints.length) {
                         getPoint2d(i, p);
+
+                        if (isNaN(p.x) || isNaN(p.y)) {
+                            if (i === 0) lineStart.setAttribute('visibility', 'hidden');
+                            else lineEnd.setAttribute('visibility', 'hidden');
+                            continue;
+                        }
 
                         const x = p.x.toString();
                         const y = p.y.toString();

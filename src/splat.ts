@@ -78,6 +78,8 @@ class Splat extends Element {
     measurePoints: Vec3[] = [];
     measureSelection = -1;
 
+    controlPoints: Vec3[] = [];
+
     rebuildMaterial: (bands: number) => void;
 
     constructor(asset: Asset, orientation: Vec3) {

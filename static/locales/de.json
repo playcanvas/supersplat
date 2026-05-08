@@ -216,6 +216,7 @@
     "tooltip.bottom-toolbar.rotate": "Drehen ( 2 )",
     "tooltip.bottom-toolbar.scale": "Skalieren ( 3 )",
     "tooltip.bottom-toolbar.measure": "Messung",
+    "tooltip.bottom-toolbar.control-point": "Kontrollpunkt hinzufügen",
     "measure.length": "Länge",
     "tooltip.bottom-toolbar.local-space": "Gizmo in local-space",
     "tooltip.bottom-toolbar.bound-center": "Mittelpunkt verwenden",

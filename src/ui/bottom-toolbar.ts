@@ -12,6 +12,7 @@ import polygonSvg from './svg/select-poly.svg';
 import sphereSvg from './svg/select-sphere.svg';
 import boxSvg from './svg/show-hide-splats.svg';
 import undoSvg from './svg/undo.svg';
+
 import { Tooltips } from './tooltips';
 // import cropSvg from './svg/crop.svg';
 

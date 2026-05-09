@@ -299,7 +299,9 @@ class PointerController {
             event.preventDefault();
         };
 
-        // FIXME: safari sends canvas as target of dblclick event but chrome sends the target element
+        // Safari fires dblclick with the canvas element as event.target instead of the
+        // overlay element (target). offsetX/offsetY are then relative to the canvas, not
+        // target, so we must normalize to target-space via clientX/clientY.
         const canvas = camera.scene.app.graphicsDevice.canvas;
 
         const dblclick = (event: globalThis.MouseEvent) => {
@@ -308,7 +310,16 @@ class PointerController {
                 if (camera.controlMode === 'fly') {
                     camera.scene.events.fire('camera.setControlMode', 'orbit');
                 }
-                camera.pickFocalPoint(event.offsetX / target.clientWidth, event.offsetY / target.clientHeight);
+
+                let x = event.offsetX;
+                let y = event.offsetY;
+                if (event.target === canvas) {
+                    const tr = target.getBoundingClientRect();
+                    x = event.clientX - tr.left;
+                    y = event.clientY - tr.top;
+                }
+
+                camera.pickFocalPoint(x / target.clientWidth, y / target.clientHeight);
             }
         };
 

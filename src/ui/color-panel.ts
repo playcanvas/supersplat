@@ -1,7 +1,8 @@
-import { ColorPicker, Container, Label, SliderInput } from '@playcanvas/pcui';
+import { Container, Label, SliderInput } from '@playcanvas/pcui';
 import { Color } from 'playcanvas';
 
 import { Events } from '../events';
+import { ColorPicker } from './color-picker';
 import { localize } from './localization';
 import { Tooltips } from './tooltips';
 import { SetSplatColorAdjustmentOp } from '../edit-ops';

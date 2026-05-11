@@ -1,7 +1,8 @@
-import { BooleanInput, Button, ColorPicker, Container, Element, Label, SelectInput, SliderInput, TextAreaInput, TextInput } from '@playcanvas/pcui';
+import { BooleanInput, Button, Container, Element, Label, SelectInput, SliderInput, TextAreaInput, TextInput } from '@playcanvas/pcui';
 
 import { Pose } from '../camera-poses';
 import { Events } from '../events';
+import { ColorPicker } from './color-picker';
 import { localize } from './localization';
 import { PublishSettings, UserStatus } from '../publish';
 import { AnimTrack, ExperienceSettings, defaultPostEffectSettings } from '../splat-serialize';

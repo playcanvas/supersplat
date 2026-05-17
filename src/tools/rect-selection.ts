@@ -81,7 +81,7 @@ class RectSelection {
                     // rect select - wait for selection to complete before hiding rect
                     await events.invoke(
                         'select.rect',
-                        e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'), {
+                        (e.shiftKey && e.ctrlKey) ? 'intersect' : e.shiftKey ? 'add' : e.ctrlKey ? 'remove' : 'set', {
                             start: { x: Math.min(start.x, end.x) / w, y: Math.min(start.y, end.y) / h },
                             end: { x: Math.max(start.x, end.x) / w, y: Math.max(start.y, end.y) / h }
                         });

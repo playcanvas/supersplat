@@ -298,9 +298,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     rect: { x1: rect.start.x, y1: rect.start.y, x2: rect.end.x, y2: rect.end.y }
                 });
             } else if (mode === 'rings') {
-                // picker only differentiates which splats can be hit; intersect uses
-                // the same visible-splat set as set, with the actual op applied by SelectOp.
-                scene.camera.pickPrep(splat, op === 'intersect' ? 'set' : op);
+                // For intersect, render only currently-selected splats into the
+                // pick buffer ('remove' mode picks the selected set) so unselected
+                // splats can't occlude selected ones and skew the intersection.
+                scene.camera.pickPrep(splat, op === 'intersect' ? 'remove' : op);
                 const pick = await scene.camera.pickRect(
                     rect.start.x,
                     rect.start.y,
@@ -360,7 +361,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 const nw = nx1 - nx0;
                 const nh = ny1 - ny0;
 
-                scene.camera.pickPrep(splat, op === 'intersect' ? 'set' : op);
+                // Same intersect rationale as above: render only selected
+                // splats so unselected ones can't occlude the pick result.
+                scene.camera.pickPrep(splat, op === 'intersect' ? 'remove' : op);
                 const pick = await scene.camera.pickRect(nx0, ny0, nw, nh);
 
                 // Calculate actual pixel dimensions for iteration

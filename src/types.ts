@@ -25,6 +25,7 @@ type Config = {
     budget?: number;                            // override splat budget in millions (overrides platform + performanceMode table)
     renderer: 'webgl' | 'webgpu';
     heatmap: boolean;                           // render heatmap debug overlay (WebGPU only)
+    debug: boolean;                             // auto-open the developer debug panel; can also be toggled with Ctrl+Shift+D
 };
 
 // observable state that can change at runtime

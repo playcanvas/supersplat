@@ -53,6 +53,12 @@ const createFrameCamera = (bbox: BoundingBox, fov: number) => {
 class CameraManager {
     update: (deltaTime: number, cameraFrame: CameraFrame) => void;
 
+    // Re-seed the active controller from the current camera pose and
+    // cancel any in-progress transition lerp. Use after externally
+    // mutating `camera` and/or `state.cameraMode` to make the change
+    // visible instantly.
+    snap: () => void;
+
     // holds the camera state
     camera = new Camera();
 
@@ -144,6 +150,13 @@ class CameraManager {
         const startTransition = () => {
             from.copy(this.camera);
             transitionTimer = 0;
+        };
+
+        this.snap = () => {
+            getController(state.cameraMode).onEnter(this.camera);
+            target.copy(this.camera);
+            transitionTimer = 1;
+            global.app.renderNextFrame = true;
         };
 
         // application update

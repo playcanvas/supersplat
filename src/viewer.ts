@@ -34,6 +34,7 @@ import { Camera } from './cameras/camera';
 import type { Collision } from './collision';
 import { MeshCollision, VoxelCollision } from './collision';
 import { nearlyEquals } from './core/math';
+import { DebugPanel } from './debug';
 import { InputController } from './input-controller';
 import { MeshDebugOverlay } from './mesh-debug-overlay';
 import { NavCursor } from './nav-cursor';
@@ -162,6 +163,8 @@ class Viewer {
     meshOverlay: MeshDebugOverlay | null = null;
 
     navCursor: NavCursor | null = null;
+
+    debugPanel: DebugPanel | null = null;
 
     origChunks: {
         glsl: {
@@ -390,6 +393,8 @@ class Viewer {
             if (!config.noui) {
                 this.navCursor = new NavCursor(app, camera, collision ?? null, events, state);
             }
+
+            this.debugPanel = new DebugPanel(global, this.cameraManager);
 
             const { instance } = gsplat;
             if (instance) {

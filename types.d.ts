@@ -13,6 +13,22 @@ interface Window {
     scrubTo?: (time: number) => Promise<void>;
 
     animationDuration?: number;
+
+    getCameraState?: () => {
+        position: [number, number, number];
+        angles: [number, number, number];
+        distance: number;
+        fov: number;
+        mode: 'orbit' | 'anim' | 'fly' | 'walk';
+    };
+
+    setCameraState?: (snapshot: {
+        position: [number, number, number];
+        angles: [number, number, number];
+        distance: number;
+        fov: number;
+        mode: 'orbit' | 'anim' | 'fly' | 'walk';
+    }) => void;
 }
 
 declare module 'playcanvas/scripts/esm/xr-controllers.mjs' {

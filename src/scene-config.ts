@@ -22,6 +22,7 @@ const sceneConfig = {
     show: {
         grid: true,
         bound: true,
+        boundDimensions: false,
         cameraPoses: false,
         shBands: 3
     },

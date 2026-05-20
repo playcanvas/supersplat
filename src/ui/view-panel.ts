@@ -301,6 +301,26 @@ class ViewPanel extends Container {
         showBoundRow.append(showBoundLabel);
         showBoundRow.append(showBoundToggle);
 
+        // show dimensions
+
+        const showBoundDimensionsRow = new Container({
+            class: 'view-panel-row'
+        });
+
+        const showBoundDimensionsLabel = new Label({
+            text: localize('panel.view-options.show-bound-dimensions'),
+            class: 'view-panel-row-label'
+        });
+
+        const showBoundDimensionsToggle = new BooleanInput({
+            type: 'toggle',
+            class: 'view-panel-row-toggle',
+            value: false
+        });
+
+        showBoundDimensionsRow.append(showBoundDimensionsLabel);
+        showBoundDimensionsRow.append(showBoundDimensionsToggle);
+
         // show camera poses
 
         const showCameraPosesRow = new Container({
@@ -332,6 +352,7 @@ class ViewPanel extends Container {
         this.append(outlineSelectionRow);
         this.append(showGridRow);
         this.append(showBoundRow);
+        this.append(showBoundDimensionsRow);
         this.append(showCameraPosesRow);
 
         // handle panel visibility
@@ -430,6 +451,16 @@ class ViewPanel extends Container {
 
         showBoundToggle.on('change', () => {
             events.fire('camera.setBound', showBoundToggle.value);
+        });
+
+        // show dimensions
+
+        events.on('camera.boundDimensions', (visible: boolean) => {
+            showBoundDimensionsToggle.value = visible;
+        });
+
+        showBoundDimensionsToggle.on('change', () => {
+            events.fire('camera.setBoundDimensions', showBoundDimensionsToggle.value);
         });
 
         // show camera poses

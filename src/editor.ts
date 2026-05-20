@@ -75,7 +75,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     [
         'camera.mode', 'camera.overlay', 'camera.splatSize', 'view.outlineSelection',
-        'view.centersUseGaussianColor', 'view.bands', 'camera.bound', 'camera.showPoses',
+        'view.centersUseGaussianColor', 'view.bands', 'camera.bound', 'camera.boundDimensions', 'camera.showPoses',
         'selection.changed', 'tool.coordSpace'
     ].forEach((eventName) => {
         events.on(eventName, () => {
@@ -154,6 +154,29 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('camera.toggleBound', () => {
         setBoundVisible(!events.invoke('camera.bound'));
+    });
+
+    // camera.boundDimensions
+
+    let boundDimensions = scene.config.show.boundDimensions;
+
+    const setBoundDimensionsVisible = (visible: boolean) => {
+        if (visible !== boundDimensions) {
+            boundDimensions = visible;
+            events.fire('camera.boundDimensions', boundDimensions);
+        }
+    };
+
+    events.function('camera.boundDimensions', () => {
+        return boundDimensions;
+    });
+
+    events.on('camera.setBoundDimensions', (value: boolean) => {
+        setBoundDimensionsVisible(value);
+    });
+
+    events.on('camera.toggleBoundDimensions', () => {
+        setBoundDimensionsVisible(!events.invoke('camera.boundDimensions'));
     });
 
     // camera.showPoses
@@ -756,6 +779,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             outlineSelection: events.invoke('view.outlineSelection'),
             showGrid: events.invoke('grid.visible'),
             showBound: events.invoke('camera.bound'),
+            showBoundDimensions: events.invoke('camera.boundDimensions'),
             showCameraPoses: events.invoke('camera.showPoses'),
             flySpeed: events.invoke('camera.flySpeed')
         };
@@ -771,6 +795,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         events.fire('view.setOutlineSelection', docView.outlineSelection);
         events.fire('grid.setVisible', docView.showGrid);
         events.fire('camera.setBound', docView.showBound);
+        events.fire('camera.setBoundDimensions', docView.showBoundDimensions ?? false);
         events.fire('camera.setShowPoses', docView.showCameraPoses ?? false);
         events.fire('camera.setFlySpeed', docView.flySpeed);
     });

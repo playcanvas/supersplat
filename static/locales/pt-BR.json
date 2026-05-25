@@ -235,6 +235,7 @@
     "popup.publish.new-scene": "Nova Cena",
     "popup.publish.override-model": "Substituir Modelo",
     "popup.publish.override-animation": "Substituir Animação",
+    "popup.publish.generate-lods": "Gerar LODs",
     "cursor.click-to-copy": "Clique para Copiar",
     "cursor.copied": "Copiado!",
     "doc.reset": "Reiniciar a Cena",

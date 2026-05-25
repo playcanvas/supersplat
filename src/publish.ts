@@ -67,6 +67,7 @@ type PublishSettings = {
     overwriteHash?: string;
     overrideModel?: boolean;
     overrideAnimation?: boolean;
+    generateLods: boolean;
 };
 
 const origin = location.origin;
@@ -247,6 +248,8 @@ class PublishWriter implements Writer {
 
             const completeJson = await completeResult.json();
 
+            const publishFormat = publishSettings.generateLods ? 'ssog' : 'sog';
+
             const doPublish = () => fetch(`${user.apiServer}/splats/publish`, {
                 method: 'POST',
                 body: JSON.stringify({
@@ -256,7 +259,7 @@ class PublishWriter implements Writer {
                     listed: publishSettings.listed,
                     settings: publishSettings.experienceSettings,
                     sourceFormat: 'ply',
-                    publishFormat: 'sog'
+                    publishFormat
                 }),
                 headers: {
                     'Authorization': `Bearer ${user.token}`,
@@ -270,7 +273,7 @@ class PublishWriter implements Writer {
                     s3Key: startJson.key,
                     settings: publishSettings.experienceSettings,
                     sourceFormat: 'ply',
-                    publishFormat: 'sog'
+                    publishFormat
                 }),
                 headers: {
                     'Authorization': `Bearer ${user.token}`,

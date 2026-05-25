@@ -235,6 +235,7 @@
     "popup.publish.new-scene": "Neue Szene",
     "popup.publish.override-model": "Modell überschreiben",
     "popup.publish.override-animation": "Animation überschreiben",
+    "popup.publish.generate-lods": "LODs erzeugen",
     "cursor.click-to-copy": "Klicken zum Kopieren",
     "cursor.copied": "Kopiert!",
     "doc.reset": "Szene Zurücksetzen",

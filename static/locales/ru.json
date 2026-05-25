@@ -235,6 +235,7 @@
     "popup.publish.new-scene": "Новая сцена",
     "popup.publish.override-model": "Заменить модель",
     "popup.publish.override-animation": "Заменить анимацию",
+    "popup.publish.generate-lods": "Создавать LOD",
     "cursor.click-to-copy": "Нажмите, чтобы скопировать",
     "cursor.copied": "Скопировано!",
     "doc.reset": "Сбросить сцену",

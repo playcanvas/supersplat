@@ -235,6 +235,7 @@
     "popup.publish.new-scene": "新規シーンを作成",
     "popup.publish.override-model": "モデルを上書き",
     "popup.publish.override-animation": "アニメーションを上書き",
+    "popup.publish.generate-lods": "LODを生成",
     "cursor.click-to-copy": "クリックしてコピー",
     "cursor.copied": "コピーしました！",
     "doc.reset": "シーンをリセット",

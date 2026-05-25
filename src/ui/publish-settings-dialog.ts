@@ -121,13 +121,13 @@ class PublishSettingsDialog extends Container {
         colorRow.append(colorLabel);
         colorRow.append(colorPicker);
 
-        // auto LODs
+        // generate LODs
 
-        const autoLodsLabel = new Label({ class: 'label', text: localize('popup.publish.generate-lods') });
-        const autoLodsToggle = new BooleanInput({ class: 'boolean', type: 'toggle', value: false });
-        const autoLodsRow = new Container({ class: 'row' });
-        autoLodsRow.append(autoLodsLabel);
-        autoLodsRow.append(autoLodsToggle);
+        const generateLodsLabel = new Label({ class: 'label', text: localize('popup.publish.generate-lods') });
+        const generateLodsToggle = new BooleanInput({ class: 'boolean', type: 'toggle', value: false });
+        const generateLodsRow = new Container({ class: 'row' });
+        generateLodsRow.append(generateLodsLabel);
+        generateLodsRow.append(generateLodsToggle);
 
         // fov
 
@@ -155,7 +155,7 @@ class PublishSettingsDialog extends Container {
         content.append(fovRow);
         content.append(animationRow);
         content.append(loopRow);
-        content.append(autoLodsRow);
+        content.append(generateLodsRow);
 
         // footer
 
@@ -217,8 +217,8 @@ class PublishSettingsDialog extends Container {
             animationRow.hidden = !isNew;
             overrideModelRow.hidden = isNew;
             overrideAnimationRow.hidden = isNew;
-            // autoLods only matters when a model is uploaded — hide when republishing animation-only
-            autoLodsRow.hidden = !isNew && !modelOn;
+            // generateLods only matters when a model is uploaded — hide when republishing animation-only
+            generateLodsRow.hidden = !isNew && !modelOn;
 
             if (isNew) {
                 animationToggle.enabled = hasPosesState;
@@ -279,7 +279,7 @@ class PublishSettingsDialog extends Container {
             loopSelect.value = 'repeat';
             colorPicker.value = [bgClr.r, bgClr.g, bgClr.b];
             fovSlider.value = events.invoke('camera.fov');
-            autoLodsToggle.value = totalSplats >= 1_000_000 && isLargeScene;
+            generateLodsToggle.value = totalSplats >= 1_000_000 && isLargeScene;
 
             updateLayout();
         };
@@ -393,7 +393,7 @@ class PublishSettingsDialog extends Container {
                         overwriteHash: selectedScene?.hash,
                         overrideModel: isNew || overrideModelToggle.value,
                         overrideAnimation: !isNew && overrideAnimationToggle.value,
-                        autoLods: autoLodsToggle.value
+                        generateLods: generateLodsToggle.value
                     });
                 };
             }).finally(() => {

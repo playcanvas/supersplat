@@ -67,7 +67,7 @@ type PublishSettings = {
     overwriteHash?: string;
     overrideModel?: boolean;
     overrideAnimation?: boolean;
-    autoLods: boolean;
+    generateLods: boolean;
 };
 
 const origin = location.origin;
@@ -248,7 +248,7 @@ class PublishWriter implements Writer {
 
             const completeJson = await completeResult.json();
 
-            const publishFormat = publishSettings.autoLods ? 'ssog' : 'sog';
+            const publishFormat = publishSettings.generateLods ? 'ssog' : 'sog';
 
             const doPublish = () => fetch(`${user.apiServer}/splats/publish`, {
                 method: 'POST',

@@ -2,7 +2,7 @@ import { Vec3 } from 'playcanvas';
 
 import type { Collision } from '../collision';
 import type { CameraFrame, Camera, CameraController } from './camera';
-import { applyFrameRotation, setBasisOffset, setCameraBasis } from './camera-utils';
+import { DEFAULT_CONTROLLER_DAMPING, applyFrameRotation, dampAngles, setBasisOffset, setCameraBasis } from './camera-utils';
 import { SphereMover } from './sphere-mover';
 
 /** Radius of the camera collision sphere (meters) */
@@ -16,9 +16,13 @@ const offset = new Vec3();
 class FlyController implements CameraController {
     fov = 90;
 
+    rotateDamping = DEFAULT_CONTROLLER_DAMPING;
+
     private _position = new Vec3();
 
     private _angles = new Vec3();
+
+    private _targetAngles = new Vec3();
 
     private _distance = 1;
 
@@ -51,7 +55,8 @@ class FlyController implements CameraController {
     update(deltaTime: number, inputFrame: CameraFrame, camera: Camera) {
         const { move, rotate } = inputFrame.read();
 
-        applyFrameRotation(this._angles, rotate);
+        applyFrameRotation(this._targetAngles, rotate);
+        dampAngles(this._angles, this._targetAngles, this.rotateDamping, deltaTime);
 
         this._step(move);
 
@@ -68,6 +73,7 @@ class FlyController implements CameraController {
     goto(camera: Camera) {
         this._position.copy(camera.position);
         this._angles.set(camera.angles.x, camera.angles.y, 0);
+        this._targetAngles.copy(this._angles);
         this._distance = camera.distance;
         this._mover.reset(this._position);
     }
@@ -79,6 +85,7 @@ class FlyController implements CameraController {
 
         this._position.copy(this._spawnPosition);
         this._angles.copy(this._spawnAngles);
+        this._targetAngles.copy(this._spawnAngles);
         this._distance = this._spawnDistance;
         this._mover.reset(this._position);
 

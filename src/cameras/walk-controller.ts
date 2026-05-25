@@ -2,7 +2,7 @@ import { math, Vec3 } from 'playcanvas';
 
 import type { Collision, PushOut } from '../collision';
 import type { CameraFrame, Camera, CameraController } from './camera';
-import { applyFrameRotation, setBasisOffset, setYawBasis } from './camera-utils';
+import { DEFAULT_CONTROLLER_DAMPING, applyFrameRotation, dampAngles, setBasisOffset, setYawBasis } from './camera-utils';
 import { findWalkSpawn } from './walk-spawn';
 import { damp } from '../core/math';
 
@@ -77,14 +77,9 @@ class WalkController implements CameraController {
     moveAirSpeed = 1;
 
     /**
-     * Movement damping factor (0 = no damping, 1 = full damping)
-     */
-    moveDamping = 0.97;
-
-    /**
      * Rotation damping factor (0 = no damping, 1 = full damping)
      */
-    rotateDamping = 0.97;
+    rotateDamping = DEFAULT_CONTROLLER_DAMPING;
 
     /**
      * Velocity damping factor when grounded (0 = no damping, 1 = full damping)
@@ -129,6 +124,8 @@ class WalkController implements CameraController {
 
     private _angles = new Vec3();
 
+    private _targetAngles = new Vec3();
+
     private _distance = 1;
 
     private _spawnPosition = new Vec3();
@@ -172,7 +169,8 @@ class WalkController implements CameraController {
         const { move, rotate } = inputFrame.read();
 
         // apply rotation at display rate for responsive mouse look
-        applyFrameRotation(this._angles, rotate);
+        applyFrameRotation(this._targetAngles, rotate);
+        dampAngles(this._angles, this._targetAngles, this.rotateDamping, deltaTime);
 
         // accumulate movement input so frames without a physics step don't lose input
         this._pendingMove[0] += move[0];
@@ -280,6 +278,7 @@ class WalkController implements CameraController {
 
         // angles (clamp pitch to avoid gimbal lock)
         this._angles.set(camera.angles.x, camera.angles.y, 0);
+        this._targetAngles.copy(this._angles);
         this._distance = camera.distance;
 
         // reset velocity and state
@@ -300,6 +299,7 @@ class WalkController implements CameraController {
         this._position.copy(this._spawnPosition);
         this._prevPosition.copy(this._position);
         this._angles.copy(this._spawnAngles);
+        this._targetAngles.copy(this._spawnAngles);
         this._distance = this._spawnDistance;
         this._resetMotion();
         this._grounded = this._spawnGrounded;

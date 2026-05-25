@@ -1,5 +1,6 @@
 import type { Camera, CameraFrame } from './camera';
 import { CameraController } from './camera';
+import { drainInputFrame } from './camera-utils';
 import { AnimState } from '../animation/anim-state';
 import { AnimTrack } from '../settings';
 
@@ -22,7 +23,7 @@ class AnimController implements CameraController {
         camera.look(this.animState.position, this.animState.target);
         camera.fov = this.animState.fov;
 
-        inputFrame.read();
+        drainInputFrame(inputFrame);
     }
 
     onExit(camera: Camera): void {

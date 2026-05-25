@@ -121,6 +121,14 @@ class PublishSettingsDialog extends Container {
         colorRow.append(colorLabel);
         colorRow.append(colorPicker);
 
+        // auto LODs
+
+        const autoLodsLabel = new Label({ class: 'label', text: 'Auto generate LODs' });
+        const autoLodsToggle = new BooleanInput({ class: 'boolean', type: 'toggle', value: false });
+        const autoLodsRow = new Container({ class: 'row' });
+        autoLodsRow.append(autoLodsLabel);
+        autoLodsRow.append(autoLodsToggle);
+
         // fov
 
         const fovLabel = new Label({ class: 'label', text: localize('popup.export.fov') });
@@ -147,6 +155,7 @@ class PublishSettingsDialog extends Container {
         content.append(fovRow);
         content.append(animationRow);
         content.append(loopRow);
+        content.append(autoLodsRow);
 
         // footer
 
@@ -236,6 +245,24 @@ class PublishSettingsDialog extends Container {
             const filename = splats[0].filename;
             const dot = splats[0].filename.lastIndexOf('.');
             const bgClr = events.invoke('bgClr');
+            const totalSplats = splats.reduce((sum: number, s: any) => sum + (s.splatData?.numSplats ?? 0), 0);
+
+            // union scene bounds to decide LOD default for large scenes
+            const sceneMin = [Infinity, Infinity, Infinity];
+            const sceneMax = [-Infinity, -Infinity, -Infinity];
+            for (const s of splats) {
+                const bound = s.worldBound;
+                if (!bound) continue;
+                const { center, halfExtents } = bound;
+                const c = [center.x, center.y, center.z];
+                const h = [halfExtents.x, halfExtents.y, halfExtents.z];
+                for (let i = 0; i < 3; i++) {
+                    sceneMin[i] = Math.min(sceneMin[i], c[i] - h[i]);
+                    sceneMax[i] = Math.max(sceneMax[i], c[i] + h[i]);
+                }
+            }
+            const largeAxes = [0, 1, 2].filter(i => sceneMax[i] - sceneMin[i] > 16).length;
+            const isLargeScene = largeAxes >= 2;
 
             overwriteSelect.options = [{
                 v: '0', t: localize('popup.publish.new-scene')
@@ -250,6 +277,7 @@ class PublishSettingsDialog extends Container {
             loopSelect.value = 'repeat';
             colorPicker.value = [bgClr.r, bgClr.g, bgClr.b];
             fovSlider.value = events.invoke('camera.fov');
+            autoLodsToggle.value = totalSplats >= 1_000_000 && isLargeScene;
 
             updateLayout();
         };
@@ -362,7 +390,8 @@ class PublishSettingsDialog extends Container {
                         overwriteId: selectedScene?.id,
                         overwriteHash: selectedScene?.hash,
                         overrideModel: isNew || overrideModelToggle.value,
-                        overrideAnimation: !isNew && overrideAnimationToggle.value
+                        overrideAnimation: !isNew && overrideAnimationToggle.value,
+                        autoLods: autoLodsToggle.value
                     });
                 };
             }).finally(() => {

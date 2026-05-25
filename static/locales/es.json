@@ -235,7 +235,7 @@
     "popup.publish.new-scene": "Nueva escena",
     "popup.publish.override-model": "Reemplazar modelo",
     "popup.publish.override-animation": "Reemplazar animación",
-    "popup.publish.auto-lods": "Generar LOD",
+    "popup.publish.generate-lods": "Generar LOD",
     "cursor.click-to-copy": "Haga clic para copiar",
     "cursor.copied": "¡Copiado!",
     "doc.reset": "Restablecer escena",

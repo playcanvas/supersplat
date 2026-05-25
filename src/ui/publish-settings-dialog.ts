@@ -123,7 +123,7 @@ class PublishSettingsDialog extends Container {
 
         // auto LODs
 
-        const autoLodsLabel = new Label({ class: 'label', text: localize('popup.publish.auto-lods') });
+        const autoLodsLabel = new Label({ class: 'label', text: localize('popup.publish.generate-lods') });
         const autoLodsToggle = new BooleanInput({ class: 'boolean', type: 'toggle', value: false });
         const autoLodsRow = new Container({ class: 'row' });
         autoLodsRow.append(autoLodsLabel);

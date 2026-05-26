@@ -10,7 +10,7 @@ import { damp, mod } from '../core/math';
  * physics-style velocity decay (e.g. walk's grounded/air velocity damping),
  * which has different tuning needs.
  */
-const DEFAULT_CONTROLLER_DAMPING = 0.96;
+const DEFAULT_CONTROLLER_DAMPING = 0.95;
 
 const rotation = new Quat();
 

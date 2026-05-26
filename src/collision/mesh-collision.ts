@@ -5,7 +5,7 @@ import {
 } from 'playcanvas';
 import type { AppBase } from 'playcanvas';
 
-import { PENETRATION_EPSILON, resolveIterative } from './collision';
+import { DEFAULT_VOXEL_RESOLUTION, PENETRATION_EPSILON, resolveIterative } from './collision';
 import type { Collision, PushOut, RayHit } from './collision';
 
 // ---- BVH node layout ----
@@ -343,6 +343,13 @@ const _segClosest = { x: 0, y: 0, z: 0 };
 const _triClosest = { x: 0, y: 0, z: 0 };
 
 class MeshCollision implements Collision {
+    /**
+     * Assumed voxel resolution of the source carve that produced this mesh.
+     * The mesh itself doesn't carry this metadata, so we fall back to the
+     * default; can be overridden post-construction if a loader knows better.
+     */
+    voxelResolution: number = DEFAULT_VOXEL_RESOLUTION;
+
     private _tris: TriangleData;
 
     private _root: BVHNode;
@@ -474,6 +481,13 @@ class MeshCollision implements Collision {
             (rx, ry, rz, push) => this._deepestCapsulePenetration(rx, ry, rz, halfHeight, radius, push),
             this._constraintNormals, this._push, out
         );
+    }
+
+    isFreeAt(x: number, y: number, z: number): boolean {
+        // Approximation: a point is in free space iff no triangle is within
+        // half a voxel of it. Matches the voxel-grid notion for data derived
+        // from the same carve.
+        return !this._deepestSpherePenetration(x, y, z, this.voxelResolution * 0.5, this._push);
     }
 
     querySurfaceNormal(

@@ -3,7 +3,8 @@ import { math, Vec3 } from 'playcanvas';
 import type { Collision, PushOut } from '../collision';
 import type { CameraFrame, Camera, CameraController } from './camera';
 import { DEFAULT_CONTROLLER_DAMPING, applyFrameRotation, dampAngles, setBasisOffset, setYawBasis } from './camera-utils';
-import { findWalkSpawn } from './walk-spawn';
+import { SpawnState } from './spawn-state';
+import { findCylinderSpawn } from '../collision/find-spawn';
 import { damp } from '../core/math';
 
 const FIXED_DT = 1 / 60;
@@ -113,11 +114,6 @@ class WalkController implements CameraController {
      */
     groundProbeRange = 1.0;
 
-    /**
-     * Maximum vertical raycast distance to search for walk spawn ground.
-     */
-    spawnSearchRange = 1000;
-
     private _position = new Vec3();
 
     private _prevPosition = new Vec3();
@@ -128,11 +124,9 @@ class WalkController implements CameraController {
 
     private _distance = 1;
 
-    private _spawnPosition = new Vec3();
+    private _spawn = new SpawnState();
 
-    private _spawnAngles = new Vec3();
-
-    private _spawnDistance = 1;
+    private _spawnGrounded = false;
 
     private _velocity = new Vec3();
 
@@ -146,16 +140,29 @@ class WalkController implements CameraController {
 
     private _jumpHeld = false;
 
-    private _spawnGrounded = false;
-
-    private _hasSpawn = false;
-
     onEnter(camera: Camera): void {
         this.goto(camera);
         if (this.collision) {
-            this._hasSpawn = false;
-            if (findWalkSpawn(this.collision, camera.position, this, spawnProbe)) {
-                this._position.copy(spawnProbe);
+            // Spawn is scoped to this walk-mode entry; reset so a stale spawn
+            // from a previous entry can't be restored if this entry fails.
+            this._spawn.clear();
+            // Treat the walk capsule as a tight-superset cylinder for spawn.
+            // The carve was produced with a separable XYZ dilation (flat ends,
+            // no hemispheres), so cylinder math matches the data exactly.
+            // Include `hoverHeight` in the height so the ceiling-clearance
+            // check accounts for the placed capsule's full vertical envelope:
+            // foot sits at `floor + hoverHeight`, head at `floor + hoverHeight
+            // + capsuleHeight`.
+            if (findCylinderSpawn(this.collision,
+                camera.position.x, camera.position.y, camera.position.z,
+                (this.capsuleHeight + this.hoverHeight) * 0.5, this.capsuleRadius, spawnProbe)) {
+                // spawnProbe is the floor world position the cylinder rests
+                // on. Eye sits hoverHeight + eyeHeight above the floor.
+                this._position.set(
+                    spawnProbe.x,
+                    spawnProbe.y + this.hoverHeight + this.eyeHeight,
+                    spawnProbe.z
+                );
                 this._grounded = true;
                 this._velocity.y = 0;
                 this._storeSpawn();
@@ -292,15 +299,13 @@ class WalkController implements CameraController {
      * @returns True if a spawn pose was available.
      */
     resetToSpawn(camera: Camera): boolean {
-        if (!this._hasSpawn) {
+        if (!this._spawn.has) {
             return false;
         }
 
-        this._position.copy(this._spawnPosition);
+        this._distance = this._spawn.restore(this._position, this._angles);
         this._prevPosition.copy(this._position);
-        this._angles.copy(this._spawnAngles);
-        this._targetAngles.copy(this._spawnAngles);
-        this._distance = this._spawnDistance;
+        this._targetAngles.copy(this._angles);
         this._resetMotion();
         this._grounded = this._spawnGrounded;
 
@@ -313,11 +318,8 @@ class WalkController implements CameraController {
     }
 
     private _storeSpawn() {
-        this._spawnPosition.copy(this._position);
-        this._spawnAngles.copy(this._angles);
-        this._spawnDistance = this._distance;
+        this._spawn.store(this._position, this._angles, this._distance);
         this._spawnGrounded = this._grounded;
-        this._hasSpawn = true;
     }
 
     private _resetMotion() {

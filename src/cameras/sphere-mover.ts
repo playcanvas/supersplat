@@ -2,9 +2,6 @@ import { math, Vec3 } from 'playcanvas';
 
 import type { Collision, PushOut } from '../collision';
 
-/** Extra resolve passes above the collider's internal iteration for tight corners */
-const MAX_COLLISION_PASSES = 4;
-
 /** Small clearance that keeps the sphere from resting exactly on a collision surface */
 const COLLISION_SKIN = 1e-3;
 
@@ -201,24 +198,21 @@ class SphereMover {
     }
 
     private _resolveSphere(position: Vec3, push: Vec3): boolean {
-        let collided = false;
-        push.set(0, 0, 0);
-
-        for (let i = 0; i < MAX_COLLISION_PASSES; i++) {
-            if (!this.collision!.querySphere(position.x, position.y, position.z, this.radius, pushOut)) {
-                break;
-            }
-
-            position.x += pushOut.x;
-            position.y += pushOut.y;
-            position.z += pushOut.z;
-            push.x += pushOut.x;
-            push.y += pushOut.y;
-            push.z += pushOut.z;
-            collided = true;
+        // `querySphere` is already corner-aware (resolveIterative inside the
+        // collider iterates up to 4 passes with constraint-normal projection),
+        // so a single call here is enough.
+        if (!this.collision!.querySphere(position.x, position.y, position.z, this.radius, pushOut)) {
+            push.set(0, 0, 0);
+            return false;
         }
 
-        return collided;
+        position.x += pushOut.x;
+        position.y += pushOut.y;
+        position.z += pushOut.z;
+        push.x = pushOut.x;
+        push.y = pushOut.y;
+        push.z = pushOut.z;
+        return true;
     }
 
     private _clipMove(move: Vec3, push: Vec3) {

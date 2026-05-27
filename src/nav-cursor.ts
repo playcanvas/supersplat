@@ -14,11 +14,12 @@ const NUM_SAMPLES = 12;
 const BASE_OUTER_RADIUS = 0.2;
 const INNER_OUTER_RATIO = 0.17 / 0.2;
 // Screen-space diameter (in CSS pixels) used for both hover and target
-// rings when the scene has no collision data. With collision present the
-// rings render world-space (BASE_OUTER_RADIUS) so they orient to the
-// surface; without collision the picks fall back to splat depth and a
-// fixed pixel size is more legible. Selection happens in
-// screenPixelsForRing(), keyed on state.hasCollision.
+// rings when the scene isn't walk-sized. Walk-sized scenes render
+// world-space (BASE_OUTER_RADIUS) so the ring orients to the surface and
+// reads as a physical footprint; smaller scenes (or no collision) fall
+// back to a fixed pixel size, which keeps the ring legible when 0.2 world
+// units would eat too much of the scene. Selection happens in
+// screenPixelsForRing(), keyed on state.walkAllowed.
 const SCREEN_OUTER_PIXELS = 48;
 const BEZIER_K = 1 / 6;
 const NORMAL_SMOOTH_FACTOR = 0.25;
@@ -387,13 +388,14 @@ class NavCursor {
         updateActive();
     }
 
-    // Ring sizing is per-scene: when the scene has collision data we get
-    // accurate surface picks with real normals, so world-space rings read
-    // as physical footprints on the surface with visible orientation.
-    // Without collision the pick falls back to splat depth which can be
-    // noisy at distance, so a fixed screen-size ring is more legible.
+    // Ring sizing is per-scene: walk-sized scenes (collision present and
+    // bbox large enough — same predicate as walk mode) get world-space
+    // rings, which read as physical footprints on the surface with visible
+    // orientation. Smaller scenes or scenes without collision use a fixed
+    // screen-pixel ring — 0.2 world units would dominate a small scene,
+    // and the pick already falls back to splat depth without collision.
     private screenPixelsForRing(): number | null {
-        return this.state.hasCollision ? null : SCREEN_OUTER_PIXELS;
+        return this.state.walkAllowed ? null : SCREEN_OUTER_PIXELS;
     }
 
     private setTarget(pos: Vec3, normal: Vec3, mode: TargetMode) {

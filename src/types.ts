@@ -23,7 +23,7 @@ type Config = {
     fullload: boolean;                          // load all streaming LOD data before first frame
     aa: boolean;                                // render with antialiasing
     budget?: number;                            // override splat budget in millions (overrides platform + performanceMode table)
-    renderer: 'webgl' | 'webgpu';
+    renderer: 'webgl' | 'webgpu';               // requested renderer; the actual one (after engine fallback) is exposed as Global.renderer
     heatmap: boolean;                           // render heatmap debug overlay (WebGPU only)
     debug: boolean;                             // auto-open the developer debug panel; can also be toggled with Ctrl+Shift+D
 };
@@ -58,6 +58,7 @@ type Global = {
     state: State;
     events: EventHandler;
     camera: Entity;
+    renderer: 'webgl' | 'webgpu';               // actual renderer in use (reflects engine fallback from WebGPU to WebGL2)
 };
 
 export { CameraMode, InputMode, Config, State, Global };

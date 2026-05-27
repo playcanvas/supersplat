@@ -180,7 +180,7 @@ class Viewer {
     constructor(global: Global, gsplatLoad: Promise<Entity>, skyboxLoad: Promise<void> | undefined, collisionLoad: Promise<Collision> | undefined) {
         this.global = global;
 
-        const { app, settings, config, events, state, camera } = global;
+        const { app, settings, config, events, state, camera, renderer } = global;
         const { graphicsDevice } = app;
 
         // enable anonymous CORS for image loading in safari
@@ -368,7 +368,7 @@ class Viewer {
 
             // Create collision debug overlay (voxel uses a compute shader, mesh
             // uses standard line rendering). The voxel path requires WebGPU.
-            if (collision instanceof VoxelCollision && config.renderer !== 'webgl') {
+            if (collision instanceof VoxelCollision && renderer !== 'webgl') {
                 this.voxelOverlay = new VoxelDebugOverlay(app, collision, camera);
                 this.voxelOverlay.mode = config.heatmap ? 'heatmap' : 'overlay';
                 state.hasCollisionOverlay = true;
@@ -508,7 +508,7 @@ class Viewer {
 
                         // debug colorize lods
                         gsplat.debug = config.colorize ? GSPLAT_DEBUG_LOD : GSPLAT_DEBUG_NONE;
-                        gsplat.renderer = rendererTable[config.renderer];
+                        gsplat.renderer = rendererTable[renderer];
 
                         // wait for the first valid frame to complete rendering
                         app.once('frameend', () => {

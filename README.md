@@ -39,11 +39,11 @@ The app supports a number of URL parameters (these are subject to change):
 
 ### Renderer
 
-By default the viewer uses WebGL. The flag below opts into WebGPU rendering:
+By default the viewer uses WebGPU when available (falling back automatically when not). The flag below forces the WebGL renderer (also required for WebXR / AR / VR):
 
 | Parameter | Description |
 | --------- | ----------- |
-| `webgpu` | Use the WebGPU hybrid renderer (raster + GPU radix sort) |
+| `webgl` | Force the WebGL renderer (required for AR/VR) |
 | `aa` | Enable antialiasing (WebGL only) |
 | `nofx` | Disable post effects |
 | `hpr` | Override `highPrecisionRendering` from settings (`?hpr`, `?hpr=1`, `?hpr=true`, `?hpr=enable` to enable) |

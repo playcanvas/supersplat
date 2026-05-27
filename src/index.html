@@ -21,7 +21,7 @@
             const settingsUrl = url.searchParams.has('settings') ? url.searchParams.get('settings') : './settings.json';
             const contentUrl = url.searchParams.has('content') ? url.searchParams.get('content') : './scene.compressed.ply';
 
-            const renderer = url.searchParams.has('webgpu') ? 'webgpu' : 'webgl';
+            const renderer = url.searchParams.has('webgl') ? 'webgl' : 'webgpu';
 
             const budgetParam = url.searchParams.get('budget');
             const budget = budgetParam !== null ? Number(budgetParam) : undefined;
@@ -490,6 +490,18 @@
 
             <!-- Tooltip -->
             <div id="tooltip"></div>
+
+            <!-- XR WebGL-required modal -->
+            <div id="xrModal" class="hidden" onwheel="event.stopPropagation()">
+                <div id="xrModalContent" onpointerdown="event.stopPropagation()">
+                    <h2>WebGL Required</h2>
+                    <p>AR and VR are not supported on the WebGPU renderer. Pressing OK will reload the viewer with WebGL.</p>
+                    <div id="xrModalButtons">
+                        <button id="xrModalCancel">Cancel</button>
+                        <button id="xrModalOk">OK</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- SVG Icons -->

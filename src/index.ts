@@ -94,17 +94,23 @@ const loadSkybox = (app: AppBase, url: string) => {
 const createApp = async (canvas: HTMLCanvasElement, config: Config) => {
     const useWebGPU = config.renderer === 'webgpu';
 
-    // Create the graphics device
+    // Create the graphics device. The engine auto-appends WebGL2/null fallbacks
+    // when WebGPU isn't supported, so request xrCompatible so the WebGL fallback
+    // is also usable for AR/VR.
     const device = await createGraphicsDevice(canvas, {
         deviceTypes: useWebGPU ? ['webgpu'] : [],
         antialias: false,
         depth: true,
         stencil: false,
-        xrCompatible: !useWebGPU,
+        xrCompatible: true,
         powerPreference: 'high-performance'
     });
 
     console.log(`Renderer: ${device.deviceType}`);
+
+    // The engine may have fallen back from WebGPU to WebGL2; downstream code
+    // (voxel overlay, XR, gsplat renderer selection) needs the *actual* renderer.
+    const renderer: 'webgl' | 'webgpu' = device.deviceType === 'webgpu' ? 'webgpu' : 'webgl';
 
     // Set maxPixelRatio so the XR framebuffer scale factor is computed correctly.
     // Regular rendering bypasses maxPixelRatio via the custom initCanvas sizing.
@@ -135,7 +141,7 @@ const createApp = async (canvas: HTMLCanvasElement, config: Config) => {
 
     app.scene.ambientLight.set(0.51, 0.55, 0.65);
 
-    return { app, camera };
+    return { app, camera, renderer };
 };
 
 // initialize canvas size and resizing
@@ -196,7 +202,7 @@ const initCanvas = (global: Global) => {
 };
 
 const main = async (canvas: HTMLCanvasElement, settingsJson: any, config: Config) => {
-    const { app, camera } = await createApp(canvas, config);
+    const { app, camera, renderer } = await createApp(canvas, config);
 
     // create events
     const events = new EventHandler();
@@ -237,7 +243,8 @@ const main = async (canvas: HTMLCanvasElement, settingsJson: any, config: Config
         config,
         state,
         events,
-        camera
+        camera,
+        renderer
     };
 
     initCanvas(global);
@@ -252,10 +259,9 @@ const main = async (canvas: HTMLCanvasElement, settingsJson: any, config: Config
 
     camera.addComponent('camera');
 
-    // Initialize XR support
-    if (config.renderer === 'webgl') {
-        initXr(global);
-    }
+    // Initialize XR support (availability detection always runs so the UI can offer
+    // a reload into WebGL when the user requests AR/VR under WebGPU)
+    initXr(global);
 
     // Initialize user interface
     initUI(global);

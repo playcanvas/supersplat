@@ -247,7 +247,8 @@ const initUI = (global: Global) => {
         'showCollision', 'desktopShowCollisionHelp',
         'tooltip',
         'annotationNav', 'annotationPrev', 'annotationNext', 'annotationInfo', 'annotationNavTitle',
-        'viewerBranding', 'viewerTitle', 'appVersionLabel'
+        'viewerBranding', 'viewerTitle', 'appVersionLabel',
+        'xrModal', 'xrModalOk', 'xrModalCancel'
     ].reduce((acc: Record<string, HTMLElement>, id) => {
         acc[id] = document.getElementById(id);
         return acc;
@@ -391,8 +392,33 @@ const initUI = (global: Global) => {
     const arChanged = () => dom.arMode.classList[state.hasAR ? 'remove' : 'add']('hidden');
     const vrChanged = () => dom.vrMode.classList[state.hasVR ? 'remove' : 'add']('hidden');
 
-    dom.arMode.addEventListener('click', () => events.fire('startAR'));
-    dom.vrMode.addEventListener('click', () => events.fire('startVR'));
+    // XR sessions require a WebGL device. Under WebGPU, prompt the user to reload
+    // the viewer with the WebGL renderer before starting AR/VR. Use replace() so
+    // the renderer-switch reload doesn't add a back-button entry — important
+    // because the viewer often runs inside an iframe (e.g. superspl.at /scene).
+    const reloadWithWebgl = () => {
+        const reloadUrl = new URL(location.href);
+        reloadUrl.searchParams.set('webgl', '');
+        location.replace(reloadUrl.toString());
+    };
+
+    const showXrModal = () => dom.xrModal.classList.remove('hidden');
+    const hideXrModal = () => dom.xrModal.classList.add('hidden');
+
+    dom.xrModalOk.addEventListener('click', reloadWithWebgl);
+    dom.xrModalCancel.addEventListener('click', hideXrModal);
+    dom.xrModal.addEventListener('pointerdown', hideXrModal);
+
+    const handleXrClick = (type: 'AR' | 'VR') => {
+        if (global.renderer !== 'webgl') {
+            showXrModal();
+        } else {
+            events.fire(type === 'AR' ? 'startAR' : 'startVR');
+        }
+    };
+
+    dom.arMode.addEventListener('click', () => handleXrClick('AR'));
+    dom.vrMode.addEventListener('click', () => handleXrClick('VR'));
 
     events.on('hasAR:changed', arChanged);
     events.on('hasVR:changed', vrChanged);

@@ -12,7 +12,7 @@ import { Global } from './types';
 
 // On entering/exiting AR, we need to set the camera clear color to transparent black
 const initXr = (global: Global) => {
-    const { app, events, state, camera } = global;
+    const { app, events, state, camera, renderer } = global;
 
     state.hasAR = app.xr.isAvailable('immersive-ar');
     state.hasVR = app.xr.isAvailable('immersive-vr');
@@ -24,6 +24,12 @@ const initXr = (global: Global) => {
     app.xr.on('available:immersive-vr', (available) => {
         state.hasVR = available;
     });
+
+    // XR sessions require a WebGL device; under WebGPU we only expose availability so
+    // the UI can offer to reload the viewer in WebGL mode.
+    if (renderer !== 'webgl') {
+        return;
+    }
 
     const parent = camera.parent as Entity;
     const clearColor = new Color();

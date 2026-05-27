@@ -1,6 +1,7 @@
 import { EventHandler } from 'playcanvas';
 
 import { version as appVersion } from '../package.json';
+import { localize } from './localization';
 import type { Annotation } from './settings';
 import { Tooltip } from './tooltip';
 import { Global } from './types';
@@ -645,11 +646,9 @@ const initUI = (global: Global) => {
 
     const getWalkHintText = () => {
         if (state.inputMode === 'desktop') {
-            return 'Click to walk. WASD to move freely.';
+            return localize('walk-hint.desktop');
         }
-        return state.gamingControls ?
-            'Use the joystick to move. Drag to look around. Tap to jump.' :
-            'Tap to walk. Drag to look around.';
+        return localize(state.gamingControls ? 'walk-hint.touch-gaming' : 'walk-hint.touch-tap');
     };
 
     events.on('cameraMode:changed', (value: string) => {
@@ -730,20 +729,20 @@ const initUI = (global: Global) => {
     // tooltips
     const tooltip = new Tooltip(dom.tooltip);
 
-    tooltip.register(dom.play, 'Play', 'top');
-    tooltip.register(dom.pause, 'Pause', 'top');
-    tooltip.register(dom.orbitCamera, 'Orbit Camera', 'top');
-    tooltip.register(dom.flyCamera, 'Fly Camera', 'top');
-    tooltip.register(dom.fpsCamera, 'Walk Mode', 'top');
-    tooltip.register(dom.reset, 'Reset Camera', 'bottom');
-    tooltip.register(dom.frame, 'Frame Scene', 'bottom');
-    tooltip.register(dom.showCollision, 'Show Collision', 'top');
-    tooltip.register(dom.settings, 'Settings', 'top');
-    tooltip.register(dom.info, 'Help', 'top');
-    tooltip.register(dom.arMode, 'Enter AR', 'top');
-    tooltip.register(dom.vrMode, 'Enter VR', 'top');
-    tooltip.register(dom.enterFullscreen, 'Fullscreen', 'top');
-    tooltip.register(dom.exitFullscreen, 'Fullscreen', 'top');
+    tooltip.register(dom.play, localize('tooltip.play'), 'top');
+    tooltip.register(dom.pause, localize('tooltip.pause'), 'top');
+    tooltip.register(dom.orbitCamera, localize('tooltip.orbit-camera'), 'top');
+    tooltip.register(dom.flyCamera, localize('tooltip.fly-camera'), 'top');
+    tooltip.register(dom.fpsCamera, localize('tooltip.walk-mode'), 'top');
+    tooltip.register(dom.reset, localize('tooltip.reset-camera'), 'bottom');
+    tooltip.register(dom.frame, localize('tooltip.frame-scene'), 'bottom');
+    tooltip.register(dom.showCollision, localize('tooltip.show-collision'), 'top');
+    tooltip.register(dom.settings, localize('tooltip.settings'), 'top');
+    tooltip.register(dom.info, localize('tooltip.help'), 'top');
+    tooltip.register(dom.arMode, localize('tooltip.enter-ar'), 'top');
+    tooltip.register(dom.vrMode, localize('tooltip.enter-vr'), 'top');
+    tooltip.register(dom.enterFullscreen, localize('tooltip.fullscreen'), 'top');
+    tooltip.register(dom.exitFullscreen, localize('tooltip.fullscreen'), 'top');
 
     const isThirdPartyEmbedded = () => {
         try {

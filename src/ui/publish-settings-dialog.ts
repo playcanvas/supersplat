@@ -389,7 +389,6 @@ class PublishSettingsDialog extends Container {
                         listed: false,
                         serializeSettings,
                         experienceSettings,
-                        overwriteId: selectedScene?.id,
                         overwriteHash: selectedScene?.hash,
                         overrideModel: isNew || overrideModelToggle.value,
                         overrideAnimation: !isNew && overrideAnimationToggle.value,

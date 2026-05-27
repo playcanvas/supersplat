@@ -9,7 +9,6 @@ import {
     Mat4,
     MiniStats,
     ShaderChunks,
-    type TextureHandler,
     PIXELFORMAT_RGBA16F,
     PIXELFORMAT_RGBA32F,
     TONEMAP_NONE,
@@ -182,9 +181,6 @@ class Viewer {
 
         const { app, settings, config, events, state, camera, renderer } = global;
         const { graphicsDevice } = app;
-
-        // enable anonymous CORS for image loading in safari
-        (app.loader.getHandler('texture') as TextureHandler).imgParser.crossOrigin = 'anonymous';
 
         // render skybox as plain equirect
         const glsl = ShaderChunks.get(graphicsDevice, 'glsl');

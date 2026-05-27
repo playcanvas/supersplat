@@ -9,6 +9,7 @@ import {
     platform,
     TouchDevice,
     type Texture,
+    type TextureHandler,
     type AppBase,
     revision as engineRevision,
     version as engineVersion
@@ -123,6 +124,11 @@ const createApp = async (canvas: HTMLCanvasElement, config: Config) => {
         touch: new TouchDevice(canvas),
         keyboard: new Keyboard(window)
     });
+
+    // enable anonymous CORS for image loading in safari (must be set before any
+    // texture asset starts loading, otherwise the <img> is fetched without the
+    // crossorigin attribute and WebGL rejects it with SecurityError)
+    (app.loader.getHandler('texture') as TextureHandler).imgParser.crossOrigin = 'anonymous';
 
     // Create entity hierarchy
     const cameraRoot = new Entity('camera root');
@@ -275,10 +281,12 @@ const main = async (canvas: HTMLCanvasElement, settingsJson: any, config: Config
         }
     );
 
-    // Load skybox
+    // Load skybox (continue without if it fails — e.g. CORS, 404)
     const skyboxLoad = config.skyboxUrl &&
         loadSkybox(app, config.skyboxUrl).then((asset) => {
             app.scene.envAtlas = asset.resource as Texture;
+        }).catch((err: Error) => {
+            console.warn('Failed to load skybox:', err);
         });
 
     // Load collision data (type determined by file extension)

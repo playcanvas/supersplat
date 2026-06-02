@@ -338,11 +338,11 @@ class Viewer {
 
         // wait for the model to load
         Promise.all([gsplatLoad, skyboxLoad, collisionLoad]).then((results) => {
-            const gsplat = results[0].gsplat as GSplatComponent;
+            const gsplatComponent = results[0].gsplat as GSplatComponent;
             const collision = results[2];
 
             // get scene bounding box
-            const gsplatBbox = gsplat.customAabb;
+            const gsplatBbox = gsplatComponent.customAabb;
             if (gsplatBbox) {
                 sceneBound.setFromTransformedAabb(gsplatBbox, results[0].getWorldTransform());
             }
@@ -392,139 +392,115 @@ class Viewer {
 
             this.debugPanel = new DebugPanel(global, this.cameraManager);
 
-            const { instance } = gsplat;
-            if (instance) {
-                // kick off gsplat sorting immediately now that camera is in position
-                instance.sort(camera);
+            const { gsplat } = app.scene;
 
-                // listen for sorting updates to trigger first frame events
-                instance.sorter?.on('updated', () => {
-                    // request frame render when sorting changes
-                    app.renderNextFrame = true;
+            // quality budget
+            const budgets = {
+                mobile: {
+                    low: 1,
+                    high: 2
+                },
+                desktop: {
+                    low: 2,
+                    high: 4
+                }
+            };
 
-                    if (!state.readyToRender) {
-                        // we're ready to render once the first sort has completed
-                        state.readyToRender = true;
-
-                        // wait for the first valid frame to complete rendering
-                        app.once('frameend', () => {
-                            events.fire('firstFrame');
-
-                            // emit first frame event on window
-                            window.firstFrame?.();
-                        });
+            const applyPerfSettings = () => {
+                const budget = () => {
+                    if (config.budget !== undefined && Number.isFinite(config.budget) && config.budget > 0) {
+                        return config.budget;
                     }
-                });
+                    const quality = platform.mobile ? budgets.mobile : budgets.desktop;
+                    return state.performanceMode ? quality.low : quality.high;
+                };
+
+                gsplat.splatBudget = budget() * 1000000;
+                gsplat.lodRangeMin = 0;
+                gsplat.lodRangeMax = 1000;
+                gsplat.colorUpdateAngle = state.performanceMode ? 4 : 2;
+                gsplat.minContribution = 1;
+                gsplat.alphaClip = 1 / 255;
+                gsplat.antiAlias = config.aa;
+            };
+
+            if (config.fullload) {
+                // reveal once full quality has finished loading (used for screenshots)
+                applyPerfSettings();
             } else {
+                // reveal once low lod has loaded for fastest possible reveal
+                const resource = results[0].gsplat.resource as GSplatOctreeResourceLike | null;
+                const lodLevels = resource?.octree?.lodLevels;
+                if (lodLevels) {
+                    gsplat.lodRangeMax = gsplat.lodRangeMin = lodLevels - 1;
+                }
+            }
 
-                const { gsplat } = app.scene;
+            // these two allow LOD behind camera to drop, saves lots of splats
+            gsplat.lodUpdateAngle = 90;
+            gsplat.lodBehindPenalty = 5;
 
-                // quality budget
-                const budgets = {
-                    mobile: {
-                        low: 1,
-                        high: 2
-                    },
-                    desktop: {
-                        low: 2,
-                        high: 4
-                    }
-                };
+            // same performance, but rotating on slow devices does not give us unsorted splats on sides
+            gsplat.radialSorting = true;
 
-                const applyPerfSettings = () => {
-                    const budget = () => {
-                        if (config.budget !== undefined && Number.isFinite(config.budget) && config.budget > 0) {
-                            return config.budget;
-                        }
-                        const quality = platform.mobile ? budgets.mobile : budgets.desktop;
-                        return state.performanceMode ? quality.low : quality.high;
-                    };
+            const eventHandler = app.systems.gsplat;
 
-                    gsplat.splatBudget = budget() * 1000000;
-                    gsplat.lodRangeMin = 0;
-                    gsplat.lodRangeMax = 1000;
-                    gsplat.colorUpdateAngle = state.performanceMode ? 4 : 2;
-                    gsplat.minContribution = state.performanceMode ? 1 : 2;
-                };
+            // idle timer: force continuous rendering until 4s of inactivity
+            let idleTime = 0;
+            this.forceRenderNextFrame = true;
 
-                if (config.fullload) {
-                    // reveal once full quality has finished loading (used for screenshots)
+            app.on('update', (dt: number) => {
+                idleTime += dt;
+                this.forceRenderNextFrame = idleTime < 4;
+            });
+
+            events.on('inputEvent', (type: string) => {
+                if (type !== 'interact') {
+                    idleTime = 0;
+                }
+            });
+
+            eventHandler.on('frame:ready', (_camera: CameraComponent, _layer: Layer, ready: boolean, loading: number) => {
+                if (loading > 0 || !ready) {
+                    idleTime = 0;
+                }
+            });
+
+            let current = 0;
+            let watermark = 1;
+            const readyHandler = (camera: CameraComponent, layer: Layer, ready: boolean, loading: number) => {
+                if (ready && loading === 0) {
+                    // scene is done loading
+                    eventHandler.off('frame:ready', readyHandler);
+
+                    state.readyToRender = true;
+
+                    // handle quality mode changes
+                    events.on('performanceMode:changed', applyPerfSettings);
                     applyPerfSettings();
-                } else {
-                    // reveal once low lod has loaded for fastest possible reveal
-                    const resource = results[0].gsplat.resource as GSplatOctreeResourceLike | null;
-                    const lodLevels = resource?.octree?.lodLevels;
-                    if (lodLevels) {
-                        gsplat.lodRangeMax = gsplat.lodRangeMin = lodLevels - 1;
-                    }
+
+                    // debug colorize lods
+                    gsplat.debug = config.colorize ? GSPLAT_DEBUG_LOD : GSPLAT_DEBUG_NONE;
+                    gsplat.renderer = rendererTable[renderer];
+
+                    // wait for the first valid frame to complete rendering
+                    app.once('frameend', () => {
+                        events.fire('firstFrame');
+
+                        // emit first frame event on window
+                        window.firstFrame?.();
+                    });
                 }
 
-                // these two allow LOD behind camera to drop, saves lots of splats
-                gsplat.lodUpdateAngle = 90;
-                gsplat.lodBehindPenalty = 5;
+                // update loading status
+                if (loading !== current) {
+                    watermark = Math.max(watermark, loading);
+                    current = watermark - loading;
+                    state.progress = Math.trunc(current / watermark * 100);
+                }
+            };
 
-                // same performance, but rotating on slow devices does not give us unsorted splats on sides
-                gsplat.radialSorting = true;
-
-                const eventHandler = app.systems.gsplat;
-
-                // idle timer: force continuous rendering until 4s of inactivity
-                let idleTime = 0;
-                this.forceRenderNextFrame = true;
-
-                app.on('update', (dt: number) => {
-                    idleTime += dt;
-                    this.forceRenderNextFrame = idleTime < 4;
-                });
-
-                events.on('inputEvent', (type: string) => {
-                    if (type !== 'interact') {
-                        idleTime = 0;
-                    }
-                });
-
-                eventHandler.on('frame:ready', (_camera: CameraComponent, _layer: Layer, ready: boolean, loading: number) => {
-                    if (loading > 0 || !ready) {
-                        idleTime = 0;
-                    }
-                });
-
-                let current = 0;
-                let watermark = 1;
-                const readyHandler = (camera: CameraComponent, layer: Layer, ready: boolean, loading: number) => {
-                    if (ready && loading === 0) {
-                        // scene is done loading
-                        eventHandler.off('frame:ready', readyHandler);
-
-                        state.readyToRender = true;
-
-                        // handle quality mode changes
-                        events.on('performanceMode:changed', applyPerfSettings);
-                        applyPerfSettings();
-
-                        // debug colorize lods
-                        gsplat.debug = config.colorize ? GSPLAT_DEBUG_LOD : GSPLAT_DEBUG_NONE;
-                        gsplat.renderer = rendererTable[renderer];
-
-                        // wait for the first valid frame to complete rendering
-                        app.once('frameend', () => {
-                            events.fire('firstFrame');
-
-                            // emit first frame event on window
-                            window.firstFrame?.();
-                        });
-                    }
-
-                    // update loading status
-                    if (loading !== current) {
-                        watermark = Math.max(watermark, loading);
-                        current = watermark - loading;
-                        state.progress = Math.trunc(current / watermark * 100);
-                    }
-                };
-
-                eventHandler.on('frame:ready', readyHandler);
-            }
+            eventHandler.on('frame:ready', readyHandler);
         });
     }
 

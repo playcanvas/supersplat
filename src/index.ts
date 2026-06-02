@@ -28,7 +28,7 @@ import { initXr } from './xr';
 import { version as appVersion } from '../package.json';
 
 const loadGsplat = async (app: AppBase, config: Config, progressCallback: (progress: number) => void) => {
-    const { contents, contentUrl, aa } = config;
+    const { contents, contentUrl } = config;
     const c = contents as unknown as ArrayBuffer;
     const filename = new URL(contentUrl, location.href).pathname.split('/').pop();
     const data = filename.toLowerCase() === 'meta.json' ? await (await contents).json() : undefined;
@@ -42,9 +42,6 @@ const loadGsplat = async (app: AppBase, config: Config, progressCallback: (progr
                 unified: true,
                 asset
             });
-            const material = app.scene.gsplat.material;
-            material.setDefine('GSPLAT_AA', aa);
-            material.setParameter('alphaClip', 1 / 255);
             app.root.addChild(entity);
             resolve(entity);
         });

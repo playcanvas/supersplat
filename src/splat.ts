@@ -90,7 +90,10 @@ class Splat extends Element {
 
         this.entity = new Entity('splatEntitiy');
         this.entity.setLocalRotation(rotation);
-        this.entity.addComponent('gsplat', { asset });
+        this.entity.addComponent('gsplat', {
+            asset,
+            unified: false
+        });
 
         const instance = this.entity.gsplat.instance;
 

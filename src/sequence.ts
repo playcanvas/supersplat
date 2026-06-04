@@ -1,8 +1,8 @@
-import { Asset, Quat } from 'playcanvas';
+import type { Asset, Quat } from 'playcanvas';
 
-import { Events } from './events';
+import type { Events } from './events';
 import { loadGSplatData, MappedReadFileSystem, validateGSplatData } from './io';
-import { Scene } from './scene';
+import type { Scene } from './scene';
 import { Splat } from './splat';
 
 type FrameData = {
@@ -12,11 +12,11 @@ type FrameData = {
 
 // A source of animation frames. getFrame produces a ready gsplat Asset (plus the
 // orientation to apply when the persistent splat is first created) for a frame.
-interface FrameSource {
+type FrameSource = {
     readonly frameCount: number;
     getFrame(index: number): Promise<FrameData>;
     destroy(): void;
-}
+};
 
 // PLY sequence: a set of frameNNNN.ply files, sorted by trailing frame number.
 class PlyFrameSource implements FrameSource {
@@ -26,13 +26,12 @@ class PlyFrameSource implements FrameSource {
     constructor(files: File[], scene: Scene) {
         this.scene = scene;
 
-        // eslint-disable-next-line regexp/no-super-linear-backtracking
         const regex = /(.*?)(\d+)(?:\.compressed)?\.ply$/;
         const key = (f: File) => f.name?.toLowerCase().match(regex)?.[2];
         this.files = files.slice().sort((a, b) => {
             const av = key(a);
             const bv = key(b);
-            return (av && bv) ? parseInt(av, 10) - parseInt(bv, 10) : 0;
+            return av && bv ? parseInt(av, 10) - parseInt(bv, 10) : 0;
         });
     }
 
@@ -53,7 +52,9 @@ class PlyFrameSource implements FrameSource {
         return { asset, rotation: transform.rotation };
     }
 
-    destroy() {}
+    destroy() {
+        // no-op
+    }
 }
 
 /**

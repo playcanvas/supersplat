@@ -19,13 +19,15 @@
     cursor: pointer;
 
     &.centers-mode {
-        #rings-icon, #rings-text {
+        #rings-icon,
+        #rings-text {
             display: none;
         }
     }
 
     &.rings-mode {
-        #centers-icon, #centers-text {
+        #centers-icon,
+        #centers-text {
             display: none;
         }
     }

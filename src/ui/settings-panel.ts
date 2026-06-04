@@ -1,11 +1,12 @@
 import { BooleanInput, Button, ColorPicker, Container, Label, SelectInput, SliderInput } from '@playcanvas/pcui';
 import { Color } from 'playcanvas';
 
-import { Events } from '../events';
+import type { Events } from '../events';
 import type { GridPlane } from '../infinite-grid';
-import { ShortcutManager } from '../shortcut-manager';
+import type { ShortcutManager } from '../shortcut-manager';
+
 import { i18n } from './localization';
-import { Tooltips } from './tooltips';
+import type { Tooltips } from './tooltips';
 
 class SettingsPanel extends Container {
     constructor(events: Events, tooltips: Tooltips, args = {}) {
@@ -62,7 +63,7 @@ class SettingsPanel extends Container {
         // their native form so they're recognisable regardless of current UI lang
         i18n.bindOptions(languageSelection, () => [
             { v: 'auto', t: i18n.t('panel.settings.language.auto') },
-            ...i18n.languages.map(l => ({ v: l.code, t: l.name }))
+            ...i18n.languages.map((l) => ({ v: l.code, t: l.name }))
         ]);
 
         // switch language live (no reload). a stored choice persists across
@@ -671,9 +672,17 @@ class SettingsPanel extends Container {
         // tooltips
         const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
         const shortcut = shortcutManager.formatShortcut('grid.toggleVisible');
-        tooltips.register(showGridLabel, () => i18n.formatTooltipWithShortcut(i18n.t('panel.settings.show-grid'), shortcut), 'left');
+        tooltips.register(
+            showGridLabel,
+            () => i18n.formatTooltipWithShortcut(i18n.t('panel.settings.show-grid'), shortcut),
+            'left'
+        );
         const cameraInfoShortcut = shortcutManager.formatShortcut('camera.toggleShowInfo');
-        tooltips.register(showCameraInfoLabel, () => i18n.formatTooltipWithShortcut(i18n.t('panel.settings.show-camera-info'), cameraInfoShortcut), 'left');
+        tooltips.register(
+            showCameraInfoLabel,
+            () => i18n.formatTooltipWithShortcut(i18n.t('panel.settings.show-camera-info'), cameraInfoShortcut),
+            'left'
+        );
         tooltips.register(bgClrPicker, () => i18n.t('panel.settings.background-color'), 'left');
         tooltips.register(selectedClrPicker, () => i18n.t('panel.settings.selected-color'), 'top');
         tooltips.register(unselectedClrPicker, () => i18n.t('panel.settings.unselected-color'), 'top');

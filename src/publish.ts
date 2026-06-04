@@ -1,8 +1,10 @@
-import { logger as splatTransformLogger, type FileSystem, type LogEvent, type Writer } from '@playcanvas/splat-transform';
+import { logger as splatTransformLogger } from '@playcanvas/splat-transform';
+import type { FileSystem, LogEvent, Writer } from '@playcanvas/splat-transform';
 
-import { Events } from './events';
+import type { Events } from './events';
 import { GZipWriter } from './io';
-import { writeSplatFile, ExperienceSettings, SerializeSettings } from './splat-serialize';
+import type { ExperienceSettings, SerializeSettings } from './splat-serialize';
+import { writeSplatFile } from './splat-serialize';
 import { i18n } from './ui/localization';
 
 /**
@@ -75,7 +77,7 @@ const origin = location.origin;
 const fetchUser = async () => {
     try {
         const urlResponse = await fetch(`${origin}/api/id`);
-        return urlResponse.ok && (await urlResponse.json() as User);
+        return urlResponse.ok && ((await urlResponse.json()) as User);
     } catch (e) {
         return null;
     }
@@ -85,7 +87,7 @@ const fetchSceneList = async (user: User) => {
     const response = await fetch(`${user.apiServer}/splats?limit=128`, {
         method: 'GET',
         headers: {
-            'Authorization': `Bearer ${user.token}`
+            Authorization: `Bearer ${user.token}`
         }
     });
 
@@ -100,13 +102,13 @@ const fetchSceneSettings = async (user: User, sceneHash: string): Promise<Experi
     const response = await fetch(`${user.apiServer}/splats/${sceneHash}/settings`, {
         method: 'GET',
         headers: {
-            'Authorization': `Bearer ${user.token}`
+            Authorization: `Bearer ${user.token}`
         }
     });
     if (!response.ok) {
         throw new Error(`failed to fetch scene settings (${response.statusText})`);
     }
-    return await response.json() as ExperienceSettings;
+    return (await response.json()) as ExperienceSettings;
 };
 
 const updateSceneSettings = async (user: User, sceneHash: string, settings: ExperienceSettings) => {
@@ -114,7 +116,7 @@ const updateSceneSettings = async (user: User, sceneHash: string, settings: Expe
         method: 'PUT',
         body: JSON.stringify(settings),
         headers: {
-            'Authorization': `Bearer ${user.token}`,
+            Authorization: `Bearer ${user.token}`,
             'Content-Type': 'application/json'
         }
     });
@@ -144,7 +146,7 @@ class PublishWriter implements Writer {
         const startResponse = await fetch(`${user.apiServer}/upload/start-upload`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${user.token}`,
+                Authorization: `Bearer ${user.token}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ fileName: filename })
@@ -155,7 +157,7 @@ class PublishWriter implements Writer {
         const result = new PublishWriter();
 
         const uploadBuf = new Uint8Array(10 * 1024 * 1024); // 10MB buffer
-        const parts: { PartNumber: number, ETag: string }[] = [];
+        const parts: { PartNumber: number; ETag: string }[] = [];
         let partNumber = 1;
         let cursor = 0;
 
@@ -166,7 +168,7 @@ class PublishWriter implements Writer {
             const urlResponse = await fetch(`${user.apiServer}/upload/signed-urls`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${user.token}`,
+                    Authorization: `Bearer ${user.token}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
@@ -232,7 +234,7 @@ class PublishWriter implements Writer {
             const completeResult = await fetch(`${user.apiServer}/upload/complete-upload`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${user.token}`,
+                    Authorization: `Bearer ${user.token}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
@@ -250,36 +252,38 @@ class PublishWriter implements Writer {
 
             const publishFormat = publishSettings.generateLods ? 'ssog' : 'sog';
 
-            const doPublish = () => fetch(`${user.apiServer}/splats/publish`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    s3Key: startJson.key,
-                    title: publishSettings.title,
-                    description: publishSettings.description,
-                    listed: publishSettings.listed,
-                    settings: publishSettings.experienceSettings,
-                    sourceFormat: 'ply',
-                    publishFormat
-                }),
-                headers: {
-                    'Authorization': `Bearer ${user.token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
+            const doPublish = () =>
+                fetch(`${user.apiServer}/splats/publish`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        s3Key: startJson.key,
+                        title: publishSettings.title,
+                        description: publishSettings.description,
+                        listed: publishSettings.listed,
+                        settings: publishSettings.experienceSettings,
+                        sourceFormat: 'ply',
+                        publishFormat
+                    }),
+                    headers: {
+                        Authorization: `Bearer ${user.token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
 
-            const doRepublish = () => fetch(`${user.apiServer}/splats/${publishSettings.overwriteHash}/republish`, {
-                method: 'PUT',
-                body: JSON.stringify({
-                    s3Key: startJson.key,
-                    settings: publishSettings.experienceSettings,
-                    sourceFormat: 'ply',
-                    publishFormat
-                }),
-                headers: {
-                    'Authorization': `Bearer ${user.token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
+            const doRepublish = () =>
+                fetch(`${user.apiServer}/splats/${publishSettings.overwriteHash}/republish`, {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        s3Key: startJson.key,
+                        settings: publishSettings.experienceSettings,
+                        sourceFormat: 'ply',
+                        publishFormat
+                    }),
+                    headers: {
+                        Authorization: `Bearer ${user.token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
 
             const publishResponse = await (publishSettings.overwriteHash ? doRepublish() : doPublish());
 
@@ -303,7 +307,6 @@ class PublishWriter implements Writer {
 }
 
 const registerPublishEvents = (events: Events) => {
-
     events.function('publish.userStatus', async () => {
         const user = await fetchUser();
         if (!user || !user.username) {
@@ -364,7 +367,7 @@ const registerPublishEvents = (events: Events) => {
                 const progressFunc = (loaded: number, total: number) => {
                     events.fire('progressUpdate', {
                         text: i18n.t('popup.publish.uploading', { ellipsis: true }),
-                        progress: 100 * loaded / total
+                        progress: (100 * loaded) / total
                     });
                 };
 

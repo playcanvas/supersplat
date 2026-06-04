@@ -1,29 +1,28 @@
+import type { GraphicsDevice, ScopeSpace, Shader } from 'playcanvas';
 import {
     ADDRESS_CLAMP_TO_EDGE,
     PIXELFORMAT_RGBA8,
     SEMANTIC_POSITION,
     drawQuadWithShader,
-    GraphicsDevice,
     Mat4,
     RenderTarget,
-    ScopeSpace,
-    Shader,
     ShaderUtils,
     Texture,
     BlendState
 } from 'playcanvas';
 
-import { BufferPool } from './buffer-pool';
-import { packedMaskHeight, packedMaskWidth } from './histogram-config';
 import { vertexShader, fragmentShader } from '../shaders/intersection-shader';
-import { Splat } from '../splat';
+import type { Splat } from '../splat';
+
+import type { BufferPool } from './buffer-pool';
+import { packedMaskHeight, packedMaskWidth } from './histogram-config';
 
 type MaskOptions = {
     mask: Texture;
 };
 
 type RectOptions = {
-    rect: { x1: number, y1: number, x2: number, y2: number };
+    rect: { x1: number; y1: number; x2: number; y2: number };
 };
 
 type SphereOptions = {

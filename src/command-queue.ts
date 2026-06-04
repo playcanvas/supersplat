@@ -9,9 +9,14 @@ class CommandQueue {
         const next = this.tail.then(fn);
         // swallow errors on the chain itself so a failed task doesn't poison
         // subsequent ones. the caller still sees the rejection on its own promise.
-        this.tail = next.then(() => {}, (err) => {
-            console.error('CommandQueue task failed', err);
-        });
+        this.tail = next.then(
+            () => {
+                // no-op
+            },
+            (err) => {
+                console.error('CommandQueue task failed', err);
+            }
+        );
         return next;
     }
 }

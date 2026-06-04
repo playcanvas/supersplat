@@ -1,10 +1,22 @@
-import { BooleanInput, Button, ColorPicker, Container, Element, Label, SelectInput, SliderInput, TextInput } from '@playcanvas/pcui';
+import {
+    BooleanInput,
+    Button,
+    ColorPicker,
+    Container,
+    Element,
+    Label,
+    SelectInput,
+    SliderInput,
+    TextInput
+} from '@playcanvas/pcui';
 
-import { Pose } from '../camera-poses';
+import type { Pose } from '../camera-poses';
+import type { Events } from '../events';
+import type { ExportType, SceneExportOptions } from '../file-handler';
+import type { AnimTrack, ExperienceSettings } from '../splat-serialize';
+import { defaultPostEffectSettings } from '../splat-serialize';
+
 import { i18n } from './localization';
-import { Events } from '../events';
-import { ExportType, SceneExportOptions } from '../file-handler';
-import { AnimTrack, ExperienceSettings, defaultPostEffectSettings } from '../splat-serialize';
 import sceneExport from './svg/export.svg';
 
 const createSvg = (svgString: string, args = {}) => {
@@ -41,7 +53,11 @@ const removeKnownExtension = (filename: string) => {
 };
 
 class ExportPopup extends Container {
-    show: (exportType: ExportType, splatNames: string[], showFilenameEdit: boolean) => Promise<null | SceneExportOptions>;
+    show: (
+        exportType: ExportType,
+        splatNames: string[],
+        showFilenameEdit: boolean
+    ) => Promise<null | SceneExportOptions>;
     hide: () => void;
     destroy: () => void;
 
@@ -73,9 +89,11 @@ class ExportPopup extends Container {
         });
         i18n.bindText(headerText, 'popup.export.header');
 
-        header.append(createSvg(sceneExport, {
-            id: 'icon'
-        }));
+        header.append(
+            createSvg(sceneExport, {
+                id: 'icon'
+            })
+        );
 
         header.append(headerText);
 
@@ -353,7 +371,16 @@ class ExportPopup extends Container {
 
         const reset = (exportType: ExportType, splatNames: string[], hasPoses: boolean) => {
             const allRows = [
-                viewerTypeRow, animationRow, loopRow, colorRow, fovRow, compressRow, bandsRow, iterationsRow, spzVersionRow, filenameRow
+                viewerTypeRow,
+                animationRow,
+                loopRow,
+                colorRow,
+                fovRow,
+                compressRow,
+                bandsRow,
+                iterationsRow,
+                spzVersionRow,
+                filenameRow
             ];
 
             const activeRows = {
@@ -417,9 +444,9 @@ class ExportPopup extends Container {
             const frameRate = events.invoke('timeline.frameRate');
             const smoothness = events.invoke('timeline.smoothness');
             const orderedPoses = (events.invoke('camera.poses') as Pose[])
-            .slice()
-            .filter(p => p.frame >= 0 && p.frame < frames)
-            .sort((a, b) => a.frame - b.frame);
+                .slice()
+                .filter((p) => p.frame >= 0 && p.frame < frames)
+                .sort((a, b) => a.frame - b.frame);
 
             reset(exportType, splatNames, orderedPoses.length > 0);
 
@@ -430,7 +457,7 @@ class ExportPopup extends Container {
             this.dom.addEventListener('keydown', keydown);
             this.dom.focus();
 
-            const assemblePlyOptions = () : SceneExportOptions => {
+            const assemblePlyOptions = (): SceneExportOptions => {
                 return {
                     filename: filenameEntry.value,
                     splatIdx: 'all',
@@ -441,15 +468,15 @@ class ExportPopup extends Container {
                 };
             };
 
-            const assembleSplatOptions = () : SceneExportOptions => {
+            const assembleSplatOptions = (): SceneExportOptions => {
                 return {
                     filename: filenameEntry.value,
                     splatIdx: 'all',
-                    serializeSettings: { }
+                    serializeSettings: {}
                 };
             };
 
-            const assembleSogOptions = () : SceneExportOptions => {
+            const assembleSogOptions = (): SceneExportOptions => {
                 return {
                     filename: filenameEntry.value,
                     splatIdx: 'all',
@@ -460,7 +487,7 @@ class ExportPopup extends Container {
                 };
             };
 
-            const assembleSpzOptions = () : SceneExportOptions => {
+            const assembleSpzOptions = (): SceneExportOptions => {
                 return {
                     filename: filenameEntry.value,
                     splatIdx: 'all',
@@ -471,20 +498,25 @@ class ExportPopup extends Container {
                 };
             };
 
-            const assembleViewerOptions = () : SceneExportOptions => {
+            const assembleViewerOptions = (): SceneExportOptions => {
                 const fov = fovSlider.value;
 
                 // use current viewport as start pose
                 const pose = events.invoke('camera.getPose');
                 const p = pose?.position;
                 const t = pose?.target;
-                const cameras = (p && t) ? [{
-                    initial: {
-                        position: [p.x, p.y, p.z] as [number, number, number],
-                        target: [t.x, t.y, t.z] as [number, number, number],
-                        fov
-                    }
-                }] : [];
+                const cameras =
+                    p && t
+                        ? [
+                              {
+                                  initial: {
+                                      position: [p.x, p.y, p.z] as [number, number, number],
+                                      target: [t.x, t.y, t.z] as [number, number, number],
+                                      fov
+                                  }
+                              }
+                          ]
+                        : [];
 
                 const includeAnimation = animationToggle.value;
                 const animTracks: AnimTrack[] = [];

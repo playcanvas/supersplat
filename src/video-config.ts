@@ -95,7 +95,10 @@ const h264Codec = ({ width, height, frameRate }: EncoderParams) => {
     // profile level 5.1 otherwise; raise the level only when the frame size
     // or macroblock rate demands it
     const [profile, minLevel] = height < 1080 ? ['4200', 40] : ['6400', 51];
-    const level = H264_LEVELS.find(([idc, maxFs, maxRate]) => idc >= minLevel && macroblocks <= maxFs && macroblocks * frameRate <= maxRate)?.[0] ?? 62;
+    const level =
+        H264_LEVELS.find(
+            ([idc, maxFs, maxRate]) => idc >= minLevel && macroblocks <= maxFs && macroblocks * frameRate <= maxRate
+        )?.[0] ?? 62;
     return `avc1.${profile}${level.toString(16).padStart(2, '0')}`;
 };
 
@@ -116,7 +119,11 @@ const vp9Codec = ({ width, height, frameRate }: EncoderParams) => {
 // av1 main profile, main tier, 8-bit
 const av1Codec = ({ width, height, frameRate }: EncoderParams) => {
     const samples = width * height;
-    const levelIdx = AV1_LEVELS.find(([, maxPs, maxRate, maxWidth, maxHeight]) => samples <= maxPs && samples * frameRate <= maxRate && width <= maxWidth && height <= maxHeight)?.[0] ?? 18;
+    const levelIdx =
+        AV1_LEVELS.find(
+            ([, maxPs, maxRate, maxWidth, maxHeight]) =>
+                samples <= maxPs && samples * frameRate <= maxRate && width <= maxWidth && height <= maxHeight
+        )?.[0] ?? 18;
     return `av01.0.${String(levelIdx).padStart(2, '0')}M.08`;
 };
 

@@ -1,8 +1,8 @@
 import type { Vec3 } from 'playcanvas';
 
-import { Events } from '../events';
+import type { Events } from '../events';
 
-interface Tool {
+type Tool = {
     activate: () => void;
     deactivate: () => void;
     // optional: handle a transform-mode request (1/2/3 shortcuts) while this
@@ -11,8 +11,8 @@ interface Tool {
     setTransformMode?: (mode: 'translate' | 'rotate' | 'scale') => boolean;
     // optional: world-space focus target for the frame ('f') shortcut. return
     // null to fall back to framing the selection.
-    getFocus?: () => { position: Vec3, radius: number } | null;
-}
+    getFocus?: () => { position: Vec3; radius: number } | null;
+};
 
 class ToolManager {
     tools = new Map<string, Tool>();

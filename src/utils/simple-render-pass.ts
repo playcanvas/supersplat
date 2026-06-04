@@ -1,15 +1,12 @@
+import type { GraphicsDevice, Shader, StencilParameters, Vec4 } from 'playcanvas';
 import {
     CULLFACE_NONE,
     SEMANTIC_POSITION,
     BlendState,
     DepthState,
-    GraphicsDevice,
     QuadRender,
     RenderPass,
-    Shader,
-    ShaderUtils,
-    StencilParameters,
-    Vec4
+    ShaderUtils
 } from 'playcanvas';
 
 import { resolve } from './resolve';
@@ -41,9 +38,9 @@ class ShaderQuad {
     }
 }
 
-interface Renderable {
+type Renderable = {
     render(viewport?: Vec4, scissor?: Vec4): void;
-}
+};
 
 class SimpleRenderPass extends RenderPass {
     blendState = BlendState.NOBLEND;

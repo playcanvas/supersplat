@@ -1,6 +1,6 @@
-import { EventHandle } from 'playcanvas';
+import type { EventHandle } from 'playcanvas';
 
-import { Events } from './events';
+import type { Events } from './events';
 
 /**
  * Register global timeline events.
@@ -162,13 +162,13 @@ const registerTimelineEvents = (events: Events) => {
     // Key navigation - delegates to active track's keys
     const skipToKey = (dir: 'forward' | 'back') => {
         // ignore keys beyond the end of the timeline - they don't play
-        const keys = (events.invoke('track.keys') as number[] ?? []).filter(k => k < frames);
+        const keys = ((events.invoke('track.keys') as number[]) ?? []).filter((k) => k < frames);
 
         if (keys.length > 0) {
             const orderedKeys = keys.slice().sort((a, b) => a - b);
             const l = orderedKeys.length;
 
-            const nextKeyIndex = orderedKeys.findIndex(k => (dir === 'back' ? k >= frame : k > frame));
+            const nextKeyIndex = orderedKeys.findIndex((k) => (dir === 'back' ? k >= frame : k > frame));
 
             if (nextKeyIndex === -1) {
                 setFrame(orderedKeys[dir === 'back' ? l - 1 : 0]);

@@ -1,11 +1,12 @@
 import { ColorPicker, Container, Label, SliderInput } from '@playcanvas/pcui';
 import { Color } from 'playcanvas';
 
-import { Events } from '../events';
-import { i18n } from './localization';
-import { Tooltips } from './tooltips';
 import { SetSplatColorAdjustmentOp } from '../edit-ops';
-import { Splat } from '../splat';
+import type { Events } from '../events';
+import type { Splat } from '../splat';
+
+import { i18n } from './localization';
+import type { Tooltips } from './tooltips';
 
 // pcui slider doesn't include start and end events
 class MyFancySliderInput extends SliderInput {
@@ -308,7 +309,14 @@ class ColorPanel extends Container {
             }
         };
 
-        [temperatureSlider, saturationSlider, brightnessSlider, blackPointSlider, whitePointSlider, transparencySlider].forEach((slider) => {
+        [
+            temperatureSlider,
+            saturationSlider,
+            brightnessSlider,
+            blackPointSlider,
+            whitePointSlider,
+            transparencySlider
+        ].forEach((slider) => {
             slider.on('slide:start', start);
             slider.on('slide:end', end);
         });

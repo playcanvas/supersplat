@@ -1,9 +1,11 @@
-import { Container, ContainerArgs, Label, NumericInput, VectorInput } from '@playcanvas/pcui';
+import type { ContainerArgs } from '@playcanvas/pcui';
+import { Container, Label, NumericInput, VectorInput } from '@playcanvas/pcui';
 import { Quat, Vec3 } from 'playcanvas';
 
-import { Events } from '../events';
+import type { Events } from '../events';
+import type { Pivot } from '../pivot';
+
 import { i18n } from './localization';
-import { Pivot } from '../pivot';
 
 const v = new Vec3();
 

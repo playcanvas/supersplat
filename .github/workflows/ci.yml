@@ -63,8 +63,14 @@ jobs:
     - name: Install
       run: npm ci
 
+    - name: Format
+      run: npm run fmt
+
     - name: Lint
       run: npm run lint
 
     - name: Lint locales
       run: npm run lint:locales
+
+    - name: Typecheck
+      run: npm run typecheck

@@ -2,11 +2,11 @@ const DB_NAME = 'supersplat';
 const DB_VERSION = 1;
 const STORE_NAME = 'recent-files';
 
-interface RecentFile {
+type RecentFile = {
     handle: FileSystemFileHandle;
     name: string;
     date: number;
-}
+};
 
 // wrap IDBRequest in a promise
 const wrap = (IDBRequest: IDBRequest): Promise<any> => {
@@ -55,7 +55,7 @@ class RecentFiles {
         const db = await this.db;
         const transaction = db.transaction([STORE_NAME], 'readonly');
         const store = transaction.objectStore(STORE_NAME);
-        const result = await wrap(store.getAll()) as RecentFile[];
+        const result = (await wrap(store.getAll())) as RecentFile[];
 
         // Sort by date descending
         result.sort((a, b) => b.date - a.date);

@@ -1,13 +1,10 @@
+import type { BoundingBox, GraphicsDevice, ScopeSpace, Shader } from 'playcanvas';
 import {
     ADDRESS_CLAMP_TO_EDGE,
     PIXELFORMAT_RGBA32F,
     SEMANTIC_POSITION,
     drawQuadWithShader,
-    BoundingBox,
-    GraphicsDevice,
     RenderTarget,
-    ScopeSpace,
-    Shader,
     ShaderUtils,
     Texture,
     Vec3,
@@ -15,7 +12,7 @@ import {
 } from 'playcanvas';
 
 import { vertexShader, fragmentShader } from '../shaders/bound-shader';
-import { Splat } from '../splat';
+import type { Splat } from '../splat';
 
 const v1 = new Vec3();
 const v2 = new Vec3();
@@ -95,7 +92,12 @@ class CalcBound {
             this.visibleMaxTexture = createTexture('calcBoundVisibleMax');
 
             this.renderTarget = new RenderTarget({
-                colorBuffers: [this.selectedMinTexture, this.selectedMaxTexture, this.visibleMinTexture, this.visibleMaxTexture],
+                colorBuffers: [
+                    this.selectedMinTexture,
+                    this.selectedMaxTexture,
+                    this.visibleMinTexture,
+                    this.visibleMaxTexture
+                ],
                 depth: false
             });
 

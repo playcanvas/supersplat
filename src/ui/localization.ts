@@ -2,17 +2,17 @@ import i18next from 'i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import Backend from 'i18next-http-backend';
 
-interface LocalizeOptions {
+type LocalizeOptions = {
     ellipsis?: boolean;
     // any other values are forwarded to i18next as {{placeholder}} interpolation data
     [key: string]: unknown;
-}
+};
 
 // minimal shapes the binders operate on (pcui elements emit a 'destroy' event)
 type Destroyable = { once?: (event: string, fn: () => void) => void };
 type TextElement = { text: string } & Destroyable;
-type Option = { v: any, t: string };
-type SelectElement = { value: any, options: Option[] } & Destroyable;
+type Option = { v: any; t: string };
+type SelectElement = { value: any; options: Option[] } & Destroyable;
 
 /**
  * Wraps i18next and adds reactive localization: UI strings bound through the
@@ -51,31 +51,31 @@ class Localization {
 
     /** Initialise i18next. Call once at startup, before building the UI. */
     init() {
-        i18next.on('languageChanged', () => this.updaters.forEach(fn => fn()));
+        i18next.on('languageChanged', () => this.updaters.forEach((fn) => fn()));
 
         return i18next
-        .use(Backend)
-        .use(LanguageDetector)
-        .init({
-            detection: {
-                // `querystring` (?lng=) wins so shareable links keep working.
-                // `localStorage` holds an EXPLICIT user choice and takes
-                // precedence over the browser locale. `navigator` is the default
-                // when nothing is stored. caches:[] disables i18next's automatic
-                // write-back so a stored value only ever means an explicit pick
-                // (setLanguage manages the key itself).
-                order: ['querystring', 'localStorage', 'navigator', 'htmlTag'],
-                caches: []
-            },
-            backend: {
-                loadPath: './static/locales/{{lng}}.json'
-            },
-            supportedLngs: this.languages.map(l => l.code),
-            fallbackLng: 'en',
-            interpolation: {
-                escapeValue: false
-            }
-        });
+            .use(Backend)
+            .use(LanguageDetector)
+            .init({
+                detection: {
+                    // `querystring` (?lng=) wins so shareable links keep working.
+                    // `localStorage` holds an EXPLICIT user choice and takes
+                    // precedence over the browser locale. `navigator` is the default
+                    // when nothing is stored. caches:[] disables i18next's automatic
+                    // write-back so a stored value only ever means an explicit pick
+                    // (setLanguage manages the key itself).
+                    order: ['querystring', 'localStorage', 'navigator', 'htmlTag'],
+                    caches: []
+                },
+                backend: {
+                    loadPath: './static/locales/{{lng}}.json'
+                },
+                supportedLngs: this.languages.map((l) => l.code),
+                fallbackLng: 'en',
+                interpolation: {
+                    escapeValue: false
+                }
+            });
     }
 
     /** Translate a key. Extra option values interpolate into {{placeholders}}. */

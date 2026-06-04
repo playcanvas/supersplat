@@ -1,7 +1,7 @@
 import { Color } from 'playcanvas';
 
-import { Events } from './events';
-import { SceneConfig } from './scene-config';
+import type { Events } from './events';
+import type { SceneConfig } from './scene-config';
 import { i18n } from './ui/localization';
 
 const storageKey = 'supersplat:preferences';
@@ -41,7 +41,7 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         const lookup = (segments: string[]) => {
             let obj = urlArgs;
             for (const segment of segments) {
-                if (typeof obj !== 'object' || obj === null || !obj.hasOwnProperty(segment)) {
+                if (typeof obj !== 'object' || obj === null || !Object.hasOwn(obj, segment)) {
                     return undefined;
                 }
                 obj = obj[segment];
@@ -53,11 +53,17 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
     };
 
     const isBool = (v: PrefValue) => typeof v === 'boolean';
-    const isNumber = (min: number, max: number) => (v: PrefValue) => typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max;
+    const isNumber = (min: number, max: number) => (v: PrefValue) =>
+        typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max;
     const isEnum = (options: string[]) => (v: PrefValue) => typeof v === 'string' && options.includes(v);
-    const isColor = (v: PrefValue) => Array.isArray(v) && v.length === 4 && v.every(c => typeof c === 'number' && c >= 0 && c <= 1);
+    const isColor = (v: PrefValue) =>
+        Array.isArray(v) && v.length === 4 && v.every((c) => typeof c === 'number' && c >= 0 && c <= 1);
 
-    const color = (key: string, setCommand: string, getDefault: () => { r: number, g: number, b: number, a: number }): Descriptor => ({
+    const color = (
+        key: string,
+        setCommand: string,
+        getDefault: () => { r: number; g: number; b: number; a: number }
+    ): Descriptor => ({
         key,
         setCommand,
         urlPath: key,
@@ -81,22 +87,96 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         color('selectedClr', 'setSelectedClr', () => config.selectedClr),
         color('unselectedClr', 'setUnselectedClr', () => config.unselectedClr),
         color('lockedClr', 'setLockedClr', () => config.lockedClr),
-        { key: 'camera.tonemapping', setCommand: 'camera.setTonemapping', urlPath: 'camera.toneMapping', getDefault: () => config.camera.toneMapping, validate: isEnum(['linear', 'neutral', 'aces', 'aces2', 'filmic', 'hejl']) },
+        {
+            key: 'camera.tonemapping',
+            setCommand: 'camera.setTonemapping',
+            urlPath: 'camera.toneMapping',
+            getDefault: () => config.camera.toneMapping,
+            validate: isEnum(['linear', 'neutral', 'aces', 'aces2', 'filmic', 'hejl'])
+        },
         { key: 'camera.fovDolly', setCommand: 'camera.setFovDolly', getDefault: () => false, validate: isBool },
-        { key: 'camera.fov', setCommand: 'camera.setFov', urlPath: 'camera.fov', getDefault: () => config.camera.fov, validate: isNumber(10, 120) },
-        { key: 'view.bands', setCommand: 'view.setBands', urlPath: 'show.shBands', getDefault: () => config.show.shBands, validate: v => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 3 },
+        {
+            key: 'camera.fov',
+            setCommand: 'camera.setFov',
+            urlPath: 'camera.fov',
+            getDefault: () => config.camera.fov,
+            validate: isNumber(10, 120)
+        },
+        {
+            key: 'view.bands',
+            setCommand: 'view.setBands',
+            urlPath: 'show.shBands',
+            getDefault: () => config.show.shBands,
+            validate: (v) => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 3
+        },
         { key: 'camera.flySpeed', setCommand: 'camera.setFlySpeed', getDefault: () => 1, validate: isNumber(0.1, 30) },
         { key: 'camera.splatSize', setCommand: 'camera.setSplatSize', getDefault: () => 2, validate: isNumber(0, 10) },
-        { key: 'view.centersUseGaussianColor', setCommand: 'view.setCentersUseGaussianColor', getDefault: () => false, validate: isBool },
-        { key: 'view.outlineSelection', setCommand: 'view.setOutlineSelection', getDefault: () => false, validate: isBool },
-        { key: 'grid.visible', setCommand: 'grid.setVisible', urlPath: 'show.grid', getDefault: () => config.show.grid, validate: isBool },
-        { key: 'camera.bound', setCommand: 'camera.setBound', urlPath: 'show.bound', getDefault: () => config.show.bound, validate: isBool },
-        { key: 'camera.boundDimensions', setCommand: 'camera.setBoundDimensions', urlPath: 'show.boundDimensions', getDefault: () => config.show.boundDimensions, validate: isBool },
-        { key: 'camera.showPoses', setCommand: 'camera.setShowPoses', urlPath: 'show.cameraPoses', getDefault: () => config.show.cameraPoses, validate: isBool },
-        { key: 'camera.showInfo', setCommand: 'camera.setShowInfo', urlPath: 'show.cameraInfo', getDefault: () => config.show.cameraInfo, validate: isBool },
-        { key: 'camera.mode', setCommand: 'camera.setMode', getDefault: () => 'centers', validate: isEnum(['centers', 'rings']) },
-        { key: 'camera.overlay', setCommand: 'camera.setOverlay', urlPath: 'camera.overlay', getDefault: () => config.camera.overlay, validate: isBool },
-        { key: 'camera.controlMode', setCommand: 'camera.setControlMode', getDefault: () => 'orbit', validate: isEnum(['orbit', 'fly']) }
+        {
+            key: 'view.centersUseGaussianColor',
+            setCommand: 'view.setCentersUseGaussianColor',
+            getDefault: () => false,
+            validate: isBool
+        },
+        {
+            key: 'view.outlineSelection',
+            setCommand: 'view.setOutlineSelection',
+            getDefault: () => false,
+            validate: isBool
+        },
+        {
+            key: 'grid.visible',
+            setCommand: 'grid.setVisible',
+            urlPath: 'show.grid',
+            getDefault: () => config.show.grid,
+            validate: isBool
+        },
+        {
+            key: 'camera.bound',
+            setCommand: 'camera.setBound',
+            urlPath: 'show.bound',
+            getDefault: () => config.show.bound,
+            validate: isBool
+        },
+        {
+            key: 'camera.boundDimensions',
+            setCommand: 'camera.setBoundDimensions',
+            urlPath: 'show.boundDimensions',
+            getDefault: () => config.show.boundDimensions,
+            validate: isBool
+        },
+        {
+            key: 'camera.showPoses',
+            setCommand: 'camera.setShowPoses',
+            urlPath: 'show.cameraPoses',
+            getDefault: () => config.show.cameraPoses,
+            validate: isBool
+        },
+        {
+            key: 'camera.showInfo',
+            setCommand: 'camera.setShowInfo',
+            urlPath: 'show.cameraInfo',
+            getDefault: () => config.show.cameraInfo,
+            validate: isBool
+        },
+        {
+            key: 'camera.mode',
+            setCommand: 'camera.setMode',
+            getDefault: () => 'centers',
+            validate: isEnum(['centers', 'rings'])
+        },
+        {
+            key: 'camera.overlay',
+            setCommand: 'camera.setOverlay',
+            urlPath: 'camera.overlay',
+            getDefault: () => config.camera.overlay,
+            validate: isBool
+        },
+        {
+            key: 'camera.controlMode',
+            setCommand: 'camera.setControlMode',
+            getDefault: () => 'orbit',
+            validate: isEnum(['orbit', 'fly'])
+        }
     ];
 
     // load and validate the stored blob. unknown keys and invalid values are
@@ -166,7 +246,12 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         try {
             for (const descriptor of descriptors) {
                 const stored = urlHas(descriptor.urlPath) ? undefined : values[descriptor.key];
-                const payload = stored !== undefined ? (descriptor.toEvent ? descriptor.toEvent(stored) : stored) : descriptor.getDefault();
+                const payload =
+                    stored !== undefined
+                        ? descriptor.toEvent
+                            ? descriptor.toEvent(stored)
+                            : stored
+                        : descriptor.getDefault();
                 events.fire(descriptor.setCommand, payload);
             }
         } finally {

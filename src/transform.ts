@@ -32,27 +32,31 @@ class Transform {
     }
 
     equals(transform: Transform) {
-        return this.position.equals(transform.position) &&
-               this.rotation.equals(transform.rotation) &&
-               this.scale.equals(transform.scale);
+        return (
+            this.position.equals(transform.position) &&
+            this.rotation.equals(transform.rotation) &&
+            this.scale.equals(transform.scale)
+        );
     }
 
     equalsApprox(transform: Transform, epsilon = 1e-6) {
-        return this.position.equalsApprox(transform.position, epsilon) &&
-               this.rotation.equalsApprox(transform.rotation, epsilon) &&
-               this.scale.equalsApprox(transform.scale, epsilon);
+        return (
+            this.position.equalsApprox(transform.position, epsilon) &&
+            this.rotation.equalsApprox(transform.rotation, epsilon) &&
+            this.scale.equalsApprox(transform.scale, epsilon)
+        );
     }
 
     equalsTRS(position: Vec3, rotation: Quat, scale: Vec3) {
-        return this.position.equals(position) &&
-               this.rotation.equals(rotation) &&
-               this.scale.equals(scale);
+        return this.position.equals(position) && this.rotation.equals(rotation) && this.scale.equals(scale);
     }
 
     equalsApproxTRS(position: Vec3, rotation: Quat, scale: Vec3, epsilon = 1e-6) {
-        return this.position.equalsApprox(position, epsilon) &&
-               this.rotation.equalsApprox(rotation, epsilon) &&
-               this.scale.equalsApprox(scale, epsilon);
+        return (
+            this.position.equalsApprox(position, epsilon) &&
+            this.rotation.equalsApprox(rotation, epsilon) &&
+            this.scale.equalsApprox(scale, epsilon)
+        );
     }
 }
 

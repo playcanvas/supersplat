@@ -1,10 +1,10 @@
 import { ZipFileSystem, ZipReadFileSystem } from '@playcanvas/splat-transform';
 
-import { Events } from './events';
+import type { Events } from './events';
 import { BrowserFileSystem, BlobReadSource } from './io';
 import { recentFiles } from './recent-files';
-import { Scene } from './scene';
-import { Splat } from './splat';
+import type { Scene } from './scene';
+import type { Splat } from './splat';
 import { writeSplatFile } from './splat-serialize';
 import { Transform } from './transform';
 import { i18n } from './ui/localization';
@@ -12,12 +12,14 @@ import { i18n } from './ui/localization';
 // ts compiler and vscode find this type, but eslint does not
 type FilePickerAcceptType = unknown;
 
-const SuperFileType: FilePickerAcceptType[] = [{
-    description: 'SuperSplat document',
-    accept: {
-        'application/x-supersplat': ['.ssproj']
+const SuperFileType: FilePickerAcceptType[] = [
+    {
+        description: 'SuperSplat document',
+        accept: {
+            'application/x-supersplat': ['.ssproj']
+        }
     }
-}];
+];
 
 type FileSelectorCallback = (fileList: File) => void;
 
@@ -156,7 +158,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
         }
     };
 
-    const saveDocument = async (options: { stream?: FileSystemWritableFileStream, filename?: string }) => {
+    const saveDocument = async (options: { stream?: FileSystemWritableFileStream; filename?: string }) => {
         events.fire('startSpinner');
 
         try {
@@ -168,7 +170,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 view: events.invoke('docSerialize.view'),
                 poseSets: events.invoke('docSerialize.poseSets'),
                 timeline: events.invoke('docSerialize.timeline'),
-                splats: splats.map(s => s.docSerialize())
+                splats: splats.map((s) => s.docSerialize())
             };
 
             const serializeSettings = {
@@ -210,7 +212,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
 
     // handle user requesting a new document
     events.function('doc.new', async () => {
-        if (!await getResetConfirmation()) {
+        if (!(await getResetConfirmation())) {
             return false;
         }
         resetScene();
@@ -225,7 +227,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     // (which would result in more seamless user experience), but this is not yet supported in
     // other browsers.
     events.function('doc.load', async (file: File, handle?: FileSystemFileHandle) => {
-        if (!events.invoke('scene.empty') && !await getResetConfirmation()) {
+        if (!events.invoke('scene.empty') && !(await getResetConfirmation())) {
             return false;
         }
 
@@ -240,7 +242,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     });
 
     events.function('doc.open', async () => {
-        if (!events.invoke('scene.empty') && !await getResetConfirmation()) {
+        if (!events.invoke('scene.empty') && !(await getResetConfirmation())) {
             return false;
         }
 
@@ -278,13 +280,13 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     });
 
     events.function('doc.openRecent', async (fileHandle: FileSystemFileHandle) => {
-        if (!events.invoke('scene.empty') && !await getResetConfirmation()) {
+        if (!events.invoke('scene.empty') && !(await getResetConfirmation())) {
             return false;
         }
 
         try {
-            if (await fileHandle.queryPermission({ mode: 'read' }) !== 'granted') {
-                if (await fileHandle.requestPermission({ mode: 'read' }) !== 'granted') {
+            if ((await fileHandle.queryPermission({ mode: 'read' })) !== 'granted') {
+                if ((await fileHandle.requestPermission({ mode: 'read' })) !== 'granted') {
                     return false;
                 }
             }

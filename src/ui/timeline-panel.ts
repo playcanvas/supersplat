@@ -1,9 +1,10 @@
 import { Button, Container, Element, NumericInput, SelectInput } from '@playcanvas/pcui';
 
-import { Events } from '../events';
-import { ShortcutManager } from '../shortcut-manager';
+import type { Events } from '../events';
+import type { ShortcutManager } from '../shortcut-manager';
+
 import { i18n } from './localization';
-import { Tooltips } from './tooltips';
+import type { Tooltips } from './tooltips';
 
 class Ticks extends Container {
     constructor(events: Events, tooltips: Tooltips, args = {}) {
@@ -30,7 +31,7 @@ class Ticks extends Container {
         // rebuild the timeline
         const rebuild = () => {
             // clear existing labels
-            keyElements.forEach(el => el.destroy());
+            keyElements.forEach((el) => el.destroy());
             keyElements = [];
             workArea.dom.innerHTML = '';
 
@@ -44,17 +45,17 @@ class Ticks extends Container {
             // 1/2/5 * 10^n series so labels land on round frame numbers
             const minStep = Math.max(1, numFrames / Math.max(1, Math.floor(width / 50)));
             const magnitude = 10 ** Math.floor(Math.log10(minStep));
-            const labelStep = [1, 2, 5, 10].map(m => m * magnitude).find(s => s >= minStep) ?? 10 * magnitude;
+            const labelStep = [1, 2, 5, 10].map((m) => m * magnitude).find((s) => s >= minStep) ?? 10 * magnitude;
 
             // subdivide labels with minor ticks (fifths, or halves for 1/2 steps)
             const tickStep = labelStep === 1 ? 0 : labelStep / (labelStep % 5 === 0 ? 5 : 2);
 
             const offsetFromFrame = (frame: number) => {
-                return padding + Math.floor(frame / (numFrames - 1) * width);
+                return padding + Math.floor((frame / (numFrames - 1)) * width);
             };
 
             frameFromOffset = (offset: number) => {
-                return Math.max(0, Math.min(numFrames - 1, Math.floor((offset - padding) / width * (numFrames - 1))));
+                return Math.max(0, Math.min(numFrames - 1, Math.floor(((offset - padding) / width) * (numFrames - 1))));
             };
 
             // timeline labels
@@ -81,12 +82,12 @@ class Ticks extends Container {
             }
 
             // keys - get from active track
-            const keys = events.invoke('track.keys') as number[] ?? [];
+            const keys = (events.invoke('track.keys') as number[]) ?? [];
 
             // keys at frame >= numFrames don't play (the spline ignores them);
             // pin them just past the right end of the strip instead of hiding them
-            const inRangeKeys = keys.filter(k => k < numFrames);
-            const outOfRangeKeys = keys.filter(k => k >= numFrames).sort((a, b) => a - b);
+            const inRangeKeys = keys.filter((k) => k < numFrames);
+            const outOfRangeKeys = keys.filter((k) => k >= numFrames).sort((a, b) => a - b);
 
             // center of a pinned marker: 10px right of the last frame, staggered
             // 2px per extra marker, capped so the 8px diamond stays inside the
@@ -107,9 +108,14 @@ class Ticks extends Container {
                 label.dataset.frame = keyFrame.toString();
 
                 const wrapper = new Element({ dom: label });
-                tooltips.register(wrapper, () => (outOfRange ?
-                    i18n.t('tooltip.timeline.key-out-of-range', { frame: keyFrame }) :
-                    i18n.t('tooltip.timeline.key')), 'top');
+                tooltips.register(
+                    wrapper,
+                    () =>
+                        outOfRange
+                            ? i18n.t('tooltip.timeline.key-out-of-range', { frame: keyFrame })
+                            : i18n.t('tooltip.timeline.key'),
+                    'top'
+                );
                 keyElements.push(wrapper);
                 let dragging = false;
                 let copying = false;
@@ -262,7 +268,7 @@ class Ticks extends Container {
         window.addEventListener('blur', onBlur);
 
         this.on('destroy', () => {
-            keyElements.forEach(el => el.destroy());
+            keyElements.forEach((el) => el.destroy());
             keyElements = [];
             window.removeEventListener('keydown', onCtrlDown);
             window.removeEventListener('keyup', onCtrlUp);
@@ -506,7 +512,7 @@ class TimelinePanel extends Container {
 
         // Helper to check if the current frame has a key
         const canDeleteKey = () => {
-            const keys = events.invoke('track.keys') as number[] ?? [];
+            const keys = (events.invoke('track.keys') as number[]) ?? [];
             const frame = events.invoke('timeline.frame');
             return keys.includes(frame);
         };

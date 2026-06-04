@@ -1,7 +1,9 @@
 import { BooleanInput, Button, Container, Element, Label, SelectInput, VectorInput } from '@playcanvas/pcui';
 
-import { Events } from '../events';
-import { buildVideoEncoderConfig, VideoCodecChoice, VideoSettings } from '../video-config';
+import type { Events } from '../events';
+import type { VideoCodecChoice, VideoSettings } from '../video-config';
+import { buildVideoEncoderConfig } from '../video-config';
+
 import { i18n } from './localization';
 import sceneExport from './svg/export.svg';
 
@@ -73,10 +75,10 @@ const frameRates: Record<string, number> = {
 
 // Bits per pixel per frame for different quality settings.
 const bppfs: Record<string, number> = {
-    'low': 0.001,
-    'medium': 0.01,
-    'high': 0.1,
-    'ultra': 1
+    low: 0.001,
+    medium: 0.01,
+    high: 0.1,
+    ultra: 1
 };
 
 // Scale down higher resolutions (matched by pixel count).
@@ -207,20 +209,20 @@ class VideoSettingsDialog extends Container {
         codecRow.append(codecSelect);
 
         // Codec compatibility mapping
-        const codecOptions: Record<string, Array<{ v: string, t: string }>> = {
-            'mp4': [
+        const codecOptions: Record<string, { v: string; t: string }[]> = {
+            mp4: [
                 { v: 'h264', t: 'H.264' },
                 { v: 'h265', t: 'H.265/HEVC' }
             ],
-            'webm': [
+            webm: [
                 { v: 'vp9', t: 'VP9' },
                 { v: 'av1', t: 'AV1' }
             ],
-            'mov': [
+            mov: [
                 { v: 'h264', t: 'H.264' },
                 { v: 'h265', t: 'H.265/HEVC' }
             ],
-            'mkv': [
+            mkv: [
                 { v: 'h264', t: 'H.264' },
                 { v: 'h265', t: 'H.265/HEVC' },
                 { v: 'vp9', t: 'VP9' },
@@ -297,7 +299,10 @@ class VideoSettingsDialog extends Container {
             value: [0, totalFrames - 1]
         });
         i18n.onChange(() => {
-            frameRangeInput.placeholder = [i18n.t('popup.render-video.frame-range-first'), i18n.t('popup.render-video.frame-range-last')];
+            frameRangeInput.placeholder = [
+                i18n.t('popup.render-video.frame-range-first'),
+                i18n.t('popup.render-video.frame-range-last')
+            ];
         }, frameRangeInput);
         const frameRangeRow = new Container({ class: 'row' });
         frameRangeRow.append(frameRangeLabel);
@@ -486,13 +491,15 @@ class VideoSettingsDialog extends Container {
                     // Keep an already-selected unsupported resolution visible so
                     // changing another setting never silently downgrades output.
                     if (option.v !== selected && supportByResolution.get(option.v) === false) {
-                        disabledOptions[option.v] = `${formatResolution(option.v)} — ${i18n.t('popup.render-video.compatibility.option-disabled')}`;
+                        disabledOptions[option.v] =
+                            `${formatResolution(option.v)} — ${i18n.t('popup.render-video.compatibility.option-disabled')}`;
                     }
                 }
             } else if (probeState === 'unavailable' || probeState === 'error') {
                 for (const option of options) {
                     if (option.v !== selected) {
-                        disabledOptions[option.v] = `${formatResolution(option.v)} — ${i18n.t('popup.render-video.compatibility.option-unavailable')}`;
+                        disabledOptions[option.v] =
+                            `${formatResolution(option.v)} — ${i18n.t('popup.render-video.compatibility.option-unavailable')}`;
                     }
                 }
             }
@@ -525,7 +532,7 @@ class VideoSettingsDialog extends Container {
             const selectedSupported = supportByResolution.get(selected) === true;
             okButton.disabled = !selectedSupported;
 
-            const unsupportedCount = options.filter(option => supportByResolution.get(option.v) === false).length;
+            const unsupportedCount = options.filter((option) => supportByResolution.get(option.v) === false).length;
             if (selectedSupported && unsupportedCount === 0) {
                 setCompatibilityMessage('');
                 return;
@@ -537,16 +544,18 @@ class VideoSettingsDialog extends Container {
             if (!selectedSupported) {
                 const selectedPixels = dimensionsFor(selected).width * dimensionsFor(selected).height;
                 const fallback = options
-                .filter((option) => {
-                    const dimensions = dimensionsFor(option.v);
-                    return supportByResolution.get(option.v) === true &&
-                        dimensions.width * dimensions.height < selectedPixels;
-                })
-                .sort((a, b) => {
-                    const aDimensions = dimensionsFor(a.v);
-                    const bDimensions = dimensionsFor(b.v);
-                    return bDimensions.width * bDimensions.height - aDimensions.width * aDimensions.height;
-                })[0];
+                    .filter((option) => {
+                        const dimensions = dimensionsFor(option.v);
+                        return (
+                            supportByResolution.get(option.v) === true &&
+                            dimensions.width * dimensions.height < selectedPixels
+                        );
+                    })
+                    .sort((a, b) => {
+                        const aDimensions = dimensionsFor(a.v);
+                        const bDimensions = dimensionsFor(b.v);
+                        return bDimensions.width * bDimensions.height - aDimensions.width * aDimensions.height;
+                    })[0];
 
                 let message = i18n.t('popup.render-video.compatibility.unsupported', description);
                 if (fallback) {
@@ -593,16 +602,18 @@ class VideoSettingsDialog extends Container {
                 // limit can never render even when the encoder supports them
                 const maxTextureSize = (events.invoke('render.maxTextureSize') as number) ?? Infinity;
 
-                const results = await Promise.all(activeResolutionOptions().map(async (option) => {
-                    const { width, height } = dimensionsFor(option.v);
-                    if (Math.max(width, height) > maxTextureSize) {
-                        return [option.v, false] as const;
-                    }
+                const results = await Promise.all(
+                    activeResolutionOptions().map(async (option) => {
+                        const { width, height } = dimensionsFor(option.v);
+                        if (Math.max(width, height) > maxTextureSize) {
+                            return [option.v, false] as const;
+                        }
 
-                    const config = buildVideoEncoderConfig(encodingSettingsFor(option.v));
-                    const support = await VideoEncoder.isConfigSupported(config);
-                    return [option.v, support.supported] as const;
-                }));
+                        const config = buildVideoEncoderConfig(encodingSettingsFor(option.v));
+                        const support = await VideoEncoder.isConfigSupported(config);
+                        return [option.v, support.supported] as const;
+                    })
+                );
 
                 if (generation !== probeGeneration) {
                     return;

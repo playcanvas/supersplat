@@ -1,12 +1,13 @@
 import { Container, Element, Label } from '@playcanvas/pcui';
 
-import { Events } from '../events';
+import type { Events } from '../events';
+
 import { i18n } from './localization';
 import { SplatList } from './splat-list';
 import sceneImportSvg from './svg/import.svg';
 import sceneNewSvg from './svg/new.svg';
 import soloSvg from './svg/solo.svg';
-import { Tooltips } from './tooltips';
+import type { Tooltips } from './tooltips';
 import { Transform } from './transform';
 
 const createSvg = (svgString: string) => {
@@ -116,10 +117,12 @@ class ScenePanel extends Container {
         this.append(splatListContainer);
         this.append(transformHeader);
         this.append(new Transform(events));
-        this.append(new Element({
-            class: 'panel-header',
-            height: 20
-        }));
+        this.append(
+            new Element({
+                class: 'panel-header',
+                height: 20
+            })
+        );
     }
 }
 

@@ -1,10 +1,11 @@
 import { Container, Element, Label } from '@playcanvas/pcui';
 
-import { Events } from '../events';
+import type { Events } from '../events';
+
 import { i18n } from './localization';
 import centersSvg from './svg/centers.svg';
 import ringsSvg from './svg/rings.svg';
-import { Tooltips } from './tooltips';
+import type { Tooltips } from './tooltips';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));

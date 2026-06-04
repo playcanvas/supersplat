@@ -20,7 +20,9 @@ if (process.env.BUILD_TYPE === 'prod') {
 }
 // debug, profile, release
 const BUILD_TYPE = process.env.BUILD_TYPE || 'release';
-const ENGINE_DIR = path.resolve(`node_modules/playcanvas/build/playcanvas${BUILD_TYPE === 'debug' ? '.dbg' : ''}/src/index.js`);
+const ENGINE_DIR = path.resolve(
+    `node_modules/playcanvas/build/playcanvas${BUILD_TYPE === 'debug' ? '.dbg' : ''}/src/index.js`
+);
 const PCUI_DIR = path.resolve('node_modules/@playcanvas/pcui');
 const HREF = process.env.BASE_HREF || '';
 
@@ -30,10 +32,9 @@ const outputHeader = () => {
     const REGULAR_OUT = '\x1b[22m';
     const RESET_OUT = '\x1b[0m';
 
-    const title = [
-        'Building SuperSplat',
-        `type ${BOLD_OUT}${BUILD_TYPE}${REGULAR_OUT}`
-    ].map(l => `${BLUE_OUT}${l}`).join('\n');
+    const title = ['Building SuperSplat', `type ${BOLD_OUT}${BUILD_TYPE}${REGULAR_OUT}`]
+        .map((l) => `${BLUE_OUT}${l}`)
+        .join('\n');
     console.log(`${BLUE_OUT}${title}${RESET_OUT}\n`);
 };
 
@@ -51,7 +52,7 @@ const application = {
             targets: [
                 {
                     src: 'src/index.html',
-                    transform: (contents, filename) => {
+                    transform: (contents, _filename) => {
                         return contents.toString().replace('__BASE_HREF__', HREF);
                     }
                 },
@@ -65,7 +66,7 @@ const application = {
         }),
         alias({
             entries: {
-                'playcanvas': ENGINE_DIR,
+                playcanvas: ENGINE_DIR,
                 '@playcanvas/pcui': PCUI_DIR
             }
         }),
@@ -80,18 +81,18 @@ const application = {
             runtime: sass,
             processor: (css) => {
                 return postcss([autoprefixer])
-                .process(css, { from: undefined })
-                .then(result => result.css);
+                    .process(css, { from: undefined })
+                    .then((result) => result.css);
             },
             fileName: 'index.css',
             includePaths: [`${PCUI_DIR}/dist`],
             watch: 'src/ui/scss'
         }),
         BUILD_TYPE === 'release' &&
-        strip({
-            include: ['**/*.ts'],
-            functions: ['Debug.exec']
-        }),
+            strip({
+                include: ['**/*.ts'],
+                functions: ['Debug.exec']
+            }),
         BUILD_TYPE !== 'debug' && terser()
     ],
     treeshake: 'smallest',
@@ -115,7 +116,4 @@ const serviceWorker = {
     cache: false
 };
 
-export default [
-    application,
-    serviceWorker
-];
+export default [application, serviceWorker];

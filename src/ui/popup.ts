@@ -1,23 +1,24 @@
 import { Button, Container, Label, SelectInput, TextInput } from '@playcanvas/pcui';
 
 import { i18n } from './localization';
-import { Tooltips } from './tooltips';
+import type { Tooltips } from './tooltips';
 
-interface ShowOptions {
+type ShowOptions = {
     type: 'error' | 'info' | 'yesno' | 'okcancel';
     message: string;
     header?: string;
     link?: string;
-    icon?: boolean;     // show the type icon before the message (default true)
+    icon?: boolean; // show the type icon before the message (default true)
     select?: {
-        options: { v: string, t: string }[];
+        options: { v: string; t: string }[];
         value: string;
     };
-    warning?: {         // secondary note below the select
+    warning?: {
+        // secondary note below the select
         text: string;
-        link?: string;  // optional link rendered inline after the text
+        link?: string; // optional link rendered inline after the text
     };
-}
+};
 
 type ShowResult = {
     action: string;

@@ -1,3 +1,4 @@
+import type { BoundingBox, Quat } from 'playcanvas';
 import {
     math,
     ADDRESS_CLAMP_TO_EDGE,
@@ -14,11 +15,9 @@ import {
     TONEMAP_HEJL,
     TONEMAP_LINEAR,
     TONEMAP_NEUTRAL,
-    BoundingBox,
     Color,
     Entity,
     Mat4,
-    Quat,
     Ray,
     RenderPass,
     RenderPassForward,
@@ -31,9 +30,9 @@ import {
 import { PointerController } from './controllers';
 import { Element, ElementType } from './element';
 import { Picker } from './picker';
-import { Serializer } from './serializer';
+import type { Serializer } from './serializer';
 import { vertexShader, fragmentShader } from './shaders/blit-shader';
-import { Splat } from './splat';
+import type { Splat } from './splat';
 import { TweenValue } from './tween-value';
 import { ShaderQuad, SimpleRenderPass } from './utils/simple-render-pass';
 
@@ -103,12 +102,12 @@ class Camera extends Element {
     finalPass: SimpleRenderPass;
 
     // overridden target size
-    targetSizeOverride: { width: number, height: number } = null;
+    targetSizeOverride: { width: number; height: number } = null;
 
     // when set, overrides the tween-driven pose, fov and clipping planes each
     // update (used by 360 capture to render arbitrary face orientations that
     // the azim/elev pose system cannot express)
-    poseOverride: { position: Vec3, rotation: Quat, fov: number, near: number, far: number } | null = null;
+    poseOverride: { position: Vec3; rotation: Quat; fov: number; near: number; far: number } | null = null;
 
     // world transform of the user-facing camera pose. while a pose override
     // is active this holds the last tween-driven pose, so ui elements (view
@@ -169,12 +168,18 @@ class Camera extends Element {
 
     get tonemapping() {
         switch (this.camera.toneMapping) {
-            case TONEMAP_LINEAR: return 'linear';
-            case TONEMAP_NEUTRAL: return 'neutral';
-            case TONEMAP_ACES: return 'aces';
-            case TONEMAP_ACES2: return 'aces2';
-            case TONEMAP_FILMIC: return 'filmic';
-            case TONEMAP_HEJL: return 'hejl';
+            case TONEMAP_LINEAR:
+                return 'linear';
+            case TONEMAP_NEUTRAL:
+                return 'neutral';
+            case TONEMAP_ACES:
+                return 'aces';
+            case TONEMAP_ACES2:
+                return 'aces2';
+            case TONEMAP_FILMIC:
+                return 'filmic';
+            case TONEMAP_HEJL:
+                return 'hejl';
         }
         return 'linear';
     }
@@ -220,7 +225,7 @@ class Camera extends Element {
         return this.distanceTween.target.distance;
     }
 
-    setFocalPoint(point: Vec3, dampingFactorFactor: number = 1) {
+    setFocalPoint(point: Vec3, dampingFactorFactor = 1) {
         this.lookCameraPos = null;
         this.focalPointTween.goto(point, dampingFactorFactor * this.scene.config.controls.dampingFactor);
     }
@@ -228,7 +233,7 @@ class Camera extends Element {
     // Fly mode: rotate camera around itself, keeping the camera position fixed
     look(dx: number, dy: number) {
         const sensitivity = this.scene.config.controls.orbitSensitivity;
-        const d = this.distance * this.sceneRadius / this.fovFactor;
+        const d = (this.distance * this.sceneRadius) / this.fovFactor;
 
         Camera.calcForwardVec(forwardVec, this.azim, this.elevation);
         const cameraPos = this.focalPoint.add(forwardVec.clone().mulScalar(d));
@@ -244,7 +249,7 @@ class Camera extends Element {
         this.lookCameraPos = cameraPos;
     }
 
-    setAzimElev(azim: number, elev: number, dampingFactorFactor: number = 1) {
+    setAzimElev(azim: number, elev: number, dampingFactorFactor = 1) {
         // clamp
         azim = mod(azim, 360);
         elev = Math.max(this.minElev, Math.min(this.maxElev, elev));
@@ -263,7 +268,7 @@ class Camera extends Element {
         this.ortho = false;
     }
 
-    setDistance(distance: number, dampingFactorFactor: number = 1) {
+    setDistance(distance: number, dampingFactorFactor = 1) {
         this.lookCameraPos = null;
 
         const controls = this.scene.config.controls;
@@ -275,14 +280,14 @@ class Camera extends Element {
         t.goto({ distance }, dampingFactorFactor * controls.dampingFactor);
     }
 
-    setPose(position: Vec3, target: Vec3, dampingFactorFactor: number = 1) {
+    setPose(position: Vec3, target: Vec3, dampingFactorFactor = 1) {
         vec.sub2(target, position);
         const l = vec.length();
         const azim = Math.atan2(-vec.x / l, -vec.z / l) * math.RAD_TO_DEG;
         const elev = Math.asin(vec.y / l) * math.RAD_TO_DEG;
         this.setFocalPoint(target, dampingFactorFactor);
         this.setAzimElev(azim, elev, dampingFactorFactor);
-        this.setDistance(l / this.sceneRadius * this.fovFactor, dampingFactorFactor);
+        this.setDistance((l / this.sceneRadius) * this.fovFactor, dampingFactorFactor);
     }
 
     // set or clear the pose override and apply it immediately so subsequent
@@ -300,8 +305,8 @@ class Camera extends Element {
         v4.set(world.x, world.y, world.z, 1);
         m.transformVec4(v4, v4);
 
-        screen.x = v4.x / v4.w * 0.5 + 0.5;
-        screen.y = 1.0 - (v4.y / v4.w * 0.5 + 0.5);
+        screen.x = (v4.x / v4.w) * 0.5 + 0.5;
+        screen.y = 1.0 - ((v4.y / v4.w) * 0.5 + 0.5);
         screen.z = v4.z / v4.w;
     }
 
@@ -331,14 +336,17 @@ class Camera extends Element {
         this.mainPass = new RenderPassForward(device, composition, app.scene, renderer);
         this.splatPass = new RenderPassForward(device, composition, app.scene, renderer);
         this.gizmoPass = new RenderPassForward(device, composition, app.scene, renderer);
-        this.finalPass = new SimpleRenderPass(device,
-            new ShaderQuad(device, vertexShader, fragmentShader, 'final-blit'), {
+        this.finalPass = new SimpleRenderPass(
+            device,
+            new ShaderQuad(device, vertexShader, fragmentShader, 'final-blit'),
+            {
                 vars: () => {
                     return {
                         srcTexture: this.mainTarget.colorBuffer
                     };
                 }
-            });
+            }
+        );
 
         const target = document.getElementById('canvas-container');
         this.controller = new PointerController(this, target);
@@ -459,18 +467,13 @@ class Camera extends Element {
     // also update the existing camera distance to maintain the current view
     onBoundChanged(bound: BoundingBox) {
         const prevDistance = this.distanceTween.value.distance * this.sceneRadius;
-        this.sceneRadius = Math.max(1e-03, bound.halfExtents.length());
+        this.sceneRadius = Math.max(1e-3, bound.halfExtents.length());
         this.setDistance(prevDistance / this.sceneRadius, 0);
     }
 
     serialize(serializer: Serializer) {
         serializer.packa(this.worldTransform.data);
-        serializer.pack(
-            this.fov,
-            this.tonemapping,
-            this.targetSize.width,
-            this.targetSize.height
-        );
+        serializer.pack(this.fov, this.tonemapping, this.targetSize.width, this.targetSize.height);
     }
 
     // handle the viewer canvas resizing
@@ -516,8 +519,8 @@ class Camera extends Element {
             // create MRT render target for splat pass
             this.splatTarget = new RenderTarget({
                 colorBuffers: [
-                    colorBuffer,        // RT0: main color (shared)
-                    workBuffer          // RT1: overlay output (shared with workTarget)
+                    colorBuffer, // RT0: main color (shared)
+                    workBuffer // RT1: overlay output (shared with workTarget)
                 ],
                 depthBuffer,
                 flipY: false,
@@ -604,7 +607,7 @@ class Camera extends Element {
             }
         } else {
             cameraPosition.copy(forwardVec);
-            cameraPosition.mulScalar(distance.distance * this.sceneRadius / this.fovFactor);
+            cameraPosition.mulScalar((distance.distance * this.sceneRadius) / this.fovFactor);
             cameraPosition.add(this.focalPointTween.value);
         }
 
@@ -629,7 +632,10 @@ class Camera extends Element {
         const { targetSize } = this;
 
         // update ortho height
-        camera.orthoHeight = this.distanceTween.value.distance * this.sceneRadius / this.fovFactor * (this.fov / 90) * (camera.horizontalFov ? targetSize.height / targetSize.width : 1);
+        camera.orthoHeight =
+            ((this.distanceTween.value.distance * this.sceneRadius) / this.fovFactor) *
+            (this.fov / 90) *
+            (camera.horizontalFov ? targetSize.height / targetSize.width : 1);
         camera.camera._updateViewProjMat();
     }
 
@@ -657,10 +663,10 @@ class Camera extends Element {
     }
 
     onPostRender() {
-
+        // no-op
     }
 
-    focus(options?: { focalPoint: Vec3, radius: number, speed: number }) {
+    focus(options?: { focalPoint: Vec3; radius: number; speed: number }) {
         const getSplatFocalPoint = () => {
             for (const element of this.scene.elements) {
                 if (element.type === ElementType.splat) {
@@ -756,7 +762,7 @@ class Camera extends Element {
             const { scene } = this;
 
             this.setFocalPoint(result.position);
-            this.setDistance(result.distance / this.sceneRadius * this.fovFactor);
+            this.setDistance((result.distance / this.sceneRadius) * this.fovFactor);
             scene.events.fire('camera.focalPointPicked', {
                 camera: this,
                 splat: result.splat,

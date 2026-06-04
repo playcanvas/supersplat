@@ -1,3 +1,4 @@
+import type { GraphicsDevice, ScopeSpace, Shader } from 'playcanvas';
 import {
     ADDRESS_CLAMP_TO_EDGE,
     BLENDEQUATION_ADD,
@@ -6,32 +7,24 @@ import {
     SEMANTIC_POSITION,
     drawQuadWithShader,
     BlendState,
-    GraphicsDevice,
     Mat4,
     RenderTarget,
-    ScopeSpace,
-    Shader,
     ShaderUtils,
     Texture,
     Vec3
 } from 'playcanvas';
 
+import { fullscreenVS, tileMinMaxFS, finalReduceFS, binVS, binFS } from '../shaders/histogram-shaders';
+import type { Splat } from '../splat';
+
 import { drawPointsWithShader } from './draw-points';
 import { GRID_DIM, NUM_BINS } from './histogram-config';
-import {
-    fullscreenVS,
-    tileMinMaxFS,
-    finalReduceFS,
-    binVS,
-    binFS
-} from '../shaders/histogram-shaders';
-import { Splat } from '../splat';
 
 const identity = new Mat4();
 const zeroVec3 = new Vec3();
 
 // number of SH coefficients per RGB band, indexed by GSplatResource.shBands.
-const SH_NUM_COEFFS: { [k: number]: number } = { 0: 0, 1: 3, 2: 8, 3: 15 };
+const SH_NUM_COEFFS: Record<number, number> = { 0: 0, 1: 3, 2: 8, 3: 15 };
 
 type CalcHistogramOptions = {
     entityMatrix?: Mat4;
@@ -42,8 +35,8 @@ type CalcHistogramOptions = {
 };
 
 type CalcHistogramResult = {
-    selected: Float32Array;     // length numBins
-    unselected: Float32Array;   // length numBins
+    selected: Float32Array; // length numBins
+    unselected: Float32Array; // length numBins
     min: number;
     max: number;
     numValues: number;
@@ -64,8 +57,8 @@ class CalcHistogram {
 
     // shaders are compiled per SH_BANDS value so that each variant declares only
     // the SH samplers it actually reads. reduceShader has no SH dependence.
-    private tileShaders: Map<number, Shader> = new Map();
-    private binShaders: Map<number, Shader> = new Map();
+    private tileShaders = new Map<number, Shader>();
+    private binShaders = new Map<number, Shader>();
     private reduceShader: Shader = null;
 
     private tileTex: Texture = null;
@@ -85,8 +78,12 @@ class CalcHistogram {
 
         this.additiveBlend = new BlendState(
             true,
-            BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE,
-            BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE
+            BLENDEQUATION_ADD,
+            BLENDMODE_ONE,
+            BLENDMODE_ONE,
+            BLENDEQUATION_ADD,
+            BLENDMODE_ONE,
+            BLENDMODE_ONE
         );
     }
 
@@ -240,8 +237,14 @@ class CalcHistogram {
     private clearRT(rt: RenderTarget) {
         const d = this.device as any;
         const oldRt = d.renderTarget;
-        const oldVx = d.vx, oldVy = d.vy, oldVw = d.vw, oldVh = d.vh;
-        const oldSx = d.sx, oldSy = d.sy, oldSw = d.sw, oldSh = d.sh;
+        const oldVx = d.vx,
+            oldVy = d.vy,
+            oldVw = d.vw,
+            oldVh = d.vh;
+        const oldSx = d.sx,
+            oldSy = d.sy,
+            oldSw = d.sw,
+            oldSh = d.sh;
 
         d.setRenderTarget(rt);
         d.updateBegin();

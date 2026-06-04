@@ -1,4 +1,4 @@
-import { Color, Vec3 } from 'playcanvas';
+import type { Color, Vec3 } from 'playcanvas';
 
 // this class is used by elements to store their pertinent state
 // every frame. the data is then compared with the previous frame's

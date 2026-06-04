@@ -13,7 +13,7 @@ import {
 } from 'playcanvas';
 
 import { Element, ElementType } from './element';
-import { Serializer } from './serializer';
+import type { Serializer } from './serializer';
 import { vertexShader, fragmentShader } from './shaders/box-shape-shader';
 
 const invMat = new Mat4();
@@ -48,8 +48,12 @@ class BoxShape extends Element {
         material.cull = CULLFACE_FRONT;
         material.blendState = new BlendState(
             true,
-            BLENDEQUATION_ADD, BLENDMODE_SRC_ALPHA, BLENDMODE_ONE_MINUS_SRC_ALPHA,
-            BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE_MINUS_SRC_ALPHA
+            BLENDEQUATION_ADD,
+            BLENDMODE_SRC_ALPHA,
+            BLENDMODE_ONE_MINUS_SRC_ALPHA,
+            BLENDEQUATION_ADD,
+            BLENDMODE_ONE,
+            BLENDMODE_ONE_MINUS_SRC_ALPHA
         );
         material.update();
 
@@ -69,7 +73,7 @@ class BoxShape extends Element {
     }
 
     destroy() {
-
+        // no-op
     }
 
     serialize(serializer: Serializer): void {
@@ -83,7 +87,7 @@ class BoxShape extends Element {
         this.pivot.setLocalScale(this._lenX, this._lenY, this._lenZ);
         invMat.copy(this.pivot.getWorldTransform()).invert();
         this.material.setParameter('boxInvMat', invMat.data);
-        this.material.setParameter('boxLen', [this._lenX * 0.5, this._lenY * 0.5, this._lenZ  * 0.5]);
+        this.material.setParameter('boxLen', [this._lenX * 0.5, this._lenY * 0.5, this._lenZ * 0.5]);
 
         const device = this.scene.graphicsDevice;
         device.scope.resolve('targetSize').setValue([device.width, device.height]);

@@ -1,31 +1,30 @@
+import type { CameraComponent, GraphicsDevice, MeshInstance } from 'playcanvas';
 import {
     EVENT_POSTRENDER_LAYER,
     EVENT_PRERENDER_LAYER,
     LAYERID_DEPTH,
     SORTMODE_CUSTOM,
     BoundingBox,
-    CameraComponent,
     Color,
     Entity,
     Layer,
-    GraphicsDevice,
-    MeshInstance,
     Vec3
 } from 'playcanvas';
 
 import { AssetLoader } from './asset-loader';
 import { Camera } from './camera';
 import { CameraPoseGizmos } from './camera-pose-gizmos';
-import { CommandQueue } from './command-queue';
+import type { CommandQueue } from './command-queue';
 import { DataProcessor } from './data-processor';
-import { Element, ElementType, ElementTypeList } from './element';
-import { Events } from './events';
+import type { Element } from './element';
+import { ElementType, ElementTypeList } from './element';
+import type { Events } from './events';
 import { InfiniteGrid as Grid } from './infinite-grid';
 import { Outline } from './outline';
 import { PCApp } from './pc-app';
 import { SceneConfig } from './scene-config';
 import { SceneState } from './scene-state';
-import { Splat } from './splat';
+import type { Splat } from './splat';
 import { SplatOverlay } from './splat-overlay';
 import { Underlay } from './underlay';
 
@@ -50,9 +49,10 @@ const specialSort = (instances: MeshInstance[], numInstances: number, cameraPos:
                         center.z + cz * halfExtents.z
                     );
                     // project camera-to-corner vector onto camera direction
-                    const dist = (corner.x - cameraPos.x) * cameraDir.x +
-                                    (corner.y - cameraPos.y) * cameraDir.y +
-                                    (corner.z - cameraPos.z) * cameraDir.z;
+                    const dist =
+                        (corner.x - cameraPos.x) * cameraDir.x +
+                        (corner.y - cameraPos.y) * cameraDir.y +
+                        (corner.z - cameraPos.z) * cameraDir.z;
                     if (dist > maxDist) {
                         maxDist = dist;
                     }
@@ -86,7 +86,7 @@ class Scene {
     lockedRenderMode = false;
     lockedRender = false;
 
-    canvasResize: {width: number; height: number} | null = null;
+    canvasResize: { width: number; height: number } | null = null;
     targetSize = {
         width: 0,
         height: 0
@@ -270,7 +270,7 @@ class Scene {
             this.elements.push(element);
 
             // notify all elements of scene addition
-            this.forEachElement(e => e !== element && e.onAdded(element));
+            this.forEachElement((e) => e !== element && e.onAdded(element));
 
             // notify listeners
             this.events.fire('scene.elementAdded', element);
@@ -292,7 +292,7 @@ class Scene {
             this.events.fire('scene.elementRemoved', element);
 
             // notify all elements of scene removal
-            this.forEachElement(e => e.onRemoved(element));
+            this.forEachElement((e) => e.onRemoved(element));
 
             element.remove();
             element.scene = null;
@@ -323,7 +323,7 @@ class Scene {
     }
 
     getElementsByType(elementType: ElementType) {
-        return this.elements.filter(e => e.type === elementType);
+        return this.elements.filter((e) => e.type === elementType);
     }
 
     get graphicsDevice() {
@@ -336,7 +336,7 @@ class Scene {
 
     private onUpdate(deltaTime: number) {
         // allow elements to update
-        this.forEachElement(e => e.onUpdate(deltaTime));
+        this.forEachElement((e) => e.onUpdate(deltaTime));
 
         // fire global update
         this.events.fire('update', deltaTime);
@@ -346,7 +346,7 @@ class Scene {
         const i = this.app.frame % 2;
         const state = this.sceneState[i];
         state.reset();
-        this.forEachElement(e => state.pack(e));
+        this.forEachElement((e) => state.pack(e));
 
         // diff with previous state
         const result = state.compare(this.sceneState[1 - i]);
@@ -371,7 +371,7 @@ class Scene {
         });
 
         // allow elements to postupdate
-        this.forEachElement(e => e.onPostUpdate());
+        this.forEachElement((e) => e.onPostUpdate());
     }
 
     private onPreRender() {
@@ -385,7 +385,7 @@ class Scene {
         this.targetSize.width = Math.ceil(this.app.graphicsDevice.width / this.config.camera.pixelScale);
         this.targetSize.height = Math.ceil(this.app.graphicsDevice.height / this.config.camera.pixelScale);
 
-        this.forEachElement(e => e.onPreRender());
+        this.forEachElement((e) => e.onPreRender());
 
         this.events.fire('prerender', this.camera.displayTransform);
 
@@ -403,13 +403,11 @@ class Scene {
                         Color.RED,
                         true,
                         undefined,
-                        splat.entity.getWorldTransform());
+                        splat.entity.getWorldTransform()
+                    );
 
                     const world = splat.worldBound;
-                    this.app.drawWireAlignedBox(
-                        world.getMin(),
-                        world.getMax(),
-                        Color.GREEN);
+                    this.app.drawWireAlignedBox(world.getMin(), world.getMax(), Color.GREEN);
                 }
             });
 
@@ -419,7 +417,7 @@ class Scene {
     }
 
     private onPostRender() {
-        this.forEachElement(e => e.onPostRender());
+        this.forEachElement((e) => e.onPostRender());
 
         this.events.fire('postrender');
     }

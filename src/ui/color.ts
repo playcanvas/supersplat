@@ -1,4 +1,4 @@
-const rgb2hsv = (rgb: { r: number, g: number, b: number }) => {
+const rgb2hsv = (rgb: { r: number; g: number; b: number }) => {
     const r = rgb.r;
     const g = rgb.g;
     const b = rgb.b;
@@ -22,9 +22,9 @@ const rgb2hsv = (rgb: { r: number, g: number, b: number }) => {
         if (r === v) {
             h = bb - gg;
         } else if (g === v) {
-            h = (1 / 3) + rr - bb;
+            h = 1 / 3 + rr - bb;
         } else if (b === v) {
-            h = (2 / 3) + gg - rr;
+            h = 2 / 3 + gg - rr;
         }
         if (h < 0) {
             h += 1;
@@ -36,7 +36,7 @@ const rgb2hsv = (rgb: { r: number, g: number, b: number }) => {
     return { h, s, v };
 };
 
-const hsv2rgb = (hsv: { h: number, s: number, v: number }) => {
+const hsv2rgb = (hsv: { h: number; s: number; v: number }) => {
     const h = hsv.h;
     const s = hsv.s;
     const v = hsv.v;
@@ -50,12 +50,36 @@ const hsv2rgb = (hsv: { h: number, s: number, v: number }) => {
     let r, g, b;
 
     switch (i % 6) {
-        case 0: r = v; g = t; b = p; break;
-        case 1: r = q; g = v; b = p; break;
-        case 2: r = p; g = v; b = t; break;
-        case 3: r = p; g = q; b = v; break;
-        case 4: r = t; g = p; b = v; break;
-        case 5: r = v; g = p; b = q; break;
+        case 0:
+            r = v;
+            g = t;
+            b = p;
+            break;
+        case 1:
+            r = q;
+            g = v;
+            b = p;
+            break;
+        case 2:
+            r = p;
+            g = v;
+            b = t;
+            break;
+        case 3:
+            r = p;
+            g = q;
+            b = v;
+            break;
+        case 4:
+            r = t;
+            g = p;
+            b = v;
+            break;
+        case 5:
+            r = v;
+            g = p;
+            b = q;
+            break;
     }
 
     return { r, g, b };

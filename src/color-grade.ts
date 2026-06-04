@@ -6,19 +6,19 @@ const dcDecode = (v: number) => v * SH_C0 + 0.5;
 const dcEncode = (v: number) => (v - 0.5) / SH_C0;
 
 const sigmoid = (v: number) => 1 / (1 + Math.exp(-v));
-const invSigmoid = (v: number) => ((v <= 0) ? -400 : ((v >= 1) ? 400 : -Math.log(1 / v - 1)));
+const invSigmoid = (v: number) => (v <= 0 ? -400 : v >= 1 ? 400 : -Math.log(1 / v - 1));
 
 type GradeParams = {
-    tintClr: Color,
-    temperature: number,
-    saturation: number,
-    brightness: number,
-    blackPoint: number,
-    whitePoint: number,
-    transparency: number
+    tintClr: Color;
+    temperature: number;
+    saturation: number;
+    brightness: number;
+    blackPoint: number;
+    whitePoint: number;
+    transparency: number;
 };
 
-type RGB = { r: number, g: number, b: number };
+type RGB = { r: number; g: number; b: number };
 
 class ColorGrade {
     private s: RGB;
@@ -39,14 +39,13 @@ class ColorGrade {
         this.saturation = p.saturation;
         this.transparency = p.transparency;
 
-        this.hasTint = (
+        this.hasTint =
             !p.tintClr.equals(Color.WHITE) ||
             p.temperature !== 0 ||
             p.saturation !== 1 ||
             p.brightness !== 0 ||
             p.blackPoint !== 0 ||
-            p.whitePoint !== 1
-        );
+            p.whitePoint !== 1;
     }
 
     private apply(c: RGB, offset: number) {

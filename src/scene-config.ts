@@ -1,4 +1,4 @@
-type Color = { r: number, g: number, b: number, a: number };
+type Color = { r: number; g: number; b: number; a: number };
 
 const DEFAULT_BG_CLR: Color = { r: 0, g: 0, b: 0, a: 1 };
 const DEFAULT_SELECTED_CLR: Color = { r: 1, g: 1, b: 0, a: 1 };
@@ -56,7 +56,7 @@ class Params {
     private resolve(configs: any[], path: string[]): any {
         const get = (obj: any): any => {
             for (const name of path) {
-                if (!obj.hasOwnProperty(name)) {
+                if (!Object.hasOwn(obj, name)) {
                     return undefined;
                 }
                 obj = obj[name];
@@ -75,7 +75,8 @@ class Params {
 
     get(path: string): any {
         // https://stackoverflow.com/a/67243723/2405687
-        const kebabize = (s: string) => s.replace(/[A-Z]+(?![a-z])|[A-Z]/g, ($, ofs) => (ofs ? '-' : '') + $.toLowerCase());
+        const kebabize = (s: string) =>
+            s.replace(/[A-Z]+(?![a-z])|[A-Z]/g, ($, ofs) => (ofs ? '-' : '') + $.toLowerCase());
         return this.resolve(this.sources, path.split('.').map(kebabize)) ?? this.resolve(this.sources, path.split('.'));
     }
 
@@ -97,7 +98,7 @@ class Params {
     getVec3(path: string) {
         const value = this.getVec(path);
         if (value) {
-            const numbers = value.map(v => parseFloat(v));
+            const numbers = value.map((v) => parseFloat(v));
             if (value.length === 1) {
                 return { x: numbers[0], y: numbers[0], z: numbers[0] };
             } else if (value.length === 3) {
@@ -110,7 +111,7 @@ class Params {
     getColor(path: string) {
         const value = this.getVec(path);
         if (value) {
-            const numbers = value.map(v => parseFloat(v));
+            const numbers = value.map((v) => parseFloat(v));
             if (value.length === 1) {
                 return { r: numbers[0], g: numbers[0], b: numbers[0], a: 1 };
             } else if (value.length === 3) {

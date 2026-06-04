@@ -2,10 +2,11 @@ import { Button, Container, Label, NumericInput } from '@playcanvas/pcui';
 import { Entity, Mat4, Quat, TranslateGizmo, Vec3 } from 'playcanvas';
 
 import { EntityTransformOp } from '../edit-ops';
-import { Events } from '../events';
-import { Scene } from '../scene';
-import { Splat } from '../splat';
-import { ToolOverlay, OverlayWriter } from '../tool-overlay';
+import type { Events } from '../events';
+import type { Scene } from '../scene';
+import type { Splat } from '../splat';
+import type { OverlayWriter } from '../tool-overlay';
+import { ToolOverlay } from '../tool-overlay';
 import { Transform } from '../transform';
 import { DimensionLabels } from '../ui/dimension-labels';
 import { i18n } from '../ui/localization';
@@ -26,14 +27,18 @@ const s = new Vec3();
 const t = new Transform();
 
 class MeasureTransformHandler {
-    activate() {}
-    deactivate() {}
+    activate() {
+        // no-op
+    }
+    deactivate() {
+        // no-op
+    }
 }
 
 class MeasureTool {
     activate: () => void;
     deactivate: () => void;
-    getFocus: () => { position: Vec3, radius: number } | null;
+    getFocus: () => { position: Vec3; radius: number } | null;
 
     constructor(events: Events, scene: Scene, canvasContainer: Container) {
         // the length label along the measured line (shown when 'show
@@ -157,7 +162,9 @@ class MeasureTool {
         });
 
         gizmo.on('transform:move', () => {
-            events.invoke('pivot').moveTRS(entity.getLocalPosition(), entity.getLocalRotation(), entity.getLocalScale());
+            events
+                .invoke('pivot')
+                .moveTRS(entity.getLocalPosition(), entity.getLocalRotation(), entity.getLocalScale());
         });
 
         gizmo.on('transform:end', () => {
@@ -173,7 +180,7 @@ class MeasureTool {
         });
 
         events.on('pivot.started', () => {
-
+            // no-op
         });
 
         events.on('pivot.moved', () => {
@@ -250,7 +257,11 @@ class MeasureTool {
             const top = new EntityTransformOp({
                 splat: splat,
                 oldt: new Transform(origP, origR, origS),
-                newt: new Transform(splat.entity.getLocalPosition(), splat.entity.getLocalRotation(), splat.entity.getLocalScale())
+                newt: new Transform(
+                    splat.entity.getLocalPosition(),
+                    splat.entity.getLocalRotation(),
+                    splat.entity.getLocalScale()
+                )
             });
 
             events.fire('edit.add', top);
@@ -341,7 +352,10 @@ class MeasureTool {
 
                 // place at the pointer-down position: that is where the user aimed
                 if (splat.measurePoints.length < 2) {
-                    const result = await scene.camera.intersect(clickX / canvasContainer.dom.clientWidth, clickY / canvasContainer.dom.clientHeight);
+                    const result = await scene.camera.intersect(
+                        clickX / canvasContainer.dom.clientWidth,
+                        clickY / canvasContainer.dom.clientHeight
+                    );
                     if (result) {
                         mat.invert(splat.worldTransform);
                         mat.transformPoint(result.position, p);

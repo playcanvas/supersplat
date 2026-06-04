@@ -2,6 +2,15 @@
  * Unified loader for all splat file formats using splat-transform.
  */
 
+import type {
+    Column,
+    ColumnType,
+    DataTable,
+    Options,
+    ChunkSource,
+    ReadFileSystem,
+    Transform
+} from '@playcanvas/splat-transform';
 import {
     getInputFormat,
     readFile,
@@ -9,13 +18,6 @@ import {
     createChunkDataPool,
     materializeToDataTable,
     selectLod,
-    Column,
-    ColumnType,
-    DataTable,
-    Options,
-    ChunkSource,
-    ReadFileSystem,
-    Transform,
     ZipReadFileSystem
 } from '@playcanvas/splat-transform';
 import { GSplatData } from 'playcanvas';
@@ -37,7 +39,7 @@ const LOD_MAX_SPLATS = 20_000_000;
 // when all levels exceed it
 const defaultLodIndex = (lodCounts: readonly number[]) => {
     const candidates = lodCounts.map((count, index) => ({ count, index }));
-    const under = candidates.filter(c => c.count < LOD_MAX_SPLATS);
+    const under = candidates.filter((c) => c.count < LOD_MAX_SPLATS);
     if (under.length > 0) {
         return under.reduce((a, b) => (b.count > a.count ? b : a)).index;
     }
@@ -60,15 +62,24 @@ const defaultOptions: Options = {
  */
 const columnTypeToGSplatType = (colType: ColumnType | null): string => {
     switch (colType) {
-        case 'int8': return 'char';
-        case 'uint8': return 'uchar';
-        case 'int16': return 'short';
-        case 'uint16': return 'ushort';
-        case 'int32': return 'int';
-        case 'uint32': return 'uint';
-        case 'float32': return 'float';
-        case 'float64': return 'double';
-        default: return 'float';
+        case 'int8':
+            return 'char';
+        case 'uint8':
+            return 'uchar';
+        case 'int16':
+            return 'short';
+        case 'uint16':
+            return 'ushort';
+        case 'int32':
+            return 'int';
+        case 'uint32':
+            return 'uint';
+        case 'float32':
+            return 'float';
+        case 'float64':
+            return 'double';
+        default:
+            return 'float';
     }
 };
 
@@ -83,11 +94,13 @@ const dataTableToGSplatData = (dataTable: DataTable): GSplatData => {
         byteSize: col.data.BYTES_PER_ELEMENT
     }));
 
-    const gsplatData = new GSplatData([{
-        name: 'vertex',
-        count: dataTable.numRows,
-        properties
-    }]);
+    const gsplatData = new GSplatData([
+        {
+            name: 'vertex',
+            count: dataTable.numRows,
+            properties
+        }
+    ]);
 
     // Support loading 2D splats by adding scale_2 property with almost 0 scale
     if (gsplatData.getProp('scale_0') && gsplatData.getProp('scale_1') && !gsplatData.getProp('scale_2')) {
@@ -96,7 +109,11 @@ const dataTableToGSplatData = (dataTable: DataTable): GSplatData => {
 
         // Place the new scale_2 property just after scale_1
         const props = gsplatData.getElement('vertex').properties;
-        props.splice(props.findIndex((prop: any) => prop.name === 'scale_1') + 1, 0, props.splice(props.length - 1, 1)[0]);
+        props.splice(
+            props.findIndex((prop: any) => prop.name === 'scale_1') + 1,
+            0,
+            props.splice(props.length - 1, 1)[0]
+        );
     }
 
     return gsplatData;
@@ -139,7 +156,12 @@ const materializeFirst = async (sources: ChunkSource[], pickLod?: PickLod): Prom
  * @param skipReorder - Skip morton reordering (for files already in morton order or animation playback)
  * @param pickLod - Invoked when the file contains multiple LODs to choose which to load
  */
-const loadGSplatData = async (filename: string, fileSystem: ReadFileSystem, skipReorder?: boolean, pickLod?: PickLod): Promise<LoadResult | null> => {
+const loadGSplatData = async (
+    filename: string,
+    fileSystem: ReadFileSystem,
+    skipReorder?: boolean,
+    pickLod?: PickLod
+): Promise<LoadResult | null> => {
     const inputFormat = getInputFormat(filename);
     const lowerFilename = filename.toLowerCase();
 
@@ -203,20 +225,28 @@ const loadGSplatData = async (filename: string, fileSystem: ReadFileSystem, skip
  */
 const validateGSplatData = (gsplatData: GSplatData): void => {
     const required = [
-        'x', 'y', 'z',
-        'scale_0', 'scale_1', 'scale_2',
-        'rot_0', 'rot_1', 'rot_2', 'rot_3',
-        'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity'
+        'x',
+        'y',
+        'z',
+        'scale_0',
+        'scale_1',
+        'scale_2',
+        'rot_0',
+        'rot_1',
+        'rot_2',
+        'rot_3',
+        'f_dc_0',
+        'f_dc_1',
+        'f_dc_2',
+        'opacity'
     ];
 
-    const missing = required.filter(x => !gsplatData.getProp(x));
+    const missing = required.filter((x) => !gsplatData.getProp(x));
     if (missing.length > 0) {
-        throw new Error(`This file does not contain gaussian splatting data. The following properties are missing: ${missing.join(', ')}`);
+        throw new Error(
+            `This file does not contain gaussian splatting data. The following properties are missing: ${missing.join(', ')}`
+        );
     }
 };
 
-export {
-    defaultLodIndex,
-    loadGSplatData,
-    validateGSplatData
-};
+export { defaultLodIndex, loadGSplatData, validateGSplatData };

@@ -1,4 +1,5 @@
-import { Element, ElementType, ElementTypeList } from './element';
+import type { Element, ElementType } from './element';
+import { ElementTypeList } from './element';
 import { Serializer } from './serializer';
 
 const common = new Set<Element>();

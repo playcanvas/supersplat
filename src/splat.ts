@@ -198,13 +198,26 @@ class Splat extends Element {
         });
     }
 
-    // wait for the next scene render to complete
+    // wait for the next scene render to complete, with a safety timeout so a
+    // stalled render loop (e.g. a backgrounded tab where rAF is paused) can't
+    // block frame swapping forever. In a live app postrender fires within a
+    // frame, so the timeout never matters.
     private waitForRender(): Promise<void> {
         return new Promise((resolve) => {
-            const handle = this.scene.events.on('postrender', () => {
-                handle.off();
+            let settled = false;
+            const off = this.scene.events.on('postrender', () => {
+                if (settled) return;
+                settled = true;
+                off.off();
                 resolve();
             });
+            // safety: a stalled timeout callback no-ops if postrender already fired
+            setTimeout(() => {
+                if (settled) return;
+                settled = true;
+                off.off();
+                resolve();
+            }, 200);
         });
     }
 

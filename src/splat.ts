@@ -256,15 +256,22 @@ class Splat extends Element {
         this.entity.gsplat.layers = [this.scene.splatLayer.id];
         this.rebuildMaterial(this.scene.events.invoke('view.bands'));
 
-        // sort/refresh the new frame, then wait for it to render before removing
-        // the old entity, which keeps the previous frame on screen in the meantime.
-        // Skip the wait during offline video render (lockedRenderMode): renders are
-        // gated on scene.lockedRender there, so blocking on a render would deadlock —
-        // and the render loop sorts+captures each frame deterministically anyway.
+        // refresh gpu state/counts/bounds, then wait for the new frame to render
+        // before removing the old entity, which keeps the previous frame on screen
+        // in the meantime. Skip the wait during offline video render
+        // (lockedRenderMode): renders are gated on scene.lockedRender there, so
+        // blocking on a render would deadlock — and the render loop sorts+captures
+        // each frame deterministically anyway.
         await this.updateState(State.deleted);
         if (!this.scene.lockedRenderMode) {
             await this.waitForRender();
         }
+
+        // notify dependents (e.g. the centers overlay, which parents itself under
+        // this.entity) to re-bind to the new entity/instance before the old entity
+        // is destroyed — otherwise they're torn down with it and never re-attach
+        // (no selection.changed fires on a frame swap).
+        this.scene.events.fire('splat.replaced', this);
 
         // tear down the previous frame
         oldEntity.destroy();

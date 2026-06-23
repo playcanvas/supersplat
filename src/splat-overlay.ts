@@ -83,6 +83,15 @@ class SplatOverlay extends Element {
                 this.detach();
             }
         });
+
+        // re-attach when the attached splat swaps its frame data (animated
+        // sequence): replaceData builds a new entity/instance, so our captured
+        // instance and our entity (parented under the old one) are stale.
+        scene.events.on('splat.replaced', (splat: Splat) => {
+            if (this.splat === splat) {
+                this.attach(splat);
+            }
+        });
     }
 
     destroy() {

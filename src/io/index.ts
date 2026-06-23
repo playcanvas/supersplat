@@ -7,7 +7,9 @@ export {
     BlobReadSource,
     MappedReadFileSystem,
     loadGSplatData,
-    validateGSplatData
+    validateGSplatData,
+    loadGsafModule,
+    GsafReader
 } from './read';
 
 // Write operations

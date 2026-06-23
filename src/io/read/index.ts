@@ -13,3 +13,9 @@ export {
     loadGSplatData,
     validateGSplatData
 } from './loader';
+
+// GSAF animated format decoder
+export {
+    loadGsafModule,
+    GsafReader
+} from './gsaf-decoder';

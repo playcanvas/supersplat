@@ -16,8 +16,8 @@ class AssetLoader {
     }
 
     // wrap in-memory GSplatData in a gsplat Asset + GSplatResource registered with
-    // the engine. shared by the splat-transform load path and the animated frame
-    // sources (PLY sequence, GSAF), which already hold decoded GSplatData.
+    // the engine. shared by the splat-transform load path and the PLY sequence
+    // frame source, which already holds decoded GSplatData.
     createGSplatAsset(gsplatData: GSplatData, filename: string): Asset {
         const asset = new Asset(filename, 'gsplat', { url: `local-asset-${Date.now()}`, filename });
         this.app.assets.add(asset);

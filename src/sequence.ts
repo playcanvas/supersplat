@@ -1,13 +1,9 @@
 import { Asset, Quat } from 'playcanvas';
 
 import { Events } from './events';
-import { GsafReader, loadGSplatData, MappedReadFileSystem, validateGSplatData } from './io';
+import { loadGSplatData, MappedReadFileSystem, validateGSplatData } from './io';
 import { Scene } from './scene';
 import { Splat } from './splat';
-
-// Orientation applied to GSAF frames so they match supersplat's .ply import
-// (splat-transform tags loaded PLYs with Transform.PLY = fromEulers(0, 0, 180)).
-const gsafRotation = new Quat().setFromEulerAngles(0, 0, 180);
 
 type FrameData = {
     asset: Asset;
@@ -60,34 +56,8 @@ class PlyFrameSource implements FrameSource {
     destroy() {}
 }
 
-// GSAF: a single .gsaf file decoded frame-by-frame via the wasm decoder.
-class GsafFrameSource implements FrameSource {
-    private reader: GsafReader;
-    private scene: Scene;
-
-    constructor(reader: GsafReader, scene: Scene) {
-        this.reader = reader;
-        this.scene = scene;
-    }
-
-    get frameCount() {
-        return this.reader.frameCount;
-    }
-
-    getFrame(index: number): Promise<FrameData> {
-        // decode is synchronous (wasm); wrap to satisfy the FrameSource contract
-        const gsplatData = this.reader.decodeToGSplatData(index);
-        const asset = this.scene.assetLoader.createGSplatAsset(gsplatData, `gsaf-frame-${index}`);
-        return Promise.resolve({ asset, rotation: gsafRotation });
-    }
-
-    destroy() {
-        this.reader.destroy();
-    }
-}
-
 /**
- * Manages animation-sequence playback (PLY sequence or GSAF).
+ * Manages animation-sequence playback (PLY sequence).
  *
  * A sequence is rendered by a single persistent Splat element whose gaussian data
  * is swapped in place each frame (Splat.replaceData). This keeps the user's
@@ -159,10 +129,6 @@ const registerSequenceEvents = (events: Events, scene: Scene) => {
 
     events.on('sequence.setPlyFrames', (files: File[]) => {
         setSource(new PlyFrameSource(files, scene));
-    });
-
-    events.on('sequence.setGsafReader', (reader: GsafReader) => {
-        setSource(new GsafFrameSource(reader, scene));
     });
 
     events.on('timeline.frame', async (frame: number) => {

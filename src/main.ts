@@ -9,12 +9,12 @@ import { registerEditorEvents } from './editor';
 import { Events } from './events';
 import { initFileHandler } from './file-handler';
 import { registerIframeApi } from './iframe-api';
-import { registerPlySequenceEvents } from './ply-sequence';
 import { registerPublishEvents } from './publish';
 import { registerRenderEvents } from './render';
 import { Scene } from './scene';
 import { getSceneConfig } from './scene-config';
 import { registerSelectionEvents } from './selection';
+import { registerSequenceEvents } from './sequence';
 import { ShortcutManager } from './shortcut-manager';
 import { registerTimelineEvents } from './timeline';
 import { BoxSelection } from './tools/box-selection';
@@ -104,7 +104,6 @@ const main = async () => {
     registerCameraPosesEvents(events);
     registerTrackManagerEvents(events);
     registerTransformHandlerEvents(events);
-    registerPlySequenceEvents(events);
     registerPublishEvents(events);
     registerIframeApi(events);
 
@@ -251,6 +250,7 @@ const main = async () => {
     // register events that need scene or other dependencies
     registerEditorEvents(events, editHistory, scene);
     registerSelectionEvents(events, scene);
+    registerSequenceEvents(events, scene);
     registerDocEvents(scene, events);
     registerRenderEvents(scene, events);
     initFileHandler(scene, events, editorUI.appContainer.dom);

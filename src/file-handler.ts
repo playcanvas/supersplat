@@ -309,7 +309,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
 
         if (isPlySequence(filenames)) {
             // handle ply sequence
-            events.fire('plysequence.setFrames', files.map(f => f.contents));
+            events.fire('sequence.setPlyFrames', files.map(f => f.contents));
             events.fire('timeline.frame', 0);
         } else if (isSog(filenames) || isLcc(filenames)) {
             if (isLcc(filenames)) {
@@ -475,7 +475,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                         }
                     }
                 }
-                events.fire('plysequence.setFrames', files);
+                events.fire('sequence.setPlyFrames', files);
                 events.fire('timeline.frame', 0);
             }
         } catch (error) {

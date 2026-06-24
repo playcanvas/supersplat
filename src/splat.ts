@@ -204,20 +204,20 @@ class Splat extends Element {
     // frame, so the timeout never matters.
     private waitForRender(): Promise<void> {
         return new Promise((resolve) => {
+            // single finish() removes the listener and clears the timeout, so the
+            // common case (postrender fires first) doesn't leave a pending timer.
+            const handles: { off?: { off: () => void }, timer?: ReturnType<typeof setTimeout> } = {};
             let settled = false;
-            const off = this.scene.events.on('postrender', () => {
+            const finish = () => {
                 if (settled) return;
                 settled = true;
-                off.off();
+                handles.off?.off();
+                clearTimeout(handles.timer);
                 resolve();
-            });
-            // safety: a stalled timeout callback no-ops if postrender already fired
-            setTimeout(() => {
-                if (settled) return;
-                settled = true;
-                off.off();
-                resolve();
-            }, 200);
+            };
+            handles.off = this.scene.events.on('postrender', finish);
+            // safety: don't block frame swapping forever if the render loop is stalled
+            handles.timer = setTimeout(finish, 200);
         });
     }
 

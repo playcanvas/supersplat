@@ -62,7 +62,7 @@ class PolygonSelection {
             // wait for selection to complete
             await events.invoke(
                 'select.byMask',
-                e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
+                (e.shiftKey && e.ctrlKey) ? 'intersect' : e.shiftKey ? 'add' : e.ctrlKey ? 'remove' : 'set',
                 canvas,
                 context
             );

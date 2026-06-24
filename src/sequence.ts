@@ -83,6 +83,12 @@ const registerSequenceEvents = (events: Events, scene: Scene) => {
         }
     };
 
+    // release an asset whose load was abandoned (source switched mid-load)
+    const discardAsset = (asset: Asset) => {
+        asset.registry?.remove(asset);
+        asset.unload();
+    };
+
     const setSource = (newSource: FrameSource) => {
         source?.destroy();
         source = newSource;
@@ -117,12 +123,19 @@ const registerSequenceEvents = (events: Events, scene: Scene) => {
         }
 
         loading = true;
+        const loadSource = source;
         try {
             const data = await source.getFrame(frame);
-            // applyFrame swaps data in place; replaceData keeps the previous frame
-            // on screen until the new one has rendered, so no extra wait is needed
-            await applyFrame(data);
-            currentFrame = frame;
+            if (source !== loadSource) {
+                // source was switched (or the scene cleared) while loading — discard
+                // this frame's asset rather than applying a stale one
+                discardAsset(data.asset);
+            } else {
+                // applyFrame swaps data in place; replaceData keeps the previous frame
+                // on screen until the new one has rendered, so no extra wait is needed
+                await applyFrame(data);
+                currentFrame = frame;
+            }
         } catch (error) {
             console.error(error);
         } finally {
@@ -177,10 +190,16 @@ const registerSequenceEvents = (events: Events, scene: Scene) => {
 
         loadingPromise = (async () => {
             loading = true;
+            const loadSource = source;
             try {
                 const data = await source.getFrame(frame);
-                await applyFrame(data);
-                currentFrame = frame;
+                if (source !== loadSource) {
+                    // source switched / scene cleared mid-load — discard the asset
+                    discardAsset(data.asset);
+                } else {
+                    await applyFrame(data);
+                    currentFrame = frame;
+                }
             } finally {
                 loading = false;
                 loadingPromise = null;

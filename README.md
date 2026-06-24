@@ -110,6 +110,16 @@ To initialize a local development environment for SuperSplat Viewer, ensure you 
 
 4. Open your browser at http://localhost:3000.
 
+### Debug engine build
+
+By default the viewer links against the release build of the PlayCanvas engine. Set `ENGINE=debug` to link against the engine's debug build instead, which includes runtime assertions and unminified, readable source for easier debugging:
+
+```sh
+ENGINE=debug npm run develop
+```
+
+This also works with `npm run build` and `npm run watch`.
+
 ## Settings Schema
 
 The `settings.json` file uses the schema below (defined in TypeScript and exported from `@playcanvas/supersplat-viewer/settings`). Legacy v1 settings produced by older SuperSplat releases are automatically migrated to v2 on load.

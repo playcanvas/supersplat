@@ -416,8 +416,8 @@ class Viewer {
                 };
 
                 gsplat.splatBudget = budget() * 1000000;
-                gsplat.lodRangeMin = 0;
-                gsplat.lodRangeMax = 1000;
+                gsplatComponent.lodRangeMin = 0;
+                gsplatComponent.lodRangeMax = 1000;
                 gsplat.colorUpdateAngle = state.performanceMode ? 4 : 2;
                 gsplat.minContribution = 1;
                 gsplat.alphaClip = 1 / 255;
@@ -432,7 +432,7 @@ class Viewer {
                 const resource = results[0].gsplat.resource as GSplatOctreeResourceLike | null;
                 const lodLevels = resource?.octree?.lodLevels;
                 if (lodLevels) {
-                    gsplat.lodRangeMax = gsplat.lodRangeMin = lodLevels - 1;
+                    gsplatComponent.lodRangeMax = gsplatComponent.lodRangeMin = lodLevels - 1;
                 }
             }
 

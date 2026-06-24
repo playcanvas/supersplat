@@ -84,7 +84,7 @@ class Splat extends Element {
         // create the entity once. its transform persists across frame swaps so
         // an animated sequence can replace its data without losing the user's
         // transform (see replaceData).
-        this.entity = new Entity('splatEntitiy');
+        this.entity = new Entity('splatEntity');
 
         this.selectionBoundStorage = new BoundingBox();
 
@@ -243,7 +243,7 @@ class Splat extends Element {
         const rotation = oldEntity.getLocalRotation().clone();
         const scale = oldEntity.getLocalScale().clone();
 
-        this.entity = new Entity('splatEntitiy');
+        this.entity = new Entity('splatEntity');
         this.entity.setLocalPosition(position);
         this.entity.setLocalRotation(rotation);
         this.entity.setLocalScale(scale);

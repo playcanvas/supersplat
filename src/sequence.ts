@@ -88,6 +88,16 @@ const registerSequenceEvents = (events: Events, scene: Scene) => {
         source = newSource;
         currentFrame = -1;
         nextFrame = -1;
+
+        // tear down the previous sequence's splat so the new source's first frame
+        // is bound as an initial load (applying its rotation/name) rather than
+        // swapped onto the old element
+        if (splat) {
+            scene.remove(splat);
+            splat.destroy();
+            splat = null;
+        }
+
         events.fire('timeline.frames', source.frameCount);
     };
 

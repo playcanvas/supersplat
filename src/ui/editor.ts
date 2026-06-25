@@ -1,5 +1,5 @@
 import { Container, Label } from '@playcanvas/pcui';
-import { Mat4, path, Vec3 } from 'playcanvas';
+import { Mat4, Vec3 } from 'playcanvas';
 
 import { DataPanel } from './data-panel';
 import { Events } from '../events';
@@ -16,6 +16,8 @@ import { Popup, ShowOptions } from './popup';
 import { Progress } from './progress';
 import { PublishSettingsDialog } from './publish-settings-dialog';
 import { RightToolbar } from './right-toolbar';
+import { getRenderFilename } from '../render-filename';
+import type { Splat } from '../splat';
 import { ScenePanel } from './scene-panel';
 import { ShortcutsPopup } from './shortcuts-popup';
 import { Spinner } from './spinner';
@@ -30,8 +32,9 @@ import { version } from '../../package.json';
 // ts compiler and vscode find this type, but eslint does not
 type FilePickerAcceptType = unknown;
 
-const removeExtension = (filename: string) => {
-    return filename.substring(0, filename.length - path.getExtension(filename).length);
+const getSceneRenderFilename = (events: Events, extension: string) => {
+    const splats = events.invoke('scene.allSplats') as Splat[];
+    return getRenderFilename(splats, extension);
 };
 
 class EditorUI {
@@ -249,7 +252,39 @@ class EditorUI {
             const imageSettings = await imageSettingsDialog.show();
 
             if (imageSettings) {
-                await events.invoke('render.image', imageSettings);
+                try {
+                    const suggestedName = getSceneRenderFilename(events, '.png');
+                    let writable;
+                    let fileHandle: FileSystemFileHandle | undefined;
+
+                    if (window.showSaveFilePicker) {
+                        fileHandle = await window.showSaveFilePicker({
+                            id: 'SuperSplatImageFileExport',
+                            types: [{
+                                description: 'PNG Image',
+                                accept: { 'image/png': ['.png'] }
+                            }],
+                            suggestedName
+                        });
+                        writable = await fileHandle.createWritable();
+                    }
+
+                    const result = await events.invoke('render.image', imageSettings, writable);
+
+                    if (result === false && fileHandle?.remove) {
+                        await fileHandle.remove();
+                    }
+                } catch (error) {
+                    if (error instanceof DOMException && error.name === 'AbortError') {
+                        return;
+                    }
+
+                    await events.invoke('showPopup', {
+                        type: 'error',
+                        header: 'Failed to render image',
+                        message: `'${error.message ?? error}'`
+                    });
+                }
             }
         });
 
@@ -257,10 +292,7 @@ class EditorUI {
             const videoSettings = await videoSettingsDialog.show();
 
             if (videoSettings) {
-
                 try {
-                    const docName = events.invoke('doc.name');
-
                     // Determine file extension and mime type based on format
                     let fileExtension: string;
                     let filePickerTypes: FilePickerAcceptType[];
@@ -300,8 +332,7 @@ class EditorUI {
                         }];
                     }
 
-                    const suggested = `${removeExtension(docName ?? 'supersplat')}${fileExtension}`;
-
+                    const suggestedName = getSceneRenderFilename(events, fileExtension);
                     let writable;
                     let fileHandle: FileSystemFileHandle | undefined;
 
@@ -309,7 +340,7 @@ class EditorUI {
                         fileHandle = await window.showSaveFilePicker({
                             id: 'SuperSplatVideoFileExport',
                             types: filePickerTypes,
-                            suggestedName: suggested
+                            suggestedName
                         });
 
                         writable = await fileHandle.createWritable();

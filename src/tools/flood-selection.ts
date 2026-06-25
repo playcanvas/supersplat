@@ -10,6 +10,8 @@ const BLUE = 2;
 const ALPHA = 3;
 const PIXEL = 4;
 
+const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
+
 class FloodSelection {
     activate: () => void;
     deactivate: () => void;
@@ -22,6 +24,7 @@ class FloodSelection {
         let threshold = 0.2;
         let point: Pt;
         let imageData: ImageData;
+        let lastOp: 'set' | 'add' | 'remove' | null = null;
 
         // ui
         const selectToolbar = new Container({
@@ -100,9 +103,32 @@ class FloodSelection {
             context.putImageData(imageData, 0, 0);
         };
 
+        const syncThreshold = async () => {
+            threshold = clamp01(thresholdInput.value ?? threshold);
+            if (!point || !lastOp) return;
+            await refreshSelection();
+            await apply(lastOp);
+            context.clearRect(0, 0, canvas.width, canvas.height);
+        };
+
+        const bindThresholdInput = () => {
+            const input = thresholdInput.dom.querySelector('input');
+            if (input) {
+                input.addEventListener('input', () => {
+                    syncThreshold().catch(() => {});
+                });
+            }
+        };
+
         thresholdInput.on('change', () => {
-            threshold = thresholdInput.value;
+            syncThreshold().catch(() => {});
         });
+
+        thresholdInput.on('input', () => {
+            syncThreshold().catch(() => {});
+        });
+
+        bindThresholdInput();
 
         const isPrimary = (e: PointerEvent) => {
             return e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary;
@@ -131,7 +157,8 @@ class FloodSelection {
 
                 await refreshSelection();
 
-                await apply(e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'));
+                lastOp = e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set');
+                await apply(lastOp);
 
                 context.clearRect(0, 0, canvas.width, canvas.height);
             }

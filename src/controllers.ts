@@ -224,51 +224,35 @@ class PointerController {
             }
         };
 
-        // Distinguish a physical mouse wheel from a trackpad two-finger
-        // scroll. A single wheel event is unreliable (Magic Mouse, hi-res
-        // mice, and macOS Shift-remapping all confuse per-event heuristics),
-        // so we classify on the first event of a burst and let the rest of
-        // the burst inherit that label. A burst is a run of wheel events
-        // separated by less than BURST_GAP_MS - trackpads stream at ~60Hz
-        // (~16ms), wheels emit one event per notch (typically >>50ms apart).
-        const BURST_GAP_MS = 80;
-        let lastWheelTime = -Infinity;
-        let burstIsWheel = false;
+        // A physical mouse wheel and a trackpad two-finger swipe are
+        // indistinguishable from their wheel-event deltas alone - every
+        // per-event heuristic (wheelDelta % 120, deltaMode, fractional or
+        // diagonal deltas) misfires on hi-res mice and in momentum tails
+        // (see issue #919). The one reliable trackpad signal the platform
+        // gives us is the macOS-synthesized pinch: a wheel event with
+        // ctrlKey set while the physical Ctrl key is *not* held. So we no
+        // longer classify the device and instead drive everything from
+        // modifier keys, treating a bare scroll as zoom regardless of device:
+        //
+        // | Input                       | Action |
+        // |-----------------------------|--------|
+        // | Bare scroll (wheel / swipe) | zoom   |
+        // | Pinch (synthetic Ctrl)      | zoom   |
+        // | Physical Ctrl + scroll      | orbit  |
+        // | Shift + scroll              | pan    |
 
-        const classifyWheel = (event: WheelEvent) => {
-            // Firefox: physical wheels report line/page mode; trackpads report
-            // pixel mode. Firefox doesn't expose wheelDelta* so this is the
-            // only reliable signal on Firefox.
-            if (event.deltaMode !== WheelEvent.DOM_DELTA_PIXEL) {
-                return true;
-            }
-            // Chrome / Safari: the non-standard wheelDelta{X,Y} properties
-            // preserve the raw wheel-tick value (always multiples of ±120 per
-            // notch) regardless of macOS scroll smoothing applied to
-            // delta{X,Y}. Trackpads and Magic Mouse emit arbitrary values
-            // that are essentially never aligned to 120.
-            const e = event as WheelEvent & { wheelDeltaX?: number, wheelDeltaY?: number };
-            if (typeof e.wheelDeltaY === 'number' && e.wheelDeltaY !== 0) {
-                return e.wheelDeltaY % 120 === 0;
-            }
-            if (typeof e.wheelDeltaX === 'number' && e.wheelDeltaX !== 0) {
-                return e.wheelDeltaX % 120 === 0;
-            }
-            // Last-resort fallback for browsers without wheelDelta*.
-            const { deltaX, deltaY } = event;
-            if (deltaX !== 0 && deltaY !== 0) {
-                return false;
-            }
-            return Number.isInteger(deltaX) && Number.isInteger(deltaY);
+        // Track the physical Ctrl key so we can tell a real Ctrl+scroll
+        // (orbit) from a macOS pinch (zoom). Listeners live on window so they
+        // fire regardless of which element currently has focus.
+        let ctrlDown = false;
+        const keydown = (event: KeyboardEvent) => {
+            if (event.key === 'Control') ctrlDown = true;
+        };
+        const keyup = (event: KeyboardEvent) => {
+            if (event.key === 'Control') ctrlDown = false;
         };
 
         const wheel = (event: WheelEvent) => {
-            const now = performance.now();
-            if (now - lastWheelTime > BURST_GAP_MS) {
-                burstIsWheel = classifyWheel(event);
-            }
-            lastWheelTime = now;
-
             const { deltaX, deltaY } = event;
 
             // Some browsers (notably Safari/Firefox on macOS) remap a vertical
@@ -278,22 +262,33 @@ class PointerController {
             // zoom / fly movement.
             const wheelDelta = event.shiftKey && deltaY === 0 ? deltaX : deltaY;
 
+            // Synthetic Ctrl (macOS/Magic Mouse pinch) or Cmd: fine zoom.
+            // Physical Ctrl held down: orbit.
+            const isPinch = (event.ctrlKey && !ctrlDown) || event.metaKey;
+            const isOrbit = event.ctrlKey && ctrlDown;
+
             if (camera.controlMode === 'fly') {
-                // Fly mode: wheel moves forward/backward by moving focal point
-                const factor = camera.flySpeed * 0.01;
-                const worldTransform = camera.mainCamera.getWorldTransform();
-                const zAxis = worldTransform.getZ();
-                moveVec.copy(zAxis).mulScalar(wheelDelta * factor);
-                const p = camera.focalPoint.add(moveVec);
-                camera.setFocalPoint(p);
-            } else if (burstIsWheel) {
-                zoom(wheelDelta * -0.002);
-            } else if (event.ctrlKey || event.metaKey) {
-                zoom(deltaY * -0.02);
+                if (isOrbit) {
+                    look(deltaX, deltaY);
+                } else if (event.shiftKey) {
+                    pan(event.offsetX, event.offsetY, deltaX, deltaY);
+                } else {
+                    // Bare scroll / pinch: move focal point forward/backward
+                    const factor = camera.flySpeed * 0.01;
+                    const worldTransform = camera.mainCamera.getWorldTransform();
+                    const zAxis = worldTransform.getZ();
+                    moveVec.copy(zAxis).mulScalar(wheelDelta * factor);
+                    const p = camera.focalPoint.add(moveVec);
+                    camera.setFocalPoint(p);
+                }
+            } else if (isOrbit) {
+                orbit(deltaX, deltaY);
             } else if (event.shiftKey) {
                 pan(event.offsetX, event.offsetY, deltaX, deltaY);
+            } else if (isPinch) {
+                zoom(deltaY * -0.02);
             } else {
-                orbit(deltaX, deltaY);
+                zoom(wheelDelta * -0.002);
             }
 
             event.preventDefault();
@@ -334,6 +329,7 @@ class PointerController {
             flyUp = false;
             fastDown = false;
             slowDown = false;
+            ctrlDown = false;
         };
 
         // Helper to switch to fly mode when a fly key is pressed
@@ -450,8 +446,19 @@ class PointerController {
         wrap(target, 'dblclick', dblclick);
         wrap(window, 'blur', clearAllKeys);
 
+        // Registered directly (not via wrap) so physical-Ctrl tracking
+        // doesn't fire camera.controller on every keystroke. Capture phase
+        // ensures we see Ctrl keydown/keyup even when a focused UI element
+        // (dialogs, popups) calls stopPropagation() on key events - otherwise
+        // ctrlDown could go stale and a real Ctrl+wheel would be misread as a
+        // synthetic-Ctrl pinch.
+        window.addEventListener('keydown', keydown, { capture: true });
+        window.addEventListener('keyup', keyup, { capture: true });
+
         this.destroy = () => {
             destroy?.();
+            window.removeEventListener('keydown', keydown, { capture: true });
+            window.removeEventListener('keyup', keyup, { capture: true });
             events.off('camera.fly.forward', onFlyForward);
             events.off('camera.fly.backward', onFlyBackward);
             events.off('camera.fly.left', onFlyLeft);

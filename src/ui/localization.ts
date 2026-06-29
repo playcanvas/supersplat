@@ -42,6 +42,11 @@ class Localization {
 
     private updaters = new Set<() => void>();
 
+    // localStorage key i18next's detector reads. We write it ONLY on an explicit
+    // user choice (see setLanguage), never auto-cached, so its presence reliably
+    // means "the user pinned a language" rather than "detected this time".
+    private readonly storageKey = 'i18nextLng';
+
     /** Initialise i18next. Call once at startup, before building the UI. */
     init() {
         i18next.on('languageChanged', () => this.updaters.forEach(fn => fn()));
@@ -52,12 +57,13 @@ class Localization {
         .init({
             detection: {
                 // `querystring` (?lng=) wins so shareable links keep working.
-                // `localStorage` holds an explicit user choice and takes
+                // `localStorage` holds an EXPLICIT user choice and takes
                 // precedence over the browser locale. `navigator` is the default
-                // when nothing is stored. `caches` writes the active language
-                // back to localStorage when changed via setLanguage().
+                // when nothing is stored. caches:[] disables i18next's automatic
+                // write-back so a stored value only ever means an explicit pick
+                // (setLanguage manages the key itself).
                 order: ['querystring', 'localStorage', 'navigator', 'htmlTag'],
-                caches: ['localStorage']
+                caches: []
             },
             backend: {
                 loadPath: './static/locales/{{lng}}.json'
@@ -85,17 +91,27 @@ class Localization {
     }
 
     /**
-     * Switch language live (no reload). Pass a language code to set it
-     * explicitly (cached to localStorage), or null for "Automatic" — clears the
-     * stored choice and reverts to the browser-detected language.
+     * The explicitly chosen language code, or null when on "Automatic"
+     * (detection-driven). Use this for the selector's default so an untouched
+     * setting reads "Automatic" rather than the detected language.
+     */
+    get storedLanguage(): string | null {
+        return localStorage.getItem(this.storageKey);
+    }
+
+    /**
+     * Switch language live (no reload). Pass a language code to pin it
+     * explicitly (persisted to localStorage), or null for "Automatic" — forgets
+     * the stored choice and reverts to the browser-detected language.
      */
     setLanguage(code: string | null): Promise<unknown> {
         if (code === null) {
-            localStorage.removeItem('i18nextLng');
+            localStorage.removeItem(this.storageKey);
             const detected = i18next.services.languageDetector?.detect();
             const detectedLng = Array.isArray(detected) ? detected[0] : detected;
             return i18next.changeLanguage(detectedLng || 'en');
         }
+        localStorage.setItem(this.storageKey, code);
         return i18next.changeLanguage(code);
     }
 

@@ -52,18 +52,10 @@ class ViewPanel extends Container {
         });
         i18n.bindText(languageLabel, 'panel.view-options.language');
 
-        // resolve the active language to one of our supported codes (the
-        // detected locale may be a region variant, e.g. 'en-US' -> 'en')
-        const activeLanguage = () => {
-            const locale = i18n.locale;
-            return i18n.languages.find(l => l.code === locale)?.code ??
-                i18n.languages.find(l => locale.split('-')[0] === l.code.split('-')[0])?.code ??
-                'en';
-        };
-
         const languageSelection = new SelectInput({
             class: 'view-panel-row-select',
-            defaultValue: activeLanguage()
+            // 'auto' unless the user has explicitly pinned a language
+            defaultValue: i18n.storedLanguage ?? 'auto'
         });
         // 'auto' label follows the language; the per-language names are shown in
         // their native form so they're recognisable regardless of current UI lang

@@ -2,7 +2,7 @@ import { BooleanInput, Button, ColorPicker, Container, Element, Label, SelectInp
 
 import { Pose } from '../camera-poses';
 import { Events } from '../events';
-import { localize } from './localization';
+import { i18n } from './localization';
 import { PublishSettings, UserStatus } from '../publish';
 import { AnimTrack, ExperienceSettings, defaultPostEffectSettings } from '../splat-serialize';
 import sceneExport from './svg/export.svg';
@@ -38,14 +38,16 @@ class PublishSettingsDialog extends Container {
         // header
 
         const headerIcon = createSvg(sceneExport, { id: 'icon' });
-        const headerText = new Label({ id: 'text', text: localize('popup.publish.header') });
+        const headerText = new Label({ id: 'text' });
+        i18n.bindText(headerText, 'popup.publish.header');
         const header = new Container({ id: 'header' });
         header.append(headerIcon);
         header.append(headerText);
 
         // overwrite
 
-        const overwriteLabel = new Label({ class: 'label', text: localize('popup.publish.to') });
+        const overwriteLabel = new Label({ class: 'label' });
+        i18n.bindText(overwriteLabel, 'popup.publish.to');
         const overwriteSelect = new SelectInput({
             class: 'select'
         });
@@ -56,7 +58,8 @@ class PublishSettingsDialog extends Container {
 
         // title
 
-        const titleLabel = new Label({ class: 'label', text: localize('popup.publish.title') });
+        const titleLabel = new Label({ class: 'label' });
+        i18n.bindText(titleLabel, 'popup.publish.title');
         const titleInput = new TextInput({ class: 'text-input' });
         const titleRow = new Container({ class: 'row' });
         titleRow.append(titleLabel);
@@ -64,7 +67,8 @@ class PublishSettingsDialog extends Container {
 
         // description
 
-        const descLabel = new Label({ class: 'label', text: localize('popup.publish.description') });
+        const descLabel = new Label({ class: 'label' });
+        i18n.bindText(descLabel, 'popup.publish.description');
         const descInput = new TextAreaInput({ class: 'text-area' });
         const descRow = new Container({ class: 'row' });
         descRow.append(descLabel);
@@ -72,7 +76,8 @@ class PublishSettingsDialog extends Container {
 
         // override model
 
-        const overrideModelLabel = new Label({ class: 'label', text: localize('popup.publish.override-model') });
+        const overrideModelLabel = new Label({ class: 'label' });
+        i18n.bindText(overrideModelLabel, 'popup.publish.override-model');
         const overrideModelToggle = new BooleanInput({ class: 'boolean', type: 'toggle', value: true });
         const overrideModelRow = new Container({ class: 'row', hidden: true });
         overrideModelRow.append(overrideModelLabel);
@@ -80,7 +85,8 @@ class PublishSettingsDialog extends Container {
 
         // override animation
 
-        const overrideAnimationLabel = new Label({ class: 'label', text: localize('popup.publish.override-animation') });
+        const overrideAnimationLabel = new Label({ class: 'label' });
+        i18n.bindText(overrideAnimationLabel, 'popup.publish.override-animation');
         const overrideAnimationToggle = new BooleanInput({ class: 'boolean', type: 'toggle', value: true });
         const overrideAnimationRow = new Container({ class: 'row', hidden: true });
         overrideAnimationRow.append(overrideAnimationLabel);
@@ -88,7 +94,8 @@ class PublishSettingsDialog extends Container {
 
         // animation
 
-        const animationLabel = new Label({ class: 'label', text: localize('popup.export.animation') });
+        const animationLabel = new Label({ class: 'label' });
+        i18n.bindText(animationLabel, 'popup.export.animation');
         const animationToggle = new BooleanInput({ class: 'boolean', type: 'toggle', value: false });
         const animationRow = new Container({ class: 'row' });
         animationRow.append(animationLabel);
@@ -96,23 +103,25 @@ class PublishSettingsDialog extends Container {
 
         // loop mode
 
-        const loopLabel = new Label({ class: 'label', text: localize('popup.export.loop-mode') });
+        const loopLabel = new Label({ class: 'label' });
+        i18n.bindText(loopLabel, 'popup.export.loop-mode');
         const loopSelect = new SelectInput({
             class: 'select',
-            defaultValue: 'repeat',
-            options: [
-                { v: 'none', t: localize('popup.export.loop-mode.none') },
-                { v: 'repeat', t: localize('popup.export.loop-mode.repeat') },
-                { v: 'pingpong', t: localize('popup.export.loop-mode.pingpong') }
-            ]
+            defaultValue: 'repeat'
         });
+        i18n.bindOptions(loopSelect, () => [
+            { v: 'none', t: i18n.t('popup.export.loop-mode.none') },
+            { v: 'repeat', t: i18n.t('popup.export.loop-mode.repeat') },
+            { v: 'pingpong', t: i18n.t('popup.export.loop-mode.pingpong') }
+        ]);
         const loopRow = new Container({ class: 'row' });
         loopRow.append(loopLabel);
         loopRow.append(loopSelect);
 
         // background color
 
-        const colorLabel = new Label({ class: 'label', text: localize('popup.export.background-color') });
+        const colorLabel = new Label({ class: 'label' });
+        i18n.bindText(colorLabel, 'popup.export.background-color');
         const colorPicker = new ColorPicker({
             class: 'color-picker',
             value: [1, 1, 1, 1]
@@ -123,7 +132,8 @@ class PublishSettingsDialog extends Container {
 
         // generate LODs
 
-        const generateLodsLabel = new Label({ class: 'label', text: localize('popup.publish.generate-lods') });
+        const generateLodsLabel = new Label({ class: 'label' });
+        i18n.bindText(generateLodsLabel, 'popup.publish.generate-lods');
         const generateLodsToggle = new BooleanInput({ class: 'boolean', type: 'toggle', value: false });
         const generateLodsRow = new Container({ class: 'row' });
         generateLodsRow.append(generateLodsLabel);
@@ -131,7 +141,8 @@ class PublishSettingsDialog extends Container {
 
         // fov
 
-        const fovLabel = new Label({ class: 'label', text: localize('popup.export.fov') });
+        const fovLabel = new Label({ class: 'label' });
+        i18n.bindText(fovLabel, 'popup.export.fov');
         const fovSlider = new SliderInput({
             class: 'slider',
             min: 10,
@@ -162,14 +173,14 @@ class PublishSettingsDialog extends Container {
         const footer = new Container({ id: 'footer' });
 
         const cancelButton = new Button({
-            class: 'button',
-            text: localize('popup.publish.cancel')
+            class: 'button'
         });
+        i18n.bindText(cancelButton, 'popup.publish.cancel');
 
         const okButton = new Button({
-            class: 'button',
-            text: localize('popup.publish.ok')
+            class: 'button'
         });
+        i18n.bindText(okButton, 'popup.publish.ok');
 
         footer.append(cancelButton);
         footer.append(okButton);
@@ -267,7 +278,7 @@ class PublishSettingsDialog extends Container {
             const isLargeScene = largeAxes >= 2;
 
             overwriteSelect.options = [{
-                v: '0', t: localize('popup.publish.new-scene')
+                v: '0', t: i18n.t('popup.publish.new-scene')
             }].concat(overwriteList.map((s, i) => ({ v: (i + 1).toString(), t: s })));
 
             overwriteSelect.value = '0';

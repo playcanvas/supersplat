@@ -2,7 +2,7 @@ import { Button, Container, NumericInput, SelectInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { ShortcutManager } from '../shortcut-manager';
-import { localize, formatTooltipWithShortcut } from './localization';
+import { i18n } from './localization';
 import { Tooltips } from './tooltips';
 
 class Ticks extends Container {
@@ -440,12 +440,12 @@ class TimelinePanel extends Container {
 
         // tooltips
         const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
-        const tooltip = (localeKey: string, shortcutId?: string) => {
-            const text = localize(localeKey);
+        const tooltip = (localeKey: string, shortcutId?: string) => () => {
+            const text = i18n.t(localeKey);
             if (shortcutId) {
                 const shortcut = shortcutManager.formatShortcut(shortcutId);
                 if (shortcut) {
-                    return formatTooltipWithShortcut(text, shortcut);
+                    return i18n.formatTooltipWithShortcut(text, shortcut);
                 }
             }
             return text;
@@ -456,9 +456,9 @@ class TimelinePanel extends Container {
         tooltips.register(next, tooltip('tooltip.timeline.next-frame', 'timeline.nextFrame'), 'top');
         tooltips.register(addKey, tooltip('tooltip.timeline.add-key', 'track.addKey'), 'top');
         tooltips.register(removeKey, tooltip('tooltip.timeline.remove-key', 'track.removeKey'), 'top');
-        tooltips.register(speed, localize('tooltip.timeline.frame-rate'), 'top');
-        tooltips.register(frames, localize('tooltip.timeline.total-frames'), 'top');
-        tooltips.register(smoothness, localize('tooltip.timeline.smoothness'), 'top');
+        tooltips.register(speed, () => i18n.t('tooltip.timeline.frame-rate'), 'top');
+        tooltips.register(frames, () => i18n.t('tooltip.timeline.total-frames'), 'top');
+        tooltips.register(smoothness, () => i18n.t('tooltip.timeline.smoothness'), 'top');
     }
 }
 

@@ -56,6 +56,8 @@
     "panel.colors.transparency": "Прозрачность",
     "panel.colors.reset": "Сбросить",
     "panel.view-options": "Параметры просмотра",
+    "panel.view-options.language": "Язык",
+    "panel.view-options.language.auto": "Автоматически",
     "panel.view-options.colors": "Цвета",
     "panel.view-options.background-color": "Цвет фона",
     "panel.view-options.selected-color": "Цвет выделенного",

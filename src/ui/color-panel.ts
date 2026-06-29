@@ -2,7 +2,7 @@ import { ColorPicker, Container, Label, SliderInput } from '@playcanvas/pcui';
 import { Color } from 'playcanvas';
 
 import { Events } from '../events';
-import { localize } from './localization';
+import { i18n } from './localization';
 import { Tooltips } from './tooltips';
 import { SetSplatColorAdjustmentOp } from '../edit-ops';
 import { Splat } from '../splat';
@@ -48,9 +48,9 @@ class ColorPanel extends Container {
         });
 
         const label = new Label({
-            class: 'panel-header-label',
-            text: localize('panel.colors')
+            class: 'panel-header-label'
         });
+        i18n.bindText(label, 'panel.colors');
 
         header.append(icon);
         header.append(label);
@@ -62,9 +62,9 @@ class ColorPanel extends Container {
         });
 
         const tintLabel = new Label({
-            text: localize('panel.colors.tint'),
             class: 'color-panel-row-label'
         });
+        i18n.bindText(tintLabel, 'panel.colors.tint');
 
         const tintPicker = new ColorPicker({
             class: 'color-panel-row-picker',
@@ -81,9 +81,9 @@ class ColorPanel extends Container {
         });
 
         const temperatureLabel = new Label({
-            text: localize('panel.colors.temperature'),
             class: 'color-panel-row-label'
         });
+        i18n.bindText(temperatureLabel, 'panel.colors.temperature');
 
         const temperatureSlider = new MyFancySliderInput({
             class: 'color-panel-row-slider',
@@ -103,9 +103,9 @@ class ColorPanel extends Container {
         });
 
         const saturationLabel = new Label({
-            text: localize('panel.colors.saturation'),
             class: 'color-panel-row-label'
         });
+        i18n.bindText(saturationLabel, 'panel.colors.saturation');
 
         const saturationSlider = new MyFancySliderInput({
             class: 'color-panel-row-slider',
@@ -125,9 +125,9 @@ class ColorPanel extends Container {
         });
 
         const brightnessLabel = new Label({
-            text: localize('panel.colors.brightness'),
             class: 'color-panel-row-label'
         });
+        i18n.bindText(brightnessLabel, 'panel.colors.brightness');
 
         const brightnessSlider = new MyFancySliderInput({
             class: 'color-panel-row-slider',
@@ -147,9 +147,9 @@ class ColorPanel extends Container {
         });
 
         const blackPointLabel = new Label({
-            text: localize('panel.colors.black-point'),
             class: 'color-panel-row-label'
         });
+        i18n.bindText(blackPointLabel, 'panel.colors.black-point');
 
         const blackPointSlider = new MyFancySliderInput({
             class: 'color-panel-row-slider',
@@ -169,9 +169,9 @@ class ColorPanel extends Container {
         });
 
         const whitePointLabel = new Label({
-            text: localize('panel.colors.white-point'),
             class: 'color-panel-row-label'
         });
+        i18n.bindText(whitePointLabel, 'panel.colors.white-point');
 
         const whitePointSlider = new MyFancySliderInput({
             class: 'color-panel-row-slider',
@@ -191,9 +191,9 @@ class ColorPanel extends Container {
         });
 
         const transparencyLabel = new Label({
-            text: localize('panel.colors.transparency'),
             class: 'color-panel-row-label'
         });
+        i18n.bindText(transparencyLabel, 'panel.colors.transparency');
 
         const transparencySlider = new MyFancySliderInput({
             class: 'color-panel-row-slider',
@@ -406,7 +406,7 @@ class ColorPanel extends Container {
         events.on('splat.whitePoint', updateUIFromState);
         events.on('splat.transparency', updateUIFromState);
 
-        tooltips.register(reset, localize('panel.colors.reset'), 'bottom');
+        tooltips.register(reset, () => i18n.t('panel.colors.reset'), 'bottom');
 
         // handle panel visibility
 

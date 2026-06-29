@@ -8,7 +8,7 @@ import { BottomToolbar } from './bottom-toolbar';
 import { ColorPanel } from './color-panel';
 import { ExportPopup } from './export-popup';
 import { ImageSettingsDialog } from './image-settings-dialog';
-import { localize, localizeInit } from './localization';
+import { i18n } from './localization';
 import { Menu } from './menu';
 import { ModeToggle } from './mode-toggle';
 import logo from './playcanvas-logo.png';
@@ -99,7 +99,7 @@ class EditorUI {
             navigator.clipboard.writeText(fullprecision);
 
             const orig = cursorLabel.text;
-            cursorLabel.text = localize('cursor.copied');
+            cursorLabel.text = i18n.t('cursor.copied');
             setTimeout(() => {
                 cursorLabel.text = orig;
             }, 1000);
@@ -171,7 +171,7 @@ class EditorUI {
 
         editorContainer.append(mainContainer);
 
-        tooltips.register(cursorLabel, localize('cursor.click-to-copy'), 'top');
+        tooltips.register(cursorLabel, () => i18n.t('cursor.click-to-copy'), 'top');
 
         // message popup
         const popup = new Popup(tooltips);
@@ -230,8 +230,8 @@ class EditorUI {
             if (!userStatus) {
                 await events.invoke('showPopup', {
                     type: 'error',
-                    header: localize('popup.error'),
-                    message: localize('popup.publish.please-log-in')
+                    header: i18n.t('popup.error'),
+                    message: i18n.t('popup.publish.please-log-in')
                 });
                 return false;
             }

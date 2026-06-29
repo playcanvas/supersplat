@@ -3,7 +3,7 @@ import { Color } from 'playcanvas';
 
 import { Events } from '../events';
 import { ShortcutManager } from '../shortcut-manager';
-import { localize, formatTooltipWithShortcut } from './localization';
+import { i18n } from './localization';
 import { Tooltips } from './tooltips';
 
 class ViewPanel extends Container {
@@ -34,12 +34,52 @@ class ViewPanel extends Container {
         });
 
         const label = new Label({
-            text: localize('panel.view-options'),
             class: 'panel-header-label'
         });
+        i18n.bindText(label, 'panel.view-options');
 
         header.append(icon);
         header.append(label);
+
+        // language
+
+        const languageRow = new Container({
+            class: 'view-panel-row'
+        });
+
+        const languageLabel = new Label({
+            class: 'view-panel-row-label'
+        });
+        i18n.bindText(languageLabel, 'panel.view-options.language');
+
+        // resolve the active language to one of our supported codes (the
+        // detected locale may be a region variant, e.g. 'en-US' -> 'en')
+        const activeLanguage = () => {
+            const locale = i18n.locale;
+            return i18n.languages.find(l => l.code === locale)?.code ??
+                i18n.languages.find(l => locale.split('-')[0] === l.code.split('-')[0])?.code ??
+                'en';
+        };
+
+        const languageSelection = new SelectInput({
+            class: 'view-panel-row-select',
+            defaultValue: activeLanguage()
+        });
+        // 'auto' label follows the language; the per-language names are shown in
+        // their native form so they're recognisable regardless of current UI lang
+        i18n.bindOptions(languageSelection, () => [
+            { v: 'auto', t: i18n.t('panel.view-options.language.auto') },
+            ...i18n.languages.map(l => ({ v: l.code, t: l.name }))
+        ]);
+
+        // switch language live (no reload). a stored choice persists across
+        // sessions; 'auto' clears it and reverts to the browser locale.
+        languageSelection.on('change', (value: string) => {
+            i18n.setLanguage(value === 'auto' ? null : value);
+        });
+
+        languageRow.append(languageLabel);
+        languageRow.append(languageSelection);
 
         // colors
 
@@ -48,9 +88,9 @@ class ViewPanel extends Container {
         });
 
         const clrLabel = new Label({
-            text: localize('panel.view-options.colors'),
             class: 'view-panel-row-label'
         });
+        i18n.bindText(clrLabel, 'panel.view-options.colors');
 
         const clrPickers = new Container({
             class: 'view-panel-row-pickers'
@@ -115,22 +155,22 @@ class ViewPanel extends Container {
         });
 
         const tonemappingLabel = new Label({
-            text: localize('panel.view-options.tonemapping'),
             class: 'view-panel-row-label'
         });
+        i18n.bindText(tonemappingLabel, 'panel.view-options.tonemapping');
 
         const tonemappingSelection = new SelectInput({
             class: 'view-panel-row-select',
-            defaultValue: 'linear',
-            options: [
-                { v: 'linear', t: localize('panel.view-options.tonemapping.linear') },
-                { v: 'neutral', t: localize('panel.view-options.tonemapping.neutral') },
-                { v: 'aces', t: localize('panel.view-options.tonemapping.aces') },
-                { v: 'aces2', t: localize('panel.view-options.tonemapping.aces2') },
-                { v: 'filmic', t: localize('panel.view-options.tonemapping.filmic') },
-                { v: 'hejl', t: localize('panel.view-options.tonemapping.hejl') }
-            ]
+            defaultValue: 'linear'
         });
+        i18n.bindOptions(tonemappingSelection, () => [
+            { v: 'linear', t: i18n.t('panel.view-options.tonemapping.linear') },
+            { v: 'neutral', t: i18n.t('panel.view-options.tonemapping.neutral') },
+            { v: 'aces', t: i18n.t('panel.view-options.tonemapping.aces') },
+            { v: 'aces2', t: i18n.t('panel.view-options.tonemapping.aces2') },
+            { v: 'filmic', t: i18n.t('panel.view-options.tonemapping.filmic') },
+            { v: 'hejl', t: i18n.t('panel.view-options.tonemapping.hejl') }
+        ]);
 
         tonemappingRow.append(tonemappingLabel);
         tonemappingRow.append(tonemappingSelection);
@@ -142,9 +182,9 @@ class ViewPanel extends Container {
         });
 
         const fovLabel = new Label({
-            text: localize('panel.view-options.fov'),
             class: 'view-panel-row-label'
         });
+        i18n.bindText(fovLabel, 'panel.view-options.fov');
 
         const fovSlider = new SliderInput({
             class: 'view-panel-row-slider',
@@ -163,9 +203,9 @@ class ViewPanel extends Container {
         });
 
         const shBandsLabel = new Label({
-            text: localize('panel.view-options.sh-bands'),
             class: 'view-panel-row-label'
         });
+        i18n.bindText(shBandsLabel, 'panel.view-options.sh-bands');
 
         const shBandsSlider = new SliderInput({
             class: 'view-panel-row-slider',
@@ -185,9 +225,9 @@ class ViewPanel extends Container {
         });
 
         const cameraFlySpeedLabel = new Label({
-            text: localize('panel.view-options.fly-speed'),
             class: 'view-panel-row-label'
         });
+        i18n.bindText(cameraFlySpeedLabel, 'panel.view-options.fly-speed');
 
         const cameraFlySpeedSlider = new SliderInput({
             class: 'view-panel-row-slider',
@@ -207,9 +247,9 @@ class ViewPanel extends Container {
         });
 
         const centersSizeLabel = new Label({
-            text: localize('panel.view-options.centers-size'),
             class: 'view-panel-row-label'
         });
+        i18n.bindText(centersSizeLabel, 'panel.view-options.centers-size');
 
         const centersSizeSlider = new SliderInput({
             class: 'view-panel-row-slider',
@@ -228,9 +268,9 @@ class ViewPanel extends Container {
         });
 
         const centersColorLabel = new Label({
-            text: localize('panel.view-options.centers-gaussian-color'),
             class: 'view-panel-row-label'
         });
+        i18n.bindText(centersColorLabel, 'panel.view-options.centers-gaussian-color');
 
         const centersColorToggle = new BooleanInput({
             type: 'toggle',
@@ -248,9 +288,9 @@ class ViewPanel extends Container {
         });
 
         const outlineSelectionLabel = new Label({
-            text: localize('panel.view-options.outline-selection'),
             class: 'view-panel-row-label'
         });
+        i18n.bindText(outlineSelectionLabel, 'panel.view-options.outline-selection');
 
         const outlineSelectionToggle = new BooleanInput({
             type: 'toggle',
@@ -268,9 +308,9 @@ class ViewPanel extends Container {
         });
 
         const showGridLabel = new Label({
-            text: localize('panel.view-options.show-grid'),
             class: 'view-panel-row-label'
         });
+        i18n.bindText(showGridLabel, 'panel.view-options.show-grid');
 
         const showGridToggle = new BooleanInput({
             type: 'toggle',
@@ -288,9 +328,9 @@ class ViewPanel extends Container {
         });
 
         const showBoundLabel = new Label({
-            text: localize('panel.view-options.show-bound'),
             class: 'view-panel-row-label'
         });
+        i18n.bindText(showBoundLabel, 'panel.view-options.show-bound');
 
         const showBoundToggle = new BooleanInput({
             type: 'toggle',
@@ -308,9 +348,9 @@ class ViewPanel extends Container {
         });
 
         const showBoundDimensionsLabel = new Label({
-            text: localize('panel.view-options.show-bound-dimensions'),
             class: 'view-panel-row-label'
         });
+        i18n.bindText(showBoundDimensionsLabel, 'panel.view-options.show-bound-dimensions');
 
         const showBoundDimensionsToggle = new BooleanInput({
             type: 'toggle',
@@ -328,9 +368,9 @@ class ViewPanel extends Container {
         });
 
         const showCameraPosesLabel = new Label({
-            text: localize('panel.view-options.show-camera-poses'),
             class: 'view-panel-row-label'
         });
+        i18n.bindText(showCameraPosesLabel, 'panel.view-options.show-camera-poses');
 
         const showCameraPosesToggle = new BooleanInput({
             type: 'toggle',
@@ -342,6 +382,7 @@ class ViewPanel extends Container {
         showCameraPosesRow.append(showCameraPosesToggle);
 
         this.append(header);
+        this.append(languageRow);
         this.append(clrRow);
         this.append(tonemappingRow);
         this.append(fovRow);
@@ -514,11 +555,11 @@ class ViewPanel extends Container {
         // tooltips
         const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
         const shortcut = shortcutManager.formatShortcut('grid.toggleVisible');
-        tooltips.register(showGridLabel, formatTooltipWithShortcut(localize('panel.view-options.show-grid'), shortcut), 'left');
-        tooltips.register(bgClrPicker, localize('panel.view-options.background-color'), 'left');
-        tooltips.register(selectedClrPicker, localize('panel.view-options.selected-color'), 'top');
-        tooltips.register(unselectedClrPicker, localize('panel.view-options.unselected-color'), 'top');
-        tooltips.register(lockedClrPicker, localize('panel.view-options.locked-color'), 'top');
+        tooltips.register(showGridLabel, () => i18n.formatTooltipWithShortcut(i18n.t('panel.view-options.show-grid'), shortcut), 'left');
+        tooltips.register(bgClrPicker, () => i18n.t('panel.view-options.background-color'), 'left');
+        tooltips.register(selectedClrPicker, () => i18n.t('panel.view-options.selected-color'), 'top');
+        tooltips.register(unselectedClrPicker, () => i18n.t('panel.view-options.unselected-color'), 'top');
+        tooltips.register(lockedClrPicker, () => i18n.t('panel.view-options.locked-color'), 'top');
     }
 }
 

@@ -56,6 +56,8 @@
     "panel.colors.transparency": "透明度",
     "panel.colors.reset": "重置",
     "panel.view-options": "视图选项",
+    "panel.view-options.language": "语言",
+    "panel.view-options.language.auto": "自动",
     "panel.view-options.colors": "颜色",
     "panel.view-options.background-color": "背景颜色",
     "panel.view-options.selected-color": "选中颜色",

@@ -56,6 +56,8 @@
     "panel.colors.transparency": "Transparence",
     "panel.colors.reset": "Réinitialiser",
     "panel.view-options": "Options d'Affichage",
+    "panel.view-options.language": "Langue",
+    "panel.view-options.language.auto": "Automatique",
     "panel.view-options.colors": "Couleurs",
     "panel.view-options.background-color": "Couleur de fond",
     "panel.view-options.selected-color": "Couleur sélectionnée",

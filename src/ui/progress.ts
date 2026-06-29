@@ -1,6 +1,6 @@
 import { Button, Container, Element, Label } from '@playcanvas/pcui';
 
-import { localize } from './localization';
+import { i18n } from './localization';
 
 class Progress extends Container {
     setHeader: (headerText: string) => void;
@@ -39,9 +39,9 @@ class Progress extends Container {
 
         const cancelButton = new Button({
             id: 'cancel-button',
-            text: localize('panel.render.cancel'),
             hidden: true
         });
+        i18n.bindText(cancelButton, 'panel.render.cancel');
 
         cancelButton.on('click', () => {
             if (this.onCancel) this.onCancel();

@@ -221,7 +221,6 @@ const main = async (canvas: HTMLCanvasElement, settingsJson: any, config: Config
 
     const state = observe(events, {
         loaded: false,
-        readyToRender: false,
         performanceMode: storedPerformanceMode !== null ? storedPerformanceMode === 'true' : platform.mobile,
         progress: 0,
         inputMode: platform.mobile ? 'touch' : 'desktop',

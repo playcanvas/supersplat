@@ -155,8 +155,6 @@ class Viewer {
 
     annotations: Annotations;
 
-    forceRenderNextFrame = false;
-
     voxelOverlay: VoxelDebugOverlay | null = null;
 
     meshOverlay: MeshDebugOverlay | null = null;
@@ -200,8 +198,13 @@ class Viewer {
             }
         };
 
-        // disable auto render, we'll render only when camera changes
-        app.autoRender = false;
+        // Render every frame while the scene loads, then switch to on-demand rendering once the
+        // first complete frame is ready (autoRender is disabled in the frame:ready handler below).
+        // Loading progress and the ready transition are both reported via frame:ready, which only
+        // fires when a frame is rendered — so we must render continuously through loading. After
+        // that, rendering is driven on demand by frame:request and camera-change detection. This
+        // mirrors the engine's simple-on-demand gsplat example.
+        app.autoRender = true;
 
         // configure the camera
         this.configureCamera(settings);
@@ -252,15 +255,6 @@ class Viewer {
                 }
             }
 
-            // suppress rendering till we're ready
-            if (!state.readyToRender) {
-                app.renderNextFrame = false;
-            }
-
-            if (this.forceRenderNextFrame) {
-                app.renderNextFrame = true;
-            }
-
             if (app.renderNextFrame) {
                 prevWorld.copy(world);
                 prevProj.copy(proj);
@@ -287,7 +281,7 @@ class Viewer {
             const near = Math.max(dist - boundRadius, far / (1024 * 16));
 
             cameraEntity.camera.farClip = far;
-            cameraEntity.camera.nearClip = near;
+            cameraEntity.camera.nearClip = Math.min(1.0, near);
         };
 
         // handle application update
@@ -445,35 +439,22 @@ class Viewer {
 
             const eventHandler = app.systems.gsplat;
 
-            // idle timer: force continuous rendering until 4s of inactivity
-            let idleTime = 0;
-            this.forceRenderNextFrame = true;
-
-            app.on('update', (dt: number) => {
-                idleTime += dt;
-                this.forceRenderNextFrame = idleTime < 4;
-            });
-
-            events.on('inputEvent', (type: string) => {
-                if (type !== 'interact') {
-                    idleTime = 0;
-                }
-            });
-
-            eventHandler.on('frame:ready', (_camera: CameraComponent, _layer: Layer, ready: boolean, loading: number) => {
-                if (loading > 0 || !ready) {
-                    idleTime = 0;
-                }
+            // Once on demand (autoRender is disabled at ready, below), render when gsplat streaming
+            // produces new data a render would show (new LOD/world-state, pending sort). This also
+            // keeps work-buffer texture lifetime coupled to the submit under app.autoRender = false.
+            eventHandler.on('frame:request', () => {
+                app.renderNextFrame = true;
             });
 
             let current = 0;
             let watermark = 1;
             const readyHandler = (camera: CameraComponent, layer: Layer, ready: boolean, loading: number) => {
                 if (ready && loading === 0) {
-                    // scene is done loading
+                    // scene is done with initial/reveal loading
                     eventHandler.off('frame:ready', readyHandler);
 
-                    state.readyToRender = true;
+                    // switch to on-demand rendering (frame:request + camera-change detection)
+                    app.autoRender = false;
 
                     // handle quality mode changes
                     events.on('performanceMode:changed', applyPerfSettings);

@@ -68,8 +68,7 @@ class MeasureTool {
         svg.appendChild(lineEnd);
 
         // ui
-        const lengthLabel = new Label({
-        });
+        const lengthLabel = new Label();
         i18n.bindText(lengthLabel, 'measure.length');
 
         const lengthInput = new NumericInput({

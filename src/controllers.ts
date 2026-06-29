@@ -447,14 +447,18 @@ class PointerController {
         wrap(window, 'blur', clearAllKeys);
 
         // Registered directly (not via wrap) so physical-Ctrl tracking
-        // doesn't fire camera.controller on every keystroke.
-        window.addEventListener('keydown', keydown);
-        window.addEventListener('keyup', keyup);
+        // doesn't fire camera.controller on every keystroke. Capture phase
+        // ensures we see Ctrl keydown/keyup even when a focused UI element
+        // (dialogs, popups) calls stopPropagation() on key events - otherwise
+        // ctrlDown could go stale and a real Ctrl+wheel would be misread as a
+        // synthetic-Ctrl pinch.
+        window.addEventListener('keydown', keydown, { capture: true });
+        window.addEventListener('keyup', keyup, { capture: true });
 
         this.destroy = () => {
             destroy?.();
-            window.removeEventListener('keydown', keydown);
-            window.removeEventListener('keyup', keyup);
+            window.removeEventListener('keydown', keydown, { capture: true });
+            window.removeEventListener('keyup', keyup, { capture: true });
             events.off('camera.fly.forward', onFlyForward);
             events.off('camera.fly.backward', onFlyBackward);
             events.off('camera.fly.left', onFlyLeft);

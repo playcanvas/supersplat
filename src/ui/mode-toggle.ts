@@ -1,7 +1,7 @@
 import { Container, Element, Label } from '@playcanvas/pcui';
 
 import { Events } from '../events';
-import { localize } from './localization';
+import { i18n } from './localization';
 import centersSvg from './svg/centers.svg';
 import ringsSvg from './svg/rings.svg';
 import { Tooltips } from './tooltips';
@@ -32,14 +32,14 @@ class ModeToggle extends Container {
         });
 
         const centersText = new Label({
-            id: 'centers-text',
-            text: localize('panel.mode.centers')
+            id: 'centers-text'
         });
+        i18n.bindText(centersText, 'panel.mode.centers');
 
         const ringsText = new Label({
-            id: 'rings-text',
-            text: localize('panel.mode.rings')
+            id: 'rings-text'
         });
+        i18n.bindText(ringsText, 'panel.mode.rings');
 
         this.append(centersIcon);
         this.append(ringsIcon);
@@ -57,7 +57,7 @@ class ModeToggle extends Container {
             this.class[mode === 'rings' ? 'add' : 'remove']('rings-mode');
         });
 
-        tooltips.register(this, localize('tooltip.right-toolbar.splat-mode'));
+        tooltips.register(this, () => i18n.t('tooltip.right-toolbar.splat-mode'));
     }
 }
 

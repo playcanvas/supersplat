@@ -2,7 +2,7 @@ import { BooleanInput, Button, Container, Element, Label, NumericInput, SelectIn
 
 import { Events } from '../events';
 import { ImageSettings } from '../render';
-import { localize } from './localization';
+import { i18n } from './localization';
 import sceneExport from './svg/export.svg';
 
 const createSvg = (svgString: string, args = {}) => {
@@ -36,32 +36,35 @@ class ImageSettingsDialog extends Container {
         // header
 
         const headerIcon = createSvg(sceneExport, { id: 'icon' });
-        const headerText = new Label({ id: 'text', text: localize('popup.render-image.header').toUpperCase() });
+        const headerText = new Label({ id: 'text' });
+        i18n.bindText(headerText, () => i18n.t('popup.render-image.header').toUpperCase());
         const header = new Container({ id: 'header' });
         header.append(headerIcon);
         header.append(headerText);
 
         // preset
 
-        const presetLabel = new Label({ class: 'label', text: localize('popup.render-image.preset') });
+        const presetLabel = new Label({ class: 'label' });
+        i18n.bindText(presetLabel, 'popup.render-image.preset');
         const presetSelect = new SelectInput({
             class: 'select',
-            defaultValue: 'viewport',
-            options: [
-                { v: 'viewport', t: localize('popup.render-image.resolution-current') },
-                { v: 'HD', t: 'HD' },
-                { v: 'QHD', t: 'QHD' },
-                { v: '4K', t: '4K' },
-                { v: 'custom', t: localize('popup.render-image.resolution-custom') }
-            ]
+            defaultValue: 'viewport'
         });
+        i18n.bindOptions(presetSelect, () => [
+            { v: 'viewport', t: i18n.t('popup.render-image.resolution-current') },
+            { v: 'HD', t: 'HD' },
+            { v: 'QHD', t: 'QHD' },
+            { v: '4K', t: '4K' },
+            { v: 'custom', t: i18n.t('popup.render-image.resolution-custom') }
+        ]);
         const presetRow = new Container({ class: 'row' });
         presetRow.append(presetLabel);
         presetRow.append(presetSelect);
 
         // resolution
 
-        const resolutionLabel = new Label({ class: 'label', text: localize('popup.render-image.resolution') });
+        const resolutionLabel = new Label({ class: 'label' });
+        i18n.bindText(resolutionLabel, 'popup.render-image.resolution');
         const resolutionValue = new VectorInput({
             class: 'vector-input',
             dimensions: 2,
@@ -76,7 +79,8 @@ class ImageSettingsDialog extends Container {
 
         // transparent background
 
-        const transparentBgLabel = new Label({ class: 'label', text: localize('popup.render-image.transparent-bg') });
+        const transparentBgLabel = new Label({ class: 'label' });
+        i18n.bindText(transparentBgLabel, 'popup.render-image.transparent-bg');
         const transparentBgBoolean = new BooleanInput({ class: 'boolean', value: false });
         const transparentBgRow = new Container({ class: 'row' });
         transparentBgRow.append(transparentBgLabel);
@@ -84,7 +88,8 @@ class ImageSettingsDialog extends Container {
 
         // show debug overlays
 
-        const showDebugLabel = new Label({ class: 'label', text: localize('popup.render-image.show-debug') });
+        const showDebugLabel = new Label({ class: 'label' });
+        i18n.bindText(showDebugLabel, 'popup.render-image.show-debug');
         const showDebugBoolean = new BooleanInput({ class: 'boolean', value: false });
         const showDebugRow = new Container({ class: 'row' });
         showDebugRow.append(showDebugLabel);
@@ -103,14 +108,14 @@ class ImageSettingsDialog extends Container {
         const footer = new Container({ id: 'footer' });
 
         const cancelButton = new Button({
-            class: 'button',
-            text: localize('panel.render.cancel')
+            class: 'button'
         });
+        i18n.bindText(cancelButton, 'panel.render.cancel');
 
         const okButton = new Button({
-            class: 'button',
-            text: localize('panel.render.ok')
+            class: 'button'
         });
+        i18n.bindText(okButton, 'panel.render.ok');
 
         footer.append(cancelButton);
         footer.append(okButton);

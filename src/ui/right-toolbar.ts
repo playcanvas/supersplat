@@ -2,7 +2,7 @@ import { Button, Container, Element, Label } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { ShortcutManager } from '../shortcut-manager';
-import { localize, formatTooltipWithShortcut } from './localization';
+import { i18n } from './localization';
 import cameraFrameSelectionSvg from './svg/camera-frame-selection.svg';
 import cameraResetSvg from './svg/camera-reset.svg';
 import centersSvg from './svg/centers.svg';
@@ -99,12 +99,12 @@ class RightToolbar extends Container {
 
         // Helper to compose localized tooltip text with shortcut
         const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
-        const tooltip = (localeKey: string, shortcutId?: string) => {
-            const text = localize(localeKey);
+        const tooltip = (localeKey: string, shortcutId?: string) => () => {
+            const text = i18n.t(localeKey);
             if (shortcutId) {
                 const shortcut = shortcutManager.formatShortcut(shortcutId);
                 if (shortcut) {
-                    return formatTooltipWithShortcut(text, shortcut);
+                    return i18n.formatTooltipWithShortcut(text, shortcut);
                 }
             }
             return text;

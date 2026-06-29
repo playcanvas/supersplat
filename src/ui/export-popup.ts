@@ -1,7 +1,7 @@
 import { BooleanInput, Button, ColorPicker, Container, Element, Label, SelectInput, SliderInput, TextInput } from '@playcanvas/pcui';
 
 import { Pose } from '../camera-poses';
-import { localize } from './localization';
+import { i18n } from './localization';
 import { Events } from '../events';
 import { ExportType, SceneExportOptions } from '../file-handler';
 import { AnimTrack, ExperienceSettings, defaultPostEffectSettings } from '../splat-serialize';
@@ -67,9 +67,9 @@ class ExportPopup extends Container {
         });
 
         const headerText = new Label({
-            id: 'header',
-            text: localize('popup.export.header')
+            id: 'header'
         });
+        i18n.bindText(headerText, 'popup.export.header');
 
         header.append(createSvg(sceneExport, {
             id: 'icon'
@@ -88,25 +88,26 @@ class ExportPopup extends Container {
         });
 
         const viewerTypeLabel = new Label({
-            class: 'label',
-            text: localize('popup.export.type')
+            class: 'label'
         });
+        i18n.bindText(viewerTypeLabel, 'popup.export.type');
 
         const viewerTypeSelect = new SelectInput({
             class: 'select',
-            defaultValue: 'html',
-            options: [
-                { v: 'html', t: localize('popup.export.html') },
-                { v: 'zip', t: localize('popup.export.package') }
-            ]
+            defaultValue: 'html'
         });
+        i18n.bindOptions(viewerTypeSelect, () => [
+            { v: 'html', t: i18n.t('popup.export.html') },
+            { v: 'zip', t: i18n.t('popup.export.package') }
+        ]);
 
         viewerTypeRow.append(viewerTypeLabel);
         viewerTypeRow.append(viewerTypeSelect);
 
         // viewer: animation
 
-        const animationLabel = new Label({ class: 'label', text: localize('popup.export.animation') });
+        const animationLabel = new Label({ class: 'label' });
+        i18n.bindText(animationLabel, 'popup.export.animation');
         const animationToggle = new BooleanInput({ class: 'boolean', type: 'toggle', value: false });
         const animationRow = new Container({ class: 'row' });
         animationRow.append(animationLabel);
@@ -114,16 +115,17 @@ class ExportPopup extends Container {
 
         // viewer: loop mode
 
-        const loopLabel = new Label({ class: 'label', text: localize('popup.export.loop-mode') });
+        const loopLabel = new Label({ class: 'label' });
+        i18n.bindText(loopLabel, 'popup.export.loop-mode');
         const loopSelect = new SelectInput({
             class: 'select',
-            defaultValue: 'repeat',
-            options: [
-                { v: 'none', t: localize('popup.export.loop-mode.none') },
-                { v: 'repeat', t: localize('popup.export.loop-mode.repeat') },
-                { v: 'pingpong', t: localize('popup.export.loop-mode.pingpong') }
-            ]
+            defaultValue: 'repeat'
         });
+        i18n.bindOptions(loopSelect, () => [
+            { v: 'none', t: i18n.t('popup.export.loop-mode.none') },
+            { v: 'repeat', t: i18n.t('popup.export.loop-mode.repeat') },
+            { v: 'pingpong', t: i18n.t('popup.export.loop-mode.pingpong') }
+        ]);
         const loopRow = new Container({ class: 'row' });
         loopRow.append(loopLabel);
         loopRow.append(loopSelect);
@@ -135,9 +137,9 @@ class ExportPopup extends Container {
         });
 
         const colorLabel = new Label({
-            class: 'label',
-            text: localize('popup.export.background-color')
+            class: 'label'
         });
+        i18n.bindText(colorLabel, 'popup.export.background-color');
 
         const colorPicker = new ColorPicker({
             class: 'color-picker',
@@ -154,9 +156,9 @@ class ExportPopup extends Container {
         });
 
         const fovLabel = new Label({
-            class: 'label',
-            text: localize('popup.export.fov')
+            class: 'label'
         });
+        i18n.bindText(fovLabel, 'popup.export.fov');
 
         const fovSlider = new SliderInput({
             class: 'slider',
@@ -176,9 +178,9 @@ class ExportPopup extends Container {
         });
 
         const compressLabel = new Label({
-            class: 'label',
-            text: localize('popup.export.compress-ply')
+            class: 'label'
         });
+        i18n.bindText(compressLabel, 'popup.export.compress-ply');
 
         const compressBoolean = new BooleanInput({
             class: 'boolean',
@@ -195,9 +197,9 @@ class ExportPopup extends Container {
         });
 
         const bandsLabel = new Label({
-            class: 'label',
-            text: localize('popup.export.sh-bands')
+            class: 'label'
         });
+        i18n.bindText(bandsLabel, 'popup.export.sh-bands');
 
         const bandsSlider = new SliderInput({
             class: 'slider',
@@ -217,9 +219,9 @@ class ExportPopup extends Container {
         });
 
         const iterationsLabel = new Label({
-            class: 'label',
-            text: localize('popup.export.iterations')
+            class: 'label'
         });
+        i18n.bindText(iterationsLabel, 'popup.export.iterations');
 
         const iterationsSlider = new SliderInput({
             class: 'slider',
@@ -239,9 +241,9 @@ class ExportPopup extends Container {
         });
 
         const filenameLabel = new Label({
-            class: 'label',
-            text: localize('popup.export.filename')
+            class: 'label'
         });
+        i18n.bindText(filenameLabel, 'popup.export.filename');
 
         const filenameEntry = new TextInput({
             class: 'text-input'
@@ -267,14 +269,14 @@ class ExportPopup extends Container {
         const footer = new Container({ id: 'footer' });
 
         const cancelButton = new Button({
-            class: 'button',
-            text: localize('popup.cancel')
+            class: 'button'
         });
+        i18n.bindText(cancelButton, 'popup.cancel');
 
         const exportButton = new Button({
-            class: 'button',
-            text: localize('popup.export')
+            class: 'button'
         });
+        i18n.bindText(exportButton, 'popup.export');
 
         footer.append(cancelButton);
         footer.append(exportButton);

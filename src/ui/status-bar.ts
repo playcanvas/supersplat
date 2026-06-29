@@ -3,7 +3,7 @@ import { Button, Container, Label } from '@playcanvas/pcui';
 import { Events } from '../events';
 import { ShortcutManager } from '../shortcut-manager';
 import { Splat } from '../splat';
-import { localize, formatInteger, formatTooltipWithShortcut } from './localization';
+import { i18n } from './localization';
 import { Tooltips } from './tooltips';
 
 class StatusBar extends Container {
@@ -20,14 +20,14 @@ class StatusBar extends Container {
 
         // Toggle buttons for panels
         const timelineButton = new Button({
-            class: 'status-bar-toggle',
-            text: localize('status-bar.timeline').toUpperCase()
+            class: 'status-bar-toggle'
         });
+        i18n.bindText(timelineButton, () => i18n.t('status-bar.timeline').toUpperCase());
 
         const splatDataButton = new Button({
-            class: 'status-bar-toggle',
-            text: localize('status-bar.splat-data').toUpperCase()
+            class: 'status-bar-toggle'
         });
+        i18n.bindText(splatDataButton, () => i18n.t('status-bar.splat-data').toUpperCase());
 
         // Panel toggle logic
         const setActivePanel = (panel: string) => {
@@ -50,14 +50,14 @@ class StatusBar extends Container {
             class: 'status-bar-stats'
         });
 
-        const createStat = (labelText: string) => {
+        const createStat = (labelKey: string) => {
             const container = new Container({
                 class: 'status-bar-stat'
             });
             const label = new Label({
-                class: 'status-bar-stat-label',
-                text: labelText
+                class: 'status-bar-stat-label'
             });
+            i18n.bindText(label, labelKey);
             const value = new Label({
                 class: 'status-bar-stat-value',
                 text: '0'
@@ -68,10 +68,10 @@ class StatusBar extends Container {
             return value;
         };
 
-        const splatsValue = createStat(localize('status-bar.splats'));
-        const selectedValue = createStat(localize('status-bar.selected'));
-        const lockedValue = createStat(localize('status-bar.locked'));
-        const deletedValue = createStat(localize('status-bar.deleted'));
+        const splatsValue = createStat('status-bar.splats');
+        const selectedValue = createStat('status-bar.selected');
+        const lockedValue = createStat('status-bar.locked');
+        const deletedValue = createStat('status-bar.deleted');
 
         this.append(timelineButton);
         this.append(splatDataButton);
@@ -79,12 +79,12 @@ class StatusBar extends Container {
 
         // register tooltips
         const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
-        const tooltip = (localeKey: string, shortcutId?: string) => {
-            const text = localize(localeKey);
+        const tooltip = (localeKey: string, shortcutId?: string) => () => {
+            const text = i18n.t(localeKey);
             if (shortcutId) {
                 const shortcut = shortcutManager.formatShortcut(shortcutId);
                 if (shortcut) {
-                    return formatTooltipWithShortcut(text, shortcut);
+                    return i18n.formatTooltipWithShortcut(text, shortcut);
                 }
             }
             return text;
@@ -109,10 +109,10 @@ class StatusBar extends Container {
             if (!splat) return;
             const state = splat.splatData.getProp('state') as Uint8Array;
             if (state) {
-                splatsValue.text = formatInteger(state.length - splat.numDeleted);
-                selectedValue.text = formatInteger(splat.numSelected);
-                lockedValue.text = formatInteger(splat.numLocked);
-                deletedValue.text = formatInteger(splat.numDeleted);
+                splatsValue.text = i18n.formatInteger(state.length - splat.numDeleted);
+                selectedValue.text = i18n.formatInteger(splat.numSelected);
+                lockedValue.text = i18n.formatInteger(splat.numLocked);
+                deletedValue.text = i18n.formatInteger(splat.numDeleted);
             }
         };
 

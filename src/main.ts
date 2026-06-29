@@ -34,7 +34,7 @@ import { registerTrackManagerEvents } from './track-manager';
 import { registerTransformHandlerEvents } from './transform-handler';
 import { BoundDimensionsOverlay } from './ui/bound-dimensions-overlay';
 import { EditorUI } from './ui/editor';
-import { localizeInit } from './ui/localization';
+import { i18n } from './ui/localization';
 
 declare global {
     interface LaunchParams {
@@ -94,7 +94,7 @@ const main = async () => {
     events.function('queue', (fn: () => Promise<void> | void) => commandQueue.enqueue(fn));
 
     // init localization
-    await localizeInit();
+    await i18n.init();
 
     // Configure WebP WASM for SOG format (used for both reading and writing)
     WebPCodec.wasmUrl = new URL('static/lib/webp/webp.wasm', document.baseURI).toString();

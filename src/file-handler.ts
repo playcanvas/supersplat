@@ -7,7 +7,7 @@ import { BrowserFileSystem, MappedReadFileSystem } from './io';
 import { Scene } from './scene';
 import { Splat } from './splat';
 import { serializePly, serializePlyCompressed, SerializeSettings, serializeSog, serializeSplat, serializeViewer, SogSettings, ViewerExportSettings } from './splat-serialize';
-import { localize } from './ui/localization';
+import { i18n } from './ui/localization';
 
 // ts compiler and vscode find this type, but eslint does not
 type FilePickerAcceptType = unknown;
@@ -258,7 +258,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
     const showLoadError = async (message: string, filename: string) => {
         await events.invoke('showPopup', {
             type: 'error',
-            header: localize('popup.error-loading'),
+            header: i18n.t('popup.error-loading'),
             message: `${message} while loading '${filename}'`
         });
     };
@@ -316,7 +316,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                 const response = await events.invoke('showPopup', {
                     type: 'okcancel',
                     header: 'LCC',
-                    message: localize('popup.lcc-upload-warning'),
+                    message: i18n.t('popup.lcc-upload-warning'),
                     link: `${window.location.origin}/upload`
                 });
                 if (response.action === 'cancel') {
@@ -574,7 +574,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         } catch (error) {
             await events.invoke('showPopup', {
                 type: 'error',
-                header: localize('popup.error-loading'),
+                header: i18n.t('popup.error-loading'),
                 message: `${error.message ?? error} while saving file`
             });
         } finally {

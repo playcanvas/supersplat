@@ -2,7 +2,7 @@ import { BooleanInput, Button, Container, Element, Label, SelectInput, VectorInp
 
 import { Events } from '../events';
 import { VideoSettings } from '../render';
-import { localize } from './localization';
+import { i18n } from './localization';
 import sceneExport from './svg/export.svg';
 
 const createSvg = (svgString: string, args = {}) => {
@@ -36,14 +36,16 @@ class VideoSettingsDialog extends Container {
         // header
 
         const headerIcon = createSvg(sceneExport, { id: 'icon' });
-        const headerText = new Label({ id: 'text', text: localize('popup.render-video.header').toUpperCase() });
+        const headerText = new Label({ id: 'text' });
+        i18n.bindText(headerText, () => i18n.t('popup.render-video.header').toUpperCase());
         const header = new Container({ id: 'header' });
         header.append(headerIcon);
         header.append(headerText);
 
         // resolution
 
-        const resolutionLabel = new Label({ class: 'label', text: localize('popup.render-video.resolution') });
+        const resolutionLabel = new Label({ class: 'label' });
+        i18n.bindText(resolutionLabel, 'popup.render-video.resolution');
         const resolutionSelect = new SelectInput({
             class: 'select',
             defaultValue: '1080',
@@ -61,7 +63,8 @@ class VideoSettingsDialog extends Container {
 
         // format
 
-        const formatLabel = new Label({ class: 'label', text: localize('popup.render-video.format') });
+        const formatLabel = new Label({ class: 'label' });
+        i18n.bindText(formatLabel, 'popup.render-video.format');
         const formatSelect = new SelectInput({
             class: 'select',
             defaultValue: 'mp4',
@@ -78,7 +81,8 @@ class VideoSettingsDialog extends Container {
 
         // codec
 
-        const codecLabel = new Label({ class: 'label', text: localize('popup.render-video.codec') });
+        const codecLabel = new Label({ class: 'label' });
+        i18n.bindText(codecLabel, 'popup.render-video.codec');
         const codecSelect = new SelectInput({
             class: 'select',
             defaultValue: 'h264',
@@ -129,7 +133,8 @@ class VideoSettingsDialog extends Container {
 
         // framerate
 
-        const frameRateLabel = new Label({ class: 'label', text: localize('popup.render-video.frame-rate') });
+        const frameRateLabel = new Label({ class: 'label' });
+        i18n.bindText(frameRateLabel, 'popup.render-video.frame-rate');
         const frameRateSelect = new SelectInput({
             class: 'select',
             defaultValue: '30',
@@ -151,7 +156,8 @@ class VideoSettingsDialog extends Container {
 
         // bitrate
 
-        const bitrateLabel = new Label({ class: 'label', text: localize('popup.render-video.bitrate') });
+        const bitrateLabel = new Label({ class: 'label' });
+        i18n.bindText(bitrateLabel, 'popup.render-video.bitrate');
         const bitrateSelect = new SelectInput({
             class: 'select',
             defaultValue: 'high',
@@ -169,16 +175,19 @@ class VideoSettingsDialog extends Container {
         // frame range
 
         const totalFrames = events.invoke('timeline.frames');
-        const frameRangeLabel = new Label({ class: 'label', text: localize('popup.render-video.frame-range') });
+        const frameRangeLabel = new Label({ class: 'label' });
+        i18n.bindText(frameRangeLabel, 'popup.render-video.frame-range');
         const frameRangeInput = new VectorInput({
             class: 'vector-input',
             dimensions: 2,
             min: 0,
             max: totalFrames - 1,
-            placeholder: [localize('popup.render-video.frame-range-first'), localize('popup.render-video.frame-range-last')],
             precision: 0,
             value: [0, totalFrames - 1]
         });
+        i18n.onChange(() => {
+            frameRangeInput.placeholder = [i18n.t('popup.render-video.frame-range-first'), i18n.t('popup.render-video.frame-range-last')];
+        }, frameRangeInput);
         const frameRangeRow = new Container({ class: 'row' });
         frameRangeRow.append(frameRangeLabel);
         frameRangeRow.append(frameRangeInput);
@@ -192,7 +201,8 @@ class VideoSettingsDialog extends Container {
 
         // portrait mode
 
-        const portraitLabel = new Label({ class: 'label', text: localize('popup.render-video.portrait') });
+        const portraitLabel = new Label({ class: 'label' });
+        i18n.bindText(portraitLabel, 'popup.render-video.portrait');
         const portraitBoolean = new BooleanInput({ class: 'boolean', value: false });
         const portraitRow = new Container({ class: 'row' });
         portraitRow.append(portraitLabel);
@@ -200,7 +210,8 @@ class VideoSettingsDialog extends Container {
 
         // transparent background
 
-        const transparentBgLabel = new Label({ class: 'label', text: localize('popup.render-video.transparent-bg') });
+        const transparentBgLabel = new Label({ class: 'label' });
+        i18n.bindText(transparentBgLabel, 'popup.render-video.transparent-bg');
         const transparentBgBoolean = new BooleanInput({ class: 'boolean', value: false });
         const transparentBgRow = new Container({ class: 'row' });
         transparentBgRow.append(transparentBgLabel);
@@ -212,7 +223,8 @@ class VideoSettingsDialog extends Container {
 
         // show debug overlays
 
-        const showDebugLabel = new Label({ class: 'label', text: localize('popup.render-video.show-debug') });
+        const showDebugLabel = new Label({ class: 'label' });
+        i18n.bindText(showDebugLabel, 'popup.render-video.show-debug');
         const showDebugBoolean = new BooleanInput({ class: 'boolean', value: false });
         const showDebugRow = new Container({ class: 'row' });
         showDebugRow.append(showDebugLabel);
@@ -236,14 +248,14 @@ class VideoSettingsDialog extends Container {
         const footer = new Container({ id: 'footer' });
 
         const cancelButton = new Button({
-            class: 'button',
-            text: localize('panel.render.cancel')
+            class: 'button'
         });
+        i18n.bindText(cancelButton, 'panel.render.cancel');
 
         const okButton = new Button({
-            class: 'button',
-            text: localize('panel.render.ok')
+            class: 'button'
         });
+        i18n.bindText(okButton, 'panel.render.ok');
 
         footer.append(cancelButton);
         footer.append(okButton);

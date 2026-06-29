@@ -5,7 +5,7 @@ import { Element } from '../element';
 import { Events } from '../events';
 import { Splat } from '../splat';
 import { Histogram } from './histogram';
-import { localize } from './localization';
+import { i18n } from './localization';
 import { Tooltips } from './tooltips';
 
 // gpu propMode constants. these must match the propMode dispatch in
@@ -168,9 +168,9 @@ class DataPanel extends Container {
         });
 
         const logScaleLabel = new Label({
-            class: 'data-panel-toggle-label',
-            text: localize('panel.splat-data.log-scale')
+            class: 'data-panel-toggle-label'
         });
+        i18n.bindText(logScaleLabel, 'panel.splat-data.log-scale');
 
         const logScaleValue = new BooleanInput({
             type: 'toggle',
@@ -188,9 +188,9 @@ class DataPanel extends Container {
         });
 
         const showAllLabel = new Label({
-            class: 'data-panel-toggle-label',
-            text: localize('panel.splat-data.show-all')
+            class: 'data-panel-toggle-label'
         });
+        i18n.bindText(showAllLabel, 'panel.splat-data.show-all');
 
         const showAllValue = new BooleanInput({
             type: 'toggle',
@@ -208,9 +208,9 @@ class DataPanel extends Container {
         });
 
         const onScreenOnlyLabel = new Label({
-            class: 'data-panel-toggle-label',
-            text: localize('panel.splat-data.on-screen-only')
+            class: 'data-panel-toggle-label'
         });
+        i18n.bindText(onScreenOnlyLabel, 'panel.splat-data.on-screen-only');
 
         const onScreenOnlyValue = new BooleanInput({
             type: 'toggle',
@@ -226,27 +226,27 @@ class DataPanel extends Container {
             // "green", "blue" and HSV here are the final on-screen color (DC
             // + evaluated SH for the current view direction).
             const localizations: any = {
-                x: `${localize('panel.splat-data.position')} X`,
-                y: `${localize('panel.splat-data.position')} Y`,
-                z: `${localize('panel.splat-data.position')} Z`,
-                opacity: localize('panel.splat-data.opacity'),
-                red: localize('panel.splat-data.red'),
-                green: localize('panel.splat-data.green'),
-                blue: localize('panel.splat-data.blue'),
-                scale_0: localize('panel.splat-data.scale-x'),
-                scale_1: localize('panel.splat-data.scale-y'),
-                scale_2: localize('panel.splat-data.scale-z'),
-                rot_0: `${localize('panel.splat-data.quat')} W`,
-                rot_1: `${localize('panel.splat-data.quat')} X`,
-                rot_2: `${localize('panel.splat-data.quat')} Y`,
-                rot_3: `${localize('panel.splat-data.quat')} Z`,
-                distance: localize('panel.splat-data.distance'),
-                'camera-depth': localize('panel.splat-data.camera-depth'),
-                volume: localize('panel.splat-data.volume'),
-                'surface-area': localize('panel.splat-data.surface-area'),
-                hue: localize('panel.splat-data.hue'),
-                saturation: localize('panel.splat-data.saturation'),
-                value: localize('panel.splat-data.value')
+                x: `${i18n.t('panel.splat-data.position')} X`,
+                y: `${i18n.t('panel.splat-data.position')} Y`,
+                z: `${i18n.t('panel.splat-data.position')} Z`,
+                opacity: i18n.t('panel.splat-data.opacity'),
+                red: i18n.t('panel.splat-data.red'),
+                green: i18n.t('panel.splat-data.green'),
+                blue: i18n.t('panel.splat-data.blue'),
+                scale_0: i18n.t('panel.splat-data.scale-x'),
+                scale_1: i18n.t('panel.splat-data.scale-y'),
+                scale_2: i18n.t('panel.splat-data.scale-z'),
+                rot_0: `${i18n.t('panel.splat-data.quat')} W`,
+                rot_1: `${i18n.t('panel.splat-data.quat')} X`,
+                rot_2: `${i18n.t('panel.splat-data.quat')} Y`,
+                rot_3: `${i18n.t('panel.splat-data.quat')} Z`,
+                distance: i18n.t('panel.splat-data.distance'),
+                'camera-depth': i18n.t('panel.splat-data.camera-depth'),
+                volume: i18n.t('panel.splat-data.volume'),
+                'surface-area': i18n.t('panel.splat-data.surface-area'),
+                hue: i18n.t('panel.splat-data.hue'),
+                saturation: i18n.t('panel.splat-data.saturation'),
+                value: i18n.t('panel.splat-data.value')
             };
 
             // "Show All" extras: raw DC coefficients first, then spherical
@@ -254,9 +254,9 @@ class DataPanel extends Container {
             // within-channel index. all filtered by the splat's actual SH band
             // count so we never offer a mode the GPU shader can't decode.
             const extras: any = {
-                f_dc_0: localize('panel.splat-data.dc-red'),
-                f_dc_1: localize('panel.splat-data.dc-green'),
-                f_dc_2: localize('panel.splat-data.dc-blue')
+                f_dc_0: i18n.t('panel.splat-data.dc-red'),
+                f_dc_1: i18n.t('panel.splat-data.dc-green'),
+                f_dc_2: i18n.t('panel.splat-data.dc-blue')
             };
             const shBands = (splat.entity.gsplat.instance.resource as any).shBands ?? 0;
             const numCoeffs = SH_NUM_COEFFS[shBands] ?? 0;
@@ -265,7 +265,7 @@ class DataPanel extends Container {
             for (let i = 0; i < maxFRest; i++) {
                 const channel = channels[Math.floor(i / numCoeffs)];
                 const idx = i % numCoeffs;
-                extras[`f_rest_${i}`] = `${channel} ${localize('panel.splat-data.sh')} ${idx}`;
+                extras[`f_rest_${i}`] = `${channel} ${i18n.t('panel.splat-data.sh')} ${idx}`;
             }
 
             const dataProps = splat.splatData.getElement('vertex').properties.map(p => p.name);
@@ -330,9 +330,9 @@ class DataPanel extends Container {
         // tooltips explain what each toggle actually does. registered on the
         // row containers so the entire row (label + toggle) shares one
         // hover target.
-        tooltips.register(onScreenOnly, localize('tooltip.splat-data.on-screen-only'), 'right');
-        tooltips.register(logScale, localize('tooltip.splat-data.log-scale'), 'right');
-        tooltips.register(showAll, localize('tooltip.splat-data.show-all'), 'right');
+        tooltips.register(onScreenOnly, () => i18n.t('tooltip.splat-data.on-screen-only'), 'right');
+        tooltips.register(logScale, () => i18n.t('tooltip.splat-data.log-scale'), 'right');
+        tooltips.register(showAll, () => i18n.t('tooltip.splat-data.show-all'), 'right');
 
         controlsContainer.append(controls);
 
@@ -362,7 +362,9 @@ class DataPanel extends Container {
         statsCountRow.className = 'histogram-stats-row';
         const statsCountLabel = document.createElement('span');
         statsCountLabel.className = 'histogram-stats-label';
-        statsCountLabel.textContent = `${localize('panel.splat-data.totals.splats')}:`;
+        i18n.onChange(() => {
+            statsCountLabel.textContent = `${i18n.t('panel.splat-data.totals.splats')}:`;
+        });
         const statsCountValue = document.createElement('span');
         statsCountValue.className = 'histogram-stats-value';
         statsCountRow.appendChild(statsCountLabel);
@@ -372,7 +374,9 @@ class DataPanel extends Container {
         statsSelectedRow.className = 'histogram-stats-row';
         const statsSelectedLabel = document.createElement('span');
         statsSelectedLabel.className = 'histogram-stats-label';
-        statsSelectedLabel.textContent = `${localize('panel.splat-data.totals.selected')}:`;
+        i18n.onChange(() => {
+            statsSelectedLabel.textContent = `${i18n.t('panel.splat-data.totals.selected')}:`;
+        });
         const statsSelectedValue = document.createElement('span');
         statsSelectedValue.className = 'histogram-stats-value';
         statsSelectedRow.appendChild(statsSelectedLabel);
@@ -416,6 +420,13 @@ class DataPanel extends Container {
 
         // current splat
         let splat: Splat;
+
+        // rebuild the localized property list when the language changes
+        i18n.onChange(() => {
+            if (splat) {
+                populateDataSelector(splat);
+            }
+        });
 
         let pendingToken = 0;
         let lastGpuMode = 0;

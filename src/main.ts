@@ -1,4 +1,4 @@
-import { WebPCodec } from '@playcanvas/splat-transform';
+import { WebPCodec, WorkerQueue } from '@playcanvas/splat-transform';
 import { Color, createGraphicsDevice } from 'playcanvas';
 
 import { registerCameraPosesEvents } from './camera-poses';
@@ -98,6 +98,12 @@ const main = async () => {
 
     // Configure WebP WASM for SOG format (used for both reading and writing)
     WebPCodec.wasmUrl = new URL('static/lib/webp/webp.wasm', document.baseURI).toString();
+
+    // Run SOG writing inline rather than in worker threads. We don't ship
+    // splat-transform's worker.mjs, so leaving the pool enabled makes it try to
+    // spawn a worker that 404s; under SOG's parallel task load it then hangs
+    // instead of falling back, producing an empty export.
+    WorkerQueue.maxWorkers = 0;
 
     // register events that only need the events object (before UI is created)
     registerTimelineEvents(events);

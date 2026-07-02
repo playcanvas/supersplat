@@ -14,13 +14,18 @@ import {
     Texture
 } from 'playcanvas';
 
-import { vertexShader, fragmentShader } from './shaders/equirect-shader';
+import { faceFov, vertexShader, fragmentShader } from './shaders/equirect-shader';
 
-// renders the six 90° fov cube faces of a panorama to individual 2d textures
-// and projects them to an equirectangular target. face order and the (s, t)
-// bases used by the projection shader are defined together in
-// shaders/equirect-shader.ts.
+// renders the six cube faces of a panorama to individual 2d textures and
+// projects them to an equirectangular target. faces are rendered wider than
+// 90° (see shaders/equirect-shader.ts) so the projection can blend the
+// overlap, feathering away per-face splat shape and sort order differences at
+// face boundaries. face order and the (s, t) bases used by the projection
+// shader are defined together in shaders/equirect-shader.ts.
 class EquirectRenderer {
+    // fov of each face camera in degrees; must match the projection shader
+    static faceFov = faceFov;
+
     // capture-space rotations for the six face cameras: front (-Z), right (+X),
     // back (+Z), left (-X), up (+Y), down (-Y). multiply by the capture
     // orientation to get the world-space face rotation.

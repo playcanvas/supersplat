@@ -431,7 +431,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                         if (cancelled) return;
 
                         qWorld.mul2(qCapture, EquirectRenderer.faceRotations[face]);
-                        scene.camera.setPoseOverride({ position: camPos, rotation: qWorld, fov: 90, near, far });
+                        scene.camera.setPoseOverride({ position: camPos, rotation: qWorld, fov: EquirectRenderer.faceFov, near, far });
 
                         // faces view different directions, so each render must
                         // wait for its own sort

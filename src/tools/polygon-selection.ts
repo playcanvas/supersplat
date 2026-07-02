@@ -117,7 +117,10 @@ class PolygonSelection {
             if (e.key === 'Enter' && points.length > 2) {
                 e.preventDefault();
                 e.stopPropagation();
-                commitSelection(e);
+                // ignore held-key repeats so a single commit runs at a time
+                if (!e.repeat) {
+                    commitSelection(e);
+                }
             }
         };
 

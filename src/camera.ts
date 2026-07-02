@@ -18,6 +18,7 @@ import {
     Color,
     Entity,
     Mat4,
+    Quat,
     Ray,
     RenderPass,
     RenderPassForward,
@@ -103,6 +104,16 @@ class Camera extends Element {
 
     // overridden target size
     targetSizeOverride: { width: number, height: number } = null;
+
+    // when set, overrides the tween-driven pose, fov and clipping planes each
+    // update (used by 360 capture to render arbitrary face orientations that
+    // the azim/elev pose system cannot express)
+    poseOverride: { position: Vec3, rotation: Quat, fov: number, near: number, far: number } | null = null;
+
+    // world transform of the user-facing camera pose. while a pose override
+    // is active this holds the last tween-driven pose, so ui elements (view
+    // cube, overlays) don't track the internal capture poses
+    displayTransform = new Mat4();
 
     renderOverlays = true;
 
@@ -272,6 +283,13 @@ class Camera extends Element {
         this.setFocalPoint(target, dampingFactorFactor);
         this.setAzimElev(azim, elev, dampingFactorFactor);
         this.setDistance(l / this.sceneRadius * this.fovFactor, dampingFactorFactor);
+    }
+
+    // set or clear the pose override and apply it immediately so subsequent
+    // splat sorting and rendering see the new transform
+    setPoseOverride(override: Camera['poseOverride']) {
+        this.poseOverride = override;
+        this.onUpdate(0);
     }
 
     // transform the world space coordinate to normalized screen coordinate
@@ -588,10 +606,22 @@ class Camera extends Element {
             cameraPosition.add(this.focalPointTween.value);
         }
 
-        this.mainCamera.setLocalPosition(cameraPosition);
-        this.mainCamera.setLocalEulerAngles(azimElev.elev, azimElev.azim, 0);
+        if (this.poseOverride) {
+            // cameraRoot has identity transform, so local space is world space
+            const { position, rotation, fov, near, far } = this.poseOverride;
+            this.mainCamera.setLocalPosition(position);
+            this.mainCamera.setLocalRotation(rotation);
+            this.camera.fov = fov;
+            this.near = near;
+            this.far = far;
+        } else {
+            this.mainCamera.setLocalPosition(cameraPosition);
+            this.mainCamera.setLocalEulerAngles(azimElev.elev, azimElev.azim, 0);
 
-        this.fitClippingPlanes(this.mainCamera.getLocalPosition(), this.mainCamera.forward);
+            this.fitClippingPlanes(this.mainCamera.getLocalPosition(), this.mainCamera.forward);
+
+            this.displayTransform.copy(this.mainCamera.getWorldTransform());
+        }
 
         const { camera } = this.mainCamera;
         const { targetSize } = this;

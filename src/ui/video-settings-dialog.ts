@@ -42,20 +42,50 @@ class VideoSettingsDialog extends Container {
         header.append(headerIcon);
         header.append(headerText);
 
+        // projection
+
+        const projectionLabel = new Label({ class: 'label' });
+        i18n.bindText(projectionLabel, 'popup.render-video.projection');
+        const projectionSelect = new SelectInput({
+            class: 'select',
+            defaultValue: 'standard',
+            options: [
+                { v: 'standard', t: 'Standard' },
+                { v: 'equirect', t: '360° Equirectangular' }
+            ]
+        });
+        i18n.bindOptions(projectionSelect, () => [
+            { v: 'standard', t: i18n.t('popup.render-video.projection-standard') },
+            { v: 'equirect', t: i18n.t('popup.render-video.projection-360') }
+        ]);
+        const projectionRow = new Container({ class: 'row' });
+        projectionRow.append(projectionLabel);
+        projectionRow.append(projectionSelect);
+
         // resolution
+
+        const standardResolutions = [
+            { v: '540', t: '960x540' },
+            { v: '720', t: '1280x720' },
+            { v: '1080', t: '1920x1080' },
+            { v: '1440', t: '2560x1440' },
+            { v: '4k', t: '3840x2160' }
+        ];
+
+        // 360 output is 2:1 equirectangular, capped at 4096 wide to stay
+        // within common encoder dimension limits
+        const equirectResolutions = [
+            { v: '360-2k', t: '2048x1024' },
+            { v: '360-4k', t: '3840x1920' },
+            { v: '360-4096', t: '4096x2048' }
+        ];
 
         const resolutionLabel = new Label({ class: 'label' });
         i18n.bindText(resolutionLabel, 'popup.render-video.resolution');
         const resolutionSelect = new SelectInput({
             class: 'select',
             defaultValue: '1080',
-            options: [
-                { v: '540', t: '960x540' },
-                { v: '720', t: '1280x720' },
-                { v: '1080', t: '1920x1080' },
-                { v: '1440', t: '2560x1440' },
-                { v: '4k', t: '3840x2160' }
-            ]
+            options: standardResolutions
         });
         const resolutionRow = new Container({ class: 'row' });
         resolutionRow.append(resolutionLabel);
@@ -208,6 +238,15 @@ class VideoSettingsDialog extends Container {
         portraitRow.append(portraitLabel);
         portraitRow.append(portraitBoolean);
 
+        // level horizon (360 only)
+
+        const levelHorizonLabel = new Label({ class: 'label' });
+        i18n.bindText(levelHorizonLabel, 'popup.render-video.level-horizon');
+        const levelHorizonBoolean = new BooleanInput({ class: 'boolean', value: true });
+        const levelHorizonRow = new Container({ class: 'row' });
+        levelHorizonRow.append(levelHorizonLabel);
+        levelHorizonRow.append(levelHorizonBoolean);
+
         // transparent background
 
         const transparentBgLabel = new Label({ class: 'label' });
@@ -230,9 +269,24 @@ class VideoSettingsDialog extends Container {
         showDebugRow.append(showDebugLabel);
         showDebugRow.append(showDebugBoolean);
 
+        // sync the ui to the selected projection: 360 renders are 2:1
+        // equirectangular without portrait mode or debug overlays
+        const syncProjection = () => {
+            const is360 = projectionSelect.value === 'equirect';
+            resolutionSelect.options = is360 ? equirectResolutions : standardResolutions;
+            resolutionSelect.value = is360 ? '360-4k' : '1080';
+            portraitRow.hidden = is360;
+            showDebugRow.hidden = is360;
+            levelHorizonRow.hidden = !is360;
+        };
+
+        projectionSelect.on('change', syncProjection);
+        syncProjection();
+
         // content
 
         const content = new Container({ id: 'content' });
+        content.append(projectionRow);
         content.append(resolutionRow);
         content.append(formatRow);
         content.append(codecRow);
@@ -240,6 +294,7 @@ class VideoSettingsDialog extends Container {
         content.append(bitrateRow);
         content.append(frameRangeRow);
         content.append(portraitRow);
+        content.append(levelHorizonRow);
         content.append(transparentBgRow);
         content.append(showDebugRow);
 
@@ -310,7 +365,10 @@ class VideoSettingsDialog extends Container {
                         '720': 1280,
                         '1080': 1920,
                         '1440': 2560,
-                        '4k': 3840
+                        '4k': 3840,
+                        '360-2k': 2048,
+                        '360-4k': 3840,
+                        '360-4096': 4096
                     };
 
                     const heights: Record<string, number> = {
@@ -318,7 +376,10 @@ class VideoSettingsDialog extends Container {
                         '720': 720,
                         '1080': 1080,
                         '1440': 1440,
-                        '4k': 2160
+                        '4k': 2160,
+                        '360-2k': 1024,
+                        '360-4k': 1920,
+                        '360-4096': 2048
                     };
 
                     const frameRates: Record<string, number> = {
@@ -340,16 +401,20 @@ class VideoSettingsDialog extends Container {
                         'ultra': 1
                     };
 
-                    // scale down higher resolutions
+                    // scale down higher resolutions (matched by pixel count)
                     const bbpfFactors: Record<string, number> = {
                         '540': 1,
                         '720': 1 / 2,
                         '1080': 1 / 3,
                         '1440': 1 / 4,
-                        '4k': 1 / 5
+                        '4k': 1 / 5,
+                        '360-2k': 1 / 3,
+                        '360-4k': 1 / 5,
+                        '360-4096': 1 / 5
                     };
 
-                    const portrait = portraitBoolean.value;
+                    const is360 = projectionSelect.value === 'equirect';
+                    const portrait = !is360 && portraitBoolean.value;
                     const width = (portrait ? heights : widths)[resolutionSelect.value];
                     const height = (portrait ? widths : heights)[resolutionSelect.value];
                     const frameRate = frameRates[frameRateSelect.value];
@@ -367,9 +432,11 @@ class VideoSettingsDialog extends Container {
                         height,
                         bitrate,
                         transparentBg: transparentBgBoolean.value,
-                        showDebug: showDebugBoolean.value,
+                        showDebug: !is360 && showDebugBoolean.value,
                         format: formatSelect.value as 'mp4' | 'webm' | 'mov' | 'mkv',
-                        codec: codecSelect.value as 'h264' | 'h265' | 'vp9' | 'av1'
+                        codec: codecSelect.value as 'h264' | 'h265' | 'vp9' | 'av1',
+                        projection: (is360 ? 'equirect' : 'standard') as 'standard' | 'equirect',
+                        levelHorizon: is360 && levelHorizonBoolean.value
                     };
 
                     resolve(videoSettings);

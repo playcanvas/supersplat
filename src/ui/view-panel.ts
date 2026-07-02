@@ -182,7 +182,7 @@ class ViewPanel extends Container {
             class: 'view-panel-row-slider',
             min: 10,
             max: 120,
-            precision: 1,
+            precision: 2,
             value: 60
         });
 

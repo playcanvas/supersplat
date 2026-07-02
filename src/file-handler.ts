@@ -54,8 +54,7 @@ const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
     'lcc': {
         description: 'LCC Scene',
         accept: {
-            'application/json': ['.lcc'],
-            'application/octet-stream': ['.bin']
+            'application/x-lcc': ['.lcc', '.bin']
         }
     },
     'splat': {
@@ -102,8 +101,7 @@ const allImportTypes = {
         'application/ply': ['.ply'],
         'application/x-gaussian-splat': ['.json', '.sog', '.splat', '.ksplat', '.spz'],
         'image/webp': ['.webp'],
-        'application/json': ['.lcc'],
-        'application/octet-stream': ['.bin'],
+        'application/x-lcc': ['.lcc', '.bin'],
         'text/plain': ['.txt']
     }
 };

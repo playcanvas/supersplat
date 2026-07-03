@@ -6,15 +6,15 @@ import { Events } from './events';
 import { BrowserFileSystem, MappedReadFileSystem } from './io';
 import { Scene } from './scene';
 import { Splat } from './splat';
-import { serializePly, serializePlyCompressed, SerializeSettings, serializeSog, serializeSplat, serializeViewer, SogSettings, ViewerExportSettings } from './splat-serialize';
+import { serializePly, serializePlyCompressed, SerializeSettings, serializeSog, serializeSplat, serializeSpz, serializeViewer, SogSettings, SpzSettings, ViewerExportSettings } from './splat-serialize';
 import { i18n } from './ui/localization';
 
 // ts compiler and vscode find this type, but eslint does not
 type FilePickerAcceptType = unknown;
 
-type ExportType = 'ply' | 'splat' | 'sog' | 'viewer';
+type ExportType = 'ply' | 'splat' | 'sog' | 'spz' | 'viewer';
 
-type FileType = 'ply' | 'compressedPly' | 'splat' | 'sog' | 'htmlViewer' | 'packageViewer';
+type FileType = 'ply' | 'compressedPly' | 'splat' | 'sog' | 'spz' | 'htmlViewer' | 'packageViewer';
 
 interface SceneExportOptions {
     filename: string;
@@ -26,6 +26,9 @@ interface SceneExportOptions {
 
     // sog
     sogIterations?: number;
+
+    // spz
+    spzVersion?: 3 | 4;
 
     // viewer
     viewerExportSettings?: ViewerExportSettings;
@@ -499,7 +502,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         const fileType: FileType =
             (exportType === 'viewer') ? (options.viewerExportSettings!.type === 'zip' ? 'packageViewer' : 'htmlViewer') :
                 (exportType === 'ply') ? (options.compressedPly ? 'compressedPly' : 'ply') :
-                    (exportType === 'sog') ? 'sog' : 'splat';
+                    (exportType === 'sog') ? 'sog' :
+                        (exportType === 'spz') ? 'spz' : 'splat';
 
         if (hasFilePicker) {
             try {
@@ -520,8 +524,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
     });
 
     events.function('scene.write', async (fileType: FileType, options: SceneExportOptions, stream?: FileSystemWritableFileStream) => {
-        // SOG and viewer exports have their own progress UI, other formats use spinner
-        const useSpinner = fileType !== 'sog' && fileType !== 'htmlViewer' && fileType !== 'packageViewer';
+        // SOG, SPZ and viewer exports have their own progress UI, other formats use spinner
+        const useSpinner = fileType !== 'sog' && fileType !== 'spz' && fileType !== 'htmlViewer' && fileType !== 'packageViewer';
 
         if (useSpinner) {
             events.fire('startSpinner');
@@ -561,6 +565,17 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                         events
                     };
                     await serializeSog(splats, sogSettings, fs);
+                    break;
+                }
+                case 'spz': {
+                    const spzSettings: SpzSettings = {
+                        ...serializeSettings,
+                        minOpacity: 1 / 255,
+                        removeInvalid: true,
+                        version: options.spzVersion ?? 4,
+                        events
+                    };
+                    await serializeSpz(splats, spzSettings, fs);
                     break;
                 }
                 case 'htmlViewer':

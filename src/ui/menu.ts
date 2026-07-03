@@ -137,6 +137,11 @@ class Menu extends Container {
             isEnabled: () => !events.invoke('scene.empty'),
             onSelect: () => events.invoke('scene.export', 'sog')
         }, {
+            text: () => i18n.t('menu.file.export.spz'),
+            icon: createSvg(sceneExport),
+            isEnabled: () => !events.invoke('scene.empty'),
+            onSelect: () => events.invoke('scene.export', 'spz')
+        }, {
             // separator
         }, {
             text: () => i18n.t('menu.file.export.viewer', { ellipsis: true }),

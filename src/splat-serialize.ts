@@ -6,6 +6,7 @@ import {
     Transform,
     writeHtml,
     writeSog as writeSogInternal,
+    writeSpz,
     ZipFileSystem,
     type FileSystem,
     type LogEvent,
@@ -1358,12 +1359,39 @@ const serializeSog = async (splats: Splat[], settings: SogSettings, fs: FileSyst
     }
 };
 
+type SpzSettings = SerializeSettings & {
+    version?: 3 | 4;
+    events?: Events;
+};
+
+const serializeSpz = async (splats: Splat[], settings: SpzSettings, fs: FileSystem): Promise<void> => {
+    const { version = 4, events } = settings;
+
+    splatTransformLogger.setRenderer(createProgressRenderer('Exporting SPZ', events));
+
+    // Extract splat data to DataTable
+    const dataTable = extractDataTable(splats, settings);
+
+    // unwind the logger's top-level scope on error (see serializeSog)
+    try {
+        await writeSpz({
+            filename: 'output.spz',
+            dataTable,
+            version
+        }, fs);
+    } catch (err) {
+        splatTransformLogger.unwindAll(true);
+        throw err;
+    }
+};
+
 export {
     Writer,
     serializePly,
     serializePlyCompressed,
     serializeSplat,
     serializeSog,
+    serializeSpz,
     serializeViewer,
     AnimTrack,
     CameraPose,
@@ -1374,5 +1402,6 @@ export {
     ExperienceSettings,
     SerializeSettings,
     SogSettings,
+    SpzSettings,
     ViewerExportSettings
 };

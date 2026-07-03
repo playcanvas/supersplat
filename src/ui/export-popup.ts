@@ -234,6 +234,29 @@ class ExportPopup extends Container {
         iterationsRow.append(iterationsLabel);
         iterationsRow.append(iterationsSlider);
 
+        // spz version
+
+        const spzVersionRow = new Container({
+            class: 'row'
+        });
+
+        const spzVersionLabel = new Label({
+            class: 'label'
+        });
+        i18n.bindText(spzVersionLabel, 'popup.export.spz-version');
+
+        const spzVersionSelect = new SelectInput({
+            class: 'select',
+            defaultValue: '4'
+        });
+        i18n.bindOptions(spzVersionSelect, () => [
+            { v: '4', t: i18n.t('popup.export.spz-version.4') },
+            { v: '3', t: i18n.t('popup.export.spz-version.3') }
+        ]);
+
+        spzVersionRow.append(spzVersionLabel);
+        spzVersionRow.append(spzVersionSelect);
+
         // filename
 
         const filenameRow = new Container({
@@ -262,6 +285,7 @@ class ExportPopup extends Container {
         content.append(compressRow);
         content.append(bandsRow);
         content.append(iterationsRow);
+        content.append(spzVersionRow);
         content.append(filenameRow);
 
         // footer
@@ -327,13 +351,14 @@ class ExportPopup extends Container {
 
         const reset = (exportType: ExportType, splatNames: string[], hasPoses: boolean) => {
             const allRows = [
-                viewerTypeRow, animationRow, loopRow, colorRow, fovRow, compressRow, bandsRow, iterationsRow, filenameRow
+                viewerTypeRow, animationRow, loopRow, colorRow, fovRow, compressRow, bandsRow, iterationsRow, spzVersionRow, filenameRow
             ];
 
             const activeRows = {
                 ply: [compressRow, bandsRow, filenameRow],
                 splat: [filenameRow],
                 sog: [bandsRow, iterationsRow, filenameRow],
+                spz: [bandsRow, spzVersionRow, filenameRow],
                 viewer: [viewerTypeRow, animationRow, loopRow, colorRow, fovRow, bandsRow, filenameRow]
             }[exportType];
 
@@ -349,6 +374,9 @@ class ExportPopup extends Container {
             // sog
             iterationsSlider.value = 10;
 
+            // spz
+            spzVersionSelect.value = '4';
+
             // filename
             filenameEntry.value = splatNames[0];
             switch (exportType) {
@@ -360,6 +388,9 @@ class ExportPopup extends Container {
                     break;
                 case 'sog':
                     updateExtension('.sog');
+                    break;
+                case 'spz':
+                    updateExtension('.spz');
                     break;
                 case 'viewer':
                     updateExtension(viewerTypeSelect.value === 'html' ? '.html' : '.zip');
@@ -424,6 +455,17 @@ class ExportPopup extends Container {
                         maxSHBands: bandsSlider.value
                     },
                     sogIterations: iterationsSlider.value
+                };
+            };
+
+            const assembleSpzOptions = () : SceneExportOptions => {
+                return {
+                    filename: filenameEntry.value,
+                    splatIdx: 'all',
+                    serializeSettings: {
+                        maxSHBands: bandsSlider.value
+                    },
+                    spzVersion: spzVersionSelect.value === '3' ? 3 : 4
                 };
             };
 
@@ -514,6 +556,9 @@ class ExportPopup extends Container {
                             break;
                         case 'sog':
                             resolve(assembleSogOptions());
+                            break;
+                        case 'spz':
+                            resolve(assembleSpzOptions());
                             break;
                         case 'viewer':
                             resolve(assembleViewerOptions());

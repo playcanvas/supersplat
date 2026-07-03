@@ -415,6 +415,12 @@ class ViewPanel extends Container {
             }
         });
 
+        events.on('collisionMeshPanel.visible', (visible: boolean) => {
+            if (visible) {
+                setVisible(false);
+            }
+        });
+
         // sh bands
 
         events.on('view.bands', (bands: number) => {

@@ -99,6 +99,7 @@ class Camera extends Element {
     clearPass: RenderPass;
     mainPass: RenderPassForward;
     splatPass: RenderPassForward;
+    overlayPass: RenderPassForward;
     gizmoPass: RenderPassForward;
     finalPass: SimpleRenderPass;
 
@@ -314,6 +315,7 @@ class Camera extends Element {
         this.mainCamera.camera.layers = [
             scene.worldLayer.id,
             scene.splatLayer.id,
+            scene.overlayLayer.id,
             scene.gizmoLayer.id
         ];
 
@@ -329,6 +331,7 @@ class Camera extends Element {
         this.clearPass = new RenderPass(device);
         this.mainPass = new RenderPassForward(device, composition, app.scene, renderer);
         this.splatPass = new RenderPassForward(device, composition, app.scene, renderer);
+        this.overlayPass = new RenderPassForward(device, composition, app.scene, renderer);
         this.gizmoPass = new RenderPassForward(device, composition, app.scene, renderer);
         this.finalPass = new SimpleRenderPass(device,
             new ShaderQuad(device, vertexShader, fragmentShader, 'final-blit'), {
@@ -441,6 +444,7 @@ class Camera extends Element {
         this.clearPass?.destroy();
         this.mainPass?.destroy();
         this.splatPass?.destroy();
+        this.overlayPass?.destroy();
         this.gizmoPass?.destroy();
         this.finalPass?.destroy();
         this.camera.framePasses = null;
@@ -555,6 +559,12 @@ class Camera extends Element {
             this.splatPass.addLayer(this.camera, scene.splatLayer, false, false);
             this.splatPass.addLayer(this.camera, scene.splatLayer, true, false);
 
+            // configure overlay pass - renders after splats with no clears, so
+            // overlays blend over splats and depth-test against splat depth
+            this.overlayPass.init(this.mainTarget);
+            this.overlayPass.addLayer(this.camera, scene.overlayLayer, false, false);
+            this.overlayPass.addLayer(this.camera, scene.overlayLayer, true, false);
+
             // configure gizmo pass
             this.gizmoPass.init(this.mainTarget);
             this.gizmoPass.addLayer(this.camera, scene.gizmoLayer, false, false);
@@ -565,7 +575,7 @@ class Camera extends Element {
             this.finalPass.init(null);
 
             // assign render passes to camera
-            this.camera.framePasses = [this.clearPass, this.mainPass, this.splatPass, this.gizmoPass, this.finalPass];
+            this.camera.framePasses = [this.clearPass, this.mainPass, this.splatPass, this.overlayPass, this.gizmoPass, this.finalPass];
         } else {
             // resize existing render targets
             const { splatTarget, colorTarget, workTarget } = this;

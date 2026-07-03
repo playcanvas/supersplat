@@ -1,0 +1,109 @@
+@use 'colors.scss' as *;
+
+#collision-mesh-panel {
+    top: 50%;
+    transform: translate(0, -50%);
+    right: 102px;
+    width: 320px;
+    flex-direction: column;
+
+    &:not(.pcui-hidden) {
+        display: flex;
+    }
+
+    .collision-mesh-panel-row {
+        flex-direction: row;
+        align-items: center;
+        padding: 2px;
+        height: 28px;
+
+        &:not(.pcui-hidden) {
+            display: flex;
+        }
+
+        & > .collision-mesh-panel-row-label {
+            flex-grow: 1;
+        }
+
+        & > .collision-mesh-panel-row-toggle {
+            background-color: $bcg-dark;
+
+            &::after {
+                background-color: $clr-default;
+            }
+
+            &.pcui-boolean-input-ticked {
+                background-color: $clr-hilight;
+
+                &::after {
+                    background-color: $clr-active;
+                }
+            }
+        }
+
+        & > .collision-mesh-panel-row-slider {
+            width: 187px;
+            margin: 0;
+
+            & > .pcui-slider-container {
+                & > .pcui-slider-bar {
+                    & > .pcui-slider-handle {
+                        background-color: $clr-default;
+                        border-radius: 3px;
+                    }
+                }
+            }
+        }
+
+        & > .collision-mesh-panel-row-select {
+            width: 187px;
+            margin: 0;
+        }
+
+        & > .collision-mesh-panel-row-numeric {
+            width: 187px;
+            margin: 0;
+        }
+
+        & > .collision-mesh-panel-row-vector {
+            width: 187px;
+            margin: 0;
+        }
+
+        & > .collision-mesh-panel-button {
+            flex-grow: 1;
+            margin: 2px;
+        }
+
+        & > .collision-mesh-panel-stats {
+            flex-grow: 1;
+            color: $text-secondary;
+        }
+
+        & > .collision-mesh-panel-stale {
+            flex-grow: 1;
+            color: $clr-hilight;
+        }
+    }
+
+    & > .collision-mesh-panel-advanced {
+        display: flex;
+        flex-direction: column;
+        background-color: $bcg-dark;
+
+        &.pcui-hidden {
+            display: none;
+        }
+    }
+
+    & > .collision-mesh-panel-control-row {
+        display: flex;
+        flex-direction: row;
+        background-color: $bcg-dark;
+
+        & > .collision-mesh-panel-button {
+            flex-grow: 1;
+            margin: 4px;
+        }
+    }
+}

@@ -35,6 +35,7 @@ import { State } from './splat-state';
 type SerializeSettings = {
     maxSHBands?: number;            // specifies the maximum number of bands to be exported
     selected?: boolean;             // only export selected gaussians. used for copy/paste
+    visibleOnly?: boolean;          // filter out hidden (locked) gaussians. used for collision mesh generation
     minOpacity?: number;            // filter out gaussians with alpha less than or equal to minAlpha
     removeInvalid?: boolean;        // filter out gaussians with invalid data (NaN/Infinity)
 
@@ -161,6 +162,7 @@ class GaussianFilter {
         };
 
         const onlySelected = serializeSettings.selected ?? false;
+        const visibleOnly = serializeSettings.visibleOnly ?? false;
         const minOpacity = serializeSettings.minOpacity ?? 0;
         const removeInvalid = serializeSettings.removeInvalid ?? false;
 
@@ -177,6 +179,11 @@ class GaussianFilter {
 
             // optionally filter out unselected gaussians
             if (onlySelected && (state[i] !== State.selected)) {
+                return false;
+            }
+
+            // optionally filter out hidden gaussians
+            if (visibleOnly && (state[i] & State.locked) !== 0) {
                 return false;
             }
 
@@ -1387,6 +1394,9 @@ const serializeSpz = async (splats: Splat[], settings: SpzSettings, fs: FileSyst
 
 export {
     Writer,
+    createGpuDevice,
+    createProgressRenderer,
+    extractDataTable,
     serializePly,
     serializePlyCompressed,
     serializeSplat,

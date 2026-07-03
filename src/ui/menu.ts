@@ -148,6 +148,13 @@ class Menu extends Container {
             icon: createSvg(sceneExport),
             isEnabled: () => !events.invoke('scene.empty'),
             onSelect: () => events.invoke('scene.export', 'viewer')
+        }, {
+            // separator
+        }, {
+            text: () => i18n.t('menu.file.export.collision-mesh', { ellipsis: true }),
+            icon: createSvg(sceneExport),
+            isEnabled: () => !events.invoke('scene.empty'),
+            onSelect: () => events.fire('collisionMeshPanel.setVisible', true)
         }]);
 
         const openRecentMenuPanel = new MenuPanel([]);

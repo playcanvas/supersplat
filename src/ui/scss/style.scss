@@ -28,11 +28,14 @@
 * {
     font-size: 12px;
     user-select: none;
-    overscroll-behavior: none;
 }
 
+// viewport only - on '*' this hits overflow:hidden elements (e.g. pcui-label),
+// which are scroll containers, so wheel events die there instead of chaining
+// up to the nearest scrollable ancestor
 html {
     height: 100%;
+    overscroll-behavior: none;
 }
 
 body {
@@ -43,6 +46,7 @@ body {
     background-color: black;
     overflow: hidden;
     touch-action: none;
+    overscroll-behavior: none;
 }
 
 #app-container {

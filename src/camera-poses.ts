@@ -45,6 +45,10 @@ class CameraAnimTrack implements AnimTrack {
             this.rebuildSpline();
         });
 
+        events.on('timeline.loop', () => {
+            this.rebuildSpline();
+        });
+
         // Clear track when scene is cleared
         events.on('scene.clear', () => {
             this.clear();
@@ -211,6 +215,7 @@ class CameraAnimTrack implements AnimTrack {
     private rebuildSpline(): void {
         const duration = this.events.invoke('timeline.frames');
         const smoothness = this.events.invoke('timeline.smoothness');
+        const loop = this.events.invoke('timeline.loop');
 
         const orderedPoses = this.poses.slice()
         .filter(a => a.frame < duration)
@@ -226,7 +231,11 @@ class CameraAnimTrack implements AnimTrack {
         }
 
         if (orderedPoses.length > 1) {
-            const spline = CubicSpline.fromPointsLooping(duration, times, points, smoothness);
+            // when not looping the spline clamps, holding the first/last pose
+            // beyond the outer keys instead of wrapping the end into the start
+            const spline = loop ?
+                CubicSpline.fromPointsLooping(duration, times, points, smoothness) :
+                CubicSpline.fromPoints(times, points, smoothness);
             const result: number[] = [];
             const pose = { position: new Vec3(), target: new Vec3(), fov: 0 };
 

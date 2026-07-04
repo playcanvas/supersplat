@@ -291,6 +291,7 @@
     "tooltip.timeline.frame-rate": "Frame Rate",
     "tooltip.timeline.total-frames": "Total Frames",
     "tooltip.timeline.smoothness": "Smoothness",
+    "tooltip.timeline.loop": "Loop Animation",
     "tooltip.scene.solo": "Solo Selected",
     "status-bar.splats": "Splats",
     "status-bar.selected": "Selected",

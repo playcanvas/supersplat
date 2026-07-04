@@ -387,12 +387,32 @@ class TimelinePanel extends Container {
             smoothness.value = smoothnessIn;
         });
 
+        // loop
+
+        const loop = new Button({
+            id: 'loop',
+            text: '\uE128'
+        });
+
+        loop.on('click', () => {
+            events.fire('timeline.setLoop', !events.invoke('timeline.loop'));
+        });
+
+        events.on('timeline.loop', (loopIn: boolean) => {
+            loop.class[loopIn ? 'add' : 'remove']('active');
+        });
+
+        if (events.invoke('timeline.loop')) {
+            loop.class.add('active');
+        }
+
         const settingsControls = new Container({
             id: 'settings-controls'
         });
         settingsControls.append(speed);
         settingsControls.append(frames);
         settingsControls.append(smoothness);
+        settingsControls.append(loop);
 
         // append control groups
 
@@ -528,6 +548,7 @@ class TimelinePanel extends Container {
         tooltips.register(speed, () => i18n.t('tooltip.timeline.frame-rate'), 'top');
         tooltips.register(frames, () => i18n.t('tooltip.timeline.total-frames'), 'top');
         tooltips.register(smoothness, () => i18n.t('tooltip.timeline.smoothness'), 'top');
+        tooltips.register(loop, () => i18n.t('tooltip.timeline.loop'), 'top');
     }
 }
 

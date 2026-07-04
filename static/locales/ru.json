@@ -291,6 +291,7 @@
     "tooltip.timeline.frame-rate": "Частота кадров",
     "tooltip.timeline.total-frames": "Всего кадров",
     "tooltip.timeline.smoothness": "Плавность",
+    "tooltip.timeline.loop": "Зациклить анимацию",
     "tooltip.scene.solo": "Соло выбранного",
     "status-bar.splats": "Сплаты",
     "status-bar.selected": "Выбрано",

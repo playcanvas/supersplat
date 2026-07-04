@@ -272,6 +272,10 @@ class PointerController {
                     look(deltaX, deltaY);
                 } else if (event.shiftKey) {
                     pan(event.offsetX, event.offsetY, deltaX, deltaY);
+                } else if (camera.ortho) {
+                    // moving forward/backward has no visual effect in ortho
+                    // (ortho height derives from distance), so zoom instead
+                    zoom(wheelDelta * -0.002);
                 } else {
                     // Bare scroll / pinch: move focal point forward/backward
                     const factor = camera.flySpeed * 0.01;

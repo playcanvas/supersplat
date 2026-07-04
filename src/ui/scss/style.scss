@@ -28,11 +28,12 @@
 * {
     font-size: 12px;
     user-select: none;
-    overscroll-behavior: none;
 }
 
+// not on '*' - that breaks wheel scrolling over overflow:hidden elements (e.g. pcui labels)
 html {
     height: 100%;
+    overscroll-behavior: none;
 }
 
 body {
@@ -43,6 +44,7 @@ body {
     background-color: black;
     overflow: hidden;
     touch-action: none;
+    overscroll-behavior: none;
 }
 
 #app-container {

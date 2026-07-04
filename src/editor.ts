@@ -109,9 +109,25 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // camera.fov
 
     const setCameraFov = (fov: number) => {
-        if (fov !== scene.camera.fov) {
-            scene.camera.fov = fov;
-            events.fire('camera.fov', scene.camera.fov);
+        const { camera } = scene;
+        if (fov !== camera.fov) {
+            const oldFovFactor = camera.fovFactor;
+            camera.fov = fov;
+
+            // in fly mode a fov change must act like a lens zoom, not a dolly:
+            // scale distance so the camera's world-space offset from the focal
+            // point (distance * sceneRadius / fovFactor) is unchanged. orbit
+            // mode keeps its framing-preserving dolly.
+            if (camera.controlMode === 'fly') {
+                const { controls } = scene.config;
+                const k = camera.fovFactor / oldFovFactor;
+                const t = camera.distanceTween;
+                for (const s of [t.value, t.source, t.target]) {
+                    s.distance = Math.max(controls.minZoom, Math.min(controls.maxZoom, s.distance * k));
+                }
+            }
+
+            events.fire('camera.fov', camera.fov);
         }
     };
 

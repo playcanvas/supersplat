@@ -76,7 +76,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     [
         'camera.mode', 'camera.overlay', 'camera.splatSize', 'view.outlineSelection',
         'view.centersUseGaussianColor', 'view.bands', 'camera.bound', 'camera.boundDimensions', 'camera.showPoses',
-        'selection.changed', 'tool.coordSpace'
+        'camera.showInfo', 'selection.changed', 'tool.coordSpace'
     ].forEach((eventName) => {
         events.on(eventName, () => {
             scene.forceRender = true;
@@ -200,6 +200,29 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('camera.toggleShowPoses', () => {
         setShowPoses(!events.invoke('camera.showPoses'));
+    });
+
+    // camera.showInfo
+
+    let showInfo = scene.config.show.cameraInfo;
+
+    const setShowInfo = (visible: boolean) => {
+        if (visible !== showInfo) {
+            showInfo = visible;
+            events.fire('camera.showInfo', showInfo);
+        }
+    };
+
+    events.function('camera.showInfo', () => {
+        return showInfo;
+    });
+
+    events.on('camera.setShowInfo', (value: boolean) => {
+        setShowInfo(value);
+    });
+
+    events.on('camera.toggleShowInfo', () => {
+        setShowInfo(!events.invoke('camera.showInfo'));
     });
 
     // camera.focus
@@ -769,6 +792,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.fire('camera.fov', scene.camera.fov);
     events.fire('camera.overlay', cameraOverlay);
     events.fire('view.bands', viewBands);
+    events.fire('camera.showInfo', showInfo);
 
     // doc serialization
     events.function('docSerialize.view', () => {
@@ -785,6 +809,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             showBound: events.invoke('camera.bound'),
             showBoundDimensions: events.invoke('camera.boundDimensions'),
             showCameraPoses: events.invoke('camera.showPoses'),
+            showCameraInfo: events.invoke('camera.showInfo'),
             flySpeed: events.invoke('camera.flySpeed')
         };
     });
@@ -801,6 +826,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         events.fire('camera.setBound', docView.showBound);
         events.fire('camera.setBoundDimensions', docView.showBoundDimensions ?? false);
         events.fire('camera.setShowPoses', docView.showCameraPoses ?? false);
+        events.fire('camera.setShowInfo', docView.showCameraInfo ?? false);
         events.fire('camera.setFlySpeed', docView.flySpeed);
     });
 };

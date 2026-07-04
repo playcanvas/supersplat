@@ -391,7 +391,7 @@ class TimelinePanel extends Container {
 
         const loop = new Button({
             id: 'loop',
-            text: '\uE113'
+            text: '\uE128'
         });
 
         loop.on('click', () => {

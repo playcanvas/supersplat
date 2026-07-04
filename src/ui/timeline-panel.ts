@@ -1,4 +1,4 @@
-import { Button, Container, NumericInput, SelectInput } from '@playcanvas/pcui';
+import { Button, Container, Element, NumericInput, SelectInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { ShortcutManager } from '../shortcut-manager';
@@ -23,9 +23,15 @@ class Ticks extends Container {
         let frameFromOffset: (offset: number) => number;
         let moveCursor: (frame: number) => void;
 
+        // pcui wrappers around key markers, kept so their tooltips unregister
+        // (via the destroy event) when the timeline is rebuilt
+        let keyElements: Element[] = [];
+
         // rebuild the timeline
         const rebuild = () => {
             // clear existing labels
+            keyElements.forEach(el => el.destroy());
+            keyElements = [];
             workArea.dom.innerHTML = '';
 
             const numFrames = events.invoke('timeline.frames');
@@ -82,6 +88,10 @@ class Ticks extends Container {
                 label.classList.add('time-label', 'key');
                 label.style.left = `${offsetFromFrame(keyFrame)}px`;
                 label.dataset.frame = keyFrame.toString();
+
+                const wrapper = new Element({ dom: label });
+                tooltips.register(wrapper, () => i18n.t('tooltip.timeline.key'), 'top');
+                keyElements.push(wrapper);
                 let dragging = false;
                 let copying = false;
                 let clone: HTMLElement = null;
@@ -115,6 +125,9 @@ class Ticks extends Container {
                         } else {
                             label.style.left = `${offsetFromFrame(toFrame)}px`;
                         }
+                    } else {
+                        // hint that ctrl+click overwrites the key with the current pose
+                        label.classList.toggle('stamping', event.ctrlKey);
                     }
                 });
 
@@ -134,7 +147,11 @@ class Ticks extends Container {
 
                         label.releasePointerCapture(event.pointerId);
 
-                        if (fromFrame !== toFrame && toFrame >= 0) {
+                        if (event.ctrlKey && (toFrame < 0 || toFrame === fromFrame)) {
+                            // ctrl+click without dragging: overwrite this key
+                            // with the current camera pose
+                            events.fire('track.addKey', fromFrame);
+                        } else if (fromFrame !== toFrame && toFrame >= 0) {
                             if (copying) {
                                 events.fire('track.copyKey', fromFrame, toFrame);
                             } else {
@@ -191,6 +208,39 @@ class Ticks extends Container {
                 workArea.dom.releasePointerCapture(event.pointerId);
                 scrubbing = false;
             }
+        });
+
+        // update the stamp cursor hint when ctrl changes while already
+        // hovering a key (pointermove alone misses a stationary pointer)
+        const updateStamping = (down: boolean) => {
+            const hovered = workArea.dom.querySelector('.key:hover');
+            workArea.dom.querySelectorAll('.key.stamping').forEach((el) => {
+                if (!down || el !== hovered) el.classList.remove('stamping');
+            });
+            if (down && hovered) hovered.classList.add('stamping');
+        };
+
+        const onCtrlDown = (event: KeyboardEvent) => {
+            if (event.key === 'Control' && !event.repeat) updateStamping(true);
+        };
+
+        const onCtrlUp = (event: KeyboardEvent) => {
+            if (event.key === 'Control') updateStamping(false);
+        };
+
+        // ctrl released while the window is unfocused never fires keyup
+        const onBlur = () => updateStamping(false);
+
+        window.addEventListener('keydown', onCtrlDown);
+        window.addEventListener('keyup', onCtrlUp);
+        window.addEventListener('blur', onBlur);
+
+        this.on('destroy', () => {
+            keyElements.forEach(el => el.destroy());
+            keyElements = [];
+            window.removeEventListener('keydown', onCtrlDown);
+            window.removeEventListener('keyup', onCtrlUp);
+            window.removeEventListener('blur', onBlur);
         });
 
         // rebuild the timeline on dom resize

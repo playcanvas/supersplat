@@ -138,6 +138,12 @@
                     pointer-events: auto;
                 }
 
+                // declared before dragging/copying so those cursors win
+                // during a ctrl+drag
+                &.stamping {
+                    cursor: crosshair;
+                }
+
                 &.dragging {
                     cursor: ew-resize;
                 }

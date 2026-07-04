@@ -5,6 +5,7 @@ import { DataPanel } from './data-panel';
 import { Events } from '../events';
 import { AboutPopup } from './about-popup';
 import { BottomToolbar } from './bottom-toolbar';
+import { CameraInfoOverlay } from './camera-info-overlay';
 import { CollisionMeshPanel } from './collision-mesh-panel';
 import { ColorPanel } from './color-panel';
 import { ExportPopup } from './export-popup';
@@ -106,6 +107,12 @@ class EditorUI {
             }, 1000);
         });
 
+        // the camera info overlay occupies the same corner and its target row
+        // shows the focal point live, so hide the cursor label while it's visible
+        events.on('camera.showInfo', (visible: boolean) => {
+            cursorLabel.hidden = visible;
+        });
+
         // canvas container
         const canvasContainer = new Container({
             id: 'canvas-container'
@@ -129,10 +136,12 @@ class EditorUI {
         const rightToolbar = new RightToolbar(events, tooltips);
         const modeToggle = new ModeToggle(events, tooltips);
         const menu = new Menu(events);
+        const cameraInfoOverlay = new CameraInfoOverlay(events, tooltips);
 
         canvasContainer.dom.appendChild(canvas);
         canvasContainer.append(appLabel);
         canvasContainer.append(cursorLabel);
+        canvasContainer.append(cameraInfoOverlay);
         canvasContainer.append(toolsContainer);
         canvasContainer.append(scenePanel);
         canvasContainer.append(viewPanel);

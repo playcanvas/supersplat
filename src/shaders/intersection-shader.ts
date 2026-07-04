@@ -16,7 +16,7 @@ const fragmentShader = /* glsl */ `
 
     uniform uvec2 output_params;                    // output width, height
 
-    // 0: mask, 1: rect, 2: sphere
+    // 0: mask, 1: rect, 2: sphere, 3: box
     uniform int mode;
 
     // mask params
@@ -71,38 +71,41 @@ const fragmentShader = /* glsl */ `
                 center = vec4(center, 1.0) * t;
             }
 
-            // transform to clip space and discard if outside
+            // transform to world space (sphere/box modes test world-space containment)
             vec3 world = (matrix_model * vec4(center, 1.0)).xyz;
-            vec4 clip = matrix_viewProjection * vec4(world, 1.0);
-            vec3 ndc = clip.xyz / clip.w;
 
-            // skip offscreen fragments
-            if (!any(greaterThan(abs(ndc), vec3(1.0)))) {
-                if (mode == 0) {
-                    // select by mask
-                    ivec2 maskUV = ivec2((ndc.xy * vec2(0.5, -0.5) + 0.5) * mask_params);
-                    clr[i] = texelFetch(mask, maskUV, 0).a < 1.0 ? 0.0 : 1.0;
-                } else if (mode == 1) {
-                    // select by rect
-                    clr[i] = all(greaterThan(ndc.xy * vec2(1.0, -1.0), rect_params.xy)) && all(lessThan(ndc.xy * vec2(1.0, -1.0), rect_params.zw)) ? 1.0 : 0.0;
-                } else if (mode == 2) {
-                    // select by sphere
-                    clr[i] = length(world - sphere_params.xyz) < sphere_params.w ? 1.0 : 0.0;
-                } else if (mode == 3) {
-                    // select by box
-                    vec3 relativePosition = world - box_params.xyz;
-                    bool isInsideCube = true;
-                    if (relativePosition.x < -aabb_params.x || relativePosition.x > aabb_params.x) {
-                        isInsideCube = false;
+            if (mode == 0 || mode == 1) {
+                // screen-space modes: project to clip space and skip offscreen fragments
+                vec4 clip = matrix_viewProjection * vec4(world, 1.0);
+                vec3 ndc = clip.xyz / clip.w;
+
+                if (!any(greaterThan(abs(ndc), vec3(1.0)))) {
+                    if (mode == 0) {
+                        // select by mask
+                        ivec2 maskUV = ivec2((ndc.xy * vec2(0.5, -0.5) + 0.5) * mask_params);
+                        clr[i] = texelFetch(mask, maskUV, 0).a < 1.0 ? 0.0 : 1.0;
+                    } else {
+                        // select by rect
+                        clr[i] = all(greaterThan(ndc.xy * vec2(1.0, -1.0), rect_params.xy)) && all(lessThan(ndc.xy * vec2(1.0, -1.0), rect_params.zw)) ? 1.0 : 0.0;
                     }
-                    if (relativePosition.y < -aabb_params.y || relativePosition.y > aabb_params.y) {
-                        isInsideCube = false;
-                    }
-                    if (relativePosition.z < -aabb_params.z || relativePosition.z > aabb_params.z) {
-                        isInsideCube = false;
-                    }
-                    clr[i] = isInsideCube ? 1.0 : 0.0;
                 }
+            } else if (mode == 2) {
+                // select by sphere (world-space, independent of camera frustum)
+                clr[i] = length(world - sphere_params.xyz) < sphere_params.w ? 1.0 : 0.0;
+            } else if (mode == 3) {
+                // select by box (world-space, independent of camera frustum)
+                vec3 relativePosition = world - box_params.xyz;
+                bool isInsideCube = true;
+                if (relativePosition.x < -aabb_params.x || relativePosition.x > aabb_params.x) {
+                    isInsideCube = false;
+                }
+                if (relativePosition.y < -aabb_params.y || relativePosition.y > aabb_params.y) {
+                    isInsideCube = false;
+                }
+                if (relativePosition.z < -aabb_params.z || relativePosition.z > aabb_params.z) {
+                    isInsideCube = false;
+                }
+                clr[i] = isInsideCube ? 1.0 : 0.0;
             }
         }
 

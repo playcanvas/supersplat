@@ -17,6 +17,7 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'camera.toggleOverlay': { keys: ['Tab'] },
     'camera.toggleMode': { keys: ['m'] },
     'grid.toggleVisible': { keys: ['g'] },
+    'camera.toggleShowInfo': { keys: ['i'] },
     'select.hide': { keys: ['h'] },
     'select.unhide': { keys: ['h'], shift: 'required' },
 

@@ -29,11 +29,12 @@
 * {
     font-size: 12px;
     user-select: none;
-    overscroll-behavior: none;
 }
 
+// not on '*' - that breaks wheel scrolling over overflow:hidden elements (e.g. pcui labels)
 html {
     height: 100%;
+    overscroll-behavior: none;
 }
 
 body {
@@ -44,6 +45,7 @@ body {
     background-color: black;
     overflow: hidden;
     touch-action: none;
+    overscroll-behavior: none;
 }
 
 #app-container {
@@ -122,6 +124,39 @@ body {
     &:hover {
         border: 1px solid $clr-hilight;
         background-color: rgba(0, 0, 0, 0.25);
+    }
+}
+
+#camera-info-overlay {
+    position: absolute;
+    left: 12px;
+    bottom: 17px;
+    color: $text-primary;
+    text-shadow: 1px 1px 4px black;
+
+    .camera-info-row {
+        display: flex;
+        flex-direction: row;
+        padding: 2px 8px;
+        border-radius: 4px;
+        border: 1px solid transparent;
+        cursor: pointer;
+
+        &:hover {
+            border: 1px solid $clr-hilight;
+            background-color: rgba(0, 0, 0, 0.25);
+        }
+    }
+
+    .camera-info-key {
+        min-width: 56px;
+        margin-right: 0;
+        color: $text-secondary;
+    }
+
+    .camera-info-value {
+        margin-left: 0;
+        font-variant-numeric: tabular-nums;
     }
 }
 

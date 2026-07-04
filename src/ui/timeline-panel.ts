@@ -201,6 +201,24 @@ class Ticks extends Container {
             }
         });
 
+        // update the stamp cursor hint when ctrl changes while already
+        // hovering a key (pointermove alone misses a stationary pointer)
+        const updateStamping = (down: boolean) => {
+            const hovered = workArea.dom.querySelector('.key:hover');
+            workArea.dom.querySelectorAll('.key.stamping').forEach((el) => {
+                if (!down || el !== hovered) el.classList.remove('stamping');
+            });
+            if (down && hovered) hovered.classList.add('stamping');
+        };
+
+        window.addEventListener('keydown', (event: KeyboardEvent) => {
+            if (event.key === 'Control') updateStamping(true);
+        });
+
+        window.addEventListener('keyup', (event: KeyboardEvent) => {
+            if (event.key === 'Control') updateStamping(false);
+        });
+
         // rebuild the timeline on dom resize
         new ResizeObserver(() => rebuild()).observe(workArea.dom);
 

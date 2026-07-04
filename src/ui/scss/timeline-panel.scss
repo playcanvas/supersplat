@@ -74,7 +74,32 @@
                 }
 
                 > #loop {
-                    margin: 0 4px;
+                    font-family: pc-icon;
+                    font-weight: bold;
+                    font-size: 13px;
+
+                    width: 36px;
+                    height: 24px;
+                    margin: 0;
+                    padding: 0;
+                    flex-grow: 0;
+                    flex-shrink: 0;
+
+                    border-radius: 4px;
+
+                    text-align: center;
+                    line-height: 24px;
+
+                    &:hover {
+                        color: #ff9900;
+                        cursor: pointer;
+                        box-shadow: none;
+                        border-color: #ff990088;
+                    }
+
+                    &.active {
+                        color: $clr-hilight;
+                    }
                 }
             }
         }

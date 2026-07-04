@@ -1,4 +1,4 @@
-import { BooleanInput, Button, Container, Element, NumericInput, SelectInput } from '@playcanvas/pcui';
+import { Button, Container, Element, NumericInput, SelectInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { ShortcutManager } from '../shortcut-manager';
@@ -389,19 +389,22 @@ class TimelinePanel extends Container {
 
         // loop
 
-        const loop = new BooleanInput({
-            type: 'toggle',
+        const loop = new Button({
             id: 'loop',
-            value: true
+            text: '\uE113'
         });
 
-        loop.on('change', (value: boolean) => {
-            events.fire('timeline.setLoop', value);
+        loop.on('click', () => {
+            events.fire('timeline.setLoop', !events.invoke('timeline.loop'));
         });
 
         events.on('timeline.loop', (loopIn: boolean) => {
-            loop.value = loopIn;
+            loop.class[loopIn ? 'add' : 'remove']('active');
         });
+
+        if (events.invoke('timeline.loop')) {
+            loop.class.add('active');
+        }
 
         const settingsControls = new Container({
             id: 'settings-controls'

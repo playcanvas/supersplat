@@ -38,7 +38,7 @@ class Ticks extends Container {
             // 1/2/5 * 10^n series so labels land on round frame numbers
             const minStep = Math.max(1, numFrames / Math.max(1, Math.floor(width / 50)));
             const magnitude = 10 ** Math.floor(Math.log10(minStep));
-            const labelStep = [1, 2, 5, 10].map(m => m * magnitude).find(s => s >= minStep);
+            const labelStep = [1, 2, 5, 10].map(m => m * magnitude).find(s => s >= minStep) ?? 10 * magnitude;
 
             // subdivide labels with minor ticks (fifths, or halves for 1/2 steps)
             const tickStep = labelStep === 1 ? 0 : labelStep / (labelStep % 5 === 0 ? 5 : 2);

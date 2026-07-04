@@ -237,6 +237,14 @@ class CameraAnimTrack implements AnimTrack {
                 pose.fov = result[6];
                 this.events.fire('camera.setPose', pose, 0);
             };
+        } else if (orderedPoses.length === 1) {
+            // a single key can't form a spline; hold its pose at every frame
+            const p = orderedPoses[0];
+            const pose = { position: p.position.clone(), target: p.target.clone(), fov: p.fov };
+
+            this.onTimelineChange = () => {
+                this.events.fire('camera.setPose', pose, 0);
+            };
         } else {
             this.onTimelineChange = null;
         }

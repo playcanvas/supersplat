@@ -287,6 +287,7 @@
     "tooltip.timeline.play": "Jouer/Arrêter",
     "tooltip.timeline.add-key": "Ajouter une clé",
     "tooltip.timeline.remove-key": "Supprimer une clé",
+    "tooltip.timeline.key": "Glisser pour déplacer. Maj+glisser pour copier. Ctrl+clic pour reprendre la vue actuelle.",
     "tooltip.timeline.frame-rate": "Fréquence d'image",
     "tooltip.timeline.total-frames": "Nombre total de frames",
     "tooltip.timeline.smoothness": "Douceur",

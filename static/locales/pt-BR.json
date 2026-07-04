@@ -287,6 +287,7 @@
     "tooltip.timeline.play": "Tocar/Parar",
     "tooltip.timeline.add-key": "Adicionar Quadro",
     "tooltip.timeline.remove-key": "Remover Quadro",
+    "tooltip.timeline.key": "Arraste para mover. Shift+arrastar para copiar. Ctrl+clique para definir a visão atual.",
     "tooltip.timeline.frame-rate": "Taxa de Quadros",
     "tooltip.timeline.total-frames": "Total de Quadros",
     "tooltip.timeline.smoothness": "Suavidade",

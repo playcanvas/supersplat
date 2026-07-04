@@ -287,6 +287,7 @@
     "tooltip.timeline.play": "Воспроизвести/Остановить",
     "tooltip.timeline.add-key": "Добавить ключ",
     "tooltip.timeline.remove-key": "Удалить ключ",
+    "tooltip.timeline.key": "Перетащите для перемещения. Shift+перетаскивание — копировать. Ctrl+клик — задать текущий вид.",
     "tooltip.timeline.frame-rate": "Частота кадров",
     "tooltip.timeline.total-frames": "Всего кадров",
     "tooltip.timeline.smoothness": "Плавность",

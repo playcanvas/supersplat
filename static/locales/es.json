@@ -287,6 +287,7 @@
     "tooltip.timeline.play": "Reproducir/Detener",
     "tooltip.timeline.add-key": "Añadir clave",
     "tooltip.timeline.remove-key": "Eliminar clave",
+    "tooltip.timeline.key": "Arrastra para mover. Mayús+arrastrar para copiar. Ctrl+clic para fijar la vista actual.",
     "tooltip.timeline.frame-rate": "Velocidad de fotogramas",
     "tooltip.timeline.total-frames": "Fotogramas totales",
     "tooltip.timeline.smoothness": "Suavidad",

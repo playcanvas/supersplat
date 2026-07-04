@@ -102,6 +102,16 @@
             width: 100%;
             height: 100%;
 
+            > .time-tick {
+                position: absolute;
+                bottom: 1px;
+                width: 1px;
+                height: 5px;
+                transform: translate(-50%, 0);
+                background-color: $clr-disabled;
+                pointer-events: none;
+            }
+
             > .time-label {
                 position: absolute;
                 font-size: 12px;
@@ -130,6 +140,12 @@
                     // border-radius: 50%;
                     cursor: pointer;
                     pointer-events: auto;
+                }
+
+                // declared before dragging/copying so those cursors win
+                // during a ctrl+drag
+                &.stamping {
+                    cursor: crosshair;
                 }
 
                 &.dragging {

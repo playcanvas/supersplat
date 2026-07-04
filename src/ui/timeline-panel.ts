@@ -63,6 +63,7 @@ class Ticks extends Container {
                 label.classList.add('time-label', 'key');
                 label.style.left = `${offsetFromFrame(keyFrame)}px`;
                 label.dataset.frame = keyFrame.toString();
+                label.title = i18n.t('tooltip.timeline.key');
                 let dragging = false;
                 let copying = false;
                 let clone: HTMLElement = null;
@@ -96,6 +97,9 @@ class Ticks extends Container {
                         } else {
                             label.style.left = `${offsetFromFrame(toFrame)}px`;
                         }
+                    } else {
+                        // hint that ctrl+click overwrites the key with the current pose
+                        label.classList.toggle('stamping', event.ctrlKey);
                     }
                 });
 
@@ -115,7 +119,11 @@ class Ticks extends Container {
 
                         label.releasePointerCapture(event.pointerId);
 
-                        if (fromFrame !== toFrame && toFrame >= 0) {
+                        if (event.ctrlKey && (toFrame < 0 || toFrame === fromFrame)) {
+                            // ctrl+click without dragging: overwrite this key
+                            // with the current camera pose
+                            events.fire('track.addKey', fromFrame);
+                        } else if (fromFrame !== toFrame && toFrame >= 0) {
                             if (copying) {
                                 events.fire('track.copyKey', fromFrame, toFrame);
                             } else {

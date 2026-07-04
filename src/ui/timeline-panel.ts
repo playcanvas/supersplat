@@ -228,14 +228,19 @@ class Ticks extends Container {
             if (event.key === 'Control') updateStamping(false);
         };
 
+        // ctrl released while the window is unfocused never fires keyup
+        const onBlur = () => updateStamping(false);
+
         window.addEventListener('keydown', onCtrlDown);
         window.addEventListener('keyup', onCtrlUp);
+        window.addEventListener('blur', onBlur);
 
         this.on('destroy', () => {
             keyElements.forEach(el => el.destroy());
             keyElements = [];
             window.removeEventListener('keydown', onCtrlDown);
             window.removeEventListener('keyup', onCtrlUp);
+            window.removeEventListener('blur', onBlur);
         });
 
         // rebuild the timeline on dom resize

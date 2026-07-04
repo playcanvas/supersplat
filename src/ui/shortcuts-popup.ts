@@ -48,6 +48,7 @@ const popupConfig: Record<string, CategoryConfig> = {
             { id: 'camera.toggleOverlay', localeKey: 'popup.shortcuts.toggle-splat-overlay' },
             { id: 'camera.toggleMode', localeKey: 'popup.shortcuts.toggle-overlay-mode' },
             { id: 'grid.toggleVisible', localeKey: 'popup.shortcuts.toggle-grid' },
+            { id: 'camera.toggleShowInfo', localeKey: 'popup.shortcuts.toggle-camera-info' },
             { id: 'select.hide', localeKey: 'popup.shortcuts.lock-selected-splats' },
             { id: 'select.unhide', localeKey: 'popup.shortcuts.unlock-all-splats' }
         ]

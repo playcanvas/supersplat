@@ -373,6 +373,26 @@ class ViewPanel extends Container {
         showCameraPosesRow.append(showCameraPosesLabel);
         showCameraPosesRow.append(showCameraPosesToggle);
 
+        // show camera info
+
+        const showCameraInfoRow = new Container({
+            class: 'view-panel-row'
+        });
+
+        const showCameraInfoLabel = new Label({
+            class: 'view-panel-row-label'
+        });
+        i18n.bindText(showCameraInfoLabel, 'panel.view-options.show-camera-info');
+
+        const showCameraInfoToggle = new BooleanInput({
+            type: 'toggle',
+            class: 'view-panel-row-toggle',
+            value: false
+        });
+
+        showCameraInfoRow.append(showCameraInfoLabel);
+        showCameraInfoRow.append(showCameraInfoToggle);
+
         this.append(header);
         this.append(languageRow);
         this.append(clrRow);
@@ -387,6 +407,7 @@ class ViewPanel extends Container {
         this.append(showBoundRow);
         this.append(showBoundDimensionsRow);
         this.append(showCameraPosesRow);
+        this.append(showCameraInfoRow);
 
         // handle panel visibility
 
@@ -506,6 +527,16 @@ class ViewPanel extends Container {
             events.fire('camera.setShowPoses', showCameraPosesToggle.value);
         });
 
+        // show camera info
+
+        events.on('camera.showInfo', (visible: boolean) => {
+            showCameraInfoToggle.value = visible;
+        });
+
+        showCameraInfoToggle.on('change', () => {
+            events.fire('camera.setShowInfo', showCameraInfoToggle.value);
+        });
+
         // background color
 
         bgClrPicker.on('change', (value: number[]) => {
@@ -548,6 +579,8 @@ class ViewPanel extends Container {
         const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
         const shortcut = shortcutManager.formatShortcut('grid.toggleVisible');
         tooltips.register(showGridLabel, () => i18n.formatTooltipWithShortcut(i18n.t('panel.view-options.show-grid'), shortcut), 'left');
+        const cameraInfoShortcut = shortcutManager.formatShortcut('camera.toggleShowInfo');
+        tooltips.register(showCameraInfoLabel, () => i18n.formatTooltipWithShortcut(i18n.t('panel.view-options.show-camera-info'), cameraInfoShortcut), 'left');
         tooltips.register(bgClrPicker, () => i18n.t('panel.view-options.background-color'), 'left');
         tooltips.register(selectedClrPicker, () => i18n.t('panel.view-options.selected-color'), 'top');
         tooltips.register(unselectedClrPicker, () => i18n.t('panel.view-options.unselected-color'), 'top');

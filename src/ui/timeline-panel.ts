@@ -33,8 +33,15 @@ class Ticks extends Container {
 
             const padding = 20;
             const width = this.dom.getBoundingClientRect().width - padding * 2;
-            const labelStep = Math.max(1, Math.floor(numFrames / Math.max(1, Math.floor(width / 50))));
-            const numLabels = Math.max(1, Math.ceil(numFrames / labelStep));
+
+            // round the smallest step that keeps labels ~50px apart up to the
+            // 1/2/5 * 10^n series so labels land on round frame numbers
+            const minStep = Math.max(1, numFrames / Math.max(1, Math.floor(width / 50)));
+            const magnitude = 10 ** Math.floor(Math.log10(minStep));
+            const labelStep = [1, 2, 5, 10].map(m => m * magnitude).find(s => s >= minStep);
+
+            // subdivide labels with minor ticks (fifths, or halves for 1/2 steps)
+            const tickStep = labelStep === 1 ? 0 : labelStep / (labelStep % 5 === 0 ? 5 : 2);
 
             const offsetFromFrame = (frame: number) => {
                 return padding + Math.floor(frame / (numFrames - 1) * width);
@@ -46,13 +53,25 @@ class Ticks extends Container {
 
             // timeline labels
 
-            for (let i = 0; i < numLabels; i++) {
-                const thisFrame = Math.floor(i * labelStep);
+            for (let frame = 0; frame < numFrames; frame += labelStep) {
                 const label = document.createElement('div');
                 label.classList.add('time-label');
-                label.style.left = `${offsetFromFrame(thisFrame)}px`;
-                label.textContent = thisFrame.toString();
+                label.style.left = `${offsetFromFrame(frame)}px`;
+                label.textContent = frame.toString();
                 workArea.dom.appendChild(label);
+            }
+
+            // minor ticks
+
+            if (tickStep > 0) {
+                for (let frame = tickStep; frame < numFrames; frame += tickStep) {
+                    if (frame % labelStep !== 0) {
+                        const tick = document.createElement('div');
+                        tick.classList.add('time-tick');
+                        tick.style.left = `${offsetFromFrame(frame)}px`;
+                        workArea.dom.appendChild(tick);
+                    }
+                }
             }
 
             // keys - get from active track

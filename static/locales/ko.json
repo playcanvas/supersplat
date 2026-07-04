@@ -290,6 +290,7 @@
     "tooltip.timeline.frame-rate": "프레임 속도",
     "tooltip.timeline.total-frames": "총 프레임 수",
     "tooltip.timeline.smoothness": "부드러움",
+    "tooltip.timeline.loop": "애니메이션 루프",
     "tooltip.scene.solo": "선택 항목 솔로",
     "status-bar.splats": "스플랫",
     "status-bar.selected": "선택됨",

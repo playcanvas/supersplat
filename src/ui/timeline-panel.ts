@@ -1,4 +1,4 @@
-import { Button, Container, NumericInput, SelectInput } from '@playcanvas/pcui';
+import { BooleanInput, Button, Container, NumericInput, SelectInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { ShortcutManager } from '../shortcut-manager';
@@ -318,12 +318,29 @@ class TimelinePanel extends Container {
             smoothness.value = smoothnessIn;
         });
 
+        // loop
+
+        const loop = new BooleanInput({
+            type: 'toggle',
+            id: 'loop',
+            value: true
+        });
+
+        loop.on('change', (value: boolean) => {
+            events.fire('timeline.setLoop', value);
+        });
+
+        events.on('timeline.loop', (loopIn: boolean) => {
+            loop.value = loopIn;
+        });
+
         const settingsControls = new Container({
             id: 'settings-controls'
         });
         settingsControls.append(speed);
         settingsControls.append(frames);
         settingsControls.append(smoothness);
+        settingsControls.append(loop);
 
         // append control groups
 
@@ -459,6 +476,7 @@ class TimelinePanel extends Container {
         tooltips.register(speed, () => i18n.t('tooltip.timeline.frame-rate'), 'top');
         tooltips.register(frames, () => i18n.t('tooltip.timeline.total-frames'), 'top');
         tooltips.register(smoothness, () => i18n.t('tooltip.timeline.smoothness'), 'top');
+        tooltips.register(loop, () => i18n.t('tooltip.timeline.loop'), 'top');
     }
 }
 

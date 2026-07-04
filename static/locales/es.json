@@ -290,6 +290,7 @@
     "tooltip.timeline.frame-rate": "Velocidad de fotogramas",
     "tooltip.timeline.total-frames": "Fotogramas totales",
     "tooltip.timeline.smoothness": "Suavidad",
+    "tooltip.timeline.loop": "Animación en bucle",
     "tooltip.scene.solo": "Solo seleccionado",
     "status-bar.splats": "Splats",
     "status-bar.selected": "Seleccionados",

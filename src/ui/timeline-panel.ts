@@ -220,12 +220,20 @@ class Ticks extends Container {
             if (down && hovered) hovered.classList.add('stamping');
         };
 
-        window.addEventListener('keydown', (event: KeyboardEvent) => {
-            if (event.key === 'Control') updateStamping(true);
-        });
+        const onCtrlDown = (event: KeyboardEvent) => {
+            if (event.key === 'Control' && !event.repeat) updateStamping(true);
+        };
 
-        window.addEventListener('keyup', (event: KeyboardEvent) => {
+        const onCtrlUp = (event: KeyboardEvent) => {
             if (event.key === 'Control') updateStamping(false);
+        };
+
+        window.addEventListener('keydown', onCtrlDown);
+        window.addEventListener('keyup', onCtrlUp);
+
+        this.on('destroy', () => {
+            window.removeEventListener('keydown', onCtrlDown);
+            window.removeEventListener('keyup', onCtrlUp);
         });
 
         // rebuild the timeline on dom resize

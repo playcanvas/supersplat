@@ -1,4 +1,4 @@
-import { Button, Container, NumericInput, SelectInput } from '@playcanvas/pcui';
+import { Button, Container, Element, NumericInput, SelectInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { ShortcutManager } from '../shortcut-manager';
@@ -23,9 +23,15 @@ class Ticks extends Container {
         let frameFromOffset: (offset: number) => number;
         let moveCursor: (frame: number) => void;
 
+        // pcui wrappers around key markers, kept so their tooltips unregister
+        // (via the destroy event) when the timeline is rebuilt
+        let keyElements: Element[] = [];
+
         // rebuild the timeline
         const rebuild = () => {
             // clear existing labels
+            keyElements.forEach(el => el.destroy());
+            keyElements = [];
             workArea.dom.innerHTML = '';
 
             const numFrames = events.invoke('timeline.frames');
@@ -82,7 +88,10 @@ class Ticks extends Container {
                 label.classList.add('time-label', 'key');
                 label.style.left = `${offsetFromFrame(keyFrame)}px`;
                 label.dataset.frame = keyFrame.toString();
-                label.title = i18n.t('tooltip.timeline.key');
+
+                const wrapper = new Element({ dom: label });
+                tooltips.register(wrapper, () => i18n.t('tooltip.timeline.key'), 'top');
+                keyElements.push(wrapper);
                 let dragging = false;
                 let copying = false;
                 let clone: HTMLElement = null;

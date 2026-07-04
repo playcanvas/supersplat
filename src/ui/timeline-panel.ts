@@ -232,6 +232,8 @@ class Ticks extends Container {
         window.addEventListener('keyup', onCtrlUp);
 
         this.on('destroy', () => {
+            keyElements.forEach(el => el.destroy());
+            keyElements = [];
             window.removeEventListener('keydown', onCtrlDown);
             window.removeEventListener('keyup', onCtrlUp);
         });

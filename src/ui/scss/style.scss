@@ -30,9 +30,7 @@
     user-select: none;
 }
 
-// viewport only - on '*' this hits overflow:hidden elements (e.g. pcui-label),
-// which are scroll containers, so wheel events die there instead of chaining
-// up to the nearest scrollable ancestor
+// not on '*' - that breaks wheel scrolling over overflow:hidden elements (e.g. pcui labels)
 html {
     height: 100%;
     overscroll-behavior: none;

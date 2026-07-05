@@ -1129,6 +1129,14 @@ const createGpuDevice = async (): Promise<WebgpuGraphicsDevice> => {
         throw new Error('WebGPU is not available in this browser');
     }
 
+    // Ensure a compatible WebGPU adapter exists before creating the device.
+    // Without this pre-flight, a null adapter causes the engine to read
+    // adapter.features on null, crashing with a confusing error during export.
+    const adapter = await navigator.gpu.requestAdapter();
+    if (!adapter) {
+        throw new Error('WebGPU is not available: no compatible GPU adapter was found. This export format requires WebGPU.');
+    }
+
     // Create a minimal canvas for the graphics device
     const canvas = document.createElement('canvas');
     canvas.width = 1024;

@@ -587,7 +587,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         } catch (error) {
             await events.invoke('showPopup', {
                 type: 'error',
-                header: i18n.t('popup.error-loading'),
+                header: i18n.t('popup.error-saving'),
                 message: `${error.message ?? error} while saving file`
             });
         } finally {

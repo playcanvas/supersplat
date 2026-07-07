@@ -65,6 +65,7 @@
     "panel.view-options.unselected-color": "Unselected Color",
     "panel.view-options.locked-color": "Locked Color",
     "panel.view-options.fov": "Field of View",
+    "panel.view-options.fov-dolly": "FOV Auto Dolly",
     "panel.view-options.control-mode": "Control Mode",
     "panel.view-options.control-mode.orbit": "Orbit",
     "panel.view-options.control-mode.fly": "Fly",

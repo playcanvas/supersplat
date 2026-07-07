@@ -65,6 +65,7 @@
     "panel.view-options.unselected-color": "Color no seleccionado",
     "panel.view-options.locked-color": "Color bloqueado",
     "panel.view-options.fov": "Campo de visión",
+    "panel.view-options.fov-dolly": "Auto dolly de FOV",
     "panel.view-options.control-mode": "Modo de control",
     "panel.view-options.control-mode.orbit": "Órbita",
     "panel.view-options.control-mode.fly": "Volar",

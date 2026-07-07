@@ -65,6 +65,7 @@
     "panel.view-options.unselected-color": "非選択色",
     "panel.view-options.locked-color": "ロック色",
     "panel.view-options.fov": "視野 ( FOV )",
+    "panel.view-options.fov-dolly": "FOV自動ドリー",
     "panel.view-options.control-mode": "操作モード",
     "panel.view-options.control-mode.orbit": "オービット",
     "panel.view-options.control-mode.fly": "フライ",

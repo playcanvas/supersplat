@@ -189,6 +189,26 @@ class ViewPanel extends Container {
         fovRow.append(fovLabel);
         fovRow.append(fovSlider);
 
+        // fov auto dolly
+
+        const fovDollyRow = new Container({
+            class: 'view-panel-row'
+        });
+
+        const fovDollyLabel = new Label({
+            class: 'view-panel-row-label'
+        });
+        i18n.bindText(fovDollyLabel, 'panel.view-options.fov-dolly');
+
+        const fovDollyToggle = new BooleanInput({
+            type: 'toggle',
+            class: 'view-panel-row-toggle',
+            value: false
+        });
+
+        fovDollyRow.append(fovDollyLabel);
+        fovDollyRow.append(fovDollyToggle);
+
         // sh bands
         const shBandsRow = new Container({
             class: 'view-panel-row'
@@ -398,6 +418,7 @@ class ViewPanel extends Container {
         this.append(clrRow);
         this.append(tonemappingRow);
         this.append(fovRow);
+        this.append(fovDollyRow);
         this.append(shBandsRow);
         this.append(cameraFlySpeedRow);
         this.append(centersSizeRow);
@@ -475,6 +496,16 @@ class ViewPanel extends Container {
 
         cameraFlySpeedSlider.on('change', (value: number) => {
             events.fire('camera.setFlySpeed', value);
+        });
+
+        // fov auto dolly
+
+        events.on('camera.fovDolly', (value: boolean) => {
+            fovDollyToggle.value = value;
+        });
+
+        fovDollyToggle.on('change', (value: boolean) => {
+            events.fire('camera.setFovDolly', value);
         });
 
         // outline selection

@@ -65,6 +65,7 @@
     "panel.view-options.unselected-color": "선택되지 않은 색상",
     "panel.view-options.locked-color": "잠긴 색상",
     "panel.view-options.fov": "시야각",
+    "panel.view-options.fov-dolly": "FOV 자동 달리",
     "panel.view-options.control-mode": "제어 모드",
     "panel.view-options.control-mode.orbit": "궤도",
     "panel.view-options.control-mode.fly": "비행",

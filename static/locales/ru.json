@@ -65,6 +65,7 @@
     "panel.view-options.unselected-color": "Цвет невыделенного",
     "panel.view-options.locked-color": "Цвет заблокированного",
     "panel.view-options.fov": "Поле зрения",
+    "panel.view-options.fov-dolly": "Авто-долли FOV",
     "panel.view-options.control-mode": "Режим управления",
     "panel.view-options.control-mode.orbit": "Орбита",
     "panel.view-options.control-mode.fly": "Полёт",

@@ -65,6 +65,7 @@
     "panel.view-options.unselected-color": "未选中颜色",
     "panel.view-options.locked-color": "锁定颜色",
     "panel.view-options.fov": "视野角",
+    "panel.view-options.fov-dolly": "FOV 自动推轨",
     "panel.view-options.control-mode": "控制模式",
     "panel.view-options.control-mode.orbit": "环绕",
     "panel.view-options.control-mode.fly": "飞行",

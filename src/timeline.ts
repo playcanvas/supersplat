@@ -11,6 +11,7 @@ const registerTimelineEvents = (events: Events) => {
     let frames = 180;
     let frameRate = 30;
     let smoothness = 1;
+    let loop = true;
 
     // frames
 
@@ -61,6 +62,23 @@ const registerTimelineEvents = (events: Events) => {
 
     events.on('timeline.setSmoothness', (value: number) => {
         setSmoothness(value);
+    });
+
+    // loop
+
+    const setLoop = (value: boolean) => {
+        if (value !== loop) {
+            loop = value;
+            events.fire('timeline.loop', loop);
+        }
+    };
+
+    events.function('timeline.loop', () => {
+        return loop;
+    });
+
+    events.on('timeline.setLoop', (value: boolean) => {
+        setLoop(value);
     });
 
     // current frame
@@ -176,7 +194,8 @@ const registerTimelineEvents = (events: Events) => {
             frames,
             frameRate,
             frame,
-            smoothness
+            smoothness,
+            loop
         };
     });
 
@@ -186,12 +205,14 @@ const registerTimelineEvents = (events: Events) => {
         frameRate = data.frameRate ?? 30;
         frame = data.frame ?? 0;
         smoothness = data.smoothness ?? 1;
+        loop = data.loop ?? true;
 
         // Fire events to update UI (always fire to ensure rebuild)
         events.fire('timeline.frames', frames);
         events.fire('timeline.frameRate', frameRate);
         events.fire('timeline.frame', frame);
         events.fire('timeline.smoothness', smoothness);
+        events.fire('timeline.loop', loop);
     });
 };
 

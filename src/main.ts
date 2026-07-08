@@ -35,6 +35,7 @@ import { registerTransformHandlerEvents } from './transform-handler';
 import { BoundDimensionsOverlay } from './ui/bound-dimensions-overlay';
 import { EditorUI } from './ui/editor';
 import { i18n } from './ui/localization';
+import { registerSelectCursor } from './ui/select-cursor';
 
 declare global {
     interface LaunchParams {
@@ -250,6 +251,9 @@ const main = async () => {
     const boundDimensionsOverlay = new BoundDimensionsOverlay(events, scene, editorUI.canvasContainer);
 
     editorUI.toolsContainer.dom.appendChild(maskCanvas);
+
+    // show the active selection op (add/remove/intersect) at the cursor
+    registerSelectCursor(events, editorUI.toolsContainer.dom);
 
     window.scene = scene;
 

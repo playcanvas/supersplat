@@ -90,7 +90,7 @@ class RectSelection {
                     // pick - wait for selection to complete before hiding rect
                     await events.invoke(
                         'select.point',
-                        e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
+                        opFromModifiers(e),
                         { x: e.offsetX / parent.clientWidth, y: e.offsetY / parent.clientHeight }
                     );
                 }

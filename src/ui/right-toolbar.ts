@@ -117,7 +117,15 @@ class RightToolbar extends Container {
         tooltips.register(cameraFrameSelection, tooltip('tooltip.right-toolbar.frame-selection', 'camera.focus'), 'left');
         tooltips.register(cameraReset, tooltip('tooltip.right-toolbar.reset-camera', 'camera.reset'), 'left');
         tooltips.register(colorPanel, tooltip('tooltip.right-toolbar.colors'), 'left');
-        tooltips.register(options, tooltip('tooltip.right-toolbar.view-options'), 'left');
+        tooltips.register(
+            options,
+            tooltip('tooltip.right-toolbar.view-options'),
+            'left',
+            {
+                description: i18n.t('tooltip.right-toolbar.view-options.desc'),
+                image: 'static/images/myau.webp'
+            }
+        );
 
         // add event handlers
 

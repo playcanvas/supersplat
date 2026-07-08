@@ -75,6 +75,7 @@ class VideoSettingsDialog extends Container {
         // 360 output is 2:1 equirectangular, capped at 4096 wide to stay
         // within common encoder dimension limits
         const equirectResolutions = [
+            { v: '360-1k', t: '1024x512' },
             { v: '360-2k', t: '2048x1024' },
             { v: '360-4k', t: '3840x1920' },
             { v: '360-4096', t: '4096x2048' }
@@ -366,6 +367,7 @@ class VideoSettingsDialog extends Container {
                         '1080': 1920,
                         '1440': 2560,
                         '4k': 3840,
+                        '360-1k': 1024,
                         '360-2k': 2048,
                         '360-4k': 3840,
                         '360-4096': 4096
@@ -377,6 +379,7 @@ class VideoSettingsDialog extends Container {
                         '1080': 1080,
                         '1440': 1440,
                         '4k': 2160,
+                        '360-1k': 512,
                         '360-2k': 1024,
                         '360-4k': 1920,
                         '360-4096': 2048
@@ -408,6 +411,7 @@ class VideoSettingsDialog extends Container {
                         '1080': 1 / 3,
                         '1440': 1 / 4,
                         '4k': 1 / 5,
+                        '360-1k': 1,
                         '360-2k': 1 / 3,
                         '360-4k': 1 / 5,
                         '360-4096': 1 / 5

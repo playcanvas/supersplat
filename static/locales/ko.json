@@ -128,6 +128,7 @@
     "popup.no": "아니요",
     "popup.error": "오류",
     "popup.error-loading": "파일 로드 오류",
+    "popup.webgpu-unavailable": "이 내보내기에는 WebGPU가 필요하지만 이 브라우저에서는 사용할 수 없습니다. 최신 버전의 Chrome, Edge 또는 Safari를 사용해 보세요.",
     "popup.lcc-upload-warning": "superspl.at에 더 나은 게시를 위해 업로드 페이지를 통해 LCC 파일을 직접 업로드하세요.",
     "popup.export": "내보내기",
     "popup.copy-to-clipboard": "클립 보드에 링크 복사",

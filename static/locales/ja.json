@@ -128,6 +128,7 @@
     "popup.no": "いいえ",
     "popup.error": "エラー",
     "popup.error-loading": "ファイルの読み込みエラー",
+    "popup.webgpu-unavailable": "このエクスポートにはWebGPUが必要ですが、このブラウザでは利用できません。Chrome、Edge、Safariの最新バージョンをお試しください。",
     "popup.lcc-upload-warning": "superspl.atへの公開には、アップロードページから直接LCCファイルをアップロードすることをお勧めします。",
     "popup.export": "エクスポート",
     "popup.copy-to-clipboard": "リンクをクリップボードにコピー",

@@ -128,6 +128,7 @@
     "popup.no": "Não",
     "popup.error": "Erro",
     "popup.error-loading": "Erro ao Carregar Arquivo",
+    "popup.webgpu-unavailable": "Esta exportação requer WebGPU, que não está disponível neste navegador. Tente uma versão recente do Chrome, Edge ou Safari.",
     "popup.lcc-upload-warning": "Para uma melhor publicação no superspl.at, envie seu arquivo LCC diretamente pela página de upload.",
     "popup.export": "Exportar",
     "popup.copy-to-clipboard": "Copiar Link para Área de Transferência",

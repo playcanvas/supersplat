@@ -128,6 +128,7 @@
     "popup.no": "否",
     "popup.error": "错误",
     "popup.error-loading": "加载文件错误",
+    "popup.webgpu-unavailable": "此导出需要 WebGPU，但当前浏览器不支持。请尝试使用最新版本的 Chrome、Edge 或 Safari。",
     "popup.lcc-upload-warning": "为了更好地发布到 superspl.at，请通过上传页面直接上传您的 LCC 文件。",
     "popup.export": "导出",
     "popup.copy-to-clipboard": "复制链接到剪贴板",

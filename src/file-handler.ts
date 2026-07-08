@@ -592,10 +592,11 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                     message: i18n.t('popup.webgpu-unavailable')
                 });
             } else {
+                const message = error instanceof Error ? error.message : String(error);
                 await events.invoke('showPopup', {
                     type: 'error',
                     header: i18n.t('popup.error'),
-                    message: `${error.message ?? error} while saving file`
+                    message: `${message} while saving file`
                 });
             }
         } finally {

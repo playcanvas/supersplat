@@ -6,7 +6,7 @@ import { Events } from '../events';
 import { Scene } from '../scene';
 import { Splat } from '../splat';
 import { Transform } from '../transform';
-import { localize } from '../ui/localization';
+import { i18n } from '../ui/localization';
 
 const mat = new Mat4();
 const mat1 = new Mat4();
@@ -68,9 +68,8 @@ class MeasureTool {
         svg.appendChild(lineEnd);
 
         // ui
-        const lengthLabel = new Label({
-            text: localize('measure.length')
-        });
+        const lengthLabel = new Label();
+        i18n.bindText(lengthLabel, 'measure.length');
 
         const lengthInput = new NumericInput({
             width: 90,

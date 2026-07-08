@@ -28,11 +28,12 @@
 * {
     font-size: 12px;
     user-select: none;
-    overscroll-behavior: none;
 }
 
+// not on '*' - that breaks wheel scrolling over overflow:hidden elements (e.g. pcui labels)
 html {
     height: 100%;
+    overscroll-behavior: none;
 }
 
 body {
@@ -43,6 +44,7 @@ body {
     background-color: black;
     overflow: hidden;
     touch-action: none;
+    overscroll-behavior: none;
 }
 
 #app-container {
@@ -105,22 +107,59 @@ body {
     text-shadow: 1px 1px 4px black;
 }
 
-#cursor-label {
+#camera-info-overlay {
     position: absolute;
     left: 12px;
-    bottom: 12px;
-    color: $text-primary;
+    bottom: 17px;
     text-shadow: 1px 1px 4px black;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
 
-    padding: 8px;
-    border-radius: 4px;
-    border: 1px solid transparent;
+    .camera-info-row {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        padding: 1px 0;
+        font-family: inherit;
+    }
 
-    cursor: pointer;
+    .camera-info-key {
+        margin: 0;
+        color: $clr-icon-hilight;
+        font-family: inherit;
+        font-weight: bold;
+        overflow: visible;
+    }
 
-    &:hover {
-        border: 1px solid $clr-hilight;
-        background-color: rgba(0, 0, 0, 0.25);
+    .camera-info-value {
+        margin: 0 0 0 8px;
+        color: $text-primary;
+        font-family: inherit;
+        font-variant-numeric: tabular-nums;
+        overflow: visible;
+        cursor: text;
+        user-select: text;
+        padding: 0 4px;
+        border-radius: 4px;
+        border: 1px solid transparent;
+        outline: none;
+        transition: background-color 0.15s ease;
+
+        &:hover {
+            background-color: rgba(0, 0, 0, 0.25);
+        }
+
+        &:focus {
+            border-color: $clr-hilight;
+            background-color: rgba(0, 0, 0, 0.25);
+        }
+
+        &.flash-ok {
+            background-color: rgba(120, 220, 140, 0.35);
+        }
+
+        &.flash-bad {
+            background-color: rgba(220, 100, 100, 0.45);
+        }
     }
 }
 

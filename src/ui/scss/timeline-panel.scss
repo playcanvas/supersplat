@@ -72,6 +72,35 @@
                     margin: 0;
                     width: 60px;
                 }
+
+                > #loop {
+                    font-family: pc-icon;
+                    font-weight: bold;
+                    font-size: 13px;
+
+                    width: 36px;
+                    height: 24px;
+                    margin: 0;
+                    padding: 0;
+                    flex-grow: 0;
+                    flex-shrink: 0;
+
+                    border-radius: 4px;
+
+                    text-align: center;
+                    line-height: 24px;
+
+                    &:hover {
+                        color: #ff9900;
+                        cursor: pointer;
+                        box-shadow: none;
+                        border-color: #ff990088;
+                    }
+
+                    &.active {
+                        color: $clr-hilight;
+                    }
+                }
             }
         }
     }
@@ -97,6 +126,16 @@
         > #ticks-area {
             width: 100%;
             height: 100%;
+
+            > .time-tick {
+                position: absolute;
+                bottom: 1px;
+                width: 1px;
+                height: 5px;
+                transform: translate(-50%, 0);
+                background-color: $clr-disabled;
+                pointer-events: none;
+            }
 
             > .time-label {
                 position: absolute;
@@ -126,6 +165,12 @@
                     // border-radius: 50%;
                     cursor: pointer;
                     pointer-events: auto;
+                }
+
+                // declared before dragging/copying so those cursors win
+                // during a ctrl+drag
+                &.stamping {
+                    cursor: crosshair;
                 }
 
                 &.dragging {

@@ -45,6 +45,19 @@
         }
     }
 
+    &#bound-dimensions-svg {
+        pointer-events: none;
+
+        > text {
+            font-family: monospace;
+            font-size: 11px;
+            fill: white;
+            paint-order: stroke;
+            stroke: rgba(0, 0, 0, 0.7);
+            stroke-width: 3px;
+        }
+    }
+
     &#measure-tool-svg {
         >#measure-line-bottom {
             stroke: black;

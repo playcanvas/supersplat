@@ -7,7 +7,7 @@ import { Scene } from './scene';
 import { Splat } from './splat';
 import { serializePly } from './splat-serialize';
 import { Transform } from './transform';
-import { localize } from './ui/localization';
+import { i18n } from './ui/localization';
 
 // ts compiler and vscode find this type, but eslint does not
 type FilePickerAcceptType = unknown;
@@ -63,8 +63,8 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     const getResetConfirmation = async () => {
         const result = await events.invoke('showPopup', {
             type: 'yesno',
-            header: localize('doc.reset'),
-            message: localize(events.invoke('scene.dirty') ? 'doc.unsaved-message' : 'doc.reset-message')
+            header: i18n.t('doc.reset'),
+            message: i18n.t(events.invoke('scene.dirty') ? 'doc.unsaved-message' : 'doc.reset-message')
         });
 
         if (result.action !== 'yes') {
@@ -137,7 +137,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
         } catch (error) {
             await events.invoke('showPopup', {
                 type: 'error',
-                header: localize('doc.load-failed'),
+                header: i18n.t('doc.load-failed'),
                 message: `'${error.message ?? error}'`
             });
         } finally {
@@ -191,7 +191,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
         } catch (error) {
             await events.invoke('showPopup', {
                 type: 'error',
-                header: localize('doc.save-failed'),
+                header: i18n.t('doc.save-failed'),
                 message: `'${error.message ?? error}'`
             });
         } finally {
@@ -288,7 +288,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 console.error(error);
                 await events.invoke('showPopup', {
                     type: 'error',
-                    header: localize('popup.error-loading'),
+                    header: i18n.t('popup.error-loading'),
                     message: `${error.message ?? error}`
                 });
             }

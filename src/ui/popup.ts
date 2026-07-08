@@ -1,6 +1,6 @@
 import { Button, Container, Label, TextInput } from '@playcanvas/pcui';
 
-import { localize } from './localization';
+import { i18n } from './localization';
 import { Tooltips } from './tooltips';
 
 interface ShowOptions {
@@ -54,24 +54,24 @@ class Popup extends Container {
         linkRow.append(linkCopy);
 
         const okButton = new Button({
-            class: 'popup-button',
-            text: localize('popup.ok')
+            class: 'popup-button'
         });
+        i18n.bindText(okButton, 'popup.ok');
 
         const cancelButton = new Button({
-            class: 'popup-button',
-            text: localize('popup.cancel')
+            class: 'popup-button'
         });
+        i18n.bindText(cancelButton, 'popup.cancel');
 
         const yesButton = new Button({
-            class: 'popup-button',
-            text: localize('popup.yes')
+            class: 'popup-button'
         });
+        i18n.bindText(yesButton, 'popup.yes');
 
         const noButton = new Button({
-            class: 'popup-button',
-            text: localize('popup.no')
+            class: 'popup-button'
         });
+        i18n.bindText(noButton, 'popup.no');
 
         const buttons = new Container({
             id: 'popup-buttons'
@@ -190,7 +190,7 @@ class Popup extends Container {
             super.destroy();
         };
 
-        tooltips.register(linkCopy, localize('popup.copy-to-clipboard'));
+        tooltips.register(linkCopy, () => i18n.t('popup.copy-to-clipboard'));
     }
 }
 

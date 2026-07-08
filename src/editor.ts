@@ -75,8 +75,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     [
         'camera.mode', 'camera.overlay', 'camera.splatSize', 'view.outlineSelection',
-        'view.centersUseGaussianColor', 'view.bands', 'camera.bound', 'camera.showPoses',
-        'selection.changed', 'tool.coordSpace'
+        'view.centersUseGaussianColor', 'view.bands', 'camera.bound', 'camera.boundDimensions', 'camera.showPoses',
+        'camera.showInfo', 'selection.changed', 'tool.coordSpace'
     ].forEach((eventName) => {
         events.on(eventName, () => {
             scene.forceRender = true;
@@ -106,12 +106,47 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     setGridVisible(scene.config.show.grid);
 
+    // camera.fovDolly
+
+    let fovDolly = false;
+
+    const setFovDolly = (value: boolean) => {
+        if (value !== fovDolly) {
+            fovDolly = value;
+            events.fire('camera.fovDolly', fovDolly);
+        }
+    };
+
+    events.function('camera.fovDolly', () => {
+        return fovDolly;
+    });
+
+    events.on('camera.setFovDolly', (value: boolean) => {
+        setFovDolly(value);
+    });
+
     // camera.fov
 
     const setCameraFov = (fov: number) => {
-        if (fov !== scene.camera.fov) {
-            scene.camera.fov = fov;
-            events.fire('camera.fov', scene.camera.fov);
+        const { camera } = scene;
+        if (fov !== camera.fov) {
+            const oldFovFactor = camera.fovFactor;
+            camera.fov = fov;
+
+            // by default a fov change acts like a lens zoom: scale distance so
+            // the camera's world-space offset from the focal point (distance *
+            // sceneRadius / fovFactor) is unchanged. with auto-dolly enabled
+            // the camera moves instead, preserving the subject's framing.
+            if (!fovDolly) {
+                const { controls } = scene.config;
+                const k = camera.fovFactor / oldFovFactor;
+                const t = camera.distanceTween;
+                for (const s of [t.value, t.source, t.target]) {
+                    s.distance = Math.max(controls.minZoom, Math.min(controls.maxZoom, s.distance * k));
+                }
+            }
+
+            events.fire('camera.fov', camera.fov);
         }
     };
 
@@ -156,6 +191,29 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         setBoundVisible(!events.invoke('camera.bound'));
     });
 
+    // camera.boundDimensions
+
+    let boundDimensions = scene.config.show.boundDimensions;
+
+    const setBoundDimensionsVisible = (visible: boolean) => {
+        if (visible !== boundDimensions) {
+            boundDimensions = visible;
+            events.fire('camera.boundDimensions', boundDimensions);
+        }
+    };
+
+    events.function('camera.boundDimensions', () => {
+        return boundDimensions;
+    });
+
+    events.on('camera.setBoundDimensions', (value: boolean) => {
+        setBoundDimensionsVisible(value);
+    });
+
+    events.on('camera.toggleBoundDimensions', () => {
+        setBoundDimensionsVisible(!events.invoke('camera.boundDimensions'));
+    });
+
     // camera.showPoses
 
     let showPoses = scene.config.show.cameraPoses;
@@ -177,6 +235,29 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('camera.toggleShowPoses', () => {
         setShowPoses(!events.invoke('camera.showPoses'));
+    });
+
+    // camera.showInfo
+
+    let showInfo = scene.config.show.cameraInfo;
+
+    const setShowInfo = (visible: boolean) => {
+        if (visible !== showInfo) {
+            showInfo = visible;
+            events.fire('camera.showInfo', showInfo);
+        }
+    };
+
+    events.function('camera.showInfo', () => {
+        return showInfo;
+    });
+
+    events.on('camera.setShowInfo', (value: boolean) => {
+        setShowInfo(value);
+    });
+
+    events.on('camera.toggleShowInfo', () => {
+        setShowInfo(!events.invoke('camera.showInfo'));
     });
 
     // camera.focus
@@ -520,6 +601,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         if (events.invoke('tool.active') === 'measure') {
             return;
         }
+        // Don't delete gaussians while a polygon selection is in progress (backspace removes the last point instead)
+        if (events.invoke('polygonSelection.removeLastPoint')) {
+            return;
+        }
         selectedSplats().forEach((splat) => {
             editHistory.add(new DeleteSelectionOp(splat));
         });
@@ -749,6 +834,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.fire('camera.fov', scene.camera.fov);
     events.fire('camera.overlay', cameraOverlay);
     events.fire('view.bands', viewBands);
+    events.fire('camera.showInfo', showInfo);
 
     // doc serialization
     events.function('docSerialize.view', () => {
@@ -763,8 +849,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             outlineSelection: events.invoke('view.outlineSelection'),
             showGrid: events.invoke('grid.visible'),
             showBound: events.invoke('camera.bound'),
+            showBoundDimensions: events.invoke('camera.boundDimensions'),
             showCameraPoses: events.invoke('camera.showPoses'),
-            flySpeed: events.invoke('camera.flySpeed')
+            showCameraInfo: events.invoke('camera.showInfo'),
+            flySpeed: events.invoke('camera.flySpeed'),
+            fovDolly: events.invoke('camera.fovDolly')
         };
     });
 
@@ -778,8 +867,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         events.fire('view.setOutlineSelection', docView.outlineSelection);
         events.fire('grid.setVisible', docView.showGrid);
         events.fire('camera.setBound', docView.showBound);
+        events.fire('camera.setBoundDimensions', docView.showBoundDimensions ?? false);
         events.fire('camera.setShowPoses', docView.showCameraPoses ?? false);
+        events.fire('camera.setShowInfo', docView.showCameraInfo ?? false);
         events.fire('camera.setFlySpeed', docView.flySpeed);
+        events.fire('camera.setFovDolly', docView.fovDolly ?? false);
     });
 };
 

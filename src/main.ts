@@ -1,4 +1,4 @@
-import { WebPCodec } from '@playcanvas/splat-transform';
+import { WebPCodec, WorkerQueue } from '@playcanvas/splat-transform';
 import { Color, createGraphicsDevice } from 'playcanvas';
 
 import { registerCameraPosesEvents } from './camera-poses';
@@ -9,12 +9,12 @@ import { registerEditorEvents } from './editor';
 import { Events } from './events';
 import { initFileHandler } from './file-handler';
 import { registerIframeApi } from './iframe-api';
-import { registerPlySequenceEvents } from './ply-sequence';
 import { registerPublishEvents } from './publish';
 import { registerRenderEvents } from './render';
 import { Scene } from './scene';
 import { getSceneConfig } from './scene-config';
 import { registerSelectionEvents } from './selection';
+import { registerSequenceEvents } from './sequence';
 import { ShortcutManager } from './shortcut-manager';
 import { registerTimelineEvents } from './timeline';
 import { BoxSelection } from './tools/box-selection';
@@ -32,8 +32,9 @@ import { SphereSelection } from './tools/sphere-selection';
 import { ToolManager } from './tools/tool-manager';
 import { registerTrackManagerEvents } from './track-manager';
 import { registerTransformHandlerEvents } from './transform-handler';
+import { BoundDimensionsOverlay } from './ui/bound-dimensions-overlay';
 import { EditorUI } from './ui/editor';
-import { localizeInit } from './ui/localization';
+import { i18n } from './ui/localization';
 
 declare global {
     interface LaunchParams {
@@ -93,17 +94,22 @@ const main = async () => {
     events.function('queue', (fn: () => Promise<void> | void) => commandQueue.enqueue(fn));
 
     // init localization
-    await localizeInit();
+    await i18n.init();
 
     // Configure WebP WASM for SOG format (used for both reading and writing)
     WebPCodec.wasmUrl = new URL('static/lib/webp/webp.wasm', document.baseURI).toString();
+
+    // Run SOG writing inline rather than in worker threads. We don't ship
+    // splat-transform's worker.mjs, so leaving the pool enabled makes it try to
+    // spawn a worker that 404s; under SOG's parallel task load it then hangs
+    // instead of falling back, producing an empty export.
+    WorkerQueue.maxWorkers = 0;
 
     // register events that only need the events object (before UI is created)
     registerTimelineEvents(events);
     registerCameraPosesEvents(events);
     registerTrackManagerEvents(events);
     registerTransformHandlerEvents(events);
-    registerPlySequenceEvents(events);
     registerPublishEvents(events);
     registerIframeApi(events);
 
@@ -241,6 +247,8 @@ const main = async () => {
     toolManager.register('scale', new ScaleTool(events, scene));
     toolManager.register('measure', new MeasureTool(events, scene, editorUI.toolsContainer.dom, editorUI.canvasContainer));
 
+    const boundDimensionsOverlay = new BoundDimensionsOverlay(events, scene, editorUI.canvasContainer);
+
     editorUI.toolsContainer.dom.appendChild(maskCanvas);
 
     window.scene = scene;
@@ -248,6 +256,7 @@ const main = async () => {
     // register events that need scene or other dependencies
     registerEditorEvents(events, editHistory, scene);
     registerSelectionEvents(events, scene);
+    registerSequenceEvents(events, scene);
     registerDocEvents(scene, events);
     registerRenderEvents(scene, events);
     initFileHandler(scene, events, editorUI.appContainer.dom);

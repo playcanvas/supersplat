@@ -6,6 +6,7 @@ import {
     Transform,
     writeHtml,
     writeSog as writeSogInternal,
+    writeSpz,
     ZipFileSystem,
     type FileSystem,
     type LogEvent,
@@ -1115,6 +1116,15 @@ const serializeSplat = async (splats: Splat[], options: SerializeSettings, fs: F
     await writer.close();
 };
 
+// Thrown when the WebGPU device needed for SOG compression can't be created.
+// Callers show a friendly message for this instead of the raw error text.
+class WebGPUUnavailableError extends Error {
+    constructor() {
+        super('WebGPU is not available');
+        this.name = 'WebGPUUnavailableError';
+    }
+}
+
 // Cached WebGPU device for SOG compression
 let cachedGpuDevice: WebgpuGraphicsDevice | null = null;
 let cachedBackbuffer: Texture | null = null;
@@ -1125,7 +1135,7 @@ const createGpuDevice = async (): Promise<WebgpuGraphicsDevice> => {
     }
 
     if (!navigator.gpu) {
-        throw new Error('WebGPU is not available in this browser');
+        throw new WebGPUUnavailableError();
     }
 
     // Create a minimal canvas for the graphics device
@@ -1139,7 +1149,21 @@ const createGpuDevice = async (): Promise<WebgpuGraphicsDevice> => {
         stencil: false
     });
 
-    await graphicsDevice.createDevice();
+    try {
+        await graphicsDevice.createDevice();
+    } catch (err) {
+        // createDevice fails with an obscure internal error when no adapter
+        // is available (e.g. blocklisted GPU or missing drivers)
+        console.error(err);
+        throw new WebGPUUnavailableError();
+    }
+
+    // createDevice can also resolve without creating a device (e.g.
+    // blocklisted adapters)
+    // @ts-ignore - wgpu is an internal property
+    if (!graphicsDevice.wgpu) {
+        throw new WebGPUUnavailableError();
+    }
 
     // Create external backbuffer (required by PlayCanvas)
     cachedBackbuffer = new Texture(graphicsDevice, {
@@ -1358,12 +1382,39 @@ const serializeSog = async (splats: Splat[], settings: SogSettings, fs: FileSyst
     }
 };
 
+type SpzSettings = SerializeSettings & {
+    version?: 3 | 4;
+    events?: Events;
+};
+
+const serializeSpz = async (splats: Splat[], settings: SpzSettings, fs: FileSystem): Promise<void> => {
+    const { version = 4, events } = settings;
+
+    splatTransformLogger.setRenderer(createProgressRenderer('Exporting SPZ', events));
+
+    // Extract splat data to DataTable
+    const dataTable = extractDataTable(splats, settings);
+
+    // unwind the logger's top-level scope on error (see serializeSog)
+    try {
+        await writeSpz({
+            filename: 'output.spz',
+            dataTable,
+            version
+        }, fs);
+    } catch (err) {
+        splatTransformLogger.unwindAll(true);
+        throw err;
+    }
+};
+
 export {
     Writer,
     serializePly,
     serializePlyCompressed,
     serializeSplat,
     serializeSog,
+    serializeSpz,
     serializeViewer,
     AnimTrack,
     CameraPose,
@@ -1374,5 +1425,7 @@ export {
     ExperienceSettings,
     SerializeSettings,
     SogSettings,
-    ViewerExportSettings
+    SpzSettings,
+    ViewerExportSettings,
+    WebGPUUnavailableError
 };

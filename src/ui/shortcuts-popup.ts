@@ -2,7 +2,7 @@ import { Container, Label } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { ShortcutManager } from '../shortcut-manager';
-import { localize } from './localization';
+import { i18n } from './localization';
 
 // Popup display configuration - maps shortcuts to categories and locale keys
 // This is separate from the shortcut bindings themselves (separation of concerns)
@@ -48,6 +48,7 @@ const popupConfig: Record<string, CategoryConfig> = {
             { id: 'camera.toggleOverlay', localeKey: 'popup.shortcuts.toggle-splat-overlay' },
             { id: 'camera.toggleMode', localeKey: 'popup.shortcuts.toggle-overlay-mode' },
             { id: 'grid.toggleVisible', localeKey: 'popup.shortcuts.toggle-grid' },
+            { id: 'camera.toggleShowInfo', localeKey: 'popup.shortcuts.toggle-camera-info' },
             { id: 'select.hide', localeKey: 'popup.shortcuts.lock-selected-splats' },
             { id: 'select.unhide', localeKey: 'popup.shortcuts.unlock-all-splats' }
         ]
@@ -145,9 +146,9 @@ class ShortcutsPopup extends Container {
 
         // Header
         const header = new Label({
-            id: 'header',
-            text: localize('popup.shortcuts.title').toUpperCase()
+            id: 'header'
         });
+        i18n.bindText(header, () => i18n.t('popup.shortcuts.title').toUpperCase());
 
         // Content
         const content = new Container({
@@ -164,9 +165,9 @@ class ShortcutsPopup extends Container {
 
             // Add category header
             const headerLabel = new Label({
-                class: 'shortcut-header-label',
-                text: localize(config.localeKey)
+                class: 'shortcut-header-label'
             });
+            i18n.bindText(headerLabel, config.localeKey);
 
             const headerEntry = new Container({
                 class: 'shortcut-header'
@@ -186,9 +187,9 @@ class ShortcutsPopup extends Container {
                 });
 
                 const action = new Label({
-                    class: 'shortcut-action',
-                    text: localize(item.localeKey)
+                    class: 'shortcut-action'
                 });
+                i18n.bindText(action, item.localeKey);
 
                 const entry = new Container({
                     class: 'shortcut-entry'
@@ -208,9 +209,9 @@ class ShortcutsPopup extends Container {
                     });
 
                     const action = new Label({
-                        class: 'shortcut-action',
-                        text: localize(hint.localeKey)
+                        class: 'shortcut-action'
                     });
+                    i18n.bindText(action, hint.localeKey);
 
                     const entry = new Container({
                         class: 'shortcut-entry'

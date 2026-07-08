@@ -117,16 +117,21 @@ class SelectOp extends StateOp {
     constructor(splat: Splat, op: 'add' | 'remove' | 'set' | 'intersect', sel: Uint8Array | Uint32Array) {
         const splatData = splat.splatData;
         const state = splatData.getProp('state') as Uint8Array;
-        const bitOp = (op === 'add') ? BitOp.SET :
-            (op === 'remove' || op === 'intersect') ? BitOp.CLEAR :
-                BitOp.TOGGLE;
-
         const isHit = sel instanceof Uint32Array ? sortedPredicate(sel) : (i: number) => sel[i] === 255;
 
         // single rule applied uniformly: only valid (clean or selected) splats
         // are considered. consolidates the locked/deleted guard in one place so
         // each producer doesn't have to remember it for the 'set' (toggle) path.
         const valid = (i: number) => state[i] === 0 || state[i] === State.selected;
+
+        // op → bit operation and op → predicate, kept as parallel lookups keyed
+        // by the same union so adding an op forces both to be updated together.
+        const bitOps = {
+            add: BitOp.SET,
+            remove: BitOp.CLEAR,
+            set: BitOp.TOGGLE,
+            intersect: BitOp.CLEAR
+        };
 
         const preds = {
             add: (i: number) => valid(i) && isHit(i) && state[i] === 0,
@@ -135,7 +140,7 @@ class SelectOp extends StateOp {
             intersect: (i: number) => valid(i) && state[i] === State.selected && !isHit(i)
         };
 
-        super(splat, IndexRanges.fromPredicate(splatData.numSplats, preds[op]), State.selected, bitOp);
+        super(splat, IndexRanges.fromPredicate(splatData.numSplats, preds[op]), State.selected, bitOps[op]);
     }
 }
 

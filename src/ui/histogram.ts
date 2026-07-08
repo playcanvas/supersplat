@@ -1,4 +1,5 @@
 import { Events } from '../events';
+import { opFromModifiers } from '../select-op';
 
 class HistogramData {
     bins: { selected: number, unselected: number }[];
@@ -132,7 +133,7 @@ class Histogram {
                 activePointerId = -1;
             }
             if (commit) {
-                const op = shiftKey ? 'add' : (ctrlKey ? 'remove' : 'set');
+                const op = opFromModifiers({ shiftKey, ctrlKey });
                 this.events.fire('select', op, Math.min(dragStart, dragEnd), Math.max(dragStart, dragEnd));
             } else {
                 this.events.fire('cancelHighlight');

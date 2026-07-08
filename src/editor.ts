@@ -341,8 +341,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // run the GPU intersect + the resulting SelectOp inside one queued task so the
     // gpu readback is ordered relative to other queued history ops (rapid drag +
     // undo, drag-while-camera-settling, etc).
-    // Named `runSelectIntersect` (not `intersectCenters`) to avoid reader confusion
-    // with the SelectOp 'intersect' modifier introduced for #858.
     const runSelectIntersect = (splat: Splat, op: 'add'|'remove'|'set'|'intersect', options: any) => {
         return scene.commandQueue.enqueue(async () => {
             const data = await scene.dataProcessor.intersect(options, splat);
@@ -379,10 +377,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     rect: { x1: rect.start.x, y1: rect.start.y, x2: rect.end.x, y2: rect.end.y }
                 });
             } else if (mode === 'rings') {
-                // For intersect, render only currently-selected splats into the
-                // pick buffer ('remove' mode picks the selected set) so unselected
-                // splats can't occlude selected ones and skew the intersection.
-                scene.camera.pickPrep(splat, op === 'intersect' ? 'remove' : op);
+                scene.camera.pickPrep(splat, op);
                 const pick = await scene.camera.pickRect(
                     rect.start.x,
                     rect.start.y,
@@ -442,9 +437,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 const nw = nx1 - nx0;
                 const nh = ny1 - ny0;
 
-                // Same intersect rationale as above: render only selected
-                // splats so unselected ones can't occlude the pick result.
-                scene.camera.pickPrep(splat, op === 'intersect' ? 'remove' : op);
+                scene.camera.pickPrep(splat, op);
                 const pick = await scene.camera.pickRect(nx0, ny0, nw, nh);
 
                 // Calculate actual pixel dimensions for iteration

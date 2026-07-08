@@ -1,6 +1,7 @@
 import { Container, NumericInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
+import { opFromModifiers } from '../select-op';
 
 type Pt = {x : number, y: number };
 
@@ -131,7 +132,7 @@ class FloodSelection {
 
                 await refreshSelection();
 
-                await apply((e.shiftKey && e.ctrlKey) ? 'intersect' : e.shiftKey ? 'add' : e.ctrlKey ? 'remove' : 'set');
+                await apply(opFromModifiers(e));
 
                 context.clearRect(0, 0, canvas.width, canvas.height);
             }

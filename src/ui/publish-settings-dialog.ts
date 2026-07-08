@@ -287,7 +287,7 @@ class PublishSettingsDialog extends Container {
             overrideModelToggle.value = true;
             overrideAnimationToggle.value = hasPoses;
             animationToggle.value = hasPoses;
-            loopSelect.value = 'repeat';
+            loopSelect.value = events.invoke('timeline.loop') ? 'repeat' : 'none';
             colorPicker.value = [bgClr.r, bgClr.g, bgClr.b];
             fovSlider.value = events.invoke('camera.fov');
             generateLodsToggle.value = totalSplats >= 1_000_000 && isLargeScene;

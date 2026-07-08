@@ -67,8 +67,8 @@ const sortSplatsAndWait = (scene: Scene, splats: Splat[]) => {
     }));
 };
 
-const downloadFile = (arrayBuffer: ArrayBuffer, filename: string) => {
-    const blob = new Blob([arrayBuffer], { type: 'application/octet-stream' });
+const downloadFile = (data: ArrayBuffer | Uint8Array<ArrayBuffer>, filename: string) => {
+    const blob = new Blob([data], { type: 'application/octet-stream' });
     const url = window.URL.createObjectURL(blob);
     const el = document.createElement('a');
     el.download = filename;
@@ -243,7 +243,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             const filename = `${removeExtension(selected?.name ?? 'SuperSplat')}-image.webp`;
 
             // download
-            downloadFile(bytes.buffer, filename);
+            downloadFile(bytes, filename);
 
             return true;
         } catch (error) {

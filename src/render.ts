@@ -1,10 +1,10 @@
+import { WebPCodec } from '@playcanvas/splat-transform';
 import { BufferTarget, EncodedPacket, EncodedVideoPacketSource, MkvOutputFormat, MovOutputFormat, Mp4OutputFormat, Output, StreamTarget, WebMOutputFormat } from 'mediabunny';
 import { Color, path, Quat, Vec3 } from 'playcanvas';
 
 import { ElementType } from './element';
 import { EquirectRenderer } from './equirect-renderer';
 import { Events } from './events';
-import { PngCompressor } from './png-compressor';
 import { Scene } from './scene';
 import { injectSphericalMetadata } from './spherical-metadata';
 import { Splat } from './splat';
@@ -32,6 +32,8 @@ type ImageSettings = {
     height: number;
     transparentBg: boolean;
     showDebug: boolean;
+    projection?: 'standard' | 'equirect';
+    levelHorizon?: boolean;
 };
 
 type VideoSettings = {
@@ -53,8 +55,20 @@ const removeExtension = (filename: string) => {
     return filename.substring(0, filename.length - path.getExtension(filename).length);
 };
 
-const downloadFile = (arrayBuffer: ArrayBuffer, filename: string) => {
-    const blob = new Blob([arrayBuffer], { type: 'application/octet-stream' });
+// sort splats and wait for the sort to complete (or a 1s timeout)
+const sortSplatsAndWait = (scene: Scene, splats: Splat[]) => {
+    return Promise.all(splats.map((splat) => {
+        return new Promise<void>((resolve) => {
+            const { instance } = splat.entity.gsplat;
+            instance.sorter.once('updated', resolve);
+            instance.sort(scene.camera.mainCamera);
+            setTimeout(resolve, 1000);
+        });
+    }));
+};
+
+const downloadFile = (data: ArrayBuffer | Uint8Array<ArrayBuffer>, filename: string) => {
+    const blob = new Blob([data], { type: 'application/octet-stream' });
     const url = window.URL.createObjectURL(blob);
     const el = document.createElement('a');
     el.download = filename;
@@ -64,7 +78,7 @@ const downloadFile = (arrayBuffer: ArrayBuffer, filename: string) => {
 };
 
 const registerRenderEvents = (scene: Scene, events: Events) => {
-    let compressor: PngCompressor;
+    let webpCodec: WebPCodec;
 
     // wait for postrender to fire
     const postRender = () => {
@@ -123,51 +137,113 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
     events.function('render.image', async (imageSettings: ImageSettings) => {
         events.fire('startSpinner');
 
+        let equirect: EquirectRenderer | null = null;
+        let savedFov = 0;
+        let savedOrtho = false;
+
         try {
-            const { width, height, transparentBg, showDebug } = imageSettings;
-            const bgClr = events.invoke('bgClr');
+            const { width, height, transparentBg, showDebug, projection, levelHorizon } = imageSettings;
+            const is360 = projection === 'equirect';
+
+            // in 360 mode the offscreen target is a square cube face; the
+            // equirect target holds the output-sized frame
+            const faceSize = Math.min(height, scene.graphicsDevice.maxTextureSize);
 
             // start rendering to offscreen buffer only
-            scene.camera.startOffscreenMode(width, height);
-            scene.camera.renderOverlays = showDebug;
+            scene.camera.startOffscreenMode(is360 ? faceSize : width, is360 ? faceSize : height);
+            scene.camera.renderOverlays = is360 ? false : showDebug;
             scene.gizmoLayer.enabled = false;
             if (!transparentBg) {
                 scene.camera.clearPass.setClearColor(events.invoke('bgClr'));
             }
 
-            // render the next frame
-            scene.forceRender = true;
-
-            // for render to finish
-            await postRender();
-
             // cpu-side buffer to read pixels into
             const data = new Uint8Array(width * height * 4);
 
-            const { mainTarget, workTarget } = scene.camera;
+            if (is360) {
+                savedFov = scene.camera.fov;
+                savedOrtho = scene.camera.ortho;
+                equirect = new EquirectRenderer(scene.graphicsDevice, faceSize, width, height);
+                scene.camera.ortho = false;
 
-            scene.dataProcessor.copyRt(mainTarget, workTarget);
+                // snapshot the current camera pose. supersplat cameras never
+                // roll, so with level horizon the capture frame is the
+                // camera yaw, otherwise yaw and pitch
+                const camPos = new Vec3().copy(scene.camera.position);
+                const qCapture = new Quat();
+                if (levelHorizon ?? true) {
+                    qCapture.setFromEulerAngles(0, scene.camera.azim, 0);
+                } else {
+                    qCapture.copy(scene.camera.mainCamera.getRotation());
+                }
 
-            // read the rendered frame
-            await workTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workTarget, data });
+                // all faces share direction-independent clipping planes so
+                // near-plane culling cannot differ across a face boundary
+                const boundRadius = scene.bound.halfExtents.length();
+                const dist = new Vec3().sub2(scene.bound.center, camPos).length();
+                const far = dist + boundRadius;
+                const near = Math.max(1e-6, dist < boundRadius ? far / (1024 * 16) : dist - boundRadius);
 
-            // construct the png compressor
-            if (!compressor) {
-                compressor = new PngCompressor();
+                const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
+                const qWorld = new Quat();
+
+                for (let face = 0; face < 6; face++) {
+                    qWorld.mul2(qCapture, EquirectRenderer.faceRotations[face]);
+                    scene.camera.setPoseOverride({ position: camPos, rotation: qWorld, fov: EquirectRenderer.faceFov, near, far });
+
+                    // faces view different directions, so each render must
+                    // wait for its own sort
+                    await sortSplatsAndWait(scene, splats);
+
+                    // render a frame and wait for it to finish
+                    scene.forceRender = true;
+                    await postRender();
+
+                    scene.dataProcessor.copyRt(scene.camera.mainTarget, equirect.faceTargets[face]);
+                }
+
+                // project the faces to the equirect target and read back
+                equirect.project();
+                await equirect.read(data);
+            } else {
+                // render the next frame
+                scene.forceRender = true;
+
+                // for render to finish
+                await postRender();
+
+                const { mainTarget, workTarget } = scene.camera;
+
+                scene.dataProcessor.copyRt(mainTarget, workTarget);
+
+                // read the rendered frame
+                await workTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workTarget, data });
             }
 
-            const arrayBuffer = await compressor.compress(
-                new Uint32Array(data.buffer),
-                width,
-                height
-            );
+            // flip the buffer vertically: the framebuffer read is bottom-up
+            // but webp (and image files generally) expect top-down rows
+            const line = new Uint8Array(width * 4);
+            for (let y = 0; y < height / 2; y++) {
+                const top = y * width * 4;
+                const bottom = (height - y - 1) * width * 4;
+                line.set(data.subarray(top, top + width * 4));
+                data.copyWithin(top, bottom, bottom + width * 4);
+                data.set(line, bottom);
+            }
+
+            // construct the webp codec
+            if (!webpCodec) {
+                webpCodec = await WebPCodec.create();
+            }
+
+            const bytes = webpCodec.encodeLosslessRGBA(data, width, height);
 
             // construct filename
             const selected = events.invoke('selection') as Splat;
-            const filename = `${removeExtension(selected?.name ?? 'SuperSplat')}-image.png`;
+            const filename = `${removeExtension(selected?.name ?? 'SuperSplat')}-image.webp`;
 
             // download
-            downloadFile(arrayBuffer, filename);
+            downloadFile(bytes, filename);
 
             return true;
         } catch (error) {
@@ -177,6 +253,14 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 message: `'${error.message ?? error}'`
             });
         } finally {
+            if (equirect) {
+                scene.camera.setPoseOverride(null);
+                scene.camera.fov = savedFov;
+                scene.camera.ortho = savedOrtho;
+                equirect.destroy();
+                equirect = null;
+            }
+
             scene.camera.endOffscreenMode();
             scene.camera.renderOverlays = true;
             scene.gizmoLayer.enabled = true;
@@ -290,16 +374,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 const last_forward = new Vec3(1, 0, 0);
 
                 // helper to sort splats and wait for completion
-                const sortAndWait = (splats: Splat[]) => {
-                    return Promise.all(splats.map((splat) => {
-                        return new Promise<void>((resolve) => {
-                            const { instance } = splat.entity.gsplat;
-                            instance.sorter.once('updated', resolve);
-                            instance.sort(scene.camera.mainCamera);
-                            setTimeout(resolve, 1000);
-                        });
-                    }));
-                };
+                const sortAndWait = (splats: Splat[]) => sortSplatsAndWait(scene, splats);
 
                 // prepare the frame for rendering, returns the newly loaded splat if any
                 const prepareFrame = async (frameTime: number, skipSort = false): Promise<Splat | null> => {

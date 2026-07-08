@@ -1,4 +1,5 @@
 import { Events } from '../events';
+import { opFromModifiers } from '../select-op';
 
 type Point = { x: number, y: number };
 
@@ -80,7 +81,7 @@ class LassoSelection {
             // wait for selection to complete
             await events.invoke(
                 'select.byMask',
-                e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
+                opFromModifiers(e),
                 canvas,
                 context
             );

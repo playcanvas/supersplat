@@ -38,6 +38,7 @@ class BoxSelection {
         const setButton = new Button({ text: 'Set', class: 'select-toolbar-button' });
         const addButton = new Button({ text: 'Add', class: 'select-toolbar-button' });
         const removeButton = new Button({ text: 'Remove', class: 'select-toolbar-button' });
+        const intersectButton = new Button({ text: 'Intersect', class: 'select-toolbar-button' });
 
         const lenX = new NumericInput({
             precision: 2,
@@ -66,13 +67,14 @@ class BoxSelection {
         selectToolbar.append(setButton);
         selectToolbar.append(addButton);
         selectToolbar.append(removeButton);
+        selectToolbar.append(intersectButton);
         selectToolbar.append(lenX);
         selectToolbar.append(lenY);
         selectToolbar.append(lenZ);
 
         canvasContainer.append(selectToolbar);
 
-        const apply = (op: 'set' | 'add' | 'remove') => {
+        const apply = (op: 'set' | 'add' | 'remove' | 'intersect') => {
             const p = box.pivot.getPosition();
             events.fire('select.byBox', op, [p.x, p.y, p.z, box.lenX, box.lenY, box.lenZ]);
         };
@@ -88,6 +90,10 @@ class BoxSelection {
         removeButton.dom.addEventListener('pointerdown', (e) => {
             e.stopPropagation();
             apply('remove');
+        });
+        intersectButton.dom.addEventListener('pointerdown', (e) => {
+            e.stopPropagation();
+            apply('intersect');
         });
         lenX.on('change', () => {
             box.lenX = lenX.value;

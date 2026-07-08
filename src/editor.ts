@@ -332,16 +332,16 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
     });
 
-    events.on('select.mask', (op: 'add'|'remove'|'set', mask: Uint8Array | Uint32Array) => {
+    events.on('select.mask', (op: 'add'|'remove'|'set'|'intersect', mask: Uint8Array | Uint32Array) => {
         selectedSplats().forEach((splat) => {
             events.fire('edit.add', new SelectOp(splat, op, mask));
         });
     });
 
-    const intersectCenters = (splat: Splat, op: 'add'|'remove'|'set', options: any) => {
-        // run the GPU intersect + the resulting SelectOp inside one queued task so the
-        // gpu readback is ordered relative to other queued history ops (rapid drag +
-        // undo, drag-while-camera-settling, etc).
+    // run the GPU intersect + the resulting SelectOp inside one queued task so the
+    // gpu readback is ordered relative to other queued history ops (rapid drag +
+    // undo, drag-while-camera-settling, etc).
+    const runSelectIntersect = (splat: Splat, op: 'add'|'remove'|'set'|'intersect', options: any) => {
         return scene.commandQueue.enqueue(async () => {
             const data = await scene.dataProcessor.intersect(options, splat);
             // SelectOp consumes `data` synchronously in its constructor
@@ -352,28 +352,28 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
     };
 
-    events.on('select.bySphere', async (op: 'add'|'remove'|'set', sphere: number[]) => {
+    events.on('select.bySphere', async (op: 'add'|'remove'|'set'|'intersect', sphere: number[]) => {
         for (const splat of selectedSplats()) {
-            await intersectCenters(splat, op, {
+            await runSelectIntersect(splat, op, {
                 sphere: { x: sphere[0], y: sphere[1], z: sphere[2], radius: sphere[3] }
             });
         }
     });
 
-    events.on('select.byBox', async (op: 'add'|'remove'|'set', box: number[]) => {
+    events.on('select.byBox', async (op: 'add'|'remove'|'set'|'intersect', box: number[]) => {
         for (const splat of selectedSplats()) {
-            await intersectCenters(splat, op, {
+            await runSelectIntersect(splat, op, {
                 box: { x: box[0], y: box[1], z: box[2], lenx: box[3], leny: box[4], lenz: box[5] }
             });
         }
     });
 
-    events.function('select.rect', async (op: 'add'|'remove'|'set', rect: any) => {
+    events.function('select.rect', async (op: 'add'|'remove'|'set'|'intersect', rect: any) => {
         const mode = events.invoke('camera.mode');
 
         for (const splat of selectedSplats()) {
             if (mode === 'centers') {
-                await intersectCenters(splat, op, {
+                await runSelectIntersect(splat, op, {
                     rect: { x1: rect.start.x, y1: rect.start.y, x2: rect.end.x, y2: rect.end.y }
                 });
             } else if (mode === 'rings') {
@@ -393,7 +393,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     let maskTexture: Texture = null;
 
-    events.function('select.byMask', async (op: 'add'|'remove'|'set', canvas: HTMLCanvasElement, context: CanvasRenderingContext2D) => {
+    events.function('select.byMask', async (op: 'add'|'remove'|'set'|'intersect', canvas: HTMLCanvasElement, context: CanvasRenderingContext2D) => {
         const mode = events.invoke('camera.mode');
 
         for (const splat of selectedSplats()) {
@@ -407,7 +407,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 }
                 maskTexture.setSource(canvas);
 
-                await intersectCenters(splat, op, {
+                await runSelectIntersect(splat, op, {
                     mask: maskTexture
                 });
             } else if (mode === 'rings') {

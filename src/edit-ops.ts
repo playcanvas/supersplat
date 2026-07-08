@@ -106,17 +106,17 @@ class SelectOp extends StateOp {
     // committed mask rather than a closure removes the foot-gun where a
     // predicate captured `state[i]` at call time and was evaluated later.
     // `op` semantics:
-    //   add    — select valid splats that are hit and currently unselected
-    //   remove — deselect valid splats that are hit and currently selected
-    //   set    — make selection match the hit mask (toggle valid splats whose
-    //            current selection state differs from the mask). NOT a replace —
-    //            the underlying BitOp is TOGGLE on the rows where selection and
-    //            hit disagree, which leaves locked/deleted bits untouched.
-    constructor(splat: Splat, op: 'add' | 'remove' | 'set', sel: Uint8Array | Uint32Array) {
+    //   add       — select valid splats that are hit and currently unselected
+    //   remove    — deselect valid splats that are hit and currently selected
+    //   set       — make selection match the hit mask (toggle valid splats whose
+    //               current selection state differs from the mask). NOT a replace —
+    //               the underlying BitOp is TOGGLE on the rows where selection and
+    //               hit disagree, which leaves locked/deleted bits untouched.
+    //   intersect — keep only splats currently selected AND in the hit mask
+    //               (clear the selected bit on selected splats that are not hit).
+    constructor(splat: Splat, op: 'add' | 'remove' | 'set' | 'intersect', sel: Uint8Array | Uint32Array) {
         const splatData = splat.splatData;
         const state = splatData.getProp('state') as Uint8Array;
-        const bitOp = op === 'add' ? BitOp.SET : op === 'remove' ? BitOp.CLEAR : BitOp.TOGGLE;
-
         const isHit = sel instanceof Uint32Array ? sortedPredicate(sel) : (i: number) => sel[i] === 255;
 
         // single rule applied uniformly: only valid (clean or selected) splats
@@ -124,13 +124,23 @@ class SelectOp extends StateOp {
         // each producer doesn't have to remember it for the 'set' (toggle) path.
         const valid = (i: number) => state[i] === 0 || state[i] === State.selected;
 
+        // op → bit operation and op → predicate, kept as parallel lookups keyed
+        // by the same union so adding an op forces both to be updated together.
+        const bitOps = {
+            add: BitOp.SET,
+            remove: BitOp.CLEAR,
+            set: BitOp.TOGGLE,
+            intersect: BitOp.CLEAR
+        };
+
         const preds = {
             add: (i: number) => valid(i) && isHit(i) && state[i] === 0,
             remove: (i: number) => valid(i) && isHit(i) && state[i] === State.selected,
-            set: (i: number) => valid(i) && ((state[i] === State.selected) !== isHit(i))
+            set: (i: number) => valid(i) && ((state[i] === State.selected) !== isHit(i)),
+            intersect: (i: number) => valid(i) && state[i] === State.selected && !isHit(i)
         };
 
-        super(splat, IndexRanges.fromPredicate(splatData.numSplats, preds[op]), State.selected, bitOp);
+        super(splat, IndexRanges.fromPredicate(splatData.numSplats, preds[op]), State.selected, bitOps[op]);
     }
 }
 

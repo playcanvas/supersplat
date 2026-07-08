@@ -766,7 +766,7 @@ class Camera extends Element {
     // pick mode
 
     // render picker contents
-    pickPrep(splat: Splat, mode: 'add' | 'remove' | 'set') {
+    pickPrep(splat: Splat, mode: 'add' | 'remove' | 'set' | 'intersect') {
         this.picker.prepareId(splat, mode);
     }
 

@@ -106,12 +106,47 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     setGridVisible(scene.config.show.grid);
 
+    // camera.fovDolly
+
+    let fovDolly = false;
+
+    const setFovDolly = (value: boolean) => {
+        if (value !== fovDolly) {
+            fovDolly = value;
+            events.fire('camera.fovDolly', fovDolly);
+        }
+    };
+
+    events.function('camera.fovDolly', () => {
+        return fovDolly;
+    });
+
+    events.on('camera.setFovDolly', (value: boolean) => {
+        setFovDolly(value);
+    });
+
     // camera.fov
 
     const setCameraFov = (fov: number) => {
-        if (fov !== scene.camera.fov) {
-            scene.camera.fov = fov;
-            events.fire('camera.fov', scene.camera.fov);
+        const { camera } = scene;
+        if (fov !== camera.fov) {
+            const oldFovFactor = camera.fovFactor;
+            camera.fov = fov;
+
+            // by default a fov change acts like a lens zoom: scale distance so
+            // the camera's world-space offset from the focal point (distance *
+            // sceneRadius / fovFactor) is unchanged. with auto-dolly enabled
+            // the camera moves instead, preserving the subject's framing.
+            if (!fovDolly) {
+                const { controls } = scene.config;
+                const k = camera.fovFactor / oldFovFactor;
+                const t = camera.distanceTween;
+                for (const s of [t.value, t.source, t.target]) {
+                    s.distance = Math.max(controls.minZoom, Math.min(controls.maxZoom, s.distance * k));
+                }
+            }
+
+            events.fire('camera.fov', camera.fov);
         }
     };
 
@@ -810,7 +845,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             showBoundDimensions: events.invoke('camera.boundDimensions'),
             showCameraPoses: events.invoke('camera.showPoses'),
             showCameraInfo: events.invoke('camera.showInfo'),
-            flySpeed: events.invoke('camera.flySpeed')
+            flySpeed: events.invoke('camera.flySpeed'),
+            fovDolly: events.invoke('camera.fovDolly')
         };
     });
 
@@ -828,6 +864,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         events.fire('camera.setShowPoses', docView.showCameraPoses ?? false);
         events.fire('camera.setShowInfo', docView.showCameraInfo ?? false);
         events.fire('camera.setFlySpeed', docView.flySpeed);
+        events.fire('camera.setFovDolly', docView.fovDolly ?? false);
     });
 };
 

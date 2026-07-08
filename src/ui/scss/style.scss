@@ -124,8 +124,10 @@ body {
 
     .camera-info-key {
         margin: 0;
-        color: $clr-hilight;
+        color: $clr-icon-hilight;
         font-family: inherit;
+        font-weight: bold;
+        overflow: visible;
     }
 
     .camera-info-value {
@@ -133,6 +135,7 @@ body {
         color: $text-primary;
         font-family: inherit;
         font-variant-numeric: tabular-nums;
+        overflow: visible;
         cursor: text;
         user-select: text;
         padding: 0 4px;

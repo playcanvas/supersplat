@@ -268,6 +268,7 @@
     "tooltip.right-toolbar.reset-camera": "Reset Camera",
     "tooltip.right-toolbar.colors": "Colors",
     "tooltip.right-toolbar.view-options": "Settings",
+    "tooltip.right-toolbar.view-options.desc": "View and adjust scene rendering, camera controls, and visual preferences",
     "tooltip.bottom-toolbar.undo": "Undo",
     "tooltip.bottom-toolbar.redo": "Redo",
     "tooltip.bottom-toolbar.rect": "Rect Select",

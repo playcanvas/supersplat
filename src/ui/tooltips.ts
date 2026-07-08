@@ -7,8 +7,13 @@ type Direction = 'left' | 'right' | 'top' | 'bottom';
 // current language without any language-change listener.
 type TooltipText = string | (() => string);
 
+type TooltipDetails = {
+    description: string;
+    image?: string;
+};
+
 class Tooltips extends Container {
-    register: (target: Element, text: TooltipText, direction?: Direction) => void;
+    register: (target: Element, text: TooltipText, direction?: Direction, details?: TooltipDetails) => void;
     unregister: (target: Element) => void;
     destroy: () => void;
 
@@ -25,15 +30,55 @@ class Tooltips extends Container {
             class: 'tooltips-content'
         });
 
+        const description = new Label({
+            class: 'tooltips-description'
+        });
+
+        const tooltipImage = document.createElement('img');
+        tooltipImage.className = 'tooltips-image';
+
         this.append(text);
+        this.append(description);
+        this.dom.appendChild(tooltipImage);
 
         const targets = new Map<Element, any>();
         const style = this.dom.style;
         let timer: number = 0;
+        let expansionTimer: number = 0;
+        let activeTarget: Element | null = null;
 
-        this.register = (target: Element, textString: TooltipText, direction: Direction = 'bottom') => {
+        const cancelTimer = () => {
+            if (timer >= 0) {
+                clearTimeout(timer);
+                timer = -1;
+            }
+        };
+
+        const cancelExpansion = () => {
+            if (expansionTimer >= 0) {
+                clearTimeout(expansionTimer);
+                expansionTimer = -1;
+            }
+            this.dom.classList.remove('expanded');
+            description.dom.classList.remove('visible');
+            tooltipImage.classList.remove('visible');
+            tooltipImage.removeAttribute('src');
+            description.text = '';
+        };
+
+        const startTimer = (fn: () => void) => {
+            timer = window.setTimeout(() => {
+                fn();
+                timer = -1;
+            }, 250);
+        };
+
+        this.register = (target: Element, textString: TooltipText, direction: Direction = 'bottom', details?: TooltipDetails) => {
+            const currentTarget = target;
 
             const activate = () => {
+                if (activeTarget !== currentTarget) return;
+
                 const rect = target.dom.getBoundingClientRect();
                 const midx = Math.floor((rect.left + rect.right) * 0.5);
                 const midy = Math.floor((rect.top + rect.bottom) * 0.5);
@@ -62,8 +107,6 @@ class Tooltips extends Container {
                 }
 
                 text.text = typeof textString === 'function' ? textString() : textString;
-                // inline-block so max-width / wrapping in SCSS apply (inline
-                // would stay one long line).
                 style.display = 'inline-block';
 
                 // clamp to viewport so tooltip doesn't go off-screen
@@ -73,24 +116,26 @@ class Tooltips extends Container {
                 } else if (tooltipRect.right > window.innerWidth) {
                     style.left = `${parseFloat(style.left) - (tooltipRect.right - window.innerWidth)}px`;
                 }
-            };
 
-            const startTimer = (fn: () => void) => {
-                timer = window.setTimeout(() => {
-                    fn();
-                    timer = -1;
-                }, 250);
-            };
-
-            const cancelTimer = () => {
-                if (timer >= 0) {
-                    clearTimeout(timer);
-                    timer = -1;
+                if (details) {
+                    expansionTimer = window.setTimeout(() => {
+                        if (activeTarget !== currentTarget) return;
+                        description.text = details.description;
+                        description.dom.classList.add('visible');
+                        if (details.image) {
+                            tooltipImage.src = details.image;
+                            tooltipImage.classList.add('visible');
+                        }
+                        this.dom.classList.add('expanded');
+                        expansionTimer = -1;
+                    }, 750);
                 }
             };
 
             const enter = () => {
                 cancelTimer();
+                cancelExpansion();
+                activeTarget = currentTarget;
 
                 if (style.display === 'inline-block') {
                     activate();
@@ -102,10 +147,18 @@ class Tooltips extends Container {
             const leave = () => {
                 cancelTimer();
 
+                const wasExpanded = this.dom.classList.contains('expanded');
+                cancelExpansion();
+                activeTarget = null;
+
                 if (style.display === 'inline-block') {
-                    startTimer(() => {
+                    if (wasExpanded) {
                         style.display = 'none';
-                    });
+                    } else {
+                        startTimer(() => {
+                            style.display = 'none';
+                        });
+                    }
                 }
             };
 
@@ -129,6 +182,8 @@ class Tooltips extends Container {
         };
 
         this.destroy = () => {
+            cancelTimer();
+            cancelExpansion();
             for (const target of targets.keys()) {
                 this.unregister(target);
             }

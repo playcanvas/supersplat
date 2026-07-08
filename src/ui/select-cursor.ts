@@ -34,17 +34,25 @@ const applyOpCursor = (element: HTMLElement, op: string) => {
 // add/remove/intersect before acting.
 const registerSelectCursor = (events: Events, toolsContainer: HTMLElement) => {
     let engaged = false;
+    // track modifier state so the cursor is correct the instant a tool is activated
+    // with Shift/Ctrl already held, not only after the next key event.
+    const modifiers = { shiftKey: false, ctrlKey: false };
+
+    const refresh = () => {
+        if (engaged) {
+            applyOpCursor(toolsContainer, opFromModifiers(modifiers));
+        }
+    };
 
     const onKey = (e: KeyboardEvent) => {
-        if (engaged) {
-            applyOpCursor(toolsContainer, opFromModifiers(e));
-        }
+        modifiers.shiftKey = e.shiftKey;
+        modifiers.ctrlKey = e.ctrlKey;
+        refresh();
     };
 
     events.on('tool.activated', (name: string) => {
         engaged = pointerTools.has(name);
-        // default to the plain crosshair; a held modifier corrects on the next key event
-        applyOpCursor(toolsContainer, 'set');
+        refresh();
     });
 
     events.on('tool.deactivated', () => {
@@ -53,14 +61,14 @@ const registerSelectCursor = (events: Events, toolsContainer: HTMLElement) => {
     });
 
     // capture phase so we still see keydown/keyup when a focused dialog stops
-    // propagation; blur resets because a key release while unfocused never fires.
-    // (mirrors the modifier tracking in controllers.ts)
+    // propagation; blur clears the tracked modifiers because a key release while
+    // unfocused never fires. (mirrors the modifier tracking in controllers.ts)
     window.addEventListener('keydown', onKey, { capture: true });
     window.addEventListener('keyup', onKey, { capture: true });
     window.addEventListener('blur', () => {
-        if (engaged) {
-            applyOpCursor(toolsContainer, 'set');
-        }
+        modifiers.shiftKey = false;
+        modifiers.ctrlKey = false;
+        refresh();
     });
 };
 

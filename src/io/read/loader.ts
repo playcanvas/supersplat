@@ -6,10 +6,14 @@ import {
     getInputFormat,
     readFile,
     sortMortonOrder,
+    createChunkDataPool,
+    materializeToDataTable,
+    selectLod,
     Column,
     ColumnType,
     DataTable,
     Options,
+    ChunkSource,
     ReadFileSystem,
     Transform,
     ZipReadFileSystem
@@ -80,6 +84,26 @@ const dataTableToGSplatData = (dataTable: DataTable): GSplatData => {
 };
 
 /**
+ * Materialize the first source returned by readFile into a DataTable.
+ * readFile now returns lazy ChunkSource[]; multi-LOD sources (e.g. LCC) are
+ * reduced to LOD 0 (highest detail) before materializing, matching the previous
+ * behaviour of using the first table.
+ */
+const materializeFirst = async (sources: ChunkSource[]): Promise<DataTable> => {
+    const source = sources[0];
+    const single = source.meta.numLods > 1 ? selectLod(source, 0) : source;
+    const pool = createChunkDataPool({ chunkSize: source.meta.chunkSize });
+    try {
+        return await materializeToDataTable(single, pool);
+    } finally {
+        for (const s of sources) {
+            await s.close();
+        }
+        pool.destroy();
+    }
+};
+
+/**
  * Load a file using splat-transform and convert to GSplatData.
  * @param filename - The filename to load
  * @param fileSystem - The file system to read from
@@ -94,27 +118,30 @@ const loadGSplatData = async (filename: string, fileSystem: ReadFileSystem, skip
         const source = await fileSystem.createSource(filename);
         const zipFs = new ZipReadFileSystem(source);
         try {
-            const tables = await readFile({
+            const sources = await readFile({
                 filename: 'meta.json',
                 inputFormat: 'sog',
                 options: defaultOptions,
                 params: [],
                 fileSystem: zipFs
             });
-            return { gsplatData: dataTableToGSplatData(tables[0]), transform: tables[0].transform };
+            const dataTable = await materializeFirst(sources);
+            return { gsplatData: dataTableToGSplatData(dataTable), transform: dataTable.transform };
         } finally {
             zipFs.close();
         }
     }
 
     // Read the file using splat-transform
-    const tables = await readFile({
+    const sources = await readFile({
         filename,
         inputFormat,
         options: defaultOptions,
         params: [],
         fileSystem
     });
+
+    const dataTable = await materializeFirst(sources);
 
     // Reorder data into morton order for better render performance.
     // Skip reordering for:
@@ -123,17 +150,16 @@ const loadGSplatData = async (filename: string, fileSystem: ReadFileSystem, skip
     // - When skipReorder is true (ssproj files are already ordered, animation frames need speed)
     const isCompressedPly = lowerFilename.endsWith('.compressed.ply');
     if (inputFormat !== 'sog' && !isCompressedPly && !skipReorder) {
-        const indices = new Uint32Array(tables[0].numRows);
+        const indices = new Uint32Array(dataTable.numRows);
         for (let i = 0; i < indices.length; i++) {
             indices[i] = i;
         }
-        sortMortonOrder(tables[0], indices);
-        tables[0].permuteRowsInPlace(indices);
+        sortMortonOrder(dataTable, indices);
+        dataTable.permuteRowsInPlace(indices);
     }
 
-    // Convert to GSplatData (use first table, as most formats return single table)
-    // LCC may return multiple tables for different LOD levels - we use the first (highest detail)
-    return { gsplatData: dataTableToGSplatData(tables[0]), transform: tables[0].transform };
+    // Convert to GSplatData
+    return { gsplatData: dataTableToGSplatData(dataTable), transform: dataTable.transform };
 };
 
 /**

@@ -1,16 +1,23 @@
 import {
-    Column,
-    DataTable,
+    createChunkDataPool,
     logger as splatTransformLogger,
     MemoryFileSystem,
     Transform,
-    writeHtml,
-    writeSog as writeSogInternal,
-    writeSpz,
+    writeSource,
     ZipFileSystem,
+    type ChunkData,
+    type ChunkDataPool,
+    type ChunkLayer,
+    type ChunkSource,
+    type ChunkSourceMetadata,
     type FileSystem,
+    type LayerLayout,
     type LogEvent,
+    type Options,
+    type OutputFormat,
+    type ReadRequest,
     type Renderer,
+    type SHBands,
     type Writer
 } from '@playcanvas/splat-transform';
 import {
@@ -514,6 +521,208 @@ class SingleSplat {
     }
 }
 
+// Number of f_rest_* SH coefficients per band level (mirrors splat-transform's
+// SH_REST_COUNTS; that constant isn't exported from the package root).
+const SH_REST_COUNTS: Record<number, number> = { 0: 0, 1: 9, 2: 24, 3: 45 };
+
+// Gaussians per chunk when streaming a scene to splat-transform. Chosen to
+// bound the transient working set (input layer buffers + writer output buffer)
+// rather than scale with the whole scene.
+const EXPORT_CHUNK_SIZE = 256 * 1024;
+
+// Build the canonical per-layer byte layout splat-transform expects. The
+// interleaved packing here must match splat-transform's readers/materialize:
+// position = xyz (stride 12); geometric = rot0-3, scale0-2, opacity (stride 32);
+// color = dc0-2 then f_rest_* (stride (3 + numRest) * 4).
+const buildLayouts = (numRest: number): Partial<Record<ChunkLayer, LayerLayout>> => ({
+    position: {
+        stride: 12,
+        fields: { position: { byteOffset: 0, components: 3, type: 'float32' } }
+    },
+    geometric: {
+        stride: 32,
+        fields: {
+            rotation: { byteOffset: 0, components: 4, type: 'float32' },
+            scale: { byteOffset: 16, components: 3, type: 'float32' },
+            opacity: { byteOffset: 28, components: 1, type: 'float32' }
+        }
+    },
+    color: {
+        stride: (3 + numRest) * 4,
+        fields: numRest > 0 ? {
+            dc: { byteOffset: 0, components: 3, type: 'float32' },
+            shRest: { byteOffset: 12, components: numRest, type: 'float32' }
+        } : {
+            dc: { byteOffset: 0, components: 3, type: 'float32' }
+        }
+    }
+});
+
+/**
+ * A lazy, chunked ChunkSource over a set of Splats, for feeding splat-transform's
+ * streaming writers (writeSource) without materializing a whole-scene copy.
+ *
+ * It is the streaming analog of the old extractDataTable/DataTable path:
+ * gaussians are filtered
+ * (deleted/selection/opacity/invalid) and transformed (world + palette + SH
+ * rotation + colour tint + PLY-space flip) on demand via SingleSplat, one chunk
+ * at a time. The output is in PLY space, so the source is tagged Transform.PLY
+ * (identity) and the writers' bakeTransform is a no-op.
+ */
+class SuperSplatChunkSource implements ChunkSource {
+    meta: ChunkSourceMetadata;
+
+    private splats: Splat[];
+    private splatOf: Uint32Array;   // output row -> index into splats
+    private localOf: Uint32Array;   // output row -> gaussian index within that splat
+    private singleSplat: SingleSplat;
+    private numRest: number;
+
+    constructor(splats: Splat[], settings: SerializeSettings) {
+        this.splats = splats;
+
+        // Determine the SH band count to export: the highest band present in any
+        // splat, capped by maxSHBands. SingleSplat zero-fills missing bands.
+        const splatBands = splats.map(s => calcSHBands(getVertexProperties(s.splatData)));
+        const outputBands = Math.min(settings.maxSHBands ?? 3, splatBands.length ? Math.max(...splatBands) : 0);
+        const numRest = SH_REST_COUNTS[outputBands];
+        this.numRest = numRest;
+
+        // Build the filtered output->source index map (in splat order).
+        const filter = new GaussianFilter(settings);
+        const total = countGaussians(splats, filter);
+        const splatOf = new Uint32Array(total);
+        const localOf = new Uint32Array(total);
+        let idx = 0;
+        for (let s = 0; s < splats.length; ++s) {
+            filter.set(splats[s]);
+            const n = splats[s].splatData.numSplats;
+            for (let i = 0; i < n; ++i) {
+                if (filter.test(i)) {
+                    splatOf[idx] = s;
+                    localOf[idx] = i;
+                    idx++;
+                }
+            }
+        }
+        this.splatOf = splatOf;
+        this.localOf = localOf;
+
+        const members = [
+            'x', 'y', 'z',
+            'scale_0', 'scale_1', 'scale_2',
+            'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity',
+            'rot_0', 'rot_1', 'rot_2', 'rot_3',
+            ...shNames.slice(0, numRest)
+        ];
+        this.singleSplat = new SingleSplat(members, settings);
+
+        const numChunks = Math.ceil(total / EXPORT_CHUNK_SIZE);
+        this.meta = {
+            numGaussians: total,
+            numLods: 1,
+            lodCounts: [total],
+            chunkSize: EXPORT_CHUNK_SIZE,
+            numChunks: [numChunks],
+            shBands: outputBands as SHBands,
+            extraColumns: [],
+            transform: Transform.PLY,
+            availableLayers: new Set<ChunkLayer>(['position', 'geometric', 'color']),
+            layouts: buildLayouts(numRest)
+        };
+    }
+
+    async read(request: ReadRequest): Promise<void> {
+        const isGather = 'indices' in request;
+        const anyBuf = (request.position ?? request.geometric ?? request.color) as ChunkData;
+        const count = isGather ? request.count : anyBuf.count;
+        const chunkBase = isGather ? 0 : request.chunkIndex * EXPORT_CHUNK_SIZE;
+
+        const posF = request.position ? new Float32Array(request.position.data) : null;
+        const geoF = request.geometric ? new Float32Array(request.geometric.data) : null;
+        const colF = request.color ? new Float32Array(request.color.data) : null;
+        const cstride = 3 + this.numRest;
+
+        const { data } = this.singleSplat;
+
+        for (let i = 0; i < count; ++i) {
+            const outputRow = isGather ? request.indices[request.indexOffset + i] : chunkBase + i;
+            const splat = this.splats[this.splatOf[outputRow]];
+            this.singleSplat.read(splat, this.localOf[outputRow]);
+
+            if (posF) {
+                const o = i * 3;
+                posF[o + 0] = data.x;
+                posF[o + 1] = data.y;
+                posF[o + 2] = data.z;
+            }
+            if (geoF) {
+                const o = i * 8;
+                geoF[o + 0] = data.rot_0;
+                geoF[o + 1] = data.rot_1;
+                geoF[o + 2] = data.rot_2;
+                geoF[o + 3] = data.rot_3;
+                geoF[o + 4] = data.scale_0;
+                geoF[o + 5] = data.scale_1;
+                geoF[o + 6] = data.scale_2;
+                geoF[o + 7] = data.opacity;
+            }
+            if (colF) {
+                const o = i * cstride;
+                colF[o + 0] = data.f_dc_0;
+                colF[o + 1] = data.f_dc_1;
+                colF[o + 2] = data.f_dc_2;
+                for (let r = 0; r < this.numRest; ++r) {
+                    colF[o + 3 + r] = data[shNames[r]];
+                }
+            }
+        }
+    }
+
+    async close(): Promise<void> {
+        // nothing to release; the scene data is owned by the editor
+    }
+}
+
+/**
+ * Build a ChunkSource + matching pool over the given splats, or null if nothing
+ * passes the export filter.
+ */
+const createExportSource = (splats: Splat[], settings: SerializeSettings): { source: ChunkSource, pool: ChunkDataPool } | null => {
+    const source = new SuperSplatChunkSource(splats, settings);
+    if (source.meta.numGaussians === 0) {
+        return null;
+    }
+    const pool = createChunkDataPool({ chunkSize: source.meta.chunkSize });
+    return { source, pool };
+};
+
+/**
+ * Stream the given splats to a file via splat-transform's writeSource. Streaming
+ * formats (ply/sog/splat) never build a whole-scene copy; the rest materialize a
+ * single transient copy inside the library.
+ */
+const writeSplatFile = async (
+    splats: Splat[],
+    settings: SerializeSettings,
+    outputFormat: OutputFormat,
+    filename: string,
+    options: Options,
+    fs: FileSystem
+): Promise<void> => {
+    const built = createExportSource(splats, settings);
+    if (!built) {
+        return;
+    }
+    const { source, pool } = built;
+    try {
+        await writeSource({ filename, outputFormat, source, pool, options, createDevice: createGpuDevice }, fs);
+    } finally {
+        await source.close();
+        pool.destroy();
+    }
+};
+
 const serializePly = async (splats: Splat[], serializeSettings: SerializeSettings, fs: FileSystem, filename = 'output.ply', progress?: ProgressFunc): Promise<void> => {
     const { maxSHBands, keepStateData } = serializeSettings;
 
@@ -607,515 +816,6 @@ const serializePly = async (splats: Splat[], serializeSettings: SerializeSetting
     await writer.close();
 };
 
-interface CompressedIndex {
-    splatIndex: number;
-    i: number;
-    globalIndex: number;
-}
-
-// process and compress a chunk of 256 splats
-class Chunk {
-    static members = [
-        'x', 'y', 'z',
-        'scale_0', 'scale_1', 'scale_2',
-        'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity',
-        'rot_0', 'rot_1', 'rot_2', 'rot_3'
-    ];
-
-    size: number;
-    data: any = {};
-
-    // compressed data
-    position: Uint32Array;
-    rotation: Uint32Array;
-    scale: Uint32Array;
-    color: Uint32Array;
-
-    constructor(size = 256) {
-        this.size = size;
-        Chunk.members.forEach((m) => {
-            this.data[m] = new Float32Array(size);
-        });
-        this.position = new Uint32Array(size);
-        this.rotation = new Uint32Array(size);
-        this.scale = new Uint32Array(size);
-        this.color = new Uint32Array(size);
-    }
-
-    set(index: number, splat: SingleSplat) {
-        Chunk.members.forEach((name) => {
-            this.data[name][index] = splat.data[name];
-        });
-    }
-
-    pack() {
-        const calcMinMax = (data: Float32Array) => {
-            let min;
-            let max;
-            min = max = data[0];
-            for (let i = 1; i < data.length; ++i) {
-                const v = data[i];
-                min = Math.min(min, v);
-                max = Math.max(max, v);
-            }
-            return { min, max };
-        };
-
-        const normalize = (x: number, min: number, max: number) => {
-            if (x <= min) return 0;
-            if (x >= max) return 1;
-            return (max - min < 0.00001) ? 0 : (x - min) / (max - min);
-        };
-
-        const data = this.data;
-
-        const x = data.x;
-        const y = data.y;
-        const z = data.z;
-        const scale_0 = data.scale_0;
-        const scale_1 = data.scale_1;
-        const scale_2 = data.scale_2;
-        const rot_0 = data.rot_0;
-        const rot_1 = data.rot_1;
-        const rot_2 = data.rot_2;
-        const rot_3 = data.rot_3;
-        const f_dc_0 = data.f_dc_0;
-        const f_dc_1 = data.f_dc_1;
-        const f_dc_2 = data.f_dc_2;
-        const opacity = data.opacity;
-
-        const px = calcMinMax(x);
-        const py = calcMinMax(y);
-        const pz = calcMinMax(z);
-
-        const sx = calcMinMax(scale_0);
-        const sy = calcMinMax(scale_1);
-        const sz = calcMinMax(scale_2);
-
-        // clamp scale because sometimes values are at infinity
-        const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
-        sx.min = clamp(sx.min, -20, 20);
-        sx.max = clamp(sx.max, -20, 20);
-        sy.min = clamp(sy.min, -20, 20);
-        sy.max = clamp(sy.max, -20, 20);
-        sz.min = clamp(sz.min, -20, 20);
-        sz.max = clamp(sz.max, -20, 20);
-
-        // convert f_dc_ to colors before calculating min/max and packaging
-        for (let i = 0; i < f_dc_0.length; ++i) {
-            f_dc_0[i] = dcDecode(f_dc_0[i]);
-            f_dc_1[i] = dcDecode(f_dc_1[i]);
-            f_dc_2[i] = dcDecode(f_dc_2[i]);
-        }
-
-        const cr = calcMinMax(f_dc_0);
-        const cg = calcMinMax(f_dc_1);
-        const cb = calcMinMax(f_dc_2);
-
-        const packUnorm = (value: number, bits: number) => {
-            const t = (1 << bits) - 1;
-            return Math.max(0, Math.min(t, Math.floor(value * t + 0.5)));
-        };
-
-        const pack111011 = (x: number, y: number, z: number) => {
-            return packUnorm(x, 11) << 21 |
-                   packUnorm(y, 10) << 11 |
-                   packUnorm(z, 11);
-        };
-
-        const pack8888 = (x: number, y: number, z: number, w: number) => {
-            return packUnorm(x, 8) << 24 |
-                   packUnorm(y, 8) << 16 |
-                   packUnorm(z, 8) << 8 |
-                   packUnorm(w, 8);
-        };
-
-        // pack quaternion into 2,10,10,10
-        const packRot = (x: number, y: number, z: number, w: number) => {
-            q.set(x, y, z, w).normalize();
-            const a = [q.x, q.y, q.z, q.w];
-            const largest = a.reduce((curr, v, i) => (Math.abs(v) > Math.abs(a[curr]) ? i : curr), 0);
-
-            if (a[largest] < 0) {
-                a[0] = -a[0];
-                a[1] = -a[1];
-                a[2] = -a[2];
-                a[3] = -a[3];
-            }
-
-            const norm = Math.sqrt(2) * 0.5;
-            let result = largest;
-            for (let i = 0; i < 4; ++i) {
-                if (i !== largest) {
-                    result = (result << 10) | packUnorm(a[i] * norm + 0.5, 10);
-                }
-            }
-
-            return result;
-        };
-
-        // pack
-        for (let i = 0; i < this.size; ++i) {
-            this.position[i] = pack111011(
-                normalize(x[i], px.min, px.max),
-                normalize(y[i], py.min, py.max),
-                normalize(z[i], pz.min, pz.max)
-            );
-
-            this.rotation[i] = packRot(rot_0[i], rot_1[i], rot_2[i], rot_3[i]);
-
-            this.scale[i] = pack111011(
-                normalize(scale_0[i], sx.min, sx.max),
-                normalize(scale_1[i], sy.min, sy.max),
-                normalize(scale_2[i], sz.min, sz.max)
-            );
-
-            this.color[i] = pack8888(
-                normalize(f_dc_0[i], cr.min, cr.max),
-                normalize(f_dc_1[i], cg.min, cg.max),
-                normalize(f_dc_2[i], cb.min, cb.max),
-                1 / (1 + Math.exp(-opacity[i]))
-            );
-        }
-
-        return { px, py, pz, sx, sy, sz, cr, cg, cb };
-    }
-}
-
-// sort the compressed indices into morton order
-const sortSplats = (splats: Splat[], indices: CompressedIndex[]) => {
-    // https://fgiesen.wordpress.com/2009/12/13/decoding-morton-codes/
-    const encodeMorton3 = (x: number, y: number, z: number) : number => {
-        const Part1By2 = (x: number) => {
-            x &= 0x000003ff;
-            x = (x ^ (x << 16)) & 0xff0000ff;
-            x = (x ^ (x <<  8)) & 0x0300f00f;
-            x = (x ^ (x <<  4)) & 0x030c30c3;
-            x = (x ^ (x <<  2)) & 0x09249249;
-            return x;
-        };
-
-        return (Part1By2(z) << 2) + (Part1By2(y) << 1) + Part1By2(x);
-    };
-
-    let minx: number;
-    let miny: number;
-    let minz: number;
-    let maxx: number;
-    let maxy: number;
-    let maxz: number;
-
-    // calculate scene extents across all splats (using sort centers, because they're in world space)
-    for (let i = 0; i < splats.length; ++i) {
-        const splat = splats[i];
-        const splatData = splat.splatData;
-        const state = splatData.getProp('state') as Uint8Array;
-        const { centers } = splat.entity.gsplat.instance.sorter;
-
-        for (let i = 0; i < splatData.numSplats; ++i) {
-            if ((state[i] & State.deleted) === 0) {
-                const x = centers[i * 3 + 0];
-                const y = centers[i * 3 + 1];
-                const z = centers[i * 3 + 2];
-
-                if (minx === undefined) {
-                    minx = maxx = x;
-                    miny = maxy = y;
-                    minz = maxz = z;
-                } else {
-                    if (x < minx) minx = x; else if (x > maxx) maxx = x;
-                    if (y < miny) miny = y; else if (y > maxy) maxy = y;
-                    if (z < minz) minz = z; else if (z > maxz) maxz = z;
-                }
-            }
-        }
-    }
-
-    const xlen = maxx - minx;
-    const ylen = maxy - miny;
-    const zlen = maxz - minz;
-
-    const morton = new Uint32Array(indices.length);
-    let idx = 0;
-    for (let i = 0; i < splats.length; ++i) {
-        const splat = splats[i];
-        const splatData = splat.splatData;
-        const state = splatData.getProp('state') as Uint8Array;
-        const { centers } = splat.entity.gsplat.instance.sorter;
-
-        for (let i = 0; i < splatData.numSplats; ++i) {
-            if ((state[i] & State.deleted) === 0) {
-                const x = centers[i * 3 + 0];
-                const y = centers[i * 3 + 1];
-                const z = centers[i * 3 + 2];
-
-                const ix = Math.min(1023, Math.floor(1024 * (x - minx) / xlen));
-                const iy = Math.min(1023, Math.floor(1024 * (y - miny) / ylen));
-                const iz = Math.min(1023, Math.floor(1024 * (z - minz) / zlen));
-
-                morton[idx++] = encodeMorton3(ix, iy, iz);
-            }
-        }
-    }
-
-    // order splats by morton code
-    indices.sort((a, b) => morton[a.globalIndex] - morton[b.globalIndex]);
-};
-
-const serializePlyCompressed = async (splats: Splat[], options: SerializeSettings, fs: FileSystem, progress?: ProgressFunc): Promise<void> => {
-    const { maxSHBands } = options;
-
-    // create filter and count total gaussians
-    const filter = new GaussianFilter(options);
-
-    // make a list of indices spanning all splats (so we can sort them together)
-    const indices: CompressedIndex[] = [];
-    for (let splatIndex = 0; splatIndex < splats.length; ++splatIndex) {
-        const splatData = splats[splatIndex].splatData;
-        filter.set(splats[splatIndex]);
-        for (let i = 0; i < splatData.numSplats; ++i) {
-            if (filter.test(i)) {
-                indices.push({ splatIndex, i, globalIndex: indices.length });
-            }
-        }
-    }
-
-    if (indices.length === 0) {
-        console.error('nothing to export');
-        return;
-    }
-
-    // create writer from filesystem
-    const writer = await fs.createWriter('output.compressed.ply');
-
-    const numSplats = indices.length;
-    const numChunks = Math.ceil(numSplats / 256);
-
-    const chunkProps = [
-        'min_x', 'min_y', 'min_z',
-        'max_x', 'max_y', 'max_z',
-        'min_scale_x', 'min_scale_y', 'min_scale_z',
-        'max_scale_x', 'max_scale_y', 'max_scale_z',
-        'min_r', 'min_g', 'min_b',
-        'max_r', 'max_g', 'max_b'
-    ];
-
-    const vertexProps = [
-        'packed_position',
-        'packed_rotation',
-        'packed_scale',
-        'packed_color'
-    ];
-
-    // calculate the number of output bands given the scene splat data and
-    // user-chosen maxSHBands
-    const outputSHBands = (() => {
-        const splatBands = splats.map(s => calcSHBands(getVertexProperties(s.splatData)));
-        return Math.min(maxSHBands ?? 3, Math.max(...splatBands));
-    })();
-    const outputSHCoeffs = shBandCoeffs[outputSHBands];
-
-    const shHeader = outputSHBands ? [
-        `element sh ${numSplats}`,
-        new Array(outputSHCoeffs * 3).fill('').map((_, i) => `property uchar f_rest_${i}`)
-    ].flat() : [];
-
-    const headerText = [
-        'ply',
-        'format binary_little_endian 1.0',
-        `comment ${generatedByString}`,
-        `element chunk ${numChunks}`,
-        chunkProps.map(p => `property float ${p}`),
-        `element vertex ${numSplats}`,
-        vertexProps.map(p => `property uint ${p}`),
-        shHeader,
-        'end_header\n'
-    ].flat().join('\n');
-
-    // sort splats into some kind of order (morton order rn)
-    sortSplats(splats, indices);
-
-    const singleSplat = new SingleSplat([
-        'x', 'y', 'z',
-        'scale_0', 'scale_1', 'scale_2',
-        'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity',
-        'rot_0', 'rot_1', 'rot_2', 'rot_3'
-    ], options);
-
-    const prepareChunk = (chunk: Chunk, i: number) => {
-        const num = Math.min(numSplats, (i + 1) * 256) - i * 256;
-
-        for (let j = 0; j < num; ++j) {
-            const index = indices[i * 256 + j];
-
-            // read splat
-            singleSplat.read(splats[index.splatIndex], index.i);
-
-            // update chunk
-            chunk.set(j, singleSplat);
-        }
-
-        // pad the end of the last chunk with duplicate data
-        if (num < 256) {
-            for (let j = num; j < 256; ++j) {
-                chunk.set(j, singleSplat);
-            }
-        }
-    };
-
-    const header = new TextEncoder().encode(headerText);
-
-    const totalBytes =
-        header.byteLength +
-        numChunks * chunkProps.length * 4 +
-        numSplats * vertexProps.length * 4 +
-        outputSHCoeffs * 3 * numSplats;
-
-    const progressWriter = new ProgressWriter(writer, totalBytes, progress);
-
-    // write the header
-    await progressWriter.write(header);
-
-    const chunk = new Chunk();
-
-    // write chunks
-    const chunkData = new Float32Array(18);
-    const chunkDataUint8 = new Uint8Array(chunkData.buffer);
-    for (let i = 0; i < numChunks; ++i) {
-        prepareChunk(chunk, i);
-
-        const result = chunk.pack();
-
-        chunkData[0] = result.px.min;
-        chunkData[1] = result.py.min;
-        chunkData[2] = result.pz.min;
-        chunkData[3] = result.px.max;
-        chunkData[4] = result.py.max;
-        chunkData[5] = result.pz.max;
-
-        chunkData[6] = result.sx.min;
-        chunkData[7] = result.sy.min;
-        chunkData[8] = result.sz.min;
-        chunkData[9] = result.sx.max;
-        chunkData[10] = result.sy.max;
-        chunkData[11] = result.sz.max;
-
-        chunkData[12] = result.cr.min;
-        chunkData[13] = result.cg.min;
-        chunkData[14] = result.cb.min;
-        chunkData[15] = result.cr.max;
-        chunkData[16] = result.cg.max;
-        chunkData[17] = result.cb.max;
-
-        await progressWriter.write(chunkDataUint8);
-    }
-
-    // write vertices
-    const vertexData = new Uint32Array(256 * 4);
-    const vertexDataUint8 = new Uint8Array(vertexData.buffer);
-    for (let i = 0; i < numChunks; ++i) {
-        const num = Math.min(numSplats, (i + 1) * 256) - i * 256;
-
-        prepareChunk(chunk, i);
-        chunk.pack();
-
-        // write vertex data
-        for (let j = 0; j < num; ++j) {
-            vertexData[j * 4 + 0] = chunk.position[j];
-            vertexData[j * 4 + 1] = chunk.rotation[j];
-            vertexData[j * 4 + 2] = chunk.scale[j];
-            vertexData[j * 4 + 3] = chunk.color[j];
-        }
-
-        await progressWriter.write(num === 256 ? vertexDataUint8 : new Uint8Array(vertexData.buffer, 0, num * 4 * 4));
-    }
-
-    // write sh
-    const singleSplatSH = new SingleSplat(shNames.slice(0, outputSHCoeffs * 3), options);
-
-    const shData = new Uint8Array(outputSHCoeffs * 3 * 256);
-    for (let i = 0; i < numChunks; ++i) {
-        const num = Math.min(numSplats, (i + 1) * 256) - i * 256;
-
-        for (let j = 0; j < num; ++j) {
-            const index = indices[i * 256 + j];
-
-            // read splat
-            singleSplatSH.read(splats[index.splatIndex], index.i);
-
-            // quantize and write sh data
-            const offset = j * outputSHCoeffs * 3;
-            for (let k = 0; k < outputSHCoeffs * 3; ++k) {
-                const nvalue = singleSplatSH.data[shNames[k]] / 8 + 0.5;
-                shData[offset + k] = Math.max(0, Math.min(255, Math.trunc(nvalue * 256)));
-            }
-        }
-
-        await progressWriter.write(num === 256 ? shData : new Uint8Array(shData.buffer, 0, num * outputSHCoeffs * 3));
-    }
-
-    progressWriter.close();
-    await writer.close();
-};
-
-const serializeSplat = async (splats: Splat[], options: SerializeSettings, fs: FileSystem): Promise<void> => {
-    // create writer from filesystem
-    const writer = await fs.createWriter('output.splat');
-    // create filter and count total gaussians
-    const filter = new GaussianFilter(options);
-    const totalGaussians = countGaussians(splats, filter);
-    if (totalGaussians === 0) {
-        return;
-    }
-
-    // position.xyz: float32, scale.xyz: float32, color.rgba: uint8, quaternion.ijkl: uint8
-    const result = new Uint8Array(totalGaussians * 32);
-    const dataView = new DataView(result.buffer);
-
-    let idx = 0;
-
-    const props = ['x', 'y', 'z', 'opacity', 'rot_0', 'rot_1', 'rot_2', 'rot_3', 'f_dc_0', 'f_dc_1', 'f_dc_2', 'scale_0', 'scale_1', 'scale_2'];
-    const singleSplat = new SingleSplat(props, options);
-    const { data } = singleSplat;
-
-    const clamp = (x: number) => Math.max(0, Math.min(255, x));
-
-    for (let e = 0; e < splats.length; ++e) {
-        const splat = splats[e];
-        const { splatData } = splat;
-        filter.set(splat);
-
-        for (let i = 0; i < splatData.numSplats; ++i) {
-            if (!filter.test(i)) continue;
-
-            singleSplat.read(splat, i);
-
-            const off = idx++ * 32;
-
-            dataView.setFloat32(off + 0, data.x, true);
-            dataView.setFloat32(off + 4, data.y, true);
-            dataView.setFloat32(off + 8, data.z, true);
-
-            dataView.setFloat32(off + 12, Math.exp(data.scale_0), true);
-            dataView.setFloat32(off + 16, Math.exp(data.scale_1), true);
-            dataView.setFloat32(off + 20, Math.exp(data.scale_2), true);
-
-            dataView.setUint8(off + 24, clamp(dcDecode(data.f_dc_0) * 255));
-            dataView.setUint8(off + 25, clamp(dcDecode(data.f_dc_1) * 255));
-            dataView.setUint8(off + 26, clamp(dcDecode(data.f_dc_2) * 255));
-            dataView.setUint8(off + 27, clamp(sigmoid(data.opacity) * 255));
-
-            dataView.setUint8(off + 28, clamp(data.rot_0 * 128 + 128));
-            dataView.setUint8(off + 29, clamp(data.rot_1 * 128 + 128));
-            dataView.setUint8(off + 30, clamp(data.rot_2 * 128 + 128));
-            dataView.setUint8(off + 31, clamp(data.rot_3 * 128 + 128));
-        }
-    }
-
-    await writer.write(result);
-    await writer.close();
-};
-
 // Thrown when the WebGPU device needed for SOG compression can't be created.
 // Callers show a friendly message for this instead of the raw error text.
 class WebGPUUnavailableError extends Error {
@@ -1185,67 +885,6 @@ const createGpuDevice = async (): Promise<WebgpuGraphicsDevice> => {
  * Extract Splat data into a DataTable for use with splat-transform writers.
  * This is shared between serializeSog and serializeViewer.
  */
-const extractDataTable = (splats: Splat[], settings: SerializeSettings): DataTable => {
-    const { maxSHBands = 3 } = settings;
-
-    // Determine which members to extract
-    const shCoeffs = [0, 3, 8, 15][maxSHBands];
-    const memberNames = [
-        'x', 'y', 'z',
-        'scale_0', 'scale_1', 'scale_2',
-        'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity',
-        'rot_0', 'rot_1', 'rot_2', 'rot_3',
-        ...shNames.slice(0, shCoeffs * 3)
-    ];
-
-    // Create SingleSplat for data extraction
-    const singleSplat = new SingleSplat(memberNames, settings);
-
-    // Create filter
-    const filter = new GaussianFilter(settings);
-
-    // Count total gaussians to export
-    let totalCount = 0;
-    for (const splat of splats) {
-        filter.set(splat);
-        for (let i = 0; i < splat.splatData.numSplats; ++i) {
-            if (filter.test(i)) {
-                totalCount++;
-            }
-        }
-    }
-
-    if (totalCount === 0) {
-        throw new Error('No gaussians to export');
-    }
-
-    // Create DataTable columns. Tag the table with Transform.PLY because
-    // SingleSplat.read pre-applies the PLY-style 180° Z flip (see
-    // SplatTransformCache.getMat), so the column data is in PLY space.
-    // Without this, splat-transform writers (writeSog, writeHtml) would apply
-    // the flip a second time and produce upside-down output.
-    const columns = memberNames.map(name => new Column(name, new Float32Array(totalCount)));
-    const dataTable = new DataTable(columns, Transform.PLY);
-
-    // Extract data into DataTable
-    let idx = 0;
-    for (const splat of splats) {
-        filter.set(splat);
-        for (let i = 0; i < splat.splatData.numSplats; ++i) {
-            if (!filter.test(i)) continue;
-
-            singleSplat.read(splat, i);
-
-            for (let j = 0; j < memberNames.length; ++j) {
-                (columns[j].data as Float32Array)[idx] = singleSplat.data[memberNames[j]] ?? 0;
-            }
-            idx++;
-        }
-    }
-
-    return dataTable;
-};
-
 // Bridge splat-transform progress events to supersplat's events.
 const createProgressRenderer = (header: string, events?: Events): Renderer => ({
     handle: (event: LogEvent) => {
@@ -1296,9 +935,6 @@ const serializeViewer = async (splats: Splat[], serializeSettings: SerializeSett
 
     splatTransformLogger.setRenderer(createProgressRenderer('Exporting HTML', events));
 
-    // Extract splat data to DataTable
-    const dataTable = extractDataTable(splats, serializeSettings);
-
     // splat-transform's writers leave their top-level scope open on error
     // (their contract is for the caller to unwind), so we explicitly
     // unwind here to deliver a matching depth-0 `scopeEnd(failed)` to the
@@ -1306,25 +942,17 @@ const serializeViewer = async (splats: Splat[], serializeSettings: SerializeSett
     // any error popup is shown.
     try {
         if (options.type === 'html') {
-            // Bundled HTML - writeHtml handles everything
-            await writeHtml({
-                filename: 'output.html',
-                dataTable,
+            // Bundled HTML - a single self-contained file
+            await writeSplatFile(splats, serializeSettings, 'html-bundle', 'output.html', {
                 viewerSettingsJson: experienceSettings,
-                bundle: true,
-                iterations: 10,
-                createDevice: createGpuDevice
+                iterations: 10
             }, fs);
         } else {
-            // Package - use unbundled mode into a MemoryFileSystem, then ZIP
+            // Package - write unbundled into a MemoryFileSystem, then ZIP
             const memFs = new MemoryFileSystem();
-            await writeHtml({
-                filename: 'index.html',
-                dataTable,
+            await writeSplatFile(splats, serializeSettings, 'html', 'index.html', {
                 viewerSettingsJson: experienceSettings,
-                bundle: false,
-                iterations: 10,
-                createDevice: createGpuDevice
+                iterations: 10
             }, memFs);
 
             // Create ZIP from memory filesystem results. The try/finally
@@ -1360,22 +988,14 @@ const serializeSog = async (splats: Splat[], settings: SogSettings, fs: FileSyst
 
     splatTransformLogger.setRenderer(createProgressRenderer('Exporting SOG', events));
 
-    // Extract splat data to DataTable
-    const dataTable = extractDataTable(splats, settings);
-
+    // Streamed via writeSogSource — no whole-scene DataTable copy.
     // splat-transform's writers leave their top-level scope open on error
     // (their contract is for the caller to unwind), so we explicitly
     // unwind here to deliver a matching depth-0 `scopeEnd(failed)` to the
     // renderer. That fires `progressEnd` and dismisses the dialog before
     // any error popup is shown.
     try {
-        await writeSogInternal({
-            filename: 'output.sog',
-            dataTable,
-            bundle: true,
-            iterations,
-            createDevice: createGpuDevice
-        }, fs);
+        await writeSplatFile(splats, settings, 'sog-bundle', 'output.sog', { iterations }, fs);
     } catch (err) {
         splatTransformLogger.unwindAll(true);
         throw err;
@@ -1392,16 +1012,9 @@ const serializeSpz = async (splats: Splat[], settings: SpzSettings, fs: FileSyst
 
     splatTransformLogger.setRenderer(createProgressRenderer('Exporting SPZ', events));
 
-    // Extract splat data to DataTable
-    const dataTable = extractDataTable(splats, settings);
-
     // unwind the logger's top-level scope on error (see serializeSog)
     try {
-        await writeSpz({
-            filename: 'output.spz',
-            dataTable,
-            version
-        }, fs);
+        await writeSplatFile(splats, settings, 'spz', 'output.spz', { spzVersion: version }, fs);
     } catch (err) {
         splatTransformLogger.unwindAll(true);
         throw err;
@@ -1411,8 +1024,7 @@ const serializeSpz = async (splats: Splat[], settings: SpzSettings, fs: FileSyst
 export {
     Writer,
     serializePly,
-    serializePlyCompressed,
-    serializeSplat,
+    writeSplatFile,
     serializeSog,
     serializeSpz,
     serializeViewer,

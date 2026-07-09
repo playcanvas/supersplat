@@ -6,7 +6,7 @@ import { Events } from './events';
 import { BrowserFileSystem, MappedReadFileSystem } from './io';
 import { Scene } from './scene';
 import { Splat } from './splat';
-import { serializePly, serializePlyCompressed, SerializeSettings, serializeSog, serializeSplat, serializeSpz, serializeViewer, SogSettings, SpzSettings, ViewerExportSettings, WebGPUUnavailableError } from './splat-serialize';
+import { SerializeSettings, serializeSog, serializeSpz, serializeViewer, SogSettings, SpzSettings, ViewerExportSettings, WebGPUUnavailableError, writeSplatFile } from './splat-serialize';
 import { i18n } from './ui/localization';
 
 // ts compiler and vscode find this type, but eslint does not
@@ -546,15 +546,15 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
 
             switch (fileType) {
                 case 'ply':
-                    await serializePly(splats, serializeSettings, fs);
+                    await writeSplatFile(splats, serializeSettings, 'ply', 'output.ply', {}, fs);
                     break;
                 case 'compressedPly':
                     serializeSettings.minOpacity = 1 / 255;
                     serializeSettings.removeInvalid = true;
-                    await serializePlyCompressed(splats, serializeSettings, fs);
+                    await writeSplatFile(splats, serializeSettings, 'compressed-ply', 'output.compressed.ply', {}, fs);
                     break;
                 case 'splat':
-                    await serializeSplat(splats, serializeSettings, fs);
+                    await writeSplatFile(splats, serializeSettings, 'splat', 'output.splat', {}, fs);
                     break;
                 case 'sog': {
                     const sogSettings: SogSettings = {

@@ -27,7 +27,8 @@ class WriterFileSystem implements FileSystem {
                 return inner.bytesWritten;
             },
             write: (data: Uint8Array) => inner.write(data),
-            close: () => Promise.resolve()
+            close: () => Promise.resolve(),
+            abort: () => Promise.resolve()
         };
     }
 
@@ -126,6 +127,7 @@ const updateSceneSettings = async (user: User, sceneHash: string, settings: Expe
 class PublishWriter implements Writer {
     write: (data: Uint8Array) => void;
     close: () => Promise<any>;
+    abort: () => Promise<void> = () => Promise.resolve();
 
     private cursor = 0;
 

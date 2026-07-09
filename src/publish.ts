@@ -1,8 +1,8 @@
-import type { FileSystem, Writer } from '@playcanvas/splat-transform';
+import { logger as splatTransformLogger, type FileSystem, type LogEvent, type Writer } from '@playcanvas/splat-transform';
 
 import { Events } from './events';
 import { GZipWriter } from './io';
-import { serializePly, ExperienceSettings, SerializeSettings } from './splat-serialize';
+import { writeSplatFile, ExperienceSettings, SerializeSettings } from './splat-serialize';
 import { i18n } from './ui/localization';
 
 /**
@@ -368,6 +368,15 @@ const registerPublishEvents = (events: Events) => {
                     });
                 };
 
+                // bridge splat-transform's write progress bar to the publish UI
+                splatTransformLogger.setRenderer({
+                    handle: (event: LogEvent) => {
+                        if (event.kind === 'barTick') {
+                            progressFunc(event.current, event.total);
+                        }
+                    }
+                });
+
                 // create the writer chain: gzip->stream->upload
                 const publishWriter = await PublishWriter.create(publishSettings);
                 const gzipWriter = new GZipWriter(publishWriter);
@@ -376,7 +385,7 @@ const registerPublishEvents = (events: Events) => {
 
                 // serialize using WriterFileSystem wrapper (close is managed by caller)
                 const fs = new WriterFileSystem(gzipWriter);
-                await serializePly(splats, publishSettings.serializeSettings, fs, 'output.ply', progressFunc);
+                await writeSplatFile(splats, publishSettings.serializeSettings, 'ply', 'output.ply', {}, fs);
 
                 await gzipWriter.close();
                 const response = await publishWriter.close();

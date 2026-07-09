@@ -8,7 +8,7 @@ import { Events } from './events';
 import { MappedReadFileSystem } from './io';
 import { Scene } from './scene';
 import { Splat } from './splat';
-import { serializePly } from './splat-serialize';
+import { writeSplatFile } from './splat-serialize';
 
 const removeExtension = (filename: string) => {
     return filename.substring(0, filename.length - path.getExtension(filename).length);
@@ -608,10 +608,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
         const memFs = new MemoryFileSystem();
 
-        await serializePly(splats, {
+        await writeSplatFile(splats, {
             maxSHBands: 3,
             selected: true
-        }, memFs);
+        }, 'ply', 'output.ply', {}, memFs);
 
         const data = memFs.results.get('output.ply');
 

@@ -19,7 +19,8 @@
         "serve": "serve dist -C",
         "develop": "cross-env BUILD_TYPE=debug concurrently --kill-others \"npm run watch\" \"npm run serve\"",
         "develop:auto-launch": "concurrently --kill-others \"xdg-open 'http://localhost:3000/'\" \"npm run watch\" \"npm run serve\"",
-        "lint": "eslint src"
+        "lint": "eslint src",
+        "lint:locales": "node scripts/check-locales.mjs"
     },
     "engines": {
         "node": ">=20.19.0"

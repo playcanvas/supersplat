@@ -1,10 +1,11 @@
-import { Button, Container, NumericInput } from '@playcanvas/pcui';
+import { Button, Container, Label, NumericInput, VectorInput } from '@playcanvas/pcui';
 import { TranslateGizmo, Vec3 } from 'playcanvas';
 
 import { Events } from '../events';
 import { Scene } from '../scene';
 import { SphereShape } from '../sphere-shape';
 import { Splat } from '../splat';
+import { i18n } from '../ui/localization';
 
 class SphereSelection {
     activate: () => void;
@@ -35,14 +36,33 @@ class SphereSelection {
             e.stopPropagation();
         });
 
-        const setButton = new Button({ text: 'Set', class: 'select-toolbar-button' });
-        const addButton = new Button({ text: 'Add', class: 'select-toolbar-button' });
-        const removeButton = new Button({ text: 'Remove', class: 'select-toolbar-button' });
-        const intersectButton = new Button({ text: 'Intersect', class: 'select-toolbar-button' });
+        const setButton = new Button({ class: 'select-toolbar-button' });
+        const addButton = new Button({ class: 'select-toolbar-button' });
+        const removeButton = new Button({ class: 'select-toolbar-button' });
+        const intersectButton = new Button({ class: 'select-toolbar-button' });
+
+        i18n.bindText(setButton, 'select-toolbar.set');
+        i18n.bindText(addButton, 'select-toolbar.add');
+        i18n.bindText(removeButton, 'select-toolbar.remove');
+        i18n.bindText(intersectButton, 'select-toolbar.intersect');
+
+        const positionLabel = new Label({ class: 'select-toolbar-label' });
+        i18n.bindText(positionLabel, 'select-toolbar.position');
+
+        const position = new VectorInput({
+            class: 'select-toolbar-vector',
+            precision: 2,
+            dimensions: 3,
+            placeholder: ['X', 'Y', 'Z'],
+            value: [0, 0, 0]
+        });
+
+        const radiusLabel = new Label({ class: 'select-toolbar-label' });
+        i18n.bindText(radiusLabel, 'select-toolbar.radius');
+
         const radius = new NumericInput({
             precision: 2,
             value: sphere.radius,
-            placeholder: 'Radius',
             width: 80,
             min: 0.01
         });
@@ -51,9 +71,26 @@ class SphereSelection {
         selectToolbar.append(addButton);
         selectToolbar.append(removeButton);
         selectToolbar.append(intersectButton);
+        selectToolbar.append(positionLabel);
+        selectToolbar.append(position);
+        selectToolbar.append(radiusLabel);
         selectToolbar.append(radius);
 
         canvasContainer.append(selectToolbar);
+
+        // write the volume's world position into the ui without retriggering
+        // the position input's change handler
+        let uiUpdating = false;
+        const updateUI = () => {
+            uiUpdating = true;
+            const p = sphere.pivot.getPosition();
+            position.value = [p.x, p.y, p.z];
+            uiUpdating = false;
+        };
+
+        gizmo.on('transform:move', () => {
+            updateUI();
+        });
 
         const apply = (op: 'set' | 'add' | 'remove' | 'intersect') => {
             const p = sphere.pivot.getPosition();
@@ -72,6 +109,16 @@ class SphereSelection {
         intersectButton.dom.addEventListener('pointerdown', (e) => {
             e.stopPropagation(); apply('intersect');
         });
+        position.inputs.forEach((input) => {
+            input.on('change', () => {
+                if (!uiUpdating) {
+                    const v = position.value;
+                    sphere.pivot.setPosition(v[0], v[1], v[2]);
+                    sphere.moved();
+                    gizmo.attach([sphere.pivot]);
+                }
+            });
+        });
         radius.on('change', () => {
             sphere.radius = radius.value;
         });
@@ -80,6 +127,7 @@ class SphereSelection {
             if (this.active) {
                 sphere.pivot.setPosition(details.position);
                 gizmo.attach([sphere.pivot]);
+                updateUI();
             }
         });
 
@@ -99,6 +147,7 @@ class SphereSelection {
             this.active = true;
             scene.add(sphere);
             gizmo.attach([sphere.pivot]);
+            updateUI();
             selectToolbar.hidden = false;
         };
 

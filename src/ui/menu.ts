@@ -245,12 +245,12 @@ class Menu extends Container {
             text: () => i18n.t('menu.edit.duplicate'),
             icon: createSvg(selectDuplicate),
             isEnabled: () => events.invoke('selection.splats'),
-            onSelect: () => events.fire('select.duplicate')
+            onSelect: () => events.fire('edit.duplicate')
         }, {
             text: () => i18n.t('menu.edit.separate'),
             icon: createSvg(selectSeparate),
             isEnabled: () => events.invoke('selection.splats'),
-            onSelect: () => events.fire('select.separate')
+            onSelect: () => events.fire('edit.separate')
         }]);
 
         const selectionMenuPanel = new MenuPanel([{

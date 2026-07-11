@@ -637,11 +637,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     };
 
     // duplicate the current selection
-    events.on('select.duplicate', async () => {
+    events.on('edit.duplicate', async () => {
         await performSelectionFunc('duplicate');
     });
 
-    events.on('select.separate', async () => {
+    events.on('edit.separate', async () => {
         await performSelectionFunc('separate');
     });
 

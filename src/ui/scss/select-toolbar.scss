@@ -31,13 +31,16 @@
         color: $text-secondary;
     }
 
-    // match the height treatment of the transform panel's inputs (see transform.scss)
+    // match the height treatment of the transform panel's inputs (see transform.scss);
+    // all numeric fields share one width so standalone inputs align with vector components
     $input-height: 22px;
+    $field-width: 56px;
+    $field-gap: 10px;
 
     .select-toolbar-vector {
-        width: 190px;
+        width: $field-width * 3 + $field-gap * 2;
         margin: 0px;
-        gap: 10px;
+        gap: $field-gap;
         height: $input-height;
 
         > .pcui-numeric-input {
@@ -54,6 +57,7 @@
     }
 
     > .pcui-numeric-input {
+        width: $field-width;
         margin: 0px;
         height: $input-height;
         line-height: $input-height;

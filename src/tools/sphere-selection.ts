@@ -63,7 +63,6 @@ class SphereSelection {
         const radius = new NumericInput({
             precision: 2,
             value: sphere.radius,
-            width: 80,
             min: 0.01
         });
 

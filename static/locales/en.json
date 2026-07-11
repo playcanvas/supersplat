@@ -300,6 +300,8 @@
     "tooltip.timeline.smoothness": "Smoothness",
     "tooltip.timeline.loop": "Loop Animation",
     "tooltip.scene.solo": "Solo Selected",
+    "tooltip.scene.import": "Import Scene",
+    "tooltip.scene.new": "New Scene",
     "status-bar.splats": "Splats",
     "status-bar.selected": "Selected",
     "status-bar.locked": "Locked",

@@ -300,6 +300,8 @@
     "tooltip.timeline.smoothness": "スムーズさ",
     "tooltip.timeline.loop": "アニメーションをループ",
     "tooltip.scene.solo": "選択をソロ表示",
+    "tooltip.scene.import": "シーンをインポート",
+    "tooltip.scene.new": "新規シーンを作成",
     "status-bar.splats": "スプラット",
     "status-bar.selected": "選択済み",
     "status-bar.locked": "ロック済み",

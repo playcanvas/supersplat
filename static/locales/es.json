@@ -300,6 +300,8 @@
     "tooltip.timeline.smoothness": "Suavidad",
     "tooltip.timeline.loop": "Animación en bucle",
     "tooltip.scene.solo": "Solo seleccionado",
+    "tooltip.scene.import": "Importar escena",
+    "tooltip.scene.new": "Nueva escena",
     "status-bar.splats": "Splats",
     "status-bar.selected": "Seleccionados",
     "status-bar.locked": "Bloqueados",

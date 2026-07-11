@@ -300,6 +300,8 @@
     "tooltip.timeline.smoothness": "平滑度",
     "tooltip.timeline.loop": "循环动画",
     "tooltip.scene.solo": "独显所选",
+    "tooltip.scene.import": "导入场景",
+    "tooltip.scene.new": "新建场景",
     "status-bar.splats": "高斯点",
     "status-bar.selected": "已选择",
     "status-bar.locked": "已锁定",

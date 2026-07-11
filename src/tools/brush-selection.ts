@@ -1,4 +1,5 @@
 import { Events } from '../events';
+import { opFromModifiers } from '../select-op';
 
 class BrushSelection {
     activate: () => void;
@@ -96,7 +97,7 @@ class BrushSelection {
 
                 await events.invoke(
                     'select.byMask',
-                    e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
+                    opFromModifiers(e),
                     canvas,
                     context
                 );

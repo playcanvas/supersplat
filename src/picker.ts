@@ -90,7 +90,7 @@ class Picker {
     }
 
     // Prepare for ID picking by rendering the specified splat
-    prepareId(splat: Splat, mode: 'add' | 'remove' | 'set') {
+    prepareId(splat: Splat, mode: 'add' | 'remove' | 'set' | 'intersect') {
         if (!this.idRenderTarget) {
             return;
         }
@@ -103,8 +103,12 @@ class Picker {
             s.entity.enabled = s === splat;
         });
 
+        // 'intersect' picks against the currently-selected set (same render as
+        // 'remove') so unselected splats can't occlude selected ones and skew it.
+        const pickOp = mode === 'intersect' ? 'remove' : mode;
+
         // Set picker uniforms
-        this.device.scope.resolve('pickOp').setValue(['add', 'remove', 'set'].indexOf(mode));
+        this.device.scope.resolve('pickOp').setValue(['add', 'remove', 'set'].indexOf(pickOp));
         this.device.scope.resolve('pickMode').setValue(0);
 
         // Render ID picking pass

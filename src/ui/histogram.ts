@@ -1,4 +1,6 @@
 import { Events } from '../events';
+import { opFromModifiers } from '../select-op';
+import { applyOpCursor } from './select-cursor';
 
 class HistogramData {
     bins: { selected: number, unselected: number }[];
@@ -69,6 +71,7 @@ class Histogram {
         let dragStart = 0;
         let dragEnd = 0;
         let activePointerId = -1;
+        let hovering = false;
 
         const offsetToBucket = (offset: number) => {
             const rect = this.canvas.getBoundingClientRect();
@@ -132,7 +135,7 @@ class Histogram {
                 activePointerId = -1;
             }
             if (commit) {
-                const op = shiftKey ? 'add' : (ctrlKey ? 'remove' : 'set');
+                const op = opFromModifiers({ shiftKey, ctrlKey });
                 this.events.fire('select', op, Math.min(dragStart, dragEnd), Math.max(dragStart, dragEnd));
             } else {
                 this.events.fire('cancelHighlight');
@@ -212,13 +215,33 @@ class Histogram {
             }
         });
 
-        this.canvas.addEventListener('pointerenter', () => {
+        // keep the cursor showing the op the modifiers will apply (add/remove/
+        // intersect) while hovering the interactive histogram, matching the
+        // selection tools. numValues gates it so an empty histogram is unaffected.
+        const syncCursor = (e: { shiftKey: boolean, ctrlKey: boolean }) => {
+            if (hovering) {
+                applyOpCursor(this.canvas, this.histogram.numValues ? opFromModifiers(e) : 'set');
+            }
+        };
+
+        this.canvas.addEventListener('pointerenter', (e: PointerEvent) => {
+            hovering = true;
             this.events.fire('showOverlay');
+            syncCursor(e);
         });
 
         this.canvas.addEventListener('pointerleave', () => {
+            hovering = false;
             this.events.fire('hideOverlay');
+            applyOpCursor(this.canvas, 'set');
         });
+
+        // capture phase so a modifier press updates the cursor even while another
+        // element holds focus; blur clears because a key release while unfocused
+        // never fires. (mirrors the selection-tool cursor and controllers.ts)
+        window.addEventListener('keydown', e => syncCursor(e), { capture: true });
+        window.addEventListener('keyup', e => syncCursor(e), { capture: true });
+        window.addEventListener('blur', () => applyOpCursor(this.canvas, 'set'));
     }
 
     private render(logScale: boolean) {

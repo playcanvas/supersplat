@@ -6,7 +6,7 @@ import { Events } from './events';
 import { BrowserFileSystem, MappedReadFileSystem } from './io';
 import { Scene } from './scene';
 import { Splat } from './splat';
-import { serializePly, serializePlyCompressed, SerializeSettings, serializeSog, serializeSplat, serializeSpz, serializeViewer, SogSettings, SpzSettings, ViewerExportSettings } from './splat-serialize';
+import { serializePly, serializePlyCompressed, SerializeSettings, serializeSog, serializeSplat, serializeSpz, serializeViewer, SogSettings, SpzSettings, ViewerExportSettings, WebGPUUnavailableError } from './splat-serialize';
 import { i18n } from './ui/localization';
 
 // ts compiler and vscode find this type, but eslint does not
@@ -585,11 +585,20 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             }
 
         } catch (error) {
-            await events.invoke('showPopup', {
-                type: 'error',
-                header: i18n.t('popup.error-loading'),
-                message: `${error.message ?? error} while saving file`
-            });
+            if (error instanceof WebGPUUnavailableError) {
+                await events.invoke('showPopup', {
+                    type: 'error',
+                    header: i18n.t('popup.error'),
+                    message: i18n.t('popup.webgpu-unavailable')
+                });
+            } else {
+                const message = error instanceof Error ? error.message : String(error);
+                await events.invoke('showPopup', {
+                    type: 'error',
+                    header: i18n.t('popup.error'),
+                    message: `${message} while saving file`
+                });
+            }
         } finally {
             if (useSpinner) {
                 events.fire('stopSpinner');

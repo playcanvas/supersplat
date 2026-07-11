@@ -1,4 +1,4 @@
-import { Button, Container, NumericInput, SelectInput } from '@playcanvas/pcui';
+import { Button, Container, Element, NumericInput, SelectInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { ShortcutManager } from '../shortcut-manager';
@@ -23,9 +23,15 @@ class Ticks extends Container {
         let frameFromOffset: (offset: number) => number;
         let moveCursor: (frame: number) => void;
 
+        // pcui wrappers around key markers, kept so their tooltips unregister
+        // (via the destroy event) when the timeline is rebuilt
+        let keyElements: Element[] = [];
+
         // rebuild the timeline
         const rebuild = () => {
             // clear existing labels
+            keyElements.forEach(el => el.destroy());
+            keyElements = [];
             workArea.dom.innerHTML = '';
 
             const numFrames = events.invoke('timeline.frames');
@@ -33,8 +39,15 @@ class Ticks extends Container {
 
             const padding = 20;
             const width = this.dom.getBoundingClientRect().width - padding * 2;
-            const labelStep = Math.max(1, Math.floor(numFrames / Math.max(1, Math.floor(width / 50))));
-            const numLabels = Math.max(1, Math.ceil(numFrames / labelStep));
+
+            // round the smallest step that keeps labels ~50px apart up to the
+            // 1/2/5 * 10^n series so labels land on round frame numbers
+            const minStep = Math.max(1, numFrames / Math.max(1, Math.floor(width / 50)));
+            const magnitude = 10 ** Math.floor(Math.log10(minStep));
+            const labelStep = [1, 2, 5, 10].map(m => m * magnitude).find(s => s >= minStep) ?? 10 * magnitude;
+
+            // subdivide labels with minor ticks (fifths, or halves for 1/2 steps)
+            const tickStep = labelStep === 1 ? 0 : labelStep / (labelStep % 5 === 0 ? 5 : 2);
 
             const offsetFromFrame = (frame: number) => {
                 return padding + Math.floor(frame / (numFrames - 1) * width);
@@ -46,13 +59,25 @@ class Ticks extends Container {
 
             // timeline labels
 
-            for (let i = 0; i < numLabels; i++) {
-                const thisFrame = Math.floor(i * labelStep);
+            for (let frame = 0; frame < numFrames; frame += labelStep) {
                 const label = document.createElement('div');
                 label.classList.add('time-label');
-                label.style.left = `${offsetFromFrame(thisFrame)}px`;
-                label.textContent = thisFrame.toString();
+                label.style.left = `${offsetFromFrame(frame)}px`;
+                label.textContent = frame.toString();
                 workArea.dom.appendChild(label);
+            }
+
+            // minor ticks
+
+            if (tickStep > 0) {
+                for (let frame = tickStep; frame < numFrames; frame += tickStep) {
+                    if (frame % labelStep !== 0) {
+                        const tick = document.createElement('div');
+                        tick.classList.add('time-tick');
+                        tick.style.left = `${offsetFromFrame(frame)}px`;
+                        workArea.dom.appendChild(tick);
+                    }
+                }
             }
 
             // keys - get from active track
@@ -63,6 +88,10 @@ class Ticks extends Container {
                 label.classList.add('time-label', 'key');
                 label.style.left = `${offsetFromFrame(keyFrame)}px`;
                 label.dataset.frame = keyFrame.toString();
+
+                const wrapper = new Element({ dom: label });
+                tooltips.register(wrapper, () => i18n.t('tooltip.timeline.key'), 'top');
+                keyElements.push(wrapper);
                 let dragging = false;
                 let copying = false;
                 let clone: HTMLElement = null;
@@ -96,6 +125,9 @@ class Ticks extends Container {
                         } else {
                             label.style.left = `${offsetFromFrame(toFrame)}px`;
                         }
+                    } else {
+                        // hint that ctrl+click overwrites the key with the current pose
+                        label.classList.toggle('stamping', event.ctrlKey);
                     }
                 });
 
@@ -115,7 +147,11 @@ class Ticks extends Container {
 
                         label.releasePointerCapture(event.pointerId);
 
-                        if (fromFrame !== toFrame && toFrame >= 0) {
+                        if (event.ctrlKey && (toFrame < 0 || toFrame === fromFrame)) {
+                            // ctrl+click without dragging: overwrite this key
+                            // with the current camera pose
+                            events.fire('track.addKey', fromFrame);
+                        } else if (fromFrame !== toFrame && toFrame >= 0) {
                             if (copying) {
                                 events.fire('track.copyKey', fromFrame, toFrame);
                             } else {
@@ -172,6 +208,39 @@ class Ticks extends Container {
                 workArea.dom.releasePointerCapture(event.pointerId);
                 scrubbing = false;
             }
+        });
+
+        // update the stamp cursor hint when ctrl changes while already
+        // hovering a key (pointermove alone misses a stationary pointer)
+        const updateStamping = (down: boolean) => {
+            const hovered = workArea.dom.querySelector('.key:hover');
+            workArea.dom.querySelectorAll('.key.stamping').forEach((el) => {
+                if (!down || el !== hovered) el.classList.remove('stamping');
+            });
+            if (down && hovered) hovered.classList.add('stamping');
+        };
+
+        const onCtrlDown = (event: KeyboardEvent) => {
+            if (event.key === 'Control' && !event.repeat) updateStamping(true);
+        };
+
+        const onCtrlUp = (event: KeyboardEvent) => {
+            if (event.key === 'Control') updateStamping(false);
+        };
+
+        // ctrl released while the window is unfocused never fires keyup
+        const onBlur = () => updateStamping(false);
+
+        window.addEventListener('keydown', onCtrlDown);
+        window.addEventListener('keyup', onCtrlUp);
+        window.addEventListener('blur', onBlur);
+
+        this.on('destroy', () => {
+            keyElements.forEach(el => el.destroy());
+            keyElements = [];
+            window.removeEventListener('keydown', onCtrlDown);
+            window.removeEventListener('keyup', onCtrlUp);
+            window.removeEventListener('blur', onBlur);
         });
 
         // rebuild the timeline on dom resize
@@ -318,12 +387,32 @@ class TimelinePanel extends Container {
             smoothness.value = smoothnessIn;
         });
 
+        // loop
+
+        const loop = new Button({
+            id: 'loop',
+            text: '\uE128'
+        });
+
+        loop.on('click', () => {
+            events.fire('timeline.setLoop', !events.invoke('timeline.loop'));
+        });
+
+        events.on('timeline.loop', (loopIn: boolean) => {
+            loop.class[loopIn ? 'add' : 'remove']('active');
+        });
+
+        if (events.invoke('timeline.loop')) {
+            loop.class.add('active');
+        }
+
         const settingsControls = new Container({
             id: 'settings-controls'
         });
         settingsControls.append(speed);
         settingsControls.append(frames);
         settingsControls.append(smoothness);
+        settingsControls.append(loop);
 
         // append control groups
 
@@ -459,6 +548,7 @@ class TimelinePanel extends Container {
         tooltips.register(speed, () => i18n.t('tooltip.timeline.frame-rate'), 'top');
         tooltips.register(frames, () => i18n.t('tooltip.timeline.total-frames'), 'top');
         tooltips.register(smoothness, () => i18n.t('tooltip.timeline.smoothness'), 'top');
+        tooltips.register(loop, () => i18n.t('tooltip.timeline.loop'), 'top');
     }
 }
 

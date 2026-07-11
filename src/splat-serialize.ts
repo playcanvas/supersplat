@@ -1123,6 +1123,15 @@ const serializeSplat = async (splats: Splat[], options: SerializeSettings, fs: F
     await writer.close();
 };
 
+// Thrown when the WebGPU device needed for SOG compression can't be created.
+// Callers show a friendly message for this instead of the raw error text.
+class WebGPUUnavailableError extends Error {
+    constructor() {
+        super('WebGPU is not available');
+        this.name = 'WebGPUUnavailableError';
+    }
+}
+
 // Cached WebGPU device for SOG compression
 let cachedGpuDevice: WebgpuGraphicsDevice | null = null;
 let cachedBackbuffer: Texture | null = null;
@@ -1133,7 +1142,7 @@ const createGpuDevice = async (): Promise<WebgpuGraphicsDevice> => {
     }
 
     if (!navigator.gpu) {
-        throw new Error('WebGPU is not available in this browser');
+        throw new WebGPUUnavailableError();
     }
 
     // Create a minimal canvas for the graphics device
@@ -1147,7 +1156,21 @@ const createGpuDevice = async (): Promise<WebgpuGraphicsDevice> => {
         stencil: false
     });
 
-    await graphicsDevice.createDevice();
+    try {
+        await graphicsDevice.createDevice();
+    } catch (err) {
+        // createDevice fails with an obscure internal error when no adapter
+        // is available (e.g. blocklisted GPU or missing drivers)
+        console.error(err);
+        throw new WebGPUUnavailableError();
+    }
+
+    // createDevice can also resolve without creating a device (e.g.
+    // blocklisted adapters)
+    // @ts-ignore - wgpu is an internal property
+    if (!graphicsDevice.wgpu) {
+        throw new WebGPUUnavailableError();
+    }
 
     // Create external backbuffer (required by PlayCanvas)
     cachedBackbuffer = new Texture(graphicsDevice, {
@@ -1413,5 +1436,6 @@ export {
     SerializeSettings,
     SogSettings,
     SpzSettings,
-    ViewerExportSettings
+    ViewerExportSettings,
+    WebGPUUnavailableError
 };

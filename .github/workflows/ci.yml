@@ -65,3 +65,6 @@ jobs:
 
     - name: Lint
       run: npm run lint
+
+    - name: Lint locales
+      run: npm run lint:locales

@@ -300,6 +300,8 @@
     "tooltip.timeline.smoothness": "부드러움",
     "tooltip.timeline.loop": "애니메이션 루프",
     "tooltip.scene.solo": "선택 항목 솔로",
+    "tooltip.scene.import": "장면 가져오기",
+    "tooltip.scene.new": "새 장면",
     "status-bar.splats": "스플랫",
     "status-bar.selected": "선택됨",
     "status-bar.locked": "잠김",

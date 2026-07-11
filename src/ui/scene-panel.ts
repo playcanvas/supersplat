@@ -85,8 +85,8 @@ class ScenePanel extends Container {
         });
 
         tooltips.register(soloToggle, () => i18n.t('tooltip.scene.solo'), 'top');
-        tooltips.register(sceneImport, 'Import Scene', 'top');
-        tooltips.register(sceneNew, 'New Scene', 'top');
+        tooltips.register(sceneImport, () => i18n.t('tooltip.scene.import'), 'top');
+        tooltips.register(sceneNew, () => i18n.t('tooltip.scene.new'), 'top');
 
         const splatList = new SplatList(events);
 

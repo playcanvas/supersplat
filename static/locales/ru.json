@@ -300,6 +300,8 @@
     "tooltip.timeline.smoothness": "Плавность",
     "tooltip.timeline.loop": "Зациклить анимацию",
     "tooltip.scene.solo": "Соло выбранного",
+    "tooltip.scene.import": "Импортировать сцену",
+    "tooltip.scene.new": "Новая сцена",
     "status-bar.splats": "Сплаты",
     "status-bar.selected": "Выбрано",
     "status-bar.locked": "Заблокировано",

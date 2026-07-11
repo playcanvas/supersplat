@@ -1,5 +1,5 @@
 import { Container, Label } from '@playcanvas/pcui';
-import { Mat4, path } from 'playcanvas';
+import { Mat4 } from 'playcanvas';
 
 import { DataPanel } from './data-panel';
 import { Events } from '../events';
@@ -30,10 +30,6 @@ import { version } from '../../package.json';
 
 // ts compiler and vscode find this type, but eslint does not
 type FilePickerAcceptType = unknown;
-
-const removeExtension = (filename: string) => {
-    return filename.substring(0, filename.length - path.getExtension(filename).length);
-};
 
 class EditorUI {
     appContainer: Container;
@@ -223,7 +219,41 @@ class EditorUI {
             const imageSettings = await imageSettingsDialog.show();
 
             if (imageSettings) {
-                await events.invoke('render.image', imageSettings);
+                try {
+                    let writable;
+                    let fileHandle: FileSystemFileHandle | undefined;
+
+                    if (window.showSaveFilePicker) {
+                        fileHandle = await window.showSaveFilePicker({
+                            id: 'SuperSplatImageFileExport',
+                            types: [{
+                                description: 'WebP Image',
+                                accept: { 'image/webp': ['.webp'] }
+                            }],
+                            suggestedName: `${events.invoke('render.baseFilename')}.webp`
+                        });
+
+                        writable = await fileHandle.createWritable();
+                    }
+
+                    const result = await events.invoke('render.image', imageSettings, writable);
+
+                    // if the render failed, remove the empty file left on disk
+                    if (result === false && fileHandle?.remove) {
+                        await fileHandle.remove();
+                    }
+                } catch (error) {
+                    if (error instanceof DOMException && error.name === 'AbortError') {
+                        // user cancelled save dialog
+                        return;
+                    }
+
+                    await events.invoke('showPopup', {
+                        type: 'error',
+                        header: i18n.t('panel.render.failed'),
+                        message: `'${error.message ?? error}'`
+                    });
+                }
             }
         });
 
@@ -233,8 +263,6 @@ class EditorUI {
             if (videoSettings) {
 
                 try {
-                    const docName = events.invoke('doc.name');
-
                     // Determine file extension and mime type based on format
                     let fileExtension: string;
                     let filePickerTypes: FilePickerAcceptType[];
@@ -274,7 +302,7 @@ class EditorUI {
                         }];
                     }
 
-                    const suggested = `${removeExtension(docName ?? 'supersplat')}${fileExtension}`;
+                    const suggested = `${events.invoke('render.baseFilename')}${fileExtension}`;
 
                     let writable;
                     let fileHandle: FileSystemFileHandle | undefined;
@@ -303,7 +331,7 @@ class EditorUI {
 
                     await events.invoke('showPopup', {
                         type: 'error',
-                        header: 'Failed to render video',
+                        header: i18n.t('panel.render.failed'),
                         message: `'${error.message ?? error}'`
                     });
                 }

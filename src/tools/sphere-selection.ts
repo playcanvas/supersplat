@@ -109,15 +109,12 @@ class SphereSelection {
         intersectButton.dom.addEventListener('pointerdown', (e) => {
             e.stopPropagation(); apply('intersect');
         });
-        position.inputs.forEach((input) => {
-            input.on('change', () => {
-                if (!uiUpdating) {
-                    const v = position.value;
-                    sphere.pivot.setPosition(v[0], v[1], v[2]);
-                    sphere.moved();
-                    gizmo.attach([sphere.pivot]);
-                }
-            });
+        position.on('change', (v: number[]) => {
+            if (!uiUpdating) {
+                sphere.pivot.setPosition(v[0], v[1], v[2]);
+                sphere.moved();
+                gizmo.attach([sphere.pivot]);
+            }
         });
         radius.on('change', () => {
             sphere.radius = radius.value;

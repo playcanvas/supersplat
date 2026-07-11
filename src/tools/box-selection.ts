@@ -115,24 +115,17 @@ class BoxSelection {
             e.stopPropagation();
             apply('intersect');
         });
-        position.inputs.forEach((input) => {
-            input.on('change', () => {
-                if (!uiUpdating) {
-                    const v = position.value;
-                    box.pivot.setPosition(v[0], v[1], v[2]);
-                    box.moved();
-                    gizmo.attach([box.pivot]);
-                }
-            });
+        position.on('change', (v: number[]) => {
+            if (!uiUpdating) {
+                box.pivot.setPosition(v[0], v[1], v[2]);
+                box.moved();
+                gizmo.attach([box.pivot]);
+            }
         });
-        size.inputs[0].on('change', () => {
-            box.lenX = size.inputs[0].value;
-        });
-        size.inputs[1].on('change', () => {
-            box.lenY = size.inputs[1].value;
-        });
-        size.inputs[2].on('change', () => {
-            box.lenZ = size.inputs[2].value;
+        size.on('change', (v: number[]) => {
+            box.lenX = v[0];
+            box.lenY = v[1];
+            box.lenZ = v[2];
         });
 
         events.on('camera.focalPointPicked', (details: { splat: Splat, position: Vec3 }) => {

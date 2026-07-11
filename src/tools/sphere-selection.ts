@@ -126,6 +126,7 @@ class SphereSelection {
         events.on('camera.focalPointPicked', (details: { splat: Splat, position: Vec3 }) => {
             if (this.active) {
                 sphere.pivot.setPosition(details.position);
+                sphere.moved();
                 gizmo.attach([sphere.pivot]);
                 updateUI();
             }

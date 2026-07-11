@@ -125,18 +125,20 @@ class BoxSelection {
                 }
             });
         });
-        size.inputs.forEach((input) => {
-            input.on('change', () => {
-                const v = size.value;
-                box.lenX = v[0];
-                box.lenY = v[1];
-                box.lenZ = v[2];
-            });
+        size.inputs[0].on('change', () => {
+            box.lenX = size.inputs[0].value;
+        });
+        size.inputs[1].on('change', () => {
+            box.lenY = size.inputs[1].value;
+        });
+        size.inputs[2].on('change', () => {
+            box.lenZ = size.inputs[2].value;
         });
 
         events.on('camera.focalPointPicked', (details: { splat: Splat, position: Vec3 }) => {
             if (this.active) {
                 box.pivot.setPosition(details.position);
+                box.moved();
                 gizmo.attach([box.pivot]);
                 updateUI();
             }

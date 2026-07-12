@@ -117,7 +117,7 @@ class RightToolbar extends Container {
         tooltips.register(cameraFrameSelection, tooltip('tooltip.right-toolbar.frame-selection', 'camera.focus'), 'left');
         tooltips.register(cameraReset, tooltip('tooltip.right-toolbar.reset-camera', 'camera.reset'), 'left');
         tooltips.register(colorPanel, tooltip('tooltip.right-toolbar.colors'), 'left');
-        tooltips.register(options, tooltip('tooltip.right-toolbar.view-options'), 'left');
+        tooltips.register(options, tooltip('tooltip.right-toolbar.settings'), 'left');
 
         // add event handlers
 
@@ -131,7 +131,7 @@ class RightToolbar extends Container {
         cameraFrameSelection.on('click', () => events.fire('camera.focus'));
         cameraReset.on('click', () => events.fire('camera.reset'));
         colorPanel.on('click', () => events.fire('colorPanel.toggleVisible'));
-        options.on('click', () => events.fire('viewPanel.toggleVisible'));
+        options.on('click', () => events.fire('settingsPanel.toggleVisible'));
 
         events.on('camera.mode', (mode: string) => {
             ringsModeToggle.class[mode === 'rings' ? 'add' : 'remove']('active');
@@ -152,7 +152,7 @@ class RightToolbar extends Container {
             colorPanel.class[visible ? 'add' : 'remove']('active');
         });
 
-        events.on('viewPanel.visible', (visible: boolean) => {
+        events.on('settingsPanel.visible', (visible: boolean) => {
             options.class[visible ? 'add' : 'remove']('active');
         });
     }

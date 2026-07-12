@@ -821,9 +821,12 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             // preference - suspend capture around the notify and the
             // synchronous ui echo it triggers
             events.fire('preferences.suspend');
-            scene.camera.fov = pose.fov;
-            events.fire('camera.fov', pose.fov);
-            events.fire('preferences.resume');
+            try {
+                scene.camera.fov = pose.fov;
+                events.fire('camera.fov', pose.fov);
+            } finally {
+                events.fire('preferences.resume');
+            }
         }
         scene.camera.setPose(pose.position, pose.target, speed);
     });

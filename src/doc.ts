@@ -86,16 +86,17 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     const loadDocument = async (file: File) => {
         events.fire('startSpinner');
 
-        // the document's view settings are applied through the same events as
-        // user changes - suspend preference capture so they don't overwrite
-        // the user's stored preferences
-        events.fire('preferences.suspend');
-
         // Create streaming ZIP reader from the file
         const blobSource = new BlobReadSource(file);
         const zipFs = new ZipReadFileSystem(blobSource);
 
         try {
+            // the document's view settings are applied through the same events
+            // as user changes - suspend preference capture so they don't
+            // overwrite the user's stored preferences. resumed in the finally
+            // below so a failed load can't leave capture suspended.
+            events.fire('preferences.suspend');
+
             // reset the scene
             resetScene();
 
@@ -146,10 +147,13 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 message: `'${error.message ?? error}'`
             });
         } finally {
-            // Clean up resources
-            zipFs.close();
+            // fire events before cleanup so a throwing close can't leave
+            // preference capture suspended or the spinner running
             events.fire('preferences.resume');
             events.fire('stopSpinner');
+
+            // Clean up resources
+            zipFs.close();
         }
     };
 

@@ -1,4 +1,4 @@
-import { BooleanInput, ColorPicker, Container, Label, SelectInput, SliderInput } from '@playcanvas/pcui';
+import { BooleanInput, Button, ColorPicker, Container, Label, SelectInput, SliderInput } from '@playcanvas/pcui';
 import { Color } from 'playcanvas';
 
 import { Events } from '../events';
@@ -413,6 +413,19 @@ class ViewPanel extends Container {
         showCameraInfoRow.append(showCameraInfoLabel);
         showCameraInfoRow.append(showCameraInfoToggle);
 
+        // reset preferences to defaults
+
+        const resetRow = new Container({
+            class: 'view-panel-row'
+        });
+
+        const resetButton = new Button({
+            class: 'view-panel-row-button'
+        });
+        i18n.bindText(resetButton, 'panel.view-options.reset');
+
+        resetRow.append(resetButton);
+
         this.append(header);
         this.append(languageRow);
         this.append(clrRow);
@@ -429,6 +442,7 @@ class ViewPanel extends Container {
         this.append(showBoundDimensionsRow);
         this.append(showCameraPosesRow);
         this.append(showCameraInfoRow);
+        this.append(resetRow);
 
         // handle panel visibility
 
@@ -604,6 +618,18 @@ class ViewPanel extends Container {
 
         tonemappingSelection.on('change', (value: string) => {
             events.fire('camera.setTonemapping', value);
+        });
+
+        // reset preferences
+
+        resetButton.on('click', () => {
+            events.fire('preferences.reset');
+        });
+
+        // reset reverts language to automatic; sync the selector (its change
+        // handler makes the equivalent setLanguage(null) call idempotently)
+        events.on('preferences.reset', () => {
+            languageSelection.value = 'auto';
         });
 
         // tooltips

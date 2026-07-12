@@ -90,6 +90,7 @@
     "panel.view-options.tonemapping.aces2": "ACES2",
     "panel.view-options.tonemapping.filmic": "Fílmico",
     "panel.view-options.tonemapping.hejl": "Hejl",
+    "panel.view-options.reset": "Restablecer valores predeterminados",
     "panel.splat-data": "Datos de Splat",
     "panel.splat-data.distance": "Distancia",
     "panel.splat-data.camera-depth": "Profundidad de cámara",

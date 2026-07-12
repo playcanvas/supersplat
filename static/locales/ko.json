@@ -90,6 +90,7 @@
     "panel.view-options.tonemapping.aces2": "ACES2",
     "panel.view-options.tonemapping.filmic": "필름 스타일",
     "panel.view-options.tonemapping.hejl": "Hejl",
+    "panel.view-options.reset": "기본값으로 재설정",
     "panel.splat-data": "Splat 데이터",
     "panel.splat-data.distance": "거리",
     "panel.splat-data.camera-depth": "카메라 깊이",

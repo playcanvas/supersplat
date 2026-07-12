@@ -1,6 +1,6 @@
 @use 'colors.scss' as *;
 
-#view-panel {
+#settings-panel {
     top: 50%;
     transform: translate(0, -50%);
     right: 102px;
@@ -11,17 +11,17 @@
         display: flex;
     }
 
-    & > .view-panel-row {
+    & > .settings-panel-row {
         display: flex;
         flex-direction: row;
         padding: 2px;
         height: 28px;
 
-        & > .view-panel-row-label {
+        & > .settings-panel-row-label {
             flex-grow: 1;
         }
 
-        & > .view-panel-row-toggle {
+        & > .settings-panel-row-toggle {
             background-color: $bcg-dark;
 
             &::after {
@@ -37,7 +37,7 @@
             }
         }
 
-        & > .view-panel-row-slider {
+        & > .settings-panel-row-slider {
             margin: 0px;
 
             & > .pcui-slider-container {
@@ -50,26 +50,26 @@
             }
         }
 
-        & > .view-panel-row-pickers {
+        & > .settings-panel-row-pickers {
             display: flex;
             flex-direction: row;
             margin: 2px 2px;
             width: 185px;
             justify-content: space-between;
 
-            & > .view-panel-row-picker {
+            & > .settings-panel-row-picker {
                 margin: 0px 0px;
                 padding: 0px;
                 height: 24px;
             }
         }
 
-        & > .view-panel-row-select {
+        & > .settings-panel-row-select {
             width: 187px;
             margin: 0;
         }
 
-        & > .view-panel-row-button {
+        & > .settings-panel-row-button {
             flex-grow: 1;
             margin: 0 2px;
         }

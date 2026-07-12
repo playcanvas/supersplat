@@ -626,6 +626,12 @@ class ViewPanel extends Container {
             events.fire('preferences.reset');
         });
 
+        // reset reverts language to automatic; sync the selector (its change
+        // handler makes the equivalent setLanguage(null) call idempotently)
+        events.on('preferences.reset', () => {
+            languageSelection.value = 'auto';
+        });
+
         // tooltips
         const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
         const shortcut = shortcutManager.formatShortcut('grid.toggleVisible');

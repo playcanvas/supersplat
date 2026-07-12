@@ -2,6 +2,7 @@ import { Color } from 'playcanvas';
 
 import { Events } from './events';
 import { SceneConfig } from './scene-config';
+import { i18n } from './ui/localization';
 
 const storageKey = 'supersplat:preferences';
 const storageVersion = 1;
@@ -199,13 +200,15 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         apply();
     });
 
-    // clear stored preferences and restore defaults
+    // clear stored preferences and restore defaults. language lives in its
+    // own store (i18nextLng) but its default is 'automatic', so reset it too.
     events.on('preferences.reset', () => {
         for (const key in values) {
             delete values[key];
         }
         scheduleWrite();
         apply();
+        i18n.setLanguage(null);
     });
 };
 

@@ -817,8 +817,13 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.on('camera.setPose', (pose: { position: Vec3, target: Vec3, fov?: number }, speed = 1) => {
         // assign fov before setPose so distance is computed using the new fovFactor
         if (pose.fov !== undefined) {
+            // pose-driven fov (timeline playback, fly-to-pose) is not a user
+            // preference - suspend capture around the notify and the
+            // synchronous ui echo it triggers
+            events.fire('preferences.suspend');
             scene.camera.fov = pose.fov;
             events.fire('camera.fov', pose.fov);
+            events.fire('preferences.resume');
         }
         scene.camera.setPose(pose.position, pose.target, speed);
     });

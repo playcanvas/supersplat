@@ -68,5 +68,10 @@
             width: 187px;
             margin: 0;
         }
+
+        & > .view-panel-row-button {
+            flex-grow: 1;
+            margin: 0 2px;
+        }
     }
 }

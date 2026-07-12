@@ -90,6 +90,7 @@
     "panel.view-options.tonemapping.aces2": "ACES2",
     "panel.view-options.tonemapping.filmic": "电影",
     "panel.view-options.tonemapping.hejl": "Hejl",
+    "panel.view-options.reset": "恢复默认设置",
     "panel.splat-data": "Splat 数据",
     "panel.splat-data.distance": "距离",
     "panel.splat-data.camera-depth": "相机深度",

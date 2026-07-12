@@ -86,6 +86,11 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     const loadDocument = async (file: File) => {
         events.fire('startSpinner');
 
+        // the document's view settings are applied through the same events as
+        // user changes - suspend preference capture so they don't overwrite
+        // the user's stored preferences
+        events.fire('preferences.suspend');
+
         // Create streaming ZIP reader from the file
         const blobSource = new BlobReadSource(file);
         const zipFs = new ZipReadFileSystem(blobSource);
@@ -143,6 +148,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
         } finally {
             // Clean up resources
             zipFs.close();
+            events.fire('preferences.resume');
             events.fire('stopSpinner');
         }
     };
@@ -205,6 +211,9 @@ const registerDocEvents = (scene: Scene, events: Events) => {
             return false;
         }
         resetScene();
+        // new documents start from the user's stored preferences rather than
+        // whatever view state the previous document left behind
+        events.fire('preferences.apply');
         return true;
     });
 

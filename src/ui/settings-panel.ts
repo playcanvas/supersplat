@@ -1,4 +1,4 @@
-import { BooleanInput, ColorPicker, Container, Label, SelectInput, SliderInput } from '@playcanvas/pcui';
+import { BooleanInput, Button, ColorPicker, Container, Label, SelectInput, SliderInput } from '@playcanvas/pcui';
 import { Color } from 'playcanvas';
 
 import { Events } from '../events';
@@ -6,11 +6,11 @@ import { ShortcutManager } from '../shortcut-manager';
 import { i18n } from './localization';
 import { Tooltips } from './tooltips';
 
-class ViewPanel extends Container {
+class SettingsPanel extends Container {
     constructor(events: Events, tooltips: Tooltips, args = {}) {
         args = {
             ...args,
-            id: 'view-panel',
+            id: 'settings-panel',
             class: 'panel',
             hidden: true
         };
@@ -36,7 +36,7 @@ class ViewPanel extends Container {
         const label = new Label({
             class: 'panel-header-label'
         });
-        i18n.bindText(label, 'panel.view-options');
+        i18n.bindText(label, 'panel.settings');
 
         header.append(icon);
         header.append(label);
@@ -44,23 +44,23 @@ class ViewPanel extends Container {
         // language
 
         const languageRow = new Container({
-            class: 'view-panel-row'
+            class: 'settings-panel-row'
         });
 
         const languageLabel = new Label({
-            class: 'view-panel-row-label'
+            class: 'settings-panel-row-label'
         });
-        i18n.bindText(languageLabel, 'panel.view-options.language');
+        i18n.bindText(languageLabel, 'panel.settings.language');
 
         const languageSelection = new SelectInput({
-            class: 'view-panel-row-select',
+            class: 'settings-panel-row-select',
             // 'auto' unless the user has explicitly pinned a language
             defaultValue: i18n.storedLanguage ?? 'auto'
         });
         // 'auto' label follows the language; the per-language names are shown in
         // their native form so they're recognisable regardless of current UI lang
         i18n.bindOptions(languageSelection, () => [
-            { v: 'auto', t: i18n.t('panel.view-options.language.auto') },
+            { v: 'auto', t: i18n.t('panel.settings.language.auto') },
             ...i18n.languages.map(l => ({ v: l.code, t: l.name }))
         ]);
 
@@ -76,38 +76,38 @@ class ViewPanel extends Container {
         // colors
 
         const clrRow = new Container({
-            class: 'view-panel-row'
+            class: 'settings-panel-row'
         });
 
         const clrLabel = new Label({
-            class: 'view-panel-row-label'
+            class: 'settings-panel-row-label'
         });
-        i18n.bindText(clrLabel, 'panel.view-options.colors');
+        i18n.bindText(clrLabel, 'panel.settings.colors');
 
         const clrPickers = new Container({
-            class: 'view-panel-row-pickers'
+            class: 'settings-panel-row-pickers'
         });
 
         const bgClrPicker = new ColorPicker({
-            class: 'view-panel-row-picker',
+            class: 'settings-panel-row-picker',
             channels: 3,
             value: [0, 0, 0]
         });
 
         const selectedClrPicker = new ColorPicker({
-            class: 'view-panel-row-picker',
+            class: 'settings-panel-row-picker',
             channels: 4,
             value: [0, 0, 0, 1]
         });
 
         const unselectedClrPicker = new ColorPicker({
-            class: 'view-panel-row-picker',
+            class: 'settings-panel-row-picker',
             channels: 4,
             value: [0, 0, 0, 1]
         });
 
         const lockedClrPicker = new ColorPicker({
-            class: 'view-panel-row-picker',
+            class: 'settings-panel-row-picker',
             channels: 4,
             value: [0, 0, 0, 1]
         });
@@ -143,25 +143,25 @@ class ViewPanel extends Container {
         // tonemapping
 
         const tonemappingRow = new Container({
-            class: 'view-panel-row'
+            class: 'settings-panel-row'
         });
 
         const tonemappingLabel = new Label({
-            class: 'view-panel-row-label'
+            class: 'settings-panel-row-label'
         });
-        i18n.bindText(tonemappingLabel, 'panel.view-options.tonemapping');
+        i18n.bindText(tonemappingLabel, 'panel.settings.tonemapping');
 
         const tonemappingSelection = new SelectInput({
-            class: 'view-panel-row-select',
+            class: 'settings-panel-row-select',
             defaultValue: 'linear'
         });
         i18n.bindOptions(tonemappingSelection, () => [
-            { v: 'linear', t: i18n.t('panel.view-options.tonemapping.linear') },
-            { v: 'neutral', t: i18n.t('panel.view-options.tonemapping.neutral') },
-            { v: 'aces', t: i18n.t('panel.view-options.tonemapping.aces') },
-            { v: 'aces2', t: i18n.t('panel.view-options.tonemapping.aces2') },
-            { v: 'filmic', t: i18n.t('panel.view-options.tonemapping.filmic') },
-            { v: 'hejl', t: i18n.t('panel.view-options.tonemapping.hejl') }
+            { v: 'linear', t: i18n.t('panel.settings.tonemapping.linear') },
+            { v: 'neutral', t: i18n.t('panel.settings.tonemapping.neutral') },
+            { v: 'aces', t: i18n.t('panel.settings.tonemapping.aces') },
+            { v: 'aces2', t: i18n.t('panel.settings.tonemapping.aces2') },
+            { v: 'filmic', t: i18n.t('panel.settings.tonemapping.filmic') },
+            { v: 'hejl', t: i18n.t('panel.settings.tonemapping.hejl') }
         ]);
 
         tonemappingRow.append(tonemappingLabel);
@@ -170,16 +170,16 @@ class ViewPanel extends Container {
         // camera fov
 
         const fovRow = new Container({
-            class: 'view-panel-row'
+            class: 'settings-panel-row'
         });
 
         const fovLabel = new Label({
-            class: 'view-panel-row-label'
+            class: 'settings-panel-row-label'
         });
-        i18n.bindText(fovLabel, 'panel.view-options.fov');
+        i18n.bindText(fovLabel, 'panel.settings.fov');
 
         const fovSlider = new SliderInput({
-            class: 'view-panel-row-slider',
+            class: 'settings-panel-row-slider',
             min: 10,
             max: 120,
             precision: 1,
@@ -192,17 +192,17 @@ class ViewPanel extends Container {
         // fov auto dolly
 
         const fovDollyRow = new Container({
-            class: 'view-panel-row'
+            class: 'settings-panel-row'
         });
 
         const fovDollyLabel = new Label({
-            class: 'view-panel-row-label'
+            class: 'settings-panel-row-label'
         });
-        i18n.bindText(fovDollyLabel, 'panel.view-options.fov-dolly');
+        i18n.bindText(fovDollyLabel, 'panel.settings.fov-dolly');
 
         const fovDollyToggle = new BooleanInput({
             type: 'toggle',
-            class: 'view-panel-row-toggle',
+            class: 'settings-panel-row-toggle',
             value: false
         });
 
@@ -211,16 +211,16 @@ class ViewPanel extends Container {
 
         // sh bands
         const shBandsRow = new Container({
-            class: 'view-panel-row'
+            class: 'settings-panel-row'
         });
 
         const shBandsLabel = new Label({
-            class: 'view-panel-row-label'
+            class: 'settings-panel-row-label'
         });
-        i18n.bindText(shBandsLabel, 'panel.view-options.sh-bands');
+        i18n.bindText(shBandsLabel, 'panel.settings.sh-bands');
 
         const shBandsSlider = new SliderInput({
-            class: 'view-panel-row-slider',
+            class: 'settings-panel-row-slider',
             min: 0,
             max: 3,
             precision: 0,
@@ -233,16 +233,16 @@ class ViewPanel extends Container {
         // camera fly speed
 
         const cameraFlySpeedRow = new Container({
-            class: 'view-panel-row'
+            class: 'settings-panel-row'
         });
 
         const cameraFlySpeedLabel = new Label({
-            class: 'view-panel-row-label'
+            class: 'settings-panel-row-label'
         });
-        i18n.bindText(cameraFlySpeedLabel, 'panel.view-options.fly-speed');
+        i18n.bindText(cameraFlySpeedLabel, 'panel.settings.fly-speed');
 
         const cameraFlySpeedSlider = new SliderInput({
-            class: 'view-panel-row-slider',
+            class: 'settings-panel-row-slider',
             min: 0.1,
             max: 30,
             precision: 1,
@@ -255,16 +255,16 @@ class ViewPanel extends Container {
         // centers size
 
         const centersSizeRow = new Container({
-            class: 'view-panel-row'
+            class: 'settings-panel-row'
         });
 
         const centersSizeLabel = new Label({
-            class: 'view-panel-row-label'
+            class: 'settings-panel-row-label'
         });
-        i18n.bindText(centersSizeLabel, 'panel.view-options.centers-size');
+        i18n.bindText(centersSizeLabel, 'panel.settings.centers-size');
 
         const centersSizeSlider = new SliderInput({
-            class: 'view-panel-row-slider',
+            class: 'settings-panel-row-slider',
             min: 0,
             max: 10,
             precision: 1,
@@ -276,17 +276,17 @@ class ViewPanel extends Container {
 
         // centers gaussian color
         const centersColorRow = new Container({
-            class: 'view-panel-row'
+            class: 'settings-panel-row'
         });
 
         const centersColorLabel = new Label({
-            class: 'view-panel-row-label'
+            class: 'settings-panel-row-label'
         });
-        i18n.bindText(centersColorLabel, 'panel.view-options.centers-gaussian-color');
+        i18n.bindText(centersColorLabel, 'panel.settings.centers-gaussian-color');
 
         const centersColorToggle = new BooleanInput({
             type: 'toggle',
-            class: 'view-panel-row-toggle',
+            class: 'settings-panel-row-toggle',
             value: false
         });
 
@@ -296,17 +296,17 @@ class ViewPanel extends Container {
         // outline selection
 
         const outlineSelectionRow = new Container({
-            class: 'view-panel-row'
+            class: 'settings-panel-row'
         });
 
         const outlineSelectionLabel = new Label({
-            class: 'view-panel-row-label'
+            class: 'settings-panel-row-label'
         });
-        i18n.bindText(outlineSelectionLabel, 'panel.view-options.outline-selection');
+        i18n.bindText(outlineSelectionLabel, 'panel.settings.outline-selection');
 
         const outlineSelectionToggle = new BooleanInput({
             type: 'toggle',
-            class: 'view-panel-row-toggle',
+            class: 'settings-panel-row-toggle',
             value: false
         });
 
@@ -316,17 +316,17 @@ class ViewPanel extends Container {
         // show grid
 
         const showGridRow = new Container({
-            class: 'view-panel-row'
+            class: 'settings-panel-row'
         });
 
         const showGridLabel = new Label({
-            class: 'view-panel-row-label'
+            class: 'settings-panel-row-label'
         });
-        i18n.bindText(showGridLabel, 'panel.view-options.show-grid');
+        i18n.bindText(showGridLabel, 'panel.settings.show-grid');
 
         const showGridToggle = new BooleanInput({
             type: 'toggle',
-            class: 'view-panel-row-toggle',
+            class: 'settings-panel-row-toggle',
             value: true
         });
 
@@ -336,17 +336,17 @@ class ViewPanel extends Container {
         // show bound
 
         const showBoundRow = new Container({
-            class: 'view-panel-row'
+            class: 'settings-panel-row'
         });
 
         const showBoundLabel = new Label({
-            class: 'view-panel-row-label'
+            class: 'settings-panel-row-label'
         });
-        i18n.bindText(showBoundLabel, 'panel.view-options.show-bound');
+        i18n.bindText(showBoundLabel, 'panel.settings.show-bound');
 
         const showBoundToggle = new BooleanInput({
             type: 'toggle',
-            class: 'view-panel-row-toggle',
+            class: 'settings-panel-row-toggle',
             value: true
         });
 
@@ -356,17 +356,17 @@ class ViewPanel extends Container {
         // show dimensions
 
         const showBoundDimensionsRow = new Container({
-            class: 'view-panel-row'
+            class: 'settings-panel-row'
         });
 
         const showBoundDimensionsLabel = new Label({
-            class: 'view-panel-row-label'
+            class: 'settings-panel-row-label'
         });
-        i18n.bindText(showBoundDimensionsLabel, 'panel.view-options.show-bound-dimensions');
+        i18n.bindText(showBoundDimensionsLabel, 'panel.settings.show-bound-dimensions');
 
         const showBoundDimensionsToggle = new BooleanInput({
             type: 'toggle',
-            class: 'view-panel-row-toggle',
+            class: 'settings-panel-row-toggle',
             value: false
         });
 
@@ -376,17 +376,17 @@ class ViewPanel extends Container {
         // show camera poses
 
         const showCameraPosesRow = new Container({
-            class: 'view-panel-row'
+            class: 'settings-panel-row'
         });
 
         const showCameraPosesLabel = new Label({
-            class: 'view-panel-row-label'
+            class: 'settings-panel-row-label'
         });
-        i18n.bindText(showCameraPosesLabel, 'panel.view-options.show-camera-poses');
+        i18n.bindText(showCameraPosesLabel, 'panel.settings.show-camera-poses');
 
         const showCameraPosesToggle = new BooleanInput({
             type: 'toggle',
-            class: 'view-panel-row-toggle',
+            class: 'settings-panel-row-toggle',
             value: false
         });
 
@@ -396,22 +396,35 @@ class ViewPanel extends Container {
         // show camera info
 
         const showCameraInfoRow = new Container({
-            class: 'view-panel-row'
+            class: 'settings-panel-row'
         });
 
         const showCameraInfoLabel = new Label({
-            class: 'view-panel-row-label'
+            class: 'settings-panel-row-label'
         });
-        i18n.bindText(showCameraInfoLabel, 'panel.view-options.show-camera-info');
+        i18n.bindText(showCameraInfoLabel, 'panel.settings.show-camera-info');
 
         const showCameraInfoToggle = new BooleanInput({
             type: 'toggle',
-            class: 'view-panel-row-toggle',
+            class: 'settings-panel-row-toggle',
             value: false
         });
 
         showCameraInfoRow.append(showCameraInfoLabel);
         showCameraInfoRow.append(showCameraInfoToggle);
+
+        // reset preferences to defaults
+
+        const resetRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const resetButton = new Button({
+            class: 'settings-panel-row-button'
+        });
+        i18n.bindText(resetButton, 'panel.settings.reset');
+
+        resetRow.append(resetButton);
 
         this.append(header);
         this.append(languageRow);
@@ -429,25 +442,26 @@ class ViewPanel extends Container {
         this.append(showBoundDimensionsRow);
         this.append(showCameraPosesRow);
         this.append(showCameraInfoRow);
+        this.append(resetRow);
 
         // handle panel visibility
 
         const setVisible = (visible: boolean) => {
             if (visible === this.hidden) {
                 this.hidden = !visible;
-                events.fire('viewPanel.visible', visible);
+                events.fire('settingsPanel.visible', visible);
             }
         };
 
-        events.function('viewPanel.visible', () => {
+        events.function('settingsPanel.visible', () => {
             return !this.hidden;
         });
 
-        events.on('viewPanel.setVisible', (visible: boolean) => {
+        events.on('settingsPanel.setVisible', (visible: boolean) => {
             setVisible(visible);
         });
 
-        events.on('viewPanel.toggleVisible', () => {
+        events.on('settingsPanel.toggleVisible', () => {
             setVisible(this.hidden);
         });
 
@@ -612,17 +626,29 @@ class ViewPanel extends Container {
             events.fire('camera.setTonemapping', value);
         });
 
+        // reset preferences
+
+        resetButton.on('click', () => {
+            events.fire('preferences.reset');
+        });
+
+        // reset reverts language to automatic; sync the selector (its change
+        // handler makes the equivalent setLanguage(null) call idempotently)
+        events.on('preferences.reset', () => {
+            languageSelection.value = 'auto';
+        });
+
         // tooltips
         const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
         const shortcut = shortcutManager.formatShortcut('grid.toggleVisible');
-        tooltips.register(showGridLabel, () => i18n.formatTooltipWithShortcut(i18n.t('panel.view-options.show-grid'), shortcut), 'left');
+        tooltips.register(showGridLabel, () => i18n.formatTooltipWithShortcut(i18n.t('panel.settings.show-grid'), shortcut), 'left');
         const cameraInfoShortcut = shortcutManager.formatShortcut('camera.toggleShowInfo');
-        tooltips.register(showCameraInfoLabel, () => i18n.formatTooltipWithShortcut(i18n.t('panel.view-options.show-camera-info'), cameraInfoShortcut), 'left');
-        tooltips.register(bgClrPicker, () => i18n.t('panel.view-options.background-color'), 'left');
-        tooltips.register(selectedClrPicker, () => i18n.t('panel.view-options.selected-color'), 'top');
-        tooltips.register(unselectedClrPicker, () => i18n.t('panel.view-options.unselected-color'), 'top');
-        tooltips.register(lockedClrPicker, () => i18n.t('panel.view-options.locked-color'), 'top');
+        tooltips.register(showCameraInfoLabel, () => i18n.formatTooltipWithShortcut(i18n.t('panel.settings.show-camera-info'), cameraInfoShortcut), 'left');
+        tooltips.register(bgClrPicker, () => i18n.t('panel.settings.background-color'), 'left');
+        tooltips.register(selectedClrPicker, () => i18n.t('panel.settings.selected-color'), 'top');
+        tooltips.register(unselectedClrPicker, () => i18n.t('panel.settings.unselected-color'), 'top');
+        tooltips.register(lockedClrPicker, () => i18n.t('panel.settings.locked-color'), 'top');
     }
 }
 
-export { ViewPanel };
+export { SettingsPanel };

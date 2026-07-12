@@ -521,7 +521,7 @@ class CollisionMeshPanel extends Container {
             }
         });
 
-        events.on('viewPanel.visible', (visible: boolean) => {
+        events.on('settingsPanel.visible', (visible: boolean) => {
             if (visible) {
                 setVisible(false);
             }

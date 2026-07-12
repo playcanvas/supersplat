@@ -1,10 +1,11 @@
-import { Button, Container, NumericInput } from '@playcanvas/pcui';
+import { Button, Container, Label, VectorInput } from '@playcanvas/pcui';
 import { TranslateGizmo, Vec3 } from 'playcanvas';
 
 import { BoxShape } from '../box-shape';
 import { Events } from '../events';
 import { Scene } from '../scene';
 import { Splat } from '../splat';
+import { i18n } from '../ui/localization';
 
 class BoxSelection {
     activate: () => void;
@@ -35,32 +36,36 @@ class BoxSelection {
             e.stopPropagation();
         });
 
-        const setButton = new Button({ text: 'Set', class: 'select-toolbar-button' });
-        const addButton = new Button({ text: 'Add', class: 'select-toolbar-button' });
-        const removeButton = new Button({ text: 'Remove', class: 'select-toolbar-button' });
-        const intersectButton = new Button({ text: 'Intersect', class: 'select-toolbar-button' });
+        const setButton = new Button({ class: 'select-toolbar-button' });
+        const addButton = new Button({ class: 'select-toolbar-button' });
+        const removeButton = new Button({ class: 'select-toolbar-button' });
+        const intersectButton = new Button({ class: 'select-toolbar-button' });
 
-        const lenX = new NumericInput({
+        i18n.bindText(setButton, 'select-toolbar.set');
+        i18n.bindText(addButton, 'select-toolbar.add');
+        i18n.bindText(removeButton, 'select-toolbar.remove');
+        i18n.bindText(intersectButton, 'select-toolbar.intersect');
+
+        const positionLabel = new Label({ class: 'select-toolbar-label' });
+        i18n.bindText(positionLabel, 'select-toolbar.position');
+
+        const position = new VectorInput({
+            class: 'select-toolbar-vector',
             precision: 2,
-            value: box.lenX,
-            placeholder: 'LenX',
-            width: 80,
-            min: 0.01
+            dimensions: 3,
+            placeholder: ['X', 'Y', 'Z'],
+            value: [0, 0, 0]
         });
 
-        const lenY = new NumericInput({
-            precision: 2,
-            value: box.lenY,
-            placeholder: 'LenY',
-            width: 80,
-            min: 0.01
-        });
+        const sizeLabel = new Label({ class: 'select-toolbar-label' });
+        i18n.bindText(sizeLabel, 'select-toolbar.size');
 
-        const lenZ = new NumericInput({
+        const size = new VectorInput({
+            class: 'select-toolbar-vector',
             precision: 2,
-            value: box.lenZ,
-            placeholder: 'LenZ',
-            width: 80,
+            dimensions: 3,
+            placeholder: ['X', 'Y', 'Z'],
+            value: [box.lenX, box.lenY, box.lenZ],
             min: 0.01
         });
 
@@ -68,11 +73,26 @@ class BoxSelection {
         selectToolbar.append(addButton);
         selectToolbar.append(removeButton);
         selectToolbar.append(intersectButton);
-        selectToolbar.append(lenX);
-        selectToolbar.append(lenY);
-        selectToolbar.append(lenZ);
+        selectToolbar.append(positionLabel);
+        selectToolbar.append(position);
+        selectToolbar.append(sizeLabel);
+        selectToolbar.append(size);
 
         canvasContainer.append(selectToolbar);
+
+        // write the volume's world position into the ui without retriggering
+        // the position input's change handler
+        let uiUpdating = false;
+        const updateUI = () => {
+            uiUpdating = true;
+            const p = box.pivot.getPosition();
+            position.value = [p.x, p.y, p.z];
+            uiUpdating = false;
+        };
+
+        gizmo.on('transform:move', () => {
+            updateUI();
+        });
 
         const apply = (op: 'set' | 'add' | 'remove' | 'intersect') => {
             const p = box.pivot.getPosition();
@@ -95,20 +115,25 @@ class BoxSelection {
             e.stopPropagation();
             apply('intersect');
         });
-        lenX.on('change', () => {
-            box.lenX = lenX.value;
+        position.on('change', (v: number[]) => {
+            if (!uiUpdating) {
+                box.pivot.setPosition(v[0], v[1], v[2]);
+                box.moved();
+                gizmo.attach([box.pivot]);
+            }
         });
-        lenY.on('change', () => {
-            box.lenY = lenY.value;
-        });
-        lenZ.on('change', () => {
-            box.lenZ = lenZ.value;
+        size.on('change', (v: number[]) => {
+            box.lenX = v[0];
+            box.lenY = v[1];
+            box.lenZ = v[2];
         });
 
         events.on('camera.focalPointPicked', (details: { splat: Splat, position: Vec3 }) => {
             if (this.active) {
                 box.pivot.setPosition(details.position);
+                box.moved();
                 gizmo.attach([box.pivot]);
+                updateUI();
             }
         });
 
@@ -128,6 +153,7 @@ class BoxSelection {
             this.active = true;
             scene.add(box);
             gizmo.attach([box.pivot]);
+            updateUI();
             selectToolbar.hidden = false;
         };
 

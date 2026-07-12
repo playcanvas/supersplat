@@ -19,6 +19,7 @@ import { Progress } from './progress';
 import { PublishSettingsDialog } from './publish-settings-dialog';
 import { RightToolbar } from './right-toolbar';
 import { ScenePanel } from './scene-panel';
+import { SettingsPanel } from './settings-panel';
 import { ShortcutsPopup } from './shortcuts-popup';
 import { Spinner } from './spinner';
 import { StatusBar } from './status-bar';
@@ -26,7 +27,6 @@ import { TimelinePanel } from './timeline-panel';
 import { Tooltips } from './tooltips';
 import { VideoSettingsDialog } from './video-settings-dialog';
 import { ViewCube } from './view-cube';
-import { ViewPanel } from './view-panel';
 import { version } from '../../package.json';
 
 // ts compiler and vscode find this type, but eslint does not
@@ -93,7 +93,7 @@ class EditorUI {
 
         // bottom toolbar
         const scenePanel = new ScenePanel(events, tooltips);
-        const viewPanel = new ViewPanel(events, tooltips);
+        const settingsPanel = new SettingsPanel(events, tooltips);
         const colorPanel = new ColorPanel(events, tooltips);
         const collisionMeshPanel = new CollisionMeshPanel(events, tooltips);
         const bottomToolbar = new BottomToolbar(events, tooltips);
@@ -107,7 +107,7 @@ class EditorUI {
         canvasContainer.append(cameraInfoOverlay);
         canvasContainer.append(toolsContainer);
         canvasContainer.append(scenePanel);
-        canvasContainer.append(viewPanel);
+        canvasContainer.append(settingsPanel);
         canvasContainer.append(colorPanel);
         canvasContainer.append(collisionMeshPanel);
         canvasContainer.append(bottomToolbar);

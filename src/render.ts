@@ -284,13 +284,30 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     data[i] = 255;
                 }
 
-                const canvas = new OffscreenCanvas(width, height);
-                const context = canvas.getContext('2d');
-                if (!context) {
-                    throw new Error('failed to create 2d context');
+                const imageData = new ImageData(new Uint8ClampedArray(data.buffer, data.byteOffset, data.length), width, height);
+                let blob: Blob;
+                if (typeof OffscreenCanvas !== 'undefined') {
+                    const canvas = new OffscreenCanvas(width, height);
+                    const context = canvas.getContext('2d');
+                    if (!context) {
+                        throw new Error('failed to create 2d context');
+                    }
+                    context.putImageData(imageData, 0, 0);
+                    blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: quality ?? 0.9 });
+                } else {
+                    // fallback for browsers without OffscreenCanvas
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const context = canvas.getContext('2d');
+                    if (!context) {
+                        throw new Error('failed to create 2d context');
+                    }
+                    context.putImageData(imageData, 0, 0);
+                    blob = await new Promise<Blob>((resolve, reject) => {
+                        canvas.toBlob(b => (b ? resolve(b) : reject(new Error('failed to encode jpeg'))), 'image/jpeg', quality ?? 0.9);
+                    });
                 }
-                context.putImageData(new ImageData(new Uint8ClampedArray(data.buffer, data.byteOffset, data.length), width, height), 0, 0);
-                const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: quality ?? 0.9 });
                 bytes = new Uint8Array(await blob.arrayBuffer());
                 extension = 'jpg';
                 mimeType = 'image/jpeg';

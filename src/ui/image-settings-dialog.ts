@@ -316,7 +316,7 @@ class ImageSettingsDialog extends Container {
                         transparentBg: format !== 'jpeg' && transparentBgBoolean.value,
                         showDebug: !is360 && showDebugBoolean.value,
                         format,
-                        quality: qualitySlider.value / 100,
+                        quality: format === 'jpeg' ? qualitySlider.value / 100 : undefined,
                         projection: (is360 ? 'equirect' : 'standard') as 'standard' | 'equirect',
                         levelHorizon: is360 && levelHorizonBoolean.value
                     };

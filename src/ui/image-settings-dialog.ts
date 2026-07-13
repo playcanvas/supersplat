@@ -1,4 +1,4 @@
-import { BooleanInput, Button, Container, Element, Label, NumericInput, SelectInput, VectorInput } from '@playcanvas/pcui';
+import { BooleanInput, Button, Container, Element, Label, NumericInput, SelectInput, SliderInput, VectorInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { ImageSettings } from '../render';
@@ -105,6 +105,41 @@ class ImageSettingsDialog extends Container {
         resolutionRow.append(resolutionLabel);
         resolutionRow.append(resolutionValue);
 
+        // format
+
+        const formatLabel = new Label({ class: 'label' });
+        i18n.bindText(formatLabel, 'popup.render-image.format');
+        const formatSelect = new SelectInput({
+            class: 'select',
+            defaultValue: 'png',
+            options: [
+                { v: 'png', t: 'PNG' },
+                { v: 'jpeg', t: 'JPEG' },
+                { v: 'webp', t: 'WebP' }
+            ]
+        });
+        const formatRow = new Container({ class: 'row' });
+        formatRow.append(formatLabel);
+        formatRow.append(formatSelect);
+
+        // jpeg quality
+
+        const qualityLabel = new Label({ class: 'label' });
+        i18n.bindText(qualityLabel, 'popup.render-image.quality');
+        const qualitySlider = new SliderInput({
+            class: 'slider',
+            min: 1,
+            max: 100,
+            precision: 0,
+            value: 90
+        });
+        const qualityRow = new Container({ class: 'row' });
+        qualityRow.append(qualityLabel);
+        qualityRow.append(qualitySlider);
+
+        // hidden until jpeg is selected
+        qualityRow.hidden = true;
+
         // level horizon (360 only)
 
         const levelHorizonLabel = new Label({ class: 'label' });
@@ -141,6 +176,8 @@ class ImageSettingsDialog extends Container {
         content.append(projectionRow);
         content.append(presetRow);
         content.append(resolutionRow);
+        content.append(formatRow);
+        content.append(qualityRow);
         content.append(transparentBgRow);
         content.append(showDebugRow);
         content.append(levelHorizonRow);
@@ -223,6 +260,14 @@ class ImageSettingsDialog extends Container {
 
         projectionSelect.on('change', syncProjection);
 
+        // jpeg has no alpha channel: hide the transparent background toggle
+        // and show the quality slider instead
+        formatSelect.on('change', () => {
+            const isJpeg = formatSelect.value === 'jpeg';
+            transparentBgRow.hidden = isJpeg;
+            qualityRow.hidden = !isJpeg;
+        });
+
         // handle key bindings for enter and escape
 
         let onCancel: () => void;
@@ -263,12 +308,15 @@ class ImageSettingsDialog extends Container {
                 onOK = () => {
                     const [width, height] = resolutionValue.value;
                     const is360 = projectionSelect.value === 'equirect';
+                    const format = formatSelect.value as 'png' | 'jpeg' | 'webp';
 
                     const imageSettings = {
                         width,
                         height,
-                        transparentBg: transparentBgBoolean.value,
+                        transparentBg: format !== 'jpeg' && transparentBgBoolean.value,
                         showDebug: !is360 && showDebugBoolean.value,
+                        format,
+                        quality: format === 'jpeg' ? qualitySlider.value / 100 : undefined,
                         projection: (is360 ? 'equirect' : 'standard') as 'standard' | 'equirect',
                         levelHorizon: is360 && levelHorizonBoolean.value
                     };

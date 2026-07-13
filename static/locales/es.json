@@ -150,6 +150,8 @@
     "popup.render-image.show-debug": "Mostrar superposiciones de depuración",
     "popup.render-image.resolution-current": "Actual",
     "popup.render-image.resolution-custom": "Personalizada",
+    "popup.render-image.format": "Formato",
+    "popup.render-image.quality": "Calidad",
     "popup.render-image.projection": "Proyección",
     "popup.render-image.projection-standard": "Estándar",
     "popup.render-image.projection-360": "Equirrectangular 360°",

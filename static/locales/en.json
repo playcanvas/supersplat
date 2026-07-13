@@ -150,6 +150,8 @@
     "popup.render-image.show-debug": "Show Debug Overlays",
     "popup.render-image.resolution-current": "Current",
     "popup.render-image.resolution-custom": "Custom",
+    "popup.render-image.format": "Format",
+    "popup.render-image.quality": "Quality",
     "popup.render-image.projection": "Projection",
     "popup.render-image.projection-standard": "Standard",
     "popup.render-image.projection-360": "360° Equirectangular",

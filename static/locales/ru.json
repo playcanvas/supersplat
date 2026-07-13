@@ -150,6 +150,8 @@
     "popup.render-image.show-debug": "Показать отладочные наложения",
     "popup.render-image.resolution-current": "Текущее",
     "popup.render-image.resolution-custom": "Пользовательское",
+    "popup.render-image.format": "Формат",
+    "popup.render-image.quality": "Качество",
     "popup.render-image.projection": "Проекция",
     "popup.render-image.projection-standard": "Стандартная",
     "popup.render-image.projection-360": "Эквиректангулярная 360°",

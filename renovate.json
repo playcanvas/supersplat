@@ -20,6 +20,11 @@
     {
       "matchDepTypes": ["dependencies"],
       "rangeStrategy": "widen"
+    },
+    {
+      "description": "typescript-eslint peer range caps at <6.1.0 - hold TypeScript until it supports newer",
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<6.1.0"
     }
   ]
 }

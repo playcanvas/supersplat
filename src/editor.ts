@@ -618,8 +618,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         if (data) {
             const splat = splats[0];
 
-            // wrap PLY in a blob and load it
-            const blob = new Blob([data.buffer as ArrayBuffer], { type: 'application/octet-stream' });
+            // wrap PLY in a blob and load it. pass the view rather than the
+            // underlying buffer, which is the writer's oversized scratch allocation
+            const blob = new Blob([data as BlobPart], { type: 'application/octet-stream' });
             const filename = `${removeExtension(splat.filename)}.ply`;
             const fileSystem = new MappedReadFileSystem();
             fileSystem.addFile(filename, blob);

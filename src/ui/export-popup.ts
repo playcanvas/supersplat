@@ -22,6 +22,7 @@ const removeKnownExtension = (filename: string) => {
         '.ksplat',
         '.splat',
         '.html',
+        '.lcc2',
         '.ply',
         '.sog',
         '.spz',

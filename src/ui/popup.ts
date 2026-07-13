@@ -1,4 +1,4 @@
-import { Button, Container, Label, TextInput } from '@playcanvas/pcui';
+import { Button, Container, Label, SelectInput, TextInput } from '@playcanvas/pcui';
 
 import { i18n } from './localization';
 import { Tooltips } from './tooltips';
@@ -8,6 +8,12 @@ interface ShowOptions {
     message: string;
     header?: string;
     link?: string;
+    icon?: boolean;     // show the type icon before the message (default true)
+    select?: {
+        options: { v: string, t: string }[];
+        value: string;
+    };
+    warning?: string;   // secondary note below the select, may contain inline HTML links
 }
 
 class Popup extends Container {
@@ -53,6 +59,20 @@ class Popup extends Container {
         linkRow.append(linkText);
         linkRow.append(linkCopy);
 
+        const selectInput = new SelectInput({
+            id: 'popup-select'
+        });
+
+        const selectRow = new Container({
+            id: 'popup-select-row'
+        });
+
+        selectRow.append(selectInput);
+
+        const warningText = new Label({
+            id: 'popup-warning-text'
+        });
+
         const okButton = new Button({
             class: 'popup-button'
         });
@@ -84,6 +104,8 @@ class Popup extends Container {
 
         dialog.append(header);
         dialog.append(text);
+        dialog.append(selectRow);
+        dialog.append(warningText);
         dialog.append(linkRow);
         dialog.append(buttons);
 
@@ -128,10 +150,10 @@ class Popup extends Container {
             header.text = options.header;
             text.text = options.message;
 
-            const { type, link } = options;
+            const { type, link, select, warning } = options;
 
             ['error', 'info', 'yesno', 'okcancel'].forEach((t) => {
-                text.class[t === type ? 'add' : 'remove'](t);
+                text.class[t === type && options.icon !== false ? 'add' : 'remove'](t);
             });
 
             // configure based on message type
@@ -147,6 +169,17 @@ class Popup extends Container {
                 linkCopy.icon = 'E352';
             }
 
+            // the select dropdown list renders outside the dialog bounds
+            dialog.class[select ? 'add' : 'remove']('has-select');
+            selectRow.hidden = select === undefined;
+            if (select !== undefined) {
+                selectInput.options = select.options;
+                selectInput.value = select.value;
+            }
+
+            warningText.hidden = warning === undefined;
+            warningText.dom.innerHTML = warning ?? '';
+
             // take keyboard focus so shortcuts stop working
             this.dom.focus();
 
@@ -154,7 +187,8 @@ class Popup extends Container {
                 okFn = () => {
                     this.hide();
                     resolve({
-                        action: 'ok'
+                        action: 'ok',
+                        value: select ? selectInput.value : undefined
                     });
                 };
                 cancelFn = () => {

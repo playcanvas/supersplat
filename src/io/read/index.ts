@@ -10,6 +10,7 @@ export {
 
 // Loading functions
 export {
+    defaultLodIndex,
     loadGSplatData,
     validateGSplatData
 } from './loader';

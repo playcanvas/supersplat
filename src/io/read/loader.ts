@@ -25,12 +25,31 @@ type LoadResult = {
     transform: Transform;
 };
 
+// invoked when a file contains multiple LODs. returns the LOD index to load,
+// or null to cancel the load.
+type PickLod = (lodCounts: readonly number[]) => Promise<number | null>;
+
+// maximum splat count considered reasonable to load, used to select a default
+// LOD level for multi-LOD formats (e.g. LCC)
+const LOD_MAX_SPLATS = 20_000_000;
+
+// pick the most detailed LOD under the splat limit, or the least detailed
+// when all levels exceed it
+const defaultLodIndex = (lodCounts: readonly number[]) => {
+    const candidates = lodCounts.map((count, index) => ({ count, index }));
+    const under = candidates.filter(c => c.count < LOD_MAX_SPLATS);
+    if (under.length > 0) {
+        return under.reduce((a, b) => (b.count > a.count ? b : a)).index;
+    }
+    return candidates.reduce((a, b) => (b.count < a.count ? b : a)).index;
+};
+
 /**
  * Default options for readFile.
  */
 const defaultOptions: Options = {
     iterations: 10,
-    lodSelect: [0],
+    lodSelect: [],
     unbundled: false,
     lodChunkCount: 512,
     lodChunkExtent: 16
@@ -85,15 +104,24 @@ const dataTableToGSplatData = (dataTable: DataTable): GSplatData => {
 
 /**
  * Materialize the first source returned by readFile into a DataTable.
- * readFile now returns lazy ChunkSource[]; multi-LOD sources (e.g. LCC) are
- * reduced to LOD 0 (highest detail) before materializing, matching the previous
- * behaviour of using the first table.
+ * readFile returns lazy ChunkSource[]; multi-LOD sources (e.g. LCC) are
+ * reduced to a single LOD before materializing - chosen by the pickLod
+ * callback when supplied, otherwise the most detailed level with a
+ * reasonable splat count. Returns null if pickLod cancels the load.
  */
-const materializeFirst = async (sources: ChunkSource[]): Promise<DataTable> => {
+const materializeFirst = async (sources: ChunkSource[], pickLod?: PickLod): Promise<DataTable | null> => {
     const source = sources[0];
-    const single = source.meta.numLods > 1 ? selectLod(source, 0) : source;
     const pool = createChunkDataPool({ chunkSize: source.meta.chunkSize });
     try {
+        let single = source;
+        if (source.meta.numLods > 1) {
+            const { lodCounts } = source.meta;
+            const lod = pickLod ? await pickLod(lodCounts) : defaultLodIndex(lodCounts);
+            if (lod === null) {
+                return null;
+            }
+            single = selectLod(source, lod);
+        }
         return await materializeToDataTable(single, pool);
     } finally {
         for (const s of sources) {
@@ -105,11 +133,13 @@ const materializeFirst = async (sources: ChunkSource[]): Promise<DataTable> => {
 
 /**
  * Load a file using splat-transform and convert to GSplatData.
+ * Returns null if the user cancels LOD selection.
  * @param filename - The filename to load
  * @param fileSystem - The file system to read from
  * @param skipReorder - Skip morton reordering (for files already in morton order or animation playback)
+ * @param pickLod - Invoked when the file contains multiple LODs to choose which to load
  */
-const loadGSplatData = async (filename: string, fileSystem: ReadFileSystem, skipReorder?: boolean): Promise<LoadResult> => {
+const loadGSplatData = async (filename: string, fileSystem: ReadFileSystem, skipReorder?: boolean, pickLod?: PickLod): Promise<LoadResult | null> => {
     const inputFormat = getInputFormat(filename);
     const lowerFilename = filename.toLowerCase();
 
@@ -125,7 +155,10 @@ const loadGSplatData = async (filename: string, fileSystem: ReadFileSystem, skip
                 params: [],
                 fileSystem: zipFs
             });
-            const dataTable = await materializeFirst(sources);
+            const dataTable = await materializeFirst(sources, pickLod);
+            if (!dataTable) {
+                return null;
+            }
             return { gsplatData: dataTableToGSplatData(dataTable), transform: dataTable.transform };
         } finally {
             zipFs.close();
@@ -141,7 +174,10 @@ const loadGSplatData = async (filename: string, fileSystem: ReadFileSystem, skip
         fileSystem
     });
 
-    const dataTable = await materializeFirst(sources);
+    const dataTable = await materializeFirst(sources, pickLod);
+    if (!dataTable) {
+        return null;
+    }
 
     // Reorder data into morton order for better render performance.
     // Skip reordering for:
@@ -180,6 +216,7 @@ const validateGSplatData = (gsplatData: GSplatData): void => {
 };
 
 export {
+    defaultLodIndex,
     loadGSplatData,
     validateGSplatData
 };

@@ -150,6 +150,8 @@
     "popup.render-image.show-debug": "Mostrar Sobreposições (Debug)",
     "popup.render-image.resolution-current": "Resolução da Tela",
     "popup.render-image.resolution-custom": "Personalizado",
+    "popup.render-image.format": "Formato",
+    "popup.render-image.quality": "Qualidade",
     "popup.render-image.projection": "Projeção",
     "popup.render-image.projection-standard": "Padrão",
     "popup.render-image.projection-360": "Equirretangular 360°",

@@ -223,14 +223,21 @@ class EditorUI {
                     let writable;
                     let fileHandle: FileSystemFileHandle | undefined;
 
+                    const imageFileTypes: Record<string, { description: string, accept: Record<`${string}/${string}`, `.${string}`[]>, extension: string }> = {
+                        png: { description: 'PNG Image', accept: { 'image/png': ['.png'] }, extension: '.png' },
+                        jpeg: { description: 'JPEG Image', accept: { 'image/jpeg': ['.jpg', '.jpeg'] }, extension: '.jpg' },
+                        webp: { description: 'WebP Image', accept: { 'image/webp': ['.webp'] }, extension: '.webp' }
+                    };
+                    const imageFileType = imageFileTypes[imageSettings.format];
+
                     if (window.showSaveFilePicker) {
                         fileHandle = await window.showSaveFilePicker({
                             id: 'SuperSplatImageFileExport',
                             types: [{
-                                description: 'WebP Image',
-                                accept: { 'image/webp': ['.webp'] }
+                                description: imageFileType.description,
+                                accept: imageFileType.accept
                             }],
-                            suggestedName: `${events.invoke('render.baseFilename')}.webp`
+                            suggestedName: `${events.invoke('render.baseFilename')}${imageFileType.extension}`
                         });
 
                         writable = await fileHandle.createWritable();

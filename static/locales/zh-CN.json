@@ -150,6 +150,8 @@
     "popup.render-image.show-debug": "显示调试覆盖",
     "popup.render-image.resolution-current": "当前",
     "popup.render-image.resolution-custom": "自定义",
+    "popup.render-image.format": "格式",
+    "popup.render-image.quality": "质量",
     "popup.render-image.projection": "投影",
     "popup.render-image.projection-standard": "标准",
     "popup.render-image.projection-360": "360° 等距柱状",

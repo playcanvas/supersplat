@@ -17,9 +17,55 @@
     flex-direction: row;
     align-items: center;
 
+    // buttons form a tight cluster like the bottom toolbar's controls
     .select-toolbar-button {
         height: 38px;
-        padding: 0px 16px;
+        margin: 0px 1px;
+        padding: 0px 12px;
         border-radius: 2px;
+    }
+
+    // 16px group break from the preceding cluster, 6px to the input it labels
+    .select-toolbar-label {
+        margin: 0px 6px 0px 16px;
+        color: $text-secondary;
+    }
+
+    // match the height treatment of the transform panel's inputs (see transform.scss);
+    // all numeric fields share one width so standalone inputs align with vector components
+    $input-height: 22px;
+    $field-width: 56px;
+    $field-gap: 10px;
+
+    .select-toolbar-vector {
+        width: $field-width * 3 + $field-gap * 2;
+        margin: 0px;
+        gap: $field-gap;
+        height: $input-height;
+
+        > .pcui-numeric-input {
+            margin: 0px;
+            height: $input-height;
+            line-height: $input-height;
+
+            > input {
+                padding: 0px;
+                margin: 0px 0px 0px 4px;
+                height: $input-height;
+            }
+        }
+    }
+
+    > .pcui-numeric-input {
+        width: $field-width;
+        margin: 0px;
+        height: $input-height;
+        line-height: $input-height;
+
+        > input {
+            padding: 0px;
+            margin: 0px 0px 0px 4px;
+            height: $input-height;
+        }
     }
 }

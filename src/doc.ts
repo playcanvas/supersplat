@@ -91,6 +91,12 @@ const registerDocEvents = (scene: Scene, events: Events) => {
         const zipFs = new ZipReadFileSystem(blobSource);
 
         try {
+            // the document's view settings are applied through the same events
+            // as user changes - suspend preference capture so they don't
+            // overwrite the user's stored preferences. resumed in the finally
+            // below so a failed load can't leave capture suspended.
+            events.fire('preferences.suspend');
+
             // reset the scene
             resetScene();
 
@@ -141,9 +147,13 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 message: `'${error.message ?? error}'`
             });
         } finally {
+            // fire events before cleanup so a throwing close can't leave
+            // preference capture suspended or the spinner running
+            events.fire('preferences.resume');
+            events.fire('stopSpinner');
+
             // Clean up resources
             zipFs.close();
-            events.fire('stopSpinner');
         }
     };
 
@@ -205,6 +215,9 @@ const registerDocEvents = (scene: Scene, events: Events) => {
             return false;
         }
         resetScene();
+        // new documents start from the user's stored preferences rather than
+        // whatever view state the previous document left behind
+        events.fire('preferences.apply');
         return true;
     });
 

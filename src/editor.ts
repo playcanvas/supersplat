@@ -637,11 +637,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     };
 
     // duplicate the current selection
-    events.on('select.duplicate', async () => {
+    events.on('edit.duplicate', async () => {
         await performSelectionFunc('duplicate');
     });
 
-    events.on('select.separate', async () => {
+    events.on('edit.separate', async () => {
         await performSelectionFunc('separate');
     });
 
@@ -817,8 +817,16 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.on('camera.setPose', (pose: { position: Vec3, target: Vec3, fov?: number }, speed = 1) => {
         // assign fov before setPose so distance is computed using the new fovFactor
         if (pose.fov !== undefined) {
-            scene.camera.fov = pose.fov;
-            events.fire('camera.fov', pose.fov);
+            // pose-driven fov (timeline playback, fly-to-pose) is not a user
+            // preference - suspend capture around the notify and the
+            // synchronous ui echo it triggers
+            events.fire('preferences.suspend');
+            try {
+                scene.camera.fov = pose.fov;
+                events.fire('camera.fov', pose.fov);
+            } finally {
+                events.fire('preferences.resume');
+            }
         }
         scene.camera.setPose(pose.position, pose.target, speed);
     });

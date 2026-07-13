@@ -55,6 +55,30 @@ const removeExtension = (filename: string) => {
     return filename.substring(0, filename.length - path.getExtension(filename).length);
 };
 
+const isInvalidFilenameChar = (char: string) => {
+    return /[<>:"/\\|?*]/.test(char) || char.charCodeAt(0) < 32;
+};
+
+const sanitizeFilename = (filename: string) => {
+    const sanitized = Array.from(filename, char => (isInvalidFilenameChar(char) ? '_' : char)).join('').trim();
+    return sanitized.length > 0 ? sanitized : 'supersplat';
+};
+
+// extract a plain filename from url-style names (e.g. splats imported via ?load=)
+const getImportedFilename = (filename: string) => {
+    const trimmed = filename.split(/[?#]/)[0];
+
+    if (trimmed.includes('://') || trimmed.startsWith('blob:')) {
+        try {
+            return path.getBasename(new URL(trimmed).pathname);
+        } catch {
+            // fall through to the raw filename below
+        }
+    }
+
+    return path.getBasename(trimmed);
+};
+
 // sort splats and wait for the sort to complete (or a 1s timeout)
 const sortSplatsAndWait = (scene: Scene, splats: Splat[]) => {
     return Promise.all(splats.map((splat) => {
@@ -79,6 +103,17 @@ const downloadFile = (data: ArrayBuffer | Uint8Array<ArrayBuffer>, filename: str
 
 const registerRenderEvents = (scene: Scene, events: Events) => {
     let webpCodec: WebPCodec;
+
+    // default base filename for rendered output: the project document name if
+    // set, otherwise the first visible splat's name
+    const baseFilename = () => {
+        const docName = events.invoke('doc.name');
+        const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
+        const source = docName || (splats[0]?.name ?? 'supersplat');
+        return sanitizeFilename(removeExtension(getImportedFilename(source)));
+    };
+
+    events.function('render.baseFilename', baseFilename);
 
     // wait for postrender to fire
     const postRender = () => {
@@ -134,7 +169,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
         }
     });
 
-    events.function('render.image', async (imageSettings: ImageSettings) => {
+    events.function('render.image', async (imageSettings: ImageSettings, fileStream?: FileSystemWritableFileStream) => {
         events.fire('startSpinner');
 
         let equirect: EquirectRenderer | null = null;
@@ -238,20 +273,32 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
             const bytes = webpCodec.encodeLosslessRGBA(data, width, height);
 
-            // construct filename
-            const selected = events.invoke('selection') as Splat;
-            const filename = `${removeExtension(selected?.name ?? 'SuperSplat')}-image.webp`;
-
-            // download
-            downloadFile(bytes, filename);
+            if (fileStream) {
+                await fileStream.write(bytes);
+                await fileStream.close();
+            } else {
+                downloadFile(bytes, `${baseFilename()}.webp`);
+            }
 
             return true;
         } catch (error) {
+            // close the stream even on failure so the caller can remove the
+            // empty file
+            if (fileStream) {
+                try {
+                    await fileStream.close();
+                } catch {
+                    // stream already closed or errored
+                }
+            }
+
             await events.invoke('showPopup', {
                 type: 'error',
                 header: i18n.t('panel.render.failed'),
                 message: `'${error.message ?? error}'`
             });
+
+            return false;
         } finally {
             if (equirect) {
                 scene.camera.setPoseOverride(null);
@@ -571,10 +618,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 await encoder.flush();
                 await output.finalize();
 
-                const filename = () => {
-                    const currentSplats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
-                    return `${removeExtension(currentSplats[0]?.name ?? 'supersplat')}.${fileExtension}`;
-                };
+                const filename = () => `${baseFilename()}.${fileExtension}`;
 
                 if (taggable) {
                     // patch spherical metadata into the finished buffer so

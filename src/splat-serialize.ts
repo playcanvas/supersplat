@@ -596,7 +596,7 @@ class SuperSplatChunkSource implements ChunkSource {
         };
     }
 
-    async read(request: ReadRequest): Promise<void> {
+    read(request: ReadRequest): Promise<void> {
         const isGather = 'indices' in request;
         const anyBuf = (request.position ?? request.geometric ?? request.color) as ChunkData;
         const count = isGather ? request.count : anyBuf.count;
@@ -641,6 +641,8 @@ class SuperSplatChunkSource implements ChunkSource {
                 }
             }
         }
+
+        return Promise.resolve();
     }
 
     async close(): Promise<void> {
@@ -659,32 +661,6 @@ const createExportSource = (splats: Splat[], settings: SerializeSettings): { sou
     }
     const pool = createChunkDataPool({ chunkSize: source.meta.chunkSize });
     return { source, pool };
-};
-
-/**
- * Stream the given splats to a file via splat-transform's writeSource. Streaming
- * formats (ply/sog/splat) never build a whole-scene copy; the rest materialize a
- * single transient copy inside the library.
- */
-const writeSplatFile = async (
-    splats: Splat[],
-    settings: SerializeSettings,
-    outputFormat: OutputFormat,
-    filename: string,
-    options: Options,
-    fs: FileSystem
-): Promise<void> => {
-    const built = createExportSource(splats, settings);
-    if (!built) {
-        return;
-    }
-    const { source, pool } = built;
-    try {
-        await writeSource({ filename, outputFormat, source, pool, options, createDevice: createGpuDevice }, fs);
-    } finally {
-        await source.close();
-        pool.destroy();
-    }
 };
 
 // Thrown when the WebGPU device needed for SOG compression can't be created.
@@ -750,6 +726,32 @@ const createGpuDevice = async (): Promise<WebgpuGraphicsDevice> => {
 
     cachedGpuDevice = graphicsDevice;
     return graphicsDevice;
+};
+
+/**
+ * Stream the given splats to a file via splat-transform's writeSource. Streaming
+ * formats (ply/sog/splat) never build a whole-scene copy; the rest materialize a
+ * single transient copy inside the library.
+ */
+const writeSplatFile = async (
+    splats: Splat[],
+    settings: SerializeSettings,
+    outputFormat: OutputFormat,
+    filename: string,
+    options: Options,
+    fs: FileSystem
+): Promise<void> => {
+    const built = createExportSource(splats, settings);
+    if (!built) {
+        return;
+    }
+    const { source, pool } = built;
+    try {
+        await writeSource({ filename, outputFormat, source, pool, options, createDevice: createGpuDevice }, fs);
+    } finally {
+        await source.close();
+        pool.destroy();
+    }
 };
 
 /**

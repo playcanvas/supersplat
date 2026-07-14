@@ -2,6 +2,10 @@
 
 .tooltips {
     position: absolute;
+    // size to content: shrink-to-fit against the space right of `left` would
+    // otherwise crush tooltips near the right viewport edge into thin columns
+    // (the show-time clamp in tooltips.ts shifts any overflow back into view)
+    width: max-content;
     background-color: $bcg-darkest;
     border: 1px solid $bcg-primary;
     padding: 4px;

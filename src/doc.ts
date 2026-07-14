@@ -5,7 +5,7 @@ import { BrowserFileSystem, BlobReadSource } from './io';
 import { recentFiles } from './recent-files';
 import { Scene } from './scene';
 import { Splat } from './splat';
-import { serializePly } from './splat-serialize';
+import { writeSplatFile } from './splat-serialize';
 import { Transform } from './transform';
 import { i18n } from './ui/localization';
 
@@ -193,7 +193,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
 
             // Write each splat as PLY
             for (let i = 0; i < splats.length; ++i) {
-                await serializePly([splats[i]], serializeSettings, zipFs, `splat_${i}.ply`);
+                await writeSplatFile([splats[i]], serializeSettings, 'ply', `splat_${i}.ply`, {}, zipFs);
             }
 
             // Close zip (also closes underlying browser writer)

@@ -135,11 +135,6 @@ class Menu extends Container {
             isEnabled: () => !events.invoke('scene.empty'),
             onSelect: () => events.invoke('scene.export', 'ply')
         }, {
-            text: () => i18n.t('menu.file.export.splat'),
-            icon: createSvg(sceneExport),
-            isEnabled: () => !events.invoke('scene.empty'),
-            onSelect: () => events.invoke('scene.export', 'splat')
-        }, {
             text: () => i18n.t('menu.file.export.sog'),
             icon: createSvg(sceneExport),
             isEnabled: () => !events.invoke('scene.empty'),
@@ -149,6 +144,11 @@ class Menu extends Container {
             icon: createSvg(sceneExport),
             isEnabled: () => !events.invoke('scene.empty'),
             onSelect: () => events.invoke('scene.export', 'spz')
+        }, {
+            text: () => i18n.t('menu.file.export.splat'),
+            icon: createSvg(sceneExport),
+            isEnabled: () => !events.invoke('scene.empty'),
+            onSelect: () => events.invoke('scene.export', 'splat')
         }, {
             // separator
         }, {

@@ -8,7 +8,7 @@ import { Events } from './events';
 import { MappedReadFileSystem } from './io';
 import { Scene } from './scene';
 import { Splat } from './splat';
-import { serializePly } from './splat-serialize';
+import { writeSplatFile } from './splat-serialize';
 
 const removeExtension = (filename: string) => {
     return filename.substring(0, filename.length - path.getExtension(filename).length);
@@ -608,18 +608,19 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
         const memFs = new MemoryFileSystem();
 
-        await serializePly(splats, {
+        await writeSplatFile(splats, {
             maxSHBands: 3,
             selected: true
-        }, memFs);
+        }, 'ply', 'output.ply', {}, memFs);
 
         const data = memFs.results.get('output.ply');
 
         if (data) {
             const splat = splats[0];
 
-            // wrap PLY in a blob and load it
-            const blob = new Blob([data.buffer as ArrayBuffer], { type: 'application/octet-stream' });
+            // wrap PLY in a blob and load it. pass the view rather than the
+            // underlying buffer, which is the writer's oversized scratch allocation
+            const blob = new Blob([data as BlobPart], { type: 'application/octet-stream' });
             const filename = `${removeExtension(splat.filename)}.ply`;
             const fileSystem = new MappedReadFileSystem();
             fileSystem.addFile(filename, blob);

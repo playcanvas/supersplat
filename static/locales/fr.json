@@ -305,6 +305,7 @@
     "tooltip.timeline.add-key": "Ajouter une clé",
     "tooltip.timeline.remove-key": "Supprimer une clé",
     "tooltip.timeline.key": "Glisser pour déplacer. Maj+glisser pour copier. Ctrl+clic pour reprendre la vue actuelle.",
+    "tooltip.timeline.key-out-of-range": "L'image clé {{frame}} est au-delà de la fin de la timeline et ne sera pas jouée. Glissez-la sur la timeline ou augmentez le nombre total de frames.",
     "tooltip.timeline.frame-rate": "Fréquence d'image",
     "tooltip.timeline.total-frames": "Nombre total de frames",
     "tooltip.timeline.smoothness": "Douceur",

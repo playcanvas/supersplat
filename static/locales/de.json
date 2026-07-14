@@ -305,6 +305,7 @@
     "tooltip.timeline.add-key": "Key hinzufügen",
     "tooltip.timeline.remove-key": "Key entfernen",
     "tooltip.timeline.key": "Ziehen zum Verschieben. Umschalt+Ziehen zum Kopieren. Strg+Klick übernimmt die aktuelle Ansicht.",
+    "tooltip.timeline.key-out-of-range": "Keyframe {{frame}} liegt hinter dem Ende der Timeline und wird nicht abgespielt. Auf die Timeline ziehen oder die Gesamtanzahl der Frames erhöhen.",
     "tooltip.timeline.frame-rate": "Bildrate",
     "tooltip.timeline.total-frames": "Gesamtanzahl der Frames",
     "tooltip.timeline.smoothness": "Weichheit",

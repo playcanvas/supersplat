@@ -305,6 +305,7 @@
     "tooltip.timeline.add-key": "Adicionar Quadro",
     "tooltip.timeline.remove-key": "Remover Quadro",
     "tooltip.timeline.key": "Arraste para mover. Shift+arrastar para copiar. Ctrl+clique para definir a visão atual.",
+    "tooltip.timeline.key-out-of-range": "O quadro-chave {{frame}} está além do fim da linha do tempo e não será reproduzido. Arraste-o para a linha do tempo ou aumente o Total de Quadros.",
     "tooltip.timeline.frame-rate": "Taxa de Quadros",
     "tooltip.timeline.total-frames": "Total de Quadros",
     "tooltip.timeline.smoothness": "Suavidade",

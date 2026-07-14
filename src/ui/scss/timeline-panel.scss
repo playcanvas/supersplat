@@ -165,6 +165,13 @@
                     // border-radius: 50%;
                     cursor: pointer;
                     pointer-events: auto;
+
+                    // keys stranded beyond the timeline's end: pinned just past
+                    // the strip, error-tinted and dimmed - present but not playing
+                    &.out-of-range {
+                        background-color: $error;
+                        opacity: 0.7;
+                    }
                 }
 
                 // declared before dragging/copying so those cursors win

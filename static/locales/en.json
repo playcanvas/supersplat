@@ -305,6 +305,7 @@
     "tooltip.timeline.add-key": "Add Key",
     "tooltip.timeline.remove-key": "Remove Key",
     "tooltip.timeline.key": "Drag to move. Shift+drag to copy. Ctrl+click to set to current view.",
+    "tooltip.timeline.key-out-of-range": "Keyframe {{frame}} is past the end of the timeline and won't play. Drag it onto the timeline or increase Total Frames.",
     "tooltip.timeline.frame-rate": "Frame Rate",
     "tooltip.timeline.total-frames": "Total Frames",
     "tooltip.timeline.smoothness": "Smoothness",

@@ -26,12 +26,9 @@ const fragmentShader = /* glsl */ `
     // rect params
     uniform vec4 rect_params;                       // rect x, y, width, height
 
-    // sphere params
-    uniform vec4 sphere_params;                     // sphere x, y, z, radius
-
-    // box params
-    uniform vec4 box_params;                     // box x, y, z
-    uniform vec4 aabb_params;                    // len x, y, z
+    // sphere/box params: transforms world space into the shape's local space,
+    // where the shape is the unit sphere (diameter 1) or unit cube (side 1)
+    uniform mat4 shape_matrix_inv;
 
     void main(void) {
         // calculate output id
@@ -90,22 +87,15 @@ const fragmentShader = /* glsl */ `
                     }
                 }
             } else if (mode == 2) {
-                // select by sphere (world-space, independent of camera frustum)
-                clr[i] = length(world - sphere_params.xyz) < sphere_params.w ? 1.0 : 0.0;
+                // select by sphere (world-space, independent of camera frustum):
+                // unit sphere test in shape-local space
+                vec3 local = (shape_matrix_inv * vec4(world, 1.0)).xyz;
+                clr[i] = length(local) < 0.5 ? 1.0 : 0.0;
             } else if (mode == 3) {
-                // select by box (world-space, independent of camera frustum)
-                vec3 relativePosition = world - box_params.xyz;
-                bool isInsideCube = true;
-                if (relativePosition.x < -aabb_params.x || relativePosition.x > aabb_params.x) {
-                    isInsideCube = false;
-                }
-                if (relativePosition.y < -aabb_params.y || relativePosition.y > aabb_params.y) {
-                    isInsideCube = false;
-                }
-                if (relativePosition.z < -aabb_params.z || relativePosition.z > aabb_params.z) {
-                    isInsideCube = false;
-                }
-                clr[i] = isInsideCube ? 1.0 : 0.0;
+                // select by box (world-space, independent of camera frustum):
+                // unit cube test in shape-local space
+                vec3 local = (shape_matrix_inv * vec4(world, 1.0)).xyz;
+                clr[i] = all(lessThanEqual(abs(local), vec3(0.5))) ? 1.0 : 0.0;
             }
         }
 

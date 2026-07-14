@@ -132,6 +132,7 @@
     "select-toolbar.intersect": "相交",
     "select-toolbar.position": "位置",
     "select-toolbar.size": "大小",
+    "select-toolbar.rotation": "旋转",
     "select-toolbar.radius": "半径",
     "popup.ok": "确定",
     "popup.cancel": "取消",

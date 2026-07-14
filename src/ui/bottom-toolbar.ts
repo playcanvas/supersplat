@@ -231,9 +231,9 @@ class BottomToolbar extends Container {
         tooltips.register(flood, tooltip('tooltip.bottom-toolbar.flood', 'tool.floodSelection'));
         tooltips.register(sphere, tooltip('tooltip.bottom-toolbar.sphere'));
         tooltips.register(box, tooltip('tooltip.bottom-toolbar.box'));
-        tooltips.register(translate, tooltip('tooltip.bottom-toolbar.translate', 'tool.move'));
-        tooltips.register(rotate, tooltip('tooltip.bottom-toolbar.rotate', 'tool.rotate'));
-        tooltips.register(scale, tooltip('tooltip.bottom-toolbar.scale', 'tool.scale'));
+        tooltips.register(translate, tooltip('tooltip.bottom-toolbar.translate', 'tool.moveShortcut'));
+        tooltips.register(rotate, tooltip('tooltip.bottom-toolbar.rotate', 'tool.rotateShortcut'));
+        tooltips.register(scale, tooltip('tooltip.bottom-toolbar.scale', 'tool.scaleShortcut'));
         tooltips.register(measure, tooltip('tooltip.bottom-toolbar.measure'));
         tooltips.register(coordSpace, tooltip('tooltip.bottom-toolbar.local-space', 'tool.toggleCoordSpace'));
         tooltips.register(origin, tooltip('tooltip.bottom-toolbar.bound-center'));

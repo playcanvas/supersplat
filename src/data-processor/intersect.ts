@@ -27,14 +27,19 @@ type RectOptions = {
 };
 
 type SphereOptions = {
-    sphere: { x: number, y: number, z: number, radius: number };
+    // transform mapping the unit sphere (diameter 1) to world space
+    sphere: { transform: Mat4 };
 };
 
 type BoxOptions = {
-    box: { x: number, y: number, z: number, lenx: number, leny: number, lenz: number };
+    // transform mapping the unit cube (side 1) to world space
+    box: { transform: Mat4 };
 };
 
 type IntersectOptions = MaskOptions | RectOptions | SphereOptions | BoxOptions;
+
+const shapeInvMat = new Mat4();
+const identityMat = new Mat4();
 
 const resolve = (scope: ScopeSpace, values: any) => {
     for (const key in values) {
@@ -164,43 +169,22 @@ class Intersect {
         }
 
         const sphereOptions = options as SphereOptions;
+        const boxOptions = options as BoxOptions;
         if (sphereOptions.sphere) {
+            shapeInvMat.copy(sphereOptions.sphere.transform).invert();
             resolve(scope, {
                 mode: 2,
-                sphere_params: [
-                    sphereOptions.sphere.x,
-                    sphereOptions.sphere.y,
-                    sphereOptions.sphere.z,
-                    sphereOptions.sphere.radius
-                ]
+                shape_matrix_inv: shapeInvMat.data
             });
-        } else {
-            resolve(scope, {
-                sphere_params: [0, 0, 0, 0]
-            });
-        }
-
-        const boxOptions = options as BoxOptions;
-        if (boxOptions.box) {
+        } else if (boxOptions.box) {
+            shapeInvMat.copy(boxOptions.box.transform).invert();
             resolve(scope, {
                 mode: 3,
-                box_params: [
-                    boxOptions.box.x,
-                    boxOptions.box.y,
-                    boxOptions.box.z,
-                    0
-                ],
-                aabb_params: [
-                    boxOptions.box.lenx * 0.5,
-                    boxOptions.box.leny * 0.5,
-                    boxOptions.box.lenz * 0.5,
-                    0
-                ]
+                shape_matrix_inv: shapeInvMat.data
             });
         } else {
             resolve(scope, {
-                box_params: [0, 0, 0, 0],
-                aabb_params: [0, 0, 0, 0]
+                shape_matrix_inv: identityMat.data
             });
         }
 

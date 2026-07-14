@@ -1,30 +1,34 @@
-import { Button, Container, Label, NumericInput, VectorInput } from '@playcanvas/pcui';
-import { TranslateGizmo, Vec3 } from 'playcanvas';
+import { Button, Container, Element, Label, NumericInput, VectorInput } from '@playcanvas/pcui';
+import { Vec3 } from 'playcanvas';
 
+import { ShapeGizmoMode, ShapeTransformGizmo } from './shape-transform-gizmo';
+import { ShapeTransformOp } from '../edit-ops';
 import { Events } from '../events';
 import { Scene } from '../scene';
+import { ShortcutManager } from '../shortcut-manager';
 import { SphereShape } from '../sphere-shape';
 import { Splat } from '../splat';
 import { i18n } from '../ui/localization';
+import addSvg from '../ui/svg/select-add.svg';
+import intersectSvg from '../ui/svg/select-intersect.svg';
+import removeSvg from '../ui/svg/select-remove.svg';
+import setSvg from '../ui/svg/select-set.svg';
+import { Tooltips } from '../ui/tooltips';
+
+const createSvg = (svgString: string) => {
+    const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
+    return new DOMParser().parseFromString(decodedStr, 'image/svg+xml').documentElement;
+};
 
 class SphereSelection {
     activate: () => void;
     deactivate: () => void;
+    setTransformMode: (mode: Exclude<ShapeGizmoMode, 'none'>) => boolean;
 
     active = false;
 
-    constructor(events: Events, scene: Scene, canvasContainer: Container) {
+    constructor(events: Events, scene: Scene, canvasContainer: Container, tooltips: Tooltips) {
         const sphere = new SphereShape();
-
-        const gizmo = new TranslateGizmo(scene.camera.camera, scene.gizmoLayer);
-
-        gizmo.on('render:update', () => {
-            scene.forceRender = true;
-        });
-
-        gizmo.on('transform:move', () => {
-            sphere.moved();
-        });
 
         // ui
         const selectToolbar = new Container({
@@ -36,15 +40,26 @@ class SphereSelection {
             e.stopPropagation();
         });
 
-        const setButton = new Button({ class: 'select-toolbar-button' });
-        const addButton = new Button({ class: 'select-toolbar-button' });
-        const removeButton = new Button({ class: 'select-toolbar-button' });
-        const intersectButton = new Button({ class: 'select-toolbar-button' });
+        const translateButton = new Button({ class: 'select-toolbar-mode', icon: 'E111' });
+        const scaleButton = new Button({ class: 'select-toolbar-mode', icon: 'E112' });
 
-        i18n.bindText(setButton, 'select-toolbar.set');
-        i18n.bindText(addButton, 'select-toolbar.add');
-        i18n.bindText(removeButton, 'select-toolbar.remove');
-        i18n.bindText(intersectButton, 'select-toolbar.intersect');
+        const setButton = new Button({ class: 'select-toolbar-op' });
+        const addButton = new Button({ class: 'select-toolbar-op' });
+        const removeButton = new Button({ class: 'select-toolbar-op' });
+        const intersectButton = new Button({ class: 'select-toolbar-op' });
+
+        setButton.dom.appendChild(createSvg(setSvg));
+        addButton.dom.appendChild(createSvg(addSvg));
+        removeButton.dom.appendChild(createSvg(removeSvg));
+        intersectButton.dom.appendChild(createSvg(intersectSvg));
+
+        // icon-only buttons need localized accessible names
+        i18n.onChange(() => {
+            setButton.dom.setAttribute('aria-label', i18n.t('select-toolbar.set'));
+            addButton.dom.setAttribute('aria-label', i18n.t('select-toolbar.add'));
+            removeButton.dom.setAttribute('aria-label', i18n.t('select-toolbar.remove'));
+            intersectButton.dom.setAttribute('aria-label', i18n.t('select-toolbar.intersect'));
+        }, setButton);
 
         const positionLabel = new Label({ class: 'select-toolbar-label' });
         i18n.bindText(positionLabel, 'select-toolbar.position');
@@ -66,6 +81,9 @@ class SphereSelection {
             min: 0.01
         });
 
+        selectToolbar.append(translateButton);
+        selectToolbar.append(scaleButton);
+        selectToolbar.append(new Element({ class: 'select-toolbar-separator' }));
         selectToolbar.append(setButton);
         selectToolbar.append(addButton);
         selectToolbar.append(removeButton);
@@ -77,25 +95,92 @@ class SphereSelection {
 
         canvasContainer.append(selectToolbar);
 
-        // write the volume's world position into the ui without retriggering
-        // the position input's change handler
+        // write the volume's transform into the ui without retriggering the
+        // inputs' change handlers
         let uiUpdating = false;
         const updateUI = () => {
             uiUpdating = true;
             const p = sphere.pivot.getPosition();
             position.value = [p.x, p.y, p.z];
+            radius.value = sphere.radius;
             uiUpdating = false;
         };
 
-        gizmo.on('transform:move', () => {
-            updateUI();
-        });
-
-        const apply = (op: 'set' | 'add' | 'remove' | 'intersect') => {
-            const p = sphere.pivot.getPosition();
-            events.fire('select.bySphere', op, [p.x, p.y, p.z, sphere.radius]);
+        const syncModeUI = (mode: ShapeGizmoMode) => {
+            translateButton.class[mode === 'translate' ? 'add' : 'remove']('active');
+            scaleButton.class[mode === 'scale' ? 'add' : 'remove']('active');
         };
 
+        // undo/redo support for volume transforms
+        const captureState = () => ({
+            position: sphere.pivot.getPosition().clone(),
+            radius: sphere.radius
+        });
+
+        type SphereState = ReturnType<typeof captureState>;
+
+        const statesEqual = (a: SphereState, b: SphereState) => {
+            return a.position.equals(b.position) && a.radius === b.radius;
+        };
+
+        const addOp = (oldState: SphereState, newState: SphereState) => {
+            if (!statesEqual(oldState, newState)) {
+                // the change is already applied, so suppress the op's do()
+                events.fire('edit.add', new ShapeTransformOp({ shape: sphere, oldState, newState }), true);
+            }
+        };
+
+        // record an undo op for the state change performed by fn
+        const recordOp = (fn: () => void) => {
+            const oldState = captureState();
+            fn();
+            addOp(oldState, captureState());
+        };
+
+        let dragState: SphereState | null = null;
+
+        const gizmo = new ShapeTransformGizmo(events, scene, {
+            rotate: false,
+            uniformScale: true,
+            lowerBoundScale: new Vec3(0.02, 0.02, 0.02),
+            onTransformStart: () => {
+                dragState = captureState();
+            },
+            onTransform: (mode) => {
+                if (mode === 'scale') {
+                    // the pivot's uniform scale is the sphere's diameter
+                    sphere.radius = sphere.pivot.getLocalScale().x * 0.5;
+                }
+                sphere.moved();
+                updateUI();
+            },
+            onTransformEnd: () => {
+                if (dragState) {
+                    addOp(dragState, captureState());
+                    dragState = null;
+                }
+            },
+            onModeChanged: syncModeUI
+        });
+        syncModeUI(gizmo.mode);
+
+        this.setTransformMode = (mode) => {
+            gizmo.toggleMode(mode);
+            return true;
+        };
+
+        const apply = (op: 'set' | 'add' | 'remove' | 'intersect') => {
+            events.fire('select.bySphere', op, sphere.pivot.getWorldTransform().clone());
+        };
+
+        translateButton.dom.addEventListener('pointerdown', (e) => {
+            e.stopPropagation();
+            gizmo.toggleMode('translate');
+        });
+        scaleButton.dom.addEventListener('pointerdown', (e) => {
+            e.stopPropagation();
+            gizmo.toggleMode('scale');
+        });
         setButton.dom.addEventListener('pointerdown', (e) => {
             e.stopPropagation(); apply('set');
         });
@@ -110,40 +195,61 @@ class SphereSelection {
         });
         position.on('change', (v: number[]) => {
             if (!uiUpdating) {
-                sphere.pivot.setPosition(v[0], v[1], v[2]);
-                sphere.moved();
-                gizmo.attach([sphere.pivot]);
+                recordOp(() => {
+                    sphere.pivot.setPosition(v[0], v[1], v[2]);
+                    sphere.moved();
+                });
+                gizmo.attach(sphere.pivot);
             }
         });
         radius.on('change', () => {
-            sphere.radius = radius.value;
+            if (!uiUpdating) {
+                recordOp(() => {
+                    sphere.radius = radius.value;
+                });
+            }
         });
 
         events.on('camera.focalPointPicked', (details: { splat: Splat, position: Vec3 }) => {
             if (this.active) {
-                sphere.pivot.setPosition(details.position);
-                sphere.moved();
-                gizmo.attach([sphere.pivot]);
+                recordOp(() => {
+                    sphere.pivot.setPosition(details.position);
+                    sphere.moved();
+                });
+                gizmo.attach(sphere.pivot);
                 updateUI();
             }
         });
 
-        const updateGizmoSize = () => {
-            const { camera, canvas } = scene;
-            if (camera.ortho) {
-                gizmo.size = 1125 / canvas.clientHeight;
-            } else {
-                gizmo.size = 1200 / Math.max(canvas.clientWidth, canvas.clientHeight);
+        // refresh the ui when undo/redo changes the volume while the tool is active
+        events.on('shapeSelection.changed', (shape: unknown) => {
+            if (this.active && shape === sphere) {
+                updateUI();
             }
+        });
+
+        // compose localized tooltip text with the shortcut key
+        const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
+        const tooltip = (localeKey: string, shortcutId: string) => () => {
+            const text = i18n.t(localeKey);
+            const shortcut = shortcutManager.formatShortcut(shortcutId);
+            return shortcut ? i18n.formatTooltipWithShortcut(text, shortcut) : text;
         };
-        updateGizmoSize();
-        events.on('camera.resize', updateGizmoSize);
-        events.on('camera.ortho', updateGizmoSize);
+
+        tooltips.register(translateButton, tooltip('tooltip.bottom-toolbar.translate', 'tool.moveShortcut'), 'top');
+        tooltips.register(scaleButton, tooltip('tooltip.bottom-toolbar.scale', 'tool.scaleShortcut'), 'top');
+        tooltips.register(setButton, () => i18n.t('select-toolbar.set'), 'top');
+        tooltips.register(addButton, () => i18n.t('select-toolbar.add'), 'top');
+        tooltips.register(removeButton, () => i18n.t('select-toolbar.remove'), 'top');
+        tooltips.register(intersectButton, () => i18n.t('select-toolbar.intersect'), 'top');
 
         this.activate = () => {
             this.active = true;
             scene.add(sphere);
-            gizmo.attach([sphere.pivot]);
+            if (gizmo.mode === 'none') {
+                gizmo.setMode('translate');
+            }
+            gizmo.attach(sphere.pivot);
             updateUI();
             selectToolbar.hidden = false;
         };

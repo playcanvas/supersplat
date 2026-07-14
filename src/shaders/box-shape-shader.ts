@@ -51,8 +51,9 @@ const fragmentShader = /* glsl */ `
     }
 
     uniform sampler2D blueNoiseTex32;
+    uniform mat4 matrix_model;
     uniform mat4 matrix_viewProjection;
-    uniform vec3 boxCen;
+    uniform mat4 boxInvMat;
     uniform vec3 boxLen;
 
     uniform vec3 near_origin;
@@ -81,25 +82,34 @@ const fragmentShader = /* glsl */ `
         vec2 clip = gl_FragCoord.xy / targetSize;
         vec3 worldNear = near_origin + near_x * clip.x + near_y * clip.y;
         vec3 worldFar = far_origin + far_x * clip.x + far_y * clip.y;
-        vec3 rayDir = normalize(worldFar - worldNear);
+
+        // transform the ray into the box's local space, where the box is the
+        // axis-aligned unit cube centered on the origin (the pivot's scale
+        // carries the box lengths)
+        vec3 localNear = (boxInvMat * vec4(worldNear, 1.0)).xyz;
+        vec3 localDir = normalize((boxInvMat * vec4(worldFar, 1.0)).xyz - localNear);
 
         float t0, t1;
         int axis0, axis1;
-        if (!intersectBox(t0, t1, axis0, axis1, worldNear, rayDir, boxCen, boxLen)) {
+        if (!intersectBox(t0, t1, axis0, axis1, localNear, localDir, vec3(0.0), vec3(0.5))) {
             gl_FragColor = vec4(1.0, 0.0, 0.0, 0.6);
             return;
         }
 
-        vec3 frontPos = worldNear + rayDir * t0;
-        bool front = t0 > 0.0 && strips(frontPos - boxCen, axis0);
+        // strips operate on box-metric offsets (local * lengths) so the
+        // 0.5-unit grid spacing is preserved and rotates with the box
+        vec3 frontLocal = localNear + localDir * t0;
+        bool front = t0 > 0.0 && strips(frontLocal * boxLen * 2.0, axis0);
 
-        vec3 backPos = worldNear + rayDir * t1;
-        bool back = strips(backPos - boxCen, axis1);
+        vec3 backLocal = localNear + localDir * t1;
+        bool back = strips(backLocal * boxLen * 2.0, axis1);
 
         if (front) {
+            vec3 frontPos = (matrix_model * vec4(frontLocal, 1.0)).xyz;
             gl_FragColor = vec4(1.0, 1.0, 1.0, 0.6);
             gl_FragDepth = writeDepth(0.6) ? calcDepth(frontPos, matrix_viewProjection) : 1.0;
         } else if (back) {
+            vec3 backPos = (matrix_model * vec4(backLocal, 1.0)).xyz;
             gl_FragColor = vec4(0.0, 0.0, 0.0, 0.6);
             gl_FragDepth = writeDepth(0.6) ? calcDepth(backPos, matrix_viewProjection) : 1.0;
         } else {

@@ -87,7 +87,11 @@ class SphereShape extends Element {
     updateBound() {
         bound.center.copy(this.pivot.getPosition());
         bound.halfExtents.set(this.radius, this.radius, this.radius);
-        this.scene.boundDirty = true;
+
+        // undo/redo can change the volume while it's not in the scene
+        if (this.scene) {
+            this.scene.boundDirty = true;
+        }
     }
 
     get worldBound(): BoundingBox | null {

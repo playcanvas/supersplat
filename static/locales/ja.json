@@ -132,6 +132,7 @@
     "select-toolbar.intersect": "交差",
     "select-toolbar.position": "位置",
     "select-toolbar.size": "サイズ",
+    "select-toolbar.rotation": "回転",
     "select-toolbar.radius": "半径",
     "popup.ok": "OK",
     "popup.cancel": "キャンセル",

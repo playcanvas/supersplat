@@ -6,6 +6,7 @@
 export {
     BlobReadSource,
     MappedReadFileSystem,
+    defaultLodIndex,
     loadGSplatData,
     validateGSplatData
 } from './read';

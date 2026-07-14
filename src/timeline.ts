@@ -13,11 +13,34 @@ const registerTimelineEvents = (events: Events) => {
     let smoothness = 1;
     let loop = true;
 
+    // current frame
+    let frame = 0;
+
+    const setFrame = (value: number) => {
+        if (value !== frame) {
+            frame = value;
+            events.fire('timeline.frame', frame);
+        }
+    };
+
+    events.function('timeline.frame', () => {
+        return frame;
+    });
+
+    events.on('timeline.setFrame', (value: number) => {
+        setFrame(value);
+    });
+
     // frames
 
     const setFrames = (value: number) => {
         if (value !== frames) {
             frames = value;
+            // clamp a stranded playhead before announcing the new length so
+            // 'timeline.frames' listeners observe a consistent frame/frames pair
+            if (frame >= frames) {
+                setFrame(frames - 1);
+            }
             events.fire('timeline.frames', frames);
         }
     };
@@ -81,24 +104,6 @@ const registerTimelineEvents = (events: Events) => {
         setLoop(value);
     });
 
-    // current frame
-    let frame = 0;
-
-    const setFrame = (value: number) => {
-        if (value !== frame) {
-            frame = value;
-            events.fire('timeline.frame', frame);
-        }
-    };
-
-    events.function('timeline.frame', () => {
-        return frame;
-    });
-
-    events.on('timeline.setFrame', (value: number) => {
-        setFrame(value);
-    });
-
     // anim controls
     let animHandle: EventHandle = null;
 
@@ -156,7 +161,8 @@ const registerTimelineEvents = (events: Events) => {
 
     // Key navigation - delegates to active track's keys
     const skipToKey = (dir: 'forward' | 'back') => {
-        const keys = events.invoke('track.keys') as number[] ?? [];
+        // ignore keys beyond the end of the timeline - they don't play
+        const keys = (events.invoke('track.keys') as number[] ?? []).filter(k => k < frames);
 
         if (keys.length > 0) {
             const orderedKeys = keys.slice().sort((a, b) => a - b);

@@ -6,7 +6,7 @@ import { Events } from './events';
 import { BrowserFileSystem, MappedReadFileSystem } from './io';
 import { Scene } from './scene';
 import { Splat } from './splat';
-import { serializePly, serializePlyCompressed, SerializeSettings, serializeSog, serializeSplat, serializeSpz, serializeViewer, SogSettings, SpzSettings, ViewerExportSettings, WebGPUUnavailableError } from './splat-serialize';
+import { SerializeSettings, serializeSog, serializeSpz, serializeViewer, SogSettings, SpzSettings, ViewerExportSettings, WebGPUUnavailableError, writeSplatFile } from './splat-serialize';
 import { i18n } from './ui/localization';
 
 // ts compiler and vscode find this type, but eslint does not
@@ -57,7 +57,7 @@ const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
     'lcc': {
         description: 'LCC Scene',
         accept: {
-            'application/x-lcc': ['.lcc', '.bin']
+            'application/x-lcc': ['.lcc', '.lcc2', '.bin']
         }
     },
     'splat': {
@@ -104,7 +104,7 @@ const allImportTypes = {
         'application/ply': ['.ply'],
         'application/x-gaussian-splat': ['.json', '.sog', '.splat', '.ksplat', '.spz'],
         'image/webp': ['.webp'],
-        'application/x-lcc': ['.lcc', '.bin'],
+        'application/x-lcc': ['.lcc', '.lcc2', '.bin'],
         'text/plain': ['.txt']
     }
 };
@@ -139,10 +139,11 @@ const isSog = (filenames: string[]) => {
     return count('meta.json') === 1;
 };
 
-// The LCC file contains meta.lcc, index.bin, data.bin and shcoef.bin (optional)
+// The LCC file contains meta.lcc, index.bin, data.bin and shcoef.bin (optional).
+// LCC2 comprises a meta.lcc2 file and .sog/.spz chunk files.
 const isLcc = (filenames: string[]) => {
     const count = (extension: string) => filenames.reduce((sum, f) => sum + (f.endsWith(extension) ? 1 : 0), 0);
-    return count('.lcc') === 1;
+    return count('.lcc') === 1 || count('.lcc2') === 1;
 };
 
 type ImportFile = {
@@ -273,8 +274,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             let mainIndex: number;
             if (filenames.some(f => f === 'meta.json')) {
                 mainIndex = filenames.findIndex(f => f === 'meta.json');
-            } else if (filenames.some(f => f.endsWith('.lcc'))) {
-                mainIndex = filenames.findIndex(f => f.endsWith('.lcc'));
+            } else if (filenames.some(f => f.endsWith('.lcc') || f.endsWith('.lcc2'))) {
+                mainIndex = filenames.findIndex(f => f.endsWith('.lcc') || f.endsWith('.lcc2'));
             } else {
                 mainIndex = 0;  // Single file case
             }
@@ -288,12 +289,22 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                 if (f.contents) fileSystem.addFile(f.filename, f.contents);
             });
 
+            // Multi-file container formats must load by their relative name so the
+            // library resolves sibling files against the file system's baseUrl
+            // (path-joining a full URL corrupts the 'http://' prefix)
+            const lowerMainFilename = mainFile.filename.toLowerCase();
+            const isContainer = lowerMainFilename === 'meta.json' || lowerMainFilename.endsWith('.lcc') || lowerMainFilename.endsWith('.lcc2');
+
             // For URL-only single file, use full URL as filename
-            const filename = (files.length === 1 && !mainFile.contents && mainFile.url) ?
+            const filename = (files.length === 1 && !mainFile.contents && mainFile.url && !isContainer) ?
                 mainFile.url :
                 mainFile.filename;
 
             const model = await scene.assetLoader.load(filename, fileSystem, animationFrame);
+            if (!model) {
+                // user cancelled the load
+                return null;
+            }
             await scene.add(model);
             return model;
         } catch (error) {
@@ -313,17 +324,6 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             events.fire('sequence.setPlyFrames', files.map(f => f.contents));
             events.fire('timeline.frame', 0);
         } else if (isSog(filenames) || isLcc(filenames)) {
-            if (isLcc(filenames)) {
-                const response = await events.invoke('showPopup', {
-                    type: 'okcancel',
-                    header: 'LCC',
-                    message: i18n.t('popup.lcc-upload-warning'),
-                    link: `${window.location.origin}/upload`
-                });
-                if (response.action === 'cancel') {
-                    return result;
-                }
-            }
             const model = await importSplatModel(files, animationFrame);
             if (model) result.push(model);
         } else {
@@ -370,7 +370,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         fileSelector = document.createElement('input');
         fileSelector.setAttribute('id', 'file-selector');
         fileSelector.setAttribute('type', 'file');
-        fileSelector.setAttribute('accept', '.ply,.splat,meta.json,.json,.webp,.ssproj,.sog,.lcc,.bin,.txt,.ksplat,.spz');
+        fileSelector.setAttribute('accept', '.ply,.splat,meta.json,.json,.webp,.ssproj,.sog,.lcc,.lcc2,.bin,.txt,.ksplat,.spz');
         fileSelector.setAttribute('multiple', 'true');
 
         fileSelector.onchange = () => {
@@ -546,15 +546,15 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
 
             switch (fileType) {
                 case 'ply':
-                    await serializePly(splats, serializeSettings, fs);
+                    await writeSplatFile(splats, serializeSettings, 'ply', 'output.ply', {}, fs);
                     break;
                 case 'compressedPly':
                     serializeSettings.minOpacity = 1 / 255;
                     serializeSettings.removeInvalid = true;
-                    await serializePlyCompressed(splats, serializeSettings, fs);
+                    await writeSplatFile(splats, serializeSettings, 'compressed-ply', 'output.compressed.ply', {}, fs);
                     break;
                 case 'splat':
-                    await serializeSplat(splats, serializeSettings, fs);
+                    await writeSplatFile(splats, serializeSettings, 'splat', 'output.splat', {}, fs);
                     break;
                 case 'sog': {
                     const sogSettings: SogSettings = {

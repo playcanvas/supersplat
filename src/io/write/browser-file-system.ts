@@ -33,6 +33,15 @@ class BrowserFileWriter implements Writer {
         await this.stream.truncate(this.cursor);
         await this.stream.close();
     }
+
+    async abort(): Promise<void> {
+        await this.ready;
+        try {
+            await this.stream.abort();
+        } catch {
+            // already failing — ignore
+        }
+    }
 }
 
 /**
@@ -90,6 +99,11 @@ class BrowserDownloadWriter implements Writer {
         if (data) {
             triggerDownload(data, this.filename);
         }
+    }
+
+    abort(): void {
+        // discard buffered data without triggering a download
+        this.innerWriter.abort();
     }
 }
 

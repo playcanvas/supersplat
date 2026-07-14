@@ -10,6 +10,7 @@ import type { Writer } from '@playcanvas/splat-transform';
 class GZipWriter implements Writer {
     write: (data: Uint8Array) => Promise<void>;
     close: () => Promise<void>;
+    abort: () => Promise<void>;
 
     private cursor = 0;
 
@@ -44,6 +45,19 @@ class GZipWriter implements Writer {
             // wait for the reader to finish sending data
             await reader;
         };
+
+        this.abort = async () => {
+            try {
+                await streamWriter.abort();
+            } catch {
+                // already failing — ignore
+            }
+            try {
+                await writer.abort();
+            } catch {
+                // already failing — ignore
+            }
+        };
     }
 }
 
@@ -53,6 +67,7 @@ class GZipWriter implements Writer {
 class ProgressWriter implements Writer {
     write: (data: Uint8Array) => Promise<void>;
     close: () => void;
+    abort: () => Promise<void>;
 
     private cursor = 0;
 
@@ -72,6 +87,14 @@ class ProgressWriter implements Writer {
                 throw new Error(`ProgressWriter: expected ${totalBytes} bytes, but wrote ${this.cursor} bytes`);
             }
             progress?.(this.cursor, totalBytes);
+        };
+
+        this.abort = async () => {
+            try {
+                await writer.abort();
+            } catch {
+                // already failing — ignore
+            }
         };
     }
 }

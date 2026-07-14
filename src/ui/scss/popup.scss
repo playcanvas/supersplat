@@ -27,6 +27,20 @@
         // the following is needed to get drop-shadow working on safari
         will-change: transform;
 
+        // allow the select dropdown list to extend past the dialog bounds
+        &.has-select {
+            overflow: visible;
+
+            #popup-header {
+                border-radius: 8px 8px 0 0;
+            }
+
+            // keep the message snug against the select it introduces
+            #popup-text {
+                padding-bottom: 8px;
+            }
+        }
+
         #popup-header {
             height: 32px;
             line-height: 32px;
@@ -99,6 +113,33 @@
                 height: 32px;
                 line-height: 24px;
                 font-family: 'pc-icon';
+            }
+        }
+
+        #popup-select-row {
+            margin: 0px 20px;
+
+            &:not(.pcui-hidden) {
+                display: flex;
+                justify-content: center;
+            }
+
+            #popup-select {
+                width: 300px;
+                background-color: $bcg-dark;
+            }
+        }
+
+        #popup-warning-text {
+            text-wrap: wrap;
+            text-align: center;
+            padding: 16px 20px 10px;
+
+            color: $text-secondary;
+
+            a {
+                color: $clr-hilight;
+                text-decoration-line: none;
             }
         }
 

@@ -5,6 +5,7 @@ import { Color, path, Quat, Vec3 } from 'playcanvas';
 import { ElementType } from './element';
 import { EquirectRenderer } from './equirect-renderer';
 import { Events } from './events';
+import { encodePng } from './png-writer';
 import { Scene } from './scene';
 import { injectSphericalMetadata } from './spherical-metadata';
 import { Splat } from './splat';
@@ -32,6 +33,8 @@ type ImageSettings = {
     height: number;
     transparentBg: boolean;
     showDebug: boolean;
+    format: 'png' | 'jpeg' | 'webp';
+    quality?: number;           // 0..1, jpeg only
     projection?: 'standard' | 'equirect';
     levelHorizon?: boolean;
 };
@@ -91,8 +94,8 @@ const sortSplatsAndWait = (scene: Scene, splats: Splat[]) => {
     }));
 };
 
-const downloadFile = (data: ArrayBuffer | Uint8Array<ArrayBuffer>, filename: string) => {
-    const blob = new Blob([data], { type: 'application/octet-stream' });
+const downloadFile = (data: ArrayBuffer | Uint8Array<ArrayBuffer>, filename: string, type = 'application/octet-stream') => {
+    const blob = new Blob([data], { type });
     const url = window.URL.createObjectURL(blob);
     const el = document.createElement('a');
     el.download = filename;
@@ -177,7 +180,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
         let savedOrtho = false;
 
         try {
-            const { width, height, transparentBg, showDebug, projection, levelHorizon } = imageSettings;
+            const { width, height, transparentBg, showDebug, format, quality, projection, levelHorizon } = imageSettings;
             const is360 = projection === 'equirect';
 
             // in 360 mode the offscreen target is a square cube face; the
@@ -266,18 +269,64 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 data.set(line, bottom);
             }
 
-            // construct the webp codec
-            if (!webpCodec) {
-                webpCodec = await WebPCodec.create();
-            }
+            let bytes: Uint8Array<ArrayBuffer>;
+            let extension: string;
+            let mimeType: string;
 
-            const bytes = webpCodec.encodeLosslessRGBA(data, width, height);
+            if (format === 'png') {
+                bytes = await encodePng(data, width, height);
+                extension = 'png';
+                mimeType = 'image/png';
+            } else if (format === 'jpeg') {
+                // jpeg has no alpha channel and canvas encoding flattens
+                // transparent pixels toward black, so force full opacity
+                for (let i = 3; i < data.length; i += 4) {
+                    data[i] = 255;
+                }
+
+                const imageData = new ImageData(new Uint8ClampedArray(data.buffer, data.byteOffset, data.length), width, height);
+                let blob: Blob;
+                if (typeof OffscreenCanvas !== 'undefined') {
+                    const canvas = new OffscreenCanvas(width, height);
+                    const context = canvas.getContext('2d');
+                    if (!context) {
+                        throw new Error('failed to create 2d context');
+                    }
+                    context.putImageData(imageData, 0, 0);
+                    blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: quality ?? 0.9 });
+                } else {
+                    // fallback for browsers without OffscreenCanvas
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const context = canvas.getContext('2d');
+                    if (!context) {
+                        throw new Error('failed to create 2d context');
+                    }
+                    context.putImageData(imageData, 0, 0);
+                    blob = await new Promise<Blob>((resolve, reject) => {
+                        canvas.toBlob(b => (b ? resolve(b) : reject(new Error('failed to encode jpeg'))), 'image/jpeg', quality ?? 0.9);
+                    });
+                }
+                bytes = new Uint8Array(await blob.arrayBuffer());
+                extension = 'jpg';
+                mimeType = 'image/jpeg';
+            } else {
+                // construct the webp codec
+                if (!webpCodec) {
+                    webpCodec = await WebPCodec.create();
+                }
+
+                bytes = webpCodec.encodeLosslessRGBA(data, width, height);
+                extension = 'webp';
+                mimeType = 'image/webp';
+            }
 
             if (fileStream) {
                 await fileStream.write(bytes);
                 await fileStream.close();
             } else {
-                downloadFile(bytes, `${baseFilename()}.webp`);
+                downloadFile(bytes, `${baseFilename()}.${extension}`, mimeType);
             }
 
             return true;

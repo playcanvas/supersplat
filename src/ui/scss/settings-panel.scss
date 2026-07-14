@@ -1,0 +1,77 @@
+@use 'colors.scss' as *;
+
+#settings-panel {
+    top: 50%;
+    transform: translate(0, -50%);
+    right: 102px;
+    width: 320px;
+    flex-direction: column;
+
+    &:not(.pcui-hidden) {
+        display: flex;
+    }
+
+    & > .settings-panel-row {
+        display: flex;
+        flex-direction: row;
+        padding: 2px;
+        height: 28px;
+
+        & > .settings-panel-row-label {
+            flex-grow: 1;
+        }
+
+        & > .settings-panel-row-toggle {
+            background-color: $bcg-dark;
+
+            &::after {
+                background-color: $clr-default;
+            }
+
+            &.pcui-boolean-input-ticked {
+                background-color: $clr-hilight;
+
+                &::after {
+                    background-color: $clr-active;
+                }
+            }
+        }
+
+        & > .settings-panel-row-slider {
+            margin: 0px;
+
+            & > .pcui-slider-container {
+                & > .pcui-slider-bar {
+                    & > .pcui-slider-handle {
+                        background-color: $clr-default;
+                        border-radius: 3px;
+                    }
+                }
+            }
+        }
+
+        & > .settings-panel-row-pickers {
+            display: flex;
+            flex-direction: row;
+            margin: 2px 2px;
+            width: 185px;
+            justify-content: space-between;
+
+            & > .settings-panel-row-picker {
+                margin: 0px 0px;
+                padding: 0px;
+                height: 24px;
+            }
+        }
+
+        & > .settings-panel-row-select {
+            width: 187px;
+            margin: 0;
+        }
+
+        & > .settings-panel-row-button {
+            flex-grow: 1;
+            margin: 0 2px;
+        }
+    }
+}

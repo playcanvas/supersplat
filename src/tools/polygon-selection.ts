@@ -1,4 +1,5 @@
 import { Events } from '../events';
+import { opFromModifiers } from '../select-op';
 
 type Point = { x: number, y: number };
 
@@ -22,6 +23,7 @@ class PolygonSelection {
 
         let points: Point[] = [];
         let currentPoint: Point = null;
+        let active = false;
 
         const dist = (a: Point, b: Point) => {
             return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
@@ -36,7 +38,7 @@ class PolygonSelection {
             polyline.setAttribute('stroke', isClosed() ? '#fa6' : '#f60');
         };
 
-        const commitSelection = async (e: PointerEvent) => {
+        const commitSelection = async (e: MouseEvent | KeyboardEvent) => {
             // initialize canvas
             if (canvas.width !== parent.clientWidth || canvas.height !== parent.clientHeight) {
                 canvas.width = parent.clientWidth;
@@ -62,7 +64,7 @@ class PolygonSelection {
             // wait for selection to complete
             await events.invoke(
                 'select.byMask',
-                e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
+                opFromModifiers(e),
                 canvas,
                 context
             );
@@ -100,7 +102,7 @@ class PolygonSelection {
             }
         };
 
-        const dblclick = async (e: PointerEvent) => {
+        const dblclick = async (e: MouseEvent) => {
             e.preventDefault();
             e.stopPropagation();
 
@@ -109,23 +111,52 @@ class PolygonSelection {
             }
         };
 
+        const keydown = (e: KeyboardEvent) => {
+            // ignore when focus is elsewhere (input fields, modals, etc.)
+            if (e.target !== document.body) return;
+
+            if (e.key === 'Enter' && points.length > 2) {
+                e.preventDefault();
+                e.stopPropagation();
+                // ignore held-key repeats so a single commit runs at a time
+                if (!e.repeat) {
+                    commitSelection(e);
+                }
+            }
+        };
+
+        // remove the last placed point, returning whether a point was removed
+        events.function('polygonSelection.removeLastPoint', () => {
+            if (active && points.length > 0) {
+                points.pop();
+                paint();
+                return true;
+            }
+            return false;
+        });
+
         this.activate = () => {
+            active = true;
             svg.classList.remove('hidden');
             parent.style.display = 'block';
             parent.addEventListener('pointerdown', pointerdown);
             parent.addEventListener('pointermove', pointermove);
             parent.addEventListener('pointerup', pointerup);
             parent.addEventListener('dblclick', dblclick);
+            // capture phase so enter commits the polygon before the shortcut handlers run
+            document.addEventListener('keydown', keydown, true);
         };
 
         this.deactivate = () => {
             // cancel active operation
+            active = false;
             svg.classList.add('hidden');
             parent.style.display = 'none';
             parent.removeEventListener('pointerdown', pointerdown);
             parent.removeEventListener('pointermove', pointermove);
             parent.removeEventListener('pointerup', pointerup);
             parent.removeEventListener('dblclick', dblclick);
+            document.removeEventListener('keydown', keydown, true);
             points = [];
             paint();
         };

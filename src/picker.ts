@@ -90,7 +90,7 @@ class Picker {
     }
 
     // Prepare for ID picking by rendering the specified splat
-    prepareId(splat: Splat, mode: 'add' | 'remove' | 'set') {
+    prepareId(splat: Splat, mode: 'add' | 'remove' | 'set' | 'intersect') {
         if (!this.idRenderTarget) {
             return;
         }
@@ -98,13 +98,17 @@ class Picker {
         const { splatLayer } = this.scene;
 
         // Hide non-selected elements
-        const splats = this.scene.getElementsByType(ElementType.splat);
-        splats.forEach((s: Splat) => {
+        const splats = this.scene.getElementsByType(ElementType.splat) as Splat[];
+        splats.forEach((s) => {
             s.entity.enabled = s === splat;
         });
 
+        // 'intersect' picks against the currently-selected set (same render as
+        // 'remove') so unselected splats can't occlude selected ones and skew it.
+        const pickOp = mode === 'intersect' ? 'remove' : mode;
+
         // Set picker uniforms
-        this.device.scope.resolve('pickOp').setValue(['add', 'remove', 'set'].indexOf(mode));
+        this.device.scope.resolve('pickOp').setValue(['add', 'remove', 'set'].indexOf(pickOp));
         this.device.scope.resolve('pickMode').setValue(0);
 
         // Render ID picking pass
@@ -116,7 +120,7 @@ class Picker {
         this.renderPass.render();
 
         // Re-enable all splats
-        splats.forEach((s: Splat) => {
+        splats.forEach((s) => {
             s.entity.enabled = true;
         });
     }
@@ -181,8 +185,8 @@ class Picker {
         const emptyMap = new Map();
 
         // Hide non-selected elements
-        const splats = scene.getElementsByType(ElementType.splat);
-        splats.forEach((s: Splat) => {
+        const splats = scene.getElementsByType(ElementType.splat) as Splat[];
+        splats.forEach((s) => {
             s.entity.enabled = s === splat;
         });
 
@@ -198,7 +202,7 @@ class Picker {
         this.renderPass.render();
 
         // Re-enable all splats
-        splats.forEach((s: Splat) => {
+        splats.forEach((s) => {
             s.entity.enabled = true;
         });
     }

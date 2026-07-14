@@ -1,13 +1,13 @@
 import {
     math,
     ADDRESS_CLAMP_TO_EDGE,
+    ASPECT_MANUAL,
     FILTER_NEAREST,
     PIXELFORMAT_RGBA8,
     PIXELFORMAT_RGBA16F,
     PIXELFORMAT_DEPTH,
     PROJECTION_ORTHOGRAPHIC,
     PROJECTION_PERSPECTIVE,
-    TONEMAP_NONE,
     TONEMAP_ACES,
     TONEMAP_ACES2,
     TONEMAP_FILMIC,
@@ -18,6 +18,7 @@ import {
     Color,
     Entity,
     Mat4,
+    Quat,
     Ray,
     RenderPass,
     RenderPassForward,
@@ -81,6 +82,10 @@ class Camera extends Element {
 
     controlMode: 'orbit' | 'fly' = 'orbit';
 
+    // during fly-mode look, stores the camera position that must stay fixed
+    // while the azim/elev tween smoothly converges
+    lookCameraPos: Vec3 | null = null;
+
     picker: Picker;
 
     mainCamera: Entity;
@@ -99,6 +104,16 @@ class Camera extends Element {
 
     // overridden target size
     targetSizeOverride: { width: number, height: number } = null;
+
+    // when set, overrides the tween-driven pose, fov and clipping planes each
+    // update (used by 360 capture to render arbitrary face orientations that
+    // the azim/elev pose system cannot express)
+    poseOverride: { position: Vec3, rotation: Quat, fov: number, near: number, far: number } | null = null;
+
+    // world transform of the user-facing camera pose. while a pose override
+    // is active this holds the last tween-driven pose, so ui elements (view
+    // cube, overlays) don't track the internal capture poses
+    displayTransform = new Mat4();
 
     renderOverlays = true;
 
@@ -136,7 +151,6 @@ class Camera extends Element {
     // tonemapping
     set tonemapping(value: string) {
         const mapping: Record<string, number> = {
-            none: TONEMAP_NONE,
             linear: TONEMAP_LINEAR,
             neutral: TONEMAP_NEUTRAL,
             aces: TONEMAP_ACES,
@@ -155,7 +169,6 @@ class Camera extends Element {
 
     get tonemapping() {
         switch (this.camera.toneMapping) {
-            case TONEMAP_NONE: return 'none';
             case TONEMAP_LINEAR: return 'linear';
             case TONEMAP_NEUTRAL: return 'neutral';
             case TONEMAP_ACES: return 'aces';
@@ -163,7 +176,7 @@ class Camera extends Element {
             case TONEMAP_FILMIC: return 'filmic';
             case TONEMAP_HEJL: return 'hejl';
         }
-        return 'none';
+        return 'linear';
     }
 
     // near clip
@@ -208,7 +221,27 @@ class Camera extends Element {
     }
 
     setFocalPoint(point: Vec3, dampingFactorFactor: number = 1) {
+        this.lookCameraPos = null;
         this.focalPointTween.goto(point, dampingFactorFactor * this.scene.config.controls.dampingFactor);
+    }
+
+    // Fly mode: rotate camera around itself, keeping the camera position fixed
+    look(dx: number, dy: number) {
+        const sensitivity = this.scene.config.controls.orbitSensitivity;
+        const d = this.distance * this.sceneRadius / this.fovFactor;
+
+        Camera.calcForwardVec(forwardVec, this.azim, this.elevation);
+        const cameraPos = this.focalPoint.add(forwardVec.clone().mulScalar(d));
+
+        const azim = this.azim - dx * sensitivity;
+        const elev = this.elevation - dy * sensitivity;
+
+        Camera.calcForwardVec(forwardVec, azim, elev);
+        const focalPoint = cameraPos.clone().sub(forwardVec.clone().mulScalar(d));
+
+        this.setAzimElev(azim, elev);
+        this.focalPointTween.goto(focalPoint, this.scene.config.controls.dampingFactor);
+        this.lookCameraPos = cameraPos;
     }
 
     setAzimElev(azim: number, elev: number, dampingFactorFactor: number = 1) {
@@ -231,6 +264,8 @@ class Camera extends Element {
     }
 
     setDistance(distance: number, dampingFactorFactor: number = 1) {
+        this.lookCameraPos = null;
+
         const controls = this.scene.config.controls;
 
         // clamp
@@ -248,6 +283,13 @@ class Camera extends Element {
         this.setFocalPoint(target, dampingFactorFactor);
         this.setAzimElev(azim, elev, dampingFactorFactor);
         this.setDistance(l / this.sceneRadius * this.fovFactor, dampingFactorFactor);
+    }
+
+    // set or clear the pose override and apply it immediately so subsequent
+    // splat sorting and rendering see the new transform
+    setPoseOverride(override: Camera['poseOverride']) {
+        this.poseOverride = override;
+        this.onUpdate(0);
     }
 
     // transform the world space coordinate to normalized screen coordinate
@@ -274,6 +316,9 @@ class Camera extends Element {
             scene.splatLayer.id,
             scene.gizmoLayer.id
         ];
+
+        // use manual aspect ratio mode so we can set it based on targetSize
+        camera.aspectRatioMode = ASPECT_MANUAL;
 
         // create render passes
         const device = scene.graphicsDevice;
@@ -398,7 +443,7 @@ class Camera extends Element {
         this.splatPass?.destroy();
         this.gizmoPass?.destroy();
         this.finalPass?.destroy();
-        this.camera.renderPasses = null;
+        this.camera.framePasses = null;
 
         scene.cameraRoot.removeChild(this.mainCamera);
 
@@ -520,7 +565,7 @@ class Camera extends Element {
             this.finalPass.init(null);
 
             // assign render passes to camera
-            this.camera.renderPasses = [this.clearPass, this.mainPass, this.splatPass, this.gizmoPass, this.finalPass];
+            this.camera.framePasses = [this.clearPass, this.mainPass, this.splatPass, this.gizmoPass, this.finalPass];
         } else {
             // resize existing render targets
             const { splatTarget, colorTarget, workTarget } = this;
@@ -532,6 +577,7 @@ class Camera extends Element {
         }
 
         this.camera.horizontalFov = width > height;
+        this.camera.aspectRatio = width / height;
         scene.events.fire('camera.resize', { width, height });
     }
 
@@ -548,14 +594,34 @@ class Camera extends Element {
         const distance = this.distanceTween.value;
 
         Camera.calcForwardVec(forwardVec, azimElev.azim, azimElev.elev);
-        cameraPosition.copy(forwardVec);
-        cameraPosition.mulScalar(distance.distance * this.sceneRadius / this.fovFactor);
-        cameraPosition.add(this.focalPointTween.value);
 
-        this.mainCamera.setLocalPosition(cameraPosition);
-        this.mainCamera.setLocalEulerAngles(azimElev.elev, azimElev.azim, 0);
+        if (this.lookCameraPos) {
+            cameraPosition.copy(this.lookCameraPos);
+            if (this.azimElevTween.timer >= this.azimElevTween.transitionTime) {
+                this.lookCameraPos = null;
+            }
+        } else {
+            cameraPosition.copy(forwardVec);
+            cameraPosition.mulScalar(distance.distance * this.sceneRadius / this.fovFactor);
+            cameraPosition.add(this.focalPointTween.value);
+        }
 
-        this.fitClippingPlanes(this.mainCamera.getLocalPosition(), this.mainCamera.forward);
+        if (this.poseOverride) {
+            // cameraRoot has identity transform, so local space is world space
+            const { position, rotation, fov, near, far } = this.poseOverride;
+            this.mainCamera.setLocalPosition(position);
+            this.mainCamera.setLocalRotation(rotation);
+            this.camera.fov = fov;
+            this.near = near;
+            this.far = far;
+        } else {
+            this.mainCamera.setLocalPosition(cameraPosition);
+            this.mainCamera.setLocalEulerAngles(azimElev.elev, azimElev.azim, 0);
+
+            this.fitClippingPlanes(this.mainCamera.getLocalPosition(), this.mainCamera.forward);
+
+            this.displayTransform.copy(this.mainCamera.getWorldTransform());
+        }
 
         const { camera } = this.mainCamera;
         const { targetSize } = this;
@@ -614,12 +680,9 @@ class Camera extends Element {
     }
 
     get fovFactor() {
-        // we set the fov of the longer axis. here we get the fov of the other (smaller) axis so framing
-        // doesn't cut off the scene.
-        const { width, height } = this.targetSize;
-        const aspect = (width && height) ? this.camera.horizontalFov ? height / width : width / height : 1;
-        const fov = 2 * Math.atan(Math.tan(this.fov * math.DEG_TO_RAD * 0.5) * aspect);
-        return Math.sin(fov * 0.5);
+        // use the larger axis fov (which is always this.fov) so camera distance
+        // stays constant regardless of viewport aspect ratio.
+        return Math.sin(this.fov * math.DEG_TO_RAD * 0.5);
     }
 
     getRay(screenX: number, screenY: number, ray: Ray) {
@@ -703,7 +766,7 @@ class Camera extends Element {
     // pick mode
 
     // render picker contents
-    pickPrep(splat: Splat, mode: 'add' | 'remove' | 'set') {
+    pickPrep(splat: Splat, mode: 'add' | 'remove' | 'set' | 'intersect') {
         this.picker.prepareId(splat, mode);
     }
 
@@ -741,11 +804,15 @@ class Camera extends Element {
     startOffscreenMode(width: number, height: number) {
         this.targetSizeOverride = { width, height };
         this.finalPass.enabled = false;
+        this.rebuildRenderTargets();
+        this.onUpdate(0);
     }
 
     endOffscreenMode() {
         this.targetSizeOverride = null;
         this.finalPass.enabled = true;
+        this.rebuildRenderTargets();
+        this.onUpdate(0);
     }
 
     get targetSize() {

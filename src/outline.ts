@@ -28,14 +28,14 @@ class Outline extends Element {
 
         const { camera, events } = this.scene;
 
-        camera.camera.on('preRenderLayer', (layer: Layer, transparent: boolean) => {
+        camera.camera.on('postRenderLayer', (layer: Layer, transparent: boolean) => {
             // only apply when outline mode is enabled
             if (!this.enabled || !events.invoke('view.outlineSelection')) {
                 return;
             }
 
-            // apply at the start of the gizmo layer
-            if (layer !== this.scene.gizmoLayer || transparent) {
+            // apply at the end of the gizmo layer (after overlay renders)
+            if (layer !== this.scene.gizmoLayer || !transparent) {
                 return;
             }
 
@@ -43,7 +43,7 @@ class Outline extends Element {
 
             this.renderPass.execute({
                 srcTexture: camera.workTarget.colorBuffer,
-                alphaCutoff: events.invoke('camera.mode') === 'rings' ? 0.0 : 0.4,
+                alphaCutoff: events.invoke('camera.mode') === 'rings' ? 0.0 : 0.8,
                 clr
             });
         });

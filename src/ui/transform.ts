@@ -2,7 +2,7 @@ import { Container, ContainerArgs, Label, NumericInput, VectorInput } from '@pla
 import { Quat, Vec3 } from 'playcanvas';
 
 import { Events } from '../events';
-import { localize } from './localization';
+import { i18n } from './localization';
 import { Pivot } from '../pivot';
 
 const v = new Vec3();
@@ -22,9 +22,9 @@ class Transform extends Container {
         });
 
         const positionLabel = new Label({
-            class: 'transform-label',
-            text: localize('panel.scene-manager.transform.position')
+            class: 'transform-label'
         });
+        i18n.bindText(positionLabel, 'panel.scene-manager.transform.position');
 
         const positionVector = new VectorInput({
             class: 'transform-expand',
@@ -44,9 +44,9 @@ class Transform extends Container {
         });
 
         const rotationLabel = new Label({
-            class: 'transform-label',
-            text: localize('panel.scene-manager.transform.rotation')
+            class: 'transform-label'
         });
+        i18n.bindText(rotationLabel, 'panel.scene-manager.transform.rotation');
 
         const rotationVector = new VectorInput({
             class: 'transform-expand',
@@ -66,9 +66,9 @@ class Transform extends Container {
         });
 
         const scaleLabel = new Label({
-            class: 'transform-label',
-            text: localize('panel.scene-manager.transform.scale')
+            class: 'transform-label'
         });
+        i18n.bindText(scaleLabel, 'panel.scene-manager.transform.scale');
 
         const scaleInput = new NumericInput({
             class: 'transform-expand',

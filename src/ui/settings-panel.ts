@@ -1,0 +1,648 @@
+import { BooleanInput, Button, ColorPicker, Container, Label, SelectInput, SliderInput } from '@playcanvas/pcui';
+import { Color } from 'playcanvas';
+
+import { Events } from '../events';
+import { ShortcutManager } from '../shortcut-manager';
+import { i18n } from './localization';
+import { Tooltips } from './tooltips';
+
+class SettingsPanel extends Container {
+    constructor(events: Events, tooltips: Tooltips, args = {}) {
+        args = {
+            ...args,
+            id: 'settings-panel',
+            class: 'panel',
+            hidden: true
+        };
+
+        super(args);
+
+        // stop pointer events bubbling
+        ['pointerdown', 'pointerup', 'pointermove', 'wheel', 'dblclick'].forEach((eventName) => {
+            this.dom.addEventListener(eventName, (event: Event) => event.stopPropagation());
+        });
+
+        // header
+
+        const header = new Container({
+            class: 'panel-header'
+        });
+
+        const icon = new Label({
+            text: '\uE403',
+            class: 'panel-header-icon'
+        });
+
+        const label = new Label({
+            class: 'panel-header-label'
+        });
+        i18n.bindText(label, 'panel.settings');
+
+        header.append(icon);
+        header.append(label);
+
+        // language
+
+        const languageRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const languageLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(languageLabel, 'panel.settings.language');
+
+        const languageSelection = new SelectInput({
+            class: 'settings-panel-row-select',
+            // 'auto' unless the user has explicitly pinned a language
+            defaultValue: i18n.storedLanguage ?? 'auto'
+        });
+        // 'auto' label follows the language; the per-language names are shown in
+        // their native form so they're recognisable regardless of current UI lang
+        i18n.bindOptions(languageSelection, () => [
+            { v: 'auto', t: i18n.t('panel.settings.language.auto') },
+            ...i18n.languages.map(l => ({ v: l.code, t: l.name }))
+        ]);
+
+        // switch language live (no reload). a stored choice persists across
+        // sessions; 'auto' clears it and reverts to the browser locale.
+        languageSelection.on('change', (value: string) => {
+            i18n.setLanguage(value === 'auto' ? null : value);
+        });
+
+        languageRow.append(languageLabel);
+        languageRow.append(languageSelection);
+
+        // colors
+
+        const clrRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const clrLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(clrLabel, 'panel.settings.colors');
+
+        const clrPickers = new Container({
+            class: 'settings-panel-row-pickers'
+        });
+
+        const bgClrPicker = new ColorPicker({
+            class: 'settings-panel-row-picker',
+            channels: 3,
+            value: [0, 0, 0]
+        });
+
+        const selectedClrPicker = new ColorPicker({
+            class: 'settings-panel-row-picker',
+            channels: 4,
+            value: [0, 0, 0, 1]
+        });
+
+        const unselectedClrPicker = new ColorPicker({
+            class: 'settings-panel-row-picker',
+            channels: 4,
+            value: [0, 0, 0, 1]
+        });
+
+        const lockedClrPicker = new ColorPicker({
+            class: 'settings-panel-row-picker',
+            channels: 4,
+            value: [0, 0, 0, 1]
+        });
+
+        const toArray = (clr: Color) => {
+            return [clr.r, clr.g, clr.b, clr.a];
+        };
+
+        events.on('bgClr', (clr: Color) => {
+            bgClrPicker.value = toArray(clr);
+        });
+
+        events.on('selectedClr', (clr: Color) => {
+            selectedClrPicker.value = toArray(clr);
+        });
+
+        events.on('unselectedClr', (clr: Color) => {
+            unselectedClrPicker.value = toArray(clr);
+        });
+
+        events.on('lockedClr', (clr: Color) => {
+            lockedClrPicker.value = toArray(clr);
+        });
+
+        clrPickers.append(bgClrPicker);
+        clrPickers.append(selectedClrPicker);
+        clrPickers.append(unselectedClrPicker);
+        clrPickers.append(lockedClrPicker);
+
+        clrRow.append(clrLabel);
+        clrRow.append(clrPickers);
+
+        // tonemapping
+
+        const tonemappingRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const tonemappingLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(tonemappingLabel, 'panel.settings.tonemapping');
+
+        const tonemappingSelection = new SelectInput({
+            class: 'settings-panel-row-select',
+            defaultValue: 'linear'
+        });
+        i18n.bindOptions(tonemappingSelection, () => [
+            { v: 'linear', t: i18n.t('panel.settings.tonemapping.linear') },
+            { v: 'neutral', t: i18n.t('panel.settings.tonemapping.neutral') },
+            { v: 'aces', t: i18n.t('panel.settings.tonemapping.aces') },
+            { v: 'aces2', t: i18n.t('panel.settings.tonemapping.aces2') },
+            { v: 'filmic', t: i18n.t('panel.settings.tonemapping.filmic') },
+            { v: 'hejl', t: i18n.t('panel.settings.tonemapping.hejl') }
+        ]);
+
+        tonemappingRow.append(tonemappingLabel);
+        tonemappingRow.append(tonemappingSelection);
+
+        // camera fov
+
+        const fovRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const fovLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(fovLabel, 'panel.settings.fov');
+
+        const fovSlider = new SliderInput({
+            class: 'settings-panel-row-slider',
+            min: 10,
+            max: 120,
+            precision: 1,
+            value: 60
+        });
+
+        fovRow.append(fovLabel);
+        fovRow.append(fovSlider);
+
+        // fov auto dolly
+
+        const fovDollyRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const fovDollyLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(fovDollyLabel, 'panel.settings.fov-dolly');
+
+        const fovDollyToggle = new BooleanInput({
+            type: 'toggle',
+            class: 'settings-panel-row-toggle',
+            value: false
+        });
+
+        fovDollyRow.append(fovDollyLabel);
+        fovDollyRow.append(fovDollyToggle);
+
+        // sh bands
+        const shBandsRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const shBandsLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(shBandsLabel, 'panel.settings.sh-bands');
+
+        const shBandsSlider = new SliderInput({
+            class: 'settings-panel-row-slider',
+            min: 0,
+            max: 3,
+            precision: 0,
+            value: 3
+        });
+
+        shBandsRow.append(shBandsLabel);
+        shBandsRow.append(shBandsSlider);
+
+        // camera fly speed
+
+        const cameraFlySpeedRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const cameraFlySpeedLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(cameraFlySpeedLabel, 'panel.settings.fly-speed');
+
+        const cameraFlySpeedSlider = new SliderInput({
+            class: 'settings-panel-row-slider',
+            min: 0.1,
+            max: 30,
+            precision: 1,
+            value: 1
+        });
+
+        cameraFlySpeedRow.append(cameraFlySpeedLabel);
+        cameraFlySpeedRow.append(cameraFlySpeedSlider);
+
+        // centers size
+
+        const centersSizeRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const centersSizeLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(centersSizeLabel, 'panel.settings.centers-size');
+
+        const centersSizeSlider = new SliderInput({
+            class: 'settings-panel-row-slider',
+            min: 0,
+            max: 10,
+            precision: 1,
+            value: 2
+        });
+
+        centersSizeRow.append(centersSizeLabel);
+        centersSizeRow.append(centersSizeSlider);
+
+        // centers gaussian color
+        const centersColorRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const centersColorLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(centersColorLabel, 'panel.settings.centers-gaussian-color');
+
+        const centersColorToggle = new BooleanInput({
+            type: 'toggle',
+            class: 'settings-panel-row-toggle',
+            value: false
+        });
+
+        centersColorRow.append(centersColorLabel);
+        centersColorRow.append(centersColorToggle);
+
+        // outline selection
+
+        const outlineSelectionRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const outlineSelectionLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(outlineSelectionLabel, 'panel.settings.outline-selection');
+
+        const outlineSelectionToggle = new BooleanInput({
+            type: 'toggle',
+            class: 'settings-panel-row-toggle',
+            value: false
+        });
+
+        outlineSelectionRow.append(outlineSelectionLabel);
+        outlineSelectionRow.append(outlineSelectionToggle);
+
+        // show grid
+
+        const showGridRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const showGridLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(showGridLabel, 'panel.settings.show-grid');
+
+        const showGridToggle = new BooleanInput({
+            type: 'toggle',
+            class: 'settings-panel-row-toggle',
+            value: true
+        });
+
+        showGridRow.append(showGridLabel);
+        showGridRow.append(showGridToggle);
+
+        // show bound
+
+        const showBoundRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const showBoundLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(showBoundLabel, 'panel.settings.show-bound');
+
+        const showBoundToggle = new BooleanInput({
+            type: 'toggle',
+            class: 'settings-panel-row-toggle',
+            value: true
+        });
+
+        showBoundRow.append(showBoundLabel);
+        showBoundRow.append(showBoundToggle);
+
+        // show dimensions
+
+        const showBoundDimensionsRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const showBoundDimensionsLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(showBoundDimensionsLabel, 'panel.settings.show-bound-dimensions');
+
+        const showBoundDimensionsToggle = new BooleanInput({
+            type: 'toggle',
+            class: 'settings-panel-row-toggle',
+            value: false
+        });
+
+        showBoundDimensionsRow.append(showBoundDimensionsLabel);
+        showBoundDimensionsRow.append(showBoundDimensionsToggle);
+
+        // show camera poses
+
+        const showCameraPosesRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const showCameraPosesLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(showCameraPosesLabel, 'panel.settings.show-camera-poses');
+
+        const showCameraPosesToggle = new BooleanInput({
+            type: 'toggle',
+            class: 'settings-panel-row-toggle',
+            value: false
+        });
+
+        showCameraPosesRow.append(showCameraPosesLabel);
+        showCameraPosesRow.append(showCameraPosesToggle);
+
+        // show camera info
+
+        const showCameraInfoRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const showCameraInfoLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(showCameraInfoLabel, 'panel.settings.show-camera-info');
+
+        const showCameraInfoToggle = new BooleanInput({
+            type: 'toggle',
+            class: 'settings-panel-row-toggle',
+            value: false
+        });
+
+        showCameraInfoRow.append(showCameraInfoLabel);
+        showCameraInfoRow.append(showCameraInfoToggle);
+
+        // reset preferences to defaults
+
+        const resetRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const resetButton = new Button({
+            class: 'settings-panel-row-button'
+        });
+        i18n.bindText(resetButton, 'panel.settings.reset');
+
+        resetRow.append(resetButton);
+
+        this.append(header);
+        this.append(languageRow);
+        this.append(clrRow);
+        this.append(tonemappingRow);
+        this.append(fovRow);
+        this.append(fovDollyRow);
+        this.append(shBandsRow);
+        this.append(cameraFlySpeedRow);
+        this.append(centersSizeRow);
+        this.append(centersColorRow);
+        this.append(outlineSelectionRow);
+        this.append(showGridRow);
+        this.append(showBoundRow);
+        this.append(showBoundDimensionsRow);
+        this.append(showCameraPosesRow);
+        this.append(showCameraInfoRow);
+        this.append(resetRow);
+
+        // handle panel visibility
+
+        const setVisible = (visible: boolean) => {
+            if (visible === this.hidden) {
+                this.hidden = !visible;
+                events.fire('settingsPanel.visible', visible);
+            }
+        };
+
+        events.function('settingsPanel.visible', () => {
+            return !this.hidden;
+        });
+
+        events.on('settingsPanel.setVisible', (visible: boolean) => {
+            setVisible(visible);
+        });
+
+        events.on('settingsPanel.toggleVisible', () => {
+            setVisible(this.hidden);
+        });
+
+        events.on('colorPanel.visible', (visible: boolean) => {
+            if (visible) {
+                setVisible(false);
+            }
+        });
+
+        // sh bands
+
+        events.on('view.bands', (bands: number) => {
+            shBandsSlider.value = bands;
+        });
+
+        shBandsSlider.on('change', (value: number) => {
+            events.fire('view.setBands', value);
+        });
+
+        // splat size
+
+        events.on('camera.splatSize', (value: number) => {
+            centersSizeSlider.value = value;
+        });
+
+        centersSizeSlider.on('change', (value: number) => {
+            events.fire('camera.setSplatSize', value);
+            events.fire('camera.setOverlay', true);
+            events.fire('camera.setMode', 'centers');
+        });
+
+        // centers gaussian color
+        events.on('view.centersUseGaussianColor', (value: boolean) => {
+            centersColorToggle.value = value;
+        });
+
+        centersColorToggle.on('change', (value: boolean) => {
+            events.fire('view.setCentersUseGaussianColor', value);
+        });
+
+        // camera speed
+
+        events.on('camera.flySpeed', (value: number) => {
+            cameraFlySpeedSlider.value = value;
+        });
+
+        cameraFlySpeedSlider.on('change', (value: number) => {
+            events.fire('camera.setFlySpeed', value);
+        });
+
+        // fov auto dolly
+
+        events.on('camera.fovDolly', (value: boolean) => {
+            fovDollyToggle.value = value;
+        });
+
+        fovDollyToggle.on('change', (value: boolean) => {
+            events.fire('camera.setFovDolly', value);
+        });
+
+        // outline selection
+
+        events.on('view.outlineSelection', (value: boolean) => {
+            outlineSelectionToggle.value = value;
+        });
+
+        outlineSelectionToggle.on('change', (value: boolean) => {
+            events.fire('view.setOutlineSelection', value);
+        });
+
+        // show grid
+
+        events.on('grid.visible', (visible: boolean) => {
+            showGridToggle.value = visible;
+        });
+
+        showGridToggle.on('change', () => {
+            events.fire('grid.setVisible', showGridToggle.value);
+        });
+
+        // show bound
+
+        events.on('camera.bound', (visible: boolean) => {
+            showBoundToggle.value = visible;
+        });
+
+        showBoundToggle.on('change', () => {
+            events.fire('camera.setBound', showBoundToggle.value);
+        });
+
+        // show dimensions
+
+        events.on('camera.boundDimensions', (visible: boolean) => {
+            showBoundDimensionsToggle.value = visible;
+        });
+
+        showBoundDimensionsToggle.on('change', () => {
+            events.fire('camera.setBoundDimensions', showBoundDimensionsToggle.value);
+        });
+
+        // show camera poses
+
+        events.on('camera.showPoses', (visible: boolean) => {
+            showCameraPosesToggle.value = visible;
+        });
+
+        showCameraPosesToggle.on('change', () => {
+            events.fire('camera.setShowPoses', showCameraPosesToggle.value);
+        });
+
+        // show camera info
+
+        events.on('camera.showInfo', (visible: boolean) => {
+            showCameraInfoToggle.value = visible;
+        });
+
+        showCameraInfoToggle.on('change', () => {
+            events.fire('camera.setShowInfo', showCameraInfoToggle.value);
+        });
+
+        // background color
+
+        bgClrPicker.on('change', (value: number[]) => {
+            events.fire('setBgClr', new Color(value[0], value[1], value[2]));
+        });
+
+        selectedClrPicker.on('change', (value: number[]) => {
+            events.fire('setSelectedClr', new Color(value[0], value[1], value[2], value[3]));
+        });
+
+        unselectedClrPicker.on('change', (value: number[]) => {
+            events.fire('setUnselectedClr', new Color(value[0], value[1], value[2], value[3]));
+        });
+
+        lockedClrPicker.on('change', (value: number[]) => {
+            events.fire('setLockedClr', new Color(value[0], value[1], value[2], value[3]));
+        });
+
+        // camera fov
+
+        events.on('camera.fov', (fov: number) => {
+            fovSlider.value = fov;
+        });
+
+        fovSlider.on('change', (value: number) => {
+            events.fire('camera.setFov', value);
+        });
+
+        // tonemapping
+
+        events.on('camera.tonemapping', (tonemapping: string) => {
+            tonemappingSelection.value = tonemapping;
+        });
+
+        tonemappingSelection.on('change', (value: string) => {
+            events.fire('camera.setTonemapping', value);
+        });
+
+        // reset preferences
+
+        resetButton.on('click', () => {
+            events.fire('preferences.reset');
+        });
+
+        // reset reverts language to automatic; sync the selector (its change
+        // handler makes the equivalent setLanguage(null) call idempotently)
+        events.on('preferences.reset', () => {
+            languageSelection.value = 'auto';
+        });
+
+        // tooltips
+        const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
+        const shortcut = shortcutManager.formatShortcut('grid.toggleVisible');
+        tooltips.register(showGridLabel, () => i18n.formatTooltipWithShortcut(i18n.t('panel.settings.show-grid'), shortcut), 'left');
+        const cameraInfoShortcut = shortcutManager.formatShortcut('camera.toggleShowInfo');
+        tooltips.register(showCameraInfoLabel, () => i18n.formatTooltipWithShortcut(i18n.t('panel.settings.show-camera-info'), cameraInfoShortcut), 'left');
+        tooltips.register(bgClrPicker, () => i18n.t('panel.settings.background-color'), 'left');
+        tooltips.register(selectedClrPicker, () => i18n.t('panel.settings.selected-color'), 'top');
+        tooltips.register(unselectedClrPicker, () => i18n.t('panel.settings.unselected-color'), 'top');
+        tooltips.register(lockedClrPicker, () => i18n.t('panel.settings.locked-color'), 'top');
+    }
+}
+
+export { SettingsPanel };

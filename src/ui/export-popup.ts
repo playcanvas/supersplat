@@ -1,10 +1,10 @@
-import { Button, ColorPicker, Container, Element, Label, SelectInput, SliderInput, TextInput, BooleanInput } from '@playcanvas/pcui';
+import { BooleanInput, Button, ColorPicker, Container, Element, Label, SelectInput, SliderInput, TextInput } from '@playcanvas/pcui';
 
 import { Pose } from '../camera-poses';
-import { localize } from './localization';
+import { i18n } from './localization';
 import { Events } from '../events';
 import { ExportType, SceneExportOptions } from '../file-handler';
-import { AnimTrack, ExperienceSettings } from '../splat-serialize';
+import { AnimTrack, ExperienceSettings, defaultPostEffectSettings } from '../splat-serialize';
 import sceneExport from './svg/export.svg';
 
 const createSvg = (svgString: string, args = {}) => {
@@ -16,8 +16,19 @@ const createSvg = (svgString: string, args = {}) => {
 };
 
 const removeKnownExtension = (filename: string) => {
-    // remove known extensions
-    const knownExtensions = ['.compressed.ply', '.ply', '.splat', '.sog', '.html', '.zip'];
+    // remove known extensions (ordered from longest to shortest for compound extensions)
+    const knownExtensions = [
+        '.compressed.ply',
+        '.ksplat',
+        '.splat',
+        '.html',
+        '.lcc2',
+        '.ply',
+        '.sog',
+        '.spz',
+        '.lcc',
+        '.zip'
+    ];
 
     for (let i = 0; i < knownExtensions.length; ++i) {
         const ext = knownExtensions[i];
@@ -57,9 +68,9 @@ class ExportPopup extends Container {
         });
 
         const headerText = new Label({
-            id: 'header',
-            text: localize('popup.export.header')
+            id: 'header'
         });
+        i18n.bindText(headerText, 'popup.export.header');
 
         header.append(createSvg(sceneExport, {
             id: 'icon'
@@ -78,60 +89,47 @@ class ExportPopup extends Container {
         });
 
         const viewerTypeLabel = new Label({
-            class: 'label',
-            text: localize('popup.export.type')
+            class: 'label'
         });
+        i18n.bindText(viewerTypeLabel, 'popup.export.type');
 
         const viewerTypeSelect = new SelectInput({
             class: 'select',
-            defaultValue: 'html',
-            options: [
-                { v: 'html', t: localize('popup.export.html') },
-                { v: 'zip', t: localize('popup.export.package') }
-            ]
+            defaultValue: 'html'
         });
+        i18n.bindOptions(viewerTypeSelect, () => [
+            { v: 'html', t: i18n.t('popup.export.html') },
+            { v: 'zip', t: i18n.t('popup.export.package') }
+        ]);
 
         viewerTypeRow.append(viewerTypeLabel);
         viewerTypeRow.append(viewerTypeSelect);
 
-        // viewer: camera start position
-
-        const startRow = new Container({
-            class: 'row'
-        });
-
-        const startLabel = new Label({
-            class: 'label',
-            text: localize('popup.export.start-position')
-        });
-
-        const startSelect = new SelectInput({
-            class: 'select',
-            defaultValue: 'viewport',
-            options: [
-                { v: 'default', t: localize('popup.export.default') },
-                { v: 'viewport', t: localize('popup.export.viewport') },
-                { v: 'pose', t: localize('popup.export.pose-camera') }
-            ]
-        });
-
-        startRow.append(startLabel);
-        startRow.append(startSelect);
-
         // viewer: animation
 
-        const animationLabel = new Label({ class: 'label', text: localize('popup.export.animation') });
-        const animationSelect = new SelectInput({
-            class: 'select',
-            defaultValue: 'none',
-            options: [
-                { v: 'none', t: localize('popup.export.animation.none') },
-                { v: 'track', t: localize('popup.export.animation.track') }
-            ]
-        });
+        const animationLabel = new Label({ class: 'label' });
+        i18n.bindText(animationLabel, 'popup.export.animation');
+        const animationToggle = new BooleanInput({ class: 'boolean', type: 'toggle', value: false });
         const animationRow = new Container({ class: 'row' });
         animationRow.append(animationLabel);
-        animationRow.append(animationSelect);
+        animationRow.append(animationToggle);
+
+        // viewer: loop mode
+
+        const loopLabel = new Label({ class: 'label' });
+        i18n.bindText(loopLabel, 'popup.export.loop-mode');
+        const loopSelect = new SelectInput({
+            class: 'select',
+            defaultValue: 'repeat'
+        });
+        i18n.bindOptions(loopSelect, () => [
+            { v: 'none', t: i18n.t('popup.export.loop-mode.none') },
+            { v: 'repeat', t: i18n.t('popup.export.loop-mode.repeat') },
+            { v: 'pingpong', t: i18n.t('popup.export.loop-mode.pingpong') }
+        ]);
+        const loopRow = new Container({ class: 'row' });
+        loopRow.append(loopLabel);
+        loopRow.append(loopSelect);
 
         // viewer: clear color
 
@@ -140,9 +138,9 @@ class ExportPopup extends Container {
         });
 
         const colorLabel = new Label({
-            class: 'label',
-            text: localize('popup.export.background-color')
+            class: 'label'
         });
+        i18n.bindText(colorLabel, 'popup.export.background-color');
 
         const colorPicker = new ColorPicker({
             class: 'color-picker',
@@ -159,9 +157,9 @@ class ExportPopup extends Container {
         });
 
         const fovLabel = new Label({
-            class: 'label',
-            text: localize('popup.export.fov')
+            class: 'label'
         });
+        i18n.bindText(fovLabel, 'popup.export.fov');
 
         const fovSlider = new SliderInput({
             class: 'slider',
@@ -181,9 +179,9 @@ class ExportPopup extends Container {
         });
 
         const compressLabel = new Label({
-            class: 'label',
-            text: localize('popup.export.compress-ply')
+            class: 'label'
         });
+        i18n.bindText(compressLabel, 'popup.export.compress-ply');
 
         const compressBoolean = new BooleanInput({
             class: 'boolean',
@@ -193,28 +191,6 @@ class ExportPopup extends Container {
         compressRow.append(compressLabel);
         compressRow.append(compressBoolean);
 
-        // splats
-
-        const splatsRow = new Container({
-            class: 'row'
-        });
-
-        const splatsLabel = new Label({
-            class: 'label',
-            text: localize('popup.export.splats-select')
-        });
-
-        const splatsSelect = new SelectInput({
-            class: 'select',
-            defaultValue: 'ply',
-            options: [
-                { v: 'all', t: localize('popup.export.splats-select.all') }
-            ]
-        });
-
-        splatsRow.append(splatsLabel);
-        splatsRow.append(splatsSelect);
-
         // spherical harmonic bands
 
         const bandsRow = new Container({
@@ -222,9 +198,9 @@ class ExportPopup extends Container {
         });
 
         const bandsLabel = new Label({
-            class: 'label',
-            text: localize('popup.export.sh-bands')
+            class: 'label'
         });
+        i18n.bindText(bandsLabel, 'popup.export.sh-bands');
 
         const bandsSlider = new SliderInput({
             class: 'slider',
@@ -244,9 +220,9 @@ class ExportPopup extends Container {
         });
 
         const iterationsLabel = new Label({
-            class: 'label',
-            text: localize('popup.export.iterations')
+            class: 'label'
         });
+        i18n.bindText(iterationsLabel, 'popup.export.iterations');
 
         const iterationsSlider = new SliderInput({
             class: 'slider',
@@ -259,6 +235,29 @@ class ExportPopup extends Container {
         iterationsRow.append(iterationsLabel);
         iterationsRow.append(iterationsSlider);
 
+        // spz version
+
+        const spzVersionRow = new Container({
+            class: 'row'
+        });
+
+        const spzVersionLabel = new Label({
+            class: 'label'
+        });
+        i18n.bindText(spzVersionLabel, 'popup.export.spz-version');
+
+        const spzVersionSelect = new SelectInput({
+            class: 'select',
+            defaultValue: '4'
+        });
+        i18n.bindOptions(spzVersionSelect, () => [
+            { v: '4', t: i18n.t('popup.export.spz-version.4') },
+            { v: '3', t: i18n.t('popup.export.spz-version.3') }
+        ]);
+
+        spzVersionRow.append(spzVersionLabel);
+        spzVersionRow.append(spzVersionSelect);
+
         // filename
 
         const filenameRow = new Container({
@@ -266,9 +265,9 @@ class ExportPopup extends Container {
         });
 
         const filenameLabel = new Label({
-            class: 'label',
-            text: localize('popup.export.filename')
+            class: 'label'
         });
+        i18n.bindText(filenameLabel, 'popup.export.filename');
 
         const filenameEntry = new TextInput({
             class: 'text-input'
@@ -280,14 +279,14 @@ class ExportPopup extends Container {
         // content
 
         content.append(viewerTypeRow);
-        content.append(startRow);
         content.append(animationRow);
+        content.append(loopRow);
         content.append(colorRow);
         content.append(fovRow);
         content.append(compressRow);
-        content.append(splatsRow);
         content.append(bandsRow);
         content.append(iterationsRow);
+        content.append(spzVersionRow);
         content.append(filenameRow);
 
         // footer
@@ -295,14 +294,14 @@ class ExportPopup extends Container {
         const footer = new Container({ id: 'footer' });
 
         const cancelButton = new Button({
-            class: 'button',
-            text: localize('popup.cancel')
+            class: 'button'
         });
+        i18n.bindText(cancelButton, 'popup.cancel');
 
         const exportButton = new Button({
-            class: 'button',
-            text: localize('popup.export')
+            class: 'button'
         });
+        i18n.bindText(exportButton, 'popup.export');
 
         footer.append(cancelButton);
         footer.append(exportButton);
@@ -347,32 +346,26 @@ class ExportPopup extends Container {
             updateExtension(viewerTypeSelect.value === 'html' ? '.html' : '.zip');
         });
 
+        animationToggle.on('change', (value: boolean) => {
+            loopSelect.enabled = value;
+        });
+
         const reset = (exportType: ExportType, splatNames: string[], hasPoses: boolean) => {
             const allRows = [
-                viewerTypeRow, startRow, animationRow, colorRow, fovRow, compressRow, splatsRow, bandsRow, iterationsRow, filenameRow
+                viewerTypeRow, animationRow, loopRow, colorRow, fovRow, compressRow, bandsRow, iterationsRow, spzVersionRow, filenameRow
             ];
 
             const activeRows = {
-                ply: [compressRow, splatsRow, bandsRow, filenameRow],
-                splat: [splatsRow, filenameRow],
-                sog: [splatsRow, bandsRow, iterationsRow, filenameRow],
-                viewer: [viewerTypeRow, startRow, animationRow, colorRow, fovRow, splatsRow, bandsRow, filenameRow]
+                ply: [compressRow, bandsRow, filenameRow],
+                splat: [filenameRow],
+                sog: [bandsRow, iterationsRow, filenameRow],
+                spz: [bandsRow, spzVersionRow, filenameRow],
+                viewer: [viewerTypeRow, animationRow, loopRow, colorRow, fovRow, bandsRow, filenameRow]
             }[exportType];
 
             allRows.forEach((r) => {
                 r.hidden = activeRows.indexOf(r) === -1;
             });
-
-            // update splat list
-            splatsSelect.options = [
-                {
-                    v: 'all',
-                    t: localize('popup.export.splats-select.all')
-                },
-                ...splatNames.map((s, i) => ({ v: i.toFixed(0), t: s }))
-            ];
-            splatsSelect.value = 'all';
-            splatsSelect.enabled = splatNames.length > 1;
 
             bandsSlider.value = events.invoke('view.bands');
 
@@ -381,6 +374,9 @@ class ExportPopup extends Container {
 
             // sog
             iterationsSlider.value = 10;
+
+            // spz
+            spzVersionSelect.value = '4';
 
             // filename
             filenameEntry.value = splatNames[0];
@@ -394,6 +390,9 @@ class ExportPopup extends Container {
                 case 'sog':
                     updateExtension('.sog');
                     break;
+                case 'spz':
+                    updateExtension('.spz');
+                    break;
                 case 'viewer':
                     updateExtension(viewerTypeSelect.value === 'html' ? '.html' : '.zip');
                     break;
@@ -402,12 +401,10 @@ class ExportPopup extends Container {
             // viewer
             const bgClr = events.invoke('bgClr');
 
-            startSelect.value = hasPoses ? 'pose' : 'viewport';
-            startSelect.disabledOptions = hasPoses ? {} : { 'pose': startSelect.options[2].t };
-
-            animationSelect.value = hasPoses ? 'track' : 'none';
-            animationSelect.disabledOptions = hasPoses ? { } : { track: animationSelect.options[1].t };
-            animationSelect.enabled = hasPoses;
+            animationToggle.value = hasPoses;
+            animationToggle.enabled = hasPoses;
+            loopSelect.value = 'repeat';
+            loopSelect.enabled = hasPoses;
 
             colorPicker.value = [bgClr.r, bgClr.g, bgClr.b];
 
@@ -435,7 +432,7 @@ class ExportPopup extends Container {
             const assemblePlyOptions = () : SceneExportOptions => {
                 return {
                     filename: filenameEntry.value,
-                    splatIdx: splatsSelect.value === 'all' ? 'all' : splatsSelect.value,
+                    splatIdx: 'all',
                     serializeSettings: {
                         maxSHBands: bandsSlider.value
                     },
@@ -446,7 +443,7 @@ class ExportPopup extends Container {
             const assembleSplatOptions = () : SceneExportOptions => {
                 return {
                     filename: filenameEntry.value,
-                    splatIdx: splatsSelect.value === 'all' ? 'all' : splatsSelect.value,
+                    splatIdx: 'all',
                     serializeSettings: { }
                 };
             };
@@ -454,7 +451,7 @@ class ExportPopup extends Container {
             const assembleSogOptions = () : SceneExportOptions => {
                 return {
                     filename: filenameEntry.value,
-                    splatIdx: splatsSelect.value === 'all' ? 'all' : splatsSelect.value,
+                    splatIdx: 'all',
                     serializeSettings: {
                         maxSHBands: bandsSlider.value
                     },
@@ -462,79 +459,79 @@ class ExportPopup extends Container {
                 };
             };
 
+            const assembleSpzOptions = () : SceneExportOptions => {
+                return {
+                    filename: filenameEntry.value,
+                    splatIdx: 'all',
+                    serializeSettings: {
+                        maxSHBands: bandsSlider.value
+                    },
+                    spzVersion: spzVersionSelect.value === '3' ? 3 : 4
+                };
+            };
+
             const assembleViewerOptions = () : SceneExportOptions => {
-                // extract camera starting pos
-                let pose;
-                switch (startSelect.value) {
-                    case 'pose':
-                        pose = orderedPoses?.[0];
-                        break;
-                    case 'viewport':
-                        pose = events.invoke('camera.getPose');
-                        break;
-                }
+                const fov = fovSlider.value;
+
+                // use current viewport as start pose
+                const pose = events.invoke('camera.getPose');
                 const p = pose?.position;
                 const t = pose?.target;
-
-                const startAnim = (() => {
-                    switch (animationSelect.value) {
-                        case 'none': return 'none';
-                        case 'track': return 'animTrack';
+                const cameras = (p && t) ? [{
+                    initial: {
+                        position: [p.x, p.y, p.z] as [number, number, number],
+                        target: [t.x, t.y, t.z] as [number, number, number],
+                        fov
                     }
-                })();
+                }] : [];
 
-                // extract camera animation
+                const includeAnimation = animationToggle.value;
                 const animTracks: AnimTrack[] = [];
-                switch (startAnim) {
-                    case 'none':
-                        break;
-                    case 'animTrack': {
-                        // use camera poses
-                        const times = [];
-                        const position = [];
-                        const target = [];
-                        for (let i = 0; i < orderedPoses.length; ++i) {
-                            const p = orderedPoses[i];
-                            times.push(p.frame);
-                            position.push(p.position.x, p.position.y, p.position.z);
-                            target.push(p.target.x, p.target.y, p.target.z);
-                        }
 
-                        animTracks.push({
-                            name: 'cameraAnim',
-                            duration: frames / frameRate,
-                            frameRate,
-                            target: 'camera',
-                            loopMode: 'repeat',
-                            interpolation: 'spline',
-                            smoothness,
-                            keyframes: {
-                                times,
-                                values: { position, target }
-                            }
-                        });
-
-                        break;
+                if (includeAnimation && orderedPoses.length > 0) {
+                    const times: number[] = [];
+                    const position: number[] = [];
+                    const target: number[] = [];
+                    const fovKeys: number[] = [];
+                    for (let i = 0; i < orderedPoses.length; ++i) {
+                        const op = orderedPoses[i];
+                        times.push(op.frame);
+                        position.push(op.position.x, op.position.y, op.position.z);
+                        target.push(op.target.x, op.target.y, op.target.z);
+                        fovKeys.push(op.fov ?? fov);
                     }
+
+                    animTracks.push({
+                        name: 'cameraAnim',
+                        duration: frames / frameRate,
+                        frameRate,
+                        loopMode: loopSelect.value as 'none' | 'repeat' | 'pingpong',
+                        interpolation: 'spline',
+                        smoothness,
+                        keyframes: {
+                            times,
+                            values: { position, target, fov: fovKeys }
+                        }
+                    });
                 }
 
+                const bgColor = colorPicker.value.slice(0, 3) as [number, number, number];
+
                 const experienceSettings: ExperienceSettings = {
-                    camera: {
-                        fov: fovSlider.value,
-                        position: p ? [p.x, p.y, p.z] : null,
-                        target: t ? [t.x, t.y, t.z] : null,
-                        startAnim,
-                        animTrack: startAnim === 'animTrack' ? 'cameraAnim' : null
-                    },
-                    background: {
-                        color: colorPicker.value.slice()
-                    },
-                    animTracks
+                    version: 2,
+                    tonemapping: 'none',
+                    highPrecisionRendering: false,
+                    background: { color: bgColor },
+                    postEffectSettings: defaultPostEffectSettings,
+                    animTracks,
+                    cameras,
+                    annotations: [],
+                    startMode: includeAnimation ? 'animTrack' : 'default'
                 };
 
                 return {
                     filename: filenameEntry.value,
-                    splatIdx: splatsSelect.value === 'all' ? 'all' : splatsSelect.value,
+                    splatIdx: 'all',
                     serializeSettings: {
                         maxSHBands: bandsSlider.value
                     },
@@ -560,6 +557,9 @@ class ExportPopup extends Container {
                             break;
                         case 'sog':
                             resolve(assembleSogOptions());
+                            break;
+                        case 'spz':
+                            resolve(assembleSpzOptions());
                             break;
                         case 'viewer':
                             resolve(assembleViewerOptions());

@@ -1,6 +1,7 @@
 import { Container, NumericInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
+import { opFromModifiers } from '../select-op';
 
 type Pt = {x : number, y: number };
 
@@ -24,7 +25,7 @@ class FloodSelection {
         let threshold = 0.2;
         let point: Pt;
         let imageData: ImageData;
-        let lastOp: 'set' | 'add' | 'remove' | null = null;
+        let lastOp: 'set' | 'add' | 'remove' | 'intersect' | null = null;
 
         // ui
         const selectToolbar = new Container({
@@ -48,7 +49,7 @@ class FloodSelection {
 
         canvasContainer.append(selectToolbar);
 
-        const apply = async (op: 'set' | 'add' | 'remove') => {
+        const apply = async (op: 'set' | 'add' | 'remove' | 'intersect') => {
             await events.invoke(
                 'select.byMask',
                 op,
@@ -157,7 +158,7 @@ class FloodSelection {
 
                 await refreshSelection();
 
-                lastOp = e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set');
+                lastOp = opFromModifiers(e);
                 await apply(lastOp);
 
                 context.clearRect(0, 0, canvas.width, canvas.height);

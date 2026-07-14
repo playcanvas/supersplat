@@ -1,8 +1,8 @@
-import { BooleanInput, Button, Container, Element, Label, NumericInput, SelectInput, VectorInput } from '@playcanvas/pcui';
+import { BooleanInput, Button, Container, Element, Label, NumericInput, SelectInput, SliderInput, VectorInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { ImageSettings } from '../render';
-import { localize } from './localization';
+import { i18n } from './localization';
 import sceneExport from './svg/export.svg';
 
 const createSvg = (svgString: string, args = {}) => {
@@ -36,36 +36,67 @@ class ImageSettingsDialog extends Container {
         // header
 
         const headerIcon = createSvg(sceneExport, { id: 'icon' });
-        const headerText = new Label({ id: 'text', text: localize('popup.render-image.header').toUpperCase() });
+        const headerText = new Label({ id: 'text' });
+        i18n.bindText(headerText, () => i18n.t('popup.render-image.header').toUpperCase());
         const header = new Container({ id: 'header' });
         header.append(headerIcon);
         header.append(headerText);
 
+        // projection
+
+        const projectionLabel = new Label({ class: 'label' });
+        i18n.bindText(projectionLabel, 'popup.render-image.projection');
+        const projectionSelect = new SelectInput({
+            class: 'select',
+            defaultValue: 'standard'
+        });
+        i18n.bindOptions(projectionSelect, () => [
+            { v: 'standard', t: i18n.t('popup.render-image.projection-standard') },
+            { v: 'equirect', t: i18n.t('popup.render-image.projection-360') }
+        ]);
+        const projectionRow = new Container({ class: 'row' });
+        projectionRow.append(projectionLabel);
+        projectionRow.append(projectionSelect);
+
         // preset
 
-        const presetLabel = new Label({ class: 'label', text: localize('popup.render-image.preset') });
-        const presetSelect = new SelectInput({
-            class: 'select',
-            defaultValue: 'viewport',
-            options: [
-                { v: 'viewport', t: localize('popup.render-image.resolution-current') },
+        // 360 output is 2:1 equirectangular, capped at 4096 wide to stay
+        // within common encoder dimension limits (mirrors video's presets)
+        const buildPresetOptions = () => {
+            return projectionSelect.value === 'equirect' ? [
+                { v: '360-1k', t: '1024x512' },
+                { v: '360-2k', t: '2048x1024' },
+                { v: '360-4k', t: '3840x1920' },
+                { v: '360-4096', t: '4096x2048' },
+                { v: 'custom', t: i18n.t('popup.render-image.resolution-custom') }
+            ] : [
+                { v: 'viewport', t: i18n.t('popup.render-image.resolution-current') },
                 { v: 'HD', t: 'HD' },
                 { v: 'QHD', t: 'QHD' },
                 { v: '4K', t: '4K' },
-                { v: 'custom', t: localize('popup.render-image.resolution-custom') }
-            ]
+                { v: 'custom', t: i18n.t('popup.render-image.resolution-custom') }
+            ];
+        };
+
+        const presetLabel = new Label({ class: 'label' });
+        i18n.bindText(presetLabel, 'popup.render-image.preset');
+        const presetSelect = new SelectInput({
+            class: 'select',
+            defaultValue: 'viewport'
         });
+        i18n.bindOptions(presetSelect, buildPresetOptions);
         const presetRow = new Container({ class: 'row' });
         presetRow.append(presetLabel);
         presetRow.append(presetSelect);
 
         // resolution
 
-        const resolutionLabel = new Label({ class: 'label', text: localize('popup.render-image.resolution') });
+        const resolutionLabel = new Label({ class: 'label' });
+        i18n.bindText(resolutionLabel, 'popup.render-image.resolution');
         const resolutionValue = new VectorInput({
             class: 'vector-input',
             dimensions: 2,
-            min: 320,
+            min: 4,
             max: 16000,
             precision: 0,
             value: [1024, 768]
@@ -74,9 +105,57 @@ class ImageSettingsDialog extends Container {
         resolutionRow.append(resolutionLabel);
         resolutionRow.append(resolutionValue);
 
+        // format
+
+        const formatLabel = new Label({ class: 'label' });
+        i18n.bindText(formatLabel, 'popup.render-image.format');
+        const formatSelect = new SelectInput({
+            class: 'select',
+            defaultValue: 'png',
+            options: [
+                { v: 'png', t: 'PNG' },
+                { v: 'jpeg', t: 'JPEG' },
+                { v: 'webp', t: 'WebP' }
+            ]
+        });
+        const formatRow = new Container({ class: 'row' });
+        formatRow.append(formatLabel);
+        formatRow.append(formatSelect);
+
+        // jpeg quality
+
+        const qualityLabel = new Label({ class: 'label' });
+        i18n.bindText(qualityLabel, 'popup.render-image.quality');
+        const qualitySlider = new SliderInput({
+            class: 'slider',
+            min: 1,
+            max: 100,
+            precision: 0,
+            value: 90
+        });
+        const qualityRow = new Container({ class: 'row' });
+        qualityRow.append(qualityLabel);
+        qualityRow.append(qualitySlider);
+
+        // hidden until jpeg is selected
+        qualityRow.hidden = true;
+
+        // level horizon (360 only)
+
+        const levelHorizonLabel = new Label({ class: 'label' });
+        i18n.bindText(levelHorizonLabel, 'popup.render-image.level-horizon');
+        const levelHorizonBoolean = new BooleanInput({ class: 'boolean', value: true });
+        const levelHorizonRow = new Container({ class: 'row' });
+        levelHorizonRow.append(levelHorizonLabel);
+        levelHorizonRow.append(levelHorizonBoolean);
+
+        // hidden until 360 projection is selected
+        levelHorizonRow.hidden = true;
+
         // transparent background
 
-        const transparentBgLabel = new Label({ class: 'label', text: localize('popup.render-image.transparent-bg') });
+        const transparentBgLabel = new Label({ class: 'label' });
+        i18n.bindText(transparentBgLabel, 'popup.render-image.transparent-bg');
         const transparentBgBoolean = new BooleanInput({ class: 'boolean', value: false });
         const transparentBgRow = new Container({ class: 'row' });
         transparentBgRow.append(transparentBgLabel);
@@ -84,7 +163,8 @@ class ImageSettingsDialog extends Container {
 
         // show debug overlays
 
-        const showDebugLabel = new Label({ class: 'label', text: localize('popup.render-image.show-debug') });
+        const showDebugLabel = new Label({ class: 'label' });
+        i18n.bindText(showDebugLabel, 'popup.render-image.show-debug');
         const showDebugBoolean = new BooleanInput({ class: 'boolean', value: false });
         const showDebugRow = new Container({ class: 'row' });
         showDebugRow.append(showDebugLabel);
@@ -93,24 +173,28 @@ class ImageSettingsDialog extends Container {
         // content
 
         const content = new Container({ id: 'content' });
+        content.append(projectionRow);
         content.append(presetRow);
         content.append(resolutionRow);
+        content.append(formatRow);
+        content.append(qualityRow);
         content.append(transparentBgRow);
         content.append(showDebugRow);
+        content.append(levelHorizonRow);
 
         // footer
 
         const footer = new Container({ id: 'footer' });
 
         const cancelButton = new Button({
-            class: 'button',
-            text: localize('panel.render.cancel')
+            class: 'button'
         });
+        i18n.bindText(cancelButton, 'panel.render.cancel');
 
         const okButton = new Button({
-            class: 'button',
-            text: localize('panel.render.ok')
+            class: 'button'
         });
+        i18n.bindText(okButton, 'panel.render.ok');
 
         footer.append(cancelButton);
         footer.append(okButton);
@@ -130,17 +214,28 @@ class ImageSettingsDialog extends Container {
                 'viewport': targetSize.width,
                 'HD': 1920,
                 'QHD': 2560,
-                '4K': 3840
+                '4K': 3840,
+                '360-1k': 1024,
+                '360-2k': 2048,
+                '360-4k': 3840,
+                '360-4096': 4096
             };
 
             const heights: Record<string, number> = {
                 'viewport': targetSize.height,
                 'HD': 1080,
                 'QHD': 1440,
-                '4K': 2160
+                '4K': 2160,
+                '360-1k': 512,
+                '360-2k': 1024,
+                '360-4k': 1920,
+                '360-4096': 2048
             };
 
-            resolutionValue.value = [widths[presetSelect.value], heights[presetSelect.value]];
+            resolutionValue.value = [
+                widths[presetSelect.value] ?? resolutionValue.value[0],
+                heights[presetSelect.value] ?? resolutionValue.value[1]
+            ];
         };
 
         presetSelect.on('change', () => {
@@ -149,6 +244,28 @@ class ImageSettingsDialog extends Container {
             if (presetSelect.value !== 'custom') {
                 updateResolution();
             }
+        });
+
+        // sync the ui to the selected projection: 360 renders are 2:1
+        // equirectangular without debug overlays, and gain a level horizon toggle
+        const syncProjection = () => {
+            const is360 = projectionSelect.value === 'equirect';
+            presetSelect.options = buildPresetOptions();
+            presetSelect.value = is360 ? '360-4k' : 'viewport';
+            resolutionRow.enabled = presetSelect.value === 'custom';
+            updateResolution();
+            showDebugRow.hidden = is360;
+            levelHorizonRow.hidden = !is360;
+        };
+
+        projectionSelect.on('change', syncProjection);
+
+        // jpeg has no alpha channel: hide the transparent background toggle
+        // and show the quality slider instead
+        formatSelect.on('change', () => {
+            const isJpeg = formatSelect.value === 'jpeg';
+            transparentBgRow.hidden = isJpeg;
+            qualityRow.hidden = !isJpeg;
         });
 
         // handle key bindings for enter and escape
@@ -190,12 +307,18 @@ class ImageSettingsDialog extends Container {
 
                 onOK = () => {
                     const [width, height] = resolutionValue.value;
+                    const is360 = projectionSelect.value === 'equirect';
+                    const format = formatSelect.value as 'png' | 'jpeg' | 'webp';
 
                     const imageSettings = {
                         width,
                         height,
-                        transparentBg: transparentBgBoolean.value,
-                        showDebug: showDebugBoolean.value
+                        transparentBg: format !== 'jpeg' && transparentBgBoolean.value,
+                        showDebug: !is360 && showDebugBoolean.value,
+                        format,
+                        quality: format === 'jpeg' ? qualitySlider.value / 100 : undefined,
+                        projection: (is360 ? 'equirect' : 'standard') as 'standard' | 'equirect',
+                        levelHorizon: is360 && levelHorizonBoolean.value
                     };
 
                     resolve(imageSettings);

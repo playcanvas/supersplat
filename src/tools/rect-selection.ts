@@ -1,4 +1,5 @@
 import { Events } from '../events';
+import { opFromModifiers } from '../select-op';
 
 class RectSelection {
     activate: () => void;
@@ -81,7 +82,7 @@ class RectSelection {
                     // rect select - wait for selection to complete before hiding rect
                     await events.invoke(
                         'select.rect',
-                        e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'), {
+                        opFromModifiers(e), {
                             start: { x: Math.min(start.x, end.x) / w, y: Math.min(start.y, end.y) / h },
                             end: { x: Math.max(start.x, end.x) / w, y: Math.max(start.y, end.y) / h }
                         });
@@ -89,7 +90,7 @@ class RectSelection {
                     // pick - wait for selection to complete before hiding rect
                     await events.invoke(
                         'select.point',
-                        e.shiftKey ? 'add' : (e.ctrlKey ? 'remove' : 'set'),
+                        opFromModifiers(e),
                         { x: e.offsetX / parent.clientWidth, y: e.offsetY / parent.clientHeight }
                     );
                 }

@@ -6,7 +6,6 @@ const fromWorldPoint = new Vec3();
 const toWorldPoint = new Vec3();
 const worldDiff = new Vec3();
 const moveVec = new Vec3();
-const forwardVec = new Vec3();
 
 // calculate the distance between two 2d points
 const dist = (x0: number, y0: number, x1: number, y1: number) => Math.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2);
@@ -24,29 +23,8 @@ class PointerController {
             camera.setAzimElev(azim, elev);
         };
 
-        // Fly mode: rotate camera around itself (keep camera position fixed)
         const look = (dx: number, dy: number) => {
-            // Use TARGET values to calculate target camera position (not current interpolated)
-            const distance = camera.distance * camera.sceneRadius / camera.fovFactor;
-
-            // Calculate target camera position from target focal point and angles
-            Camera.calcForwardVec(forwardVec, camera.azim, camera.elevation);
-            const targetCameraPos = camera.focalPoint.add(forwardVec.clone().mulScalar(distance));
-
-            // Calculate new azim/elev
-            const azim = camera.azim - dx * camera.scene.config.controls.orbitSensitivity;
-            const elev = camera.elevation - dy * camera.scene.config.controls.orbitSensitivity;
-
-            // Calculate the new forward vector based on new angles
-            Camera.calcForwardVec(forwardVec, azim, elev);
-
-            // Calculate new focal point to keep camera at target position
-            // Camera position = focalPoint + forwardVec * distance
-            // So: focalPoint = cameraPosition - forwardVec * distance
-            const newFocalPoint = targetCameraPos.clone().sub(forwardVec.clone().mulScalar(distance));
-
-            camera.setAzimElev(azim, elev);
-            camera.setFocalPoint(newFocalPoint);
+            camera.look(dx, dy);
         };
 
         const pan = (x: number, y: number, dx: number, dy: number) => {
@@ -72,6 +50,10 @@ class PointerController {
         let pressedButton = -1;  // no button pressed, otherwise 0, 1, or 2
         let x: number, y: number;
 
+        // middle-mouse click-vs-drag tracking (for MMB single-click to focus)
+        const CLICK_DRAG_THRESHOLD = 4;
+        let mmbStartX = 0, mmbStartY = 0, mmbDragged = false;
+
         // touch state
         let touches: { id: number, x: number, y: number}[] = [];
         let midx: number, midy: number, midlen: number;
@@ -86,6 +68,11 @@ class PointerController {
                 pressedButton = event.button;
                 x = event.offsetX;
                 y = event.offsetY;
+                if (pressedButton === 1) {
+                    mmbStartX = x;
+                    mmbStartY = y;
+                    mmbDragged = false;
+                }
             } else if (event.pointerType === 'touch') {
                 if (touches.length === 0) {
                     target.setPointerCapture(event.pointerId);
@@ -108,6 +95,10 @@ class PointerController {
             if (event.pointerType === 'mouse') {
                 // Only release if this is the button that was initially pressed
                 if (event.button === pressedButton) {
+                    // MMB tap (no significant movement) -> focus on cursor point (orbit only; fly uses MMB for zoom)
+                    if (pressedButton === 1 && camera.controlMode === 'orbit' && !mmbDragged) {
+                        camera.pickFocalPoint(event.offsetX / target.clientWidth, event.offsetY / target.clientHeight);
+                    }
                     pressedButton = -1;
                     target.releasePointerCapture(event.pointerId);
                 }
@@ -160,18 +151,34 @@ class PointerController {
                         }
                     }
                 } else {
-                    // Orbit mode: existing behavior
-                    // right button can be used to orbit with ctrl key and to zoom with alt | meta key
-                    const mod = pressedButton === 2 ?
-                        (event.shiftKey || event.ctrlKey ? 'orbit' :
-                            (event.altKey || event.metaKey ? 'zoom' : null)) :
-                        null;
+                    // Orbit mode:
+                    // - left button: orbit
+                    // - middle button (Blender-style): orbit, Shift -> pan, Ctrl -> zoom
+                    //   (gated on a small drag threshold so a tap can be used to focus on release)
+                    // - right button: pan, Shift/Ctrl -> orbit, Alt/Meta -> zoom
+                    if (pressedButton === 1 && !mmbDragged) {
+                        if (dist(event.offsetX, event.offsetY, mmbStartX, mmbStartY) < CLICK_DRAG_THRESHOLD) {
+                            return;
+                        }
+                        mmbDragged = true;
+                    }
 
-                    if (mod === 'orbit' || (mod === null && pressedButton === 0)) {
+                    let mod: 'orbit' | 'pan' | 'zoom';
+                    if (pressedButton === 2) {
+                        mod = event.shiftKey || event.ctrlKey ? 'orbit' :
+                            (event.altKey || event.metaKey ? 'zoom' : 'pan');
+                    } else if (pressedButton === 1) {
+                        mod = event.shiftKey ? 'pan' :
+                            (event.ctrlKey ? 'zoom' : 'orbit');
+                    } else {
+                        mod = 'orbit';
+                    }
+
+                    if (mod === 'orbit') {
                         orbit(dx, dy);
-                    } else if (mod === 'zoom' || (mod === null && pressedButton === 1)) {
+                    } else if (mod === 'zoom') {
                         zoom(dy * -0.02);
-                    } else if (mod === 'pan' || (mod === null && pressedButton === 2)) {
+                    } else {
                         pan(x, y, dx, dy);
                     }
                 }
@@ -217,35 +224,76 @@ class PointerController {
             }
         };
 
-        // fuzzy detection of mouse wheel events vs trackpad events
-        const isMouseEvent = (deltaX: number, deltaY: number) => {
-            return (Math.abs(deltaX) > 50 && deltaY === 0) ||
-                   (Math.abs(deltaY) > 50 && deltaX === 0) ||
-                   (deltaX === 0 && deltaY !== 0) && !Number.isInteger(deltaY);
+        // A physical mouse wheel and a trackpad two-finger swipe are
+        // indistinguishable from their wheel-event deltas alone - every
+        // per-event heuristic (wheelDelta % 120, deltaMode, fractional or
+        // diagonal deltas) misfires on hi-res mice and in momentum tails
+        // (see issue #919). The one reliable trackpad signal the platform
+        // gives us is the macOS-synthesized pinch: a wheel event with
+        // ctrlKey set while the physical Ctrl key is *not* held. So we no
+        // longer classify the device and instead drive everything from
+        // modifier keys, treating a bare scroll as zoom regardless of device:
+        //
+        // | Input                       | Action |
+        // |-----------------------------|--------|
+        // | Bare scroll (wheel / swipe) | zoom   |
+        // | Pinch (synthetic Ctrl)      | zoom   |
+        // | Physical Ctrl + scroll      | orbit  |
+        // | Shift + scroll              | pan    |
+
+        // Track the physical Ctrl key so we can tell a real Ctrl+scroll
+        // (orbit) from a macOS pinch (zoom). Listeners live on window so they
+        // fire regardless of which element currently has focus.
+        let ctrlDown = false;
+        const keydown = (event: KeyboardEvent) => {
+            if (event.key === 'Control') ctrlDown = true;
+        };
+        const keyup = (event: KeyboardEvent) => {
+            if (event.key === 'Control') ctrlDown = false;
         };
 
         const wheel = (event: WheelEvent) => {
             const { deltaX, deltaY } = event;
 
+            // Some browsers (notably Safari/Firefox on macOS) remap a vertical
+            // mouse wheel to deltaX when Shift is held. Only fall back to
+            // deltaX for that remapped case so horizontal-only scrolling
+            // (tilt wheel, horizontal trackpad swipe) is not treated as
+            // zoom / fly movement.
+            const wheelDelta = event.shiftKey && deltaY === 0 ? deltaX : deltaY;
+
+            // Synthetic Ctrl (macOS/Magic Mouse pinch) or Cmd: fine zoom.
+            // Physical Ctrl held down: orbit.
+            const isPinch = (event.ctrlKey && !ctrlDown) || event.metaKey;
+            const isOrbit = event.ctrlKey && ctrlDown;
+
             if (camera.controlMode === 'fly') {
-                // Fly mode: wheel moves forward/backward by moving focal point
-                const factor = camera.flySpeed * 0.01;
-                const worldTransform = camera.mainCamera.getWorldTransform();
-                const zAxis = worldTransform.getZ();
-                moveVec.copy(zAxis).mulScalar(deltaY * factor);
-                const p = camera.focalPoint.add(moveVec);
-                camera.setFocalPoint(p);
-            } else {
-                // Orbit mode: existing behavior
-                if (isMouseEvent(deltaX, deltaY)) {
-                    zoom(deltaY * -0.002);
-                } else if (event.ctrlKey || event.metaKey) {
-                    zoom(deltaY * -0.02);
+                if (isOrbit) {
+                    look(deltaX, deltaY);
                 } else if (event.shiftKey) {
                     pan(event.offsetX, event.offsetY, deltaX, deltaY);
+                } else if (camera.ortho) {
+                    // moving forward/backward has no visual effect in ortho
+                    // (ortho height derives from distance), so zoom instead,
+                    // with the same pinch/scroll factors as the orbit path
+                    zoom(isPinch ? deltaY * -0.02 : wheelDelta * -0.002);
                 } else {
-                    orbit(deltaX, deltaY);
+                    // Bare scroll / pinch: move focal point forward/backward
+                    const factor = camera.flySpeed * 0.01;
+                    const worldTransform = camera.mainCamera.getWorldTransform();
+                    const zAxis = worldTransform.getZ();
+                    moveVec.copy(zAxis).mulScalar(wheelDelta * factor);
+                    const p = camera.focalPoint.add(moveVec);
+                    camera.setFocalPoint(p);
                 }
+            } else if (isOrbit) {
+                orbit(deltaX, deltaY);
+            } else if (event.shiftKey) {
+                pan(event.offsetX, event.offsetY, deltaX, deltaY);
+            } else if (isPinch) {
+                zoom(deltaY * -0.02);
+            } else {
+                zoom(wheelDelta * -0.002);
             }
 
             event.preventDefault();
@@ -286,6 +334,7 @@ class PointerController {
             flyUp = false;
             fastDown = false;
             slowDown = false;
+            ctrlDown = false;
         };
 
         // Helper to switch to fly mode when a fly key is pressed
@@ -402,8 +451,19 @@ class PointerController {
         wrap(target, 'dblclick', dblclick);
         wrap(window, 'blur', clearAllKeys);
 
+        // Registered directly (not via wrap) so physical-Ctrl tracking
+        // doesn't fire camera.controller on every keystroke. Capture phase
+        // ensures we see Ctrl keydown/keyup even when a focused UI element
+        // (dialogs, popups) calls stopPropagation() on key events - otherwise
+        // ctrlDown could go stale and a real Ctrl+wheel would be misread as a
+        // synthetic-Ctrl pinch.
+        window.addEventListener('keydown', keydown, { capture: true });
+        window.addEventListener('keyup', keyup, { capture: true });
+
         this.destroy = () => {
             destroy?.();
+            window.removeEventListener('keydown', keydown, { capture: true });
+            window.removeEventListener('keyup', keyup, { capture: true });
             events.off('camera.fly.forward', onFlyForward);
             events.off('camera.fly.backward', onFlyBackward);
             events.off('camera.fly.left', onFlyLeft);

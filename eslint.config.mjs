@@ -11,7 +11,8 @@ export default [
             parser: tsParser,
             globals: {
                 ...globals.browser,
-                ...globals.serviceworker
+                ...globals.serviceworker,
+                BlobPart: 'readonly'
             }
         },
         plugins: {

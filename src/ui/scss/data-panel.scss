@@ -3,61 +3,115 @@
 #data-panel {
     width: 100%;
     height: 320px;
+    border-top: 1px solid $bcg-lighter;
+
+    &:not(.pcui-hidden) {
+        display: flex;
+    }
 }
 
-#data-panel-popup-container {
+#data-panel-resize-handle {
     position: absolute;
-    left: 50px;
-    top: 50px;
-}
-
-#data-panel-popup-label {
-    background-color: $bcg-dark;
-    color: $text-primary;
+    top: -4px;
+    left: 0;
+    right: 0;
+    height: 8px;
+    cursor: ns-resize;
+    z-index: 10;
 }
 
 #data-controls-container {
-    width: 256px;
+    width: 200px;
     flex-grow: 0;
     flex-shrink: 0;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    background-color: $bcg-darker;
+    border-right: 1px solid $bcg-lighter;
 }
 
 #data-controls {
     width: 100%;
-}
-
-.control-parent {
-    width: 100%;
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
+    flex-grow: 1;
+    background-color: $bcg-primary;
+}
+
+.data-panel-toggle-row {
+    height: 28px;
+    min-height: 28px;
+    flex-shrink: 0;
+    padding: 0px;
+    margin: 0 4px;
+    align-items: center;
+}
+
+.data-panel-toggle-label {
     flex-grow: 1;
 }
 
-.control-label {
-    width: 100px;
+.data-panel-toggle {
     flex-shrink: 0;
-    flex-grow: 0;
-    line-height: 32px;
-    margin: 0px 6px 0px 6px;
+    background-color: $bcg-dark;
+
+    &::after {
+        background-color: $clr-default;
+    }
+
+    &.pcui-boolean-input-ticked {
+        background-color: $clr-hilight;
+
+        &::after {
+            background-color: $clr-active;
+        }
+    }
 }
 
-.control-element {
-    flex-shrink: 0;
-    flex-grow: 0;
-}
-
-.control-element-expand {
+#data-list-box {
+    overflow-y: auto;
     flex-grow: 1;
+    margin: 8px;
+    background-color: $bcg-darker;
+    border-radius: 2px;
+    border: 1px solid $bcg-darkest;
 }
 
-.control-element.pcui-boolean-input {
-    margin-top: 10px;
+.data-list-item {
+    padding: 4px 8px;
+    cursor: pointer;
+    color: $text-secondary;
+    font-size: 12px;
+    border-left: 3px solid transparent;
+
+    &:hover {
+        color: $text-primary;
+        background-color: $bcg-primary;
+    }
+
+    &.active {
+        font-weight: bold;
+        color: $clr-hilight;
+        background-color: $bcg-primary;
+        border-left-color: $clr-hilight;
+    }
 }
 
 #histogram-container {
     flex-grow: 1;
     flex-shrink: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+// holds the canvas and the SVG highlight overlay. flexes to fill the
+// container's vertical space so the info row underneath gets a fixed slice.
+#histogram-canvas-area {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
 }
 
 #histogram-canvas {
@@ -73,4 +127,106 @@
     right: 0;
     bottom: 0;
     left: 0;
+}
+
+// row pinned beneath the histogram canvas: min on the left, max on the right,
+// and the hovered/drag-range readout positioned horizontally to track the
+// pointer x. pointer-events: none so it never blocks the canvas.
+#histogram-info-row {
+    position: relative;
+    flex: 0 0 18px;
+    height: 18px;
+    pointer-events: none;
+    user-select: none;
+    font-size: 11px;
+    line-height: 18px;
+    font-variant-numeric: tabular-nums;
+    color: $text-secondary;
+    background-color: $bcg-darker;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.histogram-info-min,
+.histogram-info-max {
+    position: absolute;
+    top: 0;
+}
+
+.histogram-info-min {
+    left: 4px;
+}
+
+.histogram-info-max {
+    right: 4px;
+}
+
+// anchor and cursor labels both sit at `left: <x>px`. by default they are
+// centered on that point (used for the hover-cursor case). during a drag,
+// data-panel toggles .align-left / .align-right so the labels sit just
+// outside the selection rect (the left-most label is right-aligned, the
+// right-most label is left-aligned).
+.histogram-info-anchor,
+.histogram-info-cursor {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+
+    &.align-left {
+        // text left edge at x; text grows to the right.
+        transform: translateX(0);
+    }
+
+    &.align-right {
+        // text right edge at x; text grows to the left.
+        transform: translateX(-100%);
+    }
+
+    &:empty {
+        display: none;
+    }
+}
+
+// anchor uses the selection highlight color so the user can tell the click
+// position apart from the live cursor (which uses the primary text color).
+.histogram-info-anchor {
+    color: $clr-hilight;
+}
+
+.histogram-info-cursor {
+    color: $text-primary;
+    background-color: $bcg-dark;
+}
+
+// top-right stats overlay: shows aggregate counts (splats in the
+// hovered bucket / drag range, and how many are selected). pointer-events:
+// none so it never blocks canvas interactions. translucent dark background
+// keeps it readable over the histogram visualization.
+#histogram-stats-overlay {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    pointer-events: none;
+    user-select: none;
+    padding: 3px 6px;
+    border-radius: 2px;
+    background-color: rgba(0, 0, 0, 0.55);
+    font-size: 10px;
+    line-height: 1.35;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.histogram-stats-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.histogram-stats-label {
+    color: $text-secondary;
+}
+
+.histogram-stats-value {
+    color: $text-primary;
 }

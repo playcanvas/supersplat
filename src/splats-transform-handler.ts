@@ -151,20 +151,17 @@ class SplatsTransformHandler implements TransformHandler {
             transformPalette.setTransform(newIdx, mat2);
         });
 
-        this.splat.updateLocalBounds();
+        // route through the shared queue so overlapping drag ticks don't race
+        // on CalcBound's shared render targets / readback buffers. fire-and-
+        // forget is fine: the final bound is recomputed when end() awaits
+        // updatePositions -> updateSorting -> updateLocalBounds.
+        this.events.invoke('queue', () => this.splat.updateLocalBounds());
     }
 
     async end() {
         const { splat, transform, paletteMap } = this;
 
-        // TODO: consider moving this to update() function above so splats are sorted correctly
-        // for render during drag (which is slower).
-        await splat.updatePositions();
-        splat.selectionAlpha = 1;
-        splat.scene.outline.enabled = true;
-        splat.scene.underlay.enabled = true;
-
-        // create op for splat transform
+        // create op for splat transform (already applied to GPU during update())
         const top = new SplatsTransformOp({
             splat,
             transform: transform.clone(),
@@ -177,8 +174,22 @@ class SplatsTransformHandler implements TransformHandler {
         const newt = pivot.transform.clone();
         const pop = new PlacePivotOp({ pivot, newt, oldt });
 
-        // add the editop without applying it
+        // record the editop on the shared command queue BEFORE awaiting any async work.
+        // events.fire synchronously enqueues the add, so any subsequent undo/redo
+        // (e.g. user pressing Ctrl+Z while updatePositions is still resolving) is
+        // guaranteed to land AFTER this op on the queue — which means the undo will
+        // revert this transform operation rather than the prior selection op.
         this.events.fire('edit.add', new MultiOp([top, pop]), true);
+
+        // enqueue the GPU readback onto the same shared queue so any subsequent
+        // undo/redo waits for it to finish before mutating the sorter's centers buffer.
+        // TODO: consider moving this to update() function above so splats are sorted correctly
+        // for render during drag (which is slower).
+        await this.events.invoke('queue', () => splat.updatePositions());
+
+        splat.selectionAlpha = 1;
+        splat.scene.outline.enabled = true;
+        splat.scene.underlay.enabled = true;
     }
 }
 

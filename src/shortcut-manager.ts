@@ -14,9 +14,10 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'camera.toggleControlMode': { keys: ['v'] },
 
     // Show
-    'camera.toggleOverlay': { keys: ['m'], shift: 'required' },
+    'camera.toggleOverlay': { keys: ['Tab'] },
     'camera.toggleMode': { keys: ['m'] },
     'grid.toggleVisible': { keys: ['g'] },
+    'camera.toggleShowInfo': { keys: ['i'] },
     'select.hide': { keys: ['h'] },
     'select.unhide': { keys: ['h'], shift: 'required' },
 
@@ -26,8 +27,8 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'timeline.nextFrame': { keys: ['.'], repeat: true },
     'timeline.prevKey': { keys: ['<'], shift: 'optional', repeat: true },
     'timeline.nextKey': { keys: ['>'], shift: 'optional', repeat: true },
-    'timeline.addKey': { keys: ['Enter'] },
-    'timeline.removeKey': { keys: ['Enter'], shift: 'required' },
+    'track.addKey': { keys: ['Enter'] },
+    'track.removeKey': { keys: ['Enter'], shift: 'required' },
 
     // Selection
     'select.all': { keys: ['a'], ctrl: 'required', capture: true },
@@ -51,10 +52,10 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'tool.toggleCoordSpace': { keys: ['c'], shift: 'required' },
 
     // Other
-    'selection.next': { keys: ['Tab'] },
     'edit.undo': { keys: ['z'], ctrl: 'required', repeat: true, capture: true },
     'edit.redo': { keys: ['z'], ctrl: 'required', shift: 'required', repeat: true, capture: true },
     'dataPanel.toggle': { keys: ['d'], ctrl: 'required', capture: true },
+    'timelinePanel.toggle': { keys: ['t'], ctrl: 'required', capture: true },
 
     // Camera fly keys - use physical positions (codes) for WASD layout on non-QWERTY keyboards
     'camera.fly.forward': { codes: ['KeyW'], held: true, shift: 'optional', alt: 'optional' },

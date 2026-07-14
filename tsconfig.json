@@ -4,9 +4,22 @@
         "module": "es2020",
         "moduleResolution": "bundler",
 
+        // When @playcanvas/splat-transform is npm-linked, its `playcanvas` import
+        // resolves to the linked repo's own copy, producing a second, mismatched
+        // set of engine types (e.g. GraphicsDevice). Pin `playcanvas` to this
+        // repo's copy so there is a single engine type identity — mirrors the
+        // rollup alias in rollup.config.mjs.
+        "paths": {
+            "playcanvas": ["./node_modules/playcanvas"]
+        },
+
         "lib": ["es2022", "dom", "WebWorker"],
         "sourceMap": true,
         "noImplicitAny": true,
+        "strictNullChecks": false,
+        "strictPropertyInitialization": false,
+        "useUnknownInCatchVariables": false,
+        "skipLibCheck": true,
         "inlineSources": true,
         "resolveJsonModule": true,
     },

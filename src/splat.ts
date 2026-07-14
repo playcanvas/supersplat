@@ -18,7 +18,7 @@ import {
 import { Element, ElementType } from './element';
 import { Serializer } from './serializer';
 import { vertexShader, fragmentShader, gsplatCenter } from './shaders/splat-shader';
-import { State } from './splat-state';
+import { State, SplatState } from './splat-state';
 import { Transform } from './transform';
 import { TransformPalette } from './transform-palette';
 
@@ -49,6 +49,9 @@ class Splat extends Element {
     entity: Entity;
     changedCounter = 0;
     stateTexture: Texture;
+    // encapsulates per-splat state mirror (cpu Uint8Array + gpu Texture).
+    // all writes go through state.setBits/clearBits/toggleBits, then flush().
+    state: SplatState;
     transformTexture: Texture;
     selectionBoundStorage: BoundingBox;
     localBoundStorage: BoundingBox;
@@ -73,21 +76,67 @@ class Splat extends Element {
 
     rebuildMaterial: (bands: number) => void;
 
-    constructor(asset: Asset, orientation: Vec3) {
+    constructor(asset: Asset, rotation: Quat) {
         super(ElementType.splat);
 
+        const { device } = asset.resource as GSplatResource;
+
+        // create the entity once. its transform persists across frame swaps so
+        // an animated sequence can replace its data without losing the user's
+        // transform (see replaceData).
+        this.entity = new Entity('splatEntity');
+
+        this.selectionBoundStorage = new BoundingBox();
+
+        // create the transform palette (reused across frame swaps; index 0 is identity)
+        this.transformPalette = new TransformPalette(device);
+
+        // rebuilds material chunks/params. reads the *current* gsplat instance and
+        // state/transform textures so it remains valid after a replaceData swap
+        // (the 'view.bands' listener registered in add() keeps pointing at it).
+        this.rebuildMaterial = (bands: number) => {
+            const instance = this.entity.gsplat.instance;
+            const { material } = instance;
+            const { glsl } = material.shaderChunks;
+            glsl.set('gsplatVS', vertexShader);
+            glsl.set('gsplatPS', fragmentShader);
+            glsl.set('gsplatCenterVS', gsplatCenter);
+
+            material.setDefine('SH_BANDS', `${Math.min(bands, (instance.resource as GSplatResource).shBands)}`);
+            material.setParameter('splatState', this.stateTexture);
+            material.setParameter('splatTransform', this.transformTexture);
+            material.update();
+        };
+
+        // bind the initial frame's data, applying the file's load rotation
+        this.bindAsset(asset, rotation);
+    }
+
+    // bind a gsplat asset onto this element's entity: creates the gsplat
+    // component, the per-splat state/transform channels and their gpu textures,
+    // and caches the instance bounds. When `rotation` is supplied (initial load)
+    // the entity rotation is set; on a frame swap it is omitted so the user's
+    // transform is preserved.
+    private bindAsset(asset: Asset, rotation?: Quat) {
         const splatResource = asset.resource as GSplatResource;
-        const splatData = splatResource.gsplatData;
+        const splatData = splatResource.gsplatData as GSplatData;
         const { device } = splatResource;
 
-        this._name = (asset.file as any).filename;
         this.asset = asset;
-        this.splatData = splatData as GSplatData;
+        this.splatData = splatData;
         this.numSplats = splatData.numSplats;
 
-        this.entity = new Entity('splatEntitiy');
-        this.entity.setEulerAngles(orientation);
-        this.entity.addComponent('gsplat', { asset });
+        // name and orientation are set on the initial bind only; a frame swap
+        // (replaceData, no rotation) keeps the element's name and transform
+        if (rotation) {
+            this._name = (asset.file as any).filename;
+            this.entity.setLocalRotation(rotation);
+        }
+
+        this.entity.addComponent('gsplat', {
+            asset,
+            unified: false
+        });
 
         const instance = this.entity.gsplat.instance;
 
@@ -95,24 +144,24 @@ class Splat extends Element {
         // bit 1: selected
         // bit 2: deleted
         // bit 3: locked
-        if (!this.splatData.getProp('state')) {
-            this.splatData.getElement('vertex').properties.push({
+        if (!splatData.getProp('state')) {
+            splatData.getElement('vertex').properties.push({
                 type: 'uchar',
                 name: 'state',
-                storage: new Uint8Array(this.splatData.numSplats),
+                storage: new Uint8Array(splatData.numSplats),
                 byteSize: 1
             });
         }
 
         // per-splat transform matrix
-        this.splatData.getElement('vertex').properties.push({
+        splatData.getElement('vertex').properties.push({
             type: 'ushort',
             name: 'transform',
-            storage: new Uint16Array(this.splatData.numSplats),
+            storage: new Uint16Array(splatData.numSplats),
             byteSize: 2
         });
 
-        const { width, height } = splatResource.colorTexture;
+        const { x: width, y: height } = (splatResource as any).textureDimensions;
 
         // pack spherical harmonic data
         const createTexture = (name: string, format: number) => {
@@ -129,27 +178,13 @@ class Splat extends Element {
             });
         };
 
-        // create the state texture
+        // create the state texture and the SplatState mirror that owns it.
+        // splatData.getProp('state') aliases state.data so existing read-only
+        // consumers (serialize, status-bar, etc) keep working unchanged.
         this.stateTexture = createTexture('splatState', PIXELFORMAT_R8);
+        this.state = new SplatState(splatData.getProp('state') as Uint8Array, this.stateTexture);
         this.transformTexture = createTexture('splatTransform', PIXELFORMAT_R16U);
 
-        // create the transform palette
-        this.transformPalette = new TransformPalette(device);
-
-        this.rebuildMaterial = (bands: number) => {
-            const { material } = instance;
-            const { glsl } = material.shaderChunks;
-            glsl.set('gsplatVS', vertexShader);
-            glsl.set('gsplatPS', fragmentShader);
-            glsl.set('gsplatCenterVS', gsplatCenter);
-
-            material.setDefine('SH_BANDS', `${Math.min(bands, (instance.resource as GSplatResource).shBands)}`);
-            material.setParameter('splatState', this.stateTexture);
-            material.setParameter('splatTransform', this.transformTexture);
-            material.update();
-        };
-
-        this.selectionBoundStorage = new BoundingBox();
         this.localBoundStorage = instance.resource.aabb;
         // @ts-ignore
         this.worldBoundStorage = instance.meshInstance._aabb;
@@ -163,6 +198,92 @@ class Splat extends Element {
         });
     }
 
+    // wait for the next scene render to complete, with a safety timeout so a
+    // stalled render loop (e.g. a backgrounded tab where rAF is paused) can't
+    // block frame swapping forever. In a live app postrender fires within a
+    // frame, so the timeout never matters.
+    private waitForRender(): Promise<void> {
+        return new Promise((resolve) => {
+            // single finish() removes the listener and clears the timeout, so the
+            // common case (postrender fires first) doesn't leave a pending timer.
+            const handles: { off?: { off: () => void }, timer?: ReturnType<typeof setTimeout> } = {};
+            let settled = false;
+            const finish = () => {
+                if (settled) return;
+                settled = true;
+                handles.off?.off();
+                clearTimeout(handles.timer);
+                resolve();
+            };
+            handles.off = this.scene.events.on('postrender', finish);
+            // safety: don't block frame swapping forever if the render loop is stalled
+            handles.timer = setTimeout(finish, 200);
+        });
+    }
+
+    // swap in a new frame's gsplat data while preserving this element's identity,
+    // transform and visual properties. used by animated sequence playback so each
+    // frame doesn't recreate the whole element.
+    //
+    // The gsplat lives on this.entity (read in many places), so we can't double
+    // buffer on a child. Instead we bind the new frame to a *fresh* entity, sort
+    // it, and let it render once alongside the still-present old entity before
+    // destroying the old one. This overlap avoids a blank/unsorted frame
+    // flickering on screen during the swap (the old frame masks the new one's
+    // first sort), matching the previous per-frame load behaviour. The user's
+    // transform is carried across so it persists.
+    async replaceData(asset: Asset) {
+        const oldEntity = this.entity;
+        const oldAsset = this.asset;
+        const oldStateTexture = this.stateTexture;
+        const oldTransformTexture = this.transformTexture;
+
+        // carry the current transform onto the new entity
+        const position = oldEntity.getLocalPosition().clone();
+        const rotation = oldEntity.getLocalRotation().clone();
+        const scale = oldEntity.getLocalScale().clone();
+
+        this.entity = new Entity('splatEntity');
+        this.entity.setLocalPosition(position);
+        this.entity.setLocalRotation(rotation);
+        this.entity.setLocalScale(scale);
+
+        // bind the new frame (no rotation: transform already applied above)
+        this.bindAsset(asset);
+
+        // add the new entity to the scene and configure its instance
+        this.scene.contentRoot.addChild(this.entity);
+        this.entity.gsplat.layers = [this.scene.splatLayer.id];
+        this.rebuildMaterial(this.scene.events.invoke('view.bands'));
+
+        // refresh gpu state/counts/bounds, then wait for the new frame to render
+        // before removing the old entity, which keeps the previous frame on screen
+        // in the meantime. Skip the wait during offline video render
+        // (lockedRenderMode): renders are gated on scene.lockedRender there, so
+        // blocking on a render would deadlock — and the render loop sorts+captures
+        // each frame deterministically anyway.
+        await this.updateState(State.deleted);
+        if (!this.scene.lockedRenderMode) {
+            await this.waitForRender();
+        }
+
+        // notify dependents (e.g. the centers overlay, which parents itself under
+        // this.entity) to re-bind to the new entity/instance before the old entity
+        // is destroyed — otherwise they're torn down with it and never re-attach
+        // (no selection.changed fires on a frame swap).
+        this.scene.events.fire('splat.replaced', this);
+
+        // tear down the previous frame
+        oldEntity.destroy();
+        oldStateTexture.destroy();
+        oldTransformTexture.destroy();
+        oldAsset.registry?.remove(oldAsset);
+        oldAsset.unload();
+
+        this.changedCounter++;
+        this.scene.forceRender = true;
+    }
+
     destroy() {
         super.destroy();
         this.entity.destroy();
@@ -171,32 +292,12 @@ class Splat extends Element {
     }
 
     async updateState(changedState = State.selected) {
-        const state = this.splatData.getProp('state') as Uint8Array;
-
-        // write state data to gpu texture
-        const data = this.stateTexture.lock();
-        data.set(state);
-        this.stateTexture.unlock();
-
-        let numSelected = 0;
-        let numLocked = 0;
-        let numDeleted = 0;
-
-        for (let i = 0; i < state.length; ++i) {
-            const s = state[i];
-            if (s & State.deleted) {
-                numDeleted++;
-            } else if (s & State.locked) {
-                numLocked++;
-            } else if (s & State.selected) {
-                numSelected++;
-            }
-        }
-
-        this.numSplats = state.length - numDeleted;
-        this.numLocked = numLocked;
-        this.numSelected = numSelected;
-        this.numDeleted = numDeleted;
+        // uploads dirty range + refreshes counts in one pass.
+        this.state.flush();
+        this.numSplats = this.state.data.length - this.state.numDeleted;
+        this.numLocked = this.state.numLocked;
+        this.numSelected = this.state.numSelected;
+        this.numDeleted = this.state.numDeleted;
 
         // handle splats being added or removed
         if (changedState & State.deleted) {
@@ -436,7 +537,7 @@ class Splat extends Element {
     set visible(value: boolean) {
         if (value !== this.visible) {
             this._visible = value;
-            this.scene.events.fire('splat.visibility', this);
+            this.scene?.events.fire('splat.visibility', this);
         }
     }
 

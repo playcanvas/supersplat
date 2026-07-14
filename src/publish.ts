@@ -1,7 +1,41 @@
+import { logger as splatTransformLogger, type FileSystem, type LogEvent, type Writer } from '@playcanvas/splat-transform';
+
 import { Events } from './events';
-import { Writer, GZipWriter } from './serialize/writer';
-import { serializePlyCompressed, serializePly, ExperienceSettings, SerializeSettings } from './splat-serialize';
-import { localize } from './ui/localization';
+import { GZipWriter } from './io';
+import { writeSplatFile, ExperienceSettings, SerializeSettings } from './splat-serialize';
+import { i18n } from './ui/localization';
+
+/**
+ * Simple FileSystem wrapper around a single Writer.
+ * Used for cases like GZip compression where we need FileSystem semantics
+ * but only have a single Writer to wrap.
+ * The wrapper makes close() a no-op since the caller manages the writer lifecycle.
+ */
+class WriterFileSystem implements FileSystem {
+    private writer: Writer;
+
+    constructor(writer: Writer) {
+        this.writer = writer;
+    }
+
+    createWriter(_filename: string): Writer {
+        // Return a wrapper that delegates write but makes close a no-op
+        // The caller is responsible for closing the underlying writer
+        const inner = this.writer;
+        return {
+            get bytesWritten() {
+                return inner.bytesWritten;
+            },
+            write: (data: Uint8Array) => inner.write(data),
+            close: () => Promise.resolve(),
+            abort: () => Promise.resolve()
+        };
+    }
+
+    mkdir(_path: string): Promise<void> {
+        return Promise.resolve();
+    }
+}
 
 type User = {
     id: string;
@@ -11,7 +45,6 @@ type User = {
 };
 
 type Scene = {
-    id: string;
     hash: string;
     title: string;
     description: string;
@@ -30,7 +63,10 @@ type PublishSettings = {
     listed: boolean;
     serializeSettings: SerializeSettings;
     experienceSettings: ExperienceSettings;
-    overwriteId?: string;   // for republishing an existing scene
+    overwriteHash?: string;
+    overrideModel?: boolean;
+    overrideAnimation?: boolean;
+    generateLods: boolean;
 };
 
 const origin = location.origin;
@@ -60,9 +96,44 @@ const fetchSceneList = async (user: User) => {
     return (await response.json()).result as Scene[];
 };
 
+const fetchSceneSettings = async (user: User, sceneHash: string): Promise<ExperienceSettings> => {
+    const response = await fetch(`${user.apiServer}/splats/${sceneHash}/settings`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${user.token}`
+        }
+    });
+    if (!response.ok) {
+        throw new Error(`failed to fetch scene settings (${response.statusText})`);
+    }
+    return await response.json() as ExperienceSettings;
+};
+
+const updateSceneSettings = async (user: User, sceneHash: string, settings: ExperienceSettings) => {
+    const response = await fetch(`${user.apiServer}/splats/${sceneHash}/settings`, {
+        method: 'PUT',
+        body: JSON.stringify(settings),
+        headers: {
+            'Authorization': `Bearer ${user.token}`,
+            'Content-Type': 'application/json'
+        }
+    });
+    if (!response.ok) {
+        throw new Error(`failed to update scene settings (${response.statusText})`);
+    }
+    return response;
+};
+
 class PublishWriter implements Writer {
     write: (data: Uint8Array) => void;
     close: () => Promise<any>;
+    abort: () => Promise<void> = () => Promise.resolve();
+
+    private cursor = 0;
+
+    get bytesWritten(): number {
+        return this.cursor;
+    }
 
     static async create(publishSettings: PublishSettings) {
         const { user } = publishSettings;
@@ -150,6 +221,7 @@ class PublishWriter implements Writer {
                     await upload();
                 }
             }
+            result.cursor += data.byteLength;
         };
 
         result.close = async () => {
@@ -176,6 +248,8 @@ class PublishWriter implements Writer {
 
             const completeJson = await completeResult.json();
 
+            const publishFormat = publishSettings.generateLods ? 'ssog' : 'sog';
+
             const doPublish = () => fetch(`${user.apiServer}/splats/publish`, {
                 method: 'POST',
                 body: JSON.stringify({
@@ -185,7 +259,7 @@ class PublishWriter implements Writer {
                     listed: publishSettings.listed,
                     settings: publishSettings.experienceSettings,
                     sourceFormat: 'ply',
-                    publishFormat: 'sog'
+                    publishFormat
                 }),
                 headers: {
                     'Authorization': `Bearer ${user.token}`,
@@ -193,13 +267,13 @@ class PublishWriter implements Writer {
                 }
             });
 
-            const doRepublish = () => fetch(`${user.apiServer}/splats/${publishSettings.overwriteId}/republish`, {
+            const doRepublish = () => fetch(`${user.apiServer}/splats/${publishSettings.overwriteHash}/republish`, {
                 method: 'PUT',
                 body: JSON.stringify({
                     s3Key: startJson.key,
                     settings: publishSettings.experienceSettings,
                     sourceFormat: 'ply',
-                    publishFormat: 'sog'
+                    publishFormat
                 }),
                 headers: {
                     'Authorization': `Bearer ${user.token}`,
@@ -207,7 +281,7 @@ class PublishWriter implements Writer {
                 }
             });
 
-            const publishResponse = await (publishSettings.overwriteId ? doRepublish() : doPublish());
+            const publishResponse = await (publishSettings.overwriteHash ? doRepublish() : doPublish());
 
             if (!publishResponse.ok) {
                 let msg;
@@ -243,7 +317,7 @@ const registerPublishEvents = (events: Events) => {
         try {
             events.fire('progressStart', 'Publishing...');
             events.fire('progressUpdate', {
-                text: localize('popup.publish.converting', { ellipsis: true }),
+                text: i18n.t('popup.publish.converting', { ellipsis: true }),
                 progress: 0
             });
 
@@ -252,43 +326,89 @@ const registerPublishEvents = (events: Events) => {
                 setTimeout(resolve, 10);
             });
 
-            const progressFunc = (loaded: number, total: number) => {
-                events.fire('progressUpdate', {
-                    text: localize('popup.publish.uploading', { ellipsis: true }),
-                    progress: 100 * loaded / total
-                });
+            const { overwriteHash, overrideAnimation } = publishSettings;
+            const overrideModel = publishSettings.overrideModel ?? true;
+
+            const mergeAnimation = (target: ExperienceSettings, source: ExperienceSettings) => {
+                target.animTracks = source.animTracks;
+                target.startMode = source.startMode;
             };
 
-            // create the writer chain: gzip->stream->upload
-            const publishWriter = await PublishWriter.create(publishSettings);
-            const gzipWriter = new GZipWriter(publishWriter);
+            if (overwriteHash && !overrideModel) {
+                if (!overrideAnimation) {
+                    throw new Error('No overrides selected');
+                }
 
-            const splats = events.invoke('scene.splats');
+                // animation-only update: fetch existing settings, merge animation, PUT settings
+                const existingSettings = await fetchSceneSettings(publishSettings.user, overwriteHash);
+                mergeAnimation(existingSettings, publishSettings.experienceSettings);
+                await updateSceneSettings(publishSettings.user, overwriteHash, existingSettings);
 
-            // serialize
-            await serializePly(splats, publishSettings.serializeSettings, gzipWriter, progressFunc);
-
-            await gzipWriter.close();
-            const response = await publishWriter.close();
-
-            if (!response) {
-                await events.invoke('showPopup', {
-                    type: 'error',
-                    header: localize('popup.publish.failed'),
-                    message: localize('popup.publish.please-try-again')
-                });
-            } else {
                 await events.invoke('showPopup', {
                     type: 'info',
-                    header: localize('popup.publish.succeeded'),
-                    message: localize('popup.publish.message'),
-                    link: response.url
+                    header: i18n.t('popup.publish.succeeded'),
+                    message: i18n.t('popup.publish.message'),
+                    link: `${origin}/scene/${overwriteHash}/edit`
                 });
+            } else {
+                // new scene or model override: upload PLY and publish/republish
+                if (overwriteHash) {
+                    // republishing with model override: merge with existing settings
+                    const existingSettings = await fetchSceneSettings(publishSettings.user, overwriteHash);
+                    if (overrideAnimation) {
+                        mergeAnimation(existingSettings, publishSettings.experienceSettings);
+                    }
+                    publishSettings.experienceSettings = existingSettings;
+                }
+
+                const progressFunc = (loaded: number, total: number) => {
+                    events.fire('progressUpdate', {
+                        text: i18n.t('popup.publish.uploading', { ellipsis: true }),
+                        progress: 100 * loaded / total
+                    });
+                };
+
+                // bridge splat-transform's write progress bar to the publish UI
+                splatTransformLogger.setRenderer({
+                    handle: (event: LogEvent) => {
+                        if (event.kind === 'barTick') {
+                            progressFunc(event.current, event.total);
+                        }
+                    }
+                });
+
+                // create the writer chain: gzip->stream->upload
+                const publishWriter = await PublishWriter.create(publishSettings);
+                const gzipWriter = new GZipWriter(publishWriter);
+
+                const splats = events.invoke('scene.splats');
+
+                // serialize using WriterFileSystem wrapper (close is managed by caller)
+                const fs = new WriterFileSystem(gzipWriter);
+                await writeSplatFile(splats, publishSettings.serializeSettings, 'ply', 'output.ply', {}, fs);
+
+                await gzipWriter.close();
+                const response = await publishWriter.close();
+
+                if (!response) {
+                    await events.invoke('showPopup', {
+                        type: 'error',
+                        header: i18n.t('popup.publish.failed'),
+                        message: i18n.t('popup.publish.please-try-again')
+                    });
+                } else {
+                    await events.invoke('showPopup', {
+                        type: 'info',
+                        header: i18n.t('popup.publish.succeeded'),
+                        message: i18n.t('popup.publish.message'),
+                        link: `${origin}/scene/${response.hash}/edit`
+                    });
+                }
             }
         } catch (error) {
             await events.invoke('showPopup', {
                 type: 'error',
-                header: localize('popup.publish.failed'),
+                header: i18n.t('popup.publish.failed'),
                 message: `'${error.message ?? error}'`
             });
         } finally {

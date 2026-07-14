@@ -5,7 +5,6 @@ import {
     drawQuadWithShader,
     BoundingBox,
     GraphicsDevice,
-    GSplatResource,
     RenderTarget,
     ScopeSpace,
     Shader,
@@ -149,7 +148,7 @@ class CalcBound {
         const { scope } = device;
 
         const numSplats = splat.splatData.numSplats;
-        const transformA = (splat.entity.gsplat.instance.resource as GSplatResource).transformATexture;
+        const transformA = (splat.entity.gsplat.instance.resource as any).getTexture('transformA');
         const splatTransform = splat.transformTexture;
         const transformPalette = splat.transformPalette.texture;
         const splatState = splat.stateTexture;

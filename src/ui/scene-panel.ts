@@ -1,10 +1,11 @@
 import { Container, Element, Label } from '@playcanvas/pcui';
 
 import { Events } from '../events';
-import { localize } from './localization';
+import { i18n } from './localization';
 import { SplatList } from './splat-list';
 import sceneImportSvg from './svg/import.svg';
 import sceneNewSvg from './svg/new.svg';
+import soloSvg from './svg/solo.svg';
 import { Tooltips } from './tooltips';
 import { Transform } from './transform';
 
@@ -38,8 +39,25 @@ class ScenePanel extends Container {
         });
 
         const sceneLabel = new Label({
-            text: localize('panel.scene-manager'),
             class: 'panel-header-label'
+        });
+        i18n.bindText(sceneLabel, 'panel.scene-manager');
+
+        let soloActive = false;
+
+        const soloToggle = new Container({
+            class: 'panel-header-button'
+        });
+        soloToggle.dom.appendChild(createSvg(soloSvg));
+
+        soloToggle.on('click', () => {
+            soloActive = !soloActive;
+            if (soloActive) {
+                soloToggle.class.add('active');
+            } else {
+                soloToggle.class.remove('active');
+            }
+            events.fire('scene.solo', soloActive);
         });
 
         const sceneImport = new Container({
@@ -54,6 +72,7 @@ class ScenePanel extends Container {
 
         sceneHeader.append(sceneIcon);
         sceneHeader.append(sceneLabel);
+        sceneHeader.append(soloToggle);
         sceneHeader.append(sceneImport);
         sceneHeader.append(sceneNew);
 
@@ -65,8 +84,9 @@ class ScenePanel extends Container {
             events.invoke('doc.new');
         });
 
-        tooltips.register(sceneImport, 'Import Scene', 'top');
-        tooltips.register(sceneNew, 'New Scene', 'top');
+        tooltips.register(soloToggle, () => i18n.t('tooltip.scene.solo'), 'top');
+        tooltips.register(sceneImport, () => i18n.t('tooltip.scene.import'), 'top');
+        tooltips.register(sceneNew, () => i18n.t('tooltip.scene.new'), 'top');
 
         const splatList = new SplatList(events);
 
@@ -85,9 +105,9 @@ class ScenePanel extends Container {
         });
 
         const transformLabel = new Label({
-            text: localize('panel.scene-manager.transform'),
             class: 'panel-header-label'
         });
+        i18n.bindText(transformLabel, 'panel.scene-manager.transform');
 
         transformHeader.append(transformIcon);
         transformHeader.append(transformLabel);

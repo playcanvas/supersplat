@@ -4,7 +4,6 @@ import {
     SEMANTIC_POSITION,
     drawQuadWithShader,
     GraphicsDevice,
-    GSplatResource,
     Mat4,
     RenderTarget,
     ScopeSpace,
@@ -14,6 +13,8 @@ import {
     BlendState
 } from 'playcanvas';
 
+import { BufferPool } from './buffer-pool';
+import { packedMaskHeight, packedMaskWidth } from './histogram-config';
 import { vertexShader, fragmentShader } from '../shaders/intersection-shader';
 import { Splat } from '../splat';
 
@@ -48,7 +49,6 @@ class Intersect {
     private shader: Shader = null;
     private texture: Texture = null;
     private renderTarget: RenderTarget = null;
-    private data: Uint8Array = null;
 
     constructor(device: GraphicsDevice) {
         this.device = device;
@@ -73,8 +73,8 @@ class Intersect {
             });
         }
 
-        const resultWidth = Math.max(1, Math.floor(width / 2));
-        const resultHeight = Math.ceil(numSplats / (resultWidth * 4));
+        const resultWidth = packedMaskWidth(width);
+        const resultHeight = packedMaskHeight(resultWidth, numSplats);
 
         if (!this.texture || this.texture.width !== resultWidth || this.texture.height !== resultHeight) {
             if (this.texture) {
@@ -96,24 +96,21 @@ class Intersect {
                 colorBuffer: this.texture,
                 depth: false
             });
-
-            this.data = new Uint8Array(resultWidth * resultHeight * 4);
         }
 
         return {
             shader: this.shader,
             texture: this.texture,
-            renderTarget: this.renderTarget,
-            data: this.data
+            renderTarget: this.renderTarget
         };
     }
 
-    async run(options: IntersectOptions, splat: Splat): Promise<Uint8Array> {
+    async run(options: IntersectOptions, splat: Splat, bufferPool: BufferPool): Promise<Uint8Array> {
         const { device } = this;
         const { scope } = device;
 
         const numSplats = splat.splatData.numSplats;
-        const transformA = (splat.entity.gsplat.instance.resource as GSplatResource).transformATexture;
+        const transformA = (splat.entity.gsplat.instance.resource as any).getTexture('transformA');
         const splatTransform = splat.transformTexture;
         const transformPalette = splat.transformPalette.texture;
 
@@ -210,9 +207,12 @@ class Intersect {
         device.setBlendState(BlendState.NOBLEND);
         drawQuadWithShader(device, resources.renderTarget, resources.shader);
 
+        const byteLen = resources.texture.width * resources.texture.height * 4;
+        const buffer = bufferPool.acquire(byteLen);
+
         const data = await resources.texture.read(0, 0, resources.texture.width, resources.texture.height, {
             renderTarget: resources.renderTarget,
-            data: resources.data,
+            data: buffer,
             immediate: false
         });
 

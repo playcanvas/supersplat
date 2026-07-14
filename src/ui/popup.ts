@@ -13,11 +13,19 @@ interface ShowOptions {
         options: { v: string, t: string }[];
         value: string;
     };
-    warning?: string;   // secondary note below the select, may contain inline HTML links
+    warning?: {         // secondary note below the select
+        text: string;
+        link?: string;  // optional link rendered inline after the text
+    };
 }
 
+type ShowResult = {
+    action: string;
+    value?: string;
+};
+
 class Popup extends Container {
-    show: (options: ShowOptions) => void;
+    show: (options: ShowOptions) => Promise<ShowResult>;
     hide: () => void;
     destroy: () => void;
 
@@ -178,12 +186,20 @@ class Popup extends Container {
             }
 
             warningText.hidden = warning === undefined;
-            warningText.dom.innerHTML = warning ?? '';
+            warningText.dom.textContent = warning?.text ?? '';
+            if (warning?.link) {
+                const anchor = document.createElement('a');
+                anchor.href = warning.link;
+                anchor.target = '_blank';
+                anchor.rel = 'noopener noreferrer';
+                anchor.textContent = warning.link;
+                warningText.dom.append(' ', anchor);
+            }
 
             // take keyboard focus so shortcuts stop working
             this.dom.focus();
 
-            return new Promise<{action: string, value?: string}>((resolve) => {
+            return new Promise<ShowResult>((resolve) => {
                 okFn = () => {
                     this.hide();
                     resolve({

@@ -39,7 +39,6 @@ class AssetLoader {
             const pickLod = async (lodCounts: readonly number[]) => {
                 this.events.fire('stopSpinner');
                 try {
-                    const uploadUrl = `${window.location.origin}/upload`;
                     const result = await this.events.invoke('showPopup', {
                         type: 'okcancel',
                         header: i18n.t('popup.load-options-header'),
@@ -52,7 +51,10 @@ class AssetLoader {
                                 t: `LOD ${i} (${count.toLocaleString()} ${i18n.t('popup.lod-select-splats')})`
                             }))
                         },
-                        warning: `${i18n.t('popup.lod-upload-note')} <a href="${uploadUrl}" target="_blank">${uploadUrl}</a>`
+                        warning: {
+                            text: i18n.t('popup.lod-upload-note'),
+                            link: `${window.location.origin}/upload`
+                        }
                     });
                     return result.action === 'ok' ? parseInt(result.value, 10) : null;
                 } finally {

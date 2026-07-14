@@ -83,14 +83,33 @@ class Ticks extends Container {
             // keys - get from active track
             const keys = events.invoke('track.keys') as number[] ?? [];
 
-            const createKey = (keyFrame: number) => {
+            // keys at frame >= numFrames don't play (the spline ignores them);
+            // pin them just past the right end of the strip instead of hiding them
+            const inRangeKeys = keys.filter(k => k < numFrames);
+            const outOfRangeKeys = keys.filter(k => k >= numFrames).sort((a, b) => a - b);
+
+            // center of a pinned marker: 10px right of the last frame, staggered
+            // 2px per extra marker, capped so the 8px diamond stays inside the
+            // 20px right padding
+            const pinnedOffset = (index: number) => {
+                return padding + width + 10 + Math.min(index, 3) * 2;
+            };
+
+            const createKey = (keyFrame: number, pinnedIndex = -1) => {
+                const outOfRange = pinnedIndex !== -1;
+
                 const label = document.createElement('div');
                 label.classList.add('time-label', 'key');
-                label.style.left = `${offsetFromFrame(keyFrame)}px`;
+                if (outOfRange) {
+                    label.classList.add('out-of-range');
+                }
+                label.style.left = `${outOfRange ? pinnedOffset(pinnedIndex) : offsetFromFrame(keyFrame)}px`;
                 label.dataset.frame = keyFrame.toString();
 
                 const wrapper = new Element({ dom: label });
-                tooltips.register(wrapper, () => i18n.t('tooltip.timeline.key'), 'top');
+                tooltips.register(wrapper, () => (outOfRange ?
+                    i18n.t('tooltip.timeline.key-out-of-range', { frame: keyFrame }) :
+                    i18n.t('tooltip.timeline.key')), 'top');
                 keyElements.push(wrapper);
                 let dragging = false;
                 let copying = false;
@@ -123,6 +142,8 @@ class Ticks extends Container {
                         if (copying) {
                             clone.style.left = `${offsetFromFrame(toFrame)}px`;
                         } else {
+                            // once dragged, the key can only land in range
+                            label.classList.remove('out-of-range');
                             label.style.left = `${offsetFromFrame(toFrame)}px`;
                         }
                     } else {
@@ -167,8 +188,13 @@ class Ticks extends Container {
                 workArea.dom.appendChild(label);
             };
 
-            keys.forEach((keyFrame: number) => {
+            inRangeKeys.forEach((keyFrame: number) => {
                 createKey(keyFrame);
+            });
+
+            // ascending order so the marker for the largest frame renders topmost
+            outOfRangeKeys.forEach((keyFrame: number, index: number) => {
+                createKey(keyFrame, index);
             });
 
             // cursor

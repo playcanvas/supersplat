@@ -4,6 +4,8 @@ import Backend from 'i18next-http-backend';
 
 interface LocalizeOptions {
     ellipsis?: boolean;
+    // any other values are forwarded to i18next as {{placeholder}} interpolation data
+    [key: string]: unknown;
 }
 
 // minimal shapes the binders operate on (pcui elements emit a 'destroy' event)
@@ -76,9 +78,9 @@ class Localization {
         });
     }
 
-    /** Translate a key. */
+    /** Translate a key. Extra option values interpolate into {{placeholders}}. */
     t(key: string, options?: LocalizeOptions): string {
-        let text = i18next.t(key);
+        let text = i18next.t(key, options);
 
         if (options?.ellipsis) text += '...';
 

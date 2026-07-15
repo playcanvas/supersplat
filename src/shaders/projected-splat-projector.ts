@@ -257,7 +257,8 @@ fn main(
         cov01 = focal.x * focal.y * c01;
         cov11 = focal.y * focal.y * c11;
     } else {
-        let invDepth = 1.0 / depth;
+        let safeDepth = max(depth, 0.001);
+        let invDepth = 1.0 / safeDepth;
         let jx0 = focal.x * invDepth;
         let jx2 = focal.x * viewCenter.x * invDepth * invDepth;
         let jy1 = focal.y * invDepth;
@@ -280,13 +281,22 @@ fn main(
         return;
     }
 
+    let maxRadius = min(1024.0, min(viewport.x, viewport.y));
+    let radiusXUncapped = sqrt(2.0 * cov00);
+    let radiusYUncapped = sqrt(2.0 * cov11);
+    let capScale = max(1.0, max(radiusXUncapped, radiusYUncapped) / maxRadius);
+    let invCapScale2 = 1.0 / (capScale * capScale);
+    cov00 *= invCapScale2;
+    cov01 *= invCapScale2;
+    cov11 *= invCapScale2;
+
     let mid = 0.5 * (cov00 + cov11);
     let radius = length(vec2f(0.5 * (cov00 - cov11), cov01));
     let lambda1 = mid + radius;
     let lambda2 = max(mid - radius, 0.1);
     let direction = normalize(vec2f(cov01, lambda1 - cov00));
-    let axis1 = 2.0 * sqrt(2.0 * lambda1) * direction;
-    let axis2 = 2.0 * sqrt(2.0 * lambda2) * vec2f(direction.y, -direction.x);
+    let axis1 = 2.0 * min(sqrt(2.0 * lambda1), maxRadius) * direction;
+    let axis2 = 2.0 * min(sqrt(2.0 * lambda2), maxRadius) * vec2f(direction.y, -direction.x);
 
     let ndc = clip.xy / clip.w;
     let extent = abs(axis1) + abs(axis2);

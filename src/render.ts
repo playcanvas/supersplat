@@ -82,17 +82,8 @@ const getImportedFilename = (filename: string) => {
     return path.getBasename(trimmed);
 };
 
-// sort splats and wait for the sort to complete (or a 1s timeout)
-const sortSplatsAndWait = (scene: Scene, splats: Splat[]) => {
-    return Promise.all(splats.map((splat) => {
-        return new Promise<void>((resolve) => {
-            const { instance } = splat.entity.gsplat;
-            instance.sorter.once('updated', resolve);
-            instance.sort(scene.camera.mainCamera);
-            setTimeout(resolve, 1000);
-        });
-    }));
-};
+// sorting is submitted on the GPU immediately before each render
+const sortSplatsAndWait = (_scene: Scene, _splats: Splat[]) => Promise.resolve();
 
 const downloadFile = (data: ArrayBuffer | Uint8Array<ArrayBuffer>, filename: string, type = 'application/octet-stream') => {
     const blob = new Blob([data], { type });

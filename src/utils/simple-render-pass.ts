@@ -18,14 +18,14 @@ class ShaderQuad {
     shader: Shader;
     quadRender: QuadRender;
 
-    constructor(device: GraphicsDevice, vertexGLSL: string, fragmentGLSL: string, uniqueName: string) {
+    constructor(device: GraphicsDevice, vertexWGSL: string, fragmentWGSL: string, uniqueName: string) {
         this.shader = ShaderUtils.createShader(device, {
             uniqueName,
             attributes: {
                 vertex_position: SEMANTIC_POSITION
             },
-            vertexGLSL,
-            fragmentGLSL
+            vertexWGSL,
+            fragmentWGSL
         });
 
         this.quadRender = new QuadRender(this.shader);

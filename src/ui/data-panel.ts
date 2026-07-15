@@ -258,7 +258,7 @@ class DataPanel extends Container {
                 f_dc_1: i18n.t('panel.splat-data.dc-green'),
                 f_dc_2: i18n.t('panel.splat-data.dc-blue')
             };
-            const shBands = (splat.entity.gsplat.instance.resource as any).shBands ?? 0;
+            const shBands = splat.resource.shBands;
             const numCoeffs = SH_NUM_COEFFS[shBands] ?? 0;
             const channels = ['R', 'G', 'B'];
             const maxFRest = numCoeffs * 3;

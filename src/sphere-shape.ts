@@ -37,8 +37,8 @@ class SphereShape extends Element {
     add() {
         const material = new ShaderMaterial({
             uniqueName: 'sphereShape',
-            vertexGLSL: vertexShader,
-            fragmentGLSL: fragmentShader
+            vertexWGSL: vertexShader,
+            fragmentWGSL: fragmentShader
         });
         material.cull = CULLFACE_FRONT;
         material.blendState = new BlendState(

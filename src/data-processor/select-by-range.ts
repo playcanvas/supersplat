@@ -1,206 +1,137 @@
 import {
-    ADDRESS_CLAMP_TO_EDGE,
-    PIXELFORMAT_RGBA8,
-    SEMANTIC_POSITION,
-    drawQuadWithShader,
-    BlendState,
+    BUFFERUSAGE_COPY_DST,
+    BUFFERUSAGE_COPY_SRC,
+    SHADERLANGUAGE_WGSL,
+    SHADERSTAGE_COMPUTE,
+    BindGroupFormat,
+    BindStorageBufferFormat,
+    BindUniformBufferFormat,
+    Compute,
     GraphicsDevice,
-    Mat4,
-    RenderTarget,
-    ScopeSpace,
     Shader,
-    ShaderUtils,
-    Texture,
-    Vec3
+    StorageBuffer,
+    Vec2
 } from 'playcanvas';
 
 import { BufferPool } from './buffer-pool';
 import { packedMaskHeight, packedMaskWidth } from './histogram-config';
-import { vertexShader, fragmentShader } from '../shaders/select-by-range-shader';
+import {
+    createSplatValueTextureFormats,
+    createSplatValueUniformFormat,
+    setSplatValueParameters,
+    SplatValueOptions
+} from './splat-value-compute';
+import { computeSplatValueWGSL } from '../shaders/splat-value-shader';
 import { Splat } from '../splat';
 
-const identity = new Mat4();
-const zeroVec3 = new Vec3();
-
-// number of SH coefficients per RGB band, indexed by GSplatResource.shBands.
-const SH_NUM_COEFFS: { [k: number]: number } = { 0: 0, 1: 3, 2: 8, 3: 15 };
-
-type SelectByRangeOptions = {
+type SelectByRangeOptions = SplatValueOptions & {
     min: number;
     max: number;
     numBins: number;
     rangeStart: number;
     rangeEnd: number;
-    entityMatrix?: Mat4;
-    viewMatrix?: Mat4;
-    viewProjection?: Mat4;
-    cameraPos?: Vec3;
-    onScreenOnly?: boolean;
 };
 
-const resolve = (scope: ScopeSpace, values: any) => {
-    for (const key in values) {
-        scope.resolve(key).setValue(values[key]);
-    }
+type Variant = {
+    compute: Compute;
+    bindGroupFormat: BindGroupFormat;
 };
 
-const getShBands = (splat: Splat): number => {
-    return (splat.entity.gsplat.instance.resource as any).shBands ?? 0;
-};
+const WORKGROUP_SIZE = 256;
 
-// GPU pass that produces a 1-byte-per-splat selection mask for a given
-// histogram bucket range. mirrors the packing scheme used by Intersect so the
-// CPU readback is `numSplats` bytes (with up to 3 bytes of padding at the
-// end), addressable directly as `mask[splatIdx]`.
 class SelectByRange {
-    private device: GraphicsDevice;
-
-    // shaders compiled per SH_BANDS, same pattern as CalcHistogram.
-    private shaders: Map<number, Shader> = new Map();
-    private texture: Texture = null;
-    private renderTarget: RenderTarget = null;
+    private readonly device: GraphicsDevice;
+    private readonly variants = new Map<number, Variant>();
+    private readonly dispatchSize = new Vec2();
+    private output: StorageBuffer = null;
 
     constructor(device: GraphicsDevice) {
         this.device = device;
     }
 
-    private getShader(shBands: number): Shader {
-        let shader = this.shaders.get(shBands);
-        if (!shader) {
-            const defines = new Map<string, string>();
-            defines.set('SH_BANDS', `${shBands}`);
-            shader = ShaderUtils.createShader(this.device, {
-                uniqueName: `selectByRangeShader_SH${shBands}`,
-                attributes: {
-                    vertex_position: SEMANTIC_POSITION
-                },
-                vertexGLSL: vertexShader,
-                fragmentGLSL: fragmentShader,
-                fragmentDefines: defines
-            });
-            this.shaders.set(shBands, shader);
-        }
-        return shader;
+    private getVariant(bands: number) {
+        let variant = this.variants.get(bands);
+        if (variant) return variant;
+
+        const common = computeSplatValueWGSL(bands, 1);
+        const uniforms = createSplatValueUniformFormat(this.device);
+        const bindGroupFormat = new BindGroupFormat(this.device, [
+            new BindStorageBufferFormat('result', SHADERSTAGE_COMPUTE),
+            ...createSplatValueTextureFormats(bands),
+            new BindUniformBufferFormat('uniforms', SHADERSTAGE_COMPUTE)
+        ]);
+        const shader = new Shader(this.device, {
+            name: `SelectByRangeCompute-${bands}`,
+            shaderLanguage: SHADERLANGUAGE_WGSL,
+            cshader: /* wgsl */`
+@group(0) @binding(0) var<storage, read_write> result: array<u32>;
+${common.code}
+
+fn selectedByRange(index: u32) -> bool {
+    var value = 0.0;
+    var selected = false;
+    var visible = false;
+    if (!computeSplatValue(index, &value, &selected, &visible) || !visible) { return false; }
+    var normalized = 0.0;
+    if (uniforms.maxValue != uniforms.minValue) {
+        normalized = (value - uniforms.minValue) / (uniforms.maxValue - uniforms.minValue);
     }
+    let bin = clamp(i32(normalized * f32(uniforms.numBins)), 0, uniforms.numBins - 1);
+    return bin >= uniforms.rangeStart && bin <= uniforms.rangeEnd;
+}
 
-    private getResources(width: number, numSplats: number) {
-        // pack 4 splats per RGBA8 texel; layout shared with Intersect via histogram-config.
-        const resultWidth = packedMaskWidth(width);
-        const resultHeight = packedMaskHeight(resultWidth, numSplats);
-
-        if (!this.texture || this.texture.width !== resultWidth || this.texture.height !== resultHeight) {
-            if (this.texture) {
-                this.texture.destroy();
-                this.renderTarget.destroy();
-            }
-
-            this.texture = new Texture(this.device, {
-                name: 'selectByRangeTexture',
-                width: resultWidth,
-                height: resultHeight,
-                format: PIXELFORMAT_RGBA8,
-                mipmaps: false,
-                addressU: ADDRESS_CLAMP_TO_EDGE,
-                addressV: ADDRESS_CLAMP_TO_EDGE
-            });
-
-            this.renderTarget = new RenderTarget({
-                colorBuffer: this.texture,
-                depth: false
-            });
-        }
-
-        return {
-            texture: this.texture,
-            renderTarget: this.renderTarget
-        };
+@compute @workgroup_size(${WORKGROUP_SIZE})
+fn main(@builtin(global_invocation_id) gid: vec3u) {
+    let word = gid.x;
+    let first = word * 4u;
+    if (first >= uniforms.numSplats) { return; }
+    var packed = 0u;
+    for (var channel = 0u; channel < 4u; channel++) {
+        if (selectedByRange(first + channel)) { packed |= 0xffu << (channel * 8u); }
+    }
+    result[word] = packed;
+}`,
+            computeBindGroupFormat: bindGroupFormat,
+            computeUniformBufferFormats: { uniforms }
+        } as any);
+        const compute = new Compute(this.device, shader, `SelectByRangeCompute-${bands}`);
+        variant = { compute, bindGroupFormat };
+        this.variants.set(bands, variant);
+        return variant;
     }
 
     async run(splat: Splat, mode: number, options: SelectByRangeOptions, bufferPool: BufferPool): Promise<Uint8Array> {
-        const { device } = this;
-        const { scope } = device;
-
-        const numSplats = splat.splatData.numSplats;
-        const resource = splat.entity.gsplat.instance.resource as any;
-        const transformA = resource.getTexture('transformA');
-        const transformB = resource.getTexture('transformB');
-        const splatColor = resource.getTexture('splatColor');
-        const splatTransform = splat.transformTexture;
-        const transformPalette = splat.transformPalette.texture;
-        const splatState = splat.stateTexture;
-
-        const shBands = getShBands(splat);
-        const numCoeffs = SH_NUM_COEFFS[shBands] ?? 0;
-
-        const resources = this.getResources(transformA.width, numSplats);
-        const shader = this.getShader(shBands);
-
-        const entityMatrix = options.entityMatrix ?? identity;
-        const viewMatrix = options.viewMatrix ?? identity;
-        const viewProjection = options.viewProjection ?? identity;
-        const cameraPos = options.cameraPos ?? zeroVec3;
-        const onScreenOnly = options.onScreenOnly ? 1 : 0;
-
-        // ColorGrade math, kept in sync with ColorGrade in src/color-grade.ts.
-        const { tintClr, temperature, saturation, brightness, blackPoint, whitePoint, transparency } = splat;
-        const cgInvRange = 1 / (whitePoint - blackPoint);
-
-        const values: any = {
-            transformA,
-            transformB,
-            splatColor,
-            splatTransform,
-            transformPalette,
-            splatState,
-            splat_params: [transformA.width, numSplats],
-            propMode: mode,
-            entityMatrix: entityMatrix.data,
-            viewMatrix: viewMatrix.data,
-            viewProjection: viewProjection.data,
-            cameraWorldPos: [cameraPos.x, cameraPos.y, cameraPos.z],
-            onScreenOnly,
-            cgScale: [
-                cgInvRange * tintClr.r * (1 + temperature),
-                cgInvRange * tintClr.g,
-                cgInvRange * tintClr.b * (1 - temperature)
-            ],
-            cgOffset: -blackPoint + brightness,
-            cgSaturation: saturation,
-            transparency,
-            output_params: [resources.texture.width, resources.texture.height],
-            minMax: [options.min, options.max],
-            numBins: options.numBins,
-            rangeStart: options.rangeStart,
-            rangeEnd: options.rangeEnd
-        };
-
-        if (shBands > 0) {
-            values.splatSH_1to3 = resource.getTexture('splatSH_1to3');
-            values.shNumCoeffs = numCoeffs;
-        }
-        if (shBands > 1) {
-            values.splatSH_4to7 = resource.getTexture('splatSH_4to7');
-            values.splatSH_8to11 = resource.getTexture('splatSH_8to11');
-        }
-        if (shBands > 2) {
-            values.splatSH_12to15 = resource.getTexture('splatSH_12to15');
+        const count = splat.splatData.numSplats;
+        const sourceWidth = splat.resource.getTexture('transformA').width;
+        const resultWidth = packedMaskWidth(sourceWidth);
+        const resultHeight = packedMaskHeight(resultWidth, count);
+        const byteSize = resultWidth * resultHeight * 4;
+        if (!this.output || this.output.byteSize !== byteSize) {
+            this.output?.destroy();
+            this.output = new StorageBuffer(this.device, byteSize, BUFFERUSAGE_COPY_DST | BUFFERUSAGE_COPY_SRC);
         }
 
-        resolve(scope, values);
-
-        device.setBlendState(BlendState.NOBLEND);
-        drawQuadWithShader(device, resources.renderTarget, shader);
-
-        const byteLen = resources.texture.width * resources.texture.height * 4;
-        const buffer = bufferPool.acquire(byteLen);
-
-        const data = await resources.texture.read(0, 0, resources.texture.width, resources.texture.height, {
-            renderTarget: resources.renderTarget,
-            data: buffer,
-            immediate: false
-        });
-
-        return data as Uint8Array;
+        const variant = this.getVariant(splat.resource.shBands);
+        variant.compute.setParameter('result', this.output);
+        setSplatValueParameters(
+            variant.compute,
+            splat,
+            mode,
+            options,
+            options.min,
+            options.max,
+            options.numBins,
+            options.rangeStart,
+            options.rangeEnd
+        );
+        const words = byteSize / 4;
+        Compute.calcDispatchSize(Math.ceil(words / WORKGROUP_SIZE), this.dispatchSize);
+        variant.compute.setupDispatch(this.dispatchSize.x, this.dispatchSize.y);
+        this.device.computeDispatch([variant.compute], 'select-by-range');
+        const data = bufferPool.acquire(byteSize);
+        const readback = this.output.read(0, byteSize, data, false);
+        (this.device as any).submit();
+        return await readback as Uint8Array;
     }
 }
 

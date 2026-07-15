@@ -47,8 +47,8 @@ class InfiniteGrid extends Element {
             attributes: {
                 vertex_position: SEMANTIC_POSITION
             },
-            vertexGLSL: vertexShader,
-            fragmentGLSL: fragmentShader
+            vertexWGSL: vertexShader,
+            fragmentWGSL: fragmentShader
         });
 
         this.quadRender = new QuadRender(this.shader);

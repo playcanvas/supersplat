@@ -80,8 +80,8 @@ class EquirectRenderer {
             attributes: {
                 vertex_position: SEMANTIC_POSITION
             },
-            vertexGLSL: vertexShader,
-            fragmentGLSL: fragmentShader
+            vertexWGSL: vertexShader,
+            fragmentWGSL: fragmentShader
         });
     }
 

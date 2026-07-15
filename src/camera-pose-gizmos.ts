@@ -42,8 +42,8 @@ class CameraPoseGizmos extends Element {
 
         this.material = new ShaderMaterial({
             uniqueName: 'cameraPoseGizmoMaterial',
-            vertexGLSL: vertexShader,
-            fragmentGLSL: fragmentShader
+            vertexWGSL: vertexShader,
+            fragmentWGSL: fragmentShader
         });
         this.material.depthWrite = true;
         this.material.depthTest = true;

@@ -1,171 +1,163 @@
-const vertexShader = /* glsl */ `
-    uniform mat4 matrix_model;
-    uniform mat4 matrix_viewProjection;
+const vertexShader = /* wgsl */`
+attribute vertex_position: vec2f;
 
-    uniform highp usampler2D splatOrder;            // order texture mapping render order to splat ID
-    uniform uint splatTextureSize;                  // width of order texture
+uniform matrix_model: mat4x4f;
+uniform matrix_viewProjection: mat4x4f;
+uniform view_position: vec3f;
+uniform texParams: vec2u;
+uniform splatSize: f32;
+uniform viewportSize: vec2f;
+uniform useGaussianColor: f32;
+uniform selectedClr: vec4f;
+uniform unselectedClr: vec4f;
 
-    uniform sampler2D splatState;
-    uniform highp usampler2D splatPosition;
-    uniform highp usampler2D splatTransform;        // per-splat index into transform palette
-    uniform sampler2D transformPalette;             // palette of transform matrices
-    uniform sampler2D splatColor;                   // Gaussian color texture (RGBA16F)
+var splatState: texture_2d<f32>;
+var splatPosition: texture_2d<u32>;
+var splatTransform: texture_2d<u32>;
+var transformPalette: texture_2d<f32>;
+var splatColor: texture_2d<f32>;
 
-    // SH textures (for uncompressed format)
-    #if SH_BANDS > 0
-    uniform highp usampler2D splatSH_1to3;
+#if SH_BANDS > 0
+var splatSH_1to3: texture_2d<u32>;
+#if SH_BANDS > 1
+var splatSH_4to7: texture_2d<u32>;
+var splatSH_8to11: texture_2d<u32>;
+#if SH_BANDS > 2
+var splatSH_12to15: texture_2d<u32>;
+#endif
+#endif
+#endif
+
+varying overlayColor: vec4f;
+
+fn splatUv(index: u32) -> vec2i {
+    return vec2i(i32(index % uniform.texParams.x), i32(index / uniform.texParams.x));
+}
+
+fn paletteMatrix(index: u32) -> mat4x4f {
+    if (index == 0u) {
+        return mat4x4f(
+            vec4f(1.0, 0.0, 0.0, 0.0),
+            vec4f(0.0, 1.0, 0.0, 0.0),
+            vec4f(0.0, 0.0, 1.0, 0.0),
+            vec4f(0.0, 0.0, 0.0, 1.0)
+        );
+    }
+    let x = i32(index % 512u) * 3;
+    let y = i32(index / 512u);
+    let row0 = textureLoad(transformPalette, vec2i(x, y), 0);
+    let row1 = textureLoad(transformPalette, vec2i(x + 1, y), 0);
+    let row2 = textureLoad(transformPalette, vec2i(x + 2, y), 0);
+    return mat4x4f(
+        vec4f(row0.x, row1.x, row2.x, 0.0),
+        vec4f(row0.y, row1.y, row2.y, 0.0),
+        vec4f(row0.z, row1.z, row2.z, 0.0),
+        vec4f(row0.w, row1.w, row2.w, 1.0)
+    );
+}
+
+#if SH_BANDS > 0
+fn unpack111011s(bits: u32) -> vec3f {
+    let value = vec3u((vec3u(bits) >> vec3u(21u, 11u, 0u)) & vec3u(0x7ffu, 0x3ffu, 0x7ffu));
+    return vec3f(value) / vec3f(2047.0, 1023.0, 2047.0) * 2.0 - 1.0;
+}
+
+fn evaluateSH(uv: vec2i, direction: vec3f) -> vec3f {
+    var coefficients: array<vec3f, 15>;
+    let first = textureLoad(splatSH_1to3, uv, 0);
+    let scale = bitcast<f32>(first.x);
+    coefficients[0] = unpack111011s(first.y);
+    coefficients[1] = unpack111011s(first.z);
+    coefficients[2] = unpack111011s(first.w);
+    var result = 0.4886025119029199 * (
+        -coefficients[0] * direction.y
+        + coefficients[1] * direction.z
+        - coefficients[2] * direction.x
+    );
     #if SH_BANDS > 1
-    uniform highp usampler2D splatSH_4to7;
-    uniform highp usampler2D splatSH_8to11;
-    #if SH_BANDS > 2
-    uniform highp usampler2D splatSH_12to15;
+        let second = textureLoad(splatSH_4to7, uv, 0);
+        coefficients[3] = unpack111011s(second.x);
+        coefficients[4] = unpack111011s(second.y);
+        coefficients[5] = unpack111011s(second.z);
+        coefficients[6] = unpack111011s(second.w);
+        coefficients[7] = unpack111011s(textureLoad(splatSH_8to11, uv, 0).x);
+        let xx = direction.x * direction.x;
+        let yy = direction.y * direction.y;
+        let zz = direction.z * direction.z;
+        let xy = direction.x * direction.y;
+        let yz = direction.y * direction.z;
+        let xz = direction.x * direction.z;
+        result += coefficients[3] * (1.0925484305920792 * xy)
+            + coefficients[4] * (-1.0925484305920792 * yz)
+            + coefficients[5] * (0.31539156525252005 * (2.0 * zz - xx - yy))
+            + coefficients[6] * (-1.0925484305920792 * xz)
+            + coefficients[7] * (0.5462742152960396 * (xx - yy));
+        #if SH_BANDS > 2
+            let third = textureLoad(splatSH_8to11, uv, 0);
+            coefficients[7] = unpack111011s(third.x);
+            coefficients[8] = unpack111011s(third.y);
+            coefficients[9] = unpack111011s(third.z);
+            coefficients[10] = unpack111011s(third.w);
+            let fourth = textureLoad(splatSH_12to15, uv, 0);
+            coefficients[11] = unpack111011s(fourth.x);
+            coefficients[12] = unpack111011s(fourth.y);
+            coefficients[13] = unpack111011s(fourth.z);
+            coefficients[14] = unpack111011s(fourth.w);
+            result += coefficients[8] * (-0.5900435899266435 * direction.y * (3.0 * xx - yy))
+                + coefficients[9] * (2.890611442640554 * xy * direction.z)
+                + coefficients[10] * (-0.4570457994644658 * direction.y * (4.0 * zz - xx - yy))
+                + coefficients[11] * (0.3731763325901154 * direction.z * (2.0 * zz - 3.0 * xx - 3.0 * yy))
+                + coefficients[12] * (-0.4570457994644658 * direction.x * (4.0 * zz - xx - yy))
+                + coefficients[13] * (1.445305721320277 * direction.z * (xx - yy))
+                + coefficients[14] * (-0.5900435899266435 * direction.x * (xx - 3.0 * yy));
+        #endif
     #endif
-    #endif
-    #endif
+    return result * scale;
+}
+#endif
 
-    uniform vec3 view_position;                     // camera position in world space
-
-    uniform uvec2 texParams;
-
-    uniform float splatSize;
-    uniform float useGaussianColor;                 // 0.0 = use selection colors, 1.0 = use gaussian color
-    uniform vec4 selectedClr;
-    uniform vec4 unselectedClr;
-
-    varying vec4 varying_color;
-
-    // calculate the current splat index and uv
-    ivec2 calcSplatUV(uint index, uint width) {
-        return ivec2(int(index % width), int(index / width));
+@vertex
+fn vertexMain(input: VertexInput) -> VertexOutput {
+    var output: VertexOutput;
+    let id = pcInstanceIndex;
+    let uv = splatUv(id);
+    let state = u32(textureLoad(splatState, uv, 0).r * 255.0 + 0.5);
+    if ((state & 6u) != 0u) {
+        output.position = vec4f(0.0, 0.0, 2.0, 1.0);
+        return output;
     }
 
-    #if SH_BANDS > 0
+    let model = uniform.matrix_model * paletteMatrix(textureLoad(splatTransform, uv, 0).r);
+    let center = bitcast<vec3f>(textureLoad(splatPosition, uv, 0).xyz);
+    let worldPosition = model * vec4f(center, 1.0);
+    let projected = uniform.matrix_viewProjection * worldPosition;
+    let offset = input.vertex_position * uniform.splatSize * 2.0 / uniform.viewportSize * projected.w;
+    output.position = projected + vec4f(offset, -projected.z, 0.0);
 
-    // include SH evaluation from engine (provides SH_COEFFS, constants, and evalSH)
-    #include "gsplatEvalSHVS"
-
-    // unpack signed 11 10 11 bits
-    vec3 unpack111011s(uint bits) {
-        return vec3((uvec3(bits) >> uvec3(21u, 11u, 0u)) & uvec3(0x7ffu, 0x3ffu, 0x7ffu)) / vec3(2047.0, 1023.0, 2047.0) * 2.0 - 1.0;
+    var gaussianColor = uniform.unselectedClr.rgb;
+    if (uniform.useGaussianColor > 0.0) {
+        gaussianColor = textureLoad(splatColor, uv, 0).rgb;
+        #if SH_BANDS > 0
+            let worldDirection = normalize(worldPosition.xyz - uniform.view_position);
+            let modelDirection = normalize(transpose(mat3x3f(model[0].xyz, model[1].xyz, model[2].xyz)) * worldDirection);
+            gaussianColor += evaluateSH(uv, modelDirection);
+        #endif
     }
-
-    // fetch quantized spherical harmonic coefficients with scale
-    void fetchScale(in uvec4 t, out float scale, out vec3 a, out vec3 b, out vec3 c) {
-        scale = uintBitsToFloat(t.x);
-        a = unpack111011s(t.y);
-        b = unpack111011s(t.z);
-        c = unpack111011s(t.w);
-    }
-
-    // fetch quantized spherical harmonic coefficients
-    void fetchSH(in uvec4 t, out vec3 a, out vec3 b, out vec3 c, out vec3 d) {
-        a = unpack111011s(t.x);
-        b = unpack111011s(t.y);
-        c = unpack111011s(t.z);
-        d = unpack111011s(t.w);
-    }
-
-    void fetchSH1(in uint t, out vec3 a) {
-        a = unpack111011s(t);
-    }
-
-    #if SH_BANDS == 1
-    void readSHData(in ivec2 uv, out vec3 sh[3], out float scale) {
-        fetchScale(texelFetch(splatSH_1to3, uv, 0), scale, sh[0], sh[1], sh[2]);
-    }
-    #elif SH_BANDS == 2
-    void readSHData(in ivec2 uv, out vec3 sh[8], out float scale) {
-        fetchScale(texelFetch(splatSH_1to3, uv, 0), scale, sh[0], sh[1], sh[2]);
-        fetchSH(texelFetch(splatSH_4to7, uv, 0), sh[3], sh[4], sh[5], sh[6]);
-        fetchSH1(texelFetch(splatSH_8to11, uv, 0).x, sh[7]);
-    }
-    #elif SH_BANDS == 3
-    void readSHData(in ivec2 uv, out vec3 sh[15], out float scale) {
-        fetchScale(texelFetch(splatSH_1to3, uv, 0), scale, sh[0], sh[1], sh[2]);
-        fetchSH(texelFetch(splatSH_4to7, uv, 0), sh[3], sh[4], sh[5], sh[6]);
-        fetchSH(texelFetch(splatSH_8to11, uv, 0), sh[7], sh[8], sh[9], sh[10]);
-        fetchSH(texelFetch(splatSH_12to15, uv, 0), sh[11], sh[12], sh[13], sh[14]);
-    }
-    #endif
-
-    #endif
-
-    void main(void) {
-        // look up splat ID from order texture using gl_VertexID
-        ivec2 orderUV = ivec2(gl_VertexID % int(splatTextureSize), gl_VertexID / int(splatTextureSize));
-        uint splatId = texelFetch(splatOrder, orderUV, 0).r;
-
-        ivec2 splatUV = calcSplatUV(splatId, texParams.x);
-        uint splatState = uint(texelFetch(splatState, splatUV, 0).r * 255.0);
-
-        // check for locked splats (deleted splats are already excluded from order texture)
-        if ((splatState & 2u) != 0u) {
-            // locked
-            gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
-            gl_PointSize = 0.0;
-        } else {
-            mat4 model = matrix_model;
-
-            // handle per-splat transform
-            uint transformIndex = texelFetch(splatTransform, splatUV, 0).r;
-            if (transformIndex > 0u) {
-                // read transform matrix
-                int u = int(transformIndex % 512u) * 3;
-                int v = int(transformIndex / 512u);
-
-                mat4 t;
-                t[0] = texelFetch(transformPalette, ivec2(u, v), 0);
-                t[1] = texelFetch(transformPalette, ivec2(u + 1, v), 0);
-                t[2] = texelFetch(transformPalette, ivec2(u + 2, v), 0);
-                t[3] = vec4(0.0, 0.0, 0.0, 1.0);
-
-                model = matrix_model * transpose(t);
-            }
-
-            vec3 center = uintBitsToFloat(texelFetch(splatPosition, splatUV, 0).xyz);
-
-            vec3 gaussianClr;
-
-            if (useGaussianColor > 0.0) {
-                // get base gaussian color
-                gaussianClr = texelFetch(splatColor, splatUV, 0).xyz;
-
-                #if SH_BANDS > 0
-                    // calculate world position and view direction
-                    vec3 worldPos = (model * vec4(center, 1.0)).xyz;
-                    vec3 viewDir = normalize(worldPos - view_position);
-                    // transform view direction to model space
-                    vec3 modelViewDir = normalize(viewDir * mat3(model));
-
-                    // read and evaluate SH
-                    vec3 sh[SH_COEFFS];
-                    float scale;
-                    readSHData(splatUV, sh, scale);
-                    gaussianClr += evalSH(sh, modelViewDir) * scale;
-                #endif
-            } else {
-                gaussianClr = unselectedClr.xyz;
-            }
-
-            // choose between selection colors and gaussian color
-            varying_color = vec4(mix(gaussianClr, selectedClr.xyz, (splatState == 1u) ? selectedClr.w : 0.0), unselectedClr.w);
-
-            gl_Position = matrix_viewProjection * model * vec4(center, 1.0);
-
-            // disable depth clipping
-            gl_Position.z = 0.0;
-
-            gl_PointSize = splatSize;
-        }
-    }
+    let selected = select(0.0, uniform.selectedClr.a, state == 1u);
+    output.overlayColor = vec4f(mix(gaussianColor, uniform.selectedClr.rgb, selected), uniform.unselectedClr.a);
+    return output;
+}
 `;
 
-const fragmentShader = /* glsl */ `
-    varying vec4 varying_color;
+const fragmentShader = /* wgsl */`
+varying overlayColor: vec4f;
 
-    void main(void) {
-        gl_FragColor = varying_color;
-    }
+@fragment
+fn fragmentMain(input: FragmentInput) -> FragmentOutput {
+    var output: FragmentOutput;
+    output.color = input.overlayColor;
+    return output;
+}
 `;
 
 export { vertexShader, fragmentShader };

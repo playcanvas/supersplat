@@ -106,10 +106,12 @@ class Picker {
         // 'intersect' picks against the currently-selected set (same render as
         // 'remove') so unselected splats can't occlude selected ones and skew it.
         const pickOp = mode === 'intersect' ? 'remove' : mode;
+        const pickOpIndex = ['add', 'remove', 'set'].indexOf(pickOp);
 
         // Set picker uniforms
-        this.device.scope.resolve('pickOp').setValue(['add', 'remove', 'set'].indexOf(pickOp));
+        this.device.scope.resolve('pickOp').setValue(pickOpIndex);
         this.device.scope.resolve('pickMode').setValue(0);
+        this.scene.projectedSplatRenderer.preparePick(splat, pickOpIndex, false);
 
         // Render ID picking pass
         const emptyMap = new Map();
@@ -118,6 +120,7 @@ class Picker {
         this.renderPass.setClearColor(idClearColor);
         this.renderPass.update(this.scene.camera.camera, this.scene.app.scene, [splatLayer], emptyMap, false);
         this.renderPass.render();
+        this.scene.projectedSplatRenderer.finishPick();
 
         // Re-enable all splats
         splats.forEach((s) => {
@@ -193,6 +196,7 @@ class Picker {
         // Set depth estimation mode uniform
         this.device.scope.resolve('pickOp').setValue(2); // 'set' mode - don't skip any visible splats
         this.device.scope.resolve('pickMode').setValue(1);
+        scene.projectedSplatRenderer.preparePick(splat, 2, true);
 
         // Render scene with depth pass
         this.renderPass.blendState = this.depthBlendState;
@@ -200,6 +204,7 @@ class Picker {
         this.renderPass.setClearColor(depthClearColor);
         this.renderPass.update(camera.camera, app.scene, [splatLayer], emptyMap, false);
         this.renderPass.render();
+        scene.projectedSplatRenderer.finishPick();
 
         // Re-enable all splats
         splats.forEach((s) => {

@@ -1,0 +1,139 @@
+import {
+    SAMPLETYPE_FLOAT,
+    SAMPLETYPE_UINT,
+    SAMPLETYPE_UNFILTERABLE_FLOAT,
+    SHADERSTAGE_COMPUTE,
+    UNIFORMTYPE_FLOAT,
+    UNIFORMTYPE_INT,
+    UNIFORMTYPE_MAT4,
+    UNIFORMTYPE_UINT,
+    UNIFORMTYPE_VEC3,
+    BindTextureFormat,
+    Compute,
+    GraphicsDevice,
+    Mat4,
+    UniformBufferFormat,
+    UniformFormat,
+    Vec3
+} from 'playcanvas';
+
+import { Splat } from '../splat';
+
+const identity = new Mat4();
+const zeroVec3 = new Vec3();
+const SH_NUM_COEFFS = [0, 3, 8, 15];
+
+type SplatValueOptions = {
+    entityMatrix?: Mat4;
+    viewMatrix?: Mat4;
+    viewProjection?: Mat4;
+    cameraPos?: Vec3;
+    onScreenOnly?: boolean;
+};
+
+const createSplatValueUniformFormat = (device: GraphicsDevice) => new UniformBufferFormat(device, [
+    new UniformFormat('sourceWidth', UNIFORMTYPE_UINT),
+    new UniformFormat('numSplats', UNIFORMTYPE_UINT),
+    new UniformFormat('propMode', UNIFORMTYPE_INT),
+    new UniformFormat('onScreenOnly', UNIFORMTYPE_UINT),
+    new UniformFormat('entityMatrix', UNIFORMTYPE_MAT4),
+    new UniformFormat('viewMatrix', UNIFORMTYPE_MAT4),
+    new UniformFormat('viewProjection', UNIFORMTYPE_MAT4),
+    new UniformFormat('cameraWorldPos', UNIFORMTYPE_VEC3),
+    new UniformFormat('cgOffset', UNIFORMTYPE_FLOAT),
+    new UniformFormat('cgScale', UNIFORMTYPE_VEC3),
+    new UniformFormat('cgSaturation', UNIFORMTYPE_FLOAT),
+    new UniformFormat('transparency', UNIFORMTYPE_FLOAT),
+    new UniformFormat('shNumCoeffs', UNIFORMTYPE_INT),
+    new UniformFormat('minValue', UNIFORMTYPE_FLOAT),
+    new UniformFormat('maxValue', UNIFORMTYPE_FLOAT),
+    new UniformFormat('numBins', UNIFORMTYPE_INT),
+    new UniformFormat('rangeStart', UNIFORMTYPE_INT),
+    new UniformFormat('rangeEnd', UNIFORMTYPE_INT),
+    new UniformFormat('padding', UNIFORMTYPE_INT)
+]);
+
+const createSplatValueTextureFormats = (bands: number) => {
+    const formats = [
+        new BindTextureFormat('transformA', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false),
+        new BindTextureFormat('transformB', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_FLOAT, false),
+        new BindTextureFormat('splatColor', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_FLOAT, false),
+        new BindTextureFormat('splatTransform', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false),
+        new BindTextureFormat('transformPalette', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UNFILTERABLE_FLOAT, false),
+        new BindTextureFormat('splatState', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_FLOAT, false)
+    ];
+    const uintTexture = (name: string) => new BindTextureFormat(name, SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false);
+    if (bands > 0) formats.push(uintTexture('splatSH_1to3'));
+    if (bands > 1) {
+        formats.push(uintTexture('splatSH_4to7'));
+        formats.push(uintTexture('splatSH_8to11'));
+    }
+    if (bands > 2) formats.push(uintTexture('splatSH_12to15'));
+    return formats;
+};
+
+const setSplatValueParameters = (
+    compute: Compute,
+    splat: Splat,
+    mode: number,
+    options?: SplatValueOptions,
+    minValue = 0,
+    maxValue = 0,
+    numBins = 0,
+    rangeStart = 0,
+    rangeEnd = 0
+) => {
+    const resource = splat.resource;
+    const bands = resource.shBands;
+    const transformA = resource.getTexture('transformA');
+    const entityMatrix = options?.entityMatrix ?? identity;
+    const viewMatrix = options?.viewMatrix ?? identity;
+    const viewProjection = options?.viewProjection ?? identity;
+    const cameraPos = options?.cameraPos ?? zeroVec3;
+    const { tintClr, temperature, saturation, brightness, blackPoint, whitePoint, transparency } = splat;
+    const inverseRange = 1 / (whitePoint - blackPoint);
+
+    compute.setParameter('transformA', transformA);
+    compute.setParameter('transformB', resource.getTexture('transformB'));
+    compute.setParameter('splatColor', resource.getTexture('splatColor'));
+    compute.setParameter('splatTransform', splat.transformTexture);
+    compute.setParameter('transformPalette', splat.transformPalette.texture);
+    compute.setParameter('splatState', splat.stateTexture);
+    if (bands > 0) compute.setParameter('splatSH_1to3', resource.getTexture('splatSH_1to3'));
+    if (bands > 1) {
+        compute.setParameter('splatSH_4to7', resource.getTexture('splatSH_4to7'));
+        compute.setParameter('splatSH_8to11', resource.getTexture('splatSH_8to11'));
+    }
+    if (bands > 2) compute.setParameter('splatSH_12to15', resource.getTexture('splatSH_12to15'));
+
+    compute.setParameter('sourceWidth', transformA.width);
+    compute.setParameter('numSplats', splat.splatData.numSplats);
+    compute.setParameter('propMode', mode);
+    compute.setParameter('onScreenOnly', options?.onScreenOnly ? 1 : 0);
+    compute.setParameter('entityMatrix', entityMatrix.data);
+    compute.setParameter('viewMatrix', viewMatrix.data);
+    compute.setParameter('viewProjection', viewProjection.data);
+    compute.setParameter('cameraWorldPos', [cameraPos.x, cameraPos.y, cameraPos.z]);
+    compute.setParameter('cgOffset', -blackPoint + brightness);
+    compute.setParameter('cgScale', [
+        inverseRange * tintClr.r * (1 + temperature),
+        inverseRange * tintClr.g,
+        inverseRange * tintClr.b * (1 - temperature)
+    ]);
+    compute.setParameter('cgSaturation', saturation);
+    compute.setParameter('transparency', transparency);
+    compute.setParameter('shNumCoeffs', SH_NUM_COEFFS[bands] ?? 0);
+    compute.setParameter('minValue', minValue);
+    compute.setParameter('maxValue', maxValue);
+    compute.setParameter('numBins', numBins);
+    compute.setParameter('rangeStart', rangeStart);
+    compute.setParameter('rangeEnd', rangeEnd);
+    compute.setParameter('padding', 0);
+};
+
+export {
+    createSplatValueTextureFormats,
+    createSplatValueUniformFormat,
+    setSplatValueParameters
+};
+export type { SplatValueOptions };

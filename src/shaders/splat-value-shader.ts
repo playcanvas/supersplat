@@ -1,393 +1,229 @@
-// shared GLSL chunk used by histogram and select-by-range GPU passes.
-//
-// declares the texture and uniform interface for reading per-splat data and
-// computing a single scalar value selected by `propMode`. exposes a small
-// extractor API (`Splat` struct + `readSplat`, `readColorDC`, `readOpacity`,
-// `readScale`, `readRotation`, `readSHCoeff`, `readFinalColor`) so callers can
-// also pull individual fields if they need something other than the propMode
-// dispatch.
-//
-// propMode values:
-//
-//   0..2   world.x / world.y / world.z
-//   3      distance (= length(world))
-//   4      camera depth (= -(viewMatrix * world).z)
-//   5..7   "Red"/"Green"/"Blue" = final on-screen color channels.
-//          applyColorGrade(dcDecode(f_dc) + evalSH(viewDir)). view-dependent.
-//   8      opacity (= splatColor.a * transparency)
-//   9..11  scale_0 / scale_1 / scale_2 (exp'd in transformB.xyz)
-//   12     volume (= scale.x * scale.y * scale.z)
-//   13     surface area (= dot(scale, scale))
-//   14..17 quat W (reconstructed, always >= 0) / X / Y / Z
-//   18..20 H / S / V of the final on-screen color (same dependence as 5..7)
-//   21..   f_rest_N (N = propMode - 21), decoded from the engine's packed SH
-//          textures. only valid when SH_BANDS > 0 and N < 3 * shNumCoeffs.
-//   66..68 raw "DC R"/"DC G"/"DC B" coefficients: inverse of `dcDecode` applied
-//          to `splatColor.rgb`. camera-independent.
-//
-// the active SH_BANDS define controls which SH samplers are declared and which
-// branches are compiled in. callers must select a matching uniqueName so that
-// each SH_BANDS variant gets its own cached shader.
+const computeSplatValueWGSL = (bands: number, firstBinding = 1) => {
+    let binding = firstBinding;
+    const declarations = [
+        `@group(0) @binding(${binding++}) var transformA: texture_2d<u32>;`,
+        `@group(0) @binding(${binding++}) var transformB: texture_2d<f32>;`,
+        `@group(0) @binding(${binding++}) var splatColor: texture_2d<f32>;`,
+        `@group(0) @binding(${binding++}) var splatTransform: texture_2d<u32>;`,
+        `@group(0) @binding(${binding++}) var transformPalette: texture_2d<f32>;`,
+        `@group(0) @binding(${binding++}) var splatState: texture_2d<f32>;`
+    ];
+    if (bands > 0) declarations.push(`@group(0) @binding(${binding++}) var splatSH_1to3: texture_2d<u32>;`);
+    if (bands > 1) {
+        declarations.push(`@group(0) @binding(${binding++}) var splatSH_4to7: texture_2d<u32>;`);
+        declarations.push(`@group(0) @binding(${binding++}) var splatSH_8to11: texture_2d<u32>;`);
+    }
+    if (bands > 2) declarations.push(`@group(0) @binding(${binding++}) var splatSH_12to15: texture_2d<u32>;`);
+    declarations.push(`@group(0) @binding(${binding}) var<uniform> uniforms: SplatValueUniforms;`);
 
-const computeSplatValueGLSL = /* glsl */ `
-
-#ifndef SH_BANDS
-#define SH_BANDS 0
-#endif
-
-#define SH_C0 0.28209479177387814
-
-#if SH_BANDS == 1
-#define SH_COEFFS 3
-#elif SH_BANDS == 2
-#define SH_COEFFS 8
-#elif SH_BANDS == 3
-#define SH_COEFFS 15
-#endif
-
-uniform highp usampler2D transformA;
-uniform sampler2D transformB;
-uniform sampler2D splatColor;
-uniform highp usampler2D splatTransform;
-uniform sampler2D transformPalette;
-uniform sampler2D splatState;
-
-#if SH_BANDS > 0
-uniform highp usampler2D splatSH_1to3;
-uniform int shNumCoeffs;
-#endif
-#if SH_BANDS > 1
-uniform highp usampler2D splatSH_4to7;
-uniform highp usampler2D splatSH_8to11;
-#endif
-#if SH_BANDS > 2
-uniform highp usampler2D splatSH_12to15;
-#endif
-
-uniform ivec2 splat_params;
-uniform int propMode;
-uniform mat4 entityMatrix;
-uniform mat4 viewMatrix;
-uniform mat4 viewProjection;
-uniform vec3 cameraWorldPos;
-uniform int onScreenOnly;
-
-uniform vec3 cgScale;
-uniform float cgOffset;
-uniform float cgSaturation;
-uniform float transparency;
-
-// SH band weighting constants (matches engine's gsplatEvalSH GLSL chunk).
-#if SH_BANDS > 0
-const float SH_C1 = 0.4886025119029199;
-#if SH_BANDS > 1
-const float SH_C2_0 =  1.0925484305920792;
-const float SH_C2_1 = -1.0925484305920792;
-const float SH_C2_2 =  0.31539156525252005;
-const float SH_C2_3 = -1.0925484305920792;
-const float SH_C2_4 =  0.5462742152960396;
-#endif
-#if SH_BANDS > 2
-const float SH_C3_0 = -0.5900435899266435;
-const float SH_C3_1 =  2.890611442640554;
-const float SH_C3_2 = -0.4570457994644658;
-const float SH_C3_3 =  0.3731763325901154;
-const float SH_C3_4 = -0.4570457994644658;
-const float SH_C3_5 =  1.445305721320277;
-const float SH_C3_6 = -0.5900435899266435;
-#endif
-#endif
-
-struct Splat {
-    int idx;
-    ivec2 uv;
-    int state;
-    bool selected;      // state == 1
-    bool valid;         // state == 0 || state == 1 (not locked / deleted)
-    vec3 localPos;      // pre-transform (from transformA)
-    vec3 worldPos;      // post entity + per-splat transform
-    bool visible;       // passes the onScreenOnly filter
-};
-
-vec3 applyColorGrade(vec3 c) {
-    c = cgOffset + c * cgScale;
-    float grey = dot(c, vec3(0.299, 0.587, 0.114));
-    return mix(vec3(grey), c, cgSaturation);
-}
-
-vec3 rgb2hsv(vec3 c) {
-    vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
-    vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
-    vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
-    float d = q.x - min(q.w, q.y);
-    float e = 1.0e-10;
-    return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
-}
-
-#if SH_BANDS > 0
-// unpack the (R, G, B) SH triplet at coefficient index coeffIdx (0..14) for
-// the splat at uv. R/B are stored in 11 bits, G in 10 bits, all per-splat
-// normalized by the max value packed into splatSH_1to3.x.
-vec3 unpackSHTriplet(int coeffIdx, ivec2 uv) {
-    uvec4 sh1 = texelFetch(splatSH_1to3, uv, 0);
-    float maxV = uintBitsToFloat(sh1.x);
-
-    uint packed = 0u;
+    const coefficientCount = bands === 1 ? 3 : bands === 2 ? 8 : 15;
+    const shFunctions = bands === 0 ? '' : /* wgsl */`
+fn unpackSHTriplet(coeffIdx: i32, uv: vec2i) -> vec3f {
+    let first = textureLoad(splatSH_1to3, uv, 0);
+    var packed = 0u;
     if (coeffIdx < 3) {
-        packed = sh1[coeffIdx + 1];
+        packed = first[coeffIdx + 1];
     }
-    #if SH_BANDS > 1
-    else if (coeffIdx < 7) {
-        packed = texelFetch(splatSH_4to7, uv, 0)[coeffIdx - 3];
-    }
-    else if (coeffIdx < 11) {
-        packed = texelFetch(splatSH_8to11, uv, 0)[coeffIdx - 7];
-    }
-    #endif
-    #if SH_BANDS > 2
-    else if (coeffIdx < 15) {
-        packed = texelFetch(splatSH_12to15, uv, 0)[coeffIdx - 11];
-    }
-    #endif
-
-    uint encR = (packed >> 21) & 0x7FFu;
-    uint encG = (packed >> 11) & 0x3FFu;
-    uint encB =  packed        & 0x7FFu;
-
-    vec3 normalized = vec3(
-        (float(encR) / 2047.0) * 2.0 - 1.0,
-        (float(encG) / 1023.0) * 2.0 - 1.0,
-        (float(encB) / 2047.0) * 2.0 - 1.0
-    );
-
-    return normalized * maxV;
+    ${bands > 1 ? `else if (coeffIdx < 7) {
+        packed = textureLoad(splatSH_4to7, uv, 0)[coeffIdx - 3];
+    } else if (coeffIdx < 11) {
+        packed = textureLoad(splatSH_8to11, uv, 0)[coeffIdx - 7];
+    }` : ''}
+    ${bands > 2 ? `else if (coeffIdx < 15) {
+        packed = textureLoad(splatSH_12to15, uv, 0)[coeffIdx - 11];
+    }` : ''}
+    let encoded = (vec3u(packed) >> vec3u(21u, 11u, 0u)) & vec3u(0x7ffu, 0x3ffu, 0x7ffu);
+    let normalized = vec3f(encoded) / vec3f(2047.0, 1023.0, 2047.0) * 2.0 - 1.0;
+    return normalized * bitcast<f32>(first.x);
 }
-#endif
 
-// populate s from the given index. returns false when the splat is
-// out-of-bounds or in a locked / deleted state; in that case only idx, state,
-// valid, and selected are reliably set.
-bool readSplat(int idx, out Splat s) {
-    s.idx = idx;
-    s.uv = ivec2(0);
-    s.state = 0;
-    s.selected = false;
-    s.valid = false;
-    s.localPos = vec3(0.0);
-    s.worldPos = vec3(0.0);
-    s.visible = false;
+fn readSHCoeff(s: SplatValue, index: i32) -> f32 {
+    let channel = index / uniforms.shNumCoeffs;
+    let triplet = unpackSHTriplet(index % uniforms.shNumCoeffs, s.uv);
+    if (channel == 0) { return triplet.r; }
+    if (channel == 1) { return triplet.g; }
+    return triplet.b;
+}
 
-    if (idx >= splat_params.y) return false;
-    s.uv = ivec2(idx % splat_params.x, idx / splat_params.x);
-
-    s.state = int(texelFetch(splatState, s.uv, 0).r * 255.0 + 0.5);
-    s.selected = (s.state == 1);
-    bool clean = (s.state == 0);
-    if (!(s.selected || clean)) return false;
-    s.valid = true;
-
-    uvec4 transformAData = texelFetch(transformA, s.uv, 0);
-    s.localPos = uintBitsToFloat(transformAData.xyz);
-
-    vec3 pos = s.localPos;
-    uint ti = texelFetch(splatTransform, s.uv, 0).r;
-    if (ti > 0u) {
-        int u = int(ti % 512u) * 3;
-        int v = int(ti / 512u);
-        mat3x4 t;
-        t[0] = texelFetch(transformPalette, ivec2(u,     v), 0);
-        t[1] = texelFetch(transformPalette, ivec2(u + 1, v), 0);
-        t[2] = texelFetch(transformPalette, ivec2(u + 2, v), 0);
-        pos = vec4(s.localPos, 1.0) * t;
+fn evaluateSH(s: SplatValue) -> vec3f {
+    let direction = normalize(s.worldPos - uniforms.cameraWorldPos);
+    var coefficients: array<vec3f, ${coefficientCount}>;
+    for (var i = 0; i < ${coefficientCount}; i++) {
+        coefficients[i] = unpackSHTriplet(i, s.uv);
     }
+    var result = 0.4886025119029199 * (
+        -coefficients[0] * direction.y
+        + coefficients[1] * direction.z
+        - coefficients[2] * direction.x
+    );
+    ${bands > 1 ? `let xx = direction.x * direction.x;
+    let yy = direction.y * direction.y;
+    let zz = direction.z * direction.z;
+    let xy = direction.x * direction.y;
+    let yz = direction.y * direction.z;
+    let xz = direction.x * direction.z;
+    result += coefficients[3] * (1.0925484305920792 * xy)
+        + coefficients[4] * (-1.0925484305920792 * yz)
+        + coefficients[5] * (0.31539156525252005 * (2.0 * zz - xx - yy))
+        + coefficients[6] * (-1.0925484305920792 * xz)
+        + coefficients[7] * (0.5462742152960396 * (xx - yy));` : ''}
+    ${bands > 2 ? `result += coefficients[8] * (-0.5900435899266435 * direction.y * (3.0 * xx - yy))
+        + coefficients[9] * (2.890611442640554 * xy * direction.z)
+        + coefficients[10] * (-0.4570457994644658 * direction.y * (4.0 * zz - xx - yy))
+        + coefficients[11] * (0.3731763325901154 * direction.z * (2.0 * zz - 3.0 * xx - 3.0 * yy))
+        + coefficients[12] * (-0.4570457994644658 * direction.x * (4.0 * zz - xx - yy))
+        + coefficients[13] * (1.445305721320277 * direction.z * (xx - yy))
+        + coefficients[14] * (-0.5900435899266435 * direction.x * (xx - 3.0 * yy));` : ''}
+    return result;
+}`;
 
-    s.worldPos = (entityMatrix * vec4(pos, 1.0)).xyz;
+    const shDispatch = bands === 0 ? '' : `else if (uniforms.propMode >= 21 && uniforms.propMode <= 65) {
+        value = readSHCoeff(s, uniforms.propMode - 21);
+    }`;
 
-    s.visible = true;
-    if (onScreenOnly == 1) {
-        vec4 clip = viewProjection * vec4(s.worldPos, 1.0);
-        if (clip.w <= 0.0) {
-            s.visible = false;
-        } else {
-            // OpenGL-style clip space: ndc in [-1, 1] on all axes.
-            vec3 ndc = clip.xyz / clip.w;
-            if (any(greaterThan(abs(ndc), vec3(1.0)))) {
-                s.visible = false;
-            }
+    return {
+        uniformBinding: binding,
+        code: /* wgsl */`
+struct SplatValueUniforms {
+    sourceWidth: u32,
+    numSplats: u32,
+    propMode: i32,
+    onScreenOnly: u32,
+    entityMatrix: mat4x4f,
+    viewMatrix: mat4x4f,
+    viewProjection: mat4x4f,
+    cameraWorldPos: vec3f,
+    cgOffset: f32,
+    cgScale: vec3f,
+    cgSaturation: f32,
+    transparency: f32,
+    shNumCoeffs: i32,
+    minValue: f32,
+    maxValue: f32,
+    numBins: i32,
+    rangeStart: i32,
+    rangeEnd: i32,
+    padding: i32
+}
+
+struct SplatValue {
+    uv: vec2i,
+    selected: bool,
+    visible: bool,
+    localPos: vec3f,
+    worldPos: vec3f
+}
+
+${declarations.join('\n')}
+
+fn paletteMatrix(index: u32) -> mat4x4f {
+    if (index == 0u) {
+        return mat4x4f(
+            vec4f(1.0, 0.0, 0.0, 0.0), vec4f(0.0, 1.0, 0.0, 0.0),
+            vec4f(0.0, 0.0, 1.0, 0.0), vec4f(0.0, 0.0, 0.0, 1.0)
+        );
+    }
+    let x = i32(index % 512u) * 3;
+    let y = i32(index / 512u);
+    let r0 = textureLoad(transformPalette, vec2i(x, y), 0);
+    let r1 = textureLoad(transformPalette, vec2i(x + 1, y), 0);
+    let r2 = textureLoad(transformPalette, vec2i(x + 2, y), 0);
+    return mat4x4f(
+        vec4f(r0.x, r1.x, r2.x, 0.0), vec4f(r0.y, r1.y, r2.y, 0.0),
+        vec4f(r0.z, r1.z, r2.z, 0.0), vec4f(r0.w, r1.w, r2.w, 1.0)
+    );
+}
+
+fn applyColorGrade(color: vec3f) -> vec3f {
+    let graded = uniforms.cgOffset + color * uniforms.cgScale;
+    let grey = dot(graded, vec3f(0.299, 0.587, 0.114));
+    return mix(vec3f(grey), graded, uniforms.cgSaturation);
+}
+
+fn rgbToHsv(color: vec3f) -> vec3f {
+    let k = vec4f(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+    let p = select(vec4f(color.bg, k.wz), vec4f(color.gb, k.xy), color.g >= color.b);
+    let q = select(vec4f(p.xyw, color.r), vec4f(color.r, p.yzx), color.r >= p.x);
+    let d = q.x - min(q.w, q.y);
+    return vec3f(abs(q.z + (q.w - q.y) / (6.0 * d + 1e-10)), d / (q.x + 1e-10), q.x);
+}
+
+fn readSplat(index: u32, value: ptr<function, SplatValue>) -> bool {
+    if (index >= uniforms.numSplats) { return false; }
+    let uv = vec2i(i32(index % uniforms.sourceWidth), i32(index / uniforms.sourceWidth));
+    let state = i32(textureLoad(splatState, uv, 0).r * 255.0 + 0.5);
+    if (state != 0 && state != 1) { return false; }
+    let data = textureLoad(transformA, uv, 0);
+    let localPos = bitcast<vec3f>(data.xyz);
+    let paletteIndex = textureLoad(splatTransform, uv, 0).r;
+    let worldPos = (uniforms.entityMatrix * paletteMatrix(paletteIndex) * vec4f(localPos, 1.0)).xyz;
+    var visible = true;
+    if (uniforms.onScreenOnly != 0u) {
+        let clip = uniforms.viewProjection * vec4f(worldPos, 1.0);
+        visible = clip.w > 0.0;
+        if (visible) {
+            let ndc = clip.xyz / clip.w;
+            visible = abs(ndc.x) <= 1.0 && abs(ndc.y) <= 1.0 && ndc.z >= 0.0 && ndc.z <= 1.0;
         }
     }
-
+    (*value).uv = uv;
+    (*value).selected = state == 1;
+    (*value).visible = visible;
+    (*value).localPos = localPos;
+    (*value).worldPos = worldPos;
     return true;
 }
 
-// color-graded DC color (no SH contribution). this is what was historically
-// returned for the "Red"/"Green"/"Blue" propModes, now exposed as a building
-// block.
-vec3 readColorDC(Splat s) {
-    return applyColorGrade(texelFetch(splatColor, s.uv, 0).rgb);
-}
+${shFunctions}
 
-// post-grade alpha = sigmoid(opacity) * transparency.
-float readOpacity(Splat s) {
-    return texelFetch(splatColor, s.uv, 0).a * transparency;
-}
-
-// exponentiated scale per axis.
-vec3 readScale(Splat s) {
-    return texelFetch(transformB, s.uv, 0).xyz;
-}
-
-// quaternion components as (W, X, Y, Z). W is reconstructed and always >= 0
-// because the engine canonicalises rotation signs during splat construction.
-vec4 readRotation(Splat s) {
-    vec2 qxy = unpackHalf2x16(texelFetch(transformA, s.uv, 0).w);
-    float qz = texelFetch(transformB, s.uv, 0).w;
-    float qw = sqrt(max(0.0, 1.0 - qxy.x * qxy.x - qxy.y * qxy.y - qz * qz));
-    return vec4(qw, qxy.x, qxy.y, qz);
-}
-
-#if SH_BANDS > 0
-// returns the single-channel f_rest value at the given index (0..44 for
-// shBands 3). identical layout to getSHData in the engine.
-float readSHCoeff(Splat s, int fRestIdx) {
-    int channel = fRestIdx / shNumCoeffs;
-    int coeffIdx = fRestIdx % shNumCoeffs;
-    vec3 triplet = unpackSHTriplet(coeffIdx, s.uv);
-    if (channel == 0) return triplet.r;
-    if (channel == 1) return triplet.g;
-    return triplet.b;
-}
-#endif
-
-// final on-screen color: dcDecode(f_dc) + evalSH(viewDir), then ColorGrade.
-// view-dependent. for shBands == 0 this collapses to the DC-only color.
-vec3 readFinalColor(Splat s) {
-    vec3 color = texelFetch(splatColor, s.uv, 0).rgb;
-
-    #if SH_BANDS > 0
-    vec3 dir = normalize(s.worldPos - cameraWorldPos);
-    float x = dir.x;
-    float y = dir.y;
-    float z = dir.z;
-
-    vec3 sh0 = unpackSHTriplet(0, s.uv);
-    vec3 sh1 = unpackSHTriplet(1, s.uv);
-    vec3 sh2 = unpackSHTriplet(2, s.uv);
-    color += SH_C1 * (-sh0 * y + sh1 * z - sh2 * x);
-
-    #if SH_BANDS > 1
-    float xx = x * x;
-    float yy = y * y;
-    float zz = z * z;
-    float xy = x * y;
-    float yz = y * z;
-    float xz = x * z;
-
-    vec3 sh3 = unpackSHTriplet(3, s.uv);
-    vec3 sh4 = unpackSHTriplet(4, s.uv);
-    vec3 sh5 = unpackSHTriplet(5, s.uv);
-    vec3 sh6 = unpackSHTriplet(6, s.uv);
-    vec3 sh7 = unpackSHTriplet(7, s.uv);
-    color +=
-        sh3 * (SH_C2_0 * xy) +
-        sh4 * (SH_C2_1 * yz) +
-        sh5 * (SH_C2_2 * (2.0 * zz - xx - yy)) +
-        sh6 * (SH_C2_3 * xz) +
-        sh7 * (SH_C2_4 * (xx - yy));
-    #endif
-
-    #if SH_BANDS > 2
-    vec3 sh8  = unpackSHTriplet(8,  s.uv);
-    vec3 sh9  = unpackSHTriplet(9,  s.uv);
-    vec3 sh10 = unpackSHTriplet(10, s.uv);
-    vec3 sh11 = unpackSHTriplet(11, s.uv);
-    vec3 sh12 = unpackSHTriplet(12, s.uv);
-    vec3 sh13 = unpackSHTriplet(13, s.uv);
-    vec3 sh14 = unpackSHTriplet(14, s.uv);
-    color +=
-        sh8  * (SH_C3_0 * y * (3.0 * xx - yy)) +
-        sh9  * (SH_C3_1 * xy * z) +
-        sh10 * (SH_C3_2 * y * (4.0 * zz - xx - yy)) +
-        sh11 * (SH_C3_3 * z * (2.0 * zz - 3.0 * xx - 3.0 * yy)) +
-        sh12 * (SH_C3_4 * x * (4.0 * zz - xx - yy)) +
-        sh13 * (SH_C3_5 * z * (xx - yy)) +
-        sh14 * (SH_C3_6 * x * (xx - 3.0 * yy));
-    #endif
-    #endif
-
+fn readFinalColor(s: SplatValue) -> vec3f {
+    var color = textureLoad(splatColor, s.uv, 0).rgb;
+    ${bands > 0 ? 'color += evaluateSH(s);' : ''}
     return applyColorGrade(color);
 }
 
-// computes the scalar value for the splat at the given index. out-params
-// receive the value, whether the splat is selected, and whether it passes the
-// onScreenOnly filter (always true when onScreenOnly == 0).
-bool computeSplatValue(int idx, out float value, out bool selected, out bool visible) {
-    value = 0.0;
-    Splat s;
-    if (!readSplat(idx, s)) {
-        selected = false;
-        visible = false;
+fn computeSplatValue(index: u32, valueOut: ptr<function, f32>, selectedOut: ptr<function, bool>, visibleOut: ptr<function, bool>) -> bool {
+    var s: SplatValue;
+    if (!readSplat(index, &s)) {
+        (*selectedOut) = false;
+        (*visibleOut) = false;
         return false;
     }
-    selected = s.selected;
-    visible = s.visible;
-
-    if (propMode == 0)        value = s.worldPos.x;
-    else if (propMode == 1)   value = s.worldPos.y;
-    else if (propMode == 2)   value = s.worldPos.z;
-    else if (propMode == 3)   value = length(s.worldPos);
-    else if (propMode == 4)   value = -(viewMatrix * vec4(s.worldPos, 1.0)).z;
-    else if (propMode == 5 || propMode == 6 || propMode == 7) {
-        vec3 rgb = readFinalColor(s);
-        if (propMode == 5)       value = rgb.r;
-        else if (propMode == 6)  value = rgb.g;
-        else                     value = rgb.b;
+    (*selectedOut) = s.selected;
+    (*visibleOut) = s.visible;
+    var value = 0.0;
+    if (uniforms.propMode == 0) { value = s.worldPos.x; }
+    else if (uniforms.propMode == 1) { value = s.worldPos.y; }
+    else if (uniforms.propMode == 2) { value = s.worldPos.z; }
+    else if (uniforms.propMode == 3) { value = length(s.worldPos); }
+    else if (uniforms.propMode == 4) { value = -(uniforms.viewMatrix * vec4f(s.worldPos, 1.0)).z; }
+    else if (uniforms.propMode >= 5 && uniforms.propMode <= 7) {
+        value = readFinalColor(s)[uniforms.propMode - 5];
+    } else if (uniforms.propMode == 8) {
+        value = textureLoad(splatColor, s.uv, 0).a * uniforms.transparency;
+    } else if (uniforms.propMode >= 9 && uniforms.propMode <= 13) {
+        let scale = textureLoad(transformB, s.uv, 0).xyz;
+        if (uniforms.propMode <= 11) { value = scale[uniforms.propMode - 9]; }
+        else if (uniforms.propMode == 12) { value = scale.x * scale.y * scale.z; }
+        else { value = dot(scale, scale); }
+    } else if (uniforms.propMode >= 14 && uniforms.propMode <= 17) {
+        let dataA = textureLoad(transformA, s.uv, 0);
+        let dataB = textureLoad(transformB, s.uv, 0);
+        let xy = unpack2x16float(dataA.w);
+        let rotation = vec4f(sqrt(max(0.0, 1.0 - xy.x * xy.x - xy.y * xy.y - dataB.w * dataB.w)), xy, dataB.w);
+        value = rotation[uniforms.propMode - 14];
+    } else if (uniforms.propMode >= 18 && uniforms.propMode <= 20) {
+        let hsv = rgbToHsv(clamp(readFinalColor(s), vec3f(0.0), vec3f(1.0)));
+        value = hsv[uniforms.propMode - 18];
+        if (uniforms.propMode == 18) { value *= 360.0; }
+    } ${shDispatch} else if (uniforms.propMode >= 66 && uniforms.propMode <= 68) {
+        value = (textureLoad(splatColor, s.uv, 0).rgb[uniforms.propMode - 66] - 0.5) / 0.28209479177387814;
     }
-    else if (propMode == 8) {
-        value = readOpacity(s);
-    }
-    else if (propMode >= 9 && propMode <= 13) {
-        vec3 sc = readScale(s);
-        if (propMode == 9)       value = sc.x;
-        else if (propMode == 10) value = sc.y;
-        else if (propMode == 11) value = sc.z;
-        else if (propMode == 12) value = sc.x * sc.y * sc.z;
-        else                     value = dot(sc, sc);
-    }
-    else if (propMode >= 14 && propMode <= 17) {
-        vec4 q = readRotation(s);
-        if (propMode == 14)      value = q.x;     // W
-        else if (propMode == 15) value = q.y;     // X
-        else if (propMode == 16) value = q.z;     // Y
-        else                     value = q.w;     // Z
-    }
-    else if (propMode == 18 || propMode == 19 || propMode == 20) {
-        // rgb2hsv expects channels in [0, 1]; the renderer clamps the final
-        // pixel at output, so HSV is well-defined only on the clamped color.
-        // without this, unclamped HDR / SH-shifted channels yield nonsense
-        // S/V (e.g. (max - min)/max blowing up when max ≈ 0).
-        vec3 hsv = rgb2hsv(clamp(readFinalColor(s), 0.0, 1.0));
-        if (propMode == 18)      value = hsv.x * 360.0;
-        else if (propMode == 19) value = hsv.y;
-        else                     value = hsv.z;
-    }
-    #if SH_BANDS > 0
-    else if (propMode >= 21 && propMode <= 65) {
-        value = readSHCoeff(s, propMode - 21);
-    }
-    #endif
-    else if (propMode >= 66 && propMode <= 68) {
-        // raw f_dc_N coefficient: invert the engine's dcDecode.
-        vec3 dc = texelFetch(splatColor, s.uv, 0).rgb;
-        float c;
-        if (propMode == 66)      c = dc.r;
-        else if (propMode == 67) c = dc.g;
-        else                     c = dc.b;
-        value = (c - 0.5) / SH_C0;
-    }
-
+    (*valueOut) = value;
     return true;
 }
-`;
+`
+    };
+};
 
-export { computeSplatValueGLSL };
+export { computeSplatValueWGSL };

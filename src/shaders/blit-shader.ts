@@ -1,16 +1,23 @@
-const vertexShader = /* glsl*/ `
-    attribute vec2 vertex_position;
-    void main(void) {
-        gl_Position = vec4(vertex_position, 0.0, 1.0);
-    }
+const vertexShader = /* wgsl */`
+attribute vertex_position: vec2f;
+
+@vertex
+fn vertexMain(input: VertexInput) -> VertexOutput {
+    var output: VertexOutput;
+    output.position = vec4f(input.vertex_position, 0.0, 1.0);
+    return output;
+}
 `;
 
-const fragmentShader = /* glsl*/ `
-    uniform sampler2D srcTexture;
-    void main(void) {
-        ivec2 texel = ivec2(gl_FragCoord.xy);
-        gl_FragColor = texelFetch(srcTexture, texel, 0);
-    }
+const fragmentShader = /* wgsl */`
+var srcTexture: texture_2d<f32>;
+
+@fragment
+fn fragmentMain(input: FragmentInput) -> FragmentOutput {
+    var output: FragmentOutput;
+    output.color = textureLoad(srcTexture, vec2i(pcPosition.xy), 0);
+    return output;
+}
 `;
 
 export { vertexShader, fragmentShader };

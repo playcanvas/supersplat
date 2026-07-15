@@ -16,6 +16,7 @@ import { CalcHistogram, CalcHistogramOptions } from './calc-histogram';
 import { CalcPositions } from './calc-positions';
 import { Intersect, IntersectOptions } from './intersect';
 import { SelectByRange, SelectByRangeOptions } from './select-by-range';
+import { fragmentShader as blitFragmentShader, vertexShader as blitVertexShader } from '../shaders/blit-shader';
 import { Splat } from '../splat';
 
 const resolve = (scope: ScopeSpace, values: any) => {
@@ -51,19 +52,8 @@ class DataProcessor {
             attributes: {
                 vertex_position: SEMANTIC_POSITION
             },
-            vertexGLSL: `
-                attribute vec2 vertex_position;
-                void main(void) {
-                    gl_Position = vec4(vertex_position, 0.0, 1.0);
-                }
-            `,
-            fragmentGLSL: `
-                uniform sampler2D colorTex;
-                void main(void) {
-                    ivec2 texel = ivec2(gl_FragCoord.xy);
-                    gl_FragColor = texelFetch(colorTex, texel, 0);
-                }
-            `
+            vertexWGSL: blitVertexShader,
+            fragmentWGSL: blitFragmentShader
         });
 
         // create instances
@@ -113,7 +103,7 @@ class DataProcessor {
         const { device } = this;
 
         resolve(device.scope, {
-            colorTex: source.colorBuffer
+            srcTexture: source.colorBuffer
         });
 
         device.setBlendState(BlendState.NOBLEND);

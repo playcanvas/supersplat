@@ -23,6 +23,7 @@ import { Events } from './events';
 import { InfiniteGrid as Grid } from './infinite-grid';
 import { Outline } from './outline';
 import { PCApp } from './pc-app';
+import { ProjectedSplatRenderer } from './projected-splat-renderer';
 import { SceneConfig } from './scene-config';
 import { SceneState } from './scene-state';
 import { Splat } from './splat';
@@ -92,6 +93,7 @@ class Scene {
     };
 
     dataProcessor: DataProcessor;
+    projectedSplatRenderer: ProjectedSplatRenderer;
     assetLoader: AssetLoader;
     camera: Camera;
     cameraPoseGizmos: CameraPoseGizmos;
@@ -128,7 +130,6 @@ class Scene {
         this.app.autoRender = false;
         // @ts-ignore
         this.app._allowResize = false;
-        this.app.scene.clusteredLightingEnabled = false;
 
         // hack: disable lightmapper first bake until we expose option for this
         // @ts-ignore
@@ -209,6 +210,7 @@ class Scene {
         layers.push(this.splatLayer);
         layers.push(this.gizmoLayer);
 
+        this.projectedSplatRenderer = new ProjectedSplatRenderer(this);
         this.dataProcessor = new DataProcessor(this.app.graphicsDevice);
         this.assetLoader = new AssetLoader(this.app, events);
 
@@ -320,6 +322,12 @@ class Scene {
     }
 
     private onUpdate(deltaTime: number) {
+        if (this.canvasResize) {
+            this.canvas.width = this.canvasResize.width;
+            this.canvas.height = this.canvasResize.height;
+            this.canvasResize = null;
+        }
+
         // allow elements to update
         this.forEachElement(e => e.onUpdate(deltaTime));
 
@@ -360,17 +368,13 @@ class Scene {
     }
 
     private onPreRender() {
-        if (this.canvasResize) {
-            this.canvas.width = this.canvasResize.width;
-            this.canvas.height = this.canvasResize.height;
-            this.canvasResize = null;
-        }
-
         // update render target size
         this.targetSize.width = Math.ceil(this.app.graphicsDevice.width / this.config.camera.pixelScale);
         this.targetSize.height = Math.ceil(this.app.graphicsDevice.height / this.config.camera.pixelScale);
 
         this.forEachElement(e => e.onPreRender());
+
+        this.projectedSplatRenderer.render();
 
         this.events.fire('prerender', this.camera.displayTransform);
 

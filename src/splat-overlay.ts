@@ -1,17 +1,12 @@
 import {
     BLEND_NORMAL,
-    PRIMITIVE_POINTS,
+    PRIMITIVE_TRIANGLES,
     SEMANTIC_POSITION,
-    TYPE_FLOAT32,
     Color,
     Entity,
-    EventHandler,
-    GSplatResource,
     ShaderMaterial,
     Mesh,
-    MeshInstance,
-    VertexBuffer,
-    VertexFormat
+    MeshInstance
 } from 'playcanvas';
 
 import { ElementType, Element } from './element';
@@ -26,10 +21,6 @@ class SplatOverlay extends Element {
     material: ShaderMaterial;
     meshInstance: MeshInstance;
     splat: Splat;
-    onSorterUpdated: (count: number) => void;
-    // the sorter we subscribed to in attach(); cached so detach() unsubscribes
-    // from it directly (splat.entity may have been swapped out by replaceData)
-    sorter: EventHandler;
 
     constructor() {
         super(ElementType.debug);
@@ -41,8 +32,11 @@ class SplatOverlay extends Element {
 
         this.material = new ShaderMaterial({
             uniqueName: 'splatOverlayMaterial',
-            vertexGLSL: vertexShader,
-            fragmentGLSL: fragmentShader
+            attributes: {
+                vertex_position: SEMANTIC_POSITION
+            },
+            vertexWGSL: vertexShader,
+            fragmentWGSL: fragmentShader
         });
         this.material.blendType = BLEND_NORMAL;
         this.material.depthWrite = false;
@@ -50,25 +44,12 @@ class SplatOverlay extends Element {
         this.material.update();
 
         this.mesh = new Mesh(device);
-
-        // dummy 1-vertex VB so the engine caches the VAO (avoids creating a new one every frame)
-        const format = new VertexFormat(device, [
-            { semantic: SEMANTIC_POSITION, components: 1, type: TYPE_FLOAT32 }
-        ]);
-        format.instancing = true;
-        const vb = new VertexBuffer(device, format, 1);
-        vb.lock();
-        vb.unlock();
-        this.mesh.vertexBuffer = vb;
-
-        this.mesh.primitive[0] = {
-            baseVertex: 0,
-            type: PRIMITIVE_POINTS,
-            base: 0,
-            count: 0
-        };
+        this.mesh.setPositions([-1, -1, 1, -1, 1, 1, -1, 1], 2);
+        this.mesh.setIndices([0, 1, 2, 0, 2, 3]);
+        this.mesh.update(PRIMITIVE_TRIANGLES);
 
         this.meshInstance = new MeshInstance(this.mesh, this.material, null);
+        this.meshInstance.setInstancing(true, false);
         // slightly higher priority so it renders before gizmos
         this.meshInstance.drawBucket = 128;
         // disable frustum culling since mesh has no vertex buffer for AABB calculation
@@ -108,15 +89,9 @@ class SplatOverlay extends Element {
         this.detach();
 
         const { mesh, material } = this;
-        const instance = splat.entity.gsplat.instance;
-        const orderTexture = instance.orderTexture;
-
-        // set up order texture uniforms
-        material.setParameter('splatOrder', orderTexture);
-        material.setParameter('splatTextureSize', orderTexture.width);
 
         // set up other uniforms
-        const resource = instance.resource as GSplatResource;
+        const resource = splat.resource;
         material.setParameter('splatState', splat.stateTexture);
         material.setParameter('splatPosition', (resource as any).getTexture('transformA'));
         material.setParameter('splatTransform', splat.transformTexture);
@@ -139,30 +114,13 @@ class SplatOverlay extends Element {
 
         material.update();
 
-        // subscribe to sorter updates for dynamic count, caching the sorter so
-        // detach() can unsubscribe from this exact instance
-        this.onSorterUpdated = () => {
-            mesh.primitive[0].count = instance.sorter.pendingSorted?.count ?? mesh.primitive[0].count;
-        };
-        this.sorter = instance.sorter;
-        this.sorter.on('updated', this.onSorterUpdated);
-
-        // initialize count - numSplats is the current visible count (excluding deleted)
-        mesh.primitive[0].count = splat.numSplats;
+        this.meshInstance.instancingCount = splat.splatData.numSplats;
 
         splat.entity.addChild(this.entity);
         this.splat = splat;
     }
 
     detach() {
-        // unsubscribe from the cached sorter (not splat.entity, which replaceData
-        // may have already swapped to a new entity/instance)
-        if (this.sorter && this.onSorterUpdated) {
-            this.sorter.off('updated', this.onSorterUpdated);
-        }
-        this.sorter = null;
-        this.onSorterUpdated = null;
-
         this.entity.remove();
         this.splat = null;
     }
@@ -181,6 +139,7 @@ class SplatOverlay extends Element {
             const useGaussianColor = events.invoke('view.centersUseGaussianColor') ? 1.0 : 0.0;
 
             material.setParameter('splatSize', splatSize * window.devicePixelRatio);
+            material.setParameter('viewportSize', [scene.targetSize.width, scene.targetSize.height]);
             material.setParameter('selectedClr', [selectedClr.r, selectedClr.g, selectedClr.b, selectedClr.a]);
             material.setParameter('unselectedClr', [unselectedClr.r, unselectedClr.g, unselectedClr.b, unselectedClr.a]);
             material.setParameter('useGaussianColor', useGaussianColor);

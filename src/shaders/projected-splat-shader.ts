@@ -105,7 +105,11 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
     #ifdef PICK_PASS
         if (uniform.pickMode == 1) {
             let depth = (gaussianDepth - uniform.cameraParams.z) / (uniform.cameraParams.y - uniform.cameraParams.z);
-            let alpha = normExp(radius);
+            let contribution = normExp(radius) * gaussianColor.a;
+            if (contribution < 1.0 / 255.0) {
+                discard;
+            }
+            let alpha = gaussianColor.a;
             output.color = vec4f(depth * alpha, 0.0, 0.0, alpha);
         } else {
             let id = gaussianId;

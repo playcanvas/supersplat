@@ -256,7 +256,6 @@ class ProjectedSplatRenderer {
             new UniformFormat('sourceWidth', UNIFORMTYPE_UINT),
             new UniformFormat('cacheWidth', UNIFORMTYPE_UINT),
             new UniformFormat('viewport', UNIFORMTYPE_VEC2),
-            new UniformFormat('nearClip', UNIFORMTYPE_FLOAT),
             new UniformFormat('isOrtho', UNIFORMTYPE_UINT),
             new UniformFormat('focal', UNIFORMTYPE_VEC2),
             new UniformFormat('model', UNIFORMTYPE_MAT4),
@@ -404,7 +403,6 @@ class ProjectedSplatRenderer {
             compute.setParameter('sourceWidth', resource.textureDimensions.x);
             compute.setParameter('cacheWidth', this.cacheWidth);
             compute.setParameter('viewport', viewport);
-            compute.setParameter('nearClip', cameraComponent.nearClip);
             compute.setParameter('isOrtho', cameraComponent.projection === 1 ? 1 : 0);
             compute.setParameter('focal', focal);
             compute.setParameter('model', splat.entity.getWorldTransform().data);

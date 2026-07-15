@@ -221,15 +221,22 @@ class Picker {
         const rt = this.depthRenderTarget;
         const colorBuffer = rt.colorBuffer;
 
+        if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 1 || y < 0 || y > 1 || rt.width < 1 || rt.height < 1) {
+            return null;
+        }
+
         // Convert normalized coordinates to render target pixels
-        const px = Math.floor(x * rt.width);
-        const py = Math.floor(y * rt.height);
+        const px = Math.min(Math.floor(x * rt.width), rt.width - 1);
+        const py = Math.min(Math.floor(y * rt.height), rt.height - 1);
 
         // Flip Y for texture read on WebGL (texture origin is bottom-left)
         const texY = this.device.isWebGL2 ? rt.height - py - 1 : py;
 
         // Read the pixel using Texture.read() which handles RGBA16F format
-        const pixels = await colorBuffer.read(px, texY, 1, 1, { renderTarget: rt });
+        const pixels = await colorBuffer.read(px, texY, 1, 1, {
+            renderTarget: rt,
+            immediate: true
+        });
 
         // Convert half-float values to floats
         // R channel: accumulated depth * alpha

@@ -89,7 +89,6 @@ struct ProjectorUniforms {
     sourceWidth: u32,
     cacheWidth: u32,
     viewport: vec2f,
-    nearClip: f32,
     isOrtho: u32,
     focal: vec2f,
     model: mat4x4f,
@@ -218,16 +217,17 @@ fn main(
     let worldCenter = model * vec4f(localCenter, 1.0);
     let viewCenter = uniforms.view * worldCenter;
     let depth = -viewCenter.z;
-    if (uniforms.isOrtho == 0u && depth <= uniforms.nearClip) {
+    if (uniforms.isOrtho == 0u && depth <= 0.0) {
         writeInvalid(entry);
         return;
     }
 
-    let clip = uniforms.viewProj * worldCenter;
+    var clip = uniforms.viewProj * worldCenter;
     if (clip.w == 0.0) {
         writeInvalid(entry);
         return;
     }
+    clip.z = clamp(clip.z, 0.0, abs(clip.w));
 
     let viewport = uniforms.viewport;
     let focal = uniforms.focal;

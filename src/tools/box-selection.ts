@@ -313,6 +313,11 @@ class BoxSelection {
             gizmo.detach();
             scene.remove(box);
             this.active = false;
+
+            // the volume is transient tool state: drop its ops from history so
+            // undo/redo never hits steps that visibly change nothing while the
+            // tool is hidden
+            events.fire('edit.removeForShape', box);
         };
     }
 }

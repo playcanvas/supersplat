@@ -344,8 +344,10 @@ class ShapeTransformOp {
             shape.moved();
         }
 
-        // refresh the owning tool's ui. while the shape is not in the scene
-        // the state changes silently and shows on the tool's next activation.
+        // refresh the owning tool's ui. shape ops are purged from history when
+        // the tool deactivates, so the shape is normally in the scene here; the
+        // guard covers the brief window where an already-queued undo/redo runs
+        // after a synchronous deactivate.
         shape.scene?.events.fire('shapeSelection.changed', shape);
     }
 

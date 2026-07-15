@@ -333,14 +333,16 @@ class ShapeTransformOp {
             shape.pivot.setRotation(state.rotation);
         }
         if (shape instanceof BoxShape && state.lens) {
+            // the length setters refresh the bound with the new transform
             shape.lenX = state.lens.x;
             shape.lenY = state.lens.y;
             shape.lenZ = state.lens.z;
-        }
-        if (shape instanceof SphereShape && state.radius !== undefined) {
+        } else if (shape instanceof SphereShape && state.radius !== undefined) {
+            // the radius setter refreshes the bound with the new transform
             shape.radius = state.radius;
+        } else {
+            shape.moved();
         }
-        shape.moved();
 
         // refresh the owning tool's ui. while the shape is not in the scene
         // the state changes silently and shows on the tool's next activation.

@@ -148,10 +148,12 @@ class SphereSelection {
             },
             onTransform: (mode) => {
                 if (mode === 'scale') {
-                    // the pivot's uniform scale is the sphere's diameter
+                    // the pivot's uniform scale is the sphere's diameter;
+                    // the radius setter refreshes the bound
                     sphere.radius = sphere.pivot.getLocalScale().x * 0.5;
+                } else {
+                    sphere.moved();
                 }
-                sphere.moved();
                 updateUI();
             },
             onTransformEnd: () => {

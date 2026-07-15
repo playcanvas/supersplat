@@ -178,12 +178,14 @@ class BoxSelection {
             },
             onTransform: (mode) => {
                 if (mode === 'scale') {
+                    // the length setters refresh the bound
                     const s = box.pivot.getLocalScale();
                     box.lenX = s.x;
                     box.lenY = s.y;
                     box.lenZ = s.z;
+                } else {
+                    box.moved();
                 }
-                box.moved();
                 updateUI();
             },
             onTransformEnd: () => {

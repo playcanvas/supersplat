@@ -132,6 +132,7 @@
     "select-toolbar.intersect": "교차",
     "select-toolbar.position": "위치",
     "select-toolbar.size": "크기",
+    "select-toolbar.rotation": "회전",
     "select-toolbar.radius": "반경",
     "popup.ok": "확인",
     "popup.cancel": "취소",

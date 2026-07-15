@@ -132,6 +132,7 @@
     "select-toolbar.intersect": "Intersecar",
     "select-toolbar.position": "Posición",
     "select-toolbar.size": "Tamaño",
+    "select-toolbar.rotation": "Rotación",
     "select-toolbar.radius": "Radio",
     "popup.ok": "Aceptar",
     "popup.cancel": "Cancelar",

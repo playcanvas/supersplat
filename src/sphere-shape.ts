@@ -4,6 +4,7 @@ import {
     BLENDMODE_ONE_MINUS_SRC_ALPHA,
     BLENDMODE_SRC_ALPHA,
     CULLFACE_FRONT,
+    SEMANTIC_POSITION,
     BlendState,
     BoundingBox,
     Entity,
@@ -37,6 +38,9 @@ class SphereShape extends Element {
     add() {
         const material = new ShaderMaterial({
             uniqueName: 'sphereShape',
+            attributes: {
+                vertex_position: SEMANTIC_POSITION
+            },
             vertexWGSL: vertexShader,
             fragmentWGSL: fragmentShader
         });

@@ -62,7 +62,10 @@ fn strips(localPosition: vec3f) -> bool {
 @fragment
 fn fragmentMain(input: FragmentInput) -> FragmentOutput {
     var output: FragmentOutput;
-    let clip = pcPosition.xy / uniform.targetSize;
+    let clip = vec2f(
+        pcPosition.x / uniform.targetSize.x,
+        1.0 - pcPosition.y / uniform.targetSize.y
+    );
     let worldNear = uniform.near_origin + uniform.near_x * clip.x + uniform.near_y * clip.y;
     let worldFar = uniform.far_origin + uniform.far_x * clip.x + uniform.far_y * clip.y;
     let rayDirection = normalize(worldFar - worldNear);

@@ -7,6 +7,7 @@ import {
     BlendState,
     BoundingBox,
     Entity,
+    Mat4,
     ShaderMaterial,
     Vec3
 } from 'playcanvas';
@@ -15,8 +16,12 @@ import { Element, ElementType } from './element';
 import { Serializer } from './serializer';
 import { vertexShader, fragmentShader } from './shaders/box-shape-shader';
 
-const v = new Vec3();
+const invMat = new Mat4();
 const bound = new BoundingBox();
+
+// the pivot's local scale carries the box lengths, so in the pivot's local
+// space the box is the unit cube
+const unitBound = new BoundingBox(new Vec3(0, 0, 0), new Vec3(0.5, 0.5, 0.5));
 
 class BoxShape extends Element {
     _lenX = 2;
@@ -76,8 +81,8 @@ class BoxShape extends Element {
 
     onPreRender() {
         this.pivot.setLocalScale(this._lenX, this._lenY, this._lenZ);
-        this.pivot.getWorldTransform().getTranslation(v);
-        this.material.setParameter('boxCen', [v.x, v.y, v.z]);
+        invMat.copy(this.pivot.getWorldTransform()).invert();
+        this.material.setParameter('boxInvMat', invMat.data);
         this.material.setParameter('boxLen', [this._lenX * 0.5, this._lenY * 0.5, this._lenZ  * 0.5]);
 
         const device = this.scene.graphicsDevice;
@@ -89,9 +94,15 @@ class BoxShape extends Element {
     }
 
     updateBound() {
-        bound.center.copy(this.pivot.getPosition());
-        bound.halfExtents.set(this._lenX, this._lenY, this._lenZ);
-        this.scene.boundDirty = true;
+        // keep the pivot's scale in sync immediately (not just at the next
+        // prerender) so world-transform reads are never stale
+        this.pivot.setLocalScale(this._lenX, this._lenY, this._lenZ);
+        bound.setFromTransformedAabb(unitBound, this.pivot.getWorldTransform());
+
+        // undo/redo can change the volume while it's not in the scene
+        if (this.scene) {
+            this.scene.boundDirty = true;
+        }
     }
 
     get worldBound(): BoundingBox | null {

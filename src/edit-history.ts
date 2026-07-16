@@ -30,6 +30,7 @@ class EditHistory {
         events.on('edit.undo', () => this.undo());
         events.on('edit.redo', () => this.redo());
         events.on('edit.add', (editOp: EditOp, suppressOp = false) => this.add(editOp, suppressOp));
+        events.on('edit.removeForShape', (shape: unknown) => this.removeForShape(shape));
     }
 
     private queue<T>(fn: () => T | Promise<T>): Promise<T> {
@@ -108,6 +109,33 @@ class EditHistory {
             });
             this.history = [];
             this.cursor = 0;
+            this.fireEvents();
+        });
+    }
+
+    // Remove all operations that reference a specific selection shape. Called
+    // when a shape tool deactivates: the volume is transient tool state, so
+    // its ops must not linger in history as steps that visibly change nothing.
+    // Shape ops are never nested inside MultiOp, so a flat scan suffices.
+    removeForShape(shape: unknown) {
+        return this.queue(() => {
+            let newCursor = 0;
+            const newHistory: EditOp[] = [];
+
+            for (let i = 0; i < this.history.length; i++) {
+                const op = this.history[i];
+                if ((op as any).shape === shape) {
+                    op.destroy?.();
+                } else {
+                    newHistory.push(op);
+                    if (i < this.cursor) {
+                        newCursor++;
+                    }
+                }
+            }
+
+            this.history = newHistory;
+            this.cursor = newCursor;
             this.fireEvents();
         });
     }

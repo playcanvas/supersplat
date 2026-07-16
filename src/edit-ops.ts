@@ -1,9 +1,11 @@
-import { Color, Mat4 } from 'playcanvas';
+import { Color, Mat4, Quat, Vec3 } from 'playcanvas';
 
 import { AnimTrack } from './anim-track';
+import { BoxShape } from './box-shape';
 import { IndexRanges, sortedPredicate } from './index-ranges';
 import { Pivot } from './pivot';
 import { Scene } from './scene';
+import { SphereShape } from './sphere-shape';
 import { Splat } from './splat';
 import { State } from './splat-state';
 import { Transform } from './transform';
@@ -304,6 +306,60 @@ class PlacePivotOp {
     }
 }
 
+type ShapeTransformState = {
+    position: Vec3;
+    rotation?: Quat;
+    lens?: Vec3;        // box lengths
+    radius?: number;    // sphere radius
+};
+
+// moves/rotates/resizes a box/sphere selection volume
+class ShapeTransformOp {
+    name = 'shapeTransform';
+    shape: BoxShape | SphereShape;
+    oldState: ShapeTransformState;
+    newState: ShapeTransformState;
+
+    constructor(options: { shape: BoxShape | SphereShape, oldState: ShapeTransformState, newState: ShapeTransformState }) {
+        this.shape = options.shape;
+        this.oldState = options.oldState;
+        this.newState = options.newState;
+    }
+
+    apply(state: ShapeTransformState) {
+        const { shape } = this;
+        shape.pivot.setPosition(state.position);
+        if (state.rotation) {
+            shape.pivot.setRotation(state.rotation);
+        }
+        if (shape instanceof BoxShape && state.lens) {
+            // the length setters refresh the bound with the new transform
+            shape.lenX = state.lens.x;
+            shape.lenY = state.lens.y;
+            shape.lenZ = state.lens.z;
+        } else if (shape instanceof SphereShape && state.radius !== undefined) {
+            // the radius setter refreshes the bound with the new transform
+            shape.radius = state.radius;
+        } else {
+            shape.moved();
+        }
+
+        // refresh the owning tool's ui. shape ops are purged from history when
+        // the tool deactivates, so the shape is normally in the scene here; the
+        // guard covers the brief window where an already-queued undo/redo runs
+        // after a synchronous deactivate.
+        shape.scene?.events.fire('shapeSelection.changed', shape);
+    }
+
+    do() {
+        this.apply(this.newState);
+    }
+
+    undo() {
+        this.apply(this.oldState);
+    }
+}
+
 type ColorAdjustment = {
     tintClr?: Color
     temperature?: number,
@@ -455,6 +511,8 @@ export {
     EntityTransformOp,
     SplatsTransformOp,
     PlacePivotOp,
+    ShapeTransformOp,
+    ShapeTransformState,
     ColorAdjustment,
     SetSplatColorAdjustmentOp,
     AnimTrackEditOp,

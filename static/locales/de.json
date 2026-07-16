@@ -132,6 +132,7 @@
     "select-toolbar.intersect": "Schneiden",
     "select-toolbar.position": "Position",
     "select-toolbar.size": "Größe",
+    "select-toolbar.rotation": "Rotation",
     "select-toolbar.radius": "Radius",
     "popup.ok": "OK",
     "popup.cancel": "Abbrechen",

@@ -12,8 +12,9 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 `;
 
 const fragmentShader = /* wgsl */`
+uniform matrix_model: mat4x4f;
 uniform matrix_viewProjection: mat4x4f;
-uniform boxCen: vec3f;
+uniform boxInvMat: mat4x4f;
 uniform boxLen: vec3f;
 uniform near_origin: vec3f;
 uniform near_x: vec3f;
@@ -71,24 +72,28 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
     let clip = pcPosition.xy / uniform.targetSize;
     let worldNear = uniform.near_origin + uniform.near_x * clip.x + uniform.near_y * clip.y;
     let worldFar = uniform.far_origin + uniform.far_x * clip.x + uniform.far_y * clip.y;
-    let rayDirection = normalize(worldFar - worldNear);
-    let hit = intersectBox(worldNear, rayDirection, uniform.boxCen, uniform.boxLen);
+    let localNear = (uniform.boxInvMat * vec4f(worldNear, 1.0)).xyz;
+    let localFar = (uniform.boxInvMat * vec4f(worldFar, 1.0)).xyz;
+    let rayDirection = normalize(localFar - localNear);
+    let hit = intersectBox(localNear, rayDirection, vec3f(0.0), vec3f(0.5));
     if (!hit.hit) {
         output.color = vec4f(1.0, 0.0, 0.0, 0.6);
         return output;
     }
 
-    let frontPosition = worldNear + rayDirection * hit.nearDistance;
-    let front = hit.nearDistance > 0.0 && strips(frontPosition - uniform.boxCen, hit.nearAxis);
-    let backPosition = worldNear + rayDirection * hit.farDistance;
-    let back = strips(backPosition - uniform.boxCen, hit.farAxis);
+    let frontLocal = localNear + rayDirection * hit.nearDistance;
+    let front = hit.nearDistance > 0.0 && strips(frontLocal * uniform.boxLen * 2.0, hit.nearAxis);
+    let backLocal = localNear + rayDirection * hit.farDistance;
+    let back = strips(backLocal * uniform.boxLen * 2.0, hit.farAxis);
 
     if (front) {
+        let frontPosition = (uniform.matrix_model * vec4f(frontLocal, 1.0)).xyz;
         output.color = vec4f(1.0, 1.0, 1.0, 0.6);
         output.fragDepth = select(1.0, calcDepth(frontPosition), writeDepth(0.6));
         return output;
     }
     if (back) {
+        let backPosition = (uniform.matrix_model * vec4f(backLocal, 1.0)).xyz;
         output.color = vec4f(0.0, 0.0, 0.0, 0.6);
         output.fragDepth = select(1.0, calcDepth(backPosition), writeDepth(0.6));
         return output;

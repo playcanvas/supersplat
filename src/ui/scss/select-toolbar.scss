@@ -17,12 +17,43 @@
     flex-direction: row;
     align-items: center;
 
-    // buttons form a tight cluster like the bottom toolbar's controls
-    .select-toolbar-button {
+    // icon apply buttons (set/add/remove/intersect)
+    .select-toolbar-op {
+        width: 38px;
         height: 38px;
         margin: 0px 1px;
-        padding: 0px 12px;
+        padding: 0px;
         border-radius: 2px;
+
+        svg {
+            color: $clr-default;
+        }
+    }
+
+    // gizmo mode buttons mirror the bottom toolbar's tool buttons
+    .select-toolbar-mode {
+        width: 38px;
+        height: 38px;
+        margin: 0px 1px;
+        padding: 0px;
+        border-radius: 2px;
+
+        &::before {
+            font-size: 16px !important;
+            line-height: 100%;
+        }
+
+        &.active {
+            color: $clr-active;
+            background-color: $clr-hilight !important;
+        }
+    }
+
+    .select-toolbar-separator {
+        width: 2px;
+        height: 38px;
+        margin: 0px 10px;
+        background-color: $bcg-dark;
     }
 
     // 16px group break from the preceding cluster, 6px to the input it labels

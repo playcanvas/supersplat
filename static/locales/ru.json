@@ -132,6 +132,7 @@
     "select-toolbar.intersect": "Пересечь",
     "select-toolbar.position": "Позиция",
     "select-toolbar.size": "Размер",
+    "select-toolbar.rotation": "Вращение",
     "select-toolbar.radius": "Радиус",
     "popup.ok": "ОК",
     "popup.cancel": "Отмена",

@@ -352,18 +352,20 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
     };
 
-    events.on('select.bySphere', async (op: 'add'|'remove'|'set'|'intersect', sphere: number[]) => {
+    // transform maps the unit sphere (diameter 1) to world space
+    events.on('select.bySphere', async (op: 'add'|'remove'|'set'|'intersect', transform: Mat4) => {
         for (const splat of selectedSplats()) {
             await runSelectIntersect(splat, op, {
-                sphere: { x: sphere[0], y: sphere[1], z: sphere[2], radius: sphere[3] }
+                sphere: { transform }
             });
         }
     });
 
-    events.on('select.byBox', async (op: 'add'|'remove'|'set'|'intersect', box: number[]) => {
+    // transform maps the unit cube (side 1) to world space
+    events.on('select.byBox', async (op: 'add'|'remove'|'set'|'intersect', transform: Mat4) => {
         for (const splat of selectedSplats()) {
             await runSelectIntersect(splat, op, {
-                box: { x: box[0], y: box[1], z: box[2], lenx: box[3], leny: box[4], lenz: box[5] }
+                box: { transform }
             });
         }
     });

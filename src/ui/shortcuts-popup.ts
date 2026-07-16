@@ -69,9 +69,9 @@ const popupConfig: Record<string, CategoryConfig> = {
     tools: {
         localeKey: 'popup.shortcuts.tools',
         shortcuts: [
-            { id: 'tool.move', localeKey: 'popup.shortcuts.move' },
-            { id: 'tool.rotate', localeKey: 'popup.shortcuts.rotate' },
-            { id: 'tool.scale', localeKey: 'popup.shortcuts.scale' },
+            { id: 'tool.moveShortcut', localeKey: 'popup.shortcuts.move' },
+            { id: 'tool.rotateShortcut', localeKey: 'popup.shortcuts.rotate' },
+            { id: 'tool.scaleShortcut', localeKey: 'popup.shortcuts.scale' },
             { id: 'tool.rectSelection', localeKey: 'popup.shortcuts.rect-selection' },
             { id: 'tool.lassoSelection', localeKey: 'popup.shortcuts.lasso-selection' },
             { id: 'tool.polygonSelection', localeKey: 'popup.shortcuts.polygon-selection' },

@@ -31,11 +31,28 @@ import { BufferPool } from './buffer-pool';
 import { packedMaskHeight, packedMaskWidth } from './histogram-config';
 import { Splat } from '../splat';
 
-type MaskOptions = { mask: Texture };
-type RectOptions = { rect: { x1: number, y1: number, x2: number, y2: number } };
-type SphereOptions = { sphere: { x: number, y: number, z: number, radius: number } };
-type BoxOptions = { box: { x: number, y: number, z: number, lenx: number, leny: number, lenz: number } };
+type MaskOptions = {
+    mask: Texture;
+};
+
+type RectOptions = {
+    rect: { x1: number, y1: number, x2: number, y2: number };
+};
+
+type SphereOptions = {
+    // transform mapping the unit sphere (diameter 1) to world space
+    sphere: { transform: Mat4 };
+};
+
+type BoxOptions = {
+    // transform mapping the unit cube (side 1) to world space
+    box: { transform: Mat4 };
+};
+
 type IntersectOptions = MaskOptions | RectOptions | SphereOptions | BoxOptions;
+
+const shapeInvMat = new Mat4();
+const identityMat = new Mat4();
 
 const WORKGROUP_SIZE = 256;
 
@@ -49,9 +66,7 @@ struct Uniforms {
     viewProjection: mat4x4f,
     maskSize: vec2f,
     rect: vec4f,
-    sphere: vec4f,
-    boxCenter: vec4f,
-    boxHalfExtents: vec4f
+    shapeInverse: mat4x4f
 }
 
 @group(0) @binding(0) var<storage, read_write> result: array<u32>;
@@ -97,11 +112,11 @@ fn intersects(index: u32) -> bool {
         let point = ndc.xy * vec2f(1.0, -1.0);
         return all(point > uniforms.rect.xy) && all(point < uniforms.rect.zw);
     }
+    let local = (uniforms.shapeInverse * vec4f(world, 1.0)).xyz;
     if (uniforms.mode == 2) {
-        return distance(world, uniforms.sphere.xyz) < uniforms.sphere.w;
+        return length(local) < 0.5;
     }
-    let relative = abs(world - uniforms.boxCenter.xyz);
-    return all(relative <= uniforms.boxHalfExtents.xyz);
+    return all(abs(local) <= vec3f(0.5));
 }
 
 @compute @workgroup_size(${WORKGROUP_SIZE})
@@ -139,9 +154,7 @@ class Intersect {
             new UniformFormat('viewProjection', UNIFORMTYPE_MAT4),
             new UniformFormat('maskSize', UNIFORMTYPE_VEC2),
             new UniformFormat('rect', UNIFORMTYPE_VEC4),
-            new UniformFormat('sphere', UNIFORMTYPE_VEC4),
-            new UniformFormat('boxCenter', UNIFORMTYPE_VEC4),
-            new UniformFormat('boxHalfExtents', UNIFORMTYPE_VEC4)
+            new UniformFormat('shapeInverse', UNIFORMTYPE_MAT4)
         ]);
         this.bindGroupFormat = new BindGroupFormat(device, [
             new BindStorageBufferFormat('result', SHADERSTAGE_COMPUTE),
@@ -181,6 +194,8 @@ class Intersect {
         const box = (options as BoxOptions).box;
         const mode = mask ? 0 : rect ? 1 : sphere ? 2 : 3;
 
+        const shapeInverse = sphere ? shapeInvMat.copy(sphere.transform).invert() : box ? shapeInvMat.copy(box.transform).invert() : identityMat;
+
         this.compute.setParameter('result', this.output);
         this.compute.setParameter('transformA', transformA);
         this.compute.setParameter('splatTransform', splat.transformTexture);
@@ -194,9 +209,7 @@ class Intersect {
         this.compute.setParameter('viewProjection', this.viewProjection.data);
         this.compute.setParameter('maskSize', mask ? [mask.width, mask.height] : [0, 0]);
         this.compute.setParameter('rect', rect ? [rect.x1 * 2 - 1, rect.y1 * 2 - 1, rect.x2 * 2 - 1, rect.y2 * 2 - 1] : [0, 0, 0, 0]);
-        this.compute.setParameter('sphere', sphere ? [sphere.x, sphere.y, sphere.z, sphere.radius] : [0, 0, 0, 0]);
-        this.compute.setParameter('boxCenter', box ? [box.x, box.y, box.z, 0] : [0, 0, 0, 0]);
-        this.compute.setParameter('boxHalfExtents', box ? [box.lenx * 0.5, box.leny * 0.5, box.lenz * 0.5, 0] : [0, 0, 0, 0]);
+        this.compute.setParameter('shapeInverse', shapeInverse.data);
         Compute.calcDispatchSize(Math.ceil(outputWords / WORKGROUP_SIZE), this.dispatchSize);
         this.compute.setupDispatch(this.dispatchSize.x, this.dispatchSize.y);
         this.device.computeDispatch([this.compute], 'intersect');

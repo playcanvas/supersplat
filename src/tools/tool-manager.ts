@@ -3,6 +3,10 @@ import { Events } from '../events';
 interface Tool {
     activate: () => void;
     deactivate: () => void;
+    // optional: handle a transform-mode request (1/2/3 shortcuts) while this
+    // tool is active. return true if consumed, otherwise the corresponding
+    // transform tool is activated instead.
+    setTransformMode?: (mode: 'translate' | 'rotate' | 'scale') => boolean;
 }
 
 class ToolManager {
@@ -41,6 +45,20 @@ class ToolManager {
         events.on('tool.toggleCoordSpace', () => {
             setCoordSpace(coordSpace === 'local' ? 'world' : 'local');
         });
+
+        // the 1/2/3 shortcuts switch the active tool's gizmo mode if it
+        // supports one (box/sphere selection), otherwise activate the
+        // corresponding transform tool
+        const transformShortcut = (mode: 'translate' | 'rotate' | 'scale', toolName: string) => {
+            const tool = this.active ? this.tools.get(this.active) : null;
+            if (!tool?.setTransformMode?.(mode)) {
+                this.activate(toolName);
+            }
+        };
+
+        events.on('tool.moveShortcut', () => transformShortcut('translate', 'move'));
+        events.on('tool.rotateShortcut', () => transformShortcut('rotate', 'rotate'));
+        events.on('tool.scaleShortcut', () => transformShortcut('scale', 'scale'));
     }
 
     register(name: string, tool: Tool) {

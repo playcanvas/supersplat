@@ -133,7 +133,7 @@ const isPlySequence = (filenames: string[]) => {
     return true;
 };
 
-// sog comprises a single meta.json file and zero or more .webp files
+// SOG has a meta.json file; streamed SOG has a lod-meta.json file.
 const isSog = (filenames: string[]) => {
     const count = (extension: string) => filenames.reduce((sum, f) => sum + (f.endsWith(extension) ? 1 : 0), 0);
     return count('meta.json') === 1;
@@ -272,8 +272,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
 
             // Determine the main file based on format
             let mainIndex: number;
-            if (filenames.some(f => f === 'meta.json')) {
-                mainIndex = filenames.findIndex(f => f === 'meta.json');
+            if (filenames.some(f => f === 'meta.json' || f === 'lod-meta.json')) {
+                mainIndex = filenames.findIndex(f => f === 'meta.json' || f === 'lod-meta.json');
             } else if (filenames.some(f => f.endsWith('.lcc') || f.endsWith('.lcc2'))) {
                 mainIndex = filenames.findIndex(f => f.endsWith('.lcc') || f.endsWith('.lcc2'));
             } else {
@@ -293,7 +293,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             // library resolves sibling files against the file system's baseUrl
             // (path-joining a full URL corrupts the 'http://' prefix)
             const lowerMainFilename = mainFile.filename.toLowerCase();
-            const isContainer = lowerMainFilename === 'meta.json' || lowerMainFilename.endsWith('.lcc') || lowerMainFilename.endsWith('.lcc2');
+            const isContainer = lowerMainFilename === 'meta.json' || lowerMainFilename === 'lod-meta.json' || lowerMainFilename.endsWith('.lcc') || lowerMainFilename.endsWith('.lcc2');
 
             // For URL-only single file, use full URL as filename
             const filename = (files.length === 1 && !mainFile.contents && mainFile.url && !isContainer) ?

@@ -136,7 +136,7 @@ const isPlySequence = (filenames: string[]) => {
 // SOG has a meta.json file; streamed SOG has a lod-meta.json file.
 const isSog = (filenames: string[]) => {
     const count = (extension: string) => filenames.reduce((sum, f) => sum + (f.endsWith(extension) ? 1 : 0), 0);
-    return count('meta.json') === 1;
+    return count('lod-meta.json') === 1 || count('meta.json') === 1;
 };
 
 // The LCC file contains meta.lcc, index.bin, data.bin and shcoef.bin (optional).

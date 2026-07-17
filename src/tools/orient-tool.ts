@@ -379,10 +379,15 @@ class OrientTool {
                 }
 
                 if (splat.orientPoints.length < 3) {
-                    const result = await scene.camera.intersect(e.offsetX / canvasContainer.dom.clientWidth, e.offsetY / canvasContainer.dom.clientHeight);
-                    if (result) {
+                    // pick the frontmost gaussian under the cursor and use its center.
+                    // depth picking (camera.intersect) returns a transmittance-weighted
+                    // mean depth along the ray, which lands behind the visible surface;
+                    // the id pick snaps the point to actual splat geometry instead.
+                    scene.camera.pickPrep(splat, 'set');
+                    const id = await scene.camera.pick(e.offsetX / canvasContainer.dom.clientWidth, e.offsetY / canvasContainer.dom.clientHeight);
+                    if (splat.calcSplatWorldPosition(id, v)) {
                         mat.invert(splat.worldTransform);
-                        mat.transformPoint(result.position, p);
+                        mat.transformPoint(v, p);
                         splat.orientSelection = splat.orientPoints.length;
                         splat.orientPoints.push(p.clone());
                         updateVisuals();

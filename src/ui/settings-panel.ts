@@ -2,6 +2,7 @@ import { BooleanInput, Button, ColorPicker, Container, Label, SelectInput, Slide
 import { Color } from 'playcanvas';
 
 import { Events } from '../events';
+import { GridPlane } from '../infinite-grid';
 import { ShortcutManager } from '../shortcut-manager';
 import { i18n } from './localization';
 import { Tooltips } from './tooltips';
@@ -333,6 +334,30 @@ class SettingsPanel extends Container {
         showGridRow.append(showGridLabel);
         showGridRow.append(showGridToggle);
 
+        // grid plane
+
+        const gridPlaneRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const gridPlaneLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(gridPlaneLabel, 'panel.settings.grid-plane');
+
+        const gridPlaneSelection = new SelectInput({
+            class: 'settings-panel-row-select',
+            defaultValue: 'xz'
+        });
+        i18n.bindOptions(gridPlaneSelection, () => [
+            { v: 'xz', t: i18n.t('panel.settings.grid-plane.xz') },
+            { v: 'xy', t: i18n.t('panel.settings.grid-plane.xy') },
+            { v: 'yz', t: i18n.t('panel.settings.grid-plane.yz') }
+        ]);
+
+        gridPlaneRow.append(gridPlaneLabel);
+        gridPlaneRow.append(gridPlaneSelection);
+
         // show bound
 
         const showBoundRow = new Container({
@@ -438,6 +463,7 @@ class SettingsPanel extends Container {
         this.append(centersColorRow);
         this.append(outlineSelectionRow);
         this.append(showGridRow);
+        this.append(gridPlaneRow);
         this.append(showBoundRow);
         this.append(showBoundDimensionsRow);
         this.append(showCameraPosesRow);
@@ -540,6 +566,16 @@ class SettingsPanel extends Container {
 
         showGridToggle.on('change', () => {
             events.fire('grid.setVisible', showGridToggle.value);
+        });
+
+        // grid plane
+
+        events.on('grid.plane', (plane: GridPlane) => {
+            gridPlaneSelection.value = plane;
+        });
+
+        gridPlaneSelection.on('change', (value: GridPlane) => {
+            events.fire('grid.setPlane', value);
         });
 
         // show bound

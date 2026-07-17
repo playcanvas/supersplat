@@ -103,7 +103,8 @@ struct ProjectorUniforms {
     indexed: u32,
     visible: u32,
     selectionEnabled: u32,
-    pickOp: i32
+    pickOp: i32,
+    minPixelSize: f32
 }
 
 @group(0) @binding(0) var<storage, read_write> sortKeys: array<u32>;
@@ -294,6 +295,13 @@ fn main(
     let radius = length(vec2f(0.5 * (cov00 - cov11), cov01));
     let lambda1 = mid + radius;
     let lambda2 = max(mid - radius, 0.1);
+
+    // skip splats whose projected size falls below the cull threshold
+    if (2.0 * sqrt(2.0 * lambda1) < uniforms.minPixelSize) {
+        writeInvalid(entry);
+        return;
+    }
+
     let direction = normalize(vec2f(cov01, lambda1 - cov00));
     let axis1 = 2.0 * min(sqrt(2.0 * lambda1), maxRadius) * direction;
     let axis2 = 2.0 * min(sqrt(2.0 * lambda2), maxRadius) * vec2f(direction.y, -direction.x);

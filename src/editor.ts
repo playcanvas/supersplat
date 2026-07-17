@@ -68,7 +68,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     [
         'camera.mode', 'camera.overlay', 'camera.splatSize', 'view.outlineSelection',
-        'view.centersUseGaussianColor', 'view.bands', 'camera.bound', 'camera.boundDimensions', 'camera.showPoses',
+        'view.centersUseGaussianColor', 'view.bands', 'view.minPixelSize', 'camera.bound', 'camera.boundDimensions', 'camera.showPoses',
         'camera.showInfo', 'selection.changed', 'tool.coordSpace'
     ].forEach((eventName) => {
         events.on(eventName, () => {
@@ -754,6 +754,21 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('view.setBands', (value: number) => {
         setViewBands(value);
+    });
+
+    // minimum projected splat size in pixels (0 disables the cull)
+
+    let minPixelSize = 0;
+
+    events.function('view.minPixelSize', () => {
+        return minPixelSize;
+    });
+
+    events.on('view.setMinPixelSize', (value: number) => {
+        if (value !== minPixelSize) {
+            minPixelSize = value;
+            events.fire('view.minPixelSize', minPixelSize);
+        }
     });
 
     // centers gaussian color toggle

@@ -152,6 +152,8 @@ class ProjectedSplatRenderer {
         this.material.setParameter('pickOp', 2);
         this.material.setParameter('outlineMode', 0);
         this.material.setParameter('ringSize', 0);
+        this.material.setParameter('ringsBase', 0);
+        this.material.setParameter('ringsCount', 0);
         this.material.setParameter('pickMode', 0);
         this.material.setParameter('cameraParams', [0, 1, 0, 0]);
         this.material.update();
@@ -270,7 +272,8 @@ class ProjectedSplatRenderer {
             new UniformFormat('indexed', UNIFORMTYPE_UINT),
             new UniformFormat('visible', UNIFORMTYPE_UINT),
             new UniformFormat('selectionEnabled', UNIFORMTYPE_UINT),
-            new UniformFormat('pickOp', UNIFORMTYPE_INT)
+            new UniformFormat('pickOp', UNIFORMTYPE_INT),
+            new UniformFormat('minPixelSize', UNIFORMTYPE_FLOAT)
         ]);
         const bindGroupFormat = new BindGroupFormat(this.device, [
             new BindStorageBufferFormat('sortKeys', SHADERSTAGE_COMPUTE),
@@ -367,6 +370,10 @@ class ProjectedSplatRenderer {
         const selectedColor = events.invoke('selectedClr');
         const lockedColor = events.invoke('lockedClr');
         const viewBands = events.invoke('view.bands') as number;
+        const minPixelSize = (events.invoke('view.minPixelSize') as number) ?? 0;
+
+        let ringsBase = 0;
+        let ringsCount = 0;
 
         for (const placement of this.placements) {
             const { splat } = placement;
@@ -376,6 +383,11 @@ class ProjectedSplatRenderer {
             const offset = -splat.blackPoint + splat.brightness;
             const scale = 1 / (splat.whitePoint - splat.blackPoint);
             const selectionEnabled = selectedSplat === splat && camera.renderOverlays;
+
+            if (selectionEnabled) {
+                ringsBase = placement.entryBase;
+                ringsCount = placement.count;
+            }
 
             compute.setParameter('sortKeys', this.sortKeys);
             compute.setParameter('cacheA', this.cacheA);
@@ -428,6 +440,7 @@ class ProjectedSplatRenderer {
             compute.setParameter('visible', splat.visible ? 1 : 0);
             compute.setParameter('selectionEnabled', selectionEnabled ? 1 : 0);
             compute.setParameter('pickOp', -1);
+            compute.setParameter('minPixelSize', minPixelSize);
 
             const workgroups = Math.ceil(placement.count / WORKGROUP_SIZE);
             Compute.calcDispatchSize(workgroups, this.dispatchSize);
@@ -449,7 +462,9 @@ class ProjectedSplatRenderer {
             2 / targetSize.height
         ]);
         this.material.setParameter('outlineMode', events.invoke('view.outlineSelection') ? 1 : 0);
-        this.material.setParameter('ringSize', events.invoke('camera.mode') === 'rings' ? 0.04 : 0);
+        this.material.setParameter('ringSize', (events.invoke('camera.mode') === 'rings' && events.invoke('camera.overlay')) ? 0.04 : 0);
+        this.material.setParameter('ringsBase', ringsBase);
+        this.material.setParameter('ringsCount', ringsCount);
         this.material.setParameter('cameraParams', [1 / cameraComponent.farClip, cameraComponent.farClip, cameraComponent.nearClip, cameraComponent.projection]);
         this.submissionCpuMs = performance.now() - start;
     }

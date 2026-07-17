@@ -84,6 +84,8 @@ varying gaussianDepth: f32;
 
 uniform outlineMode: u32;
 uniform ringSize: f32;
+uniform ringsBase: u32;
+uniform ringsCount: u32;
 uniform pickMode: i32;
 uniform cameraParams: vec4f;
 
@@ -120,7 +122,10 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         let locked = (gaussianFlags & 2u) != 0u;
         let norm = normExp(radius);
         var alpha = norm * gaussianColor.a;
-        if (!locked && uniform.ringSize > 0.0) {
+        // rings apply only to the selected splat's gaussians (gaussianId is the
+        // cache entry index in the forward pass, where pickBase is 0)
+        let rings = gaussianId >= uniform.ringsBase && gaussianId < uniform.ringsBase + uniform.ringsCount;
+        if (!locked && rings && uniform.ringSize > 0.0) {
             alpha = select(0.6, max(0.05, alpha), radius < 1.0 - uniform.ringSize);
         }
         if (uniform.outlineMode != 0u) {

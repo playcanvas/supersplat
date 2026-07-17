@@ -2,7 +2,7 @@ import { BooleanInput, Button, ColorPicker, Container, Label, SelectInput, Slide
 import { Color } from 'playcanvas';
 
 import { Events } from '../events';
-import { GridPlane } from '../infinite-grid';
+import type { GridPlane } from '../infinite-grid';
 import { ShortcutManager } from '../shortcut-manager';
 import { i18n } from './localization';
 import { Tooltips } from './tooltips';

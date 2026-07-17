@@ -116,4 +116,5 @@ class InfiniteGrid extends Element {
     }
 }
 
-export { InfiniteGrid, GridPlane };
+export { InfiniteGrid };
+export type { GridPlane };

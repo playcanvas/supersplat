@@ -4,6 +4,7 @@ import { Entity, Mat4, Quat, TranslateGizmo, Vec3, math } from 'playcanvas';
 import { EntityTransformOp, MultiOp, PlacePivotOp } from '../edit-ops';
 import { Events } from '../events';
 import type { GridPlane } from '../infinite-grid';
+import { OrientPlane } from '../orient-plane';
 import { Pivot } from '../pivot';
 import { Scene } from '../scene';
 import { Splat } from '../splat';
@@ -133,6 +134,19 @@ class OrientTool {
             scene.camera.worldToScreen(result, result);
             result.x *= canvasContainer.dom.clientWidth;
             result.y *= canvasContainer.dom.clientHeight;
+        };
+
+        // the plane fill is rendered in the scene (occludable by gaussians) so
+        // the user can see how the plane sits relative to the splat surface
+        const orientPlane = new OrientPlane();
+        orientPlane.supplier = (out: Vec3[]) => {
+            if (!active || !splat || splat.orientPoints.length !== 3) {
+                return false;
+            }
+            for (let i = 0; i < 3; i++) {
+                getPoint(i, out[i]);
+            }
+            return true;
         };
 
         // calculate the world space plane normal and centroid from the three
@@ -496,11 +510,15 @@ class OrientTool {
 
             events.fire('transformHandler.push', transformHandler);
 
+            scene.add(orientPlane);
+
             scene.forceRender = true;
         };
 
         this.deactivate = () => {
             active = false;
+
+            scene.remove(orientPlane);
 
             // the points are consumed by the alignment, so start the next session fresh
             if (splat) {

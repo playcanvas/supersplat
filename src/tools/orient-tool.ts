@@ -1,5 +1,5 @@
 import { Button, Container, Label } from '@playcanvas/pcui';
-import { Entity, Mat4, Quat, TranslateGizmo, Vec3, math } from 'playcanvas';
+import { Entity, Mat4, Quat, Ray, TranslateGizmo, Vec3, math } from 'playcanvas';
 
 import { EntityTransformOp, MultiOp, PlacePivotOp } from '../edit-ops';
 import { Events } from '../events';
@@ -30,6 +30,7 @@ const snapped = new Vec3();
 const newPos = new Vec3();
 const q = new Quat();
 const newRot = new Quat();
+const ray = new Ray();
 
 const t = new Transform();
 
@@ -379,18 +380,25 @@ class OrientTool {
                 }
 
                 if (splat.orientPoints.length < 3) {
-                    // pick the frontmost gaussian under the cursor and use its center.
-                    // depth picking (camera.intersect) returns a transmittance-weighted
-                    // mean depth along the ray, which lands behind the visible surface;
-                    // the id pick snaps the point to actual splat geometry instead.
+                    // the point must sit on the click ray (under the cursor) at the
+                    // depth of the visible surface. depth picking (camera.intersect)
+                    // stays on the ray but returns a transmittance-weighted mean depth
+                    // that lands behind the surface, while a picked gaussian's center
+                    // can sit laterally offset from the cursor. so combine the two:
+                    // pick the frontmost gaussian, then place the point on the click
+                    // ray at that gaussian's depth.
                     scene.camera.pickPrep(splat, 'set');
                     const id = await scene.camera.pick(e.offsetX / canvasContainer.dom.clientWidth, e.offsetY / canvasContainer.dom.clientHeight);
                     if (splat.calcSplatWorldPosition(id, v)) {
+                        scene.camera.getRay(e.offsetX, e.offsetY, ray);
+                        const dist = v.sub(ray.origin).dot(ray.direction);
+                        p.copy(ray.direction).mulScalar(dist).add(ray.origin);
                         mat.invert(splat.worldTransform);
-                        mat.transformPoint(v, p);
+                        mat.transformPoint(p, v);
                         splat.orientSelection = splat.orientPoints.length;
-                        splat.orientPoints.push(p.clone());
+                        splat.orientPoints.push(v.clone());
                         updateVisuals();
+                        scene.forceRender = true;
                     }
                 }
 

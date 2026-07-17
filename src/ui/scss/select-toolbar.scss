@@ -69,6 +69,11 @@
     .select-toolbar-label {
         margin: 0px 6px 0px 16px;
         color: $text-secondary;
+
+        // no group break when the label leads the toolbar (e.g. measure, orient)
+        &:first-child {
+            margin-left: 0px;
+        }
     }
 
     // match the height treatment of the transform panel's inputs (see transform.scss);

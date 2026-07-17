@@ -420,14 +420,23 @@ class OrientTool {
             }
 
             events.fire('transformHandler.push', transformHandler);
+
+            scene.forceRender = true;
         };
 
         this.deactivate = () => {
             active = false;
+
+            // the points are consumed by the alignment, so start the next session fresh
+            if (splat) {
+                splat.orientPoints.length = 0;
+                splat.orientSelection = -1;
+            }
+
             updateVisuals();
             canvasContainer.dom.removeEventListener('pointerdown', pointerdown);
             canvasContainer.dom.removeEventListener('pointermove', pointermove);
-            canvasContainer.dom.removeEventListener('pointerup', pointerup);
+            canvasContainer.dom.removeEventListener('pointerup', pointerup, true);
             selectToolbar.hidden = true;
             parent.style.display = 'none';
             parent.classList.remove('noevents');
@@ -439,6 +448,8 @@ class OrientTool {
             }
 
             events.fire('transformHandler.pop');
+
+            scene.forceRender = true;
         };
     }
 }

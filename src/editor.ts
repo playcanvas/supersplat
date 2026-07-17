@@ -5,6 +5,7 @@ import { EditHistory } from './edit-history';
 import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp, MultiOp, AddSplatOp } from './edit-ops';
 import { Element, ElementType } from './element';
 import { Events } from './events';
+import type { GridPlane } from './infinite-grid';
 import { MappedReadFileSystem } from './io';
 import { Scene } from './scene';
 import { Splat } from './splat';
@@ -105,6 +106,23 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     });
 
     setGridVisible(scene.config.show.grid);
+
+    // grid.plane
+
+    const setGridPlane = (plane: GridPlane) => {
+        if (plane !== scene.grid.plane) {
+            scene.grid.plane = plane;
+            events.fire('grid.plane', plane);
+        }
+    };
+
+    events.function('grid.plane', () => {
+        return scene.grid.plane;
+    });
+
+    events.on('grid.setPlane', (plane: GridPlane) => {
+        setGridPlane(plane);
+    });
 
     // camera.fovDolly
 
@@ -852,6 +870,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             centersSize: events.invoke('camera.splatSize'),
             outlineSelection: events.invoke('view.outlineSelection'),
             showGrid: events.invoke('grid.visible'),
+            gridPlane: events.invoke('grid.plane'),
             showBound: events.invoke('camera.bound'),
             showBoundDimensions: events.invoke('camera.boundDimensions'),
             showCameraPoses: events.invoke('camera.showPoses'),
@@ -870,6 +889,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         events.fire('camera.setSplatSize', docView.centersSize);
         events.fire('view.setOutlineSelection', docView.outlineSelection);
         events.fire('grid.setVisible', docView.showGrid);
+        events.fire('grid.setPlane', docView.gridPlane ?? 'xz');
         events.fire('camera.setBound', docView.showBound);
         events.fire('camera.setBoundDimensions', docView.showBoundDimensions ?? false);
         events.fire('camera.setShowPoses', docView.showCameraPoses ?? false);

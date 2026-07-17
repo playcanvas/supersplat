@@ -77,6 +77,7 @@
     "panel.settings.centers-gaussian-color": "カラーセンター",
     "panel.settings.outline-selection": "選択のアウトライン",
     "panel.settings.show-grid": "グリッド",
+    "panel.settings.grid-plane": "グリッド平面",
     "panel.settings.show-bound": "バウンディングボックス",
     "panel.settings.show-bound-dimensions": "寸法を表示",
     "panel.settings.show-camera-poses": "カメラを表示",

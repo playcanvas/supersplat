@@ -77,6 +77,7 @@
     "panel.settings.centers-gaussian-color": "Centros de Cor",
     "panel.settings.outline-selection": "Contorno da Seleção",
     "panel.settings.show-grid": "Mostrar Grade",
+    "panel.settings.grid-plane": "Plano da Grade",
     "panel.settings.show-bound": "Mostrar Limite",
     "panel.settings.show-bound-dimensions": "Mostrar Dimensões",
     "panel.settings.show-camera-poses": "Mostrar Câmeras",

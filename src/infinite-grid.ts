@@ -27,6 +27,11 @@ const resolve = (scope: ScopeSpace, values: any) => {
     }
 };
 
+type GridPlane = 'xz' | 'xy' | 'yz';
+
+// map plane name to the shader's plane index (0: x (yz), 1: y (xz), 2: z (xy))
+const planeIndices = { yz: 0, xz: 1, xy: 2 };
+
 class InfiniteGrid extends Element {
     shader: Shader;
     quadRender: QuadRender;
@@ -34,6 +39,7 @@ class InfiniteGrid extends Element {
     depthState = new DepthState(FUNC_LESSEQUAL, true);
 
     visible = true;
+    plane: GridPlane = 'xz';
 
     constructor() {
         super(ElementType.debug);
@@ -79,8 +85,7 @@ class InfiniteGrid extends Element {
                     const z = camera.worldTransform.getZ();
                     plane = cmp(z, Vec3.RIGHT) ? 0 : (cmp(z, Vec3.BACK) ? 2 : 1);
                 } else {
-                    // default is xz plane
-                    plane = 1;
+                    plane = planeIndices[this.plane];
                 }
 
                 const p = camera.position;
@@ -107,8 +112,9 @@ class InfiniteGrid extends Element {
     }
 
     serialize(serializer: Serializer): void {
-        serializer.pack(this.visible);
+        serializer.pack(this.visible, this.plane);
     }
 }
 
 export { InfiniteGrid };
+export type { GridPlane };

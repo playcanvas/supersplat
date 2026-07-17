@@ -77,6 +77,7 @@
     "panel.settings.centers-gaussian-color": "Farbzentren",
     "panel.settings.outline-selection": "Umriss Selektion",
     "panel.settings.show-grid": "Raster anzeigen",
+    "panel.settings.grid-plane": "Rasterebene",
     "panel.settings.show-bound": "Objektbox anzeigen",
     "panel.settings.show-bound-dimensions": "Abmessungen anzeigen",
     "panel.settings.show-camera-poses": "Kameras anzeigen",

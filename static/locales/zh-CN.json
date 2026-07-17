@@ -77,6 +77,7 @@
     "panel.settings.centers-gaussian-color": "颜色中心",
     "panel.settings.outline-selection": "轮廓选择",
     "panel.settings.show-grid": "显示网格",
+    "panel.settings.grid-plane": "网格平面",
     "panel.settings.show-bound": "显示边界",
     "panel.settings.show-bound-dimensions": "显示尺寸",
     "panel.settings.show-camera-poses": "显示相机",

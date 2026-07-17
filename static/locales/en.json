@@ -77,6 +77,7 @@
     "panel.settings.centers-gaussian-color": "Color Centers",
     "panel.settings.outline-selection": "Outline Selection",
     "panel.settings.show-grid": "Show Grid",
+    "panel.settings.grid-plane": "Grid Plane",
     "panel.settings.show-bound": "Show Bound",
     "panel.settings.show-bound-dimensions": "Show Dimensions",
     "panel.settings.show-camera-poses": "Show Cameras",

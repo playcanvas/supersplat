@@ -186,7 +186,7 @@ class ProjectedSplatRenderer {
         }
         this.placements.push({
             splat,
-            count: sourceIndices?.length ?? splat.splatData.numSplats,
+            count: sourceIndices?.length ?? splat.resource.numSplats,
             entryBase: 0,
             sourceIndices: indexBuffer
         });
@@ -205,7 +205,7 @@ class ProjectedSplatRenderer {
     replace(splat: Splat) {
         const placement = this.placements.find(item => item.splat === splat);
         if (placement) {
-            placement.count = placement.sourceIndices ? placement.sourceIndices.byteSize / 4 : splat.splatData.numSplats;
+            placement.count = placement.sourceIndices ? placement.sourceIndices.byteSize / 4 : splat.resource.numSplats;
             this.layoutDirty = true;
         }
     }

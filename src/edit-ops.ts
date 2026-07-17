@@ -77,8 +77,8 @@ class SelectAllOp extends StateOp {
     name = 'selectAll';
 
     constructor(splat: Splat) {
-        const state = splat.splatData.getProp('state') as Uint8Array;
-        super(splat, IndexRanges.fromPredicate(splat.splatData.numSplats, i => state[i] === 0), State.selected, BitOp.SET);
+        const state = splat.state.data;
+        super(splat, IndexRanges.fromPredicate(state.length, i => state[i] === 0), State.selected, BitOp.SET);
     }
 }
 
@@ -86,8 +86,8 @@ class SelectNoneOp extends StateOp {
     name = 'selectNone';
 
     constructor(splat: Splat) {
-        const state = splat.splatData.getProp('state') as Uint8Array;
-        super(splat, IndexRanges.fromPredicate(splat.splatData.numSplats, i => state[i] === State.selected), State.selected, BitOp.CLEAR);
+        const state = splat.state.data;
+        super(splat, IndexRanges.fromPredicate(state.length, i => state[i] === State.selected), State.selected, BitOp.CLEAR);
     }
 }
 
@@ -95,8 +95,8 @@ class SelectInvertOp extends StateOp {
     name = 'selectInvert';
 
     constructor(splat: Splat) {
-        const state = splat.splatData.getProp('state') as Uint8Array;
-        super(splat, IndexRanges.fromPredicate(splat.splatData.numSplats, i => (state[i] & (State.locked | State.deleted)) === 0), State.selected, BitOp.TOGGLE);
+        const state = splat.state.data;
+        super(splat, IndexRanges.fromPredicate(state.length, i => (state[i] & (State.locked | State.deleted)) === 0), State.selected, BitOp.TOGGLE);
     }
 }
 
@@ -117,8 +117,7 @@ class SelectOp extends StateOp {
     //   intersect — keep only splats currently selected AND in the hit mask
     //               (clear the selected bit on selected splats that are not hit).
     constructor(splat: Splat, op: 'add' | 'remove' | 'set' | 'intersect', sel: Uint8Array | Uint32Array) {
-        const splatData = splat.splatData;
-        const state = splatData.getProp('state') as Uint8Array;
+        const state = splat.state.data;
         const isHit = sel instanceof Uint32Array ? sortedPredicate(sel) : (i: number) => sel[i] === 255;
 
         // single rule applied uniformly: only valid (clean or selected) splats
@@ -142,7 +141,7 @@ class SelectOp extends StateOp {
             intersect: (i: number) => valid(i) && state[i] === State.selected && !isHit(i)
         };
 
-        super(splat, IndexRanges.fromPredicate(splatData.numSplats, preds[op]), State.selected, bitOps[op]);
+        super(splat, IndexRanges.fromPredicate(state.length, preds[op]), State.selected, bitOps[op]);
     }
 }
 
@@ -150,8 +149,8 @@ class HideSelectionOp extends StateOp {
     name = 'hideSelection';
 
     constructor(splat: Splat) {
-        const state = splat.splatData.getProp('state') as Uint8Array;
-        super(splat, IndexRanges.fromPredicate(splat.splatData.numSplats, i => state[i] === State.selected), State.locked, BitOp.SET, State.locked);
+        const state = splat.state.data;
+        super(splat, IndexRanges.fromPredicate(state.length, i => state[i] === State.selected), State.locked, BitOp.SET, State.locked);
     }
 }
 
@@ -159,8 +158,8 @@ class UnhideAllOp extends StateOp {
     name = 'unhideAll';
 
     constructor(splat: Splat) {
-        const state = splat.splatData.getProp('state') as Uint8Array;
-        super(splat, IndexRanges.fromPredicate(splat.splatData.numSplats, i => (state[i] & (State.locked | State.deleted)) === State.locked), State.locked, BitOp.CLEAR, State.locked);
+        const state = splat.state.data;
+        super(splat, IndexRanges.fromPredicate(state.length, i => (state[i] & (State.locked | State.deleted)) === State.locked), State.locked, BitOp.CLEAR, State.locked);
     }
 }
 
@@ -168,8 +167,8 @@ class DeleteSelectionOp extends StateOp {
     name = 'deleteSelection';
 
     constructor(splat: Splat) {
-        const state = splat.splatData.getProp('state') as Uint8Array;
-        super(splat, IndexRanges.fromPredicate(splat.splatData.numSplats, i => state[i] === State.selected), State.deleted, BitOp.SET, State.deleted);
+        const state = splat.state.data;
+        super(splat, IndexRanges.fromPredicate(state.length, i => state[i] === State.selected), State.deleted, BitOp.SET, State.deleted);
     }
 }
 
@@ -177,8 +176,8 @@ class ResetOp extends StateOp {
     name = 'reset';
 
     constructor(splat: Splat) {
-        const state = splat.splatData.getProp('state') as Uint8Array;
-        super(splat, IndexRanges.fromPredicate(splat.splatData.numSplats, i => (state[i] & State.deleted) !== 0), State.deleted, BitOp.CLEAR, State.deleted);
+        const state = splat.state.data;
+        super(splat, IndexRanges.fromPredicate(state.length, i => (state[i] & State.deleted) !== 0), State.deleted, BitOp.CLEAR, State.deleted);
     }
 }
 
@@ -228,8 +227,8 @@ class SplatsTransformOp {
 
     async do() {
         const { splat, transform, paletteMap } = this;
-        const state = splat.splatData.getProp('state') as Uint8Array;
-        const indices = splat.transformTexture.lock() as Uint16Array;
+        const state = splat.state.data;
+        const indices = splat.transformIndices;
 
         // update splat transform palette indices
         for (let i = 0; i < state.length; ++i) {
@@ -238,6 +237,8 @@ class SplatsTransformOp {
             }
         }
 
+        const textureData = splat.transformTexture.lock() as Uint16Array;
+        textureData.set(indices);
         splat.transformTexture.unlock();
 
         splat.transformPalette.alloc(paletteMap.size);
@@ -255,8 +256,8 @@ class SplatsTransformOp {
 
     async undo() {
         const { splat, paletteMap } = this;
-        const state = splat.splatData.getProp('state') as Uint8Array;
-        const indices = splat.transformTexture.lock() as Uint16Array;
+        const state = splat.state.data;
+        const indices = splat.transformIndices;
 
         // invert the palette map
         const inverseMap = new Map<number, number>();
@@ -271,6 +272,8 @@ class SplatsTransformOp {
             }
         }
 
+        const textureData = splat.transformTexture.lock() as Uint16Array;
+        textureData.set(indices);
         splat.transformTexture.unlock();
 
         splat.transformPalette.free(paletteMap.size);

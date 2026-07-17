@@ -1,5 +1,5 @@
 import { MemoryFileSystem } from '@playcanvas/splat-transform';
-import { Color, Mat4, path, Texture, Vec3, Vec4 } from 'playcanvas';
+import { Color, Mat4, path, Texture, Vec3 } from 'playcanvas';
 
 import { EditHistory } from './edit-history';
 import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp, MultiOp, AddSplatOp } from './edit-ops';
@@ -18,13 +18,6 @@ const removeExtension = (filename: string) => {
 const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: Scene) => {
     const vec = new Vec3();
     const vec2 = new Vec3();
-    const vec4 = new Vec4();
-    const mat = new Mat4();
-    const SH_C0 = 0.28209479177387814;
-
-    const decodeColorChannel = (value: number) => {
-        return Math.min(1, Math.max(0, 0.5 + value * SH_C0));
-    };
 
     // get the list of selected splats (currently limited to just a single one)
     const selectedSplats = () => {
@@ -473,37 +466,16 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         const mode = events.invoke('camera.mode');
 
         for (const splat of selectedSplats()) {
-            const splatData = splat.splatData;
-
             if (mode === 'centers') {
-                const x = splatData.getProp('x');
-                const y = splatData.getProp('y');
-                const z = splatData.getProp('z');
-
                 const splatSize = events.invoke('camera.splatSize');
-                const camera = scene.camera.camera;
-                const sx = point.x * width;
-                const sy = point.y * height;
-
-                // calculate final matrix
-                mat.mul2(camera.camera._viewProjMat, splat.worldTransform);
-
-                // materialize hits into an owned mask. SelectOp consumes a
-                // committed snapshot rather than a closure so we never have to
-                // worry about state shifting between capture and apply.
-                const numSplats = splatData.numSplats;
-                const mask = new Uint8Array(numSplats);
-                for (let i = 0; i < numSplats; i++) {
-                    vec4.set(x[i], y[i], z[i], 1.0);
-                    mat.transformVec4(vec4, vec4);
-                    const px = (vec4.x / vec4.w * 0.5 + 0.5) * width;
-                    const py = (-vec4.y / vec4.w * 0.5 + 0.5) * height;
-                    if (Math.abs(px - sx) < splatSize && Math.abs(py - sy) < splatSize) {
-                        mask[i] = 255;
+                await runSelectIntersect(splat, op, {
+                    rect: {
+                        x1: point.x - splatSize / width,
+                        y1: point.y - splatSize / height,
+                        x2: point.x + splatSize / width,
+                        y2: point.y + splatSize / height
                     }
-                }
-
-                events.fire('edit.add', new SelectOp(splat, op, mask));
+                });
             } else if (mode === 'rings') {
                 scene.camera.pickPrep(splat, op);
 
@@ -551,31 +523,17 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 continue;
             }
 
-            const reds = splat.splatData.getProp('f_dc_0') as Float32Array;
-            const greens = splat.splatData.getProp('f_dc_1') as Float32Array;
-            const blues = splat.splatData.getProp('f_dc_2') as Float32Array;
-            // validate pickId and color channels exist
-            if (!reds || !greens || !blues || pickId < 0 || pickId >= reds.length) {
+            if (pickId < 0 || pickId >= splat.resource.numSplats) {
                 continue;
             }
-            // decode color channels for the reference pixel
-            const refR = decodeColorChannel(reds[pickId]);
-            const refG = decodeColorChannel(greens[pickId]);
-            const refB = decodeColorChannel(blues[pickId]);
-
-            // materialize hits into an owned mask up front; SelectOp consumes
-            // a committed snapshot.
-            const numSplats = splat.splatData.numSplats;
-            const mask = new Uint8Array(numSplats);
-            for (let i = 0; i < numSplats; i++) {
-                if (Math.abs(decodeColorChannel(reds[i]) - refR) <= colorThreshold &&
-                    Math.abs(decodeColorChannel(greens[i]) - refG) <= colorThreshold &&
-                    Math.abs(decodeColorChannel(blues[i]) - refB) <= colorThreshold) {
-                    mask[i] = 255;
-                }
-            }
-
-            events.fire('edit.add', new SelectOp(splat, op, mask));
+            await scene.commandQueue.enqueue(async () => {
+                const mask = await scene.dataProcessor.colorMatch(splat, pickId, colorThreshold, {
+                    entityMatrix: splat.entity.getWorldTransform(),
+                    cameraPos: scene.camera.position
+                });
+                events.fire('edit.add', new SelectOp(splat, op, mask));
+                scene.dataProcessor.releaseMask(mask);
+            });
         }
     });
 

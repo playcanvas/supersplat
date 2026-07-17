@@ -114,7 +114,7 @@ class SplatOverlay extends Element {
 
         material.update();
 
-        this.meshInstance.instancingCount = splat.splatData.numSplats;
+        this.meshInstance.instancingCount = splat.resource.numSplats;
 
         splat.entity.addChild(this.entity);
         this.splat = splat;

@@ -107,7 +107,7 @@ class StatusBar extends Container {
 
         const updateStats = () => {
             if (!splat) return;
-            const state = splat.splatData.getProp('state') as Uint8Array;
+            const state = splat.state.data;
             if (state) {
                 splatsValue.text = i18n.formatInteger(state.length - splat.numDeleted);
                 selectedValue.text = i18n.formatInteger(splat.numSelected);

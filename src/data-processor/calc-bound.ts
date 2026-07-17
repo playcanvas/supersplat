@@ -144,7 +144,7 @@ class CalcBound {
         this.compute.setParameter('splatState', splat.stateTexture);
         this.compute.setParameter('sourceWidth', transformA.width);
         this.compute.setParameter('sourceHeight', transformA.height);
-        this.compute.setParameter('numSplats', splat.splatData.numSplats);
+        this.compute.setParameter('numSplats', splat.resource.numSplats);
         Compute.calcDispatchSize(Math.ceil(transformA.width / WORKGROUP_SIZE), this.dispatchSize);
         this.compute.setupDispatch(this.dispatchSize.x, this.dispatchSize.y);
         this.device.computeDispatch([this.compute], 'calc-bound');

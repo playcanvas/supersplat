@@ -175,7 +175,7 @@ class Intersect {
     }
 
     async run(options: IntersectOptions, splat: Splat, bufferPool: BufferPool): Promise<Uint8Array> {
-        const count = splat.splatData.numSplats;
+        const count = splat.resource.numSplats;
         const transformA = splat.resource.getTexture('transformA');
         const resultWidth = packedMaskWidth(transformA.width);
         const resultHeight = packedMaskHeight(resultWidth, count);

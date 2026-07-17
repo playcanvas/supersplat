@@ -21,7 +21,6 @@ import {
     type Writer
 } from '@playcanvas/splat-transform';
 import {
-    GSplatData,
     Mat3,
     Mat4,
     PIXELFORMAT_BGRA8,
@@ -45,7 +44,7 @@ type SerializeSettings = {
     removeInvalid?: boolean;        // filter out gaussians with invalid data (NaN/Infinity)
 
     // the following options are used when serializing for document save.
-    // keepWorldTransform/keepColorTint flow through to SingleSplat; keepStateData
+    // keepWorldTransform/keepColorTint flow through the streaming source; keepStateData
     // is accepted for compatibility but the streaming writers never export state.
     keepStateData?: boolean;        // keep the state data array
     keepWorldTransform?: boolean;   // don't apply the world transform when resolving splat transforms
@@ -149,108 +148,7 @@ type ViewerExportSettings = {
 
 type ProgressFunc = (loaded: number, total: number) => void;
 
-// create a filter for gaussians
-class GaussianFilter {
-    set: (splat: Splat) => void;
-    test: (i: number) => boolean;
-
-    constructor(serializeSettings: SerializeSettings) {
-        let splat: Splat = null;
-        let state: Uint8Array = null;
-        let opacity: Float32Array = null;
-
-        this.set = (s: Splat) => {
-            splat = s;
-            state = splat.splatData.getProp('state') as Uint8Array;
-            opacity = splat.splatData.getProp('opacity') as Float32Array;
-        };
-
-        const onlySelected = serializeSettings.selected ?? false;
-        const minOpacity = serializeSettings.minOpacity ?? 0;
-        const removeInvalid = serializeSettings.removeInvalid ?? false;
-
-        // properties where +Infinity and -Infinity are valid values
-        const infOk = new Set(['opacity']);
-        // properties where -Infinity is a valid value
-        const negInfOk = new Set(['scale_0', 'scale_1', 'scale_2']);
-
-        this.test = (i: number) => {
-            // splat is deleted, always removed
-            if ((state[i] & State.deleted) !== 0) {
-                return false;
-            }
-
-            // optionally filter out unselected gaussians
-            if (onlySelected && (state[i] !== State.selected)) {
-                return false;
-            }
-
-            // optionally filter based on opacity
-            if (minOpacity > 0 && sigmoid(opacity[i]) < minOpacity) {
-                return false;
-            }
-
-            if (removeInvalid) {
-                const { splatData } = splat;
-
-                // check if any property of the gaussian is NaN/Infinity
-                const element = splatData.getElement('vertex');
-                for (let k = 0; k < element.properties.length; ++k) {
-                    const prop = element.properties[k];
-                    const { storage, name } = prop;
-                    if (storage && !Number.isFinite(storage[i])) {
-                        if (storage[i] === -Infinity && (infOk.has(name) || negInfOk.has(name))) continue;
-                        if (storage[i] === Infinity && infOk.has(name)) continue;
-                        return false;
-                    }
-                }
-            }
-
-            return true;
-        };
-    }
-}
-
-// count the total number of gaussians given a filter
-const countGaussians = (splats: Splat[], filter: GaussianFilter) => {
-    return splats.reduce((accum, splat) => {
-        filter.set(splat);
-        for (let i = 0; i < splat.splatData.numSplats; ++i) {
-            accum += filter.test(i) ? 1 : 0;
-        }
-        return accum;
-    }, 0);
-};
-
-const getVertexProperties = (splatData: GSplatData) => {
-    return new Set<string>(
-        splatData.getElement('vertex')
-        .properties.filter((p: any) => p.storage)
-        .map((p: any) => p.name)
-    );
-};
-
-const getCommonPropNames = (splats: Splat[]) => {
-    let result: Set<string>;
-
-    for (let i = 0; i < splats.length; ++i) {
-        const props = getVertexProperties(splats[i].splatData);
-        result = i === 0 ? props : new Set([...result].filter(i => props.has(i)));
-    }
-
-    return [...result];
-};
-
-const shNames = new Array(45).fill('').map((_, i) => `f_rest_${i}`);
 const shBandCoeffs = [0, 3, 8, 15];
-
-// determine the number of sh bands present given an object with 'f_rest_*' properties
-const calcSHBands = (data: Set<string>) => {
-    return { '9': 1, '24': 2, '-1': 3 }[shNames.findIndex(v => !data.has(v))] ?? 0;
-};
-
-const v = new Vec3();
-const q = new Quat();
 
 // calculate splat transforms on demand and cache the result for next time
 class SplatTransformCache {
@@ -261,7 +159,7 @@ class SplatTransformCache {
 
     constructor(splat: Splat, keepWorldTransform = false) {
         const transforms = new Map<number, { transformIndex: number, mat: Mat4, rot: Quat, scale: Vec3, shRot: SHRotation }>();
-        const indices = splat.transformTexture.getSource() as unknown as Uint32Array;
+        const indices = splat.transformIndices;
         const tmpMat = new Mat4();
         const tmpMat3 = new Mat3();
         const tmpQuat = new Quat();
@@ -336,155 +234,6 @@ class SplatTransformCache {
     }
 }
 
-// helper class for extracting and transforming a single splat's data
-// to prepare it for export
-class SingleSplat {
-    // final data keyed on member name
-    data: any = {};
-
-    // read a single gaussian's data and transform it for export
-    read: (splats: Splat, i: number) => void;
-
-    // specify the data members required
-    constructor(members: string[], serializeSettings: SerializeSettings) {
-        const data: any = {};
-        members.forEach((name) => {
-            data[name] = 0;
-        });
-
-        const hasPosition = ['x', 'y', 'z'].every(v => data.hasOwnProperty(v));
-        const hasRotation = ['rot_0', 'rot_1', 'rot_2', 'rot_3'].every(v => data.hasOwnProperty(v));
-        const hasScale = ['scale_0', 'scale_1', 'scale_2'].every(v => data.hasOwnProperty(v));
-        const hasColor = ['f_dc_0', 'f_dc_1', 'f_dc_2'].every(v => data.hasOwnProperty(v));
-        const hasOpacity = data.hasOwnProperty('opacity');
-
-        const dstSHBands = calcSHBands(new Set(Object.keys(data)));
-        const dstSHCoeffs = shBandCoeffs[dstSHBands];
-        const tmpSHData = dstSHBands ? new Float32Array(dstSHCoeffs) : null;
-
-        type CacheEntry = {
-            splat: Splat;
-            transformCache: SplatTransformCache;
-            srcProps: { [name: string]: Float32Array };
-            grade: ColorGrade;
-        };
-
-        const cacheMap = new Map<Splat, CacheEntry>();
-        let cacheEntry: CacheEntry;
-
-        const read = (splat: Splat, i: number) => {
-            // get the cached data entry for this splat
-            if (splat !== cacheEntry?.splat) {
-                if (!cacheMap.has(splat)) {
-                    const transformCache = new SplatTransformCache(splat, serializeSettings.keepWorldTransform);
-
-                    const srcPropNames = getVertexProperties(splat.splatData);
-                    const srcSHBands = calcSHBands(srcPropNames);
-                    const srcSHCoeffs = shBandCoeffs[srcSHBands];
-
-                    // cache the props objects
-                    const srcProps: { [name: string]: Float32Array } = {};
-
-                    members.forEach((name) => {
-                        const shIndex = shNames.indexOf(name);
-                        if (shIndex >= 0) {
-                            const a = Math.floor(shIndex / dstSHCoeffs);
-                            const b = shIndex % dstSHCoeffs;
-                            srcProps[name] = (b < srcSHCoeffs) ? splat.splatData.getProp(shNames[a * srcSHCoeffs + b]) as Float32Array : null;
-                        } else {
-                            srcProps[name] = splat.splatData.getProp(name) as Float32Array;
-                        }
-                    });
-
-                    const grade = new ColorGrade(splat);
-
-                    cacheEntry = { splat, transformCache, srcProps, grade };
-
-                    cacheMap.set(splat, cacheEntry);
-                } else {
-                    cacheEntry = cacheMap.get(splat);
-                }
-            }
-
-            const { transformCache, srcProps, grade } = cacheEntry;
-
-            // copy members
-            members.forEach((name) => {
-                data[name] = srcProps[name]?.[i] ?? 0;
-            });
-
-            // apply transform palette transforms
-            const mat = transformCache.getMat(i);
-
-            if (hasPosition) {
-                v.set(data.x, data.y, data.z);
-                mat.transformPoint(v, v);
-                [data.x, data.y, data.z] = [v.x, v.y, v.z];
-            }
-
-            if (hasRotation) {
-                const quat = transformCache.getRot(i);
-                q.set(data.rot_1, data.rot_2, data.rot_3, data.rot_0).mul2(quat, q);
-                [data.rot_1, data.rot_2, data.rot_3, data.rot_0] = [q.x, q.y, q.z, q.w];
-            }
-
-            if (hasScale) {
-                const scale = transformCache.getScale(i);
-                data.scale_0 = Math.log(Math.exp(data.scale_0) * scale.x);
-                data.scale_1 = Math.log(Math.exp(data.scale_1) * scale.y);
-                data.scale_2 = Math.log(Math.exp(data.scale_2) * scale.z);
-            }
-
-            if (dstSHBands > 0) {
-                for (let c = 0; c < 3; ++c) {
-                    for (let d = 0; d < dstSHCoeffs; ++d) {
-                        tmpSHData[d] = data[shNames[c * dstSHCoeffs + d]];
-                    }
-
-                    transformCache.getSHRot(i).apply(tmpSHData);
-
-                    for (let d = 0; d < dstSHCoeffs; ++d) {
-                        data[shNames[c * dstSHCoeffs + d]] = tmpSHData[d];
-                    }
-                }
-            }
-
-            if (!serializeSettings.keepColorTint && hasColor && grade.hasTint) {
-                const c = {
-                    r: dcDecode(data.f_dc_0),
-                    g: dcDecode(data.f_dc_1),
-                    b: dcDecode(data.f_dc_2)
-                };
-
-                grade.applyDC(c);
-                data.f_dc_0 = dcEncode(c.r);
-                data.f_dc_1 = dcEncode(c.g);
-                data.f_dc_2 = dcEncode(c.b);
-
-                if (dstSHBands > 0) {
-                    for (let d = 0; d < dstSHCoeffs; ++d) {
-                        c.r = data[shNames[d]];
-                        c.g = data[shNames[d + dstSHCoeffs]];
-                        c.b = data[shNames[d + dstSHCoeffs * 2]];
-
-                        grade.applySH(c);
-                        data[shNames[d]] = c.r;
-                        data[shNames[d + dstSHCoeffs]] = c.g;
-                        data[shNames[d + dstSHCoeffs * 2]] = c.b;
-                    }
-                }
-            }
-
-            if (!serializeSettings.keepColorTint && hasOpacity && splat.transparency !== 1) {
-                data.opacity = grade.applyOpacity(data.opacity);
-            }
-        };
-
-        this.data = data;
-        this.read = read;
-    }
-}
-
 // Number of f_rest_* SH coefficients per band level (mirrors splat-transform's
 // SH_REST_COUNTS; that constant isn't exported from the package root).
 const SH_REST_COUNTS: Record<number, number> = { 0: 0, 1: 9, 2: 24, 3: 45 };
@@ -522,6 +271,117 @@ const buildLayouts = (numRest: number): Partial<Record<ChunkLayer, LayerLayout>>
     }
 });
 
+const sourceChunkCount = (source: ChunkSource, chunkIndex: number) => {
+    return Math.min(source.meta.chunkSize, source.meta.numGaussians - chunkIndex * source.meta.chunkSize);
+};
+
+const validFloatLayer = (chunk: ChunkData, row: number) => {
+    const values = new Float32Array(chunk.data, row * chunk.stride, chunk.stride / 4);
+    for (let i = 0; i < values.length; ++i) {
+        if (!Number.isFinite(values[i])) return false;
+    }
+    return true;
+};
+
+const validGeometric = (chunk: ChunkData, row: number) => {
+    const values = new Float32Array(chunk.data, row * chunk.stride, chunk.stride / 4);
+    for (let i = 0; i < 4; ++i) if (!Number.isFinite(values[i])) return false;
+    for (let i = 4; i < 7; ++i) {
+        if (!Number.isFinite(values[i]) && values[i] !== -Infinity) return false;
+    }
+    return !Number.isNaN(values[7]);
+};
+
+const validOther = (chunk: ChunkData, row: number) => {
+    const view = new DataView(chunk.data);
+    for (const field of Object.values(chunk.fields)) {
+        if (field.type !== 'float32') continue;
+        for (let i = 0; i < field.components; ++i) {
+            const value = view.getFloat32(row * chunk.stride + field.byteOffset + i * 4, true);
+            if (!Number.isFinite(value)) return false;
+        }
+    }
+    return true;
+};
+
+const filteredIndices = async (splat: Splat, settings: SerializeSettings) => {
+    const { source } = splat.resource;
+    const state = splat.state.data;
+    const onlySelected = settings.selected ?? false;
+    const minOpacity = settings.minOpacity ?? 0;
+    const removeInvalid = settings.removeInvalid ?? false;
+    const needsSource = minOpacity > 0 || removeInvalid;
+
+    if (!needsSource) {
+        let count = 0;
+        for (let i = 0; i < state.length; ++i) {
+            if ((state[i] & State.deleted) === 0 && (!onlySelected || state[i] === State.selected)) count++;
+        }
+        const result = new Uint32Array(count);
+        for (let i = 0, dst = 0; i < state.length; ++i) {
+            if ((state[i] & State.deleted) === 0 && (!onlySelected || state[i] === State.selected)) result[dst++] = i;
+        }
+        return result;
+    }
+
+    const pool = createChunkDataPool({ chunkSize: source.meta.chunkSize });
+    const blocks: Uint32Array[] = [];
+    let total = 0;
+    try {
+        for (let chunkIndex = 0; chunkIndex < source.meta.numChunks[0]; ++chunkIndex) {
+            const count = sourceChunkCount(source, chunkIndex);
+            const position = removeInvalid ? pool.acquire('position', source.meta.layouts.position, count) : undefined;
+            const geometric = pool.acquire('geometric', source.meta.layouts.geometric, count);
+            const color = removeInvalid ? pool.acquire('color', source.meta.layouts.color, count) : undefined;
+            const other = removeInvalid && source.meta.availableLayers.has('other') ? pool.acquire('other', source.meta.layouts.other, count) : undefined;
+            try {
+                await source.read({ chunkIndex, position, geometric, color, other });
+                const opacity = new Float32Array(geometric.data);
+                const accepted = new Uint32Array(count);
+                let acceptedCount = 0;
+                const base = chunkIndex * source.meta.chunkSize;
+                for (let i = 0; i < count; ++i) {
+                    const index = base + i;
+                    if ((state[index] & State.deleted) !== 0) continue;
+                    if (onlySelected && state[index] !== State.selected) continue;
+                    if (minOpacity > 0 && sigmoid(opacity[i * 8 + 7]) < minOpacity) continue;
+                    if (removeInvalid && (!validFloatLayer(position, i) || !validGeometric(geometric, i) ||
+                        !validFloatLayer(color, i) || (other && !validOther(other, i)))) continue;
+                    accepted[acceptedCount++] = index;
+                }
+                if (acceptedCount > 0) {
+                    blocks.push(accepted.slice(0, acceptedCount));
+                    total += acceptedCount;
+                }
+            } finally {
+                position?.release();
+                geometric.release();
+                color?.release();
+                other?.release();
+            }
+        }
+    } finally {
+        pool.destroy();
+    }
+
+    const result = new Uint32Array(total);
+    let offset = 0;
+    for (const block of blocks) {
+        result.set(block, offset);
+        offset += block.length;
+    }
+    return result;
+};
+
+type ExportEntry = {
+    splat: Splat;
+    indices: Uint32Array;
+    start: number;
+    end: number;
+    transform: SplatTransformCache;
+    grade: ColorGrade;
+};
+
 /**
  * A lazy, chunked ChunkSource over a set of Splats, for feeding splat-transform's
  * streaming writers (writeSource) without materializing a whole-scene copy.
@@ -536,50 +396,16 @@ const buildLayouts = (numRest: number): Partial<Record<ChunkLayer, LayerLayout>>
 class SuperSplatChunkSource implements ChunkSource {
     meta: ChunkSourceMetadata;
 
-    private splats: Splat[];
-    private splatOf: Uint32Array;   // output row -> index into splats
-    private localOf: Uint32Array;   // output row -> gaussian index within that splat
-    private singleSplat: SingleSplat;
+    private entries: ExportEntry[];
+    private settings: SerializeSettings;
     private numRest: number;
+    private pools = new Map<Splat, ChunkDataPool>();
 
-    constructor(splats: Splat[], settings: SerializeSettings) {
-        this.splats = splats;
-
-        // Determine the SH band count to export: the highest band present in any
-        // splat, capped by maxSHBands. SingleSplat zero-fills missing bands.
-        const splatBands = splats.map(s => calcSHBands(getVertexProperties(s.splatData)));
-        const outputBands = Math.min(settings.maxSHBands ?? 3, splatBands.length ? Math.max(...splatBands) : 0);
-        const numRest = SH_REST_COUNTS[outputBands];
-        this.numRest = numRest;
-
-        // Build the filtered output->source index map (in splat order).
-        const filter = new GaussianFilter(settings);
-        const total = countGaussians(splats, filter);
-        const splatOf = new Uint32Array(total);
-        const localOf = new Uint32Array(total);
-        let idx = 0;
-        for (let s = 0; s < splats.length; ++s) {
-            filter.set(splats[s]);
-            const n = splats[s].splatData.numSplats;
-            for (let i = 0; i < n; ++i) {
-                if (filter.test(i)) {
-                    splatOf[idx] = s;
-                    localOf[idx] = i;
-                    idx++;
-                }
-            }
-        }
-        this.splatOf = splatOf;
-        this.localOf = localOf;
-
-        const members = [
-            'x', 'y', 'z',
-            'scale_0', 'scale_1', 'scale_2',
-            'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity',
-            'rot_0', 'rot_1', 'rot_2', 'rot_3',
-            ...shNames.slice(0, numRest)
-        ];
-        this.singleSplat = new SingleSplat(members, settings);
+    private constructor(entries: ExportEntry[], settings: SerializeSettings, outputBands: number) {
+        this.entries = entries;
+        this.settings = settings;
+        this.numRest = SH_REST_COUNTS[outputBands];
+        const total = entries.length ? entries[entries.length - 1].end : 0;
 
         const numChunks = Math.ceil(total / EXPORT_CHUNK_SIZE);
         this.meta = {
@@ -592,61 +418,176 @@ class SuperSplatChunkSource implements ChunkSource {
             extraColumns: [],
             transform: Transform.PLY,
             availableLayers: new Set<ChunkLayer>(['position', 'geometric', 'color']),
-            layouts: buildLayouts(numRest)
+            layouts: buildLayouts(this.numRest)
         };
     }
 
-    read(request: ReadRequest): Promise<void> {
+    static async create(splats: Splat[], settings: SerializeSettings) {
+        const outputBands = Math.min(settings.maxSHBands ?? 3, splats.length ? Math.max(...splats.map(s => s.resource.shBands)) : 0);
+        const entries: ExportEntry[] = [];
+        let start = 0;
+        for (const splat of splats) {
+            const indices = await filteredIndices(splat, settings);
+            const end = start + indices.length;
+            entries.push({
+                splat,
+                indices,
+                start,
+                end,
+                transform: new SplatTransformCache(splat, settings.keepWorldTransform),
+                grade: new ColorGrade(splat)
+            });
+            start = end;
+        }
+        return new SuperSplatChunkSource(entries, settings, outputBands);
+    }
+
+    private findEntry(row: number) {
+        let lo = 0;
+        let hi = this.entries.length - 1;
+        while (lo <= hi) {
+            const mid = (lo + hi) >> 1;
+            const entry = this.entries[mid];
+            if (row < entry.start) hi = mid - 1;
+            else if (row >= entry.end) lo = mid + 1;
+            else return entry;
+        }
+        return null;
+    }
+
+    private async readGroup(entry: ExportEntry, indices: Uint32Array, outputOffset: number, request: ReadRequest) {
+        const { splat, transform, grade } = entry;
+        const source = splat.resource.source;
+        let pool = this.pools.get(splat);
+        if (!pool) {
+            pool = createChunkDataPool({ chunkSize: source.meta.chunkSize });
+            this.pools.set(splat, pool);
+        }
+
+        const count = indices.length;
+        const position = request.position ? pool.acquire('position', source.meta.layouts.position, count) : undefined;
+        const geometric = request.geometric ? pool.acquire('geometric', source.meta.layouts.geometric, count) : undefined;
+        const color = request.color ? pool.acquire('color', source.meta.layouts.color, count) : undefined;
+        try {
+            await source.read({ indices, indexOffset: 0, count, position, geometric, color });
+            const srcPosition = position ? new Float32Array(position.data) : null;
+            const srcGeometric = geometric ? new Float32Array(geometric.data) : null;
+            const srcColor = color ? new Float32Array(color.data) : null;
+            const dstPosition = request.position ? new Float32Array(request.position.data) : null;
+            const dstGeometric = request.geometric ? new Float32Array(request.geometric.data) : null;
+            const dstColor = request.color ? new Float32Array(request.color.data) : null;
+            const srcRest = SH_REST_COUNTS[source.meta.shBands];
+            const srcCoeffs = shBandCoeffs[source.meta.shBands];
+            const dstCoeffs = this.numRest / 3;
+            const rest = new Float32Array(this.numRest);
+            const tmpSH = new Float32Array(dstCoeffs);
+            const positionValue = new Vec3();
+            const rotationValue = new Quat();
+            const c = { r: 0, g: 0, b: 0 };
+
+            for (let i = 0; i < count; ++i) {
+                const sourceIndex = indices[i];
+                if (dstPosition) {
+                    const src = i * 3;
+                    const dst = (outputOffset + i) * 3;
+                    positionValue.set(srcPosition[src], srcPosition[src + 1], srcPosition[src + 2]);
+                    transform.getMat(sourceIndex).transformPoint(positionValue, positionValue);
+                    dstPosition[dst] = positionValue.x;
+                    dstPosition[dst + 1] = positionValue.y;
+                    dstPosition[dst + 2] = positionValue.z;
+                }
+                if (dstGeometric) {
+                    const src = i * 8;
+                    const dst = (outputOffset + i) * 8;
+                    rotationValue.set(srcGeometric[src + 1], srcGeometric[src + 2], srcGeometric[src + 3], srcGeometric[src]);
+                    rotationValue.mul2(transform.getRot(sourceIndex), rotationValue);
+                    dstGeometric[dst] = rotationValue.w;
+                    dstGeometric[dst + 1] = rotationValue.x;
+                    dstGeometric[dst + 2] = rotationValue.y;
+                    dstGeometric[dst + 3] = rotationValue.z;
+                    const scale = transform.getScale(sourceIndex);
+                    dstGeometric[dst + 4] = Math.log(Math.exp(srcGeometric[src + 4]) * scale.x);
+                    dstGeometric[dst + 5] = Math.log(Math.exp(srcGeometric[src + 5]) * scale.y);
+                    dstGeometric[dst + 6] = Math.log(Math.exp(srcGeometric[src + 6]) * scale.z);
+                    dstGeometric[dst + 7] = !this.settings.keepColorTint && splat.transparency !== 1 ?
+                        grade.applyOpacity(srcGeometric[src + 7]) : srcGeometric[src + 7];
+                }
+                if (dstColor) {
+                    const src = i * (3 + srcRest);
+                    const dst = (outputOffset + i) * (3 + this.numRest);
+                    c.r = dcDecode(srcColor[src]);
+                    c.g = dcDecode(srcColor[src + 1]);
+                    c.b = dcDecode(srcColor[src + 2]);
+                    if (!this.settings.keepColorTint && grade.hasTint) grade.applyDC(c);
+                    dstColor[dst] = dcEncode(c.r);
+                    dstColor[dst + 1] = dcEncode(c.g);
+                    dstColor[dst + 2] = dcEncode(c.b);
+
+                    rest.fill(0);
+                    if (dstCoeffs > 0) {
+                        for (let channel = 0; channel < 3; ++channel) {
+                            tmpSH.fill(0);
+                            const copy = Math.min(srcCoeffs, dstCoeffs);
+                            for (let coeff = 0; coeff < copy; ++coeff) {
+                                tmpSH[coeff] = srcColor[src + 3 + channel * srcCoeffs + coeff];
+                            }
+                            transform.getSHRot(sourceIndex).apply(tmpSH);
+                            rest.set(tmpSH, channel * dstCoeffs);
+                        }
+                        if (!this.settings.keepColorTint && grade.hasTint) {
+                            for (let coeff = 0; coeff < dstCoeffs; ++coeff) {
+                                c.r = rest[coeff];
+                                c.g = rest[dstCoeffs + coeff];
+                                c.b = rest[dstCoeffs * 2 + coeff];
+                                grade.applySH(c);
+                                rest[coeff] = c.r;
+                                rest[dstCoeffs + coeff] = c.g;
+                                rest[dstCoeffs * 2 + coeff] = c.b;
+                            }
+                        }
+                        dstColor.set(rest, dst + 3);
+                    }
+                }
+            }
+        } finally {
+            position?.release();
+            geometric?.release();
+            color?.release();
+        }
+    }
+
+    async read(request: ReadRequest): Promise<void> {
         const isGather = 'indices' in request;
         const anyBuf = (request.position ?? request.geometric ?? request.color) as ChunkData;
         const count = isGather ? request.count : anyBuf.count;
         const chunkBase = isGather ? 0 : request.chunkIndex * EXPORT_CHUNK_SIZE;
 
-        const posF = request.position ? new Float32Array(request.position.data) : null;
-        const geoF = request.geometric ? new Float32Array(request.geometric.data) : null;
-        const colF = request.color ? new Float32Array(request.color.data) : null;
-        const cstride = 3 + this.numRest;
-
-        const { data } = this.singleSplat;
-
-        for (let i = 0; i < count; ++i) {
-            const outputRow = isGather ? request.indices[request.indexOffset + i] : chunkBase + i;
-            const splat = this.splats[this.splatOf[outputRow]];
-            this.singleSplat.read(splat, this.localOf[outputRow]);
-
-            if (posF) {
-                const o = i * 3;
-                posF[o + 0] = data.x;
-                posF[o + 1] = data.y;
-                posF[o + 2] = data.z;
+        let offset = 0;
+        while (offset < count) {
+            const outputRow = isGather ? request.indices[request.indexOffset + offset] : chunkBase + offset;
+            const entry = this.findEntry(outputRow);
+            if (!entry) throw new Error(`Invalid export row ${outputRow}`);
+            const maxCount = entry.splat.resource.source.meta.chunkSize;
+            let groupCount = 1;
+            while (offset + groupCount < count && groupCount < maxCount) {
+                const nextRow = isGather ? request.indices[request.indexOffset + offset + groupCount] : chunkBase + offset + groupCount;
+                if (this.findEntry(nextRow) !== entry) break;
+                groupCount++;
             }
-            if (geoF) {
-                const o = i * 8;
-                geoF[o + 0] = data.rot_0;
-                geoF[o + 1] = data.rot_1;
-                geoF[o + 2] = data.rot_2;
-                geoF[o + 3] = data.rot_3;
-                geoF[o + 4] = data.scale_0;
-                geoF[o + 5] = data.scale_1;
-                geoF[o + 6] = data.scale_2;
-                geoF[o + 7] = data.opacity;
+            const indices = new Uint32Array(groupCount);
+            for (let i = 0; i < groupCount; ++i) {
+                const row = isGather ? request.indices[request.indexOffset + offset + i] : chunkBase + offset + i;
+                indices[i] = entry.indices[row - entry.start];
             }
-            if (colF) {
-                const o = i * cstride;
-                colF[o + 0] = data.f_dc_0;
-                colF[o + 1] = data.f_dc_1;
-                colF[o + 2] = data.f_dc_2;
-                for (let r = 0; r < this.numRest; ++r) {
-                    colF[o + 3 + r] = data[shNames[r]];
-                }
-            }
+            await this.readGroup(entry, indices, offset, request);
+            offset += groupCount;
         }
-
-        return Promise.resolve();
     }
 
-    async close(): Promise<void> {
-        // nothing to release; the scene data is owned by the editor
+    close(): Promise<void> {
+        this.pools.forEach(pool => pool.destroy());
+        this.pools.clear();
+        return Promise.resolve();
     }
 }
 
@@ -654,8 +595,8 @@ class SuperSplatChunkSource implements ChunkSource {
  * Build a ChunkSource + matching pool over the given splats, or null if nothing
  * passes the export filter.
  */
-const createExportSource = (splats: Splat[], settings: SerializeSettings): { source: ChunkSource, pool: ChunkDataPool } | null => {
-    const source = new SuperSplatChunkSource(splats, settings);
+const createExportSource = async (splats: Splat[], settings: SerializeSettings): Promise<{ source: ChunkSource, pool: ChunkDataPool } | null> => {
+    const source = await SuperSplatChunkSource.create(splats, settings);
     if (source.meta.numGaussians === 0) {
         return null;
     }
@@ -741,7 +682,7 @@ const writeSplatFile = async (
     options: Options,
     fs: FileSystem
 ): Promise<void> => {
-    const built = createExportSource(splats, settings);
+    const built = await createExportSource(splats, settings);
     if (!built) {
         return;
     }

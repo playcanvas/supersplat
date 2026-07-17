@@ -1,9 +1,10 @@
 import { ReadFileSystem } from '@playcanvas/splat-transform';
-import { AppBase, Asset, GSplatData, GSplatResource } from 'playcanvas';
+import { AppBase, Asset } from 'playcanvas';
 
 import { Events } from './events';
-import { defaultLodIndex, loadGSplatData, validateGSplatData } from './io';
+import { defaultLodIndex, loadSplatSource } from './io';
 import { Splat } from './splat';
+import { EditorSplatResource } from './splat-resource';
 import { i18n } from './ui/localization';
 
 // handles loading gsplat assets using splat-transform
@@ -16,13 +17,10 @@ class AssetLoader {
         this.events = events;
     }
 
-    // wrap in-memory GSplatData in a gsplat Asset + GSplatResource registered with
-    // the engine. shared by the splat-transform load path and the PLY sequence
-    // frame source, which already holds decoded GSplatData.
-    createGSplatAsset(gsplatData: GSplatData, filename: string): Asset {
+    createGSplatAsset(resource: EditorSplatResource, filename: string): Asset {
         const asset = new Asset(filename, 'gsplat', { url: `local-asset-${Date.now()}`, filename });
         this.app.assets.add(asset);
-        asset.resource = new GSplatResource(this.app.graphicsDevice, gsplatData);
+        asset.resource = resource;
         return asset;
     }
 
@@ -63,15 +61,14 @@ class AssetLoader {
             };
 
             // Skip reordering for animation frames (speed) or when explicitly requested (already ordered)
-            const result = await loadGSplatData(filename, fileSystem, skipReorder || animationFrame, animationFrame ? undefined : pickLod);
+            const result = await loadSplatSource(filename, fileSystem, skipReorder || animationFrame, animationFrame ? undefined : pickLod);
             if (!result) {
                 // user cancelled LOD selection
                 return null;
             }
-            const { gsplatData, transform } = result;
-            validateGSplatData(gsplatData);
-
-            const asset = this.createGSplatAsset(gsplatData, filename);
+            const { source, transform } = result;
+            const resource = await EditorSplatResource.create(this.app.graphicsDevice, source);
+            const asset = this.createGSplatAsset(resource, filename);
 
             return new Splat(asset, transform.rotation);
         } finally {

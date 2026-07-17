@@ -101,8 +101,8 @@ class SplatsTransformHandler implements TransformHandler {
         this.pivotStart.copy(transform);
 
         // allocate a new transform for the current selection
-        const state = splat.splatData.getProp('state') as Uint8Array;
-        const indices = splat.transformTexture.lock() as Uint16Array;
+        const state = splat.state.data;
+        const indices = splat.transformIndices;
 
         const { paletteMap } = this;
         paletteMap.clear();
@@ -122,6 +122,8 @@ class SplatsTransformHandler implements TransformHandler {
             }
         }
 
+        const textureData = splat.transformTexture.lock() as Uint16Array;
+        textureData.set(indices);
         splat.transformTexture.unlock();
 
         // initialize transforms

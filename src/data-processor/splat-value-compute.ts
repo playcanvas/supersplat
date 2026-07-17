@@ -50,7 +50,8 @@ const createSplatValueUniformFormat = (device: GraphicsDevice) => new UniformBuf
     new UniformFormat('numBins', UNIFORMTYPE_INT),
     new UniformFormat('rangeStart', UNIFORMTYPE_INT),
     new UniformFormat('rangeEnd', UNIFORMTYPE_INT),
-    new UniformFormat('padding', UNIFORMTYPE_INT)
+    new UniformFormat('colorMatchIndex', UNIFORMTYPE_UINT),
+    new UniformFormat('colorMatchThreshold', UNIFORMTYPE_FLOAT)
 ]);
 
 const createSplatValueTextureFormats = (bands: number) => {
@@ -107,7 +108,7 @@ const setSplatValueParameters = (
     if (bands > 2) compute.setParameter('splatSH_12to15', resource.getTexture('splatSH_12to15'));
 
     compute.setParameter('sourceWidth', transformA.width);
-    compute.setParameter('numSplats', splat.splatData.numSplats);
+    compute.setParameter('numSplats', splat.resource.numSplats);
     compute.setParameter('propMode', mode);
     compute.setParameter('onScreenOnly', options?.onScreenOnly ? 1 : 0);
     compute.setParameter('entityMatrix', entityMatrix.data);
@@ -128,7 +129,8 @@ const setSplatValueParameters = (
     compute.setParameter('numBins', numBins);
     compute.setParameter('rangeStart', rangeStart);
     compute.setParameter('rangeEnd', rangeEnd);
-    compute.setParameter('padding', 0);
+    compute.setParameter('colorMatchIndex', 0);
+    compute.setParameter('colorMatchThreshold', 0);
 };
 
 export {

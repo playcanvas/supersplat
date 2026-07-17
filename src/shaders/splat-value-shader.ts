@@ -103,7 +103,8 @@ struct SplatValueUniforms {
     numBins: i32,
     rangeStart: i32,
     rangeEnd: i32,
-    padding: i32
+    colorMatchIndex: u32,
+    colorMatchThreshold: f32
 }
 
 struct SplatValue {

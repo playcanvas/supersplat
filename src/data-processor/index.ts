@@ -13,9 +13,10 @@ import {
 import { BufferPool } from './buffer-pool';
 import { CalcBound } from './calc-bound';
 import { CalcHistogram, CalcHistogramOptions } from './calc-histogram';
-import { CalcPositions } from './calc-positions';
+import { ColorMatch } from './color-match';
 import { Intersect, IntersectOptions } from './intersect';
 import { SelectByRange, SelectByRangeOptions } from './select-by-range';
+import { SplatValueOptions } from './splat-value-compute';
 import { fragmentShader as blitFragmentShader, vertexShader as blitVertexShader } from '../shaders/blit-shader';
 import { Splat } from '../splat';
 
@@ -40,8 +41,8 @@ class DataProcessor {
     // instances
     private intersectImpl: Intersect;
     private calcBoundImpl: CalcBound;
-    private calcPositionsImpl: CalcPositions;
     private calcHistogramImpl: CalcHistogram;
+    private colorMatchImpl: ColorMatch;
     private selectByRangeImpl: SelectByRange;
 
     constructor(device: GraphicsDevice) {
@@ -59,8 +60,8 @@ class DataProcessor {
         // create instances
         this.intersectImpl = new Intersect(device);
         this.calcBoundImpl = new CalcBound(device);
-        this.calcPositionsImpl = new CalcPositions(device);
         this.calcHistogramImpl = new CalcHistogram(device);
+        this.colorMatchImpl = new ColorMatch(device);
         this.selectByRangeImpl = new SelectByRange(device);
     }
 
@@ -73,11 +74,6 @@ class DataProcessor {
     // use gpu to calculate both selected and visible bounds in a single pass
     calcBound(splat: Splat, selectionBound: BoundingBox, localBound: BoundingBox): Promise<void> {
         return this.calcBoundImpl.run(splat, selectionBound, localBound);
-    }
-
-    // calculate world-space splat positions
-    calcPositions(splat: Splat) {
-        return this.calcPositionsImpl.run(splat);
     }
 
     // calculate histogram (bin counts + min/max) entirely on GPU
@@ -93,8 +89,14 @@ class DataProcessor {
         return this.selectByRangeImpl.run(splat, mode, options, this.bufferPool);
     }
 
-    // release a mask buffer returned by intersect() or selectByRange() back to
-    // the pool so subsequent calls can reuse it without re-allocating.
+    // compare final, view-dependent splat colors on the GPU and return an
+    // owned per-splat byte mask the caller must release via releaseMask().
+    colorMatch(splat: Splat, index: number, threshold: number, options: SplatValueOptions) {
+        return this.colorMatchImpl.run(splat, index, threshold, options, this.bufferPool);
+    }
+
+    // release a mask buffer returned by intersect(), selectByRange() or
+    // colorMatch() so subsequent calls can reuse it without re-allocating.
     releaseMask(mask: Uint8Array) {
         this.bufferPool.release(mask);
     }

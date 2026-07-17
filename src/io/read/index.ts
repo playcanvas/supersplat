@@ -11,6 +11,6 @@ export {
 // Loading functions
 export {
     defaultLodIndex,
-    loadGSplatData,
-    validateGSplatData
+    loadSplatSource,
+    validateSplatSource
 } from './loader';

@@ -7,8 +7,8 @@ export {
     BlobReadSource,
     MappedReadFileSystem,
     defaultLodIndex,
-    loadGSplatData,
-    validateGSplatData
+    loadSplatSource,
+    validateSplatSource
 } from './read';
 
 // Write operations

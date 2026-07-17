@@ -268,7 +268,7 @@ class DataPanel extends Container {
                 extras[`f_rest_${i}`] = `${channel} ${i18n.t('panel.splat-data.sh')} ${idx}`;
             }
 
-            const dataProps = splat.splatData.getElement('vertex').properties.map(p => p.name);
+            const dataProps = [...splat.resource.propertyNames];
             const derivedProps = ['distance', 'camera-depth', 'volume', 'surface-area', 'red', 'green', 'blue', 'hue', 'saturation', 'value'];
             const availableProps = new Set(dataProps.concat(derivedProps));
 

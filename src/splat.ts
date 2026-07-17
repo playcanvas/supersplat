@@ -7,8 +7,6 @@ import {
     BoundingBox,
     Color,
     Entity,
-    GSplatData,
-    GSplatResource,
     Mat4,
     Quat,
     Texture,
@@ -17,6 +15,7 @@ import {
 
 import { Element, ElementType } from './element';
 import { Serializer } from './serializer';
+import { EditorSplatResource } from './splat-resource';
 import { State, SplatState } from './splat-state';
 import { Transform } from './transform';
 import { TransformPalette } from './transform-palette';
@@ -40,9 +39,8 @@ const boundingPoints =
 
 class Splat extends Element {
     asset: Asset;
-    resource: GSplatResource;
-    splatData: GSplatData;
-    centers: Float32Array;
+    resource: EditorSplatResource;
+    transformIndices: Uint16Array;
     numSplats = 0;
     numDeleted = 0;
     numLocked = 0;
@@ -78,7 +76,7 @@ class Splat extends Element {
     constructor(asset: Asset, rotation: Quat) {
         super(ElementType.splat);
 
-        const { device } = asset.resource as GSplatResource;
+        const { device } = asset.resource as EditorSplatResource;
 
         // create the entity once. its transform persists across frame swaps so
         // an animated sequence can replace its data without losing the user's
@@ -99,15 +97,12 @@ class Splat extends Element {
     // the entity rotation is set; on a frame swap it is omitted so the user's
     // transform is preserved.
     private bindAsset(asset: Asset, rotation?: Quat) {
-        const splatResource = asset.resource as GSplatResource;
-        const splatData = splatResource.gsplatData as GSplatData;
+        const splatResource = asset.resource as EditorSplatResource;
         const { device } = splatResource;
 
         this.asset = asset;
         this.resource = splatResource;
-        this.splatData = splatData;
-        this.centers = splatResource.centers.slice();
-        this.numSplats = splatData.numSplats;
+        this.numSplats = splatResource.numSplats;
 
         // name and orientation are set on the initial bind only; a frame swap
         // (replaceData, no rotation) keeps the element's name and transform
@@ -115,27 +110,6 @@ class Splat extends Element {
             this._name = (asset.file as any).filename;
             this.entity.setLocalRotation(rotation);
         }
-
-        // added per-splat state channel
-        // bit 1: selected
-        // bit 2: locked
-        // bit 3: deleted
-        if (!splatData.getProp('state')) {
-            splatData.getElement('vertex').properties.push({
-                type: 'uchar',
-                name: 'state',
-                storage: new Uint8Array(splatData.numSplats),
-                byteSize: 1
-            });
-        }
-
-        // per-splat transform matrix
-        splatData.getElement('vertex').properties.push({
-            type: 'ushort',
-            name: 'transform',
-            storage: new Uint16Array(splatData.numSplats),
-            byteSize: 2
-        });
 
         const { x: width, y: height } = (splatResource as any).textureDimensions;
 
@@ -154,12 +128,12 @@ class Splat extends Element {
             });
         };
 
-        // create the state texture and the SplatState mirror that owns it.
-        // splatData.getProp('state') aliases state.data so existing read-only
-        // consumers (serialize, status-bar, etc) keep working unchanged.
+        // create compact CPU/GPU mirrors for editor state and palette indices.
         this.stateTexture = createTexture('splatState', PIXELFORMAT_R8);
-        this.state = new SplatState(splatData.getProp('state') as Uint8Array, this.stateTexture);
+        this.state = new SplatState(splatResource.stateData, this.stateTexture);
         this.transformTexture = createTexture('splatTransform', PIXELFORMAT_R16U);
+        this.transformIndices = this.transformTexture.lock() as Uint16Array;
+        this.transformTexture.unlock();
 
         this.localBoundStorage = splatResource.aabb.clone();
         this.worldBoundStorage = new BoundingBox();
@@ -249,19 +223,6 @@ class Splat extends Element {
     }
 
     async updatePositions() {
-        const data = await this.scene.dataProcessor.calcPositions(this);
-
-        // update the CPU centers used by editor tools
-        const state = this.splatData.getProp('state') as Uint8Array;
-        const { centers } = this;
-        for (let i = 0; i < this.splatData.numSplats; ++i) {
-            if (state[i] === State.selected) {
-                centers[i * 3 + 0] = data[i * 4];
-                centers[i * 3 + 1] = data[i * 4 + 1];
-                centers[i * 3 + 2] = data[i * 4 + 2];
-            }
-        }
-
         await this.updateSorting();
 
         this.scene.forceRender = true;
@@ -290,25 +251,6 @@ class Splat extends Element {
 
     get filename() {
         return (this.asset.file as any).filename;
-    }
-
-    calcSplatWorldPosition(splatId: number, result: Vec3) {
-        if (splatId >= this.splatData.numSplats) {
-            return false;
-        }
-
-        // use centers data, which are updated when edits occur
-        const { centers } = this;
-
-        result.set(
-            centers[splatId * 3 + 0],
-            centers[splatId * 3 + 1],
-            centers[splatId * 3 + 2]
-        );
-
-        this.worldTransform.transformPoint(result, result);
-
-        return true;
     }
 
     async add() {
@@ -362,8 +304,6 @@ class Splat extends Element {
     }
 
     focalPoint() {
-        // GSplatData has a function for calculating an weighted average of the splat positions
-        // to get a focal point for the camera, but we use bound center instead
         return this.worldBound.center;
     }
 

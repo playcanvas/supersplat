@@ -13,8 +13,7 @@ enum State {
 // the cached counts. Replaces the implicit "remember to call updateState() after
 // mutating state[]" contract with an encapsulated owner.
 class SplatState {
-    // shared with splatData.getProp('state') so existing read consumers keep
-    // working without any indirection. SplatState is the sole writer.
+    // SplatState is the sole writer of this compact CPU mirror.
     readonly data: Uint8Array;
     private readonly gpu: Texture;
     private dirtyLo = -1;

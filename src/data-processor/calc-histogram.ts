@@ -156,7 +156,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     }
 
     async run(splat: Splat, mode: number, options?: CalcHistogramOptions): Promise<CalcHistogramResult> {
-        const count = splat.splatData.numSplats;
+        const count = splat.resource.numSplats;
         const variant = this.getVariant(splat.resource.shBands);
         this.minMax.write(0, this.minMaxInit, 0, 2);
         this.bins.write(0, this.binInit, 0, this.binInit.length);

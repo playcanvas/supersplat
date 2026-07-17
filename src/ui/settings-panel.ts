@@ -347,13 +347,13 @@ class SettingsPanel extends Container {
 
         const gridPlaneSelection = new SelectInput({
             class: 'settings-panel-row-select',
-            defaultValue: 'xz'
+            defaultValue: 'xz',
+            options: [
+                { v: 'xz', t: 'XZ' },
+                { v: 'xy', t: 'XY' },
+                { v: 'yz', t: 'YZ' }
+            ]
         });
-        i18n.bindOptions(gridPlaneSelection, () => [
-            { v: 'xz', t: i18n.t('panel.settings.grid-plane.xz') },
-            { v: 'xy', t: i18n.t('panel.settings.grid-plane.xy') },
-            { v: 'yz', t: i18n.t('panel.settings.grid-plane.yz') }
-        ]);
 
         gridPlaneRow.append(gridPlaneLabel);
         gridPlaneRow.append(gridPlaneSelection);

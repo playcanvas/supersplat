@@ -76,4 +76,25 @@
             r: 5;
         }
     }
+
+    &#orient-tool-svg {
+        >#orient-triangle-bottom {
+            fill: none;
+            stroke: black;
+            stroke-width: 6;
+        }
+
+        >#orient-triangle-top {
+            fill: rgba(255, 102, 0, 0.2);
+            stroke: white;
+            stroke-width: 2;
+        }
+
+        >circle {
+            fill: white;
+            stroke: black;
+            stroke-width: 2;
+            r: 5;
+        }
+    }
 }

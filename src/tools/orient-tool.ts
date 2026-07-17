@@ -3,7 +3,7 @@ import { Entity, Mat4, Quat, TranslateGizmo, Vec3, math } from 'playcanvas';
 
 import { EntityTransformOp, MultiOp, PlacePivotOp } from '../edit-ops';
 import { Events } from '../events';
-import { GridPlane } from '../infinite-grid';
+import type { GridPlane } from '../infinite-grid';
 import { Pivot } from '../pivot';
 import { Scene } from '../scene';
 import { Splat } from '../splat';

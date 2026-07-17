@@ -1,5 +1,5 @@
 import { Button, Container, Label } from '@playcanvas/pcui';
-import { Entity, Mat4, Quat, Ray, TranslateGizmo, Vec3, math } from 'playcanvas';
+import { Entity, Mat4, Quat, Ray, TranslateGizmo, Vec3, Vec4, math } from 'playcanvas';
 
 import { EntityTransformOp, MultiOp, PlacePivotOp } from '../edit-ops';
 import { Events } from '../events';
@@ -8,12 +8,18 @@ import { OrientPlane } from '../orient-plane';
 import { Pivot } from '../pivot';
 import { Scene } from '../scene';
 import { Splat } from '../splat';
+import { State } from '../splat-state';
 import { Transform } from '../transform';
 import { i18n } from '../ui/localization';
 
 // snap the picked plane normal to a splat-local axis within this angle so
 // axis-aligned scans (e.g. z-up captures) produce exact quarter/half turns
 const SNAP_ANGLE_DEG = 3;
+
+// clicked points gather the gaussians whose centers project within this many
+// pixels of the cursor (falling back to the larger radius on sparse surfaces)
+const PICK_RADIUS = 8;
+const PICK_RADIUS_FAR = 24;
 
 const mat = new Mat4();
 const p = new Vec3();
@@ -31,6 +37,7 @@ const newPos = new Vec3();
 const q = new Quat();
 const newRot = new Quat();
 const ray = new Ray();
+const vec4 = new Vec4();
 
 const t = new Transform();
 
@@ -341,6 +348,91 @@ class OrientTool {
             }
         });
 
+        // place a point on the click ray at the opacity-weighted median depth of
+        // the gaussians whose centers project near the click. a single pick is
+        // unreliable on real captures: the frontmost gaussian is often a large,
+        // nearly transparent floater (placing the point in mid-air), while the
+        // depth pick's transmittance-weighted mean lands behind the surface.
+        // the weighted median keeps the point on the dominant opaque surface.
+        const placePoint = (offsetX: number, offsetY: number) => {
+            const { splatData } = splat;
+            const state = splatData.getProp('state') as Uint8Array;
+            const opacity = splatData.getProp('opacity') as Float32Array;
+            const { centers } = splat.entity.gsplat.instance.sorter;
+            const { numSplats } = splatData;
+
+            const cw = canvasContainer.dom.clientWidth;
+            const ch = canvasContainer.dom.clientHeight;
+
+            mat.mul2(scene.camera.camera.projectionMatrix, scene.camera.camera.viewMatrix);
+            mat.mul(splat.worldTransform);
+            scene.camera.getRay(offsetX, offsetY, ray);
+
+            const near: { t: number, w: number }[] = [];
+            const far: { t: number, w: number }[] = [];
+
+            for (let i = 0; i < numSplats; i++) {
+                if (state[i] & State.deleted) {
+                    continue;
+                }
+
+                const x = centers[i * 3 + 0];
+                const y = centers[i * 3 + 1];
+                const z = centers[i * 3 + 2];
+
+                vec4.set(x, y, z, 1);
+                mat.transformVec4(vec4, vec4);
+                if (vec4.w <= 0) {
+                    continue;
+                }
+
+                const dx = Math.abs((vec4.x / vec4.w * 0.5 + 0.5) * cw - offsetX);
+                const dy = Math.abs((-vec4.y / vec4.w * 0.5 + 0.5) * ch - offsetY);
+                if (dx >= PICK_RADIUS_FAR || dy >= PICK_RADIUS_FAR) {
+                    continue;
+                }
+
+                // depth along the click ray
+                v.set(x, y, z);
+                splat.worldTransform.transformPoint(v, v);
+                const dist = v.sub(ray.origin).dot(ray.direction);
+                if (dist <= 0) {
+                    continue;
+                }
+
+                const entry = { t: dist, w: opacity ? 1 / (1 + Math.exp(-opacity[i])) : 1 };
+                far.push(entry);
+                if (dx < PICK_RADIUS && dy < PICK_RADIUS) {
+                    near.push(entry);
+                }
+            }
+
+            const candidates = near.length > 0 ? near : far;
+            if (candidates.length === 0) {
+                return false;
+            }
+
+            candidates.sort((a, b) => a.t - b.t);
+            const total = candidates.reduce((sum, cand) => sum + cand.w, 0);
+            let accum = 0;
+            let median = candidates[candidates.length - 1].t;
+            for (const cand of candidates) {
+                accum += cand.w;
+                if (accum >= total * 0.5) {
+                    median = cand.t;
+                    break;
+                }
+            }
+
+            p.copy(ray.direction).mulScalar(median).add(ray.origin);
+            mat.invert(splat.worldTransform);
+            mat.transformPoint(p, v);
+            splat.orientSelection = splat.orientPoints.length;
+            splat.orientPoints.push(v.clone());
+
+            return true;
+        };
+
         const isPrimary = (e: PointerEvent) => {
             return e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary;
         };
@@ -357,7 +449,7 @@ class OrientTool {
             clicked = false;
         };
 
-        const pointerup = async (e: PointerEvent) => {
+        const pointerup = (e: PointerEvent) => {
             if (splat && clicked && isPrimary(e)) {
                 clicked = false;
 
@@ -379,27 +471,9 @@ class OrientTool {
                     return;
                 }
 
-                if (splat.orientPoints.length < 3) {
-                    // the point must sit on the click ray (under the cursor) at the
-                    // depth of the visible surface. depth picking (camera.intersect)
-                    // stays on the ray but returns a transmittance-weighted mean depth
-                    // that lands behind the surface, while a picked gaussian's center
-                    // can sit laterally offset from the cursor. so combine the two:
-                    // pick the frontmost gaussian, then place the point on the click
-                    // ray at that gaussian's depth.
-                    scene.camera.pickPrep(splat, 'set');
-                    const id = await scene.camera.pick(e.offsetX / canvasContainer.dom.clientWidth, e.offsetY / canvasContainer.dom.clientHeight);
-                    if (splat.calcSplatWorldPosition(id, v)) {
-                        scene.camera.getRay(e.offsetX, e.offsetY, ray);
-                        const dist = v.sub(ray.origin).dot(ray.direction);
-                        p.copy(ray.direction).mulScalar(dist).add(ray.origin);
-                        mat.invert(splat.worldTransform);
-                        mat.transformPoint(p, v);
-                        splat.orientSelection = splat.orientPoints.length;
-                        splat.orientPoints.push(v.clone());
-                        updateVisuals();
-                        scene.forceRender = true;
-                    }
+                if (splat.orientPoints.length < 3 && placePoint(e.offsetX, e.offsetY)) {
+                    updateVisuals();
+                    scene.forceRender = true;
                 }
 
                 e.preventDefault();

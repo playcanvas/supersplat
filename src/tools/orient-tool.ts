@@ -392,11 +392,13 @@ class OrientTool {
                     continue;
                 }
 
-                // depth along the click ray
+                // depth along the click ray. the inverted test also rejects NaN
+                // (e.g. a degenerate zero-sized viewport makes getRay produce NaN),
+                // which would otherwise flow through every comparison unchecked
                 v.set(x, y, z);
                 splat.worldTransform.transformPoint(v, v);
                 const dist = v.sub(ray.origin).dot(ray.direction);
-                if (dist <= 0) {
+                if (!(dist > 0)) {
                     continue;
                 }
 
@@ -439,6 +441,11 @@ class OrientTool {
 
         let clicked = false;
 
+        // whether each placed point is in front of the camera (updated each
+        // render): worldToScreen mirrors positions behind the camera, so the
+        // svg overlay must cull them
+        const pointInFront = [false, false, false];
+
         const pointerdown = (e: PointerEvent) => {
             if (!clicked && isPrimary(e)) {
                 clicked = true;
@@ -457,6 +464,10 @@ class OrientTool {
 
                 // check for intersection with existing point
                 for (let i = 0; i < splat.orientPoints.length; i++) {
+                    if (!pointInFront[i]) {
+                        continue;
+                    }
+
                     getPoint2d(i, p);
 
                     if (Math.abs(p.x - e.offsetX) < 8 && Math.abs(p.y - e.offsetY) < 8) {
@@ -484,33 +495,39 @@ class OrientTool {
         events.on('postrender', () => {
             const count = (active && splat) ? splat.orientPoints.length : 0;
             const points: string[] = [];
+            const cameraPos = scene.camera.mainCamera.getPosition();
+            const cameraFwd = scene.camera.mainCamera.forward;
+
+            let allInFront = true;
 
             for (let i = 0; i < 3; i++) {
                 if (i < count) {
                     getPoint(i, worldPoints[i]);
+                    pointInFront[i] = v.sub2(worldPoints[i], cameraPos).dot(cameraFwd) > 0;
+                    allInFront = allInFront && pointInFront[i];
                     scene.camera.worldToScreen(worldPoints[i], screenPoints[i]);
                     screenPoints[i].x *= canvasContainer.dom.clientWidth;
                     screenPoints[i].y *= canvasContainer.dom.clientHeight;
                     markers[i].setAttribute('cx', screenPoints[i].x.toString());
                     markers[i].setAttribute('cy', screenPoints[i].y.toString());
-                    markers[i].setAttribute('visibility', 'visible');
+                    markers[i].setAttribute('visibility', pointInFront[i] ? 'visible' : 'hidden');
                     points.push(`${screenPoints[i].x},${screenPoints[i].y}`);
                 } else {
+                    pointInFront[i] = false;
                     markers[i].setAttribute('visibility', 'hidden');
                 }
             }
 
             triangle.setAttribute('points', points.join(' '));
 
-            const triangleVisibility = count > 1 ? 'visible' : 'hidden';
+            // hide the outline when any corner projects from behind the camera;
+            // the in-scene plane fill still renders correctly in that case
+            const triangleVisibility = (count > 1 && allInFront) ? 'visible' : 'hidden';
             triangleBottom.setAttribute('visibility', triangleVisibility);
             triangleTop.setAttribute('visibility', triangleVisibility);
 
             // edge length labels, following the bound dimensions overlay conventions
             const showDims = count > 1 && events.invoke('camera.boundDimensions');
-            const cameraPos = scene.camera.mainCamera.getPosition();
-            const cameraFwd = scene.camera.mainCamera.forward;
-            const inFront = (i: number) => v.sub2(worldPoints[i], cameraPos).dot(cameraFwd) > 0;
 
             // screen centroid of the placed points, used to offset labels outwards
             let scx = 0, scy = 0;
@@ -524,7 +541,7 @@ class OrientTool {
                 const label = edgeLabels[i];
                 const exists = count === 3 || (count === 2 && i === 0);
 
-                if (!showDims || !exists || !inFront(i) || !inFront(j)) {
+                if (!showDims || !exists || !pointInFront[i] || !pointInFront[j]) {
                     label.setAttribute('visibility', 'hidden');
                     continue;
                 }

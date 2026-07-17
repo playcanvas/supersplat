@@ -32,6 +32,9 @@ const newRot = new Quat();
 
 const t = new Transform();
 
+const worldPoints = [new Vec3(), new Vec3(), new Vec3()];
+const screenPoints = [new Vec3(), new Vec3(), new Vec3()];
+
 class OrientTransformHandler {
     activate() {}
     deactivate() {}
@@ -73,10 +76,20 @@ class OrientTool {
             return marker;
         });
 
+        // create the edge length labels (shown when 'show dimensions' is enabled)
+        const edgeLabels = [0, 1, 2].map((i) => {
+            const label = document.createElementNS(ns, 'text') as SVGTextElement;
+            label.id = `orient-edge-${i}`;
+            label.setAttribute('text-anchor', 'middle');
+            label.setAttribute('dominant-baseline', 'middle');
+            return label;
+        });
+
         svg.appendChild(defs);
         svg.appendChild(triangleBottom);
         svg.appendChild(triangleTop);
         markers.forEach(marker => svg.appendChild(marker));
+        edgeLabels.forEach(label => svg.appendChild(label));
 
         // ui
         const hintLabel = new Label({ class: 'select-toolbar-label' });
@@ -373,11 +386,14 @@ class OrientTool {
 
             for (let i = 0; i < 3; i++) {
                 if (i < count) {
-                    getPoint2d(i, p);
-                    markers[i].setAttribute('cx', p.x.toString());
-                    markers[i].setAttribute('cy', p.y.toString());
+                    getPoint(i, worldPoints[i]);
+                    scene.camera.worldToScreen(worldPoints[i], screenPoints[i]);
+                    screenPoints[i].x *= canvasContainer.dom.clientWidth;
+                    screenPoints[i].y *= canvasContainer.dom.clientHeight;
+                    markers[i].setAttribute('cx', screenPoints[i].x.toString());
+                    markers[i].setAttribute('cy', screenPoints[i].y.toString());
                     markers[i].setAttribute('visibility', 'visible');
-                    points.push(`${p.x},${p.y}`);
+                    points.push(`${screenPoints[i].x},${screenPoints[i].y}`);
                 } else {
                     markers[i].setAttribute('visibility', 'hidden');
                 }
@@ -388,6 +404,65 @@ class OrientTool {
             const triangleVisibility = count > 1 ? 'visible' : 'hidden';
             triangleBottom.setAttribute('visibility', triangleVisibility);
             triangleTop.setAttribute('visibility', triangleVisibility);
+
+            // edge length labels, following the bound dimensions overlay conventions
+            const showDims = count > 1 && events.invoke('camera.boundDimensions');
+            const cameraPos = scene.camera.mainCamera.getPosition();
+            const cameraFwd = scene.camera.mainCamera.forward;
+            const inFront = (i: number) => v.sub2(worldPoints[i], cameraPos).dot(cameraFwd) > 0;
+
+            // screen centroid of the placed points, used to offset labels outwards
+            let scx = 0, scy = 0;
+            for (let i = 0; i < count; i++) {
+                scx += screenPoints[i].x / count;
+                scy += screenPoints[i].y / count;
+            }
+
+            for (let i = 0; i < 3; i++) {
+                const j = (i + 1) % 3;
+                const label = edgeLabels[i];
+                const exists = count === 3 || (count === 2 && i === 0);
+
+                if (!showDims || !exists || !inFront(i) || !inFront(j)) {
+                    label.setAttribute('visibility', 'hidden');
+                    continue;
+                }
+                label.setAttribute('visibility', 'visible');
+
+                const length = worldPoints[i].distance(worldPoints[j]);
+
+                const x0 = screenPoints[i].x;
+                const y0 = screenPoints[i].y;
+                const x1 = screenPoints[j].x;
+                const y1 = screenPoints[j].y;
+
+                const mx = (x0 + x1) * 0.5;
+                const my = (y0 + y1) * 0.5;
+
+                let theta = Math.atan2(y1 - y0, x1 - x0);
+                // flip 180° to keep text upright
+                if (Math.cos(theta) < 0) {
+                    theta += Math.PI;
+                }
+
+                // perpendicular offset so the label sits outside the triangle
+                const perpX = -Math.sin(theta);
+                const perpY = Math.cos(theta);
+                const dot = perpX * (scx - mx) + perpY * (scy - my);
+                const sign = dot > 0 ? -1 : 1;
+                const offsetPx = 10;
+
+                const thetaDeg = theta * 180 / Math.PI;
+                label.setAttribute('transform', `translate(${(mx + perpX * offsetPx * sign).toFixed(1)}, ${(my + perpY * offsetPx * sign).toFixed(1)}) rotate(${thetaDeg.toFixed(1)})`);
+                label.textContent = length.toFixed(2);
+            }
+        });
+
+        // re-render so labels react to the setting while the tool is active
+        events.on('camera.boundDimensions', () => {
+            if (active) {
+                scene.forceRender = true;
+            }
         });
 
         const updateGizmoSize = () => {

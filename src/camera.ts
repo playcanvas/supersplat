@@ -314,6 +314,7 @@ class Camera extends Element {
         this.mainCamera.camera.layers = [
             scene.worldLayer.id,
             scene.splatLayer.id,
+            scene.overlayLayer.id,
             scene.gizmoLayer.id
         ];
 
@@ -555,8 +556,11 @@ class Camera extends Element {
             this.splatPass.addLayer(this.camera, scene.splatLayer, false, false);
             this.splatPass.addLayer(this.camera, scene.splatLayer, true, false);
 
-            // configure gizmo pass
+            // configure gizmo pass - the tool overlay layer renders first (its
+            // ghost materials ignore depth), then the gizmos over a cleared depth
             this.gizmoPass.init(this.mainTarget);
+            this.gizmoPass.addLayer(this.camera, scene.overlayLayer, false, false);
+            this.gizmoPass.addLayer(this.camera, scene.overlayLayer, true, false);
             this.gizmoPass.addLayer(this.camera, scene.gizmoLayer, false, false);
             this.gizmoPass.addLayer(this.camera, scene.gizmoLayer, true, false);
             this.gizmoPass.renderActions[0].clearDepth = true;

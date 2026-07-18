@@ -4,11 +4,11 @@ import { Entity, Mat4, Quat, Ray, TranslateGizmo, Vec3, Vec4, math } from 'playc
 import { EntityTransformOp, MultiOp, PlacePivotOp } from '../edit-ops';
 import { Events } from '../events';
 import type { GridPlane } from '../infinite-grid';
-import { OrientPlane } from '../orient-plane';
 import { Pivot } from '../pivot';
 import { Scene } from '../scene';
 import { Splat } from '../splat';
 import { State } from '../splat-state';
+import { ToolOverlay, OverlayWriter } from '../tool-overlay';
 import { Transform } from '../transform';
 import { i18n } from '../ui/localization';
 
@@ -54,36 +54,14 @@ class OrientTool {
     deactivate: () => void;
 
     constructor(events: Events, scene: Scene, parent: HTMLElement, canvasContainer: Container) {
-        // create svg
+        // svg overlay holding the edge length labels; the points, edges and
+        // plane fill render in the scene via the shared tool overlay
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.classList.add('tool-svg', 'hidden');
         svg.id = 'orient-tool-svg';
         parent.appendChild(svg);
 
         const ns = svg.namespaceURI;
-
-        // create defs node
-        const defs = document.createElementNS(ns, 'defs');
-
-        // create the plane triangle
-        const triangle = document.createElementNS(ns, 'polygon') as SVGPolygonElement;
-        triangle.id = 'orient-triangle';
-        defs.appendChild(triangle);
-
-        const triangleBottom = document.createElementNS(ns, 'use') as SVGUseElement;
-        triangleBottom.id = 'orient-triangle-bottom';
-        triangleBottom.setAttribute('href', '#orient-triangle');
-
-        const triangleTop = document.createElementNS(ns, 'use') as SVGUseElement;
-        triangleTop.id = 'orient-triangle-top';
-        triangleTop.setAttribute('href', '#orient-triangle');
-
-        // create the point markers
-        const markers = [0, 1, 2].map((i) => {
-            const marker = document.createElementNS(ns, 'circle') as SVGCircleElement;
-            marker.id = `orient-point-${i}`;
-            return marker;
-        });
 
         // create the edge length labels (shown when 'show dimensions' is enabled)
         const edgeLabels = [0, 1, 2].map((i) => {
@@ -94,10 +72,6 @@ class OrientTool {
             return label;
         });
 
-        svg.appendChild(defs);
-        svg.appendChild(triangleBottom);
-        svg.appendChild(triangleTop);
-        markers.forEach(marker => svg.appendChild(marker));
         edgeLabels.forEach(label => svg.appendChild(label));
 
         // ui
@@ -144,17 +118,28 @@ class OrientTool {
             result.y *= canvasContainer.dom.clientHeight;
         };
 
-        // the plane fill is rendered in the scene (occludable by gaussians) so
-        // the user can see how the plane sits relative to the splat surface
-        const orientPlane = new OrientPlane();
-        orientPlane.supplier = (out: Vec3[]) => {
-            if (!active || !splat || splat.orientPoints.length !== 3) {
-                return false;
+        // the points, edges and plane fill render in the scene (occluded by
+        // gaussians, with a faint ghost showing through) so the user can see
+        // how the plane sits relative to the splat surface
+        const overlay = new ToolOverlay();
+        overlay.provider = (writer: OverlayWriter) => {
+            if (!active || !splat) {
+                return;
             }
-            for (let i = 0; i < 3; i++) {
-                getPoint(i, out[i]);
+            const count = splat.orientPoints.length;
+            const pts = [p0, p1, p2];
+            for (let i = 0; i < count; i++) {
+                getPoint(i, pts[i]);
+                writer.dot(pts[i]);
             }
-            return true;
+            if (count > 1) {
+                writer.segment(p0, p1);
+            }
+            if (count === 3) {
+                writer.segment(p1, p2);
+                writer.segment(p2, p0);
+                writer.fill(p0, p1, p2);
+            }
         };
 
         // calculate the world space plane normal and centroid from the three
@@ -494,37 +479,20 @@ class OrientTool {
 
         events.on('postrender', () => {
             const count = (active && splat) ? splat.orientPoints.length : 0;
-            const points: string[] = [];
             const cameraPos = scene.camera.mainCamera.getPosition();
             const cameraFwd = scene.camera.mainCamera.forward;
-
-            let allInFront = true;
 
             for (let i = 0; i < 3; i++) {
                 if (i < count) {
                     getPoint(i, worldPoints[i]);
                     pointInFront[i] = v.sub2(worldPoints[i], cameraPos).dot(cameraFwd) > 0;
-                    allInFront = allInFront && pointInFront[i];
                     scene.camera.worldToScreen(worldPoints[i], screenPoints[i]);
                     screenPoints[i].x *= canvasContainer.dom.clientWidth;
                     screenPoints[i].y *= canvasContainer.dom.clientHeight;
-                    markers[i].setAttribute('cx', screenPoints[i].x.toString());
-                    markers[i].setAttribute('cy', screenPoints[i].y.toString());
-                    markers[i].setAttribute('visibility', pointInFront[i] ? 'visible' : 'hidden');
-                    points.push(`${screenPoints[i].x},${screenPoints[i].y}`);
                 } else {
                     pointInFront[i] = false;
-                    markers[i].setAttribute('visibility', 'hidden');
                 }
             }
-
-            triangle.setAttribute('points', points.join(' '));
-
-            // hide the outline when any corner projects from behind the camera;
-            // the in-scene plane fill still renders correctly in that case
-            const triangleVisibility = (count > 1 && allInFront) ? 'visible' : 'hidden';
-            triangleBottom.setAttribute('visibility', triangleVisibility);
-            triangleTop.setAttribute('visibility', triangleVisibility);
 
             // edge length labels, following the bound dimensions overlay conventions
             const showDims = count > 1 && events.invoke('camera.boundDimensions');
@@ -614,7 +582,7 @@ class OrientTool {
 
             events.fire('transformHandler.push', transformHandler);
 
-            scene.add(orientPlane);
+            scene.add(overlay);
 
             scene.forceRender = true;
         };
@@ -622,7 +590,7 @@ class OrientTool {
         this.deactivate = () => {
             active = false;
 
-            scene.remove(orientPlane);
+            scene.remove(overlay);
 
             // the points are consumed by the alignment, so start the next session fresh
             if (splat) {

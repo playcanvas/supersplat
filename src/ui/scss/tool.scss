@@ -58,48 +58,10 @@
         }
     }
 
-    &#measure-tool-svg {
-        >#measure-line-bottom {
-            stroke: black;
-            stroke-width: 6;
-        }
-
-        >#measure-line-top {
-            stroke: white;
-            stroke-width: 2;
-        }
-
-        >#measure-line-start, >#measure-line-end {
-            fill: white;
-            stroke: black;
-            stroke-width: 2;
-            r: 5;
-        }
-    }
-
+    // the orient tool's points, edges and plane fill render in the scene (see
+    // tool-overlay.ts); the svg holds only the edge length labels, which match
+    // the bound dimensions overlay
     &#orient-tool-svg {
-        >#orient-triangle-bottom {
-            fill: none;
-            stroke: black;
-            stroke-width: 6;
-        }
-
-        // the fill is rendered in the scene (see orient-plane.ts); the svg
-        // draws only the always-on-top outline
-        >#orient-triangle-top {
-            fill: none;
-            stroke: white;
-            stroke-width: 2;
-        }
-
-        >circle {
-            fill: white;
-            stroke: black;
-            stroke-width: 2;
-            r: 5;
-        }
-
-        // edge length labels match the bound dimensions overlay
         >text {
             font-family: monospace;
             font-size: 11px;

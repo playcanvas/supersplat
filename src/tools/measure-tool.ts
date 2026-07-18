@@ -5,6 +5,7 @@ import { EntityTransformOp } from '../edit-ops';
 import { Events } from '../events';
 import { Scene } from '../scene';
 import { Splat } from '../splat';
+import { ToolOverlay, OverlayWriter } from '../tool-overlay';
 import { Transform } from '../transform';
 import { i18n } from '../ui/localization';
 
@@ -29,44 +30,7 @@ class MeasureTool {
     activate: () => void;
     deactivate: () => void;
 
-    constructor(events: Events, scene: Scene, parent: HTMLElement, canvasContainer: Container) {
-        // create svg
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.classList.add('tool-svg', 'hidden');
-        svg.id = 'measure-tool-svg';
-        parent.appendChild(svg);
-
-        const ns = svg.namespaceURI;
-
-        // create defs node
-        const defs = document.createElementNS(ns, 'defs');
-
-        // create line element
-        const line = document.createElementNS(ns, 'line') as SVGLineElement;
-        line.id = 'measure-line';
-        defs.appendChild(line);
-
-        const lineBottom = document.createElementNS(ns, 'use') as SVGUseElement;
-        lineBottom.id = 'measure-line-bottom';
-        lineBottom.setAttribute('href', '#measure-line');
-
-        const lineTop = document.createElementNS(ns, 'use') as SVGUseElement;
-        lineTop.id = 'measure-line-top';
-        lineTop.setAttribute('href', '#measure-line');
-
-        // create line ends
-        const lineStart = document.createElementNS(ns, 'circle') as SVGCircleElement;
-        lineStart.id = 'measure-line-start';
-
-        const lineEnd = document.createElementNS(ns, 'circle') as SVGCircleElement;
-        lineEnd.id = 'measure-line-end';
-
-        svg.appendChild(defs);
-        svg.appendChild(lineBottom);
-        svg.appendChild(lineTop);
-        svg.appendChild(lineStart);
-        svg.appendChild(lineEnd);
-
+    constructor(events: Events, scene: Scene, canvasContainer: Container) {
         // ui
         const lengthLabel = new Label();
         i18n.bindText(lengthLabel, 'measure.length');
@@ -110,6 +74,24 @@ class MeasureTool {
             scene.camera.worldToScreen(result, result);
             result.x *= canvasContainer.dom.clientWidth;
             result.y *= canvasContainer.dom.clientHeight;
+        };
+
+        // the measurement points and line render in the scene via the shared
+        // tool overlay (occluded by gaussians, with a faint ghost showing through)
+        const overlay = new ToolOverlay();
+        overlay.provider = (writer: OverlayWriter) => {
+            if (!active || !splat) {
+                return;
+            }
+            const count = splat.measurePoints.length;
+            const pts = [p0, p1];
+            for (let i = 0; i < count; i++) {
+                getPoint(i, pts[i]);
+                writer.dot(pts[i]);
+            }
+            if (count === 2) {
+                writer.segment(p0, p1);
+            }
         };
 
         const updateVisuals = () => {
@@ -298,7 +280,15 @@ class MeasureTool {
                 let closestIdx = -1;
 
                 // check for intersection with existing point
+                const cameraPos = scene.camera.mainCamera.getPosition();
+                const cameraFwd = scene.camera.mainCamera.forward;
                 for (let i = 0; i < splat.measurePoints.length; i++) {
+                    // ignore points behind the camera (their projection is mirrored)
+                    getPoint(i, p);
+                    if (p.sub(cameraPos).dot(cameraFwd) <= 0) {
+                        continue;
+                    }
+
                     getPoint2d(i, p);
 
                     if (Math.abs(p.x - e.offsetX) < 8 && Math.abs(p.y - e.offsetY) < 8) {
@@ -329,46 +319,6 @@ class MeasureTool {
             }
         };
 
-        events.on('postrender', () => {
-            if (active && splat) {
-                line.setAttribute('visibility', splat.measurePoints.length > 1 ? 'visible' : 'hidden');
-
-                for (let i = 0; i < 2; i++) {
-                    if (i < splat.measurePoints.length) {
-                        getPoint2d(i, p);
-
-                        const x = p.x.toString();
-                        const y = p.y.toString();
-
-                        if (i === 0) {
-                            line.setAttribute('x1', x);
-                            line.setAttribute('y1', y);
-                            lineStart.setAttribute('cx', x);
-                            lineStart.setAttribute('cy', y);
-
-                            lineStart.setAttribute('visibility', 'visible');
-                        } else if (i === 1) {
-                            line.setAttribute('x2', x);
-                            line.setAttribute('y2', y);
-                            lineEnd.setAttribute('cx', x);
-                            lineEnd.setAttribute('cy', y);
-                            lineEnd.setAttribute('visibility', 'visible');
-                        }
-                    } else {
-                        if (i === 0) {
-                            lineStart.setAttribute('visibility', 'hidden');
-                        } else {
-                            lineEnd.setAttribute('visibility', 'hidden');
-                        }
-                    }
-                }
-            } else {
-                line.setAttribute('visibility', 'hidden');
-                lineStart.setAttribute('visibility', 'hidden');
-                lineEnd.setAttribute('visibility', 'hidden');
-            }
-        });
-
         const updateGizmoSize = () => {
             const { camera, canvas } = scene;
             if (camera.ortho) {
@@ -388,25 +338,28 @@ class MeasureTool {
             canvasContainer.dom.addEventListener('pointermove', pointermove);
             canvasContainer.dom.addEventListener('pointerup', pointerup, true);
             selectToolbar.hidden = false;
-            parent.style.display = 'block';
-            parent.classList.add('noevents');
-            svg.classList.remove('hidden');
 
             events.fire('transformHandler.push', transformHandler);
+
+            scene.add(overlay);
+
+            scene.forceRender = true;
         };
 
         this.deactivate = () => {
             active = false;
+
+            scene.remove(overlay);
+
             updateVisuals();
             canvasContainer.dom.removeEventListener('pointerdown', pointerdown);
             canvasContainer.dom.removeEventListener('pointermove', pointermove);
-            canvasContainer.dom.removeEventListener('pointerup', pointerup);
+            canvasContainer.dom.removeEventListener('pointerup', pointerup, true);
             selectToolbar.hidden = true;
-            parent.style.display = 'none';
-            parent.classList.remove('noevents');
-            svg.classList.add('hidden');
 
             events.fire('transformHandler.pop');
+
+            scene.forceRender = true;
         };
     }
 }

@@ -2,6 +2,7 @@ import { WebPCodec, WorkerQueue } from '@playcanvas/splat-transform';
 import { Color, createGraphicsDevice } from 'playcanvas';
 
 import { registerCameraPosesEvents } from './camera-poses';
+import { registerCollisionMeshEvents } from './collision-mesh-events';
 import { CommandQueue } from './command-queue';
 import { registerDocEvents } from './doc';
 import { EditHistory } from './edit-history';
@@ -266,6 +267,7 @@ const main = async () => {
     registerSequenceEvents(events, scene);
     registerDocEvents(scene, events);
     registerRenderEvents(scene, events);
+    registerCollisionMeshEvents(events, scene);
     initFileHandler(scene, events, editorUI.appContainer.dom);
 
     // apply stored user preferences and start capturing changes to them.

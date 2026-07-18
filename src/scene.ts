@@ -75,6 +75,7 @@ class Scene {
     app: PCApp;
     worldLayer: Layer;
     splatLayer: Layer;
+    overlayLayer: Layer;
     gizmoLayer: Layer;
     sceneState = [new SceneState(), new SceneState()];
     elements: Element[] = [];
@@ -202,11 +203,16 @@ class Scene {
         });
         this.splatLayer.customCalculateSortValues = specialSort;
 
+        // overlay layer - renders after splats without clearing depth, so
+        // overlays composite over splats while depth-testing against them
+        this.overlayLayer = new Layer({ name: 'Overlay' });
+
         // gizmo layer
         this.gizmoLayer = new Layer({ name: 'Gizmo' });
 
         const layers = this.app.scene.layers;
         layers.push(this.splatLayer);
+        layers.push(this.overlayLayer);
         layers.push(this.gizmoLayer);
 
         this.dataProcessor = new DataProcessor(this.app.graphicsDevice);

@@ -1,5 +1,7 @@
 import {
+    Column,
     createChunkDataPool,
+    DataTable,
     logger as splatTransformLogger,
     MemoryFileSystem,
     Transform,
@@ -41,6 +43,7 @@ import { State } from './splat-state';
 type SerializeSettings = {
     maxSHBands?: number;            // specifies the maximum number of bands to be exported
     selected?: boolean;             // only export selected gaussians. used for copy/paste
+    visibleOnly?: boolean;          // filter out hidden (locked) gaussians. used for collision mesh generation
     minOpacity?: number;            // filter out gaussians with alpha less than or equal to minAlpha
     removeInvalid?: boolean;        // filter out gaussians with invalid data (NaN/Infinity)
 
@@ -166,6 +169,7 @@ class GaussianFilter {
         };
 
         const onlySelected = serializeSettings.selected ?? false;
+        const visibleOnly = serializeSettings.visibleOnly ?? false;
         const minOpacity = serializeSettings.minOpacity ?? 0;
         const removeInvalid = serializeSettings.removeInvalid ?? false;
 
@@ -182,6 +186,11 @@ class GaussianFilter {
 
             // optionally filter out unselected gaussians
             if (onlySelected && (state[i] !== State.selected)) {
+                return false;
+            }
+
+            // optionally filter out hidden gaussians
+            if (visibleOnly && (state[i] & State.locked) !== 0) {
                 return false;
             }
 
@@ -756,8 +765,70 @@ const writeSplatFile = async (
 
 /**
  * Extract Splat data into a DataTable for use with splat-transform writers.
- * This is shared between serializeSog and serializeViewer.
+ * Sog/viewer export now stream instead; this materialized path remains for the
+ * collision mesh generator, which needs random access to the whole table.
  */
+const extractDataTable = (splats: Splat[], settings: SerializeSettings): DataTable => {
+    const { maxSHBands = 3 } = settings;
+
+    // Determine which members to extract
+    const shCoeffs = [0, 3, 8, 15][maxSHBands];
+    const memberNames = [
+        'x', 'y', 'z',
+        'scale_0', 'scale_1', 'scale_2',
+        'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity',
+        'rot_0', 'rot_1', 'rot_2', 'rot_3',
+        ...shNames.slice(0, shCoeffs * 3)
+    ];
+
+    // Create SingleSplat for data extraction
+    const singleSplat = new SingleSplat(memberNames, settings);
+
+    // Create filter
+    const filter = new GaussianFilter(settings);
+
+    // Count total gaussians to export
+    let totalCount = 0;
+    for (const splat of splats) {
+        filter.set(splat);
+        for (let i = 0; i < splat.splatData.numSplats; ++i) {
+            if (filter.test(i)) {
+                totalCount++;
+            }
+        }
+    }
+
+    if (totalCount === 0) {
+        throw new Error('No gaussians to export');
+    }
+
+    // Create DataTable columns. Tag the table with Transform.PLY because
+    // SingleSplat.read pre-applies the PLY-style 180° Z flip (see
+    // SplatTransformCache.getMat), so the column data is in PLY space.
+    // Without this, splat-transform writers (writeSog, writeHtml) would apply
+    // the flip a second time and produce upside-down output.
+    const columns = memberNames.map(name => new Column(name, new Float32Array(totalCount)));
+    const dataTable = new DataTable(columns, Transform.PLY);
+
+    // Extract data into DataTable
+    let idx = 0;
+    for (const splat of splats) {
+        filter.set(splat);
+        for (let i = 0; i < splat.splatData.numSplats; ++i) {
+            if (!filter.test(i)) continue;
+
+            singleSplat.read(splat, i);
+
+            for (let j = 0; j < memberNames.length; ++j) {
+                (columns[j].data as Float32Array)[idx] = singleSplat.data[memberNames[j]] ?? 0;
+            }
+            idx++;
+        }
+    }
+
+    return dataTable;
+};
+
 // Bridge splat-transform progress events to supersplat's events.
 const createProgressRenderer = (header: string, events?: Events): Renderer => ({
     handle: (event: LogEvent) => {
@@ -896,6 +967,9 @@ const serializeSpz = async (splats: Splat[], settings: SpzSettings, fs: FileSyst
 
 export {
     Writer,
+    createGpuDevice,
+    createProgressRenderer,
+    extractDataTable,
     writeSplatFile,
     serializeSog,
     serializeSpz,

@@ -434,6 +434,12 @@ class ColorPanel extends Container {
                 setVisible(false);
             }
         });
+
+        events.on('collisionMeshPanel.visible', (visible: boolean) => {
+            if (visible) {
+                setVisible(false);
+            }
+        });
     }
 }
 

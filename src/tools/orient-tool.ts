@@ -399,8 +399,24 @@ class OrientTool {
                 return false;
             }
 
+            // composite the candidates front to back like the renderer would:
+            // each contributes its opacity scaled by the remaining transmittance,
+            // so an opaque surface in front wins even when denser geometry sits
+            // behind it (a raw census would vote for the occluded geometry)
             candidates.sort((a, b) => a.t - b.t);
-            const total = candidates.reduce((sum, cand) => sum + cand.w, 0);
+            let transmittance = 1;
+            let total = 0;
+            for (const cand of candidates) {
+                const alpha = cand.w;
+                cand.w = alpha * transmittance;
+                total += cand.w;
+                transmittance *= 1 - Math.min(0.99, alpha);
+                if (transmittance < 0.05) {
+                    break;
+                }
+            }
+
+            // the point lands at the median visible depth
             let accum = 0;
             let median = candidates[candidates.length - 1].t;
             for (const cand of candidates) {

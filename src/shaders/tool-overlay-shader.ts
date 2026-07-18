@@ -43,9 +43,15 @@ const lineVertexShader = /* glsl */ `
 
     uniform mat4 matrix_model;
     uniform mat4 matrix_viewProjection;
+    uniform float depthBias;
 
     void main() {
         gl_Position = matrix_viewProjection * matrix_model * vec4(vertex_position, 1.0);
+
+        // the overlay elements are coplanar (outline under core, fill under
+        // both), so order them with explicit depth strata rather than relying
+        // on draw order, which the layer sorting does not guarantee
+        gl_Position.z += depthBias * gl_Position.w;
     }
 `;
 
@@ -85,9 +91,10 @@ const fillFragmentShader = /* glsl */ `
 
     void main() {
         gl_FragColor = fillColor;
-        // bias the fill slightly behind the coplanar line and dot geometry so
-        // its stochastic depth writes can't flicker the triangle edges
-        gl_FragDepth = writeDepth(fillColor.a) ? (clipPos.z / clipPos.w) * 0.5 + 0.5 + 1e-4 : 1.0;
+        // bias the fill behind the coplanar dot/line strata so its stochastic
+        // depth writes can't flicker the triangle edges (window space, one
+        // stratum deeper than the line outline's vertex bias)
+        gl_FragDepth = writeDepth(fillColor.a) ? (clipPos.z / clipPos.w) * 0.5 + 0.5 + 2e-4 : 1.0;
     }
 `;
 

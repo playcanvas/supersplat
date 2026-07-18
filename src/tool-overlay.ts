@@ -186,14 +186,19 @@ class ToolOverlay extends Element {
         dotGhost.setParameter('dotTexture', this.texture);
         dotGhost.setParameter('ghost', GHOST_OPACITY);
 
+        // explicit depth strata (ndc): dots in front, then the line core, the
+        // line outline and (deeper still, biased in its shader) the fill
         const lineBase = makeMaterial('toolOverlayLineBase', lineVertexShader, lineFragmentShader, false);
         lineBase.setParameter('lineColor', [1, 1, 1, 1]);
+        lineBase.setParameter('depthBias', 1e-4);
 
         const lineGhost = makeMaterial('toolOverlayLineGhost', lineVertexShader, lineFragmentShader, true);
         lineGhost.setParameter('lineColor', [1, 1, 1, GHOST_OPACITY]);
+        lineGhost.setParameter('depthBias', 0);
 
         const outlineBase = makeMaterial('toolOverlayOutlineBase', lineVertexShader, lineFragmentShader, false);
         outlineBase.setParameter('lineColor', [0, 0, 0, 1]);
+        outlineBase.setParameter('depthBias', 2e-4);
 
         const fillBase = makeMaterial('toolOverlayFillBase', fillVertexShader, fillFragmentShader, false);
         fillBase.blendState = blend;

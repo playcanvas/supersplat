@@ -85,7 +85,9 @@ const fillFragmentShader = /* glsl */ `
 
     void main() {
         gl_FragColor = fillColor;
-        gl_FragDepth = writeDepth(fillColor.a) ? (clipPos.z / clipPos.w) * 0.5 + 0.5 : 1.0;
+        // bias the fill slightly behind the coplanar line and dot geometry so
+        // its stochastic depth writes can't flicker the triangle edges
+        gl_FragDepth = writeDepth(fillColor.a) ? (clipPos.z / clipPos.w) * 0.5 + 0.5 + 1e-4 : 1.0;
     }
 `;
 

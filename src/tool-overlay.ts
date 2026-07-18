@@ -121,7 +121,7 @@ class ToolOverlay extends Element {
     // fills the writer with world-space geometry for the current frame
     provider: (writer: OverlayWriter) => void = () => {};
 
-    fillColor = new Color(1, 0.4, 0, 0.4);
+    fillColor = new Color(1, 0.4, 0, 0.6);
 
     private writer = new OverlayWriter();
     private baseEntity: Entity;

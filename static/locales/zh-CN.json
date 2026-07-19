@@ -82,7 +82,7 @@
     "panel.settings.fov-dolly": "FOV 自动推轨",
     "panel.settings.sh-bands": "SH 带",
     "panel.settings.fly-speed": "相机飞行速度",
-    "panel.settings.centers-size": "中心大小",
+    "panel.settings.center-size": "中心大小",
     "panel.settings.use-splat-colors": "颜色中心",
     "panel.settings.outline-selection": "轮廓选择",
     "panel.settings.show-grid": "显示网格",

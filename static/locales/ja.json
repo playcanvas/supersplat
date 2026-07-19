@@ -82,7 +82,7 @@
     "panel.settings.fov-dolly": "FOV自動ドリー",
     "panel.settings.sh-bands": "球面調和関数のバンド",
     "panel.settings.fly-speed": "カメラの移動速度",
-    "panel.settings.centers-size": "センターサイズ",
+    "panel.settings.center-size": "センターサイズ",
     "panel.settings.use-splat-colors": "カラーセンター",
     "panel.settings.outline-selection": "選択のアウトライン",
     "panel.settings.show-grid": "グリッド",

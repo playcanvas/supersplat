@@ -82,7 +82,7 @@
     "panel.settings.fov-dolly": "Dolly auto du FOV",
     "panel.settings.sh-bands": "Ordres d'HS",
     "panel.settings.fly-speed": "Vitesse de vol",
-    "panel.settings.centers-size": "Échelle des centres",
+    "panel.settings.center-size": "Échelle des centres",
     "panel.settings.use-splat-colors": "Centres de Couleur",
     "panel.settings.outline-selection": "Contour de la sélection",
     "panel.settings.show-grid": "Afficher la grille",

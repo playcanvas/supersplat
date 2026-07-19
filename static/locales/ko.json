@@ -82,7 +82,7 @@
     "panel.settings.fov-dolly": "FOV 자동 달리",
     "panel.settings.sh-bands": "SH 밴드",
     "panel.settings.fly-speed": "카메라 이동 속도",
-    "panel.settings.centers-size": "센터 크기",
+    "panel.settings.center-size": "센터 크기",
     "panel.settings.use-splat-colors": "컬러 센터",
     "panel.settings.outline-selection": "선택 윤곽선",
     "panel.settings.show-grid": "그리드 표시",

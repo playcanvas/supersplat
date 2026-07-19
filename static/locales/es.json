@@ -82,7 +82,7 @@
     "panel.settings.fov-dolly": "Auto dolly de FOV",
     "panel.settings.sh-bands": "Bandas SH",
     "panel.settings.fly-speed": "Velocidad de vuelo",
-    "panel.settings.centers-size": "Tamaño de centros",
+    "panel.settings.center-size": "Tamaño de centros",
     "panel.settings.use-splat-colors": "Centros de Color",
     "panel.settings.outline-selection": "Contorno de selección",
     "panel.settings.show-grid": "Mostrar cuadrícula",

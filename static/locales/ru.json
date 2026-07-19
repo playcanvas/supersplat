@@ -82,7 +82,7 @@
     "panel.settings.fov-dolly": "Авто-долли FOV",
     "panel.settings.sh-bands": "Полосы SH",
     "panel.settings.fly-speed": "Скорость полёта",
-    "panel.settings.centers-size": "Размер центров",
+    "panel.settings.center-size": "Размер центров",
     "panel.settings.use-splat-colors": "Цветные центры",
     "panel.settings.outline-selection": "Контур выделения",
     "panel.settings.show-grid": "Показать сетку",

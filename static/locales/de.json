@@ -82,7 +82,7 @@
     "panel.settings.fov-dolly": "FOV-Auto-Dolly",
     "panel.settings.sh-bands": "SH Bänder",
     "panel.settings.fly-speed": "Kamera Geschwindigkeit",
-    "panel.settings.centers-size": "Punktgrößen",
+    "panel.settings.center-size": "Punktgrößen",
     "panel.settings.use-splat-colors": "Farbzentren",
     "panel.settings.outline-selection": "Umriss Selektion",
     "panel.settings.show-grid": "Raster anzeigen",

@@ -262,7 +262,7 @@ class SettingsPanel extends Container {
         const centersSizeLabel = new Label({
             class: 'settings-panel-row-label'
         });
-        i18n.bindText(centersSizeLabel, 'panel.settings.centers-size');
+        i18n.bindText(centersSizeLabel, 'panel.settings.center-size');
 
         const centersSizeSlider = new SliderInput({
             class: 'settings-panel-row-slider',

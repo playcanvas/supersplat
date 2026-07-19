@@ -308,7 +308,7 @@
     "tooltip.bottom-toolbar.eyedropper-selection": "Eyedropper Selection",
     "tooltip.bottom-toolbar.sphere-selection": "Sphere Selection",
     "tooltip.bottom-toolbar.box-selection": "Box Selection",
-    "tooltip.bottom-toolbar.translate": "Move",
+    "tooltip.bottom-toolbar.move": "Move",
     "tooltip.bottom-toolbar.rotate": "Rotate",
     "tooltip.bottom-toolbar.scale": "Scale",
     "tooltip.bottom-toolbar.measure": "Measure",

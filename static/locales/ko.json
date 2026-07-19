@@ -308,7 +308,7 @@
     "tooltip.bottom-toolbar.eyedropper-selection": "스포이드 선택",
     "tooltip.bottom-toolbar.sphere-selection": "구 선택",
     "tooltip.bottom-toolbar.box-selection": "상자 선택",
-    "tooltip.bottom-toolbar.translate": "이동",
+    "tooltip.bottom-toolbar.move": "이동",
     "tooltip.bottom-toolbar.rotate": "회전",
     "tooltip.bottom-toolbar.scale": "크기 조정",
     "tooltip.bottom-toolbar.measure": "측정",

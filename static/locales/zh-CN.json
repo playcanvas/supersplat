@@ -308,7 +308,7 @@
     "tooltip.bottom-toolbar.eyedropper-selection": "吸管选择",
     "tooltip.bottom-toolbar.sphere-selection": "球选择",
     "tooltip.bottom-toolbar.box-selection": "盒选择",
-    "tooltip.bottom-toolbar.translate": "移动",
+    "tooltip.bottom-toolbar.move": "移动",
     "tooltip.bottom-toolbar.rotate": "旋转",
     "tooltip.bottom-toolbar.scale": "缩放",
     "tooltip.bottom-toolbar.measure": "测量",

@@ -308,7 +308,7 @@
     "tooltip.bottom-toolbar.eyedropper-selection": "Sélection avec pipette",
     "tooltip.bottom-toolbar.sphere-selection": "Sélection avec sphère",
     "tooltip.bottom-toolbar.box-selection": "Sélection de boîte",
-    "tooltip.bottom-toolbar.translate": "Déplacer",
+    "tooltip.bottom-toolbar.move": "Déplacer",
     "tooltip.bottom-toolbar.rotate": "Tourner",
     "tooltip.bottom-toolbar.scale": "Changer l'échelle",
     "tooltip.bottom-toolbar.measure": "Mesurer",

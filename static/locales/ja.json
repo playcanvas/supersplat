@@ -308,7 +308,7 @@
     "tooltip.bottom-toolbar.eyedropper-selection": "スポイト選択",
     "tooltip.bottom-toolbar.sphere-selection": "球で選択",
     "tooltip.bottom-toolbar.box-selection": "箱で選択",
-    "tooltip.bottom-toolbar.translate": "移動",
+    "tooltip.bottom-toolbar.move": "移動",
     "tooltip.bottom-toolbar.rotate": "回転",
     "tooltip.bottom-toolbar.scale": "スケール",
     "tooltip.bottom-toolbar.measure": "計測",

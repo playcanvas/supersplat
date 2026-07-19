@@ -308,7 +308,7 @@
     "tooltip.bottom-toolbar.eyedropper-selection": "Seleção com Conta-gotas",
     "tooltip.bottom-toolbar.sphere-selection": "Selecionar com Esfera",
     "tooltip.bottom-toolbar.box-selection": "Selecionar com Caixa",
-    "tooltip.bottom-toolbar.translate": "Mover",
+    "tooltip.bottom-toolbar.move": "Mover",
     "tooltip.bottom-toolbar.rotate": "Rotacionar",
     "tooltip.bottom-toolbar.scale": "Escalar",
     "tooltip.bottom-toolbar.measure": "Medir",

@@ -308,7 +308,7 @@
     "tooltip.bottom-toolbar.eyedropper-selection": "Выделение пипеткой",
     "tooltip.bottom-toolbar.sphere-selection": "Выделение сферой",
     "tooltip.bottom-toolbar.box-selection": "Выделение прямоугольником",
-    "tooltip.bottom-toolbar.translate": "Перемещение",
+    "tooltip.bottom-toolbar.move": "Перемещение",
     "tooltip.bottom-toolbar.rotate": "Вращение",
     "tooltip.bottom-toolbar.scale": "Масштабирование",
     "tooltip.bottom-toolbar.measure": "Измерить",

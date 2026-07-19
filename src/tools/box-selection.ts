@@ -289,7 +289,7 @@ class BoxSelection {
             return shortcut ? i18n.formatTooltipWithShortcut(text, shortcut) : text;
         };
 
-        tooltips.register(translateButton, tooltip('tooltip.bottom-toolbar.translate', 'tool.moveShortcut'), 'top');
+        tooltips.register(translateButton, tooltip('tooltip.bottom-toolbar.move', 'tool.moveShortcut'), 'top');
         tooltips.register(rotateButton, tooltip('tooltip.bottom-toolbar.rotate', 'tool.rotateShortcut'), 'top');
         tooltips.register(scaleButton, tooltip('tooltip.bottom-toolbar.scale', 'tool.scaleShortcut'), 'top');
         tooltips.register(setButton, () => i18n.t('select-toolbar.set'), 'top');

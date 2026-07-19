@@ -308,7 +308,7 @@
     "tooltip.bottom-toolbar.eyedropper-selection": "Pipettenselektion",
     "tooltip.bottom-toolbar.sphere-selection": "Kugelselektion",
     "tooltip.bottom-toolbar.box-selection": "Kastenselektion",
-    "tooltip.bottom-toolbar.translate": "Bewegen",
+    "tooltip.bottom-toolbar.move": "Bewegen",
     "tooltip.bottom-toolbar.rotate": "Drehen",
     "tooltip.bottom-toolbar.scale": "Skalieren",
     "tooltip.bottom-toolbar.measure": "Messen",

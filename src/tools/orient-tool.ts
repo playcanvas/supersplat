@@ -1,5 +1,5 @@
 import { Button, Container, Label } from '@playcanvas/pcui';
-import { Entity, Mat4, Quat, Ray, TranslateGizmo, Vec3, Vec4, math } from 'playcanvas';
+import { Entity, Mat4, Quat, TranslateGizmo, Vec3, math } from 'playcanvas';
 
 import { EntityTransformOp, MultiOp, PlacePivotOp } from '../edit-ops';
 import { Events } from '../events';
@@ -7,7 +7,7 @@ import type { GridPlane } from '../infinite-grid';
 import { Pivot } from '../pivot';
 import { Scene } from '../scene';
 import { Splat } from '../splat';
-import { State } from '../splat-state';
+import { pickSplatSurfacePoint } from '../splat-pick';
 import { ToolOverlay, OverlayWriter } from '../tool-overlay';
 import { Transform } from '../transform';
 import { i18n } from '../ui/localization';
@@ -15,11 +15,6 @@ import { i18n } from '../ui/localization';
 // snap the picked plane normal to a splat-local axis within this angle so
 // axis-aligned scans (e.g. z-up captures) produce exact quarter/half turns
 const SNAP_ANGLE_DEG = 3;
-
-// clicked points gather the gaussians whose centers project within this many
-// pixels of the cursor (falling back to the larger radius on sparse surfaces)
-const PICK_RADIUS = 8;
-const PICK_RADIUS_FAR = 24;
 
 const mat = new Mat4();
 const p = new Vec3();
@@ -36,8 +31,6 @@ const snapped = new Vec3();
 const newPos = new Vec3();
 const q = new Quat();
 const newRot = new Quat();
-const ray = new Ray();
-const vec4 = new Vec4();
 
 const t = new Transform();
 
@@ -199,11 +192,13 @@ class OrientTool {
         });
 
         events.on('selection.changed', (selection: Splat) => {
-            splat = selection;
             if (active) {
-                // for now we always deactivate the tool so the current transform handler remains in place
+                // deactivate before switching so the session cleanup applies to
+                // the splat the points belong to (we always deactivate so the
+                // current transform handler remains in place)
                 events.fire('tool.deactivate');
             }
+            splat = selection;
         });
 
         events.on('pivot.moved', () => {
@@ -267,17 +262,7 @@ class OrientTool {
             const a = gridPlane === 'xy' ? Vec3.BACK : (gridPlane === 'yz' ? Vec3.RIGHT : Vec3.UP);
 
             // shortest arc rotation from the plane normal to the grid axis
-            const d = n.dot(a);
-            if (d >= 1 - 1e-9) {
-                q.set(0, 0, 0, 1);
-            } else if (d <= -1 + 1e-9) {
-                // 180 degrees: rotate about any axis perpendicular to a
-                axis.cross(a, Math.abs(a.y) < 0.9 ? Vec3.UP : Vec3.RIGHT).normalize();
-                q.setFromAxisAngle(axis, 180);
-            } else {
-                axis.cross(n, a).normalize();
-                q.setFromAxisAngle(axis, Math.acos(math.clamp(d, -1, 1)) * math.RAD_TO_DEG);
-            }
+            q.setFromDirections(n, a);
 
             const oldt = new Transform(
                 splat.entity.getLocalPosition(),
@@ -333,106 +318,13 @@ class OrientTool {
             }
         });
 
-        // place a point on the click ray at the opacity-weighted median depth of
-        // the gaussians whose centers project near the click. a single pick is
-        // unreliable on real captures: the frontmost gaussian is often a large,
-        // nearly transparent floater (placing the point in mid-air), while the
-        // depth pick's transmittance-weighted mean lands behind the surface.
-        // the weighted median keeps the point on the dominant opaque surface.
+        // place a point at the visible surface under the click (see splat-pick.ts)
         const placePoint = (offsetX: number, offsetY: number) => {
-            const { splatData } = splat;
-            const state = splatData.getProp('state') as Uint8Array;
-            const opacity = splatData.getProp('opacity') as Float32Array;
-            const { centers } = splat.entity.gsplat.instance.sorter;
-            const { numSplats } = splatData;
-
-            const cw = canvasContainer.dom.clientWidth;
-            const ch = canvasContainer.dom.clientHeight;
-
-            mat.mul2(scene.camera.camera.projectionMatrix, scene.camera.camera.viewMatrix);
-            mat.mul(splat.worldTransform);
-            scene.camera.getRay(offsetX, offsetY, ray);
-
-            const near: { t: number, w: number }[] = [];
-            const far: { t: number, w: number }[] = [];
-
-            for (let i = 0; i < numSplats; i++) {
-                if (state[i] & State.deleted) {
-                    continue;
-                }
-
-                const x = centers[i * 3 + 0];
-                const y = centers[i * 3 + 1];
-                const z = centers[i * 3 + 2];
-
-                vec4.set(x, y, z, 1);
-                mat.transformVec4(vec4, vec4);
-                if (vec4.w <= 0) {
-                    continue;
-                }
-
-                const dx = Math.abs((vec4.x / vec4.w * 0.5 + 0.5) * cw - offsetX);
-                const dy = Math.abs((-vec4.y / vec4.w * 0.5 + 0.5) * ch - offsetY);
-                if (dx >= PICK_RADIUS_FAR || dy >= PICK_RADIUS_FAR) {
-                    continue;
-                }
-
-                // depth along the click ray. the inverted test also rejects NaN
-                // (e.g. a degenerate zero-sized viewport makes getRay produce NaN),
-                // which would otherwise flow through every comparison unchecked
-                v.set(x, y, z);
-                splat.worldTransform.transformPoint(v, v);
-                const dist = v.sub(ray.origin).dot(ray.direction);
-                if (!(dist > 0)) {
-                    continue;
-                }
-
-                const entry = { t: dist, w: opacity ? 1 / (1 + Math.exp(-opacity[i])) : 1 };
-                far.push(entry);
-                if (dx < PICK_RADIUS && dy < PICK_RADIUS) {
-                    near.push(entry);
-                }
-            }
-
-            const candidates = near.length > 0 ? near : far;
-            if (candidates.length === 0) {
+            if (!pickSplatSurfacePoint(scene, splat, offsetX, offsetY, v)) {
                 return false;
             }
-
-            // composite the candidates front to back like the renderer would:
-            // each contributes its opacity scaled by the remaining transmittance,
-            // so an opaque surface in front wins even when denser geometry sits
-            // behind it (a raw census would vote for the occluded geometry)
-            candidates.sort((a, b) => a.t - b.t);
-            let transmittance = 1;
-            let total = 0;
-            for (const cand of candidates) {
-                const alpha = cand.w;
-                cand.w = alpha * transmittance;
-                total += cand.w;
-                transmittance *= 1 - Math.min(0.99, alpha);
-                if (transmittance < 0.05) {
-                    break;
-                }
-            }
-
-            // the point lands at the median visible depth
-            let accum = 0;
-            let median = candidates[candidates.length - 1].t;
-            for (const cand of candidates) {
-                accum += cand.w;
-                if (accum >= total * 0.5) {
-                    median = cand.t;
-                    break;
-                }
-            }
-
-            p.copy(ray.direction).mulScalar(median).add(ray.origin);
-            mat.invert(splat.worldTransform);
-            mat.transformPoint(p, v);
             splat.orientSelection = splat.orientPoints.length;
             splat.orientPoints.push(v.clone());
-
             return true;
         };
 
@@ -442,9 +334,9 @@ class OrientTool {
 
         let clicked = false;
 
-        // whether each placed point is in front of the camera (updated each
-        // render): worldToScreen mirrors positions behind the camera, so the
-        // svg overlay must cull them
+        // whether each placed point is in front of the camera, computed and
+        // consumed within the postrender label pass: worldToScreen mirrors
+        // positions behind the camera, so the labels must cull them
         const pointInFront = [false, false, false];
 
         const pointerdown = (e: PointerEvent) => {
@@ -464,8 +356,12 @@ class OrientTool {
                 let closestIdx = -1;
 
                 // check for intersection with existing point
+                const cameraPos = scene.camera.mainCamera.getPosition();
+                const cameraFwd = scene.camera.mainCamera.forward;
                 for (let i = 0; i < splat.orientPoints.length; i++) {
-                    if (!pointInFront[i]) {
+                    // ignore points behind the camera (their projection is mirrored)
+                    getPoint(i, v);
+                    if (v.sub(cameraPos).dot(cameraFwd) <= 0) {
                         continue;
                     }
 
@@ -494,7 +390,12 @@ class OrientTool {
         };
 
         events.on('postrender', () => {
-            const count = (active && splat) ? splat.orientPoints.length : 0;
+            // the svg is hidden while the tool is inactive, so skip the work
+            if (!active || !splat) {
+                return;
+            }
+
+            const count = splat.orientPoints.length;
             const cameraPos = scene.camera.mainCamera.getPosition();
             const cameraFwd = scene.camera.mainCamera.forward;
 
@@ -590,10 +491,14 @@ class OrientTool {
             parent.classList.add('noevents');
             svg.classList.remove('hidden');
 
-            // ensure the grid is visible while the tool is active
+            // ensure the grid is visible while the tool is active. suspend
+            // preference capture: the forced grid is tool state, not a user
+            // setting change
             gridForced = !events.invoke('grid.visible');
             if (gridForced) {
+                events.fire('preferences.suspend');
                 events.fire('grid.setVisible', true);
+                events.fire('preferences.resume');
             }
 
             events.fire('transformHandler.push', transformHandler);
@@ -624,7 +529,9 @@ class OrientTool {
             svg.classList.add('hidden');
 
             if (gridForced) {
+                events.fire('preferences.suspend');
                 events.fire('grid.setVisible', false);
+                events.fire('preferences.resume');
                 gridForced = false;
             }
 

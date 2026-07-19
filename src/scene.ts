@@ -276,8 +276,13 @@ class Scene {
     // remove an element from the scene
     remove(element: Element) {
         if (element.scene === this) {
-            // remove from list
-            this.elements.splice(this.elements.indexOf(element), 1);
+            // remove from list. guard the index: if add() hasn't completed its
+            // await yet the element isn't registered, and splice(-1) would
+            // evict an unrelated element
+            const index = this.elements.indexOf(element);
+            if (index !== -1) {
+                this.elements.splice(index, 1);
+            }
 
             // notify listeners
             this.events.fire('scene.elementRemoved', element);

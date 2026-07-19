@@ -48,9 +48,7 @@ const lineVertexShader = /* glsl */ `
     void main() {
         gl_Position = matrix_viewProjection * matrix_model * vec4(vertex_position, 1.0);
 
-        // the overlay elements are coplanar (outline under core, fill under
-        // both), so order them with explicit depth strata rather than relying
-        // on draw order, which the layer sorting does not guarantee
+        // depth stratum in ndc (see the strata table in tool-overlay.ts)
         gl_Position.z += depthBias * gl_Position.w;
     }
 `;
@@ -80,6 +78,7 @@ const fillVertexShader = /* glsl */ `
 const fillFragmentShader = /* glsl */ `
     uniform sampler2D blueNoiseTex32;
     uniform vec4 fillColor;
+    uniform float depthBias;
 
     varying vec4 clipPos;
 
@@ -91,10 +90,10 @@ const fillFragmentShader = /* glsl */ `
 
     void main() {
         gl_FragColor = fillColor;
-        // bias the fill behind the coplanar dot/line strata so its stochastic
-        // depth writes can't flicker the triangle edges (window space, one
-        // stratum deeper than the line outline's vertex bias)
-        gl_FragDepth = writeDepth(fillColor.a) ? (clipPos.z / clipPos.w) * 0.5 + 0.5 + 2e-4 : 1.0;
+        // depth stratum in window space (see the strata table in
+        // tool-overlay.ts): the fill sits behind the coplanar dot/line strata
+        // so its stochastic depth writes can't flicker the triangle edges
+        gl_FragDepth = writeDepth(fillColor.a) ? (clipPos.z / clipPos.w) * 0.5 + 0.5 + depthBias : 1.0;
     }
 `;
 

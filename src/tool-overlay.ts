@@ -8,7 +8,6 @@ import {
     PIXELFORMAT_RGBA8,
     PRIMITIVE_TRIANGLES,
     BlendState,
-    Color,
     Entity,
     GraphicsDevice,
     Mesh,
@@ -36,6 +35,25 @@ const LINE_OUTLINE_WIDTH = 5;
 
 // opacity of the ghost pass, drawn over the splats where the base pass is occluded
 const GHOST_OPACITY = 0.25;
+
+// the plane fill color
+const FILL_COLOR = [1, 0.4, 0, 0.6];
+
+// depth strata (window space), front to back: dots (no bias), line core, line
+// outline, fill. the overlay elements are coplanar, so ties between them are
+// broken with explicit biases rather than draw order, which the layer sorting
+// does not guarantee. the line strata are applied in the vertex shader in ndc
+// (2x window space); the fill stratum is applied in its fragment shader, since
+// the fill writes stochastic depth there.
+const STRATUM_LINE = 0.5e-4;
+const STRATUM_OUTLINE = 1e-4;
+const STRATUM_FILL = 2e-4;
+
+// view depth at which behind-camera segment endpoints are clipped
+const NEAR_CLIP = 1e-3;
+
+// unit quad corners as two triangles
+const quadCorners = [-1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1];
 
 const va = new Vec3();
 const vb = new Vec3();
@@ -69,6 +87,18 @@ class OverlayWriter {
         this.fills.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
     }
 }
+
+const arraysEqual = (a: number[], b: number[]) => {
+    if (a.length !== b.length) {
+        return false;
+    }
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) {
+            return false;
+        }
+    }
+    return true;
+};
 
 // a round marker texture matching the previous svg styling: white fill, black rim
 const createDotTexture = (device: GraphicsDevice, size = 64) => {
@@ -121,8 +151,6 @@ class ToolOverlay extends Element {
     // fills the writer with world-space geometry for the current frame
     provider: (writer: OverlayWriter) => void = () => {};
 
-    fillColor = new Color(1, 0.4, 0, 0.6);
-
     private writer = new OverlayWriter();
     private baseEntity: Entity;
     private ghostEntity: Entity;
@@ -132,6 +160,17 @@ class ToolOverlay extends Element {
     private fillMesh: Mesh;
     private texture: Texture;
     private initialized = false;
+
+    // per-mesh instance lists and last-uploaded geometry, so unchanged
+    // geometry skips the vertex buffer upload
+    private instances = new Map<Mesh, MeshInstance[]>();
+    private uploaded = new Map<Mesh, number[]>();
+
+    // persistent build buffers, reset each frame
+    private dotPositions: number[] = [];
+    private dotUvs: number[] = [];
+    private linePositions: number[] = [];
+    private outlinePositions: number[] = [];
 
     constructor() {
         super(ElementType.debug);
@@ -186,11 +225,9 @@ class ToolOverlay extends Element {
         dotGhost.setParameter('dotTexture', this.texture);
         dotGhost.setParameter('ghost', GHOST_OPACITY);
 
-        // explicit depth strata (ndc): dots in front, then the line core, the
-        // line outline and (deeper still, biased in its shader) the fill
         const lineBase = makeMaterial('toolOverlayLineBase', lineVertexShader, lineFragmentShader, false);
         lineBase.setParameter('lineColor', [1, 1, 1, 1]);
-        lineBase.setParameter('depthBias', 1e-4);
+        lineBase.setParameter('depthBias', STRATUM_LINE * 2);
 
         const lineGhost = makeMaterial('toolOverlayLineGhost', lineVertexShader, lineFragmentShader, true);
         lineGhost.setParameter('lineColor', [1, 1, 1, GHOST_OPACITY]);
@@ -198,11 +235,12 @@ class ToolOverlay extends Element {
 
         const outlineBase = makeMaterial('toolOverlayOutlineBase', lineVertexShader, lineFragmentShader, false);
         outlineBase.setParameter('lineColor', [0, 0, 0, 1]);
-        outlineBase.setParameter('depthBias', 2e-4);
+        outlineBase.setParameter('depthBias', STRATUM_OUTLINE * 2);
 
         const fillBase = makeMaterial('toolOverlayFillBase', fillVertexShader, fillFragmentShader, false);
         fillBase.blendState = blend;
-        fillBase.setParameter('fillColor', [this.fillColor.r, this.fillColor.g, this.fillColor.b, this.fillColor.a]);
+        fillBase.setParameter('fillColor', FILL_COLOR);
+        fillBase.setParameter('depthBias', STRATUM_FILL);
 
         const makeMesh = () => {
             const mesh = new Mesh(device);
@@ -220,6 +258,10 @@ class ToolOverlay extends Element {
             return meshes.map(([mesh, material]) => {
                 const meshInstance = new MeshInstance(mesh, material);
                 meshInstance.visible = false;
+                if (!this.instances.has(mesh)) {
+                    this.instances.set(mesh, []);
+                }
+                this.instances.get(mesh).push(meshInstance);
                 return meshInstance;
             });
         };
@@ -249,18 +291,44 @@ class ToolOverlay extends Element {
         const { writer } = this;
         writer.reset();
         this.provider(writer);
-        serializer.pack(writer.dots.length, writer.segments.length, writer.fills.length);
+        serializer.pack(this.scene.camera.renderOverlays, writer.dots.length, writer.segments.length, writer.fills.length);
         serializer.packa(writer.dots);
         serializer.packa(writer.segments);
         serializer.packa(writer.fills);
     }
 
     onPreRender() {
+        // consume the geometry serialize() gathered this frame (scene update,
+        // where elements serialize, always precedes rendering)
         const { writer } = this;
-        writer.reset();
-        this.provider(writer);
-
         const { camera } = this.scene;
+
+        const updateMesh = (mesh: Mesh, positions: number[], uvs?: number[]) => {
+            const visible = camera.renderOverlays && positions.length > 0;
+            if (visible) {
+                const last = this.uploaded.get(mesh);
+                if (!last || !arraysEqual(positions, last)) {
+                    mesh.setPositions(positions);
+                    if (uvs) {
+                        mesh.setUvs(0, uvs);
+                    }
+                    mesh.update(PRIMITIVE_TRIANGLES);
+                    this.uploaded.set(mesh, positions.slice());
+                }
+            }
+            this.instances.get(mesh).forEach((meshInstance) => {
+                meshInstance.visible = visible;
+            });
+        };
+
+        // hidden overlays (e.g. during image/video export) skip geometry building
+        if (!camera.renderOverlays) {
+            for (const mesh of this.instances.keys()) {
+                updateMesh(mesh, []);
+            }
+            return;
+        }
+
         const cameraTransform = camera.mainCamera.getWorldTransform();
         cameraTransform.getX(right).normalize();
         cameraTransform.getY(up).normalize();
@@ -276,8 +344,9 @@ class ToolOverlay extends Element {
         const viewDepth = (p: Vec3) => tmp.sub2(p, cameraPos).dot(cameraFwd);
 
         // dots: camera-facing quads with constant screen-space size
-        const dotPositions: number[] = [];
-        const dotUvs: number[] = [];
+        const { dotPositions, dotUvs, linePositions, outlinePositions } = this;
+        dotPositions.length = 0;
+        dotUvs.length = 0;
         const { dots } = writer;
         for (let i = 0; i < dots.length; i += 3) {
             vb.set(dots[i], dots[i + 1], dots[i + 2]);
@@ -286,7 +355,9 @@ class ToolOverlay extends Element {
                 continue;
             }
             const s = worldSize(DOT_SIZE, depth) * 0.5;
-            for (const [cx, cy] of [[-1, -1], [1, -1], [1, 1], [-1, -1], [1, 1], [-1, 1]]) {
+            for (let j = 0; j < 12; j += 2) {
+                const cx = quadCorners[j];
+                const cy = quadCorners[j + 1];
                 dotPositions.push(
                     vb.x + (right.x * cx + up.x * cy) * s,
                     vb.y + (right.y * cx + up.y * cy) * s,
@@ -297,16 +368,26 @@ class ToolOverlay extends Element {
         }
 
         // lines: camera-facing ribbons with constant screen-space width
-        const linePositions: number[] = [];
-        const outlinePositions: number[] = [];
+        linePositions.length = 0;
+        outlinePositions.length = 0;
         const { segments } = writer;
         for (let i = 0; i < segments.length; i += 6) {
             va.set(segments[i], segments[i + 1], segments[i + 2]);
             vb.set(segments[i + 3], segments[i + 4], segments[i + 5]);
-            const depthA = viewDepth(va);
-            const depthB = viewDepth(vb);
-            if (depthA <= 0 || depthB <= 0) {
+            let depthA = viewDepth(va);
+            let depthB = viewDepth(vb);
+            if (depthA <= 0 && depthB <= 0) {
                 continue;
+            }
+
+            // clip a behind-camera endpoint to just in front of the camera
+            // plane so the visible part of the segment still renders
+            if (depthA <= 0) {
+                va.lerp(va, vb, (NEAR_CLIP - depthA) / (depthB - depthA));
+                depthA = NEAR_CLIP;
+            } else if (depthB <= 0) {
+                vb.lerp(vb, va, (NEAR_CLIP - depthB) / (depthA - depthB));
+                depthB = NEAR_CLIP;
             }
 
             dir.sub2(vb, va);
@@ -337,24 +418,6 @@ class ToolOverlay extends Element {
             ribbon(linePositions, LINE_WIDTH);
             ribbon(outlinePositions, LINE_OUTLINE_WIDTH);
         }
-
-        const updateMesh = (mesh: Mesh, positions: number[], uvs?: number[]) => {
-            const visible = positions.length > 0;
-            if (visible) {
-                mesh.setPositions(positions);
-                if (uvs) {
-                    mesh.setUvs(0, uvs);
-                }
-                mesh.update(PRIMITIVE_TRIANGLES);
-            }
-            for (const entity of [this.baseEntity, this.ghostEntity]) {
-                entity.render?.meshInstances.forEach((meshInstance) => {
-                    if (meshInstance.mesh === mesh) {
-                        meshInstance.visible = visible;
-                    }
-                });
-            }
-        };
 
         updateMesh(this.dotMesh, dotPositions, dotUvs);
         updateMesh(this.lineMesh, linePositions);

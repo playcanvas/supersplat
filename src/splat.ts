@@ -74,6 +74,9 @@ class Splat extends Element {
     measurePoints: Vec3[] = [];
     measureSelection = -1;
 
+    orientPoints: Vec3[] = [];
+    orientSelection = -1;
+
     rebuildMaterial: (bands: number) => void;
 
     constructor(asset: Asset, rotation: Quat) {

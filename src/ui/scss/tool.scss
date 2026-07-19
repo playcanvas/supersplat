@@ -58,22 +58,17 @@
         }
     }
 
-    &#measure-tool-svg {
-        >#measure-line-bottom {
-            stroke: black;
-            stroke-width: 6;
-        }
-
-        >#measure-line-top {
-            stroke: white;
-            stroke-width: 2;
-        }
-
-        >#measure-line-start, >#measure-line-end {
+    // the orient tool's points, edges and plane fill render in the scene (see
+    // tool-overlay.ts); the svg holds only the edge length labels, which match
+    // the bound dimensions overlay
+    &#orient-tool-svg {
+        >text {
+            font-family: monospace;
+            font-size: 11px;
             fill: white;
-            stroke: black;
-            stroke-width: 2;
-            r: 5;
+            paint-order: stroke;
+            stroke: rgba(0, 0, 0, 0.7);
+            stroke-width: 3px;
         }
     }
 }

@@ -610,8 +610,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     });
 
     events.on('select.delete', () => {
-        // Don't delete gaussians when measure tool is active (backspace deletes measure points instead)
-        if (events.invoke('tool.active') === 'measure') {
+        // Don't delete gaussians when a point-placing tool is active (backspace deletes its points instead)
+        if (['measure', 'orient'].includes(events.invoke('tool.active'))) {
             return;
         }
         // Don't delete gaussians while a polygon selection is in progress (backspace removes the last point instead)

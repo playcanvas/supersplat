@@ -75,6 +75,7 @@ class Scene {
     app: PCApp;
     worldLayer: Layer;
     splatLayer: Layer;
+    overlayLayer: Layer;
     gizmoLayer: Layer;
     sceneState = [new SceneState(), new SceneState()];
     elements: Element[] = [];
@@ -202,11 +203,16 @@ class Scene {
         });
         this.splatLayer.customCalculateSortValues = specialSort;
 
+        // tool overlay layer - drawn after the splats (e.g. ghost passes of the
+        // measure/orient tool overlays, which show through occluding gaussians)
+        this.overlayLayer = new Layer({ name: 'ToolOverlay' });
+
         // gizmo layer
         this.gizmoLayer = new Layer({ name: 'Gizmo' });
 
         const layers = this.app.scene.layers;
         layers.push(this.splatLayer);
+        layers.push(this.overlayLayer);
         layers.push(this.gizmoLayer);
 
         this.dataProcessor = new DataProcessor(this.app.graphicsDevice);
@@ -270,8 +276,13 @@ class Scene {
     // remove an element from the scene
     remove(element: Element) {
         if (element.scene === this) {
-            // remove from list
-            this.elements.splice(this.elements.indexOf(element), 1);
+            // remove from list. guard the index: if add() hasn't completed its
+            // await yet the element isn't registered, and splice(-1) would
+            // evict an unrelated element
+            const index = this.elements.indexOf(element);
+            if (index !== -1) {
+                this.elements.splice(index, 1);
+            }
 
             // notify listeners
             this.events.fire('scene.elementRemoved', element);

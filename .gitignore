@@ -5,4 +5,4 @@ dist
 .vscode
 .cursor
 .idea
-.claude/
+.claude

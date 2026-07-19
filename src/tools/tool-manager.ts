@@ -1,3 +1,5 @@
+import type { Vec3 } from 'playcanvas';
+
 import { Events } from '../events';
 
 interface Tool {
@@ -7,6 +9,9 @@ interface Tool {
     // tool is active. return true if consumed, otherwise the corresponding
     // transform tool is activated instead.
     setTransformMode?: (mode: 'translate' | 'rotate' | 'scale') => boolean;
+    // optional: world-space focus target for the frame ('f') shortcut. return
+    // null to fall back to framing the selection.
+    getFocus?: () => { position: Vec3, radius: number } | null;
 }
 
 class ToolManager {
@@ -23,6 +28,13 @@ class ToolManager {
 
         this.events.function('tool.active', () => {
             return this.active;
+        });
+
+        // the active tool's focus target (if any), framed by camera.focus in
+        // place of the selection
+        this.events.function('tool.focus', () => {
+            const tool = this.active ? this.tools.get(this.active) : null;
+            return tool?.getFocus?.() ?? null;
         });
 
         let coordSpace: 'local' | 'world' = 'world';

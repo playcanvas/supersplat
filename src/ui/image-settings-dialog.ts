@@ -22,7 +22,7 @@ class ImageSettingsDialog extends Container {
         args = {
             ...args,
             id: 'image-settings-dialog',
-            class: 'settings-dialog',
+            class: ['settings-dialog', 'blocks-shortcuts'],
             hidden: true,
             tabIndex: -1
         };

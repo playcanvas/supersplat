@@ -11,6 +11,7 @@ class Spinner extends Container {
         super(args);
 
         this.dom.tabIndex = 0;
+        this.dom.classList.add('blocks-shortcuts');
 
         const spinner = new Element({
             dom: 'div',

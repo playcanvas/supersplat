@@ -88,7 +88,7 @@
     "panel.settings.show-grid": "Mostrar cuadrícula",
     "panel.settings.grid-plane": "Plano de cuadrícula",
     "panel.settings.show-bounding-box": "Mostrar límites",
-    "panel.settings.show-bounding-box-dimensions": "Mostrar dimensiones",
+    "panel.settings.show-dimensions": "Mostrar dimensiones",
     "panel.settings.show-camera-poses": "Mostrar cámaras",
     "panel.settings.show-camera-info": "Mostrar info de cámara",
     "panel.settings.reset": "Restablecer valores predeterminados",

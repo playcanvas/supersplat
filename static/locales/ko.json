@@ -88,7 +88,7 @@
     "panel.settings.show-grid": "그리드 표시",
     "panel.settings.grid-plane": "그리드 평면",
     "panel.settings.show-bounding-box": "경계 표시",
-    "panel.settings.show-bounding-box-dimensions": "치수 표시",
+    "panel.settings.show-dimensions": "치수 표시",
     "panel.settings.show-camera-poses": "카메라 표시",
     "panel.settings.show-camera-info": "카메라 정보 표시",
     "panel.settings.reset": "기본값으로 재설정",

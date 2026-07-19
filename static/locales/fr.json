@@ -88,7 +88,7 @@
     "panel.settings.show-grid": "Afficher la grille",
     "panel.settings.grid-plane": "Plan de la grille",
     "panel.settings.show-bounding-box": "Afficher limites",
-    "panel.settings.show-bounding-box-dimensions": "Afficher dimensions",
+    "panel.settings.show-dimensions": "Afficher dimensions",
     "panel.settings.show-camera-poses": "Afficher caméras",
     "panel.settings.show-camera-info": "Afficher infos caméra",
     "panel.settings.reset": "Réinitialiser les valeurs par défaut",

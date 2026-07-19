@@ -88,7 +88,7 @@
     "panel.settings.show-grid": "Raster anzeigen",
     "panel.settings.grid-plane": "Rasterebene",
     "panel.settings.show-bounding-box": "Objektbox anzeigen",
-    "panel.settings.show-bounding-box-dimensions": "Abmessungen anzeigen",
+    "panel.settings.show-dimensions": "Abmessungen anzeigen",
     "panel.settings.show-camera-poses": "Kameras anzeigen",
     "panel.settings.show-camera-info": "Kamera-Info anzeigen",
     "panel.settings.reset": "Auf Standard zurücksetzen",

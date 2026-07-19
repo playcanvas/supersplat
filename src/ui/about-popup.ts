@@ -19,6 +19,7 @@ class AboutPopup extends Container {
         args = {
             ...args,
             id: 'about-popup',
+            class: 'blocks-shortcuts',
             hidden: true,
             tabIndex: -1
         };

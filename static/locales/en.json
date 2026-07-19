@@ -88,7 +88,7 @@
     "panel.settings.show-grid": "Show Grid",
     "panel.settings.grid-plane": "Grid Plane",
     "panel.settings.show-bounding-box": "Show Bounding Box",
-    "panel.settings.show-bounding-box-dimensions": "Show Bounding Box Dimensions",
+    "panel.settings.show-dimensions": "Show Dimensions",
     "panel.settings.show-camera-poses": "Show Camera Poses",
     "panel.settings.show-camera-info": "Show Camera Info",
     "panel.settings.reset": "Reset to Defaults",

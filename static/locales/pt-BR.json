@@ -88,7 +88,7 @@
     "panel.settings.show-grid": "Mostrar Grade",
     "panel.settings.grid-plane": "Plano da Grade",
     "panel.settings.show-bounding-box": "Mostrar Limite",
-    "panel.settings.show-bounding-box-dimensions": "Mostrar Dimensões",
+    "panel.settings.show-dimensions": "Mostrar Dimensões",
     "panel.settings.show-camera-poses": "Mostrar Câmeras",
     "panel.settings.show-camera-info": "Mostrar Info da Câmera",
     "panel.settings.reset": "Redefinir padrões",

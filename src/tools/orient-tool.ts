@@ -48,6 +48,7 @@ class OrientTransformHandler {
 class OrientTool {
     activate: () => void;
     deactivate: () => void;
+    getFocus: () => { position: Vec3, radius: number } | null;
 
     constructor(events: Events, scene: Scene, parent: HTMLElement, canvasContainer: Container) {
         // svg overlay holding the edge length labels; the points, edges and
@@ -95,8 +96,19 @@ class OrientTool {
         canvasContainer.append(selectToolbar);
 
         const gizmo = new TranslateGizmo(scene.camera.camera, scene.gizmoLayer);
-        const entity = new Entity('orientGizmoPivot');
         const transformHandler = new OrientTransformHandler();
+
+        // the gizmo pivot must live in the scene graph: in local coord space
+        // the gizmo divides its translate delta by the parent's world scale,
+        // and a parentless entity leaves that divisor stale (1/0 = Infinity)
+        const entity = new Entity('orientGizmoPivot');
+        scene.app.root.addChild(entity);
+
+        gizmo.coordSpace = events.invoke('tool.coordSpace');
+        events.on('tool.coordSpace', (coordSpace: 'local' | 'world') => {
+            gizmo.coordSpace = coordSpace;
+            scene.forceRender = true;
+        });
 
         let active = false;
         let splat: Splat;
@@ -159,6 +171,19 @@ class OrientTool {
             return true;
         };
 
+        // calculate the rotation aligning +y with the plane normal (on the
+        // camera-facing side, matching the align convention) and +x with the
+        // first edge. requires a valid calcPlane result in p0/p1, n and c.
+        const calcPlaneRotation = (result: Quat) => {
+            if (n.dot(v.sub2(scene.camera.position, c)) < 0) {
+                n.mulScalar(-1);
+            }
+            e0.normalize();
+            e1.cross(e0, n);
+            mat.set([e0.x, e0.y, e0.z, 0, n.x, n.y, n.z, 0, e1.x, e1.y, e1.z, 0, 0, 0, 0, 1]);
+            result.setFromMat4(mat);
+        };
+
         const updateButtons = () => {
             alignButton.enabled = !!splat && splat.orientPoints.length === 3 && calcPlane();
             clearButton.enabled = !!splat && splat.orientPoints.length > 0;
@@ -172,6 +197,15 @@ class OrientTool {
                 t.set(p, Quat.IDENTITY, Vec3.ONE);
                 events.invoke('pivot').place(t);
                 entity.setLocalPosition(p);
+
+                // in local space the gizmo aligns to the picked plane (y perpendicular)
+                if (splat.orientPoints.length === 3 && calcPlane()) {
+                    calcPlaneRotation(q);
+                    entity.setLocalRotation(q);
+                } else {
+                    entity.setLocalRotation(Quat.IDENTITY);
+                }
+
                 gizmo.attach(entity);
             }
 
@@ -491,6 +525,34 @@ class OrientTool {
         events.on('camera.resize', updateGizmoSize);
         events.on('camera.ortho', updateGizmoSize);
 
+        // frame the placed points instead of the selection ('f' shortcut)
+        this.getFocus = () => {
+            const count = splat ? splat.orientPoints.length : 0;
+            if (count === 0) {
+                return null;
+            }
+
+            const position = new Vec3();
+            for (let i = 0; i < count; i++) {
+                getPoint(i, v);
+                position.add(v);
+            }
+            position.mulScalar(1 / count);
+
+            let radius = 0;
+            for (let i = 0; i < count; i++) {
+                getPoint(i, v);
+                radius = Math.max(radius, v.distance(position));
+            }
+
+            // frame with some margin; a lone point falls back to a radius
+            // relative to the splat's world size
+            splat.worldTransform.getScale(v);
+            radius = Math.max(radius * 1.5, splat.localBound.halfExtents.length() * v.x * 0.05);
+
+            return { position, radius };
+        };
+
         this.activate = () => {
             active = true;
             updateVisuals();
@@ -523,12 +585,6 @@ class OrientTool {
             active = false;
 
             scene.remove(overlay);
-
-            // the points are consumed by the alignment, so start the next session fresh
-            if (splat) {
-                splat.orientPoints.length = 0;
-                splat.orientSelection = -1;
-            }
 
             updateVisuals();
             canvasContainer.dom.removeEventListener('pointerdown', pointerdown);

@@ -116,6 +116,7 @@ class ShortcutsPopup extends Container {
         args = {
             ...args,
             id: 'shortcuts-popup',
+            class: 'blocks-shortcuts',
             hidden: true,
             tabIndex: -1
         };

@@ -88,7 +88,7 @@
     "panel.settings.show-grid": "显示网格",
     "panel.settings.grid-plane": "网格平面",
     "panel.settings.show-bounding-box": "显示边界",
-    "panel.settings.show-bounding-box-dimensions": "显示尺寸",
+    "panel.settings.show-dimensions": "显示尺寸",
     "panel.settings.show-camera-poses": "显示相机",
     "panel.settings.show-camera-info": "显示相机信息",
     "panel.settings.reset": "恢复默认设置",

@@ -281,6 +281,17 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // camera.focus
 
     events.on('camera.focus', () => {
+        // the active tool's focus target (e.g. orient points) takes precedence
+        const toolFocus: { position: Vec3, radius: number } | null = events.invoke('tool.focus');
+        if (toolFocus) {
+            scene.camera.focus({
+                focalPoint: toolFocus.position,
+                radius: toolFocus.radius,
+                speed: 1
+            });
+            return;
+        }
+
         const splat = selectedSplats()[0];
         if (splat) {
             // use current bounds (caller should have awaited the operation that changed data)

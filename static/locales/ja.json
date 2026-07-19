@@ -88,7 +88,7 @@
     "panel.settings.show-grid": "グリッド",
     "panel.settings.grid-plane": "グリッド平面",
     "panel.settings.show-bounding-box": "バウンディングボックス",
-    "panel.settings.show-bounding-box-dimensions": "寸法を表示",
+    "panel.settings.show-dimensions": "寸法を表示",
     "panel.settings.show-camera-poses": "カメラを表示",
     "panel.settings.show-camera-info": "カメラ情報を表示",
     "panel.settings.reset": "デフォルトに戻す",

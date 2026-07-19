@@ -32,6 +32,7 @@ class MeasureTransformHandler {
 class MeasureTool {
     activate: () => void;
     deactivate: () => void;
+    getFocus: () => { position: Vec3, radius: number } | null;
 
     constructor(events: Events, scene: Scene, canvasContainer: Container) {
         // ui
@@ -360,6 +361,34 @@ class MeasureTool {
         updateGizmoSize();
         events.on('camera.resize', updateGizmoSize);
         events.on('camera.ortho', updateGizmoSize);
+
+        // frame the placed points instead of the selection ('f' shortcut)
+        this.getFocus = () => {
+            const count = splat ? splat.measurePoints.length : 0;
+            if (count === 0) {
+                return null;
+            }
+
+            const position = new Vec3();
+            for (let i = 0; i < count; i++) {
+                getPoint(i, p);
+                position.add(p);
+            }
+            position.mulScalar(1 / count);
+
+            let radius = 0;
+            for (let i = 0; i < count; i++) {
+                getPoint(i, p);
+                radius = Math.max(radius, p.distance(position));
+            }
+
+            // frame with some margin; a lone point falls back to a radius
+            // relative to the splat's world size
+            splat.worldTransform.getScale(p);
+            radius = Math.max(radius * 1.5, splat.localBound.halfExtents.length() * p.x * 0.05);
+
+            return { position, radius };
+        };
 
         this.activate = () => {
             active = true;

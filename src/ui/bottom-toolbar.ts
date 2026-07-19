@@ -236,12 +236,12 @@ class BottomToolbar extends Container {
         tooltips.register(undo, tooltip('tooltip.bottom-toolbar.undo', 'edit.undo'));
         tooltips.register(redo, tooltip('tooltip.bottom-toolbar.redo', 'edit.redo'));
         tooltips.register(picker, tooltip('tooltip.bottom-toolbar.rectangle-selection', 'tool.rectSelection'));
-        tooltips.register(lasso, tooltip('tooltip.bottom-toolbar.lasso', 'tool.lassoSelection'));
-        tooltips.register(polygon, tooltip('tooltip.bottom-toolbar.polygon', 'tool.polygonSelection'));
-        tooltips.register(brush, tooltip('tooltip.bottom-toolbar.brush', 'tool.brushSelection'));
-        tooltips.register(flood, tooltip('tooltip.bottom-toolbar.flood', 'tool.floodSelection'));
-        tooltips.register(sphere, tooltip('tooltip.bottom-toolbar.sphere'));
-        tooltips.register(box, tooltip('tooltip.bottom-toolbar.box'));
+        tooltips.register(lasso, tooltip('tooltip.bottom-toolbar.lasso-selection', 'tool.lassoSelection'));
+        tooltips.register(polygon, tooltip('tooltip.bottom-toolbar.polygon-selection', 'tool.polygonSelection'));
+        tooltips.register(brush, tooltip('tooltip.bottom-toolbar.brush-selection', 'tool.brushSelection'));
+        tooltips.register(flood, tooltip('tooltip.bottom-toolbar.flood-selection', 'tool.floodSelection'));
+        tooltips.register(sphere, tooltip('tooltip.bottom-toolbar.sphere-selection'));
+        tooltips.register(box, tooltip('tooltip.bottom-toolbar.box-selection'));
         tooltips.register(translate, tooltip('tooltip.bottom-toolbar.translate', 'tool.moveShortcut'));
         tooltips.register(rotate, tooltip('tooltip.bottom-toolbar.rotate', 'tool.rotateShortcut'));
         tooltips.register(scale, tooltip('tooltip.bottom-toolbar.scale', 'tool.scaleShortcut'));
@@ -249,7 +249,7 @@ class BottomToolbar extends Container {
         tooltips.register(orient, tooltip('tooltip.bottom-toolbar.orient'));
         tooltips.register(coordSpace, tooltip('tooltip.bottom-toolbar.local-space', 'tool.toggleCoordSpace'));
         tooltips.register(origin, tooltip('tooltip.bottom-toolbar.bounding-box-center'));
-        tooltips.register(eyedropper, tooltip('tooltip.bottom-toolbar.eyedropper', 'tool.eyedropperSelection'));
+        tooltips.register(eyedropper, tooltip('tooltip.bottom-toolbar.eyedropper-selection', 'tool.eyedropperSelection'));
     }
 }
 

@@ -39,15 +39,18 @@ const GHOST_OPACITY = 0.25;
 // the plane fill color
 const FILL_COLOR = [1, 0.4, 0, 0.6];
 
-// depth strata (window space), front to back: dots (no bias), line core, line
-// outline, fill. the overlay elements are coplanar, so ties between them are
-// broken with explicit biases rather than draw order, which the layer sorting
-// does not guarantee. the line strata are applied in the vertex shader in ndc
-// (2x window space); the fill stratum is applied in its fragment shader, since
-// the fill writes stochastic depth there.
-const STRATUM_LINE = 0.5e-4;
-const STRATUM_OUTLINE = 1e-4;
-const STRATUM_FILL = 2e-4;
+// depth strata, front to back: dots (no bias), line core, line outline, fill.
+// the overlay elements are coplanar, so ties between them are broken with
+// polygon-offset style biases (a slope-scaled term plus a handful of depth
+// buffer quanta), which stay tie-breaking-sized at any camera distance. a
+// fixed window-space offset does not: its world-space size swings with the
+// dynamic near/far planes, which made the fill/splat blend change with zoom.
+// the lines use the hardware polygon offset via material state; the fill
+// writes stochastic gl_FragDepth (which disables the hardware offset), so its
+// fragment shader applies the same formula manually.
+const STRATUM_LINE = { slope: 1, bias: 2 };
+const STRATUM_OUTLINE = { slope: 2, bias: 4 };
+const STRATUM_FILL = [3, 2e-6]; // slope factor, constant window-space offset
 
 // view depth at which behind-camera segment endpoints are clipped
 const NEAR_CLIP = 1e-3;
@@ -227,15 +230,16 @@ class ToolOverlay extends Element {
 
         const lineBase = makeMaterial('toolOverlayLineBase', lineVertexShader, lineFragmentShader, false);
         lineBase.setParameter('lineColor', [1, 1, 1, 1]);
-        lineBase.setParameter('depthBias', STRATUM_LINE * 2);
+        lineBase.slopeDepthBias = STRATUM_LINE.slope;
+        lineBase.depthBias = STRATUM_LINE.bias;
 
         const lineGhost = makeMaterial('toolOverlayLineGhost', lineVertexShader, lineFragmentShader, true);
         lineGhost.setParameter('lineColor', [1, 1, 1, GHOST_OPACITY]);
-        lineGhost.setParameter('depthBias', 0);
 
         const outlineBase = makeMaterial('toolOverlayOutlineBase', lineVertexShader, lineFragmentShader, false);
         outlineBase.setParameter('lineColor', [0, 0, 0, 1]);
-        outlineBase.setParameter('depthBias', STRATUM_OUTLINE * 2);
+        outlineBase.slopeDepthBias = STRATUM_OUTLINE.slope;
+        outlineBase.depthBias = STRATUM_OUTLINE.bias;
 
         const fillBase = makeMaterial('toolOverlayFillBase', fillVertexShader, fillFragmentShader, false);
         fillBase.blendState = blend;

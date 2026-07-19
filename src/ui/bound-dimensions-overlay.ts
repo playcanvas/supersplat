@@ -64,6 +64,7 @@ class BoundDimensionsOverlay {
 
             if (!selection ||
                 !selection.visible ||
+                !events.invoke('camera.bound') ||
                 !events.invoke('camera.boundDimensions')) {
                 svg.classList.add('hidden');
                 return;

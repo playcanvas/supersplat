@@ -65,6 +65,18 @@
         line-height: 38px;
     }
 
+    // the measure/orient toolbars: a hint label plus text actions and inputs,
+    // spaced with a uniform flex gap rather than the icon-cluster margins
+    &.select-toolbar-tool {
+        gap: 12px;
+        padding: 0px 16px;
+
+        .select-toolbar-label,
+        .select-toolbar-button {
+            margin: 0px;
+        }
+    }
+
     // 16px group break from the preceding cluster, 6px to the input it labels
     .select-toolbar-label {
         margin: 0px 6px 0px 16px;

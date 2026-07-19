@@ -82,7 +82,7 @@ class OrientTool {
         i18n.bindText(clearButton, 'orient.clear');
 
         const selectToolbar = new Container({
-            class: 'select-toolbar',
+            class: ['select-toolbar', 'select-toolbar-tool'],
             hidden: true
         });
 
@@ -113,6 +113,16 @@ class OrientTool {
         let active = false;
         let splat: Splat;
         let gridForced = false;
+        let gridSelfToggle = false;
+
+        // if grid visibility changes for any reason other than the tool's own
+        // forcing (e.g. the user pressing 'g'), the grid is the user's again:
+        // leave it alone on deactivate
+        events.on('grid.visible', () => {
+            if (!gridSelfToggle) {
+                gridForced = false;
+            }
+        });
 
         // get world space point
         const getPoint = (index: number, result: Vec3) => {
@@ -569,9 +579,11 @@ class OrientTool {
             // setting change
             gridForced = !events.invoke('grid.visible');
             if (gridForced) {
+                gridSelfToggle = true;
                 events.fire('preferences.suspend');
                 events.fire('grid.setVisible', true);
                 events.fire('preferences.resume');
+                gridSelfToggle = false;
             }
 
             events.fire('transformHandler.push', transformHandler);
@@ -596,9 +608,11 @@ class OrientTool {
             svg.classList.add('hidden');
 
             if (gridForced) {
+                gridSelfToggle = true;
                 events.fire('preferences.suspend');
                 events.fire('grid.setVisible', false);
                 events.fire('preferences.resume');
+                gridSelfToggle = false;
                 gridForced = false;
             }
 

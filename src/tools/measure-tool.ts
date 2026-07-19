@@ -55,7 +55,7 @@ class MeasureTool {
         i18n.bindText(clearButton, 'measure.clear');
 
         const selectToolbar = new Container({
-            class: 'select-toolbar',
+            class: ['select-toolbar', 'select-toolbar-tool'],
             hidden: true
         });
 

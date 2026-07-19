@@ -47,7 +47,7 @@ class PublishSettingsDialog extends Container {
         // overwrite
 
         const overwriteLabel = new Label({ class: 'label' });
-        i18n.bindText(overwriteLabel, 'popup.publish.to');
+        i18n.bindText(overwriteLabel, 'popup.publish.destination');
         const overwriteSelect = new SelectInput({
             class: 'select'
         });

@@ -24,7 +24,7 @@ class Transform extends Container {
         const positionLabel = new Label({
             class: 'transform-label'
         });
-        i18n.bindText(positionLabel, 'panel.scene-manager.transform.position');
+        i18n.bindText(positionLabel, 'panel.scene.transform.position');
 
         const positionVector = new VectorInput({
             class: 'transform-expand',
@@ -46,7 +46,7 @@ class Transform extends Container {
         const rotationLabel = new Label({
             class: 'transform-label'
         });
-        i18n.bindText(rotationLabel, 'panel.scene-manager.transform.rotation');
+        i18n.bindText(rotationLabel, 'panel.scene.transform.rotation');
 
         const rotationVector = new VectorInput({
             class: 'transform-expand',
@@ -68,7 +68,7 @@ class Transform extends Container {
         const scaleLabel = new Label({
             class: 'transform-label'
         });
-        i18n.bindText(scaleLabel, 'panel.scene-manager.transform.scale');
+        i18n.bindText(scaleLabel, 'panel.scene.transform.scale');
 
         const scaleInput = new NumericInput({
             class: 'transform-expand',

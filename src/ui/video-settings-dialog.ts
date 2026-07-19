@@ -55,8 +55,8 @@ class VideoSettingsDialog extends Container {
             ]
         });
         i18n.bindOptions(projectionSelect, () => [
-            { v: 'standard', t: i18n.t('popup.render-video.projection-standard') },
-            { v: 'equirect', t: i18n.t('popup.render-video.projection-360') }
+            { v: 'standard', t: i18n.t('popup.render-video.projection.standard') },
+            { v: 'equirect', t: i18n.t('popup.render-video.projection.equirectangular') }
         ]);
         const projectionRow = new Container({ class: 'row' });
         projectionRow.append(projectionLabel);
@@ -251,7 +251,7 @@ class VideoSettingsDialog extends Container {
         // transparent background
 
         const transparentBgLabel = new Label({ class: 'label' });
-        i18n.bindText(transparentBgLabel, 'popup.render-video.transparent-bg');
+        i18n.bindText(transparentBgLabel, 'popup.render-video.transparent-background');
         const transparentBgBoolean = new BooleanInput({ class: 'boolean', value: false });
         const transparentBgRow = new Container({ class: 'row' });
         transparentBgRow.append(transparentBgLabel);
@@ -264,7 +264,7 @@ class VideoSettingsDialog extends Container {
         // show debug overlays
 
         const showDebugLabel = new Label({ class: 'label' });
-        i18n.bindText(showDebugLabel, 'popup.render-video.show-debug');
+        i18n.bindText(showDebugLabel, 'popup.render-video.show-debug-overlays');
         const showDebugBoolean = new BooleanInput({ class: 'boolean', value: false });
         const showDebugRow = new Container({ class: 'row' });
         showDebugRow.append(showDebugLabel);

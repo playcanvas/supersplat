@@ -41,7 +41,7 @@ class ScenePanel extends Container {
         const sceneLabel = new Label({
             class: 'panel-header-label'
         });
-        i18n.bindText(sceneLabel, 'panel.scene-manager');
+        i18n.bindText(sceneLabel, 'panel.scene');
 
         let soloActive = false;
 
@@ -107,7 +107,7 @@ class ScenePanel extends Container {
         const transformLabel = new Label({
             class: 'panel-header-label'
         });
-        i18n.bindText(transformLabel, 'panel.scene-manager.transform');
+        i18n.bindText(transformLabel, 'panel.scene.transform');
 
         transformHeader.append(transformIcon);
         transformHeader.append(transformLabel);

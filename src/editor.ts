@@ -604,9 +604,13 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     });
 
     events.on('select.unhide', () => {
-        selectedSplats().forEach((splat) => {
-            events.fire('edit.add', new UnhideAllOp(splat));
-        });
+        const ops = (scene.getElementsByType(ElementType.splat) as Splat[])
+        .map(splat => new UnhideAllOp(splat))
+        .filter(op => !op.ranges.empty);
+
+        if (ops.length > 0) {
+            events.fire('edit.add', ops.length === 1 ? ops[0] : new MultiOp(ops));
+        }
     });
 
     events.on('select.delete', () => {

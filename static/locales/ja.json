@@ -101,7 +101,7 @@
     "panel.splat-data.scale-x": "スケール X",
     "panel.splat-data.scale-y": "スケール Y",
     "panel.splat-data.scale-z": "スケール Z",
-    "panel.splat-data.quaternion": "Quat",
+    "panel.splat-data.quaternion": "クォータニオン",
     "panel.splat-data.distance": "距離",
     "panel.splat-data.camera-depth": "カメラ深度",
     "panel.splat-data.volume": "体積",

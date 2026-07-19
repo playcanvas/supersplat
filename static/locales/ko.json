@@ -101,7 +101,7 @@
     "panel.splat-data.scale-x": "크기 X",
     "panel.splat-data.scale-y": "크기 Y",
     "panel.splat-data.scale-z": "크기 Z",
-    "panel.splat-data.quaternion": "Quat",
+    "panel.splat-data.quaternion": "쿼터니언",
     "panel.splat-data.distance": "거리",
     "panel.splat-data.camera-depth": "카메라 깊이",
     "panel.splat-data.volume": "부피",

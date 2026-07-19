@@ -101,7 +101,7 @@
     "panel.splat-data.scale-x": "Масштаб X",
     "panel.splat-data.scale-y": "Масштаб Y",
     "panel.splat-data.scale-z": "Масштаб Z",
-    "panel.splat-data.quaternion": "Quat",
+    "panel.splat-data.quaternion": "Кватернион",
     "panel.splat-data.distance": "Расстояние",
     "panel.splat-data.camera-depth": "Глубина камеры",
     "panel.splat-data.volume": "Объём",

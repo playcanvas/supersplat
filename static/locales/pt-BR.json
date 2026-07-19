@@ -101,7 +101,7 @@
     "panel.splat-data.scale-x": "Escala X",
     "panel.splat-data.scale-y": "Escala Y",
     "panel.splat-data.scale-z": "Escala Z",
-    "panel.splat-data.quaternion": "Quat",
+    "panel.splat-data.quaternion": "Quatérnio",
     "panel.splat-data.distance": "Distância",
     "panel.splat-data.camera-depth": "Profundidade da câmera",
     "panel.splat-data.volume": "Volume",

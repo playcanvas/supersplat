@@ -3,6 +3,7 @@ import { Button, Element, Container } from '@playcanvas/pcui';
 import { Events } from '../events';
 import { ShortcutManager } from '../shortcut-manager';
 import { i18n } from './localization';
+import measureSvg from './svg/measure.svg';
 import orientSvg from './svg/orient.svg';
 import redoSvg from './svg/redo.svg';
 import brushSvg from './svg/select-brush.svg';
@@ -112,8 +113,7 @@ class BottomToolbar extends Container {
 
         const measure = new Button({
             id: 'bottom-toolbar-measure',
-            class: 'bottom-toolbar-tool',
-            icon: 'E358'
+            class: 'bottom-toolbar-tool'
         });
 
         const orient = new Button({
@@ -143,6 +143,7 @@ class BottomToolbar extends Container {
         box.dom.appendChild(createSvg(boxSvg));
         lasso.dom.appendChild(createSvg(lassoSvg));
         eyedropper.dom.appendChild(createSvg(eyedropperSvg));
+        measure.dom.appendChild(createSvg(measureSvg));
         orient.dom.appendChild(createSvg(orientSvg));
         // crop.dom.appendChild(createSvg(cropSvg));
 

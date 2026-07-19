@@ -302,6 +302,8 @@
     "tooltip.bottom-toolbar.scale": "缩放",
     "tooltip.bottom-toolbar.measure": "测量",
     "measure.length": "长度",
+    "measure.hint": "放置2个点以测量",
+    "measure.clear": "清除",
     "tooltip.bottom-toolbar.orient": "调整方向",
     "orient.hint": "放置3个点以定义平面",
     "orient.align": "对齐到网格",

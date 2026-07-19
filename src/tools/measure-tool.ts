@@ -1,4 +1,4 @@
-import { Container, Label, NumericInput } from '@playcanvas/pcui';
+import { Button, Container, Label, NumericInput } from '@playcanvas/pcui';
 import { Entity, Mat4, Quat, TranslateGizmo, Vec3 } from 'playcanvas';
 
 import { EntityTransformOp } from '../edit-ops';
@@ -32,7 +32,10 @@ class MeasureTool {
 
     constructor(events: Events, scene: Scene, canvasContainer: Container) {
         // ui
-        const lengthLabel = new Label();
+        const hintLabel = new Label({ class: 'select-toolbar-label' });
+        i18n.bindText(hintLabel, 'measure.hint');
+
+        const lengthLabel = new Label({ class: 'select-toolbar-label' });
         i18n.bindText(lengthLabel, 'measure.length');
 
         const lengthInput = new NumericInput({
@@ -44,6 +47,9 @@ class MeasureTool {
         });
         let suppressUI = 0;
 
+        const clearButton = new Button({ class: 'select-toolbar-button', enabled: false });
+        i18n.bindText(clearButton, 'measure.clear');
+
         const selectToolbar = new Container({
             class: 'select-toolbar',
             hidden: true
@@ -53,8 +59,10 @@ class MeasureTool {
             e.stopPropagation();
         });
 
+        selectToolbar.append(hintLabel);
         selectToolbar.append(lengthLabel);
         selectToolbar.append(lengthInput);
+        selectToolbar.append(clearButton);
         canvasContainer.append(selectToolbar);
 
         const gizmo = new TranslateGizmo(scene.camera.camera, scene.gizmoLayer);
@@ -117,7 +125,18 @@ class MeasureTool {
             } else {
                 lengthInput.enabled = false;
             }
+
+            clearButton.enabled = !!splat && splat.measurePoints.length > 0;
         };
+
+        clearButton.on('click', () => {
+            if (splat) {
+                splat.measurePoints.length = 0;
+                splat.measureSelection = -1;
+                updateVisuals();
+                scene.forceRender = true;
+            }
+        });
 
         gizmo.on('render:update', () => {
             scene.forceRender = true;

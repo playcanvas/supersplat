@@ -302,6 +302,8 @@
     "tooltip.bottom-toolbar.scale": "Escalar",
     "tooltip.bottom-toolbar.measure": "Medir",
     "measure.length": "Comprimento",
+    "measure.hint": "Posicione 2 pontos para medir",
+    "measure.clear": "Limpar",
     "tooltip.bottom-toolbar.orient": "Orientar",
     "orient.hint": "Posicione 3 pontos para definir um plano",
     "orient.align": "Alinhar à Grade",

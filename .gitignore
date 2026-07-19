@@ -1,8 +1,8 @@
-node_modules
-dist
+.claude
+.cursor
 .DS_Store
+.idea
 .npmrc
 .vscode
-.cursor
-.idea
-.claude
+dist
+node_modules

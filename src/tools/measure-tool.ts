@@ -9,6 +9,9 @@ import { ToolOverlay, OverlayWriter } from '../tool-overlay';
 import { Transform } from '../transform';
 import { i18n } from '../ui/localization';
 
+// pointer movement below this many pixels still counts as a click
+const CLICK_TOLERANCE = 4;
+
 const mat = new Mat4();
 const mat1 = new Mat4();
 const mat2 = new Mat4();
@@ -281,15 +284,22 @@ class MeasureTool {
         };
 
         let clicked = false;
+        let clickX = 0;
+        let clickY = 0;
 
         const pointerdown = (e: PointerEvent) => {
             if (!clicked && isPrimary(e)) {
                 clicked = true;
+                clickX = e.offsetX;
+                clickY = e.offsetY;
             }
         };
 
         const pointermove = (e: PointerEvent) => {
-            clicked = false;
+            // forgive small jitter between down and up; only a real drag cancels the click
+            if (clicked && Math.hypot(e.offsetX - clickX, e.offsetY - clickY) > CLICK_TOLERANCE) {
+                clicked = false;
+            }
         };
 
         const pointerup = async (e: PointerEvent) => {
@@ -310,7 +320,7 @@ class MeasureTool {
 
                     getPoint2d(i, p);
 
-                    if (Math.abs(p.x - e.offsetX) < 8 && Math.abs(p.y - e.offsetY) < 8) {
+                    if (Math.abs(p.x - clickX) < 8 && Math.abs(p.y - clickY) < 8) {
                         closestIdx = i;
                         break;
                     }
@@ -322,8 +332,9 @@ class MeasureTool {
                     return;
                 }
 
+                // place at the pointer-down position: that is where the user aimed
                 if (splat.measurePoints.length < 2) {
-                    const result = await scene.camera.intersect(e.offsetX / canvasContainer.dom.clientWidth, e.offsetY / canvasContainer.dom.clientHeight);
+                    const result = await scene.camera.intersect(clickX / canvasContainer.dom.clientWidth, clickY / canvasContainer.dom.clientHeight);
                     if (result) {
                         mat.invert(splat.worldTransform);
                         mat.transformPoint(result.position, p);

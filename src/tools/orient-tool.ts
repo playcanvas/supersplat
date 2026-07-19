@@ -16,6 +16,9 @@ import { i18n } from '../ui/localization';
 // axis-aligned scans (e.g. z-up captures) produce exact quarter/half turns
 const SNAP_ANGLE_DEG = 3;
 
+// pointer movement below this many pixels still counts as a click
+const CLICK_TOLERANCE = 4;
+
 const mat = new Mat4();
 const p = new Vec3();
 const p0 = new Vec3();
@@ -333,6 +336,8 @@ class OrientTool {
         };
 
         let clicked = false;
+        let clickX = 0;
+        let clickY = 0;
 
         // whether each placed point is in front of the camera, computed and
         // consumed within the postrender label pass: worldToScreen mirrors
@@ -342,11 +347,16 @@ class OrientTool {
         const pointerdown = (e: PointerEvent) => {
             if (!clicked && isPrimary(e)) {
                 clicked = true;
+                clickX = e.offsetX;
+                clickY = e.offsetY;
             }
         };
 
         const pointermove = (e: PointerEvent) => {
-            clicked = false;
+            // forgive small jitter between down and up; only a real drag cancels the click
+            if (clicked && Math.hypot(e.offsetX - clickX, e.offsetY - clickY) > CLICK_TOLERANCE) {
+                clicked = false;
+            }
         };
 
         const pointerup = (e: PointerEvent) => {
@@ -367,7 +377,7 @@ class OrientTool {
 
                     getPoint2d(i, p);
 
-                    if (Math.abs(p.x - e.offsetX) < 8 && Math.abs(p.y - e.offsetY) < 8) {
+                    if (Math.abs(p.x - clickX) < 8 && Math.abs(p.y - clickY) < 8) {
                         closestIdx = i;
                         break;
                     }
@@ -379,7 +389,8 @@ class OrientTool {
                     return;
                 }
 
-                if (splat.orientPoints.length < 3 && placePoint(e.offsetX, e.offsetY)) {
+                // place at the pointer-down position: that is where the user aimed
+                if (splat.orientPoints.length < 3 && placePoint(clickX, clickY)) {
                     updateVisuals();
                     scene.forceRender = true;
                 }

@@ -8,10 +8,6 @@
     "menu.file.save-as": "Salvar Como",
     "menu.file.import": "Importar",
     "menu.file.export": "Exportar",
-    "menu.file.export.ply": "PLY (.ply)",
-    "menu.file.export.sog": "SOG (.sog)",
-    "menu.file.export.spz": "SPZ (.spz)",
-    "menu.file.export.splat": "Splat (.splat)",
     "menu.file.export.viewer": "Aplicativo de Visualização",
     "menu.file.publish": "Publicar",
 

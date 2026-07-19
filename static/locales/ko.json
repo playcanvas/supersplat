@@ -8,10 +8,6 @@
     "menu.file.save-as": "다른 이름으로 저장",
     "menu.file.import": "가져오기",
     "menu.file.export": "내보내기",
-    "menu.file.export.ply": "PLY (.ply)",
-    "menu.file.export.sog": "SOG (.sog)",
-    "menu.file.export.spz": "SPZ (.spz)",
-    "menu.file.export.splat": "Splat (.splat)",
     "menu.file.export.viewer": "뷰어 앱",
     "menu.file.publish": "게시",
 

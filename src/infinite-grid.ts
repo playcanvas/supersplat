@@ -7,6 +7,7 @@ import {
     FUNC_LESSEQUAL,
     SEMANTIC_POSITION,
     BlendState,
+    Camera,
     DepthState,
     Layer,
     QuadRender,
@@ -66,6 +67,7 @@ class InfiniteGrid extends Element {
         );
 
         const view_position = [0, 0, 0];
+        const shaderProjection = new Mat4();
         const viewProjectionMatrix = new Mat4();
         let plane;
 
@@ -93,7 +95,13 @@ class InfiniteGrid extends Element {
                 view_position[1] = p.y;
                 view_position[2] = p.z;
 
-                viewProjectionMatrix.mul2(camera.camera.projectionMatrix, camera.camera.viewMatrix);
+                // the shader writes fragDepth from this matrix: apply the same
+                // clip-z transform the engine applies for meshes (and the splat
+                // renderer applies), so all depth shares one convention
+                viewProjectionMatrix.mul2(
+                    Camera.applyShaderProjectionTransform(camera.camera.projectionMatrix, shaderProjection, false, device.isWebGPU),
+                    camera.camera.viewMatrix
+                );
 
                 resolve(device.scope, {
                     plane,

@@ -23,6 +23,7 @@ import {
     BindStorageTextureFormat,
     BindTextureFormat,
     BindUniformBufferFormat,
+    Camera,
     Compute,
     ComputeRadixSort,
     Entity,
@@ -104,6 +105,7 @@ class ProjectedSplatRenderer {
     private readonly device: GraphicsDevice;
     private readonly placements: Placement[] = [];
     private readonly variants = new Map<number, ProjectorVariant>();
+    private readonly shaderProjection = new Mat4();
     private readonly viewProjection = new Mat4();
     private readonly dispatchSize = new Vec2();
     private readonly dummyIndices: StorageBuffer;
@@ -358,7 +360,13 @@ class ProjectedSplatRenderer {
         const { camera, targetSize, events } = this.scene;
         const cameraComponent = camera.camera;
         const view = cameraComponent.viewMatrix;
-        this.viewProjection.mul2(cameraComponent.projectionMatrix, view);
+        // match the depth convention of engine-drawn meshes: the forward
+        // renderer maps clip z to WebGPU's 0..1 range (setCameraUniforms), so
+        // splat depth must be produced with the same transform to test
+        // correctly against the depth they write (grid, tool overlays)
+        const proj = Camera.applyShaderProjectionTransform(
+            cameraComponent.projectionMatrix, this.shaderProjection, false, this.device.isWebGPU);
+        this.viewProjection.mul2(proj, view);
         const cameraPosition = camera.mainCamera.getPosition();
         const projection = cameraComponent.projectionMatrix.data;
         const viewport = [targetSize.width, targetSize.height];

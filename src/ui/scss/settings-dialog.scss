@@ -99,6 +99,39 @@
                     }
                 }
             }
+
+            .video-compatibility-message {
+                display: block;
+                margin: 0;
+                padding: 2px 0 8px;
+                line-height: 18px;
+                text-wrap: wrap;
+                color: $text-secondary;
+
+                &.warning {
+                    position: relative;
+                    margin-bottom: 8px;
+                    padding: 8px 10px 8px 34px;
+                    border: 1px solid rgba($clr-icon-hilight, 0.45);
+                    border-radius: 3px;
+                    background-color: rgba($clr-icon-hilight, 0.08);
+                    color: $text-primary;
+
+                    &::before {
+                        content: '\26a0';
+                        position: absolute;
+                        top: 8px;
+                        left: 10px;
+                        color: $clr-icon-hilight;
+                        font-size: 16px;
+                        line-height: 18px;
+                    }
+                }
+
+                &.error {
+                    color: $error;
+                }
+            }
         }
 
         #footer {

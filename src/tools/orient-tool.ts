@@ -63,9 +63,6 @@ class OrientTool {
         const alignButton = new Button({ class: 'select-toolbar-button', enabled: false });
         i18n.bindText(alignButton, 'orient.align');
 
-        const frameButton = new Button({ class: 'select-toolbar-button', enabled: false });
-        i18n.bindText(frameButton, 'orient.set-pivot');
-
         const clearButton = new Button({ class: 'select-toolbar-button', enabled: false });
         i18n.bindText(clearButton, 'orient.clear');
 
@@ -80,7 +77,6 @@ class OrientTool {
 
         selectToolbar.append(hintLabel);
         selectToolbar.append(alignButton);
-        selectToolbar.append(frameButton);
         selectToolbar.append(clearButton);
         canvasContainer.append(selectToolbar);
 
@@ -186,7 +182,6 @@ class OrientTool {
         const updateButtons = () => {
             const planeReady = !!splat && splat.orientPoints.length === 3 && calcPlane();
             alignButton.enabled = planeReady;
-            frameButton.enabled = planeReady;
             clearButton.enabled = !!splat && splat.orientPoints.length > 0;
         };
 
@@ -346,7 +341,11 @@ class OrientTool {
 
         // make the picked plane the model's local frame without moving it:
         // the transform gizmos and panel use it in local coordinate space
-        frameButton.on('click', () => {
+        events.on('orient.setPivot', () => {
+            if (!active) {
+                return;
+            }
+
             if (!splat || splat.orientPoints.length !== 3 || !calcPlane()) {
                 return;
             }

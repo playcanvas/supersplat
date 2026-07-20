@@ -10,6 +10,7 @@ import { Scene } from './scene';
 import { injectSphericalMetadata } from './spherical-metadata';
 import { Splat } from './splat';
 import { i18n } from './ui/localization';
+import { buildVideoEncoderConfig, getVideoCodecType, VideoSettings } from './video-config';
 
 const nullClr = new Color(0, 0, 0, 0);
 
@@ -21,13 +22,6 @@ const FORMAT_CONFIG: Record<string, { create: (streaming: boolean) => Mp4OutputF
     mkv: { create: () => new MkvOutputFormat(), extension: 'mkv' }
 };
 
-const CODEC_CONFIG: Record<string, { type: 'avc' | 'hevc' | 'vp9' | 'av1'; codec: (height: number) => string }> = {
-    h264: { type: 'avc', codec: h => (h < 1080 ? 'avc1.420028' : 'avc1.640033') }, // H.264 Constrained Baseline/High profile
-    h265: { type: 'hevc', codec: () => 'hev1.1.6.L120.B0' },                       // H.265 Main profile, Level 4.0
-    vp9: { type: 'vp9', codec: () => 'vp09.00.10.08' },                            // VP9 Profile 0, Level 1.0
-    av1: { type: 'av1', codec: () => 'av01.0.05M.08' }                             // AV1 Main Profile, Level 3.1
-};
-
 type ImageSettings = {
     width: number;
     height: number;
@@ -35,21 +29,6 @@ type ImageSettings = {
     showDebug: boolean;
     format: 'png' | 'jpeg' | 'webp';
     quality?: number;           // 0..1, jpeg only
-    projection?: 'standard' | 'equirect';
-    levelHorizon?: boolean;
-};
-
-type VideoSettings = {
-    startFrame: number;
-    endFrame: number;
-    frameRate: number;
-    width: number;
-    height: number;
-    bitrate: number;
-    transparentBg: boolean;
-    showDebug: boolean;
-    format: 'mp4' | 'webm' | 'mov' | 'mkv';
-    codec: 'h264' | 'h265' | 'vp9' | 'av1';
     projection?: 'standard' | 'equirect';
     levelHorizon?: boolean;
 };
@@ -397,9 +376,8 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 const outputFormat = formatConfig.create(taggable || !!fileStream);
                 const fileExtension = formatConfig.extension;
 
-                const codecConfig = CODEC_CONFIG[codecChoice] ?? CODEC_CONFIG.h264;
-                const codecType = codecConfig.type;
-                const codec = codecConfig.codec(height);
+                const encoderConfig = buildVideoEncoderConfig(videoSettings);
+                const codecType = getVideoCodecType(codecChoice);
 
                 const output = new Output({
                     format: outputFormat,
@@ -428,13 +406,13 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                             encoderError = error;
                         }
                     });
-                    enc.configure({ codec, width, height, bitrate });
+                    enc.configure(encoderConfig);
                     return enc;
                 };
 
                 // fail fast on unsupported configurations (e.g. encoder
                 // dimension limits) instead of erroring mid-render
-                const support = await VideoEncoder.isConfigSupported({ codec, width, height, bitrate });
+                const support = await VideoEncoder.isConfigSupported(encoderConfig);
                 if (!support.supported) {
                     throw new Error(`Unsupported video configuration (${codecChoice} @ ${width}x${height})`);
                 }
@@ -740,4 +718,5 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
     });
 };
 
-export { ImageSettings, VideoSettings, registerRenderEvents };
+export { ImageSettings, registerRenderEvents };
+export type { VideoSettings } from './video-config';

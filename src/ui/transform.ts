@@ -93,7 +93,9 @@ class Transform extends Container {
         let uiUpdating = false;
         let mouseUpdating = false;
 
-        // update UI with pivot
+        // the panel shows the pivot in world coordinates. with a user-defined
+        // local frame set (see Splat.getPivot), the pivot is that frame, so
+        // zeroing the values aligns the frame with the world origin and axes
         const updateUI = (pivot: Pivot) => {
             uiUpdating = true;
             const transform = pivot.transform;

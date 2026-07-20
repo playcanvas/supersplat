@@ -88,7 +88,7 @@
     "panel.settings.show-grid": "Afficher la grille",
     "panel.settings.grid-plane": "Plan de la grille",
     "panel.settings.show-bounding-box": "Afficher limites",
-    "panel.settings.show-bounding-box-dimensions": "Afficher dimensions",
+    "panel.settings.show-dimensions": "Afficher dimensions",
     "panel.settings.show-camera-poses": "Afficher caméras",
     "panel.settings.show-camera-info": "Afficher infos caméra",
     "panel.settings.reset": "Réinitialiser les valeurs par défaut",
@@ -280,6 +280,7 @@
 
     "orient.hint": "Placez 3 points pour définir un plan",
     "orient.align": "Aligner sur la grille",
+    "orient.set-pivot": "Définir le pivot",
     "orient.clear": "Effacer",
 
     "status-bar.splats": "Splats",
@@ -314,7 +315,7 @@
     "tooltip.bottom-toolbar.measure": "Mesurer",
     "tooltip.bottom-toolbar.orient": "Orienter",
     "tooltip.bottom-toolbar.local-space": "Espace local gizmo",
-    "tooltip.bottom-toolbar.bounding-box-center": "Utiliser le centre de la limite",
+    "tooltip.bottom-toolbar.reset-pivot": "Réinitialiser le pivot (Maj : au centre)",
 
     "tooltip.timeline.prev-frame": "Image Précédente",
     "tooltip.timeline.play": "Lecture/Pause",

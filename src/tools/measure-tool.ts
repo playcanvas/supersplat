@@ -7,6 +7,7 @@ import { Scene } from '../scene';
 import { Splat } from '../splat';
 import { ToolOverlay, OverlayWriter } from '../tool-overlay';
 import { Transform } from '../transform';
+import { DimensionLabels } from '../ui/dimension-labels';
 import { i18n } from '../ui/localization';
 
 // pointer movement below this many pixels still counts as a click
@@ -32,8 +33,14 @@ class MeasureTransformHandler {
 class MeasureTool {
     activate: () => void;
     deactivate: () => void;
+    getFocus: () => { position: Vec3, radius: number } | null;
 
     constructor(events: Events, scene: Scene, canvasContainer: Container) {
+        // the length label along the measured line (shown when 'show
+        // dimensions' is enabled); the points and line render in the scene
+        // via the shared tool overlay
+        const dimLabels = new DimensionLabels(scene, canvasContainer.dom, canvasContainer.dom, 'measure-tool-svg', 1);
+
         // ui
         const hintLabel = new Label({ class: 'select-toolbar-label' });
         i18n.bindText(hintLabel, 'measure.hint');
@@ -54,7 +61,7 @@ class MeasureTool {
         i18n.bindText(clearButton, 'measure.clear');
 
         const selectToolbar = new Container({
-            class: 'select-toolbar',
+            class: ['select-toolbar', 'select-toolbar-tool'],
             hidden: true
         });
 
@@ -349,6 +356,30 @@ class MeasureTool {
             }
         };
 
+        // length label along the measured line
+        events.on('postrender', () => {
+            // the svg is hidden while the tool is inactive, so skip the work
+            if (!active || !splat) {
+                return;
+            }
+
+            if (splat.measurePoints.length !== 2 || !events.invoke('camera.boundDimensions')) {
+                dimLabels.hideLabel(0);
+                return;
+            }
+
+            getPoint(0, p0);
+            getPoint(1, p1);
+            dimLabels.setLabel(0, p0, p1);
+        });
+
+        // re-render so the label reacts to the setting while the tool is active
+        events.on('camera.boundDimensions', () => {
+            if (active) {
+                scene.forceRender = true;
+            }
+        });
+
         const updateGizmoSize = () => {
             const { camera, canvas } = scene;
             if (camera.ortho) {
@@ -361,6 +392,35 @@ class MeasureTool {
         events.on('camera.resize', updateGizmoSize);
         events.on('camera.ortho', updateGizmoSize);
 
+        // frame the placed points instead of the selection ('f' shortcut)
+        this.getFocus = () => {
+            const count = splat ? splat.measurePoints.length : 0;
+            if (count === 0) {
+                return null;
+            }
+
+            const position = new Vec3();
+            for (let i = 0; i < count; i++) {
+                getPoint(i, p);
+                position.add(p);
+            }
+            position.mulScalar(1 / count);
+
+            let radius = 0;
+            for (let i = 0; i < count; i++) {
+                getPoint(i, p);
+                radius = Math.max(radius, p.distance(position));
+            }
+
+            // frame with some margin; a lone point falls back to a radius
+            // relative to the splat's world size
+            splat.worldTransform.getScale(p);
+            const maxScale = Math.max(Math.abs(p.x), Math.abs(p.y), Math.abs(p.z));
+            radius = Math.max(radius * 1.5, splat.localBound.halfExtents.length() * maxScale * 0.05);
+
+            return { position, radius };
+        };
+
         this.activate = () => {
             active = true;
             updateVisuals();
@@ -368,6 +428,7 @@ class MeasureTool {
             canvasContainer.dom.addEventListener('pointermove', pointermove);
             canvasContainer.dom.addEventListener('pointerup', pointerup, true);
             selectToolbar.hidden = false;
+            dimLabels.show();
 
             events.fire('transformHandler.push', transformHandler);
 
@@ -386,6 +447,7 @@ class MeasureTool {
             canvasContainer.dom.removeEventListener('pointermove', pointermove);
             canvasContainer.dom.removeEventListener('pointerup', pointerup, true);
             selectToolbar.hidden = true;
+            dimLabels.hide();
 
             events.fire('transformHandler.pop');
 

@@ -186,7 +186,7 @@ class BottomToolbar extends Container {
         measure.dom.addEventListener('click', () => events.fire('tool.measure'));
         orient.dom.addEventListener('click', () => events.fire('tool.orient'));
         coordSpace.dom.addEventListener('click', () => events.fire('tool.toggleCoordSpace'));
-        origin.dom.addEventListener('click', () => events.fire('pivot.toggleOrigin'));
+        origin.dom.addEventListener('click', (e: MouseEvent) => events.fire('pivot.reset', e.shiftKey));
 
         events.on('edit.canUndo', (value: boolean) => {
             undo.enabled = value;
@@ -215,9 +215,6 @@ class BottomToolbar extends Container {
             coordSpace.dom.classList[space === 'local' ? 'add' : 'remove']('active');
         });
 
-        events.on('pivot.origin', (o: 'center' | 'boundCenter') => {
-            origin.dom.classList[o === 'boundCenter' ? 'add' : 'remove']('active');
-        });
 
         // Helper to compose localized tooltip text with shortcut
         const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
@@ -248,7 +245,7 @@ class BottomToolbar extends Container {
         tooltips.register(measure, tooltip('tooltip.bottom-toolbar.measure'));
         tooltips.register(orient, tooltip('tooltip.bottom-toolbar.orient'));
         tooltips.register(coordSpace, tooltip('tooltip.bottom-toolbar.local-space', 'tool.toggleCoordSpace'));
-        tooltips.register(origin, tooltip('tooltip.bottom-toolbar.bounding-box-center'));
+        tooltips.register(origin, tooltip('tooltip.bottom-toolbar.reset-pivot'));
         tooltips.register(eyedropper, tooltip('tooltip.bottom-toolbar.eyedropper-selection', 'tool.eyedropperSelection'));
     }
 }

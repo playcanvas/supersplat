@@ -25,6 +25,7 @@ import { TransformPalette } from './transform-palette';
 const vec = new Vec3();
 const veca = new Vec3();
 const vecb = new Vec3();
+const quat = new Quat();
 
 const boundingPoints =
     [-1, 1].map((x) => {
@@ -76,6 +77,14 @@ class Splat extends Element {
 
     orientPoints: Vec3[] = [];
     orientSelection = -1;
+
+    // user-defined local frame (relative to the data frame), set from the
+    // orient tool's picked plane: origin at the first picked point, rotation
+    // aligning +y with the plane normal. the transform gizmos and panel use
+    // it as the model's local coordinate space; the gaussian data is
+    // unaffected. the defaults reproduce the entity's own frame
+    localFrameOrigin = new Vec3();
+    localFrame = new Quat();
 
     rebuildMaterial: (bands: number) => void;
 
@@ -626,19 +635,24 @@ class Splat extends Element {
     }
 
     // get pivot position/rotation/scale (caller should have awaited operation that changed data)
-    getPivot(mode: 'center' | 'boundCenter', selection: boolean, result: Transform) {
+    getPivot(result: Transform) {
         const { entity } = this;
-        switch (mode) {
-            case 'center':
-                result.set(entity.getLocalPosition(), entity.getLocalRotation(), entity.getLocalScale());
-                break;
-            case 'boundCenter': {
-                const bound = selection ? this.selectionBound : this.localBound;
-                entity.getLocalTransform().transformPoint(bound.center, vec);
-                result.set(vec, entity.getLocalRotation(), entity.getLocalScale());
-                break;
-            }
-        }
+        // the pivot is the model's local frame: the entity's own frame
+        // amended by the user-defined local frame (identity by default, so
+        // the pivot then lands exactly on the entity transform)
+        quat.mul2(entity.getLocalRotation(), this.localFrame);
+        entity.getLocalTransform().transformPoint(this.localFrameOrigin, vec);
+        result.set(vec, quat, entity.getLocalScale());
+    }
+
+    setLocalFrame(origin: Vec3, rotation: Quat) {
+        this.localFrameOrigin.copy(origin);
+        this.localFrame.copy(rotation);
+        this.scene.events.fire('splat.localFrame', this);
+    }
+
+    get hasLocalFrame() {
+        return !this.localFrameOrigin.equals(Vec3.ZERO) || !this.localFrame.equals(Quat.IDENTITY);
     }
 
     docSerialize() {
@@ -650,6 +664,8 @@ class Splat extends Element {
             position: pack3(this.entity.getLocalPosition()),
             rotation: pack4(this.entity.getLocalRotation()),
             scale: pack3(this.entity.getLocalScale()),
+            localFrameOrigin: pack3(this.localFrameOrigin),
+            localFrame: pack4(this.localFrame),
             visible: this.visible,
             tintClr: packC(this.tintClr),
             temperature: this.temperature,
@@ -666,6 +682,9 @@ class Splat extends Element {
 
         this.name = name;
         this.move(new Vec3(position), new Quat(rotation), new Vec3(scale));
+        // older documents predate the local frame
+        this.localFrameOrigin = doc.localFrameOrigin ? new Vec3(doc.localFrameOrigin) : new Vec3();
+        this.localFrame = doc.localFrame ? new Quat(doc.localFrame) : new Quat();
         this.visible = visible;
         this.tintClr = new Color(tintClr[0], tintClr[1], tintClr[2], tintClr[3]);
         this.temperature = temperature ?? 0;

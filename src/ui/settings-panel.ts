@@ -387,7 +387,7 @@ class SettingsPanel extends Container {
         const showBoundDimensionsLabel = new Label({
             class: 'settings-panel-row-label'
         });
-        i18n.bindText(showBoundDimensionsLabel, 'panel.settings.show-bounding-box-dimensions');
+        i18n.bindText(showBoundDimensionsLabel, 'panel.settings.show-dimensions');
 
         const showBoundDimensionsToggle = new BooleanInput({
             type: 'toggle',

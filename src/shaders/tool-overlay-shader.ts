@@ -43,13 +43,9 @@ const lineVertexShader = /* glsl */ `
 
     uniform mat4 matrix_model;
     uniform mat4 matrix_viewProjection;
-    uniform float depthBias;
 
     void main() {
         gl_Position = matrix_viewProjection * matrix_model * vec4(vertex_position, 1.0);
-
-        // depth stratum in ndc (see the strata table in tool-overlay.ts)
-        gl_Position.z += depthBias * gl_Position.w;
     }
 `;
 
@@ -67,20 +63,15 @@ const fillVertexShader = /* glsl */ `
     uniform mat4 matrix_model;
     uniform mat4 matrix_viewProjection;
 
-    varying vec4 clipPos;
-
     void main() {
-        clipPos = matrix_viewProjection * matrix_model * vec4(vertex_position, 1.0);
-        gl_Position = clipPos;
+        gl_Position = matrix_viewProjection * matrix_model * vec4(vertex_position, 1.0);
     }
 `;
 
 const fillFragmentShader = /* glsl */ `
     uniform sampler2D blueNoiseTex32;
     uniform vec4 fillColor;
-    uniform float depthBias;
-
-    varying vec4 clipPos;
+    uniform vec2 depthBias;
 
     bool writeDepth(float alpha) {
         vec2 uv = fract(gl_FragCoord.xy / 32.0);
@@ -90,10 +81,13 @@ const fillFragmentShader = /* glsl */ `
 
     void main() {
         gl_FragColor = fillColor;
-        // depth stratum in window space (see the strata table in
-        // tool-overlay.ts): the fill sits behind the coplanar dot/line strata
-        // so its stochastic depth writes can't flicker the triangle edges
-        gl_FragDepth = writeDepth(fillColor.a) ? (clipPos.z / clipPos.w) * 0.5 + 0.5 + depthBias : 1.0;
+        // depth stratum (see the strata table in tool-overlay.ts): a manual
+        // polygon offset (slope-scaled term plus a constant a few depth
+        // quanta wide) keeping the fill just behind the coplanar dot/line
+        // strata at any camera distance. writing gl_FragDepth disables the
+        // hardware polygon offset the line strata use, so it is applied here.
+        gl_FragDepth = writeDepth(fillColor.a) ?
+            gl_FragCoord.z + depthBias.x * fwidth(gl_FragCoord.z) + depthBias.y : 1.0;
     }
 `;
 

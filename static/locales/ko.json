@@ -88,7 +88,7 @@
     "panel.settings.show-grid": "그리드 표시",
     "panel.settings.grid-plane": "그리드 평면",
     "panel.settings.show-bounding-box": "경계 표시",
-    "panel.settings.show-bounding-box-dimensions": "치수 표시",
+    "panel.settings.show-dimensions": "치수 표시",
     "panel.settings.show-camera-poses": "카메라 표시",
     "panel.settings.show-camera-info": "카메라 정보 표시",
     "panel.settings.reset": "기본값으로 재설정",
@@ -280,6 +280,7 @@
 
     "orient.hint": "3개의 점을 배치하여 평면 정의",
     "orient.align": "그리드에 정렬",
+    "orient.set-pivot": "피벗 설정",
     "orient.clear": "지우기",
 
     "status-bar.splats": "스플랫",
@@ -314,7 +315,7 @@
     "tooltip.bottom-toolbar.measure": "측정",
     "tooltip.bottom-toolbar.orient": "방향 조정",
     "tooltip.bottom-toolbar.local-space": "로컬 공간",
-    "tooltip.bottom-toolbar.bounding-box-center": "바운드 중심 사용",
+    "tooltip.bottom-toolbar.reset-pivot": "피벗 재설정 (Shift: 중심으로)",
 
     "tooltip.timeline.prev-frame": "이전 프레임",
     "tooltip.timeline.play": "재생/일시정지",

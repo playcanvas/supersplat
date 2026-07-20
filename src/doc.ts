@@ -136,8 +136,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
             if (currentSelection) {
                 const pivot = events.invoke('pivot');
                 const transform = new Transform();
-                const pivotOrigin = events.invoke('pivot.origin');
-                currentSelection.getPivot(pivotOrigin, false, transform);
+                currentSelection.getPivot(transform);
                 pivot.place(transform);
             }
         } catch (error) {

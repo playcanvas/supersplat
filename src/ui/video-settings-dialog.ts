@@ -22,7 +22,7 @@ class VideoSettingsDialog extends Container {
         args = {
             ...args,
             id: 'video-settings-dialog',
-            class: 'settings-dialog',
+            class: ['settings-dialog', 'blocks-shortcuts'],
             hidden: true,
             tabIndex: -1
         };

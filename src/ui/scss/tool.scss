@@ -45,24 +45,12 @@
         }
     }
 
-    &#bound-dimensions-svg {
+    // shared edge length labels: the bound dimensions overlay and the
+    // measure/orient tools (see dimension-labels.ts)
+    &.dimension-labels-svg {
         pointer-events: none;
 
         > text {
-            font-family: monospace;
-            font-size: 11px;
-            fill: white;
-            paint-order: stroke;
-            stroke: rgba(0, 0, 0, 0.7);
-            stroke-width: 3px;
-        }
-    }
-
-    // the orient tool's points, edges and plane fill render in the scene (see
-    // tool-overlay.ts); the svg holds only the edge length labels, which match
-    // the bound dimensions overlay
-    &#orient-tool-svg {
-        >text {
             font-family: monospace;
             font-size: 11px;
             fill: white;

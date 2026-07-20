@@ -88,7 +88,7 @@
     "panel.settings.show-grid": "グリッド",
     "panel.settings.grid-plane": "グリッド平面",
     "panel.settings.show-bounding-box": "バウンディングボックス",
-    "panel.settings.show-bounding-box-dimensions": "寸法を表示",
+    "panel.settings.show-dimensions": "寸法を表示",
     "panel.settings.show-camera-poses": "カメラを表示",
     "panel.settings.show-camera-info": "カメラ情報を表示",
     "panel.settings.reset": "デフォルトに戻す",
@@ -280,6 +280,7 @@
 
     "orient.hint": "3点を配置して平面を定義",
     "orient.align": "グリッドに合わせる",
+    "orient.set-pivot": "ピボットを設定",
     "orient.clear": "クリア",
 
     "status-bar.splats": "スプラット",
@@ -314,7 +315,7 @@
     "tooltip.bottom-toolbar.measure": "計測",
     "tooltip.bottom-toolbar.orient": "向きを調整",
     "tooltip.bottom-toolbar.local-space": "ローカル座標へ切り替え",
-    "tooltip.bottom-toolbar.bounding-box-center": "バウンディングボックスの中心を使用",
+    "tooltip.bottom-toolbar.reset-pivot": "ピボットをリセット（Shift：中心へ）",
 
     "tooltip.timeline.prev-frame": "前のフレーム",
     "tooltip.timeline.play": "再生/一時停止",

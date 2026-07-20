@@ -1,7 +1,7 @@
 import { Button, Container, Label } from '@playcanvas/pcui';
 import { Entity, Mat4, Quat, TranslateGizmo, Vec3, math } from 'playcanvas';
 
-import { EntityTransformOp, MultiOp, PlacePivotOp } from '../edit-ops';
+import { EntityTransformOp, MultiOp, PlacePivotOp, SetLocalFrameOp } from '../edit-ops';
 import { Events } from '../events';
 import type { GridPlane } from '../infinite-grid';
 import { Pivot } from '../pivot';
@@ -10,6 +10,7 @@ import { Splat } from '../splat';
 import { pickSplatSurfacePoint } from '../splat-pick';
 import { ToolOverlay, OverlayWriter } from '../tool-overlay';
 import { Transform } from '../transform';
+import { DimensionLabels } from '../ui/dimension-labels';
 import { i18n } from '../ui/localization';
 
 // snap the picked plane normal to a splat-local axis within this angle so
@@ -37,8 +38,7 @@ const newRot = new Quat();
 
 const t = new Transform();
 
-const worldPoints = [new Vec3(), new Vec3(), new Vec3()];
-const screenPoints = [new Vec3(), new Vec3(), new Vec3()];
+const cent = new Vec3();
 
 class OrientTransformHandler {
     activate() {}
@@ -48,27 +48,13 @@ class OrientTransformHandler {
 class OrientTool {
     activate: () => void;
     deactivate: () => void;
+    getFocus: () => { position: Vec3, radius: number } | null;
 
     constructor(events: Events, scene: Scene, parent: HTMLElement, canvasContainer: Container) {
-        // svg overlay holding the edge length labels; the points, edges and
-        // plane fill render in the scene via the shared tool overlay
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.classList.add('tool-svg', 'hidden');
-        svg.id = 'orient-tool-svg';
-        parent.appendChild(svg);
-
-        const ns = svg.namespaceURI;
-
-        // create the edge length labels (shown when 'show dimensions' is enabled)
-        const edgeLabels = [0, 1, 2].map((i) => {
-            const label = document.createElementNS(ns, 'text') as SVGTextElement;
-            label.id = `orient-edge-${i}`;
-            label.setAttribute('text-anchor', 'middle');
-            label.setAttribute('dominant-baseline', 'middle');
-            return label;
-        });
-
-        edgeLabels.forEach(label => svg.appendChild(label));
+        // the edge length labels (shown when 'show dimensions' is enabled);
+        // the points, edges and plane fill render in the scene via the shared
+        // tool overlay
+        const dimLabels = new DimensionLabels(scene, canvasContainer.dom, parent, 'orient-tool-svg', 3);
 
         // ui
         const hintLabel = new Label({ class: 'select-toolbar-label' });
@@ -77,11 +63,14 @@ class OrientTool {
         const alignButton = new Button({ class: 'select-toolbar-button', enabled: false });
         i18n.bindText(alignButton, 'orient.align');
 
+        const frameButton = new Button({ class: 'select-toolbar-button', enabled: false });
+        i18n.bindText(frameButton, 'orient.set-pivot');
+
         const clearButton = new Button({ class: 'select-toolbar-button', enabled: false });
         i18n.bindText(clearButton, 'orient.clear');
 
         const selectToolbar = new Container({
-            class: 'select-toolbar',
+            class: ['select-toolbar', 'select-toolbar-tool'],
             hidden: true
         });
 
@@ -91,16 +80,38 @@ class OrientTool {
 
         selectToolbar.append(hintLabel);
         selectToolbar.append(alignButton);
+        selectToolbar.append(frameButton);
         selectToolbar.append(clearButton);
         canvasContainer.append(selectToolbar);
 
         const gizmo = new TranslateGizmo(scene.camera.camera, scene.gizmoLayer);
-        const entity = new Entity('orientGizmoPivot');
         const transformHandler = new OrientTransformHandler();
+
+        // the gizmo pivot must live in the scene graph: in local coord space
+        // the gizmo divides its translate delta by the parent's world scale,
+        // and a parentless entity leaves that divisor stale (1/0 = Infinity)
+        const entity = new Entity('orientGizmoPivot');
+        scene.app.root.addChild(entity);
+
+        gizmo.coordSpace = events.invoke('tool.coordSpace');
+        events.on('tool.coordSpace', (coordSpace: 'local' | 'world') => {
+            gizmo.coordSpace = coordSpace;
+            scene.forceRender = true;
+        });
 
         let active = false;
         let splat: Splat;
         let gridForced = false;
+        let gridSelfToggle = false;
+
+        // if grid visibility changes for any reason other than the tool's own
+        // forcing (e.g. the user pressing 'g'), the grid is the user's again:
+        // leave it alone on deactivate
+        events.on('grid.visible', () => {
+            if (!gridSelfToggle) {
+                gridForced = false;
+            }
+        });
 
         // get world space point
         const getPoint = (index: number, result: Vec3) => {
@@ -159,8 +170,23 @@ class OrientTool {
             return true;
         };
 
+        // calculate the rotation aligning +y with the plane normal (on the
+        // camera-facing side, matching the align convention) and +x with the
+        // first edge. requires a valid calcPlane result in p0/p1, n and c.
+        const calcPlaneRotation = (result: Quat) => {
+            if (n.dot(v.sub2(scene.camera.position, c)) < 0) {
+                n.mulScalar(-1);
+            }
+            e0.normalize();
+            e1.cross(e0, n);
+            mat.set([e0.x, e0.y, e0.z, 0, n.x, n.y, n.z, 0, e1.x, e1.y, e1.z, 0, 0, 0, 0, 1]);
+            result.setFromMat4(mat);
+        };
+
         const updateButtons = () => {
-            alignButton.enabled = !!splat && splat.orientPoints.length === 3 && calcPlane();
+            const planeReady = !!splat && splat.orientPoints.length === 3 && calcPlane();
+            alignButton.enabled = planeReady;
+            frameButton.enabled = planeReady;
             clearButton.enabled = !!splat && splat.orientPoints.length > 0;
         };
 
@@ -172,6 +198,15 @@ class OrientTool {
                 t.set(p, Quat.IDENTITY, Vec3.ONE);
                 events.invoke('pivot').place(t);
                 entity.setLocalPosition(p);
+
+                // in local space the gizmo aligns to the picked plane (y perpendicular)
+                if (splat.orientPoints.length === 3 && calcPlane()) {
+                    calcPlaneRotation(q);
+                    entity.setLocalRotation(q);
+                } else {
+                    entity.setLocalRotation(Quat.IDENTITY);
+                }
+
                 gizmo.attach(entity);
             }
 
@@ -290,15 +325,12 @@ class OrientTool {
 
             const top = new EntityTransformOp({ splat, oldt, newt });
 
-            // place the pivot to match the new transform
+            // place the pivot at the local frame under the new transform
             const pivot = events.invoke('pivot') as Pivot;
-            if (events.invoke('pivot.origin') === 'boundCenter') {
-                mat.setTRS(newt.position, newt.rotation, newt.scale);
-                mat.transformPoint(splat.localBound.center, v);
-                t.set(v, newt.rotation, newt.scale);
-            } else {
-                t.copy(newt);
-            }
+            mat.setTRS(newt.position, newt.rotation, newt.scale);
+            mat.transformPoint(splat.localFrameOrigin, v);
+            q.mul2(newt.rotation, splat.localFrame);
+            t.set(v, q, newt.scale);
             const pop = new PlacePivotOp({ pivot, oldt: pivot.transform.clone(), newt: t.clone() });
 
             events.fire('edit.add', new MultiOp([top, pop]));
@@ -311,6 +343,28 @@ class OrientTool {
         };
 
         alignButton.on('click', alignToGrid);
+
+        // make the picked plane the model's local frame without moving it:
+        // the transform gizmos and panel use it in local coordinate space
+        frameButton.on('click', () => {
+            if (!splat || splat.orientPoints.length !== 3 || !calcPlane()) {
+                return;
+            }
+            calcPlaneRotation(q);
+
+            // the frame is stored relative to the entity: rotation from the
+            // picked plane, origin at the first picked point
+            newRot.copy(splat.entity.getLocalRotation()).invert().mul(q);
+
+            events.fire('edit.add', new SetLocalFrameOp({
+                splat,
+                oldOrigin: splat.localFrameOrigin.clone(),
+                oldFrame: splat.localFrame.clone(),
+                newOrigin: splat.orientPoints[0].clone(),
+                newFrame: newRot.clone()
+            }));
+        });
+
 
         clearButton.on('click', () => {
             if (splat) {
@@ -338,11 +392,6 @@ class OrientTool {
         let clicked = false;
         let clickX = 0;
         let clickY = 0;
-
-        // whether each placed point is in front of the camera, computed and
-        // consumed within the postrender label pass: worldToScreen mirrors
-        // positions behind the camera, so the labels must cull them
-        const pointInFront = [false, false, false];
 
         const pointerdown = (e: PointerEvent) => {
             if (!clicked && isPrimary(e)) {
@@ -407,68 +456,28 @@ class OrientTool {
             }
 
             const count = splat.orientPoints.length;
-            const cameraPos = scene.camera.mainCamera.getPosition();
-            const cameraFwd = scene.camera.mainCamera.forward;
-
-            for (let i = 0; i < 3; i++) {
-                if (i < count) {
-                    getPoint(i, worldPoints[i]);
-                    pointInFront[i] = v.sub2(worldPoints[i], cameraPos).dot(cameraFwd) > 0;
-                    scene.camera.worldToScreen(worldPoints[i], screenPoints[i]);
-                    screenPoints[i].x *= canvasContainer.dom.clientWidth;
-                    screenPoints[i].y *= canvasContainer.dom.clientHeight;
-                } else {
-                    pointInFront[i] = false;
-                }
-            }
-
-            // edge length labels, following the bound dimensions overlay conventions
             const showDims = count > 1 && events.invoke('camera.boundDimensions');
 
-            // screen centroid of the placed points, used to offset labels outwards
-            let scx = 0, scy = 0;
-            for (let i = 0; i < count; i++) {
-                scx += screenPoints[i].x / count;
-                scy += screenPoints[i].y / count;
+            // the labels sit outside the triangle: offset away from the
+            // centroid of the placed points
+            if (showDims) {
+                cent.set(0, 0, 0);
+                for (let i = 0; i < count; i++) {
+                    getPoint(i, p);
+                    cent.add(p);
+                }
+                cent.mulScalar(1 / count);
             }
 
             for (let i = 0; i < 3; i++) {
-                const j = (i + 1) % 3;
-                const label = edgeLabels[i];
                 const exists = count === 3 || (count === 2 && i === 0);
-
-                if (!showDims || !exists || !pointInFront[i] || !pointInFront[j]) {
-                    label.setAttribute('visibility', 'hidden');
+                if (!showDims || !exists) {
+                    dimLabels.hideLabel(i);
                     continue;
                 }
-                label.setAttribute('visibility', 'visible');
-
-                const length = worldPoints[i].distance(worldPoints[j]);
-
-                const x0 = screenPoints[i].x;
-                const y0 = screenPoints[i].y;
-                const x1 = screenPoints[j].x;
-                const y1 = screenPoints[j].y;
-
-                const mx = (x0 + x1) * 0.5;
-                const my = (y0 + y1) * 0.5;
-
-                let theta = Math.atan2(y1 - y0, x1 - x0);
-                // flip 180° to keep text upright
-                if (Math.cos(theta) < 0) {
-                    theta += Math.PI;
-                }
-
-                // perpendicular offset so the label sits outside the triangle
-                const perpX = -Math.sin(theta);
-                const perpY = Math.cos(theta);
-                const dot = perpX * (scx - mx) + perpY * (scy - my);
-                const sign = dot > 0 ? -1 : 1;
-                const offsetPx = 10;
-
-                const thetaDeg = theta * 180 / Math.PI;
-                label.setAttribute('transform', `translate(${(mx + perpX * offsetPx * sign).toFixed(1)}, ${(my + perpY * offsetPx * sign).toFixed(1)}) rotate(${thetaDeg.toFixed(1)})`);
-                label.textContent = length.toFixed(2);
+                getPoint(i, p0);
+                getPoint((i + 1) % 3, p1);
+                dimLabels.setLabel(i, p0, p1, cent);
             }
         });
 
@@ -491,6 +500,35 @@ class OrientTool {
         events.on('camera.resize', updateGizmoSize);
         events.on('camera.ortho', updateGizmoSize);
 
+        // frame the placed points instead of the selection ('f' shortcut)
+        this.getFocus = () => {
+            const count = splat ? splat.orientPoints.length : 0;
+            if (count === 0) {
+                return null;
+            }
+
+            const position = new Vec3();
+            for (let i = 0; i < count; i++) {
+                getPoint(i, v);
+                position.add(v);
+            }
+            position.mulScalar(1 / count);
+
+            let radius = 0;
+            for (let i = 0; i < count; i++) {
+                getPoint(i, v);
+                radius = Math.max(radius, v.distance(position));
+            }
+
+            // frame with some margin; a lone point falls back to a radius
+            // relative to the splat's world size
+            splat.worldTransform.getScale(v);
+            const maxScale = Math.max(Math.abs(v.x), Math.abs(v.y), Math.abs(v.z));
+            radius = Math.max(radius * 1.5, splat.localBound.halfExtents.length() * maxScale * 0.05);
+
+            return { position, radius };
+        };
+
         this.activate = () => {
             active = true;
             updateVisuals();
@@ -500,16 +538,18 @@ class OrientTool {
             selectToolbar.hidden = false;
             parent.style.display = 'block';
             parent.classList.add('noevents');
-            svg.classList.remove('hidden');
+            dimLabels.show();
 
             // ensure the grid is visible while the tool is active. suspend
             // preference capture: the forced grid is tool state, not a user
             // setting change
             gridForced = !events.invoke('grid.visible');
             if (gridForced) {
+                gridSelfToggle = true;
                 events.fire('preferences.suspend');
                 events.fire('grid.setVisible', true);
                 events.fire('preferences.resume');
+                gridSelfToggle = false;
             }
 
             events.fire('transformHandler.push', transformHandler);
@@ -524,12 +564,6 @@ class OrientTool {
 
             scene.remove(overlay);
 
-            // the points are consumed by the alignment, so start the next session fresh
-            if (splat) {
-                splat.orientPoints.length = 0;
-                splat.orientSelection = -1;
-            }
-
             updateVisuals();
             canvasContainer.dom.removeEventListener('pointerdown', pointerdown);
             canvasContainer.dom.removeEventListener('pointermove', pointermove);
@@ -537,12 +571,14 @@ class OrientTool {
             selectToolbar.hidden = true;
             parent.style.display = 'none';
             parent.classList.remove('noevents');
-            svg.classList.add('hidden');
+            dimLabels.hide();
 
             if (gridForced) {
+                gridSelfToggle = true;
                 events.fire('preferences.suspend');
                 events.fire('grid.setVisible', false);
                 events.fire('preferences.resume');
+                gridSelfToggle = false;
                 gridForced = false;
             }
 

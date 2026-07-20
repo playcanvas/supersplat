@@ -88,7 +88,7 @@
     "panel.settings.show-grid": "Mostrar Grade",
     "panel.settings.grid-plane": "Plano da Grade",
     "panel.settings.show-bounding-box": "Mostrar Limite",
-    "panel.settings.show-bounding-box-dimensions": "Mostrar Dimensões",
+    "panel.settings.show-dimensions": "Mostrar Dimensões",
     "panel.settings.show-camera-poses": "Mostrar Câmeras",
     "panel.settings.show-camera-info": "Mostrar Info da Câmera",
     "panel.settings.reset": "Redefinir padrões",
@@ -280,6 +280,7 @@
 
     "orient.hint": "Posicione 3 pontos para definir um plano",
     "orient.align": "Alinhar à Grade",
+    "orient.set-pivot": "Definir Pivô",
     "orient.clear": "Limpar",
 
     "status-bar.splats": "Splats",
@@ -314,7 +315,7 @@
     "tooltip.bottom-toolbar.measure": "Medir",
     "tooltip.bottom-toolbar.orient": "Orientar",
     "tooltip.bottom-toolbar.local-space": "Usar Orientação Local",
-    "tooltip.bottom-toolbar.bounding-box-center": "Usar Centro da Cena",
+    "tooltip.bottom-toolbar.reset-pivot": "Redefinir Pivô (Shift: para o centro)",
 
     "tooltip.timeline.prev-frame": "Quadro Anterior",
     "tooltip.timeline.play": "Reproduzir/Pausar",

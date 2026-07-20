@@ -88,7 +88,7 @@
     "panel.settings.show-grid": "Показать сетку",
     "panel.settings.grid-plane": "Плоскость сетки",
     "panel.settings.show-bounding-box": "Показать границы",
-    "panel.settings.show-bounding-box-dimensions": "Показать размеры",
+    "panel.settings.show-dimensions": "Показать размеры",
     "panel.settings.show-camera-poses": "Показать камеры",
     "panel.settings.show-camera-info": "Показать информацию о камере",
     "panel.settings.reset": "Сбросить настройки",
@@ -280,6 +280,7 @@
 
     "orient.hint": "Разместите 3 точки, чтобы задать плоскость",
     "orient.align": "Выровнять по сетке",
+    "orient.set-pivot": "Задать опорную точку",
     "orient.clear": "Очистить",
 
     "status-bar.splats": "Сплаты",
@@ -314,7 +315,7 @@
     "tooltip.bottom-toolbar.measure": "Измерить",
     "tooltip.bottom-toolbar.orient": "Ориентация",
     "tooltip.bottom-toolbar.local-space": "Использовать локальную ориентацию",
-    "tooltip.bottom-toolbar.bounding-box-center": "Использовать центр границ",
+    "tooltip.bottom-toolbar.reset-pivot": "Сбросить опорную точку (Shift: к центру)",
 
     "tooltip.timeline.prev-frame": "Предыдущий кадр",
     "tooltip.timeline.play": "Воспроизведение/Пауза",

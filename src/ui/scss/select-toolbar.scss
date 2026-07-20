@@ -56,13 +56,14 @@
         background-color: $bcg-dark;
     }
 
-    // text action buttons (e.g. the orient tool's align/clear)
+    // text action buttons (e.g. the orient tool's align/clear); shorter than
+    // the icon buttons so they sit in balance with the labels and inputs
     .select-toolbar-button {
-        height: 38px;
+        height: 28px;
         margin: 0px 1px;
         padding: 0px 12px;
         border-radius: 2px;
-        line-height: 38px;
+        line-height: 28px;
     }
 
     // the measure/orient toolbars: a hint label plus text actions and inputs,

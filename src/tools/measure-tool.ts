@@ -7,6 +7,7 @@ import { Scene } from '../scene';
 import { Splat } from '../splat';
 import { ToolOverlay, OverlayWriter } from '../tool-overlay';
 import { Transform } from '../transform';
+import { DimensionLabels } from '../ui/dimension-labels';
 import { i18n } from '../ui/localization';
 
 // pointer movement below this many pixels still counts as a click
@@ -35,6 +36,11 @@ class MeasureTool {
     getFocus: () => { position: Vec3, radius: number } | null;
 
     constructor(events: Events, scene: Scene, canvasContainer: Container) {
+        // the length label along the measured line (shown when 'show
+        // dimensions' is enabled); the points and line render in the scene
+        // via the shared tool overlay
+        const dimLabels = new DimensionLabels(scene, canvasContainer.dom, canvasContainer.dom, 'measure-tool-svg', 1);
+
         // ui
         const hintLabel = new Label({ class: 'select-toolbar-label' });
         i18n.bindText(hintLabel, 'measure.hint');
@@ -350,6 +356,30 @@ class MeasureTool {
             }
         };
 
+        // length label along the measured line
+        events.on('postrender', () => {
+            // the svg is hidden while the tool is inactive, so skip the work
+            if (!active || !splat) {
+                return;
+            }
+
+            if (splat.measurePoints.length !== 2 || !events.invoke('camera.boundDimensions')) {
+                dimLabels.hideLabel(0);
+                return;
+            }
+
+            getPoint(0, p0);
+            getPoint(1, p1);
+            dimLabels.setLabel(0, p0, p1);
+        });
+
+        // re-render so the label reacts to the setting while the tool is active
+        events.on('camera.boundDimensions', () => {
+            if (active) {
+                scene.forceRender = true;
+            }
+        });
+
         const updateGizmoSize = () => {
             const { camera, canvas } = scene;
             if (camera.ortho) {
@@ -397,6 +427,7 @@ class MeasureTool {
             canvasContainer.dom.addEventListener('pointermove', pointermove);
             canvasContainer.dom.addEventListener('pointerup', pointerup, true);
             selectToolbar.hidden = false;
+            dimLabels.show();
 
             events.fire('transformHandler.push', transformHandler);
 
@@ -415,6 +446,7 @@ class MeasureTool {
             canvasContainer.dom.removeEventListener('pointermove', pointermove);
             canvasContainer.dom.removeEventListener('pointerup', pointerup, true);
             selectToolbar.hidden = true;
+            dimLabels.hide();
 
             events.fire('transformHandler.pop');
 

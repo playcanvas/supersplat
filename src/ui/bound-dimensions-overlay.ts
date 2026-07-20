@@ -1,6 +1,7 @@
 import { Container } from '@playcanvas/pcui';
 import { Vec3 } from 'playcanvas';
 
+import { DimensionLabels } from './dimension-labels';
 import { Events } from '../events';
 import { Scene } from '../scene';
 import { Splat } from '../splat';
@@ -43,21 +44,10 @@ const axisEdges: number[][][] = [
 
 class BoundDimensionsOverlay {
     constructor(events: Events, scene: Scene, canvasContainer: Container) {
-        const ns = 'http://www.w3.org/2000/svg';
-        const svg = document.createElementNS(ns, 'svg');
-        svg.classList.add('tool-svg', 'bound-dimensions-svg', 'hidden');
-        svg.id = 'bound-dimensions-svg';
-        canvasContainer.dom.appendChild(svg);
-
-        const labels: SVGTextElement[] = [];
-        for (let i = 0; i < 3; i++) {
-            const text = document.createElementNS(ns, 'text') as SVGTextElement;
-            text.classList.add(['bound-dim-x', 'bound-dim-y', 'bound-dim-z'][i]);
-            text.setAttribute('text-anchor', 'middle');
-            text.setAttribute('dominant-baseline', 'middle');
-            svg.appendChild(text);
-            labels.push(text);
-        }
+        const dimLabels = new DimensionLabels(scene, canvasContainer.dom, canvasContainer.dom, 'bound-dimensions-svg', 3);
+        dimLabels.labels.forEach((label, i) => {
+            label.classList.add(['bound-dim-x', 'bound-dim-y', 'bound-dim-z'][i]);
+        });
 
         events.on('prerender', () => {
             const selection = events.invoke('selection') as Splat;
@@ -66,11 +56,11 @@ class BoundDimensionsOverlay {
                 !selection.visible ||
                 !events.invoke('camera.bound') ||
                 !events.invoke('camera.boundDimensions')) {
-                svg.classList.add('hidden');
+                dimLabels.hide();
                 return;
             }
 
-            svg.classList.remove('hidden');
+            dimLabels.show();
 
             const width = canvasContainer.dom.clientWidth;
             const height = canvasContainer.dom.clientHeight;
@@ -135,51 +125,15 @@ class BoundDimensionsOverlay {
                     }
                 }
 
-                const text = labels[axis];
-
                 if (bestEdge < 0) {
                     // no parallel edge has both endpoints in front of the camera
-                    text.setAttribute('visibility', 'hidden');
+                    dimLabels.hideLabel(axis);
                     continue;
                 }
-                text.setAttribute('visibility', 'visible');
 
+                // label the edge, offset away from the bound center
                 const [a, b] = edges[bestEdge];
-                const sa = screenCorners[a];
-                const sb = screenCorners[b];
-
-                // world-space edge length
-                const length = corners[a].distance(corners[b]);
-
-                // screen-space endpoints in pixels
-                const x0 = sa.x * width;
-                const y0 = sa.y * height;
-                const x1 = sb.x * width;
-                const y1 = sb.y * height;
-
-                const mx = (x0 + x1) * 0.5;
-                const my = (y0 + y1) * 0.5;
-
-                let theta = Math.atan2(y1 - y0, x1 - x0);
-                // flip 180° to keep text upright
-                if (Math.cos(theta) < 0) {
-                    theta += Math.PI;
-                }
-
-                // perpendicular offset so the label sits outside the box
-                const perpX = -Math.sin(theta);
-                const perpY = Math.cos(theta);
-                const toCenterX = scx - mx;
-                const toCenterY = scy - my;
-                const dot = perpX * toCenterX + perpY * toCenterY;
-                const sign = dot > 0 ? -1 : 1;
-                const offsetPx = 10;
-                const ox = perpX * offsetPx * sign;
-                const oy = perpY * offsetPx * sign;
-
-                const thetaDeg = theta * 180 / Math.PI;
-                text.setAttribute('transform', `translate(${(mx + ox).toFixed(1)}, ${(my + oy).toFixed(1)}) rotate(${thetaDeg.toFixed(1)})`);
-                text.textContent = length.toFixed(2);
+                dimLabels.setLabel(axis, corners[a], corners[b], worldBoundCenter);
             }
         });
     }

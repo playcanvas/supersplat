@@ -10,6 +10,7 @@ import { Splat } from '../splat';
 import { pickSplatSurfacePoint } from '../splat-pick';
 import { ToolOverlay, OverlayWriter } from '../tool-overlay';
 import { Transform } from '../transform';
+import { DimensionLabels } from '../ui/dimension-labels';
 import { i18n } from '../ui/localization';
 
 // snap the picked plane normal to a splat-local axis within this angle so
@@ -37,8 +38,7 @@ const newRot = new Quat();
 
 const t = new Transform();
 
-const worldPoints = [new Vec3(), new Vec3(), new Vec3()];
-const screenPoints = [new Vec3(), new Vec3(), new Vec3()];
+const cent = new Vec3();
 
 class OrientTransformHandler {
     activate() {}
@@ -51,25 +51,10 @@ class OrientTool {
     getFocus: () => { position: Vec3, radius: number } | null;
 
     constructor(events: Events, scene: Scene, parent: HTMLElement, canvasContainer: Container) {
-        // svg overlay holding the edge length labels; the points, edges and
-        // plane fill render in the scene via the shared tool overlay
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.classList.add('tool-svg', 'hidden');
-        svg.id = 'orient-tool-svg';
-        parent.appendChild(svg);
-
-        const ns = svg.namespaceURI;
-
-        // create the edge length labels (shown when 'show dimensions' is enabled)
-        const edgeLabels = [0, 1, 2].map((i) => {
-            const label = document.createElementNS(ns, 'text') as SVGTextElement;
-            label.id = `orient-edge-${i}`;
-            label.setAttribute('text-anchor', 'middle');
-            label.setAttribute('dominant-baseline', 'middle');
-            return label;
-        });
-
-        edgeLabels.forEach(label => svg.appendChild(label));
+        // the edge length labels (shown when 'show dimensions' is enabled);
+        // the points, edges and plane fill render in the scene via the shared
+        // tool overlay
+        const dimLabels = new DimensionLabels(scene, canvasContainer.dom, parent, 'orient-tool-svg', 3);
 
         // ui
         const hintLabel = new Label({ class: 'select-toolbar-label' });
@@ -383,11 +368,6 @@ class OrientTool {
         let clickX = 0;
         let clickY = 0;
 
-        // whether each placed point is in front of the camera, computed and
-        // consumed within the postrender label pass: worldToScreen mirrors
-        // positions behind the camera, so the labels must cull them
-        const pointInFront = [false, false, false];
-
         const pointerdown = (e: PointerEvent) => {
             if (!clicked && isPrimary(e)) {
                 clicked = true;
@@ -451,68 +431,28 @@ class OrientTool {
             }
 
             const count = splat.orientPoints.length;
-            const cameraPos = scene.camera.mainCamera.getPosition();
-            const cameraFwd = scene.camera.mainCamera.forward;
-
-            for (let i = 0; i < 3; i++) {
-                if (i < count) {
-                    getPoint(i, worldPoints[i]);
-                    pointInFront[i] = v.sub2(worldPoints[i], cameraPos).dot(cameraFwd) > 0;
-                    scene.camera.worldToScreen(worldPoints[i], screenPoints[i]);
-                    screenPoints[i].x *= canvasContainer.dom.clientWidth;
-                    screenPoints[i].y *= canvasContainer.dom.clientHeight;
-                } else {
-                    pointInFront[i] = false;
-                }
-            }
-
-            // edge length labels, following the bound dimensions overlay conventions
             const showDims = count > 1 && events.invoke('camera.boundDimensions');
 
-            // screen centroid of the placed points, used to offset labels outwards
-            let scx = 0, scy = 0;
-            for (let i = 0; i < count; i++) {
-                scx += screenPoints[i].x / count;
-                scy += screenPoints[i].y / count;
+            // the labels sit outside the triangle: offset away from the
+            // centroid of the placed points
+            if (showDims) {
+                cent.set(0, 0, 0);
+                for (let i = 0; i < count; i++) {
+                    getPoint(i, p);
+                    cent.add(p);
+                }
+                cent.mulScalar(1 / count);
             }
 
             for (let i = 0; i < 3; i++) {
-                const j = (i + 1) % 3;
-                const label = edgeLabels[i];
                 const exists = count === 3 || (count === 2 && i === 0);
-
-                if (!showDims || !exists || !pointInFront[i] || !pointInFront[j]) {
-                    label.setAttribute('visibility', 'hidden');
+                if (!showDims || !exists) {
+                    dimLabels.hideLabel(i);
                     continue;
                 }
-                label.setAttribute('visibility', 'visible');
-
-                const length = worldPoints[i].distance(worldPoints[j]);
-
-                const x0 = screenPoints[i].x;
-                const y0 = screenPoints[i].y;
-                const x1 = screenPoints[j].x;
-                const y1 = screenPoints[j].y;
-
-                const mx = (x0 + x1) * 0.5;
-                const my = (y0 + y1) * 0.5;
-
-                let theta = Math.atan2(y1 - y0, x1 - x0);
-                // flip 180° to keep text upright
-                if (Math.cos(theta) < 0) {
-                    theta += Math.PI;
-                }
-
-                // perpendicular offset so the label sits outside the triangle
-                const perpX = -Math.sin(theta);
-                const perpY = Math.cos(theta);
-                const dot = perpX * (scx - mx) + perpY * (scy - my);
-                const sign = dot > 0 ? -1 : 1;
-                const offsetPx = 10;
-
-                const thetaDeg = theta * 180 / Math.PI;
-                label.setAttribute('transform', `translate(${(mx + perpX * offsetPx * sign).toFixed(1)}, ${(my + perpY * offsetPx * sign).toFixed(1)}) rotate(${thetaDeg.toFixed(1)})`);
-                label.textContent = length.toFixed(2);
+                getPoint(i, p0);
+                getPoint((i + 1) % 3, p1);
+                dimLabels.setLabel(i, p0, p1, cent);
             }
         });
 
@@ -572,7 +512,7 @@ class OrientTool {
             selectToolbar.hidden = false;
             parent.style.display = 'block';
             parent.classList.add('noevents');
-            svg.classList.remove('hidden');
+            dimLabels.show();
 
             // ensure the grid is visible while the tool is active. suspend
             // preference capture: the forced grid is tool state, not a user
@@ -605,7 +545,7 @@ class OrientTool {
             selectToolbar.hidden = true;
             parent.style.display = 'none';
             parent.classList.remove('noevents');
-            svg.classList.add('hidden');
+            dimLabels.hide();
 
             if (gridForced) {
                 gridSelfToggle = true;

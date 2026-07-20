@@ -280,6 +280,7 @@
 
     "orient.hint": "放置3个点以定义平面",
     "orient.align": "对齐到网格",
+    "orient.set-pivot": "设置枢轴",
     "orient.clear": "清除",
 
     "status-bar.splats": "高斯点",
@@ -314,7 +315,7 @@
     "tooltip.bottom-toolbar.measure": "测量",
     "tooltip.bottom-toolbar.orient": "调整方向",
     "tooltip.bottom-toolbar.local-space": "局部坐标系",
-    "tooltip.bottom-toolbar.bounding-box-center": "使用边界中心",
+    "tooltip.bottom-toolbar.reset-pivot": "重置枢轴（Shift：至中心）",
 
     "tooltip.timeline.prev-frame": "上一帧",
     "tooltip.timeline.play": "播放/暂停",

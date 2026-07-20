@@ -306,6 +306,41 @@ class PlacePivotOp {
     }
 }
 
+// op for setting a splat's user-defined local frame (the origin and rotation
+// the transform gizmos and panel use in local coordinate space)
+class SetLocalFrameOp {
+    name = 'setLocalFrame';
+    splat: Splat;
+    oldOrigin: Vec3;
+    oldFrame: Quat;
+    newOrigin: Vec3;
+    newFrame: Quat;
+
+    constructor(options: { splat: Splat, oldOrigin: Vec3, oldFrame: Quat, newOrigin: Vec3, newFrame: Quat }) {
+        this.splat = options.splat;
+        this.oldOrigin = options.oldOrigin;
+        this.oldFrame = options.oldFrame;
+        this.newOrigin = options.newOrigin;
+        this.newFrame = options.newFrame;
+    }
+
+    do() {
+        this.splat.setLocalFrame(this.newOrigin, this.newFrame);
+    }
+
+    undo() {
+        this.splat.setLocalFrame(this.oldOrigin, this.oldFrame);
+    }
+
+    destroy() {
+        this.splat = null;
+        this.oldOrigin = null;
+        this.oldFrame = null;
+        this.newOrigin = null;
+        this.newFrame = null;
+    }
+}
+
 type ShapeTransformState = {
     position: Vec3;
     rotation?: Quat;
@@ -511,6 +546,7 @@ export {
     EntityTransformOp,
     SplatsTransformOp,
     PlacePivotOp,
+    SetLocalFrameOp,
     ShapeTransformOp,
     ShapeTransformState,
     ColorAdjustment,

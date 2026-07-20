@@ -1,8 +1,8 @@
 import { MemoryFileSystem } from '@playcanvas/splat-transform';
-import { Color, Mat4, path, Texture, Vec3, Vec4 } from 'playcanvas';
+import { Color, Mat4, path, Quat, Texture, Vec3, Vec4 } from 'playcanvas';
 
 import { EditHistory } from './edit-history';
-import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp, MultiOp, AddSplatOp } from './edit-ops';
+import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp, MultiOp, AddSplatOp, SetLocalFrameOp } from './edit-ops';
 import { Element, ElementType } from './element';
 import { Events } from './events';
 import type { GridPlane } from './infinite-grid';
@@ -310,6 +310,34 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 speed: 1
             });
         }
+    });
+
+    // pivot.reset
+
+    // reset the selection's local frame back to the model's own frame, or,
+    // with toCenter, to the bound center (the selection bound while gaussians
+    // are selected). resets orientation in both cases
+    events.on('pivot.reset', (toCenter: boolean) => {
+        const splat = selectedSplats()[0];
+        if (!splat) {
+            return;
+        }
+
+        const bound = splat.numSelected > 0 ? splat.selectionBound : splat.localBound;
+        const newOrigin = toCenter ? bound.center.clone() : new Vec3();
+        const newFrame = new Quat();
+
+        if (splat.localFrameOrigin.equals(newOrigin) && splat.localFrame.equals(newFrame)) {
+            return;
+        }
+
+        events.fire('edit.add', new SetLocalFrameOp({
+            splat,
+            oldOrigin: splat.localFrameOrigin.clone(),
+            oldFrame: splat.localFrame.clone(),
+            newOrigin,
+            newFrame
+        }));
     });
 
     events.on('camera.reset', () => {

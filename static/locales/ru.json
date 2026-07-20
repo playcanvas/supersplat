@@ -280,6 +280,7 @@
 
     "orient.hint": "Разместите 3 точки, чтобы задать плоскость",
     "orient.align": "Выровнять по сетке",
+    "orient.set-pivot": "Задать опорную точку",
     "orient.clear": "Очистить",
 
     "status-bar.splats": "Сплаты",
@@ -314,7 +315,7 @@
     "tooltip.bottom-toolbar.measure": "Измерить",
     "tooltip.bottom-toolbar.orient": "Ориентация",
     "tooltip.bottom-toolbar.local-space": "Использовать локальную ориентацию",
-    "tooltip.bottom-toolbar.bounding-box-center": "Использовать центр границ",
+    "tooltip.bottom-toolbar.reset-pivot": "Сбросить опорную точку (Shift: к центру)",
 
     "tooltip.timeline.prev-frame": "Предыдущий кадр",
     "tooltip.timeline.play": "Воспроизведение/Пауза",

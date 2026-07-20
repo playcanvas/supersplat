@@ -280,6 +280,7 @@
 
     "orient.hint": "3 Punkte platzieren, um eine Ebene zu definieren",
     "orient.align": "An Raster ausrichten",
+    "orient.set-pivot": "Pivot setzen",
     "orient.clear": "Leeren",
 
     "status-bar.splats": "Splats",
@@ -314,7 +315,7 @@
     "tooltip.bottom-toolbar.measure": "Messen",
     "tooltip.bottom-toolbar.orient": "Ausrichten",
     "tooltip.bottom-toolbar.local-space": "Gizmo in local-space",
-    "tooltip.bottom-toolbar.bounding-box-center": "Mittelpunkt verwenden",
+    "tooltip.bottom-toolbar.reset-pivot": "Pivot zurücksetzen (Umschalt: zur Mitte)",
 
     "tooltip.timeline.prev-frame": "Vorheriges Bild",
     "tooltip.timeline.play": "Abspielen/Pause",

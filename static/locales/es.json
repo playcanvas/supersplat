@@ -280,6 +280,7 @@
 
     "orient.hint": "Coloca 3 puntos para definir un plano",
     "orient.align": "Alinear con la cuadrícula",
+    "orient.set-pivot": "Fijar pivote",
     "orient.clear": "Borrar",
 
     "status-bar.splats": "Splats",
@@ -314,7 +315,7 @@
     "tooltip.bottom-toolbar.measure": "Medir",
     "tooltip.bottom-toolbar.orient": "Orientar",
     "tooltip.bottom-toolbar.local-space": "Usar orientación local",
-    "tooltip.bottom-toolbar.bounding-box-center": "Usar centro de límites",
+    "tooltip.bottom-toolbar.reset-pivot": "Restablecer pivote (Mayús: al centro)",
 
     "tooltip.timeline.prev-frame": "Fotograma Anterior",
     "tooltip.timeline.play": "Reproducir/Pausar",

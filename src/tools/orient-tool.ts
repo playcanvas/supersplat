@@ -1,7 +1,7 @@
 import { Button, Container, Label } from '@playcanvas/pcui';
 import { Entity, Mat4, Quat, TranslateGizmo, Vec3, math } from 'playcanvas';
 
-import { EntityTransformOp, MultiOp, PlacePivotOp } from '../edit-ops';
+import { EntityTransformOp, MultiOp, PlacePivotOp, SetLocalFrameOp } from '../edit-ops';
 import { Events } from '../events';
 import type { GridPlane } from '../infinite-grid';
 import { Pivot } from '../pivot';
@@ -63,6 +63,9 @@ class OrientTool {
         const alignButton = new Button({ class: 'select-toolbar-button', enabled: false });
         i18n.bindText(alignButton, 'orient.align');
 
+        const frameButton = new Button({ class: 'select-toolbar-button', enabled: false });
+        i18n.bindText(frameButton, 'orient.set-pivot');
+
         const clearButton = new Button({ class: 'select-toolbar-button', enabled: false });
         i18n.bindText(clearButton, 'orient.clear');
 
@@ -77,6 +80,7 @@ class OrientTool {
 
         selectToolbar.append(hintLabel);
         selectToolbar.append(alignButton);
+        selectToolbar.append(frameButton);
         selectToolbar.append(clearButton);
         canvasContainer.append(selectToolbar);
 
@@ -180,7 +184,9 @@ class OrientTool {
         };
 
         const updateButtons = () => {
-            alignButton.enabled = !!splat && splat.orientPoints.length === 3 && calcPlane();
+            const planeReady = !!splat && splat.orientPoints.length === 3 && calcPlane();
+            alignButton.enabled = planeReady;
+            frameButton.enabled = planeReady;
             clearButton.enabled = !!splat && splat.orientPoints.length > 0;
         };
 
@@ -319,15 +325,12 @@ class OrientTool {
 
             const top = new EntityTransformOp({ splat, oldt, newt });
 
-            // place the pivot to match the new transform
+            // place the pivot at the local frame under the new transform
             const pivot = events.invoke('pivot') as Pivot;
-            if (events.invoke('pivot.origin') === 'boundCenter') {
-                mat.setTRS(newt.position, newt.rotation, newt.scale);
-                mat.transformPoint(splat.localBound.center, v);
-                t.set(v, newt.rotation, newt.scale);
-            } else {
-                t.copy(newt);
-            }
+            mat.setTRS(newt.position, newt.rotation, newt.scale);
+            mat.transformPoint(splat.localFrameOrigin, v);
+            q.mul2(newt.rotation, splat.localFrame);
+            t.set(v, q, newt.scale);
             const pop = new PlacePivotOp({ pivot, oldt: pivot.transform.clone(), newt: t.clone() });
 
             events.fire('edit.add', new MultiOp([top, pop]));
@@ -340,6 +343,28 @@ class OrientTool {
         };
 
         alignButton.on('click', alignToGrid);
+
+        // make the picked plane the model's local frame without moving it:
+        // the transform gizmos and panel use it in local coordinate space
+        frameButton.on('click', () => {
+            if (!splat || splat.orientPoints.length !== 3 || !calcPlane()) {
+                return;
+            }
+            calcPlaneRotation(q);
+
+            // the frame is stored relative to the entity: rotation from the
+            // picked plane, origin at the first picked point
+            newRot.copy(splat.entity.getLocalRotation()).invert().mul(q);
+
+            events.fire('edit.add', new SetLocalFrameOp({
+                splat,
+                oldOrigin: splat.localFrameOrigin.clone(),
+                oldFrame: splat.localFrame.clone(),
+                newOrigin: splat.orientPoints[0].clone(),
+                newFrame: newRot.clone()
+            }));
+        });
+
 
         clearButton.on('click', () => {
             if (splat) {

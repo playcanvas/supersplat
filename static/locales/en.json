@@ -280,6 +280,7 @@
 
     "orient.hint": "Place 3 points to define a plane",
     "orient.align": "Align to Grid",
+    "orient.set-pivot": "Set Pivot",
     "orient.clear": "Clear",
 
     "status-bar.splats": "Splats",
@@ -314,7 +315,7 @@
     "tooltip.bottom-toolbar.measure": "Measure",
     "tooltip.bottom-toolbar.orient": "Orient",
     "tooltip.bottom-toolbar.local-space": "Use Local Orientation",
-    "tooltip.bottom-toolbar.bounding-box-center": "Use Bounding Box Center",
+    "tooltip.bottom-toolbar.reset-pivot": "Reset Pivot (Shift: to center)",
 
     "tooltip.timeline.prev-frame": "Previous Frame",
     "tooltip.timeline.play": "Play/Pause",

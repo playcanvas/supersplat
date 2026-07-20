@@ -186,7 +186,13 @@ class BottomToolbar extends Container {
         measure.dom.addEventListener('click', () => events.fire('tool.measure'));
         orient.dom.addEventListener('click', () => events.fire('tool.orient'));
         coordSpace.dom.addEventListener('click', () => events.fire('tool.toggleCoordSpace'));
-        origin.dom.addEventListener('click', (e: MouseEvent) => events.fire('pivot.reset', e.shiftKey));
+        origin.dom.addEventListener('click', (e: MouseEvent) => {
+            if (events.invoke('tool.active') === 'orient') {
+                events.fire('orient.setPivot');
+            } else {
+                events.fire('pivot.reset', e.shiftKey);
+            }
+        });
 
         events.on('edit.canUndo', (value: boolean) => {
             undo.enabled = value;
@@ -245,7 +251,9 @@ class BottomToolbar extends Container {
         tooltips.register(measure, tooltip('tooltip.bottom-toolbar.measure'));
         tooltips.register(orient, tooltip('tooltip.bottom-toolbar.orient'));
         tooltips.register(coordSpace, tooltip('tooltip.bottom-toolbar.local-space', 'tool.toggleCoordSpace'));
-        tooltips.register(origin, tooltip('tooltip.bottom-toolbar.reset-pivot'));
+        tooltips.register(origin, () => i18n.t(
+            events.invoke('tool.active') === 'orient' ? 'orient.set-pivot' : 'tooltip.bottom-toolbar.reset-pivot'
+        ));
         tooltips.register(eyedropper, tooltip('tooltip.bottom-toolbar.eyedropper-selection', 'tool.eyedropperSelection'));
     }
 }

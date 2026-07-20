@@ -37,7 +37,7 @@ class ToolManager {
             return tool?.getFocus?.() ?? null;
         });
 
-        let coordSpace: 'local' | 'world' = 'world';
+        let coordSpace: 'local' | 'world' = 'local';
 
         const setCoordSpace = (space: 'local' | 'world') => {
             if (space !== coordSpace) {
@@ -57,6 +57,11 @@ class ToolManager {
         events.on('tool.toggleCoordSpace', () => {
             setCoordSpace(coordSpace === 'local' ? 'world' : 'local');
         });
+
+        // announce the initial space so ui constructed before this (e.g. the
+        // bottom toolbar toggle) reflects the default; tools constructed
+        // after read it via tool.coordSpace
+        events.fire('tool.coordSpace', coordSpace);
 
         // the 1/2/3 shortcuts switch the active tool's gizmo mode if it
         // supports one (box/sphere selection), otherwise activate the

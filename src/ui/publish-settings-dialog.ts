@@ -24,7 +24,7 @@ class PublishSettingsDialog extends Container {
         args = {
             ...args,
             id: 'publish-settings-dialog',
-            class: 'settings-dialog',
+            class: ['settings-dialog', 'blocks-shortcuts'],
             hidden: true,
             tabIndex: -1
         };
@@ -47,7 +47,7 @@ class PublishSettingsDialog extends Container {
         // overwrite
 
         const overwriteLabel = new Label({ class: 'label' });
-        i18n.bindText(overwriteLabel, 'popup.publish.to');
+        i18n.bindText(overwriteLabel, 'popup.publish.destination');
         const overwriteSelect = new SelectInput({
             class: 'select'
         });

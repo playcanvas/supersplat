@@ -39,8 +39,8 @@ class EntityTransformHandler implements TransformHandler {
             }
         });
 
-        events.on('pivot.origin', (mode: 'center' | 'boundCenter') => {
-            if (this.splat) {
+        events.on('splat.localFrame', (splat: Splat) => {
+            if (this.splat === splat) {
                 this.placePivot();
             }
         });
@@ -57,8 +57,7 @@ class EntityTransformHandler implements TransformHandler {
 
     placePivot() {
         // place initial pivot point
-        const origin = this.events.invoke('pivot.origin');
-        this.splat.getPivot(origin === 'center' ? 'center' : 'boundCenter', false, transform);
+        this.splat.getPivot(transform);
         this.events.invoke('pivot').place(transform);
     }
 

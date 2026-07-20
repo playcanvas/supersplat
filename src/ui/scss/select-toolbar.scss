@@ -56,10 +56,37 @@
         background-color: $bcg-dark;
     }
 
+    // text action buttons (e.g. the orient tool's align/clear); shorter than
+    // the icon buttons so they sit in balance with the labels and inputs
+    .select-toolbar-button {
+        height: 28px;
+        margin: 0px 1px;
+        padding: 0px 12px;
+        border-radius: 2px;
+        line-height: 28px;
+    }
+
+    // the measure/orient toolbars: a hint label plus text actions and inputs,
+    // spaced with a uniform flex gap rather than the icon-cluster margins
+    &.select-toolbar-tool {
+        gap: 12px;
+        padding: 0px 16px;
+
+        .select-toolbar-label,
+        .select-toolbar-button {
+            margin: 0px;
+        }
+    }
+
     // 16px group break from the preceding cluster, 6px to the input it labels
     .select-toolbar-label {
         margin: 0px 6px 0px 16px;
         color: $text-secondary;
+
+        // no group break when the label leads the toolbar (e.g. measure, orient)
+        &:first-child {
+            margin-left: 0px;
+        }
     }
 
     // match the height treatment of the transform panel's inputs (see transform.scss);

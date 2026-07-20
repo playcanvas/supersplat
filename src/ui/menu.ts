@@ -130,22 +130,22 @@ class Menu extends Container {
         const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
 
         const exportMenuPanel = new MenuPanel([{
-            text: () => i18n.t('menu.file.export.ply'),
+            text: 'PLY (.ply)',
             icon: createSvg(sceneExport),
             isEnabled: () => !events.invoke('scene.empty'),
             onSelect: () => events.invoke('scene.export', 'ply')
         }, {
-            text: () => i18n.t('menu.file.export.sog'),
+            text: 'SOG (.sog)',
             icon: createSvg(sceneExport),
             isEnabled: () => !events.invoke('scene.empty'),
             onSelect: () => events.invoke('scene.export', 'sog')
         }, {
-            text: () => i18n.t('menu.file.export.spz'),
+            text: 'SPZ (.spz)',
             icon: createSvg(sceneExport),
             isEnabled: () => !events.invoke('scene.empty'),
             onSelect: () => events.invoke('scene.export', 'spz')
         }, {
-            text: () => i18n.t('menu.file.export.splat'),
+            text: 'Splat (.splat)',
             icon: createSvg(sceneExport),
             isEnabled: () => !events.invoke('scene.empty'),
             onSelect: () => events.invoke('scene.export', 'splat')

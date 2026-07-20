@@ -238,7 +238,7 @@ class SphereSelection {
             return shortcut ? i18n.formatTooltipWithShortcut(text, shortcut) : text;
         };
 
-        tooltips.register(translateButton, tooltip('tooltip.bottom-toolbar.translate', 'tool.moveShortcut'), 'top');
+        tooltips.register(translateButton, tooltip('tooltip.bottom-toolbar.move', 'tool.moveShortcut'), 'top');
         tooltips.register(scaleButton, tooltip('tooltip.bottom-toolbar.scale', 'tool.scaleShortcut'), 'top');
         tooltips.register(setButton, () => i18n.t('select-toolbar.set'), 'top');
         tooltips.register(addButton, () => i18n.t('select-toolbar.add'), 'top');

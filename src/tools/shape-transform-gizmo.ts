@@ -85,6 +85,9 @@ class ShapeTransformGizmo {
             all.forEach((gizmo) => {
                 gizmo.coordSpace = space;
             });
+            // the gizmos only request a redraw from within a frame, so with
+            // on-demand rendering the reorientation needs a forced frame
+            scene.forceRender = true;
         };
         setCoordSpace(events.invoke('tool.coordSpace'));
         events.on('tool.coordSpace', setCoordSpace);

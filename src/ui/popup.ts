@@ -32,6 +32,7 @@ class Popup extends Container {
     constructor(tooltips: Tooltips, args = {}) {
         args = {
             id: 'popup',
+            class: 'blocks-shortcuts',
             hidden: true,
             tabIndex: -1,
             ...args

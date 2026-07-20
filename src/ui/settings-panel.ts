@@ -2,6 +2,7 @@ import { BooleanInput, Button, ColorPicker, Container, Label, SelectInput, Slide
 import { Color } from 'playcanvas';
 
 import { Events } from '../events';
+import type { GridPlane } from '../infinite-grid';
 import { ShortcutManager } from '../shortcut-manager';
 import { i18n } from './localization';
 import { Tooltips } from './tooltips';
@@ -149,19 +150,19 @@ class SettingsPanel extends Container {
         const tonemappingLabel = new Label({
             class: 'settings-panel-row-label'
         });
-        i18n.bindText(tonemappingLabel, 'panel.settings.tonemapping');
+        i18n.bindText(tonemappingLabel, 'panel.settings.tone-mapping');
 
         const tonemappingSelection = new SelectInput({
             class: 'settings-panel-row-select',
             defaultValue: 'linear'
         });
         i18n.bindOptions(tonemappingSelection, () => [
-            { v: 'linear', t: i18n.t('panel.settings.tonemapping.linear') },
-            { v: 'neutral', t: i18n.t('panel.settings.tonemapping.neutral') },
-            { v: 'aces', t: i18n.t('panel.settings.tonemapping.aces') },
-            { v: 'aces2', t: i18n.t('panel.settings.tonemapping.aces2') },
-            { v: 'filmic', t: i18n.t('panel.settings.tonemapping.filmic') },
-            { v: 'hejl', t: i18n.t('panel.settings.tonemapping.hejl') }
+            { v: 'linear', t: i18n.t('panel.settings.tone-mapping.linear') },
+            { v: 'neutral', t: i18n.t('panel.settings.tone-mapping.neutral') },
+            { v: 'aces', t: i18n.t('panel.settings.tone-mapping.aces') },
+            { v: 'aces2', t: i18n.t('panel.settings.tone-mapping.aces2') },
+            { v: 'filmic', t: i18n.t('panel.settings.tone-mapping.filmic') },
+            { v: 'hejl', t: i18n.t('panel.settings.tone-mapping.hejl') }
         ]);
 
         tonemappingRow.append(tonemappingLabel);
@@ -261,7 +262,7 @@ class SettingsPanel extends Container {
         const centersSizeLabel = new Label({
             class: 'settings-panel-row-label'
         });
-        i18n.bindText(centersSizeLabel, 'panel.settings.centers-size');
+        i18n.bindText(centersSizeLabel, 'panel.settings.center-size');
 
         const centersSizeSlider = new SliderInput({
             class: 'settings-panel-row-slider',
@@ -282,7 +283,7 @@ class SettingsPanel extends Container {
         const centersColorLabel = new Label({
             class: 'settings-panel-row-label'
         });
-        i18n.bindText(centersColorLabel, 'panel.settings.centers-gaussian-color');
+        i18n.bindText(centersColorLabel, 'panel.settings.use-splat-colors');
 
         const centersColorToggle = new BooleanInput({
             type: 'toggle',
@@ -333,6 +334,30 @@ class SettingsPanel extends Container {
         showGridRow.append(showGridLabel);
         showGridRow.append(showGridToggle);
 
+        // grid plane
+
+        const gridPlaneRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const gridPlaneLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(gridPlaneLabel, 'panel.settings.grid-plane');
+
+        const gridPlaneSelection = new SelectInput({
+            class: 'settings-panel-row-select',
+            defaultValue: 'xz',
+            options: [
+                { v: 'xz', t: 'XZ' },
+                { v: 'xy', t: 'XY' },
+                { v: 'yz', t: 'YZ' }
+            ]
+        });
+
+        gridPlaneRow.append(gridPlaneLabel);
+        gridPlaneRow.append(gridPlaneSelection);
+
         // show bound
 
         const showBoundRow = new Container({
@@ -342,7 +367,7 @@ class SettingsPanel extends Container {
         const showBoundLabel = new Label({
             class: 'settings-panel-row-label'
         });
-        i18n.bindText(showBoundLabel, 'panel.settings.show-bound');
+        i18n.bindText(showBoundLabel, 'panel.settings.show-bounding-box');
 
         const showBoundToggle = new BooleanInput({
             type: 'toggle',
@@ -362,7 +387,7 @@ class SettingsPanel extends Container {
         const showBoundDimensionsLabel = new Label({
             class: 'settings-panel-row-label'
         });
-        i18n.bindText(showBoundDimensionsLabel, 'panel.settings.show-bound-dimensions');
+        i18n.bindText(showBoundDimensionsLabel, 'panel.settings.show-dimensions');
 
         const showBoundDimensionsToggle = new BooleanInput({
             type: 'toggle',
@@ -438,6 +463,7 @@ class SettingsPanel extends Container {
         this.append(centersColorRow);
         this.append(outlineSelectionRow);
         this.append(showGridRow);
+        this.append(gridPlaneRow);
         this.append(showBoundRow);
         this.append(showBoundDimensionsRow);
         this.append(showCameraPosesRow);
@@ -540,6 +566,16 @@ class SettingsPanel extends Container {
 
         showGridToggle.on('change', () => {
             events.fire('grid.setVisible', showGridToggle.value);
+        });
+
+        // grid plane
+
+        events.on('grid.plane', (plane: GridPlane) => {
+            gridPlaneSelection.value = plane;
+        });
+
+        gridPlaneSelection.on('change', (value: GridPlane) => {
+            events.fire('grid.setPlane', value);
         });
 
         // show bound

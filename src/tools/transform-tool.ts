@@ -53,6 +53,9 @@ class TransformTool {
 
         events.on('tool.coordSpace', (coordSpace: string) => {
             gizmo.coordSpace = coordSpace as 'local' | 'world';
+            // the gizmo only requests a redraw from within a frame, so with
+            // on-demand rendering the reorientation needs a forced frame
+            scene.forceRender = true;
         });
 
         // set the gizmo size to remain a constant size in screen space.

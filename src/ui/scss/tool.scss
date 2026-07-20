@@ -45,7 +45,9 @@
         }
     }
 
-    &#bound-dimensions-svg {
+    // shared edge length labels: the bound dimensions overlay and the
+    // measure/orient tools (see dimension-labels.ts)
+    &.dimension-labels-svg {
         pointer-events: none;
 
         > text {
@@ -55,25 +57,6 @@
             paint-order: stroke;
             stroke: rgba(0, 0, 0, 0.7);
             stroke-width: 3px;
-        }
-    }
-
-    &#measure-tool-svg {
-        >#measure-line-bottom {
-            stroke: black;
-            stroke-width: 6;
-        }
-
-        >#measure-line-top {
-            stroke: white;
-            stroke-width: 2;
-        }
-
-        >#measure-line-start, >#measure-line-end {
-            fill: white;
-            stroke: black;
-            stroke-width: 2;
-            r: 5;
         }
     }
 }

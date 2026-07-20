@@ -21,6 +21,7 @@ class Progress extends Container {
         this.onCancel = null;
 
         this.dom.tabIndex = 0;
+        this.dom.classList.add('blocks-shortcuts');
 
         const header = new Label({
             id: 'header'

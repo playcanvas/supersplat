@@ -178,11 +178,11 @@ class BoxSelection {
             },
             onTransform: (mode) => {
                 if (mode === 'scale') {
-                    // the length setters refresh the bound
-                    const s = box.pivot.getLocalScale();
-                    box.lenX = s.x;
-                    box.lenY = s.y;
-                    box.lenZ = s.z;
+                    // snapshot the live scale vector before the length setters mutate it
+                    const { x, y, z } = box.pivot.getLocalScale();
+                    box.lenX = x;
+                    box.lenY = y;
+                    box.lenZ = z;
                 } else {
                     box.moved();
                 }
@@ -289,7 +289,7 @@ class BoxSelection {
             return shortcut ? i18n.formatTooltipWithShortcut(text, shortcut) : text;
         };
 
-        tooltips.register(translateButton, tooltip('tooltip.bottom-toolbar.translate', 'tool.moveShortcut'), 'top');
+        tooltips.register(translateButton, tooltip('tooltip.bottom-toolbar.move', 'tool.moveShortcut'), 'top');
         tooltips.register(rotateButton, tooltip('tooltip.bottom-toolbar.rotate', 'tool.rotateShortcut'), 'top');
         tooltips.register(scaleButton, tooltip('tooltip.bottom-toolbar.scale', 'tool.scaleShortcut'), 'top');
         tooltips.register(setButton, () => i18n.t('select-toolbar.set'), 'top');

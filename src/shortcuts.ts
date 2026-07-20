@@ -43,6 +43,40 @@ const checkMod = (requirement: ModifierState | undefined, isPressed: boolean): b
     }
 };
 
+// keys that focusable controls (buttons, selects, sliders) handle themselves;
+// while such an element has focus these must not fire global shortcuts
+const controlKeys = new Set([
+    'Enter', ' ', 'Tab',
+    'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+    'Home', 'End', 'PageUp', 'PageDown'
+]);
+
+// input types whose value can be entered as text; unlike checkbox/radio/range
+// controls, these own every key while focused
+const textInputTypes = new Set([
+    'text', 'search', 'email', 'url', 'tel', 'password', 'number',
+    'date', 'datetime-local', 'month', 'time', 'week'
+]);
+
+// true if the focused element owns this key press: text entry contexts and
+// modal overlays (marked with .blocks-shortcuts) own all keys, any other
+// focused control owns only the keys such controls handle (controlKeys).
+// everything else falls through to the global shortcuts.
+const targetConsumesKey = (e: KeyboardEvent): boolean => {
+    const target = e.target;
+    if (!(target instanceof Element) || target === document.body) {
+        return false;
+    }
+    if (target.closest('textarea, [contenteditable], .blocks-shortcuts')) {
+        return true;
+    }
+    const input = target.closest('input');
+    if (input && textInputTypes.has(input.type)) {
+        return true;
+    }
+    return controlKeys.has(e.key);
+};
+
 class Shortcuts {
     shortcuts: ShortcutOptions[] = [];
 
@@ -50,8 +84,8 @@ class Shortcuts {
         const shortcuts = this.shortcuts;
 
         const handleEvent = (e: KeyboardEvent, down: boolean, capture: boolean) => {
-            // skip if focus is elsewhere (input fields, modals, etc.)
-            if (e.target !== document.body) return;
+            // skip keys owned by the focused element (text entry, modals, control keys)
+            if (targetConsumesKey(e)) return;
 
             const isCtrlKey = e.code.startsWith('Control');
             const isShiftKey = e.code.startsWith('Shift');

@@ -415,7 +415,8 @@ class MeasureTool {
             // frame with some margin; a lone point falls back to a radius
             // relative to the splat's world size
             splat.worldTransform.getScale(p);
-            radius = Math.max(radius * 1.5, splat.localBound.halfExtents.length() * p.x * 0.05);
+            const maxScale = Math.max(Math.abs(p.x), Math.abs(p.y), Math.abs(p.z));
+            radius = Math.max(radius * 1.5, splat.localBound.halfExtents.length() * maxScale * 0.05);
 
             return { position, radius };
         };

@@ -523,7 +523,8 @@ class OrientTool {
             // frame with some margin; a lone point falls back to a radius
             // relative to the splat's world size
             splat.worldTransform.getScale(v);
-            radius = Math.max(radius * 1.5, splat.localBound.halfExtents.length() * v.x * 0.05);
+            const maxScale = Math.max(Math.abs(v.x), Math.abs(v.y), Math.abs(v.z));
+            radius = Math.max(radius * 1.5, splat.localBound.halfExtents.length() * maxScale * 0.05);
 
             return { position, radius };
         };

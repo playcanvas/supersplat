@@ -51,6 +51,13 @@ const controlKeys = new Set([
     'Home', 'End', 'PageUp', 'PageDown'
 ]);
 
+// input types whose value can be entered as text; unlike checkbox/radio/range
+// controls, these own every key while focused
+const textInputTypes = new Set([
+    'text', 'search', 'email', 'url', 'tel', 'password', 'number',
+    'date', 'datetime-local', 'month', 'time', 'week'
+]);
+
 // true if the focused element owns this key press: text entry contexts and
 // modal overlays (marked with .blocks-shortcuts) own all keys, any other
 // focused control owns only the keys such controls handle (controlKeys).
@@ -60,7 +67,11 @@ const targetConsumesKey = (e: KeyboardEvent): boolean => {
     if (!(target instanceof Element) || target === document.body) {
         return false;
     }
-    if (target.closest('input, textarea, select, [contenteditable], .blocks-shortcuts')) {
+    if (target.closest('textarea, [contenteditable], .blocks-shortcuts')) {
+        return true;
+    }
+    const input = target.closest('input');
+    if (input && textInputTypes.has(input.type)) {
         return true;
     }
     return controlKeys.has(e.key);

@@ -565,8 +565,9 @@ class Camera extends Element {
             this.gizmoPass.addLayer(this.camera, scene.overlayLayer, true, false);
             this.gizmoPass.addLayer(this.camera, scene.gizmoLayer, false, false);
             this.gizmoPass.addLayer(this.camera, scene.gizmoLayer, true, false);
-            this.gizmoPass.renderActions[0].clearDepth = true;
-            this.gizmoPass.renderActions[0].clearStencil = true;
+            const firstGizmoStep = (this.gizmoPass as any).layerRenderSteps[0];
+            firstGizmoStep.clearDepth = true;
+            firstGizmoStep.clearStencil = true;
 
             this.finalPass.init(null);
 

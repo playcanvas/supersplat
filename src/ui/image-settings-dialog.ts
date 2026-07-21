@@ -60,14 +60,15 @@ class ImageSettingsDialog extends Container {
 
         // preset
 
-        // 360 output is 2:1 equirectangular, capped at 4096 wide to stay
-        // within common encoder dimension limits (mirrors video's presets)
+        // 360 output is 2:1 equirectangular (mirrors video's presets)
         const buildPresetOptions = () => {
             return projectionSelect.value === 'equirect' ? [
                 { v: '360-1k', t: '1024x512' },
                 { v: '360-2k', t: '2048x1024' },
                 { v: '360-4k', t: '3840x1920' },
                 { v: '360-4096', t: '4096x2048' },
+                { v: '360-8k', t: '7680x3840' },
+                { v: '360-8192', t: '8192x4096' },
                 { v: 'custom', t: i18n.t('popup.render-image.resolution.custom') }
             ] : [
                 { v: 'viewport', t: i18n.t('popup.render-image.resolution.current') },
@@ -218,7 +219,9 @@ class ImageSettingsDialog extends Container {
                 '360-1k': 1024,
                 '360-2k': 2048,
                 '360-4k': 3840,
-                '360-4096': 4096
+                '360-4096': 4096,
+                '360-8k': 7680,
+                '360-8192': 8192
             };
 
             const heights: Record<string, number> = {
@@ -229,7 +232,9 @@ class ImageSettingsDialog extends Container {
                 '360-1k': 512,
                 '360-2k': 1024,
                 '360-4k': 1920,
-                '360-4096': 2048
+                '360-4096': 2048,
+                '360-8k': 3840,
+                '360-8192': 4096
             };
 
             resolutionValue.value = [

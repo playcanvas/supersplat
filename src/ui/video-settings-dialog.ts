@@ -15,7 +15,8 @@ const standardResolutions: ResolutionOption[] = [
     { v: '720', t: '1280x720' },
     { v: '1080', t: '1920x1080' },
     { v: '1440', t: '2560x1440' },
-    { v: '4k', t: '3840x2160' }
+    { v: '4k', t: '3840x2160' },
+    { v: '8k', t: '7680x4320' }
 ];
 
 // 360 output is 2:1 equirectangular. Encoder support for each preset is
@@ -24,7 +25,9 @@ const equirectResolutions: ResolutionOption[] = [
     { v: '360-1k', t: '1024x512' },
     { v: '360-2k', t: '2048x1024' },
     { v: '360-4k', t: '3840x1920' },
-    { v: '360-4096', t: '4096x2048' }
+    { v: '360-4096', t: '4096x2048' },
+    { v: '360-8k', t: '7680x3840' },
+    { v: '360-8192', t: '8192x4096' }
 ];
 
 const widths: Record<string, number> = {
@@ -33,10 +36,13 @@ const widths: Record<string, number> = {
     '1080': 1920,
     '1440': 2560,
     '4k': 3840,
+    '8k': 7680,
     '360-1k': 1024,
     '360-2k': 2048,
     '360-4k': 3840,
-    '360-4096': 4096
+    '360-4096': 4096,
+    '360-8k': 7680,
+    '360-8192': 8192
 };
 
 const heights: Record<string, number> = {
@@ -45,10 +51,13 @@ const heights: Record<string, number> = {
     '1080': 1080,
     '1440': 1440,
     '4k': 2160,
+    '8k': 4320,
     '360-1k': 512,
     '360-2k': 1024,
     '360-4k': 1920,
-    '360-4096': 2048
+    '360-4096': 2048,
+    '360-8k': 3840,
+    '360-8192': 4096
 };
 
 const frameRates: Record<string, number> = {
@@ -77,10 +86,13 @@ const bppfFactors: Record<string, number> = {
     '1080': 1 / 3,
     '1440': 1 / 4,
     '4k': 1 / 5,
+    '8k': 1 / 7,
     '360-1k': 1,
     '360-2k': 1 / 3,
     '360-4k': 1 / 5,
-    '360-4096': 1 / 5
+    '360-4096': 1 / 5,
+    '360-8k': 1 / 7,
+    '360-8192': 1 / 7
 };
 
 const codecNames: Record<VideoCodecChoice, string> = {
@@ -576,7 +588,17 @@ class VideoSettingsDialog extends Container {
             }, 150);
 
             try {
+                // the offscreen and equirect render targets allocate textures
+                // at the output size, so resolutions beyond the device texture
+                // limit can never render even when the encoder supports them
+                const maxTextureSize = (events.invoke('render.maxTextureSize') as number) ?? Infinity;
+
                 const results = await Promise.all(activeResolutionOptions().map(async (option) => {
+                    const { width, height } = dimensionsFor(option.v);
+                    if (Math.max(width, height) > maxTextureSize) {
+                        return [option.v, false] as const;
+                    }
+
                     const config = buildVideoEncoderConfig(encodingSettingsFor(option.v));
                     const support = await VideoEncoder.isConfigSupported(config);
                     return [option.v, support.supported] as const;

@@ -100,6 +100,10 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
     events.function('render.baseFilename', baseFilename);
 
+    // largest render target dimension the device supports; used by the render
+    // dialogs to disable resolutions the gpu cannot produce
+    events.function('render.maxTextureSize', () => scene.graphicsDevice.maxTextureSize);
+
     // wait for postrender to fire
     const postRender = () => {
         return new Promise<boolean>((resolve, reject) => {

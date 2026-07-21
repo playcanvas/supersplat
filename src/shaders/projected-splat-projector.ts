@@ -109,7 +109,7 @@ struct ProjectorUniforms {
 
 @group(0) @binding(0) var<storage, read_write> sortKeys: array<u32>;
 @group(0) @binding(1) var cacheA: texture_storage_2d<rgba32uint, write>;
-@group(0) @binding(2) var cacheB: texture_storage_2d<rgba32uint, write>;
+@group(0) @binding(2) var cacheB: texture_storage_2d<r32uint, write>;
 @group(0) @binding(3) var<storage, read> sourceIndices: array<u32>;
 @group(0) @binding(4) var transformA: texture_2d<u32>;
 @group(0) @binding(5) var transformB: texture_2d<f32>;
@@ -223,12 +223,11 @@ fn main(
         return;
     }
 
-    var clip = uniforms.viewProj * worldCenter;
+    let clip = uniforms.viewProj * worldCenter;
     if (clip.w == 0.0) {
         writeInvalid(entry);
         return;
     }
-    clip.z = clamp(clip.z, 0.0, abs(clip.w));
 
     let viewport = uniforms.viewport;
     let focal = uniforms.focal;
@@ -304,7 +303,8 @@ fn main(
 
     let direction = normalize(vec2f(cov01, lambda1 - cov00));
     let axis1 = 2.0 * min(sqrt(2.0 * lambda1), maxRadius) * direction;
-    let axis2 = 2.0 * min(sqrt(2.0 * lambda2), maxRadius) * vec2f(direction.y, -direction.x);
+    let len2 = 2.0 * min(sqrt(2.0 * lambda2), maxRadius);
+    let axis2 = len2 * vec2f(direction.y, -direction.x);
 
     let ndc = clip.xy / clip.w;
     let extent = abs(axis1) + abs(axis2);
@@ -338,15 +338,35 @@ fn main(
         return;
     }
 
+    // rgb: 10/10/10 unorm with a 2-bit shared exponent (scale 1/2/4/8, range [0, 8])
+    let maxChannel = max(color.r, max(color.g, color.b));
+    var exponent = 0u;
+    if (maxChannel > 4.0) {
+        exponent = 3u;
+    } else if (maxChannel > 2.0) {
+        exponent = 2u;
+    } else if (maxChannel > 1.0) {
+        exponent = 1u;
+    }
+    let rgb = vec3u(clamp(color.rgb / f32(1u << exponent), vec3f(0.0), vec3f(1.0)) * 1023.0 + 0.5);
+
+    // center: ndc as snorm16. The offscreen cull above bounds visible centers to
+    // |ndc| <= 1 + 2 * extentMax / viewport with extentMax = 4 * maxRadius; the
+    // render shader derives the same range from its viewport uniform
+    let ndcRange = vec2f(1.0) + vec2f(8.0 * maxRadius) / viewport;
+
     let cacheUv = cacheCoord(entry);
-    textureStore(cacheA, cacheUv, bitcast<vec4u>(clip));
+    textureStore(cacheA, cacheUv, vec4u(
+        pack2x16snorm(ndc / ndcRange),
+        bitcast<u32>(depth),
+        rgb.r | (rgb.g << 10u) | (rgb.b << 20u) | (exponent << 30u),
+        pack2x16float(axis1)
+    ));
     textureStore(cacheB, cacheUv, vec4u(
-        pack2x16float(axis1),
-        pack2x16float(axis2),
-        pack2x16float(color.rg),
-        pack2x16float(color.ba)
-            | select(0u, 0x00008000u, locked)
-            | select(0u, 0x80000000u, selected)
+        pack2x16float(vec2f(len2, 0.0))
+            | (u32(clamp(color.a, 0.0, 1.0) * 255.0 + 0.5) << 16u)
+            | select(0u, 0x01000000u, selected)
+            | select(0u, 0x02000000u, locked)
     ));
     sortKeys[entry] = (~bitcast<u32>(depth)) >> 12u;
 }

@@ -819,7 +819,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     // minimum projected splat size in pixels (0 disables the cull)
 
-    let minPixelSize = 0;
+    let minPixelSize = 2;
 
     events.function('view.minPixelSize', () => {
         return minPixelSize;

@@ -3,6 +3,7 @@ import {
     BUFFERUSAGE_COPY_DST,
     BUFFERUSAGE_COPY_SRC,
     CULLFACE_NONE,
+    PIXELFORMAT_R32U,
     PIXELFORMAT_RGBA32U,
     PRIMITIVE_TRIANGLES,
     SAMPLETYPE_FLOAT,
@@ -149,6 +150,7 @@ class ProjectedSplatRenderer {
         this.material.setParameter('numProjectedSplats', 0);
         this.material.setParameter('cacheWidth', 1);
         this.material.setParameter('viewportSize', [1, 1, 2, 2]);
+        this.material.setParameter('clipZParams', [0, 0, 0, 0]);
         this.material.setParameter('pickBase', 0);
         this.material.setParameter('pickCount', 0);
         this.material.setParameter('pickOp', 2);
@@ -280,7 +282,7 @@ class ProjectedSplatRenderer {
         const bindGroupFormat = new BindGroupFormat(this.device, [
             new BindStorageBufferFormat('sortKeys', SHADERSTAGE_COMPUTE),
             new BindStorageTextureFormat('cacheA', PIXELFORMAT_RGBA32U),
-            new BindStorageTextureFormat('cacheB', PIXELFORMAT_RGBA32U),
+            new BindStorageTextureFormat('cacheB', PIXELFORMAT_R32U),
             new BindStorageBufferFormat('sourceIndices', SHADERSTAGE_COMPUTE, true),
             ...textureFormats,
             new BindUniformBufferFormat('uniforms', SHADERSTAGE_COMPUTE)
@@ -329,7 +331,7 @@ class ProjectedSplatRenderer {
                     name: 'ProjectedSplatCacheB',
                     width: this.cacheWidth,
                     height: this.cacheHeight,
-                    format: PIXELFORMAT_RGBA32U,
+                    format: PIXELFORMAT_R32U,
                     mipmaps: false,
                     storage: true
                 });
@@ -474,11 +476,15 @@ class ProjectedSplatRenderer {
         this.material.setParameter('ringsBase', ringsBase);
         this.material.setParameter('ringsCount', ringsCount);
         this.material.setParameter('cameraParams', [1 / cameraComponent.farClip, cameraComponent.farClip, cameraComponent.nearClip, cameraComponent.projection]);
+        // clip z is affine in view depth for perspective/ortho projections:
+        // z = -m22 * depth + m23, taken from the WebGPU-transformed projection
+        const shaderProj = this.shaderProjection.data;
+        this.material.setParameter('clipZParams', [-shaderProj[10], shaderProj[14], cameraComponent.projection === 1 ? 1 : 0, 0]);
         this.submissionCpuMs = performance.now() - start;
     }
 
     get stats(): ProjectedRendererStats {
-        const cacheBytes = this.cacheWidth * this.cacheHeight * 32 * (this.capacity > 0 ? 1 : 0);
+        const cacheBytes = this.cacheWidth * this.cacheHeight * 20 * (this.capacity > 0 ? 1 : 0);
         const keyBytes = this.capacity * 4;
         const estimatedRadixBytes = this.capacity * 12;
         const resources = new Set(this.placements.map(placement => placement.splat.resource));

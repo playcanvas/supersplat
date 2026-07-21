@@ -10,6 +10,7 @@ var cacheB: texture_2d<u32>;
 uniform cacheWidth: u32;
 uniform numProjectedSplats: u32;
 uniform viewportSize: vec4f;
+uniform clipZParams: vec4f;
 uniform pickBase: u32;
 uniform pickCount: u32;
 uniform pickOp: i32;
@@ -40,14 +41,14 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     #endif
     let uv = vec2i(i32(entry % uniform.cacheWidth), i32(entry / uniform.cacheWidth));
     let a = textureLoad(cacheA, uv, 0);
-    let b = textureLoad(cacheB, uv, 0);
-    let clip = bitcast<vec4f>(a);
-    let axis1 = unpack2x16float(b.x);
-    let axis2 = unpack2x16float(b.y);
-    let rg = unpack2x16float(b.z);
-    let ba = unpack2x16float(b.w);
-    let flags = select(0u, 1u, (b.w & 0x80000000u) != 0u)
-        | select(0u, 2u, (b.w & 0x00008000u) != 0u);
+    let b = textureLoad(cacheB, uv, 0).x;
+
+    let alpha = f32((b >> 16u) & 0xffu) / 255.0;
+    if (alpha == 0.0) {
+        output.position = discardPosition;
+        return output;
+    }
+    let flags = (b >> 24u) & 3u;
     #ifdef PICK_PASS
         if ((uniform.pickOp == 0 && flags != 0u)
             || (uniform.pickOp == 1 && flags != 1u)
@@ -56,18 +57,29 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
             return output;
         }
     #endif
-    let color = vec4f(rg, abs(ba.x), abs(ba.y));
-    if (color.a == 0.0) {
-        output.position = discardPosition;
-        return output;
-    }
+
+    // reconstruct clip position: ndc from snorm16 over the projector's range,
+    // w = view depth (1 for ortho), z affine in view depth via clipZParams.xy
+    let maxRadius = min(1024.0, min(uniform.viewportSize.x, uniform.viewportSize.y));
+    let ndcRange = vec2f(1.0) + vec2f(8.0 * maxRadius) / uniform.viewportSize.xy;
+    let ndc = unpack2x16snorm(a.x) * ndcRange;
+    let depth = bitcast<f32>(a.y);
+    let w = select(depth, 1.0, uniform.clipZParams.z != 0.0);
+    let clip = vec4f(ndc * w, clamp(uniform.clipZParams.x * depth + uniform.clipZParams.y, 0.0, w), w);
+
+    let rgbBits = a.z;
+    let color = vec3f(vec3u(rgbBits, rgbBits >> 10u, rgbBits >> 20u) & vec3u(1023u))
+        * (f32(1u << (rgbBits >> 30u)) / 1023.0);
+
+    let axis1 = unpack2x16float(a.w);
+    let axis2 = unpack2x16float(b).x * normalize(vec2f(axis1.y, -axis1.x));
 
     let corner = vertex_position.xy;
     let pixelOffset = corner.x * axis1 + corner.y * axis2;
     let clipOffset = pixelOffset * clip.w * uniform.viewportSize.zw;
     output.position = clip + vec4f(clipOffset, 0.0, 0.0);
     output.gaussianUV = corner;
-    output.gaussianColor = vec4f(prepareOutputFromGamma(color.rgb, clip.w), color.a);
+    output.gaussianColor = vec4f(prepareOutputFromGamma(color, clip.w), alpha);
     output.gaussianFlags = flags;
     output.gaussianId = entry - uniform.pickBase;
     output.gaussianDepth = clip.w;

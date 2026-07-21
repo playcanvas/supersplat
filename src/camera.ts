@@ -556,18 +556,13 @@ class Camera extends Element {
             this.splatPass.addLayer(this.camera, scene.splatLayer, false, false);
             this.splatPass.addLayer(this.camera, scene.splatLayer, true, false);
 
-            // configure gizmo pass. the depth clear is attached to the first
-            // render action, which is the tool overlay layer: its ghost
-            // materials ignore depth entirely, so the clear effectively
-            // belongs to the gizmo layers that follow
+            // configure gizmo pass. the gizmo layer clears depth and stencil
+            // before its opaque step, after the depth-independent tool overlay
             this.gizmoPass.init(this.mainTarget);
             this.gizmoPass.addLayer(this.camera, scene.overlayLayer, false, false);
             this.gizmoPass.addLayer(this.camera, scene.overlayLayer, true, false);
-            this.gizmoPass.addLayer(this.camera, scene.gizmoLayer, false, false);
+            this.gizmoPass.addLayer(this.camera, scene.gizmoLayer, false, true);
             this.gizmoPass.addLayer(this.camera, scene.gizmoLayer, true, false);
-            const firstGizmoStep = (this.gizmoPass as any).layerRenderSteps[0];
-            firstGizmoStep.clearDepth = true;
-            firstGizmoStep.clearStencil = true;
 
             this.finalPass.init(null);
 

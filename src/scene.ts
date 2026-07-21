@@ -207,8 +207,12 @@ class Scene {
         // measure/orient tool overlays, which show through occluding gaussians)
         this.overlayLayer = new Layer({ name: 'ToolOverlay' });
 
-        // gizmo layer
-        this.gizmoLayer = new Layer({ name: 'Gizmo' });
+        // gizmo layer - clear scene depth before drawing gizmos so they remain visible
+        this.gizmoLayer = new Layer({
+            name: 'Gizmo',
+            clearDepthBuffer: true,
+            clearStencilBuffer: true
+        });
 
         const layers = this.app.scene.layers;
         layers.push(this.splatLayer);

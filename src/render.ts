@@ -539,7 +539,10 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                             setTimeout(resolve, 1);
                         });
                     }
-                    if (muxerQueueSize > MAX_QUEUE_SIZE) {
+                    // muxerQueueSize is decremented by the write chain settling
+                    // during the await
+                    // eslint-disable-next-line no-unmodified-loop-condition
+                    while (muxerQueueSize > MAX_QUEUE_SIZE) {
                         await muxerWrites;
                     }
 

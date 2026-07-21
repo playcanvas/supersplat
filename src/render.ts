@@ -22,6 +22,9 @@ const FORMAT_CONFIG: Record<string, { create: (streaming: boolean) => Mp4OutputF
     mkv: { create: () => new MkvOutputFormat(), extension: 'mkv' }
 };
 
+// backpressure high-water mark for the encoder queue and pending muxer writes
+const MAX_QUEUE_SIZE = 5;
+
 type ImageSettings = {
     width: number;
     height: number;
@@ -405,10 +408,14 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                             const encodedPacket = EncodedPacket.fromEncodedChunk(chunk);
                             muxerQueueSize++;
 
-                            // WebCodecs does not await a Promise returned by its
-                            // output callback. Serialize and track packet writes
-                            // explicitly so output.finalize() cannot race ahead
-                            // of the muxer and produce a truncated file.
+                            // WebCodecs ignores a Promise returned by its output
+                            // callback: awaiting the muxer here provides no
+                            // backpressure, and a rejected write becomes an
+                            // unhandled rejection that silently drops packets
+                            // from the finished file. Chain the writes instead
+                            // so failures surface via muxerError, muxerQueueSize
+                            // drives backpressure in the encode loop, and every
+                            // write has settled before output.finalize().
                             muxerWrites = muxerWrites
                             .then(async () => {
                                 if (!muxerError) {
@@ -416,7 +423,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                                 }
                             })
                             .catch((error) => {
-                                muxerError = error;
+                                muxerError = error instanceof Error ? error : new Error(String(error));
                             })
                             .finally(() => {
                                 muxerQueueSize--;
@@ -526,12 +533,12 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     });
 
                     // wait for encoder queue to drain if necessary (backpressure handling)
-                    while (encoder.encodeQueueSize > 5) {
+                    while (encoder.encodeQueueSize > MAX_QUEUE_SIZE) {
                         await new Promise<void>((resolve) => {
                             setTimeout(resolve, 1);
                         });
                     }
-                    if (muxerQueueSize > 5) {
+                    if (muxerQueueSize > MAX_QUEUE_SIZE) {
                         await muxerWrites;
                     }
 

@@ -393,14 +393,34 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 await output.start();
 
                 let encoderError: Error | null = null;
+                let muxerError: Error | null = null;
+                let muxerQueueSize = 0;
+                let muxerWrites = Promise.resolve();
 
                 // helper to create and configure a VideoEncoder instance
                 const createEncoder = () => {
                     encoderError = null;
                     const enc = new VideoEncoder({
-                        output: async (chunk, meta) => {
+                        output: (chunk, meta) => {
                             const encodedPacket = EncodedPacket.fromEncodedChunk(chunk);
-                            await videoSource.add(encodedPacket, meta);
+                            muxerQueueSize++;
+
+                            // WebCodecs does not await a Promise returned by its
+                            // output callback. Serialize and track packet writes
+                            // explicitly so output.finalize() cannot race ahead
+                            // of the muxer and produce a truncated file.
+                            muxerWrites = muxerWrites
+                            .then(async () => {
+                                if (!muxerError) {
+                                    await videoSource.add(encodedPacket, meta);
+                                }
+                            })
+                            .catch((error) => {
+                                muxerError = error;
+                            })
+                            .finally(() => {
+                                muxerQueueSize--;
+                            });
                         },
                         error: (error) => {
                             encoderError = error;
@@ -511,6 +531,9 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                             setTimeout(resolve, 1);
                         });
                     }
+                    if (muxerQueueSize > 5) {
+                        await muxerWrites;
+                    }
 
                     // if the codec was reclaimed (e.g. browser backgrounded the tab),
                     // recreate the encoder and continue
@@ -521,9 +544,9 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     }
 
                     // check for non-recoverable encoder errors
-                    if (encoderError) {
+                    if (encoderError || muxerError) {
                         videoFrame.close();
-                        throw encoderError;
+                        throw encoderError ?? muxerError;
                     }
 
                     encoder.encode(videoFrame, { keyFrame: forceKeyFrame });
@@ -643,6 +666,10 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
                 // Flush and finalize output
                 await encoder.flush();
+                await muxerWrites;
+                if (muxerError) {
+                    throw muxerError;
+                }
                 await output.finalize();
 
                 const filename = () => `${baseFilename()}.${fileExtension}`;

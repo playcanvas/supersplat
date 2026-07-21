@@ -361,6 +361,8 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             let equirect: EquirectRenderer | null = null;
             let savedFov = 0;
             let savedOrtho = false;
+            let output: Output | null = null;
+            let muxerWrites = Promise.resolve();
 
             try {
                 const { startFrame, endFrame, frameRate, width, height, bitrate, transparentBg, showDebug, format, codec: codecChoice, projection, levelHorizon } = videoSettings;
@@ -382,7 +384,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 const encoderConfig = buildVideoEncoderConfig(videoSettings);
                 const codecType = getVideoCodecType(codecChoice);
 
-                const output = new Output({
+                output = new Output({
                     format: outputFormat,
                     target
                 });
@@ -398,7 +400,6 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 let encoderError: Error | null = null;
                 let muxerError: Error | null = null;
                 let muxerQueueSize = 0;
-                let muxerWrites = Promise.resolve();
 
                 // helper to create and configure a VideoEncoder instance
                 const createEncoder = () => {
@@ -711,6 +712,35 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
                 return !cancelled;
             } catch (error) {
+                // stop the encoder so no further packets are queued while
+                // cleaning up
+                if (encoder && encoder.state !== 'closed') {
+                    encoder.close();
+                }
+
+                // the output's stream target holds a writer lock on the
+                // destination file stream. drain in-flight muxer writes and
+                // cancel the output to release it, otherwise the caller
+                // cannot remove the partial file
+                if (output) {
+                    try {
+                        await muxerWrites;
+                        await output.cancel();
+                    } catch {
+                        // output already finalized or its target already closed
+                    }
+                }
+
+                // tagged 360 exports write to the file stream directly, so
+                // close it here too (mirrors render.image failure handling)
+                if (fileStream) {
+                    try {
+                        await fileStream.close();
+                    } catch {
+                        // stream already closed or still locked by the output
+                    }
+                }
+
                 await events.invoke('showPopup', {
                     type: 'error',
                     header: i18n.t('panel.render.failed'),

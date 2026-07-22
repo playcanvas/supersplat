@@ -1,4 +1,5 @@
 import {
+    BLEND_NONE,
     BLEND_PREMULTIPLIED,
     BUFFERUSAGE_COPY_DST,
     BUFFERUSAGE_COPY_SRC,
@@ -124,6 +125,7 @@ class ProjectedSplatRenderer {
     private capacity = 0;
     private layoutDirty = true;
     private submissionCpuMs = 0;
+    private stochastic = false;
 
     constructor(scene: Scene) {
         this.scene = scene;
@@ -229,6 +231,21 @@ class ProjectedSplatRenderer {
         this.material.setParameter('pickCount', this.capacity);
         this.material.setParameter('pickOp', 2);
         this.material.setParameter('pickMode', 0);
+    }
+
+    // Switch between the default sorted premultiplied-alpha renderer and the
+    // experimental 1 spp stochastic-transparency renderer (opaque, depth-tested,
+    // no per-frame sort). Recompiles the material variant only when the mode
+    // actually changes.
+    private setStochastic(value: boolean) {
+        if (value === this.stochastic) {
+            return;
+        }
+        this.stochastic = value;
+        this.material.setDefine('STOCHASTIC', value ? '' : undefined);
+        this.material.blendType = value ? BLEND_NONE : BLEND_PREMULTIPLIED;
+        this.material.depthWrite = value;
+        this.material.update();
     }
 
     private getVariant(bands: number) {
@@ -382,6 +399,10 @@ class ProjectedSplatRenderer {
         const viewBands = events.invoke('view.bands') as number;
         const minPixelSize = (events.invoke('view.minPixelSize') as number) ?? 0;
 
+        // motion-adaptive: fast stochastic (no-sort) while interacting, clean
+        // sorted & blended when the scene settles (driven by Scene.onUpdate)
+        this.setStochastic(this.scene.movingRender);
+
         let ringsBase = 0;
         let ringsCount = 0;
 
@@ -458,8 +479,10 @@ class ProjectedSplatRenderer {
             this.device.computeDispatch([compute], `project-splats-${splat.uid}`);
         }
 
-        const sortedIndices = this.sorter.sort(this.sortKeys, this.capacity, 20, undefined, true, true);
-        this.material.setParameter('sortedIndices', sortedIndices);
+        if (!this.stochastic) {
+            const sortedIndices = this.sorter.sort(this.sortKeys, this.capacity, 20, undefined, true, true);
+            this.material.setParameter('sortedIndices', sortedIndices);
+        }
         this.material.setParameter('cacheA', this.cacheA);
         this.material.setParameter('cacheB', this.cacheB);
         this.material.setParameter('cacheWidth', this.cacheWidth);

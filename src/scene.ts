@@ -84,6 +84,14 @@ class Scene {
     boundDirty = true;
     forceRender = false;
 
+    // motion-adaptive stochastic rendering. While the scene is actively changing
+    // (camera orbit / edit) we draw the fast no-sort stochastic mode; when it
+    // settles we render a single clean sorted & blended frame. movingRender picks
+    // the mode for the current frame; pendingResolve marks that a clean settled
+    // frame is still owed after motion ends.
+    movingRender = false;
+    pendingResolve = false;
+
     lockedRenderMode = false;
     lockedRender = false;
 
@@ -363,11 +371,29 @@ class Scene {
         const all = new Set([...result.added, ...result.removed, ...result.moved, ...result.changed]);
 
         // compare with previously serialized
+        const changed = this.forceRender || all.size > 0;
+        const interacting = all.size > 0;
+        const adaptive = !!this.events.invoke('view.stochastic');
+
+        // fast no-sort stochastic mode only while actively interacting; settled
+        // frames (and locked-mode captures) use the clean sorted & blended path
+        this.movingRender = adaptive && interacting && !this.lockedRenderMode;
+
         if (this.lockedRenderMode) {
             this.app.renderNextFrame = this.lockedRender;
             this.lockedRender = false;
         } else if (!this.app.renderNextFrame) {
-            this.app.renderNextFrame = this.forceRender || all.size > 0;
+            if (changed) {
+                this.app.renderNextFrame = true;
+                // motion in stochastic mode owes one clean sorted frame on settle
+                if (interacting) {
+                    this.pendingResolve = adaptive;
+                }
+            } else if (this.pendingResolve) {
+                // scene just settled → render the single clean resolve frame
+                this.pendingResolve = false;
+                this.app.renderNextFrame = true;
+            }
         }
         this.forceRender = false;
 

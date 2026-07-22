@@ -3,7 +3,9 @@ const vertexShader = /* wgsl */`
 
 attribute vertex_position: vec3f;
 
+#ifndef STOCHASTIC
 var<storage, read> sortedIndices: array<u32>;
+#endif
 var cacheA: texture_2d<u32>;
 var cacheB: texture_2d<u32>;
 
@@ -32,7 +34,13 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
         return output;
     }
 
-    let entry = sortedIndices[order];
+    // stochastic mode skips the sort, so the draw reads cache entries in identity
+    // order; the sorted path indexes through the globally-sorted index buffer
+    #ifdef STOCHASTIC
+        let entry = order;
+    #else
+        let entry = sortedIndices[order];
+    #endif
     #ifdef PICK_PASS
         if (entry < uniform.pickBase || entry >= uniform.pickBase + uniform.pickCount) {
             output.position = discardPosition;
@@ -108,6 +116,18 @@ fn normExp(x: f32) -> f32 {
     return (exp(x * -4.0) - EXP4) * INV_EXP4;
 }
 
+// integer hash (Chris Wellons' "prospector" mix) → uniform u32, used for the
+// per-(pixel, splat) stochastic-transparency coverage decision
+fn hashU32(x: u32) -> u32 {
+    var v = x;
+    v ^= v >> 16u;
+    v *= 0x7feb352du;
+    v ^= v >> 15u;
+    v *= 0x846ca68bu;
+    v ^= v >> 16u;
+    return v;
+}
+
 @fragment
 fn fragmentMain(input: FragmentInput) -> FragmentOutput {
     var output: FragmentOutput;
@@ -130,6 +150,28 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
             output.color = vec4f(vec4u(id, id >> 8u, id >> 16u, id >> 24u) & vec4u(255u)) / 255.0;
         }
     #else
+      #ifdef STOCHASTIC
+        // 1 spp stochastic transparency: keep this fragment with probability
+        // alpha and write it opaque; the hardware depth test then resolves
+        // visibility, so no sorting is needed. Hashing per (pixel, splat) makes
+        // overlapping gaussians take independent coverage decisions.
+        // 1 spp stochastic transparency: keep this fragment with probability
+        // alpha and write it opaque; the hardware depth test then resolves
+        // visibility, so no sorting is needed. gaussianUV varies per fragment
+        // across the quad and differs between overlapping splats, so hashing it
+        // (with the splat id) gives independent per-pixel coverage decisions
+        // without needing a screen-position varying.
+        let norm = normExp(radius);
+        let alpha = norm * gaussianColor.a;
+        let q = vec2u(vec2i((gaussianUV * 0.5 + 0.5) * 4095.0));
+        // WGSL requires parentheses when mixing bitwise (^) with arithmetic (*)
+        let rnd = f32(hashU32((q.x * 1973u) ^ (q.y * 9277u) ^ ((gaussianId + 1u) * 26699u))) * (1.0 / 4294967295.0);
+        if (rnd >= alpha) {
+            discard;
+        }
+        output.color = vec4f(gaussianColor.rgb, 1.0);
+        output.color1 = vec4f(0.0);
+      #else
         let selected = (gaussianFlags & 1u) != 0u;
         let locked = (gaussianFlags & 2u) != 0u;
         let norm = normExp(radius);
@@ -150,6 +192,7 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
             output.color = vec4f(gaussianColor.rgb * alpha, alpha);
             output.color1 = vec4f(0.0);
         }
+      #endif
     #endif
     return output;
 }

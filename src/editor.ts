@@ -69,7 +69,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     [
         'camera.mode', 'camera.overlay', 'camera.splatSize', 'view.outlineSelection',
-        'view.centersUseGaussianColor', 'view.bands', 'view.minPixelSize', 'camera.bound', 'camera.boundDimensions', 'camera.showPoses',
+        'view.centersUseGaussianColor', 'view.bands', 'view.minPixelSize', 'view.stochastic', 'camera.bound', 'camera.boundDimensions', 'camera.showPoses',
         'camera.showInfo', 'selection.changed', 'tool.coordSpace'
     ].forEach((eventName) => {
         events.on(eventName, () => {
@@ -829,6 +829,21 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         if (value !== minPixelSize) {
             minPixelSize = value;
             events.fire('view.minPixelSize', minPixelSize);
+        }
+    });
+
+    // experimental stochastic-transparency splat renderer (1 spp, no sort)
+
+    let stochastic = false;
+
+    events.function('view.stochastic', () => {
+        return stochastic;
+    });
+
+    events.on('view.setStochastic', (value: boolean) => {
+        if (value !== stochastic) {
+            stochastic = value;
+            events.fire('view.stochastic', value);
         }
     });
 

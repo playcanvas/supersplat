@@ -409,7 +409,8 @@ class Scene {
     }
 
     private onPreRender() {
-        // update render target size
+        // update render target size (config.camera.pixelScale divides the
+        // backbuffer size; the final blit upscales the result to fill the screen)
         this.targetSize.width = Math.ceil(this.app.graphicsDevice.width / this.config.camera.pixelScale);
         this.targetSize.height = Math.ceil(this.app.graphicsDevice.height / this.config.camera.pixelScale);
 

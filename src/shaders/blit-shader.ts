@@ -11,11 +11,14 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 
 const fragmentShader = /* wgsl */`
 var srcTexture: texture_2d<f32>;
+uniform blitScale: vec2f;
 
 @fragment
 fn fragmentMain(input: FragmentInput) -> FragmentOutput {
     var output: FragmentOutput;
-    output.color = textureLoad(srcTexture, vec2i(pcPosition.xy), 0);
+    // map backbuffer pixel → source pixel so a smaller (lower-res) render target
+    // upscales to fill the backbuffer (nearest). blitScale = srcSize / dstSize; = 1 at full res
+    output.color = textureLoad(srcTexture, vec2i(vec2f(pcPosition.xy) * uniform.blitScale), 0);
     return output;
 }
 `;

@@ -334,8 +334,12 @@ class Camera extends Element {
         this.finalPass = new SimpleRenderPass(device,
             new ShaderQuad(device, vertexShader, fragmentShader, 'final-blit'), {
                 vars: () => {
+                    const gd = this.scene.graphicsDevice;
+                    const ts = this.targetSize;
                     return {
-                        srcTexture: this.mainTarget.colorBuffer
+                        srcTexture: this.mainTarget.colorBuffer,
+                        // upscale the (possibly lower-res) target to the backbuffer
+                        blitScale: [ts.width / gd.width, ts.height / gd.height]
                     };
                 }
             });

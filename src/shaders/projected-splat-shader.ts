@@ -151,16 +151,11 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         }
     #else
       #ifdef STOCHASTIC
-        // 1 spp stochastic transparency: keep this fragment with probability
-        // alpha and write it opaque; the hardware depth test then resolves
-        // visibility, so no sorting is needed. Hashing per (pixel, splat) makes
-        // overlapping gaussians take independent coverage decisions.
-        // 1 spp stochastic transparency: keep this fragment with probability
-        // alpha and write it opaque; the hardware depth test then resolves
-        // visibility, so no sorting is needed. gaussianUV varies per fragment
-        // across the quad and differs between overlapping splats, so hashing it
-        // (with the splat id) gives independent per-pixel coverage decisions
-        // without needing a screen-position varying.
+        // 1 spp stochastic transparency (StochasticSplats, Listing 1): keep this
+        // fragment with raw probability alpha, write it opaque; the depth test
+        // resolves visibility, so no sorting. Noisy during motion — the
+        // motion-adaptive settle renders the exact sorted blend. gaussianUV (per
+        // fragment) + splat id seed the hash so overlapping splats decorrelate.
         let norm = normExp(radius);
         let alpha = norm * gaussianColor.a;
         let q = vec2u(vec2i((gaussianUV * 0.5 + 0.5) * 4095.0));

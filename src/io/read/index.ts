@@ -12,5 +12,6 @@ export {
 export {
     defaultLodIndex,
     loadSplatSource,
+    PermutedChunkSource,
     validateSplatSource
 } from './loader';

@@ -8,6 +8,7 @@ export {
     MappedReadFileSystem,
     defaultLodIndex,
     loadSplatSource,
+    PermutedChunkSource,
     validateSplatSource
 } from './read';
 

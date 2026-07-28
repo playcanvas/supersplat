@@ -1,6 +1,7 @@
 import {
     ChunkData,
     ChunkDataPool,
+    ChunkField,
     ChunkLayer,
     ChunkSource,
     SHBands,
@@ -19,7 +20,18 @@ import {
     Vec3
 } from 'playcanvas';
 
+import { PermutedChunkSource } from './io';
+
 const SH_REST_COUNTS = [0, 9, 24, 45];
+
+// One SH texture filled by the upload sweep: which packed coefficient words it
+// stores and its per-row component count.
+type SHTarget = {
+    packed: Uint32Array;
+    firstCoeff: number;
+    coeffCount: number;
+    components: number;
+};
 
 const chunkCount = (source: ChunkSource, chunkIndex: number) => {
     return Math.min(source.meta.chunkSize, source.meta.numGaussians - chunkIndex * source.meta.chunkSize);
@@ -98,10 +110,11 @@ class EditorSplatResource extends GSplatContainer {
     }
 
     private async forEachChunk(
+        source: ChunkSource,
         layers: ChunkLayer[],
         callback: (base: number, count: number, data: Partial<Record<ChunkLayer, ChunkData>>) => void
     ) {
-        const { source, sourcePool } = this;
+        const { sourcePool } = this;
         for (let chunkIndex = 0; chunkIndex < source.meta.numChunks[0]; ++chunkIndex) {
             const count = chunkCount(source, chunkIndex);
             const chunks: Partial<Record<ChunkLayer, ChunkData>> = {};
@@ -117,11 +130,182 @@ class EditorSplatResource extends GSplatContainer {
         }
     }
 
-    private uploadTexture(name: string, fill: (target: Uint16Array | Uint32Array) => Promise<void>) {
-        const texture = this.getTexture(name);
-        texture.releaseSourceAfterUpload = true;
-        const target = texture.lock() as Uint16Array | Uint32Array;
-        return fill(target).then(() => {
+    private fillTransformA(packed: Uint32Array, position: Float32Array, geometric: Float32Array, base: number, count: number, remap: Uint32Array | null) {
+        const floats = new Float32Array(packed.buffer);
+        const quat = new Quat();
+        for (let i = 0; i < count; ++i) {
+            const dst = (remap ? remap[base + i] : base + i) * 4;
+            const pos = i * 3;
+            const geo = i * 8;
+            quat.set(geometric[geo + 1], geometric[geo + 2], geometric[geo + 3], geometric[geo]).normalize();
+            if (quat.w < 0) quat.mulScalar(-1);
+            floats[dst] = position[pos];
+            floats[dst + 1] = position[pos + 1];
+            floats[dst + 2] = position[pos + 2];
+            packed[dst + 3] = FloatPacking.float2Half(quat.x) | (FloatPacking.float2Half(quat.y) << 16);
+        }
+    }
+
+    private fillTransformB(packed: Uint16Array, geometric: Float32Array, base: number, count: number, remap: Uint32Array | null) {
+        const quat = new Quat();
+        for (let i = 0; i < count; ++i) {
+            const dst = (remap ? remap[base + i] : base + i) * 4;
+            const geo = i * 8;
+            quat.set(geometric[geo + 1], geometric[geo + 2], geometric[geo + 3], geometric[geo]).normalize();
+            if (quat.w < 0) quat.mulScalar(-1);
+            packed[dst] = FloatPacking.float2Half(Math.exp(geometric[geo + 4]));
+            packed[dst + 1] = FloatPacking.float2Half(Math.exp(geometric[geo + 5]));
+            packed[dst + 2] = FloatPacking.float2Half(Math.exp(geometric[geo + 6]));
+            packed[dst + 3] = FloatPacking.float2Half(quat.z);
+        }
+    }
+
+    private fillColor(packed: Uint16Array, geometric: Float32Array, color: Float32Array, colorStride: number, base: number, count: number, remap: Uint32Array | null) {
+        const SH_C0 = 0.28209479177387814;
+        for (let i = 0; i < count; ++i) {
+            const dst = (remap ? remap[base + i] : base + i) * 4;
+            const col = i * colorStride;
+            packed[dst] = FloatPacking.float2Half(color[col] * SH_C0 + 0.5);
+            packed[dst + 1] = FloatPacking.float2Half(color[col + 1] * SH_C0 + 0.5);
+            packed[dst + 2] = FloatPacking.float2Half(color[col + 2] * SH_C0 + 0.5);
+            packed[dst + 3] = FloatPacking.float2Half(1 / (1 + Math.exp(-geometric[i * 8 + 7])));
+        }
+    }
+
+    // Quantize each row's SH coefficients once (11/10/11-bit triples against
+    // the row's max, whose float bits are stored as coefficient word 0) and
+    // write all SH textures from the shared result.
+    private fillSH(targets: SHTarget[], color: Float32Array, colorStride: number, base: number, count: number, remap: Uint32Array | null) {
+        const numCoeffs = SH_REST_COUNTS[this.shBands] / 3;
+        const t11 = (1 << 11) - 1;
+        const t10 = (1 << 10) - 1;
+        const value = new Float32Array(1);
+        const bits = new Uint32Array(value.buffer);
+        const coeffs = new Array(numCoeffs * 3).fill(0);
+
+        for (let i = 0; i < count; ++i) {
+            const col = i * colorStride + 3;
+            for (let j = 0; j < numCoeffs; ++j) {
+                coeffs[j * 3] = color[col + j];
+                coeffs[j * 3 + 1] = color[col + numCoeffs + j];
+                coeffs[j * 3 + 2] = color[col + numCoeffs * 2 + j];
+            }
+            let max = Math.abs(coeffs[0]);
+            for (let j = 1; j < coeffs.length; ++j) max = Math.max(max, Math.abs(coeffs[j]));
+            if (max === 0) continue;
+            for (let j = 0; j < coeffs.length; j += 3) {
+                coeffs[j] = Math.max(0, Math.min(t11, Math.floor((coeffs[j] / max * 0.5 + 0.5) * t11 + 0.5)));
+                coeffs[j + 1] = Math.max(0, Math.min(t10, Math.floor((coeffs[j + 1] / max * 0.5 + 0.5) * t10 + 0.5)));
+                coeffs[j + 2] = Math.max(0, Math.min(t11, Math.floor((coeffs[j + 2] / max * 0.5 + 0.5) * t11 + 0.5)));
+            }
+            value[0] = max;
+            const row = remap ? remap[base + i] : base + i;
+            for (const target of targets) {
+                const dst = row * target.components;
+                for (let c = 0; c < target.coeffCount; ++c) {
+                    const coeff = target.firstCoeff + c;
+                    if (coeff === 0) {
+                        target.packed[dst] = bits[0];
+                    } else {
+                        const o = (coeff - 1) * 3;
+                        target.packed[dst + c] = coeffs[o] << 21 | coeffs[o + 1] << 11 | coeffs[o + 2];
+                    }
+                }
+            }
+        }
+    }
+
+    private fillState(stateField: ChunkField, other: ChunkData, base: number, count: number, remap: Uint32Array | null) {
+        const data = new DataView(other.data);
+        const stride = other.stride;
+        for (let i = 0; i < count; ++i) {
+            const offset = i * stride + stateField.byteOffset;
+            const value = stateField.type === 'uint32' ? data.getUint32(offset, true) : data.getFloat32(offset, true);
+            this.stateData[remap ? remap[base + i] : base + i] = value;
+        }
+    }
+
+    private async upload() {
+        const { source, shBands } = this;
+
+        // The loader Morton-permutes lazily-read sources (PermutedChunkSource);
+        // reading that wrapper sequentially degenerates into full-file random
+        // gathers on the underlying file. Sweep the parent in its native file
+        // order instead — fast sequential reads — and scatter each row to its
+        // permuted destination through the inverse permutation.
+        let sweepSource: ChunkSource = source;
+        let remap: Uint32Array | null = null;
+        if (source instanceof PermutedChunkSource) {
+            const { order } = source;
+            sweepSource = source.parent;
+            remap = new Uint32Array(order.length);
+            for (let i = 0; i < order.length; ++i) {
+                remap[order[i]] = i;
+            }
+        }
+
+        const shDefs: { name: string, firstCoeff: number, coeffCount: number, components: number }[] = [];
+        if (shBands > 0) {
+            shDefs.push({ name: 'splatSH_1to3', firstCoeff: 0, coeffCount: 4, components: 4 });
+            if (shBands > 1) {
+                shDefs.push({ name: 'splatSH_4to7', firstCoeff: 4, coeffCount: 4, components: 4 });
+                const wide = shBands > 2;
+                shDefs.push({ name: 'splatSH_8to11', firstCoeff: 8, coeffCount: wide ? 4 : 1, components: wide ? 4 : 1 });
+                if (wide) {
+                    shDefs.push({ name: 'splatSH_12to15', firstCoeff: 12, coeffCount: 4, components: 4 });
+                }
+            }
+        }
+
+        const textureNames = ['transformA', 'transformB', 'splatColor', ...shDefs.map(sh => sh.name)];
+        const textures = textureNames.map(name => this.getTexture(name));
+        const targets = textures.map((texture) => {
+            texture.releaseSourceAfterUpload = true;
+            return texture.lock() as Uint16Array | Uint32Array;
+        });
+        const shTargets: SHTarget[] = shDefs.map((sh, i) => ({ ...sh, packed: targets[3 + i] as Uint32Array }));
+
+        const stateField = source.meta.availableLayers.has('other') ? source.meta.layouts.other?.fields.state : undefined;
+        const layers: ChunkLayer[] = ['position', 'geometric', 'color'];
+        if (stateField) layers.push('other');
+
+        const colorStride = 3 + SH_REST_COUNTS[shBands];
+        const min = new Vec3(Infinity, Infinity, Infinity);
+        const max = new Vec3(-Infinity, -Infinity, -Infinity);
+
+        try {
+            // Single sequential sweep: read each chunk once and fill all
+            // textures, the state array and the source AABB from it.
+            await this.forEachChunk(sweepSource, layers, (base, count, chunks) => {
+                const position = new Float32Array(chunks.position.data, 0, count * 3);
+                const geometric = new Float32Array(chunks.geometric.data, 0, count * 8);
+                const color = new Float32Array(chunks.color.data, 0, count * colorStride);
+
+                this.fillTransformA(targets[0] as Uint32Array, position, geometric, base, count, remap);
+                this.fillTransformB(targets[1] as Uint16Array, geometric, base, count, remap);
+                this.fillColor(targets[2] as Uint16Array, geometric, color, colorStride, base, count, remap);
+                if (shTargets.length > 0) {
+                    this.fillSH(shTargets, color, colorStride, base, count, remap);
+                }
+                if (stateField) {
+                    this.fillState(stateField, chunks.other, base, count, remap);
+                }
+                for (let i = 0; i < count; ++i) {
+                    const o = i * 3;
+                    min.x = Math.min(min.x, position[o]);
+                    min.y = Math.min(min.y, position[o + 1]);
+                    min.z = Math.min(min.z, position[o + 2]);
+                    max.x = Math.max(max.x, position[o]);
+                    max.y = Math.max(max.y, position[o + 1]);
+                    max.z = Math.max(max.z, position[o + 2]);
+                }
+            });
+        } catch (err) {
+            textures.forEach(texture => texture.unlock());
+            throw err;
+        }
+
+        textures.forEach((texture) => {
             texture.unlock();
             texture.upload();
             // Texture.releaseSourceAfterUpload currently only releases ImageBitmap
@@ -130,168 +314,13 @@ class EditorSplatResource extends GSplatContainer {
             // authoritative CPU-side copy.
             const levels = (texture as any)._levels;
             if (levels) levels[0] = null;
-        }, (err) => {
-            texture.unlock();
-            throw err;
         });
-    }
 
-    private async uploadTransformA() {
-        await this.uploadTexture('transformA', async (target) => {
-            const packed = target as Uint32Array;
-            const floats = new Float32Array(packed.buffer);
-            const quat = new Quat();
-            await this.forEachChunk(['position', 'geometric'], (base, count, chunks) => {
-                const position = new Float32Array(chunks.position.data, 0, count * 3);
-                const geometric = new Float32Array(chunks.geometric.data, 0, count * 8);
-                for (let i = 0; i < count; ++i) {
-                    const dst = (base + i) * 4;
-                    const pos = i * 3;
-                    const geo = i * 8;
-                    quat.set(geometric[geo + 1], geometric[geo + 2], geometric[geo + 3], geometric[geo]).normalize();
-                    if (quat.w < 0) quat.mulScalar(-1);
-                    floats[dst] = position[pos];
-                    floats[dst + 1] = position[pos + 1];
-                    floats[dst + 2] = position[pos + 2];
-                    packed[dst + 3] = FloatPacking.float2Half(quat.x) | (FloatPacking.float2Half(quat.y) << 16);
-                }
-            });
-        });
-    }
-
-    private async uploadTransformB() {
-        await this.uploadTexture('transformB', async (target) => {
-            const packed = target as Uint16Array;
-            const quat = new Quat();
-            await this.forEachChunk(['geometric'], (base, count, chunks) => {
-                const geometric = new Float32Array(chunks.geometric.data, 0, count * 8);
-                for (let i = 0; i < count; ++i) {
-                    const dst = (base + i) * 4;
-                    const geo = i * 8;
-                    quat.set(geometric[geo + 1], geometric[geo + 2], geometric[geo + 3], geometric[geo]).normalize();
-                    if (quat.w < 0) quat.mulScalar(-1);
-                    packed[dst] = FloatPacking.float2Half(Math.exp(geometric[geo + 4]));
-                    packed[dst + 1] = FloatPacking.float2Half(Math.exp(geometric[geo + 5]));
-                    packed[dst + 2] = FloatPacking.float2Half(Math.exp(geometric[geo + 6]));
-                    packed[dst + 3] = FloatPacking.float2Half(quat.z);
-                }
-            });
-        });
-    }
-
-    private async uploadColor() {
-        await this.uploadTexture('splatColor', async (target) => {
-            const packed = target as Uint16Array;
-            const SH_C0 = 0.28209479177387814;
-            await this.forEachChunk(['geometric', 'color'], (base, count, chunks) => {
-                const geometric = new Float32Array(chunks.geometric.data, 0, count * 8);
-                const color = new Float32Array(chunks.color.data, 0, count * (3 + SH_REST_COUNTS[this.shBands]));
-                const colorStride = 3 + SH_REST_COUNTS[this.shBands];
-                for (let i = 0; i < count; ++i) {
-                    const dst = (base + i) * 4;
-                    const col = i * colorStride;
-                    packed[dst] = FloatPacking.float2Half(color[col] * SH_C0 + 0.5);
-                    packed[dst + 1] = FloatPacking.float2Half(color[col + 1] * SH_C0 + 0.5);
-                    packed[dst + 2] = FloatPacking.float2Half(color[col + 2] * SH_C0 + 0.5);
-                    packed[dst + 3] = FloatPacking.float2Half(1 / (1 + Math.exp(-geometric[i * 8 + 7])));
-                }
-            });
-        });
-    }
-
-    private async uploadSHTexture(name: string, firstCoeff: number, coeffCount: number) {
-        await this.uploadTexture(name, async (target) => {
-            const packed = target as Uint32Array;
-            const numCoeffs = SH_REST_COUNTS[this.shBands] / 3;
-            const colorStride = 3 + SH_REST_COUNTS[this.shBands];
-            const t11 = (1 << 11) - 1;
-            const t10 = (1 << 10) - 1;
-            const value = new Float32Array(1);
-            const bits = new Uint32Array(value.buffer);
-            const coeffs = new Array(numCoeffs * 3).fill(0);
-
-            await this.forEachChunk(['color'], (base, count, chunks) => {
-                const color = new Float32Array(chunks.color.data, 0, count * colorStride);
-                for (let i = 0; i < count; ++i) {
-                    const col = i * colorStride + 3;
-                    for (let j = 0; j < numCoeffs; ++j) {
-                        coeffs[j * 3] = color[col + j];
-                        coeffs[j * 3 + 1] = color[col + numCoeffs + j];
-                        coeffs[j * 3 + 2] = color[col + numCoeffs * 2 + j];
-                    }
-                    let max = Math.abs(coeffs[0]);
-                    for (let j = 1; j < coeffs.length; ++j) max = Math.max(max, Math.abs(coeffs[j]));
-                    if (max === 0) continue;
-                    for (let j = 0; j < coeffs.length; j += 3) {
-                        coeffs[j] = Math.max(0, Math.min(t11, Math.floor((coeffs[j] / max * 0.5 + 0.5) * t11 + 0.5)));
-                        coeffs[j + 1] = Math.max(0, Math.min(t10, Math.floor((coeffs[j + 1] / max * 0.5 + 0.5) * t10 + 0.5)));
-                        coeffs[j + 2] = Math.max(0, Math.min(t11, Math.floor((coeffs[j + 2] / max * 0.5 + 0.5) * t11 + 0.5)));
-                    }
-                    value[0] = max;
-                    const row = base + i;
-                    const components = name === 'splatSH_8to11' && this.shBands === 2 ? 1 : 4;
-                    const dst = row * components;
-                    for (let c = 0; c < coeffCount; ++c) {
-                        const coeff = firstCoeff + c;
-                        if (coeff === 0) {
-                            packed[dst] = bits[0];
-                        } else {
-                            const o = (coeff - 1) * 3;
-                            packed[dst + c] = coeffs[o] << 21 | coeffs[o + 1] << 11 | coeffs[o + 2];
-                        }
-                    }
-                }
-            });
-        });
-    }
-
-    private async uploadState() {
-        if (!this.source.meta.availableLayers.has('other')) return;
-        const stateField = this.source.meta.layouts.other?.fields.state;
-        if (!stateField) return;
-        await this.forEachChunk(['other'], (base, count, chunks) => {
-            const data = new DataView(chunks.other.data);
-            const stride = chunks.other.stride;
-            for (let i = 0; i < count; ++i) {
-                const offset = i * stride + stateField.byteOffset;
-                this.stateData[base + i] = stateField.type === 'uint32' ? data.getUint32(offset, true) : data.getFloat32(offset, true);
-            }
-        });
-    }
-
-    private async upload() {
-        await this.uploadTransformA();
-        await this.uploadTransformB();
-        await this.uploadColor();
-        if (this.shBands > 0) await this.uploadSHTexture('splatSH_1to3', 0, 4);
-        if (this.shBands > 1) {
-            await this.uploadSHTexture('splatSH_4to7', 4, 4);
-            await this.uploadSHTexture('splatSH_8to11', 8, this.shBands > 2 ? 4 : 1);
-        }
-        if (this.shBands > 2) await this.uploadSHTexture('splatSH_12to15', 12, 4);
-        await this.uploadState();
-        await this.calcSourceAabb();
-        this.sourcePool.trim(0);
-        this.update(this.source.meta.numGaussians, false);
-    }
-
-    private async calcSourceAabb() {
-        const min = new Vec3(Infinity, Infinity, Infinity);
-        const max = new Vec3(-Infinity, -Infinity, -Infinity);
-        await this.forEachChunk(['position'], (_base, count, chunks) => {
-            const position = new Float32Array(chunks.position.data, 0, count * 3);
-            for (let i = 0; i < count; ++i) {
-                const o = i * 3;
-                min.x = Math.min(min.x, position[o]);
-                min.y = Math.min(min.y, position[o + 1]);
-                min.z = Math.min(min.z, position[o + 2]);
-                max.x = Math.max(max.x, position[o]);
-                max.y = Math.max(max.y, position[o + 1]);
-                max.z = Math.max(max.z, position[o + 2]);
-            }
-        });
         this.aabb = new BoundingBox();
         this.aabb.setMinMax(min, max);
+
+        this.sourcePool.trim(0);
+        this.update(source.meta.numGaussians, false);
     }
 
     async close() {

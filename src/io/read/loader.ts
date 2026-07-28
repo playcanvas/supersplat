@@ -55,10 +55,17 @@ const defaultOptions: Options = {
     lodChunkExtent: 16
 };
 
+/**
+ * Presents `parent` reordered by `order` (`order[row]` is the parent row that
+ * appears at `row`). `parent` and `order` are public so consumers doing bulk
+ * sequential work (e.g. the initial texture upload) can iterate the parent in
+ * its native order — fast sequential reads — and scatter rows to their
+ * permuted destination, instead of gathering the whole file in permuted order.
+ */
 class PermutedChunkSource implements ChunkSource {
     readonly meta: ChunkSourceMetadata;
 
-    constructor(private readonly parent: ChunkSource, readonly order: Uint32Array) {
+    constructor(readonly parent: ChunkSource, readonly order: Uint32Array) {
         this.meta = {
             ...parent.meta,
             numGaussians: order.length,
@@ -225,5 +232,6 @@ const loadSplatSource = async (
 export {
     defaultLodIndex,
     loadSplatSource,
+    PermutedChunkSource,
     validateSplatSource
 };

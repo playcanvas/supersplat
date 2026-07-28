@@ -153,14 +153,23 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
       #ifdef STOCHASTIC
         // 1 spp stochastic transparency (StochasticSplats, Listing 1): keep this
         // fragment with raw probability alpha, write it opaque; the depth test
-        // resolves visibility, so no sorting. Noisy during motion — the
-        // motion-adaptive settle renders the exact sorted blend. gaussianUV (per
-        // fragment) + splat id seed the hash so overlapping splats decorrelate.
+        // resolves visibility, so no sorting. Coverage thresholds are stratified
+        // across each screen-space 2x2 quad — the quad's four pixels take the
+        // four strata of [0,1) in a per-(quad, splat) scrambled order with a
+        // shared jitter — so a splat with alpha a covers 4a±1 of the quad. The
+        // final blit averages each quad (blit-shader quadResolve), replacing
+        // most of the sampling noise with quantization error. Hashing quad +
+        // splat id keeps overlapping splats decorrelated and each pixel's
+        // threshold marginally uniform. The settle still renders the exact
+        // sorted blend.
         let norm = normExp(radius);
         let alpha = norm * gaussianColor.a;
-        let q = vec2u(vec2i((gaussianUV * 0.5 + 0.5) * 4095.0));
+        let pix = vec2u(pcPosition.xy);
+        let quad = pix >> vec2u(1u);
         // WGSL requires parentheses when mixing bitwise (^) with arithmetic (*)
-        let rnd = f32(hashU32((q.x * 1973u) ^ (q.y * 9277u) ^ ((gaussianId + 1u) * 26699u))) * (1.0 / 4294967295.0);
+        let h = hashU32((quad.x * 1973u) ^ (quad.y * 9277u) ^ ((gaussianId + 1u) * 26699u));
+        let stratum = ((pix.y & 1u) * 2u + (pix.x & 1u)) ^ (h & 3u);
+        let rnd = (f32(stratum) + f32(h >> 8u) * (1.0 / 16777216.0)) * 0.25;
         if (rnd >= alpha) {
             discard;
         }

@@ -339,7 +339,9 @@ class Camera extends Element {
                     return {
                         srcTexture: this.mainTarget.colorBuffer,
                         // upscale the (possibly lower-res) target to the backbuffer
-                        blitScale: [ts.width / gd.width, ts.height / gd.height]
+                        blitScale: [ts.width / gd.width, ts.height / gd.height],
+                        // stochastic frames resolve each 2x2 quad to its mean
+                        quadResolve: this.scene.movingRender ? 1 : 0
                     };
                 }
             });

@@ -51,7 +51,7 @@ const INSTANCE_SIZE = 128;
 const WORKGROUP_SIZE = 256;
 
 type ProjectorVariant = {
-    compute: Compute;
+    shader: Shader;
     bindGroupFormat: BindGroupFormat;
     uniformBufferFormat: UniformBufferFormat;
 };
@@ -61,6 +61,12 @@ type Placement = {
     count: number;
     entryBase: number;
     sourceIndices: StorageBuffer | null;
+    // each placement owns its Compute: a Compute's uniform buffer is a single
+    // persistent GPU buffer written at dispatch-record time, so sharing one
+    // instance would make every dispatch of the frame read the uniforms of the
+    // last placement recorded
+    compute: Compute | null;
+    bands: number;
 };
 
 type ProjectedRendererStats = {
@@ -196,7 +202,9 @@ class ProjectedSplatRenderer {
             splat,
             count: sourceIndices?.length ?? splat.resource.numSplats,
             entryBase: 0,
-            sourceIndices: indexBuffer
+            sourceIndices: indexBuffer,
+            compute: null,
+            bands: -1
         });
         this.layoutDirty = true;
     }
@@ -205,6 +213,7 @@ class ProjectedSplatRenderer {
         const index = this.placements.findIndex(placement => placement.splat === splat);
         if (index !== -1) {
             this.placements[index].sourceIndices?.destroy();
+            this.placements[index].compute?.destroy();
             this.placements.splice(index, 1);
             this.layoutDirty = true;
         }
@@ -311,10 +320,20 @@ class ProjectedSplatRenderer {
             computeBindGroupFormat: bindGroupFormat,
             computeUniformBufferFormats: { uniforms: uniformBufferFormat }
         } as any);
-        const compute = new Compute(this.device, shader, `ProjectedSplatProjector-${bands}`);
-        variant = { compute, bindGroupFormat, uniformBufferFormat };
+        variant = { shader, bindGroupFormat, uniformBufferFormat };
         this.variants.set(bands, variant);
         return variant;
+    }
+
+    // the shader (and its pipeline) is shared per band count, the Compute - and
+    // with it the uniform buffer and bind group - is per placement
+    private getCompute(placement: Placement, bands: number) {
+        if (!placement.compute || placement.bands !== bands) {
+            placement.compute?.destroy();
+            placement.compute = new Compute(this.device, this.getVariant(bands).shader, `ProjectedSplatProjector-${bands}`);
+            placement.bands = bands;
+        }
+        return placement.compute;
     }
 
     private rebuildLayout() {
@@ -410,7 +429,7 @@ class ProjectedSplatRenderer {
             const { splat } = placement;
             const resource = splat.resource;
             const bands = Math.min(viewBands, resource.shBands);
-            const compute = this.getVariant(bands).compute;
+            const compute = this.getCompute(placement, bands);
             const offset = -splat.blackPoint + splat.brightness;
             const scale = 1 / (splat.whitePoint - splat.blackPoint);
             const selectionEnabled = selectedSplat === splat && camera.renderOverlays;
@@ -539,10 +558,10 @@ class ProjectedSplatRenderer {
     destroy() {
         for (const placement of this.placements) {
             placement.sourceIndices?.destroy();
+            placement.compute?.destroy();
         }
         for (const variant of this.variants.values()) {
-            variant.compute.shader?.destroy();
-            variant.compute.destroy();
+            variant.shader.destroy();
             variant.bindGroupFormat.destroy();
         }
         this.sortKeys?.destroy();

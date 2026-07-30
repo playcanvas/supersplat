@@ -19,6 +19,20 @@
     }
 }
 
+.transform-copy-options {
+    gap: 1px;
+
+    svg:last-child {
+        width: 10px;
+        height: 10px;
+        transform: rotate(90deg);
+    }
+}
+
+.transform-copy-menu {
+    z-index: 20;
+}
+
 .splat-list-container {
     max-height: 300px;
     overflow: auto;

@@ -8,10 +8,19 @@ import { Pivot } from '../pivot';
 
 const v = new Vec3();
 
+type TransformComponents = {
+    position?: boolean;
+    rotation?: boolean;
+    scale?: boolean;
+};
+
 class Transform extends Container {
     private events: Events;
 
-    private copiedTransform: TransformData | null = null;
+    private copiedTransform: {
+        transform: TransformData;
+        components: TransformComponents;
+    } | null = null;
 
     constructor(events: Events, args: ContainerArgs = {}) {
         args = {
@@ -179,13 +188,16 @@ class Transform extends Container {
         });
     }
 
-    copyTransform(): boolean {
+    copyTransform(components: TransformComponents): boolean {
         if (!this.events.invoke('selection')) {
             return false;
         }
 
         const pivot = this.events.invoke('pivot') as Pivot;
-        this.copiedTransform = pivot.transform.clone();
+        this.copiedTransform = {
+            transform: pivot.transform.clone(),
+            components: { ...components }
+        };
         return true;
     }
 
@@ -195,8 +207,21 @@ class Transform extends Container {
         }
 
         const pivot = this.events.invoke('pivot') as Pivot;
+        const target = pivot.transform.clone();
+        const { transform, components } = this.copiedTransform;
+
+        if (components.position) {
+            target.position.copy(transform.position);
+        }
+        if (components.rotation) {
+            target.rotation.copy(transform.rotation);
+        }
+        if (components.scale) {
+            target.scale.copy(transform.scale);
+        }
+
         pivot.start();
-        pivot.move(this.copiedTransform);
+        pivot.move(target);
         pivot.end();
         return true;
     }

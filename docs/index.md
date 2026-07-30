@@ -77,6 +77,8 @@ SuperSplat can translate, rotate and scale splats. To do this, select a splat in
 
 To achieve fine grain control over the transform of the selected splat, you can use the TRANSFORM panel (below the SCENE MANAGER panel).
 
+Use the copy menu in the TRANSFORM panel to copy position, rotation, both position and rotation, or the complete transform. Select another splat and use the paste button to apply the copied properties.
+
 To set the origin of the currently active gizmo, double click anywhere in the 3D view.
 
 ## Merging Splats

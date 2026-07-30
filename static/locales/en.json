@@ -17,6 +17,11 @@
     "menu.edit.duplicate": "Duplicate",
     "menu.edit.separate": "Separate",
 
+    "menu.transform.copy-position": "Copy Position",
+    "menu.transform.copy-rotation": "Copy Rotation",
+    "menu.transform.copy-position-rotation": "Copy Position and Rotation",
+    "menu.transform.copy-all": "Copy All Transforms",
+
     "menu.select": "Select",
     "menu.select.all": "All",
     "menu.select.none": "None",
@@ -345,7 +350,7 @@
     "tooltip.scene.solo": "Solo Selected",
     "tooltip.scene.import": "Import Scene",
     "tooltip.scene.new": "New Scene",
-    "tooltip.scene.copy-transform": "Copy Transform",
+    "tooltip.scene.copy-transform-options": "Copy Transform Options",
     "tooltip.scene.paste-transform": "Paste Transform",
 
     "tooltip.status-bar.timeline": "Toggle Timeline Panel",

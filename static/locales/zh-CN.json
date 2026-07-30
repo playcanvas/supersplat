@@ -17,6 +17,11 @@
     "menu.edit.duplicate": "复制",
     "menu.edit.separate": "分离",
 
+    "menu.transform.copy-position": "复制位置",
+    "menu.transform.copy-rotation": "复制旋转",
+    "menu.transform.copy-position-rotation": "复制位置和旋转",
+    "menu.transform.copy-all": "复制所有变换",
+
     "menu.select": "选择",
     "menu.select.all": "全部",
     "menu.select.none": "无",
@@ -345,7 +350,7 @@
     "tooltip.scene.solo": "独显所选",
     "tooltip.scene.import": "导入场景",
     "tooltip.scene.new": "新建场景",
-    "tooltip.scene.copy-transform": "复制变换",
+    "tooltip.scene.copy-transform-options": "变换复制选项",
     "tooltip.scene.paste-transform": "粘贴变换",
 
     "tooltip.status-bar.timeline": "切换时间线面板",

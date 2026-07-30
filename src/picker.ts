@@ -166,15 +166,24 @@ class Picker {
             immediate: true
         });
 
+        // Row 0 of the result is the top row of the requested rectangle on both
+        // platforms: the WebGL read starts from the flipped origin above, so its
+        // rows arrive bottom-up and are reversed here. Callers that index
+        // individual rows (the brush/lasso mask) must not flip again.
+        const flipRows = this.device.isWebGL2;
         const result: number[] = [];
-        for (let i = 0; i < pw * ph; i++) {
-            // Use >>> 0 to convert signed 32-bit to unsigned (so 0xffffffff instead of -1)
-            result.push(
-                (pixels[i * 4] |
-                (pixels[i * 4 + 1] << 8) |
-                (pixels[i * 4 + 2] << 16) |
-                (pixels[i * 4 + 3] << 24)) >>> 0
-            );
+        for (let row = 0; row < ph; ++row) {
+            const src = (flipRows ? ph - 1 - row : row) * pw;
+            for (let col = 0; col < pw; ++col) {
+                const i = (src + col) * 4;
+                // Use >>> 0 to convert signed 32-bit to unsigned (so 0xffffffff instead of -1)
+                result.push(
+                    (pixels[i] |
+                    (pixels[i + 1] << 8) |
+                    (pixels[i + 2] << 16) |
+                    (pixels[i + 3] << 24)) >>> 0
+                );
+            }
         }
 
         return result;

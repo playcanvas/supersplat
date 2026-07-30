@@ -85,6 +85,7 @@
     "panel.settings.center-size": "Center Size",
     "panel.settings.use-splat-colors": "Use Splat Colors",
     "panel.settings.outline-selection": "Outline Selection",
+    "panel.settings.stochastic-alpha": "Stochastic Alpha",
     "panel.settings.show-grid": "Show Grid",
     "panel.settings.grid-plane": "Grid Plane",
     "panel.settings.show-bounding-box": "Show Bounding Box",

@@ -85,6 +85,7 @@
     "panel.settings.center-size": "Размер центров",
     "panel.settings.use-splat-colors": "Цветные центры",
     "panel.settings.outline-selection": "Контур выделения",
+    "panel.settings.stochastic-alpha": "Стохастическая альфа",
     "panel.settings.show-grid": "Показать сетку",
     "panel.settings.grid-plane": "Плоскость сетки",
     "panel.settings.show-bounding-box": "Показать границы",

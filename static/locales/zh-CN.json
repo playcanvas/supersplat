@@ -85,6 +85,7 @@
     "panel.settings.center-size": "中心大小",
     "panel.settings.use-splat-colors": "颜色中心",
     "panel.settings.outline-selection": "轮廓选择",
+    "panel.settings.stochastic-alpha": "随机 Alpha",
     "panel.settings.show-grid": "显示网格",
     "panel.settings.grid-plane": "网格平面",
     "panel.settings.show-bounding-box": "显示边界",

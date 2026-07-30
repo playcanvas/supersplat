@@ -85,6 +85,7 @@
     "panel.settings.center-size": "센터 크기",
     "panel.settings.use-splat-colors": "컬러 센터",
     "panel.settings.outline-selection": "선택 윤곽선",
+    "panel.settings.stochastic-alpha": "확률적 알파",
     "panel.settings.show-grid": "그리드 표시",
     "panel.settings.grid-plane": "그리드 평면",
     "panel.settings.show-bounding-box": "경계 표시",

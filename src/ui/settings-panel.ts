@@ -314,6 +314,26 @@ class SettingsPanel extends Container {
         outlineSelectionRow.append(outlineSelectionLabel);
         outlineSelectionRow.append(outlineSelectionToggle);
 
+        // stochastic alpha
+
+        const stochasticRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const stochasticLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(stochasticLabel, 'panel.settings.stochastic-alpha');
+
+        const stochasticToggle = new BooleanInput({
+            type: 'toggle',
+            class: 'settings-panel-row-toggle',
+            value: false
+        });
+
+        stochasticRow.append(stochasticLabel);
+        stochasticRow.append(stochasticToggle);
+
         // show grid
 
         const showGridRow = new Container({
@@ -462,6 +482,7 @@ class SettingsPanel extends Container {
         this.append(centersSizeRow);
         this.append(centersColorRow);
         this.append(outlineSelectionRow);
+        this.append(stochasticRow);
         this.append(showGridRow);
         this.append(gridPlaneRow);
         this.append(showBoundRow);
@@ -556,6 +577,16 @@ class SettingsPanel extends Container {
 
         outlineSelectionToggle.on('change', (value: boolean) => {
             events.fire('view.setOutlineSelection', value);
+        });
+
+        // stochastic alpha
+
+        events.on('view.stochastic', (value: boolean) => {
+            stochasticToggle.value = value;
+        });
+
+        stochasticToggle.on('change', (value: boolean) => {
+            events.fire('view.setStochastic', value);
         });
 
         // show grid

@@ -85,6 +85,7 @@
     "panel.settings.center-size": "Punktgrößen",
     "panel.settings.use-splat-colors": "Farbzentren",
     "panel.settings.outline-selection": "Umriss Selektion",
+    "panel.settings.stochastic-alpha": "Stochastisches Alpha",
     "panel.settings.show-grid": "Raster anzeigen",
     "panel.settings.grid-plane": "Rasterebene",
     "panel.settings.show-bounding-box": "Objektbox anzeigen",

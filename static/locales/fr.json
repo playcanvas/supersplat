@@ -85,6 +85,7 @@
     "panel.settings.center-size": "Échelle des centres",
     "panel.settings.use-splat-colors": "Centres de Couleur",
     "panel.settings.outline-selection": "Contour de la sélection",
+    "panel.settings.stochastic-alpha": "Alpha stochastique",
     "panel.settings.show-grid": "Afficher la grille",
     "panel.settings.grid-plane": "Plan de la grille",
     "panel.settings.show-bounding-box": "Afficher limites",

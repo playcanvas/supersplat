@@ -85,6 +85,7 @@
     "panel.settings.center-size": "Tamanho dos Centros",
     "panel.settings.use-splat-colors": "Centros de Cor",
     "panel.settings.outline-selection": "Contorno da Seleção",
+    "panel.settings.stochastic-alpha": "Alfa Estocástico",
     "panel.settings.show-grid": "Mostrar Grade",
     "panel.settings.grid-plane": "Plano da Grade",
     "panel.settings.show-bounding-box": "Mostrar Limite",

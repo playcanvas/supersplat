@@ -85,6 +85,7 @@
     "panel.settings.center-size": "センターサイズ",
     "panel.settings.use-splat-colors": "カラーセンター",
     "panel.settings.outline-selection": "選択のアウトライン",
+    "panel.settings.stochastic-alpha": "確率的アルファ",
     "panel.settings.show-grid": "グリッド",
     "panel.settings.grid-plane": "グリッド平面",
     "panel.settings.show-bounding-box": "バウンディングボックス",

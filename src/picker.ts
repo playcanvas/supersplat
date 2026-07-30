@@ -157,10 +157,13 @@ class Picker {
         // Flip Y for texture read on WebGL (texture origin is bottom-left)
         const texY = this.device.isWebGL2 ? rt.height - py - ph : py;
 
-        // Read pixels using texture.read() API
+        // Read pixels using texture.read() API. The read must be immediate: the
+        // id pass is rendered synchronously by prepareId and nothing submits the
+        // shared command encoder before the caller awaits us, so a deferred read
+        // maps the staging buffer before the copy has run and returns zeros.
         const pixels = await colorBuffer.read(px, texY, pw, ph, {
             renderTarget: rt,
-            immediate: false
+            immediate: true
         });
 
         const result: number[] = [];

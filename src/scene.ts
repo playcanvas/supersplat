@@ -84,6 +84,15 @@ class Scene {
     boundDirty = true;
     forceRender = false;
 
+    // True while the user is dragging in the viewport. The element-state diff below
+    // only sees what elements serialize, so edits that live outside it - a
+    // per-gaussian transform (transform palette + instance list), a selection
+    // change - are indistinguishable from a settled scene. Rather than have each
+    // tool remember to report itself, this is driven from the pointer directly, so
+    // every tool is treated the same. It classifies frames only: it never forces a
+    // frame to render that wouldn't have.
+    forceInteracting = false;
+
     // motion-adaptive stochastic rendering. While the scene is actively changing
     // (camera orbit / edit) we draw the fast no-sort stochastic mode; when it
     // settles we render a single clean sorted & blended frame. movingRender picks
@@ -175,7 +184,20 @@ class Scene {
             }
         });
 
-        observer.observe(window.document.getElementById('canvas-container'));
+        const canvasContainer = window.document.getElementById('canvas-container');
+        observer.observe(canvasContainer);
+
+        // Uniform "user is dragging" signal for every tool. canvasContainer is the
+        // common ancestor of the canvas (where the engine's gizmos listen) and of
+        // tools-container (where the 2d selection tools listen), and the capture
+        // phase sees the event before any of them - including through a
+        // setPointerCapture retarget. `buttons` keeps hovering out of it, so no
+        // per-tool drag state is needed.
+        canvasContainer.addEventListener('pointermove', (event: PointerEvent) => {
+            if (event.buttons !== 0) {
+                this.forceInteracting = true;
+            }
+        }, true);
 
         // configure depth layers to handle dynamic refraction
         const depthLayer = this.app.scene.layers.getLayerById(LAYERID_DEPTH);
@@ -372,7 +394,7 @@ class Scene {
 
         // compare with previously serialized
         const changed = this.forceRender || all.size > 0;
-        const interacting = all.size > 0;
+        const interacting = this.forceInteracting || all.size > 0;
         const adaptive = !!this.events.invoke('view.stochastic');
 
         // fast no-sort stochastic mode only while actively interacting; settled
@@ -396,6 +418,7 @@ class Scene {
             }
         }
         this.forceRender = false;
+        this.forceInteracting = false;
 
         // raise per-type update events
         ElementTypeList.forEach((type) => {

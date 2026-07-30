@@ -105,7 +105,10 @@ class DataProcessor {
         const { device } = this;
 
         resolve(device.scope, {
-            srcTexture: source.colorBuffer
+            srcTexture: source.colorBuffer,
+            // straight 1:1 copy, no upscale or stochastic quad resolve
+            blitScale: [1, 1],
+            quadResolve: 0
         });
 
         device.setBlendState(BlendState.NOBLEND);

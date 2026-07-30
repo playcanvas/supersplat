@@ -1,3 +1,5 @@
+import { indexToUvWGSL, paletteMatrixWGSL } from './palette-chunk';
+
 const vertexShader = /* wgsl */`
 attribute vertex_position: vec2f;
 
@@ -30,31 +32,8 @@ var splatSH_12to15: texture_2d<u32>;
 
 varying overlayColor: vec4f;
 
-fn splatUv(index: u32) -> vec2i {
-    return vec2i(i32(index % uniform.texParams.x), i32(index / uniform.texParams.x));
-}
-
-fn paletteMatrix(index: u32) -> mat4x4f {
-    if (index == 0u) {
-        return mat4x4f(
-            vec4f(1.0, 0.0, 0.0, 0.0),
-            vec4f(0.0, 1.0, 0.0, 0.0),
-            vec4f(0.0, 0.0, 1.0, 0.0),
-            vec4f(0.0, 0.0, 0.0, 1.0)
-        );
-    }
-    let x = i32(index % 512u) * 3;
-    let y = i32(index / 512u);
-    let row0 = textureLoad(transformPalette, vec2i(x, y), 0);
-    let row1 = textureLoad(transformPalette, vec2i(x + 1, y), 0);
-    let row2 = textureLoad(transformPalette, vec2i(x + 2, y), 0);
-    return mat4x4f(
-        vec4f(row0.x, row1.x, row2.x, 0.0),
-        vec4f(row0.y, row1.y, row2.y, 0.0),
-        vec4f(row0.z, row1.z, row2.z, 0.0),
-        vec4f(row0.w, row1.w, row2.w, 1.0)
-    );
-}
+${indexToUvWGSL('splatUv', 'uniform.texParams.x')}
+${paletteMatrixWGSL}
 
 #if SH_BANDS > 0
 fn unpack111011s(bits: u32) -> vec3f {

@@ -28,7 +28,8 @@ import {
 } from 'playcanvas';
 
 import { BufferPool } from './buffer-pool';
-import { packedMaskHeight, packedMaskWidth } from './histogram-config';
+import { maskByteSize } from './histogram-config';
+import { indexToUvWGSL, paletteMatrixWGSL } from '../shaders/palette-chunk';
 import { Splat } from '../splat';
 
 type MaskOptions = {
@@ -76,27 +77,12 @@ struct Uniforms {
 @group(0) @binding(4) var maskTexture: texture_2d<f32>;
 @group(0) @binding(5) var<uniform> uniforms: Uniforms;
 
-fn paletteMatrix(index: u32) -> mat4x4f {
-    if (index == 0u) {
-        return mat4x4f(
-            vec4f(1.0, 0.0, 0.0, 0.0), vec4f(0.0, 1.0, 0.0, 0.0),
-            vec4f(0.0, 0.0, 1.0, 0.0), vec4f(0.0, 0.0, 0.0, 1.0)
-        );
-    }
-    let x = i32(index % 512u) * 3;
-    let y = i32(index / 512u);
-    let r0 = textureLoad(transformPalette, vec2i(x, y), 0);
-    let r1 = textureLoad(transformPalette, vec2i(x + 1, y), 0);
-    let r2 = textureLoad(transformPalette, vec2i(x + 2, y), 0);
-    return mat4x4f(
-        vec4f(r0.x, r1.x, r2.x, 0.0), vec4f(r0.y, r1.y, r2.y, 0.0),
-        vec4f(r0.z, r1.z, r2.z, 0.0), vec4f(r0.w, r1.w, r2.w, 1.0)
-    );
-}
+${paletteMatrixWGSL}
+${indexToUvWGSL('sourceCoord', 'uniforms.sourceWidth')}
 
 fn intersects(index: u32) -> bool {
     if (index >= uniforms.numSplats) { return false; }
-    let uv = vec2i(i32(index % uniforms.sourceWidth), i32(index / uniforms.sourceWidth));
+    let uv = sourceCoord(index);
     let center = bitcast<vec3f>(textureLoad(transformA, uv, 0).xyz);
     let paletteIndex = textureLoad(splatTransform, uv, 0).r;
     let world = (uniforms.model * paletteMatrix(paletteIndex) * vec4f(center, 1.0)).xyz;
@@ -177,9 +163,7 @@ class Intersect {
     async run(options: IntersectOptions, splat: Splat, bufferPool: BufferPool): Promise<Uint8Array> {
         const count = splat.resource.numSplats;
         const transformA = splat.resource.getTexture('transformA');
-        const resultWidth = packedMaskWidth(transformA.width);
-        const resultHeight = packedMaskHeight(resultWidth, count);
-        const byteSize = resultWidth * resultHeight * 4;
+        const byteSize = maskByteSize(count);
         const outputWords = byteSize / 4;
         if (!this.output || this.output.byteSize !== byteSize) {
             this.output?.destroy();

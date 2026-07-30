@@ -14,7 +14,7 @@ import {
 } from 'playcanvas';
 
 import { BufferPool } from './buffer-pool';
-import { packedMaskHeight, packedMaskWidth } from './histogram-config';
+import { maskByteSize } from './histogram-config';
 import {
     createSplatValueTextureFormats,
     createSplatValueUniformFormat,
@@ -102,10 +102,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
 
     async run(splat: Splat, mode: number, options: SelectByRangeOptions, bufferPool: BufferPool): Promise<Uint8Array> {
         const count = splat.resource.numSplats;
-        const sourceWidth = splat.resource.getTexture('transformA').width;
-        const resultWidth = packedMaskWidth(sourceWidth);
-        const resultHeight = packedMaskHeight(resultWidth, count);
-        const byteSize = resultWidth * resultHeight * 4;
+        const byteSize = maskByteSize(count);
         if (!this.output || this.output.byteSize !== byteSize) {
             this.output?.destroy();
             this.output = new StorageBuffer(this.device, byteSize, BUFFERUSAGE_COPY_DST | BUFFERUSAGE_COPY_SRC);

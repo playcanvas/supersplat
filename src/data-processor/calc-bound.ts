@@ -22,6 +22,7 @@ import {
     Vec3
 } from 'playcanvas';
 
+import { paletteMatrixWGSL } from '../shaders/palette-chunk';
 import { Splat } from '../splat';
 
 const WORKGROUP_SIZE = 256;
@@ -44,23 +45,7 @@ struct Uniforms {
 @group(0) @binding(4) var splatState: texture_2d<f32>;
 @group(0) @binding(5) var<uniform> uniforms: Uniforms;
 
-fn paletteMatrix(index: u32) -> mat4x4f {
-    if (index == 0u) {
-        return mat4x4f(
-            vec4f(1.0, 0.0, 0.0, 0.0), vec4f(0.0, 1.0, 0.0, 0.0),
-            vec4f(0.0, 0.0, 1.0, 0.0), vec4f(0.0, 0.0, 0.0, 1.0)
-        );
-    }
-    let x = i32(index % 512u) * 3;
-    let y = i32(index / 512u);
-    let r0 = textureLoad(transformPalette, vec2i(x, y), 0);
-    let r1 = textureLoad(transformPalette, vec2i(x + 1, y), 0);
-    let r2 = textureLoad(transformPalette, vec2i(x + 2, y), 0);
-    return mat4x4f(
-        vec4f(r0.x, r1.x, r2.x, 0.0), vec4f(r0.y, r1.y, r2.y, 0.0),
-        vec4f(r0.z, r1.z, r2.z, 0.0), vec4f(r0.w, r1.w, r2.w, 1.0)
-    );
-}
+${paletteMatrixWGSL}
 
 @compute @workgroup_size(${WORKGROUP_SIZE})
 fn main(@builtin(global_invocation_id) gid: vec3u) {

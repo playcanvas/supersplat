@@ -1,3 +1,6 @@
+import { applyColorGradeWGSL } from './color-grade-chunk';
+import { indexToUvWGSL, paletteMatrixWGSL } from './palette-chunk';
+
 const computeSplatValueWGSL = (bands: number, firstBinding = 1) => {
     let binding = firstBinding;
     const declarations = [
@@ -117,29 +120,10 @@ struct SplatValue {
 
 ${declarations.join('\n')}
 
-fn paletteMatrix(index: u32) -> mat4x4f {
-    if (index == 0u) {
-        return mat4x4f(
-            vec4f(1.0, 0.0, 0.0, 0.0), vec4f(0.0, 1.0, 0.0, 0.0),
-            vec4f(0.0, 0.0, 1.0, 0.0), vec4f(0.0, 0.0, 0.0, 1.0)
-        );
-    }
-    let x = i32(index % 512u) * 3;
-    let y = i32(index / 512u);
-    let r0 = textureLoad(transformPalette, vec2i(x, y), 0);
-    let r1 = textureLoad(transformPalette, vec2i(x + 1, y), 0);
-    let r2 = textureLoad(transformPalette, vec2i(x + 2, y), 0);
-    return mat4x4f(
-        vec4f(r0.x, r1.x, r2.x, 0.0), vec4f(r0.y, r1.y, r2.y, 0.0),
-        vec4f(r0.z, r1.z, r2.z, 0.0), vec4f(r0.w, r1.w, r2.w, 1.0)
-    );
-}
+${paletteMatrixWGSL}
+${indexToUvWGSL('sourceCoord', 'uniforms.sourceWidth')}
 
-fn applyColorGrade(color: vec3f) -> vec3f {
-    let graded = uniforms.cgOffset + color * uniforms.cgScale;
-    let grey = dot(graded, vec3f(0.299, 0.587, 0.114));
-    return mix(vec3f(grey), graded, uniforms.cgSaturation);
-}
+${applyColorGradeWGSL}
 
 fn rgbToHsv(color: vec3f) -> vec3f {
     let k = vec4f(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
@@ -151,7 +135,7 @@ fn rgbToHsv(color: vec3f) -> vec3f {
 
 fn readSplat(index: u32, value: ptr<function, SplatValue>) -> bool {
     if (index >= uniforms.numSplats) { return false; }
-    let uv = vec2i(i32(index % uniforms.sourceWidth), i32(index / uniforms.sourceWidth));
+    let uv = sourceCoord(index);
     let state = i32(textureLoad(splatState, uv, 0).r * 255.0 + 0.5);
     if (state != 0 && state != 1) { return false; }
     let data = textureLoad(transformA, uv, 0);
@@ -180,7 +164,7 @@ ${shFunctions}
 fn readFinalColor(s: SplatValue) -> vec3f {
     var color = textureLoad(splatColor, s.uv, 0).rgb;
     ${bands > 0 ? 'color += evaluateSH(s);' : ''}
-    return applyColorGrade(color);
+    return applyColorGrade(color, uniforms.cgScale, uniforms.cgOffset, uniforms.cgSaturation);
 }
 
 fn computeSplatValue(index: u32, valueOut: ptr<function, f32>, selectedOut: ptr<function, bool>, visibleOut: ptr<function, bool>) -> bool {

@@ -42,6 +42,7 @@ import {
     Vec2
 } from 'playcanvas';
 
+import { createGradeTerms, gradeTerms } from './color-grade';
 import type { Scene } from './scene';
 import { projectedSplatProjector } from './shaders/projected-splat-projector';
 import { fragmentShader, vertexShader } from './shaders/projected-splat-shader';
@@ -113,6 +114,7 @@ class ProjectedSplatRenderer {
     private readonly device: GraphicsDevice;
     private readonly placements: Placement[] = [];
     private readonly variants = new Map<number, ProjectorVariant>();
+    private readonly gradeTerms = createGradeTerms();
     private readonly shaderProjection = new Mat4();
     private readonly viewProjection = new Mat4();
     private readonly dispatchSize = new Vec2();
@@ -430,8 +432,7 @@ class ProjectedSplatRenderer {
             const resource = splat.resource;
             const bands = Math.min(viewBands, resource.shBands);
             const compute = this.getCompute(placement, bands);
-            const offset = -splat.blackPoint + splat.brightness;
-            const scale = 1 / (splat.whitePoint - splat.blackPoint);
+            const grade = gradeTerms(splat, this.gradeTerms);
             const selectionEnabled = selectedSplat === splat && camera.renderOverlays;
 
             if (selectionEnabled) {
@@ -471,14 +472,9 @@ class ProjectedSplatRenderer {
             compute.setParameter('view', view.data);
             compute.setParameter('viewProj', this.viewProjection.data);
             compute.setParameter('cameraPosition', [cameraPosition.x, cameraPosition.y, cameraPosition.z]);
-            compute.setParameter('saturation', splat.saturation);
-            compute.setParameter('colorOffset', [offset, offset, offset, 0]);
-            compute.setParameter('colorScale', [
-                scale * splat.tintClr.r * (1 + splat.temperature),
-                scale * splat.tintClr.g,
-                scale * splat.tintClr.b * (1 - splat.temperature),
-                splat.transparency
-            ]);
+            compute.setParameter('saturation', grade.saturation);
+            compute.setParameter('colorOffset', [grade.offset, grade.offset, grade.offset, 0]);
+            compute.setParameter('colorScale', [grade.scale.r, grade.scale.g, grade.scale.b, grade.transparency]);
             compute.setParameter('selectedColor', selectionEnabled && !events.invoke('view.outlineSelection') ? [
                 selectedColor.r,
                 selectedColor.g,

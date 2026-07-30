@@ -19,19 +19,44 @@ class SplatState {
     private dirtyLo = -1;
     private dirtyHi = -1;
 
-    // cached counts, refreshed by flush().
+    // counts, maintained incrementally by the mutators below.
     numSelected = 0;
     numLocked = 0;
     numDeleted = 0;
+
+    // set until the counts have been seeded from the loaded state bytes
+    private countsDirty = true;
 
     constructor(data: Uint8Array, gpu: Texture) {
         this.data = data;
         this.gpu = gpu;
 
         // mark everything dirty so the first flush uploads whatever was loaded
-        // from disk (ply state column) and seeds the cached counts.
+        // from disk (ply state column) and seeds the counts.
         this.dirtyLo = 0;
         this.dirtyHi = data.length;
+    }
+
+    // each splat contributes to at most one count, by priority
+    // deleted > locked > selected (matching the original full recount)
+    private static bucket(s: number): number {
+        if (s & State.deleted) return State.deleted;
+        if (s & State.locked) return State.locked;
+        if (s & State.selected) return State.selected;
+        return 0;
+    }
+
+    // move one splat between counts after its state byte changed
+    private reclassify(before: number, after: number) {
+        const from = SplatState.bucket(before);
+        const to = SplatState.bucket(after);
+        if (from === to) return;
+        if (from === State.deleted) this.numDeleted--;
+        else if (from === State.locked) this.numLocked--;
+        else if (from === State.selected) this.numSelected--;
+        if (to === State.deleted) this.numDeleted++;
+        else if (to === State.locked) this.numLocked++;
+        else if (to === State.selected) this.numSelected++;
     }
 
     private markDirty(lo: number, hi: number) {
@@ -45,44 +70,38 @@ class SplatState {
     }
 
     setBits(ranges: IndexRanges, mask: number): void {
-        const { data } = this;
-        let lo = Infinity;
-        let hi = -1;
-        ranges.forEach((i) => {
-            data[i] |= mask;
-            if (i < lo) lo = i;
-            if (i >= hi) hi = i + 1;
-        });
-        if (hi > 0) this.markDirty(lo, hi);
+        this.mutate(ranges, before => before | mask);
     }
 
     clearBits(ranges: IndexRanges, mask: number): void {
-        const { data } = this;
-        let lo = Infinity;
-        let hi = -1;
-        ranges.forEach((i) => {
-            data[i] &= ~mask;
-            if (i < lo) lo = i;
-            if (i >= hi) hi = i + 1;
-        });
-        if (hi > 0) this.markDirty(lo, hi);
+        this.mutate(ranges, before => before & ~mask);
     }
 
     toggleBits(ranges: IndexRanges, mask: number): void {
+        this.mutate(ranges, before => before ^ mask);
+    }
+
+    // apply a per-byte state change over the ranges, recording the dirty span
+    // and keeping the counts up to date without a full rescan
+    private mutate(ranges: IndexRanges, op: (before: number) => number) {
         const { data } = this;
         let lo = Infinity;
         let hi = -1;
         ranges.forEach((i) => {
-            data[i] ^= mask;
+            const before = data[i];
+            const after = op(before);
+            if (after !== before) {
+                data[i] = after;
+                this.reclassify(before, after);
+            }
             if (i < lo) lo = i;
             if (i >= hi) hi = i + 1;
         });
         if (hi > 0) this.markDirty(lo, hi);
     }
 
-    // recount selected/locked/deleted from scratch. cheap relative to a GPU
-    // readback (single CPU pass over numSplats bytes) and only triggered from
-    // flush, so the same call that uploads to GPU also refreshes counts.
+    // seed the counts from the loaded state bytes. only needed once per
+    // instance, since every later change goes through mutate()
     private recount() {
         const { data } = this;
         let numSelected = 0;
@@ -103,9 +122,13 @@ class SplatState {
         this.numDeleted = numDeleted;
     }
 
-    // upload dirty bytes to the GPU texture and refresh cached counts.
-    // idempotent and cheap when nothing is dirty.
+    // upload dirty bytes to the GPU texture. idempotent and cheap when nothing
+    // is dirty; counts are already current (see mutate).
     flush(): void {
+        if (this.countsDirty) {
+            this.recount();
+            this.countsDirty = false;
+        }
         if (this.dirtyLo < 0) return;
         // full upload. sub-rect upload is a worthwhile future optimisation
         // (would drop a 4M-byte upload to a few KB for small selections) but
@@ -114,7 +137,6 @@ class SplatState {
         const buffer = this.gpu.lock() as Uint8Array;
         buffer.set(this.data);
         this.gpu.unlock();
-        this.recount();
         this.dirtyLo = -1;
         this.dirtyHi = -1;
     }

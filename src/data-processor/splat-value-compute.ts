@@ -17,11 +17,13 @@ import {
     Vec3
 } from 'playcanvas';
 
+import { createGradeTerms, gradeTerms } from '../color-grade';
 import { Splat } from '../splat';
 
 const identity = new Mat4();
 const zeroVec3 = new Vec3();
 const SH_NUM_COEFFS = [0, 3, 8, 15];
+const terms = createGradeTerms();
 
 type SplatValueOptions = {
     entityMatrix?: Mat4;
@@ -91,8 +93,7 @@ const setSplatValueParameters = (
     const viewMatrix = options?.viewMatrix ?? identity;
     const viewProjection = options?.viewProjection ?? identity;
     const cameraPos = options?.cameraPos ?? zeroVec3;
-    const { tintClr, temperature, saturation, brightness, blackPoint, whitePoint, transparency } = splat;
-    const inverseRange = 1 / (whitePoint - blackPoint);
+    const grade = gradeTerms(splat, terms);
 
     compute.setParameter('transformA', transformA);
     compute.setParameter('transformB', resource.getTexture('transformB'));
@@ -115,14 +116,10 @@ const setSplatValueParameters = (
     compute.setParameter('viewMatrix', viewMatrix.data);
     compute.setParameter('viewProjection', viewProjection.data);
     compute.setParameter('cameraWorldPos', [cameraPos.x, cameraPos.y, cameraPos.z]);
-    compute.setParameter('cgOffset', -blackPoint + brightness);
-    compute.setParameter('cgScale', [
-        inverseRange * tintClr.r * (1 + temperature),
-        inverseRange * tintClr.g,
-        inverseRange * tintClr.b * (1 - temperature)
-    ]);
-    compute.setParameter('cgSaturation', saturation);
-    compute.setParameter('transparency', transparency);
+    compute.setParameter('cgOffset', grade.offset);
+    compute.setParameter('cgScale', [grade.scale.r, grade.scale.g, grade.scale.b]);
+    compute.setParameter('cgSaturation', grade.saturation);
+    compute.setParameter('transparency', grade.transparency);
     compute.setParameter('shNumCoeffs', SH_NUM_COEFFS[bands] ?? 0);
     compute.setParameter('minValue', minValue);
     compute.setParameter('maxValue', maxValue);

@@ -1,3 +1,6 @@
+import { applyColorGradeWGSL } from './color-grade-chunk';
+import { indexToUvWGSL, paletteMatrixWGSL } from './palette-chunk';
+
 const shCode = (bands: number) => {
     if (bands === 0) {
         return `
@@ -123,36 +126,10 @@ ${bands > 2 ? '@group(0) @binding(13) var splatSH_12to15: texture_2d<u32>;' : ''
 @group(0) @binding(${10 + (bands > 0 ? 1 : 0) + (bands > 1 ? 2 : 0) + (bands > 2 ? 1 : 0)}) var<uniform> uniforms: ProjectorUniforms;
 
 ${shCode(bands)}
-
-fn sourceCoord(index: u32) -> vec2i {
-    return vec2i(i32(index % uniforms.sourceWidth), i32(index / uniforms.sourceWidth));
-}
-
-fn cacheCoord(index: u32) -> vec2i {
-    return vec2i(i32(index % uniforms.cacheWidth), i32(index / uniforms.cacheWidth));
-}
-
-fn paletteMatrix(index: u32) -> mat4x4f {
-    if (index == 0u) {
-        return mat4x4f(
-            vec4f(1.0, 0.0, 0.0, 0.0),
-            vec4f(0.0, 1.0, 0.0, 0.0),
-            vec4f(0.0, 0.0, 1.0, 0.0),
-            vec4f(0.0, 0.0, 0.0, 1.0)
-        );
-    }
-    let x = i32(index % 512u) * 3;
-    let y = i32(index / 512u);
-    let r0 = textureLoad(transformPalette, vec2i(x, y), 0);
-    let r1 = textureLoad(transformPalette, vec2i(x + 1, y), 0);
-    let r2 = textureLoad(transformPalette, vec2i(x + 2, y), 0);
-    return mat4x4f(
-        vec4f(r0.x, r1.x, r2.x, 0.0),
-        vec4f(r0.y, r1.y, r2.y, 0.0),
-        vec4f(r0.z, r1.z, r2.z, 0.0),
-        vec4f(r0.w, r1.w, r2.w, 1.0)
-    );
-}
+${indexToUvWGSL('sourceCoord', 'uniforms.sourceWidth')}
+${indexToUvWGSL('cacheCoord', 'uniforms.cacheWidth')}
+${paletteMatrixWGSL}
+${applyColorGradeWGSL}
 
 fn rotationMatrix(qIn: vec4f) -> mat3x3f {
     let q = normalize(qIn);
@@ -321,9 +298,10 @@ fn main(
         let localDirection = normalize(transpose(mat3x3f(model[0].xyz, model[1].xyz, model[2].xyz)) * worldDirection);
         color = vec4f(color.rgb + evaluateSH(uv, localDirection), color.a);
     }
-    color = color * uniforms.colorScale + uniforms.colorOffset;
-    let grey = dot(color.rgb, vec3f(0.299, 0.587, 0.114));
-    color = vec4f(vec3f(grey) + (color.rgb - vec3f(grey)) * uniforms.saturation, clamp(color.a, 0.0, 1.0));
+    color = vec4f(
+        applyColorGrade(color.rgb, uniforms.colorScale.rgb, uniforms.colorOffset.x, uniforms.saturation),
+        clamp(color.a * uniforms.colorScale.w + uniforms.colorOffset.w, 0.0, 1.0)
+    );
 
     let selected = (state & 1u) != 0u && uniforms.selectionEnabled != 0u;
     let locked = (state & 2u) != 0u;

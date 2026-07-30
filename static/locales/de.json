@@ -345,6 +345,8 @@
     "tooltip.scene.solo": "Auswahl solo anzeigen",
     "tooltip.scene.import": "Szene importieren",
     "tooltip.scene.new": "Neue Szene",
+    "tooltip.scene.copy-transform": "Transformation kopieren",
+    "tooltip.scene.paste-transform": "Transformation einfügen",
 
     "tooltip.status-bar.timeline": "Zeitleisten-Panel umschalten",
     "tooltip.status-bar.splat-data": "Splat-Daten-Panel umschalten",

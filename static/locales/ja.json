@@ -345,6 +345,8 @@
     "tooltip.scene.solo": "選択をソロ表示",
     "tooltip.scene.import": "シーンをインポート",
     "tooltip.scene.new": "新規シーンを作成",
+    "tooltip.scene.copy-transform": "変換をコピー",
+    "tooltip.scene.paste-transform": "変換を貼り付け",
 
     "tooltip.status-bar.timeline": "タイムラインパネルの切り替え",
     "tooltip.status-bar.splat-data": "スプラットデータパネルの切り替え",

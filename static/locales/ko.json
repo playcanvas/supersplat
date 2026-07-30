@@ -345,6 +345,8 @@
     "tooltip.scene.solo": "선택 항목 솔로",
     "tooltip.scene.import": "장면 가져오기",
     "tooltip.scene.new": "새 장면",
+    "tooltip.scene.copy-transform": "변환 복사",
+    "tooltip.scene.paste-transform": "변환 붙여넣기",
 
     "tooltip.status-bar.timeline": "타임라인 패널 전환",
     "tooltip.status-bar.splat-data": "스플랫 데이터 패널 전환",

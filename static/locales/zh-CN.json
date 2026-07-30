@@ -345,6 +345,8 @@
     "tooltip.scene.solo": "独显所选",
     "tooltip.scene.import": "导入场景",
     "tooltip.scene.new": "新建场景",
+    "tooltip.scene.copy-transform": "复制变换",
+    "tooltip.scene.paste-transform": "粘贴变换",
 
     "tooltip.status-bar.timeline": "切换时间线面板",
     "tooltip.status-bar.splat-data": "切换高斯点数据面板",

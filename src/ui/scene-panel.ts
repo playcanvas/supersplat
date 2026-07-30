@@ -1,10 +1,12 @@
-import { Container, Element, Label } from '@playcanvas/pcui';
+import { Button, Container, Element, Label } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { i18n } from './localization';
 import { SplatList } from './splat-list';
+import copyTransformSvg from './svg/copy-transform.svg';
 import sceneImportSvg from './svg/import.svg';
 import sceneNewSvg from './svg/new.svg';
+import pasteTransformSvg from './svg/paste-transform.svg';
 import soloSvg from './svg/solo.svg';
 import { Tooltips } from './tooltips';
 import { Transform } from './transform';
@@ -95,6 +97,8 @@ class ScenePanel extends Container {
         });
         splatListContainer.append(splatList);
 
+        const transform = new Transform(events);
+
         const transformHeader = new Container({
             class: 'panel-header'
         });
@@ -109,13 +113,59 @@ class ScenePanel extends Container {
         });
         i18n.bindText(transformLabel, 'panel.scene.transform');
 
+        const copyTransform = new Button({
+            class: 'panel-header-button',
+            enabled: false
+        });
+        copyTransform.dom.appendChild(createSvg(copyTransformSvg));
+
+        const pasteTransform = new Button({
+            class: 'panel-header-button',
+            enabled: false
+        });
+        pasteTransform.dom.appendChild(createSvg(pasteTransformSvg));
+
+        let hasSelection = false;
+        const updateTransformActions = () => {
+            copyTransform.enabled = hasSelection;
+            pasteTransform.enabled = hasSelection && transform.hasCopiedTransform;
+        };
+
+        events.on('selection.changed', (selection) => {
+            hasSelection = !!selection;
+            updateTransformActions();
+        });
+
+        copyTransform.on('click', () => {
+            if (transform.copyTransform()) {
+                updateTransformActions();
+            }
+        });
+
+        pasteTransform.on('click', () => {
+            transform.pasteTransform();
+        });
+
+        i18n.onChange(() => copyTransform.dom.setAttribute(
+            'aria-label',
+            i18n.t('tooltip.scene.copy-transform')
+        ), copyTransform);
+        i18n.onChange(() => pasteTransform.dom.setAttribute(
+            'aria-label',
+            i18n.t('tooltip.scene.paste-transform')
+        ), pasteTransform);
+        tooltips.register(copyTransform, () => i18n.t('tooltip.scene.copy-transform'), 'top');
+        tooltips.register(pasteTransform, () => i18n.t('tooltip.scene.paste-transform'), 'top');
+
         transformHeader.append(transformIcon);
         transformHeader.append(transformLabel);
+        transformHeader.append(copyTransform);
+        transformHeader.append(pasteTransform);
 
         this.append(sceneHeader);
         this.append(splatListContainer);
         this.append(transformHeader);
-        this.append(new Transform(events));
+        this.append(transform);
         this.append(new Element({
             class: 'panel-header',
             height: 20

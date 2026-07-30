@@ -345,6 +345,8 @@
     "tooltip.scene.solo": "Соло выбранного",
     "tooltip.scene.import": "Импортировать сцену",
     "tooltip.scene.new": "Новая сцена",
+    "tooltip.scene.copy-transform": "Копировать трансформацию",
+    "tooltip.scene.paste-transform": "Вставить трансформацию",
 
     "tooltip.status-bar.timeline": "Переключить панель временной шкалы",
     "tooltip.status-bar.splat-data": "Переключить панель данных сплатов",

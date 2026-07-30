@@ -2,6 +2,7 @@ import { Color, Mat4, Quat, Vec3 } from 'playcanvas';
 
 import { AnimTrack } from './anim-track';
 import { BoxShape } from './box-shape';
+import type { RemovedInstances } from './gaussian-instances';
 import { IndexRanges, sortedPredicate } from './index-ranges';
 import { Pivot } from './pivot';
 import { Scene } from './scene';
@@ -28,14 +29,12 @@ class StateOp {
     ranges: IndexRanges;
     mask: number;
     op: BitOp;
-    updateFlags: number;
 
-    constructor(splat: Splat, ranges: IndexRanges, mask: number, op: BitOp, updateFlags = State.selected) {
+    constructor(splat: Splat, ranges: IndexRanges, mask: number, op: BitOp) {
         this.splat = splat;
         this.ranges = ranges;
         this.mask = mask;
         this.op = op;
-        this.updateFlags = updateFlags;
     }
 
     private apply(op: BitOp) {
@@ -57,14 +56,14 @@ class StateOp {
 
     async do() {
         this.apply(this.op);
-        await this.splat.updateState(this.updateFlags);
+        await this.splat.updateState();
     }
 
     async undo() {
         const undoOp = this.op === BitOp.TOGGLE ? BitOp.TOGGLE :
             this.op === BitOp.SET ? BitOp.CLEAR : BitOp.SET;
         this.apply(undoOp);
-        await this.splat.updateState(this.updateFlags);
+        await this.splat.updateState();
     }
 
     destroy() {
@@ -99,7 +98,7 @@ class SelectInvertOp extends StateOp {
     constructor(splat: Splat) {
         const state = splat.instances.flags;
         const count = splat.instances.count;
-        super(splat, IndexRanges.fromPredicate(count, i => (state[i] & (State.locked | State.deleted)) === 0), State.selected, BitOp.TOGGLE);
+        super(splat, IndexRanges.fromPredicate(count, i => (state[i] & State.locked) === 0), State.selected, BitOp.TOGGLE);
     }
 }
 
@@ -116,7 +115,7 @@ class SelectOp extends StateOp {
     //   set       — make selection match the hit mask (toggle valid splats whose
     //               current selection state differs from the mask). NOT a replace —
     //               the underlying BitOp is TOGGLE on the rows where selection and
-    //               hit disagree, which leaves locked/deleted bits untouched.
+    //               hit disagree, which leaves the locked bit untouched.
     //   intersect — keep only splats currently selected AND in the hit mask
     //               (clear the selected bit on selected splats that are not hit).
     constructor(splat: Splat, op: 'add' | 'remove' | 'set' | 'intersect', sel: Uint8Array | Uint32Array) {
@@ -125,7 +124,7 @@ class SelectOp extends StateOp {
         const isHit = sel instanceof Uint32Array ? sortedPredicate(sel) : (i: number) => sel[i] === 255;
 
         // single rule applied uniformly: only valid (clean or selected) splats
-        // are considered. consolidates the locked/deleted guard in one place so
+        // are considered. consolidates the locked guard in one place so
         // each producer doesn't have to remember it for the 'set' (toggle) path.
         const valid = (i: number) => state[i] === 0 || state[i] === State.selected;
 
@@ -155,7 +154,7 @@ class HideSelectionOp extends StateOp {
     constructor(splat: Splat) {
         const state = splat.instances.flags;
         const count = splat.instances.count;
-        super(splat, IndexRanges.fromPredicate(count, i => state[i] === State.selected), State.locked, BitOp.SET, State.locked);
+        super(splat, IndexRanges.fromPredicate(count, i => state[i] === State.selected), State.locked, BitOp.SET);
     }
 }
 
@@ -165,27 +164,68 @@ class UnhideAllOp extends StateOp {
     constructor(splat: Splat) {
         const state = splat.instances.flags;
         const count = splat.instances.count;
-        super(splat, IndexRanges.fromPredicate(count, i => (state[i] & (State.locked | State.deleted)) === State.locked), State.locked, BitOp.CLEAR, State.locked);
+        super(splat, IndexRanges.fromPredicate(count, i => (state[i] & State.locked) !== 0), State.locked, BitOp.CLEAR);
     }
 }
 
-class DeleteSelectionOp extends StateOp {
-    name = 'deleteSelection';
+// Deleting removes the selected instances from the live list, order-preserving,
+// and retains their records so undo can put them back exactly where they were.
+// The recorded ranges stay meaningful for older ops because the edit history is
+// strict LIFO: nothing older is undone until this op has been.
+class RemoveInstancesOp {
+    name = 'removeInstances';
+    splat: Splat;
+    ranges: IndexRanges;
+    private removed: RemovedInstances = null;
 
     constructor(splat: Splat) {
         const state = splat.instances.flags;
-        const count = splat.instances.count;
-        super(splat, IndexRanges.fromPredicate(count, i => state[i] === State.selected), State.deleted, BitOp.SET, State.deleted);
+        this.splat = splat;
+        this.ranges = IndexRanges.fromPredicate(splat.instances.count, i => state[i] === State.selected);
+    }
+
+    async do() {
+        this.removed = this.splat.instances.remove(this.ranges);
+        await this.splat.updateState();
+    }
+
+    async undo() {
+        this.splat.instances.insert(this.removed);
+        this.removed = null;
+        await this.splat.updateState();
+    }
+
+    destroy() {
+        this.splat = null;
+        this.ranges = null;
+        this.removed = null;
     }
 }
 
-class ResetOp extends StateOp {
-    name = 'reset';
+// Bring back every static gaussian nothing references any more. Unlike undo the
+// original positions are gone, so the restored instances land at the tail, clean.
+class RestoreMissingInstancesOp {
+    name = 'restoreMissingInstances';
+    splat: Splat;
+    private appended = 0;
 
     constructor(splat: Splat) {
-        const state = splat.instances.flags;
-        const count = splat.instances.count;
-        super(splat, IndexRanges.fromPredicate(count, i => (state[i] & State.deleted) !== 0), State.deleted, BitOp.CLEAR, State.deleted);
+        this.splat = splat;
+    }
+
+    async do() {
+        this.appended = this.splat.instances.appendMissing(this.splat.resource.numRows);
+        await this.splat.updateState();
+    }
+
+    async undo() {
+        this.splat.instances.truncate(this.appended);
+        this.appended = 0;
+        await this.splat.updateState();
+    }
+
+    destroy() {
+        this.splat = null;
     }
 }
 
@@ -544,8 +584,8 @@ export {
     SelectOp,
     HideSelectionOp,
     UnhideAllOp,
-    DeleteSelectionOp,
-    ResetOp,
+    RemoveInstancesOp,
+    RestoreMissingInstancesOp,
     EntityTransformOp,
     SplatsTransformOp,
     PlacePivotOp,

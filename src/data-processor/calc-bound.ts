@@ -66,7 +66,6 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(num_workgroups) numW
     var visMax = vec3f(-1e6);
     for (var i = thread; i < uniforms.numSplats; i += ${NUM_THREADS}u) {
         let state = instanceFlagByte(i);
-        if ((state & 4u) != 0u) { continue; }
         let uv = sourceCoord(instanceSource[i]);
         var center = bitcast<vec3f>(textureLoad(transformA, uv, 0).xyz);
         center = (paletteMatrix(instancePalette[i] & 0xffffu) * vec4f(center, 1.0)).xyz;

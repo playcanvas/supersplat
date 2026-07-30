@@ -109,7 +109,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     let instance = uniform.instanceBase + pcInstanceIndex;
     let uv = splatUv(instanceSource[instance]);
     let state = instanceFlagByte(instance);
-    if ((state & 6u) != 0u) {
+    if ((state & 2u) != 0u) {
         output.position = vec4f(0.0, 0.0, 2.0, 1.0);
         return output;
     }

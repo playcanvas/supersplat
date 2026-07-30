@@ -1,9 +1,9 @@
 import { Mat4, Ray, Vec3, Vec4 } from 'playcanvas';
 
 import { sigmoid } from './color-grade';
+import { groupInstancesByChunk } from './gaussian-instances';
 import { Scene } from './scene';
 import { Splat } from './splat';
-import { State } from './splat-state';
 
 // clicked points gather the gaussians whose centers project within this many
 // pixels of the cursor (falling back to the larger radius on sparse surfaces)
@@ -20,10 +20,10 @@ const PICK_RADIUS_FAR = 24;
 // on the dominant visible surface.
 const pickSplatSurfacePoint = async (scene: Scene, splat: Splat, offsetX: number, offsetY: number, result: Vec3) => {
     const { source, sourcePool } = splat.resource;
-    // this sweep walks source chunks in file order (sequential reads), so it
-    // indexes the instance arrays by row - valid while the list is the identity
+    // this sweep walks source chunks in file order (sequential reads), so the
+    // instances referencing each chunk are gathered up front
     const { instances } = splat;
-    const state = instances.flags;
+    const { starts, ordered } = groupInstancesByChunk(instances, source.meta.chunkSize, source.meta.numChunks[0]);
     const localToClip = new Mat4();
     const paletteTransform = new Mat4();
     const ray = new Ray();
@@ -50,14 +50,12 @@ const pickSplatSurfacePoint = async (scene: Scene, splat: Splat, offsetX: number
             const geometry = new Float32Array(geometric.data);
             const base = chunkIndex * source.meta.chunkSize;
 
-            for (let i = 0; i < count; ++i) {
-                const index = base + i;
-                if (state[index] & State.deleted) {
-                    continue;
-                }
+            for (let slot = starts[chunkIndex]; slot < starts[chunkIndex + 1]; ++slot) {
+                const instance = ordered[slot];
+                const i = instances.sourceRow[instance] - base;
 
                 center.set(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
-                const paletteIndex = instances.transformIndex(index);
+                const paletteIndex = instances.transformIndex(instance);
                 if (paletteIndex) {
                     splat.transformPalette.getTransform(paletteIndex, paletteTransform);
                     paletteTransform.transformPoint(center, center);

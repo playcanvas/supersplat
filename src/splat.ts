@@ -12,7 +12,6 @@ import { Element, ElementType } from './element';
 import { GaussianInstances } from './gaussian-instances';
 import { Serializer } from './serializer';
 import { EditorSplatResource } from './splat-resource';
-import { State } from './splat-state';
 import { Transform } from './transform';
 import { TransformPalette } from './transform-palette';
 
@@ -162,8 +161,7 @@ class Splat extends Element {
         // (lockedRenderMode): renders are gated on scene.lockedRender there, so
         // blocking on a render would deadlock — and the render loop sorts+captures
         // each frame deterministically anyway.
-        await this.updateState(State.deleted);
-        this.scene.projectedSplatRenderer.replace(this);
+        await this.updateState();
         if (!this.scene.lockedRenderMode) {
             await this.waitForRender();
         }
@@ -188,20 +186,17 @@ class Splat extends Element {
         this.asset.unload();
     }
 
-    async updateState(changedState = State.selected) {
+    async updateState() {
         // uploads dirty ranges; counts are maintained by the mutators.
         this.instances.flush();
-        this.numSplats = this.instances.count - this.instances.numDeleted;
+        this.numSplats = this.instances.count;
         this.numLocked = this.instances.numLocked;
         this.numSelected = this.instances.numSelected;
-        this.numDeleted = this.instances.numDeleted;
+        this.numDeleted = this.instances.numRemoved;
 
-        // handle splats being added or removed
-        if (changedState & State.deleted) {
-            await this.updateSorting();
-        } else {
-            await this.updateLocalBounds();
-        }
+        // an edit may have resized the list, which the renderer's placement caches
+        this.scene.projectedSplatRenderer.replace(this);
+        await this.updateLocalBounds();
 
         this.scene.forceRender = true;
         this.scene.events.fire('splat.stateChanged', this);
@@ -210,15 +205,10 @@ class Splat extends Element {
     async updatePositions() {
         // palette index edits mark dirty spans; get them onto the GPU
         this.instances.flush();
-        await this.updateSorting();
+        await this.updateLocalBounds();
 
         this.scene.forceRender = true;
         this.scene.events.fire('splat.positionsChanged', this);
-    }
-
-    async updateSorting() {
-        // deleted splats are rejected by the GPU projection pass
-        await this.updateLocalBounds();
     }
 
     get worldTransform() {

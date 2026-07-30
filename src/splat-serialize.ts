@@ -33,6 +33,7 @@ import {
 import { version } from '../package.json';
 import { ColorGrade, dcDecode, dcEncode, sigmoid } from './color-grade';
 import { Events } from './events';
+import { groupInstancesByChunk } from './gaussian-instances';
 import { SHRotation } from './sh-utils';
 import { Splat } from './splat';
 import { State } from './splat-state';
@@ -164,9 +165,8 @@ class SplatTransformCache {
         const tmpMat3 = new Mat3();
         const tmpQuat = new Quat();
 
-        // `index` is the instance being exported (row == instance while the
-        // instance list is the identity); the cache itself is keyed by palette
-        // entry, which is what makes it a cache
+        // `index` is the instance being exported; the cache itself is keyed by
+        // palette entry, which is what makes it a cache
         const getTransform = (index: number) => {
             const transformIndex = instances.transformIndex(index);
             let result = transforms.get(transformIndex);
@@ -319,17 +319,20 @@ const filteredIndices = async (splat: Splat, settings: SerializeSettings) => {
     if (!needsSource) {
         let count = 0;
         for (let i = 0; i < numInstances; ++i) {
-            if ((state[i] & State.deleted) === 0 && (!onlySelected || state[i] === State.selected)) count++;
+            if (!onlySelected || state[i] === State.selected) count++;
         }
         const result = new Uint32Array(count);
-        for (let i = 0, dst = 0; i < state.length; ++i) {
-            if ((state[i] & State.deleted) === 0 && (!onlySelected || state[i] === State.selected)) result[dst++] = i;
+        for (let i = 0, dst = 0; i < numInstances; ++i) {
+            if (!onlySelected || state[i] === State.selected) result[dst++] = i;
         }
         return result;
     }
 
     const pool = createChunkDataPool({ chunkSize: source.meta.chunkSize });
-    const blocks: Uint32Array[] = [];
+    // the source has to be read sequentially, which visits instances in source
+    // order, so acceptance is recorded in a mask and emitted in instance order
+    const { starts, ordered } = groupInstancesByChunk(splat.instances, source.meta.chunkSize, source.meta.numChunks[0]);
+    const accepted = new Uint8Array(numInstances);
     let total = 0;
     try {
         for (let chunkIndex = 0; chunkIndex < source.meta.numChunks[0]; ++chunkIndex) {
@@ -341,21 +344,16 @@ const filteredIndices = async (splat: Splat, settings: SerializeSettings) => {
             try {
                 await source.read({ chunkIndex, position, geometric, color, other });
                 const opacity = new Float32Array(geometric.data);
-                const accepted = new Uint32Array(count);
-                let acceptedCount = 0;
                 const base = chunkIndex * source.meta.chunkSize;
-                for (let i = 0; i < count; ++i) {
-                    const index = base + i;
-                    if ((state[index] & State.deleted) !== 0) continue;
-                    if (onlySelected && state[index] !== State.selected) continue;
+                for (let slot = starts[chunkIndex]; slot < starts[chunkIndex + 1]; ++slot) {
+                    const instance = ordered[slot];
+                    if (onlySelected && state[instance] !== State.selected) continue;
+                    const i = splat.instances.sourceRow[instance] - base;
                     if (minOpacity > 0 && sigmoid(opacity[i * 8 + 7]) < minOpacity) continue;
                     if (removeInvalid && (!validFloatLayer(position, i) || !validGeometric(geometric, i) ||
                         !validFloatLayer(color, i) || (other && !validOther(other, i)))) continue;
-                    accepted[acceptedCount++] = index;
-                }
-                if (acceptedCount > 0) {
-                    blocks.push(accepted.slice(0, acceptedCount));
-                    total += acceptedCount;
+                    accepted[instance] = 1;
+                    total++;
                 }
             } finally {
                 position?.release();
@@ -369,10 +367,8 @@ const filteredIndices = async (splat: Splat, settings: SerializeSettings) => {
     }
 
     const result = new Uint32Array(total);
-    let offset = 0;
-    for (const block of blocks) {
-        result.set(block, offset);
-        offset += block.length;
+    for (let i = 0, dst = 0; i < numInstances; ++i) {
+        if (accepted[i]) result[dst++] = i;
     }
     return result;
 };
@@ -392,7 +388,7 @@ type ExportEntry = {
  *
  * It is the streaming analog of the old extractDataTable/DataTable path:
  * gaussians are filtered
- * (deleted/selection/opacity/invalid) and transformed (world + palette + SH
+ * (selection/opacity/invalid) and transformed (world + palette + SH
  * rotation + colour tint + PLY-space flip) on demand via SingleSplat, one chunk
  * at a time. The output is in PLY space, so the source is tagged Transform.PLY
  * (identity) and the writers' bakeTransform is a no-op.
@@ -459,9 +455,17 @@ class SuperSplatChunkSource implements ChunkSource {
         return null;
     }
 
-    private async readGroup(entry: ExportEntry, indices: Uint32Array, outputOffset: number, request: ReadRequest) {
+    // `instanceIndices` selects instances of `entry.splat`; the static data is
+    // gathered by their source rows, while the palette and grade lookups stay in
+    // instance space (two instances of one row can carry different transforms)
+    private async readGroup(entry: ExportEntry, instanceIndices: Uint32Array, outputOffset: number, request: ReadRequest) {
         const { splat, transform, grade } = entry;
         const source = splat.resource.source;
+        const { sourceRow } = splat.instances;
+        const indices = new Uint32Array(instanceIndices.length);
+        for (let i = 0; i < instanceIndices.length; ++i) {
+            indices[i] = sourceRow[instanceIndices[i]];
+        }
         let pool = this.pools.get(splat);
         if (!pool) {
             pool = createChunkDataPool({ chunkSize: source.meta.chunkSize });
@@ -490,12 +494,12 @@ class SuperSplatChunkSource implements ChunkSource {
             const c = { r: 0, g: 0, b: 0 };
 
             for (let i = 0; i < count; ++i) {
-                const sourceIndex = indices[i];
+                const instance = instanceIndices[i];
                 if (dstPosition) {
                     const src = i * 3;
                     const dst = (outputOffset + i) * 3;
                     positionValue.set(srcPosition[src], srcPosition[src + 1], srcPosition[src + 2]);
-                    transform.getMat(sourceIndex).transformPoint(positionValue, positionValue);
+                    transform.getMat(instance).transformPoint(positionValue, positionValue);
                     dstPosition[dst] = positionValue.x;
                     dstPosition[dst + 1] = positionValue.y;
                     dstPosition[dst + 2] = positionValue.z;
@@ -504,12 +508,12 @@ class SuperSplatChunkSource implements ChunkSource {
                     const src = i * 8;
                     const dst = (outputOffset + i) * 8;
                     rotationValue.set(srcGeometric[src + 1], srcGeometric[src + 2], srcGeometric[src + 3], srcGeometric[src]);
-                    rotationValue.mul2(transform.getRot(sourceIndex), rotationValue);
+                    rotationValue.mul2(transform.getRot(instance), rotationValue);
                     dstGeometric[dst] = rotationValue.w;
                     dstGeometric[dst + 1] = rotationValue.x;
                     dstGeometric[dst + 2] = rotationValue.y;
                     dstGeometric[dst + 3] = rotationValue.z;
-                    const scale = transform.getScale(sourceIndex);
+                    const scale = transform.getScale(instance);
                     dstGeometric[dst + 4] = Math.log(Math.exp(srcGeometric[src + 4]) * scale.x);
                     dstGeometric[dst + 5] = Math.log(Math.exp(srcGeometric[src + 5]) * scale.y);
                     dstGeometric[dst + 6] = Math.log(Math.exp(srcGeometric[src + 6]) * scale.z);
@@ -535,7 +539,7 @@ class SuperSplatChunkSource implements ChunkSource {
                             for (let coeff = 0; coeff < copy; ++coeff) {
                                 tmpSH[coeff] = srcColor[src + 3 + channel * srcCoeffs + coeff];
                             }
-                            transform.getSHRot(sourceIndex).apply(tmpSH);
+                            transform.getSHRot(instance).apply(tmpSH);
                             rest.set(tmpSH, channel * dstCoeffs);
                         }
                         if (!this.settings.keepColorTint && grade.hasTint) {
@@ -578,12 +582,12 @@ class SuperSplatChunkSource implements ChunkSource {
                 if (this.findEntry(nextRow) !== entry) break;
                 groupCount++;
             }
-            const indices = new Uint32Array(groupCount);
+            const instanceIndices = new Uint32Array(groupCount);
             for (let i = 0; i < groupCount; ++i) {
                 const row = isGather ? request.indices[request.indexOffset + offset + i] : chunkBase + offset + i;
-                indices[i] = entry.indices[row - entry.start];
+                instanceIndices[i] = entry.indices[row - entry.start];
             }
-            await this.readGroup(entry, indices, offset, request);
+            await this.readGroup(entry, instanceIndices, offset, request);
             offset += groupCount;
         }
     }

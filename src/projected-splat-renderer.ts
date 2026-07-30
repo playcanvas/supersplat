@@ -50,6 +50,9 @@ import type { Splat } from './splat';
 
 const INSTANCE_SIZE = 128;
 const WORKGROUP_SIZE = 256;
+const ENTRY_ALIGNMENT = 256;
+
+const roundUp = (value: number, alignment: number) => Math.ceil(value / alignment) * alignment;
 
 type ProjectorVariant = {
     shader: Shader;
@@ -61,6 +64,10 @@ type Placement = {
     splat: Splat;
     count: number;
     entryBase: number;
+    // entries reserved in the global cache. Always >= count and never shrinks, so
+    // removing instances doesn't force a realloc of the whole cache; the projector
+    // dispatches over the reservation and invalidates the tail
+    entryCapacity: number;
     // first instance of this placement's group within the splat's instance list
     instanceBase: number;
     // each placement owns its Compute: a Compute's uniform buffer is a single
@@ -194,6 +201,7 @@ class ProjectedSplatRenderer {
             splat,
             count: splat.instances.count,
             entryBase: 0,
+            entryCapacity: 0,
             instanceBase: 0,
             compute: null,
             bands: -1
@@ -210,9 +218,11 @@ class ProjectedSplatRenderer {
         }
     }
 
+    // pick up a change in a splat's live instance count. called after every edit,
+    // so it must stay a no-op when nothing moved
     replace(splat: Splat) {
         const placement = this.placements.find(item => item.splat === splat);
-        if (placement) {
+        if (placement && placement.count !== splat.instances.count) {
             placement.count = splat.instances.count;
             this.layoutDirty = true;
         }
@@ -274,6 +284,7 @@ class ProjectedSplatRenderer {
         const uniformBufferFormat = new UniformBufferFormat(this.device, [
             new UniformFormat('numSplats', UNIFORMTYPE_UINT),
             new UniformFormat('entryBase', UNIFORMTYPE_UINT),
+            new UniformFormat('entryCount', UNIFORMTYPE_UINT),
             new UniformFormat('instanceBase', UNIFORMTYPE_UINT),
             new UniformFormat('sourceWidth', UNIFORMTYPE_UINT),
             new UniformFormat('cacheWidth', UNIFORMTYPE_UINT),
@@ -330,8 +341,15 @@ class ProjectedSplatRenderer {
     private rebuildLayout() {
         let count = 0;
         for (const placement of this.placements) {
+            if (placement.count > placement.entryCapacity) {
+                // grow geometrically so repeated appends don't realloc every time
+                placement.entryCapacity = roundUp(
+                    Math.max(placement.count, Math.ceil(placement.entryCapacity * 1.25)),
+                    ENTRY_ALIGNMENT
+                );
+            }
             placement.entryBase = count;
-            count += placement.count;
+            count += placement.entryCapacity;
         }
 
         if (count !== this.capacity) {
@@ -453,6 +471,7 @@ class ProjectedSplatRenderer {
 
             compute.setParameter('numSplats', placement.count);
             compute.setParameter('entryBase', placement.entryBase);
+            compute.setParameter('entryCount', placement.entryCapacity);
             compute.setParameter('instanceBase', placement.instanceBase);
             compute.setParameter('sourceWidth', resource.textureDimensions.x);
             compute.setParameter('cacheWidth', this.cacheWidth);
@@ -478,7 +497,7 @@ class ProjectedSplatRenderer {
             compute.setParameter('pickOp', -1);
             compute.setParameter('minPixelSize', minPixelSize);
 
-            const workgroups = Math.ceil(placement.count / WORKGROUP_SIZE);
+            const workgroups = Math.ceil(placement.entryCapacity / WORKGROUP_SIZE);
             Compute.calcDispatchSize(workgroups, this.dispatchSize);
             compute.setupDispatch(this.dispatchSize.x, this.dispatchSize.y);
             this.device.computeDispatch([compute], `project-splats-${splat.uid}`);

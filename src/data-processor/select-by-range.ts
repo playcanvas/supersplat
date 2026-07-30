@@ -101,7 +101,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     }
 
     async run(splat: Splat, mode: number, options: SelectByRangeOptions, bufferPool: BufferPool): Promise<Uint8Array> {
-        const count = splat.resource.numSplats;
+        const count = splat.instances.count;
         const byteSize = maskByteSize(count);
         if (!this.output || this.output.byteSize !== byteSize) {
             this.output?.destroy();

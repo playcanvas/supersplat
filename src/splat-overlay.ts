@@ -117,8 +117,6 @@ class SplatOverlay extends Element {
 
         material.update();
 
-        this.meshInstance.instancingCount = splat.instances.count;
-
         splat.entity.addChild(this.entity);
         this.splat = splat;
     }
@@ -136,6 +134,8 @@ class SplatOverlay extends Element {
 
         if (enabled) {
             const { material } = this;
+            // delete/undo resizes the instance list, so the draw count is per-frame
+            this.meshInstance.instancingCount = this.splat.instances.count;
             const splatSize = events.invoke('camera.splatSize');
             const selectedClr = events.invoke('view.outlineSelection') ? nullClr : events.invoke('selectedClr');
             const unselectedClr = events.invoke('unselectedClr');

@@ -89,6 +89,7 @@ const projectedSplatProjector = (bands: number) => /* wgsl */`
 struct ProjectorUniforms {
     numSplats: u32,
     entryBase: u32,
+    entryCount: u32,
     instanceBase: u32,
     sourceWidth: u32,
     cacheWidth: u32,
@@ -162,12 +163,13 @@ fn main(
     @builtin(num_workgroups) numWorkgroups: vec3u
 ) {
     let localIndex = gid.y * numWorkgroups.x * 256u + gid.x;
-    if (localIndex >= uniforms.numSplats) {
+    if (localIndex >= uniforms.entryCount) {
         return;
     }
 
+    // entries beyond the live instance count are reserved slack
     let entry = uniforms.entryBase + localIndex;
-    if (uniforms.visible == 0u) {
+    if (localIndex >= uniforms.numSplats || uniforms.visible == 0u) {
         writeInvalid(entry);
         return;
     }
@@ -177,15 +179,10 @@ fn main(
     let instance = uniforms.instanceBase + localIndex;
     let sourceIndex = instanceSource[instance];
     let uv = sourceCoord(sourceIndex);
-    let state = instanceFlagByte(instance) & 7u;
-    if (uniforms.pickOp < 0) {
-        if ((state & 4u) != 0u) {
-            writeInvalid(entry);
-            return;
-        }
-    } else if ((uniforms.pickOp == 0 && state != 0u)
+    let state = instanceFlagByte(instance) & 3u;
+    if ((uniforms.pickOp == 0 && state != 0u)
         || (uniforms.pickOp == 1 && state != 1u)
-        || (uniforms.pickOp == 2 && (state & 6u) != 0u)) {
+        || (uniforms.pickOp == 2 && (state & 2u) != 0u)) {
         writeInvalid(entry);
         return;
     }

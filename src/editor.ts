@@ -2,7 +2,7 @@ import { MemoryFileSystem } from '@playcanvas/splat-transform';
 import { Color, Mat4, path, Quat, Texture, Vec3 } from 'playcanvas';
 
 import { EditHistory } from './edit-history';
-import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp, MultiOp, AddSplatOp, SetLocalFrameOp } from './edit-ops';
+import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, RemoveInstancesOp, RestoreMissingInstancesOp, MultiOp, AddSplatOp, SetLocalFrameOp } from './edit-ops';
 import { Element, ElementType } from './element';
 import { Events } from './events';
 import type { GridPlane } from './infinite-grid';
@@ -580,7 +580,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 continue;
             }
 
-            if (pickId < 0 || pickId >= splat.resource.numSplats) {
+            if (pickId < 0 || pickId >= splat.instances.count) {
                 continue;
             }
             await scene.commandQueue.enqueue(async () => {
@@ -620,7 +620,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             return;
         }
         selectedSplats().forEach((splat) => {
-            editHistory.add(new DeleteSelectionOp(splat));
+            editHistory.add(new RemoveInstancesOp(splat));
         });
     });
 
@@ -649,7 +649,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
             if (func === 'separate') {
                 editHistory.add(new MultiOp([
-                    new DeleteSelectionOp(splat),
+                    new RemoveInstancesOp(splat),
                     new AddSplatOp(scene, copy)
                 ]));
             } else {
@@ -669,7 +669,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('scene.reset', () => {
         selectedSplats().forEach((splat) => {
-            editHistory.add(new ResetOp(splat));
+            editHistory.add(new RestoreMissingInstancesOp(splat));
         });
     });
 

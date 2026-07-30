@@ -17,6 +17,11 @@
     "menu.edit.duplicate": "Duplicar",
     "menu.edit.separate": "Separar",
 
+    "menu.transform.copy-position": "Copiar posição",
+    "menu.transform.copy-rotation": "Copiar rotação",
+    "menu.transform.copy-position-rotation": "Copiar posição e rotação",
+    "menu.transform.copy-all": "Copiar todas as transformações",
+
     "menu.select": "Selecionar",
     "menu.select.all": "Todos",
     "menu.select.none": "Nenhum",
@@ -345,6 +350,8 @@
     "tooltip.scene.solo": "Solo selecionado",
     "tooltip.scene.import": "Importar Cena",
     "tooltip.scene.new": "Nova Cena",
+    "tooltip.scene.copy-transform-options": "Opções de cópia de transformação",
+    "tooltip.scene.paste-transform": "Colar transformação",
 
     "tooltip.status-bar.timeline": "Alternar painel de Linha do Tempo",
     "tooltip.status-bar.splat-data": "Alternar painel de Dados de Splat",

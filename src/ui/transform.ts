@@ -2,12 +2,26 @@ import { Container, ContainerArgs, Label, NumericInput, VectorInput } from '@pla
 import { Quat, Vec3 } from 'playcanvas';
 
 import { Events } from '../events';
+import { Transform as TransformData } from '../transform';
 import { i18n } from './localization';
 import { Pivot } from '../pivot';
 
 const v = new Vec3();
 
+type TransformComponents = {
+    position?: boolean;
+    rotation?: boolean;
+    scale?: boolean;
+};
+
 class Transform extends Container {
+    private events: Events;
+
+    private copiedTransform: {
+        transform: TransformData;
+        components: TransformComponents;
+    } | null = null;
+
     constructor(events: Events, args: ContainerArgs = {}) {
         args = {
             ...args,
@@ -15,6 +29,7 @@ class Transform extends Container {
         };
 
         super(args);
+        this.events = events;
 
         // position
         const position = new Container({
@@ -171,6 +186,48 @@ class Transform extends Container {
         events.on('pivot.ended', (pivot: Pivot) => {
             updateUI(pivot);
         });
+    }
+
+    copyTransform(components: TransformComponents): boolean {
+        if (!this.events.invoke('selection')) {
+            return false;
+        }
+
+        const pivot = this.events.invoke('pivot') as Pivot;
+        this.copiedTransform = {
+            transform: pivot.transform.clone(),
+            components: { ...components }
+        };
+        return true;
+    }
+
+    pasteTransform(): boolean {
+        if (!this.copiedTransform || !this.events.invoke('selection')) {
+            return false;
+        }
+
+        const pivot = this.events.invoke('pivot') as Pivot;
+        const target = pivot.transform.clone();
+        const { transform, components } = this.copiedTransform;
+
+        if (components.position) {
+            target.position.copy(transform.position);
+        }
+        if (components.rotation) {
+            target.rotation.copy(transform.rotation);
+        }
+        if (components.scale) {
+            target.scale.copy(transform.scale);
+        }
+
+        pivot.start();
+        pivot.move(target);
+        pivot.end();
+        return true;
+    }
+
+    get hasCopiedTransform(): boolean {
+        return this.copiedTransform !== null;
     }
 }
 

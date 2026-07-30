@@ -17,6 +17,11 @@
     "menu.edit.duplicate": "Duplizieren",
     "menu.edit.separate": "Separieren",
 
+    "menu.transform.copy-position": "Position kopieren",
+    "menu.transform.copy-rotation": "Drehung kopieren",
+    "menu.transform.copy-position-rotation": "Position und Drehung kopieren",
+    "menu.transform.copy-all": "Alle Transformationen kopieren",
+
     "menu.select": "Auswahl",
     "menu.select.all": "Alles",
     "menu.select.none": "Aufheben",
@@ -345,6 +350,8 @@
     "tooltip.scene.solo": "Auswahl solo anzeigen",
     "tooltip.scene.import": "Szene importieren",
     "tooltip.scene.new": "Neue Szene",
+    "tooltip.scene.copy-transform-options": "Kopieroptionen für Transformation",
+    "tooltip.scene.paste-transform": "Transformation einfügen",
 
     "tooltip.status-bar.timeline": "Zeitleisten-Panel umschalten",
     "tooltip.status-bar.splat-data": "Splat-Daten-Panel umschalten",

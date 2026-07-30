@@ -1,10 +1,14 @@
-import { Container, Element, Label } from '@playcanvas/pcui';
+import { Button, Container, Element, Label } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { i18n } from './localization';
+import { MenuPanel } from './menu-panel';
 import { SplatList } from './splat-list';
+import arrowSvg from './svg/arrow.svg';
+import copyTransformSvg from './svg/copy-transform.svg';
 import sceneImportSvg from './svg/import.svg';
 import sceneNewSvg from './svg/new.svg';
+import pasteTransformSvg from './svg/paste-transform.svg';
 import soloSvg from './svg/solo.svg';
 import { Tooltips } from './tooltips';
 import { Transform } from './transform';
@@ -95,6 +99,8 @@ class ScenePanel extends Container {
         });
         splatListContainer.append(splatList);
 
+        const transform = new Transform(events);
+
         const transformHeader = new Container({
             class: 'panel-header'
         });
@@ -109,13 +115,96 @@ class ScenePanel extends Container {
         });
         i18n.bindText(transformLabel, 'panel.scene.transform');
 
+        const copyTransformOptions = new Button({
+            class: ['panel-header-button', 'transform-copy-options'],
+            enabled: false
+        });
+        copyTransformOptions.dom.appendChild(createSvg(copyTransformSvg));
+        copyTransformOptions.dom.appendChild(createSvg(arrowSvg));
+
+        const pasteTransform = new Button({
+            class: 'panel-header-button',
+            enabled: false
+        });
+        pasteTransform.dom.appendChild(createSvg(pasteTransformSvg));
+
+        let hasSelection = false;
+        const updateTransformActions = () => {
+            copyTransformOptions.enabled = hasSelection;
+            pasteTransform.enabled = hasSelection && transform.hasCopiedTransform;
+        };
+
+        const copyTransformMenu = new MenuPanel([{
+            text: () => i18n.t('menu.transform.copy-position'),
+            onSelect: () => {
+                transform.copyTransform({ position: true });
+                updateTransformActions();
+            }
+        }, {
+            text: () => i18n.t('menu.transform.copy-rotation'),
+            onSelect: () => {
+                transform.copyTransform({ rotation: true });
+                updateTransformActions();
+            }
+        }, {
+            text: () => i18n.t('menu.transform.copy-position-rotation'),
+            onSelect: () => {
+                transform.copyTransform({ position: true, rotation: true });
+                updateTransformActions();
+            }
+        }, {
+            text: () => i18n.t('menu.transform.copy-all'),
+            onSelect: () => {
+                transform.copyTransform({ position: true, rotation: true, scale: true });
+                updateTransformActions();
+            }
+        }]);
+        copyTransformMenu.class.add('transform-copy-menu');
+        document.body.appendChild(copyTransformMenu.dom);
+
+        events.on('selection.changed', (selection) => {
+            hasSelection = !!selection;
+            updateTransformActions();
+        });
+
+        copyTransformOptions.on('click', () => {
+            copyTransformMenu.position(copyTransformOptions.dom, 'bottom', 2);
+            copyTransformMenu.hidden = !copyTransformMenu.hidden;
+        });
+
+        pasteTransform.on('click', () => {
+            transform.pasteTransform();
+        });
+
+        i18n.onChange(() => copyTransformOptions.dom.setAttribute(
+            'aria-label',
+            i18n.t('tooltip.scene.copy-transform-options')
+        ), copyTransformOptions);
+        i18n.onChange(() => pasteTransform.dom.setAttribute(
+            'aria-label',
+            i18n.t('tooltip.scene.paste-transform')
+        ), pasteTransform);
+        tooltips.register(copyTransformOptions, () => i18n.t('tooltip.scene.copy-transform-options'), 'top');
+        tooltips.register(pasteTransform, () => i18n.t('tooltip.scene.paste-transform'), 'top');
+
         transformHeader.append(transformIcon);
         transformHeader.append(transformLabel);
+        transformHeader.append(copyTransformOptions);
+        transformHeader.append(pasteTransform);
+
+        const closeCopyTransformMenu = (event: PointerEvent) => {
+            if (!copyTransformMenu.dom.contains(event.target as Node) &&
+                !copyTransformOptions.dom.contains(event.target as Node)) {
+                copyTransformMenu.hidden = true;
+            }
+        };
+        window.addEventListener('pointerdown', closeCopyTransformMenu, true);
+        window.addEventListener('pointerup', closeCopyTransformMenu, true);
 
         this.append(sceneHeader);
         this.append(splatListContainer);
         this.append(transformHeader);
-        this.append(new Transform(events));
+        this.append(transform);
         this.append(new Element({
             class: 'panel-header',
             height: 20

@@ -17,6 +17,11 @@
     "menu.edit.duplicate": "복제",
     "menu.edit.separate": "분리",
 
+    "menu.transform.copy-position": "위치 복사",
+    "menu.transform.copy-rotation": "회전 복사",
+    "menu.transform.copy-position-rotation": "위치 및 회전 복사",
+    "menu.transform.copy-all": "모든 변환 복사",
+
     "menu.select": "선택",
     "menu.select.all": "모두",
     "menu.select.none": "없음",
@@ -345,6 +350,8 @@
     "tooltip.scene.solo": "선택 항목 솔로",
     "tooltip.scene.import": "장면 가져오기",
     "tooltip.scene.new": "새 장면",
+    "tooltip.scene.copy-transform-options": "변환 복사 옵션",
+    "tooltip.scene.paste-transform": "변환 붙여넣기",
 
     "tooltip.status-bar.timeline": "타임라인 패널 전환",
     "tooltip.status-bar.splat-data": "스플랫 데이터 패널 전환",

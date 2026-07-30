@@ -17,6 +17,11 @@
     "menu.edit.duplicate": "複製",
     "menu.edit.separate": "分離",
 
+    "menu.transform.copy-position": "位置をコピー",
+    "menu.transform.copy-rotation": "回転をコピー",
+    "menu.transform.copy-position-rotation": "位置と回転をコピー",
+    "menu.transform.copy-all": "すべての変換をコピー",
+
     "menu.select": "選択",
     "menu.select.all": "全て",
     "menu.select.none": "選択を解除",
@@ -345,6 +350,8 @@
     "tooltip.scene.solo": "選択をソロ表示",
     "tooltip.scene.import": "シーンをインポート",
     "tooltip.scene.new": "新規シーンを作成",
+    "tooltip.scene.copy-transform-options": "変換コピーのオプション",
+    "tooltip.scene.paste-transform": "変換を貼り付け",
 
     "tooltip.status-bar.timeline": "タイムラインパネルの切り替え",
     "tooltip.status-bar.splat-data": "スプラットデータパネルの切り替え",

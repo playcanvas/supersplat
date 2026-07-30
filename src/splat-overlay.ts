@@ -92,11 +92,14 @@ class SplatOverlay extends Element {
 
         // set up other uniforms
         const resource = splat.resource;
-        material.setParameter('splatState', splat.stateTexture);
-        material.setParameter('splatPosition', (resource as any).getTexture('transformA'));
-        material.setParameter('splatTransform', splat.transformTexture);
+        const positionTexture = (resource as any).getTexture('transformA');
+        material.setParameter('instanceSource', splat.instances.instanceSource);
+        material.setParameter('instanceFlags', splat.instances.instanceFlags);
+        material.setParameter('instancePalette', splat.instances.instancePalette);
+        material.setParameter('instanceBase', 0);
+        material.setParameter('splatPosition', positionTexture);
         material.setParameter('splatColor', (resource as any).getTexture('splatColor'));
-        material.setParameter('texParams', [splat.stateTexture.width, splat.stateTexture.height]);
+        material.setParameter('texParams', [positionTexture.width, positionTexture.height]);
 
         // set up SH textures and define based on SH bands
         const shBands = resource.shBands;
@@ -114,7 +117,7 @@ class SplatOverlay extends Element {
 
         material.update();
 
-        this.meshInstance.instancingCount = splat.resource.numSplats;
+        this.meshInstance.instancingCount = splat.instances.count;
 
         splat.entity.addChild(this.entity);
         this.splat = splat;

@@ -1,22 +1,18 @@
 import {
-    ADDRESS_CLAMP_TO_EDGE,
-    FILTER_NEAREST,
-    PIXELFORMAT_R8,
-    PIXELFORMAT_R16U,
     Asset,
     BoundingBox,
     Color,
     Entity,
     Mat4,
     Quat,
-    Texture,
     Vec3
 } from 'playcanvas';
 
 import { Element, ElementType } from './element';
+import { GaussianInstances } from './gaussian-instances';
 import { Serializer } from './serializer';
 import { EditorSplatResource } from './splat-resource';
-import { State, SplatState } from './splat-state';
+import { State } from './splat-state';
 import { Transform } from './transform';
 import { TransformPalette } from './transform-palette';
 
@@ -41,18 +37,16 @@ const boundingPoints =
 class Splat extends Element {
     asset: Asset;
     resource: EditorSplatResource;
-    transformIndices: Uint16Array;
     numSplats = 0;
     numDeleted = 0;
     numLocked = 0;
     numSelected = 0;
     entity: Entity;
     changedCounter = 0;
-    stateTexture: Texture;
-    // encapsulates per-splat state mirror (cpu Uint8Array + gpu Texture).
-    // all writes go through state.setBits/clearBits/toggleBits, then flush().
-    state: SplatState;
-    transformTexture: Texture;
+    // the live edited data: one instance per rendered gaussian, referencing a
+    // row of the immutable static resource. all per-gaussian writes go through
+    // instances.setBits/clearBits/toggleBits/setTransformIndex, then flush().
+    instances: GaussianInstances;
     selectionBoundStorage: BoundingBox;
     localBoundStorage: BoundingBox;
     worldBoundStorage: BoundingBox;
@@ -123,29 +117,9 @@ class Splat extends Element {
             this.entity.setLocalRotation(rotation);
         }
 
-        const { x: width, y: height } = (splatResource as any).textureDimensions;
-
-        // pack spherical harmonic data
-        const createTexture = (name: string, format: number) => {
-            return new Texture(device, {
-                name: name,
-                width: width,
-                height: height,
-                format: format,
-                mipmaps: false,
-                minFilter: FILTER_NEAREST,
-                magFilter: FILTER_NEAREST,
-                addressU: ADDRESS_CLAMP_TO_EDGE,
-                addressV: ADDRESS_CLAMP_TO_EDGE
-            });
-        };
-
-        // create compact CPU/GPU mirrors for editor state and palette indices.
-        this.stateTexture = createTexture('splatState', PIXELFORMAT_R8);
-        this.state = new SplatState(splatResource.stateData, this.stateTexture);
-        this.transformTexture = createTexture('splatTransform', PIXELFORMAT_R16U);
-        this.transformIndices = this.transformTexture.lock() as Uint16Array;
-        this.transformTexture.unlock();
+        // build the instance list over this frame's rows, seeded with the state
+        // column the file carried (if any)
+        this.instances = new GaussianInstances(device, splatResource.numRows, splatResource.initialState);
 
         this.localBoundStorage = splatResource.aabb.clone();
         this.worldBoundStorage = new BoundingBox();
@@ -178,8 +152,7 @@ class Splat extends Element {
     // transform and visual properties.
     async replaceData(asset: Asset) {
         const oldAsset = this.asset;
-        const oldStateTexture = this.stateTexture;
-        const oldTransformTexture = this.transformTexture;
+        const oldInstances = this.instances;
 
         // no rotation: preserve the entity transform
         this.bindAsset(asset);
@@ -199,8 +172,7 @@ class Splat extends Element {
         this.scene.events.fire('splat.replaced', this);
 
         // tear down the previous frame
-        oldStateTexture.destroy();
-        oldTransformTexture.destroy();
+        oldInstances.destroy();
         oldAsset.registry?.remove(oldAsset);
         oldAsset.unload();
 
@@ -210,18 +182,19 @@ class Splat extends Element {
 
     destroy() {
         super.destroy();
+        this.instances.destroy();
         this.entity.destroy();
         this.asset.registry.remove(this.asset);
         this.asset.unload();
     }
 
     async updateState(changedState = State.selected) {
-        // uploads dirty range + refreshes counts in one pass.
-        this.state.flush();
-        this.numSplats = this.state.data.length - this.state.numDeleted;
-        this.numLocked = this.state.numLocked;
-        this.numSelected = this.state.numSelected;
-        this.numDeleted = this.state.numDeleted;
+        // uploads dirty ranges; counts are maintained by the mutators.
+        this.instances.flush();
+        this.numSplats = this.instances.count - this.instances.numDeleted;
+        this.numLocked = this.instances.numLocked;
+        this.numSelected = this.instances.numSelected;
+        this.numDeleted = this.instances.numDeleted;
 
         // handle splats being added or removed
         if (changedState & State.deleted) {
@@ -235,6 +208,8 @@ class Splat extends Element {
     }
 
     async updatePositions() {
+        // palette index edits mark dirty spans; get them onto the GPU
+        this.instances.flush();
         await this.updateSorting();
 
         this.scene.forceRender = true;

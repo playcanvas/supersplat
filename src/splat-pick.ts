@@ -20,7 +20,10 @@ const PICK_RADIUS_FAR = 24;
 // on the dominant visible surface.
 const pickSplatSurfacePoint = async (scene: Scene, splat: Splat, offsetX: number, offsetY: number, result: Vec3) => {
     const { source, sourcePool } = splat.resource;
-    const state = splat.state.data;
+    // this sweep walks source chunks in file order (sequential reads), so it
+    // indexes the instance arrays by row - valid while the list is the identity
+    const { instances } = splat;
+    const state = instances.flags;
     const localToClip = new Mat4();
     const paletteTransform = new Mat4();
     const ray = new Ray();
@@ -54,7 +57,7 @@ const pickSplatSurfacePoint = async (scene: Scene, splat: Splat, offsetX: number
                 }
 
                 center.set(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
-                const paletteIndex = splat.transformIndices[index];
+                const paletteIndex = instances.transformIndex(index);
                 if (paletteIndex) {
                     splat.transformPalette.getTransform(paletteIndex, paletteTransform);
                     paletteTransform.transformPoint(center, center);

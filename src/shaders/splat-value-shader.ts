@@ -4,12 +4,13 @@ import { indexToUvWGSL, paletteMatrixWGSL } from './palette-chunk';
 const computeSplatValueWGSL = (bands: number, firstBinding = 1) => {
     let binding = firstBinding;
     const declarations = [
+        `@group(0) @binding(${binding++}) var<storage, read> instanceSource: array<u32>;`,
+        `@group(0) @binding(${binding++}) var<storage, read> instanceFlags: array<u32>;`,
+        `@group(0) @binding(${binding++}) var<storage, read> instancePalette: array<u32>;`,
         `@group(0) @binding(${binding++}) var transformA: texture_2d<u32>;`,
         `@group(0) @binding(${binding++}) var transformB: texture_2d<f32>;`,
         `@group(0) @binding(${binding++}) var splatColor: texture_2d<f32>;`,
-        `@group(0) @binding(${binding++}) var splatTransform: texture_2d<u32>;`,
-        `@group(0) @binding(${binding++}) var transformPalette: texture_2d<f32>;`,
-        `@group(0) @binding(${binding++}) var splatState: texture_2d<f32>;`
+        `@group(0) @binding(${binding++}) var transformPalette: texture_2d<f32>;`
     ];
     if (bands > 0) declarations.push(`@group(0) @binding(${binding++}) var splatSH_1to3: texture_2d<u32>;`);
     if (bands > 1) {
@@ -133,14 +134,19 @@ fn rgbToHsv(color: vec3f) -> vec3f {
     return vec3f(abs(q.z + (q.w - q.y) / (6.0 * d + 1e-10)), d / (q.x + 1e-10), q.x);
 }
 
+fn instanceFlagByte(instance: u32) -> u32 {
+    return (instanceFlags[instance >> 2u] >> ((instance & 3u) * 8u)) & 0xffu;
+}
+
+// index is an instance; static gaussian data is read at its source row
 fn readSplat(index: u32, value: ptr<function, SplatValue>) -> bool {
     if (index >= uniforms.numSplats) { return false; }
-    let uv = sourceCoord(index);
-    let state = i32(textureLoad(splatState, uv, 0).r * 255.0 + 0.5);
+    let uv = sourceCoord(instanceSource[index]);
+    let state = i32(instanceFlagByte(index));
     if (state != 0 && state != 1) { return false; }
     let data = textureLoad(transformA, uv, 0);
     let localPos = bitcast<vec3f>(data.xyz);
-    let paletteIndex = textureLoad(splatTransform, uv, 0).r;
+    let paletteIndex = instancePalette[index] & 0xffffu;
     let worldPos = (uniforms.entityMatrix * paletteMatrix(paletteIndex) * vec4f(localPos, 1.0)).xyz;
     var visible = true;
     if (uniforms.onScreenOnly != 0u) {

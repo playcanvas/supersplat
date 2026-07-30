@@ -39,18 +39,18 @@ class StateOp {
     }
 
     private apply(op: BitOp) {
-        const { state } = this.splat;
+        const { instances } = this.splat;
         const { mask, ranges } = this;
 
         switch (op) {
             case BitOp.SET:
-                state.setBits(ranges, mask);
+                instances.setBits(ranges, mask);
                 break;
             case BitOp.CLEAR:
-                state.clearBits(ranges, mask);
+                instances.clearBits(ranges, mask);
                 break;
             case BitOp.TOGGLE:
-                state.toggleBits(ranges, mask);
+                instances.toggleBits(ranges, mask);
                 break;
         }
     }
@@ -77,8 +77,9 @@ class SelectAllOp extends StateOp {
     name = 'selectAll';
 
     constructor(splat: Splat) {
-        const state = splat.state.data;
-        super(splat, IndexRanges.fromPredicate(state.length, i => state[i] === 0), State.selected, BitOp.SET);
+        const state = splat.instances.flags;
+        const count = splat.instances.count;
+        super(splat, IndexRanges.fromPredicate(count, i => state[i] === 0), State.selected, BitOp.SET);
     }
 }
 
@@ -86,8 +87,9 @@ class SelectNoneOp extends StateOp {
     name = 'selectNone';
 
     constructor(splat: Splat) {
-        const state = splat.state.data;
-        super(splat, IndexRanges.fromPredicate(state.length, i => state[i] === State.selected), State.selected, BitOp.CLEAR);
+        const state = splat.instances.flags;
+        const count = splat.instances.count;
+        super(splat, IndexRanges.fromPredicate(count, i => state[i] === State.selected), State.selected, BitOp.CLEAR);
     }
 }
 
@@ -95,8 +97,9 @@ class SelectInvertOp extends StateOp {
     name = 'selectInvert';
 
     constructor(splat: Splat) {
-        const state = splat.state.data;
-        super(splat, IndexRanges.fromPredicate(state.length, i => (state[i] & (State.locked | State.deleted)) === 0), State.selected, BitOp.TOGGLE);
+        const state = splat.instances.flags;
+        const count = splat.instances.count;
+        super(splat, IndexRanges.fromPredicate(count, i => (state[i] & (State.locked | State.deleted)) === 0), State.selected, BitOp.TOGGLE);
     }
 }
 
@@ -117,7 +120,8 @@ class SelectOp extends StateOp {
     //   intersect — keep only splats currently selected AND in the hit mask
     //               (clear the selected bit on selected splats that are not hit).
     constructor(splat: Splat, op: 'add' | 'remove' | 'set' | 'intersect', sel: Uint8Array | Uint32Array) {
-        const state = splat.state.data;
+        const state = splat.instances.flags;
+        const count = splat.instances.count;
         const isHit = sel instanceof Uint32Array ? sortedPredicate(sel) : (i: number) => sel[i] === 255;
 
         // single rule applied uniformly: only valid (clean or selected) splats
@@ -141,7 +145,7 @@ class SelectOp extends StateOp {
             intersect: (i: number) => valid(i) && state[i] === State.selected && !isHit(i)
         };
 
-        super(splat, IndexRanges.fromPredicate(state.length, preds[op]), State.selected, bitOps[op]);
+        super(splat, IndexRanges.fromPredicate(count, preds[op]), State.selected, bitOps[op]);
     }
 }
 
@@ -149,8 +153,9 @@ class HideSelectionOp extends StateOp {
     name = 'hideSelection';
 
     constructor(splat: Splat) {
-        const state = splat.state.data;
-        super(splat, IndexRanges.fromPredicate(state.length, i => state[i] === State.selected), State.locked, BitOp.SET, State.locked);
+        const state = splat.instances.flags;
+        const count = splat.instances.count;
+        super(splat, IndexRanges.fromPredicate(count, i => state[i] === State.selected), State.locked, BitOp.SET, State.locked);
     }
 }
 
@@ -158,8 +163,9 @@ class UnhideAllOp extends StateOp {
     name = 'unhideAll';
 
     constructor(splat: Splat) {
-        const state = splat.state.data;
-        super(splat, IndexRanges.fromPredicate(state.length, i => (state[i] & (State.locked | State.deleted)) === State.locked), State.locked, BitOp.CLEAR, State.locked);
+        const state = splat.instances.flags;
+        const count = splat.instances.count;
+        super(splat, IndexRanges.fromPredicate(count, i => (state[i] & (State.locked | State.deleted)) === State.locked), State.locked, BitOp.CLEAR, State.locked);
     }
 }
 
@@ -167,8 +173,9 @@ class DeleteSelectionOp extends StateOp {
     name = 'deleteSelection';
 
     constructor(splat: Splat) {
-        const state = splat.state.data;
-        super(splat, IndexRanges.fromPredicate(state.length, i => state[i] === State.selected), State.deleted, BitOp.SET, State.deleted);
+        const state = splat.instances.flags;
+        const count = splat.instances.count;
+        super(splat, IndexRanges.fromPredicate(count, i => state[i] === State.selected), State.deleted, BitOp.SET, State.deleted);
     }
 }
 
@@ -176,8 +183,9 @@ class ResetOp extends StateOp {
     name = 'reset';
 
     constructor(splat: Splat) {
-        const state = splat.state.data;
-        super(splat, IndexRanges.fromPredicate(state.length, i => (state[i] & State.deleted) !== 0), State.deleted, BitOp.CLEAR, State.deleted);
+        const state = splat.instances.flags;
+        const count = splat.instances.count;
+        super(splat, IndexRanges.fromPredicate(count, i => (state[i] & State.deleted) !== 0), State.deleted, BitOp.CLEAR, State.deleted);
     }
 }
 
@@ -227,19 +235,15 @@ class SplatsTransformOp {
 
     async do() {
         const { splat, transform, paletteMap } = this;
-        const state = splat.state.data;
-        const indices = splat.transformIndices;
+        const { instances } = splat;
+        const state = instances.flags;
 
-        // update splat transform palette indices
-        for (let i = 0; i < state.length; ++i) {
+        // update the selected instances' transform palette indices
+        for (let i = 0; i < instances.count; ++i) {
             if (state[i] === State.selected) {
-                indices[i] = paletteMap.get(indices[i]);
+                instances.setTransformIndex(i, paletteMap.get(instances.transformIndex(i)));
             }
         }
-
-        const textureData = splat.transformTexture.lock() as Uint16Array;
-        textureData.set(indices);
-        splat.transformTexture.unlock();
 
         splat.transformPalette.alloc(paletteMap.size);
 
@@ -256,8 +260,8 @@ class SplatsTransformOp {
 
     async undo() {
         const { splat, paletteMap } = this;
-        const state = splat.state.data;
-        const indices = splat.transformIndices;
+        const { instances } = splat;
+        const state = instances.flags;
 
         // invert the palette map
         const inverseMap = new Map<number, number>();
@@ -266,15 +270,11 @@ class SplatsTransformOp {
         });
 
         // restore the original transform indices
-        for (let i = 0; i < state.length; ++i) {
+        for (let i = 0; i < instances.count; ++i) {
             if (state[i] === State.selected) {
-                indices[i] = inverseMap.get(indices[i]);
+                instances.setTransformIndex(i, inverseMap.get(instances.transformIndex(i)));
             }
         }
-
-        const textureData = splat.transformTexture.lock() as Uint16Array;
-        textureData.set(indices);
-        splat.transformTexture.unlock();
 
         splat.transformPalette.free(paletteMap.size);
 

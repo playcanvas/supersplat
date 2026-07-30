@@ -89,6 +89,7 @@ const projectedSplatProjector = (bands: number) => /* wgsl */`
 struct ProjectorUniforms {
     numSplats: u32,
     entryBase: u32,
+    instanceBase: u32,
     sourceWidth: u32,
     cacheWidth: u32,
     viewport: vec2f,
@@ -103,7 +104,6 @@ struct ProjectorUniforms {
     colorScale: vec4f,
     selectedColor: vec4f,
     lockedColor: vec4f,
-    indexed: u32,
     visible: u32,
     selectionEnabled: u32,
     pickOp: i32,
@@ -113,12 +113,12 @@ struct ProjectorUniforms {
 @group(0) @binding(0) var<storage, read_write> sortKeys: array<u32>;
 @group(0) @binding(1) var cacheA: texture_storage_2d<rgba32uint, write>;
 @group(0) @binding(2) var cacheB: texture_storage_2d<r32uint, write>;
-@group(0) @binding(3) var<storage, read> sourceIndices: array<u32>;
-@group(0) @binding(4) var transformA: texture_2d<u32>;
-@group(0) @binding(5) var transformB: texture_2d<f32>;
-@group(0) @binding(6) var splatColor: texture_2d<f32>;
-@group(0) @binding(7) var splatState: texture_2d<f32>;
-@group(0) @binding(8) var splatTransform: texture_2d<u32>;
+@group(0) @binding(3) var<storage, read> instanceSource: array<u32>;
+@group(0) @binding(4) var<storage, read> instanceFlags: array<u32>;
+@group(0) @binding(5) var<storage, read> instancePalette: array<u32>;
+@group(0) @binding(6) var transformA: texture_2d<u32>;
+@group(0) @binding(7) var transformB: texture_2d<f32>;
+@group(0) @binding(8) var splatColor: texture_2d<f32>;
 @group(0) @binding(9) var transformPalette: texture_2d<f32>;
 ${bands > 0 ? '@group(0) @binding(10) var splatSH_1to3: texture_2d<u32>;' : ''}
 ${bands > 1 ? '@group(0) @binding(11) var splatSH_4to7: texture_2d<u32>;\n@group(0) @binding(12) var splatSH_8to11: texture_2d<u32>;' : ''}
@@ -151,6 +151,11 @@ fn writeInvalid(entry: u32) {
     textureStore(cacheB, uv, vec4u(0u));
 }
 
+// per-instance editor state, packed 4 bytes to a word
+fn instanceFlagByte(instance: u32) -> u32 {
+    return (instanceFlags[instance >> 2u] >> ((instance & 3u) * 8u)) & 0xffu;
+}
+
 @compute @workgroup_size(256)
 fn main(
     @builtin(global_invocation_id) gid: vec3u,
@@ -167,12 +172,12 @@ fn main(
         return;
     }
 
-    var sourceIndex = localIndex;
-    if (uniforms.indexed != 0u) {
-        sourceIndex = sourceIndices[localIndex];
-    }
+    // per-instance channels are indexed by instance; the static gaussian data
+    // is reached through the instance's source row
+    let instance = uniforms.instanceBase + localIndex;
+    let sourceIndex = instanceSource[instance];
     let uv = sourceCoord(sourceIndex);
-    let state = u32(textureLoad(splatState, uv, 0).r * 255.0 + 0.5) & 7u;
+    let state = instanceFlagByte(instance) & 7u;
     if (uniforms.pickOp < 0) {
         if ((state & 4u) != 0u) {
             writeInvalid(entry);
@@ -190,7 +195,7 @@ fn main(
     let packedRotation = unpack2x16float(a.w);
     let rotation = vec4f(packedRotation, b.w, sqrt(max(0.0, 1.0 - dot(vec3f(packedRotation, b.w), vec3f(packedRotation, b.w)))));
     let localCenter = bitcast<vec3f>(a.xyz);
-    let paletteIndex = textureLoad(splatTransform, uv, 0).r;
+    let paletteIndex = instancePalette[instance] & 0xffffu;
     let model = uniforms.model * paletteMatrix(paletteIndex);
     let worldCenter = model * vec4f(localCenter, 1.0);
     let viewCenter = uniforms.view * worldCenter;

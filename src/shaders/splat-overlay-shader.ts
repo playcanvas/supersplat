@@ -7,15 +7,17 @@ uniform matrix_model: mat4x4f;
 uniform matrix_viewProjection: mat4x4f;
 uniform view_position: vec3f;
 uniform texParams: vec2u;
+uniform instanceBase: u32;
 uniform splatSize: f32;
 uniform viewportSize: vec2f;
 uniform useGaussianColor: f32;
 uniform selectedClr: vec4f;
 uniform unselectedClr: vec4f;
 
-var splatState: texture_2d<f32>;
+var<storage, read> instanceSource: array<u32>;
+var<storage, read> instanceFlags: array<u32>;
+var<storage, read> instancePalette: array<u32>;
 var splatPosition: texture_2d<u32>;
-var splatTransform: texture_2d<u32>;
 var transformPalette: texture_2d<f32>;
 var splatColor: texture_2d<f32>;
 
@@ -34,6 +36,10 @@ varying overlayColor: vec4f;
 
 ${indexToUvWGSL('splatUv', 'uniform.texParams.x')}
 ${paletteMatrixWGSL}
+
+fn instanceFlagByte(instance: u32) -> u32 {
+    return (instanceFlags[instance >> 2u] >> ((instance & 3u) * 8u)) & 0xffu;
+}
 
 #if SH_BANDS > 0
 fn unpack111011s(bits: u32) -> vec3f {
@@ -98,15 +104,17 @@ fn evaluateSH(uv: vec2i, direction: vec3f) -> vec3f {
 @vertex
 fn vertexMain(input: VertexInput) -> VertexOutput {
     var output: VertexOutput;
-    let id = pcInstanceIndex;
-    let uv = splatUv(id);
-    let state = u32(textureLoad(splatState, uv, 0).r * 255.0 + 0.5);
+    // one draw instance per gaussian instance; the static data is reached
+    // through the instance's source row
+    let instance = uniform.instanceBase + pcInstanceIndex;
+    let uv = splatUv(instanceSource[instance]);
+    let state = instanceFlagByte(instance);
     if ((state & 6u) != 0u) {
         output.position = vec4f(0.0, 0.0, 2.0, 1.0);
         return output;
     }
 
-    let model = uniform.matrix_model * paletteMatrix(textureLoad(splatTransform, uv, 0).r);
+    let model = uniform.matrix_model * paletteMatrix(instancePalette[instance] & 0xffffu);
     let center = bitcast<vec3f>(textureLoad(splatPosition, uv, 0).xyz);
     let worldPosition = model * vec4f(center, 1.0);
     let projected = uniform.matrix_viewProjection * worldPosition;

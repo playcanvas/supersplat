@@ -8,6 +8,7 @@ import {
     UNIFORMTYPE_MAT4,
     UNIFORMTYPE_UINT,
     UNIFORMTYPE_VEC3,
+    BindStorageBufferFormat,
     BindTextureFormat,
     Compute,
     GraphicsDevice,
@@ -57,13 +58,15 @@ const createSplatValueUniformFormat = (device: GraphicsDevice) => new UniformBuf
 ]);
 
 const createSplatValueTextureFormats = (bands: number) => {
-    const formats = [
+    // order must match the declarations in computeSplatValueWGSL
+    const formats: (BindStorageBufferFormat | BindTextureFormat)[] = [
+        new BindStorageBufferFormat('instanceSource', SHADERSTAGE_COMPUTE, true),
+        new BindStorageBufferFormat('instanceFlags', SHADERSTAGE_COMPUTE, true),
+        new BindStorageBufferFormat('instancePalette', SHADERSTAGE_COMPUTE, true),
         new BindTextureFormat('transformA', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false),
         new BindTextureFormat('transformB', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_FLOAT, false),
         new BindTextureFormat('splatColor', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_FLOAT, false),
-        new BindTextureFormat('splatTransform', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false),
-        new BindTextureFormat('transformPalette', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UNFILTERABLE_FLOAT, false),
-        new BindTextureFormat('splatState', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_FLOAT, false)
+        new BindTextureFormat('transformPalette', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UNFILTERABLE_FLOAT, false)
     ];
     const uintTexture = (name: string) => new BindTextureFormat(name, SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false);
     if (bands > 0) formats.push(uintTexture('splatSH_1to3'));
@@ -95,12 +98,13 @@ const setSplatValueParameters = (
     const cameraPos = options?.cameraPos ?? zeroVec3;
     const grade = gradeTerms(splat, terms);
 
+    compute.setParameter('instanceSource', splat.instances.instanceSource);
+    compute.setParameter('instanceFlags', splat.instances.instanceFlags);
+    compute.setParameter('instancePalette', splat.instances.instancePalette);
     compute.setParameter('transformA', transformA);
     compute.setParameter('transformB', resource.getTexture('transformB'));
     compute.setParameter('splatColor', resource.getTexture('splatColor'));
-    compute.setParameter('splatTransform', splat.transformTexture);
     compute.setParameter('transformPalette', splat.transformPalette.texture);
-    compute.setParameter('splatState', splat.stateTexture);
     if (bands > 0) compute.setParameter('splatSH_1to3', resource.getTexture('splatSH_1to3'));
     if (bands > 1) {
         compute.setParameter('splatSH_4to7', resource.getTexture('splatSH_4to7'));
@@ -109,7 +113,8 @@ const setSplatValueParameters = (
     if (bands > 2) compute.setParameter('splatSH_12to15', resource.getTexture('splatSH_12to15'));
 
     compute.setParameter('sourceWidth', transformA.width);
-    compute.setParameter('numSplats', splat.resource.numSplats);
+    // the iteration domain is instances, not static rows
+    compute.setParameter('numSplats', splat.instances.count);
     compute.setParameter('propMode', mode);
     compute.setParameter('onScreenOnly', options?.onScreenOnly ? 1 : 0);
     compute.setParameter('entityMatrix', entityMatrix.data);

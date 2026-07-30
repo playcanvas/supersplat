@@ -61,7 +61,8 @@ type Placement = {
     splat: Splat;
     count: number;
     entryBase: number;
-    sourceIndices: StorageBuffer | null;
+    // first instance of this placement's group within the splat's instance list
+    instanceBase: number;
     // each placement owns its Compute: a Compute's uniform buffer is a single
     // persistent GPU buffer written at dispatch-record time, so sharing one
     // instance would make every dispatch of the frame read the uniforms of the
@@ -75,7 +76,6 @@ type ProjectedRendererStats = {
     projectedSplats: number;
     sourceBytes: number;
     editingBytes: number;
-    placementIndexBytes: number;
     cacheBytes: number;
     keyBytes: number;
     estimatedRadixBytes: number;
@@ -118,7 +118,6 @@ class ProjectedSplatRenderer {
     private readonly shaderProjection = new Mat4();
     private readonly viewProjection = new Mat4();
     private readonly dispatchSize = new Vec2();
-    private readonly dummyIndices: StorageBuffer;
     private readonly sorter: ComputeRadixSort;
     private readonly material: ShaderMaterial;
     private readonly mesh: Mesh;
@@ -139,9 +138,6 @@ class ProjectedSplatRenderer {
         this.scene = scene;
         this.device = scene.graphicsDevice;
 
-        this.dummyIndices = new StorageBuffer(this.device, 4, BUFFERUSAGE_COPY_DST | BUFFERUSAGE_COPY_SRC);
-        const dummyIndex = new Uint32Array(1);
-        this.dummyIndices.write(0, dummyIndex, 0, dummyIndex.length);
         this.sorter = new ComputeRadixSort(this.device);
 
         this.material = new ShaderMaterial({
@@ -190,21 +186,15 @@ class ProjectedSplatRenderer {
         scene.events.function('splat.projectedRendererStats', () => this.stats);
     }
 
-    add(splat: Splat, sourceIndices?: Uint32Array) {
-        let indexBuffer: StorageBuffer | null = null;
-        if (sourceIndices) {
-            indexBuffer = new StorageBuffer(
-                this.device,
-                Math.max(4, sourceIndices.byteLength),
-                BUFFERUSAGE_COPY_DST | BUFFERUSAGE_COPY_SRC
-            );
-            indexBuffer.write(0, sourceIndices, 0, sourceIndices.length);
-        }
+    add(splat: Splat) {
+        // one placement per instance group; a group is a contiguous run of
+        // instances sharing a static source, and there is exactly one until
+        // cloning can mix sources into a single splat
         this.placements.push({
             splat,
-            count: sourceIndices?.length ?? splat.resource.numSplats,
+            count: splat.instances.count,
             entryBase: 0,
-            sourceIndices: indexBuffer,
+            instanceBase: 0,
             compute: null,
             bands: -1
         });
@@ -214,7 +204,6 @@ class ProjectedSplatRenderer {
     remove(splat: Splat) {
         const index = this.placements.findIndex(placement => placement.splat === splat);
         if (index !== -1) {
-            this.placements[index].sourceIndices?.destroy();
             this.placements[index].compute?.destroy();
             this.placements.splice(index, 1);
             this.layoutDirty = true;
@@ -224,7 +213,7 @@ class ProjectedSplatRenderer {
     replace(splat: Splat) {
         const placement = this.placements.find(item => item.splat === splat);
         if (placement) {
-            placement.count = placement.sourceIndices ? placement.sourceIndices.byteSize / 4 : splat.resource.numSplats;
+            placement.count = splat.instances.count;
             this.layoutDirty = true;
         }
     }
@@ -269,8 +258,6 @@ class ProjectedSplatRenderer {
             new BindTextureFormat('transformA', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false),
             new BindTextureFormat('transformB', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_FLOAT, false),
             new BindTextureFormat('splatColor', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_FLOAT, false),
-            new BindTextureFormat('splatState', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_FLOAT, false),
-            new BindTextureFormat('splatTransform', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false),
             new BindTextureFormat('transformPalette', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UNFILTERABLE_FLOAT, false)
         ];
         if (bands > 0) {
@@ -287,6 +274,7 @@ class ProjectedSplatRenderer {
         const uniformBufferFormat = new UniformBufferFormat(this.device, [
             new UniformFormat('numSplats', UNIFORMTYPE_UINT),
             new UniformFormat('entryBase', UNIFORMTYPE_UINT),
+            new UniformFormat('instanceBase', UNIFORMTYPE_UINT),
             new UniformFormat('sourceWidth', UNIFORMTYPE_UINT),
             new UniformFormat('cacheWidth', UNIFORMTYPE_UINT),
             new UniformFormat('viewport', UNIFORMTYPE_VEC2),
@@ -301,7 +289,6 @@ class ProjectedSplatRenderer {
             new UniformFormat('colorScale', UNIFORMTYPE_VEC4),
             new UniformFormat('selectedColor', UNIFORMTYPE_VEC4),
             new UniformFormat('lockedColor', UNIFORMTYPE_VEC4),
-            new UniformFormat('indexed', UNIFORMTYPE_UINT),
             new UniformFormat('visible', UNIFORMTYPE_UINT),
             new UniformFormat('selectionEnabled', UNIFORMTYPE_UINT),
             new UniformFormat('pickOp', UNIFORMTYPE_INT),
@@ -311,7 +298,9 @@ class ProjectedSplatRenderer {
             new BindStorageBufferFormat('sortKeys', SHADERSTAGE_COMPUTE),
             new BindStorageTextureFormat('cacheA', PIXELFORMAT_RGBA32U),
             new BindStorageTextureFormat('cacheB', PIXELFORMAT_R32U),
-            new BindStorageBufferFormat('sourceIndices', SHADERSTAGE_COMPUTE, true),
+            new BindStorageBufferFormat('instanceSource', SHADERSTAGE_COMPUTE, true),
+            new BindStorageBufferFormat('instanceFlags', SHADERSTAGE_COMPUTE, true),
+            new BindStorageBufferFormat('instancePalette', SHADERSTAGE_COMPUTE, true),
             ...textureFormats,
             new BindUniformBufferFormat('uniforms', SHADERSTAGE_COMPUTE)
         ]);
@@ -429,6 +418,7 @@ class ProjectedSplatRenderer {
 
         for (const placement of this.placements) {
             const { splat } = placement;
+            const { instances } = splat;
             const resource = splat.resource;
             const bands = Math.min(viewBands, resource.shBands);
             const compute = this.getCompute(placement, bands);
@@ -443,12 +433,12 @@ class ProjectedSplatRenderer {
             compute.setParameter('sortKeys', this.sortKeys);
             compute.setParameter('cacheA', this.cacheA);
             compute.setParameter('cacheB', this.cacheB);
-            compute.setParameter('sourceIndices', placement.sourceIndices ?? this.dummyIndices);
+            compute.setParameter('instanceSource', instances.instanceSource);
+            compute.setParameter('instanceFlags', instances.instanceFlags);
+            compute.setParameter('instancePalette', instances.instancePalette);
             compute.setParameter('transformA', resource.getTexture('transformA'));
             compute.setParameter('transformB', resource.getTexture('transformB'));
             compute.setParameter('splatColor', resource.getTexture('splatColor'));
-            compute.setParameter('splatState', splat.stateTexture);
-            compute.setParameter('splatTransform', splat.transformTexture);
             compute.setParameter('transformPalette', splat.transformPalette.texture);
             if (bands > 0) {
                 compute.setParameter('splatSH_1to3', resource.getTexture('splatSH_1to3'));
@@ -463,6 +453,7 @@ class ProjectedSplatRenderer {
 
             compute.setParameter('numSplats', placement.count);
             compute.setParameter('entryBase', placement.entryBase);
+            compute.setParameter('instanceBase', placement.instanceBase);
             compute.setParameter('sourceWidth', resource.textureDimensions.x);
             compute.setParameter('cacheWidth', this.cacheWidth);
             compute.setParameter('viewport', viewport);
@@ -482,7 +473,6 @@ class ProjectedSplatRenderer {
                 selectedColor.a * splat.selectionAlpha
             ] : [0, 0, 0, 0]);
             compute.setParameter('lockedColor', [lockedColor.r, lockedColor.g, lockedColor.b, lockedColor.a]);
-            compute.setParameter('indexed', placement.sourceIndices ? 1 : 0);
             compute.setParameter('visible', splat.visible ? 1 : 0);
             compute.setParameter('selectionEnabled', selectionEnabled ? 1 : 0);
             compute.setParameter('pickOp', -1);
@@ -530,22 +520,20 @@ class ProjectedSplatRenderer {
         const sourceBytes = Array.from(resources).reduce((sum, resource) => {
             return sum + Array.from(resource.streams.textures.values()).reduce((textureSum, texture) => textureSum + texture.gpuSize, 0);
         }, 0);
-        const editingBytes = Array.from(splats).reduce((sum, splat) => {
-            return sum + splat.stateTexture.gpuSize + splat.transformTexture.gpuSize;
-        }, 0);
-        const placementIndexBytes = this.placements.reduce((sum, placement) => sum + (placement.sourceIndices?.byteSize ?? 0), 0);
+        // the instance list (source row + flags + palette indices) is the whole
+        // of the per-gaussian editable data now
+        const editingBytes = Array.from(splats).reduce((sum, splat) => sum + splat.instances.byteSize, 0);
         const totalTransientBytes = cacheBytes + keyBytes + estimatedRadixBytes;
         return {
             placements: this.placements.length,
             projectedSplats: this.capacity,
             sourceBytes,
             editingBytes,
-            placementIndexBytes,
             cacheBytes,
             keyBytes,
             estimatedRadixBytes,
             totalTransientBytes,
-            totalSplatGpuBytes: sourceBytes + editingBytes + placementIndexBytes + totalTransientBytes,
+            totalSplatGpuBytes: sourceBytes + editingBytes + totalTransientBytes,
             submissionCpuMs: this.submissionCpuMs,
             gpuFrameMs: (this.device.gpuProfiler as any)._frameTime ?? 0
         };
@@ -553,7 +541,6 @@ class ProjectedSplatRenderer {
 
     destroy() {
         for (const placement of this.placements) {
-            placement.sourceIndices?.destroy();
             placement.compute?.destroy();
         }
         for (const variant of this.variants.values()) {
@@ -563,7 +550,6 @@ class ProjectedSplatRenderer {
         this.sortKeys?.destroy();
         this.cacheA?.destroy();
         this.cacheB?.destroy();
-        this.dummyIndices.destroy();
         this.sorter.destroy();
         this.entity.destroy();
         this.meshInstance.destroy();

@@ -159,13 +159,16 @@ class SplatTransformCache {
 
     constructor(splat: Splat, keepWorldTransform = false) {
         const transforms = new Map<number, { transformIndex: number, mat: Mat4, rot: Quat, scale: Vec3, shRot: SHRotation }>();
-        const indices = splat.transformIndices;
+        const { instances } = splat;
         const tmpMat = new Mat4();
         const tmpMat3 = new Mat3();
         const tmpQuat = new Quat();
 
+        // `index` is the instance being exported (row == instance while the
+        // instance list is the identity); the cache itself is keyed by palette
+        // entry, which is what makes it a cache
         const getTransform = (index: number) => {
-            const transformIndex = indices?.[index] ?? 0;
+            const transformIndex = instances.transformIndex(index);
             let result = transforms.get(transformIndex);
             if (!result) {
                 result = { transformIndex, mat: null, rot: null, scale: null, shRot: null };
@@ -306,7 +309,8 @@ const validOther = (chunk: ChunkData, row: number) => {
 
 const filteredIndices = async (splat: Splat, settings: SerializeSettings) => {
     const { source } = splat.resource;
-    const state = splat.state.data;
+    const state = splat.instances.flags;
+    const numInstances = splat.instances.count;
     const onlySelected = settings.selected ?? false;
     const minOpacity = settings.minOpacity ?? 0;
     const removeInvalid = settings.removeInvalid ?? false;
@@ -314,7 +318,7 @@ const filteredIndices = async (splat: Splat, settings: SerializeSettings) => {
 
     if (!needsSource) {
         let count = 0;
-        for (let i = 0; i < state.length; ++i) {
+        for (let i = 0; i < numInstances; ++i) {
             if ((state[i] & State.deleted) === 0 && (!onlySelected || state[i] === State.selected)) count++;
         }
         const result = new Uint32Array(count);

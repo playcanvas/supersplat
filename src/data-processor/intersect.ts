@@ -71,20 +71,22 @@ struct Uniforms {
 }
 
 @group(0) @binding(0) var<storage, read_write> result: array<u32>;
-@group(0) @binding(1) var transformA: texture_2d<u32>;
-@group(0) @binding(2) var splatTransform: texture_2d<u32>;
-@group(0) @binding(3) var transformPalette: texture_2d<f32>;
-@group(0) @binding(4) var maskTexture: texture_2d<f32>;
-@group(0) @binding(5) var<uniform> uniforms: Uniforms;
+@group(0) @binding(1) var<storage, read> instanceSource: array<u32>;
+@group(0) @binding(2) var<storage, read> instancePalette: array<u32>;
+@group(0) @binding(3) var transformA: texture_2d<u32>;
+@group(0) @binding(4) var transformPalette: texture_2d<f32>;
+@group(0) @binding(5) var maskTexture: texture_2d<f32>;
+@group(0) @binding(6) var<uniform> uniforms: Uniforms;
 
 ${paletteMatrixWGSL}
 ${indexToUvWGSL('sourceCoord', 'uniforms.sourceWidth')}
 
+// index is an instance; its geometry comes from the referenced source row
 fn intersects(index: u32) -> bool {
     if (index >= uniforms.numSplats) { return false; }
-    let uv = sourceCoord(index);
+    let uv = sourceCoord(instanceSource[index]);
     let center = bitcast<vec3f>(textureLoad(transformA, uv, 0).xyz);
-    let paletteIndex = textureLoad(splatTransform, uv, 0).r;
+    let paletteIndex = instancePalette[index] & 0xffffu;
     let world = (uniforms.model * paletteMatrix(paletteIndex) * vec4f(center, 1.0)).xyz;
     if (uniforms.mode <= 1) {
         let clip = uniforms.viewProjection * vec4f(world, 1.0);
@@ -144,8 +146,9 @@ class Intersect {
         ]);
         this.bindGroupFormat = new BindGroupFormat(device, [
             new BindStorageBufferFormat('result', SHADERSTAGE_COMPUTE),
+            new BindStorageBufferFormat('instanceSource', SHADERSTAGE_COMPUTE, true),
+            new BindStorageBufferFormat('instancePalette', SHADERSTAGE_COMPUTE, true),
             new BindTextureFormat('transformA', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false),
-            new BindTextureFormat('splatTransform', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false),
             new BindTextureFormat('transformPalette', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UNFILTERABLE_FLOAT, false),
             new BindTextureFormat('maskTexture', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_FLOAT, false),
             new BindUniformBufferFormat('uniforms', SHADERSTAGE_COMPUTE)
@@ -161,7 +164,7 @@ class Intersect {
     }
 
     async run(options: IntersectOptions, splat: Splat, bufferPool: BufferPool): Promise<Uint8Array> {
-        const count = splat.resource.numSplats;
+        const count = splat.instances.count;
         const transformA = splat.resource.getTexture('transformA');
         const byteSize = maskByteSize(count);
         const outputWords = byteSize / 4;
@@ -181,8 +184,9 @@ class Intersect {
         const shapeInverse = sphere ? shapeInvMat.copy(sphere.transform).invert() : box ? shapeInvMat.copy(box.transform).invert() : identityMat;
 
         this.compute.setParameter('result', this.output);
+        this.compute.setParameter('instanceSource', splat.instances.instanceSource);
+        this.compute.setParameter('instancePalette', splat.instances.instancePalette);
         this.compute.setParameter('transformA', transformA);
-        this.compute.setParameter('splatTransform', splat.transformTexture);
         this.compute.setParameter('transformPalette', splat.transformPalette.texture);
         this.compute.setParameter('maskTexture', mask ?? this.dummyTexture);
         this.compute.setParameter('sourceWidth', transformA.width);

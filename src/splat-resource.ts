@@ -45,7 +45,9 @@ class EditorSplatResource extends GSplatContainer {
     readonly source: ChunkSource;
     readonly sourcePool: ChunkDataPool;
     readonly shBands: SHBands;
-    readonly stateData: Uint8Array;
+    // the state column as loaded from file. read-only after upload: the live
+    // editor state belongs to the instance list, not to the static resource
+    readonly initialState: Uint8Array;
     readonly propertyNames: ReadonlySet<string>;
 
     private closed = false;
@@ -80,7 +82,7 @@ class EditorSplatResource extends GSplatContainer {
             maxPooledBytes: pooledBytes
         });
         this.shBands = shBands;
-        this.stateData = new Uint8Array(source.meta.numGaussians);
+        this.initialState = new Uint8Array(source.meta.numGaussians);
 
         const properties = new Set([
             'x', 'y', 'z',
@@ -95,6 +97,12 @@ class EditorSplatResource extends GSplatContainer {
         properties.add('state');
         properties.add('transform');
         this.propertyNames = properties;
+    }
+
+    // rows of static gaussian data. named apart from the live instance count on
+    // Splat so the two iteration domains can't be confused
+    get numRows() {
+        return this.numSplats;
     }
 
     static async create(device: GraphicsDevice, source: ChunkSource) {
@@ -221,7 +229,7 @@ class EditorSplatResource extends GSplatContainer {
         for (let i = 0; i < count; ++i) {
             const offset = i * stride + stateField.byteOffset;
             const value = stateField.type === 'uint32' ? data.getUint32(offset, true) : data.getFloat32(offset, true);
-            this.stateData[remap ? remap[base + i] : base + i] = value;
+            this.initialState[remap ? remap[base + i] : base + i] = value;
         }
     }
 

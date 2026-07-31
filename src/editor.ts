@@ -837,7 +837,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // while the scene is changing - trading the sort for speed exactly when the
     // eye is least able to see the sampling noise.
 
-    let stochastic = 'disabled';
+    let stochastic = 'movement';
 
     events.function('view.stochastic', () => {
         return stochastic;

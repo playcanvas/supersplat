@@ -10,6 +10,7 @@ import {
     type ChunkLayer,
     type ChunkSource,
     type ChunkSourceMetadata,
+    type ExtraColumn,
     type FileSystem,
     type LayerLayout,
     type LogEvent,
@@ -34,6 +35,15 @@ import {
 import { version } from '../package.json';
 import { ColorGrade, dcDecode, dcEncode, sigmoid } from './color-grade';
 import { Events } from './events';
+import {
+    SB_NEUTRAL_RGB,
+    calcSBLobes,
+    rotateSBLobe,
+    sbColumnName,
+    sbColumnNames,
+    sbInvSoftplus,
+    sbSoftplus
+} from './sb-utils';
 import { SHRotation } from './sh-utils';
 import { Splat } from './splat';
 import { State } from './splat-state';
@@ -362,11 +372,18 @@ class SingleSplat {
         const dstSHCoeffs = shBandCoeffs[dstSHBands];
         const tmpSHData = dstSHBands ? new Float32Array(dstSHCoeffs) : null;
 
+        const dstSBLobes = calcSBLobes(name => data.hasOwnProperty(name));
+        const dstSBNames = sbColumnNames(dstSBLobes);
+        const tmpSBLobe = { theta: 0, phi: 0 };
+
         type CacheEntry = {
             splat: Splat;
             transformCache: SplatTransformCache;
             srcProps: { [name: string]: Float32Array };
             grade: ColorGrade;
+            // rgb members of lobes this splat lacks, which must be written as
+            // SB_NEUTRAL_RGB rather than left at 0 (see sb-utils)
+            sbNeutral: string[];
         };
 
         const cacheMap = new Map<Splat, CacheEntry>();
@@ -381,9 +398,11 @@ class SingleSplat {
                     const srcPropNames = getVertexProperties(splat.splatData);
                     const srcSHBands = calcSHBands(srcPropNames);
                     const srcSHCoeffs = shBandCoeffs[srcSHBands];
+                    const srcSBLobes = calcSBLobes(name => srcPropNames.has(name));
 
                     // cache the props objects
                     const srcProps: { [name: string]: Float32Array } = {};
+                    const sbNeutral: string[] = [];
 
                     members.forEach((name) => {
                         const shIndex = shNames.indexOf(name);
@@ -391,14 +410,33 @@ class SingleSplat {
                             const a = Math.floor(shIndex / dstSHCoeffs);
                             const b = shIndex % dstSHCoeffs;
                             srcProps[name] = (b < srcSHCoeffs) ? splat.splatData.getProp(shNames[a * srcSHCoeffs + b]) as Float32Array : null;
-                        } else {
-                            srcProps[name] = splat.splatData.getProp(name) as Float32Array;
+                            return;
                         }
+
+                        // spherical beta columns are channel-major, so a source with
+                        // fewer lobes than the output needs its indices remapped
+                        const sbIndex = dstSBNames.indexOf(name);
+                        if (sbIndex >= 0) {
+                            const channel = Math.floor(sbIndex / dstSBLobes);
+                            const lobe = sbIndex % dstSBLobes;
+                            if (lobe < srcSBLobes) {
+                                srcProps[name] = splat.splatData.getProp(sbColumnName(channel, lobe, srcSBLobes)) as Float32Array;
+                            } else {
+                                srcProps[name] = null;
+                                // channels 0-2 are the lobe color
+                                if (channel < 3) {
+                                    sbNeutral.push(name);
+                                }
+                            }
+                            return;
+                        }
+
+                        srcProps[name] = splat.splatData.getProp(name) as Float32Array;
                     });
 
                     const grade = new ColorGrade(splat);
 
-                    cacheEntry = { splat, transformCache, srcProps, grade };
+                    cacheEntry = { splat, transformCache, srcProps, grade, sbNeutral };
 
                     cacheMap.set(splat, cacheEntry);
                 } else {
@@ -406,11 +444,16 @@ class SingleSplat {
                 }
             }
 
-            const { transformCache, srcProps, grade } = cacheEntry;
+            const { transformCache, srcProps, grade, sbNeutral } = cacheEntry;
 
             // copy members
             members.forEach((name) => {
                 data[name] = srcProps[name]?.[i] ?? 0;
+            });
+
+            // lobes absent from the source must activate to zero
+            sbNeutral.forEach((name) => {
+                data[name] = SB_NEUTRAL_RGB;
             });
 
             // apply transform palette transforms
@@ -449,6 +492,21 @@ class SingleSplat {
                 }
             }
 
+            // the spherical beta analogue of the sh rotation above: a lobe is a
+            // direction, so the transform's rotation applies to it directly
+            if (dstSBLobes > 0) {
+                const rot = transformCache.getRot(i);
+                for (let l = 0; l < dstSBLobes; ++l) {
+                    const thetaName = dstSBNames[dstSBLobes * 3 + l];
+                    const phiName = dstSBNames[dstSBLobes * 4 + l];
+
+                    rotateSBLobe(rot, data[thetaName], data[phiName], tmpSBLobe);
+
+                    data[thetaName] = tmpSBLobe.theta;
+                    data[phiName] = tmpSBLobe.phi;
+                }
+            }
+
             if (!serializeSettings.keepColorTint && hasColor && grade.hasTint) {
                 const c = {
                     r: dcDecode(data.f_dc_0),
@@ -472,6 +530,25 @@ class SingleSplat {
                         data[shNames[d + dstSHCoeffs]] = c.g;
                         data[shNames[d + dstSHCoeffs * 2]] = c.b;
                     }
+                }
+
+                // lobe colors are additive radiance like sh, so grade them the
+                // same way - but in activated space, since that's what the
+                // shader adds to the color
+                for (let l = 0; l < dstSBLobes; ++l) {
+                    const rName = dstSBNames[l];
+                    const gName = dstSBNames[dstSBLobes + l];
+                    const bName = dstSBNames[dstSBLobes * 2 + l];
+
+                    c.r = sbSoftplus(data[rName]);
+                    c.g = sbSoftplus(data[gName]);
+                    c.b = sbSoftplus(data[bName]);
+
+                    grade.applySH(c);
+
+                    data[rName] = sbInvSoftplus(c.r);
+                    data[gName] = sbInvSoftplus(c.g);
+                    data[bName] = sbInvSoftplus(c.b);
                 }
             }
 
@@ -497,8 +574,16 @@ const EXPORT_CHUNK_SIZE = 256 * 1024;
 // Build the canonical per-layer byte layout splat-transform expects. The
 // interleaved packing here must match splat-transform's readers/materialize:
 // position = xyz (stride 12); geometric = rot0-3, scale0-2, opacity (stride 32);
-// color = dc0-2 then f_rest_* (stride (3 + numRest) * 4).
-const buildLayouts = (numRest: number): Partial<Record<ChunkLayer, LayerLayout>> => ({
+// color = dc0-2 then f_rest_* (stride (3 + numRest) * 4); other = one f32 per
+// extra column, in declaration order.
+const otherLayout = (extras: ReadonlyArray<ExtraColumn>): LayerLayout => ({
+    stride: extras.length * 4,
+    fields: Object.fromEntries(extras.map((extra, i) => [
+        extra.name, { byteOffset: i * 4, components: 1, type: extra.type }
+    ]))
+});
+
+const buildLayouts = (numRest: number, extras: ReadonlyArray<ExtraColumn>): Partial<Record<ChunkLayer, LayerLayout>> => ({
     position: {
         stride: 12,
         fields: { position: { byteOffset: 0, components: 3, type: 'float32' } }
@@ -519,7 +604,8 @@ const buildLayouts = (numRest: number): Partial<Record<ChunkLayer, LayerLayout>>
         } : {
             dc: { byteOffset: 0, components: 3, type: 'float32' }
         }
-    }
+    },
+    ...(extras.length > 0 ? { other: otherLayout(extras) } : null)
 });
 
 /**
@@ -541,6 +627,7 @@ class SuperSplatChunkSource implements ChunkSource {
     private localOf: Uint32Array;   // output row -> gaussian index within that splat
     private singleSplat: SingleSplat;
     private numRest: number;
+    private sbNames: string[];
 
     constructor(splats: Splat[], settings: SerializeSettings) {
         this.splats = splats;
@@ -551,6 +638,14 @@ class SuperSplatChunkSource implements ChunkSource {
         const outputBands = Math.min(settings.maxSHBands ?? 3, splatBands.length ? Math.max(...splatBands) : 0);
         const numRest = SH_REST_COUNTS[outputBands];
         this.numRest = numRest;
+
+        // Spherical beta lobes are handled the same way: take the highest lobe
+        // count present and let SingleSplat neutral-fill splats with fewer. They
+        // travel as `other`-layer extra columns, which only the plain ply writer
+        // preserves - the compressed/sog/spz schemas have no room for them.
+        const splatLobes = splats.map(s => calcSBLobes(name => !!s.splatData.getProp(name)));
+        const sbNames = sbColumnNames(splatLobes.length ? Math.max(...splatLobes) : 0);
+        this.sbNames = sbNames;
 
         // Build the filtered output->source index map (in splat order).
         const filter = new GaussianFilter(settings);
@@ -577,9 +672,17 @@ class SuperSplatChunkSource implements ChunkSource {
             'scale_0', 'scale_1', 'scale_2',
             'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity',
             'rot_0', 'rot_1', 'rot_2', 'rot_3',
-            ...shNames.slice(0, numRest)
+            ...shNames.slice(0, numRest),
+            ...sbNames
         ];
         this.singleSplat = new SingleSplat(members, settings);
+
+        const extraColumns: ExtraColumn[] = sbNames.map(name => ({ name, type: 'float32' }));
+
+        const layers: ChunkLayer[] = ['position', 'geometric', 'color'];
+        if (extraColumns.length > 0) {
+            layers.push('other');
+        }
 
         const numChunks = Math.ceil(total / EXPORT_CHUNK_SIZE);
         this.meta = {
@@ -589,23 +692,25 @@ class SuperSplatChunkSource implements ChunkSource {
             chunkSize: EXPORT_CHUNK_SIZE,
             numChunks: [numChunks],
             shBands: outputBands as SHBands,
-            extraColumns: [],
+            extraColumns,
             transform: Transform.PLY,
-            availableLayers: new Set<ChunkLayer>(['position', 'geometric', 'color']),
-            layouts: buildLayouts(numRest)
+            availableLayers: new Set(layers),
+            layouts: buildLayouts(numRest, extraColumns)
         };
     }
 
     read(request: ReadRequest): Promise<void> {
         const isGather = 'indices' in request;
-        const anyBuf = (request.position ?? request.geometric ?? request.color) as ChunkData;
+        const anyBuf = (request.position ?? request.geometric ?? request.color ?? request.other) as ChunkData;
         const count = isGather ? request.count : anyBuf.count;
         const chunkBase = isGather ? 0 : request.chunkIndex * EXPORT_CHUNK_SIZE;
 
         const posF = request.position ? new Float32Array(request.position.data) : null;
         const geoF = request.geometric ? new Float32Array(request.geometric.data) : null;
         const colF = request.color ? new Float32Array(request.color.data) : null;
+        const othF = request.other ? new Float32Array(request.other.data) : null;
         const cstride = 3 + this.numRest;
+        const { sbNames } = this;
 
         const { data } = this.singleSplat;
 
@@ -638,6 +743,12 @@ class SuperSplatChunkSource implements ChunkSource {
                 colF[o + 2] = data.f_dc_2;
                 for (let r = 0; r < this.numRest; ++r) {
                     colF[o + 3 + r] = data[shNames[r]];
+                }
+            }
+            if (othF) {
+                const o = i * sbNames.length;
+                for (let k = 0; k < sbNames.length; ++k) {
+                    othF[o + k] = data[sbNames[k]];
                 }
             }
         }

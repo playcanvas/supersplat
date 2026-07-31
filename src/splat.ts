@@ -16,6 +16,7 @@ import {
 } from 'playcanvas';
 
 import { Element, ElementType } from './element';
+import { createSBAtlas, type SBAtlas } from './sb-utils';
 import { Serializer } from './serializer';
 import { vertexShader, fragmentShader, gsplatCenter } from './shaders/splat-shader';
 import { State, SplatState } from './splat-state';
@@ -54,6 +55,8 @@ class Splat extends Element {
     // all writes go through state.setBits/clearBits/toggleBits, then flush().
     state: SplatState;
     transformTexture: Texture;
+    // per-splat spherical beta lobes, or null when the data has none
+    sbAtlas: SBAtlas = null;
     selectionBoundStorage: BoundingBox;
     localBoundStorage: BoundingBox;
     worldBoundStorage: BoundingBox;
@@ -115,8 +118,13 @@ class Splat extends Element {
             glsl.set('gsplatCenterVS', gsplatCenter);
 
             material.setDefine('SH_BANDS', `${Math.min(bands, (instance.resource as GSplatResource).shBands)}`);
+            material.setDefine('SB_LOBES', `${this.sbAtlas?.lobes ?? 0}`);
             material.setParameter('splatState', this.stateTexture);
             material.setParameter('splatTransform', this.transformTexture);
+            if (this.sbAtlas) {
+                material.setParameter('splatSB', this.sbAtlas.texture);
+                material.setParameter('splatSBWidth', this.sbAtlas.width);
+            }
             material.update();
         };
 
@@ -197,6 +205,10 @@ class Splat extends Element {
         this.state = new SplatState(splatData.getProp('state') as Uint8Array, this.stateTexture);
         this.transformTexture = createTexture('splatTransform', PIXELFORMAT_R16U);
 
+        // this atlas is sized independently of the engine's per-splat textures,
+        // so it isn't created via createTexture above
+        this.sbAtlas = createSBAtlas(device, splatData);
+
         this.localBoundStorage = instance.resource.aabb;
         // @ts-ignore
         this.worldBoundStorage = instance.meshInstance._aabb;
@@ -249,6 +261,7 @@ class Splat extends Element {
         const oldAsset = this.asset;
         const oldStateTexture = this.stateTexture;
         const oldTransformTexture = this.transformTexture;
+        const oldSbAtlas = this.sbAtlas;
 
         // carry the current transform onto the new entity
         const position = oldEntity.getLocalPosition().clone();
@@ -289,6 +302,7 @@ class Splat extends Element {
         oldEntity.destroy();
         oldStateTexture.destroy();
         oldTransformTexture.destroy();
+        oldSbAtlas?.texture.destroy();
         oldAsset.registry?.remove(oldAsset);
         oldAsset.unload();
 
@@ -299,6 +313,8 @@ class Splat extends Element {
     destroy() {
         super.destroy();
         this.entity.destroy();
+        // the lobe atlas can be hundreds of MB, so don't leave it to the gc
+        this.sbAtlas?.texture.destroy();
         this.asset.registry.remove(this.asset);
         this.asset.unload();
     }

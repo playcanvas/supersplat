@@ -26,6 +26,47 @@ vec3 applySaturation(vec3 color) {
     return grey + (color - grey) * saturation;
 }
 
+#if SB_LOBES > 0
+    // Spherical Beta lobes, added to the SH color. See sb-utils.ts for the atlas
+    // layout: SB_LOBES * 2 RGBA texels per splat, indexed by splat.index, holding
+    // raw (pre-activation) (r, g, b, theta) then (phi, beta, -, -) per lobe.
+    uniform sampler2D splatSB;
+    uniform int splatSBWidth;
+
+    // the reference model sharpens softplus with b = log(2) * 10
+    const float SB_B = 6.931471805599453;
+
+    float sbSoftplus(float x) {
+        float bx = SB_B * x;
+        // softplus(x) -> x once b*x is large; guards exp() from overflowing
+        return (bx > 20.0 ? bx : log(1.0 + exp(bx))) / SB_B;
+    }
+
+    vec4 sbFetch(int texel) {
+        return texelFetch(splatSB, ivec2(texel % splatSBWidth, texel / splatSBWidth), 0);
+    }
+
+    vec3 evalSB(vec3 dir) {
+        int base = int(splat.index) * SB_LOBES * 2;
+
+        vec3 result = vec3(0.0);
+        for (int l = 0; l < SB_LOBES; l++) {
+            vec4 rgbTheta = sbFetch(base + l * 2);
+            vec4 phiBeta = sbFetch(base + l * 2 + 1);
+
+            float sinTheta = sin(rgbTheta.w);
+            vec3 lobeDir = vec3(sinTheta * cos(phiBeta.x), sinTheta * sin(phiBeta.x), cos(rgbTheta.w));
+
+            float d = dot(dir, lobeDir);
+            if (d > 0.0) {
+                result += pow(d, 4.0 * exp(phiBeta.y)) *
+                    vec3(sbSoftplus(rgbTheta.x), sbSoftplus(rgbTheta.y), sbSoftplus(rgbTheta.z));
+            }
+        }
+        return result;
+    }
+#endif
+
 void main(void) {
     // read gaussian details
     SplatSource source;
@@ -108,11 +149,14 @@ void main(void) {
         // read color
         color = getColor();
 
+        #if SH_BANDS > 0 || SB_LOBES > 0
+            // calculate the model-space view direction, shared by the spherical
+            // harmonic and spherical beta evaluation below
+            vec3 dir = normalize(center.view * mat3(center.modelView));
+        #endif
+
         // evaluate spherical harmonics
         #if SH_BANDS > 0
-        // calculate the model-space view direction
-            vec3 dir = normalize(center.view * mat3(center.modelView));
-
             // read sh coefficients
             vec3 sh[SH_COEFFS];
             float scale;
@@ -120,6 +164,11 @@ void main(void) {
 
             // evaluate
             color.xyz += evalSH(sh, dir) * scale;
+        #endif
+
+        // add the view-dependent spherical beta lobes
+        #if SB_LOBES > 0
+            color.xyz += evalSB(dir);
         #endif
 
         // apply tint/brightness

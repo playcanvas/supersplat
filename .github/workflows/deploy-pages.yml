@@ -1,0 +1,68 @@
+name: Deploy to GitHub Pages
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths-ignore: ['README.md', 'LICENSE']
+
+permissions:
+  contents: read
+  actions: read       # deploy-pages v4+ reads the uploaded artifact
+  pages: write
+  id-token: write
+
+# one deploy at a time. queued runs are not cancelled, so a publish that has
+# already started is allowed to finish
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 10
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v7
+
+    - name: Use Node.js
+      uses: actions/setup-node@v7
+      with:
+        node-version: 22.x
+        cache: 'npm'
+
+    - name: Install
+      run: npm ci
+
+    - name: Build
+      run: npm run build
+      env:
+        # Pages serves a project site from https://<owner>.github.io/<repo>/, so
+        # index.html needs a matching <base href> for its relative urls (and the
+        # service worker's cache list) to resolve. Derived from the repo name so
+        # a fork or rename needs no edit here.
+        BASE_HREF: /${{ github.event.repository.name }}/
+
+    - name: Setup Pages
+      # enablement flips the repo's Pages source to "GitHub Actions" if it is
+      # still set to serve a branch, which is what renders README.md instead
+      uses: actions/configure-pages@v6
+      with:
+        enablement: true
+
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v5
+      with:
+        path: dist
+
+    - name: Deploy
+      id: deployment
+      uses: actions/deploy-pages@v5

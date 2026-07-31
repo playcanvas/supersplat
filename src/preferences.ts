@@ -1,6 +1,7 @@
 import { Color } from 'playcanvas';
 
 import { Events } from './events';
+import { SB_MAX_LOBES } from './sb-utils';
 import { SceneConfig } from './scene-config';
 import { i18n } from './ui/localization';
 
@@ -85,6 +86,7 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         { key: 'camera.fovDolly', setCommand: 'camera.setFovDolly', getDefault: () => false, validate: isBool },
         { key: 'camera.fov', setCommand: 'camera.setFov', urlPath: 'camera.fov', getDefault: () => config.camera.fov, validate: isNumber(10, 120) },
         { key: 'view.bands', setCommand: 'view.setBands', urlPath: 'show.shBands', getDefault: () => config.show.shBands, validate: v => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 3 },
+        { key: 'view.lobes', setCommand: 'view.setLobes', getDefault: () => SB_MAX_LOBES, validate: v => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= SB_MAX_LOBES },
         { key: 'view.colorMode', setCommand: 'view.setColorMode', getDefault: () => 'full', validate: isEnum(['full', 'diffuse', 'specular']) },
         { key: 'camera.flySpeed', setCommand: 'camera.setFlySpeed', getDefault: () => 1, validate: isNumber(0.1, 30) },
         { key: 'camera.splatSize', setCommand: 'camera.setSplatSize', getDefault: () => 2, validate: isNumber(0, 10) },

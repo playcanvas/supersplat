@@ -7,6 +7,7 @@ import { Element, ElementType } from './element';
 import { Events } from './events';
 import type { GridPlane } from './infinite-grid';
 import { MappedReadFileSystem } from './io';
+import { SB_MAX_LOBES } from './sb-utils';
 import { Scene } from './scene';
 import { Splat } from './splat';
 import { writeSplatFile } from './splat-serialize';
@@ -76,7 +77,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     [
         'camera.mode', 'camera.overlay', 'camera.splatSize', 'view.outlineSelection',
-        'view.centersUseGaussianColor', 'view.bands', 'view.colorMode', 'camera.bound', 'camera.boundDimensions', 'camera.showPoses',
+        'view.centersUseGaussianColor', 'view.bands', 'view.lobes', 'view.colorMode', 'camera.bound', 'camera.boundDimensions', 'camera.showPoses',
         'camera.showInfo', 'selection.changed', 'tool.coordSpace'
     ].forEach((eventName) => {
         events.on(eventName, () => {
@@ -859,6 +860,18 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         setViewBands(value);
     });
 
+    // view spherical beta lobes, capped per-splat by what the file carries
+    let viewLobes = SB_MAX_LOBES;
+
+    events.function('view.lobes', () => viewLobes);
+
+    events.on('view.setLobes', (value: number) => {
+        if (value !== viewLobes) {
+            viewLobes = value;
+            events.fire('view.lobes', viewLobes);
+        }
+    });
+
     // view color separation: 'full' renders everything, 'diffuse' the band-0 term
     // alone, 'specular' only the view-dependent terms over the background color
     let colorMode = 'full';
@@ -911,6 +924,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.fire('camera.fov', scene.camera.fov);
     events.fire('camera.overlay', cameraOverlay);
     events.fire('view.bands', viewBands);
+    events.fire('view.lobes', viewLobes);
     events.fire('view.colorMode', colorMode);
     events.fire('camera.showInfo', showInfo);
 
@@ -923,6 +937,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             unselectedColor: packC(events.invoke('unselectedClr')),
             lockedColor: packC(events.invoke('lockedClr')),
             shBands: events.invoke('view.bands'),
+            sbLobes: events.invoke('view.lobes'),
             colorMode: events.invoke('view.colorMode'),
             centersSize: events.invoke('camera.splatSize'),
             outlineSelection: events.invoke('view.outlineSelection'),
@@ -943,6 +958,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         events.fire('setUnselectedClr', new Color(docView.unselectedColor));
         events.fire('setLockedClr', new Color(docView.lockedColor));
         events.fire('view.setBands', docView.shBands);
+        events.fire('view.setLobes', docView.sbLobes ?? SB_MAX_LOBES);
         events.fire('view.setColorMode', docView.colorMode ?? 'full');
         events.fire('camera.setSplatSize', docView.centersSize);
         events.fire('view.setOutlineSelection', docView.outlineSelection);

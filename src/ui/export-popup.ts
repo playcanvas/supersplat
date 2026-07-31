@@ -4,6 +4,8 @@ import { Pose } from '../camera-poses';
 import { i18n } from './localization';
 import { Events } from '../events';
 import { ExportType, SceneExportOptions } from '../file-handler';
+import { SB_MAX_LOBES, calcSBLobes } from '../sb-utils';
+import { Splat } from '../splat';
 import { AnimTrack, ExperienceSettings, defaultPostEffectSettings } from '../splat-serialize';
 import sceneExport from './svg/export.svg';
 
@@ -214,6 +216,28 @@ class ExportPopup extends Container {
         bandsRow.append(bandsLabel);
         bandsRow.append(bandsSlider);
 
+        // spherical beta lobes
+
+        const lobesRow = new Container({
+            class: 'row'
+        });
+
+        const lobesLabel = new Label({
+            class: 'label'
+        });
+        i18n.bindText(lobesLabel, 'popup.export.sb-lobes');
+
+        const lobesSlider = new SliderInput({
+            class: 'slider',
+            min: 0,
+            max: SB_MAX_LOBES,
+            precision: 0,
+            value: SB_MAX_LOBES
+        });
+
+        lobesRow.append(lobesLabel);
+        lobesRow.append(lobesSlider);
+
         // sog iterations
 
         const iterationsRow = new Container({
@@ -286,6 +310,7 @@ class ExportPopup extends Container {
         content.append(fovRow);
         content.append(compressRow);
         content.append(bandsRow);
+        content.append(lobesRow);
         content.append(iterationsRow);
         content.append(spzVersionRow);
         content.append(filenameRow);
@@ -339,8 +364,17 @@ class ExportPopup extends Container {
             filenameEntry.value = removeKnownExtension(filenameEntry.value) + ext;
         };
 
+        // spherical beta lobes ride in the ply 'other' columns, so the row applies
+        // only to an uncompressed ply export of a scene that actually has lobes
+        let sbAvailable = false;
+
+        const refreshLobesRow = () => {
+            lobesRow.hidden = !sbAvailable || compressBoolean.value;
+        };
+
         compressBoolean.on('change', () => {
             updateExtension(compressBoolean.value ? '.compressed.ply' : '.ply');
+            refreshLobesRow();
         });
 
         viewerTypeSelect.on('change', () => {
@@ -353,11 +387,11 @@ class ExportPopup extends Container {
 
         const reset = (exportType: ExportType, splatNames: string[], hasPoses: boolean) => {
             const allRows = [
-                viewerTypeRow, animationRow, loopRow, colorRow, fovRow, compressRow, bandsRow, iterationsRow, spzVersionRow, filenameRow
+                viewerTypeRow, animationRow, loopRow, colorRow, fovRow, compressRow, bandsRow, lobesRow, iterationsRow, spzVersionRow, filenameRow
             ];
 
             const activeRows = {
-                ply: [compressRow, bandsRow, filenameRow],
+                ply: [compressRow, bandsRow, lobesRow, filenameRow],
                 splat: [filenameRow],
                 sog: [bandsRow, iterationsRow, filenameRow],
                 spz: [bandsRow, spzVersionRow, filenameRow],
@@ -372,6 +406,14 @@ class ExportPopup extends Container {
 
             // ply
             compressBoolean.value = false;
+
+            // default the cap to what the scene carries. must follow the
+            // compressBoolean reset above, which refreshLobesRow reads.
+            const sceneLobes = Math.max(0, ...(events.invoke('scene.splats') as Splat[])
+            .map(s => calcSBLobes(name => !!s.splatData.getProp(name))));
+            lobesSlider.value = sceneLobes;
+            sbAvailable = exportType === 'ply' && sceneLobes > 0;
+            refreshLobesRow();
 
             // sog
             iterationsSlider.value = 10;
@@ -435,7 +477,8 @@ class ExportPopup extends Container {
                     filename: filenameEntry.value,
                     splatIdx: 'all',
                     serializeSettings: {
-                        maxSHBands: bandsSlider.value
+                        maxSHBands: bandsSlider.value,
+                        maxSBLobes: lobesSlider.value
                     },
                     compressedPly: compressBoolean.value
                 };

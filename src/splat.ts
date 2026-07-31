@@ -124,9 +124,13 @@ class Splat extends Element {
             const colorMode = events.invoke('view.colorMode');
             const diffuseOnly = colorMode === 'diffuse';
             const bands = diffuseOnly ? 0 : events.invoke('view.bands');
+            const lobes = diffuseOnly ? 0 : events.invoke('view.lobes');
+            const atlasLobes = this.sbAtlas?.lobes ?? 0;
 
             material.setDefine('SH_BANDS', `${Math.min(bands, (instance.resource as GSplatResource).shBands)}`);
-            material.setDefine('SB_LOBES', `${diffuseOnly ? 0 : (this.sbAtlas?.lobes ?? 0)}`);
+            // the atlas packs every lobe; SB_LOBES only bounds the shader's loop
+            material.setDefine('SB_ATLAS_LOBES', `${atlasLobes}`);
+            material.setDefine('SB_LOBES', `${Math.min(lobes, atlasLobes)}`);
             material.setDefine('SPECULAR_ONLY', colorMode === 'specular' ? '1' : '0');
             material.setParameter('splatState', this.stateTexture);
             material.setParameter('splatTransform', this.transformTexture);
@@ -438,6 +442,7 @@ class Splat extends Element {
         this.entity.gsplat.layers = [this.scene.splatLayer.id];
 
         this.scene.events.on('view.bands', this.rebuildMaterial, this);
+        this.scene.events.on('view.lobes', this.rebuildMaterial, this);
         this.scene.events.on('view.colorMode', this.rebuildMaterial, this);
         this.rebuildMaterial();
 
@@ -447,6 +452,7 @@ class Splat extends Element {
 
     remove() {
         this.scene.events.off('view.bands', this.rebuildMaterial, this);
+        this.scene.events.off('view.lobes', this.rebuildMaterial, this);
         this.scene.events.off('view.colorMode', this.rebuildMaterial, this);
 
         this.scene.contentRoot.removeChild(this.entity);

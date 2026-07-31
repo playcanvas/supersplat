@@ -23,8 +23,8 @@ import {
 // lobeDir = (sin(theta)cos(phi), sin(theta)sin(phi), cos(theta)).
 //
 // PLY stores the lobes channel-major, matching the reference implementation:
-// column index = channel * lobes + lobe. So for 4 lobes, `sb_params_0..3` are
-// the per-lobe red values, `4..7` green, and so on to `20..23` for beta.
+// column index = channel * lobes + lobe. So for 2 lobes, `sb_params_0..1` are
+// the per-lobe red values, `2..3` green, and so on to `10..11` for beta.
 
 /** Channels per lobe: r, g, b, theta, phi, beta. */
 const SB_CHANNELS = 6;
@@ -34,7 +34,7 @@ const SB_CHANNELS = 6;
  * model: it bounds both the shader's loop and the atlas size. Files carrying
  * more are rejected by calcSBLobes rather than partially read.
  */
-const SB_MAX_LOBES = 8;
+const SB_MAX_LOBES = 2;
 
 /** RGBA texels per lobe in the GPU atlas: (r,g,b,theta) then (phi,beta,-,-). */
 const SB_TEXELS_PER_LOBE = 2;
@@ -190,6 +190,7 @@ const rotateSBLobe = (quat: Quat, theta: number, phi: number, result: { theta: n
 };
 
 export {
+    SB_MAX_LOBES,
     SB_NEUTRAL_RGB,
     calcSBLobes,
     createSBAtlas,

@@ -36,6 +36,7 @@ import { version } from '../package.json';
 import { ColorGrade, dcDecode, dcEncode, sigmoid } from './color-grade';
 import { Events } from './events';
 import {
+    SB_MAX_LOBES,
     SB_NEUTRAL_RGB,
     calcSBLobes,
     rotateSBLobe,
@@ -50,6 +51,7 @@ import { State } from './splat-state';
 
 type SerializeSettings = {
     maxSHBands?: number;            // specifies the maximum number of bands to be exported
+    maxSBLobes?: number;            // specifies the maximum number of spherical beta lobes to be exported
     selected?: boolean;             // only export selected gaussians. used for copy/paste
     minOpacity?: number;            // filter out gaussians with alpha less than or equal to minAlpha
     removeInvalid?: boolean;        // filter out gaussians with invalid data (NaN/Infinity)
@@ -639,12 +641,13 @@ class SuperSplatChunkSource implements ChunkSource {
         const numRest = SH_REST_COUNTS[outputBands];
         this.numRest = numRest;
 
-        // Spherical beta lobes are handled the same way: take the highest lobe
-        // count present and let SingleSplat neutral-fill splats with fewer. They
+        // Spherical beta lobes are handled the same way: the highest lobe count
+        // present, capped by maxSBLobes, neutral-filled by SingleSplat. They
         // travel as `other`-layer extra columns, which only the plain ply writer
         // preserves - the compressed/sog/spz schemas have no room for them.
         const splatLobes = splats.map(s => calcSBLobes(name => !!s.splatData.getProp(name)));
-        const sbNames = sbColumnNames(splatLobes.length ? Math.max(...splatLobes) : 0);
+        const outputLobes = Math.min(settings.maxSBLobes ?? SB_MAX_LOBES, splatLobes.length ? Math.max(...splatLobes) : 0);
+        const sbNames = sbColumnNames(outputLobes);
         this.sbNames = sbNames;
 
         // Build the filtered output->source index map (in splat order).

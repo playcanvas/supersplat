@@ -3,6 +3,7 @@ import { Color } from 'playcanvas';
 
 import { Events } from '../events';
 import type { GridPlane } from '../infinite-grid';
+import { SB_MAX_LOBES } from '../sb-utils';
 import { ShortcutManager } from '../shortcut-manager';
 import { i18n } from './localization';
 import { Tooltips } from './tooltips';
@@ -230,6 +231,27 @@ class SettingsPanel extends Container {
 
         shBandsRow.append(shBandsLabel);
         shBandsRow.append(shBandsSlider);
+
+        // sb lobes
+        const sbLobesRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const sbLobesLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(sbLobesLabel, 'panel.settings.sb-lobes');
+
+        const sbLobesSlider = new SliderInput({
+            class: 'settings-panel-row-slider',
+            min: 0,
+            max: SB_MAX_LOBES,
+            precision: 0,
+            value: SB_MAX_LOBES
+        });
+
+        sbLobesRow.append(sbLobesLabel);
+        sbLobesRow.append(sbLobesSlider);
 
         // color separation mode
 
@@ -482,6 +504,7 @@ class SettingsPanel extends Container {
         this.append(fovRow);
         this.append(fovDollyRow);
         this.append(shBandsRow);
+        this.append(sbLobesRow);
         this.append(colorModeRow);
         this.append(cameraFlySpeedRow);
         this.append(centersSizeRow);
@@ -532,12 +555,24 @@ class SettingsPanel extends Container {
             events.fire('view.setBands', value);
         });
 
+        // sb lobes
+
+        events.on('view.lobes', (lobes: number) => {
+            sbLobesSlider.value = lobes;
+        });
+
+        sbLobesSlider.on('change', (value: number) => {
+            events.fire('view.setLobes', value);
+        });
+
         // color separation mode
 
         events.on('view.colorMode', (mode: string) => {
             colorModeSelection.value = mode;
-            // diffuse mode compiles the sh bands out, so the slider has no effect
+            // diffuse mode compiles both view-dependent terms out, so neither
+            // slider has any effect
             shBandsSlider.enabled = mode !== 'diffuse';
+            sbLobesSlider.enabled = mode !== 'diffuse';
         });
 
         colorModeSelection.on('change', (value: string) => {

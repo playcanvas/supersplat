@@ -36,8 +36,10 @@ vec3 applySaturation(vec3 color) {
 
 #if SB_LOBES > 0
     // Spherical Beta lobes, added to the SH color. See sb-utils.ts for the atlas
-    // layout: SB_LOBES * 2 RGBA texels per splat, indexed by splat.index, holding
-    // raw (pre-activation) (r, g, b, theta) then (phi, beta, -, -) per lobe.
+    // layout: SB_ATLAS_LOBES * 2 RGBA texels per splat, indexed by splat.index,
+    // holding raw (pre-activation) (r, g, b, theta) then (phi, beta, -, -) per
+    // lobe. SB_LOBES is how many of them the view evaluates, so it bounds the
+    // loop while SB_ATLAS_LOBES sets the stride.
     uniform sampler2D splatSB;
     uniform int splatSBWidth;
 
@@ -55,7 +57,7 @@ vec3 applySaturation(vec3 color) {
     }
 
     vec3 evalSB(vec3 dir) {
-        int base = int(splat.index) * SB_LOBES * 2;
+        int base = int(splat.index) * SB_ATLAS_LOBES * 2;
 
         vec3 result = vec3(0.0);
         for (int l = 0; l < SB_LOBES; l++) {

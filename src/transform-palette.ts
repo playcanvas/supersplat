@@ -28,6 +28,8 @@ class TransformPalette {
     free: (num?: number) => void;
     destroy: () => void;
     texture: Texture;
+    // number of allocated entries, including the identity at index 0
+    size: number;
 
     constructor(device: GraphicsDevice, initialSize = 4096) {
         let texture: Texture;
@@ -101,6 +103,10 @@ class TransformPalette {
 
         Object.defineProperty(this, 'texture', { get() {
             return texture;
+        } });
+
+        Object.defineProperty(this, 'size', { get() {
+            return nextIdx;
         } });
 
         // allocate initial storage

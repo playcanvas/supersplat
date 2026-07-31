@@ -1,4 +1,4 @@
-import { applyColorGradeWGSL } from './color-grade-chunk';
+import { applyColorGradeWGSL, paletteGradeWGSL } from './color-grade-chunk';
 import { indexToUvWGSL, paletteMatrixWGSL } from './palette-chunk';
 
 const computeSplatValueWGSL = (bands: number, firstBinding = 1) => {
@@ -10,7 +10,8 @@ const computeSplatValueWGSL = (bands: number, firstBinding = 1) => {
         `@group(0) @binding(${binding++}) var transformA: texture_2d<u32>;`,
         `@group(0) @binding(${binding++}) var transformB: texture_2d<f32>;`,
         `@group(0) @binding(${binding++}) var splatColor: texture_2d<f32>;`,
-        `@group(0) @binding(${binding++}) var transformPalette: texture_2d<f32>;`
+        `@group(0) @binding(${binding++}) var transformPalette: texture_2d<f32>;`,
+        `@group(0) @binding(${binding++}) var colorPalette: texture_2d<f32>;`
     ];
     if (bands > 0) declarations.push(`@group(0) @binding(${binding++}) var splatSH_1to3: texture_2d<u32>;`);
     if (bands > 1) {
@@ -97,10 +98,6 @@ struct SplatValueUniforms {
     viewMatrix: mat4x4f,
     viewProjection: mat4x4f,
     cameraWorldPos: vec3f,
-    cgOffset: f32,
-    cgScale: vec3f,
-    cgSaturation: f32,
-    transparency: f32,
     shNumCoeffs: i32,
     minValue: f32,
     maxValue: f32,
@@ -113,6 +110,7 @@ struct SplatValueUniforms {
 
 struct SplatValue {
     uv: vec2i,
+    colorIndex: u32,
     selected: bool,
     visible: bool,
     localPos: vec3f,
@@ -125,6 +123,7 @@ ${paletteMatrixWGSL}
 ${indexToUvWGSL('sourceCoord', 'uniforms.sourceWidth')}
 
 ${applyColorGradeWGSL}
+${paletteGradeWGSL}
 
 fn rgbToHsv(color: vec3f) -> vec3f {
     let k = vec4f(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
@@ -146,8 +145,8 @@ fn readSplat(index: u32, value: ptr<function, SplatValue>) -> bool {
     if (state != 0 && state != 1) { return false; }
     let data = textureLoad(transformA, uv, 0);
     let localPos = bitcast<vec3f>(data.xyz);
-    let paletteIndex = instancePalette[index] & 0xffffu;
-    let worldPos = (uniforms.entityMatrix * paletteMatrix(paletteIndex) * vec4f(localPos, 1.0)).xyz;
+    let paletteWord = instancePalette[index];
+    let worldPos = (uniforms.entityMatrix * paletteMatrix(paletteWord & 0xffffu) * vec4f(localPos, 1.0)).xyz;
     var visible = true;
     if (uniforms.onScreenOnly != 0u) {
         let clip = uniforms.viewProjection * vec4f(worldPos, 1.0);
@@ -158,6 +157,7 @@ fn readSplat(index: u32, value: ptr<function, SplatValue>) -> bool {
         }
     }
     (*value).uv = uv;
+    (*value).colorIndex = paletteWord >> 16u;
     (*value).selected = state == 1;
     (*value).visible = visible;
     (*value).localPos = localPos;
@@ -167,10 +167,14 @@ fn readSplat(index: u32, value: ptr<function, SplatValue>) -> bool {
 
 ${shFunctions}
 
+// The gaussian's committed grade. The colour panel's uncommitted preview is
+// deliberately not applied here: the data panel reports what the scene *is*, not
+// what a slider mid-drag would make it.
 fn readFinalColor(s: SplatValue) -> vec3f {
     var color = textureLoad(splatColor, s.uv, 0).rgb;
     ${bands > 0 ? 'color += evaluateSH(s);' : ''}
-    return applyColorGrade(color, uniforms.cgScale, uniforms.cgOffset, uniforms.cgSaturation);
+    let grade = paletteGrade(s.colorIndex);
+    return applyColorGrade(color, grade.row0, grade.row1, grade.row2);
 }
 
 fn computeSplatValue(index: u32, valueOut: ptr<function, f32>, selectedOut: ptr<function, bool>, visibleOut: ptr<function, bool>) -> bool {
@@ -191,7 +195,7 @@ fn computeSplatValue(index: u32, valueOut: ptr<function, f32>, selectedOut: ptr<
     else if (uniforms.propMode >= 5 && uniforms.propMode <= 7) {
         value = readFinalColor(s)[uniforms.propMode - 5];
     } else if (uniforms.propMode == 8) {
-        value = textureLoad(splatColor, s.uv, 0).a * uniforms.transparency;
+        value = textureLoad(splatColor, s.uv, 0).a * paletteGrade(s.colorIndex).alpha;
     } else if (uniforms.propMode >= 9 && uniforms.propMode <= 13) {
         let scale = textureLoad(transformB, s.uv, 0).xyz;
         if (uniforms.propMode <= 11) { value = scale[uniforms.propMode - 9]; }

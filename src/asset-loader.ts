@@ -25,6 +25,14 @@ class AssetLoader {
     }
 
     async load(filename: string, fileSystem: ReadFileSystem, animationFrame?: boolean, skipReorder?: boolean) {
+        const loaded = await this.loadAsset(filename, fileSystem, animationFrame, skipReorder);
+        return loaded && new Splat(loaded.asset, loaded.rotation);
+    }
+
+    // Load the static tier only, without a layer over it. A .ssproj can have
+    // several layers sharing one resource, so the document loader creates the
+    // asset once here and then builds each layer's own instance list.
+    async loadAsset(filename: string, fileSystem: ReadFileSystem, animationFrame?: boolean, skipReorder?: boolean) {
         if (!animationFrame) {
             this.events.fire('startSpinner');
         }
@@ -70,7 +78,7 @@ class AssetLoader {
             const resource = await EditorSplatResource.create(this.app.graphicsDevice, source);
             const asset = this.createGSplatAsset(resource, filename);
 
-            return new Splat(asset, transform.rotation);
+            return { asset, rotation: transform.rotation };
         } finally {
             if (!animationFrame) {
                 this.events.fire('stopSpinner');

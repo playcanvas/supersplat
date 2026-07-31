@@ -1,4 +1,4 @@
-import { applyColorGradeWGSL } from './color-grade-chunk';
+import { applyColorGradeWGSL, paletteGradeWGSL } from './color-grade-chunk';
 import { indexToUvWGSL, paletteMatrixWGSL } from './palette-chunk';
 
 const shCode = (bands: number) => {
@@ -100,9 +100,16 @@ struct ProjectorUniforms {
     view: mat4x4f,
     viewProj: mat4x4f,
     cameraPosition: vec3f,
-    saturation: f32,
-    colorOffset: vec4f,
-    colorScale: vec4f,
+    // the colour panel's uncommitted grade, previewed on the edit target only:
+    // 0 = off, 1 = selected instances, 2 = every instance (an empty selection
+    // means the whole layer). Locked instances are never a target, matching
+    // SplatsColorOp.forEachTarget.
+    previewMode: u32,
+    colorAlpha: f32,
+    // rows of the affine colour grade, see color-grade-chunk
+    colorRow0: vec4f,
+    colorRow1: vec4f,
+    colorRow2: vec4f,
     selectedColor: vec4f,
     lockedColor: vec4f,
     visible: u32,
@@ -121,16 +128,18 @@ struct ProjectorUniforms {
 @group(0) @binding(7) var transformB: texture_2d<f32>;
 @group(0) @binding(8) var splatColor: texture_2d<f32>;
 @group(0) @binding(9) var transformPalette: texture_2d<f32>;
-${bands > 0 ? '@group(0) @binding(10) var splatSH_1to3: texture_2d<u32>;' : ''}
-${bands > 1 ? '@group(0) @binding(11) var splatSH_4to7: texture_2d<u32>;\n@group(0) @binding(12) var splatSH_8to11: texture_2d<u32>;' : ''}
-${bands > 2 ? '@group(0) @binding(13) var splatSH_12to15: texture_2d<u32>;' : ''}
-@group(0) @binding(${10 + (bands > 0 ? 1 : 0) + (bands > 1 ? 2 : 0) + (bands > 2 ? 1 : 0)}) var<uniform> uniforms: ProjectorUniforms;
+@group(0) @binding(10) var colorPalette: texture_2d<f32>;
+${bands > 0 ? '@group(0) @binding(11) var splatSH_1to3: texture_2d<u32>;' : ''}
+${bands > 1 ? '@group(0) @binding(12) var splatSH_4to7: texture_2d<u32>;\n@group(0) @binding(13) var splatSH_8to11: texture_2d<u32>;' : ''}
+${bands > 2 ? '@group(0) @binding(14) var splatSH_12to15: texture_2d<u32>;' : ''}
+@group(0) @binding(${11 + (bands > 0 ? 1 : 0) + (bands > 1 ? 2 : 0) + (bands > 2 ? 1 : 0)}) var<uniform> uniforms: ProjectorUniforms;
 
 ${shCode(bands)}
 ${indexToUvWGSL('sourceCoord', 'uniforms.sourceWidth')}
 ${indexToUvWGSL('cacheCoord', 'uniforms.cacheWidth')}
 ${paletteMatrixWGSL}
 ${applyColorGradeWGSL}
+${paletteGradeWGSL}
 
 fn rotationMatrix(qIn: vec4f) -> mat3x3f {
     let q = normalize(qIn);
@@ -192,8 +201,8 @@ fn main(
     let packedRotation = unpack2x16float(a.w);
     let rotation = vec4f(packedRotation, b.w, sqrt(max(0.0, 1.0 - dot(vec3f(packedRotation, b.w), vec3f(packedRotation, b.w)))));
     let localCenter = bitcast<vec3f>(a.xyz);
-    let paletteIndex = instancePalette[instance] & 0xffffu;
-    let model = uniforms.model * paletteMatrix(paletteIndex);
+    let paletteWord = instancePalette[instance];
+    let model = uniforms.model * paletteMatrix(paletteWord & 0xffffu);
     let worldCenter = model * vec4f(localCenter, 1.0);
     let viewCenter = uniforms.view * worldCenter;
     let depth = -viewCenter.z;
@@ -300,10 +309,17 @@ fn main(
         let localDirection = normalize(transpose(mat3x3f(model[0].xyz, model[1].xyz, model[2].xyz)) * worldDirection);
         color = vec4f(color.rgb + evaluateSH(uv, localDirection), color.a);
     }
-    color = vec4f(
-        applyColorGrade(color.rgb, uniforms.colorScale.rgb, uniforms.colorOffset.x, uniforms.saturation),
-        clamp(color.a * uniforms.colorScale.w + uniforms.colorOffset.w, 0.0, 1.0)
-    );
+    // the gaussian's committed grade, then the panel's pending one if this
+    // gaussian is part of what an Apply would affect
+    let grade = paletteGrade(paletteWord >> 16u);
+    var graded = applyColorGrade(color.rgb, grade.row0, grade.row1, grade.row2);
+    var gradedAlpha = color.a * grade.alpha;
+    if ((state & 2u) == 0u &&
+        (uniforms.previewMode == 2u || (uniforms.previewMode == 1u && (state & 1u) != 0u))) {
+        graded = applyColorGrade(graded, uniforms.colorRow0, uniforms.colorRow1, uniforms.colorRow2);
+        gradedAlpha *= uniforms.colorAlpha;
+    }
+    color = vec4f(graded, clamp(gradedAlpha, 0.0, 1.0));
 
     let selected = (state & 1u) != 0u && uniforms.selectionEnabled != 0u;
     let locked = (state & 2u) != 0u;

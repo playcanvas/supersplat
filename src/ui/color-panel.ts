@@ -4,21 +4,7 @@ import { Color } from 'playcanvas';
 import { Events } from '../events';
 import { i18n } from './localization';
 import { Tooltips } from './tooltips';
-import { SetSplatColorAdjustmentOp } from '../edit-ops';
 import { Splat } from '../splat';
-
-// pcui slider doesn't include start and end events
-class MyFancySliderInput extends SliderInput {
-    _onSlideStart(pageX: number) {
-        super._onSlideStart(pageX);
-        this.emit('slide:start');
-    }
-
-    _onSlideEnd(pageX: number) {
-        super._onSlideEnd(pageX);
-        this.emit('slide:end');
-    }
-}
 
 class ColorPanel extends Container {
     constructor(events: Events, tooltips: Tooltips, args = {}) {
@@ -85,7 +71,7 @@ class ColorPanel extends Container {
         });
         i18n.bindText(temperatureLabel, 'panel.colors.temperature');
 
-        const temperatureSlider = new MyFancySliderInput({
+        const temperatureSlider = new SliderInput({
             class: 'color-panel-row-slider',
             min: -0.5,
             max: 0.5,
@@ -107,7 +93,7 @@ class ColorPanel extends Container {
         });
         i18n.bindText(saturationLabel, 'panel.colors.saturation');
 
-        const saturationSlider = new MyFancySliderInput({
+        const saturationSlider = new SliderInput({
             class: 'color-panel-row-slider',
             min: 0,
             max: 2,
@@ -129,12 +115,12 @@ class ColorPanel extends Container {
         });
         i18n.bindText(brightnessLabel, 'panel.colors.brightness');
 
-        const brightnessSlider = new MyFancySliderInput({
+        const brightnessSlider = new SliderInput({
             class: 'color-panel-row-slider',
             min: -1,
             max: 1,
             step: 0.1,
-            value: 1
+            value: 0
         });
 
         brightnessRow.append(brightnessLabel);
@@ -151,7 +137,7 @@ class ColorPanel extends Container {
         });
         i18n.bindText(blackPointLabel, 'panel.colors.black-point');
 
-        const blackPointSlider = new MyFancySliderInput({
+        const blackPointSlider = new SliderInput({
             class: 'color-panel-row-slider',
             min: 0,
             max: 1,
@@ -173,7 +159,7 @@ class ColorPanel extends Container {
         });
         i18n.bindText(whitePointLabel, 'panel.colors.white-point');
 
-        const whitePointSlider = new MyFancySliderInput({
+        const whitePointSlider = new SliderInput({
             class: 'color-panel-row-slider',
             min: 0,
             max: 1,
@@ -195,12 +181,13 @@ class ColorPanel extends Container {
         });
         i18n.bindText(transparencyLabel, 'panel.colors.transparency');
 
-        const transparencySlider = new MyFancySliderInput({
+        const transparencySlider = new SliderInput({
             class: 'color-panel-row-slider',
             min: -6,
             max: 6,
             step: 0.01,
-            value: 1
+            // log space: 0 is a factor of 1, i.e. neutral
+            value: 0
         });
 
         transparencyRow.append(transparencyLabel);
@@ -212,12 +199,20 @@ class ColorPanel extends Container {
             class: 'color-panel-control-row'
         });
 
+        // apply bakes the pending grade into the target gaussians; reset clears
+        // whatever grade they already carry
+        const apply = new Label({
+            class: 'panel-header-button',
+            text: '\uE301'
+        });
+
         const reset = new Label({
             class: 'panel-header-button',
             text: '\uE304'
         });
 
         controlRow.append(new Label({ class: 'panel-header-spacer' }));
+        controlRow.append(apply);
         controlRow.append(reset);
         controlRow.append(new Label({ class: 'panel-header-spacer' }));
 
@@ -232,180 +227,113 @@ class ColorPanel extends Container {
         this.append(new Label({ class: 'panel-header-spacer' }));
         this.append(controlRow);
 
-        // handle ui updates
+        // The controls hold a *pending* grade rather than editing anything directly.
+        // The viewport previews it on whatever an Apply would affect - the selection,
+        // or the whole layer when nothing is selected - and Apply bakes it into those
+        // gaussians' palette entries and returns the controls to neutral.
 
         let suppress = false;
         let selected: Splat = null;
-        let op: SetSplatColorAdjustmentOp = null;
 
-        const updateUIFromState = (splat: Splat) => {
-            if (suppress) return;
+        const NEUTRAL = {
+            tint: [1, 1, 1],
+            temperature: 0,
+            saturation: 1,
+            brightness: 0,
+            blackPoint: 0,
+            whitePoint: 1,
+            transparency: 0     // slider is log space, so 0 means a factor of 1
+        };
+
+        // the pending grade in the form gradeTerms expects
+        const pendingParams = () => ({
+            tintClr: new Color(tintPicker.value[0], tintPicker.value[1], tintPicker.value[2]),
+            temperature: temperatureSlider.value,
+            saturation: saturationSlider.value,
+            brightness: brightnessSlider.value,
+            blackPoint: blackPointSlider.value,
+            whitePoint: whitePointSlider.value,
+            transparency: Math.exp(transparencySlider.value)
+        });
+
+        const isNeutral = () => (
+            tintPicker.value[0] === NEUTRAL.tint[0] &&
+            tintPicker.value[1] === NEUTRAL.tint[1] &&
+            tintPicker.value[2] === NEUTRAL.tint[2] &&
+            temperatureSlider.value === NEUTRAL.temperature &&
+            saturationSlider.value === NEUTRAL.saturation &&
+            brightnessSlider.value === NEUTRAL.brightness &&
+            blackPointSlider.value === NEUTRAL.blackPoint &&
+            whitePointSlider.value === NEUTRAL.whitePoint &&
+            transparencySlider.value === NEUTRAL.transparency
+        );
+
+        // the renderer asks for this every frame; null means nothing to preview
+        events.function('colorPanel.pending', () => {
+            return (selected && !isNeutral()) ? pendingParams() : null;
+        });
+
+        const setControls = (values: typeof NEUTRAL) => {
             suppress = true;
-            tintPicker.value = splat ? [splat.tintClr.r, splat.tintClr.g, splat.tintClr.b] : [1, 1, 1];
-            temperatureSlider.value = splat ? splat.temperature : 0;
-            saturationSlider.value = splat ? splat.saturation : 0;
-            brightnessSlider.value = splat ? splat.brightness : 0;
-            blackPointSlider.value = splat ? splat.blackPoint : 0;
-            whitePointSlider.value = splat ? splat.whitePoint : 1;
-            transparencySlider.value = splat ? Math.log(splat.transparency) : 0;
+            tintPicker.value = values.tint;
+            temperatureSlider.value = values.temperature;
+            saturationSlider.value = values.saturation;
+            brightnessSlider.value = values.brightness;
+            blackPointSlider.value = values.blackPoint;
+            whitePointSlider.value = values.whitePoint;
+            transparencySlider.value = values.transparency;
             suppress = false;
+            events.fire('colorPanel.pendingChanged');
         };
 
-        const start = () => {
-            if (selected) {
-                op = new SetSplatColorAdjustmentOp({
-                    splat: selected,
-                    newState: {
-                        tintClr: selected.tintClr.clone(),
-                        temperature: selected.temperature,
-                        saturation: selected.saturation,
-                        brightness: selected.brightness,
-                        blackPoint: selected.blackPoint,
-                        whitePoint: selected.whitePoint,
-                        transparency: selected.transparency
-                    },
-                    oldState: {
-                        tintClr: selected.tintClr.clone(),
-                        temperature: selected.temperature,
-                        saturation: selected.saturation,
-                        brightness: selected.brightness,
-                        blackPoint: selected.blackPoint,
-                        whitePoint: selected.whitePoint,
-                        transparency: selected.transparency
-                    }
-                });
-            }
-        };
-
-        const end = () => {
-            if (op) {
-                const { newState } = op;
-                newState.tintClr.set(tintPicker.value[0], tintPicker.value[1], tintPicker.value[2]);
-                newState.temperature = temperatureSlider.value;
-                newState.saturation = saturationSlider.value;
-                newState.brightness = brightnessSlider.value;
-                newState.blackPoint = blackPointSlider.value;
-                newState.whitePoint = whitePointSlider.value;
-                newState.transparency = Math.exp(transparencySlider.value);
-                events.fire('edit.add', op);
-                op = null;
-            }
-        };
-
-        const updateOp = (setFunc: (op: SetSplatColorAdjustmentOp) => void) => {
+        const changed = () => {
             if (!suppress) {
-                suppress = true;
-                if (op) {
-                    setFunc(op);
-                    op.do();
-                } else if (selected) {
-                    start();
-                    setFunc(op);
-                    op.do();
-                    end();
-                }
-                suppress = false;
+                events.fire('colorPanel.pendingChanged');
             }
         };
 
-        [temperatureSlider, saturationSlider, brightnessSlider, blackPointSlider, whitePointSlider, transparencySlider].forEach((slider) => {
-            slider.on('slide:start', start);
-            slider.on('slide:end', end);
+        [temperatureSlider, saturationSlider, brightnessSlider, whitePointSlider, transparencySlider].forEach((slider) => {
+            slider.on('change', changed);
         });
-        tintPicker.on('picker:color:start', start);
-        tintPicker.on('picker:color:end', end);
+        tintPicker.on('change', changed);
 
-        tintPicker.on('change', (value: number[]) => {
-            updateOp((op) => {
-                op.newState.tintClr.set(value[0], value[1], value[2]);
-            });
-        });
-
-        temperatureSlider.on('change', (value: number) => {
-            updateOp((op) => {
-                op.newState.temperature = value;
-            });
-        });
-
-        saturationSlider.on('change', (value: number) => {
-            updateOp((op) => {
-                op.newState.saturation = value;
-            });
-        });
-
-        brightnessSlider.on('change', (value: number) => {
-            updateOp((op) => {
-                op.newState.brightness = value;
-            });
-        });
-
+        // black and white point can't cross
         blackPointSlider.on('change', (value: number) => {
-            updateOp((op) => {
-                op.newState.blackPoint = value;
-            });
-
             if (value > whitePointSlider.value) {
                 whitePointSlider.value = value;
             }
+            changed();
         });
 
         whitePointSlider.on('change', (value: number) => {
-            updateOp((op) => {
-                op.newState.whitePoint = value;
-            });
-
             if (value < blackPointSlider.value) {
                 blackPointSlider.value = value;
             }
         });
 
-        transparencySlider.on('change', (value: number) => {
-            updateOp((op) => {
-                op.newState.transparency = Math.exp(value);
-            });
+        apply.on('click', () => {
+            if (selected && !isNeutral()) {
+                events.fire('edit.applyColor', pendingParams());
+                setControls(NEUTRAL);
+            }
         });
 
         reset.on('click', () => {
             if (selected) {
-                const op = new SetSplatColorAdjustmentOp({
-                    splat: selected,
-                    newState: {
-                        tintClr: new Color(1, 1, 1),
-                        temperature: 0,
-                        saturation: 1,
-                        brightness: 0,
-                        blackPoint: 0,
-                        whitePoint: 1,
-                        transparency: 1
-                    },
-                    oldState: {
-                        tintClr: selected.tintClr.clone(),
-                        temperature: selected.temperature,
-                        saturation: selected.saturation,
-                        brightness: selected.brightness,
-                        blackPoint: selected.blackPoint,
-                        whitePoint: selected.whitePoint,
-                        transparency: selected.transparency
-                    }
-                });
-
-                events.fire('edit.add', op);
+                events.fire('edit.resetColor');
+                // otherwise a pending grade would immediately re-tint what was cleared
+                setControls(NEUTRAL);
             }
         });
 
         events.on('selection.changed', (splat) => {
             selected = splat;
-            updateUIFromState(splat);
+            // the pending grade belongs to the panel, not to a layer, but carrying it
+            // across a selection change would silently retarget it
+            setControls(NEUTRAL);
         });
 
-        events.on('splat.tintClr', updateUIFromState);
-        events.on('splat.temperature', updateUIFromState);
-        events.on('splat.saturation', updateUIFromState);
-        events.on('splat.brightness', updateUIFromState);
-        events.on('splat.blackPoint', updateUIFromState);
-        events.on('splat.whitePoint', updateUIFromState);
-        events.on('splat.transparency', updateUIFromState);
-
+        tooltips.register(apply, () => i18n.t('panel.colors.apply'), 'bottom');
         tooltips.register(reset, () => i18n.t('panel.colors.reset'), 'bottom');
 
         // handle panel visibility

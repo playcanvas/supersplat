@@ -8,6 +8,8 @@ import {
     Vec3
 } from 'playcanvas';
 
+import { ColorGrade, createGradeTerms, gradeTerms } from './color-grade';
+import { ColorPalette } from './color-palette';
 import { Element, ElementType } from './element';
 import { GaussianInstances } from './gaussian-instances';
 import { IndexRanges } from './index-ranges';
@@ -53,17 +55,11 @@ class Splat extends Element {
 
     _visible = true;
     transformPalette: TransformPalette;
+    colorPalette: ColorPalette;
 
     selectionAlpha = 1;
 
     _name = '';
-    _tintClr = new Color(1, 1, 1);
-    _temperature = 0;
-    _saturation = 1;
-    _brightness = 0;
-    _blackPoint = 0;
-    _whitePoint = 1;
-    _transparency = 1;
 
     measurePoints: Vec3[] = [];
     measureSelection = -1;
@@ -94,8 +90,10 @@ class Splat extends Element {
 
         this.selectionBoundStorage = new BoundingBox();
 
-        // create the transform palette (reused across frame swaps; index 0 is identity)
+        // create the palettes (reused across frame swaps; entry 0 is the identity
+        // transform / grade)
         this.transformPalette = new TransformPalette(device);
+        this.colorPalette = new ColorPalette(device);
 
         // bind the initial frame's data, applying the file's load rotation
         this.bindAsset(asset, rotation, instances);
@@ -197,6 +195,7 @@ class Splat extends Element {
         super.destroy();
         this.instances.destroy();
         this.transformPalette.destroy();
+        this.colorPalette.destroy();
         this.entity.destroy();
         // layers can share static data, so the asset outlives this layer unless
         // this was the last reference to it
@@ -220,6 +219,15 @@ class Splat extends Element {
 
         this.scene.forceRender = true;
         this.scene.events.fire('splat.stateChanged', this);
+    }
+
+    // colour palette index edits: like updatePositions but no bounds to recompute,
+    // so nothing here needs awaiting
+    updateColors() {
+        this.instances.flush();
+
+        this.scene.forceRender = true;
+        this.scene.events.fire('splat.colorsChanged', this);
     }
 
     async updatePositions() {
@@ -287,32 +295,39 @@ class Splat extends Element {
         // and this layer has not been added to one yet
         layer._name = name;
         layer._visible = this._visible;
-        layer._tintClr.copy(this._tintClr);
-        layer._temperature = this._temperature;
-        layer._saturation = this._saturation;
-        layer._brightness = this._brightness;
-        layer._blackPoint = this._blackPoint;
-        layer._whitePoint = this._whitePoint;
-        layer._transparency = this._transparency;
 
-        // the copied instances still index *this* layer's palette, so give the new
-        // layer its own entries for the transforms it actually references. Entry 0
-        // is identity in every palette, so untransformed instances need no work.
-        const remap = new Map<number, number>();
+        // the copied instances still index *this* layer's palettes, so give the new
+        // layer its own entries for the transforms and grades it actually
+        // references. Entry 0 is the identity in every palette, so instances that
+        // reference it need no work.
+        const transformMap = new Map<number, number>();
+        const colorMap = new Map<number, number>();
         const transform = new Mat4();
+        const terms = createGradeTerms();
         for (let i = 0; i < instances.count; ++i) {
-            const index = instances.transformIndex(i);
-            if (index === 0) {
-                continue;
+            const transformIndex = instances.transformIndex(i);
+            if (transformIndex !== 0) {
+                let mapped = transformMap.get(transformIndex);
+                if (mapped === undefined) {
+                    mapped = layer.transformPalette.alloc();
+                    this.transformPalette.getTransform(transformIndex, transform);
+                    layer.transformPalette.setTransform(mapped, transform);
+                    transformMap.set(transformIndex, mapped);
+                }
+                instances.setTransformIndex(i, mapped);
             }
-            let mapped = remap.get(index);
-            if (mapped === undefined) {
-                mapped = layer.transformPalette.alloc();
-                this.transformPalette.getTransform(index, transform);
-                layer.transformPalette.setTransform(mapped, transform);
-                remap.set(index, mapped);
+
+            const colorIndex = instances.colorIndex(i);
+            if (colorIndex !== 0) {
+                let mapped = colorMap.get(colorIndex);
+                if (mapped === undefined) {
+                    mapped = layer.colorPalette.alloc();
+                    this.colorPalette.getEntry(colorIndex, terms);
+                    layer.colorPalette.setEntry(mapped, terms);
+                    colorMap.set(colorIndex, mapped);
+                }
+                instances.setColorIndex(i, mapped);
             }
-            instances.setTransformIndex(i, mapped);
         }
 
         return layer;
@@ -322,8 +337,6 @@ class Splat extends Element {
         serializer.packa(this.entity.getWorldTransform().data);
         serializer.pack(this.changedCounter);
         serializer.pack(this.visible);
-        serializer.pack(this.tintClr.r, this.tintClr.g, this.tintClr.b);
-        serializer.pack(this.temperature, this.saturation, this.brightness, this.blackPoint, this.whitePoint, this.transparency);
     }
 
     onPreRender() {
@@ -410,83 +423,6 @@ class Splat extends Element {
         return this._visible;
     }
 
-    set tintClr(value: Color) {
-        if (!this._tintClr.equals(value)) {
-            this._tintClr.set(value.r, value.g, value.b);
-            this.scene.events.fire('splat.tintClr', this);
-        }
-    }
-
-    get tintClr() {
-        return this._tintClr;
-    }
-
-    set temperature(value: number) {
-        if (value !== this._temperature) {
-            this._temperature = value;
-            this.scene.events.fire('splat.temperature', this);
-        }
-    }
-
-    get temperature() {
-        return this._temperature;
-    }
-
-    set saturation(value: number) {
-        if (value !== this._saturation) {
-            this._saturation = value;
-            this.scene.events.fire('splat.saturation', this);
-        }
-    }
-
-    get saturation() {
-        return this._saturation;
-    }
-
-    set brightness(value: number) {
-        if (value !== this._brightness) {
-            this._brightness = value;
-            this.scene.events.fire('splat.brightness', this);
-        }
-    }
-
-    get brightness() {
-        return this._brightness;
-    }
-
-    set blackPoint(value: number) {
-        if (value !== this._blackPoint) {
-            this._blackPoint = value;
-            this.scene.events.fire('splat.blackPoint', this);
-        }
-    }
-
-    get blackPoint() {
-        return this._blackPoint;
-    }
-
-    set whitePoint(value: number) {
-        if (value !== this._whitePoint) {
-            this._whitePoint = value;
-            this.scene.events.fire('splat.whitePoint', this);
-        }
-    }
-
-    get whitePoint() {
-        return this._whitePoint;
-    }
-
-    set transparency(value: number) {
-        if (value !== this._transparency) {
-            this._transparency = value;
-            this.scene.events.fire('splat.transparency', this);
-        }
-    }
-
-    get transparency() {
-        return this._transparency;
-    }
-
     // get pivot position/rotation/scale (caller should have awaited operation that changed data)
     getPivot(result: Transform) {
         const { entity } = this;
@@ -511,7 +447,6 @@ class Splat extends Element {
     docSerialize() {
         const pack3 = (v: Vec3) => [v.x, v.y, v.z];
         const pack4 = (q: Quat) => [q.x, q.y, q.z, q.w];
-        const packC = (c: Color) => [c.r, c.g, c.b, c.a];
         return {
             name: this.name,
             position: pack3(this.entity.getLocalPosition()),
@@ -519,19 +454,12 @@ class Splat extends Element {
             scale: pack3(this.entity.getLocalScale()),
             localFrameOrigin: pack3(this.localFrameOrigin),
             localFrame: pack4(this.localFrame),
-            visible: this.visible,
-            tintClr: packC(this.tintClr),
-            temperature: this.temperature,
-            saturation: this.saturation,
-            brightness: this.brightness,
-            blackPoint: this.blackPoint,
-            whitePoint: this.whitePoint,
-            transparency: this.transparency
+            visible: this.visible
         };
     }
 
     docDeserialize(doc: any) {
-        const { name, position, rotation, scale, visible, tintClr, temperature, saturation, brightness, blackPoint, whitePoint, transparency } = doc;
+        const { name, position, rotation, scale, visible } = doc;
 
         this.name = name;
         this.move(new Vec3(position), new Quat(rotation), new Vec3(scale));
@@ -539,13 +467,38 @@ class Splat extends Element {
         this.localFrameOrigin = doc.localFrameOrigin ? new Vec3(doc.localFrameOrigin) : new Vec3();
         this.localFrame = doc.localFrame ? new Quat(doc.localFrame) : new Quat();
         this.visible = visible;
-        this.tintClr = new Color(tintClr[0], tintClr[1], tintClr[2], tintClr[3]);
-        this.temperature = temperature ?? 0;
-        this.saturation = saturation ?? 1;
-        this.brightness = brightness;
-        this.blackPoint = blackPoint;
-        this.whitePoint = whitePoint;
-        this.transparency = transparency;
+        this.migrateLayerGrade(doc);
+    }
+
+    // Documents up to v0 carried one colour grade for the whole layer. Colour is
+    // per-gaussian now, so fold a saved grade into a single palette entry that
+    // every instance references: exactly equivalent, costs one entry, and it
+    // becomes editable and resettable through the colour panel like any other.
+    // v1 documents don't write these fields, so this is a no-op for them.
+    private migrateLayerGrade(doc: any) {
+        const tintClr = doc.tintClr ?
+            new Color(doc.tintClr[0], doc.tintClr[1], doc.tintClr[2]) : Color.WHITE;
+        const params = {
+            tintClr,
+            temperature: doc.temperature ?? 0,
+            saturation: doc.saturation ?? 1,
+            brightness: doc.brightness ?? 0,
+            blackPoint: doc.blackPoint ?? 0,
+            whitePoint: doc.whitePoint ?? 1,
+            transparency: doc.transparency ?? 1
+        };
+
+        const grade = new ColorGrade(gradeTerms(params, createGradeTerms()));
+        if (!grade.hasTint && !grade.hasTransparency) {
+            return;
+        }
+
+        const index = this.colorPalette.alloc();
+        this.colorPalette.setEntry(index, gradeTerms(params, createGradeTerms()));
+        for (let i = 0; i < this.instances.count; ++i) {
+            this.instances.setColorIndex(i, index);
+        }
+        this.instances.flush();
     }
 }
 

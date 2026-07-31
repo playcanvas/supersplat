@@ -592,18 +592,13 @@ class DataPanel extends Container {
             tick();
         });
 
-        const colorEvents = [
-            'splat.tintClr', 'splat.temperature', 'splat.saturation',
-            'splat.brightness', 'splat.blackPoint', 'splat.whitePoint',
-            'splat.transparency'
-        ];
-        colorEvents.forEach((name) => {
-            events.on(name, (splat_: Splat) => {
-                if (splat_ === splat) {
-                    inputs.colorGradeVersion++;
-                    tick();
-                }
-            });
+        // colour is per-gaussian now, so a grade lands as a palette edit rather than
+        // a set of per-layer property changes
+        events.on('splat.colorsChanged', (splat_: Splat) => {
+            if (splat_ === splat) {
+                inputs.colorGradeVersion++;
+                tick();
+            }
         });
 
         events.on('selection.changed', (selection: Element) => {

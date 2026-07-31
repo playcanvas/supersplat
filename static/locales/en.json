@@ -61,6 +61,7 @@
     "panel.colors.black-point": "Black Point",
     "panel.colors.white-point": "White Point",
     "panel.colors.transparency": "Transparency",
+    "panel.colors.apply": "Apply",
     "panel.colors.reset": "Reset",
 
     "panel.settings": "Settings",

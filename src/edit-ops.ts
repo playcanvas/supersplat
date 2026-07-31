@@ -2,6 +2,7 @@ import { Color, Mat4, Quat, Vec3 } from 'playcanvas';
 
 import { AnimTrack } from './anim-track';
 import { BoxShape } from './box-shape';
+import { composeGrades, createGradeTerms, type GradeTerms } from './color-grade';
 import type { RemovedInstances } from './gaussian-instances';
 import { IndexRanges, sortedPredicate } from './index-ranges';
 import { Pivot } from './pivot';
@@ -337,6 +338,104 @@ class SplatsTransformOp {
     }
 }
 
+const gradeA = createGradeTerms();
+const gradeB = createGradeTerms();
+const identityGrade = createGradeTerms();
+
+// op for grading a subset of individual splats. Mirrors SplatsTransformOp: one new
+// palette entry per distinct pre-edit index, so gaussians that already shared a
+// grade go on sharing one, and undo is a LIFO free plus an index restore.
+// A null `grade` resets the targets to the identity grade instead of composing.
+class SplatsColorOp {
+    name = 'splatsColor';
+
+    splat: Splat;
+    grade: GradeTerms;
+
+    // distinct pre-edit colour indices among the targets. The new indices aren't
+    // stored: the palette allocator is LIFO, so a redo's alloc hands back exactly
+    // the block undo freed.
+    private oldIndices: number[];
+    private paletteMap: Map<number, number>;
+
+    constructor(options: { splat: Splat, grade: GradeTerms | null }) {
+        this.splat = options.splat;
+        this.grade = options.grade;
+
+        const seen = new Set<number>();
+        this.forEachTarget(i => seen.add(options.splat.instances.colorIndex(i)));
+        this.oldIndices = [...seen];
+    }
+
+    // The colour panel targets the selection, and an empty selection means the
+    // whole layer. Locked gaussians are never a target, which matches
+    // selectedRanges(). Re-derived rather than captured because the edit history
+    // is strict LIFO: any later selection change has already been undone by the
+    // time this op's undo runs, so the target set is the same both ways.
+    private forEachTarget(fn: (i: number) => void) {
+        const { instances } = this.splat;
+        const { flags } = instances;
+        const all = instances.numSelected === 0;
+        for (let i = 0; i < instances.count; ++i) {
+            const f = flags[i];
+            if ((f & State.locked) === 0 && (all || (f & State.selected) !== 0)) {
+                fn(i);
+            }
+        }
+    }
+
+    do() {
+        const { splat, grade, oldIndices } = this;
+        const { instances, colorPalette } = splat;
+
+        const base = colorPalette.alloc(oldIndices.length);
+        const paletteMap = new Map<number, number>();
+        oldIndices.forEach((oldIdx, i) => paletteMap.set(oldIdx, base + i));
+        this.paletteMap = paletteMap;
+
+        this.forEachTarget((i) => {
+            instances.setColorIndex(i, paletteMap.get(instances.colorIndex(i)));
+        });
+
+        paletteMap.forEach((newIdx, oldIdx) => {
+            if (grade) {
+                colorPalette.getEntry(oldIdx, gradeA);
+                colorPalette.setEntry(newIdx, composeGrades(gradeA, grade, gradeB));
+            } else {
+                colorPalette.setEntry(newIdx, identityGrade);
+            }
+        });
+
+        splat.updateColors();
+    }
+
+    undo() {
+        const { splat, paletteMap } = this;
+        const { instances, colorPalette } = splat;
+
+        // invert the palette map
+        const inverseMap = new Map<number, number>();
+        paletteMap.forEach((newIdx, oldIdx) => {
+            inverseMap.set(newIdx, oldIdx);
+        });
+
+        this.forEachTarget((i) => {
+            instances.setColorIndex(i, inverseMap.get(instances.colorIndex(i)));
+        });
+
+        colorPalette.free(paletteMap.size);
+
+        splat.updateColors();
+    }
+
+    destroy() {
+        this.splat = null;
+        this.grade = null;
+        this.oldIndices = null;
+        this.paletteMap = null;
+    }
+}
+
 class PlacePivotOp {
     name = 'setPivot';
     pivot: Pivot;
@@ -447,55 +546,6 @@ class ShapeTransformOp {
     }
 }
 
-type ColorAdjustment = {
-    tintClr?: Color
-    temperature?: number,
-    saturation?: number,
-    brightness?: number,
-    blackPoint?: number,
-    whitePoint?: number,
-    transparency?: number
-};
-
-class SetSplatColorAdjustmentOp {
-    name = 'setSplatColor';
-    splat: Splat;
-
-    newState: ColorAdjustment;
-    oldState: ColorAdjustment;
-
-    constructor(options: { splat: Splat, oldState: ColorAdjustment, newState: ColorAdjustment }) {
-        const { splat, oldState, newState } = options;
-        this.splat = splat;
-        this.oldState = oldState;
-        this.newState = newState;
-    }
-
-    do() {
-        const { splat } = this;
-        const { tintClr, temperature, saturation, brightness, blackPoint, whitePoint, transparency } = this.newState;
-        if (tintClr) splat.tintClr = tintClr;
-        if (temperature !== null) splat.temperature = temperature;
-        if (saturation !== null) splat.saturation = saturation;
-        if (brightness !== null) splat.brightness = brightness;
-        if (blackPoint !== null) splat.blackPoint = blackPoint;
-        if (whitePoint !== null) splat.whitePoint = whitePoint;
-        if (transparency !== null) splat.transparency = transparency;
-    }
-
-    undo() {
-        const { splat } = this;
-        const { tintClr, temperature, saturation, brightness, blackPoint, whitePoint, transparency } = this.oldState;
-        if (tintClr) splat.tintClr = tintClr;
-        if (temperature !== null) splat.temperature = temperature;
-        if (saturation !== null) splat.saturation = saturation;
-        if (brightness !== null) splat.brightness = brightness;
-        if (blackPoint !== null) splat.blackPoint = blackPoint;
-        if (whitePoint !== null) splat.whitePoint = whitePoint;
-        if (transparency !== null) splat.transparency = transparency;
-    }
-}
-
 // Snapshot-based undo/redo for animation track edits.
 // Captures the full track state before and after a mutation.
 class AnimTrackEditOp {
@@ -597,13 +647,12 @@ export {
     RemoveInstancesOp,
     RestoreMissingInstancesOp,
     EntityTransformOp,
+    SplatsColorOp,
     SplatsTransformOp,
     PlacePivotOp,
     SetLocalFrameOp,
     ShapeTransformOp,
     ShapeTransformState,
-    ColorAdjustment,
-    SetSplatColorAdjustmentOp,
     AnimTrackEditOp,
     MultiOp,
     AddSplatOp,

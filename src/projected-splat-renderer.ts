@@ -42,7 +42,7 @@ import {
     Vec2
 } from 'playcanvas';
 
-import { createGradeTerms, gradeTerms } from './color-grade';
+import { createGradeTerms, gradeRows, gradeTerms, type GradeParams } from './color-grade';
 import type { Scene } from './scene';
 import { projectedSplatProjector } from './shaders/projected-splat-projector';
 import { fragmentShader, vertexShader } from './shaders/projected-splat-shader';
@@ -125,7 +125,9 @@ class ProjectedSplatRenderer {
     private readonly device: GraphicsDevice;
     private readonly placements: Placement[] = [];
     private readonly variants = new Map<number, ProjectorVariant>();
-    private readonly gradeTerms = createGradeTerms();
+    // the colour panel's pending grade, packed as three vec4 rows; reused per frame
+    private readonly previewTerms = createGradeTerms();
+    private readonly previewRows = new Float32Array(12);
     private readonly shaderProjection = new Mat4();
     private readonly viewProjection = new Mat4();
     private readonly dispatchSize = new Vec2();
@@ -281,7 +283,8 @@ class ProjectedSplatRenderer {
             new BindTextureFormat('transformA', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false),
             new BindTextureFormat('transformB', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_FLOAT, false),
             new BindTextureFormat('splatColor', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_FLOAT, false),
-            new BindTextureFormat('transformPalette', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UNFILTERABLE_FLOAT, false)
+            new BindTextureFormat('transformPalette', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UNFILTERABLE_FLOAT, false),
+            new BindTextureFormat('colorPalette', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UNFILTERABLE_FLOAT, false)
         ];
         if (bands > 0) {
             textureFormats.push(new BindTextureFormat('splatSH_1to3', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false));
@@ -308,9 +311,11 @@ class ProjectedSplatRenderer {
             new UniformFormat('view', UNIFORMTYPE_MAT4),
             new UniformFormat('viewProj', UNIFORMTYPE_MAT4),
             new UniformFormat('cameraPosition', UNIFORMTYPE_VEC3),
-            new UniformFormat('saturation', UNIFORMTYPE_FLOAT),
-            new UniformFormat('colorOffset', UNIFORMTYPE_VEC4),
-            new UniformFormat('colorScale', UNIFORMTYPE_VEC4),
+            new UniformFormat('previewMode', UNIFORMTYPE_UINT),
+            new UniformFormat('colorAlpha', UNIFORMTYPE_FLOAT),
+            new UniformFormat('colorRow0', UNIFORMTYPE_VEC4),
+            new UniformFormat('colorRow1', UNIFORMTYPE_VEC4),
+            new UniformFormat('colorRow2', UNIFORMTYPE_VEC4),
             new UniformFormat('selectedColor', UNIFORMTYPE_VEC4),
             new UniformFormat('lockedColor', UNIFORMTYPE_VEC4),
             new UniformFormat('visible', UNIFORMTYPE_UINT),
@@ -440,6 +445,14 @@ class ProjectedSplatRenderer {
         const viewBands = events.invoke('view.bands') as number;
         const minPixelSize = (events.invoke('view.minPixelSize') as number) ?? 0;
 
+        // the colour panel's uncommitted grade, previewed on the layer it targets.
+        // Packed once per frame: it is the same for every placement, only the
+        // preview mode differs.
+        const pending = events.invoke('colorPanel.pending') as GradeParams;
+        if (pending) {
+            gradeRows(gradeTerms(pending, this.previewTerms), this.previewRows);
+        }
+
         // motion-adaptive: fast stochastic (no-sort) while interacting, clean
         // sorted & blended when the scene settles (driven by Scene.onUpdate)
         this.setStochastic(this.scene.movingRender);
@@ -453,8 +466,11 @@ class ProjectedSplatRenderer {
             const resource = splat.resource;
             const bands = Math.min(viewBands, resource.shBands);
             const compute = this.getCompute(placement, bands);
-            const grade = gradeTerms(splat, this.gradeTerms);
             const selectionEnabled = selectedSplat === splat && camera.renderOverlays;
+            // only the layer the panel is editing previews, and an empty selection
+            // means the whole layer - the rule SplatsColorOp applies
+            const previewMode = (pending && selectedSplat === splat) ?
+                (instances.numSelected === 0 ? 2 : 1) : 0;
 
             if (selectionEnabled) {
                 ringsBase = placement.entryBase;
@@ -471,6 +487,7 @@ class ProjectedSplatRenderer {
             compute.setParameter('transformB', resource.getTexture('transformB'));
             compute.setParameter('splatColor', resource.getTexture('splatColor'));
             compute.setParameter('transformPalette', splat.transformPalette.texture);
+            compute.setParameter('colorPalette', splat.colorPalette.texture);
             if (bands > 0) {
                 compute.setParameter('splatSH_1to3', resource.getTexture('splatSH_1to3'));
             }
@@ -495,9 +512,11 @@ class ProjectedSplatRenderer {
             compute.setParameter('view', view.data);
             compute.setParameter('viewProj', this.viewProjection.data);
             compute.setParameter('cameraPosition', [cameraPosition.x, cameraPosition.y, cameraPosition.z]);
-            compute.setParameter('saturation', grade.saturation);
-            compute.setParameter('colorOffset', [grade.offset, grade.offset, grade.offset, 0]);
-            compute.setParameter('colorScale', [grade.scale.r, grade.scale.g, grade.scale.b, grade.transparency]);
+            compute.setParameter('previewMode', previewMode);
+            compute.setParameter('colorAlpha', previewMode ? this.previewTerms.transparency : 1);
+            compute.setParameter('colorRow0', this.previewRows.subarray(0, 4));
+            compute.setParameter('colorRow1', this.previewRows.subarray(4, 8));
+            compute.setParameter('colorRow2', this.previewRows.subarray(8, 12));
             compute.setParameter('selectedColor', selectionEnabled && !events.invoke('view.outlineSelection') ? [
                 selectedColor.r,
                 selectedColor.g,

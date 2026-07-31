@@ -31,11 +31,13 @@ import {
 } from 'playcanvas';
 
 import { version } from '../package.json';
-import { ColorGrade, dcDecode, dcEncode, sigmoid } from './color-grade';
+import { ColorGrade, createGradeTerms, dcDecode, dcEncode, sigmoid } from './color-grade';
 import { Events } from './events';
 import { groupInstancesByChunk } from './gaussian-instances';
+import { PermutedChunkSource } from './io';
 import { SHRotation } from './sh-utils';
 import { Splat } from './splat';
+import type { EditorSplatResource } from './splat-resource';
 import { State } from './splat-state';
 
 type SerializeSettings = {
@@ -45,11 +47,10 @@ type SerializeSettings = {
     removeInvalid?: boolean;        // filter out gaussians with invalid data (NaN/Infinity)
 
     // the following options are used when serializing for document save.
-    // keepWorldTransform/keepColorTint flow through the streaming source; keepStateData
+    // keepWorldTransform flows through the streaming source; keepStateData
     // is accepted for compatibility but the streaming writers never export state.
     keepStateData?: boolean;        // keep the state data array
     keepWorldTransform?: boolean;   // don't apply the world transform when resolving splat transforms
-    keepColorTint?: boolean;        // refrain from applying color tints
 };
 
 type AnimTrack = {
@@ -237,6 +238,30 @@ class SplatTransformCache {
     }
 }
 
+// Resolve an instance's baked colour grade on demand and cache it, the colour
+// analogue of SplatTransformCache. Keyed by colour palette entry, so a scene
+// where every gaussian shares one grade costs one ColorGrade.
+class ColorGradeCache {
+    get: (index: number) => ColorGrade;
+
+    constructor(splat: Splat) {
+        const grades = new Map<number, ColorGrade>();
+        const { instances } = splat;
+        const entry = createGradeTerms();
+
+        this.get = (index: number) => {
+            const colorIndex = instances.colorIndex(index);
+            let result = grades.get(colorIndex);
+            if (!result) {
+                splat.colorPalette.getEntry(colorIndex, entry);
+                result = new ColorGrade(entry);
+                grades.set(colorIndex, result);
+            }
+            return result;
+        };
+    }
+}
+
 // Number of f_rest_* SH coefficients per band level (mirrors splat-transform's
 // SH_REST_COUNTS; that constant isn't exported from the package root).
 const SH_REST_COUNTS: Record<number, number> = { 0: 0, 1: 9, 2: 24, 3: 45 };
@@ -379,7 +404,7 @@ type ExportEntry = {
     start: number;
     end: number;
     transform: SplatTransformCache;
-    grade: ColorGrade;
+    grade: ColorGradeCache;
 };
 
 /**
@@ -435,7 +460,7 @@ class SuperSplatChunkSource implements ChunkSource {
                 start,
                 end,
                 transform: new SplatTransformCache(splat, settings.keepWorldTransform),
-                grade: new ColorGrade(splat)
+                grade: new ColorGradeCache(splat)
             });
             start = end;
         }
@@ -459,7 +484,7 @@ class SuperSplatChunkSource implements ChunkSource {
     // gathered by their source rows, while the palette and grade lookups stay in
     // instance space (two instances of one row can carry different transforms)
     private async readGroup(entry: ExportEntry, instanceIndices: Uint32Array, outputOffset: number, request: ReadRequest) {
-        const { splat, transform, grade } = entry;
+        const { splat, transform, grade: gradeCache } = entry;
         const source = splat.resource.source;
         const { sourceRow } = splat.instances;
         const indices = new Uint32Array(instanceIndices.length);
@@ -517,16 +542,18 @@ class SuperSplatChunkSource implements ChunkSource {
                     dstGeometric[dst + 4] = Math.log(Math.exp(srcGeometric[src + 4]) * scale.x);
                     dstGeometric[dst + 5] = Math.log(Math.exp(srcGeometric[src + 5]) * scale.y);
                     dstGeometric[dst + 6] = Math.log(Math.exp(srcGeometric[src + 6]) * scale.z);
-                    dstGeometric[dst + 7] = !this.settings.keepColorTint && splat.transparency !== 1 ?
+                    const grade = gradeCache.get(instance);
+                    dstGeometric[dst + 7] = grade.hasTransparency ?
                         grade.applyOpacity(srcGeometric[src + 7]) : srcGeometric[src + 7];
                 }
                 if (dstColor) {
+                    const grade = gradeCache.get(instance);
                     const src = i * (3 + srcRest);
                     const dst = (outputOffset + i) * (3 + this.numRest);
                     c.r = dcDecode(srcColor[src]);
                     c.g = dcDecode(srcColor[src + 1]);
                     c.b = dcDecode(srcColor[src + 2]);
-                    if (!this.settings.keepColorTint && grade.hasTint) grade.applyDC(c);
+                    if (grade.hasTint) grade.applyDC(c);
                     dstColor[dst] = dcEncode(c.r);
                     dstColor[dst + 1] = dcEncode(c.g);
                     dstColor[dst + 2] = dcEncode(c.b);
@@ -542,7 +569,7 @@ class SuperSplatChunkSource implements ChunkSource {
                             transform.getSHRot(instance).apply(tmpSH);
                             rest.set(tmpSH, channel * dstCoeffs);
                         }
-                        if (!this.settings.keepColorTint && grade.hasTint) {
+                        if (grade.hasTint) {
                             for (let coeff = 0; coeff < dstCoeffs; ++coeff) {
                                 c.r = rest[coeff];
                                 c.g = rest[dstCoeffs + coeff];
@@ -704,6 +731,46 @@ const writeSplatFile = async (
 };
 
 /**
+ * Write a resource's static gaussian data, restricted to `rows` (in-memory row
+ * indices, ascending) and in that order. Nothing is baked - no entity transform,
+ * no palette, no grade - because a .ssproj stores the static tier untouched and
+ * keeps every per-layer edit in a side blob. Writing to PLY is a no-op bake for
+ * all our inputs: `Transform.PLY` is the convention for PLY, splat, KSplat, SPZ
+ * and SOG alike, which is every format the editor loads.
+ *
+ * The source is NOT closed here - it belongs to the resource and outlives the save.
+ */
+const writeResourceFile = async (
+    resource: EditorSplatResource,
+    rows: Uint32Array,
+    filename: string,
+    fs: FileSystem
+): Promise<void> => {
+    const retained = resource.source;
+
+    // PermutedChunkSource gathers through an order array, which is exactly a row
+    // filter. The loader usually leaves a morton permutation in place, so compose
+    // the two orders and wrap its parent - one gather on the file rather than two.
+    let source: ChunkSource;
+    if (retained instanceof PermutedChunkSource) {
+        const composed = new Uint32Array(rows.length);
+        for (let i = 0; i < rows.length; ++i) {
+            composed[i] = retained.order[rows[i]];
+        }
+        source = new PermutedChunkSource(retained.parent, composed);
+    } else {
+        source = new PermutedChunkSource(retained, rows);
+    }
+
+    const pool = createChunkDataPool({ chunkSize: source.meta.chunkSize });
+    try {
+        await writeSource({ filename, outputFormat: 'ply', source, pool, options: {}, createDevice: createGpuDevice }, fs);
+    } finally {
+        pool.destroy();
+    }
+};
+
+/**
  * Extract Splat data into a DataTable for use with splat-transform writers.
  * This is shared between serializeSog and serializeViewer.
  */
@@ -845,6 +912,7 @@ const serializeSpz = async (splats: Splat[], settings: SpzSettings, fs: FileSyst
 
 export {
     Writer,
+    writeResourceFile,
     writeSplatFile,
     serializeSog,
     serializeSpz,

@@ -8,6 +8,7 @@ import {
     UNIFORMTYPE_MAT4,
     UNIFORMTYPE_UINT,
     UNIFORMTYPE_VEC3,
+    UNIFORMTYPE_VEC4,
     BindStorageBufferFormat,
     BindTextureFormat,
     Compute,
@@ -18,13 +19,11 @@ import {
     Vec3
 } from 'playcanvas';
 
-import { createGradeTerms, gradeTerms } from '../color-grade';
 import { Splat } from '../splat';
 
 const identity = new Mat4();
 const zeroVec3 = new Vec3();
 const SH_NUM_COEFFS = [0, 3, 8, 15];
-const terms = createGradeTerms();
 
 type SplatValueOptions = {
     entityMatrix?: Mat4;
@@ -43,10 +42,6 @@ const createSplatValueUniformFormat = (device: GraphicsDevice) => new UniformBuf
     new UniformFormat('viewMatrix', UNIFORMTYPE_MAT4),
     new UniformFormat('viewProjection', UNIFORMTYPE_MAT4),
     new UniformFormat('cameraWorldPos', UNIFORMTYPE_VEC3),
-    new UniformFormat('cgOffset', UNIFORMTYPE_FLOAT),
-    new UniformFormat('cgScale', UNIFORMTYPE_VEC3),
-    new UniformFormat('cgSaturation', UNIFORMTYPE_FLOAT),
-    new UniformFormat('transparency', UNIFORMTYPE_FLOAT),
     new UniformFormat('shNumCoeffs', UNIFORMTYPE_INT),
     new UniformFormat('minValue', UNIFORMTYPE_FLOAT),
     new UniformFormat('maxValue', UNIFORMTYPE_FLOAT),
@@ -66,7 +61,8 @@ const createSplatValueTextureFormats = (bands: number) => {
         new BindTextureFormat('transformA', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false),
         new BindTextureFormat('transformB', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_FLOAT, false),
         new BindTextureFormat('splatColor', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_FLOAT, false),
-        new BindTextureFormat('transformPalette', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UNFILTERABLE_FLOAT, false)
+        new BindTextureFormat('transformPalette', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UNFILTERABLE_FLOAT, false),
+        new BindTextureFormat('colorPalette', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UNFILTERABLE_FLOAT, false)
     ];
     const uintTexture = (name: string) => new BindTextureFormat(name, SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false);
     if (bands > 0) formats.push(uintTexture('splatSH_1to3'));
@@ -96,7 +92,6 @@ const setSplatValueParameters = (
     const viewMatrix = options?.viewMatrix ?? identity;
     const viewProjection = options?.viewProjection ?? identity;
     const cameraPos = options?.cameraPos ?? zeroVec3;
-    const grade = gradeTerms(splat, terms);
 
     compute.setParameter('instanceSource', splat.instances.instanceSource);
     compute.setParameter('instanceFlags', splat.instances.instanceFlags);
@@ -105,6 +100,7 @@ const setSplatValueParameters = (
     compute.setParameter('transformB', resource.getTexture('transformB'));
     compute.setParameter('splatColor', resource.getTexture('splatColor'));
     compute.setParameter('transformPalette', splat.transformPalette.texture);
+    compute.setParameter('colorPalette', splat.colorPalette.texture);
     if (bands > 0) compute.setParameter('splatSH_1to3', resource.getTexture('splatSH_1to3'));
     if (bands > 1) {
         compute.setParameter('splatSH_4to7', resource.getTexture('splatSH_4to7'));
@@ -121,10 +117,6 @@ const setSplatValueParameters = (
     compute.setParameter('viewMatrix', viewMatrix.data);
     compute.setParameter('viewProjection', viewProjection.data);
     compute.setParameter('cameraWorldPos', [cameraPos.x, cameraPos.y, cameraPos.z]);
-    compute.setParameter('cgOffset', grade.offset);
-    compute.setParameter('cgScale', [grade.scale.r, grade.scale.g, grade.scale.b]);
-    compute.setParameter('cgSaturation', grade.saturation);
-    compute.setParameter('transparency', grade.transparency);
     compute.setParameter('shNumCoeffs', SH_NUM_COEFFS[bands] ?? 0);
     compute.setParameter('minValue', minValue);
     compute.setParameter('maxValue', maxValue);

@@ -1,7 +1,8 @@
 import { Color, Mat4, Quat, Texture, Vec3 } from 'playcanvas';
 
+import { createGradeTerms, gradeTerms, type GradeParams } from './color-grade';
 import { EditHistory } from './edit-history';
-import { selectedRanges, SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, RemoveInstancesOp, RestoreMissingInstancesOp, MultiOp, AddSplatOp, SetLocalFrameOp } from './edit-ops';
+import { selectedRanges, SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, RemoveInstancesOp, RestoreMissingInstancesOp, MultiOp, AddSplatOp, SetLocalFrameOp, SplatsColorOp } from './edit-ops';
 import { Element, ElementType } from './element';
 import { Events } from './events';
 import type { GridPlane } from './infinite-grid';
@@ -66,7 +67,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     [
         'camera.mode', 'camera.overlay', 'camera.splatSize', 'view.outlineSelection',
         'view.centersUseGaussianColor', 'view.bands', 'view.minPixelSize', 'view.stochastic', 'view.perfOverlay', 'camera.bound', 'camera.boundDimensions', 'camera.showPoses',
-        'camera.showInfo', 'selection.changed', 'tool.coordSpace'
+        'camera.showInfo', 'selection.changed', 'tool.coordSpace', 'colorPanel.pendingChanged'
     ].forEach((eventName) => {
         events.on(eventName, () => {
             scene.forceRender = true;
@@ -655,6 +656,24 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('edit.separate', () => {
         performSelectionFunc('separate');
+    });
+
+    // bake the panel's pending grade into the selected gaussians. `params` are the
+    // seven authored values; the op composes them onto whatever grade the targets
+    // already carry, so applying twice is the same as applying the composition.
+    events.on('edit.applyColor', (params: GradeParams) => {
+        const splat = events.invoke('selection') as Splat;
+        if (splat) {
+            editHistory.add(new SplatsColorOp({ splat, grade: gradeTerms(params, createGradeTerms()) }));
+        }
+    });
+
+    // clear the grade on the selected gaussians
+    events.on('edit.resetColor', () => {
+        const splat = events.invoke('selection') as Splat;
+        if (splat) {
+            editHistory.add(new SplatsColorOp({ splat, grade: null }));
+        }
     });
 
     events.on('scene.reset', () => {

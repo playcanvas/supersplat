@@ -49,8 +49,8 @@ class DirtySpan {
 // The live edited data: a list of gaussian instances. Instance i references a
 // row of the immutable static data (`sourceRow[i]`) and carries the editor
 // state that belongs to *this* instance rather than to the static gaussian:
-// selection/lock flags and a transform palette index (a colour palette index
-// will join it in the low/high halves of `palette`).
+// selection/lock flags plus a transform and a colour palette index, packed into
+// the low and high halves of `palette`.
 //
 // Instances are the iteration domain for every editor pass; only geometry,
 // colour and SH texture fetches remain in source-row space, reached through
@@ -66,7 +66,7 @@ class GaussianInstances {
     readonly sourceRow: Uint32Array;
     // selected = 1, locked = 2 (a byte view over flagWords)
     readonly flags: Uint8Array;
-    // transform palette index in the low 16 bits
+    // transform palette index in the low 16 bits, colour palette index in the high
     readonly palette: Uint32Array;
 
     // gpu mirrors, indexed by instance. flags are read as packed u32 words
@@ -125,7 +125,14 @@ class GaussianInstances {
     // Order is preserved because the source is in Morton order and the run
     // encoding of IndexRanges stays compact only while that holds.
     static fromSubset(device: GraphicsDevice, source: GaussianInstances, ranges: IndexRanges) {
-        const result = new GaussianInstances(device, ranges.count);
+        // Sized to the source layer's capacity, not to the subset. The new layer
+        // shares the same static rows, so RestoreMissingInstancesOp will scan the
+        // resource's full row count against it; sizing to `ranges.count` let that
+        // run off the end of the arrays - count grew past their length, numRemoved
+        // went negative and the tail read undefined. It also keeps the capacity a
+        // layer has after a document round trip the same as the one it had before.
+        const capacity = source.sourceRow.length;
+        const result = new GaussianInstances(device, capacity);
         let dst = 0;
         ranges.forEachRun((start, count) => {
             const end = start + count;
@@ -135,7 +142,29 @@ class GaussianInstances {
             result.flags.set(source.flags.subarray(start, end), dst);
             dst += count;
         });
+        result.count = ranges.count;
+        result.numRemoved = capacity - ranges.count;
         result.markDirty(0, result.count);
+        result.countsDirty = true;
+        return result;
+    }
+
+    // Rebuild a list from stored records (document load). `numRows` sizes the
+    // arrays rather than `sourceRow.length`, so scene.reset can still append the
+    // rows nothing references - the same invariant a live delete leaves behind.
+    static fromRecords(
+        device: GraphicsDevice,
+        numRows: number,
+        sourceRow: Uint32Array,
+        flags: Uint8Array,
+        palette: Uint32Array
+    ) {
+        const result = new GaussianInstances(device, numRows);
+        result.sourceRow.set(sourceRow);
+        result.flags.set(flags);
+        result.palette.set(palette);
+        result.count = sourceRow.length;
+        result.numRemoved = numRows - result.count;
         result.countsDirty = true;
         return result;
     }
@@ -157,6 +186,16 @@ class GaussianInstances {
 
     setTransformIndex(instance: number, index: number) {
         this.palette[instance] = (this.palette[instance] & 0xffff0000) | (index & 0xffff);
+        this.paletteSpan.add(instance, instance + 1);
+    }
+
+    // colour palette index of an instance
+    colorIndex(instance: number): number {
+        return this.palette[instance] >>> 16;
+    }
+
+    setColorIndex(instance: number, index: number) {
+        this.palette[instance] = (this.palette[instance] & 0xffff) | ((index & 0xffff) << 16);
         this.paletteSpan.add(instance, instance + 1);
     }
 

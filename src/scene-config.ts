@@ -14,7 +14,7 @@ const sceneConfig = {
     camera: {
         pixelScale: 1,
         multisample: false,
-        fov: 75,
+        fov: 85,
         exposure: 1.0,
         toneMapping: 'linear',
         overlay: false

@@ -1,19 +1,12 @@
-import { MemoryFileSystem } from '@playcanvas/splat-transform';
-import { Color, Mat4, path, Quat, Texture, Vec3 } from 'playcanvas';
+import { Color, Mat4, Quat, Texture, Vec3 } from 'playcanvas';
 
 import { EditHistory } from './edit-history';
-import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, RemoveInstancesOp, RestoreMissingInstancesOp, MultiOp, AddSplatOp, SetLocalFrameOp } from './edit-ops';
+import { selectedRanges, SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, RemoveInstancesOp, RestoreMissingInstancesOp, MultiOp, AddSplatOp, SetLocalFrameOp } from './edit-ops';
 import { Element, ElementType } from './element';
 import { Events } from './events';
 import type { GridPlane } from './infinite-grid';
-import { MappedReadFileSystem } from './io';
 import { Scene } from './scene';
 import { Splat } from './splat';
-import { writeSplatFile } from './splat-serialize';
-
-const removeExtension = (filename: string) => {
-    return filename.substring(0, filename.length - path.getExtension(filename).length);
-};
 
 // register for editor and scene events
 const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: Scene) => {
@@ -50,8 +43,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         lastExportCursor = 0;
     });
 
-    // When a splat is removed from the scene, remove all edit operations that reference it
-    events.on('scene.elementRemoved', (element: Element) => {
+    // When a splat is destroyed, drop the edit operations that reference it: they
+    // can never be replayed. Deliberately keyed on destruction rather than on
+    // removal from the scene - undoing an AddSplatOp (duplicate / separate) also
+    // removes the layer, and pruning there would delete the very op redo needs.
+    events.on('scene.elementDestroyed', (element: Element) => {
         if (element.type === ElementType.splat) {
             editHistory.removeForSplat(element as Splat);
         }
@@ -624,47 +620,41 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
     });
 
-    const performSelectionFunc = async (func: 'duplicate' | 'separate') => {
-        const splats = selectedSplats();
+    // Duplicate and separate both create a new layer holding the selected
+    // gaussians. The new layer *shares* the source layer's static data, so this
+    // copies the instance list only: no gaussians are duplicated, and there is no
+    // PLY round trip to lose SH precision, drop extra columns or reorder out of
+    // Morton. The asset is reference counted, so it outlives either layer.
+    const performSelectionFunc = (func: 'duplicate' | 'separate') => {
+        const splat = selectedSplats()[0];
+        if (!splat) {
+            return;
+        }
 
-        const memFs = new MemoryFileSystem();
+        const ranges = selectedRanges(splat);
+        if (ranges.count === 0) {
+            return;
+        }
 
-        await writeSplatFile(splats, {
-            maxSHBands: 3,
-            selected: true
-        }, 'ply', 'output.ply', {}, memFs);
+        const copy = splat.createLayer(ranges, splat.name);
 
-        const data = memFs.results.get('output.ply');
-
-        if (data) {
-            const splat = splats[0];
-
-            // wrap PLY in a blob and load it. pass the view rather than the
-            // underlying buffer, which is the writer's oversized scratch allocation
-            const blob = new Blob([data as BlobPart], { type: 'application/octet-stream' });
-            const filename = `${removeExtension(splat.filename)}.ply`;
-            const fileSystem = new MappedReadFileSystem();
-            fileSystem.addFile(filename, blob);
-            const copy = await scene.assetLoader.load(filename, fileSystem);
-
-            if (func === 'separate') {
-                editHistory.add(new MultiOp([
-                    new RemoveInstancesOp(splat),
-                    new AddSplatOp(scene, copy)
-                ]));
-            } else {
-                editHistory.add(new AddSplatOp(scene, copy));
-            }
+        if (func === 'separate') {
+            editHistory.add(new MultiOp([
+                new RemoveInstancesOp(splat),
+                new AddSplatOp(scene, copy)
+            ]));
+        } else {
+            editHistory.add(new AddSplatOp(scene, copy));
         }
     };
 
     // duplicate the current selection
-    events.on('edit.duplicate', async () => {
-        await performSelectionFunc('duplicate');
+    events.on('edit.duplicate', () => {
+        performSelectionFunc('duplicate');
     });
 
-    events.on('edit.separate', async () => {
-        await performSelectionFunc('separate');
+    events.on('edit.separate', () => {
+        performSelectionFunc('separate');
     });
 
     events.on('scene.reset', () => {

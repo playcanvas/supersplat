@@ -26,6 +26,7 @@ class TransformPalette {
     setTransform: (index: number, transform: Mat4) => void;
     alloc: (num?: number) => number;
     free: (num?: number) => void;
+    destroy: () => void;
     texture: Texture;
 
     constructor(device: GraphicsDevice, initialSize = 4096) {
@@ -92,6 +93,10 @@ class TransformPalette {
 
         this.free = (num = 1) => {
             nextIdx -= num;
+        };
+
+        this.destroy = () => {
+            texture.destroy();
         };
 
         Object.defineProperty(this, 'texture', { get() {

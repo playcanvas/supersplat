@@ -10,6 +10,7 @@ import {
 
 import { Element, ElementType } from './element';
 import { GaussianInstances } from './gaussian-instances';
+import { IndexRanges } from './index-ranges';
 import { Serializer } from './serializer';
 import { EditorSplatResource } from './splat-resource';
 import { Transform } from './transform';
@@ -78,7 +79,10 @@ class Splat extends Element {
     localFrameOrigin = new Vec3();
     localFrame = new Quat();
 
-    constructor(asset: Asset, rotation: Quat) {
+    // `instances` creates a layer over a subset of an existing layer's instances,
+    // sharing the asset's static data (duplicate / separate). Ownership of the
+    // list transfers here. Omit it for a normal load, which takes every row.
+    constructor(asset: Asset, rotation: Quat, instances?: GaussianInstances) {
         super(ElementType.splat);
 
         const { device } = asset.resource as EditorSplatResource;
@@ -94,20 +98,24 @@ class Splat extends Element {
         this.transformPalette = new TransformPalette(device);
 
         // bind the initial frame's data, applying the file's load rotation
-        this.bindAsset(asset, rotation);
+        this.bindAsset(asset, rotation, instances);
     }
 
     // bind a gsplat asset to this element: creates the per-splat state/transform
     // channels and their gpu textures. When `rotation` is supplied (initial load)
     // the entity rotation is set; on a frame swap it is omitted so the user's
     // transform is preserved.
-    private bindAsset(asset: Asset, rotation?: Quat) {
+    private bindAsset(asset: Asset, rotation?: Quat, instances?: GaussianInstances) {
         const splatResource = asset.resource as EditorSplatResource;
         const { device } = splatResource;
 
         this.asset = asset;
         this.resource = splatResource;
         this.numSplats = splatResource.numSplats;
+
+        // this layer now depends on the static data staying loaded; released in
+        // destroy() and when a sequence frame swap drops the old asset
+        splatResource.acquire();
 
         // name and orientation are set on the initial bind only; a frame swap
         // (replaceData, no rotation) keeps the element's name and transform
@@ -116,9 +124,11 @@ class Splat extends Element {
             this.entity.setLocalRotation(rotation);
         }
 
-        // build the instance list over this frame's rows, seeded with the state
+        // a shared-data layer arrives with its instances already built; otherwise
+        // build the identity list over this frame's rows, seeded with the state
         // column the file carried (if any)
-        this.instances = new GaussianInstances(device, splatResource.numRows, splatResource.initialState);
+        this.instances = instances ??
+            new GaussianInstances(device, splatResource.numRows, splatResource.initialState);
 
         this.localBoundStorage = splatResource.aabb.clone();
         this.worldBoundStorage = new BoundingBox();
@@ -151,6 +161,7 @@ class Splat extends Element {
     // transform and visual properties.
     async replaceData(asset: Asset) {
         const oldAsset = this.asset;
+        const oldResource = this.resource;
         const oldInstances = this.instances;
 
         // no rotation: preserve the entity transform
@@ -169,10 +180,14 @@ class Splat extends Element {
         // notify dependents to bind the new textures
         this.scene.events.fire('splat.replaced', this);
 
-        // tear down the previous frame
+        // tear down the previous frame. Another layer may share the frame's static
+        // data (it can be duplicated or separated out of a sequence), so only the
+        // last layer to let go unloads it.
         oldInstances.destroy();
-        oldAsset.registry?.remove(oldAsset);
-        oldAsset.unload();
+        if (oldResource.release()) {
+            oldAsset.registry?.remove(oldAsset);
+            oldAsset.unload();
+        }
 
         this.changedCounter++;
         this.scene.forceRender = true;
@@ -181,9 +196,14 @@ class Splat extends Element {
     destroy() {
         super.destroy();
         this.instances.destroy();
+        this.transformPalette.destroy();
         this.entity.destroy();
-        this.asset.registry.remove(this.asset);
-        this.asset.unload();
+        // layers can share static data, so the asset outlives this layer unless
+        // this was the last reference to it
+        if (this.resource.release()) {
+            this.asset.registry.remove(this.asset);
+            this.asset.unload();
+        }
     }
 
     async updateState() {
@@ -245,6 +265,57 @@ class Splat extends Element {
 
         this.scene.contentRoot.removeChild(this.entity);
         this.scene.boundDirty = true;
+    }
+
+    // Create a new layer over a subset of this layer's instances, for duplicate
+    // and separate. The new layer *shares* this layer's static data - not one
+    // gaussian is copied, so the cost is the ~14 bytes per instance of the list -
+    // and inherits the per-layer state that makes it look identical. Keep this in
+    // step with serialize() below: both enumerate the same per-layer state.
+    createLayer(ranges: IndexRanges, name: string) {
+        const instances = GaussianInstances.fromSubset(this.resource.device, this.instances, ranges);
+
+        // the entity transform is inherited rather than baked into the data, which
+        // is what lets the static rows be shared
+        const layer = new Splat(this.asset, this.entity.getLocalRotation(), instances);
+        layer.entity.setLocalPosition(this.entity.getLocalPosition());
+        layer.entity.setLocalScale(this.entity.getLocalScale());
+        layer.localFrameOrigin.copy(this.localFrameOrigin);
+        layer.localFrame.copy(this.localFrame);
+
+        // assigned through the backing fields: the public setters notify the scene,
+        // and this layer has not been added to one yet
+        layer._name = name;
+        layer._visible = this._visible;
+        layer._tintClr.copy(this._tintClr);
+        layer._temperature = this._temperature;
+        layer._saturation = this._saturation;
+        layer._brightness = this._brightness;
+        layer._blackPoint = this._blackPoint;
+        layer._whitePoint = this._whitePoint;
+        layer._transparency = this._transparency;
+
+        // the copied instances still index *this* layer's palette, so give the new
+        // layer its own entries for the transforms it actually references. Entry 0
+        // is identity in every palette, so untransformed instances need no work.
+        const remap = new Map<number, number>();
+        const transform = new Mat4();
+        for (let i = 0; i < instances.count; ++i) {
+            const index = instances.transformIndex(i);
+            if (index === 0) {
+                continue;
+            }
+            let mapped = remap.get(index);
+            if (mapped === undefined) {
+                mapped = layer.transformPalette.alloc();
+                this.transformPalette.getTransform(index, transform);
+                layer.transformPalette.setTransform(mapped, transform);
+                remap.set(index, mapped);
+            }
+            instances.setTransformIndex(i, mapped);
+        }
+
+        return layer;
     }
 
     serialize(serializer: Serializer) {

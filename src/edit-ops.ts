@@ -172,6 +172,16 @@ class UnhideAllOp extends StateOp {
 // and retains their records so undo can put them back exactly where they were.
 // The recorded ranges stay meaningful for older ops because the edit history is
 // strict LIFO: nothing older is undone until this op has been.
+// The instances that selection-driven operations act on. Note the strict
+// equality: an instance that is both selected *and* locked is excluded, which is
+// what makes locked gaussians survive a delete. Shared so that duplicate and
+// separate copy exactly the set that separate then removes - deriving it twice
+// would let the two drift apart and silently duplicate or drop instances.
+const selectedRanges = (splat: Splat) => {
+    const flags = splat.instances.flags;
+    return IndexRanges.fromPredicate(splat.instances.count, i => flags[i] === State.selected);
+};
+
 class RemoveInstancesOp {
     name = 'removeInstances';
     splat: Splat;
@@ -179,9 +189,8 @@ class RemoveInstancesOp {
     private removed: RemovedInstances = null;
 
     constructor(splat: Splat) {
-        const state = splat.instances.flags;
         this.splat = splat;
-        this.ranges = IndexRanges.fromPredicate(splat.instances.count, i => state[i] === State.selected);
+        this.ranges = selectedRanges(splat);
     }
 
     async do() {
@@ -578,6 +587,7 @@ class SplatRenameOp {
 
 export {
     EditOp,
+    selectedRanges,
     SelectAllOp,
     SelectNoneOp,
     SelectInvertOp,

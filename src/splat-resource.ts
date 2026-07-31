@@ -50,6 +50,15 @@ class EditorSplatResource extends GSplatContainer {
     readonly initialState: Uint8Array;
     readonly propertyNames: ReadonlySet<string>;
 
+    // number of layers (Splats) referencing this static data. Layers can share a
+    // resource - duplicate and separate create a new layer over the same
+    // gaussians rather than copying them - so the asset behind it must outlive
+    // any single layer. Deliberately not the engine's inherited `refCount`: that
+    // one means "in use by the sorter this frame" and is drained by
+    // GSplatDirector, which this branch's custom renderer replaced, so a
+    // deferred destroy queued there would never be processed.
+    private layerRefs = 0;
+
     private closed = false;
 
     private constructor(device: GraphicsDevice, source: ChunkSource) {
@@ -329,6 +338,18 @@ class EditorSplatResource extends GSplatContainer {
 
         this.sourcePool.trim(0);
         this.update(source.meta.numGaussians, false);
+    }
+
+    // register a layer's interest in this static data
+    acquire() {
+        this.layerRefs++;
+    }
+
+    // release a layer's interest. Returns true when the caller released the last
+    // one and is therefore responsible for unloading the asset.
+    release() {
+        this.layerRefs--;
+        return this.layerRefs <= 0;
     }
 
     async close() {

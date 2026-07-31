@@ -116,6 +116,30 @@ class GaussianInstances {
         this.markDirty(0, this.count);
     }
 
+    // Build a new list holding a subset of another list's instances, in the same
+    // order. The copy references the same static rows - duplicate and separate
+    // give the new layer its own instances over shared static data rather than
+    // copying any gaussians - and carries the source's flags and palette indices,
+    // which the caller remaps into the new layer's own palette.
+    //
+    // Order is preserved because the source is in Morton order and the run
+    // encoding of IndexRanges stays compact only while that holds.
+    static fromSubset(device: GraphicsDevice, source: GaussianInstances, ranges: IndexRanges) {
+        const result = new GaussianInstances(device, ranges.count);
+        let dst = 0;
+        ranges.forEachRun((start, count) => {
+            const end = start + count;
+            result.sourceRow.set(source.sourceRow.subarray(start, end), dst);
+            result.palette.set(source.palette.subarray(start, end), dst);
+            // flags is a byte view over the packed words, so runs copy directly
+            result.flags.set(source.flags.subarray(start, end), dst);
+            dst += count;
+        });
+        result.markDirty(0, result.count);
+        result.countsDirty = true;
+        return result;
+    }
+
     destroy() {
         this.instanceSource.destroy();
         this.instanceFlags.destroy();

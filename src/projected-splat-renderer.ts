@@ -52,6 +52,10 @@ const INSTANCE_SIZE = 128;
 const WORKGROUP_SIZE = 256;
 const ENTRY_ALIGNMENT = 256;
 
+// significant bits in a sort key: sortKeys stores (~depth) >> 12, so the top 12
+// bits are always zero and sorting more than this cannot change the ordering
+const SORT_KEY_BITS = 20;
+
 const roundUp = (value: number, alignment: number) => Math.ceil(value / alignment) * alignment;
 
 type ProjectorVariant = {
@@ -504,7 +508,15 @@ class ProjectedSplatRenderer {
         }
 
         if (!this.stochastic) {
-            const sortedIndices = this.sorter.sort(this.sortKeys, this.capacity, 20, undefined, true, true);
+            // the sort requires numBits to be a multiple of the active backend's
+            // radix width, and the backend is chosen from the device: 4 bits for
+            // the portable multipass sorter, 8 for OneSweep (NVIDIA only). A
+            // non-multiple is undefined behaviour and hangs OneSweep's lookback
+            // loop, which surfaces as a D3D12 device-removed TDR - and the
+            // engine's guard is a Debug.assert, so release builds fail silently.
+            // Rounding up is free: the extra bits of the key are always zero.
+            const sortBits = roundUp(SORT_KEY_BITS, this.sorter.radixBits);
+            const sortedIndices = this.sorter.sort(this.sortKeys, this.capacity, sortBits, undefined, true, true);
             this.material.setParameter('sortedIndices', sortedIndices);
         }
         this.material.setParameter('cacheA', this.cacheA);

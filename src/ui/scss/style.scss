@@ -107,6 +107,20 @@ body {
     text-shadow: 1px 1px 4px black;
 }
 
+#startup-error {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    background-color: $bcg-primary;
+    color: $text-primary;
+    font-size: 16px;
+    line-height: 1.5;
+    text-align: center;
+}
+
 #perf-overlay {
     position: absolute;
     left: 12px;

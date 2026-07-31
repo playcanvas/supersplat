@@ -193,7 +193,14 @@ class ProjectedSplatRenderer {
         this.entity.enabled = false;
         scene.app.root.addChild(this.entity);
 
-        this.device.gpuProfiler.enabled = true;
+        // timestamp queries cost a per-frame staging-buffer map and a resolve, so
+        // only run the profiler while the frame-timings overlay is reading it
+        const setProfiling = (value: boolean) => {
+            this.device.gpuProfiler.enabled = value;
+        };
+        setProfiling(!!scene.events.invoke('view.perfOverlay'));
+        scene.events.on('view.perfOverlay', setProfiling);
+
         scene.events.function('splat.projectedRendererStats', () => this.stats);
     }
 

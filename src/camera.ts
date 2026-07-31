@@ -50,6 +50,9 @@ const v4 = new Vec4();
 // modulo dealing with negative numbers
 const mod = (n: number, m: number) => ((n % m) + m) % m;
 
+// scene.resolveMode -> the blit shader's quadResolve enum
+const RESOLVE_UNIFORM = { none: 0, old: 1, new: 2 };
+
 class Camera extends Element {
     /**
      * Calculate the forward vector given azimuth and elevation angles.
@@ -340,8 +343,9 @@ class Camera extends Element {
                         srcTexture: this.mainTarget.colorBuffer,
                         // upscale the (possibly lower-res) target to the backbuffer
                         blitScale: [ts.width / gd.width, ts.height / gd.height],
-                        // stochastic frames resolve each 2x2 quad to its mean
-                        quadResolve: this.scene.movingRender ? 1 : 0
+                        // stochastic frames composite their samples through the
+                        // quad resolve; settled frames blit unfiltered
+                        quadResolve: this.scene.movingRender ? RESOLVE_UNIFORM[this.scene.resolveMode] : 0
                     };
                 }
             });

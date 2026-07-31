@@ -12,6 +12,7 @@ import { ImageSettingsDialog } from './image-settings-dialog';
 import { i18n } from './localization';
 import { Menu } from './menu';
 import { ModeToggle } from './mode-toggle';
+import { PerfOverlay } from './perf-overlay';
 import logo from './playcanvas-logo.png';
 import { Popup, ShowOptions } from './popup';
 import { Progress } from './progress';
@@ -100,10 +101,12 @@ class EditorUI {
         const modeToggle = new ModeToggle(events, tooltips);
         const menu = new Menu(events);
         const cameraInfoOverlay = new CameraInfoOverlay(events, tooltips);
+        const perfOverlay = new PerfOverlay(events);
 
         canvasContainer.dom.appendChild(canvas);
         canvasContainer.append(appLabel);
         canvasContainer.append(cameraInfoOverlay);
+        canvasContainer.append(perfOverlay);
         canvasContainer.append(toolsContainer);
         canvasContainer.append(scenePanel);
         canvasContainer.append(settingsPanel);

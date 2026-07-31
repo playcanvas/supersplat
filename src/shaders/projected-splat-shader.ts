@@ -157,8 +157,9 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         // across each screen-space 2x2 quad — the quad's four pixels take the
         // four strata of [0,1) in a per-(quad, splat) scrambled order with a
         // shared jitter — so a splat with alpha a covers 4a±1 of the quad. The
-        // final blit averages each quad (blit-shader quadResolve), replacing
-        // most of the sampling noise with quantization error. Hashing quad +
+        // final blit averages each quad and bilinearly interpolates between quad
+        // centres, replacing most of the sampling noise with quantization error.
+        // Hashing quad +
         // splat id keeps overlapping splats decorrelated and each pixel's
         // threshold marginally uniform. The settle still renders the exact
         // sorted blend.
@@ -173,7 +174,12 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         if (rnd >= alpha) {
             discard;
         }
-        output.color = vec4f(gaussianColor.rgb, 1.0);
+        // alpha 2 tags this pixel as a stochastic sample for the resolve. The
+        // target is RGBA16F so it survives unclamped, and nothing else drawn into
+        // it can exceed 1, which lets the blit composite splats against the rest
+        // of the frame instead of blurring all of it. Never exported: captures set
+        // lockedRenderMode, which forces the sorted path.
+        output.color = vec4f(gaussianColor.rgb, 2.0);
         output.color1 = vec4f(0.0);
       #else
         let selected = (gaussianFlags & 1u) != 0u;

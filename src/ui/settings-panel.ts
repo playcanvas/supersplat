@@ -325,14 +325,38 @@ class SettingsPanel extends Container {
         });
         i18n.bindText(stochasticLabel, 'panel.settings.stochastic-alpha');
 
-        const stochasticToggle = new BooleanInput({
+        const stochasticSelection = new SelectInput({
+            class: 'settings-panel-row-select',
+            defaultValue: 'disabled'
+        });
+        i18n.bindOptions(stochasticSelection, () => [
+            { v: 'disabled', t: i18n.t('panel.settings.stochastic-alpha.disabled') },
+            { v: 'enabled', t: i18n.t('panel.settings.stochastic-alpha.enabled') },
+            { v: 'movement', t: i18n.t('panel.settings.stochastic-alpha.movement') }
+        ]);
+
+        stochasticRow.append(stochasticLabel);
+        stochasticRow.append(stochasticSelection);
+
+        // frame timings overlay
+
+        const perfOverlayRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const perfOverlayLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(perfOverlayLabel, 'panel.settings.perf-overlay');
+
+        const perfOverlayToggle = new BooleanInput({
             type: 'toggle',
             class: 'settings-panel-row-toggle',
             value: false
         });
 
-        stochasticRow.append(stochasticLabel);
-        stochasticRow.append(stochasticToggle);
+        perfOverlayRow.append(perfOverlayLabel);
+        perfOverlayRow.append(perfOverlayToggle);
 
         // show grid
 
@@ -483,6 +507,7 @@ class SettingsPanel extends Container {
         this.append(centersColorRow);
         this.append(outlineSelectionRow);
         this.append(stochasticRow);
+        this.append(perfOverlayRow);
         this.append(showGridRow);
         this.append(gridPlaneRow);
         this.append(showBoundRow);
@@ -581,12 +606,22 @@ class SettingsPanel extends Container {
 
         // stochastic alpha
 
-        events.on('view.stochastic', (value: boolean) => {
-            stochasticToggle.value = value;
+        events.on('view.stochastic', (value: string) => {
+            stochasticSelection.value = value;
         });
 
-        stochasticToggle.on('change', (value: boolean) => {
+        stochasticSelection.on('change', (value: string) => {
             events.fire('view.setStochastic', value);
+        });
+
+        // frame timings overlay
+
+        events.on('view.perfOverlay', (value: boolean) => {
+            perfOverlayToggle.value = value;
+        });
+
+        perfOverlayToggle.on('change', (value: boolean) => {
+            events.fire('view.setPerfOverlay', value);
         });
 
         // show grid

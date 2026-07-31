@@ -69,6 +69,13 @@ const specialSort = (instances: MeshInstance[], numInstances: number, cameraPos:
     instances.sort((a, b) => distances.get(b) - distances.get(a));
 };
 
+type ResolveMode = 'none' | 'old' | 'new';
+
+// rendered frames of timing history kept for the performance overlay. The
+// overlay plots all of them but summarises only the most recent second's worth,
+// so this is graph history rather than the averaging window.
+const FRAME_TIMING_WINDOW = 180;
+
 class Scene {
     events: Events;
     config: SceneConfig;
@@ -104,11 +111,39 @@ class Scene {
     lockedRenderMode = false;
     lockedRender = false;
 
+    // devtools switch for the stochastic resolve, set from the console as
+    // `scene.resolveMode = 'old'`. 'new' is the masked quad+bilinear filter that
+    // ships; 'old' is the original aligned 2x2 block average, held across the quad
+    // and unmasked so it filters the grid and overlays too; 'none' shows the raw
+    // 1 spp samples unfiltered. Only affects stochastic frames, so pair it with
+    // Stochastic Alpha = Enabled to compare without having to keep dragging.
+    private _resolveMode: ResolveMode = 'new';
+
     canvasResize: {width: number; height: number} | null = null;
     targetSize = {
         width: 0,
         height: 0
     };
+
+    // rolling window of per-frame timings for the performance overlay, sampled
+    // only on frames that actually rendered so the window is never padded with
+    // frames that did not happen. gpu is the profiler's frame span
+    // (earliest pass begin to latest pass end); the engine reports the span
+    // rather than the sum of per-pass durations because pass intervals overlap
+    // on pipelined GPUs, which makes the sum grow with the pass count even
+    // while the GPU is idle. The timestamp readback is asynchronous, so the
+    // same value can be sampled on consecutive frames - harmless for the
+    // min/median/p95 the overlay derives from the window.
+    readonly frameTimings = {
+        gpu: [] as number[],
+        cpu: [] as number[],
+        width: 0,
+        height: 0,
+        stochastic: false,
+        gpuSupported: false
+    };
+
+    private cpuFrameStart = 0;
 
     dataProcessor: DataProcessor;
     projectedSplatRenderer: ProjectedSplatRenderer;
@@ -208,6 +243,9 @@ class Scene {
         this.app.on('update', (deltaTime: number) => this.onUpdate(deltaTime));
         this.app.on('prerender', () => this.onPreRender());
         this.app.on('postrender', () => this.onPostRender());
+
+        this.frameTimings.gpuSupported = !!(this.app.graphicsDevice as any).supportsTimestampQuery;
+        events.function('scene.frameTimings', () => this.frameTimings);
 
         // force render on device restored
         this.app.graphicsDevice.on('devicerestored', () => {
@@ -362,11 +400,23 @@ class Scene {
         return this.app.graphicsDevice;
     }
 
+    set resolveMode(value: ResolveMode) {
+        this._resolveMode = value;
+        // repaint so setting this from the console takes effect immediately
+        this.forceRender = true;
+    }
+
+    get resolveMode() {
+        return this._resolveMode;
+    }
+
     private forEachElement(action: (e: Element) => void) {
         this.elements.forEach(action);
     }
 
     private onUpdate(deltaTime: number) {
+        this.cpuFrameStart = performance.now();
+
         if (this.canvasResize) {
             this.canvas.width = this.canvasResize.width;
             this.canvas.height = this.canvasResize.height;
@@ -392,14 +442,24 @@ class Scene {
         // generate the set of all element types that changed
         const all = new Set([...result.added, ...result.removed, ...result.moved, ...result.changed]);
 
-        // compare with previously serialized
-        const changed = this.forceRender || all.size > 0;
-        const interacting = this.forceInteracting || all.size > 0;
-        const adaptive = !!this.events.invoke('view.stochastic');
+        // the performance overlay only advances on frames that render, so keep
+        // rendering while it is on. It deliberately does not count as
+        // interaction: settled frames stay on the sorted path, which is what
+        // makes the two render modes comparable by starting and stopping a drag.
+        const profiling = !!this.events.invoke('view.perfOverlay');
 
-        // fast no-sort stochastic mode only while actively interacting; settled
-        // frames (and locked-mode captures) use the clean sorted & blended path
-        this.movingRender = adaptive && interacting && !this.lockedRenderMode;
+        // compare with previously serialized
+        const changed = this.forceRender || profiling || all.size > 0;
+        const interacting = this.forceInteracting || all.size > 0;
+        const stochastic = this.events.invoke('view.stochastic');
+
+        // 'movement' takes the fast no-sort stochastic path only while actively
+        // interacting, so settled frames get the clean sorted & blended one;
+        // 'enabled' stays stochastic even once the scene settles. Locked-mode
+        // captures always use the sorted path.
+        const adaptive = stochastic === 'movement';
+        this.movingRender = !this.lockedRenderMode &&
+            (stochastic === 'enabled' || (adaptive && interacting));
 
         if (this.lockedRenderMode) {
             this.app.renderNextFrame = this.lockedRender;
@@ -407,7 +467,7 @@ class Scene {
         } else if (!this.app.renderNextFrame) {
             if (changed) {
                 this.app.renderNextFrame = true;
-                // motion in stochastic mode owes one clean sorted frame on settle
+                // motion in 'movement' mode owes one clean sorted frame on settle
                 if (interacting) {
                     this.pendingResolve = adaptive;
                 }
@@ -476,6 +536,17 @@ class Scene {
         this.forEachElement(e => e.onPostRender());
 
         this.events.fire('postrender');
+
+        const timings = this.frameTimings;
+        timings.gpu.push((this.app.graphicsDevice.gpuProfiler as any)?._frameTime ?? 0);
+        timings.cpu.push(performance.now() - this.cpuFrameStart);
+        if (timings.gpu.length > FRAME_TIMING_WINDOW) {
+            timings.gpu.shift();
+            timings.cpu.shift();
+        }
+        timings.width = this.targetSize.width;
+        timings.height = this.targetSize.height;
+        timings.stochastic = this.movingRender;
     }
 }
 

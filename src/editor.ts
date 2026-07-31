@@ -69,7 +69,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     [
         'camera.mode', 'camera.overlay', 'camera.splatSize', 'view.outlineSelection',
-        'view.centersUseGaussianColor', 'view.bands', 'view.minPixelSize', 'view.stochastic', 'camera.bound', 'camera.boundDimensions', 'camera.showPoses',
+        'view.centersUseGaussianColor', 'view.bands', 'view.minPixelSize', 'view.stochastic', 'view.perfOverlay', 'camera.bound', 'camera.boundDimensions', 'camera.showPoses',
         'camera.showInfo', 'selection.changed', 'tool.coordSpace'
     ].forEach((eventName) => {
         events.on(eventName, () => {
@@ -832,18 +832,36 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     });
 
-    // experimental stochastic-transparency splat renderer (1 spp, no sort)
+    // experimental stochastic-transparency splat renderer (1 spp, no sort).
+    // 'disabled' never uses it, 'enabled' always does, and 'movement' uses it only
+    // while the scene is changing - trading the sort for speed exactly when the
+    // eye is least able to see the sampling noise.
 
-    let stochastic = false;
+    let stochastic = 'disabled';
 
     events.function('view.stochastic', () => {
         return stochastic;
     });
 
-    events.on('view.setStochastic', (value: boolean) => {
+    events.on('view.setStochastic', (value: string) => {
         if (value !== stochastic) {
             stochastic = value;
             events.fire('view.stochastic', value);
+        }
+    });
+
+    // gpu/cpu frame timing overlay
+
+    let perfOverlay = false;
+
+    events.function('view.perfOverlay', () => {
+        return perfOverlay;
+    });
+
+    events.on('view.setPerfOverlay', (value: boolean) => {
+        if (value !== perfOverlay) {
+            perfOverlay = value;
+            events.fire('view.perfOverlay', value);
         }
     });
 

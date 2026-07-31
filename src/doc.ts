@@ -63,6 +63,13 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     // this file handle is updated as the current document is loaded and saved
     let documentFileHandle: FileSystemFileHandle = null;
 
+    // The zip the current document's resources still read from. A loaded resource
+    // retains a lazy ChunkSource over its PLY - that is what export streams from -
+    // so the archive has to outlive the load and can only be closed once nothing
+    // references it. Closing it at the end of the load made every export from an
+    // opened document fail with 'Source has been closed'.
+    let documentFs: ZipReadFileSystem = null;
+
     // show the user a reset confirmation popup
     const getResetConfirmation = async () => {
         const result = await events.invoke('showPopup', {
@@ -80,10 +87,14 @@ const registerDocEvents = (scene: Scene, events: Events) => {
 
     // reset the scene
     const resetScene = () => {
+        // clear first: the layers and their resources are what still read from the
+        // archive, so the zip is only safe to close once they are gone
         events.fire('scene.clear');
         events.fire('camera.reset');
         events.fire('doc.setName', null);
         documentFileHandle = null;
+        documentFs?.close();
+        documentFs = null;
     };
 
     // load the document from the given file
@@ -101,8 +112,10 @@ const registerDocEvents = (scene: Scene, events: Events) => {
             // below so a failed load can't leave capture suspended.
             events.fire('preferences.suspend');
 
-            // reset the scene
+            // reset the scene. This closes the *previous* document's archive, so
+            // adopt this one only afterwards
             resetScene();
+            documentFs = zipFs;
 
             // read document.json via streaming (only reads what's needed)
             const docSource = await zipFs.createSource('document.json');
@@ -180,13 +193,8 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 message: `'${error.message ?? error}'`
             });
         } finally {
-            // fire events before cleanup so a throwing close can't leave
-            // preference capture suspended or the spinner running
             events.fire('preferences.resume');
             events.fire('stopSpinner');
-
-            // Clean up resources
-            zipFs.close();
         }
     };
 

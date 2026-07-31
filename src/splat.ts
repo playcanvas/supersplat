@@ -89,7 +89,7 @@ class Splat extends Element {
     localFrameOrigin = new Vec3();
     localFrame = new Quat();
 
-    rebuildMaterial: (bands: number) => void;
+    rebuildMaterial: () => void;
 
     constructor(asset: Asset, rotation: Quat) {
         super(ElementType.splat);
@@ -108,8 +108,10 @@ class Splat extends Element {
 
         // rebuilds material chunks/params. reads the *current* gsplat instance and
         // state/transform textures so it remains valid after a replaceData swap
-        // (the 'view.bands' listener registered in add() keeps pointing at it).
-        this.rebuildMaterial = (bands: number) => {
+        // (the view listeners registered in add() keep pointing at it). Reads the
+        // view settings directly so either one can drive it.
+        this.rebuildMaterial = () => {
+            const { events } = this.scene;
             const instance = this.entity.gsplat.instance;
             const { material } = instance;
             const { glsl } = material.shaderChunks;
@@ -117,8 +119,15 @@ class Splat extends Element {
             glsl.set('gsplatPS', fragmentShader);
             glsl.set('gsplatCenterVS', gsplatCenter);
 
+            // 'diffuse' compiles out every view-dependent term; 'specular' keeps
+            // them and substitutes the background for band 0 (see the shader)
+            const colorMode = events.invoke('view.colorMode');
+            const diffuseOnly = colorMode === 'diffuse';
+            const bands = diffuseOnly ? 0 : events.invoke('view.bands');
+
             material.setDefine('SH_BANDS', `${Math.min(bands, (instance.resource as GSplatResource).shBands)}`);
-            material.setDefine('SB_LOBES', `${this.sbAtlas?.lobes ?? 0}`);
+            material.setDefine('SB_LOBES', `${diffuseOnly ? 0 : (this.sbAtlas?.lobes ?? 0)}`);
+            material.setDefine('SPECULAR_ONLY', colorMode === 'specular' ? '1' : '0');
             material.setParameter('splatState', this.stateTexture);
             material.setParameter('splatTransform', this.transformTexture);
             if (this.sbAtlas) {
@@ -279,7 +288,7 @@ class Splat extends Element {
         // add the new entity to the scene and configure its instance
         this.scene.contentRoot.addChild(this.entity);
         this.entity.gsplat.layers = [this.scene.splatLayer.id];
-        this.rebuildMaterial(this.scene.events.invoke('view.bands'));
+        this.rebuildMaterial();
 
         // refresh gpu state/counts/bounds, then wait for the new frame to render
         // before removing the old entity, which keeps the previous frame on screen
@@ -429,7 +438,8 @@ class Splat extends Element {
         this.entity.gsplat.layers = [this.scene.splatLayer.id];
 
         this.scene.events.on('view.bands', this.rebuildMaterial, this);
-        this.rebuildMaterial(this.scene.events.invoke('view.bands'));
+        this.scene.events.on('view.colorMode', this.rebuildMaterial, this);
+        this.rebuildMaterial();
 
         // we must update state in case the state data was loaded from ply
         await this.updateState();
@@ -437,6 +447,7 @@ class Splat extends Element {
 
     remove() {
         this.scene.events.off('view.bands', this.rebuildMaterial, this);
+        this.scene.events.off('view.colorMode', this.rebuildMaterial, this);
 
         this.scene.contentRoot.removeChild(this.entity);
         this.scene.boundDirty = true;
@@ -475,6 +486,13 @@ class Splat extends Element {
         }
         material.setParameter('unselectedClr', [unselectedClr.r, unselectedClr.g, unselectedClr.b, unselectedClr.a]);
         material.setParameter('lockedClr', [lockedClr.r, lockedClr.g, lockedClr.b, lockedClr.a]);
+
+        // only declared by the shader in specular mode. set per-frame so changing
+        // the background takes effect without a recompile
+        if (events.invoke('view.colorMode') === 'specular') {
+            const bgClr = events.invoke('bgClr');
+            material.setParameter('bgClr', [bgClr.r, bgClr.g, bgClr.b]);
+        }
 
         // combine black pointer, white point and brightness
         const offset = -this.blackPoint + this.brightness;

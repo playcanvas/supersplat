@@ -76,7 +76,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     [
         'camera.mode', 'camera.overlay', 'camera.splatSize', 'view.outlineSelection',
-        'view.centersUseGaussianColor', 'view.bands', 'camera.bound', 'camera.boundDimensions', 'camera.showPoses',
+        'view.centersUseGaussianColor', 'view.bands', 'view.colorMode', 'camera.bound', 'camera.boundDimensions', 'camera.showPoses',
         'camera.showInfo', 'selection.changed', 'tool.coordSpace'
     ].forEach((eventName) => {
         events.on(eventName, () => {
@@ -859,6 +859,18 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         setViewBands(value);
     });
 
+    // view color separation: 'full' renders everything, 'diffuse' the band-0 term
+    // alone, 'specular' only the view-dependent terms over the background color
+    let colorMode = 'full';
+    events.function('view.colorMode', () => colorMode);
+    events.on('view.setColorMode', (value: string) => {
+        // guarded: a redundant fire would recompile the splat shaders
+        if (value !== colorMode) {
+            colorMode = value;
+            events.fire('view.colorMode', colorMode);
+        }
+    });
+
     // centers gaussian color toggle
     let centersUseGaussianColor = false;
     events.function('view.centersUseGaussianColor', () => centersUseGaussianColor);
@@ -899,6 +911,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.fire('camera.fov', scene.camera.fov);
     events.fire('camera.overlay', cameraOverlay);
     events.fire('view.bands', viewBands);
+    events.fire('view.colorMode', colorMode);
     events.fire('camera.showInfo', showInfo);
 
     // doc serialization
@@ -910,6 +923,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             unselectedColor: packC(events.invoke('unselectedClr')),
             lockedColor: packC(events.invoke('lockedClr')),
             shBands: events.invoke('view.bands'),
+            colorMode: events.invoke('view.colorMode'),
             centersSize: events.invoke('camera.splatSize'),
             outlineSelection: events.invoke('view.outlineSelection'),
             showGrid: events.invoke('grid.visible'),
@@ -929,6 +943,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         events.fire('setUnselectedClr', new Color(docView.unselectedColor));
         events.fire('setLockedClr', new Color(docView.lockedColor));
         events.fire('view.setBands', docView.shBands);
+        events.fire('view.setColorMode', docView.colorMode ?? 'full');
         events.fire('camera.setSplatSize', docView.centersSize);
         events.fire('view.setOutlineSelection', docView.outlineSelection);
         events.fire('grid.setVisible', docView.showGrid);

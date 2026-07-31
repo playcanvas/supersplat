@@ -231,6 +231,30 @@ class SettingsPanel extends Container {
         shBandsRow.append(shBandsLabel);
         shBandsRow.append(shBandsSlider);
 
+        // color separation mode
+
+        const colorModeRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const colorModeLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(colorModeLabel, 'panel.settings.color-mode');
+
+        const colorModeSelection = new SelectInput({
+            class: 'settings-panel-row-select',
+            defaultValue: 'full'
+        });
+        i18n.bindOptions(colorModeSelection, () => [
+            { v: 'full', t: i18n.t('panel.settings.color-mode.full') },
+            { v: 'diffuse', t: i18n.t('panel.settings.color-mode.diffuse') },
+            { v: 'specular', t: i18n.t('panel.settings.color-mode.specular') }
+        ]);
+
+        colorModeRow.append(colorModeLabel);
+        colorModeRow.append(colorModeSelection);
+
         // camera fly speed
 
         const cameraFlySpeedRow = new Container({
@@ -458,6 +482,7 @@ class SettingsPanel extends Container {
         this.append(fovRow);
         this.append(fovDollyRow);
         this.append(shBandsRow);
+        this.append(colorModeRow);
         this.append(cameraFlySpeedRow);
         this.append(centersSizeRow);
         this.append(centersColorRow);
@@ -505,6 +530,18 @@ class SettingsPanel extends Container {
 
         shBandsSlider.on('change', (value: number) => {
             events.fire('view.setBands', value);
+        });
+
+        // color separation mode
+
+        events.on('view.colorMode', (mode: string) => {
+            colorModeSelection.value = mode;
+            // diffuse mode compiles the sh bands out, so the slider has no effect
+            shBandsSlider.enabled = mode !== 'diffuse';
+        });
+
+        colorModeSelection.on('change', (value: string) => {
+            events.fire('view.setColorMode', value);
         });
 
         // splat size

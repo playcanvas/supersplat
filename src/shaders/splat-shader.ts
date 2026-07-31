@@ -9,6 +9,14 @@ uniform vec4 lockedClr;
 uniform vec3 clrOffset;
 uniform vec4 clrScale;
 
+// note the '> 0' here and below: playcanvas's preprocessor treats a bare
+// '#if NAME' as '#ifdef NAME', so a 0-valued define would still be taken
+#if SPECULAR_ONLY > 0
+    // stands in for the band-0 term, so a splat with no view-dependent energy
+    // blends invisibly into the background
+    uniform vec3 bgClr;
+#endif
+
 varying mediump vec4 texCoord_flags;            // xy: texCoord, z: selected, w: locked
 varying mediump vec4 color;
 
@@ -148,6 +156,13 @@ void main(void) {
     #elif FORWARD_PASS
         // read color
         color = getColor();
+
+        // getColor is the band-0 (diffuse) term; replacing it leaves only the
+        // view-dependent contributions added below. color is in display space
+        // here, the same space bgClr is authored in, so the two match exactly.
+        #if SPECULAR_ONLY > 0
+            color.xyz = bgClr;
+        #endif
 
         #if SH_BANDS > 0 || SB_LOBES > 0
             // calculate the model-space view direction, shared by the spherical

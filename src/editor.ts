@@ -906,6 +906,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.fire('camera.overlay', cameraOverlay);
     events.fire('view.bands', viewBands);
     events.fire('camera.showInfo', showInfo);
+    // needed because view.setStochastic only notifies on a change, so a stored
+    // preference equal to the initial value leaves the ui showing its own default
+    events.fire('view.stochastic', stochastic);
 
     // doc serialization
     events.function('docSerialize.view', () => {

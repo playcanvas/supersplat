@@ -327,7 +327,7 @@ class SettingsPanel extends Container {
 
         const stochasticSelection = new SelectInput({
             class: 'settings-panel-row-select',
-            defaultValue: 'disabled'
+            defaultValue: 'movement'
         });
         i18n.bindOptions(stochasticSelection, () => [
             { v: 'disabled', t: i18n.t('panel.settings.stochastic-alpha.disabled') },
@@ -506,14 +506,14 @@ class SettingsPanel extends Container {
         this.append(centersSizeRow);
         this.append(centersColorRow);
         this.append(outlineSelectionRow);
-        this.append(stochasticRow);
-        this.append(perfOverlayRow);
         this.append(showGridRow);
         this.append(gridPlaneRow);
         this.append(showBoundRow);
         this.append(showBoundDimensionsRow);
         this.append(showCameraPosesRow);
         this.append(showCameraInfoRow);
+        this.append(stochasticRow);
+        this.append(perfOverlayRow);
         this.append(resetRow);
 
         // handle panel visibility

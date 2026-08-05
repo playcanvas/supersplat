@@ -19,7 +19,7 @@ const v2 = new Vec3();
 const v3 = new Vec3();
 const v4 = new Vec3();
 
-const resolve = (scope: ScopeSpace, values: any) => {
+const resolve = (scope: ScopeSpace, values: Record<string, unknown>) => {
     for (const key in values) {
         scope.resolve(key).setValue(values[key]);
     }
@@ -150,7 +150,7 @@ class CalcBound {
         const { scope } = device;
 
         const numSplats = splat.splatData.numSplats;
-        const transformA = (splat.entity.gsplat.instance.resource as any).getTexture('transformA');
+        const transformA = splat.entity.gsplat.instance.resource.getTexture('transformA');
         const splatTransform = splat.transformTexture;
         const transformPalette = splat.transformPalette.texture;
         const splatState = splat.stateTexture;

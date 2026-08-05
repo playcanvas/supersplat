@@ -60,7 +60,7 @@ class SimpleRenderPass extends RenderPass {
         Object.assign(this, args);
     }
 
-    execute(vars: any = {}) {
+    execute(vars: object = {}) {
         const { device, blendState, cullMode, depthState, stencilFront, stencilBack, viewport, scissor } = this;
 
         if (this.vars) {

@@ -271,7 +271,7 @@ class PublishSettingsDialog extends Container {
             const filename = splats[0].filename;
             const dot = splats[0].filename.lastIndexOf('.');
             const bgClr = events.invoke('bgClr');
-            const totalSplats = splats.reduce((sum: number, s: any) => sum + (s.numSplats ?? 0), 0);
+            const totalSplats = splats.reduce((sum, s) => sum + (s.numSplats ?? 0), 0);
 
             // union scene bounds to decide LOD default for large scenes
             const sceneMin = [Infinity, Infinity, Infinity];

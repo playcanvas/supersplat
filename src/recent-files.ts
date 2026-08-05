@@ -9,7 +9,7 @@ type RecentFile = {
 };
 
 // wrap IDBRequest in a promise
-const wrap = (IDBRequest: IDBRequest): Promise<any> => {
+const wrap = <T>(IDBRequest: IDBRequest<T>): Promise<T> => {
     return new Promise((resolve, reject) => {
         IDBRequest.onsuccess = () => resolve(IDBRequest.result);
         IDBRequest.onerror = () => {

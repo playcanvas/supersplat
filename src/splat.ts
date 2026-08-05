@@ -143,7 +143,7 @@ class Splat extends Element {
         // name and orientation are set on the initial bind only; a frame swap
         // (replaceData, no rotation) keeps the element's name and transform
         if (rotation) {
-            this._name = (asset.file as any).filename;
+            this._name = (asset.file as typeof asset.file & { filename: string }).filename;
             this.entity.setLocalRotation(rotation);
         }
 
@@ -175,7 +175,7 @@ class Splat extends Element {
             byteSize: 2
         });
 
-        const { x: width, y: height } = (splatResource as any).textureDimensions;
+        const { x: width, y: height } = splatResource.textureDimensions;
 
         // pack spherical harmonic data
         const createTexture = (name: string, format: number) => {
@@ -384,7 +384,7 @@ class Splat extends Element {
     }
 
     get filename() {
-        return (this.asset.file as any).filename;
+        return (this.asset.file as typeof this.asset.file & { filename: string }).filename;
     }
 
     calcSplatWorldPosition(splatId: number, result: Vec3) {
@@ -687,7 +687,15 @@ class Splat extends Element {
         };
     }
 
-    docDeserialize(doc: any) {
+    docDeserialize(
+        doc: Omit<ReturnType<Splat['docSerialize']>, 'localFrameOrigin' | 'localFrame' | 'temperature' | 'saturation'> &
+            Partial<
+                Pick<
+                    ReturnType<Splat['docSerialize']>,
+                    'localFrameOrigin' | 'localFrame' | 'temperature' | 'saturation'
+                >
+            >
+    ) {
         const {
             name,
             position,

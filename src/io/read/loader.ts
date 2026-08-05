@@ -109,11 +109,7 @@ const dataTableToGSplatData = (dataTable: DataTable): GSplatData => {
 
         // Place the new scale_2 property just after scale_1
         const props = gsplatData.getElement('vertex').properties;
-        props.splice(
-            props.findIndex((prop: any) => prop.name === 'scale_1') + 1,
-            0,
-            props.splice(props.length - 1, 1)[0]
-        );
+        props.splice(props.findIndex((prop) => prop.name === 'scale_1') + 1, 0, props.splice(props.length - 1, 1)[0]);
     }
 
     return gsplatData;

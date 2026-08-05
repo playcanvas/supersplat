@@ -12,9 +12,9 @@ type MenuItem = {
     extra?: string | Element;
     subMenu?: MenuPanel;
 
-    isEnabled?: () => boolean | Promise<boolean>;
+    isEnabled?: () => unknown | Promise<unknown>;
     isVisible?: () => boolean | Promise<boolean>;
-    onSelect?: () => any;
+    onSelect?: () => unknown;
 };
 
 const offsetParent = (elem: HTMLElement): HTMLElement => {
@@ -46,7 +46,7 @@ const arrange = (element: HTMLElement, target: HTMLElement, direction: Direction
     }
 };
 
-const isString = (value: any) => {
+const isString = (value: unknown) => {
     return !value || typeof value === 'string' || value instanceof String;
 };
 
@@ -92,7 +92,8 @@ class MenuPanel extends Container {
             for (let i = 0; i < this.menuItems.length; i++) {
                 const menuItem = this.menuItems[i];
                 if (menuItem.isEnabled) {
-                    this.dom.children.item(i).ui.enabled = await menuItem.isEnabled();
+                    (this.dom.children.item(i).ui as unknown as { enabled: unknown }).enabled =
+                        await menuItem.isEnabled();
                 }
                 if (menuItem.isVisible) {
                     this.dom.children.item(i).ui.hidden = !(await menuItem.isVisible());

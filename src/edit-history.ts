@@ -11,7 +11,7 @@ const opReferencesSplat = (op: EditOp, splat: Splat): boolean => {
         return op.ops.some((nestedOp) => opReferencesSplat(nestedOp, splat));
     }
     // Check for splat property on the operation
-    return (op as any).splat === splat;
+    return (op as EditOp & { splat?: Splat }).splat === splat;
 };
 
 class EditHistory {
@@ -125,7 +125,7 @@ class EditHistory {
 
             for (let i = 0; i < this.history.length; i++) {
                 const op = this.history[i];
-                if ((op as any).shape === shape) {
+                if ((op as EditOp & { shape?: unknown }).shape === shape) {
                     op.destroy?.();
                 } else {
                     newHistory.push(op);

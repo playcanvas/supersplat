@@ -436,10 +436,15 @@ class PointerController {
 
         let destroy: () => void = null;
 
-        const wrap = (target: any, name: string, fn: any, options?: any) => {
-            const callback = (event: any) => {
+        const wrap = <T extends Event>(
+            target: EventTarget,
+            name: string,
+            fn: (event: T) => void,
+            options?: AddEventListenerOptions
+        ) => {
+            const callback = (event: Event) => {
                 camera.scene.events.fire('camera.controller', name);
-                fn(event);
+                fn(event as T);
             };
             target.addEventListener(name, callback, options);
             destroy = () => {

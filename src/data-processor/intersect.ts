@@ -40,7 +40,7 @@ type IntersectOptions = MaskOptions | RectOptions | SphereOptions | BoxOptions;
 const shapeInvMat = new Mat4();
 const identityMat = new Mat4();
 
-const resolve = (scope: ScopeSpace, values: any) => {
+const resolve = (scope: ScopeSpace, values: Record<string, unknown>) => {
     for (const key in values) {
         scope.resolve(key).setValue(values[key]);
     }
@@ -114,7 +114,7 @@ class Intersect {
         const { scope } = device;
 
         const numSplats = splat.splatData.numSplats;
-        const transformA = (splat.entity.gsplat.instance.resource as any).getTexture('transformA');
+        const transformA = splat.entity.gsplat.instance.resource.getTexture('transformA');
         const splatTransform = splat.transformTexture;
         const transformPalette = splat.transformPalette.texture;
 

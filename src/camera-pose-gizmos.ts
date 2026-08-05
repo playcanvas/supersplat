@@ -95,7 +95,7 @@ class CameraPoseGizmos extends Element {
     }
 
     private rebuildMesh() {
-        const poses = this.scene.events.invoke('camera.poses') as { position: Vec3; target: Vec3 }[];
+        const poses = this.scene.events.invoke('camera.poses');
         if (!poses || poses.length === 0) {
             this.mesh.primitive[0].count = 0;
             return;

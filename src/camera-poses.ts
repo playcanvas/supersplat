@@ -12,6 +12,19 @@ type Pose = {
     fov?: number;
 };
 
+type PackedPose = {
+    name: string;
+    frame?: number;
+    position: number[];
+    target: number[];
+    fov?: number;
+};
+
+type PoseSet = {
+    name: string;
+    poses: PackedPose[];
+};
+
 /**
  * Camera animation track that manages camera keyframes and interpolation.
  * Implements AnimTrack interface so it can be used with the timeline system.
@@ -289,7 +302,7 @@ const registerCameraPosesEvents = (events: Events) => {
 
     // Serialization
 
-    events.function('docSerialize.poseSets', (): any[] => {
+    events.function('docSerialize.poseSets', (): PoseSet[] => {
         const pack3 = (v: Vec3) => [v.x, v.y, v.z];
         const poses = track.getPoses();
 
@@ -313,7 +326,7 @@ const registerCameraPosesEvents = (events: Events) => {
         ];
     });
 
-    events.function('docDeserialize.poseSets', (poseSets: any[], documentCameraFov?: number) => {
+    events.function('docDeserialize.poseSets', (poseSets: PoseSet[], documentCameraFov?: number) => {
         if (!poseSets || poseSets.length === 0) {
             return;
         }
@@ -322,7 +335,7 @@ const registerCameraPosesEvents = (events: Events) => {
 
         const defaultFov = documentCameraFov ?? events.invoke('camera.fov') ?? 60;
 
-        const loadedPoses: Pose[] = poseSets[0].poses.map((docPose: any, index: number) => {
+        const loadedPoses: Pose[] = poseSets[0].poses.map((docPose, index) => {
             return {
                 name: docPose.name,
                 frame: docPose.frame ?? index * fps,

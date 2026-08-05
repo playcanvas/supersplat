@@ -1,22 +1,24 @@
 import type { Color, Vec3 } from 'playcanvas';
 
+type Value = boolean | number | string | null | undefined;
+
 // this class is used by elements to store their pertinent state
 // every frame. the data is then compared with the previous frame's
 // values in order to determine if any changes happened.
 class Serializer {
-    constructor(packValue: (value: any) => void) {
+    constructor(packValue: (value: Value) => void) {
         this.packValue = packValue;
     }
 
-    packValue: (value: any) => void;
+    packValue: (value: Value) => void;
 
-    pack(...args: any[]) {
+    pack(...args: Value[]) {
         for (let j = 0; j < args.length; ++j) {
             this.packValue(args[j]);
         }
     }
 
-    packa(a: any[] | Float32Array) {
+    packa(a: Value[] | Float32Array) {
         for (let j = 0; j < a.length; ++j) {
             this.packValue(a[j]);
         }

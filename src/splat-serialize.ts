@@ -78,7 +78,7 @@ type Annotation = {
     position: [number, number, number];
     title: string;
     text: string;
-    extras: any;
+    extras: unknown;
     camera: Camera;
 };
 
@@ -221,8 +221,8 @@ const getVertexProperties = (splatData: GSplatData) => {
     return new Set<string>(
         splatData
             .getElement('vertex')
-            .properties.filter((p: any) => p.storage)
-            .map((p: any) => p.name)
+            .properties.filter((p) => p.storage)
+            .map((p) => p.name)
     );
 };
 
@@ -339,23 +339,25 @@ class SplatTransformCache {
 // to prepare it for export
 class SingleSplat {
     // final data keyed on member name
-    data: any = {};
+    data: Record<string, number> = {};
 
     // read a single gaussian's data and transform it for export
     read: (splats: Splat, i: number) => void;
 
     // specify the data members required
     constructor(members: string[], serializeSettings: SerializeSettings) {
-        const data: any = {};
+        const data: Record<string, number> = {};
         members.forEach((name) => {
             data[name] = 0;
         });
 
-        const hasPosition = ['x', 'y', 'z'].every((v) => Object.hasOwn(data, v));
-        const hasRotation = ['rot_0', 'rot_1', 'rot_2', 'rot_3'].every((v) => Object.hasOwn(data, v));
-        const hasScale = ['scale_0', 'scale_1', 'scale_2'].every((v) => Object.hasOwn(data, v));
-        const hasColor = ['f_dc_0', 'f_dc_1', 'f_dc_2'].every((v) => Object.hasOwn(data, v));
-        const hasOpacity = Object.hasOwn(data, 'opacity');
+        const hasPosition = ['x', 'y', 'z'].every((v) => Reflect.apply(data.hasOwnProperty, data, [v]));
+        const hasRotation = ['rot_0', 'rot_1', 'rot_2', 'rot_3'].every((v) =>
+            Reflect.apply(data.hasOwnProperty, data, [v])
+        );
+        const hasScale = ['scale_0', 'scale_1', 'scale_2'].every((v) => Reflect.apply(data.hasOwnProperty, data, [v]));
+        const hasColor = ['f_dc_0', 'f_dc_1', 'f_dc_2'].every((v) => Reflect.apply(data.hasOwnProperty, data, [v]));
+        const hasOpacity = Reflect.apply(data.hasOwnProperty, data, ['opacity']);
 
         const dstSHBands = calcSHBands(new Set(Object.keys(data)));
         const dstSHCoeffs = shBandCoeffs[dstSHBands];

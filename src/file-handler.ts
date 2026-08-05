@@ -153,23 +153,37 @@ type ImportFile = {
     handle?: FileSystemFileHandle;
 };
 
+type CameraPose = {
+    id?: string | number;
+    img_name?: string;
+    position: number[];
+    rotation: number[][];
+    fx?: number;
+    fy?: number;
+    width?: number;
+    height?: number;
+};
+
 const vec = new Vec3();
 
 // load inria camera poses from json file
 const loadCameraPoses = async (file: ImportFile, events: Events) => {
     const response = new Response(file.contents);
-    const json = await response.json();
+    const json: CameraPose[] = await response.json();
 
     if (json.length > 0) {
         // sort entries by trailing number if it exists
-        const sorter = (a: any, b: any) => {
+        const sorter = (a: CameraPose, b: CameraPose) => {
             const avalue = a.id ?? a.img_name?.match(/\d*$/)?.[0];
             const bvalue = b.id ?? b.img_name?.match(/\d*$/)?.[0];
-            return avalue && bvalue ? parseInt(avalue, 10) - parseInt(bvalue, 10) : 0;
+            return avalue && bvalue ? parseInt(avalue as string, 10) - parseInt(bvalue as string, 10) : 0;
         };
 
-        json.sort(sorter).forEach((pose: any, i: number) => {
-            if (Object.hasOwn(pose, 'position') && Object.hasOwn(pose, 'rotation')) {
+        json.sort(sorter).forEach((pose, i) => {
+            if (
+                Reflect.apply(pose.hasOwnProperty, pose, ['position']) &&
+                Reflect.apply(pose.hasOwnProperty, pose, ['rotation'])
+            ) {
                 const p = new Vec3(pose.position);
                 const z = new Vec3(pose.rotation[0][2], pose.rotation[1][2], pose.rotation[2][2]);
 

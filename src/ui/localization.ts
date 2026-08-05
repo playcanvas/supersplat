@@ -11,8 +11,8 @@ type LocalizeOptions = {
 // minimal shapes the binders operate on (pcui elements emit a 'destroy' event)
 type Destroyable = { once?: (event: string, fn: () => void) => void };
 type TextElement = { text: string } & Destroyable;
-type Option = { v: any; t: string };
-type SelectElement = { value: any; options: Option[] } & Destroyable;
+type Option<T> = { v: T; t: string };
+type SelectElement<T> = { value: T; options: Option<T>[] } & Destroyable;
 
 /**
  * Wraps i18next and adds reactive localization: UI strings bound through the
@@ -143,7 +143,7 @@ class Localization {
     }
 
     /** Bind a SelectInput's `.options` to a builder, preserving the current value. */
-    bindOptions(el: SelectElement, build: () => Option[]): () => void {
+    bindOptions<T>(el: SelectElement<T>, build: () => Option<T>[]): () => void {
         return this.onChange(() => {
             const value = el.value;
             el.options = build();

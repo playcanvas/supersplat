@@ -40,10 +40,9 @@ import { i18n } from './ui/localization';
 import { registerSelectCursor } from './ui/select-cursor';
 
 declare global {
-    // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
-    interface LaunchParams {
+    type LaunchParams = {
         readonly files: FileSystemFileHandle[];
-    }
+    };
 
     // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
     interface Window {
@@ -59,15 +58,15 @@ const getURLArgs = () => {
     const config = {};
 
     const apply = (key: string, value: string) => {
-        let obj: any = config;
+        let obj: Record<string, unknown> = config;
         key.split('.').forEach((k, i, a) => {
             if (i === a.length - 1) {
                 obj[k] = value;
             } else {
-                if (!Object.hasOwn(obj, k)) {
+                if (!Reflect.apply(obj.hasOwnProperty, obj, [k])) {
                     obj[k] = {};
                 }
-                obj = obj[k];
+                obj = obj[k] as Record<string, unknown>;
             }
         });
     };

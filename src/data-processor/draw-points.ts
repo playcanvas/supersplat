@@ -1,6 +1,23 @@
 import type { BlendState, GraphicsDevice, RenderTarget, Shader } from 'playcanvas';
 import { PRIMITIVE_POINTS, SEMANTIC_POSITION, TYPE_FLOAT32, DepthState, VertexBuffer, VertexFormat } from 'playcanvas';
 
+type DeviceState = GraphicsDevice & {
+    renderTarget: RenderTarget;
+    vx: number;
+    vy: number;
+    vw: number;
+    vh: number;
+    sx: number;
+    sy: number;
+    sw: number;
+    sh: number;
+    updateBegin: () => void;
+    updateEnd: () => void;
+    setViewport: (x: number, y: number, width: number, height: number) => void;
+    setScissor: (x: number, y: number, width: number, height: number) => void;
+    setShader: (shader: Shader) => void;
+};
+
 let cachedDevice: GraphicsDevice = null;
 let cachedVB: VertexBuffer = null;
 
@@ -9,7 +26,7 @@ const getInstancingVB = (device: GraphicsDevice) => {
         return cachedVB;
     }
     const format = new VertexFormat(device, [{ semantic: SEMANTIC_POSITION, components: 1, type: TYPE_FLOAT32 }]);
-    (format as any).instancing = true;
+    format.instancing = true;
     cachedVB = new VertexBuffer(device, format, 1);
     cachedVB.lock();
     cachedVB.unlock();
@@ -25,7 +42,7 @@ const drawPointsWithShader = (
     blendState: BlendState
 ) => {
     const vb = getInstancingVB(device);
-    const d = device as any;
+    const d = device as DeviceState;
 
     const oldRt = d.renderTarget;
     const oldVx = d.vx,

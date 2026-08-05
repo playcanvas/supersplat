@@ -71,6 +71,10 @@ type PublishSettings = {
     generateLods: boolean;
 };
 
+type PublishResult = {
+    hash: string;
+};
+
 const origin = location.origin;
 
 // check whether user is logged in
@@ -126,9 +130,9 @@ const updateSceneSettings = async (user: User, sceneHash: string, settings: Expe
     return response;
 };
 
-class PublishWriter implements Writer {
+class PublishWriter {
     write: (data: Uint8Array) => void;
-    close: () => Promise<any>;
+    close: () => Promise<PublishResult>;
     abort: () => Promise<void> = () => Promise.resolve();
 
     private cursor = 0;
@@ -285,7 +289,8 @@ class PublishWriter implements Writer {
                     }
                 });
 
-            const publishResponse = await (publishSettings.overwriteHash ? doRepublish() : doPublish());
+            const publishResponse: Response & { json: () => Promise<PublishResult> } =
+                await (publishSettings.overwriteHash ? doRepublish() : doPublish());
 
             if (!publishResponse.ok) {
                 let msg;
@@ -382,7 +387,7 @@ const registerPublishEvents = (events: Events) => {
 
                 // create the writer chain: gzip->stream->upload
                 const publishWriter = await PublishWriter.create(publishSettings);
-                const gzipWriter = new GZipWriter(publishWriter);
+                const gzipWriter = new GZipWriter(publishWriter as unknown as Writer);
 
                 const splats = events.invoke('scene.splats');
 

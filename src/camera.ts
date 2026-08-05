@@ -608,7 +608,7 @@ class Camera extends Element {
         } else {
             cameraPosition.copy(forwardVec);
             cameraPosition.mulScalar((distance.distance * this.sceneRadius) / this.fovFactor);
-            cameraPosition.add(this.focalPointTween.value);
+            cameraPosition.add(this.focalPointTween.value as Vec3);
         }
 
         if (this.poseOverride) {
@@ -787,7 +787,7 @@ class Camera extends Element {
     }
 
     docSerialize() {
-        const pack3 = (v: Vec3) => [v.x, v.y, v.z];
+        const pack3 = (v: { x: number; y: number; z: number }) => [v.x, v.y, v.z];
 
         return {
             focalPoint: pack3(this.focalPointTween.target),
@@ -799,7 +799,7 @@ class Camera extends Element {
         };
     }
 
-    docDeserialize(settings: any) {
+    docDeserialize(settings: ReturnType<Camera['docSerialize']>) {
         this.setFocalPoint(new Vec3(settings.focalPoint), 0);
         this.setAzimElev(settings.azim, settings.elev, 0);
         this.setDistance(settings.distance, 0);

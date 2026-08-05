@@ -1,6 +1,7 @@
 import { MemoryFileSystem } from '@playcanvas/splat-transform';
 import { Color, Mat4, path, Quat, Texture, Vec3, Vec4 } from 'playcanvas';
 
+import type { IntersectOptions } from './data-processor';
 import type { EditHistory } from './edit-history';
 import {
     SelectAllOp,
@@ -26,6 +27,29 @@ import { writeSplatFile } from './splat-serialize';
 
 const removeExtension = (filename: string) => {
     return filename.substring(0, filename.length - path.getExtension(filename).length);
+};
+
+type SelectionRect = {
+    start: { x: number; y: number };
+    end: { x: number; y: number };
+};
+
+type ViewSettings = {
+    bgColor: number[];
+    selectedColor: number[];
+    unselectedColor: number[];
+    lockedColor: number[];
+    shBands: number;
+    centersSize: number;
+    outlineSelection: boolean;
+    showGrid: boolean;
+    gridPlane?: GridPlane;
+    showBound: boolean;
+    showBoundDimensions?: boolean;
+    showCameraPoses?: boolean;
+    showCameraInfo?: boolean;
+    flySpeed: number;
+    fovDolly?: boolean;
 };
 
 // register for editor and scene events
@@ -433,7 +457,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // run the GPU intersect + the resulting SelectOp inside one queued task so the
     // gpu readback is ordered relative to other queued history ops (rapid drag +
     // undo, drag-while-camera-settling, etc).
-    const runSelectIntersect = (splat: Splat, op: 'add' | 'remove' | 'set' | 'intersect', options: any) => {
+    const runSelectIntersect = (
+        splat: Splat,
+        op: 'add' | 'remove' | 'set' | 'intersect',
+        options: IntersectOptions
+    ) => {
         return scene.commandQueue.enqueue(async () => {
             const data = await scene.dataProcessor.intersect(options, splat);
             // SelectOp consumes `data` synchronously in its constructor
@@ -462,7 +490,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     });
 
-    events.function('select.rect', async (op: 'add' | 'remove' | 'set' | 'intersect', rect: any) => {
+    events.function('select.rect', async (op: 'add' | 'remove' | 'set' | 'intersect', rect: SelectionRect) => {
         const mode = events.invoke('camera.mode');
 
         for (const splat of selectedSplats()) {
@@ -972,7 +1000,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         };
     });
 
-    events.function('docDeserialize.view', (docView: any) => {
+    events.function('docDeserialize.view', (docView: ViewSettings) => {
         events.fire('setBgClr', new Color(docView.bgColor));
         events.fire('setSelectedClr', new Color(docView.selectedColor));
         events.fire('setUnselectedClr', new Color(docView.unselectedColor));

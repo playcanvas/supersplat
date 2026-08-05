@@ -42,14 +42,35 @@ type CalcHistogramResult = {
     numValues: number;
 };
 
-const resolve = (scope: ScopeSpace, values: any) => {
+type SplatResource = {
+    shBands?: number;
+};
+
+type DeviceState = GraphicsDevice & {
+    renderTarget: RenderTarget;
+    vx: number;
+    vy: number;
+    vw: number;
+    vh: number;
+    sx: number;
+    sy: number;
+    sw: number;
+    sh: number;
+    updateBegin: () => void;
+    updateEnd: () => void;
+    setViewport: (x: number, y: number, width: number, height: number) => void;
+    setScissor: (x: number, y: number, width: number, height: number) => void;
+    clear: (options: { color: number[]; flags: number }) => void;
+};
+
+const resolve = (scope: ScopeSpace, values: Record<string, unknown>) => {
     for (const key in values) {
         scope.resolve(key).setValue(values[key]);
     }
 };
 
 const getShBands = (splat: Splat): number => {
-    return (splat.entity.gsplat.instance.resource as any).shBands ?? 0;
+    return (splat.entity.gsplat.instance.resource as SplatResource).shBands ?? 0;
 };
 
 class CalcHistogram {
@@ -172,7 +193,7 @@ class CalcHistogram {
     private setSplatUniforms(splat: Splat, mode: number, options?: CalcHistogramOptions) {
         const { scope } = this.device;
         const numSplats = splat.splatData.numSplats;
-        const resource = splat.entity.gsplat.instance.resource as any;
+        const resource = splat.entity.gsplat.instance.resource;
         const transformA = resource.getTexture('transformA');
         const transformB = resource.getTexture('transformB');
         const splatColor = resource.getTexture('splatColor');
@@ -193,7 +214,7 @@ class CalcHistogram {
         const { tintClr, temperature, saturation, brightness, blackPoint, whitePoint, transparency } = splat;
         const cgInvRange = 1 / (whitePoint - blackPoint);
 
-        const values: any = {
+        const values: Record<string, unknown> = {
             transformA,
             transformB,
             splatColor,
@@ -235,7 +256,7 @@ class CalcHistogram {
     }
 
     private clearRT(rt: RenderTarget) {
-        const d = this.device as any;
+        const d = this.device as DeviceState;
         const oldRt = d.renderTarget;
         const oldVx = d.vx,
             oldVy = d.vy,

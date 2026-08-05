@@ -1,7 +1,7 @@
 import { Container } from '@playcanvas/pcui';
 import { Mat4, Vec3 } from 'playcanvas';
 
-import { Events } from '../events';
+import type { Events } from '../events';
 
 const vecx = new Vec3();
 const vecy = new Vec3();
@@ -83,22 +83,28 @@ class ViewCube extends Container {
         };
 
         shapes.px.children[0].addEventListener('pointerdown', (e) => {
-            events.fire('camera.align', 'px'); e.stopPropagation();
+            events.fire('camera.align', 'px');
+            e.stopPropagation();
         });
         shapes.py.children[0].addEventListener('pointerdown', (e) => {
-            events.fire('camera.align', 'py'); e.stopPropagation();
+            events.fire('camera.align', 'py');
+            e.stopPropagation();
         });
         shapes.pz.children[0].addEventListener('pointerdown', (e) => {
-            events.fire('camera.align', 'pz'); e.stopPropagation();
+            events.fire('camera.align', 'pz');
+            e.stopPropagation();
         });
         shapes.nx.children[0].addEventListener('pointerdown', (e) => {
-            events.fire('camera.align', 'nx'); e.stopPropagation();
+            events.fire('camera.align', 'nx');
+            e.stopPropagation();
         });
         shapes.ny.children[0].addEventListener('pointerdown', (e) => {
-            events.fire('camera.align', 'ny'); e.stopPropagation();
+            events.fire('camera.align', 'ny');
+            e.stopPropagation();
         });
         shapes.nz.children[0].addEventListener('pointerdown', (e) => {
-            events.fire('camera.align', 'nz'); e.stopPropagation();
+            events.fire('camera.align', 'nz');
+            e.stopPropagation();
         });
 
         this.dom.appendChild(svg);

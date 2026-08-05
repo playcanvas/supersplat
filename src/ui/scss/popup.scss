@@ -71,7 +71,7 @@
                 content: '\E218';
                 color: $error;
             }
-    
+
             &.info::before {
                 content: '\E400';
             }
@@ -105,7 +105,7 @@
                     font-weight: bold;
                     font-size: 14px;
                     text-decoration-line: none;
-                };
+                }
             }
 
             #popup-link-copy {

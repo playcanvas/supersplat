@@ -3,14 +3,7 @@
  */
 
 // File system implementations
-export {
-    BlobReadSource,
-    MappedReadFileSystem
-} from './file-systems';
+export { BlobReadSource, MappedReadFileSystem } from './file-systems';
 
 // Loading functions
-export {
-    defaultLodIndex,
-    loadGSplatData,
-    validateGSplatData
-} from './loader';
+export { defaultLodIndex, loadGSplatData, validateGSplatData } from './loader';

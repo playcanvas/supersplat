@@ -4,117 +4,112 @@ import {
     MemoryFileSystem,
     Transform,
     writeSource,
-    ZipFileSystem,
-    type ChunkData,
-    type ChunkDataPool,
-    type ChunkLayer,
-    type ChunkSource,
-    type ChunkSourceMetadata,
-    type FileSystem,
-    type LayerLayout,
-    type LogEvent,
-    type Options,
-    type OutputFormat,
-    type ReadRequest,
-    type Renderer,
-    type SHBands,
-    type Writer
+    ZipFileSystem
 } from '@playcanvas/splat-transform';
-import {
-    GSplatData,
-    Mat3,
-    Mat4,
-    PIXELFORMAT_BGRA8,
-    Quat,
-    Texture,
-    Vec3,
-    WebgpuGraphicsDevice
-} from 'playcanvas';
+import type {
+    ChunkData,
+    ChunkDataPool,
+    ChunkLayer,
+    ChunkSource,
+    ChunkSourceMetadata,
+    FileSystem,
+    LayerLayout,
+    LogEvent,
+    Options,
+    OutputFormat,
+    ReadRequest,
+    Renderer,
+    SHBands,
+    Writer
+} from '@playcanvas/splat-transform';
+import type { GSplatData } from 'playcanvas';
+import { Mat3, Mat4, PIXELFORMAT_BGRA8, Quat, Texture, Vec3, WebgpuGraphicsDevice } from 'playcanvas';
 
 import { version } from '../package.json';
+
 import { ColorGrade, dcDecode, dcEncode, sigmoid } from './color-grade';
-import { Events } from './events';
+import type { Events } from './events';
 import { SHRotation } from './sh-utils';
-import { Splat } from './splat';
+import type { Splat } from './splat';
 import { State } from './splat-state';
 
 type SerializeSettings = {
-    maxSHBands?: number;            // specifies the maximum number of bands to be exported
-    selected?: boolean;             // only export selected gaussians. used for copy/paste
-    minOpacity?: number;            // filter out gaussians with alpha less than or equal to minAlpha
-    removeInvalid?: boolean;        // filter out gaussians with invalid data (NaN/Infinity)
+    maxSHBands?: number; // specifies the maximum number of bands to be exported
+    selected?: boolean; // only export selected gaussians. used for copy/paste
+    minOpacity?: number; // filter out gaussians with alpha less than or equal to minAlpha
+    removeInvalid?: boolean; // filter out gaussians with invalid data (NaN/Infinity)
 
     // the following options are used when serializing for document save.
     // keepWorldTransform/keepColorTint flow through to SingleSplat; keepStateData
     // is accepted for compatibility but the streaming writers never export state.
-    keepStateData?: boolean;        // keep the state data array
-    keepWorldTransform?: boolean;   // don't apply the world transform when resolving splat transforms
-    keepColorTint?: boolean;        // refrain from applying color tints
+    keepStateData?: boolean; // keep the state data array
+    keepWorldTransform?: boolean; // don't apply the world transform when resolving splat transforms
+    keepColorTint?: boolean; // refrain from applying color tints
 };
 
 type AnimTrack = {
-    name: string,
-    duration: number,
-    frameRate: number,
-    loopMode: 'none' | 'repeat' | 'pingpong',
-    interpolation: 'step' | 'spline',
-    smoothness: number,
+    name: string;
+    duration: number;
+    frameRate: number;
+    loopMode: 'none' | 'repeat' | 'pingpong';
+    interpolation: 'step' | 'spline';
+    smoothness: number;
     keyframes: {
-        times: number[],
+        times: number[];
         values: {
-            position: number[],
-            target: number[],
-            fov: number[],
-        }
-    }
+            position: number[];
+            target: number[];
+            fov: number[];
+        };
+    };
 };
 
 type CameraPose = {
-    position: [number, number, number],
-    target: [number, number, number],
-    fov: number
+    position: [number, number, number];
+    target: [number, number, number];
+    fov: number;
 };
 
 type Camera = {
-    initial: CameraPose,
+    initial: CameraPose;
 };
 
 type Annotation = {
-    position: [number, number, number],
-    title: string,
-    text: string,
-    extras: any,
-    camera: Camera
+    position: [number, number, number];
+    title: string;
+    text: string;
+    extras: unknown;
+    camera: Camera;
 };
 
 type PostEffectSettings = {
     sharpness: {
-        enabled: boolean,
-        amount: number,
-    },
+        enabled: boolean;
+        amount: number;
+    };
     bloom: {
-        enabled: boolean,
-        intensity: number,
-        blurLevel: number,
-    },
+        enabled: boolean;
+        intensity: number;
+        blurLevel: number;
+    };
     grading: {
-        enabled: boolean,
-        brightness: number,
-        contrast: number,
-        saturation: number,
-        tint: [number, number, number],
-    },
+        enabled: boolean;
+        brightness: number;
+        contrast: number;
+        saturation: number;
+        tint: [number, number, number];
+    };
     vignette: {
-        enabled: boolean,
-        intensity: number,
-        inner: number,
-        outer: number,
-        curvature: number,
-    },
+        enabled: boolean;
+        intensity: number;
+        inner: number;
+        outer: number;
+        curvature: number;
+    };
     fringing: {
-        enabled: boolean,
-        intensity: number
-    }
+        enabled: boolean;
+        intensity: number;
+    };
 };
 
 const defaultPostEffectSettings: PostEffectSettings = {
@@ -126,19 +121,19 @@ const defaultPostEffectSettings: PostEffectSettings = {
 };
 
 type ExperienceSettings = {
-    version: 2,
-    tonemapping: 'none' | 'linear' | 'filmic' | 'hejl' | 'aces' | 'aces2' | 'neutral',
-    highPrecisionRendering: boolean,
-    soundUrl?: string,
+    version: 2;
+    tonemapping: 'none' | 'linear' | 'filmic' | 'hejl' | 'aces' | 'aces2' | 'neutral';
+    highPrecisionRendering: boolean;
+    soundUrl?: string;
     background: {
-        color: [number, number, number],
-        skyboxUrl?: string
-    },
-    postEffectSettings: PostEffectSettings,
-    animTracks: AnimTrack[],
-    cameras: Camera[],
-    annotations: Annotation[],
-    startMode: 'default' | 'animTrack' | 'annotation'
+        color: [number, number, number];
+        skyboxUrl?: string;
+    };
+    postEffectSettings: PostEffectSettings;
+    animTracks: AnimTrack[];
+    cameras: Camera[];
+    annotations: Annotation[];
+    startMode: 'default' | 'animTrack' | 'annotation';
 };
 
 type ViewerExportSettings = {
@@ -181,7 +176,7 @@ class GaussianFilter {
             }
 
             // optionally filter out unselected gaussians
-            if (onlySelected && (state[i] !== State.selected)) {
+            if (onlySelected && state[i] !== State.selected) {
                 return false;
             }
 
@@ -224,9 +219,10 @@ const countGaussians = (splats: Splat[], filter: GaussianFilter) => {
 
 const getVertexProperties = (splatData: GSplatData) => {
     return new Set<string>(
-        splatData.getElement('vertex')
-        .properties.filter((p: any) => p.storage)
-        .map((p: any) => p.name)
+        splatData
+            .getElement('vertex')
+            .properties.filter((p) => p.storage)
+            .map((p) => p.name)
     );
 };
 
@@ -235,7 +231,7 @@ const getCommonPropNames = (splats: Splat[]) => {
 
     for (let i = 0; i < splats.length; ++i) {
         const props = getVertexProperties(splats[i].splatData);
-        result = i === 0 ? props : new Set([...result].filter(i => props.has(i)));
+        result = i === 0 ? props : new Set([...result].filter((i) => props.has(i)));
     }
 
     return [...result];
@@ -246,7 +242,7 @@ const shBandCoeffs = [0, 3, 8, 15];
 
 // determine the number of sh bands present given an object with 'f_rest_*' properties
 const calcSHBands = (data: Set<string>) => {
-    return { '9': 1, '24': 2, '-1': 3 }[shNames.findIndex(v => !data.has(v))] ?? 0;
+    return { '9': 1, '24': 2, '-1': 3 }[shNames.findIndex((v) => !data.has(v))] ?? 0;
 };
 
 const v = new Vec3();
@@ -260,7 +256,10 @@ class SplatTransformCache {
     getSHRot: (index: number) => SHRotation;
 
     constructor(splat: Splat, keepWorldTransform = false) {
-        const transforms = new Map<number, { transformIndex: number, mat: Mat4, rot: Quat, scale: Vec3, shRot: SHRotation }>();
+        const transforms = new Map<
+            number,
+            { transformIndex: number; mat: Mat4; rot: Quat; scale: Vec3; shRot: SHRotation }
+        >();
         const indices = splat.transformTexture.getSource() as unknown as Uint32Array;
         const tmpMat = new Mat4();
         const tmpMat3 = new Mat3();
@@ -340,23 +339,25 @@ class SplatTransformCache {
 // to prepare it for export
 class SingleSplat {
     // final data keyed on member name
-    data: any = {};
+    data: Record<string, number> = {};
 
     // read a single gaussian's data and transform it for export
     read: (splats: Splat, i: number) => void;
 
     // specify the data members required
     constructor(members: string[], serializeSettings: SerializeSettings) {
-        const data: any = {};
+        const data: Record<string, number> = {};
         members.forEach((name) => {
             data[name] = 0;
         });
 
-        const hasPosition = ['x', 'y', 'z'].every(v => data.hasOwnProperty(v));
-        const hasRotation = ['rot_0', 'rot_1', 'rot_2', 'rot_3'].every(v => data.hasOwnProperty(v));
-        const hasScale = ['scale_0', 'scale_1', 'scale_2'].every(v => data.hasOwnProperty(v));
-        const hasColor = ['f_dc_0', 'f_dc_1', 'f_dc_2'].every(v => data.hasOwnProperty(v));
-        const hasOpacity = data.hasOwnProperty('opacity');
+        const hasPosition = ['x', 'y', 'z'].every((v) => Reflect.apply(data.hasOwnProperty, data, [v]));
+        const hasRotation = ['rot_0', 'rot_1', 'rot_2', 'rot_3'].every((v) =>
+            Reflect.apply(data.hasOwnProperty, data, [v])
+        );
+        const hasScale = ['scale_0', 'scale_1', 'scale_2'].every((v) => Reflect.apply(data.hasOwnProperty, data, [v]));
+        const hasColor = ['f_dc_0', 'f_dc_1', 'f_dc_2'].every((v) => Reflect.apply(data.hasOwnProperty, data, [v]));
+        const hasOpacity = Reflect.apply(data.hasOwnProperty, data, ['opacity']);
 
         const dstSHBands = calcSHBands(new Set(Object.keys(data)));
         const dstSHCoeffs = shBandCoeffs[dstSHBands];
@@ -365,7 +366,7 @@ class SingleSplat {
         type CacheEntry = {
             splat: Splat;
             transformCache: SplatTransformCache;
-            srcProps: { [name: string]: Float32Array };
+            srcProps: Record<string, Float32Array>;
             grade: ColorGrade;
         };
 
@@ -383,14 +384,17 @@ class SingleSplat {
                     const srcSHCoeffs = shBandCoeffs[srcSHBands];
 
                     // cache the props objects
-                    const srcProps: { [name: string]: Float32Array } = {};
+                    const srcProps: Record<string, Float32Array> = {};
 
                     members.forEach((name) => {
                         const shIndex = shNames.indexOf(name);
                         if (shIndex >= 0) {
                             const a = Math.floor(shIndex / dstSHCoeffs);
                             const b = shIndex % dstSHCoeffs;
-                            srcProps[name] = (b < srcSHCoeffs) ? splat.splatData.getProp(shNames[a * srcSHCoeffs + b]) as Float32Array : null;
+                            srcProps[name] =
+                                b < srcSHCoeffs
+                                    ? (splat.splatData.getProp(shNames[a * srcSHCoeffs + b]) as Float32Array)
+                                    : null;
                         } else {
                             srcProps[name] = splat.splatData.getProp(name) as Float32Array;
                         }
@@ -513,12 +517,15 @@ const buildLayouts = (numRest: number): Partial<Record<ChunkLayer, LayerLayout>>
     },
     color: {
         stride: (3 + numRest) * 4,
-        fields: numRest > 0 ? {
-            dc: { byteOffset: 0, components: 3, type: 'float32' },
-            shRest: { byteOffset: 12, components: numRest, type: 'float32' }
-        } : {
-            dc: { byteOffset: 0, components: 3, type: 'float32' }
-        }
+        fields:
+            numRest > 0
+                ? {
+                      dc: { byteOffset: 0, components: 3, type: 'float32' },
+                      shRest: { byteOffset: 12, components: numRest, type: 'float32' }
+                  }
+                : {
+                      dc: { byteOffset: 0, components: 3, type: 'float32' }
+                  }
     }
 });
 
@@ -537,8 +544,8 @@ class SuperSplatChunkSource implements ChunkSource {
     meta: ChunkSourceMetadata;
 
     private splats: Splat[];
-    private splatOf: Uint32Array;   // output row -> index into splats
-    private localOf: Uint32Array;   // output row -> gaussian index within that splat
+    private splatOf: Uint32Array; // output row -> index into splats
+    private localOf: Uint32Array; // output row -> gaussian index within that splat
     private singleSplat: SingleSplat;
     private numRest: number;
 
@@ -547,7 +554,7 @@ class SuperSplatChunkSource implements ChunkSource {
 
         // Determine the SH band count to export: the highest band present in any
         // splat, capped by maxSHBands. SingleSplat zero-fills missing bands.
-        const splatBands = splats.map(s => calcSHBands(getVertexProperties(s.splatData)));
+        const splatBands = splats.map((s) => calcSHBands(getVertexProperties(s.splatData)));
         const outputBands = Math.min(settings.maxSHBands ?? 3, splatBands.length ? Math.max(...splatBands) : 0);
         const numRest = SH_REST_COUNTS[outputBands];
         this.numRest = numRest;
@@ -573,10 +580,20 @@ class SuperSplatChunkSource implements ChunkSource {
         this.localOf = localOf;
 
         const members = [
-            'x', 'y', 'z',
-            'scale_0', 'scale_1', 'scale_2',
-            'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity',
-            'rot_0', 'rot_1', 'rot_2', 'rot_3',
+            'x',
+            'y',
+            'z',
+            'scale_0',
+            'scale_1',
+            'scale_2',
+            'f_dc_0',
+            'f_dc_1',
+            'f_dc_2',
+            'opacity',
+            'rot_0',
+            'rot_1',
+            'rot_2',
+            'rot_3',
             ...shNames.slice(0, numRest)
         ];
         this.singleSplat = new SingleSplat(members, settings);
@@ -654,7 +671,10 @@ class SuperSplatChunkSource implements ChunkSource {
  * Build a ChunkSource + matching pool over the given splats, or null if nothing
  * passes the export filter.
  */
-const createExportSource = (splats: Splat[], settings: SerializeSettings): { source: ChunkSource, pool: ChunkDataPool } | null => {
+const createExportSource = (
+    splats: Splat[],
+    settings: SerializeSettings
+): { source: ChunkSource; pool: ChunkDataPool } | null => {
     const source = new SuperSplatChunkSource(splats, settings);
     if (source.meta.numGaussians === 0) {
         return null;
@@ -767,9 +787,10 @@ const createProgressRenderer = (header: string, events?: Events): Renderer => ({
                     events?.fire('progressStart', header);
                 } else {
                     events?.fire('progressUpdate', {
-                        text: event.index !== undefined && event.total !== undefined ?
-                            `Step ${event.index} of ${event.total}: ${event.name}` :
-                            event.name,
+                        text:
+                            event.index !== undefined && event.total !== undefined
+                                ? `Step ${event.index} of ${event.total}: ${event.name}`
+                                : event.name,
                         progress: 0
                     });
                 }
@@ -784,7 +805,7 @@ const createProgressRenderer = (header: string, events?: Events): Renderer => ({
                 break;
             case 'barTick':
                 events?.fire('progressUpdate', {
-                    progress: event.total > 0 ? 100 * event.current / event.total : 0
+                    progress: event.total > 0 ? (100 * event.current) / event.total : 0
                 });
                 break;
             case 'barEnd':
@@ -803,7 +824,12 @@ const createProgressRenderer = (header: string, events?: Events): Renderer => ({
     }
 });
 
-const serializeViewer = async (splats: Splat[], serializeSettings: SerializeSettings, options: ViewerExportSettings, fs: FileSystem): Promise<void> => {
+const serializeViewer = async (
+    splats: Splat[],
+    serializeSettings: SerializeSettings,
+    options: ViewerExportSettings,
+    fs: FileSystem
+): Promise<void> => {
     const { experienceSettings, events } = options;
 
     splatTransformLogger.setRenderer(createProgressRenderer('Exporting HTML', events));
@@ -816,17 +842,31 @@ const serializeViewer = async (splats: Splat[], serializeSettings: SerializeSett
     try {
         if (options.type === 'html') {
             // Bundled HTML - a single self-contained file
-            await writeSplatFile(splats, serializeSettings, 'html-bundle', 'output.html', {
-                viewerSettingsJson: experienceSettings,
-                iterations: 10
-            }, fs);
+            await writeSplatFile(
+                splats,
+                serializeSettings,
+                'html-bundle',
+                'output.html',
+                {
+                    viewerSettingsJson: experienceSettings,
+                    iterations: 10
+                },
+                fs
+            );
         } else {
             // Package - write unbundled into a MemoryFileSystem, then ZIP
             const memFs = new MemoryFileSystem();
-            await writeSplatFile(splats, serializeSettings, 'html', 'index.html', {
-                viewerSettingsJson: experienceSettings,
-                iterations: 10
-            }, memFs);
+            await writeSplatFile(
+                splats,
+                serializeSettings,
+                'html',
+                'index.html',
+                {
+                    viewerSettingsJson: experienceSettings,
+                    iterations: 10
+                },
+                memFs
+            );
 
             // Create ZIP from memory filesystem results. The try/finally
             // ensures zipFs (and its underlying writer) is closed even if a

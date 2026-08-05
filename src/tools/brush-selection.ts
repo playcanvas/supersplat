@@ -1,11 +1,15 @@
-import { Events } from '../events';
+import type { Events } from '../events';
 import { opFromModifiers } from '../select-op';
 
 class BrushSelection {
     activate: () => void;
     deactivate: () => void;
 
-    constructor(events: Events, parent: HTMLElement, mask: { canvas: HTMLCanvasElement, context: CanvasRenderingContext2D }) {
+    constructor(
+        events: Events,
+        parent: HTMLElement,
+        mask: { canvas: HTMLCanvasElement; context: CanvasRenderingContext2D }
+    ) {
         // create svg
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.classList.add('tool-svg', 'hidden');
@@ -95,19 +99,18 @@ class BrushSelection {
 
                 dragEnd();
 
-                await events.invoke(
-                    'select.byMask',
-                    opFromModifiers(e),
-                    canvas,
-                    context
-                );
+                await events.invoke('select.byMask', opFromModifiers(e), canvas, context);
             }
         };
 
         const wheel = (e: WheelEvent) => {
             if (e.altKey || e.metaKey) {
                 const { deltaX, deltaY } = e;
-                events.fire((Math.abs(deltaX) > Math.abs(deltaY) ? deltaX : deltaY) > 0 ? 'tool.brushSelection.smaller' : 'tool.brushSelection.bigger');
+                events.fire(
+                    (Math.abs(deltaX) > Math.abs(deltaY) ? deltaX : deltaY) > 0
+                        ? 'tool.brushSelection.smaller'
+                        : 'tool.brushSelection.bigger'
+                );
                 e.preventDefault();
                 e.stopPropagation();
             }

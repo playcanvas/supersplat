@@ -1,9 +1,9 @@
 import { Container, NumericInput } from '@playcanvas/pcui';
 
-import { Events } from '../events';
+import type { Events } from '../events';
 import { opFromModifiers } from '../select-op';
 
-type Pt = {x : number, y: number };
+type Pt = { x: number; y: number };
 
 const RED = 0;
 const GREEN = 1;
@@ -15,8 +15,12 @@ class FloodSelection {
     activate: () => void;
     deactivate: () => void;
 
-    constructor(events: Events, parent: HTMLElement, mask: { canvas: HTMLCanvasElement, context: CanvasRenderingContext2D }, canvasContainer: Container) {
-
+    constructor(
+        events: Events,
+        parent: HTMLElement,
+        mask: { canvas: HTMLCanvasElement; context: CanvasRenderingContext2D },
+        canvasContainer: Container
+    ) {
         // create canvas
         const { canvas, context } = mask;
 
@@ -47,12 +51,7 @@ class FloodSelection {
         canvasContainer.append(selectToolbar);
 
         const apply = async (op: 'set' | 'add' | 'remove' | 'intersect') => {
-            await events.invoke(
-                'select.byMask',
-                op,
-                canvas,
-                context
-            );
+            await events.invoke('select.byMask', op, canvas, context);
         };
 
         const refreshSelection = async () => {
@@ -89,10 +88,14 @@ class FloodSelection {
                     d[idx + BLUE] = 0;
                     d[idx + ALPHA] = 255;
 
-                    if (current.x > 0 && d[idx - PIXEL + ALPHA] === 102) testPixels.push({ x: current.x - 1, y: current.y });
-                    if (current.x < width - 1 && d[idx + PIXEL + ALPHA] === 102) testPixels.push({ x: current.x + 1, y: current.y });
-                    if (current.y > 0 && d[idx - width * PIXEL + ALPHA] === 102) testPixels.push({ x: current.x, y: current.y - 1 });
-                    if (current.y < height - 1 && d[idx + width * PIXEL + ALPHA] === 102) testPixels.push({ x: current.x, y: current.y + 1 });
+                    if (current.x > 0 && d[idx - PIXEL + ALPHA] === 102)
+                        testPixels.push({ x: current.x - 1, y: current.y });
+                    if (current.x < width - 1 && d[idx + PIXEL + ALPHA] === 102)
+                        testPixels.push({ x: current.x + 1, y: current.y });
+                    if (current.y > 0 && d[idx - width * PIXEL + ALPHA] === 102)
+                        testPixels.push({ x: current.x, y: current.y - 1 });
+                    if (current.y < height - 1 && d[idx + width * PIXEL + ALPHA] === 102)
+                        testPixels.push({ x: current.x, y: current.y + 1 });
                 } else {
                     d[idx + ALPHA] = 0;
                 }

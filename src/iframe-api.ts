@@ -1,22 +1,18 @@
-import { Events } from './events';
+import type { Events } from './events';
 
 const IS_SCENE_DIRTY = 'supersplat:is-scene-dirty';
 
-interface IsSceneDirtyQuery {
+type IsSceneDirtyQuery = {
     type: typeof IS_SCENE_DIRTY;
-}
+};
 
-interface IsSceneDirtyResponse {
+type IsSceneDirtyResponse = {
     type: typeof IS_SCENE_DIRTY;
     result: boolean;
-}
+};
 
-const isSceneDirtyQuery = (data: any): data is IsSceneDirtyQuery => {
-    return (
-        data &&
-        typeof data === 'object' &&
-        data.type === IS_SCENE_DIRTY
-    );
+const isSceneDirtyQuery = (data: unknown) => {
+    return data && typeof data === 'object' && (data as IsSceneDirtyQuery).type === IS_SCENE_DIRTY;
 };
 
 const registerIframeApi = (events: Events) => {

@@ -1,4 +1,3 @@
-
 .tool-svg {
     display: inline;
     position: absolute;
@@ -10,7 +9,7 @@
     }
 
     &#brush-select-svg {
-        >circle {
+        > circle {
             fill: rgba(255, 102, 0, 0.2);
             stroke: #f60;
             stroke-width: 1;
@@ -19,7 +18,7 @@
     }
 
     &#rect-select-svg {
-        >rect {
+        > rect {
             fill: none;
             stroke: #f60;
             stroke-width: 1;
@@ -28,7 +27,7 @@
     }
 
     &#lasso-select-svg {
-        >polygon {
+        > polygon {
             fill: none;
             stroke-width: 1;
             stroke-dasharray: 5, 5;
@@ -37,7 +36,7 @@
     }
 
     &#polygon-select-svg {
-        >polyline {
+        > polyline {
             fill: none;
             stroke-width: 1;
             stroke-dasharray: 5, 5;

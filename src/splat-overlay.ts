@@ -1,3 +1,4 @@
+import type { EventHandler, GSplatResource } from 'playcanvas';
 import {
     BLEND_NORMAL,
     PRIMITIVE_POINTS,
@@ -5,8 +6,6 @@ import {
     TYPE_FLOAT32,
     Color,
     Entity,
-    EventHandler,
-    GSplatResource,
     ShaderMaterial,
     Mesh,
     MeshInstance,
@@ -16,7 +15,7 @@ import {
 
 import { ElementType, Element } from './element';
 import { vertexShader, fragmentShader } from './shaders/splat-overlay-shader';
-import { Splat } from './splat';
+import type { Splat } from './splat';
 
 const nullClr = new Color(0, 0, 0, 0);
 
@@ -52,9 +51,7 @@ class SplatOverlay extends Element {
         this.mesh = new Mesh(device);
 
         // dummy 1-vertex VB so the engine caches the VAO (avoids creating a new one every frame)
-        const format = new VertexFormat(device, [
-            { semantic: SEMANTIC_POSITION, components: 1, type: TYPE_FLOAT32 }
-        ]);
+        const format = new VertexFormat(device, [{ semantic: SEMANTIC_POSITION, components: 1, type: TYPE_FLOAT32 }]);
         format.instancing = true;
         const vb = new VertexBuffer(device, format, 1);
         vb.lock();
@@ -118,21 +115,21 @@ class SplatOverlay extends Element {
         // set up other uniforms
         const resource = instance.resource as GSplatResource;
         material.setParameter('splatState', splat.stateTexture);
-        material.setParameter('splatPosition', (resource as any).getTexture('transformA'));
+        material.setParameter('splatPosition', resource.getTexture('transformA'));
         material.setParameter('splatTransform', splat.transformTexture);
-        material.setParameter('splatColor', (resource as any).getTexture('splatColor'));
+        material.setParameter('splatColor', resource.getTexture('splatColor'));
         material.setParameter('texParams', [splat.stateTexture.width, splat.stateTexture.height]);
 
         // set up SH textures and define based on SH bands
         const shBands = resource.shBands;
         material.setDefine('SH_BANDS', `${shBands}`);
         if (shBands > 0) {
-            material.setParameter('splatSH_1to3', (resource as any).getTexture('splatSH_1to3'));
+            material.setParameter('splatSH_1to3', resource.getTexture('splatSH_1to3'));
             if (shBands > 1) {
-                material.setParameter('splatSH_4to7', (resource as any).getTexture('splatSH_4to7'));
-                material.setParameter('splatSH_8to11', (resource as any).getTexture('splatSH_8to11'));
+                material.setParameter('splatSH_4to7', resource.getTexture('splatSH_4to7'));
+                material.setParameter('splatSH_8to11', resource.getTexture('splatSH_8to11'));
                 if (shBands > 2) {
-                    material.setParameter('splatSH_12to15', (resource as any).getTexture('splatSH_12to15'));
+                    material.setParameter('splatSH_12to15', resource.getTexture('splatSH_12to15'));
                 }
             }
         }
@@ -182,7 +179,12 @@ class SplatOverlay extends Element {
 
             material.setParameter('splatSize', splatSize * window.devicePixelRatio);
             material.setParameter('selectedClr', [selectedClr.r, selectedClr.g, selectedClr.b, selectedClr.a]);
-            material.setParameter('unselectedClr', [unselectedClr.r, unselectedClr.g, unselectedClr.b, unselectedClr.a]);
+            material.setParameter('unselectedClr', [
+                unselectedClr.r,
+                unselectedClr.g,
+                unselectedClr.b,
+                unselectedClr.a
+            ]);
             material.setParameter('useGaussianColor', useGaussianColor);
             material.setParameter('transformPalette', this.splat.transformPalette.texture);
 
@@ -195,11 +197,13 @@ class SplatOverlay extends Element {
     get enabled() {
         const { scene, splat } = this;
         const { events } = scene;
-        return splat &&
+        return (
+            splat &&
             events.invoke('camera.splatSize') > 0 &&
             scene.camera.renderOverlays &&
             events.invoke('camera.overlay') &&
-            events.invoke('camera.mode') === 'centers';
+            events.invoke('camera.mode') === 'centers'
+        );
     }
 }
 

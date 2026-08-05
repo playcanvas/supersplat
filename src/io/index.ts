@@ -3,17 +3,7 @@
  */
 
 // Read operations
-export {
-    BlobReadSource,
-    MappedReadFileSystem,
-    defaultLodIndex,
-    loadGSplatData,
-    validateGSplatData
-} from './read';
+export { BlobReadSource, MappedReadFileSystem, defaultLodIndex, loadGSplatData, validateGSplatData } from './read';
 
 // Write operations
-export {
-    BrowserFileSystem,
-    GZipWriter,
-    ProgressWriter
-} from './write';
+export { BrowserFileSystem, GZipWriter, ProgressWriter } from './write';

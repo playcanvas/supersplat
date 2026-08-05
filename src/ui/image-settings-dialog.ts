@@ -1,7 +1,18 @@
-import { BooleanInput, Button, Container, Element, Label, NumericInput, SelectInput, SliderInput, VectorInput } from '@playcanvas/pcui';
+import {
+    BooleanInput,
+    Button,
+    Container,
+    Element,
+    Label,
+    NumericInput,
+    SelectInput,
+    SliderInput,
+    VectorInput
+} from '@playcanvas/pcui';
 
-import { Events } from '../events';
-import { ImageSettings } from '../render';
+import type { Events } from '../events';
+import type { ImageSettings } from '../render';
+
 import { i18n } from './localization';
 import sceneExport from './svg/export.svg';
 
@@ -62,21 +73,23 @@ class ImageSettingsDialog extends Container {
 
         // 360 output is 2:1 equirectangular (mirrors video's presets)
         const buildPresetOptions = () => {
-            return projectionSelect.value === 'equirect' ? [
-                { v: '360-1k', t: '1024x512' },
-                { v: '360-2k', t: '2048x1024' },
-                { v: '360-4k', t: '3840x1920' },
-                { v: '360-4096', t: '4096x2048' },
-                { v: '360-8k', t: '7680x3840' },
-                { v: '360-8192', t: '8192x4096' },
-                { v: 'custom', t: i18n.t('popup.render-image.resolution.custom') }
-            ] : [
-                { v: 'viewport', t: i18n.t('popup.render-image.resolution.current') },
-                { v: 'HD', t: 'HD' },
-                { v: 'QHD', t: 'QHD' },
-                { v: '4K', t: '4K' },
-                { v: 'custom', t: i18n.t('popup.render-image.resolution.custom') }
-            ];
+            return projectionSelect.value === 'equirect'
+                ? [
+                      { v: '360-1k', t: '1024x512' },
+                      { v: '360-2k', t: '2048x1024' },
+                      { v: '360-4k', t: '3840x1920' },
+                      { v: '360-4096', t: '4096x2048' },
+                      { v: '360-8k', t: '7680x3840' },
+                      { v: '360-8192', t: '8192x4096' },
+                      { v: 'custom', t: i18n.t('popup.render-image.resolution.custom') }
+                  ]
+                : [
+                      { v: 'viewport', t: i18n.t('popup.render-image.resolution.current') },
+                      { v: 'HD', t: 'HD' },
+                      { v: 'QHD', t: 'QHD' },
+                      { v: '4K', t: '4K' },
+                      { v: 'custom', t: i18n.t('popup.render-image.resolution.custom') }
+                  ];
         };
 
         const presetLabel = new Label({ class: 'label' });
@@ -206,15 +219,15 @@ class ImageSettingsDialog extends Container {
 
         this.append(dialog);
 
-        let targetSize: { width: number, height: number };
+        let targetSize: { width: number; height: number };
 
         // Handle custom resolution activation
 
         const updateResolution = () => {
             const widths: Record<string, number> = {
-                'viewport': targetSize.width,
-                'HD': 1920,
-                'QHD': 2560,
+                viewport: targetSize.width,
+                HD: 1920,
+                QHD: 2560,
                 '4K': 3840,
                 '360-1k': 1024,
                 '360-2k': 2048,
@@ -225,9 +238,9 @@ class ImageSettingsDialog extends Container {
             };
 
             const heights: Record<string, number> = {
-                'viewport': targetSize.height,
-                'HD': 1080,
-                'QHD': 1440,
+                viewport: targetSize.height,
+                HD: 1080,
+                QHD: 1440,
                 '4K': 2160,
                 '360-1k': 512,
                 '360-2k': 1024,

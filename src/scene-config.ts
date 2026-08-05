@@ -1,4 +1,4 @@
-type Color = { r: number, g: number, b: number, a: number };
+type Color = { r: number; g: number; b: number; a: number };
 
 const DEFAULT_BG_CLR: Color = { r: 0, g: 0, b: 0, a: 1 };
 const DEFAULT_SELECTED_CLR: Color = { r: 1, g: 1, b: 0, a: 1 };
@@ -47,19 +47,19 @@ const sceneConfig = {
 type SceneConfig = typeof sceneConfig;
 
 class Params {
-    sources: any[];
+    sources: Record<string, unknown>[];
 
-    constructor(sources: any[]) {
+    constructor(sources: Record<string, unknown>[]) {
         this.sources = sources;
     }
 
-    private resolve(configs: any[], path: string[]): any {
-        const get = (obj: any): any => {
+    private resolve<T>(configs: Record<string, unknown>[], path: string[]) {
+        const get = (obj: Record<string, unknown>) => {
             for (const name of path) {
-                if (!obj.hasOwnProperty(name)) {
+                if (!Reflect.apply(obj.hasOwnProperty, obj, [name])) {
                     return undefined;
                 }
-                obj = obj[name];
+                obj = obj[name] as Record<string, unknown>;
             }
             return obj;
         };
@@ -67,15 +67,16 @@ class Params {
         for (const config of configs) {
             const value = get(config);
             if (value !== undefined) {
-                return value;
+                return value as T;
             }
         }
         return undefined;
     }
 
-    get(path: string): any {
+    get<T = unknown>(path: string): T | undefined {
         // https://stackoverflow.com/a/67243723/2405687
-        const kebabize = (s: string) => s.replace(/[A-Z]+(?![a-z])|[A-Z]/g, ($, ofs) => (ofs ? '-' : '') + $.toLowerCase());
+        const kebabize = (s: string) =>
+            s.replace(/[A-Z]+(?![a-z])|[A-Z]/g, ($, ofs) => (ofs ? '-' : '') + $.toLowerCase());
         return this.resolve(this.sources, path.split('.').map(kebabize)) ?? this.resolve(this.sources, path.split('.'));
     }
 
@@ -86,7 +87,7 @@ class Params {
 
     getNumber(path: string) {
         const value = this.get(path);
-        return typeof value === 'string' ? parseFloat(value) : value;
+        return typeof value === 'string' ? parseFloat(value) : (value as number | undefined);
     }
 
     getVec(path: string) {
@@ -97,7 +98,7 @@ class Params {
     getVec3(path: string) {
         const value = this.getVec(path);
         if (value) {
-            const numbers = value.map(v => parseFloat(v));
+            const numbers = value.map((v) => parseFloat(v));
             if (value.length === 1) {
                 return { x: numbers[0], y: numbers[0], z: numbers[0] };
             } else if (value.length === 3) {
@@ -110,7 +111,7 @@ class Params {
     getColor(path: string) {
         const value = this.getVec(path);
         if (value) {
-            const numbers = value.map(v => parseFloat(v));
+            const numbers = value.map((v) => parseFloat(v));
             if (value.length === 1) {
                 return { r: numbers[0], g: numbers[0], b: numbers[0], a: 1 };
             } else if (value.length === 3) {
@@ -123,15 +124,15 @@ class Params {
     }
 }
 
-const getSceneConfig = (overrides: any[]) => {
-    const params = new Params(overrides);
+const getSceneConfig = (overrides: object[]) => {
+    const params = new Params(overrides as Record<string, unknown>[]);
 
-    const cmp = (a: any[], b: any[]) => {
+    const cmp = (a: unknown[], b: unknown[]) => {
         return a.length === b.length && a.every((v, i) => v === b[i]);
     };
 
     // recurse the object and replace concrete leaf values with overrides
-    const rec = (obj: any, path: string) => {
+    const rec = (obj: Record<string, unknown>, path: string) => {
         for (const child in obj) {
             const childPath = `${path}${path.length ? '.' : ''}${child}`;
             const childValue = obj[child];
@@ -143,7 +144,7 @@ const getSceneConfig = (overrides: any[]) => {
                     obj[child] = params.getBool(childPath) ?? childValue;
                     break;
                 case 'string':
-                    obj[child] = params.get(childPath) ?? childValue;
+                    obj[child] = params.get<string>(childPath) ?? childValue;
                     break;
                 case 'object': {
                     const keys = Object.keys(childValue).sort();
@@ -152,12 +153,12 @@ const getSceneConfig = (overrides: any[]) => {
                     } else if (cmp(keys, ['x', 'y', 'z'])) {
                         obj[child] = params.getVec3(childPath) ?? childValue;
                     } else {
-                        rec(childValue, childPath);
+                        rec(childValue as Record<string, unknown>, childPath);
                     }
                     break;
                 }
                 default:
-                    rec(childValue, childPath);
+                    rec(childValue as Record<string, unknown>, childPath);
                     break;
             }
         }

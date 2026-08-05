@@ -1,8 +1,8 @@
 import { Mat4, Ray, Vec3, Vec4 } from 'playcanvas';
 
 import { sigmoid } from './color-grade';
-import { Scene } from './scene';
-import { Splat } from './splat';
+import type { Scene } from './scene';
+import type { Splat } from './splat';
 import { State } from './splat-state';
 
 // clicked points gather the gaussians whose centers project within this many
@@ -37,8 +37,8 @@ const pickSplatSurfacePoint = (scene: Scene, splat: Splat, offsetX: number, offs
     mat.mul(splat.worldTransform);
     scene.camera.getRay(offsetX, offsetY, ray);
 
-    const near: { t: number, w: number }[] = [];
-    const far: { t: number, w: number }[] = [];
+    const near: { t: number; w: number }[] = [];
+    const far: { t: number; w: number }[] = [];
 
     for (let i = 0; i < numSplats; i++) {
         if (state[i] & State.deleted) {
@@ -55,8 +55,8 @@ const pickSplatSurfacePoint = (scene: Scene, splat: Splat, offsetX: number, offs
             continue;
         }
 
-        const dx = Math.abs((vec4.x / vec4.w * 0.5 + 0.5) * cw - offsetX);
-        const dy = Math.abs((-vec4.y / vec4.w * 0.5 + 0.5) * ch - offsetY);
+        const dx = Math.abs(((vec4.x / vec4.w) * 0.5 + 0.5) * cw - offsetX);
+        const dy = Math.abs(((-vec4.y / vec4.w) * 0.5 + 0.5) * ch - offsetY);
         if (dx >= PICK_RADIUS_FAR || dy >= PICK_RADIUS_FAR) {
             continue;
         }

@@ -1,4 +1,4 @@
-import { Events } from './events';
+import type { Events } from './events';
 
 /**
  * Modifier key requirement state.
@@ -11,51 +11,72 @@ type ModifierState = 'required' | 'forbidden' | 'optional';
 /**
  * A shortcut binding definition.
  */
-interface ShortcutBinding {
-    keys?: string[];        // list of keys
-    codes?: string[];       // list of codes
+type ShortcutBinding = {
+    keys?: string[]; // list of keys
+    codes?: string[]; // list of codes
     ctrl?: ModifierState;
     shift?: ModifierState;
     alt?: ModifierState;
     held?: boolean;
-    repeat?: boolean;       // whether to fire on keyboard repeat events (for non-held shortcuts)
-    capture?: boolean;      // whether to use capture phase for the event listener
-}
+    repeat?: boolean; // whether to fire on keyboard repeat events (for non-held shortcuts)
+    capture?: boolean; // whether to use capture phase for the event listener
+};
 
 /**
  * Options for registering a shortcut handler.
  * Extends ShortcutBinding with event/func handler.
  */
-interface ShortcutOptions extends ShortcutBinding {
+type ShortcutOptions = {
     event?: string;
     func?: (down?: boolean) => void;
-}
+} & ShortcutBinding;
 
 /**
  * Check if a modifier key state matches the requirement.
  */
 const checkMod = (requirement: ModifierState | undefined, isPressed: boolean): boolean => {
     switch (requirement) {
-        case 'required': return isPressed;
-        case 'optional': return true;
+        case 'required':
+            return isPressed;
+        case 'optional':
+            return true;
         case 'forbidden':
-        default: return !isPressed;
+        default:
+            return !isPressed;
     }
 };
 
 // keys that focusable controls (buttons, selects, sliders) handle themselves;
 // while such an element has focus these must not fire global shortcuts
 const controlKeys = new Set([
-    'Enter', ' ', 'Tab',
-    'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
-    'Home', 'End', 'PageUp', 'PageDown'
+    'Enter',
+    ' ',
+    'Tab',
+    'ArrowUp',
+    'ArrowDown',
+    'ArrowLeft',
+    'ArrowRight',
+    'Home',
+    'End',
+    'PageUp',
+    'PageDown'
 ]);
 
 // input types whose value can be entered as text; unlike checkbox/radio/range
 // controls, these own every key while focused
 const textInputTypes = new Set([
-    'text', 'search', 'email', 'url', 'tel', 'password', 'number',
-    'date', 'datetime-local', 'month', 'time', 'week'
+    'text',
+    'search',
+    'email',
+    'url',
+    'tel',
+    'password',
+    'number',
+    'date',
+    'datetime-local',
+    'month',
+    'time',
+    'week'
 ]);
 
 // true if the focused element owns this key press: text entry contexts and
@@ -99,13 +120,12 @@ class Shortcuts {
                 const altMatch = isAltKey || checkMod(options.alt, e.altKey);
 
                 // Match if key matches keys array OR code matches codes array
-                const keyMatches = (options.keys?.some(k => k.toLowerCase() === e.key.toLowerCase()) ||
-                                    options.codes?.some(c => c === e.code)) ?? false;
+                const keyMatches =
+                    (options.keys?.some((k) => k.toLowerCase() === e.key.toLowerCase()) ||
+                        options.codes?.some((c) => c === e.code)) ??
+                    false;
 
-                if (keyMatches &&
-                    ((options.capture ?? false) === capture) &&
-                    ctrlMatch && shiftMatch && altMatch) {
-
+                if (keyMatches && (options.capture ?? false) === capture && ctrlMatch && shiftMatch && altMatch) {
                     // consume the event
                     e.stopPropagation();
                     e.preventDefault();
@@ -147,13 +167,21 @@ class Shortcuts {
         });
 
         // also handle capture phase
-        document.addEventListener('keydown', (e) => {
-            handleEvent(e, true, true);
-        }, true);
+        document.addEventListener(
+            'keydown',
+            (e) => {
+                handleEvent(e, true, true);
+            },
+            true
+        );
 
-        document.addEventListener('keyup', (e) => {
-            handleEvent(e, false, true);
-        }, true);
+        document.addEventListener(
+            'keyup',
+            (e) => {
+                handleEvent(e, false, true);
+            },
+            true
+        );
     }
 
     register(options: ShortcutOptions) {

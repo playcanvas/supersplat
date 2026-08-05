@@ -1,12 +1,13 @@
-import { Mat4, Vec3 } from 'playcanvas';
+import type { Vec3 } from 'playcanvas';
+import { Mat4 } from 'playcanvas';
 
 import { PlacePivotOp, SplatsTransformOp, MultiOp } from './edit-ops';
-import { Events } from './events';
-import { Pivot } from './pivot';
-import { Splat } from './splat';
+import type { Events } from './events';
+import type { Pivot } from './pivot';
+import type { Splat } from './splat';
 import { State } from './splat-state';
 import { Transform } from './transform';
-import { TransformHandler } from './transform-handler';
+import type { TransformHandler } from './transform-handler';
 
 const mat = new Mat4();
 const mat2 = new Mat4();
@@ -55,7 +56,7 @@ class SplatsTransformHandler implements TransformHandler {
             }
         });
 
-        events.on('camera.focalPointPicked', (details: { splat: Splat, position: Vec3 }) => {
+        events.on('camera.focalPointPicked', (details: { splat: Splat; position: Vec3 }) => {
             if (this.splat && ['move', 'rotate', 'scale'].includes(this.events.invoke('tool.active'))) {
                 const pivot = events.invoke('pivot') as Pivot;
                 const oldt = pivot.transform.clone();
@@ -137,8 +138,8 @@ class SplatsTransformHandler implements TransformHandler {
     update(transform: Transform) {
         // calculate updated new pivot -> world transform
         mat.setTRS(transform.position, transform.rotation, transform.scale);
-        mat.mul2(mat, this.localToPivot);       // local -> world
-        mat.mul2(this.worldToLocal, mat);       // world -> local
+        mat.mul2(mat, this.localToPivot); // local -> world
+        mat.mul2(this.worldToLocal, mat); // world -> local
 
         this.transform.copy(mat);
 

@@ -1,7 +1,8 @@
-import { Entity, RotateGizmo, ScaleGizmo, TransformGizmo, TranslateGizmo, Vec3 } from 'playcanvas';
+import type { Entity, TransformGizmo, Vec3 } from 'playcanvas';
+import { RotateGizmo, ScaleGizmo, TranslateGizmo } from 'playcanvas';
 
-import { Events } from '../events';
-import { Scene } from '../scene';
+import type { Events } from '../events';
+import type { Scene } from '../scene';
 
 type ShapeGizmoMode = 'translate' | 'rotate' | 'scale' | 'none';
 
@@ -96,9 +97,9 @@ class ShapeTransformGizmo {
         // never shows a stale size
         const updateGizmoSize = () => {
             const { camera, canvas } = scene;
-            const size = camera.ortho ?
-                1125 / canvas.clientHeight :
-                1200 / Math.max(canvas.clientWidth, canvas.clientHeight);
+            const size = camera.ortho
+                ? 1125 / canvas.clientHeight
+                : 1200 / Math.max(canvas.clientWidth, canvas.clientHeight);
             all.forEach((gizmo) => {
                 gizmo.size = size;
             });

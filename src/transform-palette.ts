@@ -1,17 +1,8 @@
-import {
-    ADDRESS_CLAMP_TO_EDGE,
-    PIXELFORMAT_RGBA32F,
-    GraphicsDevice,
-    Mat4,
-    Texture
-} from 'playcanvas';
+import type { GraphicsDevice } from 'playcanvas';
+import { ADDRESS_CLAMP_TO_EDGE, PIXELFORMAT_RGBA32F, Mat4, Texture } from 'playcanvas';
 
 // mapping from Mat4 to transposed 3x4 matrix
-const idx = [
-    0, 4, 8, 12,
-    1, 5, 9, 13,
-    2, 6, 10, 14
-];
+const idx = [0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14];
 
 // texture data stores 512 matrices per row: 512 * 3 * 4 (rgba) floats
 const width = 512 * 3;
@@ -91,9 +82,11 @@ class TransformPalette {
             nextIdx -= num;
         };
 
-        Object.defineProperty(this, 'texture', { get() {
-            return texture;
-        } });
+        Object.defineProperty(this, 'texture', {
+            get() {
+                return texture;
+            }
+        });
 
         // allocate initial storage
         realloc(width, Math.ceil(initialSize / (width / 3)));

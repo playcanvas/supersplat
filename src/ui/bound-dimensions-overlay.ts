@@ -1,10 +1,11 @@
-import { Container } from '@playcanvas/pcui';
+import type { Container } from '@playcanvas/pcui';
 import { Vec3 } from 'playcanvas';
 
+import type { Events } from '../events';
+import type { Scene } from '../scene';
+import type { Splat } from '../splat';
+
 import { DimensionLabels } from './dimension-labels';
-import { Events } from '../events';
-import { Scene } from '../scene';
-import { Splat } from '../splat';
 
 const corners = Array.from({ length: 8 }, () => new Vec3());
 const screenCorners = Array.from({ length: 8 }, () => new Vec3());
@@ -42,9 +43,16 @@ const axisEdges: number[][][] = [
     ]
 ];
 
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 class BoundDimensionsOverlay {
     constructor(events: Events, scene: Scene, canvasContainer: Container) {
-        const dimLabels = new DimensionLabels(scene, canvasContainer.dom, canvasContainer.dom, 'bound-dimensions-svg', 3);
+        const dimLabels = new DimensionLabels(
+            scene,
+            canvasContainer.dom,
+            canvasContainer.dom,
+            'bound-dimensions-svg',
+            3
+        );
         dimLabels.labels.forEach((label, i) => {
             label.classList.add(['bound-dim-x', 'bound-dim-y', 'bound-dim-z'][i]);
         });
@@ -52,10 +60,12 @@ class BoundDimensionsOverlay {
         events.on('prerender', () => {
             const selection = events.invoke('selection') as Splat;
 
-            if (!selection ||
+            if (
+                !selection ||
                 !selection.visible ||
                 !events.invoke('camera.bound') ||
-                !events.invoke('camera.boundDimensions')) {
+                !events.invoke('camera.boundDimensions')
+            ) {
                 dimLabels.hide();
                 return;
             }

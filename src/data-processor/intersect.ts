@@ -1,29 +1,28 @@
+import type { GraphicsDevice, ScopeSpace, Shader } from 'playcanvas';
 import {
     ADDRESS_CLAMP_TO_EDGE,
     PIXELFORMAT_RGBA8,
     SEMANTIC_POSITION,
     drawQuadWithShader,
-    GraphicsDevice,
     Mat4,
     RenderTarget,
-    ScopeSpace,
-    Shader,
     ShaderUtils,
     Texture,
     BlendState
 } from 'playcanvas';
 
-import { BufferPool } from './buffer-pool';
-import { packedMaskHeight, packedMaskWidth } from './histogram-config';
 import { vertexShader, fragmentShader } from '../shaders/intersection-shader';
-import { Splat } from '../splat';
+import type { Splat } from '../splat';
+
+import type { BufferPool } from './buffer-pool';
+import { packedMaskHeight, packedMaskWidth } from './histogram-config';
 
 type MaskOptions = {
     mask: Texture;
 };
 
 type RectOptions = {
-    rect: { x1: number, y1: number, x2: number, y2: number };
+    rect: { x1: number; y1: number; x2: number; y2: number };
 };
 
 type SphereOptions = {
@@ -41,7 +40,7 @@ type IntersectOptions = MaskOptions | RectOptions | SphereOptions | BoxOptions;
 const shapeInvMat = new Mat4();
 const identityMat = new Mat4();
 
-const resolve = (scope: ScopeSpace, values: any) => {
+const resolve = (scope: ScopeSpace, values: Record<string, unknown>) => {
     for (const key in values) {
         scope.resolve(key).setValue(values[key]);
     }
@@ -115,7 +114,7 @@ class Intersect {
         const { scope } = device;
 
         const numSplats = splat.splatData.numSplats;
-        const transformA = (splat.entity.gsplat.instance.resource as any).getTexture('transformA');
+        const transformA = splat.entity.gsplat.instance.resource.getTexture('transformA');
         const splatTransform = splat.transformTexture;
         const transformPalette = splat.transformPalette.texture;
 

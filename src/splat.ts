@@ -1,14 +1,12 @@
+import type { Asset, GSplatData, GSplatResource } from 'playcanvas';
 import {
     ADDRESS_CLAMP_TO_EDGE,
     FILTER_NEAREST,
     PIXELFORMAT_R8,
     PIXELFORMAT_R16U,
-    Asset,
     BoundingBox,
     Color,
     Entity,
-    GSplatData,
-    GSplatResource,
     Mat4,
     Quat,
     Texture,
@@ -16,10 +14,10 @@ import {
 } from 'playcanvas';
 
 import { Element, ElementType } from './element';
-import { Serializer } from './serializer';
+import type { Serializer } from './serializer';
 import { vertexShader, fragmentShader, gsplatCenter } from './shaders/splat-shader';
 import { State, SplatState } from './splat-state';
-import { Transform } from './transform';
+import type { Transform } from './transform';
 import { TransformPalette } from './transform-palette';
 
 const vec = new Vec3();
@@ -27,18 +25,22 @@ const veca = new Vec3();
 const vecb = new Vec3();
 const quat = new Quat();
 
-const boundingPoints =
-    [-1, 1].map((x) => {
+const boundingPoints = [-1, 1]
+    .map((x) => {
         return [-1, 1].map((y) => {
             return [-1, 1].map((z) => {
                 return [
-                    new Vec3(x, y, z), new Vec3(x * 0.75, y, z),
-                    new Vec3(x, y, z), new Vec3(x, y * 0.75, z),
-                    new Vec3(x, y, z), new Vec3(x, y, z * 0.75)
+                    new Vec3(x, y, z),
+                    new Vec3(x * 0.75, y, z),
+                    new Vec3(x, y, z),
+                    new Vec3(x, y * 0.75, z),
+                    new Vec3(x, y, z),
+                    new Vec3(x, y, z * 0.75)
                 ];
             });
         });
-    }).flat(3);
+    })
+    .flat(3);
 
 class Splat extends Element {
     asset: Asset;
@@ -141,7 +143,7 @@ class Splat extends Element {
         // name and orientation are set on the initial bind only; a frame swap
         // (replaceData, no rotation) keeps the element's name and transform
         if (rotation) {
-            this._name = (asset.file as any).filename;
+            this._name = (asset.file as typeof asset.file & { filename: string }).filename;
             this.entity.setLocalRotation(rotation);
         }
 
@@ -173,7 +175,7 @@ class Splat extends Element {
             byteSize: 2
         });
 
-        const { x: width, y: height } = (splatResource as any).textureDimensions;
+        const { x: width, y: height } = splatResource.textureDimensions;
 
         // pack spherical harmonic data
         const createTexture = (name: string, format: number) => {
@@ -218,7 +220,7 @@ class Splat extends Element {
         return new Promise((resolve) => {
             // single finish() removes the listener and clears the timeout, so the
             // common case (postrender fires first) doesn't leave a pending timer.
-            const handles: { off?: { off: () => void }, timer?: ReturnType<typeof setTimeout> } = {};
+            const handles: { off?: { off: () => void }; timer?: ReturnType<typeof setTimeout> } = {};
             let settled = false;
             const finish = () => {
                 if (settled) return;
@@ -382,7 +384,7 @@ class Splat extends Element {
     }
 
     get filename() {
-        return (this.asset.file as any).filename;
+        return (this.asset.file as typeof this.asset.file & { filename: string }).filename;
     }
 
     calcSplatWorldPosition(splatId: number, result: Vec3) {
@@ -394,11 +396,7 @@ class Splat extends Element {
         const { sorter } = this.entity.gsplat.instance;
         const { centers } = sorter;
 
-        result.set(
-            centers[splatId * 3 + 0],
-            centers[splatId * 3 + 1],
-            centers[splatId * 3 + 2]
-        );
+        result.set(centers[splatId * 3 + 0], centers[splatId * 3 + 1], centers[splatId * 3 + 2]);
 
         this.worldTransform.transformPoint(result, result);
 
@@ -431,7 +429,14 @@ class Splat extends Element {
         serializer.pack(this.changedCounter);
         serializer.pack(this.visible);
         serializer.pack(this.tintClr.r, this.tintClr.g, this.tintClr.b);
-        serializer.pack(this.temperature, this.saturation, this.brightness, this.blackPoint, this.whitePoint, this.transparency);
+        serializer.pack(
+            this.temperature,
+            this.saturation,
+            this.brightness,
+            this.blackPoint,
+            this.whitePoint,
+            this.transparency
+        );
     }
 
     onPreRender() {
@@ -443,7 +448,7 @@ class Splat extends Element {
         // configure rings rendering
         const material = this.entity.gsplat.instance.material;
         material.setParameter('outlineMode', events.invoke('view.outlineSelection') ? 1 : 0);
-        material.setParameter('ringSize', (selected && cameraOverlay && cameraMode === 'rings') ? 0.04 : 0);
+        material.setParameter('ringSize', selected && cameraOverlay && cameraMode === 'rings' ? 0.04 : 0);
 
         // configure colors
         const selectedClr = events.invoke('selectedClr');
@@ -455,7 +460,12 @@ class Splat extends Element {
         } else if (events.invoke('view.outlineSelection')) {
             material.setParameter('selectedClr', [0, 0, 0, 0]);
         } else {
-            material.setParameter('selectedClr', [selectedClr.r, selectedClr.g, selectedClr.b, selectedClr.a * this.selectionAlpha]);
+            material.setParameter('selectedClr', [
+                selectedClr.r,
+                selectedClr.g,
+                selectedClr.b,
+                selectedClr.a * this.selectionAlpha
+            ]);
         }
         material.setParameter('unselectedClr', [unselectedClr.r, unselectedClr.g, unselectedClr.b, unselectedClr.a]);
         material.setParameter('lockedClr', [lockedClr.r, lockedClr.g, lockedClr.b, lockedClr.a]);
@@ -677,8 +687,29 @@ class Splat extends Element {
         };
     }
 
-    docDeserialize(doc: any) {
-        const { name, position, rotation, scale, visible, tintClr, temperature, saturation, brightness, blackPoint, whitePoint, transparency } = doc;
+    docDeserialize(
+        doc: Omit<ReturnType<Splat['docSerialize']>, 'localFrameOrigin' | 'localFrame' | 'temperature' | 'saturation'> &
+            Partial<
+                Pick<
+                    ReturnType<Splat['docSerialize']>,
+                    'localFrameOrigin' | 'localFrame' | 'temperature' | 'saturation'
+                >
+            >
+    ) {
+        const {
+            name,
+            position,
+            rotation,
+            scale,
+            visible,
+            tintClr,
+            temperature,
+            saturation,
+            brightness,
+            blackPoint,
+            whitePoint,
+            transparency
+        } = doc;
 
         this.name = name;
         this.move(new Vec3(position), new Quat(rotation), new Vec3(scale));

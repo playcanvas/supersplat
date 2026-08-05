@@ -70,7 +70,12 @@
                     flex-shrink: 0;
                 }
 
-                .select, .color-picker, .slider, .text-input, .boolean, .text-area {
+                .select,
+                .color-picker,
+                .slider,
+                .text-input,
+                .boolean,
+                .text-area {
                     margin: 0;
                     flex-grow: 1;
                 }

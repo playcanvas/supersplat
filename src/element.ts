@@ -1,7 +1,7 @@
-import { BoundingBox, Quat, Vec3 } from 'playcanvas';
+import type { BoundingBox, Quat, Vec3 } from 'playcanvas';
 
-import { Scene } from './scene';
-import { Serializer } from './serializer';
+import type { Scene } from './scene';
+import type { Serializer } from './serializer';
 
 enum ElementType {
     camera = 'camera',
@@ -39,26 +39,47 @@ class Element {
         }
     }
 
-    add(): void | Promise<void> {}
+    add(): void | Promise<void> {
+        // no-op
+    }
 
-    remove() {}
+    remove() {
+        // no-op
+    }
 
-    serialize(serializer: Serializer) {}
+    serialize(serializer: Serializer) {
+        // no-op
+    }
 
-    onUpdate(deltaTime: number) {}
+    onUpdate(deltaTime: number) {
+        // no-op
+    }
 
-    onPostUpdate() {}
+    onPostUpdate() {
+        // no-op
+    }
 
-    onPreRender() {}
+    onPreRender() {
+        // no-op
+    }
 
-    onPostRender() {}
+    onPostRender() {
+        // no-op
+    }
 
-    onAdded(element: Element) {}
+    onAdded(element: Element) {
+        // no-op
+    }
 
-    onRemoved(element: Element) {}
+    onRemoved(element: Element) {
+        // no-op
+    }
 
-    move(position?: Vec3, rotation?: Quat, scale?: Vec3) {}
+    move(position?: Vec3, rotation?: Quat, scale?: Vec3) {
+        // no-op
+    }
 
+    // eslint-disable-next-line @typescript-eslint/class-literal-property-style
     get worldBound(): BoundingBox | null {
         return null;
     }

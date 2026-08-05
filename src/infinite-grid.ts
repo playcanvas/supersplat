@@ -1,3 +1,4 @@
+import type { Layer, ScopeSpace, Shader } from 'playcanvas';
 import {
     BLENDMODE_ONE,
     BLENDMODE_ONE_MINUS_SRC_ALPHA,
@@ -8,20 +9,17 @@ import {
     SEMANTIC_POSITION,
     BlendState,
     DepthState,
-    Layer,
     QuadRender,
-    ScopeSpace,
-    Shader,
     ShaderUtils,
     Vec3,
     Mat4
 } from 'playcanvas';
 
 import { Element, ElementType } from './element';
-import { Serializer } from './serializer';
+import type { Serializer } from './serializer';
 import { vertexShader, fragmentShader } from './shaders/infinite-grid-shader';
 
-const resolve = (scope: ScopeSpace, values: any) => {
+const resolve = (scope: ScopeSpace, values: Record<string, unknown>) => {
     for (const key in values) {
         scope.resolve(key).setValue(values[key]);
     }
@@ -61,8 +59,12 @@ class InfiniteGrid extends Element {
 
         const blendState = new BlendState(
             true,
-            BLENDEQUATION_ADD, BLENDMODE_SRC_ALPHA, BLENDMODE_ONE_MINUS_SRC_ALPHA,
-            BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE_MINUS_SRC_ALPHA
+            BLENDEQUATION_ADD,
+            BLENDMODE_SRC_ALPHA,
+            BLENDMODE_ONE_MINUS_SRC_ALPHA,
+            BLENDEQUATION_ADD,
+            BLENDMODE_ONE,
+            BLENDMODE_ONE_MINUS_SRC_ALPHA
         );
 
         const view_position = [0, 0, 0];
@@ -81,9 +83,9 @@ class InfiniteGrid extends Element {
 
                 // select the correctly plane in orthographic mode
                 if (camera.ortho) {
-                    const cmp = (a:Vec3, b: Vec3) => 1.0 - Math.abs(a.dot(b)) < 1e-03;
+                    const cmp = (a: Vec3, b: Vec3) => 1.0 - Math.abs(a.dot(b)) < 1e-3;
                     const z = camera.worldTransform.getZ();
-                    plane = cmp(z, Vec3.RIGHT) ? 0 : (cmp(z, Vec3.BACK) ? 2 : 1);
+                    plane = cmp(z, Vec3.RIGHT) ? 0 : cmp(z, Vec3.BACK) ? 2 : 1;
                 } else {
                     plane = planeIndices[this.plane];
                 }

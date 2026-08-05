@@ -111,10 +111,4 @@ const binFS = /* glsl */ `
     }
 `;
 
-export {
-    fullscreenVS,
-    tileMinMaxFS,
-    finalReduceFS,
-    binVS,
-    binFS
-};
+export { fullscreenVS, tileMinMaxFS, finalReduceFS, binVS, binFS };

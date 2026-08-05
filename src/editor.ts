@@ -1,18 +1,55 @@
 import { MemoryFileSystem } from '@playcanvas/splat-transform';
 import { Color, Mat4, path, Quat, Texture, Vec3, Vec4 } from 'playcanvas';
 
-import { EditHistory } from './edit-history';
-import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp, MultiOp, AddSplatOp, SetLocalFrameOp } from './edit-ops';
-import { Element, ElementType } from './element';
-import { Events } from './events';
+import type { IntersectOptions } from './data-processor';
+import type { EditHistory } from './edit-history';
+import {
+    SelectAllOp,
+    SelectNoneOp,
+    SelectInvertOp,
+    SelectOp,
+    HideSelectionOp,
+    UnhideAllOp,
+    DeleteSelectionOp,
+    ResetOp,
+    MultiOp,
+    AddSplatOp,
+    SetLocalFrameOp
+} from './edit-ops';
+import type { Element } from './element';
+import { ElementType } from './element';
+import type { Events } from './events';
 import type { GridPlane } from './infinite-grid';
 import { MappedReadFileSystem } from './io';
-import { Scene } from './scene';
-import { Splat } from './splat';
+import type { Scene } from './scene';
+import type { Splat } from './splat';
 import { writeSplatFile } from './splat-serialize';
 
 const removeExtension = (filename: string) => {
     return filename.substring(0, filename.length - path.getExtension(filename).length);
+};
+
+type SelectionRect = {
+    start: { x: number; y: number };
+    end: { x: number; y: number };
+};
+
+type ViewSettings = {
+    bgColor: number[];
+    selectedColor: number[];
+    unselectedColor: number[];
+    lockedColor: number[];
+    shBands: number;
+    centersSize: number;
+    outlineSelection: boolean;
+    showGrid: boolean;
+    gridPlane?: GridPlane;
+    showBound: boolean;
+    showBoundDimensions?: boolean;
+    showCameraPoses?: boolean;
+    showCameraInfo?: boolean;
+    flySpeed: number;
+    fovDolly?: boolean;
 };
 
 // register for editor and scene events
@@ -75,9 +112,18 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // force render on some events
 
     [
-        'camera.mode', 'camera.overlay', 'camera.splatSize', 'view.outlineSelection',
-        'view.centersUseGaussianColor', 'view.bands', 'camera.bound', 'camera.boundDimensions', 'camera.showPoses',
-        'camera.showInfo', 'selection.changed', 'tool.coordSpace'
+        'camera.mode',
+        'camera.overlay',
+        'camera.splatSize',
+        'view.outlineSelection',
+        'view.centersUseGaussianColor',
+        'view.bands',
+        'camera.bound',
+        'camera.boundDimensions',
+        'camera.showPoses',
+        'camera.showInfo',
+        'selection.changed',
+        'tool.coordSpace'
     ].forEach((eventName) => {
         events.on(eventName, () => {
             scene.forceRender = true;
@@ -282,7 +328,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('camera.focus', () => {
         // the active tool's focus target (e.g. orient points) takes precedence
-        const toolFocus: { position: Vec3, radius: number } | null = events.invoke('tool.focus');
+        const toolFocus: { position: Vec3; radius: number } | null = events.invoke('tool.focus');
         if (toolFocus) {
             scene.camera.focus({
                 focalPoint: toolFocus.position,
@@ -295,9 +341,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         const splat = selectedSplats()[0];
         if (splat) {
             // use current bounds (caller should have awaited the operation that changed data)
-            const bound = splat.numSelected > 0 ?
-                splat.selectionBound :
-                splat.localBound;
+            const bound = splat.numSelected > 0 ? splat.selectionBound : splat.localBound;
             vec.copy(bound.center);
 
             const worldTransform = splat.worldTransform;
@@ -331,20 +375,23 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             return;
         }
 
-        events.fire('edit.add', new SetLocalFrameOp({
-            splat,
-            oldOrigin: splat.localFrameOrigin.clone(),
-            oldFrame: splat.localFrame.clone(),
-            newOrigin,
-            newFrame
-        }));
+        events.fire(
+            'edit.add',
+            new SetLocalFrameOp({
+                splat,
+                oldOrigin: splat.localFrameOrigin.clone(),
+                oldFrame: splat.localFrame.clone(),
+                newOrigin,
+                newFrame
+            })
+        );
     });
 
     events.on('camera.reset', () => {
         const { initialAzim, initialElev, initialZoom } = scene.config.controls;
-        const x = Math.sin(initialAzim * Math.PI / 180) * Math.cos(initialElev * Math.PI / 180);
-        const y = -Math.sin(initialElev * Math.PI / 180);
-        const z = Math.cos(initialAzim * Math.PI / 180) * Math.cos(initialElev * Math.PI / 180);
+        const x = Math.sin((initialAzim * Math.PI) / 180) * Math.cos((initialElev * Math.PI) / 180);
+        const y = -Math.sin((initialElev * Math.PI) / 180);
+        const z = Math.cos((initialAzim * Math.PI) / 180) * Math.cos((initialElev * Math.PI) / 180);
         const zoom = initialZoom;
 
         scene.camera.setPose(new Vec3(x * zoom, y * zoom, z * zoom), new Vec3(0, 0, 0));
@@ -353,12 +400,24 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // handle camera align events
     events.on('camera.align', (axis: string) => {
         switch (axis) {
-            case 'px': scene.camera.setAzimElev(90, 0); break;
-            case 'py': scene.camera.setAzimElev(0, -90); break;
-            case 'pz': scene.camera.setAzimElev(0, 0); break;
-            case 'nx': scene.camera.setAzimElev(270, 0); break;
-            case 'ny': scene.camera.setAzimElev(0, 90); break;
-            case 'nz': scene.camera.setAzimElev(180, 0); break;
+            case 'px':
+                scene.camera.setAzimElev(90, 0);
+                break;
+            case 'py':
+                scene.camera.setAzimElev(0, -90);
+                break;
+            case 'pz':
+                scene.camera.setAzimElev(0, 0);
+                break;
+            case 'nx':
+                scene.camera.setAzimElev(270, 0);
+                break;
+            case 'ny':
+                scene.camera.setAzimElev(0, 90);
+                break;
+            case 'nz':
+                scene.camera.setAzimElev(180, 0);
+                break;
         }
 
         // switch to ortho mode
@@ -389,7 +448,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
     });
 
-    events.on('select.mask', (op: 'add'|'remove'|'set'|'intersect', mask: Uint8Array | Uint32Array) => {
+    events.on('select.mask', (op: 'add' | 'remove' | 'set' | 'intersect', mask: Uint8Array | Uint32Array) => {
         selectedSplats().forEach((splat) => {
             events.fire('edit.add', new SelectOp(splat, op, mask));
         });
@@ -398,7 +457,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // run the GPU intersect + the resulting SelectOp inside one queued task so the
     // gpu readback is ordered relative to other queued history ops (rapid drag +
     // undo, drag-while-camera-settling, etc).
-    const runSelectIntersect = (splat: Splat, op: 'add'|'remove'|'set'|'intersect', options: any) => {
+    const runSelectIntersect = (
+        splat: Splat,
+        op: 'add' | 'remove' | 'set' | 'intersect',
+        options: IntersectOptions
+    ) => {
         return scene.commandQueue.enqueue(async () => {
             const data = await scene.dataProcessor.intersect(options, splat);
             // SelectOp consumes `data` synchronously in its constructor
@@ -410,7 +473,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     };
 
     // transform maps the unit sphere (diameter 1) to world space
-    events.on('select.bySphere', async (op: 'add'|'remove'|'set'|'intersect', transform: Mat4) => {
+    events.on('select.bySphere', async (op: 'add' | 'remove' | 'set' | 'intersect', transform: Mat4) => {
         for (const splat of selectedSplats()) {
             await runSelectIntersect(splat, op, {
                 sphere: { transform }
@@ -419,7 +482,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     });
 
     // transform maps the unit cube (side 1) to world space
-    events.on('select.byBox', async (op: 'add'|'remove'|'set'|'intersect', transform: Mat4) => {
+    events.on('select.byBox', async (op: 'add' | 'remove' | 'set' | 'intersect', transform: Mat4) => {
         for (const splat of selectedSplats()) {
             await runSelectIntersect(splat, op, {
                 box: { transform }
@@ -427,7 +490,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     });
 
-    events.function('select.rect', async (op: 'add'|'remove'|'set'|'intersect', rect: any) => {
+    events.function('select.rect', async (op: 'add' | 'remove' | 'set' | 'intersect', rect: SelectionRect) => {
         const mode = events.invoke('camera.mode');
 
         for (const splat of selectedSplats()) {
@@ -452,189 +515,199 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     let maskTexture: Texture = null;
 
-    events.function('select.byMask', async (op: 'add'|'remove'|'set'|'intersect', canvas: HTMLCanvasElement, context: CanvasRenderingContext2D) => {
-        const mode = events.invoke('camera.mode');
+    events.function(
+        'select.byMask',
+        async (
+            op: 'add' | 'remove' | 'set' | 'intersect',
+            canvas: HTMLCanvasElement,
+            context: CanvasRenderingContext2D
+        ) => {
+            const mode = events.invoke('camera.mode');
 
-        for (const splat of selectedSplats()) {
-            if (mode === 'centers') {
-                // create mask texture
-                if (!maskTexture || maskTexture.width !== canvas.width || maskTexture.height !== canvas.height) {
-                    if (maskTexture) {
-                        maskTexture.destroy();
+            for (const splat of selectedSplats()) {
+                if (mode === 'centers') {
+                    // create mask texture
+                    if (!maskTexture || maskTexture.width !== canvas.width || maskTexture.height !== canvas.height) {
+                        if (maskTexture) {
+                            maskTexture.destroy();
+                        }
+                        maskTexture = new Texture(scene.graphicsDevice);
                     }
-                    maskTexture = new Texture(scene.graphicsDevice);
-                }
-                maskTexture.setSource(canvas);
+                    maskTexture.setSource(canvas);
 
-                await runSelectIntersect(splat, op, {
-                    mask: maskTexture
-                });
-            } else if (mode === 'rings') {
-                const mask = context.getImageData(0, 0, canvas.width, canvas.height);
+                    await runSelectIntersect(splat, op, {
+                        mask: maskTexture
+                    });
+                } else if (mode === 'rings') {
+                    const mask = context.getImageData(0, 0, canvas.width, canvas.height);
 
-                // calculate mask bound so we limit pixel operations
-                let mx0 = mask.width - 1;
-                let my0 = mask.height - 1;
-                let mx1 = 0;
-                let my1 = 0;
-                for (let y = 0; y < mask.height; ++y) {
-                    for (let x = 0; x < mask.width; ++x) {
-                        if (mask.data[(y * mask.width + x) * 4 + 3] === 255) {
-                            mx0 = Math.min(mx0, x);
-                            my0 = Math.min(my0, y);
-                            mx1 = Math.max(mx1, x);
-                            my1 = Math.max(my1, y);
+                    // calculate mask bound so we limit pixel operations
+                    let mx0 = mask.width - 1;
+                    let my0 = mask.height - 1;
+                    let mx1 = 0;
+                    let my1 = 0;
+                    for (let y = 0; y < mask.height; ++y) {
+                        for (let x = 0; x < mask.width; ++x) {
+                            if (mask.data[(y * mask.width + x) * 4 + 3] === 255) {
+                                mx0 = Math.min(mx0, x);
+                                my0 = Math.min(my0, y);
+                                mx1 = Math.max(mx1, x);
+                                my1 = Math.max(my1, y);
+                            }
                         }
                     }
-                }
 
-                // Convert mask bounds to normalized coordinates
-                const nx0 = mx0 / mask.width;
-                const ny0 = my0 / mask.height;
-                const nx1 = (mx1 + 1) / mask.width;
-                const ny1 = (my1 + 1) / mask.height;
-                const nw = nx1 - nx0;
-                const nh = ny1 - ny0;
+                    // Convert mask bounds to normalized coordinates
+                    const nx0 = mx0 / mask.width;
+                    const ny0 = my0 / mask.height;
+                    const nx1 = (mx1 + 1) / mask.width;
+                    const ny1 = (my1 + 1) / mask.height;
+                    const nw = nx1 - nx0;
+                    const nh = ny1 - ny0;
 
-                scene.camera.pickPrep(splat, op);
-                const pick = await scene.camera.pickRect(nx0, ny0, nw, nh);
+                    scene.camera.pickPrep(splat, op);
+                    const pick = await scene.camera.pickRect(nx0, ny0, nw, nh);
 
-                // Calculate actual pixel dimensions for iteration
-                const { width, height } = scene.targetSize;
+                    // Calculate actual pixel dimensions for iteration
+                    const { width, height } = scene.targetSize;
 
-                // Convert normalized coordinates to render target pixels
-                const px = Math.floor(nx0 * width);
-                const py = Math.floor(ny0 * height);
-                const pw = Math.max(1, Math.ceil((nx0 + nw) * width) - px);
-                const ph = Math.max(1, Math.ceil((ny0 + nh) * height) - py);
+                    // Convert normalized coordinates to render target pixels
+                    const px = Math.floor(nx0 * width);
+                    const py = Math.floor(ny0 * height);
+                    const pw = Math.max(1, Math.ceil((nx0 + nw) * width) - px);
+                    const ph = Math.max(1, Math.ceil((ny0 + nh) * height) - py);
 
-                const selected = new Set<number>();
-                for (let y = 0; y < ph; ++y) {
-                    for (let x = 0; x < pw; ++x) {
-                        const mx = Math.floor((nx0 + x / width) * mask.width);
-                        const my = Math.floor((ny0 + y / height) * mask.height);
-                        if (mask.data[(my * mask.width + mx) * 4] === 255) {
-                            selected.add(pick[(ph - 1 - y) * pw + x]);
+                    const selected = new Set<number>();
+                    for (let y = 0; y < ph; ++y) {
+                        for (let x = 0; x < pw; ++x) {
+                            const mx = Math.floor((nx0 + x / width) * mask.width);
+                            const my = Math.floor((ny0 + y / height) * mask.height);
+                            if (mask.data[(my * mask.width + mx) * 4] === 255) {
+                                selected.add(pick[(ph - 1 - y) * pw + x]);
+                            }
                         }
                     }
-                }
 
-                const sortedIds = new Uint32Array(selected).sort();
-                events.fire('edit.add', new SelectOp(splat, op, sortedIds));
+                    const sortedIds = new Uint32Array(selected).sort();
+                    events.fire('edit.add', new SelectOp(splat, op, sortedIds));
+                }
             }
         }
-    });
+    );
 
-    events.function('select.point', async (op: 'add'|'remove'|'set'|'intersect', point: { x: number, y: number }) => {
-        const { width, height } = scene.targetSize;
-        const mode = events.invoke('camera.mode');
+    events.function(
+        'select.point',
+        async (op: 'add' | 'remove' | 'set' | 'intersect', point: { x: number; y: number }) => {
+            const { width, height } = scene.targetSize;
+            const mode = events.invoke('camera.mode');
 
-        for (const splat of selectedSplats()) {
-            const splatData = splat.splatData;
+            for (const splat of selectedSplats()) {
+                const splatData = splat.splatData;
 
-            if (mode === 'centers') {
-                const x = splatData.getProp('x');
-                const y = splatData.getProp('y');
-                const z = splatData.getProp('z');
+                if (mode === 'centers') {
+                    const x = splatData.getProp('x');
+                    const y = splatData.getProp('y');
+                    const z = splatData.getProp('z');
 
-                const splatSize = events.invoke('camera.splatSize');
-                const camera = scene.camera.camera;
-                const sx = point.x * width;
-                const sy = point.y * height;
+                    const splatSize = events.invoke('camera.splatSize');
+                    const camera = scene.camera.camera;
+                    const sx = point.x * width;
+                    const sy = point.y * height;
 
-                // calculate final matrix
-                mat.mul2(camera.camera._viewProjMat, splat.worldTransform);
+                    // calculate final matrix
+                    mat.mul2(camera.camera._viewProjMat, splat.worldTransform);
 
-                // materialize hits into an owned mask. SelectOp consumes a
-                // committed snapshot rather than a closure so we never have to
-                // worry about state shifting between capture and apply.
-                const numSplats = splatData.numSplats;
-                const mask = new Uint8Array(numSplats);
-                for (let i = 0; i < numSplats; i++) {
-                    vec4.set(x[i], y[i], z[i], 1.0);
-                    mat.transformVec4(vec4, vec4);
-                    const px = (vec4.x / vec4.w * 0.5 + 0.5) * width;
-                    const py = (-vec4.y / vec4.w * 0.5 + 0.5) * height;
-                    if (Math.abs(px - sx) < splatSize && Math.abs(py - sy) < splatSize) {
-                        mask[i] = 255;
+                    // materialize hits into an owned mask. SelectOp consumes a
+                    // committed snapshot rather than a closure so we never have to
+                    // worry about state shifting between capture and apply.
+                    const numSplats = splatData.numSplats;
+                    const mask = new Uint8Array(numSplats);
+                    for (let i = 0; i < numSplats; i++) {
+                        vec4.set(x[i], y[i], z[i], 1.0);
+                        mat.transformVec4(vec4, vec4);
+                        const px = ((vec4.x / vec4.w) * 0.5 + 0.5) * width;
+                        const py = ((-vec4.y / vec4.w) * 0.5 + 0.5) * height;
+                        if (Math.abs(px - sx) < splatSize && Math.abs(py - sy) < splatSize) {
+                            mask[i] = 255;
+                        }
                     }
+
+                    events.fire('edit.add', new SelectOp(splat, op, mask));
+                } else if (mode === 'rings') {
+                    scene.camera.pickPrep(splat, op);
+
+                    // Use normalized coordinates with minimal size for single pixel pick
+                    const pickResult = await scene.camera.pickRect(point.x, point.y, 1 / width, 1 / height);
+                    const pickId = pickResult[0];
+                    events.fire('edit.add', new SelectOp(splat, op, new Uint32Array([pickId])));
                 }
-
-                events.fire('edit.add', new SelectOp(splat, op, mask));
-            } else if (mode === 'rings') {
-                scene.camera.pickPrep(splat, op);
-
-                // Use normalized coordinates with minimal size for single pixel pick
-                const pickResult = await scene.camera.pickRect(
-                    point.x,
-                    point.y,
-                    1 / width,
-                    1 / height
-                );
-                const pickId = pickResult[0];
-                events.fire('edit.add', new SelectOp(splat, op, new Uint32Array([pickId])));
             }
         }
-    });
+    );
 
     // Eyedropper selection with SelectOp so undo/redo and selection state updates remain consistent.
     // Threshold acts as a per-channel absolute difference: 0 only matches identical colors while 1 matches everything.
     // TO DO:
     // -  alternative distance metrics such as HSV.
     // -  alternative UI for threshold, two handles for min/max?
-    events.function('select.colorMatch', async (op: 'add'|'remove'|'set', point: { x: number, y: number }, threshold = 0) => {
-        const splats = selectedSplats();
-        const targetSize = scene.targetSize;
-        if (!splats.length || !targetSize || !point) {
-            return;
-        }
-
-        const { width, height } = targetSize;
-        if (!width || !height) {
-            return;
-        }
-
-        // Clamp normalized coordinates to valid range
-        const nx = Math.max(0, Math.min(1, point.x));
-        const ny = Math.max(0, Math.min(1, point.y));
-        const colorThreshold = Math.min(1, Math.max(0, Number.isFinite(threshold) ? threshold : 0));
-
-        for (const splat of splats) {
-            scene.camera.pickPrep(splat, 'set');
-            // Use normalized coordinates with minimal size for single pixel pick
-            const pickBuffer = await scene.camera.pickRect(nx, ny, 1 / width, 1 / height);
-            const pickId = pickBuffer?.[0];
-            if (pickId === undefined || pickId === 0xffffffff) {
-                continue;
+    events.function(
+        'select.colorMatch',
+        async (op: 'add' | 'remove' | 'set', point: { x: number; y: number }, threshold = 0) => {
+            const splats = selectedSplats();
+            const targetSize = scene.targetSize;
+            if (!splats.length || !targetSize || !point) {
+                return;
             }
 
-            const reds = splat.splatData.getProp('f_dc_0') as Float32Array;
-            const greens = splat.splatData.getProp('f_dc_1') as Float32Array;
-            const blues = splat.splatData.getProp('f_dc_2') as Float32Array;
-            // validate pickId and color channels exist
-            if (!reds || !greens || !blues || pickId < 0 || pickId >= reds.length) {
-                continue;
+            const { width, height } = targetSize;
+            if (!width || !height) {
+                return;
             }
-            // decode color channels for the reference pixel
-            const refR = decodeColorChannel(reds[pickId]);
-            const refG = decodeColorChannel(greens[pickId]);
-            const refB = decodeColorChannel(blues[pickId]);
 
-            // materialize hits into an owned mask up front; SelectOp consumes
-            // a committed snapshot.
-            const numSplats = splat.splatData.numSplats;
-            const mask = new Uint8Array(numSplats);
-            for (let i = 0; i < numSplats; i++) {
-                if (Math.abs(decodeColorChannel(reds[i]) - refR) <= colorThreshold &&
-                    Math.abs(decodeColorChannel(greens[i]) - refG) <= colorThreshold &&
-                    Math.abs(decodeColorChannel(blues[i]) - refB) <= colorThreshold) {
-                    mask[i] = 255;
+            // Clamp normalized coordinates to valid range
+            const nx = Math.max(0, Math.min(1, point.x));
+            const ny = Math.max(0, Math.min(1, point.y));
+            const colorThreshold = Math.min(1, Math.max(0, Number.isFinite(threshold) ? threshold : 0));
+
+            for (const splat of splats) {
+                scene.camera.pickPrep(splat, 'set');
+                // Use normalized coordinates with minimal size for single pixel pick
+                const pickBuffer = await scene.camera.pickRect(nx, ny, 1 / width, 1 / height);
+                const pickId = pickBuffer?.[0];
+                if (pickId === undefined || pickId === 0xffffffff) {
+                    continue;
                 }
-            }
 
-            events.fire('edit.add', new SelectOp(splat, op, mask));
+                const reds = splat.splatData.getProp('f_dc_0') as Float32Array;
+                const greens = splat.splatData.getProp('f_dc_1') as Float32Array;
+                const blues = splat.splatData.getProp('f_dc_2') as Float32Array;
+                // validate pickId and color channels exist
+                if (!reds || !greens || !blues || pickId < 0 || pickId >= reds.length) {
+                    continue;
+                }
+                // decode color channels for the reference pixel
+                const refR = decodeColorChannel(reds[pickId]);
+                const refG = decodeColorChannel(greens[pickId]);
+                const refB = decodeColorChannel(blues[pickId]);
+
+                // materialize hits into an owned mask up front; SelectOp consumes
+                // a committed snapshot.
+                const numSplats = splat.splatData.numSplats;
+                const mask = new Uint8Array(numSplats);
+                for (let i = 0; i < numSplats; i++) {
+                    if (
+                        Math.abs(decodeColorChannel(reds[i]) - refR) <= colorThreshold &&
+                        Math.abs(decodeColorChannel(greens[i]) - refG) <= colorThreshold &&
+                        Math.abs(decodeColorChannel(blues[i]) - refB) <= colorThreshold
+                    ) {
+                        mask[i] = 255;
+                    }
+                }
+
+                events.fire('edit.add', new SelectOp(splat, op, mask));
+            }
         }
-    });
+    );
 
     events.on('select.hide', () => {
         selectedSplats().forEach((splat) => {
@@ -644,8 +717,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('select.unhide', () => {
         const ops = (scene.getElementsByType(ElementType.splat) as Splat[])
-        .map(splat => new UnhideAllOp(splat))
-        .filter(op => !op.ranges.empty);
+            .map((splat) => new UnhideAllOp(splat))
+            .filter((op) => !op.ranges.empty);
 
         if (ops.length > 0) {
             events.fire('edit.add', ops.length === 1 ? ops[0] : new MultiOp(ops));
@@ -671,10 +744,17 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
         const memFs = new MemoryFileSystem();
 
-        await writeSplatFile(splats, {
-            maxSHBands: 3,
-            selected: true
-        }, 'ply', 'output.ply', {}, memFs);
+        await writeSplatFile(
+            splats,
+            {
+                maxSHBands: 3,
+                selected: true
+            },
+            'ply',
+            'output.ply',
+            {},
+            memFs
+        );
 
         const data = memFs.results.get('output.ply');
 
@@ -690,10 +770,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             const copy = await scene.assetLoader.load(filename, fileSystem);
 
             if (func === 'separate') {
-                editHistory.add(new MultiOp([
-                    new DeleteSelectionOp(splat),
-                    new AddSplatOp(scene, copy)
-                ]));
+                editHistory.add(new MultiOp([new DeleteSelectionOp(splat), new AddSplatOp(scene, copy)]));
             } else {
                 editHistory.add(new AddSplatOp(scene, copy));
             }
@@ -878,7 +955,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         };
     });
 
-    events.on('camera.setPose', (pose: { position: Vec3, target: Vec3, fov?: number }, speed = 1) => {
+    events.on('camera.setPose', (pose: { position: Vec3; target: Vec3; fov?: number }, speed = 1) => {
         // assign fov before setPose so distance is computed using the new fovFactor
         if (pose.fov !== undefined) {
             // pose-driven fov (timeline playback, fly-to-pose) is not a user
@@ -923,7 +1000,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         };
     });
 
-    events.function('docDeserialize.view', (docView: any) => {
+    events.function('docDeserialize.view', (docView: ViewSettings) => {
         events.fire('setBgClr', new Color(docView.bgColor));
         events.fire('setSelectedClr', new Color(docView.selectedColor));
         events.fire('setUnselectedClr', new Color(docView.unselectedColor));

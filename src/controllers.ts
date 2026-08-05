@@ -1,6 +1,6 @@
 import { Vec3 } from 'playcanvas';
 
-import { Camera } from './camera';
+import type { Camera } from './camera';
 
 const fromWorldPoint = new Vec3();
 const toWorldPoint = new Vec3();
@@ -15,7 +15,6 @@ class PointerController {
     destroy: () => void;
 
     constructor(camera: Camera, target: HTMLElement) {
-
         // Orbit mode: rotate camera around the focal point
         const orbit = (dx: number, dy: number) => {
             const azim = camera.azim - dx * camera.scene.config.controls.orbitSensitivity;
@@ -31,7 +30,7 @@ class PointerController {
             // For panning to work at any zoom level, we use screen point to world projection
             // to work out how far we need to pan the pivotEntity in world space
             const c = camera.camera;
-            const distance = camera.distanceTween.value.distance * camera.sceneRadius / camera.fovFactor;
+            const distance = (camera.distanceTween.value.distance * camera.sceneRadius) / camera.fovFactor;
 
             c.screenToWorld(x, y, distance, fromWorldPoint);
             c.screenToWorld(x - dx, y - dy, distance, toWorldPoint);
@@ -43,19 +42,25 @@ class PointerController {
         };
 
         const zoom = (amount: number) => {
-            camera.setDistance(camera.distance - (camera.distance * 0.999 + 0.001) * amount * camera.scene.config.controls.zoomSensitivity, 2);
+            camera.setDistance(
+                camera.distance -
+                    (camera.distance * 0.999 + 0.001) * amount * camera.scene.config.controls.zoomSensitivity,
+                2
+            );
         };
 
         // mouse state
-        let pressedButton = -1;  // no button pressed, otherwise 0, 1, or 2
+        let pressedButton = -1; // no button pressed, otherwise 0, 1, or 2
         let x: number, y: number;
 
         // middle-mouse click-vs-drag tracking (for MMB single-click to focus)
         const CLICK_DRAG_THRESHOLD = 4;
-        let mmbStartX = 0, mmbStartY = 0, mmbDragged = false;
+        let mmbStartX = 0,
+            mmbStartY = 0,
+            mmbDragged = false;
 
         // touch state
-        let touches: { id: number, x: number, y: number}[] = [];
+        let touches: { id: number; x: number; y: number }[] = [];
         let midx: number, midy: number, midlen: number;
 
         const pointerdown = (event: PointerEvent) => {
@@ -103,7 +108,7 @@ class PointerController {
                     target.releasePointerCapture(event.pointerId);
                 }
             } else {
-                touches = touches.filter(touch => touch.id !== event.pointerId);
+                touches = touches.filter((touch) => touch.id !== event.pointerId);
                 if (touches.length === 0) {
                     target.releasePointerCapture(event.pointerId);
                 }
@@ -139,8 +144,8 @@ class PointerController {
                         zoom(dy * -0.02);
                     } else if (pressedButton === 2) {
                         // Right button: same behavior as orbit mode
-                        const mod = event.shiftKey || event.ctrlKey ? 'look' :
-                            (event.altKey || event.metaKey ? 'zoom' : 'pan');
+                        const mod =
+                            event.shiftKey || event.ctrlKey ? 'look' : event.altKey || event.metaKey ? 'zoom' : 'pan';
 
                         if (mod === 'look') {
                             look(dx, dy);
@@ -165,11 +170,10 @@ class PointerController {
 
                     let mod: 'orbit' | 'pan' | 'zoom';
                     if (pressedButton === 2) {
-                        mod = event.shiftKey || event.ctrlKey ? 'orbit' :
-                            (event.altKey || event.metaKey ? 'zoom' : 'pan');
+                        mod =
+                            event.shiftKey || event.ctrlKey ? 'orbit' : event.altKey || event.metaKey ? 'zoom' : 'pan';
                     } else if (pressedButton === 1) {
-                        mod = event.shiftKey ? 'pan' :
-                            (event.ctrlKey ? 'zoom' : 'orbit');
+                        mod = event.shiftKey ? 'pan' : event.ctrlKey ? 'zoom' : 'orbit';
                     } else {
                         mod = 'orbit';
                     }
@@ -196,7 +200,7 @@ class PointerController {
                         orbit(dx, dy);
                     }
                 } else if (touches.length === 2) {
-                    const touch = touches[touches.map(t => t.id).indexOf(event.pointerId)];
+                    const touch = touches[touches.map((t) => t.id).indexOf(event.pointerId)];
                     touch.x = event.offsetX;
                     touch.y = event.offsetY;
 
@@ -213,7 +217,7 @@ class PointerController {
                         const p = camera.focalPoint.add(moveVec);
                         camera.setFocalPoint(p);
                     } else {
-                        pan(mx, my, (mx - midx), (my - midy));
+                        pan(mx, my, mx - midx, my - midy);
                         zoom((ml - midlen) * 0.01);
                     }
 
@@ -397,7 +401,7 @@ class PointerController {
 
             if (forward || strafe || vertical) {
                 // Calculate speed modifier based on current modifier key state
-                const speedMod = fastDown ? 10 : (slowDown ? 0.1 : 1);
+                const speedMod = fastDown ? 10 : slowDown ? 0.1 : 1;
                 const factor = deltaTime * camera.flySpeed * speedMod;
                 const worldTransform = camera.worldTransform;
 
@@ -432,10 +436,15 @@ class PointerController {
 
         let destroy: () => void = null;
 
-        const wrap = (target: any, name: string, fn: any, options?: any) => {
-            const callback = (event: any) => {
+        const wrap = <T extends Event>(
+            target: EventTarget,
+            name: string,
+            fn: (event: T) => void,
+            options?: AddEventListenerOptions
+        ) => {
+            const callback = (event: Event) => {
                 camera.scene.events.fire('camera.controller', name);
-                fn(event);
+                fn(event as T);
             };
             target.addEventListener(name, callback, options);
             destroy = () => {

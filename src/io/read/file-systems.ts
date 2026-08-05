@@ -2,13 +2,8 @@
  * File system implementations for reading splat data from various sources.
  */
 
-import {
-    BufferedReadStream,
-    ReadFileSystem,
-    ReadSource,
-    ReadStream,
-    UrlReadFileSystem
-} from '@playcanvas/splat-transform';
+import type { ReadFileSystem, ReadSource } from '@playcanvas/splat-transform';
+import { BufferedReadStream, ReadStream, UrlReadFileSystem } from '@playcanvas/splat-transform';
 
 // Read blob in 4MB chunks to balance async overhead vs memory usage
 const BLOB_CHUNK_SIZE = 4 * 1024 * 1024;
@@ -52,14 +47,14 @@ class BlobReadSource implements ReadSource {
     readonly seekable: boolean = true;
 
     private blob: Blob;
-    private closed: boolean = false;
+    private closed = false;
 
     constructor(blob: Blob) {
         this.blob = blob;
         this.size = blob.size;
     }
 
-    read(start: number = 0, end: number = this.size): ReadStream {
+    read(start = 0, end: number = this.size): ReadStream {
         if (this.closed) {
             throw new Error('Source has been closed');
         }
@@ -82,7 +77,7 @@ class BlobReadSource implements ReadSource {
  * Used for drag & drop and file picker scenarios.
  */
 class BlobReadFileSystem implements ReadFileSystem {
-    private files: Map<string, Blob> = new Map();
+    private files = new Map<string, Blob>();
 
     /**
      * Add a file to the file system.
@@ -140,7 +135,4 @@ class MappedReadFileSystem implements ReadFileSystem {
     }
 }
 
-export {
-    BlobReadSource,
-    MappedReadFileSystem
-};
+export { BlobReadSource, MappedReadFileSystem };

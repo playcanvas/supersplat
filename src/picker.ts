@@ -1,3 +1,4 @@
+import type { GraphicsDevice, RenderTarget } from 'playcanvas';
 import {
     BLENDEQUATION_ADD,
     BLENDMODE_ONE,
@@ -5,14 +6,12 @@ import {
     BLENDMODE_ONE_MINUS_SRC_ALPHA,
     BlendState,
     Color,
-    GraphicsDevice,
-    RenderPassPicker,
-    RenderTarget
+    RenderPassPicker
 } from 'playcanvas';
 
 import { ElementType } from './element';
-import { Scene } from './scene';
-import { Splat } from './splat';
+import type { Scene } from './scene';
+import type { Splat } from './splat';
 
 const idClearColor = new Color(1, 1, 1, 1);
 const depthClearColor = new Color(0, 0, 0, 1);
@@ -23,9 +22,9 @@ const uint32 = new Uint32Array(float32.buffer);
 
 // Convert 16-bit half-float to 32-bit float using bit manipulation
 const half2Float = (h: number): number => {
-    const sign = (h & 0x8000) << 16;           // Move sign to bit 31
-    const exponent = (h & 0x7C00) >> 10;       // Extract 5-bit exponent
-    const mantissa = h & 0x03FF;               // Extract 10-bit mantissa
+    const sign = (h & 0x8000) << 16; // Move sign to bit 31
+    const exponent = (h & 0x7c00) >> 10; // Extract 5-bit exponent
+    const mantissa = h & 0x03ff; // Extract 10-bit mantissa
 
     if (exponent === 0) {
         if (mantissa === 0) {
@@ -39,11 +38,11 @@ const half2Float = (h: number): number => {
                 e++;
                 m <<= 1;
             } while ((m & 0x0400) === 0);
-            uint32[0] = sign | ((127 - 15 - e) << 23) | ((m & 0x03FF) << 13);
+            uint32[0] = sign | ((127 - 15 - e) << 23) | ((m & 0x03ff) << 13);
         }
     } else if (exponent === 31) {
         // Infinity or NaN
-        uint32[0] = sign | 0x7F800000 | (mantissa << 13);
+        uint32[0] = sign | 0x7f800000 | (mantissa << 13);
     } else {
         // Normalized: adjust exponent bias from 15 to 127
         uint32[0] = sign | ((exponent + 127 - 15) << 23) | (mantissa << 13);
@@ -78,8 +77,12 @@ class Picker {
         // Alpha: multiplicative transmittance (ZERO, ONE_MINUS_SRC_ALPHA) -> T = T * (1 - alpha)
         this.depthBlendState = new BlendState(
             true,
-            BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE_MINUS_SRC_ALPHA,           // RGB blend
-            BLENDEQUATION_ADD, BLENDMODE_ZERO, BLENDMODE_ONE_MINUS_SRC_ALPHA           // Alpha blend (transmittance)
+            BLENDEQUATION_ADD,
+            BLENDMODE_ONE,
+            BLENDMODE_ONE_MINUS_SRC_ALPHA, // RGB blend
+            BLENDEQUATION_ADD,
+            BLENDMODE_ZERO,
+            BLENDMODE_ONE_MINUS_SRC_ALPHA // Alpha blend (transmittance)
         );
     }
 
@@ -164,10 +167,7 @@ class Picker {
         for (let i = 0; i < pw * ph; i++) {
             // Use >>> 0 to convert signed 32-bit to unsigned (so 0xffffffff instead of -1)
             result.push(
-                (pixels[i * 4] |
-                (pixels[i * 4 + 1] << 8) |
-                (pixels[i * 4 + 2] << 16) |
-                (pixels[i * 4 + 3] << 24)) >>> 0
+                (pixels[i * 4] | (pixels[i * 4 + 1] << 8) | (pixels[i * 4 + 2] << 16) | (pixels[i * 4 + 3] << 24)) >>> 0
             );
         }
 

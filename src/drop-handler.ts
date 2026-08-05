@@ -12,11 +12,11 @@ class DroppedFile {
     }
 }
 
-type DropHandlerFunc = (files: Array<DroppedFile>, resetScene: boolean) => void;
+type DropHandlerFunc = (files: DroppedFile[], resetScene: boolean) => void;
 
-const resolveDirectories = (entries: Array<FileSystemEntry>): Promise<Array<FileSystemFileEntry>> => {
-    const promises: Promise<Array<FileSystemFileEntry>>[] = [];
-    const result: Array<FileSystemFileEntry> = [];
+const resolveDirectories = (entries: FileSystemEntry[]): Promise<FileSystemFileEntry[]> => {
+    const promises: Promise<FileSystemFileEntry[]>[] = [];
+    const result: FileSystemFileEntry[] = [];
 
     entries.forEach((entry) => {
         if (entry.name === '.DS_Store') {
@@ -27,18 +27,18 @@ const resolveDirectories = (entries: Array<FileSystemEntry>): Promise<Array<File
             result.push(entry as FileSystemFileEntry);
         } else if (entry.isDirectory) {
             promises.push(
-                new Promise<any>((resolve, reject) => {
+                new Promise<FileSystemFileEntry[]>((resolve, reject) => {
                     const reader = (entry as FileSystemDirectoryEntry).createReader();
 
-                    const p: Promise<any>[] = [];
+                    const p: Promise<FileSystemFileEntry[]>[] = [];
 
                     const read = () => {
-                        reader.readEntries((children: Array<FileSystemEntry>) => {
+                        reader.readEntries((children: FileSystemEntry[]) => {
                             if (children.length > 0) {
                                 p.push(resolveDirectories(children));
                                 read();
                             } else {
-                                Promise.all(p).then((children: Array<Array<FileSystemFileEntry>>) => {
+                                Promise.all(p).then((children: FileSystemFileEntry[][]) => {
                                     resolve(children.flat());
                                 });
                             }
@@ -50,12 +50,12 @@ const resolveDirectories = (entries: Array<FileSystemEntry>): Promise<Array<File
         }
     });
 
-    return Promise.all(promises).then((children: Array<Array<FileSystemFileEntry>>) => {
+    return Promise.all(promises).then((children: FileSystemFileEntry[][]) => {
         return result.concat(...children);
     });
 };
 
-const removeCommonPrefix = (urls: Array<DroppedFile>) => {
+const removeCommonPrefix = (urls: DroppedFile[]) => {
     const split = (pathname: string) => {
         const parts = pathname.split(path.delimiter);
         const base = parts[0];
@@ -81,7 +81,6 @@ const removeCommonPrefix = (urls: Array<DroppedFile>) => {
 
 // configure drag and drop
 const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) => {
-
     const dragstart = (ev: DragEvent) => {
         ev.preventDefault();
         ev.stopPropagation();
@@ -115,9 +114,7 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
         }
 
         // Map to entries first
-        const entries = items
-        .map(item => item.webkitGetAsEntry())
-        .filter(v => v);
+        const entries = items.map((item) => item.webkitGetAsEntry()).filter((v) => v);
 
         // resolve directories to files
         const resolvedEntries = await resolveDirectories(entries);
@@ -125,7 +122,7 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
         const files = await Promise.all(
             resolvedEntries.map((entry) => {
                 return new Promise<DroppedFile>((resolve, reject) => {
-                    entry.file((entryFile: any) => {
+                    entry.file((entryFile: File) => {
                         resolve(new DroppedFile(entry.fullPath.substring(1), entryFile));
                     });
                 });

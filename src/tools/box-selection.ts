@@ -1,19 +1,21 @@
 import { Button, Container, Element, Label, VectorInput } from '@playcanvas/pcui';
 import { Vec3 } from 'playcanvas';
 
-import { ShapeGizmoMode, ShapeTransformGizmo } from './shape-transform-gizmo';
 import { BoxShape } from '../box-shape';
 import { ShapeTransformOp } from '../edit-ops';
-import { Events } from '../events';
-import { Scene } from '../scene';
-import { ShortcutManager } from '../shortcut-manager';
-import { Splat } from '../splat';
+import type { Events } from '../events';
+import type { Scene } from '../scene';
+import type { ShortcutManager } from '../shortcut-manager';
+import type { Splat } from '../splat';
 import { i18n } from '../ui/localization';
 import addSvg from '../ui/svg/select-add.svg';
 import intersectSvg from '../ui/svg/select-intersect.svg';
 import removeSvg from '../ui/svg/select-remove.svg';
 import setSvg from '../ui/svg/select-set.svg';
-import { Tooltips } from '../ui/tooltips';
+import type { Tooltips } from '../ui/tooltips';
+
+import { ShapeTransformGizmo } from './shape-transform-gizmo';
+import type { ShapeGizmoMode } from './shape-transform-gizmo';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -263,7 +265,7 @@ class BoxSelection {
             }
         });
 
-        events.on('camera.focalPointPicked', (details: { splat: Splat, position: Vec3 }) => {
+        events.on('camera.focalPointPicked', (details: { splat: Splat; position: Vec3 }) => {
             if (this.active) {
                 recordOp(() => {
                     box.pivot.setPosition(details.position);

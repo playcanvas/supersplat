@@ -1,6 +1,6 @@
-import { Texture } from 'playcanvas';
+import type { Texture } from 'playcanvas';
 
-import { IndexRanges } from './index-ranges';
+import type { IndexRanges } from './index-ranges';
 
 enum State {
     selected = 1,

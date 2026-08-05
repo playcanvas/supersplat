@@ -2,13 +2,14 @@ import { Button, Container, Label } from '@playcanvas/pcui';
 import { Entity, Mat4, Quat, TranslateGizmo, Vec3, math } from 'playcanvas';
 
 import { EntityTransformOp, MultiOp, PlacePivotOp, SetLocalFrameOp } from '../edit-ops';
-import { Events } from '../events';
+import type { Events } from '../events';
 import type { GridPlane } from '../infinite-grid';
-import { Pivot } from '../pivot';
-import { Scene } from '../scene';
-import { Splat } from '../splat';
+import type { Pivot } from '../pivot';
+import type { Scene } from '../scene';
+import type { Splat } from '../splat';
 import { pickSplatSurfacePoint } from '../splat-pick';
-import { ToolOverlay, OverlayWriter } from '../tool-overlay';
+import type { OverlayWriter } from '../tool-overlay';
+import { ToolOverlay } from '../tool-overlay';
 import { Transform } from '../transform';
 import { DimensionLabels } from '../ui/dimension-labels';
 import { i18n } from '../ui/localization';
@@ -41,14 +42,18 @@ const t = new Transform();
 const cent = new Vec3();
 
 class OrientTransformHandler {
-    activate() {}
-    deactivate() {}
+    activate() {
+        // no-op
+    }
+    deactivate() {
+        // no-op
+    }
 }
 
 class OrientTool {
     activate: () => void;
     deactivate: () => void;
-    getFocus: () => { position: Vec3, radius: number } | null;
+    getFocus: () => { position: Vec3; radius: number } | null;
 
     constructor(events: Events, scene: Scene, parent: HTMLElement, canvasContainer: Container) {
         // the edge length labels (shown when 'show dimensions' is enabled);
@@ -161,7 +166,9 @@ class OrientTool {
             }
 
             n.normalize();
-            c.add2(p0, p1).add(p2).mulScalar(1 / 3);
+            c.add2(p0, p1)
+                .add(p2)
+                .mulScalar(1 / 3);
 
             return true;
         };
@@ -217,7 +224,9 @@ class OrientTool {
         });
 
         gizmo.on('transform:move', () => {
-            events.invoke('pivot').moveTRS(entity.getLocalPosition(), entity.getLocalRotation(), entity.getLocalScale());
+            events
+                .invoke('pivot')
+                .moveTRS(entity.getLocalPosition(), entity.getLocalRotation(), entity.getLocalScale());
         });
 
         gizmo.on('transform:end', () => {
@@ -274,9 +283,15 @@ class OrientTool {
             let snap = false;
             for (let i = 0; i < 3; i++) {
                 switch (i) {
-                    case 0: worldTransform.getX(axis); break;
-                    case 1: worldTransform.getY(axis); break;
-                    case 2: worldTransform.getZ(axis); break;
+                    case 0:
+                        worldTransform.getX(axis);
+                        break;
+                    case 1:
+                        worldTransform.getY(axis);
+                        break;
+                    case 2:
+                        worldTransform.getZ(axis);
+                        break;
                 }
                 axis.normalize();
                 const d = n.dot(axis);
@@ -292,7 +307,7 @@ class OrientTool {
 
             // the grid plane's positive axis
             const gridPlane: GridPlane = events.invoke('grid.plane');
-            const a = gridPlane === 'xy' ? Vec3.BACK : (gridPlane === 'yz' ? Vec3.RIGHT : Vec3.UP);
+            const a = gridPlane === 'xy' ? Vec3.BACK : gridPlane === 'yz' ? Vec3.RIGHT : Vec3.UP;
 
             // shortest arc rotation from the plane normal to the grid axis
             q.setFromDirections(n, a);
@@ -355,15 +370,17 @@ class OrientTool {
             // picked plane, origin at the first picked point
             newRot.copy(splat.entity.getLocalRotation()).invert().mul(q);
 
-            events.fire('edit.add', new SetLocalFrameOp({
-                splat,
-                oldOrigin: splat.localFrameOrigin.clone(),
-                oldFrame: splat.localFrame.clone(),
-                newOrigin: splat.orientPoints[0].clone(),
-                newFrame: newRot.clone()
-            }));
+            events.fire(
+                'edit.add',
+                new SetLocalFrameOp({
+                    splat,
+                    oldOrigin: splat.localFrameOrigin.clone(),
+                    oldFrame: splat.localFrame.clone(),
+                    newOrigin: splat.orientPoints[0].clone(),
+                    newFrame: newRot.clone()
+                })
+            );
         });
-
 
         clearButton.on('click', () => {
             if (splat) {

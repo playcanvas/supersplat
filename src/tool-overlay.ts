@@ -1,3 +1,4 @@
+import type { GraphicsDevice } from 'playcanvas';
 import {
     BLENDEQUATION_ADD,
     BLENDMODE_ONE,
@@ -9,7 +10,6 @@ import {
     PRIMITIVE_TRIANGLES,
     BlendState,
     Entity,
-    GraphicsDevice,
     Mesh,
     MeshInstance,
     ShaderMaterial,
@@ -18,7 +18,7 @@ import {
 } from 'playcanvas';
 
 import { Element, ElementType } from './element';
-import { Serializer } from './serializer';
+import type { Serializer } from './serializer';
 import {
     dotVertexShader,
     dotFragmentShader,
@@ -152,7 +152,9 @@ const createDotTexture = (device: GraphicsDevice, size = 64) => {
 // pass after the splat layer so occluded parts stay faintly visible.
 class ToolOverlay extends Element {
     // fills the writer with world-space geometry for the current frame
-    provider: (writer: OverlayWriter) => void = () => {};
+    provider: (writer: OverlayWriter) => void = () => {
+        // no-op
+    };
 
     private writer = new OverlayWriter();
     private baseEntity: Entity;
@@ -198,8 +200,12 @@ class ToolOverlay extends Element {
         const device = this.scene.graphicsDevice;
         const blend = new BlendState(
             true,
-            BLENDEQUATION_ADD, BLENDMODE_SRC_ALPHA, BLENDMODE_ONE_MINUS_SRC_ALPHA,
-            BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE_MINUS_SRC_ALPHA
+            BLENDEQUATION_ADD,
+            BLENDMODE_SRC_ALPHA,
+            BLENDMODE_ONE_MINUS_SRC_ALPHA,
+            BLENDEQUATION_ADD,
+            BLENDMODE_ONE,
+            BLENDMODE_ONE_MINUS_SRC_ALPHA
         );
 
         this.texture = createDotTexture(device);
@@ -295,7 +301,12 @@ class ToolOverlay extends Element {
         const { writer } = this;
         writer.reset();
         this.provider(writer);
-        serializer.pack(this.scene.camera.renderOverlays, writer.dots.length, writer.segments.length, writer.fills.length);
+        serializer.pack(
+            this.scene.camera.renderOverlays,
+            writer.dots.length,
+            writer.segments.length,
+            writer.fills.length
+        );
         serializer.packa(writer.dots);
         serializer.packa(writer.segments);
         serializer.packa(writer.fills);
@@ -342,7 +353,7 @@ class ToolOverlay extends Element {
         // world size of one screen pixel at the near plane (perspective scales by view depth)
         const clientHeight = Math.max(1, this.scene.canvas.clientHeight);
         const proj = camera.camera.projectionMatrix;
-        const pixelScale = (2 / proj.data[5]) / clientHeight;
+        const pixelScale = 2 / proj.data[5] / clientHeight;
         const worldSize = (px: number, depth: number) => px * pixelScale * (camera.ortho ? 1 : depth);
 
         const viewDepth = (p: Vec3) => tmp.sub2(p, cameraPos).dot(cameraFwd);
@@ -409,14 +420,19 @@ class ToolOverlay extends Element {
             const ribbon = (out: number[], width: number) => {
                 const wa = worldSize(width, depthA) * 0.5;
                 const wb = worldSize(width, depthB) * 0.5;
-                const ax0 = va.x - perp.x * wa, ay0 = va.y - perp.y * wa, az0 = va.z - perp.z * wa;
-                const ax1 = va.x + perp.x * wa, ay1 = va.y + perp.y * wa, az1 = va.z + perp.z * wa;
-                const bx0 = vb.x - perp.x * wb, by0 = vb.y - perp.y * wb, bz0 = vb.z - perp.z * wb;
-                const bx1 = vb.x + perp.x * wb, by1 = vb.y + perp.y * wb, bz1 = vb.z + perp.z * wb;
-                out.push(
-                    ax0, ay0, az0, bx0, by0, bz0, bx1, by1, bz1,
-                    ax0, ay0, az0, bx1, by1, bz1, ax1, ay1, az1
-                );
+                const ax0 = va.x - perp.x * wa,
+                    ay0 = va.y - perp.y * wa,
+                    az0 = va.z - perp.z * wa;
+                const ax1 = va.x + perp.x * wa,
+                    ay1 = va.y + perp.y * wa,
+                    az1 = va.z + perp.z * wa;
+                const bx0 = vb.x - perp.x * wb,
+                    by0 = vb.y - perp.y * wb,
+                    bz0 = vb.z - perp.z * wb;
+                const bx1 = vb.x + perp.x * wb,
+                    by1 = vb.y + perp.y * wb,
+                    bz1 = vb.z + perp.z * wb;
+                out.push(ax0, ay0, az0, bx0, by0, bz0, bx1, by1, bz1, ax0, ay0, az0, bx1, by1, bz1, ax1, ay1, az1);
             };
 
             ribbon(linePositions, LINE_WIDTH);

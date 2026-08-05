@@ -1,7 +1,8 @@
-import { ReadFileSystem } from '@playcanvas/splat-transform';
-import { AppBase, Asset, GSplatData, GSplatResource } from 'playcanvas';
+import type { ReadFileSystem } from '@playcanvas/splat-transform';
+import type { AppBase, GSplatData } from 'playcanvas';
+import { Asset, GSplatResource } from 'playcanvas';
 
-import { Events } from './events';
+import type { Events } from './events';
 import { defaultLodIndex, loadGSplatData, validateGSplatData } from './io';
 import { Splat } from './splat';
 import { i18n } from './ui/localization';
@@ -63,7 +64,12 @@ class AssetLoader {
             };
 
             // Skip reordering for animation frames (speed) or when explicitly requested (already ordered)
-            const result = await loadGSplatData(filename, fileSystem, skipReorder || animationFrame, animationFrame ? undefined : pickLod);
+            const result = await loadGSplatData(
+                filename,
+                fileSystem,
+                skipReorder || animationFrame,
+                animationFrame ? undefined : pickLod
+            );
             if (!result) {
                 // user cancelled LOD selection
                 return null;

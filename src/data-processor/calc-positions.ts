@@ -1,21 +1,19 @@
+import type { GraphicsDevice, ScopeSpace, Shader } from 'playcanvas';
 import {
     ADDRESS_CLAMP_TO_EDGE,
     PIXELFORMAT_RGBA32F,
     SEMANTIC_POSITION,
     drawQuadWithShader,
-    GraphicsDevice,
     RenderTarget,
-    ScopeSpace,
-    Shader,
     ShaderUtils,
     Texture,
     BlendState
 } from 'playcanvas';
 
 import { vertexShader, fragmentShader } from '../shaders/position-shader';
-import { Splat } from '../splat';
+import type { Splat } from '../splat';
 
-const resolve = (scope: ScopeSpace, values: any) => {
+const resolve = (scope: ScopeSpace, values: Record<string, unknown>) => {
     for (const key in values) {
         scope.resolve(key).setValue(values[key]);
     }
@@ -83,7 +81,7 @@ class CalcPositions {
         const { scope } = device;
 
         const numSplats = splat.splatData.numSplats;
-        const transformA = (splat.entity.gsplat.instance.resource as any).getTexture('transformA');
+        const transformA = splat.entity.gsplat.instance.resource.getTexture('transformA');
         const splatTransform = splat.transformTexture;
         const transformPalette = splat.transformPalette.texture;
 

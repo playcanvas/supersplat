@@ -34,7 +34,9 @@
         background-color: $bcg-darkest;
         cursor: pointer;
 
-        & > .menu-row-text, .menu-row-postscript, .menu-row-icon {
+        & > .menu-row-text,
+        .menu-row-postscript,
+        .menu-row-icon {
             color: $text-primary;
         }
 
@@ -44,7 +46,9 @@
     }
 
     &.pcui-disabled {
-        & > .menu-row-text, .menu-row-postscript, .menu-row-icon {
+        & > .menu-row-text,
+        .menu-row-postscript,
+        .menu-row-icon {
             color: $text-darkest;
         }
 

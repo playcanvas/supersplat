@@ -2,7 +2,7 @@
  * Interface for animation tracks that can be attached to animatable targets.
  * Each track owns its keyframes and handles capture, interpolation, and evaluation.
  */
-interface AnimTrack {
+type AnimTrack = {
     /** Array of frame numbers where keyframes exist */
     readonly keys: readonly number[];
 
@@ -47,6 +47,6 @@ interface AnimTrack {
      * and fire appropriate change events.
      */
     restore(snapshot: unknown): void;
-}
+};
 
 export { AnimTrack };

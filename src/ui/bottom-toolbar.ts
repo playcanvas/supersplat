@@ -1,7 +1,8 @@
 import { Button, Element, Container } from '@playcanvas/pcui';
 
-import { Events } from '../events';
-import { ShortcutManager } from '../shortcut-manager';
+import type { Events } from '../events';
+import type { ShortcutManager } from '../shortcut-manager';
+
 import { i18n } from './localization';
 import measureSvg from './svg/measure.svg';
 import orientSvg from './svg/orient.svg';
@@ -15,7 +16,7 @@ import polygonSvg from './svg/select-poly.svg';
 import sphereSvg from './svg/select-sphere.svg';
 import boxSvg from './svg/show-hide-splats.svg';
 import undoSvg from './svg/undo.svg';
-import { Tooltips } from './tooltips';
+import type { Tooltips } from './tooltips';
 // import cropSvg from './svg/crop.svg';
 
 const createSvg = (svgString: string) => {
@@ -221,7 +222,6 @@ class BottomToolbar extends Container {
             coordSpace.dom.classList[space === 'local' ? 'add' : 'remove']('active');
         });
 
-
         // Helper to compose localized tooltip text with shortcut
         const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
         const tooltip = (localeKey: string, shortcutId?: string) => () => {
@@ -251,10 +251,15 @@ class BottomToolbar extends Container {
         tooltips.register(measure, tooltip('tooltip.bottom-toolbar.measure'));
         tooltips.register(orient, tooltip('tooltip.bottom-toolbar.orient'));
         tooltips.register(coordSpace, tooltip('tooltip.bottom-toolbar.local-space', 'tool.toggleCoordSpace'));
-        tooltips.register(origin, () => i18n.t(
-            events.invoke('tool.active') === 'orient' ? 'orient.set-pivot' : 'tooltip.bottom-toolbar.reset-pivot'
-        ));
-        tooltips.register(eyedropper, tooltip('tooltip.bottom-toolbar.eyedropper-selection', 'tool.eyedropperSelection'));
+        tooltips.register(origin, () =>
+            i18n.t(
+                events.invoke('tool.active') === 'orient' ? 'orient.set-pivot' : 'tooltip.bottom-toolbar.reset-pivot'
+            )
+        );
+        tooltips.register(
+            eyedropper,
+            tooltip('tooltip.bottom-toolbar.eyedropper-selection', 'tool.eyedropperSelection')
+        );
     }
 }
 

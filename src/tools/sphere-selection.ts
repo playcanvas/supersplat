@@ -1,19 +1,21 @@
 import { Button, Container, Element, Label, NumericInput, VectorInput } from '@playcanvas/pcui';
 import { Vec3 } from 'playcanvas';
 
-import { ShapeGizmoMode, ShapeTransformGizmo } from './shape-transform-gizmo';
 import { ShapeTransformOp } from '../edit-ops';
-import { Events } from '../events';
-import { Scene } from '../scene';
-import { ShortcutManager } from '../shortcut-manager';
+import type { Events } from '../events';
+import type { Scene } from '../scene';
+import type { ShortcutManager } from '../shortcut-manager';
 import { SphereShape } from '../sphere-shape';
-import { Splat } from '../splat';
+import type { Splat } from '../splat';
 import { i18n } from '../ui/localization';
 import addSvg from '../ui/svg/select-add.svg';
 import intersectSvg from '../ui/svg/select-intersect.svg';
 import removeSvg from '../ui/svg/select-remove.svg';
 import setSvg from '../ui/svg/select-set.svg';
-import { Tooltips } from '../ui/tooltips';
+import type { Tooltips } from '../ui/tooltips';
+
+import { ShapeTransformGizmo } from './shape-transform-gizmo';
+import type { ShapeGizmoMode } from './shape-transform-gizmo';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -184,16 +186,20 @@ class SphereSelection {
             gizmo.toggleMode('scale');
         });
         setButton.dom.addEventListener('pointerdown', (e) => {
-            e.stopPropagation(); apply('set');
+            e.stopPropagation();
+            apply('set');
         });
         addButton.dom.addEventListener('pointerdown', (e) => {
-            e.stopPropagation(); apply('add');
+            e.stopPropagation();
+            apply('add');
         });
         removeButton.dom.addEventListener('pointerdown', (e) => {
-            e.stopPropagation(); apply('remove');
+            e.stopPropagation();
+            apply('remove');
         });
         intersectButton.dom.addEventListener('pointerdown', (e) => {
-            e.stopPropagation(); apply('intersect');
+            e.stopPropagation();
+            apply('intersect');
         });
         position.on('change', (v: number[]) => {
             if (!uiUpdating) {
@@ -212,7 +218,7 @@ class SphereSelection {
             }
         });
 
-        events.on('camera.focalPointPicked', (details: { splat: Splat, position: Vec3 }) => {
+        events.on('camera.focalPointPicked', (details: { splat: Splat; position: Vec3 }) => {
             if (this.active) {
                 recordOp(() => {
                     sphere.pivot.setPosition(details.position);

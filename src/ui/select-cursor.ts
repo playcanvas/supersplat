@@ -1,5 +1,6 @@
-import { Events } from '../events';
+import type { Events } from '../events';
 import { opFromModifiers } from '../select-op';
+
 import addCursor from './svg/cursor-add.svg';
 import intersectCursor from './svg/cursor-intersect.svg';
 import removeCursor from './svg/cursor-remove.svg';

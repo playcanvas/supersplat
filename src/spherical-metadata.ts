@@ -6,8 +6,7 @@
 // Throws on unexpected input; callers should fall back to the untagged buffer.
 
 const SPHERICAL_UUID = new Uint8Array([
-    0xff, 0xcc, 0x82, 0x63, 0xf8, 0x55, 0x4a, 0x93,
-    0x88, 0x14, 0x58, 0x7a, 0x02, 0x52, 0x1f, 0xdd
+    0xff, 0xcc, 0x82, 0x63, 0xf8, 0x55, 0x4a, 0x93, 0x88, 0x14, 0x58, 0x7a, 0x02, 0x52, 0x1f, 0xdd
 ]);
 
 const SPHERICAL_XML =
@@ -77,7 +76,7 @@ const childBoxes = (view: DataView, start: number, end: number): Box[] => {
 
 const findChild = (view: DataView, parent: Box, type: string): Box | null => {
     const children = childBoxes(view, parent.start + parent.headerSize, parent.start + parent.size);
-    return children.find(child => child.type === type) ?? null;
+    return children.find((child) => child.type === type) ?? null;
 };
 
 // a trak is the video track when its mdia > hdlr handler_type is 'vide'
@@ -90,13 +89,15 @@ const isVideoTrak = (view: DataView, trak: Box): boolean => {
 
     // hdlr payload: version/flags (4) + pre_defined (4) + handler_type (4)
     const offset = hdlr.start + hdlr.headerSize + 8;
-    return offset + 4 <= hdlr.start + hdlr.size &&
+    return (
+        offset + 4 <= hdlr.start + hdlr.size &&
         String.fromCharCode(
             view.getUint8(offset),
             view.getUint8(offset + 1),
             view.getUint8(offset + 2),
             view.getUint8(offset + 3)
-        ) === 'vide';
+        ) === 'vide'
+    );
 };
 
 // add delta to every chunk offset in the stco/co64 boxes of a moov subtree.
@@ -107,7 +108,7 @@ const patchChunkOffsets = (view: DataView, box: Box, delta: number) => {
 
     if (containers.includes(box.type)) {
         const children = childBoxes(view, box.start + box.headerSize, box.start + box.size);
-        children.forEach(child => patchChunkOffsets(view, child, delta));
+        children.forEach((child) => patchChunkOffsets(view, child, delta));
     } else if (box.type === 'stco' || box.type === 'co64') {
         // full box: version/flags (4) + entry_count (4) + entries
         const count = view.getUint32(box.start + box.headerSize + 4);
@@ -130,17 +131,20 @@ const injectSphericalMetadata = (buffer: ArrayBuffer): ArrayBuffer => {
     const view = new DataView(buffer);
     const topLevel = childBoxes(view, 0, buffer.byteLength);
 
-    if (topLevel.length === 0 || topLevel[topLevel.length - 1].start + topLevel[topLevel.length - 1].size !== buffer.byteLength) {
+    if (
+        topLevel.length === 0 ||
+        topLevel[topLevel.length - 1].start + topLevel[topLevel.length - 1].size !== buffer.byteLength
+    ) {
         throw new Error('malformed container');
     }
 
-    const moov = topLevel.find(box => box.type === 'moov');
+    const moov = topLevel.find((box) => box.type === 'moov');
     if (!moov) {
         throw new Error('moov box not found');
     }
 
     const moovChildren = childBoxes(view, moov.start + moov.headerSize, moov.start + moov.size);
-    const trak = moovChildren.find(box => box.type === 'trak' && isVideoTrak(view, box));
+    const trak = moovChildren.find((box) => box.type === 'trak' && isVideoTrak(view, box));
     if (!trak) {
         throw new Error('video trak not found');
     }
@@ -154,7 +158,7 @@ const injectSphericalMetadata = (buffer: ArrayBuffer): ArrayBuffer => {
     const uuidBox = new Uint8Array(24 + xml.length);
     const uuidView = new DataView(uuidBox.buffer);
     uuidView.setUint32(0, uuidBox.length);
-    uuidBox.set([0x75, 0x75, 0x69, 0x64], 4);   // 'uuid'
+    uuidBox.set([0x75, 0x75, 0x69, 0x64], 4); // 'uuid'
     uuidBox.set(SPHERICAL_UUID, 8);
     uuidBox.set(xml, 24);
 
@@ -173,7 +177,7 @@ const injectSphericalMetadata = (buffer: ArrayBuffer): ArrayBuffer => {
 
     // fast-start layout defense: growing a moov that precedes mdat shifts the
     // media data, so chunk offsets must follow
-    const mdat = topLevel.find(box => box.type === 'mdat');
+    const mdat = topLevel.find((box) => box.type === 'mdat');
     if (mdat && moov.start < mdat.start) {
         const outMoov = readBox(outView, moov.start, out.byteLength);
         patchChunkOffsets(outView, outMoov, uuidBox.length);

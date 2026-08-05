@@ -6,7 +6,4 @@
 export { BrowserFileSystem } from './browser-file-system';
 
 // Writer utilities
-export {
-    GZipWriter,
-    ProgressWriter
-} from './writer';
+export { GZipWriter, ProgressWriter } from './writer';

@@ -1,13 +1,17 @@
-import { Events } from '../events';
+import type { Events } from '../events';
 import { opFromModifiers } from '../select-op';
 
-type Point = { x: number, y: number };
+type Point = { x: number; y: number };
 
 class PolygonSelection {
     activate: () => void;
     deactivate: () => void;
 
-    constructor(events: Events, parent: HTMLElement, mask: { canvas: HTMLCanvasElement, context: CanvasRenderingContext2D }) {
+    constructor(
+        events: Events,
+        parent: HTMLElement,
+        mask: { canvas: HTMLCanvasElement; context: CanvasRenderingContext2D }
+    ) {
         // create svg
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.classList.add('tool-svg', 'hidden');
@@ -34,7 +38,12 @@ class PolygonSelection {
         };
 
         const paint = () => {
-            polyline.setAttribute('points', [...points, currentPoint].filter(v => v).reduce((prev, current) => `${prev}${current.x}, ${current.y} `, ''));
+            polyline.setAttribute(
+                'points',
+                [...points, currentPoint]
+                    .filter((v) => v)
+                    .reduce((prev, current) => `${prev}${current.x}, ${current.y} `, '')
+            );
             polyline.setAttribute('stroke', isClosed() ? '#fa6' : '#f60');
         };
 
@@ -62,12 +71,7 @@ class PolygonSelection {
             context.fill();
 
             // wait for selection to complete
-            await events.invoke(
-                'select.byMask',
-                opFromModifiers(e),
-                canvas,
-                context
-            );
+            await events.invoke('select.byMask', opFromModifiers(e), canvas, context);
 
             // clear polygon after selection completes
             points = [];

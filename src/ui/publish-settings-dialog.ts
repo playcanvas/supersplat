@@ -1,10 +1,23 @@
-import { BooleanInput, Button, ColorPicker, Container, Element, Label, SelectInput, SliderInput, TextAreaInput, TextInput } from '@playcanvas/pcui';
+import {
+    BooleanInput,
+    Button,
+    ColorPicker,
+    Container,
+    Element,
+    Label,
+    SelectInput,
+    SliderInput,
+    TextAreaInput,
+    TextInput
+} from '@playcanvas/pcui';
 
-import { Pose } from '../camera-poses';
-import { Events } from '../events';
+import type { Pose } from '../camera-poses';
+import type { Events } from '../events';
+import type { PublishSettings, UserStatus } from '../publish';
+import type { AnimTrack, ExperienceSettings } from '../splat-serialize';
+import { defaultPostEffectSettings } from '../splat-serialize';
+
 import { i18n } from './localization';
-import { PublishSettings, UserStatus } from '../publish';
-import { AnimTrack, ExperienceSettings, defaultPostEffectSettings } from '../splat-serialize';
 import sceneExport from './svg/export.svg';
 
 const createSvg = (svgString: string, args = {}) => {
@@ -258,7 +271,7 @@ class PublishSettingsDialog extends Container {
             const filename = splats[0].filename;
             const dot = splats[0].filename.lastIndexOf('.');
             const bgClr = events.invoke('bgClr');
-            const totalSplats = splats.reduce((sum: number, s: any) => sum + (s.numSplats ?? 0), 0);
+            const totalSplats = splats.reduce((sum, s) => sum + (s.numSplats ?? 0), 0);
 
             // union scene bounds to decide LOD default for large scenes
             const sceneMin = [Infinity, Infinity, Infinity];
@@ -274,12 +287,15 @@ class PublishSettingsDialog extends Container {
                     sceneMax[i] = Math.max(sceneMax[i], c[i] + h[i]);
                 }
             }
-            const largeAxes = [0, 1, 2].filter(i => sceneMax[i] - sceneMin[i] > 16).length;
+            const largeAxes = [0, 1, 2].filter((i) => sceneMax[i] - sceneMin[i] > 16).length;
             const isLargeScene = largeAxes >= 2;
 
-            overwriteSelect.options = [{
-                v: '0', t: i18n.t('popup.publish.new-scene')
-            }].concat(overwriteList.map((s, i) => ({ v: (i + 1).toString(), t: s })));
+            overwriteSelect.options = [
+                {
+                    v: '0',
+                    t: i18n.t('popup.publish.new-scene')
+                }
+            ].concat(overwriteList.map((s, i) => ({ v: (i + 1).toString(), t: s })));
 
             overwriteSelect.value = '0';
             titleInput.value = filename.slice(0, dot > 0 ? dot : undefined);
@@ -304,9 +320,9 @@ class PublishSettingsDialog extends Container {
 
             // get poses
             const orderedPoses = (events.invoke('camera.poses') as Pose[])
-            .slice()
-            .filter(p => p.frame >= 0 && p.frame < frames)
-            .sort((a, b) => a.frame - b.frame);
+                .slice()
+                .filter((p) => p.frame >= 0 && p.frame < frames)
+                .sort((a, b) => a.frame - b.frame);
 
             // overwrite options
             const overwriteList = userStatus.scenes.map((s) => {
@@ -367,13 +383,18 @@ class PublishSettingsDialog extends Container {
                     const pose = events.invoke('camera.getPose');
                     const p = pose?.position;
                     const t = pose?.target;
-                    const cameras = (p && t) ? [{
-                        initial: {
-                            position: [p.x, p.y, p.z] as [number, number, number],
-                            target: [t.x, t.y, t.z] as [number, number, number],
-                            fov
-                        }
-                    }] : [];
+                    const cameras =
+                        p && t
+                            ? [
+                                  {
+                                      initial: {
+                                          position: [p.x, p.y, p.z] as [number, number, number],
+                                          target: [t.x, t.y, t.z] as [number, number, number],
+                                          fov
+                                      }
+                                  }
+                              ]
+                            : [];
 
                     const experienceSettings: ExperienceSettings = {
                         version: 2,

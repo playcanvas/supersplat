@@ -1,8 +1,9 @@
 import { ScaleGizmo } from 'playcanvas';
 
+import type { Events } from '../events';
+import type { Scene } from '../scene';
+
 import { TransformTool } from './transform-tool';
-import { Events } from '../events';
-import { Scene } from '../scene';
 
 class ScaleTool extends TransformTool {
     constructor(events: Events, scene: Scene) {

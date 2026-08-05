@@ -10,7 +10,7 @@
     border-radius: 8px;
 
     background-color: $bcg-dark;
- 
+
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -27,7 +27,9 @@
         }
     }
 
-    &>.right-toolbar-button, .right-toolbar-tool, .right-toolbar-toggle {
+    & > .right-toolbar-button,
+    .right-toolbar-tool,
+    .right-toolbar-toggle {
         width: 38px;
         height: 38px;
         margin: 1px 1px;
@@ -45,20 +47,20 @@
         }
     }
 
-    &>.right-toolbar-separator {
+    & > .right-toolbar-separator {
         width: 38px;
         height: 2px;
         margin: 4px 0px;
         background-color: $bcg-lighter;
     }
 
-    &>.right-toolbar-button {
+    & > .right-toolbar-button {
         svg {
             color: $clr-default;
         }
     }
 
-    &>.right-toolbar-tool {
+    & > .right-toolbar-tool {
         background-color: $bcg-primary;
 
         svg {
@@ -83,7 +85,7 @@
         }
     }
 
-    &>.right-toolbar-toggle.active {
+    & > .right-toolbar-toggle.active {
         // highlight icon
         &::before {
             color: $clr-hilight;

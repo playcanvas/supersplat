@@ -341,7 +341,11 @@ class MeasureTool {
 
                 // place at the pointer-down position: that is where the user aimed
                 if (splat.measurePoints.length < 2) {
-                    const result = await scene.camera.intersect(clickX / canvasContainer.dom.clientWidth, clickY / canvasContainer.dom.clientHeight);
+                    const result = await scene.camera.intersectById(
+                        clickX / canvasContainer.dom.clientWidth,
+                        clickY / canvasContainer.dom.clientHeight,
+                        splat
+                    );
                     if (result) {
                         mat.invert(splat.worldTransform);
                         mat.transformPoint(result.position, p);

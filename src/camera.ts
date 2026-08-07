@@ -18,6 +18,7 @@ import {
     Color,
     Entity,
     Mat4,
+    Plane,
     Quat,
     Ray,
     RenderPass,
@@ -746,6 +747,48 @@ class Camera extends Element {
             splat: closestSplat,
             position: position,
             distance: t
+        };
+    }
+
+    // intersect the scene at the given normalized screen coordinate (0-1 range)
+    // using ID picking. Returns the world position of the front-most gaussian
+    // at that pixel, refined by ray-plane intersection. More accurate than
+    // depth picking for measurement because it targets the actual gaussian
+    // center rather than an alpha-weighted depth average.
+    async intersectById(x: number, y: number, splat: Splat) {
+        const { scene } = this;
+
+        // build the pick ray in world space (screenToWorld expects CSS pixels)
+        const screenX = x * scene.canvas.clientWidth;
+        const screenY = y * scene.canvas.clientHeight;
+        this.getRay(screenX, screenY, ray);
+
+        // render the splat's ID channel and read the front-most gaussian ID
+        this.pickPrep(splat, 'set');
+        const pickId = await this.pick(x, y);
+        if (pickId === -1) {
+            return null;
+        }
+
+        // get the gaussian center world position
+        const worldPos = new Vec3();
+        if (!splat.calcSplatWorldPosition(pickId, worldPos)) {
+            return null;
+        }
+
+        // refine: intersect the pick ray with a plane through the gaussian
+        // center facing the camera, so the result lies on the ray
+        const plane = new Plane();
+        plane.setFromPointNormal(worldPos, this.mainCamera.forward);
+        if (!plane.intersectsRay(ray, worldPos)) {
+            return null;
+        }
+
+        const distance = new Vec3().sub2(worldPos, ray.origin).length();
+        return {
+            splat: splat,
+            position: worldPos,
+            distance: distance
         };
     }
 

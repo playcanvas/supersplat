@@ -17,6 +17,7 @@ class DimensionLabels {
 
     private scene: Scene;
     private viewport: HTMLElement;
+    private ns = 'http://www.w3.org/2000/svg';
 
     // the svg is appended to parent and sized by it; screen projections use
     // the viewport element's client size (the canvas container)
@@ -24,19 +25,29 @@ class DimensionLabels {
         this.scene = scene;
         this.viewport = viewport;
 
-        const ns = 'http://www.w3.org/2000/svg';
-        this.svg = document.createElementNS(ns, 'svg') as SVGSVGElement;
+        this.svg = document.createElementNS(this.ns, 'svg') as SVGSVGElement;
         this.svg.classList.add('tool-svg', 'dimension-labels-svg', 'hidden');
         this.svg.id = id;
         parent.appendChild(this.svg);
 
         this.labels = Array.from({ length: count }, () => {
-            const text = document.createElementNS(ns, 'text') as SVGTextElement;
+            const text = document.createElementNS(this.ns, 'text') as SVGTextElement;
             text.setAttribute('text-anchor', 'middle');
             text.setAttribute('dominant-baseline', 'middle');
             this.svg.appendChild(text);
             return text;
         });
+    }
+
+    // ensure at least `count` label elements exist, creating new ones as needed
+    ensureCount(count: number) {
+        while (this.labels.length < count) {
+            const text = document.createElementNS(this.ns, 'text') as SVGTextElement;
+            text.setAttribute('text-anchor', 'middle');
+            text.setAttribute('dominant-baseline', 'middle');
+            this.svg.appendChild(text);
+            this.labels.push(text);
+        }
     }
 
     show() {
@@ -48,7 +59,16 @@ class DimensionLabels {
     }
 
     hideLabel(index: number) {
-        this.labels[index].setAttribute('visibility', 'hidden');
+        if (this.labels[index]) {
+            this.labels[index].setAttribute('visibility', 'hidden');
+        }
+    }
+
+    // hide all labels beyond `count` (used when the number of segments shrinks)
+    hideExtra(count: number) {
+        for (let i = count; i < this.labels.length; i++) {
+            this.labels[i].setAttribute('visibility', 'hidden');
+        }
     }
 
     // place a label along the world-space edge a-b, showing its length. the

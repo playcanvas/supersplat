@@ -97,18 +97,23 @@ class MeasureTool {
         // the measurement points and line render in the scene via the shared
         // tool overlay (occluded by gaussians, with a faint ghost showing through)
         const overlay = new ToolOverlay();
+        const overlayPts: Vec3[] = [p0, p1];
         overlay.provider = (writer: OverlayWriter) => {
             if (!active || !splat) {
                 return;
             }
             const count = splat.measurePoints.length;
-            const pts = [p0, p1];
-            for (let i = 0; i < count; i++) {
-                getPoint(i, pts[i]);
-                writer.dot(pts[i]);
+            // ensure we have enough temp vectors
+            while (overlayPts.length < count) {
+                overlayPts.push(new Vec3());
             }
-            if (count === 2) {
-                writer.segment(p0, p1);
+            for (let i = 0; i < count; i++) {
+                getPoint(i, overlayPts[i]);
+                writer.dot(overlayPts[i]);
+            }
+            // draw a segment between each consecutive pair of points
+            for (let i = 0; i < count - 1; i++) {
+                writer.segment(overlayPts[i], overlayPts[i + 1]);
             }
         };
 
@@ -123,13 +128,17 @@ class MeasureTool {
                 gizmo.attach(entity);
             }
 
-            if (splat && splat.measurePoints.length === 2) {
-                getPoint(0, p0);
-                getPoint(1, p1);
-                const len = p0.distance(p1);
+            if (splat && splat.measurePoints.length >= 2) {
+                // total length across all segments
+                let totalLen = 0;
+                for (let i = 0; i < splat.measurePoints.length - 1; i++) {
+                    getPoint(i, p0);
+                    getPoint(i + 1, p1);
+                    totalLen += p0.distance(p1);
+                }
 
                 suppressUI++;
-                lengthInput.value = len;
+                lengthInput.value = totalLen;
                 lengthInput.enabled = true;
                 suppressUI--;
             } else {
@@ -340,19 +349,17 @@ class MeasureTool {
                 }
 
                 // place at the pointer-down position: that is where the user aimed
-                if (splat.measurePoints.length < 2) {
-                    const result = await scene.camera.intersectById(
-                        clickX / canvasContainer.dom.clientWidth,
-                        clickY / canvasContainer.dom.clientHeight,
-                        splat
-                    );
-                    if (result) {
-                        mat.invert(splat.worldTransform);
-                        mat.transformPoint(result.position, p);
-                        splat.measureSelection = splat.measurePoints.length;
-                        splat.measurePoints.push(p.clone());
-                        updateVisuals();
-                    }
+                const result = await scene.camera.intersectById(
+                    clickX / canvasContainer.dom.clientWidth,
+                    clickY / canvasContainer.dom.clientHeight,
+                    splat
+                );
+                if (result) {
+                    mat.invert(splat.worldTransform);
+                    mat.transformPoint(result.position, p);
+                    splat.measureSelection = splat.measurePoints.length;
+                    splat.measurePoints.push(p.clone());
+                    updateVisuals();
                 }
 
                 e.preventDefault();
@@ -360,21 +367,27 @@ class MeasureTool {
             }
         };
 
-        // length label along the measured line
+        // length labels along each measured segment
         events.on('postrender', () => {
             // the svg is hidden while the tool is inactive, so skip the work
             if (!active || !splat) {
                 return;
             }
 
-            if (splat.measurePoints.length !== 2 || !events.invoke('camera.boundDimensions')) {
-                dimLabels.hideLabel(0);
+            const segCount = splat.measurePoints.length - 1;
+
+            if (segCount < 1 || !events.invoke('camera.boundDimensions')) {
+                dimLabels.hideExtra(0);
                 return;
             }
 
-            getPoint(0, p0);
-            getPoint(1, p1);
-            dimLabels.setLabel(0, p0, p1);
+            dimLabels.ensureCount(segCount);
+            for (let i = 0; i < segCount; i++) {
+                getPoint(i, p0);
+                getPoint(i + 1, p1);
+                dimLabels.setLabel(i, p0, p1);
+            }
+            dimLabels.hideExtra(segCount);
         });
 
         // re-render so the label reacts to the setting while the tool is active

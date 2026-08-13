@@ -99,7 +99,6 @@ const registerSequenceEvents = (events: Events, scene: Scene) => {
         // is bound as an initial load (applying its rotation/name) rather than
         // swapped onto the old element
         if (splat) {
-            scene.remove(splat);
             splat.destroy();
             splat = null;
         }

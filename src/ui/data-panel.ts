@@ -1,5 +1,5 @@
 import { BooleanInput, Container, Label } from '@playcanvas/pcui';
-import { Mat4 } from 'playcanvas';
+import { Camera, Mat4 } from 'playcanvas';
 
 import { Element } from '../element';
 import { Events } from '../events';
@@ -431,6 +431,7 @@ class DataPanel extends Container {
         let pendingToken = 0;
         let lastGpuMode = 0;
         let lastHash = '';
+        const shaderProjection = new Mat4();
         const viewProjection = new Mat4();
 
         // single source of truth for everything that could trigger a refresh.
@@ -456,7 +457,10 @@ class DataPanel extends Container {
                 cameraPos: splat.scene.camera.position
             };
             if (inputs.onScreenOnly) {
-                viewProjection.mul2(cam.projectionMatrix, cam.viewMatrix);
+                const projection = Camera.applyShaderProjectionTransform(
+                    cam.projectionMatrix, shaderProjection, false, splat.scene.graphicsDevice.isWebGPU
+                );
+                viewProjection.mul2(projection, cam.viewMatrix);
                 opts.viewProjection = viewProjection;
                 opts.onScreenOnly = true;
             }

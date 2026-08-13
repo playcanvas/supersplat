@@ -16,6 +16,7 @@ import {
     BindStorageBufferFormat,
     BindTextureFormat,
     BindUniformBufferFormat,
+    Camera,
     Compute,
     GraphicsDevice,
     Mat4,
@@ -124,6 +125,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
 class Intersect {
     private readonly device: GraphicsDevice;
     private readonly dummyTexture: Texture;
+    private readonly shaderProjection = new Mat4();
     private readonly viewProjection = new Mat4();
     private readonly compute: Compute;
     private readonly bindGroupFormat: BindGroupFormat;
@@ -174,7 +176,10 @@ class Intersect {
         }
 
         const camera = splat.scene.camera.camera;
-        this.viewProjection.mul2(camera.projectionMatrix, camera.viewMatrix);
+        const projection = Camera.applyShaderProjectionTransform(
+            camera.projectionMatrix, this.shaderProjection, false, this.device.isWebGPU
+        );
+        this.viewProjection.mul2(projection, camera.viewMatrix);
         const mask = (options as MaskOptions).mask;
         const rect = (options as RectOptions).rect;
         const sphere = (options as SphereOptions).sphere;

@@ -9,7 +9,7 @@ type TooltipText = string | (() => string);
 
 class Tooltips extends Container {
     register: (target: Element, text: TooltipText, direction?: Direction) => void;
-    unregister: (target: Element) => void;
+    unregister: (target: Element, dom?: HTMLElement) => void;
     destroy: () => void;
 
     constructor(args: any = {}) {
@@ -112,18 +112,18 @@ class Tooltips extends Container {
             target.dom.addEventListener('pointerenter', enter);
             target.dom.addEventListener('pointerleave', leave);
 
-            target.on('destroy', () => {
-                this.unregister(target);
+            target.on('destroy', (dom: HTMLElement) => {
+                this.unregister(target, dom);
             });
 
             targets.set(target, { enter, leave });
         };
 
-        this.unregister = (target: Element) => {
+        this.unregister = (target: Element, dom = target.dom) => {
             const value = targets.get(target);
             if (value) {
-                target.dom.removeEventListener('pointerenter', value.enter);
-                target.dom.removeEventListener('pointerleave', value.leave);
+                dom?.removeEventListener('pointerenter', value.enter);
+                dom?.removeEventListener('pointerleave', value.leave);
                 targets.delete(target);
             }
         };

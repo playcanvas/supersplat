@@ -21,6 +21,15 @@ import {
     type Writer
 } from '@playcanvas/splat-transform';
 import {
+    defaultPostEffectSettings,
+    type AnimTrack,
+    type Annotation,
+    type Camera,
+    type CameraPose,
+    type ExperienceSettings,
+    type PostEffectSettings
+} from '@playcanvas/splat-transform/viewer-settings';
+import {
     GSplatData,
     Mat3,
     Mat4,
@@ -50,95 +59,6 @@ type SerializeSettings = {
     keepStateData?: boolean;        // keep the state data array
     keepWorldTransform?: boolean;   // don't apply the world transform when resolving splat transforms
     keepColorTint?: boolean;        // refrain from applying color tints
-};
-
-type AnimTrack = {
-    name: string,
-    duration: number,
-    frameRate: number,
-    loopMode: 'none' | 'repeat' | 'pingpong',
-    interpolation: 'step' | 'spline',
-    smoothness: number,
-    keyframes: {
-        times: number[],
-        values: {
-            position: number[],
-            target: number[],
-            fov: number[],
-        }
-    }
-};
-
-type CameraPose = {
-    position: [number, number, number],
-    target: [number, number, number],
-    fov: number
-};
-
-type Camera = {
-    initial: CameraPose,
-};
-
-type Annotation = {
-    position: [number, number, number],
-    title: string,
-    text: string,
-    extras: any,
-    camera: Camera
-};
-
-type PostEffectSettings = {
-    sharpness: {
-        enabled: boolean,
-        amount: number,
-    },
-    bloom: {
-        enabled: boolean,
-        intensity: number,
-        blurLevel: number,
-    },
-    grading: {
-        enabled: boolean,
-        brightness: number,
-        contrast: number,
-        saturation: number,
-        tint: [number, number, number],
-    },
-    vignette: {
-        enabled: boolean,
-        intensity: number,
-        inner: number,
-        outer: number,
-        curvature: number,
-    },
-    fringing: {
-        enabled: boolean,
-        intensity: number
-    }
-};
-
-const defaultPostEffectSettings: PostEffectSettings = {
-    sharpness: { enabled: false, amount: 0 },
-    bloom: { enabled: false, intensity: 1, blurLevel: 2 },
-    grading: { enabled: false, brightness: 1, contrast: 1, saturation: 1, tint: [1, 1, 1] },
-    vignette: { enabled: false, intensity: 0.5, inner: 0.3, outer: 0.75, curvature: 1 },
-    fringing: { enabled: false, intensity: 0.5 }
-};
-
-type ExperienceSettings = {
-    version: 2,
-    tonemapping: 'none' | 'linear' | 'filmic' | 'hejl' | 'aces' | 'aces2' | 'neutral',
-    highPrecisionRendering: boolean,
-    soundUrl?: string,
-    background: {
-        color: [number, number, number],
-        skyboxUrl?: string
-    },
-    postEffectSettings: PostEffectSettings,
-    animTracks: AnimTrack[],
-    cameras: Camera[],
-    annotations: Annotation[],
-    startMode: 'default' | 'animTrack' | 'annotation'
 };
 
 type ViewerExportSettings = {
@@ -589,6 +509,9 @@ class SuperSplatChunkSource implements ChunkSource {
             chunkSize: EXPORT_CHUNK_SIZE,
             numChunks: [numChunks],
             shBands: outputBands as SHBands,
+            // supersplat's edit pipeline doesn't carry the trained-model tag
+            // (antialiased / 2dgs) through load, so exports are untagged
+            model: 'default',
             extraColumns: [],
             transform: Transform.PLY,
             availableLayers: new Set<ChunkLayer>(['position', 'geometric', 'color']),

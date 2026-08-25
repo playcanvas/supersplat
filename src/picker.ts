@@ -154,26 +154,19 @@ class Picker {
         const pw = Math.max(1, Math.ceil((x + width) * rt.width) - px);
         const ph = Math.max(1, Math.ceil((y + height) * rt.height) - py);
 
-        // Flip Y for texture read on WebGL (texture origin is bottom-left)
-        const texY = this.device.isWebGL2 ? rt.height - py - ph : py;
-
         // Read pixels using texture.read() API. The read must be immediate: the
         // id pass is rendered synchronously by prepareId and nothing submits the
         // shared command encoder before the caller awaits us, so a deferred read
         // maps the staging buffer before the copy has run and returns zeros.
-        const pixels = await colorBuffer.read(px, texY, pw, ph, {
+        const pixels = await colorBuffer.read(px, py, pw, ph, {
             renderTarget: rt,
             immediate: true
         });
 
-        // Row 0 of the result is the top row of the requested rectangle on both
-        // platforms: the WebGL read starts from the flipped origin above, so its
-        // rows arrive bottom-up and are reversed here. Callers that index
-        // individual rows (the brush/lasso mask) must not flip again.
-        const flipRows = this.device.isWebGL2;
+        // Row 0 of the result is the top row of the requested rectangle.
         const result: number[] = [];
         for (let row = 0; row < ph; ++row) {
-            const src = (flipRows ? ph - 1 - row : row) * pw;
+            const src = row * pw;
             for (let col = 0; col < pw; ++col) {
                 const i = (src + col) * 4;
                 // Use >>> 0 to convert signed 32-bit to unsigned (so 0xffffffff instead of -1)
@@ -241,11 +234,8 @@ class Picker {
         const px = Math.min(Math.floor(x * rt.width), rt.width - 1);
         const py = Math.min(Math.floor(y * rt.height), rt.height - 1);
 
-        // Flip Y for texture read on WebGL (texture origin is bottom-left)
-        const texY = this.device.isWebGL2 ? rt.height - py - 1 : py;
-
         // Read the pixel using Texture.read() which handles RGBA16F format
-        const pixels = await colorBuffer.read(px, texY, 1, 1, {
+        const pixels = await colorBuffer.read(px, py, 1, 1, {
             renderTarget: rt,
             immediate: true
         });

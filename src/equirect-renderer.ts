@@ -98,12 +98,15 @@ class EquirectRenderer {
         drawQuadWithShader(device, equirectTarget, this.shader);
     }
 
-    // read the projected equirectangular pixels back to the cpu
+    // read the projected equirectangular pixels back to the cpu. the read must
+    // be immediate so the pending projection commands are submitted before the
+    // staging buffer is mapped.
     read(data: Uint8Array) {
         const { equirectTarget } = this;
         return equirectTarget.colorBuffer.read(0, 0, equirectTarget.width, equirectTarget.height, {
             renderTarget: equirectTarget,
-            data
+            data,
+            immediate: true
         });
     }
 

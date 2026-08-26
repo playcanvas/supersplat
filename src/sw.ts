@@ -40,7 +40,9 @@ self.addEventListener('activate', (event) => {
     // delete the old caches once this one is activated
     event.waitUntil(
         caches.keys().then(names => Promise.all(
-            names.filter(name => name !== cacheName).map(name => caches.delete(name))
+            names
+            .filter(name => name.startsWith('superSplat-v') && name !== cacheName)
+            .map(name => caches.delete(name))
         ))
     );
 });

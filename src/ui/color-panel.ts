@@ -1,45 +1,54 @@
-import { ColorPicker, Container, Label, SliderInput } from '@playcanvas/pcui';
+import { Button, ColorPicker, Container, Label, SliderInput } from '@playcanvas/pcui';
 import { Color } from 'playcanvas';
 
 import { Events } from '../events';
 import { i18n } from './localization';
-import { Tooltips } from './tooltips';
 import { Splat } from '../splat';
+import arrowSvg from './svg/arrow.svg';
+import checkSvg from './svg/check.svg';
+import colorsSvg from './svg/colors.svg';
+import editUndoSvg from './svg/edit-undo.svg';
 
+const createSvg = (svgString: string) => {
+    const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
+    return new DOMParser().parseFromString(decodedStr, 'image/svg+xml').documentElement;
+};
+
+// collapsible colors section of the scene panel: grades the current splat, so
+// it lives with the rest of the current-splat state (like transform)
 class ColorPanel extends Container {
-    constructor(events: Events, tooltips: Tooltips, args = {}) {
+    constructor(events: Events, args = {}) {
         args = {
             ...args,
-            id: 'color-panel',
-            class: 'panel',
-            hidden: true
+            class: 'color-panel-section'
         };
 
         super(args);
 
-        // stop pointer events bubbling
-        ['pointerdown', 'pointerup', 'pointermove', 'wheel', 'dblclick'].forEach((eventName) => {
-            this.dom.addEventListener(eventName, (event: Event) => event.stopPropagation());
-        });
-
-        // header
+        // header (click to expand/collapse)
 
         const header = new Container({
-            class: 'panel-header'
+            class: ['panel-header', 'color-panel-header']
         });
 
         const icon = new Label({
-            class: 'panel-header-icon',
-            text: '\uE146'
+            class: 'panel-header-icon'
         });
+        icon.dom.appendChild(createSvg(colorsSvg));
 
         const label = new Label({
             class: 'panel-header-label'
         });
         i18n.bindText(label, 'panel.colors');
 
+        const collapseArrow = new Label({
+            class: 'color-panel-collapse'
+        });
+        collapseArrow.dom.appendChild(createSvg(arrowSvg));
+
         header.append(icon);
         header.append(label);
+        header.append(collapseArrow);
 
         // tint
 
@@ -57,8 +66,15 @@ class ColorPanel extends Container {
             value: [1, 1, 1]
         });
 
+        // the swatch occupies the same control column as the sliders below,
+        // left-aligned with their numeric edit boxes
+        const tintSlot = new Container({
+            class: 'color-panel-row-swatch-slot'
+        });
+        tintSlot.append(tintPicker);
+
         tintRow.append(tintLabel);
-        tintRow.append(tintPicker);
+        tintRow.append(tintSlot);
 
         // temperature
 
@@ -200,32 +216,64 @@ class ColorPanel extends Container {
         });
 
         // apply bakes the pending grade into the target gaussians; reset clears
-        // whatever grade they already carry
-        const apply = new Label({
-            class: 'panel-header-button',
-            text: '\uE301'
+        // whatever grade they already carry. Icons render as css masks (a child
+        // svg would be wiped by the buttons' text setter on language change)
+        const apply = new Button({
+            class: 'color-panel-button'
         });
+        i18n.bindText(apply, 'panel.colors.apply');
+        apply.dom.style.setProperty('--icon', `url("${checkSvg}")`);
 
-        const reset = new Label({
-            class: 'panel-header-button',
-            text: '\uE304'
+        const reset = new Button({
+            class: 'color-panel-button'
         });
+        i18n.bindText(reset, 'panel.colors.reset');
+        reset.dom.style.setProperty('--icon', `url("${editUndoSvg}")`);
 
-        controlRow.append(new Label({ class: 'panel-header-spacer' }));
         controlRow.append(apply);
         controlRow.append(reset);
-        controlRow.append(new Label({ class: 'panel-header-spacer' }));
+
+        // the collapsible body, closed by default
+        const content = new Container({
+            class: 'color-panel-content',
+            hidden: true
+        });
+
+        content.append(tintRow);
+        content.append(temperatureRow);
+        content.append(saturationRow);
+        content.append(brightnessRow);
+        content.append(blackPointRow);
+        content.append(whitePointRow);
+        content.append(transparencyRow);
+        content.append(controlRow);
+        // dark strip closing the panel bottom, as the scene panel had before
+        // this section joined it. Lives in the collapsible content so the
+        // collapsed state still ends cleanly at the section header bar
+        content.append(new Container({ class: 'color-panel-footer' }));
 
         this.append(header);
-        this.append(tintRow);
-        this.append(temperatureRow);
-        this.append(saturationRow);
-        this.append(brightnessRow);
-        this.append(blackPointRow);
-        this.append(whitePointRow);
-        this.append(transparencyRow);
-        this.append(new Label({ class: 'panel-header-spacer' }));
-        this.append(controlRow);
+        this.append(content);
+
+        // the header acts as a button: focusable, toggleable from the
+        // keyboard, and announcing its expanded state
+        header.dom.setAttribute('role', 'button');
+        header.dom.setAttribute('tabindex', '0');
+        header.dom.setAttribute('aria-expanded', 'false');
+
+        const toggleContent = () => {
+            content.hidden = !content.hidden;
+            collapseArrow.class[content.hidden ? 'remove' : 'add']('expanded');
+            header.dom.setAttribute('aria-expanded', String(!content.hidden));
+        };
+
+        header.on('click', toggleContent);
+        header.dom.addEventListener('keydown', (event: KeyboardEvent) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                toggleContent();
+            }
+        });
 
         // The controls hold a *pending* grade rather than editing anything directly.
         // The viewport previews it on whatever an Apply would affect - the selection,
@@ -333,35 +381,6 @@ class ColorPanel extends Container {
             setControls(NEUTRAL);
         });
 
-        tooltips.register(apply, () => i18n.t('panel.colors.apply'), 'bottom');
-        tooltips.register(reset, () => i18n.t('panel.colors.reset'), 'bottom');
-
-        // handle panel visibility
-
-        const setVisible = (visible: boolean) => {
-            if (visible === this.hidden) {
-                this.hidden = !visible;
-                events.fire('colorPanel.visible', visible);
-            }
-        };
-
-        events.function('colorPanel.visible', () => {
-            return !this.hidden;
-        });
-
-        events.on('colorPanel.setVisible', (visible: boolean) => {
-            setVisible(visible);
-        });
-
-        events.on('colorPanel.toggleVisible', () => {
-            setVisible(this.hidden);
-        });
-
-        events.on('settingsPanel.visible', (visible: boolean) => {
-            if (visible) {
-                setVisible(false);
-            }
-        });
     }
 }
 

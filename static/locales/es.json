@@ -10,13 +10,11 @@
     "menu.file.export": "Exportar",
     "menu.file.export.viewer": "Aplicación de visualización",
     "menu.file.publish": "Publicar",
-
     "menu.edit": "Edición",
     "menu.edit.undo": "Deshacer",
     "menu.edit.redo": "Rehacer",
     "menu.edit.duplicate": "Duplicar",
     "menu.edit.separate": "Separar",
-
     "menu.select": "Seleccionar",
     "menu.select.all": "Todo",
     "menu.select.none": "Ninguno",
@@ -25,11 +23,9 @@
     "menu.select.unlock": "Desbloquear todo",
     "menu.select.delete": "Eliminar selección",
     "menu.select.reset": "Restablecer Splat",
-
     "menu.render": "Renderizar",
     "menu.render.image": "Imagen",
     "menu.render.video": "Video",
-
     "menu.help": "Ayuda",
     "menu.help.video-tutorials": "Tutoriales en Video",
     "menu.help.video-tutorials.basics": "Aprender lo Básico",
@@ -43,16 +39,13 @@
     "menu.help.github-repo": "Repositorio de GitHub",
     "menu.help.log-issue": "Reportar un problema",
     "menu.help.about": "Acerca de SuperSplat",
-
     "panel.mode.centers": "Modo centros",
     "panel.mode.rings": "Modo anillos",
-
     "panel.scene": "Gestor de escena",
     "panel.scene.transform": "Transformación",
     "panel.scene.transform.position": "Posición",
     "panel.scene.transform.rotation": "Rotación",
     "panel.scene.transform.scale": "Escala",
-
     "panel.colors": "Colores",
     "panel.colors.tint": "Tinte",
     "panel.colors.temperature": "Temperatura",
@@ -63,8 +56,10 @@
     "panel.colors.transparency": "Transparencia",
     "panel.colors.apply": "Aplicar",
     "panel.colors.reset": "Restablecer",
-
     "panel.settings": "Ajustes",
+    "panel.settings.section-application": "Aplicación",
+    "panel.settings.section-camera": "Cámara",
+    "panel.settings.section-rendering": "Renderizado",
     "panel.settings.language": "Idioma",
     "panel.settings.language.auto": "Automático",
     "panel.settings.colors": "Colores",
@@ -83,23 +78,26 @@
     "panel.settings.fov-dolly": "Auto dolly de FOV",
     "panel.settings.sh-bands": "Bandas SH",
     "panel.settings.fly-speed": "Velocidad de vuelo",
-    "panel.settings.center-size": "Tamaño de centros",
-    "panel.settings.use-splat-colors": "Centros de Color",
-    "panel.settings.outline-selection": "Contorno de selección",
     "panel.settings.stochastic-alpha": "Alfa estocástico",
     "panel.settings.stochastic-alpha.disabled": "Desactivado",
     "panel.settings.stochastic-alpha.enabled": "Activado",
     "panel.settings.stochastic-alpha.movement": "Movimiento",
     "panel.settings.stochastic-alpha.auto": "Automático",
-    "panel.settings.perf-overlay": "Tiempos de fotograma",
-    "panel.settings.show-grid": "Mostrar cuadrícula",
-    "panel.settings.grid-plane": "Plano de cuadrícula",
-    "panel.settings.show-bounding-box": "Mostrar límites",
-    "panel.settings.show-dimensions": "Mostrar dimensiones",
-    "panel.settings.show-camera-poses": "Mostrar cámaras",
-    "panel.settings.show-camera-info": "Mostrar info de cámara",
     "panel.settings.reset": "Restablecer valores predeterminados",
-
+    "panel.view": "Opciones de vista",
+    "panel.view.section-show": "Mostrar",
+    "panel.view.section-overlay": "Superposición",
+    "panel.view.section-diagnostics": "Diagnóstico",
+    "panel.view.grid": "Cuadrícula",
+    "panel.view.grid-plane": "Plano",
+    "panel.view.bounding-box": "Límites",
+    "panel.view.dimensions": "Dimensiones",
+    "panel.view.camera-poses": "Cámaras",
+    "panel.view.camera-info": "Info de cámara",
+    "panel.view.center-size": "Tamaño de centros",
+    "panel.view.use-splat-colors": "Centros de Color",
+    "panel.view.outline-selection": "Contorno de selección",
+    "panel.view.frame-timings": "Tiempos de fotograma",
     "panel.splat-data.position": "Posición",
     "panel.splat-data.opacity": "Opacidad",
     "panel.splat-data.red": "Rojo",
@@ -123,13 +121,11 @@
     "panel.splat-data.show-all": "Todas las propiedades",
     "panel.splat-data.totals.splats": "Splats",
     "panel.splat-data.totals.selected": "Seleccionados",
-
     "panel.render.cancel": "Cancelar",
     "panel.render.ok": "Renderizar",
     "panel.render.render-video": "Renderizar video",
     "panel.render.rendering": "Renderizando fotogramas",
     "panel.render.failed": "Error al renderizar",
-
     "select-toolbar.set": "Establecer",
     "select-toolbar.add": "Añadir",
     "select-toolbar.remove": "Quitar",
@@ -138,7 +134,6 @@
     "select-toolbar.size": "Tamaño",
     "select-toolbar.rotation": "Rotación",
     "select-toolbar.radius": "Radio",
-
     "popup.ok": "Aceptar",
     "popup.cancel": "Cancelar",
     "popup.yes": "Sí",
@@ -153,7 +148,6 @@
     "popup.lod-select-splats": "splats",
     "popup.lod-upload-note": "Nota: puede subir escenas con LODs directamente en",
     "popup.copy-to-clipboard": "Copiar enlace al portapapeles",
-
     "popup.render-image.header": "Configuración de imagen",
     "popup.render-image.projection": "Proyección",
     "popup.render-image.projection.standard": "Estándar",
@@ -167,7 +161,6 @@
     "popup.render-image.transparent-background": "Fondo transparente",
     "popup.render-image.show-debug-overlays": "Mostrar superposiciones de depuración",
     "popup.render-image.level-horizon": "Nivelar horizonte",
-
     "popup.render-video.header": "Configuración de video",
     "popup.render-video.projection": "Proyección",
     "popup.render-video.projection.standard": "Estándar",
@@ -197,7 +190,6 @@
     "popup.render-video.level-horizon": "Nivelar horizonte",
     "popup.render-video.transparent-background": "Fondo transparente",
     "popup.render-video.show-debug-overlays": "Mostrar superposiciones de depuración",
-
     "popup.shortcuts.title": "Atajos de teclado",
     "popup.shortcuts.navigation": "Navegación",
     "popup.shortcuts.reset-camera": "Restablecer cámara",
@@ -248,7 +240,6 @@
     "popup.shortcuts.redo": "Rehacer",
     "popup.shortcuts.toggle-data-panel": "Alternar panel de datos",
     "popup.shortcuts.toggle-timeline-panel": "Alternar panel de línea de tiempo",
-
     "popup.export": "Exportar",
     "popup.export.header": "Exportar",
     "popup.export.type": "Tipo de exportación",
@@ -268,7 +259,6 @@
     "popup.export.spz-version.4": "SPZ 4 (más reciente)",
     "popup.export.spz-version.3": "SPZ 3 (gzip heredado)",
     "popup.export.filename": "Nombre de archivo",
-
     "popup.publish.header": "Configuración de publicación",
     "popup.publish.destination": "Publicar en",
     "popup.publish.new-scene": "Nueva escena",
@@ -286,41 +276,34 @@
     "popup.publish.failed": "Publicación fallida",
     "popup.publish.please-try-again": "Por favor, inténtelo de nuevo más tarde.",
     "popup.publish.please-log-in": "Publicar en PlayCanvas requiere una cuenta de usuario. Por favor, inicie sesión e inténtelo de nuevo.",
-
     "camera-info.position": "Posición de la cámara",
     "camera-info.target": "Objetivo de la cámara",
-
     "doc.reset": "Restablecer escena",
     "doc.unsaved-message": "Tiene cambios sin guardar. ¿Está seguro de que desea restablecer la escena?",
     "doc.reset-message": "¿Está seguro de que desea restablecer la escena?",
     "doc.save-failed": "Error al guardar",
     "doc.load-failed": "Error al cargar",
-
     "measure.length": "Longitud",
     "measure.hint": "Coloca 2 puntos para medir",
     "measure.clear": "Borrar",
-
     "orient.hint": "Coloca 3 puntos para definir un plano",
     "orient.align": "Alinear con la cuadrícula",
     "orient.set-pivot": "Fijar pivote",
     "orient.clear": "Borrar",
-
     "status-bar.splats": "Splats",
     "status-bar.selected": "Seleccionados",
     "status-bar.locked": "Bloqueados",
     "status-bar.deleted": "Eliminados",
     "status-bar.timeline": "Línea de tiempo",
     "status-bar.splat-data": "Datos de Splat",
-
     "tooltip.right-toolbar.splat-mode": "Modo Splat",
     "tooltip.right-toolbar.show-hide": "Mostrar/Ocultar Splats",
     "tooltip.right-toolbar.orbit-camera": "Cámara orbital",
     "tooltip.right-toolbar.fly-camera": "Cámara de vuelo",
     "tooltip.right-toolbar.frame-selection": "Enmarcar selección",
     "tooltip.right-toolbar.reset-camera": "Restablecer cámara",
-    "tooltip.right-toolbar.colors": "Colores",
     "tooltip.right-toolbar.settings": "Ajustes",
-
+    "tooltip.right-toolbar.view-options": "Opciones de vista",
     "tooltip.bottom-toolbar.undo": "Deshacer",
     "tooltip.bottom-toolbar.redo": "Rehacer",
     "tooltip.bottom-toolbar.rectangle-selection": "Selección rectangular",
@@ -338,7 +321,6 @@
     "tooltip.bottom-toolbar.orient": "Orientar",
     "tooltip.bottom-toolbar.local-space": "Usar orientación local",
     "tooltip.bottom-toolbar.reset-pivot": "Restablecer pivote (Mayús: al centro)",
-
     "tooltip.timeline.prev-frame": "Fotograma Anterior",
     "tooltip.timeline.play": "Reproducir/Pausar",
     "tooltip.timeline.next-frame": "Siguiente Fotograma",
@@ -350,14 +332,11 @@
     "tooltip.timeline.total-frames": "Fotogramas totales",
     "tooltip.timeline.smoothness": "Suavidad",
     "tooltip.timeline.loop": "Animación en bucle",
-
     "tooltip.scene.solo": "Solo seleccionado",
     "tooltip.scene.import": "Importar escena",
     "tooltip.scene.new": "Nueva escena",
-
     "tooltip.status-bar.timeline": "Alternar panel de Línea de tiempo",
     "tooltip.status-bar.splat-data": "Alternar panel de Datos de Splat",
-
     "tooltip.splat-data.on-screen-only": "Contar solo los splats visibles desde la cámara. Los splats fuera de pantalla se excluyen del histograma.",
     "tooltip.splat-data.log-scale": "Usar una escala vertical logarítmica para que los valores pequeños sean visibles junto a los grandes.",
     "tooltip.splat-data.show-all": "Mostrar todas las propiedades de los splats en la lista, incluyendo coeficientes DC y armónicos esféricos."

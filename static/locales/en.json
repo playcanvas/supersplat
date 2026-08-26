@@ -10,13 +10,11 @@
     "menu.file.export": "Export",
     "menu.file.export.viewer": "Viewer App",
     "menu.file.publish": "Publish",
-
     "menu.edit": "Edit",
     "menu.edit.undo": "Undo",
     "menu.edit.redo": "Redo",
     "menu.edit.duplicate": "Duplicate",
     "menu.edit.separate": "Separate",
-
     "menu.select": "Select",
     "menu.select.all": "All",
     "menu.select.none": "None",
@@ -25,11 +23,9 @@
     "menu.select.unlock": "Unlock All",
     "menu.select.delete": "Delete Selection",
     "menu.select.reset": "Reset Splat",
-
     "menu.render": "Render",
     "menu.render.image": "Image",
     "menu.render.video": "Video",
-
     "menu.help": "Help",
     "menu.help.video-tutorials": "Video Tutorials",
     "menu.help.video-tutorials.basics": "Learn the Basics",
@@ -43,16 +39,13 @@
     "menu.help.github-repo": "GitHub Repo",
     "menu.help.log-issue": "Log an Issue",
     "menu.help.about": "About SuperSplat",
-
     "panel.mode.centers": "Centers Mode",
     "panel.mode.rings": "Rings Mode",
-
     "panel.scene": "Scene Manager",
     "panel.scene.transform": "Transform",
     "panel.scene.transform.position": "Position",
     "panel.scene.transform.rotation": "Rotation",
     "panel.scene.transform.scale": "Scale",
-
     "panel.colors": "Colors",
     "panel.colors.tint": "Tint",
     "panel.colors.temperature": "Temperature",
@@ -63,8 +56,10 @@
     "panel.colors.transparency": "Transparency",
     "panel.colors.apply": "Apply",
     "panel.colors.reset": "Reset",
-
     "panel.settings": "Settings",
+    "panel.settings.section-application": "Application",
+    "panel.settings.section-camera": "Camera",
+    "panel.settings.section-rendering": "Rendering",
     "panel.settings.language": "Language",
     "panel.settings.language.auto": "Automatic",
     "panel.settings.colors": "Colors",
@@ -83,23 +78,26 @@
     "panel.settings.fov-dolly": "FOV Auto Dolly",
     "panel.settings.sh-bands": "SH Bands",
     "panel.settings.fly-speed": "Fly Speed",
-    "panel.settings.center-size": "Center Size",
-    "panel.settings.use-splat-colors": "Use Splat Colors",
-    "panel.settings.outline-selection": "Outline Selection",
     "panel.settings.stochastic-alpha": "Stochastic Alpha",
     "panel.settings.stochastic-alpha.disabled": "Disabled",
     "panel.settings.stochastic-alpha.enabled": "Enabled",
     "panel.settings.stochastic-alpha.movement": "Movement",
     "panel.settings.stochastic-alpha.auto": "Auto",
-    "panel.settings.perf-overlay": "Frame Timings",
-    "panel.settings.show-grid": "Show Grid",
-    "panel.settings.grid-plane": "Grid Plane",
-    "panel.settings.show-bounding-box": "Show Bounding Box",
-    "panel.settings.show-dimensions": "Show Dimensions",
-    "panel.settings.show-camera-poses": "Show Camera Poses",
-    "panel.settings.show-camera-info": "Show Camera Info",
     "panel.settings.reset": "Reset to Defaults",
-
+    "panel.view": "View Options",
+    "panel.view.section-show": "Show",
+    "panel.view.section-overlay": "Overlay",
+    "panel.view.section-diagnostics": "Diagnostics",
+    "panel.view.grid": "Grid",
+    "panel.view.grid-plane": "Plane",
+    "panel.view.bounding-box": "Bounding Box",
+    "panel.view.dimensions": "Dimensions",
+    "panel.view.camera-poses": "Camera Poses",
+    "panel.view.camera-info": "Camera Info",
+    "panel.view.center-size": "Center Size",
+    "panel.view.use-splat-colors": "Use Splat Colors",
+    "panel.view.outline-selection": "Outline Selection",
+    "panel.view.frame-timings": "Frame Timings",
     "panel.splat-data.position": "Position",
     "panel.splat-data.opacity": "Opacity",
     "panel.splat-data.red": "Red",
@@ -123,13 +121,11 @@
     "panel.splat-data.show-all": "All Properties",
     "panel.splat-data.totals.splats": "Splats",
     "panel.splat-data.totals.selected": "Selected",
-
     "panel.render.cancel": "Cancel",
     "panel.render.ok": "Render",
     "panel.render.render-video": "Render Video",
     "panel.render.rendering": "Rendering Frames",
     "panel.render.failed": "Failed to Render",
-
     "select-toolbar.set": "Set",
     "select-toolbar.add": "Add",
     "select-toolbar.remove": "Remove",
@@ -138,7 +134,6 @@
     "select-toolbar.size": "Size",
     "select-toolbar.rotation": "Rotation",
     "select-toolbar.radius": "Radius",
-
     "popup.ok": "OK",
     "popup.cancel": "Cancel",
     "popup.yes": "Yes",
@@ -153,7 +148,6 @@
     "popup.lod-select-splats": "splats",
     "popup.lod-upload-note": "Note: you can upload scenes with LODs directly at",
     "popup.copy-to-clipboard": "Copy Link to Clipboard",
-
     "popup.render-image.header": "Image Settings",
     "popup.render-image.projection": "Projection",
     "popup.render-image.projection.standard": "Standard",
@@ -167,7 +161,6 @@
     "popup.render-image.transparent-background": "Transparent Background",
     "popup.render-image.show-debug-overlays": "Show Debug Overlays",
     "popup.render-image.level-horizon": "Level Horizon",
-
     "popup.render-video.header": "Video Settings",
     "popup.render-video.projection": "Projection",
     "popup.render-video.projection.standard": "Standard",
@@ -197,7 +190,6 @@
     "popup.render-video.level-horizon": "Level Horizon",
     "popup.render-video.transparent-background": "Transparent Background",
     "popup.render-video.show-debug-overlays": "Show Debug Overlays",
-
     "popup.shortcuts.title": "Keyboard Shortcuts",
     "popup.shortcuts.navigation": "Navigation",
     "popup.shortcuts.reset-camera": "Reset Camera",
@@ -248,7 +240,6 @@
     "popup.shortcuts.redo": "Redo",
     "popup.shortcuts.toggle-data-panel": "Toggle Data Panel",
     "popup.shortcuts.toggle-timeline-panel": "Toggle Timeline Panel",
-
     "popup.export": "Export",
     "popup.export.header": "Export",
     "popup.export.type": "Export Type",
@@ -268,7 +259,6 @@
     "popup.export.spz-version.4": "SPZ 4 (latest)",
     "popup.export.spz-version.3": "SPZ 3 (legacy gzip)",
     "popup.export.filename": "Filename",
-
     "popup.publish.header": "Publish Settings",
     "popup.publish.destination": "Publish to",
     "popup.publish.new-scene": "New Scene",
@@ -286,41 +276,34 @@
     "popup.publish.failed": "Publish Failed",
     "popup.publish.please-try-again": "Please try again later.",
     "popup.publish.please-log-in": "Publishing to PlayCanvas requires a user account. Please log in and try again.",
-
     "camera-info.position": "Camera Position",
     "camera-info.target": "Camera Target",
-
     "doc.reset": "Reset Scene",
     "doc.unsaved-message": "You have unsaved changes. Are you sure you want to reset the scene?",
     "doc.reset-message": "Are you sure you want to reset the scene?",
     "doc.save-failed": "Failed to Save",
     "doc.load-failed": "Failed to Load",
-
     "measure.length": "Length",
     "measure.hint": "Place 2 points to measure",
     "measure.clear": "Clear",
-
     "orient.hint": "Place 3 points to define a plane",
     "orient.align": "Align to Grid",
     "orient.set-pivot": "Set Pivot",
     "orient.clear": "Clear",
-
     "status-bar.splats": "Splats",
     "status-bar.selected": "Selected",
     "status-bar.locked": "Locked",
     "status-bar.deleted": "Deleted",
     "status-bar.timeline": "Timeline",
     "status-bar.splat-data": "Splat Data",
-
     "tooltip.right-toolbar.splat-mode": "Splat Mode",
     "tooltip.right-toolbar.show-hide": "Show/Hide Splats",
     "tooltip.right-toolbar.orbit-camera": "Orbit Camera",
     "tooltip.right-toolbar.fly-camera": "Fly Camera",
     "tooltip.right-toolbar.frame-selection": "Frame Selection",
     "tooltip.right-toolbar.reset-camera": "Reset Camera",
-    "tooltip.right-toolbar.colors": "Colors",
     "tooltip.right-toolbar.settings": "Settings",
-
+    "tooltip.right-toolbar.view-options": "View Options",
     "tooltip.bottom-toolbar.undo": "Undo",
     "tooltip.bottom-toolbar.redo": "Redo",
     "tooltip.bottom-toolbar.rectangle-selection": "Rectangle Selection",
@@ -338,7 +321,6 @@
     "tooltip.bottom-toolbar.orient": "Orient",
     "tooltip.bottom-toolbar.local-space": "Use Local Orientation",
     "tooltip.bottom-toolbar.reset-pivot": "Reset Pivot (Shift: to center)",
-
     "tooltip.timeline.prev-frame": "Previous Frame",
     "tooltip.timeline.play": "Play/Pause",
     "tooltip.timeline.next-frame": "Next Frame",
@@ -350,14 +332,11 @@
     "tooltip.timeline.total-frames": "Total Frames",
     "tooltip.timeline.smoothness": "Smoothness",
     "tooltip.timeline.loop": "Loop Animation",
-
     "tooltip.scene.solo": "Solo Selected",
     "tooltip.scene.import": "Import Scene",
     "tooltip.scene.new": "New Scene",
-
     "tooltip.status-bar.timeline": "Toggle Timeline Panel",
     "tooltip.status-bar.splat-data": "Toggle Splat Data Panel",
-
     "tooltip.splat-data.on-screen-only": "Only count splats visible in the camera's view. Off-screen splats are excluded from the histogram.",
     "tooltip.splat-data.log-scale": "Use a logarithmic vertical scale so small bucket counts remain visible alongside large ones.",
     "tooltip.splat-data.show-all": "Show all per-splat properties in the list, including raw DC and spherical harmonic coefficients."

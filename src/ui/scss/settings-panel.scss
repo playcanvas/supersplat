@@ -1,40 +1,74 @@
 @use 'colors.scss' as *;
 
-#settings-panel {
+// shared shell for the settings and view options popups
+.options-panel {
     top: 50%;
     transform: translate(0, -50%);
     right: 102px;
     width: 320px;
     flex-direction: column;
+    padding-bottom: 8px;
 
     // .panel clips overflow, which cuts off select dropdowns that open
     // downward from the bottom rows (pcui only flips a list upward at the
-    // window edge, not the panel's). Let them escape instead: the header then
-    // needs its own top rounding, and the panel must stack above the toolbars
-    // that follow it in the DOM so the escaped list stays visible and
-    // clickable.
+    // window edge, not the panel's). Let them escape instead; the header then
+    // needs its own top rounding. These panels are appended after the
+    // toolbars so the escaped list paints above them by DOM order.
     overflow: visible;
-    z-index: 10;
 
-    & > .panel-header {
+    // the title bar sits directly above the first section bar; use the darker
+    // header tone (as the modal dialogs do) so the two don't merge
+    & > .panel-header:first-child {
         border-radius: 8px 8px 0 0;
+        background-color: $bcg-darker;
+
+        // svg header icons (currentColor); the artwork has built-in padding,
+        // so render slightly larger than the 13px font glyphs to match their
+        // visual weight
+        .panel-header-icon > svg {
+            display: block;
+            width: 20px;
+            height: 20px;
+        }
     }
 
     &:not(.pcui-hidden) {
         display: flex;
     }
 
+    // section bars match the row height; their labels drop the bold weight to
+    // sit a step below the panel title
+    & > .options-panel-section {
+        box-sizing: border-box;
+        height: 32px;
+
+        & > .panel-header-label {
+            font-size: 11px;
+        }
+    }
+
     & > .settings-panel-row {
         display: flex;
         flex-direction: row;
-        padding: 2px;
+        align-items: center;
+        padding: 2px 10px;
         height: 28px;
+
+        &:hover {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+
+        &.options-panel-row-clickable {
+            cursor: pointer;
+        }
 
         & > .settings-panel-row-label {
             flex-grow: 1;
+            margin: 0;
         }
 
         & > .settings-panel-row-toggle {
+            margin: 6px 0 6px 6px;
             background-color: $bcg-dark;
 
             &::after {
@@ -66,8 +100,8 @@
         & > .settings-panel-row-pickers {
             display: flex;
             flex-direction: row;
-            margin: 2px 2px;
-            width: 185px;
+            margin: 2px 0;
+            width: 187px;
             justify-content: space-between;
 
             & > .settings-panel-row-picker {
@@ -84,7 +118,42 @@
 
         & > .settings-panel-row-button {
             flex-grow: 1;
-            margin: 0 2px;
+            margin: 0;
+        }
+    }
+
+    & > .settings-panel-row.options-panel-row-indent {
+        padding-left: 24px;
+    }
+
+    & > .settings-panel-row.options-panel-row-footer {
+        height: auto;
+        margin-top: 2px;
+
+        &:hover {
+            background-color: transparent;
+        }
+
+        // flex-center the label (the default line-height rendering sits low)
+        // and lead it with the reset icon, drawn as a mask so it tracks the
+        // text color
+        & > .settings-panel-row-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            height: 28px;
+            line-height: normal;
+
+            &::before {
+                content: '';
+                flex-shrink: 0;
+                width: 13px;
+                height: 13px;
+                background-color: currentColor;
+                mask: var(--icon) center / contain no-repeat;
+                -webkit-mask: var(--icon) center / contain no-repeat;
+            }
         }
     }
 }

@@ -10,13 +10,11 @@
     "menu.file.export": "エクスポート",
     "menu.file.export.viewer": "Viewer App",
     "menu.file.publish": "公開",
-
     "menu.edit": "編集",
     "menu.edit.undo": "元に戻す",
     "menu.edit.redo": "やり直し",
     "menu.edit.duplicate": "複製",
     "menu.edit.separate": "分離",
-
     "menu.select": "選択",
     "menu.select.all": "全て",
     "menu.select.none": "選択を解除",
@@ -25,11 +23,9 @@
     "menu.select.unlock": "ロックを解除",
     "menu.select.delete": "選択を削除",
     "menu.select.reset": "変更を全てリセット",
-
     "menu.render": "レンダリング",
     "menu.render.image": "画像",
     "menu.render.video": "動画",
-
     "menu.help": "ヘルプ",
     "menu.help.video-tutorials": "動画チュートリアル",
     "menu.help.video-tutorials.basics": "基本を学ぶ",
@@ -43,16 +39,13 @@
     "menu.help.github-repo": "GitHubリポジトリ",
     "menu.help.log-issue": "問題を報告",
     "menu.help.about": "SuperSplatについて",
-
     "panel.mode.centers": "センターモード",
     "panel.mode.rings": "リングモード",
-
     "panel.scene": "シーンマネージャー",
     "panel.scene.transform": "トランスフォーム",
     "panel.scene.transform.position": "位置",
     "panel.scene.transform.rotation": "回転",
     "panel.scene.transform.scale": "スケール",
-
     "panel.colors": "色",
     "panel.colors.tint": "色合い",
     "panel.colors.temperature": "温度",
@@ -63,8 +56,10 @@
     "panel.colors.transparency": "透明度",
     "panel.colors.apply": "適用",
     "panel.colors.reset": "リセット",
-
     "panel.settings": "設定",
+    "panel.settings.section-application": "アプリケーション",
+    "panel.settings.section-camera": "カメラ",
+    "panel.settings.section-rendering": "レンダリング",
     "panel.settings.language": "言語",
     "panel.settings.language.auto": "自動",
     "panel.settings.colors": "色",
@@ -83,23 +78,26 @@
     "panel.settings.fov-dolly": "FOV自動ドリー",
     "panel.settings.sh-bands": "球面調和関数のバンド",
     "panel.settings.fly-speed": "カメラの移動速度",
-    "panel.settings.center-size": "センターサイズ",
-    "panel.settings.use-splat-colors": "カラーセンター",
-    "panel.settings.outline-selection": "選択のアウトライン",
     "panel.settings.stochastic-alpha": "確率的アルファ",
     "panel.settings.stochastic-alpha.disabled": "無効",
     "panel.settings.stochastic-alpha.enabled": "有効",
     "panel.settings.stochastic-alpha.movement": "移動中",
     "panel.settings.stochastic-alpha.auto": "自動",
-    "panel.settings.perf-overlay": "フレーム時間",
-    "panel.settings.show-grid": "グリッド",
-    "panel.settings.grid-plane": "グリッド平面",
-    "panel.settings.show-bounding-box": "バウンディングボックス",
-    "panel.settings.show-dimensions": "寸法を表示",
-    "panel.settings.show-camera-poses": "カメラを表示",
-    "panel.settings.show-camera-info": "カメラ情報を表示",
     "panel.settings.reset": "デフォルトに戻す",
-
+    "panel.view": "表示オプション",
+    "panel.view.section-show": "表示",
+    "panel.view.section-overlay": "オーバーレイ",
+    "panel.view.section-diagnostics": "診断",
+    "panel.view.grid": "グリッド",
+    "panel.view.grid-plane": "平面",
+    "panel.view.bounding-box": "バウンディングボックス",
+    "panel.view.dimensions": "寸法",
+    "panel.view.camera-poses": "カメラポーズ",
+    "panel.view.camera-info": "カメラ情報",
+    "panel.view.center-size": "センターサイズ",
+    "panel.view.use-splat-colors": "カラーセンター",
+    "panel.view.outline-selection": "選択のアウトライン",
+    "panel.view.frame-timings": "フレーム時間",
     "panel.splat-data.position": "位置",
     "panel.splat-data.opacity": "不透明度",
     "panel.splat-data.red": "赤",
@@ -123,13 +121,11 @@
     "panel.splat-data.show-all": "すべてのプロパティ",
     "panel.splat-data.totals.splats": "スプラット数",
     "panel.splat-data.totals.selected": "選択中",
-
     "panel.render.cancel": "キャンセル",
     "panel.render.ok": "レンダリング",
     "panel.render.render-video": "ビデオレンダリング",
     "panel.render.rendering": "フレームをレンダリング中",
     "panel.render.failed": "レンダリングに失敗しました",
-
     "select-toolbar.set": "セット",
     "select-toolbar.add": "追加",
     "select-toolbar.remove": "削除",
@@ -138,7 +134,6 @@
     "select-toolbar.size": "サイズ",
     "select-toolbar.rotation": "回転",
     "select-toolbar.radius": "半径",
-
     "popup.ok": "OK",
     "popup.cancel": "キャンセル",
     "popup.yes": "はい",
@@ -153,7 +148,6 @@
     "popup.lod-select-splats": "スプラット",
     "popup.lod-upload-note": "注: LODを含むシーンは次の場所から直接アップロードできます:",
     "popup.copy-to-clipboard": "リンクをクリップボードにコピー",
-
     "popup.render-image.header": "画像設定",
     "popup.render-image.projection": "投影",
     "popup.render-image.projection.standard": "標準",
@@ -167,7 +161,6 @@
     "popup.render-image.transparent-background": "透明な背景",
     "popup.render-image.show-debug-overlays": "デバッグオーバーレイを表示",
     "popup.render-image.level-horizon": "水平を維持",
-
     "popup.render-video.header": "ビデオ設定",
     "popup.render-video.projection": "投影",
     "popup.render-video.projection.standard": "標準",
@@ -197,7 +190,6 @@
     "popup.render-video.level-horizon": "水平を維持",
     "popup.render-video.transparent-background": "透明な背景",
     "popup.render-video.show-debug-overlays": "デバッグオーバーレイを表示",
-
     "popup.shortcuts.title": "キーボードショートカット",
     "popup.shortcuts.navigation": "ナビゲーション",
     "popup.shortcuts.reset-camera": "カメラをリセット",
@@ -248,7 +240,6 @@
     "popup.shortcuts.redo": "やり直し",
     "popup.shortcuts.toggle-data-panel": "データパネルの切り替え",
     "popup.shortcuts.toggle-timeline-panel": "タイムラインパネルの切り替え",
-
     "popup.export": "エクスポート",
     "popup.export.header": "エクスポート",
     "popup.export.type": "エクスポートタイプ",
@@ -268,7 +259,6 @@
     "popup.export.spz-version.4": "SPZ 4（最新）",
     "popup.export.spz-version.3": "SPZ 3（レガシー gzip）",
     "popup.export.filename": "ファイル名",
-
     "popup.publish.header": "公開設定",
     "popup.publish.destination": "公開先",
     "popup.publish.new-scene": "新規シーンを作成",
@@ -286,41 +276,34 @@
     "popup.publish.failed": "公開に失敗",
     "popup.publish.please-try-again": "後でもう一度お試しください。",
     "popup.publish.please-log-in": "PlayCanvasに公開するにはユーザーアカウントが必要です。ログインしてもう一度お試しください。",
-
     "camera-info.position": "カメラ位置",
     "camera-info.target": "カメラ注視点",
-
     "doc.reset": "シーンをリセット",
     "doc.unsaved-message": "保存されていない変更があります。シーンをリセットしてもよろしいですか？",
     "doc.reset-message": "シーンをリセットしてもよろしいですか？",
     "doc.save-failed": "保存に失敗",
     "doc.load-failed": "読み込みに失敗",
-
     "measure.length": "長さ",
     "measure.hint": "2点を配置して計測",
     "measure.clear": "クリア",
-
     "orient.hint": "3点を配置して平面を定義",
     "orient.align": "グリッドに合わせる",
     "orient.set-pivot": "ピボットを設定",
     "orient.clear": "クリア",
-
     "status-bar.splats": "スプラット",
     "status-bar.selected": "選択済み",
     "status-bar.locked": "ロック済み",
     "status-bar.deleted": "削除済み",
     "status-bar.timeline": "タイムライン",
     "status-bar.splat-data": "スプラットデータ",
-
     "tooltip.right-toolbar.splat-mode": "スプラットモード",
     "tooltip.right-toolbar.show-hide": "スプラットの表示/非表示",
     "tooltip.right-toolbar.orbit-camera": "オービットカメラ",
     "tooltip.right-toolbar.fly-camera": "フライカメラ",
     "tooltip.right-toolbar.frame-selection": "選択をフレームイン",
     "tooltip.right-toolbar.reset-camera": "カメラをリセット",
-    "tooltip.right-toolbar.colors": "色",
     "tooltip.right-toolbar.settings": "設定",
-
+    "tooltip.right-toolbar.view-options": "表示オプション",
     "tooltip.bottom-toolbar.undo": "元に戻す",
     "tooltip.bottom-toolbar.redo": "やり直し",
     "tooltip.bottom-toolbar.rectangle-selection": "四角形選択",
@@ -338,7 +321,6 @@
     "tooltip.bottom-toolbar.orient": "向きを調整",
     "tooltip.bottom-toolbar.local-space": "ローカル座標へ切り替え",
     "tooltip.bottom-toolbar.reset-pivot": "ピボットをリセット（Shift：中心へ）",
-
     "tooltip.timeline.prev-frame": "前のフレーム",
     "tooltip.timeline.play": "再生/一時停止",
     "tooltip.timeline.next-frame": "次のフレーム",
@@ -350,14 +332,11 @@
     "tooltip.timeline.total-frames": "総フレーム数",
     "tooltip.timeline.smoothness": "スムーズさ",
     "tooltip.timeline.loop": "アニメーションをループ",
-
     "tooltip.scene.solo": "選択をソロ表示",
     "tooltip.scene.import": "シーンをインポート",
     "tooltip.scene.new": "新規シーンを作成",
-
     "tooltip.status-bar.timeline": "タイムラインパネルの切り替え",
     "tooltip.status-bar.splat-data": "スプラットデータパネルの切り替え",
-
     "tooltip.splat-data.on-screen-only": "カメラに映っているスプラットのみをヒストグラムに含めます。画面外のスプラットは除外されます。",
     "tooltip.splat-data.log-scale": "縦軸を対数スケールで表示し、小さい値と大きい値の両方を見やすくします。",
     "tooltip.splat-data.show-all": "未加工のDC係数や球面調和関数係数を含む、すべてのスプラットプロパティをリストに表示します。"

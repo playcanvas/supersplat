@@ -10,13 +10,14 @@
         <meta name="description" content="SuperSplat is an advanced browser-based editor for manipulating and optimizing 3D Gaussian Splats. It is open source and engine agnostic." />
         <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" />
 
-        <!-- Service worker -->
+        <!-- v3 removed the service worker: unregister workers and delete caches
+             left behind by earlier versions, so stale clients stop serving old
+             builds. Can be removed once pre-v3 clients have cycled through. -->
         <script>
-            const sw = navigator.serviceWorker;
-            if (sw) {
-                sw.register('./sw.js')
-                    .catch(err => console.error('failed to register service worker', err));
-            }
+            navigator.serviceWorker?.getRegistrations().then(regs => regs.forEach(reg => reg.unregister()));
+            window.caches?.keys().then(keys => keys.forEach((key) => {
+                if (key.startsWith('superSplat-v')) caches.delete(key);
+            }));
         </script>
     </head>
 

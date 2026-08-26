@@ -167,9 +167,14 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 }
             }
 
-            // reading the bound forces a recalculation so the deserialize
-            // steps below observe the loaded scene's extents
-            const bound = scene.bound;
+            // reading the bound forces a recalculation (and its
+            // scene.boundChanged event) so the deserialize steps below observe
+            // the loaded scene's extents. The result must be consumed: the
+            // release build's treeshaker assumes property reads are pure and
+            // drops a bare read, getter side effects and all
+            if (scene.bound === null) {
+                console.error('unexpected missing scene bound');
+            }
 
             events.invoke('docDeserialize.timeline', document.timeline);
             events.invoke('docDeserialize.poseSets', document.poseSets, document.camera?.fov);

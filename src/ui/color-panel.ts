@@ -255,9 +255,24 @@ class ColorPanel extends Container {
         this.append(header);
         this.append(content);
 
-        header.on('click', () => {
+        // the header acts as a button: focusable, toggleable from the
+        // keyboard, and announcing its expanded state
+        header.dom.setAttribute('role', 'button');
+        header.dom.setAttribute('tabindex', '0');
+        header.dom.setAttribute('aria-expanded', 'false');
+
+        const toggleContent = () => {
             content.hidden = !content.hidden;
             collapseArrow.class[content.hidden ? 'remove' : 'add']('expanded');
+            header.dom.setAttribute('aria-expanded', String(!content.hidden));
+        };
+
+        header.on('click', toggleContent);
+        header.dom.addEventListener('keydown', (event: KeyboardEvent) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                toggleContent();
+            }
         });
 
         // The controls hold a *pending* grade rather than editing anything directly.

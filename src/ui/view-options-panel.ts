@@ -304,10 +304,40 @@ class ViewOptionsPanel extends Container {
         this.append(sectionHeader('panel.view.section-diagnostics'));
         this.append(perfOverlayRow);
 
+        // the panel is constructed before the editor registers its state, and
+        // the notify events only fire on change - so a value initialized from
+        // config or url never reaches the constructor defaults above. Pull the
+        // live state whenever the panel opens instead; assigning an unchanged
+        // value is a no-op, and a changed one round-trips through the setter
+        // idempotently.
+        let syncing = false;
+
+        const sync = () => {
+            syncing = true;
+            const grid = events.invoke('grid.visible') as boolean;
+            showGridToggle.value = grid;
+            gridPlaneRow.enabled = grid;
+            gridPlaneSelection.value = events.invoke('grid.plane');
+            const bound = events.invoke('camera.bound') as boolean;
+            showBoundToggle.value = bound;
+            showBoundDimensionsRow.enabled = bound;
+            showBoundDimensionsToggle.value = events.invoke('camera.boundDimensions');
+            showCameraPosesToggle.value = events.invoke('camera.showPoses');
+            showCameraInfoToggle.value = events.invoke('camera.showInfo');
+            centersSizeSlider.value = events.invoke('camera.splatSize');
+            centersColorToggle.value = events.invoke('view.centersUseGaussianColor');
+            outlineSelectionToggle.value = events.invoke('view.outlineSelection');
+            perfOverlayToggle.value = events.invoke('view.perfOverlay');
+            syncing = false;
+        };
+
         // handle panel visibility
 
         const setVisible = (visible: boolean) => {
             if (visible === this.hidden) {
+                if (visible) {
+                    sync();
+                }
                 this.hidden = !visible;
                 events.fire('viewPanel.visible', visible);
             }
@@ -401,8 +431,12 @@ class ViewOptionsPanel extends Container {
 
         centersSizeSlider.on('change', (value: number) => {
             events.fire('camera.setSplatSize', value);
-            events.fire('camera.setOverlay', true);
-            events.fire('camera.setMode', 'centers');
+            // only a user drag should force the centers overlay on - a stale
+            // slider being synced on panel open must not switch modes
+            if (!syncing) {
+                events.fire('camera.setOverlay', true);
+                events.fire('camera.setMode', 'centers');
+            }
         });
 
         // centers gaussian color

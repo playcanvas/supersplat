@@ -4,6 +4,12 @@
     top: 102px;
     left: 24px;
     width: 320px;
+
+    // the panel grows when the colors section expands; never let it run past
+    // the viewport - scroll instead. Safe here because nothing inside opens a
+    // popup that needs to escape the panel bounds
+    max-height: calc(100vh - 126px);
+    overflow-y: auto;
 }
 
 .collapsed #scene-panel {

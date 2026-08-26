@@ -848,7 +848,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // 'movement' but only once a sorted frame has proven slow (see
     // Scene.autoEngageMs).
 
-    let stochastic = 'movement';
+    let stochastic = 'auto';
 
     events.function('view.stochastic', () => {
         return stochastic;

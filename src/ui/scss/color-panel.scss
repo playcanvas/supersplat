@@ -16,10 +16,13 @@
         cursor: pointer;
 
         & > .panel-header-icon {
-            font-family: pc-icon;
-            font-weight: bold;
-            font-size: 13px;
             color: $clr-hilight;
+
+            & > svg {
+                display: block;
+                width: 16px;
+                height: 16px;
+            }
         }
 
         & > .panel-header-label {
@@ -86,9 +89,41 @@
         }
     }
 
+    .color-panel-footer {
+        height: 20px;
+        background-color: $bcg-dark;
+    }
+
+    // apply/reset follow the settings panel's footer button styling
     .color-panel-control-row {
         display: flex;
         flex-direction: row;
-        background-color: $bcg-dark;
+        align-items: center;
+        gap: 8px;
+        padding: 2px 10px;
+        height: 28px;
+        margin: 2px 0 4px;
+
+        & > .color-panel-button {
+            flex-grow: 1;
+            flex-basis: 0;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            height: 28px;
+            line-height: normal;
+
+            &::before {
+                content: '';
+                flex-shrink: 0;
+                width: 13px;
+                height: 13px;
+                background-color: currentColor;
+                mask: var(--icon) center / contain no-repeat;
+                -webkit-mask: var(--icon) center / contain no-repeat;
+            }
+        }
     }
 }

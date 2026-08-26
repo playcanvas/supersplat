@@ -1,11 +1,13 @@
-import { ColorPicker, Container, Label, SliderInput } from '@playcanvas/pcui';
+import { Button, ColorPicker, Container, Label, SliderInput } from '@playcanvas/pcui';
 import { Color } from 'playcanvas';
 
 import { Events } from '../events';
 import { i18n } from './localization';
-import arrowSvg from './svg/arrow.svg';
-import { Tooltips } from './tooltips';
 import { Splat } from '../splat';
+import arrowSvg from './svg/arrow.svg';
+import checkSvg from './svg/check.svg';
+import colorsSvg from './svg/colors.svg';
+import editUndoSvg from './svg/edit-undo.svg';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -15,7 +17,7 @@ const createSvg = (svgString: string) => {
 // collapsible colors section of the scene panel: grades the current splat, so
 // it lives with the rest of the current-splat state (like transform)
 class ColorPanel extends Container {
-    constructor(events: Events, tooltips: Tooltips, args = {}) {
+    constructor(events: Events, args = {}) {
         args = {
             ...args,
             class: 'color-panel-section'
@@ -30,9 +32,9 @@ class ColorPanel extends Container {
         });
 
         const icon = new Label({
-            class: 'panel-header-icon',
-            text: '\uE146'
+            class: 'panel-header-icon'
         });
+        icon.dom.appendChild(createSvg(colorsSvg));
 
         const label = new Label({
             class: 'panel-header-label'
@@ -214,21 +216,22 @@ class ColorPanel extends Container {
         });
 
         // apply bakes the pending grade into the target gaussians; reset clears
-        // whatever grade they already carry
-        const apply = new Label({
-            class: 'panel-header-button',
-            text: '\uE301'
+        // whatever grade they already carry. Icons render as css masks (a child
+        // svg would be wiped by the buttons' text setter on language change)
+        const apply = new Button({
+            class: 'color-panel-button'
         });
+        i18n.bindText(apply, 'panel.colors.apply');
+        apply.dom.style.setProperty('--icon', `url("${checkSvg}")`);
 
-        const reset = new Label({
-            class: 'panel-header-button',
-            text: '\uE304'
+        const reset = new Button({
+            class: 'color-panel-button'
         });
+        i18n.bindText(reset, 'panel.colors.reset');
+        reset.dom.style.setProperty('--icon', `url("${editUndoSvg}")`);
 
-        controlRow.append(new Label({ class: 'panel-header-spacer' }));
         controlRow.append(apply);
         controlRow.append(reset);
-        controlRow.append(new Label({ class: 'panel-header-spacer' }));
 
         // the collapsible body, closed by default
         const content = new Container({
@@ -243,8 +246,11 @@ class ColorPanel extends Container {
         content.append(blackPointRow);
         content.append(whitePointRow);
         content.append(transparencyRow);
-        content.append(new Label({ class: 'panel-header-spacer' }));
         content.append(controlRow);
+        // dark strip closing the panel bottom, as the scene panel had before
+        // this section joined it. Lives in the collapsible content so the
+        // collapsed state still ends cleanly at the section header bar
+        content.append(new Container({ class: 'color-panel-footer' }));
 
         this.append(header);
         this.append(content);
@@ -360,8 +366,6 @@ class ColorPanel extends Container {
             setControls(NEUTRAL);
         });
 
-        tooltips.register(apply, () => i18n.t('panel.colors.apply'), 'bottom');
-        tooltips.register(reset, () => i18n.t('panel.colors.reset'), 'bottom');
     }
 }
 

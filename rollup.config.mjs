@@ -4,7 +4,6 @@ import alias from '@rollup/plugin-alias';
 import image from '@rollup/plugin-image';
 import json from '@rollup/plugin-json';
 import resolve from '@rollup/plugin-node-resolve';
-import strip from '@rollup/plugin-strip';
 import terser from '@rollup/plugin-terser';
 import typescript from '@rollup/plugin-typescript';
 import autoprefixer from 'autoprefixer';
@@ -59,8 +58,7 @@ const application = {
                 { src: 'static/images', dest: 'static' },
                 { src: 'static/icons', dest: 'static' },
                 { src: 'static/lib', dest: 'static' },
-                { src: 'static/locales', dest: 'static' },
-                { src: 'static/env/VertebraeHDRI_v1_512.png', dest: 'static/env' }
+                { src: 'static/locales', dest: 'static' }
             ]
         }),
         alias({
@@ -87,35 +85,10 @@ const application = {
             includePaths: [`${PCUI_DIR}/dist`],
             watch: 'src/ui/scss'
         }),
-        BUILD_TYPE === 'release' &&
-        strip({
-            include: ['**/*.ts'],
-            functions: ['Debug.exec']
-        }),
         BUILD_TYPE !== 'debug' && terser()
     ],
     treeshake: 'smallest',
     cache: false
 };
 
-const serviceWorker = {
-    input: 'src/sw.ts',
-    output: {
-        dir: 'dist',
-        format: 'esm',
-        sourcemap: true
-    },
-    plugins: [
-        resolve(),
-        json(),
-        typescript()
-        // BUILD_TYPE !== 'debug' && terser()
-    ],
-    treeshake: 'smallest',
-    cache: false
-};
-
-export default [
-    application,
-    serviceWorker
-];
+export default application;

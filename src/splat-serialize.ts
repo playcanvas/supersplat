@@ -23,11 +23,8 @@ import {
 import {
     defaultPostEffectSettings,
     type AnimTrack,
-    type Annotation,
     type Camera,
-    type CameraPose,
-    type ExperienceSettings,
-    type PostEffectSettings
+    type ExperienceSettings
 } from '@playcanvas/splat-transform/viewer-settings';
 import {
     Mat3,
@@ -841,10 +838,7 @@ export {
     serializeSpz,
     serializeViewer,
     AnimTrack,
-    CameraPose,
     Camera,
-    Annotation,
-    PostEffectSettings,
     defaultPostEffectSettings,
     ExperienceSettings,
     SerializeSettings,

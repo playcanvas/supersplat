@@ -151,7 +151,7 @@ class FloodSelection {
             selectToolbar.hidden = true;
             canvasContainer.dom.removeEventListener('pointerdown', pointerdown);
             canvasContainer.dom.removeEventListener('pointermove', pointermove);
-            canvasContainer.dom.removeEventListener('pointerup', pointerup);
+            canvasContainer.dom.removeEventListener('pointerup', pointerup, true);
             point = undefined;
         };
     }

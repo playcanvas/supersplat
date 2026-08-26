@@ -5,6 +5,7 @@ import { version as engineVersion, revision as engineRevision } from 'playcanvas
 
 import { main } from './main';
 import { version as appVersion } from '../package.json';
+import { i18n } from './ui/localization';
 
 // print out versions of dependent packages
 // NOTE: add dummy style reference to prevent tree shaking
@@ -16,9 +17,21 @@ console.log(`SuperSplat v${appVersion} | SplatTransform v${stVersion} (${stRevis
 main().catch((err) => {
     console.error(err);
 
-    const message = window.navigator.gpu ?
-        'SuperSplat failed to start. See the browser console for details.' :
-        'SuperSplat requires WebGPU, which this browser does not support. Please try the latest Chrome, Edge or Safari.';
+    const [key, fallback] = window.navigator.gpu ?
+        ['startup.failed', 'SuperSplat failed to start. See the browser console for details.'] :
+        ['startup.webgpu-unavailable', 'SuperSplat requires WebGPU, which this browser does not support. Please try the latest Chrome, Edge or Safari.'];
+
+    // i18n is initialized early in main(), but the failure may have hit before
+    // that - fall back to english when the key can't resolve
+    let message = fallback;
+    try {
+        const localized = i18n.t(key);
+        if (localized && localized !== key) {
+            message = localized;
+        }
+    } catch (e) {
+        // keep the fallback
+    }
 
     const dom = window.document.createElement('div');
     dom.id = 'startup-error';

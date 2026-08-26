@@ -167,10 +167,13 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 }
             }
 
-            // FIXME: trigger scene bound calc in a better way
-            const tmp = scene.bound;
-            if (tmp === null) {
-                console.error('this should never fire');
+            // reading the bound forces a recalculation (and its
+            // scene.boundChanged event) so the deserialize steps below observe
+            // the loaded scene's extents. The result must be consumed: the
+            // release build's treeshaker assumes property reads are pure and
+            // drops a bare read, getter side effects and all
+            if (scene.bound === null) {
+                console.error('unexpected missing scene bound');
             }
 
             events.invoke('docDeserialize.timeline', document.timeline);

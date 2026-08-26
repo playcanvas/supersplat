@@ -90,6 +90,7 @@
     "panel.settings.stochastic-alpha.disabled": "Disabled",
     "panel.settings.stochastic-alpha.enabled": "Enabled",
     "panel.settings.stochastic-alpha.movement": "Movement",
+    "panel.settings.stochastic-alpha.auto": "Auto",
     "panel.settings.perf-overlay": "Frame Timings",
     "panel.settings.show-grid": "Show Grid",
     "panel.settings.grid-plane": "Grid Plane",

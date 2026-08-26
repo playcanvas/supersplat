@@ -90,6 +90,7 @@
     "panel.settings.stochastic-alpha.disabled": "Отключено",
     "panel.settings.stochastic-alpha.enabled": "Включено",
     "panel.settings.stochastic-alpha.movement": "При движении",
+    "panel.settings.stochastic-alpha.auto": "Автоматически",
     "panel.settings.perf-overlay": "Время кадра",
     "panel.settings.show-grid": "Показать сетку",
     "panel.settings.grid-plane": "Плоскость сетки",

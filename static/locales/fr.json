@@ -90,6 +90,7 @@
     "panel.settings.stochastic-alpha.disabled": "Désactivé",
     "panel.settings.stochastic-alpha.enabled": "Activé",
     "panel.settings.stochastic-alpha.movement": "Mouvement",
+    "panel.settings.stochastic-alpha.auto": "Automatique",
     "panel.settings.perf-overlay": "Temps par image",
     "panel.settings.show-grid": "Afficher la grille",
     "panel.settings.grid-plane": "Plan de la grille",

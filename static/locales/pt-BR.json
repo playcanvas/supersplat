@@ -90,6 +90,7 @@
     "panel.settings.stochastic-alpha.disabled": "Desativado",
     "panel.settings.stochastic-alpha.enabled": "Ativado",
     "panel.settings.stochastic-alpha.movement": "Movimento",
+    "panel.settings.stochastic-alpha.auto": "Automático",
     "panel.settings.perf-overlay": "Tempos de quadro",
     "panel.settings.show-grid": "Mostrar Grade",
     "panel.settings.grid-plane": "Plano da Grade",

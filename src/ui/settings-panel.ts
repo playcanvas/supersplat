@@ -332,7 +332,8 @@ class SettingsPanel extends Container {
         i18n.bindOptions(stochasticSelection, () => [
             { v: 'disabled', t: i18n.t('panel.settings.stochastic-alpha.disabled') },
             { v: 'enabled', t: i18n.t('panel.settings.stochastic-alpha.enabled') },
-            { v: 'movement', t: i18n.t('panel.settings.stochastic-alpha.movement') }
+            { v: 'movement', t: i18n.t('panel.settings.stochastic-alpha.movement') },
+            { v: 'auto', t: i18n.t('panel.settings.stochastic-alpha.auto') }
         ]);
 
         stochasticRow.append(stochasticLabel);

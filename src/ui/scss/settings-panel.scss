@@ -7,6 +7,19 @@
     width: 320px;
     flex-direction: column;
 
+    // .panel clips overflow, which cuts off select dropdowns that open
+    // downward from the bottom rows (pcui only flips a list upward at the
+    // window edge, not the panel's). Let them escape instead: the header then
+    // needs its own top rounding, and the panel must stack above the toolbars
+    // that follow it in the DOM so the escaped list stays visible and
+    // clickable.
+    overflow: visible;
+    z-index: 10;
+
+    & > .panel-header {
+        border-radius: 8px 8px 0 0;
+    }
+
     &:not(.pcui-hidden) {
         display: flex;
     }

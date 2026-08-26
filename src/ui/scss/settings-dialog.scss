@@ -17,7 +17,10 @@
 
         display: flex;
         flex-direction: column;
-        overflow: hidden;
+
+        // allow select dropdown lists to extend past the dialog bounds; the
+        // header then needs its own top rounding
+        overflow: visible;
 
         border-radius: 8px;
         background-color: $bcg-primary;
@@ -31,6 +34,7 @@
             height: 32px;
             margin: 0;
             padding: 0px 12px;
+            border-radius: 8px 8px 0 0;
 
             background-color: $bcg-darker;
 

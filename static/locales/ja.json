@@ -90,6 +90,7 @@
     "panel.settings.stochastic-alpha.disabled": "無効",
     "panel.settings.stochastic-alpha.enabled": "有効",
     "panel.settings.stochastic-alpha.movement": "移動中",
+    "panel.settings.stochastic-alpha.auto": "自動",
     "panel.settings.perf-overlay": "フレーム時間",
     "panel.settings.show-grid": "グリッド",
     "panel.settings.grid-plane": "グリッド平面",

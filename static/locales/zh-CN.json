@@ -90,6 +90,7 @@
     "panel.settings.stochastic-alpha.disabled": "禁用",
     "panel.settings.stochastic-alpha.enabled": "启用",
     "panel.settings.stochastic-alpha.movement": "移动时",
+    "panel.settings.stochastic-alpha.auto": "自动",
     "panel.settings.perf-overlay": "帧耗时",
     "panel.settings.show-grid": "显示网格",
     "panel.settings.grid-plane": "网格平面",

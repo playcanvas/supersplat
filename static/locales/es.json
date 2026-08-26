@@ -90,6 +90,7 @@
     "panel.settings.stochastic-alpha.disabled": "Desactivado",
     "panel.settings.stochastic-alpha.enabled": "Activado",
     "panel.settings.stochastic-alpha.movement": "Movimiento",
+    "panel.settings.stochastic-alpha.auto": "Automático",
     "panel.settings.perf-overlay": "Tiempos de fotograma",
     "panel.settings.show-grid": "Mostrar cuadrícula",
     "panel.settings.grid-plane": "Plano de cuadrícula",

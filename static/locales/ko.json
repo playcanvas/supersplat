@@ -90,6 +90,7 @@
     "panel.settings.stochastic-alpha.disabled": "비활성",
     "panel.settings.stochastic-alpha.enabled": "활성",
     "panel.settings.stochastic-alpha.movement": "움직일 때",
+    "panel.settings.stochastic-alpha.auto": "자동",
     "panel.settings.perf-overlay": "프레임 시간",
     "panel.settings.show-grid": "그리드 표시",
     "panel.settings.grid-plane": "그리드 평면",

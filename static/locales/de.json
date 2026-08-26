@@ -90,6 +90,7 @@
     "panel.settings.stochastic-alpha.disabled": "Deaktiviert",
     "panel.settings.stochastic-alpha.enabled": "Aktiviert",
     "panel.settings.stochastic-alpha.movement": "Bewegung",
+    "panel.settings.stochastic-alpha.auto": "Automatisch",
     "panel.settings.perf-overlay": "Frame-Zeiten",
     "panel.settings.show-grid": "Raster anzeigen",
     "panel.settings.grid-plane": "Rasterebene",

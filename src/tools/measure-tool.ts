@@ -172,10 +172,6 @@ class MeasureTool {
             }
         });
 
-        events.on('pivot.started', () => {
-
-        });
-
         events.on('pivot.moved', () => {
             if (active && splat && splat.measureSelection >= 0 && splat.measureSelection < splat.measurePoints.length) {
                 const p = events.invoke('pivot').transform.position;

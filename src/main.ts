@@ -53,7 +53,7 @@ declare global {
 }
 
 const getURLArgs = () => {
-    // extract settings from command line in non-prod builds only
+    // extract settings overrides from the url query parameters
     const config = {};
 
     const apply = (key: string, value: string) => {

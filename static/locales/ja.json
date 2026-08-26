@@ -146,6 +146,8 @@
     "popup.error": "エラー",
     "popup.error-loading": "ファイルの読み込みエラー",
     "popup.webgpu-unavailable": "このエクスポートにはWebGPUが必要ですが、このブラウザでは利用できません。Chrome、Edge、Safariの最新バージョンをお試しください。",
+    "startup.failed": "SuperSplatを起動できませんでした。詳細はブラウザのコンソールをご覧ください。",
+    "startup.webgpu-unavailable": "SuperSplatにはWebGPUが必要ですが、このブラウザでは利用できません。Chrome、Edge、Safariの最新バージョンをお試しください。",
     "popup.load-options-header": "読み込みオプション",
     "popup.lod-select-message": "このファイルには複数の詳細レベルが含まれています。読み込むレベルを選択してください。",
     "popup.lod-select-splats": "スプラット",

@@ -146,6 +146,8 @@
     "popup.error": "错误",
     "popup.error-loading": "加载文件错误",
     "popup.webgpu-unavailable": "此导出需要 WebGPU，但当前浏览器不支持。请尝试使用最新版本的 Chrome、Edge 或 Safari。",
+    "startup.failed": "SuperSplat 启动失败。详情请查看浏览器控制台。",
+    "startup.webgpu-unavailable": "SuperSplat 需要 WebGPU，但当前浏览器不支持。请尝试使用最新版本的 Chrome、Edge 或 Safari。",
     "popup.load-options-header": "加载选项",
     "popup.lod-select-message": "此文件包含多个细节层级。请选择要加载的层级。",
     "popup.lod-select-splats": "高斯点",

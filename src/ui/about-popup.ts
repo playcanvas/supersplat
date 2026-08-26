@@ -1,6 +1,7 @@
 import { Container, Label, version as pcuiVersion, revision as pcuiRevision } from '@playcanvas/pcui';
 import { version as engineVersion, revision as engineRevision } from 'playcanvas';
 
+import { i18n } from './localization';
 import { version as appVersion } from '../../package.json';
 
 // Inline SVG for the SuperSplat logo
@@ -50,9 +51,9 @@ class AboutPopup extends Container {
 
         // Header bar
         const header = new Label({
-            id: 'about-header',
-            text: 'About'
+            id: 'about-header'
         });
+        i18n.bindText(header, 'menu.help.about');
 
         // Content area
         const content = new Container({

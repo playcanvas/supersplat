@@ -146,6 +146,8 @@
     "popup.error": "Ошибка",
     "popup.error-loading": "Ошибка загрузки файла",
     "popup.webgpu-unavailable": "Для этого экспорта требуется WebGPU, который недоступен в этом браузере. Попробуйте последнюю версию Chrome, Edge или Safari.",
+    "startup.failed": "Не удалось запустить SuperSplat. Подробности см. в консоли браузера.",
+    "startup.webgpu-unavailable": "Для SuperSplat требуется WebGPU, который недоступен в этом браузере. Попробуйте последнюю версию Chrome, Edge или Safari.",
     "popup.load-options-header": "Параметры загрузки",
     "popup.lod-select-message": "Этот файл содержит несколько уровней детализации. Выберите, какой загрузить.",
     "popup.lod-select-splats": "сплатов",

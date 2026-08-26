@@ -10,7 +10,6 @@ const cacheUrls = [
     './index.css',
     './index.html',
     './index.js',
-    './index.js.map',
     './manifest.json',
     './static/icons/logo-192.png',
     './static/icons/logo-512.png',
@@ -20,35 +19,30 @@ const cacheUrls = [
     './static/lib/webp/webp.wasm',
     './static/locales/de.json',
     './static/locales/en.json',
+    './static/locales/es.json',
     './static/locales/fr.json',
     './static/locales/ja.json',
     './static/locales/ko.json',
+    './static/locales/pt-BR.json',
+    './static/locales/ru.json',
     './static/locales/zh-CN.json'
 ];
 
 self.addEventListener('install', (event) => {
-    console.log(`installing v${appVersion}`);
-
     // create cache for current version
     event.waitUntil(
         caches.open(cacheName)
-        .then((cache) => {
-            cache.addAll(cacheUrls);
-        })
+        .then(cache => cache.addAll(cacheUrls))
     );
 });
 
-self.addEventListener('activate', () => {
-    console.log(`activating v${appVersion}`);
-
+self.addEventListener('activate', (event) => {
     // delete the old caches once this one is activated
-    caches.keys().then((names) => {
-        for (const name of names) {
-            if (name !== cacheName) {
-                caches.delete(name);
-            }
-        }
-    });
+    event.waitUntil(
+        caches.keys().then(names => Promise.all(
+            names.filter(name => name !== cacheName).map(name => caches.delete(name))
+        ))
+    );
 });
 
 self.addEventListener('fetch', (event) => {

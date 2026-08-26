@@ -167,11 +167,9 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 }
             }
 
-            // FIXME: trigger scene bound calc in a better way
-            const tmp = scene.bound;
-            if (tmp === null) {
-                console.error('this should never fire');
-            }
+            // reading the bound forces a recalculation so the deserialize
+            // steps below observe the loaded scene's extents
+            const bound = scene.bound;
 
             events.invoke('docDeserialize.timeline', document.timeline);
             events.invoke('docDeserialize.poseSets', document.poseSets, document.camera?.fov);

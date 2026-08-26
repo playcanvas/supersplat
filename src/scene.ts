@@ -480,8 +480,13 @@ class Scene {
 
         // timestamp queries cost a per-frame staging-buffer map and a resolve,
         // so run the profiler only while something consumes it: the
-        // frame-timings overlay or auto-mode sampling.
-        this.app.graphicsDevice.gpuProfiler.enabled = profiling || this.autoSampling;
+        // frame-timings overlay or auto-mode sampling. Locked-mode frames are
+        // never timed: reports resolve asynchronously, so a slow
+        // high-resolution capture span could otherwise land in _frameTime
+        // after unlock and be mistaken for an editor frame (disabling also
+        // zeroes the report, so nothing stale survives the capture).
+        this.app.graphicsDevice.gpuProfiler.enabled =
+            (profiling || this.autoSampling) && !this.lockedRenderMode;
 
         if (this.lockedRenderMode) {
             this.app.renderNextFrame = this.lockedRender;
@@ -562,8 +567,9 @@ class Scene {
         const gpuTime = (this.app.graphicsDevice.gpuProfiler as any)?._frameTime ?? 0;
 
         // latch 'auto' stochastic mode once a sorted frame exceeds the
-        // threshold. Skip locked-mode frames: offline captures can render at a
-        // much higher resolution than the editor view.
+        // threshold. Locked-mode frames are excluded: offline captures can
+        // render at a much higher resolution than the editor view, so they
+        // are never timed at all (see onUpdate).
         if (this.autoSampling && !this.lockedRenderMode && gpuTime > this.autoEngageMs) {
             this.autoEngaged = true;
         }

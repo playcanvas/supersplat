@@ -10,13 +10,11 @@
     "menu.file.export": "Экспорт",
     "menu.file.export.viewer": "Приложение просмотра",
     "menu.file.publish": "Опубликовать",
-
     "menu.edit": "Правка",
     "menu.edit.undo": "Отменить",
     "menu.edit.redo": "Повторить",
     "menu.edit.duplicate": "Дублировать",
     "menu.edit.separate": "Разделить",
-
     "menu.select": "Выбор",
     "menu.select.all": "Все",
     "menu.select.none": "Ничего",
@@ -25,11 +23,9 @@
     "menu.select.unlock": "Разблокировать все",
     "menu.select.delete": "Удалить выделение",
     "menu.select.reset": "Сбросить Splat",
-
     "menu.render": "Рендеринг",
     "menu.render.image": "Изображение",
     "menu.render.video": "Видео",
-
     "menu.help": "Помощь",
     "menu.help.video-tutorials": "Видео Учебники",
     "menu.help.video-tutorials.basics": "Изучить Основы",
@@ -43,16 +39,13 @@
     "menu.help.github-repo": "Репозиторий GitHub",
     "menu.help.log-issue": "Сообщить о проблеме",
     "menu.help.about": "О SuperSplat",
-
     "panel.mode.centers": "Режим центров",
     "panel.mode.rings": "Режим колец",
-
     "panel.scene": "Менеджер сцены",
     "panel.scene.transform": "Трансформация",
     "panel.scene.transform.position": "Позиция",
     "panel.scene.transform.rotation": "Вращение",
     "panel.scene.transform.scale": "Масштаб",
-
     "panel.colors": "Цвета",
     "panel.colors.tint": "Оттенок",
     "panel.colors.temperature": "Температура",
@@ -63,8 +56,10 @@
     "panel.colors.transparency": "Прозрачность",
     "panel.colors.apply": "Применить",
     "panel.colors.reset": "Сбросить",
-
     "panel.settings": "Настройки",
+    "panel.settings.section-application": "Приложение",
+    "panel.settings.section-camera": "Камера",
+    "panel.settings.section-rendering": "Рендеринг",
     "panel.settings.language": "Язык",
     "panel.settings.language.auto": "Автоматически",
     "panel.settings.colors": "Цвета",
@@ -83,23 +78,26 @@
     "panel.settings.fov-dolly": "Авто-долли FOV",
     "panel.settings.sh-bands": "Полосы SH",
     "panel.settings.fly-speed": "Скорость полёта",
-    "panel.settings.center-size": "Размер центров",
-    "panel.settings.use-splat-colors": "Цветные центры",
-    "panel.settings.outline-selection": "Контур выделения",
     "panel.settings.stochastic-alpha": "Стохастическая альфа",
     "panel.settings.stochastic-alpha.disabled": "Отключено",
     "panel.settings.stochastic-alpha.enabled": "Включено",
     "panel.settings.stochastic-alpha.movement": "При движении",
     "panel.settings.stochastic-alpha.auto": "Автоматически",
-    "panel.settings.perf-overlay": "Время кадра",
-    "panel.settings.show-grid": "Показать сетку",
-    "panel.settings.grid-plane": "Плоскость сетки",
-    "panel.settings.show-bounding-box": "Показать границы",
-    "panel.settings.show-dimensions": "Показать размеры",
-    "panel.settings.show-camera-poses": "Показать камеры",
-    "panel.settings.show-camera-info": "Показать информацию о камере",
     "panel.settings.reset": "Сбросить настройки",
-
+    "panel.view": "Параметры вида",
+    "panel.view.section-show": "Отображение",
+    "panel.view.section-overlay": "Наложение",
+    "panel.view.section-diagnostics": "Диагностика",
+    "panel.view.grid": "Сетка",
+    "panel.view.grid-plane": "Плоскость",
+    "panel.view.bounding-box": "Границы",
+    "panel.view.dimensions": "Размеры",
+    "panel.view.camera-poses": "Позы камер",
+    "panel.view.camera-info": "Информация о камере",
+    "panel.view.center-size": "Размер центров",
+    "panel.view.use-splat-colors": "Цветные центры",
+    "panel.view.outline-selection": "Контур выделения",
+    "panel.view.frame-timings": "Время кадра",
     "panel.splat-data.position": "Позиция",
     "panel.splat-data.opacity": "Непрозрачность",
     "panel.splat-data.red": "Красный",
@@ -123,13 +121,11 @@
     "panel.splat-data.show-all": "Все свойства",
     "panel.splat-data.totals.splats": "Сплаты",
     "panel.splat-data.totals.selected": "Выбрано",
-
     "panel.render.cancel": "Отмена",
     "panel.render.ok": "Рендерить",
     "panel.render.render-video": "Рендерить видео",
     "panel.render.rendering": "Рендеринг кадров",
     "panel.render.failed": "Ошибка рендеринга",
-
     "select-toolbar.set": "Задать",
     "select-toolbar.add": "Добавить",
     "select-toolbar.remove": "Убрать",
@@ -138,7 +134,6 @@
     "select-toolbar.size": "Размер",
     "select-toolbar.rotation": "Вращение",
     "select-toolbar.radius": "Радиус",
-
     "popup.ok": "ОК",
     "popup.cancel": "Отмена",
     "popup.yes": "Да",
@@ -153,7 +148,6 @@
     "popup.lod-select-splats": "сплатов",
     "popup.lod-upload-note": "Примечание: сцены с уровнями детализации можно загрузить напрямую на",
     "popup.copy-to-clipboard": "Скопировать ссылку в буфер обмена",
-
     "popup.render-image.header": "Настройки изображения",
     "popup.render-image.projection": "Проекция",
     "popup.render-image.projection.standard": "Стандартная",
@@ -167,7 +161,6 @@
     "popup.render-image.transparent-background": "Прозрачный фон",
     "popup.render-image.show-debug-overlays": "Показать отладочные наложения",
     "popup.render-image.level-horizon": "Выровнять горизонт",
-
     "popup.render-video.header": "Настройки видео",
     "popup.render-video.projection": "Проекция",
     "popup.render-video.projection.standard": "Стандартная",
@@ -197,7 +190,6 @@
     "popup.render-video.level-horizon": "Выровнять горизонт",
     "popup.render-video.transparent-background": "Прозрачный фон",
     "popup.render-video.show-debug-overlays": "Показать отладочные наложения",
-
     "popup.shortcuts.title": "Горячие клавиши",
     "popup.shortcuts.navigation": "Навигация",
     "popup.shortcuts.reset-camera": "Сбросить камеру",
@@ -248,7 +240,6 @@
     "popup.shortcuts.redo": "Повторить",
     "popup.shortcuts.toggle-data-panel": "Переключить панель данных",
     "popup.shortcuts.toggle-timeline-panel": "Переключить панель временной шкалы",
-
     "popup.export": "Экспорт",
     "popup.export.header": "Экспорт",
     "popup.export.type": "Тип экспорта",
@@ -268,7 +259,6 @@
     "popup.export.spz-version.4": "SPZ 4 (последняя)",
     "popup.export.spz-version.3": "SPZ 3 (устаревший gzip)",
     "popup.export.filename": "Имя файла",
-
     "popup.publish.header": "Настройки публикации",
     "popup.publish.destination": "Опубликовать в",
     "popup.publish.new-scene": "Новая сцена",
@@ -286,41 +276,34 @@
     "popup.publish.failed": "Публикация не удалась",
     "popup.publish.please-try-again": "Пожалуйста, попробуйте позже.",
     "popup.publish.please-log-in": "Для публикации в PlayCanvas требуется учётная запись. Пожалуйста, войдите и попробуйте снова.",
-
     "camera-info.position": "Позиция камеры",
     "camera-info.target": "Цель камеры",
-
     "doc.reset": "Сбросить сцену",
     "doc.unsaved-message": "У вас есть несохранённые изменения. Вы уверены, что хотите сбросить сцену?",
     "doc.reset-message": "Вы уверены, что хотите сбросить сцену?",
     "doc.save-failed": "Не удалось сохранить",
     "doc.load-failed": "Не удалось загрузить",
-
     "measure.length": "Длина",
     "measure.hint": "Разместите 2 точки для измерения",
     "measure.clear": "Очистить",
-
     "orient.hint": "Разместите 3 точки, чтобы задать плоскость",
     "orient.align": "Выровнять по сетке",
     "orient.set-pivot": "Задать опорную точку",
     "orient.clear": "Очистить",
-
     "status-bar.splats": "Сплаты",
     "status-bar.selected": "Выбрано",
     "status-bar.locked": "Заблокировано",
     "status-bar.deleted": "Удалено",
     "status-bar.timeline": "Временная шкала",
     "status-bar.splat-data": "Данные сплатов",
-
     "tooltip.right-toolbar.splat-mode": "Режим Splat",
     "tooltip.right-toolbar.show-hide": "Показать/Скрыть сплаты",
     "tooltip.right-toolbar.orbit-camera": "Орбитальная камера",
     "tooltip.right-toolbar.fly-camera": "Камера полёта",
     "tooltip.right-toolbar.frame-selection": "Обрамить выделение",
     "tooltip.right-toolbar.reset-camera": "Сбросить камеру",
-    "tooltip.right-toolbar.colors": "Цвета",
     "tooltip.right-toolbar.settings": "Настройки",
-
+    "tooltip.right-toolbar.view-options": "Параметры вида",
     "tooltip.bottom-toolbar.undo": "Отменить",
     "tooltip.bottom-toolbar.redo": "Повторить",
     "tooltip.bottom-toolbar.rectangle-selection": "Прямоугольное выделение",
@@ -338,7 +321,6 @@
     "tooltip.bottom-toolbar.orient": "Ориентация",
     "tooltip.bottom-toolbar.local-space": "Использовать локальную ориентацию",
     "tooltip.bottom-toolbar.reset-pivot": "Сбросить опорную точку (Shift: к центру)",
-
     "tooltip.timeline.prev-frame": "Предыдущий кадр",
     "tooltip.timeline.play": "Воспроизведение/Пауза",
     "tooltip.timeline.next-frame": "Следующий кадр",
@@ -350,14 +332,11 @@
     "tooltip.timeline.total-frames": "Всего кадров",
     "tooltip.timeline.smoothness": "Плавность",
     "tooltip.timeline.loop": "Зациклить анимацию",
-
     "tooltip.scene.solo": "Соло выбранного",
     "tooltip.scene.import": "Импортировать сцену",
     "tooltip.scene.new": "Новая сцена",
-
     "tooltip.status-bar.timeline": "Переключить панель временной шкалы",
     "tooltip.status-bar.splat-data": "Переключить панель данных сплатов",
-
     "tooltip.splat-data.on-screen-only": "Учитывать только сплаты, видимые в поле зрения камеры. Сплаты вне экрана исключаются из гистограммы.",
     "tooltip.splat-data.log-scale": "Использовать логарифмическую вертикальную шкалу, чтобы малые значения были видны рядом с большими.",
     "tooltip.splat-data.show-all": "Показать все свойства сплатов в списке, включая необработанные коэффициенты DC и сферических гармоник."

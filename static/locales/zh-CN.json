@@ -10,13 +10,11 @@
     "menu.file.export": "导出",
     "menu.file.export.viewer": "查看器应用",
     "menu.file.publish": "发布",
-
     "menu.edit": "编辑",
     "menu.edit.undo": "撤销",
     "menu.edit.redo": "重做",
     "menu.edit.duplicate": "复制",
     "menu.edit.separate": "分离",
-
     "menu.select": "选择",
     "menu.select.all": "全部",
     "menu.select.none": "无",
@@ -25,11 +23,9 @@
     "menu.select.unlock": "解锁全部",
     "menu.select.delete": "删除选择",
     "menu.select.reset": "重置 Splat",
-
     "menu.render": "渲染",
     "menu.render.image": "图像",
     "menu.render.video": "视频",
-
     "menu.help": "帮助",
     "menu.help.video-tutorials": "视频教程",
     "menu.help.video-tutorials.basics": "学习基础",
@@ -43,16 +39,13 @@
     "menu.help.github-repo": "GitHub 仓库",
     "menu.help.log-issue": "报告问题",
     "menu.help.about": "关于 SuperSplat",
-
     "panel.mode.centers": "中心模式",
     "panel.mode.rings": "环模式",
-
     "panel.scene": "场景管理器",
     "panel.scene.transform": "变换",
     "panel.scene.transform.position": "位置",
     "panel.scene.transform.rotation": "旋转",
     "panel.scene.transform.scale": "缩放",
-
     "panel.colors": "颜色",
     "panel.colors.tint": "色调",
     "panel.colors.temperature": "温度",
@@ -63,8 +56,10 @@
     "panel.colors.transparency": "透明度",
     "panel.colors.apply": "应用",
     "panel.colors.reset": "重置",
-
     "panel.settings": "设置",
+    "panel.settings.section-application": "应用",
+    "panel.settings.section-camera": "相机",
+    "panel.settings.section-rendering": "渲染",
     "panel.settings.language": "语言",
     "panel.settings.language.auto": "自动",
     "panel.settings.colors": "颜色",
@@ -83,23 +78,26 @@
     "panel.settings.fov-dolly": "FOV 自动推轨",
     "panel.settings.sh-bands": "SH 带",
     "panel.settings.fly-speed": "相机飞行速度",
-    "panel.settings.center-size": "中心大小",
-    "panel.settings.use-splat-colors": "颜色中心",
-    "panel.settings.outline-selection": "轮廓选择",
     "panel.settings.stochastic-alpha": "随机 Alpha",
     "panel.settings.stochastic-alpha.disabled": "禁用",
     "panel.settings.stochastic-alpha.enabled": "启用",
     "panel.settings.stochastic-alpha.movement": "移动时",
     "panel.settings.stochastic-alpha.auto": "自动",
-    "panel.settings.perf-overlay": "帧耗时",
-    "panel.settings.show-grid": "显示网格",
-    "panel.settings.grid-plane": "网格平面",
-    "panel.settings.show-bounding-box": "显示边界",
-    "panel.settings.show-dimensions": "显示尺寸",
-    "panel.settings.show-camera-poses": "显示相机",
-    "panel.settings.show-camera-info": "显示相机信息",
     "panel.settings.reset": "恢复默认设置",
-
+    "panel.view": "视图选项",
+    "panel.view.section-show": "显示",
+    "panel.view.section-overlay": "叠加",
+    "panel.view.section-diagnostics": "诊断",
+    "panel.view.grid": "网格",
+    "panel.view.grid-plane": "平面",
+    "panel.view.bounding-box": "边界框",
+    "panel.view.dimensions": "尺寸",
+    "panel.view.camera-poses": "相机位姿",
+    "panel.view.camera-info": "相机信息",
+    "panel.view.center-size": "中心大小",
+    "panel.view.use-splat-colors": "颜色中心",
+    "panel.view.outline-selection": "轮廓选择",
+    "panel.view.frame-timings": "帧耗时",
     "panel.splat-data.position": "位置",
     "panel.splat-data.opacity": "不透明度",
     "panel.splat-data.red": "红",
@@ -123,13 +121,11 @@
     "panel.splat-data.show-all": "全部属性",
     "panel.splat-data.totals.splats": "Splat",
     "panel.splat-data.totals.selected": "选择",
-
     "panel.render.cancel": "取消",
     "panel.render.ok": "渲染",
     "panel.render.render-video": "渲染视频",
     "panel.render.rendering": "渲染帧中",
     "panel.render.failed": "渲染失败",
-
     "select-toolbar.set": "设置",
     "select-toolbar.add": "添加",
     "select-toolbar.remove": "移除",
@@ -138,7 +134,6 @@
     "select-toolbar.size": "大小",
     "select-toolbar.rotation": "旋转",
     "select-toolbar.radius": "半径",
-
     "popup.ok": "确定",
     "popup.cancel": "取消",
     "popup.yes": "是",
@@ -153,7 +148,6 @@
     "popup.lod-select-splats": "高斯点",
     "popup.lod-upload-note": "注意：包含多个细节层级的场景可直接上传至",
     "popup.copy-to-clipboard": "复制链接到剪贴板",
-
     "popup.render-image.header": "图像设置",
     "popup.render-image.projection": "投影",
     "popup.render-image.projection.standard": "标准",
@@ -167,7 +161,6 @@
     "popup.render-image.transparent-background": "透明背景",
     "popup.render-image.show-debug-overlays": "显示调试覆盖",
     "popup.render-image.level-horizon": "保持地平线水平",
-
     "popup.render-video.header": "视频设置",
     "popup.render-video.projection": "投影",
     "popup.render-video.projection.standard": "标准",
@@ -197,7 +190,6 @@
     "popup.render-video.level-horizon": "保持地平线水平",
     "popup.render-video.transparent-background": "透明背景",
     "popup.render-video.show-debug-overlays": "显示调试覆盖",
-
     "popup.shortcuts.title": "键盘快捷键",
     "popup.shortcuts.navigation": "导航",
     "popup.shortcuts.reset-camera": "重置相机",
@@ -248,7 +240,6 @@
     "popup.shortcuts.redo": "重做",
     "popup.shortcuts.toggle-data-panel": "切换数据面板",
     "popup.shortcuts.toggle-timeline-panel": "切换时间轴面板",
-
     "popup.export": "导出",
     "popup.export.header": "导出",
     "popup.export.type": "导出类型",
@@ -268,7 +259,6 @@
     "popup.export.spz-version.4": "SPZ 4（最新）",
     "popup.export.spz-version.3": "SPZ 3（旧版 gzip）",
     "popup.export.filename": "文件名",
-
     "popup.publish.header": "发布设置",
     "popup.publish.destination": "发布到",
     "popup.publish.new-scene": "新场景",
@@ -286,41 +276,34 @@
     "popup.publish.failed": "发布失败",
     "popup.publish.please-try-again": "请稍后再试。",
     "popup.publish.please-log-in": "要在 PlayCanvas 上发布，需要用户帐户。请登录并重试。",
-
     "camera-info.position": "相机位置",
     "camera-info.target": "相机目标",
-
     "doc.reset": "重置场景",
     "doc.unsaved-message": "有未保存的更改。您确定要重置场景吗？",
     "doc.reset-message": "您确定要重置场景吗？",
     "doc.save-failed": "保存失败",
     "doc.load-failed": "加载失败",
-
     "measure.length": "长度",
     "measure.hint": "放置2个点以测量",
     "measure.clear": "清除",
-
     "orient.hint": "放置3个点以定义平面",
     "orient.align": "对齐到网格",
     "orient.set-pivot": "设置枢轴",
     "orient.clear": "清除",
-
     "status-bar.splats": "高斯点",
     "status-bar.selected": "已选择",
     "status-bar.locked": "已锁定",
     "status-bar.deleted": "已删除",
     "status-bar.timeline": "时间线",
     "status-bar.splat-data": "高斯点数据",
-
     "tooltip.right-toolbar.splat-mode": "Splat 模式",
     "tooltip.right-toolbar.show-hide": "显示/隐藏 Splats",
     "tooltip.right-toolbar.orbit-camera": "轨道相机",
     "tooltip.right-toolbar.fly-camera": "飞行相机",
     "tooltip.right-toolbar.frame-selection": "框显所选",
     "tooltip.right-toolbar.reset-camera": "重置相机",
-    "tooltip.right-toolbar.colors": "颜色",
     "tooltip.right-toolbar.settings": "设置",
-
+    "tooltip.right-toolbar.view-options": "视图选项",
     "tooltip.bottom-toolbar.undo": "撤销",
     "tooltip.bottom-toolbar.redo": "重做",
     "tooltip.bottom-toolbar.rectangle-selection": "矩形选择",
@@ -338,7 +321,6 @@
     "tooltip.bottom-toolbar.orient": "调整方向",
     "tooltip.bottom-toolbar.local-space": "局部坐标系",
     "tooltip.bottom-toolbar.reset-pivot": "重置枢轴（Shift：至中心）",
-
     "tooltip.timeline.prev-frame": "上一帧",
     "tooltip.timeline.play": "播放/暂停",
     "tooltip.timeline.next-frame": "下一帧",
@@ -350,14 +332,11 @@
     "tooltip.timeline.total-frames": "总帧数",
     "tooltip.timeline.smoothness": "平滑度",
     "tooltip.timeline.loop": "循环动画",
-
     "tooltip.scene.solo": "独显所选",
     "tooltip.scene.import": "导入场景",
     "tooltip.scene.new": "新建场景",
-
     "tooltip.status-bar.timeline": "切换时间线面板",
     "tooltip.status-bar.splat-data": "切换高斯点数据面板",
-
     "tooltip.splat-data.on-screen-only": "仅统计相机视野内可见的高斯点。屏幕外的高斯点将从直方图中排除。",
     "tooltip.splat-data.log-scale": "对纵轴使用对数刻度，让小数值与大数值同时清晰可见。",
     "tooltip.splat-data.show-all": "在列表中显示所有高斯点属性，包括原始 DC 系数和球谐函数系数。"

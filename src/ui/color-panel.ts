@@ -3,29 +3,30 @@ import { Color } from 'playcanvas';
 
 import { Events } from '../events';
 import { i18n } from './localization';
+import arrowSvg from './svg/arrow.svg';
 import { Tooltips } from './tooltips';
 import { Splat } from '../splat';
 
+const createSvg = (svgString: string) => {
+    const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
+    return new DOMParser().parseFromString(decodedStr, 'image/svg+xml').documentElement;
+};
+
+// collapsible colors section of the scene panel: grades the current splat, so
+// it lives with the rest of the current-splat state (like transform)
 class ColorPanel extends Container {
     constructor(events: Events, tooltips: Tooltips, args = {}) {
         args = {
             ...args,
-            id: 'color-panel',
-            class: 'panel',
-            hidden: true
+            class: 'color-panel-section'
         };
 
         super(args);
 
-        // stop pointer events bubbling
-        ['pointerdown', 'pointerup', 'pointermove', 'wheel', 'dblclick'].forEach((eventName) => {
-            this.dom.addEventListener(eventName, (event: Event) => event.stopPropagation());
-        });
-
-        // header
+        // header (click to expand/collapse)
 
         const header = new Container({
-            class: 'panel-header'
+            class: ['panel-header', 'color-panel-header']
         });
 
         const icon = new Label({
@@ -38,8 +39,14 @@ class ColorPanel extends Container {
         });
         i18n.bindText(label, 'panel.colors');
 
+        const collapseArrow = new Label({
+            class: 'color-panel-collapse'
+        });
+        collapseArrow.dom.appendChild(createSvg(arrowSvg));
+
         header.append(icon);
         header.append(label);
+        header.append(collapseArrow);
 
         // tint
 
@@ -57,8 +64,15 @@ class ColorPanel extends Container {
             value: [1, 1, 1]
         });
 
+        // the swatch occupies the same control column as the sliders below,
+        // left-aligned with their numeric edit boxes
+        const tintSlot = new Container({
+            class: 'color-panel-row-swatch-slot'
+        });
+        tintSlot.append(tintPicker);
+
         tintRow.append(tintLabel);
-        tintRow.append(tintPicker);
+        tintRow.append(tintSlot);
 
         // temperature
 
@@ -216,16 +230,29 @@ class ColorPanel extends Container {
         controlRow.append(reset);
         controlRow.append(new Label({ class: 'panel-header-spacer' }));
 
+        // the collapsible body, closed by default
+        const content = new Container({
+            class: 'color-panel-content',
+            hidden: true
+        });
+
+        content.append(tintRow);
+        content.append(temperatureRow);
+        content.append(saturationRow);
+        content.append(brightnessRow);
+        content.append(blackPointRow);
+        content.append(whitePointRow);
+        content.append(transparencyRow);
+        content.append(new Label({ class: 'panel-header-spacer' }));
+        content.append(controlRow);
+
         this.append(header);
-        this.append(tintRow);
-        this.append(temperatureRow);
-        this.append(saturationRow);
-        this.append(brightnessRow);
-        this.append(blackPointRow);
-        this.append(whitePointRow);
-        this.append(transparencyRow);
-        this.append(new Label({ class: 'panel-header-spacer' }));
-        this.append(controlRow);
+        this.append(content);
+
+        header.on('click', () => {
+            content.hidden = !content.hidden;
+            collapseArrow.class[content.hidden ? 'remove' : 'add']('expanded');
+        });
 
         // The controls hold a *pending* grade rather than editing anything directly.
         // The viewport previews it on whatever an Apply would affect - the selection,
@@ -335,33 +362,6 @@ class ColorPanel extends Container {
 
         tooltips.register(apply, () => i18n.t('panel.colors.apply'), 'bottom');
         tooltips.register(reset, () => i18n.t('panel.colors.reset'), 'bottom');
-
-        // handle panel visibility
-
-        const setVisible = (visible: boolean) => {
-            if (visible === this.hidden) {
-                this.hidden = !visible;
-                events.fire('colorPanel.visible', visible);
-            }
-        };
-
-        events.function('colorPanel.visible', () => {
-            return !this.hidden;
-        });
-
-        events.on('colorPanel.setVisible', (visible: boolean) => {
-            setVisible(visible);
-        });
-
-        events.on('colorPanel.toggleVisible', () => {
-            setVisible(this.hidden);
-        });
-
-        events.on('settingsPanel.visible', (visible: boolean) => {
-            if (visible) {
-                setVisible(false);
-            }
-        });
     }
 }
 

@@ -10,13 +10,11 @@
     "menu.file.export": "Exportieren",
     "menu.file.export.viewer": "Viewer App",
     "menu.file.publish": "Veröffentlichen",
-
     "menu.edit": "Bearbeiten",
     "menu.edit.undo": "Rückgängig",
     "menu.edit.redo": "Wiederholen",
     "menu.edit.duplicate": "Duplizieren",
     "menu.edit.separate": "Separieren",
-
     "menu.select": "Auswahl",
     "menu.select.all": "Alles",
     "menu.select.none": "Aufheben",
@@ -25,11 +23,9 @@
     "menu.select.unlock": "Sperre aufheben",
     "menu.select.delete": "Selektion aufheben",
     "menu.select.reset": "Splats zurücksetzen",
-
     "menu.render": "Rendern",
     "menu.render.image": "Bild",
     "menu.render.video": "Video",
-
     "menu.help": "Hilfe",
     "menu.help.video-tutorials": "Video-Tutorials",
     "menu.help.video-tutorials.basics": "Grundlagen lernen",
@@ -43,16 +39,13 @@
     "menu.help.github-repo": "GitHub Repository",
     "menu.help.log-issue": "Problem melden",
     "menu.help.about": "Über SuperSplat",
-
     "panel.mode.centers": "Punkt Modus",
     "panel.mode.rings": "Ring Modus",
-
     "panel.scene": "Szenen Manager",
     "panel.scene.transform": "Transformation",
     "panel.scene.transform.position": "Position",
     "panel.scene.transform.rotation": "Rotation",
     "panel.scene.transform.scale": "Skalierung",
-
     "panel.colors": "Farbe",
     "panel.colors.tint": "Färbung",
     "panel.colors.temperature": "Temperatur",
@@ -63,8 +56,10 @@
     "panel.colors.transparency": "Transparenz",
     "panel.colors.apply": "Anwenden",
     "panel.colors.reset": "Zurücksetzen",
-
     "panel.settings": "Einstellungen",
+    "panel.settings.section-application": "Anwendung",
+    "panel.settings.section-camera": "Kamera",
+    "panel.settings.section-rendering": "Rendering",
     "panel.settings.language": "Sprache",
     "panel.settings.language.auto": "Automatisch",
     "panel.settings.colors": "Farben",
@@ -83,23 +78,26 @@
     "panel.settings.fov-dolly": "FOV-Auto-Dolly",
     "panel.settings.sh-bands": "SH Bänder",
     "panel.settings.fly-speed": "Kamera Geschwindigkeit",
-    "panel.settings.center-size": "Punktgrößen",
-    "panel.settings.use-splat-colors": "Farbzentren",
-    "panel.settings.outline-selection": "Umriss Selektion",
     "panel.settings.stochastic-alpha": "Stochastisches Alpha",
     "panel.settings.stochastic-alpha.disabled": "Deaktiviert",
     "panel.settings.stochastic-alpha.enabled": "Aktiviert",
     "panel.settings.stochastic-alpha.movement": "Bewegung",
     "panel.settings.stochastic-alpha.auto": "Automatisch",
-    "panel.settings.perf-overlay": "Frame-Zeiten",
-    "panel.settings.show-grid": "Raster anzeigen",
-    "panel.settings.grid-plane": "Rasterebene",
-    "panel.settings.show-bounding-box": "Objektbox anzeigen",
-    "panel.settings.show-dimensions": "Abmessungen anzeigen",
-    "panel.settings.show-camera-poses": "Kameras anzeigen",
-    "panel.settings.show-camera-info": "Kamera-Info anzeigen",
     "panel.settings.reset": "Auf Standard zurücksetzen",
-
+    "panel.view": "Ansichtsoptionen",
+    "panel.view.section-show": "Anzeigen",
+    "panel.view.section-overlay": "Overlay",
+    "panel.view.section-diagnostics": "Diagnose",
+    "panel.view.grid": "Raster",
+    "panel.view.grid-plane": "Ebene",
+    "panel.view.bounding-box": "Objektbox",
+    "panel.view.dimensions": "Abmessungen",
+    "panel.view.camera-poses": "Kameras",
+    "panel.view.camera-info": "Kamera-Info",
+    "panel.view.center-size": "Punktgrößen",
+    "panel.view.use-splat-colors": "Farbzentren",
+    "panel.view.outline-selection": "Umriss Selektion",
+    "panel.view.frame-timings": "Frame-Zeiten",
     "panel.splat-data.position": "Position",
     "panel.splat-data.opacity": "Deckkraft",
     "panel.splat-data.red": "Rot",
@@ -123,13 +121,11 @@
     "panel.splat-data.show-all": "Alle Eigenschaften",
     "panel.splat-data.totals.splats": "Splats",
     "panel.splat-data.totals.selected": "Selektiert",
-
     "panel.render.cancel": "Abbrechen",
     "panel.render.ok": "Rendern",
     "panel.render.render-video": "Video rendern",
     "panel.render.rendering": "Frames werden gerendert",
     "panel.render.failed": "Rendern fehlgeschlagen",
-
     "select-toolbar.set": "Setzen",
     "select-toolbar.add": "Hinzufügen",
     "select-toolbar.remove": "Entfernen",
@@ -138,7 +134,6 @@
     "select-toolbar.size": "Größe",
     "select-toolbar.rotation": "Rotation",
     "select-toolbar.radius": "Radius",
-
     "popup.ok": "OK",
     "popup.cancel": "Abbrechen",
     "popup.yes": "Ja",
@@ -153,7 +148,6 @@
     "popup.lod-select-splats": "Splats",
     "popup.lod-upload-note": "Hinweis: Szenen mit LODs können direkt hochgeladen werden unter",
     "popup.copy-to-clipboard": "Link in die Zwischenablage kopieren",
-
     "popup.render-image.header": "Bild Einstellungen",
     "popup.render-image.projection": "Projektion",
     "popup.render-image.projection.standard": "Standard",
@@ -167,7 +161,6 @@
     "popup.render-image.transparent-background": "Transparenter Hintergrund",
     "popup.render-image.show-debug-overlays": "Debug-Überlagerungen anzeigen",
     "popup.render-image.level-horizon": "Horizont ausrichten",
-
     "popup.render-video.header": "Video Einstellungen",
     "popup.render-video.projection": "Projektion",
     "popup.render-video.projection.standard": "Standard",
@@ -197,7 +190,6 @@
     "popup.render-video.level-horizon": "Horizont ausrichten",
     "popup.render-video.transparent-background": "Transparenter Hintergrund",
     "popup.render-video.show-debug-overlays": "Debug-Überlagerungen anzeigen",
-
     "popup.shortcuts.title": "Tastaturkürzel",
     "popup.shortcuts.navigation": "Navigation",
     "popup.shortcuts.reset-camera": "Kamera zurücksetzen",
@@ -248,7 +240,6 @@
     "popup.shortcuts.redo": "Wiederholen",
     "popup.shortcuts.toggle-data-panel": "Splat Daten Panel anzeigen",
     "popup.shortcuts.toggle-timeline-panel": "Zeitleiste anzeigen",
-
     "popup.export": "Exportieren",
     "popup.export.header": "Exportieren",
     "popup.export.type": "Export Typ",
@@ -268,7 +259,6 @@
     "popup.export.spz-version.4": "SPZ 4 (aktuell)",
     "popup.export.spz-version.3": "SPZ 3 (Legacy-gzip)",
     "popup.export.filename": "Dateiname",
-
     "popup.publish.header": "Veröffentlichen Einstellungen",
     "popup.publish.destination": "Veröffentlichen in",
     "popup.publish.new-scene": "Neue Szene",
@@ -286,41 +276,34 @@
     "popup.publish.failed": "Veröffentlichen Fehlgeschlagen",
     "popup.publish.please-try-again": "Bitte versuchen Sie es später erneut.",
     "popup.publish.please-log-in": "Das Veröffentlichen in PlayCanvas erfordert ein Benutzerkonto. Bitte melden Sie sich an und versuchen Sie es erneut.",
-
     "camera-info.position": "Kameraposition",
     "camera-info.target": "Kameraziel",
-
     "doc.reset": "Szene Zurücksetzen",
     "doc.unsaved-message": "Sie haben ungespeicherte Änderungen. Möchten Sie die Szene wirklich zurücksetzen?",
     "doc.reset-message": "Möchten Sie die Szene wirklich zurücksetzen?",
     "doc.save-failed": "Fehlgeschlagen zu Speichern",
     "doc.load-failed": "Fehlgeschlagen zu Laden",
-
     "measure.length": "Länge",
     "measure.hint": "2 Punkte platzieren, um zu messen",
     "measure.clear": "Leeren",
-
     "orient.hint": "3 Punkte platzieren, um eine Ebene zu definieren",
     "orient.align": "An Raster ausrichten",
     "orient.set-pivot": "Pivot setzen",
     "orient.clear": "Leeren",
-
     "status-bar.splats": "Splats",
     "status-bar.selected": "Ausgewählt",
     "status-bar.locked": "Gesperrt",
     "status-bar.deleted": "Gelöscht",
     "status-bar.timeline": "Zeitleiste",
     "status-bar.splat-data": "Splat-Daten",
-
     "tooltip.right-toolbar.splat-mode": "Splat Modus",
     "tooltip.right-toolbar.show-hide": "Anzeigen/Ausblenden Splats",
     "tooltip.right-toolbar.orbit-camera": "Orbit-Kamera",
     "tooltip.right-toolbar.fly-camera": "Flugkamera",
     "tooltip.right-toolbar.frame-selection": "Rechteckselektion",
     "tooltip.right-toolbar.reset-camera": "Kamera zurücksetzen",
-    "tooltip.right-toolbar.colors": "Farben",
     "tooltip.right-toolbar.settings": "Einstellungen",
-
+    "tooltip.right-toolbar.view-options": "Ansichtsoptionen",
     "tooltip.bottom-toolbar.undo": "Rückgängig",
     "tooltip.bottom-toolbar.redo": "Wiederholen",
     "tooltip.bottom-toolbar.rectangle-selection": "Rechteckselektion",
@@ -338,7 +321,6 @@
     "tooltip.bottom-toolbar.orient": "Ausrichten",
     "tooltip.bottom-toolbar.local-space": "Gizmo in local-space",
     "tooltip.bottom-toolbar.reset-pivot": "Pivot zurücksetzen (Umschalt: zur Mitte)",
-
     "tooltip.timeline.prev-frame": "Vorheriges Bild",
     "tooltip.timeline.play": "Abspielen/Pause",
     "tooltip.timeline.next-frame": "Nächstes Bild",
@@ -350,14 +332,11 @@
     "tooltip.timeline.total-frames": "Gesamtanzahl der Frames",
     "tooltip.timeline.smoothness": "Weichheit",
     "tooltip.timeline.loop": "Animation wiederholen",
-
     "tooltip.scene.solo": "Auswahl solo anzeigen",
     "tooltip.scene.import": "Szene importieren",
     "tooltip.scene.new": "Neue Szene",
-
     "tooltip.status-bar.timeline": "Zeitleisten-Panel umschalten",
     "tooltip.status-bar.splat-data": "Splat-Daten-Panel umschalten",
-
     "tooltip.splat-data.on-screen-only": "Nur Splats zählen, die in der Kameraansicht sichtbar sind. Splats außerhalb des Bildschirms werden aus dem Histogramm ausgeschlossen.",
     "tooltip.splat-data.log-scale": "Logarithmische vertikale Skala verwenden, damit kleine Werte neben großen sichtbar bleiben.",
     "tooltip.splat-data.show-all": "Alle Eigenschaften pro Splat in der Liste anzeigen, einschließlich roher DC- und Kugelflächenfunktions-Koeffizienten."

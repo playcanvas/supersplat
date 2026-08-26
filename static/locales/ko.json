@@ -10,13 +10,11 @@
     "menu.file.export": "내보내기",
     "menu.file.export.viewer": "뷰어 앱",
     "menu.file.publish": "게시",
-
     "menu.edit": "편집",
     "menu.edit.undo": "실행 취소",
     "menu.edit.redo": "다시 실행",
     "menu.edit.duplicate": "복제",
     "menu.edit.separate": "분리",
-
     "menu.select": "선택",
     "menu.select.all": "모두",
     "menu.select.none": "없음",
@@ -25,11 +23,9 @@
     "menu.select.unlock": "모두 잠금 해제",
     "menu.select.delete": "선택 삭제",
     "menu.select.reset": "Splat 재설정",
-
     "menu.render": "렌더링",
     "menu.render.image": "이미지",
     "menu.render.video": "비디오",
-
     "menu.help": "도움말",
     "menu.help.video-tutorials": "비디오 튜토리얼",
     "menu.help.video-tutorials.basics": "기본 배우기",
@@ -43,16 +39,13 @@
     "menu.help.github-repo": "GitHub 저장소",
     "menu.help.log-issue": "문제 보고",
     "menu.help.about": "SuperSplat 정보",
-
     "panel.mode.centers": "센터 모드",
     "panel.mode.rings": "링 모드",
-
     "panel.scene": "장면 관리자",
     "panel.scene.transform": "변환",
     "panel.scene.transform.position": "위치",
     "panel.scene.transform.rotation": "회전",
     "panel.scene.transform.scale": "크기",
-
     "panel.colors": "색상",
     "panel.colors.tint": "색조",
     "panel.colors.temperature": "온도",
@@ -63,8 +56,10 @@
     "panel.colors.transparency": "투명도",
     "panel.colors.apply": "적용",
     "panel.colors.reset": "리셋",
-
     "panel.settings": "설정",
+    "panel.settings.section-application": "애플리케이션",
+    "panel.settings.section-camera": "카메라",
+    "panel.settings.section-rendering": "렌더링",
     "panel.settings.language": "언어",
     "panel.settings.language.auto": "자동",
     "panel.settings.colors": "색상",
@@ -83,23 +78,26 @@
     "panel.settings.fov-dolly": "FOV 자동 달리",
     "panel.settings.sh-bands": "SH 밴드",
     "panel.settings.fly-speed": "카메라 이동 속도",
-    "panel.settings.center-size": "센터 크기",
-    "panel.settings.use-splat-colors": "컬러 센터",
-    "panel.settings.outline-selection": "선택 윤곽선",
     "panel.settings.stochastic-alpha": "확률적 알파",
     "panel.settings.stochastic-alpha.disabled": "비활성",
     "panel.settings.stochastic-alpha.enabled": "활성",
     "panel.settings.stochastic-alpha.movement": "움직일 때",
     "panel.settings.stochastic-alpha.auto": "자동",
-    "panel.settings.perf-overlay": "프레임 시간",
-    "panel.settings.show-grid": "그리드 표시",
-    "panel.settings.grid-plane": "그리드 평면",
-    "panel.settings.show-bounding-box": "경계 표시",
-    "panel.settings.show-dimensions": "치수 표시",
-    "panel.settings.show-camera-poses": "카메라 표시",
-    "panel.settings.show-camera-info": "카메라 정보 표시",
     "panel.settings.reset": "기본값으로 재설정",
-
+    "panel.view": "보기 옵션",
+    "panel.view.section-show": "표시",
+    "panel.view.section-overlay": "오버레이",
+    "panel.view.section-diagnostics": "진단",
+    "panel.view.grid": "그리드",
+    "panel.view.grid-plane": "평면",
+    "panel.view.bounding-box": "경계 상자",
+    "panel.view.dimensions": "치수",
+    "panel.view.camera-poses": "카메라 포즈",
+    "panel.view.camera-info": "카메라 정보",
+    "panel.view.center-size": "센터 크기",
+    "panel.view.use-splat-colors": "컬러 센터",
+    "panel.view.outline-selection": "선택 윤곽선",
+    "panel.view.frame-timings": "프레임 시간",
     "panel.splat-data.position": "위치",
     "panel.splat-data.opacity": "불투명도",
     "panel.splat-data.red": "빨강",
@@ -123,13 +121,11 @@
     "panel.splat-data.show-all": "모든 속성",
     "panel.splat-data.totals.splats": "Splat",
     "panel.splat-data.totals.selected": "선택",
-
     "panel.render.cancel": "취소",
     "panel.render.ok": "렌더링",
     "panel.render.render-video": "비디오 렌더링",
     "panel.render.rendering": "프레임 렌더링 중",
     "panel.render.failed": "렌더링 실패",
-
     "select-toolbar.set": "설정",
     "select-toolbar.add": "추가",
     "select-toolbar.remove": "제거",
@@ -138,7 +134,6 @@
     "select-toolbar.size": "크기",
     "select-toolbar.rotation": "회전",
     "select-toolbar.radius": "반경",
-
     "popup.ok": "확인",
     "popup.cancel": "취소",
     "popup.yes": "예",
@@ -153,7 +148,6 @@
     "popup.lod-select-splats": "스플랫",
     "popup.lod-upload-note": "참고: LOD가 포함된 장면은 다음에서 직접 업로드할 수 있습니다:",
     "popup.copy-to-clipboard": "클립 보드에 링크 복사",
-
     "popup.render-image.header": "이미지 설정",
     "popup.render-image.projection": "투영",
     "popup.render-image.projection.standard": "표준",
@@ -167,7 +161,6 @@
     "popup.render-image.transparent-background": "투명 배경",
     "popup.render-image.show-debug-overlays": "디버그 오버레이 표시",
     "popup.render-image.level-horizon": "수평 유지",
-
     "popup.render-video.header": "비디오 설정",
     "popup.render-video.projection": "투영",
     "popup.render-video.projection.standard": "표준",
@@ -197,7 +190,6 @@
     "popup.render-video.level-horizon": "수평 유지",
     "popup.render-video.transparent-background": "투명 배경",
     "popup.render-video.show-debug-overlays": "디버그 오버레이 표시",
-
     "popup.shortcuts.title": "키보드 단축키",
     "popup.shortcuts.navigation": "탐색",
     "popup.shortcuts.reset-camera": "카메라 재설정",
@@ -248,7 +240,6 @@
     "popup.shortcuts.redo": "다시 실행",
     "popup.shortcuts.toggle-data-panel": "데이터 패널 전환",
     "popup.shortcuts.toggle-timeline-panel": "타임라인 패널 전환",
-
     "popup.export": "내보내기",
     "popup.export.header": "내보내기",
     "popup.export.type": "내보내기 유형",
@@ -268,7 +259,6 @@
     "popup.export.spz-version.4": "SPZ 4 (최신)",
     "popup.export.spz-version.3": "SPZ 3 (레거시 gzip)",
     "popup.export.filename": "파일 이름",
-
     "popup.publish.header": "게시 설정",
     "popup.publish.destination": "다음에 게시",
     "popup.publish.new-scene": "새 장면",
@@ -286,41 +276,34 @@
     "popup.publish.failed": "게시 실패",
     "popup.publish.please-try-again": "잠시 후 다시 시도하십시오.",
     "popup.publish.please-log-in": "PlayCanvas에 게시하려면 사용자 계정이 필요합니다. 로그인하고 다시 시도하십시오.",
-
     "camera-info.position": "카메라 위치",
     "camera-info.target": "카메라 대상",
-
     "doc.reset": "장면 재설정",
     "doc.unsaved-message": "저장되지 않은 변경 사항이 있습니다. 장면을 재설정하시겠습니까?",
     "doc.reset-message": "장면을 재설정하시겠습니까?",
     "doc.save-failed": "저장 실패",
     "doc.load-failed": "로드 실패",
-
     "measure.length": "길이",
     "measure.hint": "2개의 점을 배치하여 측정",
     "measure.clear": "지우기",
-
     "orient.hint": "3개의 점을 배치하여 평면 정의",
     "orient.align": "그리드에 정렬",
     "orient.set-pivot": "피벗 설정",
     "orient.clear": "지우기",
-
     "status-bar.splats": "스플랫",
     "status-bar.selected": "선택됨",
     "status-bar.locked": "잠김",
     "status-bar.deleted": "삭제됨",
     "status-bar.timeline": "타임라인",
     "status-bar.splat-data": "스플랫 데이터",
-
     "tooltip.right-toolbar.splat-mode": "Splat 모드",
     "tooltip.right-toolbar.show-hide": "스플래츠 표시/숨기기",
     "tooltip.right-toolbar.orbit-camera": "오빗 카메라",
     "tooltip.right-toolbar.fly-camera": "플라이 카메라",
     "tooltip.right-toolbar.frame-selection": "프레임 선택",
     "tooltip.right-toolbar.reset-camera": "카메라 재설정",
-    "tooltip.right-toolbar.colors": "색상",
     "tooltip.right-toolbar.settings": "설정",
-
+    "tooltip.right-toolbar.view-options": "보기 옵션",
     "tooltip.bottom-toolbar.undo": "실행 취소",
     "tooltip.bottom-toolbar.redo": "다시 실행",
     "tooltip.bottom-toolbar.rectangle-selection": "사각형 선택",
@@ -338,7 +321,6 @@
     "tooltip.bottom-toolbar.orient": "방향 조정",
     "tooltip.bottom-toolbar.local-space": "로컬 공간",
     "tooltip.bottom-toolbar.reset-pivot": "피벗 재설정 (Shift: 중심으로)",
-
     "tooltip.timeline.prev-frame": "이전 프레임",
     "tooltip.timeline.play": "재생/일시정지",
     "tooltip.timeline.next-frame": "다음 프레임",
@@ -350,14 +332,11 @@
     "tooltip.timeline.total-frames": "총 프레임 수",
     "tooltip.timeline.smoothness": "부드러움",
     "tooltip.timeline.loop": "애니메이션 루프",
-
     "tooltip.scene.solo": "선택 항목 솔로",
     "tooltip.scene.import": "장면 가져오기",
     "tooltip.scene.new": "새 장면",
-
     "tooltip.status-bar.timeline": "타임라인 패널 전환",
     "tooltip.status-bar.splat-data": "스플랫 데이터 패널 전환",
-
     "tooltip.splat-data.on-screen-only": "카메라에 보이는 스플랫만 히스토그램에 집계합니다. 화면 밖의 스플랫은 제외됩니다.",
     "tooltip.splat-data.log-scale": "세로축을 로그 스케일로 표시하여 작은 값과 큰 값이 함께 잘 보이도록 합니다.",
     "tooltip.splat-data.show-all": "원시 DC 계수 및 구면 조화 함수 계수를 포함한 모든 스플랫 속성을 목록에 표시합니다."

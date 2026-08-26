@@ -1,34 +1,78 @@
 @use 'colors.scss' as *;
 
-#color-panel {
-    top: 50%;
-    transform: translate(0, -50%);
-    right: 102px;
-    width: 320px;
+// collapsible colors section inside the scene panel
+.color-panel-section {
+    display: flex;
     flex-direction: column;
 
-    &:not(.pcui-hidden) {
-        display: flex;
-    }
-
-    & > .color-panel-row {
+    // .panel's own header styling only reaches direct children, so restate it
+    // for this nested header
+    & > .color-panel-header {
         display: flex;
         flex-direction: row;
+        align-items: center;
         padding: 2px;
+        background-color: $bcg-dark;
+        cursor: pointer;
+
+        & > .panel-header-icon {
+            font-family: pc-icon;
+            font-weight: bold;
+            font-size: 13px;
+            color: $clr-hilight;
+        }
+
+        & > .panel-header-label {
+            color: $text-primary;
+            font-weight: bold;
+            flex-grow: 1;
+            text-transform: uppercase;
+        }
+
+        & > .color-panel-collapse {
+            margin: 0 6px;
+            color: $clr-default;
+
+            & > svg {
+                display: block;
+                width: 12px;
+                height: 12px;
+                transition: transform 0.1s ease-out;
+            }
+
+            &.expanded > svg {
+                transform: rotate(90deg);
+            }
+        }
+    }
+
+    .color-panel-row {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        padding: 2px 10px;
         height: 28px;
 
         & > .color-panel-row-label {
             flex-grow: 1;
         }
 
-        & > .color-panel-row-picker {
-            margin: 0px 0px;
-            padding: 0px;
-            height: 24px;
+        & > .color-panel-row-swatch-slot {
+            display: flex;
+            flex-direction: row;
+            justify-content: flex-start;
+            width: 205px;
+
+            & > .color-panel-row-picker {
+                margin: 0px 0px;
+                padding: 0px;
+                width: 40px;
+                height: 24px;
+            }
         }
 
         & > .color-panel-row-slider {
-            width: 220px;
+            width: 205px;
             margin: 0px;
 
             & > .pcui-slider-container {
@@ -42,7 +86,7 @@
         }
     }
 
-    > .color-panel-control-row {
+    .color-panel-control-row {
         display: flex;
         flex-direction: row;
         background-color: $bcg-dark;

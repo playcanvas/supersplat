@@ -375,12 +375,14 @@ class OrientTool {
         });
 
         // place a point at the visible surface under the click (see splat-pick.ts)
-        const placePoint = (offsetX: number, offsetY: number) => {
-            if (!pickSplatSurfacePoint(scene, splat, offsetX, offsetY, v)) {
+        const placePoint = async (offsetX: number, offsetY: number) => {
+            const target = splat;
+            const picked = new Vec3();
+            if (!await pickSplatSurfacePoint(scene, target, offsetX, offsetY, picked) || !active || splat !== target) {
                 return false;
             }
             splat.orientSelection = splat.orientPoints.length;
-            splat.orientPoints.push(v.clone());
+            splat.orientPoints.push(picked);
             return true;
         };
 
@@ -407,7 +409,7 @@ class OrientTool {
             }
         };
 
-        const pointerup = (e: PointerEvent) => {
+        const pointerup = async (e: PointerEvent) => {
             if (splat && clicked && isPrimary(e)) {
                 clicked = false;
 
@@ -438,7 +440,7 @@ class OrientTool {
                 }
 
                 // place at the pointer-down position: that is where the user aimed
-                if (splat.orientPoints.length < 3 && placePoint(clickX, clickY)) {
+                if (splat.orientPoints.length < 3 && await placePoint(clickX, clickY)) {
                     updateVisuals();
                     scene.forceRender = true;
                 }

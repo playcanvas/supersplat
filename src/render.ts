@@ -64,17 +64,8 @@ const getImportedFilename = (filename: string) => {
     return path.getBasename(trimmed);
 };
 
-// sort splats and wait for the sort to complete (or a 1s timeout)
-const sortSplatsAndWait = (scene: Scene, splats: Splat[]) => {
-    return Promise.all(splats.map((splat) => {
-        return new Promise<void>((resolve) => {
-            const { instance } = splat.entity.gsplat;
-            instance.sorter.once('updated', resolve);
-            instance.sort(scene.camera.mainCamera);
-            setTimeout(resolve, 1000);
-        });
-    }));
-};
+// sorting is submitted on the GPU immediately before each render
+const sortSplatsAndWait = (_scene: Scene, _splats: Splat[]) => Promise.resolve();
 
 const downloadFile = (data: ArrayBuffer | Uint8Array<ArrayBuffer>, filename: string, type = 'application/octet-stream') => {
     const blob = new Blob([data], { type });
@@ -138,23 +129,20 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
             scene.dataProcessor.copyRt(mainTarget, workTarget);
 
-            // read the rendered frame
-            await workTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workTarget, data });
+            // read the rendered frame. the read must be immediate: nothing
+            // submits the shared command encoder outside the frame, so a
+            // deferred read maps the staging buffer before the copy above has
+            // run and returns zeros.
+            await workTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workTarget, data, immediate: true });
 
-            // flip y positions to have 0,0 at the top
-            let line = new Uint8Array(width * 4);
-            for (let y = 0; y < height / 2; y++) {
-                line = data.slice(y * width * 4, (y + 1) * width * 4);
-                data.copyWithin(y * width * 4, (height - y - 1) * width * 4, (height - y) * width * 4);
-                data.set(line, (height - y - 1) * width * 4);
-            }
-
+            // rows are read back top-down (0,0 at the top)
             return data;
         } finally {
             scene.camera.endOffscreenMode();
             scene.camera.renderOverlays = true;
             scene.gizmoLayer.enabled = true;
             scene.camera.camera.clearColor.set(0, 0, 0, 0);
+            scene.forceRender = true;       // repaint the viewport with normal rendering
         }
     });
 
@@ -240,19 +228,8 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
                 scene.dataProcessor.copyRt(mainTarget, workTarget);
 
-                // read the rendered frame
-                await workTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workTarget, data });
-            }
-
-            // flip the buffer vertically: the framebuffer read is bottom-up
-            // but webp (and image files generally) expect top-down rows
-            const line = new Uint8Array(width * 4);
-            for (let y = 0; y < height / 2; y++) {
-                const top = y * width * 4;
-                const bottom = (height - y - 1) * width * 4;
-                line.set(data.subarray(top, top + width * 4));
-                data.copyWithin(top, bottom, bottom + width * 4);
-                data.set(line, bottom);
+                // read the rendered frame (immediate: see render.offscreen)
+                await workTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workTarget, data, immediate: true });
             }
 
             let bytes: Uint8Array<ArrayBuffer>;
@@ -347,6 +324,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             scene.camera.renderOverlays = true;
             scene.gizmoLayer.enabled = true;
             scene.camera.clearPass.setClearColor(nullClr);
+            scene.forceRender = true;       // repaint the viewport with normal rendering
 
             events.fire('stopSpinner');
         }
@@ -473,7 +451,6 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
                 // cpu-side buffer to read pixels into
                 const data = new Uint8Array(width * height * 4);
-                const line = new Uint8Array(width * 4);
 
                 // remember last camera position so we can skip sorting if the camera didn't move
                 const last_pos = new Vec3(0, 0, 0);
@@ -517,17 +494,8 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     return newSplat;
                 };
 
-                // flip, wrap and submit the pixels currently in the data buffer
+                // wrap and submit the pixels currently in the data buffer
                 const encodeFrame = async (frameTime: number) => {
-                    // flip the buffer vertically
-                    for (let y = 0; y < height / 2; y++) {
-                        const top = y * width * 4;
-                        const bottom = (height - y - 1) * width * 4;
-                        line.set(data.subarray(top, top + width * 4));
-                        data.copyWithin(top, bottom, bottom + width * 4);
-                        data.set(line, bottom);
-                    }
-
                     // construct the video frame
                     const videoFrame = new VideoFrame(data, {
                         format: 'RGBA',
@@ -574,8 +542,8 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
                     scene.dataProcessor.copyRt(mainTarget, workTarget);
 
-                    // read the rendered frame
-                    await workTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workTarget, data });
+                    // read the rendered frame (immediate: see render.offscreen)
+                    await workTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workTarget, data, immediate: true });
 
                     await encodeFrame(frameTime);
                 };

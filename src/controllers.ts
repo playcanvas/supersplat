@@ -46,6 +46,16 @@ class PointerController {
             camera.setDistance(camera.distance - (camera.distance * 0.999 + 0.001) * amount * camera.scene.config.controls.zoomSensitivity, 2);
         };
 
+        const pickFocalPoint = (event: MouseEvent) => {
+            const rect = target.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+                camera.pickFocalPoint(
+                    (event.clientX - rect.left) / rect.width,
+                    (event.clientY - rect.top) / rect.height
+                );
+            }
+        };
+
         // mouse state
         let pressedButton = -1;  // no button pressed, otherwise 0, 1, or 2
         let x: number, y: number;
@@ -97,7 +107,7 @@ class PointerController {
                 if (event.button === pressedButton) {
                     // MMB tap (no significant movement) -> focus on cursor point (orbit only; fly uses MMB for zoom)
                     if (pressedButton === 1 && camera.controlMode === 'orbit' && !mmbDragged) {
-                        camera.pickFocalPoint(event.offsetX / target.clientWidth, event.offsetY / target.clientHeight);
+                        pickFocalPoint(event);
                     }
                     pressedButton = -1;
                     target.releasePointerCapture(event.pointerId);
@@ -308,7 +318,7 @@ class PointerController {
                 if (camera.controlMode === 'fly') {
                     camera.scene.events.fire('camera.setControlMode', 'orbit');
                 }
-                camera.pickFocalPoint(event.offsetX / target.clientWidth, event.offsetY / target.clientHeight);
+                pickFocalPoint(event);
             }
         };
 

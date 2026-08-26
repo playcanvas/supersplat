@@ -6,6 +6,8 @@ import {
     Texture
 } from 'playcanvas';
 
+import { PALETTE_ENTRIES_PER_ROW } from './shaders/palette-chunk';
+
 // mapping from Mat4 to transposed 3x4 matrix
 const idx = [
     0, 4, 8, 12,
@@ -13,8 +15,9 @@ const idx = [
     2, 6, 10, 14
 ];
 
-// texture data stores 512 matrices per row: 512 * 3 * 4 (rgba) floats
-const width = 512 * 3;
+// texture data stores PALETTE_ENTRIES_PER_ROW matrices per row, 3 texels each.
+// the shader-side lookup derives its row stride from the same constant
+const width = PALETTE_ENTRIES_PER_ROW * 3;
 
 // wraps a palette of transform data. transforms are stored as 3x4 (non-perspective)
 // matrices
@@ -23,7 +26,10 @@ class TransformPalette {
     setTransform: (index: number, transform: Mat4) => void;
     alloc: (num?: number) => number;
     free: (num?: number) => void;
+    destroy: () => void;
     texture: Texture;
+    // number of allocated entries, including the identity at index 0
+    size: number;
 
     constructor(device: GraphicsDevice, initialSize = 4096) {
         let texture: Texture;
@@ -91,8 +97,16 @@ class TransformPalette {
             nextIdx -= num;
         };
 
+        this.destroy = () => {
+            texture.destroy();
+        };
+
         Object.defineProperty(this, 'texture', { get() {
             return texture;
+        } });
+
+        Object.defineProperty(this, 'size', { get() {
+            return nextIdx;
         } });
 
         // allocate initial storage

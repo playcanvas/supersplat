@@ -68,6 +68,38 @@ class IndexRanges {
         return this.data.length === 0;
     }
 
+    /** Total number of indices. */
+    get count() {
+        const { data } = this;
+        let total = 0;
+        let r = 0;
+        while (r < data.length) {
+            if (data[r] & SINGLE_BIT) {
+                total += 1;
+                r += 1;
+            } else {
+                total += data[r + 1];
+                r += 2;
+            }
+        }
+        return total;
+    }
+
+    /** Iterate each contiguous run, in ascending order. */
+    forEachRun(fn: (start: number, count: number) => void) {
+        const { data } = this;
+        let r = 0;
+        while (r < data.length) {
+            if (data[r] & SINGLE_BIT) {
+                fn(data[r] & INDEX_MASK, 1);
+                r += 1;
+            } else {
+                fn(data[r], data[r + 1]);
+                r += 2;
+            }
+        }
+    }
+
     /** Iterate each index. */
     forEach(fn: (index: number) => void) {
         const { data } = this;

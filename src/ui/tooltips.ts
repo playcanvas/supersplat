@@ -116,14 +116,16 @@ class Tooltips extends Container {
                 this.unregister(target);
             });
 
-            targets.set(target, { enter, leave });
+            // keep our own dom reference: pcui nulls target.dom before firing
+            // 'destroy', so unregister cannot read it from the target
+            targets.set(target, { dom: target.dom, enter, leave });
         };
 
         this.unregister = (target: Element) => {
             const value = targets.get(target);
             if (value) {
-                target.dom.removeEventListener('pointerenter', value.enter);
-                target.dom.removeEventListener('pointerleave', value.leave);
+                value.dom.removeEventListener('pointerenter', value.enter);
+                value.dom.removeEventListener('pointerleave', value.leave);
                 targets.delete(target);
             }
         };

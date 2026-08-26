@@ -1,8 +1,3 @@
-// cube faces are rendered with a fov wider than 90° so neighbouring faces
-// overlap. splats rasterize with slightly different shapes and composite in a
-// different sort order per face, so a hard face boundary shows as a seam;
-// blending the overlap feathers the mismatch away. weights ramp from 1 at
-// blendStart degrees off-axis to 0 at faceFov / 2.
 const faceFov = 100;
 const blendStart = 40;
 
@@ -10,79 +5,77 @@ const outerTan = Math.tan((faceFov / 2) * (Math.PI / 180));
 const innerTan = Math.tan(blendStart * (Math.PI / 180));
 const uvScale = 0.5 / outerTan;
 
-const vertexShader = /* glsl*/ `
-    attribute vec2 vertex_position;
-    void main(void) {
-        gl_Position = vec4(vertex_position, 0.0, 1.0);
-    }
+const vertexShader = /* wgsl */`
+attribute vertex_position: vec2f;
+
+@vertex
+fn vertexMain(input: VertexInput) -> VertexOutput {
+    var output: VertexOutput;
+    output.position = vec4f(input.vertex_position, 0.0, 1.0);
+    return output;
+}
 `;
 
-// project six overlapping face renders to an equirectangular panorama. faces
-// are captured in the (level or full) camera orientation frame, so the
-// direction below is a capture-space direction: image center (lon 0, lat 0)
-// is the capture forward (-Z), lon +PI/2 is capture right (+X), lat +PI/2 is
-// up (+Y).
-//
-// face textures store camera renders bottom-row-first (flipY: false render
-// targets), which matches gl_FragCoord's bottom-left origin, so t is
-// up-positive and no flips are needed anywhere.
-const fragmentShader = /* glsl*/ `
-    uniform sampler2D uFace0;   // front -Z
-    uniform sampler2D uFace1;   // right +X
-    uniform sampler2D uFace2;   // back  +Z
-    uniform sampler2D uFace3;   // left  -X
-    uniform sampler2D uFace4;   // up    +Y
-    uniform sampler2D uFace5;   // down  -Y
-    uniform vec2 uTargetSize;
+const fragmentShader = /* wgsl */`
+var uFace0: texture_2d<f32>;
+var uFace0_sampler: sampler;
+var uFace1: texture_2d<f32>;
+var uFace1_sampler: sampler;
+var uFace2: texture_2d<f32>;
+var uFace2_sampler: sampler;
+var uFace3: texture_2d<f32>;
+var uFace3_sampler: sampler;
+var uFace4: texture_2d<f32>;
+var uFace4_sampler: sampler;
+var uFace5: texture_2d<f32>;
+var uFace5_sampler: sampler;
+uniform uTargetSize: vec2f;
 
-    #define PI 3.141592653589793
+const PI = 3.141592653589793;
 
-    // blend weight and texture uv for a face with the given basis: the
-    // direction is mapped to the face's ndc, p = (dot(d, right), dot(d, up)) /
-    // dot(d, forward), and the weight feathers to zero towards the face edge
-    float faceWeight(vec3 d, vec3 r, vec3 u, vec3 f, out vec2 st) {
-        float dn = dot(d, f);
-        if (dn <= 0.0) {
-            st = vec2(0.0);
-            return 0.0;
-        }
-        vec2 p = vec2(dot(d, r), dot(d, u)) / dn;
-        st = p * ${uvScale.toFixed(8)} + 0.5;
-        return 1.0 - smoothstep(${innerTan.toFixed(8)}, ${outerTan.toFixed(8)}, max(abs(p.x), abs(p.y)));
+struct FaceSample {
+    weight: f32,
+    uv: vec2f
+}
+
+fn faceSample(d: vec3f, r: vec3f, u: vec3f, f: vec3f) -> FaceSample {
+    let dn = dot(d, f);
+    if (dn <= 0.0) {
+        return FaceSample(0.0, vec2f(0.0));
     }
+    let p = vec2f(dot(d, r), dot(d, u)) / dn;
+    let uv = vec2f(p.x, -p.y) * ${uvScale.toFixed(8)} + vec2f(0.5);
+    let weight = 1.0 - smoothstep(${innerTan.toFixed(8)}, ${outerTan.toFixed(8)}, max(abs(p.x), abs(p.y)));
+    return FaceSample(weight, uv);
+}
 
-    void main(void) {
-        vec2 uv = gl_FragCoord.xy / uTargetSize;
-        float lon = (uv.x - 0.5) * 2.0 * PI;
-        float lat = (uv.y - 0.5) * PI;
+@fragment
+fn fragmentMain(input: FragmentInput) -> FragmentOutput {
+    var output: FragmentOutput;
+    let uv = pcPosition.xy / uniform.uTargetSize;
+    let lon = (uv.x - 0.5) * 2.0 * PI;
+    let lat = (0.5 - uv.y) * PI;
+    let d = vec3f(sin(lon) * cos(lat), sin(lat), -cos(lon) * cos(lat));
 
-        vec3 d = vec3(sin(lon) * cos(lat), sin(lat), -cos(lon) * cos(lat));
+    var acc = vec4f(0.0);
+    var weightSum = 0.0;
 
-        vec4 acc = vec4(0.0);
-        float wsum = 0.0;
-        vec2 st;
-        float w;
+    var face = faceSample(d, vec3f(1.0, 0.0, 0.0), vec3f(0.0, 1.0, 0.0), vec3f(0.0, 0.0, -1.0));
+    if (face.weight > 0.0) { acc += face.weight * textureSampleLevel(uFace0, uFace0_sampler, face.uv, 0.0); weightSum += face.weight; }
+    face = faceSample(d, vec3f(0.0, 0.0, 1.0), vec3f(0.0, 1.0, 0.0), vec3f(1.0, 0.0, 0.0));
+    if (face.weight > 0.0) { acc += face.weight * textureSampleLevel(uFace1, uFace1_sampler, face.uv, 0.0); weightSum += face.weight; }
+    face = faceSample(d, vec3f(-1.0, 0.0, 0.0), vec3f(0.0, 1.0, 0.0), vec3f(0.0, 0.0, 1.0));
+    if (face.weight > 0.0) { acc += face.weight * textureSampleLevel(uFace2, uFace2_sampler, face.uv, 0.0); weightSum += face.weight; }
+    face = faceSample(d, vec3f(0.0, 0.0, -1.0), vec3f(0.0, 1.0, 0.0), vec3f(-1.0, 0.0, 0.0));
+    if (face.weight > 0.0) { acc += face.weight * textureSampleLevel(uFace3, uFace3_sampler, face.uv, 0.0); weightSum += face.weight; }
+    face = faceSample(d, vec3f(1.0, 0.0, 0.0), vec3f(0.0, 0.0, 1.0), vec3f(0.0, 1.0, 0.0));
+    if (face.weight > 0.0) { acc += face.weight * textureSampleLevel(uFace4, uFace4_sampler, face.uv, 0.0); weightSum += face.weight; }
+    face = faceSample(d, vec3f(1.0, 0.0, 0.0), vec3f(0.0, 0.0, -1.0), vec3f(0.0, -1.0, 0.0));
+    if (face.weight > 0.0) { acc += face.weight * textureSampleLevel(uFace5, uFace5_sampler, face.uv, 0.0); weightSum += face.weight; }
 
-        w = faceWeight(d, vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, -1.0), st);
-        if (w > 0.0) { acc += w * texture2D(uFace0, st); wsum += w; }
-
-        w = faceWeight(d, vec3(0.0, 0.0, 1.0), vec3(0.0, 1.0, 0.0), vec3(1.0, 0.0, 0.0), st);
-        if (w > 0.0) { acc += w * texture2D(uFace1, st); wsum += w; }
-
-        w = faceWeight(d, vec3(-1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0), st);
-        if (w > 0.0) { acc += w * texture2D(uFace2, st); wsum += w; }
-
-        w = faceWeight(d, vec3(0.0, 0.0, -1.0), vec3(0.0, 1.0, 0.0), vec3(-1.0, 0.0, 0.0), st);
-        if (w > 0.0) { acc += w * texture2D(uFace3, st); wsum += w; }
-
-        w = faceWeight(d, vec3(1.0, 0.0, 0.0), vec3(0.0, 0.0, 1.0), vec3(0.0, 1.0, 0.0), st);
-        if (w > 0.0) { acc += w * texture2D(uFace4, st); wsum += w; }
-
-        w = faceWeight(d, vec3(1.0, 0.0, 0.0), vec3(0.0, 0.0, -1.0), vec3(0.0, -1.0, 0.0), st);
-        if (w > 0.0) { acc += w * texture2D(uFace5, st); wsum += w; }
-
-        gl_FragColor = acc / max(wsum, 1e-5);
-    }
+    output.color = acc / max(weightSum, 1e-5);
+    return output;
+}
 `;
 
 export { faceFov, vertexShader, fragmentShader };

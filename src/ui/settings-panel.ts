@@ -314,6 +314,50 @@ class SettingsPanel extends Container {
         outlineSelectionRow.append(outlineSelectionLabel);
         outlineSelectionRow.append(outlineSelectionToggle);
 
+        // stochastic alpha
+
+        const stochasticRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const stochasticLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(stochasticLabel, 'panel.settings.stochastic-alpha');
+
+        const stochasticSelection = new SelectInput({
+            class: 'settings-panel-row-select',
+            defaultValue: 'movement'
+        });
+        i18n.bindOptions(stochasticSelection, () => [
+            { v: 'disabled', t: i18n.t('panel.settings.stochastic-alpha.disabled') },
+            { v: 'enabled', t: i18n.t('panel.settings.stochastic-alpha.enabled') },
+            { v: 'movement', t: i18n.t('panel.settings.stochastic-alpha.movement') }
+        ]);
+
+        stochasticRow.append(stochasticLabel);
+        stochasticRow.append(stochasticSelection);
+
+        // frame timings overlay
+
+        const perfOverlayRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const perfOverlayLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(perfOverlayLabel, 'panel.settings.perf-overlay');
+
+        const perfOverlayToggle = new BooleanInput({
+            type: 'toggle',
+            class: 'settings-panel-row-toggle',
+            value: false
+        });
+
+        perfOverlayRow.append(perfOverlayLabel);
+        perfOverlayRow.append(perfOverlayToggle);
+
         // show grid
 
         const showGridRow = new Container({
@@ -468,6 +512,8 @@ class SettingsPanel extends Container {
         this.append(showBoundDimensionsRow);
         this.append(showCameraPosesRow);
         this.append(showCameraInfoRow);
+        this.append(stochasticRow);
+        this.append(perfOverlayRow);
         this.append(resetRow);
 
         // handle panel visibility
@@ -556,6 +602,26 @@ class SettingsPanel extends Container {
 
         outlineSelectionToggle.on('change', (value: boolean) => {
             events.fire('view.setOutlineSelection', value);
+        });
+
+        // stochastic alpha
+
+        events.on('view.stochastic', (value: string) => {
+            stochasticSelection.value = value;
+        });
+
+        stochasticSelection.on('change', (value: string) => {
+            events.fire('view.setStochastic', value);
+        });
+
+        // frame timings overlay
+
+        events.on('view.perfOverlay', (value: boolean) => {
+            perfOverlayToggle.value = value;
+        });
+
+        perfOverlayToggle.on('change', (value: boolean) => {
+            events.fire('view.setPerfOverlay', value);
         });
 
         // show grid

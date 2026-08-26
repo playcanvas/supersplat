@@ -1,31 +1,18 @@
-import { MemoryFileSystem } from '@playcanvas/splat-transform';
-import { Color, Mat4, path, Quat, Texture, Vec3, Vec4 } from 'playcanvas';
+import { Color, Mat4, Quat, Texture, Vec3 } from 'playcanvas';
 
+import { createGradeTerms, gradeTerms, type GradeParams } from './color-grade';
 import { EditHistory } from './edit-history';
-import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp, MultiOp, AddSplatOp, SetLocalFrameOp } from './edit-ops';
+import { selectedRanges, SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, RemoveInstancesOp, RestoreMissingInstancesOp, MultiOp, AddSplatOp, SetLocalFrameOp, SplatsColorOp } from './edit-ops';
 import { Element, ElementType } from './element';
 import { Events } from './events';
 import type { GridPlane } from './infinite-grid';
-import { MappedReadFileSystem } from './io';
 import { Scene } from './scene';
 import { Splat } from './splat';
-import { writeSplatFile } from './splat-serialize';
-
-const removeExtension = (filename: string) => {
-    return filename.substring(0, filename.length - path.getExtension(filename).length);
-};
 
 // register for editor and scene events
 const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: Scene) => {
     const vec = new Vec3();
     const vec2 = new Vec3();
-    const vec4 = new Vec4();
-    const mat = new Mat4();
-    const SH_C0 = 0.28209479177387814;
-
-    const decodeColorChannel = (value: number) => {
-        return Math.min(1, Math.max(0, 0.5 + value * SH_C0));
-    };
 
     // get the list of selected splats (currently limited to just a single one)
     const selectedSplats = () => {
@@ -57,8 +44,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         lastExportCursor = 0;
     });
 
-    // When a splat is removed from the scene, remove all edit operations that reference it
-    events.on('scene.elementRemoved', (element: Element) => {
+    // When a splat is destroyed, drop the edit operations that reference it: they
+    // can never be replayed. Deliberately keyed on destruction rather than on
+    // removal from the scene - undoing an AddSplatOp (duplicate / separate) also
+    // removes the layer, and pruning there would delete the very op redo needs.
+    events.on('scene.elementDestroyed', (element: Element) => {
         if (element.type === ElementType.splat) {
             editHistory.removeForSplat(element as Splat);
         }
@@ -76,8 +66,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     [
         'camera.mode', 'camera.overlay', 'camera.splatSize', 'view.outlineSelection',
-        'view.centersUseGaussianColor', 'view.bands', 'camera.bound', 'camera.boundDimensions', 'camera.showPoses',
-        'camera.showInfo', 'selection.changed', 'tool.coordSpace'
+        'view.centersUseGaussianColor', 'view.bands', 'view.minPixelSize', 'view.stochastic', 'view.perfOverlay', 'camera.bound', 'camera.boundDimensions', 'camera.showPoses',
+        'camera.showInfo', 'selection.changed', 'tool.coordSpace', 'colorPanel.pendingChanged'
     ].forEach((eventName) => {
         events.on(eventName, () => {
             scene.forceRender = true;
@@ -514,7 +504,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                         const mx = Math.floor((nx0 + x / width) * mask.width);
                         const my = Math.floor((ny0 + y / height) * mask.height);
                         if (mask.data[(my * mask.width + mx) * 4] === 255) {
-                            selected.add(pick[(ph - 1 - y) * pw + x]);
+                            selected.add(pick[y * pw + x]);
                         }
                     }
                 }
@@ -530,37 +520,16 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         const mode = events.invoke('camera.mode');
 
         for (const splat of selectedSplats()) {
-            const splatData = splat.splatData;
-
             if (mode === 'centers') {
-                const x = splatData.getProp('x');
-                const y = splatData.getProp('y');
-                const z = splatData.getProp('z');
-
                 const splatSize = events.invoke('camera.splatSize');
-                const camera = scene.camera.camera;
-                const sx = point.x * width;
-                const sy = point.y * height;
-
-                // calculate final matrix
-                mat.mul2(camera.camera._viewProjMat, splat.worldTransform);
-
-                // materialize hits into an owned mask. SelectOp consumes a
-                // committed snapshot rather than a closure so we never have to
-                // worry about state shifting between capture and apply.
-                const numSplats = splatData.numSplats;
-                const mask = new Uint8Array(numSplats);
-                for (let i = 0; i < numSplats; i++) {
-                    vec4.set(x[i], y[i], z[i], 1.0);
-                    mat.transformVec4(vec4, vec4);
-                    const px = (vec4.x / vec4.w * 0.5 + 0.5) * width;
-                    const py = (-vec4.y / vec4.w * 0.5 + 0.5) * height;
-                    if (Math.abs(px - sx) < splatSize && Math.abs(py - sy) < splatSize) {
-                        mask[i] = 255;
+                await runSelectIntersect(splat, op, {
+                    rect: {
+                        x1: point.x - splatSize / width,
+                        y1: point.y - splatSize / height,
+                        x2: point.x + splatSize / width,
+                        y2: point.y + splatSize / height
                     }
-                }
-
-                events.fire('edit.add', new SelectOp(splat, op, mask));
+                });
             } else if (mode === 'rings') {
                 scene.camera.pickPrep(splat, op);
 
@@ -608,31 +577,17 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 continue;
             }
 
-            const reds = splat.splatData.getProp('f_dc_0') as Float32Array;
-            const greens = splat.splatData.getProp('f_dc_1') as Float32Array;
-            const blues = splat.splatData.getProp('f_dc_2') as Float32Array;
-            // validate pickId and color channels exist
-            if (!reds || !greens || !blues || pickId < 0 || pickId >= reds.length) {
+            if (pickId < 0 || pickId >= splat.instances.count) {
                 continue;
             }
-            // decode color channels for the reference pixel
-            const refR = decodeColorChannel(reds[pickId]);
-            const refG = decodeColorChannel(greens[pickId]);
-            const refB = decodeColorChannel(blues[pickId]);
-
-            // materialize hits into an owned mask up front; SelectOp consumes
-            // a committed snapshot.
-            const numSplats = splat.splatData.numSplats;
-            const mask = new Uint8Array(numSplats);
-            for (let i = 0; i < numSplats; i++) {
-                if (Math.abs(decodeColorChannel(reds[i]) - refR) <= colorThreshold &&
-                    Math.abs(decodeColorChannel(greens[i]) - refG) <= colorThreshold &&
-                    Math.abs(decodeColorChannel(blues[i]) - refB) <= colorThreshold) {
-                    mask[i] = 255;
-                }
-            }
-
-            events.fire('edit.add', new SelectOp(splat, op, mask));
+            await scene.commandQueue.enqueue(async () => {
+                const mask = await scene.dataProcessor.colorMatch(splat, pickId, colorThreshold, {
+                    entityMatrix: splat.entity.getWorldTransform(),
+                    cameraPos: scene.camera.position
+                });
+                events.fire('edit.add', new SelectOp(splat, op, mask));
+                scene.dataProcessor.releaseMask(mask);
+            });
         }
     });
 
@@ -662,56 +617,68 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             return;
         }
         selectedSplats().forEach((splat) => {
-            editHistory.add(new DeleteSelectionOp(splat));
+            editHistory.add(new RemoveInstancesOp(splat));
         });
     });
 
-    const performSelectionFunc = async (func: 'duplicate' | 'separate') => {
-        const splats = selectedSplats();
+    // Duplicate and separate both create a new layer holding the selected
+    // gaussians. The new layer *shares* the source layer's static data, so this
+    // copies the instance list only: no gaussians are duplicated, and there is no
+    // PLY round trip to lose SH precision, drop extra columns or reorder out of
+    // Morton. The asset is reference counted, so it outlives either layer.
+    const performSelectionFunc = (func: 'duplicate' | 'separate') => {
+        const splat = selectedSplats()[0];
+        if (!splat) {
+            return;
+        }
 
-        const memFs = new MemoryFileSystem();
+        const ranges = selectedRanges(splat);
+        if (ranges.count === 0) {
+            return;
+        }
 
-        await writeSplatFile(splats, {
-            maxSHBands: 3,
-            selected: true
-        }, 'ply', 'output.ply', {}, memFs);
+        const copy = splat.createLayer(ranges, splat.name);
 
-        const data = memFs.results.get('output.ply');
-
-        if (data) {
-            const splat = splats[0];
-
-            // wrap PLY in a blob and load it. pass the view rather than the
-            // underlying buffer, which is the writer's oversized scratch allocation
-            const blob = new Blob([data as BlobPart], { type: 'application/octet-stream' });
-            const filename = `${removeExtension(splat.filename)}.ply`;
-            const fileSystem = new MappedReadFileSystem();
-            fileSystem.addFile(filename, blob);
-            const copy = await scene.assetLoader.load(filename, fileSystem);
-
-            if (func === 'separate') {
-                editHistory.add(new MultiOp([
-                    new DeleteSelectionOp(splat),
-                    new AddSplatOp(scene, copy)
-                ]));
-            } else {
-                editHistory.add(new AddSplatOp(scene, copy));
-            }
+        if (func === 'separate') {
+            editHistory.add(new MultiOp([
+                new RemoveInstancesOp(splat),
+                new AddSplatOp(scene, copy)
+            ]));
+        } else {
+            editHistory.add(new AddSplatOp(scene, copy));
         }
     };
 
     // duplicate the current selection
-    events.on('edit.duplicate', async () => {
-        await performSelectionFunc('duplicate');
+    events.on('edit.duplicate', () => {
+        performSelectionFunc('duplicate');
     });
 
-    events.on('edit.separate', async () => {
-        await performSelectionFunc('separate');
+    events.on('edit.separate', () => {
+        performSelectionFunc('separate');
+    });
+
+    // bake the panel's pending grade into the selected gaussians. `params` are the
+    // seven authored values; the op composes them onto whatever grade the targets
+    // already carry, so applying twice is the same as applying the composition.
+    events.on('edit.applyColor', (params: GradeParams) => {
+        const splat = events.invoke('selection') as Splat;
+        if (splat) {
+            editHistory.add(new SplatsColorOp({ splat, grade: gradeTerms(params, createGradeTerms()) }));
+        }
+    });
+
+    // clear the grade on the selected gaussians
+    events.on('edit.resetColor', () => {
+        const splat = events.invoke('selection') as Splat;
+        if (splat) {
+            editHistory.add(new SplatsColorOp({ splat, grade: null }));
+        }
     });
 
     events.on('scene.reset', () => {
         selectedSplats().forEach((splat) => {
-            editHistory.add(new ResetOp(splat));
+            editHistory.add(new RestoreMissingInstancesOp(splat));
         });
     });
 
@@ -859,6 +826,54 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         setViewBands(value);
     });
 
+    // minimum projected splat size in pixels (0 disables the cull)
+
+    let minPixelSize = 2;
+
+    events.function('view.minPixelSize', () => {
+        return minPixelSize;
+    });
+
+    events.on('view.setMinPixelSize', (value: number) => {
+        if (value !== minPixelSize) {
+            minPixelSize = value;
+            events.fire('view.minPixelSize', minPixelSize);
+        }
+    });
+
+    // experimental stochastic-transparency splat renderer (1 spp, no sort).
+    // 'disabled' never uses it, 'enabled' always does, and 'movement' uses it only
+    // while the scene is changing - trading the sort for speed exactly when the
+    // eye is least able to see the sampling noise.
+
+    let stochastic = 'movement';
+
+    events.function('view.stochastic', () => {
+        return stochastic;
+    });
+
+    events.on('view.setStochastic', (value: string) => {
+        if (value !== stochastic) {
+            stochastic = value;
+            events.fire('view.stochastic', value);
+        }
+    });
+
+    // gpu/cpu frame timing overlay
+
+    let perfOverlay = false;
+
+    events.function('view.perfOverlay', () => {
+        return perfOverlay;
+    });
+
+    events.on('view.setPerfOverlay', (value: boolean) => {
+        if (value !== perfOverlay) {
+            perfOverlay = value;
+            events.fire('view.perfOverlay', value);
+        }
+    });
+
     // centers gaussian color toggle
     let centersUseGaussianColor = false;
     events.function('view.centersUseGaussianColor', () => centersUseGaussianColor);
@@ -900,6 +915,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.fire('camera.overlay', cameraOverlay);
     events.fire('view.bands', viewBands);
     events.fire('camera.showInfo', showInfo);
+    // needed because view.setStochastic only notifies on a change, so a stored
+    // preference equal to the initial value leaves the ui showing its own default
+    events.fire('view.stochastic', stochastic);
 
     // doc serialization
     events.function('docSerialize.view', () => {

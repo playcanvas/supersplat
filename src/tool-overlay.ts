@@ -3,10 +3,13 @@ import {
     BLENDMODE_ONE,
     BLENDMODE_ONE_MINUS_SRC_ALPHA,
     BLENDMODE_SRC_ALPHA,
+    CULLFACE_BACK,
     CULLFACE_NONE,
     FILTER_LINEAR,
     PIXELFORMAT_RGBA8,
     PRIMITIVE_TRIANGLES,
+    SEMANTIC_POSITION,
+    SEMANTIC_TEXCOORD0,
     BlendState,
     Entity,
     GraphicsDevice,
@@ -39,18 +42,11 @@ const GHOST_OPACITY = 0.25;
 // the plane fill color
 const FILL_COLOR = [1, 0.4, 0, 0.6];
 
-// depth strata, front to back: dots (no bias), line core, line outline, fill.
-// the overlay elements are coplanar, so ties between them are broken with
-// polygon-offset style biases (a slope-scaled term plus a handful of depth
-// buffer quanta), which stay tie-breaking-sized at any camera distance. a
-// fixed window-space offset does not: its world-space size swings with the
-// dynamic near/far planes, which made the fill/splat blend change with zoom.
-// the lines use the hardware polygon offset via material state; the fill
-// writes stochastic gl_FragDepth (which disables the hardware offset), so its
-// fragment shader applies the same formula manually.
+// depth strata, front to back: dots (no bias), line core and line outline.
+// The translucent fill is drawn first with stochastic depth writes, so it
+// participates in splat depth while later line and dot passes remain visible.
 const STRATUM_LINE = { slope: 1, bias: 2 };
 const STRATUM_OUTLINE = { slope: 2, bias: 4 };
-const STRATUM_FILL = [3, 2e-6]; // slope factor, constant window-space offset
 
 // view depth at which behind-camera segment endpoints are clipped
 const NEAR_CLIP = 1e-3;
@@ -174,6 +170,7 @@ class ToolOverlay extends Element {
     private dotUvs: number[] = [];
     private linePositions: number[] = [];
     private outlinePositions: number[] = [];
+    private fillPositions: number[] = [];
 
     constructor() {
         super(ElementType.debug);
@@ -204,11 +201,15 @@ class ToolOverlay extends Element {
 
         this.texture = createDotTexture(device);
 
-        const makeMaterial = (name: string, vertex: string, fragment: string, ghost: boolean) => {
+        const makeMaterial = (name: string, vertex: string, fragment: string, ghost: boolean, textured = false) => {
             const material = new ShaderMaterial({
                 uniqueName: name,
-                vertexGLSL: vertex,
-                fragmentGLSL: fragment
+                attributes: {
+                    vertex_position: SEMANTIC_POSITION,
+                    ...(textured ? { vertex_texCoord0: SEMANTIC_TEXCOORD0 } : {})
+                },
+                vertexWGSL: vertex,
+                fragmentWGSL: fragment
             });
             material.cull = CULLFACE_NONE;
             if (ghost) {
@@ -220,11 +221,11 @@ class ToolOverlay extends Element {
             return material;
         };
 
-        const dotBase = makeMaterial('toolOverlayDotBase', dotVertexShader, dotFragmentShader, false);
+        const dotBase = makeMaterial('toolOverlayDotBase', dotVertexShader, dotFragmentShader, false, true);
         dotBase.setParameter('dotTexture', this.texture);
         dotBase.setParameter('ghost', 0);
 
-        const dotGhost = makeMaterial('toolOverlayDotGhost', dotVertexShader, dotFragmentShader, true);
+        const dotGhost = makeMaterial('toolOverlayDotGhost', dotVertexShader, dotFragmentShader, true, true);
         dotGhost.setParameter('dotTexture', this.texture);
         dotGhost.setParameter('ghost', GHOST_OPACITY);
 
@@ -243,8 +244,8 @@ class ToolOverlay extends Element {
 
         const fillBase = makeMaterial('toolOverlayFillBase', fillVertexShader, fillFragmentShader, false);
         fillBase.blendState = blend;
+        fillBase.cull = CULLFACE_BACK;
         fillBase.setParameter('fillColor', FILL_COLOR);
-        fillBase.setParameter('depthBias', STRATUM_FILL);
 
         const makeMesh = () => {
             const mesh = new Mesh(device);
@@ -261,6 +262,13 @@ class ToolOverlay extends Element {
         const makeInstances = (meshes: [Mesh, ShaderMaterial][]) => {
             return meshes.map(([mesh, material]) => {
                 const meshInstance = new MeshInstance(mesh, material);
+                // The WebGPU splat pass consumes depth produced by the World
+                // opaque action (as the infinite grid does). Keep alpha
+                // blending, but render the fill in that opaque action so its
+                // stochastic depth writes survive into the later MRT pass.
+                if (mesh === this.fillMesh) {
+                    meshInstance.transparent = false;
+                }
                 meshInstance.visible = false;
                 if (!this.instances.has(mesh)) {
                     this.instances.set(mesh, []);
@@ -426,7 +434,23 @@ class ToolOverlay extends Element {
         updateMesh(this.dotMesh, dotPositions, dotUvs);
         updateMesh(this.lineMesh, linePositions);
         updateMesh(this.outlineMesh, outlinePositions);
-        updateMesh(this.fillMesh, writer.fills);
+
+        // Emit both windings so the depth-tested fill is visible from either
+        // side. Back-face culling ensures only one copy contributes per view.
+        const { fillPositions } = this;
+        fillPositions.length = 0;
+        for (let i = 0; i < writer.fills.length; i += 9) {
+            const fill = writer.fills;
+            fillPositions.push(
+                fill[i], fill[i + 1], fill[i + 2],
+                fill[i + 3], fill[i + 4], fill[i + 5],
+                fill[i + 6], fill[i + 7], fill[i + 8],
+                fill[i], fill[i + 1], fill[i + 2],
+                fill[i + 6], fill[i + 7], fill[i + 8],
+                fill[i + 3], fill[i + 4], fill[i + 5]
+            );
+        }
+        updateMesh(this.fillMesh, fillPositions);
     }
 }
 

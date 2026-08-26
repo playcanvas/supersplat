@@ -34,8 +34,14 @@ class Element {
     }
 
     destroy() {
-        if (this.scene) {
-            this.scene.remove(this);
+        const scene = this.scene;
+        if (scene) {
+            scene.remove(this);
+            // distinct from 'scene.elementRemoved': an element also leaves the
+            // scene when an AddSplatOp is undone, and that op is exactly what
+            // redo needs, so history must only be pruned once the element is
+            // actually gone for good
+            scene.events.fire('scene.elementDestroyed', this);
         }
     }
 

@@ -107,6 +107,70 @@ body {
     text-shadow: 1px 1px 4px black;
 }
 
+#startup-error {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    background-color: $bcg-primary;
+    color: $text-primary;
+    font-size: 16px;
+    line-height: 1.5;
+    text-align: center;
+}
+
+#perf-overlay {
+    position: absolute;
+    left: 12px;
+    bottom: 66px;
+    pointer-events: none;
+    text-shadow: 1px 1px 4px black;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+
+    .perf-row {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        padding: 1px 0;
+        font-family: inherit;
+    }
+
+    .perf-key {
+        margin: 0;
+        color: $clr-icon-hilight;
+        font-family: inherit;
+        font-weight: bold;
+        overflow: visible;
+    }
+
+    .perf-value {
+        margin: 0 0 0 8px;
+        color: $text-primary;
+        font-family: inherit;
+        font-variant-numeric: tabular-nums;
+        white-space: pre;
+        overflow: visible;
+    }
+
+    .perf-graph {
+        display: block;
+        margin: 4px 0 3px 0;
+        border-radius: 2px;
+        outline: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .perf-note {
+        margin: 0;
+        color: $text-secondary;
+        font-family: inherit;
+        font-variant-numeric: tabular-nums;
+        white-space: pre;
+        overflow: visible;
+    }
+}
+
 #camera-info-overlay {
     position: absolute;
     left: 12px;

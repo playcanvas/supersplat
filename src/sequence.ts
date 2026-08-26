@@ -1,9 +1,10 @@
 import { Asset, Quat } from 'playcanvas';
 
 import { Events } from './events';
-import { loadGSplatData, MappedReadFileSystem, validateGSplatData } from './io';
+import { loadSplatSource, MappedReadFileSystem } from './io';
 import { Scene } from './scene';
 import { Splat } from './splat';
+import { EditorSplatResource } from './splat-resource';
 
 type FrameData = {
     asset: Asset;
@@ -46,10 +47,9 @@ class PlyFrameSource implements FrameSource {
         fileSystem.addFile(file.name, file);
 
         // skipReorder: animation frames prioritise load speed over morton ordering
-        const { gsplatData, transform } = await loadGSplatData(file.name, fileSystem, true);
-        validateGSplatData(gsplatData);
-
-        const asset = this.scene.assetLoader.createGSplatAsset(gsplatData, file.name);
+        const { source, transform } = await loadSplatSource(file.name, fileSystem, true);
+        const resource = await EditorSplatResource.create(this.scene.graphicsDevice, source);
+        const asset = this.scene.assetLoader.createGSplatAsset(resource, file.name);
         return { asset, rotation: transform.rotation };
     }
 
@@ -99,7 +99,6 @@ const registerSequenceEvents = (events: Events, scene: Scene) => {
         // is bound as an initial load (applying its rotation/name) rather than
         // swapped onto the old element
         if (splat) {
-            scene.remove(splat);
             splat.destroy();
             splat = null;
         }

@@ -1,5 +1,5 @@
 import { BooleanInput, Container, Label } from '@playcanvas/pcui';
-import { Mat4 } from 'playcanvas';
+import { Camera, Mat4 } from 'playcanvas';
 
 import { Element } from '../element';
 import { Events } from '../events';
@@ -258,7 +258,7 @@ class DataPanel extends Container {
                 f_dc_1: i18n.t('panel.splat-data.dc-green'),
                 f_dc_2: i18n.t('panel.splat-data.dc-blue')
             };
-            const shBands = (splat.entity.gsplat.instance.resource as any).shBands ?? 0;
+            const shBands = splat.resource.shBands;
             const numCoeffs = SH_NUM_COEFFS[shBands] ?? 0;
             const channels = ['R', 'G', 'B'];
             const maxFRest = numCoeffs * 3;
@@ -268,7 +268,7 @@ class DataPanel extends Container {
                 extras[`f_rest_${i}`] = `${channel} ${i18n.t('panel.splat-data.sh')} ${idx}`;
             }
 
-            const dataProps = splat.splatData.getElement('vertex').properties.map(p => p.name);
+            const dataProps = [...splat.resource.propertyNames];
             const derivedProps = ['distance', 'camera-depth', 'volume', 'surface-area', 'red', 'green', 'blue', 'hue', 'saturation', 'value'];
             const availableProps = new Set(dataProps.concat(derivedProps));
 
@@ -431,6 +431,7 @@ class DataPanel extends Container {
         let pendingToken = 0;
         let lastGpuMode = 0;
         let lastHash = '';
+        const shaderProjection = new Mat4();
         const viewProjection = new Mat4();
 
         // single source of truth for everything that could trigger a refresh.
@@ -456,7 +457,10 @@ class DataPanel extends Container {
                 cameraPos: splat.scene.camera.position
             };
             if (inputs.onScreenOnly) {
-                viewProjection.mul2(cam.projectionMatrix, cam.viewMatrix);
+                const projection = Camera.applyShaderProjectionTransform(
+                    cam.projectionMatrix, shaderProjection, false, splat.scene.graphicsDevice.isWebGPU
+                );
+                viewProjection.mul2(projection, cam.viewMatrix);
                 opts.viewProjection = viewProjection;
                 opts.onScreenOnly = true;
             }
@@ -592,18 +596,13 @@ class DataPanel extends Container {
             tick();
         });
 
-        const colorEvents = [
-            'splat.tintClr', 'splat.temperature', 'splat.saturation',
-            'splat.brightness', 'splat.blackPoint', 'splat.whitePoint',
-            'splat.transparency'
-        ];
-        colorEvents.forEach((name) => {
-            events.on(name, (splat_: Splat) => {
-                if (splat_ === splat) {
-                    inputs.colorGradeVersion++;
-                    tick();
-                }
-            });
+        // colour is per-gaussian now, so a grade lands as a palette edit rather than
+        // a set of per-layer property changes
+        events.on('splat.colorsChanged', (splat_: Splat) => {
+            if (splat_ === splat) {
+                inputs.colorGradeVersion++;
+                tick();
+            }
         });
 
         events.on('selection.changed', (selection: Element) => {

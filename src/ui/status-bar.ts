@@ -107,13 +107,10 @@ class StatusBar extends Container {
 
         const updateStats = () => {
             if (!splat) return;
-            const state = splat.splatData.getProp('state') as Uint8Array;
-            if (state) {
-                splatsValue.text = i18n.formatInteger(state.length - splat.numDeleted);
-                selectedValue.text = i18n.formatInteger(splat.numSelected);
-                lockedValue.text = i18n.formatInteger(splat.numLocked);
-                deletedValue.text = i18n.formatInteger(splat.numDeleted);
-            }
+            splatsValue.text = i18n.formatInteger(splat.numSplats);
+            selectedValue.text = i18n.formatInteger(splat.numSelected);
+            lockedValue.text = i18n.formatInteger(splat.numLocked);
+            deletedValue.text = i18n.formatInteger(splat.numDeleted);
         };
 
         events.on('splat.stateChanged', (splat_: Splat) => {

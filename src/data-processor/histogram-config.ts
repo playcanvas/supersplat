@@ -11,15 +11,12 @@ const GRID_DIM = 64;
 // default bin count for histogram results when the caller does not override.
 const NUM_BINS = 256;
 
-// per-splat mask packing: each RGBA8 output texel carries 4 splats. width is
-// derived from the source transformA texture width via this helper so all
-// callers (Intersect, SelectByRange) agree on layout.
-const packedMaskWidth = (sourceWidth: number): number => {
-    return Math.max(1, Math.floor(sourceWidth / 2));
+// per-splat mask packing: each u32 of the output carries 4 splat bytes, so the
+// mask is sized from the splat count alone and carries no dependency on the
+// source texture's shape. all callers (Intersect, SelectByRange, ColorMatch)
+// agree on layout by using this helper.
+const maskByteSize = (count: number): number => {
+    return Math.max(4, Math.ceil(count / 4) * 4);
 };
 
-const packedMaskHeight = (packedWidth: number, numSplats: number): number => {
-    return Math.ceil(numSplats / (packedWidth * 4));
-};
-
-export { GRID_DIM, NUM_BINS, packedMaskWidth, packedMaskHeight };
+export { GRID_DIM, NUM_BINS, maskByteSize };

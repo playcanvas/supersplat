@@ -1,174 +1,148 @@
-const vertexShader = /* glsl*/ `
-    uniform vec3 near_origin;
-    uniform vec3 near_x;
-    uniform vec3 near_y;
+const vertexShader = /* wgsl */`
+uniform near_origin: vec3f;
+uniform near_x: vec3f;
+uniform near_y: vec3f;
+uniform far_origin: vec3f;
+uniform far_x: vec3f;
+uniform far_y: vec3f;
 
-    uniform vec3 far_origin;
-    uniform vec3 far_x;
-    uniform vec3 far_y;
+attribute vertex_position: vec2f;
+varying worldFar: vec3f;
+varying worldNear: vec3f;
 
-    attribute vec2 vertex_position;
-
-    varying vec3 worldFar;
-    varying vec3 worldNear;
-
-    void main(void) {
-        gl_Position = vec4(vertex_position, 0.0, 1.0);
-
-        vec2 p = vertex_position * 0.5 + 0.5;
-        worldNear = near_origin + near_x * p.x + near_y * p.y;
-        worldFar = far_origin + far_x * p.x + far_y * p.y;
-    }
+@vertex
+fn vertexMain(input: VertexInput) -> VertexOutput {
+    var output: VertexOutput;
+    output.position = vec4f(input.vertex_position, 0.0, 1.0);
+    let p = input.vertex_position * 0.5 + vec2f(0.5);
+    output.worldNear = uniform.near_origin + uniform.near_x * p.x + uniform.near_y * p.y;
+    output.worldFar = uniform.far_origin + uniform.far_x * p.x + uniform.far_y * p.y;
+    return output;
+}
 `;
 
-const fragmentShader = /* glsl*/ `
-    uniform vec3 view_position;
-    uniform mat4 matrix_viewProjection;
-    uniform sampler2D blueNoiseTex32;
+const fragmentShader = /* wgsl */`
+uniform view_position: vec3f;
+uniform matrix_viewProjection: mat4x4f;
+uniform plane: i32;
+var blueNoiseTex32: texture_2d<f32>;
 
-    uniform int plane;  // 0: x (yz), 1: y (xz), 2: z (xy)
+varying worldFar: vec3f;
+varying worldNear: vec3f;
 
-    vec4 planes[3] = vec4[3](
-        vec4(1.0, 0.0, 0.0, 0.0),
-        vec4(0.0, 1.0, 0.0, 0.0),
-        vec4(0.0, 0.0, 1.0, 0.0)
-    );
+const planes = array<vec4f, 3>(
+    vec4f(1.0, 0.0, 0.0, 0.0),
+    vec4f(0.0, 1.0, 0.0, 0.0),
+    vec4f(0.0, 0.0, 1.0, 0.0)
+);
+const colors = array<vec3f, 3>(
+    vec3f(1.0, 0.2, 0.2),
+    vec3f(0.2, 1.0, 0.2),
+    vec3f(0.2, 0.2, 1.0)
+);
+const axis0 = array<i32, 3>(1, 0, 0);
+const axis1 = array<i32, 3>(2, 2, 1);
 
-    vec3 colors[3] = vec3[3](
-        vec3(1.0, 0.2, 0.2),
-        vec3(0.2, 1.0, 0.2),
-        vec3(0.2, 0.2, 1.0)
-    );
-
-    int axis0[3] = int[3](1, 0, 0);
-    int axis1[3] = int[3](2, 2, 1);
-
-    varying vec3 worldNear;
-    varying vec3 worldFar;
-
-    bool intersectPlane(inout float t, vec3 pos, vec3 dir, vec4 plane) {
-        float d = dot(dir, plane.xyz);
-        if (abs(d) < 1e-06) {
-            return false;
-        }
-
-        float n = -(dot(pos, plane.xyz) + plane.w) / d;
-        if (n < 0.0) {
-            return false;
-        }
-
-        t = n;
-
-        return true;
+fn intersectPlane(pos: vec3f, dir: vec3f, planeValue: vec4f) -> f32 {
+    let d = dot(dir, planeValue.xyz);
+    if (abs(d) < 1e-6) {
+        return -1.0;
     }
+    return -(dot(pos, planeValue.xyz) + planeValue.w) / d;
+}
 
-    // https://bgolus.medium.com/the-best-darn-grid-shader-yet-727f9278b9d8#1e7c
-    float pristineGrid(in vec2 uv, in vec2 ddx, in vec2 ddy, vec2 lineWidth) {
-        vec2 uvDeriv = vec2(length(vec2(ddx.x, ddy.x)), length(vec2(ddx.y, ddy.y)));
-        bvec2 invertLine = bvec2(lineWidth.x > 0.5, lineWidth.y > 0.5);
-        vec2 targetWidth = vec2(
-            invertLine.x ? 1.0 - lineWidth.x : lineWidth.x,
-            invertLine.y ? 1.0 - lineWidth.y : lineWidth.y
-        );
-        vec2 drawWidth = clamp(targetWidth, uvDeriv, vec2(0.5));
-        vec2 lineAA = uvDeriv * 1.5;
-        vec2 gridUV = abs(fract(uv) * 2.0 - 1.0);
-        gridUV.x = invertLine.x ? gridUV.x : 1.0 - gridUV.x;
-        gridUV.y = invertLine.y ? gridUV.y : 1.0 - gridUV.y;
-        vec2 grid2 = smoothstep(drawWidth + lineAA, drawWidth - lineAA, gridUV);
+fn pristineGrid(uv: vec2f, ddxValue: vec2f, ddyValue: vec2f, lineWidth: vec2f) -> f32 {
+    let uvDeriv = vec2f(length(vec2f(ddxValue.x, ddyValue.x)), length(vec2f(ddxValue.y, ddyValue.y)));
+    let invertLine = lineWidth > vec2f(0.5);
+    let targetWidth = select(lineWidth, vec2f(1.0) - lineWidth, invertLine);
+    let drawWidth = clamp(targetWidth, uvDeriv, vec2f(0.5));
+    let lineAA = uvDeriv * 1.5;
+    var gridUv = abs(fract(uv) * 2.0 - vec2f(1.0));
+    gridUv = select(vec2f(1.0) - gridUv, gridUv, invertLine);
+    var grid = smoothstep(drawWidth + lineAA, drawWidth - lineAA, gridUv);
+    grid *= clamp(targetWidth / drawWidth, vec2f(0.0), vec2f(1.0));
+    grid = mix(grid, targetWidth, clamp(uvDeriv * 2.0 - vec2f(1.0), vec2f(0.0), vec2f(1.0)));
+    grid = select(grid, vec2f(1.0) - grid, invertLine);
+    return mix(grid.x, 1.0, grid.y);
+}
 
-        grid2 *= clamp(targetWidth / drawWidth, 0.0, 1.0);
-        grid2 = mix(grid2, targetWidth, clamp(uvDeriv * 2.0 - 1.0, 0.0, 1.0));
-        grid2.x = invertLine.x ? 1.0 - grid2.x : grid2.x;
-        grid2.y = invertLine.y ? 1.0 - grid2.y : grid2.y;
+fn calcDepth(position: vec3f) -> f32 {
+    let projected = uniform.matrix_viewProjection * vec4f(position, 1.0);
+    return projected.z / projected.w;
+}
 
-        return mix(grid2.x, 1.0, grid2.y);
+fn writeDepth(alpha: f32) -> bool {
+    let size = vec2i(textureDimensions(blueNoiseTex32, 0));
+    let texel = vec2i(pcPosition.xy) % size;
+    return alpha > textureLoad(blueNoiseTex32, texel, 0).y;
+}
+
+fn gridPosition(position: vec3f) -> vec2f {
+    if (uniform.plane == 0) {
+        return position.yz;
     }
-
-    float calcDepth(vec3 p) {
-        vec4 v = matrix_viewProjection * vec4(p, 1.0);
-        return (v.z / v.w) * 0.5 + 0.5;
+    if (uniform.plane == 1) {
+        return position.xz;
     }
+    return position.xy;
+}
 
-    bool writeDepth(float alpha) {
-        vec2 uv = fract(gl_FragCoord.xy / 32.0);
-        float noise = texture2DLod(blueNoiseTex32, uv, 0.0).y;
-        return alpha > noise;
-    }
-
-    void main(void) {
-        vec3 p = worldNear;
-        vec3 v = normalize(worldFar - worldNear);
-
-        // intersect ray with the world xz plane
-        float t;
-        if (!intersectPlane(t, p, v, planes[plane])) {
-            discard;
-        }
-
-        // calculate grid intersection
-        vec3 worldPos = p + v * t;
-        vec2 pos = plane == 0 ? worldPos.yz : (plane == 1 ? worldPos.xz : worldPos.xy);
-        vec2 ddx = dFdx(pos);
-        vec2 ddy = dFdy(pos);
-
-        float epsilon = 1.0 / 255.0;
-
-        // calculate fade
-        float fade = 1.0 - smoothstep(400.0, 1000.0, length(worldPos - view_position));
-        if (fade < epsilon) {
-            discard;
-        }
-
-        vec2 levelPos;
-        float levelSize;
-        float levelAlpha;
-
-        // 10m grid with colored main axes
-        levelPos = pos * 0.1;
-        levelSize = 2.0 / 1000.0;
-        levelAlpha = pristineGrid(levelPos, ddx * 0.1, ddy * 0.1, vec2(levelSize)) * fade;
-        if (levelAlpha > epsilon) {
-            vec3 color;
-            vec2 loc = abs(levelPos);
-            if (loc.x < levelSize) {
-                if (loc.y < levelSize) {
-                    color = vec3(1.0);
-                } else {
-                    color = colors[axis1[plane]];
-                }
-            } else if (loc.y < levelSize) {
-                color = colors[axis0[plane]];
-            } else {
-                color = vec3(0.9);
-            }
-            gl_FragColor = vec4(color, levelAlpha);
-            gl_FragDepth = writeDepth(levelAlpha) ? calcDepth(worldPos) : 1.0;
-            return;
-        }
-
-        // 1m grid
-        levelPos = pos;
-        levelSize = 1.0 / 100.0;
-        levelAlpha = pristineGrid(levelPos, ddx, ddy, vec2(levelSize)) * fade;
-        if (levelAlpha > epsilon) {
-            gl_FragColor = vec4(vec3(0.7), levelAlpha);
-            gl_FragDepth = writeDepth(levelAlpha) ? calcDepth(worldPos) : 1.0;
-            return;
-        }
-
-        // 0.1m grid
-        levelPos = pos * 10.0;
-        levelSize = 1.0 / 100.0;
-        levelAlpha = pristineGrid(levelPos, ddx * 10.0, ddy * 10.0, vec2(levelSize)) * fade;
-        if (levelAlpha > epsilon) {
-            gl_FragColor = vec4(vec3(0.7), levelAlpha);
-            gl_FragDepth = writeDepth(levelAlpha) ? calcDepth(worldPos) : 1.0;
-            return;
-        }
-
+@fragment
+fn fragmentMain(input: FragmentInput) -> FragmentOutput {
+    var output: FragmentOutput;
+    let rayOrigin = input.worldNear;
+    let rayDirection = normalize(input.worldFar - input.worldNear);
+    let t = intersectPlane(rayOrigin, rayDirection, planes[uniform.plane]);
+    let worldPosition = rayOrigin + rayDirection * max(t, 0.0);
+    let position = gridPosition(worldPosition);
+    let derivativeX = dpdx(position);
+    let derivativeY = dpdy(position);
+    if (t < 0.0) {
         discard;
     }
+
+    let epsilon = 1.0 / 255.0;
+    let fade = 1.0 - smoothstep(400.0, 1000.0, length(worldPosition - uniform.view_position));
+    if (fade < epsilon) {
+        discard;
+    }
+
+    var levelPosition = position * 0.1;
+    var levelSize = 2.0 / 1000.0;
+    var levelAlpha = pristineGrid(levelPosition, derivativeX * 0.1, derivativeY * 0.1, vec2f(levelSize)) * fade;
+    if (levelAlpha > epsilon) {
+        let location = abs(levelPosition);
+        var color = vec3f(0.9);
+        if (location.x < levelSize) {
+            color = select(colors[axis1[uniform.plane]], vec3f(1.0), location.y < levelSize);
+        } else if (location.y < levelSize) {
+            color = colors[axis0[uniform.plane]];
+        }
+        output.color = vec4f(color, levelAlpha);
+        output.fragDepth = select(1.0, calcDepth(worldPosition), writeDepth(levelAlpha));
+        return output;
+    }
+
+    levelPosition = position;
+    levelSize = 1.0 / 100.0;
+    levelAlpha = pristineGrid(levelPosition, derivativeX, derivativeY, vec2f(levelSize)) * fade;
+    if (levelAlpha > epsilon) {
+        output.color = vec4f(vec3f(0.7), levelAlpha);
+        output.fragDepth = select(1.0, calcDepth(worldPosition), writeDepth(levelAlpha));
+        return output;
+    }
+
+    levelPosition = position * 10.0;
+    levelAlpha = pristineGrid(levelPosition, derivativeX * 10.0, derivativeY * 10.0, vec2f(levelSize)) * fade;
+    if (levelAlpha > epsilon) {
+        output.color = vec4f(vec3f(0.7), levelAlpha);
+        output.fragDepth = select(1.0, calcDepth(worldPosition), writeDepth(levelAlpha));
+        return output;
+    }
+
+    discard;
+    return output;
+}
 `;
 
 export { vertexShader, fragmentShader };

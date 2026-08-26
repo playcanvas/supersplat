@@ -11,6 +11,7 @@ export {
 // Loading functions
 export {
     defaultLodIndex,
-    loadGSplatData,
-    validateGSplatData
+    loadSplatSource,
+    PermutedChunkSource,
+    validateSplatSource
 } from './loader';

@@ -1,5 +1,7 @@
 import {
     PRIMITIVE_LINES,
+    SEMANTIC_COLOR,
+    SEMANTIC_POSITION,
     Entity,
     Mesh,
     MeshInstance,
@@ -42,8 +44,12 @@ class CameraPoseGizmos extends Element {
 
         this.material = new ShaderMaterial({
             uniqueName: 'cameraPoseGizmoMaterial',
-            vertexGLSL: vertexShader,
-            fragmentGLSL: fragmentShader
+            attributes: {
+                vertex_position: SEMANTIC_POSITION,
+                vertex_color: SEMANTIC_COLOR
+            },
+            vertexWGSL: vertexShader,
+            fragmentWGSL: fragmentShader
         });
         this.material.depthWrite = true;
         this.material.depthTest = true;
@@ -93,12 +99,15 @@ class CameraPoseGizmos extends Element {
         const { scene } = this;
         const visible = scene.events.invoke('camera.showPoses') && scene.camera.renderOverlays;
 
-        this.entity.enabled = visible;
-
         if (visible && this.dirty) {
             this.dirty = false;
             this.rebuildMesh();
         }
+
+        // with no poses the mesh has never been given a vertex buffer, and a
+        // count-0 non-instanced draw is still submitted and still validates its
+        // attributes - so stay disabled until there is geometry
+        this.entity.enabled = visible && this.mesh.primitive[0].count > 0;
     }
 
     private rebuildMesh() {

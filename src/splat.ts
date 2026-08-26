@@ -1,24 +1,20 @@
 import {
-    ADDRESS_CLAMP_TO_EDGE,
-    FILTER_NEAREST,
-    PIXELFORMAT_R8,
-    PIXELFORMAT_R16U,
     Asset,
     BoundingBox,
     Color,
     Entity,
-    GSplatData,
-    GSplatResource,
     Mat4,
     Quat,
-    Texture,
     Vec3
 } from 'playcanvas';
 
+import { ColorGrade, createGradeTerms, gradeTerms } from './color-grade';
+import { ColorPalette } from './color-palette';
 import { Element, ElementType } from './element';
+import { GaussianInstances } from './gaussian-instances';
+import { IndexRanges } from './index-ranges';
 import { Serializer } from './serializer';
-import { vertexShader, fragmentShader, gsplatCenter } from './shaders/splat-shader';
-import { State, SplatState } from './splat-state';
+import { EditorSplatResource } from './splat-resource';
 import { Transform } from './transform';
 import { TransformPalette } from './transform-palette';
 
@@ -42,35 +38,28 @@ const boundingPoints =
 
 class Splat extends Element {
     asset: Asset;
-    splatData: GSplatData;
+    resource: EditorSplatResource;
     numSplats = 0;
     numDeleted = 0;
     numLocked = 0;
     numSelected = 0;
     entity: Entity;
     changedCounter = 0;
-    stateTexture: Texture;
-    // encapsulates per-splat state mirror (cpu Uint8Array + gpu Texture).
-    // all writes go through state.setBits/clearBits/toggleBits, then flush().
-    state: SplatState;
-    transformTexture: Texture;
+    // the live edited data: one instance per rendered gaussian, referencing a
+    // row of the immutable static resource. all per-gaussian writes go through
+    // instances.setBits/clearBits/toggleBits/setTransformIndex, then flush().
+    instances: GaussianInstances;
     selectionBoundStorage: BoundingBox;
     localBoundStorage: BoundingBox;
     worldBoundStorage: BoundingBox;
 
     _visible = true;
     transformPalette: TransformPalette;
+    colorPalette: ColorPalette;
 
     selectionAlpha = 1;
 
     _name = '';
-    _tintClr = new Color(1, 1, 1);
-    _temperature = 0;
-    _saturation = 1;
-    _brightness = 0;
-    _blackPoint = 0;
-    _whitePoint = 1;
-    _transparency = 1;
 
     measurePoints: Vec3[] = [];
     measureSelection = -1;
@@ -86,12 +75,13 @@ class Splat extends Element {
     localFrameOrigin = new Vec3();
     localFrame = new Quat();
 
-    rebuildMaterial: (bands: number) => void;
-
-    constructor(asset: Asset, rotation: Quat) {
+    // `instances` creates a layer over a subset of an existing layer's instances,
+    // sharing the asset's static data (duplicate / separate). Ownership of the
+    // list transfers here. Omit it for a normal load, which takes every row.
+    constructor(asset: Asset, rotation: Quat, instances?: GaussianInstances) {
         super(ElementType.splat);
 
-        const { device } = asset.resource as GSplatResource;
+        const { device } = asset.resource as EditorSplatResource;
 
         // create the entity once. its transform persists across frame swaps so
         // an animated sequence can replace its data without losing the user's
@@ -100,43 +90,30 @@ class Splat extends Element {
 
         this.selectionBoundStorage = new BoundingBox();
 
-        // create the transform palette (reused across frame swaps; index 0 is identity)
+        // create the palettes (reused across frame swaps; entry 0 is the identity
+        // transform / grade)
         this.transformPalette = new TransformPalette(device);
-
-        // rebuilds material chunks/params. reads the *current* gsplat instance and
-        // state/transform textures so it remains valid after a replaceData swap
-        // (the 'view.bands' listener registered in add() keeps pointing at it).
-        this.rebuildMaterial = (bands: number) => {
-            const instance = this.entity.gsplat.instance;
-            const { material } = instance;
-            const { glsl } = material.shaderChunks;
-            glsl.set('gsplatVS', vertexShader);
-            glsl.set('gsplatPS', fragmentShader);
-            glsl.set('gsplatCenterVS', gsplatCenter);
-
-            material.setDefine('SH_BANDS', `${Math.min(bands, (instance.resource as GSplatResource).shBands)}`);
-            material.setParameter('splatState', this.stateTexture);
-            material.setParameter('splatTransform', this.transformTexture);
-            material.update();
-        };
+        this.colorPalette = new ColorPalette(device);
 
         // bind the initial frame's data, applying the file's load rotation
-        this.bindAsset(asset, rotation);
+        this.bindAsset(asset, rotation, instances);
     }
 
-    // bind a gsplat asset onto this element's entity: creates the gsplat
-    // component, the per-splat state/transform channels and their gpu textures,
-    // and caches the instance bounds. When `rotation` is supplied (initial load)
+    // bind a gsplat asset to this element: creates the per-splat state/transform
+    // channels and their gpu textures. When `rotation` is supplied (initial load)
     // the entity rotation is set; on a frame swap it is omitted so the user's
     // transform is preserved.
-    private bindAsset(asset: Asset, rotation?: Quat) {
-        const splatResource = asset.resource as GSplatResource;
-        const splatData = splatResource.gsplatData as GSplatData;
+    private bindAsset(asset: Asset, rotation?: Quat, instances?: GaussianInstances) {
+        const splatResource = asset.resource as EditorSplatResource;
         const { device } = splatResource;
 
         this.asset = asset;
-        this.splatData = splatData;
-        this.numSplats = splatData.numSplats;
+        this.resource = splatResource;
+        this.numSplats = splatResource.numSplats;
+
+        // this layer now depends on the static data staying loaded; released in
+        // destroy() and when a sequence frame swap drops the old asset
+        splatResource.acquire();
 
         // name and orientation are set on the initial bind only; a frame swap
         // (replaceData, no rotation) keeps the element's name and transform
@@ -145,69 +122,14 @@ class Splat extends Element {
             this.entity.setLocalRotation(rotation);
         }
 
-        this.entity.addComponent('gsplat', {
-            asset,
-            unified: false
-        });
+        // a shared-data layer arrives with its instances already built; otherwise
+        // build the identity list over this frame's rows, seeded with the state
+        // column the file carried (if any)
+        this.instances = instances ??
+            new GaussianInstances(device, splatResource.numRows, splatResource.initialState);
 
-        const instance = this.entity.gsplat.instance;
-
-        // added per-splat state channel
-        // bit 1: selected
-        // bit 2: deleted
-        // bit 3: locked
-        if (!splatData.getProp('state')) {
-            splatData.getElement('vertex').properties.push({
-                type: 'uchar',
-                name: 'state',
-                storage: new Uint8Array(splatData.numSplats),
-                byteSize: 1
-            });
-        }
-
-        // per-splat transform matrix
-        splatData.getElement('vertex').properties.push({
-            type: 'ushort',
-            name: 'transform',
-            storage: new Uint16Array(splatData.numSplats),
-            byteSize: 2
-        });
-
-        const { x: width, y: height } = (splatResource as any).textureDimensions;
-
-        // pack spherical harmonic data
-        const createTexture = (name: string, format: number) => {
-            return new Texture(device, {
-                name: name,
-                width: width,
-                height: height,
-                format: format,
-                mipmaps: false,
-                minFilter: FILTER_NEAREST,
-                magFilter: FILTER_NEAREST,
-                addressU: ADDRESS_CLAMP_TO_EDGE,
-                addressV: ADDRESS_CLAMP_TO_EDGE
-            });
-        };
-
-        // create the state texture and the SplatState mirror that owns it.
-        // splatData.getProp('state') aliases state.data so existing read-only
-        // consumers (serialize, status-bar, etc) keep working unchanged.
-        this.stateTexture = createTexture('splatState', PIXELFORMAT_R8);
-        this.state = new SplatState(splatData.getProp('state') as Uint8Array, this.stateTexture);
-        this.transformTexture = createTexture('splatTransform', PIXELFORMAT_R16U);
-
-        this.localBoundStorage = instance.resource.aabb;
-        // @ts-ignore
-        this.worldBoundStorage = instance.meshInstance._aabb;
-
-        // @ts-ignore
-        instance.meshInstance._updateAabb = false;
-
-        // when sort changes, re-render the scene
-        instance.sorter.on('updated', () => {
-            this.changedCounter++;
-        });
+        this.localBoundStorage = splatResource.aabb.clone();
+        this.worldBoundStorage = new BoundingBox();
     }
 
     // wait for the next scene render to complete, with a safety timeout so a
@@ -234,63 +156,36 @@ class Splat extends Element {
     }
 
     // swap in a new frame's gsplat data while preserving this element's identity,
-    // transform and visual properties. used by animated sequence playback so each
-    // frame doesn't recreate the whole element.
-    //
-    // The gsplat lives on this.entity (read in many places), so we can't double
-    // buffer on a child. Instead we bind the new frame to a *fresh* entity, sort
-    // it, and let it render once alongside the still-present old entity before
-    // destroying the old one. This overlap avoids a blank/unsorted frame
-    // flickering on screen during the swap (the old frame masks the new one's
-    // first sort), matching the previous per-frame load behaviour. The user's
-    // transform is carried across so it persists.
+    // transform and visual properties.
     async replaceData(asset: Asset) {
-        const oldEntity = this.entity;
         const oldAsset = this.asset;
-        const oldStateTexture = this.stateTexture;
-        const oldTransformTexture = this.transformTexture;
+        const oldResource = this.resource;
+        const oldInstances = this.instances;
 
-        // carry the current transform onto the new entity
-        const position = oldEntity.getLocalPosition().clone();
-        const rotation = oldEntity.getLocalRotation().clone();
-        const scale = oldEntity.getLocalScale().clone();
-
-        this.entity = new Entity('splatEntity');
-        this.entity.setLocalPosition(position);
-        this.entity.setLocalRotation(rotation);
-        this.entity.setLocalScale(scale);
-
-        // bind the new frame (no rotation: transform already applied above)
+        // no rotation: preserve the entity transform
         this.bindAsset(asset);
 
-        // add the new entity to the scene and configure its instance
-        this.scene.contentRoot.addChild(this.entity);
-        this.entity.gsplat.layers = [this.scene.splatLayer.id];
-        this.rebuildMaterial(this.scene.events.invoke('view.bands'));
-
-        // refresh gpu state/counts/bounds, then wait for the new frame to render
-        // before removing the old entity, which keeps the previous frame on screen
-        // in the meantime. Skip the wait during offline video render
+        // refresh gpu state/counts/bounds, then wait for the new frame to render.
+        // Skip the wait during offline video render
         // (lockedRenderMode): renders are gated on scene.lockedRender there, so
         // blocking on a render would deadlock — and the render loop sorts+captures
         // each frame deterministically anyway.
-        await this.updateState(State.deleted);
+        await this.updateState();
         if (!this.scene.lockedRenderMode) {
             await this.waitForRender();
         }
 
-        // notify dependents (e.g. the centers overlay, which parents itself under
-        // this.entity) to re-bind to the new entity/instance before the old entity
-        // is destroyed — otherwise they're torn down with it and never re-attach
-        // (no selection.changed fires on a frame swap).
+        // notify dependents to bind the new textures
         this.scene.events.fire('splat.replaced', this);
 
-        // tear down the previous frame
-        oldEntity.destroy();
-        oldStateTexture.destroy();
-        oldTransformTexture.destroy();
-        oldAsset.registry?.remove(oldAsset);
-        oldAsset.unload();
+        // tear down the previous frame. Another layer may share the frame's static
+        // data (it can be duplicated or separated out of a sequence), so only the
+        // last layer to let go unloads it.
+        oldInstances.destroy();
+        if (oldResource.release()) {
+            oldAsset.registry?.remove(oldAsset);
+            oldAsset.unload();
+        }
 
         this.changedCounter++;
         this.scene.forceRender = true;
@@ -298,72 +193,50 @@ class Splat extends Element {
 
     destroy() {
         super.destroy();
+        this.instances.destroy();
+        this.transformPalette.destroy();
+        this.colorPalette.destroy();
         this.entity.destroy();
-        this.asset.registry.remove(this.asset);
-        this.asset.unload();
+        // layers can share static data, so the asset outlives this layer unless
+        // this was the last reference to it
+        if (this.resource.release()) {
+            this.asset.registry.remove(this.asset);
+            this.asset.unload();
+        }
     }
 
-    async updateState(changedState = State.selected) {
-        // uploads dirty range + refreshes counts in one pass.
-        this.state.flush();
-        this.numSplats = this.state.data.length - this.state.numDeleted;
-        this.numLocked = this.state.numLocked;
-        this.numSelected = this.state.numSelected;
-        this.numDeleted = this.state.numDeleted;
+    async updateState() {
+        // uploads dirty ranges; counts are maintained by the mutators.
+        this.instances.flush();
+        this.numSplats = this.instances.count;
+        this.numLocked = this.instances.numLocked;
+        this.numSelected = this.instances.numSelected;
+        this.numDeleted = this.instances.numRemoved;
 
-        // handle splats being added or removed
-        if (changedState & State.deleted) {
-            await this.updateSorting();
-        } else {
-            await this.updateLocalBounds();
-        }
+        // an edit may have resized the list, which the renderer's placement caches
+        this.scene.projectedSplatRenderer.replace(this);
+        await this.updateLocalBounds();
 
         this.scene.forceRender = true;
         this.scene.events.fire('splat.stateChanged', this);
     }
 
+    // colour palette index edits: like updatePositions but no bounds to recompute,
+    // so nothing here needs awaiting
+    updateColors() {
+        this.instances.flush();
+
+        this.scene.forceRender = true;
+        this.scene.events.fire('splat.colorsChanged', this);
+    }
+
     async updatePositions() {
-        const data = await this.scene.dataProcessor.calcPositions(this);
-
-        // update the splat centers which are used for render-time sorting
-        const state = this.splatData.getProp('state') as Uint8Array;
-        const { sorter } = this.entity.gsplat.instance;
-        const { centers } = sorter;
-        for (let i = 0; i < this.splatData.numSplats; ++i) {
-            if (state[i] === State.selected) {
-                centers[i * 3 + 0] = data[i * 4];
-                centers[i * 3 + 1] = data[i * 4 + 1];
-                centers[i * 3 + 2] = data[i * 4 + 2];
-            }
-        }
-
-        await this.updateSorting();
+        // palette index edits mark dirty spans; get them onto the GPU
+        this.instances.flush();
+        await this.updateLocalBounds();
 
         this.scene.forceRender = true;
         this.scene.events.fire('splat.positionsChanged', this);
-    }
-
-    async updateSorting() {
-        const state = this.splatData.getProp('state') as Uint8Array;
-
-        let mapping;
-
-        // create a sorter mapping to remove deleted splats
-        if (this.numSplats !== state.length) {
-            mapping = new Uint32Array(this.numSplats);
-            let idx = 0;
-            for (let i = 0; i < state.length; ++i) {
-                if ((state[i] & State.deleted) === 0) {
-                    mapping[idx++] = i;
-                }
-            }
-        }
-
-        // update sorting instance
-        this.entity.gsplat.instance.sorter.setMapping(mapping);
-
-        // recalculate bounds after sorting changes
-        await this.updateLocalBounds();
     }
 
     get worldTransform() {
@@ -385,95 +258,90 @@ class Splat extends Element {
         return (this.asset.file as any).filename;
     }
 
-    calcSplatWorldPosition(splatId: number, result: Vec3) {
-        if (splatId >= this.splatData.numSplats) {
-            return false;
-        }
-
-        // use centers data, which are updated when edits occur
-        const { sorter } = this.entity.gsplat.instance;
-        const { centers } = sorter;
-
-        result.set(
-            centers[splatId * 3 + 0],
-            centers[splatId * 3 + 1],
-            centers[splatId * 3 + 2]
-        );
-
-        this.worldTransform.transformPoint(result, result);
-
-        return true;
-    }
-
     async add() {
         // add the entity to the scene
         this.scene.contentRoot.addChild(this.entity);
 
-        // assign splat to the dedicated splat layer (rendered by splat camera with MRT)
-        this.entity.gsplat.layers = [this.scene.splatLayer.id];
-
-        this.scene.events.on('view.bands', this.rebuildMaterial, this);
-        this.rebuildMaterial(this.scene.events.invoke('view.bands'));
+        this.scene.projectedSplatRenderer.add(this);
 
         // we must update state in case the state data was loaded from ply
         await this.updateState();
     }
 
     remove() {
-        this.scene.events.off('view.bands', this.rebuildMaterial, this);
+        this.scene.projectedSplatRenderer.remove(this);
 
         this.scene.contentRoot.removeChild(this.entity);
         this.scene.boundDirty = true;
+    }
+
+    // Create a new layer over a subset of this layer's instances, for duplicate
+    // and separate. The new layer *shares* this layer's static data - not one
+    // gaussian is copied, so the cost is the ~14 bytes per instance of the list -
+    // and inherits the per-layer state that makes it look identical. Keep this in
+    // step with serialize() below: both enumerate the same per-layer state.
+    createLayer(ranges: IndexRanges, name: string) {
+        const instances = GaussianInstances.fromSubset(this.resource.device, this.instances, ranges);
+
+        // the entity transform is inherited rather than baked into the data, which
+        // is what lets the static rows be shared
+        const layer = new Splat(this.asset, this.entity.getLocalRotation(), instances);
+        layer.entity.setLocalPosition(this.entity.getLocalPosition());
+        layer.entity.setLocalScale(this.entity.getLocalScale());
+        layer.localFrameOrigin.copy(this.localFrameOrigin);
+        layer.localFrame.copy(this.localFrame);
+
+        // assigned through the backing fields: the public setters notify the scene,
+        // and this layer has not been added to one yet
+        layer._name = name;
+        layer._visible = this._visible;
+
+        // the copied instances still index *this* layer's palettes, so give the new
+        // layer its own entries for the transforms and grades it actually
+        // references. Entry 0 is the identity in every palette, so instances that
+        // reference it need no work.
+        const transformMap = new Map<number, number>();
+        const colorMap = new Map<number, number>();
+        const transform = new Mat4();
+        const terms = createGradeTerms();
+        for (let i = 0; i < instances.count; ++i) {
+            const transformIndex = instances.transformIndex(i);
+            if (transformIndex !== 0) {
+                let mapped = transformMap.get(transformIndex);
+                if (mapped === undefined) {
+                    mapped = layer.transformPalette.alloc();
+                    this.transformPalette.getTransform(transformIndex, transform);
+                    layer.transformPalette.setTransform(mapped, transform);
+                    transformMap.set(transformIndex, mapped);
+                }
+                instances.setTransformIndex(i, mapped);
+            }
+
+            const colorIndex = instances.colorIndex(i);
+            if (colorIndex !== 0) {
+                let mapped = colorMap.get(colorIndex);
+                if (mapped === undefined) {
+                    mapped = layer.colorPalette.alloc();
+                    this.colorPalette.getEntry(colorIndex, terms);
+                    layer.colorPalette.setEntry(mapped, terms);
+                    colorMap.set(colorIndex, mapped);
+                }
+                instances.setColorIndex(i, mapped);
+            }
+        }
+
+        return layer;
     }
 
     serialize(serializer: Serializer) {
         serializer.packa(this.entity.getWorldTransform().data);
         serializer.pack(this.changedCounter);
         serializer.pack(this.visible);
-        serializer.pack(this.tintClr.r, this.tintClr.g, this.tintClr.b);
-        serializer.pack(this.temperature, this.saturation, this.brightness, this.blackPoint, this.whitePoint, this.transparency);
     }
 
     onPreRender() {
         const events = this.scene.events;
         const selected = this.scene.camera.renderOverlays && events.invoke('selection') === this;
-        const cameraMode = events.invoke('camera.mode');
-        const cameraOverlay = events.invoke('camera.overlay');
-
-        // configure rings rendering
-        const material = this.entity.gsplat.instance.material;
-        material.setParameter('outlineMode', events.invoke('view.outlineSelection') ? 1 : 0);
-        material.setParameter('ringSize', (selected && cameraOverlay && cameraMode === 'rings') ? 0.04 : 0);
-
-        // configure colors
-        const selectedClr = events.invoke('selectedClr');
-        const unselectedClr = events.invoke('unselectedClr');
-        const lockedClr = events.invoke('lockedClr');
-
-        if (!selected) {
-            material.setParameter('selectedClr', [0, 0, 0, 0]);
-        } else if (events.invoke('view.outlineSelection')) {
-            material.setParameter('selectedClr', [0, 0, 0, 0]);
-        } else {
-            material.setParameter('selectedClr', [selectedClr.r, selectedClr.g, selectedClr.b, selectedClr.a * this.selectionAlpha]);
-        }
-        material.setParameter('unselectedClr', [unselectedClr.r, unselectedClr.g, unselectedClr.b, unselectedClr.a]);
-        material.setParameter('lockedClr', [lockedClr.r, lockedClr.g, lockedClr.b, lockedClr.a]);
-
-        // combine black pointer, white point and brightness
-        const offset = -this.blackPoint + this.brightness;
-        const scale = 1 / (this.whitePoint - this.blackPoint);
-
-        material.setParameter('clrOffset', [offset, offset, offset]);
-        material.setParameter('clrScale', [
-            scale * this.tintClr.r * (1 + this.temperature),
-            scale * this.tintClr.g,
-            scale * this.tintClr.b * (1 - this.temperature),
-            this.transparency
-        ]);
-
-        material.setParameter('saturation', this.saturation);
-        material.setParameter('transformPalette', this.transformPalette.texture);
 
         if (this.visible && selected) {
             // render bounding box
@@ -497,8 +365,6 @@ class Splat extends Element {
     }
 
     focalPoint() {
-        // GSplatData has a function for calculating an weighted average of the splat positions
-        // to get a focal point for the camera, but we use bound center instead
         return this.worldBound.center;
     }
 
@@ -557,83 +423,6 @@ class Splat extends Element {
         return this._visible;
     }
 
-    set tintClr(value: Color) {
-        if (!this._tintClr.equals(value)) {
-            this._tintClr.set(value.r, value.g, value.b);
-            this.scene.events.fire('splat.tintClr', this);
-        }
-    }
-
-    get tintClr() {
-        return this._tintClr;
-    }
-
-    set temperature(value: number) {
-        if (value !== this._temperature) {
-            this._temperature = value;
-            this.scene.events.fire('splat.temperature', this);
-        }
-    }
-
-    get temperature() {
-        return this._temperature;
-    }
-
-    set saturation(value: number) {
-        if (value !== this._saturation) {
-            this._saturation = value;
-            this.scene.events.fire('splat.saturation', this);
-        }
-    }
-
-    get saturation() {
-        return this._saturation;
-    }
-
-    set brightness(value: number) {
-        if (value !== this._brightness) {
-            this._brightness = value;
-            this.scene.events.fire('splat.brightness', this);
-        }
-    }
-
-    get brightness() {
-        return this._brightness;
-    }
-
-    set blackPoint(value: number) {
-        if (value !== this._blackPoint) {
-            this._blackPoint = value;
-            this.scene.events.fire('splat.blackPoint', this);
-        }
-    }
-
-    get blackPoint() {
-        return this._blackPoint;
-    }
-
-    set whitePoint(value: number) {
-        if (value !== this._whitePoint) {
-            this._whitePoint = value;
-            this.scene.events.fire('splat.whitePoint', this);
-        }
-    }
-
-    get whitePoint() {
-        return this._whitePoint;
-    }
-
-    set transparency(value: number) {
-        if (value !== this._transparency) {
-            this._transparency = value;
-            this.scene.events.fire('splat.transparency', this);
-        }
-    }
-
-    get transparency() {
-        return this._transparency;
-    }
-
     // get pivot position/rotation/scale (caller should have awaited operation that changed data)
     getPivot(result: Transform) {
         const { entity } = this;
@@ -658,7 +447,6 @@ class Splat extends Element {
     docSerialize() {
         const pack3 = (v: Vec3) => [v.x, v.y, v.z];
         const pack4 = (q: Quat) => [q.x, q.y, q.z, q.w];
-        const packC = (c: Color) => [c.r, c.g, c.b, c.a];
         return {
             name: this.name,
             position: pack3(this.entity.getLocalPosition()),
@@ -666,19 +454,12 @@ class Splat extends Element {
             scale: pack3(this.entity.getLocalScale()),
             localFrameOrigin: pack3(this.localFrameOrigin),
             localFrame: pack4(this.localFrame),
-            visible: this.visible,
-            tintClr: packC(this.tintClr),
-            temperature: this.temperature,
-            saturation: this.saturation,
-            brightness: this.brightness,
-            blackPoint: this.blackPoint,
-            whitePoint: this.whitePoint,
-            transparency: this.transparency
+            visible: this.visible
         };
     }
 
     docDeserialize(doc: any) {
-        const { name, position, rotation, scale, visible, tintClr, temperature, saturation, brightness, blackPoint, whitePoint, transparency } = doc;
+        const { name, position, rotation, scale, visible } = doc;
 
         this.name = name;
         this.move(new Vec3(position), new Quat(rotation), new Vec3(scale));
@@ -686,13 +467,38 @@ class Splat extends Element {
         this.localFrameOrigin = doc.localFrameOrigin ? new Vec3(doc.localFrameOrigin) : new Vec3();
         this.localFrame = doc.localFrame ? new Quat(doc.localFrame) : new Quat();
         this.visible = visible;
-        this.tintClr = new Color(tintClr[0], tintClr[1], tintClr[2], tintClr[3]);
-        this.temperature = temperature ?? 0;
-        this.saturation = saturation ?? 1;
-        this.brightness = brightness;
-        this.blackPoint = blackPoint;
-        this.whitePoint = whitePoint;
-        this.transparency = transparency;
+        this.migrateLayerGrade(doc);
+    }
+
+    // Documents up to v0 carried one colour grade for the whole layer. Colour is
+    // per-gaussian now, so fold a saved grade into a single palette entry that
+    // every instance references: exactly equivalent, costs one entry, and it
+    // becomes editable and resettable through the colour panel like any other.
+    // v1 documents don't write these fields, so this is a no-op for them.
+    private migrateLayerGrade(doc: any) {
+        const tintClr = doc.tintClr ?
+            new Color(doc.tintClr[0], doc.tintClr[1], doc.tintClr[2]) : Color.WHITE;
+        const params = {
+            tintClr,
+            temperature: doc.temperature ?? 0,
+            saturation: doc.saturation ?? 1,
+            brightness: doc.brightness ?? 0,
+            blackPoint: doc.blackPoint ?? 0,
+            whitePoint: doc.whitePoint ?? 1,
+            transparency: doc.transparency ?? 1
+        };
+
+        const grade = new ColorGrade(gradeTerms(params, createGradeTerms()));
+        if (!grade.hasTint && !grade.hasTransparency) {
+            return;
+        }
+
+        const index = this.colorPalette.alloc();
+        this.colorPalette.setEntry(index, gradeTerms(params, createGradeTerms()));
+        for (let i = 0; i < this.instances.count; ++i) {
+            this.instances.setColorIndex(i, index);
+        }
+        this.instances.flush();
     }
 }
 

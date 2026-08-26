@@ -100,15 +100,15 @@ class SplatsTransformHandler implements TransformHandler {
         this.pivotStart.copy(transform);
 
         // allocate a new transform for the current selection
-        const state = splat.splatData.getProp('state') as Uint8Array;
-        const indices = splat.transformTexture.lock() as Uint16Array;
+        const { instances } = splat;
+        const state = instances.flags;
 
         const { paletteMap } = this;
         paletteMap.clear();
 
-        for (let i = 0; i < state.length; ++i) {
+        for (let i = 0; i < instances.count; ++i) {
             if (state[i] === State.selected) {
-                const oldIdx = indices[i];
+                const oldIdx = instances.transformIndex(i);
                 let newIdx;
                 if (!paletteMap.has(oldIdx)) {
                     newIdx = transformPalette.alloc();
@@ -117,11 +117,11 @@ class SplatsTransformHandler implements TransformHandler {
                     newIdx = paletteMap.get(oldIdx);
                 }
 
-                indices[i] = newIdx;
+                instances.setTransformIndex(i, newIdx);
             }
         }
 
-        splat.transformTexture.unlock();
+        instances.flush();
 
         // initialize transforms
         this.paletteMap.forEach((newIdx, oldIdx) => {

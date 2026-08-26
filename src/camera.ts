@@ -50,6 +50,9 @@ const v4 = new Vec4();
 // modulo dealing with negative numbers
 const mod = (n: number, m: number) => ((n % m) + m) % m;
 
+// scene.resolveMode -> the blit shader's quadResolve enum
+const RESOLVE_UNIFORM = { none: 0, old: 1, new: 2 };
+
 class Camera extends Element {
     /**
      * Calculate the forward vector given azimuth and elevation angles.
@@ -334,8 +337,15 @@ class Camera extends Element {
         this.finalPass = new SimpleRenderPass(device,
             new ShaderQuad(device, vertexShader, fragmentShader, 'final-blit'), {
                 vars: () => {
+                    const gd = this.scene.graphicsDevice;
+                    const ts = this.targetSize;
                     return {
-                        srcTexture: this.mainTarget.colorBuffer
+                        srcTexture: this.mainTarget.colorBuffer,
+                        // upscale the (possibly lower-res) target to the backbuffer
+                        blitScale: [ts.width / gd.width, ts.height / gd.height],
+                        // stochastic frames composite their samples through the
+                        // quad resolve; settled frames blit unfiltered
+                        quadResolve: this.scene.movingRender ? RESOLVE_UNIFORM[this.scene.resolveMode] : 0
                     };
                 }
             });
@@ -640,15 +650,11 @@ class Camera extends Element {
         vec.sub2(bound.center, cameraPosition);
         const dist = vec.dot(forwardVec);
 
-        if (dist > 0) {
-            this.far = dist + boundRadius;
-            // if camera is placed inside the sphere bound calculate near based far
-            this.near = Math.max(1e-6, dist < boundRadius ? this.far / (1024 * 16) : dist - boundRadius);
-        } else {
-            // if the scene is behind the camera
-            this.far = boundRadius * 2;
-            this.near = this.far / (1024 * 16);
-        }
+        const far = Math.max(dist + boundRadius, 1e-2);
+        const near = Math.max(dist - boundRadius, far / (1024 * 16));
+
+        this.far = far;
+        this.near = Math.min(1.0, near);
     }
 
     onPreRender() {

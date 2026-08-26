@@ -1,121 +1,109 @@
-const vertexShader = /* glsl */ `
-    attribute vec3 vertex_position;
+const vertexShader = /* wgsl */`
+attribute vertex_position: vec3f;
+uniform matrix_model: mat4x4f;
+uniform matrix_viewProjection: mat4x4f;
 
-    uniform mat4 matrix_model;
-    uniform mat4 matrix_viewProjection;
-
-    void main() {
-        gl_Position = matrix_viewProjection * matrix_model * vec4(vertex_position, 1.0);
-    }
+@vertex
+fn vertexMain(input: VertexInput) -> VertexOutput {
+    var output: VertexOutput;
+    output.position = uniform.matrix_viewProjection * uniform.matrix_model * vec4f(input.vertex_position, 1.0);
+    return output;
+}
 `;
 
-const fragmentShader = /* glsl */ `
-    // ray-box intersection in box space
-    bool intersectBox(out float t0, out float t1, out int axis0, out int axis1, vec3 pos, vec3 dir, vec3 boxCen, vec3 boxLen)
-    {
-        bvec3 validDir = notEqual(dir, vec3(0.0));
-        vec3 absDir = abs(dir);
-        vec3 signDir = sign(dir);
-        vec3 m = vec3(
-            validDir.x ? 1.0 / absDir.x : 0.0,
-            validDir.y ? 1.0 / absDir.y : 0.0,
-            validDir.z ? 1.0 / absDir.z : 0.0
-        ) * signDir;
+const fragmentShader = /* wgsl */`
+uniform matrix_model: mat4x4f;
+uniform matrix_viewProjection: mat4x4f;
+uniform boxInvMat: mat4x4f;
+uniform boxLen: vec3f;
+uniform near_origin: vec3f;
+uniform near_x: vec3f;
+uniform near_y: vec3f;
+uniform far_origin: vec3f;
+uniform far_x: vec3f;
+uniform far_y: vec3f;
+uniform targetSize: vec2f;
+var blueNoiseTex32: texture_2d<f32>;
 
-        vec3 n = m * (pos - boxCen);
-        vec3 k = abs(m) * boxLen;
+struct BoxHit {
+    hit: bool,
+    nearDistance: f32,
+    farDistance: f32,
+    nearAxis: i32,
+    farAxis: i32
+}
 
-        vec3 v0 = -n - k;
-        vec3 v1 = -n + k;
+fn intersectBox(position: vec3f, direction: vec3f, center: vec3f, halfExtents: vec3f) -> BoxHit {
+    let validDirection = direction != vec3f(0.0);
+    let reciprocal = select(vec3f(0.0), vec3f(1.0) / abs(direction), validDirection) * sign(direction);
+    let n = reciprocal * (position - center);
+    let k = abs(reciprocal) * halfExtents;
+    var nearValues = -n - k;
+    var farValues = -n + k;
+    nearValues = select(vec3f(-1e7), nearValues, validDirection);
+    farValues = select(vec3f(1e7), farValues, validDirection);
 
-        // replace invalid axes with -inf and +inf so the tests below ignore them
-        v0 = mix(vec3(-1.0 / 0.0000001), v0, validDir);
-        v1 = mix(vec3(1.0 / 0.0000001), v1, validDir);
+    let nearAxis = select(select(2, 1, nearValues.y > nearValues.z), select(2, 0, nearValues.x > nearValues.z), nearValues.x > nearValues.y);
+    let farAxis = select(select(2, 1, farValues.y < farValues.z), select(2, 0, farValues.x < farValues.z), farValues.x < farValues.y);
+    let nearDistance = nearValues[nearAxis];
+    let farDistance = farValues[farAxis];
+    return BoxHit(nearDistance <= farDistance && farDistance >= 0.0, nearDistance, farDistance, nearAxis, farAxis);
+}
 
-        axis0 = (v0.x > v0.y) ? ((v0.x > v0.z) ? 0 : 2) : ((v0.y > v0.z) ? 1 : 2);
-        axis1 = (v1.x < v1.y) ? ((v1.x < v1.z) ? 0 : 2) : ((v1.y < v1.z) ? 1 : 2);
+fn calcDepth(position: vec3f) -> f32 {
+    let projected = uniform.matrix_viewProjection * vec4f(position, 1.0);
+    return projected.z / projected.w;
+}
 
-        t0 = v0[axis0];
-        t1 = v1[axis1];
+fn writeDepth(alpha: f32) -> bool {
+    let size = vec2i(textureDimensions(blueNoiseTex32, 0));
+    return alpha > textureLoad(blueNoiseTex32, vec2i(pcPosition.xy) % size, 0).y;
+}
 
-        if (t0 > t1 || t1 < 0.0) {
-            return false;
-        }
+fn strips(position: vec3f, axis: i32) -> bool {
+    var stripe = fract(position * 2.0 + vec3f(0.015)) < vec3f(0.03);
+    stripe[axis] = false;
+    return any(stripe);
+}
 
-        return true;
+@fragment
+fn fragmentMain(input: FragmentInput) -> FragmentOutput {
+    var output: FragmentOutput;
+    let clip = vec2f(
+        pcPosition.x / uniform.targetSize.x,
+        1.0 - pcPosition.y / uniform.targetSize.y
+    );
+    let worldNear = uniform.near_origin + uniform.near_x * clip.x + uniform.near_y * clip.y;
+    let worldFar = uniform.far_origin + uniform.far_x * clip.x + uniform.far_y * clip.y;
+    let localNear = (uniform.boxInvMat * vec4f(worldNear, 1.0)).xyz;
+    let localFar = (uniform.boxInvMat * vec4f(worldFar, 1.0)).xyz;
+    let rayDirection = normalize(localFar - localNear);
+    let hit = intersectBox(localNear, rayDirection, vec3f(0.0), vec3f(0.5));
+    if (!hit.hit) {
+        output.color = vec4f(1.0, 0.0, 0.0, 0.6);
+        return output;
     }
 
-    float calcDepth(in vec3 pos, in mat4 viewProjection) {
-        vec4 v = viewProjection * vec4(pos, 1.0);
-        return (v.z / v.w) * 0.5 + 0.5;
+    let frontLocal = localNear + rayDirection * hit.nearDistance;
+    let front = hit.nearDistance > 0.0 && strips(frontLocal * uniform.boxLen * 2.0, hit.nearAxis);
+    let backLocal = localNear + rayDirection * hit.farDistance;
+    let back = strips(backLocal * uniform.boxLen * 2.0, hit.farAxis);
+
+    if (front) {
+        let frontPosition = (uniform.matrix_model * vec4f(frontLocal, 1.0)).xyz;
+        output.color = vec4f(1.0, 1.0, 1.0, 0.6);
+        output.fragDepth = select(1.0, calcDepth(frontPosition), writeDepth(0.6));
+        return output;
     }
-
-    uniform sampler2D blueNoiseTex32;
-    uniform mat4 matrix_model;
-    uniform mat4 matrix_viewProjection;
-    uniform mat4 boxInvMat;
-    uniform vec3 boxLen;
-
-    uniform vec3 near_origin;
-    uniform vec3 near_x;
-    uniform vec3 near_y;
-
-    uniform vec3 far_origin;
-    uniform vec3 far_x;
-    uniform vec3 far_y;
-
-    uniform vec2 targetSize;
-
-    bool writeDepth(float alpha) {
-        ivec2 uv = ivec2(gl_FragCoord.xy);
-        ivec2 size = textureSize(blueNoiseTex32, 0);
-        return alpha > texelFetch(blueNoiseTex32, uv % size, 0).y;
+    if (back) {
+        let backPosition = (uniform.matrix_model * vec4f(backLocal, 1.0)).xyz;
+        output.color = vec4f(0.0, 0.0, 0.0, 0.6);
+        output.fragDepth = select(1.0, calcDepth(backPosition), writeDepth(0.6));
+        return output;
     }
-
-    bool strips(vec3 pos, int axis) {
-        bvec3 b = lessThan(fract(pos * 2.0 + vec3(0.015)), vec3(0.03));
-        b[axis] = false;
-        return any(b);
-    }
-
-    void main() {
-        vec2 clip = gl_FragCoord.xy / targetSize;
-        vec3 worldNear = near_origin + near_x * clip.x + near_y * clip.y;
-        vec3 worldFar = far_origin + far_x * clip.x + far_y * clip.y;
-
-        // transform the ray into the box's local space, where the box is the
-        // axis-aligned unit cube centered on the origin (the pivot's scale
-        // carries the box lengths)
-        vec3 localNear = (boxInvMat * vec4(worldNear, 1.0)).xyz;
-        vec3 localDir = normalize((boxInvMat * vec4(worldFar, 1.0)).xyz - localNear);
-
-        float t0, t1;
-        int axis0, axis1;
-        if (!intersectBox(t0, t1, axis0, axis1, localNear, localDir, vec3(0.0), vec3(0.5))) {
-            gl_FragColor = vec4(1.0, 0.0, 0.0, 0.6);
-            return;
-        }
-
-        // strips operate on box-metric offsets (local * lengths) so the
-        // 0.5-unit grid spacing is preserved and rotates with the box
-        vec3 frontLocal = localNear + localDir * t0;
-        bool front = t0 > 0.0 && strips(frontLocal * boxLen * 2.0, axis0);
-
-        vec3 backLocal = localNear + localDir * t1;
-        bool back = strips(backLocal * boxLen * 2.0, axis1);
-
-        if (front) {
-            vec3 frontPos = (matrix_model * vec4(frontLocal, 1.0)).xyz;
-            gl_FragColor = vec4(1.0, 1.0, 1.0, 0.6);
-            gl_FragDepth = writeDepth(0.6) ? calcDepth(frontPos, matrix_viewProjection) : 1.0;
-        } else if (back) {
-            vec3 backPos = (matrix_model * vec4(backLocal, 1.0)).xyz;
-            gl_FragColor = vec4(0.0, 0.0, 0.0, 0.6);
-            gl_FragDepth = writeDepth(0.6) ? calcDepth(backPos, matrix_viewProjection) : 1.0;
-        } else {
-            discard;
-        }
-    }
+    discard;
+    return output;
+}
 `;
 
 export { vertexShader, fragmentShader };

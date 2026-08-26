@@ -1,11 +1,15 @@
 import { ZipFileSystem, ZipReadFileSystem } from '@playcanvas/splat-transform';
+import type { Asset, Quat } from 'playcanvas';
 
+import { decodeInstances, encodeInstances, restorePalettes } from './doc-instances';
 import { Events } from './events';
+import { GaussianInstances } from './gaussian-instances';
 import { BrowserFileSystem, BlobReadSource } from './io';
 import { recentFiles } from './recent-files';
 import { Scene } from './scene';
 import { Splat } from './splat';
-import { writeSplatFile } from './splat-serialize';
+import type { EditorSplatResource } from './splat-resource';
+import { writeResourceFile } from './splat-serialize';
 import { Transform } from './transform';
 import { i18n } from './ui/localization';
 
@@ -59,6 +63,13 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     // this file handle is updated as the current document is loaded and saved
     let documentFileHandle: FileSystemFileHandle = null;
 
+    // The zip the current document's resources still read from. A loaded resource
+    // retains a lazy ChunkSource over its PLY - that is what export streams from -
+    // so the archive has to outlive the load and can only be closed once nothing
+    // references it. Closing it at the end of the load made every export from an
+    // opened document fail with 'Source has been closed'.
+    let documentFs: ZipReadFileSystem = null;
+
     // show the user a reset confirmation popup
     const getResetConfirmation = async () => {
         const result = await events.invoke('showPopup', {
@@ -76,10 +87,14 @@ const registerDocEvents = (scene: Scene, events: Events) => {
 
     // reset the scene
     const resetScene = () => {
+        // clear first: the layers and their resources are what still read from the
+        // archive, so the zip is only safe to close once they are gone
         events.fire('scene.clear');
         events.fire('camera.reset');
         events.fire('doc.setName', null);
         documentFileHandle = null;
+        documentFs?.close();
+        documentFs = null;
     };
 
     // load the document from the given file
@@ -97,8 +112,10 @@ const registerDocEvents = (scene: Scene, events: Events) => {
             // below so a failed load can't leave capture suspended.
             events.fire('preferences.suspend');
 
-            // reset the scene
+            // reset the scene. This closes the *previous* document's archive, so
+            // adopt this one only afterwards
             resetScene();
+            documentFs = zipFs;
 
             // read document.json via streaming (only reads what's needed)
             const docSource = await zipFs.createSource('document.json');
@@ -106,18 +123,48 @@ const registerDocEvents = (scene: Scene, events: Events) => {
             docSource.close();
             const document = JSON.parse(new TextDecoder().decode(docData));
 
-            // run through each splat and load it
-            for (let i = 0; i < document.splats.length; ++i) {
-                const filename = `splat_${i}.ply`;
-                const splatSettings = document.splats[i];
+            if ((document.version ?? 0) >= 1) {
+                // v1: the static tier is stored once per resource, and each layer
+                // brings its own instance list and palettes. Layers sharing a
+                // resource share it here too, so a duplicated layer costs nothing
+                // beyond its list.
+                const assets: { asset: Asset, rotation: Quat }[] = [];
+                for (const resource of document.resources) {
+                    assets.push(await scene.assetLoader.loadAsset(resource.filename, zipFs, false, true));
+                }
 
-                // load splat directly from the zip filesystem (streams on-demand)
-                // skipReorder=true because ssproj PLY files are already in morton order
-                const splat = await scene.assetLoader.load(filename, zipFs, false, true);
+                for (const splatSettings of document.splats) {
+                    const { asset, rotation } = assets[splatSettings.resource];
+                    const numRows = (asset.resource as EditorSplatResource).numRows;
 
-                await scene.add(splat);
+                    const source = await zipFs.createSource(splatSettings.instances);
+                    const blob = await source.read().readAll();
+                    source.close();
+                    const records = decodeInstances(blob);
 
-                splat.docDeserialize(splatSettings);
+                    const instances = GaussianInstances.fromRecords(
+                        scene.app.graphicsDevice, numRows, records.sourceRow, records.flags, records.palette
+                    );
+                    const splat = new Splat(asset, rotation, instances);
+                    restorePalettes(records, splat.transformPalette, splat.colorPalette);
+
+                    await scene.add(splat);
+                    splat.docDeserialize(splatSettings);
+                }
+            } else {
+                // v0: one baked PLY per layer, no instance list
+                for (let i = 0; i < document.splats.length; ++i) {
+                    const filename = `splat_${i}.ply`;
+                    const splatSettings = document.splats[i];
+
+                    // load splat directly from the zip filesystem (streams on-demand)
+                    // skipReorder=true because ssproj PLY files are already in morton order
+                    const splat = await scene.assetLoader.load(filename, zipFs, false, true);
+
+                    await scene.add(splat);
+
+                    splat.docDeserialize(splatSettings);
+                }
             }
 
             // FIXME: trigger scene bound calc in a better way
@@ -146,14 +193,61 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 message: `'${error.message ?? error}'`
             });
         } finally {
-            // fire events before cleanup so a throwing close can't leave
-            // preference capture suspended or the spinner running
             events.fire('preferences.resume');
             events.fire('stopSpinner');
-
-            // Clean up resources
-            zipFs.close();
         }
+    };
+
+    // Group layers by the static resource they share and work out, per resource,
+    // which rows are still referenced. The saved file stores each resource's
+    // gaussian data once, so a duplicated layer costs its instance list rather than
+    // a second copy of the scene.
+    //
+    // The union across layers is a correctness requirement, not a size
+    // optimisation: if one layer deleted rows another still references, dropping
+    // them would corrupt that other layer. Rows nothing references are dropped, so
+    // deletions become permanent at save - as they already were.
+    const groupByResource = (splats: Splat[]) => {
+        const groups: { resource: EditorSplatResource, layers: Splat[] }[] = [];
+        const index = new Map<EditorSplatResource, number>();
+        for (const splat of splats) {
+            let at = index.get(splat.resource);
+            if (at === undefined) {
+                at = groups.length;
+                index.set(splat.resource, at);
+                groups.push({ resource: splat.resource, layers: [] });
+            }
+            groups[at].layers.push(splat);
+        }
+
+        return groups.map(({ resource, layers }) => {
+            const referenced = new Uint8Array(resource.numRows);
+            for (const layer of layers) {
+                const { sourceRow, count } = layer.instances;
+                for (let i = 0; i < count; ++i) {
+                    referenced[sourceRow[i]] = 1;
+                }
+            }
+
+            // ascending, so the written order is the retained subsequence of the
+            // resource's own row order - which is morton order, and what the
+            // instance run encoding stays compact under
+            let numRows = 0;
+            for (let row = 0; row < referenced.length; ++row) {
+                if (referenced[row]) numRows++;
+            }
+            const rows = new Uint32Array(numRows);
+            const rowMap = new Uint32Array(resource.numRows);
+            let at = 0;
+            for (let row = 0; row < referenced.length; ++row) {
+                if (referenced[row]) {
+                    rows[at] = row;
+                    rowMap[row] = at;
+                    at++;
+                }
+            }
+            return { resource, layers, rows, rowMap };
+        });
     };
 
     const saveDocument = async (options: { stream?: FileSystemWritableFileStream, filename?: string }) => {
@@ -161,23 +255,34 @@ const registerDocEvents = (scene: Scene, events: Events) => {
 
         try {
             const splats = events.invoke('scene.allSplats') as Splat[];
+            const groups = groupByResource(splats);
+
+            // layer -> the resource file it reads from, and its remapped records
+            const layerInfo = new Map<Splat, { resource: number, records: ArrayBuffer }>();
+            groups.forEach((group, resourceIndex) => {
+                for (const layer of group.layers) {
+                    // remap into the compacted row numbering on a copy: the live
+                    // instance list must keep working after the save
+                    const records = encodeInstances(layer, group.rowMap);
+                    layerInfo.set(layer, { resource: resourceIndex, records });
+                }
+            });
 
             const document = {
-                version: 0,
+                version: 1,
                 camera: scene.camera.docSerialize(),
                 view: events.invoke('docSerialize.view'),
                 poseSets: events.invoke('docSerialize.poseSets'),
                 timeline: events.invoke('docSerialize.timeline'),
-                splats: splats.map(s => s.docSerialize())
-            };
-
-            const serializeSettings = {
-                // even though we support saving selection state, we disable that for now
-                // because including a uint8 array in the document PLY results in slow loading
-                // path.
-                keepStateData: false,
-                keepWorldTransform: true,
-                keepColorTint: true
+                resources: groups.map((group, i) => ({
+                    filename: `resource_${i}.ply`,
+                    numRows: group.rows.length
+                })),
+                splats: splats.map((splat, i) => ({
+                    ...splat.docSerialize(),
+                    resource: layerInfo.get(splat).resource,
+                    instances: `instances_${i}.bin`
+                }))
             };
 
             // Create browser filesystem and zip filesystem
@@ -190,9 +295,16 @@ const registerDocEvents = (scene: Scene, events: Events) => {
             await docWriter.write(new TextEncoder().encode(JSON.stringify(document)));
             await docWriter.close();
 
-            // Write each splat as PLY
+            // Write each resource's static data once, verbatim
+            for (let i = 0; i < groups.length; ++i) {
+                await writeResourceFile(groups[i].resource, groups[i].rows, `resource_${i}.ply`, zipFs);
+            }
+
+            // Write each layer's instance list and palettes
             for (let i = 0; i < splats.length; ++i) {
-                await writeSplatFile([splats[i]], serializeSettings, 'ply', `splat_${i}.ply`, {}, zipFs);
+                const writer = await zipFs.createWriter(`instances_${i}.bin`);
+                await writer.write(new Uint8Array(layerInfo.get(splats[i]).records));
+                await writer.close();
             }
 
             // Close zip (also closes underlying browser writer)

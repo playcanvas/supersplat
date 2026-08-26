@@ -1,243 +1,168 @@
 import {
-    ADDRESS_CLAMP_TO_EDGE,
-    PIXELFORMAT_RGBA32F,
-    SEMANTIC_POSITION,
-    drawQuadWithShader,
+    BUFFERUSAGE_COPY_DST,
+    BUFFERUSAGE_COPY_SRC,
+    SAMPLETYPE_FLOAT,
+    SAMPLETYPE_UINT,
+    SAMPLETYPE_UNFILTERABLE_FLOAT,
+    SHADERLANGUAGE_WGSL,
+    SHADERSTAGE_COMPUTE,
+    UNIFORMTYPE_UINT,
+    BindGroupFormat,
+    BindStorageBufferFormat,
+    BindTextureFormat,
+    BindUniformBufferFormat,
     BoundingBox,
+    Compute,
     GraphicsDevice,
-    RenderTarget,
-    ScopeSpace,
     Shader,
-    ShaderUtils,
-    Texture,
-    Vec3,
-    BlendState
+    StorageBuffer,
+    UniformBufferFormat,
+    UniformFormat,
+    Vec2,
+    Vec3
 } from 'playcanvas';
 
-import { vertexShader, fragmentShader } from '../shaders/bound-shader';
+import { indexToUvWGSL, paletteMatrixWGSL } from '../shaders/palette-chunk';
 import { Splat } from '../splat';
 
-const v1 = new Vec3();
-const v2 = new Vec3();
-const v3 = new Vec3();
-const v4 = new Vec3();
+const WORKGROUP_SIZE = 256;
+const selectedMin = new Vec3();
+const selectedMax = new Vec3();
+const visibleMin = new Vec3();
+const visibleMax = new Vec3();
 
-const resolve = (scope: ScopeSpace, values: any) => {
-    for (const key in values) {
-        scope.resolve(key).setValue(values[key]);
+// fixed reduction width: each thread strides over the instance list and writes
+// one partial, so the readback is a constant size regardless of scene size
+const NUM_THREADS = WORKGROUP_SIZE * 64;
+
+const shaderSource = /* wgsl */`
+struct Uniforms {
+    sourceWidth: u32,
+    numSplats: u32
+}
+
+@group(0) @binding(0) var<storage, read_write> bounds: array<vec4f>;
+@group(0) @binding(1) var<storage, read> instanceSource: array<u32>;
+@group(0) @binding(2) var<storage, read> instanceFlags: array<u32>;
+@group(0) @binding(3) var<storage, read> instancePalette: array<u32>;
+@group(0) @binding(4) var transformA: texture_2d<u32>;
+@group(0) @binding(5) var transformPalette: texture_2d<f32>;
+@group(0) @binding(6) var<uniform> uniforms: Uniforms;
+
+${indexToUvWGSL('sourceCoord', 'uniforms.sourceWidth')}
+${paletteMatrixWGSL}
+
+fn instanceFlagByte(instance: u32) -> u32 {
+    return (instanceFlags[instance >> 2u] >> ((instance & 3u) * 8u)) & 0xffu;
+}
+
+@compute @workgroup_size(${WORKGROUP_SIZE})
+fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(num_workgroups) numWorkgroups: vec3u) {
+    let thread = gid.y * numWorkgroups.x * ${WORKGROUP_SIZE}u + gid.x;
+    if (thread >= ${NUM_THREADS}u) { return; }
+    var selMin = vec3f(1e6);
+    var selMax = vec3f(-1e6);
+    var visMin = vec3f(1e6);
+    var visMax = vec3f(-1e6);
+    for (var i = thread; i < uniforms.numSplats; i += ${NUM_THREADS}u) {
+        let state = instanceFlagByte(i);
+        let uv = sourceCoord(instanceSource[i]);
+        var center = bitcast<vec3f>(textureLoad(transformA, uv, 0).xyz);
+        center = (paletteMatrix(instancePalette[i] & 0xffffu) * vec4f(center, 1.0)).xyz;
+        let finite = abs(center) <= vec3f(1e30);
+        let safeMin = select(vec3f(1e6), center, finite);
+        let safeMax = select(visMax, center, finite);
+        visMin = min(visMin, safeMin);
+        visMax = max(visMax, safeMax);
+        if (state == 1u) {
+            selMin = min(selMin, safeMin);
+            selMax = max(selMax, select(selMax, center, finite));
+        }
     }
-};
+    let base = thread * 4u;
+    bounds[base] = vec4f(selMin, 0.0);
+    bounds[base + 1u] = vec4f(selMax, 0.0);
+    bounds[base + 2u] = vec4f(visMin, 0.0);
+    bounds[base + 3u] = vec4f(visMax, 0.0);
+}`;
 
 class CalcBound {
-    private device: GraphicsDevice;
-    private splatParams = new Int32Array(3);
-    private shader: Shader = null;
-    private selectedMinTexture: Texture = null;
-    private selectedMaxTexture: Texture = null;
-    private visibleMinTexture: Texture = null;
-    private visibleMaxTexture: Texture = null;
-    private renderTarget: RenderTarget = null;
-    private selectedMinRenderTarget: RenderTarget = null;
-    private selectedMaxRenderTarget: RenderTarget = null;
-    private visibleMinRenderTarget: RenderTarget = null;
-    private visibleMaxRenderTarget: RenderTarget = null;
-    private selectedMinData: Float32Array = null;
-    private selectedMaxData: Float32Array = null;
-    private visibleMinData: Float32Array = null;
-    private visibleMaxData: Float32Array = null;
+    private readonly device: GraphicsDevice;
+    private readonly compute: Compute;
+    private readonly bindGroupFormat: BindGroupFormat;
+    private readonly dispatchSize = new Vec2();
+    private output: StorageBuffer = null;
+    private data: Float32Array = null;
 
     constructor(device: GraphicsDevice) {
         this.device = device;
-    }
-
-    private getResources(width: number) {
-        const { device } = this;
-
-        if (!this.shader) {
-            this.shader = ShaderUtils.createShader(device, {
-                uniqueName: 'calcBoundShader',
-                attributes: {
-                    vertex_position: SEMANTIC_POSITION
-                },
-                vertexGLSL: vertexShader,
-                fragmentGLSL: fragmentShader
-            });
-        }
-
-        if (!this.selectedMinTexture || this.selectedMinTexture.width !== width) {
-            if (this.selectedMinTexture) {
-                this.selectedMinTexture.destroy();
-                this.selectedMaxTexture.destroy();
-                this.visibleMinTexture.destroy();
-                this.visibleMaxTexture.destroy();
-                this.renderTarget.destroy();
-                this.selectedMinRenderTarget.destroy();
-                this.selectedMaxRenderTarget.destroy();
-                this.visibleMinRenderTarget.destroy();
-                this.visibleMaxRenderTarget.destroy();
-            }
-
-            const createTexture = (name: string) => {
-                return new Texture(device, {
-                    name,
-                    width,
-                    height: 1,
-                    format: PIXELFORMAT_RGBA32F,
-                    mipmaps: false,
-                    addressU: ADDRESS_CLAMP_TO_EDGE,
-                    addressV: ADDRESS_CLAMP_TO_EDGE
-                });
-            };
-
-            this.selectedMinTexture = createTexture('calcBoundSelectedMin');
-            this.selectedMaxTexture = createTexture('calcBoundSelectedMax');
-            this.visibleMinTexture = createTexture('calcBoundVisibleMin');
-            this.visibleMaxTexture = createTexture('calcBoundVisibleMax');
-
-            this.renderTarget = new RenderTarget({
-                colorBuffers: [this.selectedMinTexture, this.selectedMaxTexture, this.visibleMinTexture, this.visibleMaxTexture],
-                depth: false
-            });
-
-            this.selectedMinRenderTarget = new RenderTarget({
-                colorBuffer: this.selectedMinTexture,
-                depth: false
-            });
-
-            this.selectedMaxRenderTarget = new RenderTarget({
-                colorBuffer: this.selectedMaxTexture,
-                depth: false
-            });
-
-            this.visibleMinRenderTarget = new RenderTarget({
-                colorBuffer: this.visibleMinTexture,
-                depth: false
-            });
-
-            this.visibleMaxRenderTarget = new RenderTarget({
-                colorBuffer: this.visibleMaxTexture,
-                depth: false
-            });
-
-            this.selectedMinData = new Float32Array(width * 4);
-            this.selectedMaxData = new Float32Array(width * 4);
-            this.visibleMinData = new Float32Array(width * 4);
-            this.visibleMaxData = new Float32Array(width * 4);
-        }
-
-        return {
-            shader: this.shader,
-            selectedMinTexture: this.selectedMinTexture,
-            selectedMaxTexture: this.selectedMaxTexture,
-            visibleMinTexture: this.visibleMinTexture,
-            visibleMaxTexture: this.visibleMaxTexture,
-            renderTarget: this.renderTarget,
-            selectedMinRenderTarget: this.selectedMinRenderTarget,
-            selectedMaxRenderTarget: this.selectedMaxRenderTarget,
-            visibleMinRenderTarget: this.visibleMinRenderTarget,
-            visibleMaxRenderTarget: this.visibleMaxRenderTarget,
-            selectedMinData: this.selectedMinData,
-            selectedMaxData: this.selectedMaxData,
-            visibleMinData: this.visibleMinData,
-            visibleMaxData: this.visibleMaxData
-        };
+        const uniforms = new UniformBufferFormat(device, [
+            new UniformFormat('sourceWidth', UNIFORMTYPE_UINT),
+            new UniformFormat('numSplats', UNIFORMTYPE_UINT)
+        ]);
+        this.bindGroupFormat = new BindGroupFormat(device, [
+            new BindStorageBufferFormat('bounds', SHADERSTAGE_COMPUTE),
+            new BindStorageBufferFormat('instanceSource', SHADERSTAGE_COMPUTE, true),
+            new BindStorageBufferFormat('instanceFlags', SHADERSTAGE_COMPUTE, true),
+            new BindStorageBufferFormat('instancePalette', SHADERSTAGE_COMPUTE, true),
+            new BindTextureFormat('transformA', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false),
+            new BindTextureFormat('transformPalette', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UNFILTERABLE_FLOAT, false),
+            new BindUniformBufferFormat('uniforms', SHADERSTAGE_COMPUTE)
+        ]);
+        const shader = new Shader(device, {
+            name: 'CalcBoundCompute',
+            shaderLanguage: SHADERLANGUAGE_WGSL,
+            cshader: shaderSource,
+            computeBindGroupFormat: this.bindGroupFormat,
+            computeUniformBufferFormats: { uniforms }
+        } as any);
+        this.compute = new Compute(device, shader, 'CalcBoundCompute');
     }
 
     async run(splat: Splat, selectionBound: BoundingBox, localBound: BoundingBox): Promise<void> {
-        const device = splat.scene.graphicsDevice;
-        const { scope } = device;
-
-        const numSplats = splat.splatData.numSplats;
-        const transformA = (splat.entity.gsplat.instance.resource as any).getTexture('transformA');
-        const splatTransform = splat.transformTexture;
-        const transformPalette = splat.transformPalette.texture;
-        const splatState = splat.stateTexture;
-
-        this.splatParams[0] = transformA.width;
-        this.splatParams[1] = transformA.height;
-        this.splatParams[2] = numSplats;
-
-        // get resources
-        const resources = this.getResources(transformA.width);
-
-        resolve(scope, {
-            transformA,
-            splatTransform,
-            transformPalette,
-            splatState,
-            splat_params: this.splatParams
-        });
-
-        device.setBlendState(BlendState.NOBLEND);
-        drawQuadWithShader(device, resources.renderTarget, resources.shader);
-
-        // read all 4 textures asynchronously using the public texture.read() API
-        const [selectedMinData, selectedMaxData, visibleMinData, visibleMaxData] = await Promise.all([
-            resources.selectedMinTexture.read(0, 0, transformA.width, 1, {
-                renderTarget: resources.selectedMinRenderTarget,
-                data: resources.selectedMinData,
-                immediate: false
-            }),
-            resources.selectedMaxTexture.read(0, 0, transformA.width, 1, {
-                renderTarget: resources.selectedMaxRenderTarget,
-                data: resources.selectedMaxData,
-                immediate: false
-            }),
-            resources.visibleMinTexture.read(0, 0, transformA.width, 1, {
-                renderTarget: resources.visibleMinRenderTarget,
-                data: resources.visibleMinData,
-                immediate: false
-            }),
-            resources.visibleMaxTexture.read(0, 0, transformA.width, 1, {
-                renderTarget: resources.visibleMaxRenderTarget,
-                data: resources.visibleMaxData,
-                immediate: false
-            })
-        ]);
-
-        // resolve selected bounds
-        v1.set(Infinity, Infinity, Infinity);
-        v2.set(-Infinity, -Infinity, -Infinity);
-
-        for (let i = 0; i < transformA.width; i++) {
-            const a = selectedMinData[i * 4];
-            const b = selectedMinData[i * 4 + 1];
-            const c = selectedMinData[i * 4 + 2];
-            if (isFinite(a)) v1.x = Math.min(v1.x, a);
-            if (isFinite(b)) v1.y = Math.min(v1.y, b);
-            if (isFinite(c)) v1.z = Math.min(v1.z, c);
-
-            const d = selectedMaxData[i * 4];
-            const e = selectedMaxData[i * 4 + 1];
-            const f = selectedMaxData[i * 4 + 2];
-            if (isFinite(d)) v2.x = Math.max(v2.x, d);
-            if (isFinite(e)) v2.y = Math.max(v2.y, e);
-            if (isFinite(f)) v2.z = Math.max(v2.z, f);
+        const transformA = splat.resource.getTexture('transformA');
+        // 4 vec4 partials per thread, and the thread count is fixed
+        const byteSize = NUM_THREADS * 4 * 16;
+        if (!this.output) {
+            this.output = new StorageBuffer(this.device, byteSize, BUFFERUSAGE_COPY_DST | BUFFERUSAGE_COPY_SRC);
+            this.data = new Float32Array(byteSize / 4);
         }
+        this.compute.setParameter('bounds', this.output);
+        this.compute.setParameter('instanceSource', splat.instances.instanceSource);
+        this.compute.setParameter('instanceFlags', splat.instances.instanceFlags);
+        this.compute.setParameter('instancePalette', splat.instances.instancePalette);
+        this.compute.setParameter('transformA', transformA);
+        this.compute.setParameter('transformPalette', splat.transformPalette.texture);
+        this.compute.setParameter('sourceWidth', transformA.width);
+        this.compute.setParameter('numSplats', splat.instances.count);
+        Compute.calcDispatchSize(NUM_THREADS / WORKGROUP_SIZE, this.dispatchSize);
+        this.compute.setupDispatch(this.dispatchSize.x, this.dispatchSize.y);
+        this.device.computeDispatch([this.compute], 'calc-bound');
+        const readback = this.output.read(0, byteSize, this.data, false);
+        (this.device as any).submit();
+        const data = await readback as Float32Array;
 
-        selectionBound.setMinMax(v1, v2);
-
-        // resolve visible bounds
-        v3.set(Infinity, Infinity, Infinity);
-        v4.set(-Infinity, -Infinity, -Infinity);
-
-        for (let i = 0; i < transformA.width; i++) {
-            const a = visibleMinData[i * 4];
-            const b = visibleMinData[i * 4 + 1];
-            const c = visibleMinData[i * 4 + 2];
-            if (isFinite(a)) v3.x = Math.min(v3.x, a);
-            if (isFinite(b)) v3.y = Math.min(v3.y, b);
-            if (isFinite(c)) v3.z = Math.min(v3.z, c);
-
-            const d = visibleMaxData[i * 4];
-            const e = visibleMaxData[i * 4 + 1];
-            const f = visibleMaxData[i * 4 + 2];
-            if (isFinite(d)) v4.x = Math.max(v4.x, d);
-            if (isFinite(e)) v4.y = Math.max(v4.y, e);
-            if (isFinite(f)) v4.z = Math.max(v4.z, f);
+        selectedMin.set(Infinity, Infinity, Infinity);
+        selectedMax.set(-Infinity, -Infinity, -Infinity);
+        visibleMin.set(Infinity, Infinity, Infinity);
+        visibleMax.set(-Infinity, -Infinity, -Infinity);
+        for (let thread = 0; thread < NUM_THREADS; thread++) {
+            const base = thread * 16;
+            selectedMin.x = Math.min(selectedMin.x, data[base]);
+            selectedMin.y = Math.min(selectedMin.y, data[base + 1]);
+            selectedMin.z = Math.min(selectedMin.z, data[base + 2]);
+            selectedMax.x = Math.max(selectedMax.x, data[base + 4]);
+            selectedMax.y = Math.max(selectedMax.y, data[base + 5]);
+            selectedMax.z = Math.max(selectedMax.z, data[base + 6]);
+            visibleMin.x = Math.min(visibleMin.x, data[base + 8]);
+            visibleMin.y = Math.min(visibleMin.y, data[base + 9]);
+            visibleMin.z = Math.min(visibleMin.z, data[base + 10]);
+            visibleMax.x = Math.max(visibleMax.x, data[base + 12]);
+            visibleMax.y = Math.max(visibleMax.y, data[base + 13]);
+            visibleMax.z = Math.max(visibleMax.z, data[base + 14]);
         }
-
-        localBound.setMinMax(v3, v4);
+        selectionBound.setMinMax(selectedMin, selectedMax);
+        localBound.setMinMax(visibleMin, visibleMax);
     }
 }
 

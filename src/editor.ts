@@ -845,7 +845,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // 'disabled' never uses it, 'enabled' always does, 'movement' uses it only
     // while the scene is changing - trading the sort for speed exactly when the
     // eye is least able to see the sampling noise - and 'auto' behaves like
-    // 'movement' but only once a sorted frame has proven slow (see
+    // 'movement' while the last sorted frame proved slow (see
     // Scene.autoEngageMs).
 
     let stochastic = 'auto';

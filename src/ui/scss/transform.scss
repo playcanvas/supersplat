@@ -1,12 +1,15 @@
 @use 'colors.scss' as *;
 
+// shares the scene panel's row grid: 10px side gutters, 2px section
+// boundaries, and a 95px label column so the edit controls align with the
+// colors section's control column below
 #transform {
     display: flex;
     flex-direction: column;
 
     background-color: $bcg-primary;
 
-    padding: 6px;
+    padding: 2px 10px;
 }
 
 .transform-row {
@@ -20,7 +23,7 @@
 }
 
 .transform-label {
-    width: 70px;
+    width: 95px;
     flex-shrink: 0;
     flex-grow: 0;
     margin: 0px;

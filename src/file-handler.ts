@@ -341,8 +341,11 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                 const filename = filenames[i].toLowerCase();
 
                 if (filename.endsWith('.ssproj')) {
-                    // load ssproj document
-                    await events.invoke('doc.load', files[i].contents ?? (await fetch(files[i].url)).arrayBuffer(), files[i].handle);
+                    // load ssproj document. doc.load expects a File (the zip
+                    // reader needs its size), so wrap url fetches in one
+                    const contents = files[i].contents ??
+                        new File([await (await fetch(files[i].url)).blob()], files[i].filename);
+                    await events.invoke('doc.load', contents, files[i].handle);
                 } else if (['.ply', '.splat', '.sog', '.ksplat', '.spz'].some(ext => filename.endsWith(ext))) {
                     // load gaussian splat model
                     const model = await importSplatModel([files[i]], animationFrame);

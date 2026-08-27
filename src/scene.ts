@@ -108,19 +108,30 @@ class Scene {
     movingRender = false;
     pendingResolve = false;
 
-    // 'auto' stochastic mode renders sorted until a sorted frame's GPU span
-    // exceeds autoEngageMs, then latches to stochastic-during-movement for the
-    // rest of the session. While unengaged every rendered frame is sorted, so
-    // the profiler's async report - whichever recent frame it came from - is a
-    // sorted frame's span and can be compared against the threshold directly.
-    // The threshold is tweakable from the console as `scene.autoEngageMs = 5`
-    // to exercise the switch on scenes that are not actually slow.
+    // 'auto' stochastic mode follows the timing of the last rendered sorted
+    // frame: engaged (stochastic-during-movement) while that frame's GPU span
+    // exceeded autoEngageMs, disengaged once a later sorted frame - at minimum
+    // the clean resolve frame on every settle - comes in under it, so hiding
+    // content or moving to a lighter view drops back to sorted. Stochastic
+    // frames say nothing about the cost of sorting, so they never update the
+    // decision: profiler reports resolve asynchronously, and frameModes
+    // records each profiled frame's mode by renderVersion so reports can be
+    // attributed (see onGpuReport). The threshold is tweakable from the
+    // console as `scene.autoEngageMs = 5` to exercise the switch on scenes
+    // that are not actually slow.
     autoEngageMs = 60;
     autoEngaged = false;
     private autoSampling = false;
+    private frameModes = new Map<number, boolean>();
 
     lockedRenderMode = false;
     lockedRender = false;
+
+    // viewport rendering is suspended while a document load applies its pieces:
+    // layers become visible before their saved transforms arrive and the camera
+    // pose is restored last, so intermediate frames would show a half-assembled
+    // scene. Set by doc.ts, which forces a render once the load completes.
+    suspendRender = false;
 
     // devtools switch for the stochastic resolve, set from the console as
     // `scene.resolveMode = 'old'`. 'new' is the masked quad+bilinear filter that
@@ -257,6 +268,17 @@ class Scene {
 
         this.frameTimings.gpuSupported = !!(this.app.graphicsDevice as any).supportsTimestampQuery;
         events.function('scene.frameTimings', () => this.frameTimings);
+
+        // the profiler's report callback carries the renderVersion of the frame
+        // the timings belong to, but the engine discards it before the value
+        // lands in _frameTime. Wrap it so reports can be attributed to the mode
+        // the frame rendered with (see onGpuReport).
+        const profiler = this.app.graphicsDevice.gpuProfiler as any;
+        const originalReport = profiler.report.bind(profiler);
+        profiler.report = (renderVersion: number, timings: number[] | null, frameTime?: number) => {
+            originalReport(renderVersion, timings, frameTime);
+            this.onGpuReport(renderVersion, timings, frameTime);
+        };
 
         // force render on device restored
         this.app.graphicsDevice.on('devicerestored', () => {
@@ -466,13 +488,13 @@ class Scene {
         // 'movement' takes the fast no-sort stochastic path only while actively
         // interacting, so settled frames get the clean sorted & blended one;
         // 'enabled' stays stochastic even once the scene settles. 'auto' acts
-        // like 'disabled' until a sorted frame proves slower than autoEngageMs
-        // (latched in onPostRender), then like 'movement'; without
-        // timestamp-query support it can never measure, so it falls back to
-        // 'movement' rather than leave heavy scenes janky. Locked-mode captures
-        // always use the sorted path.
+        // like 'movement' while the last sorted frame's GPU span exceeded
+        // autoEngageMs and like 'disabled' otherwise (updated per report in
+        // onGpuReport); without timestamp-query support it can never measure,
+        // so it falls back to 'movement' rather than leave heavy scenes janky.
+        // Locked-mode captures always use the sorted path.
         const auto = stochastic === 'auto';
-        this.autoSampling = auto && !this.autoEngaged && this.frameTimings.gpuSupported;
+        this.autoSampling = auto && this.frameTimings.gpuSupported;
         const adaptive = stochastic === 'movement' ||
             (auto && (this.autoEngaged || !this.frameTimings.gpuSupported));
         this.movingRender = !this.lockedRenderMode &&
@@ -488,7 +510,9 @@ class Scene {
         this.app.graphicsDevice.gpuProfiler.enabled =
             (profiling || this.autoSampling) && !this.lockedRenderMode;
 
-        if (this.lockedRenderMode) {
+        if (this.suspendRender) {
+            this.app.renderNextFrame = false;
+        } else if (this.lockedRenderMode) {
             this.app.renderNextFrame = this.lockedRender;
             this.lockedRender = false;
         } else if (!this.app.renderNextFrame) {
@@ -566,12 +590,14 @@ class Scene {
 
         const gpuTime = (this.app.graphicsDevice.gpuProfiler as any)?._frameTime ?? 0;
 
-        // latch 'auto' stochastic mode once a sorted frame exceeds the
-        // threshold. Locked-mode frames are excluded: offline captures can
-        // render at a much higher resolution than the editor view, so they
-        // are never timed at all (see onUpdate).
-        if (this.autoSampling && !this.lockedRenderMode && gpuTime > this.autoEngageMs) {
-            this.autoEngaged = true;
+        // record the mode this frame rendered with, keyed by its renderVersion,
+        // so the frame's asynchronously resolving profiler report can be
+        // attributed in onGpuReport. Only profiled frames get reports (this
+        // also excludes locked-mode frames, which are never timed - see
+        // onUpdate), so only those are recorded.
+        const device = this.app.graphicsDevice as any;
+        if (device.gpuProfiler._enabled) {
+            this.frameModes.set(device.renderVersion, this.movingRender);
         }
 
         const timings = this.frameTimings;
@@ -584,6 +610,27 @@ class Scene {
         timings.width = this.targetSize.width;
         timings.height = this.targetSize.height;
         timings.stochastic = this.movingRender;
+    }
+
+    // handle an asynchronously resolved gpu timing report. Only sorted frames
+    // measure the cost 'auto' mode trades away, so only their spans update the
+    // engage decision; stochastic-frame reports are ignored. timings is null
+    // when the backend discards a frame (e.g. a disjoint timer event).
+    private onGpuReport(renderVersion: number, timings: number[] | null, frameTime?: number) {
+        const moving = this.frameModes.get(renderVersion);
+
+        // reports resolve in order, so drop this frame's entry and any older
+        // ones a discarded report left behind
+        this.frameModes.forEach((_, version) => {
+            if (version <= renderVersion) {
+                this.frameModes.delete(version);
+            }
+        });
+
+        if (moving === false && timings && timings.length > 0) {
+            const gpuTime = frameTime ?? timings.reduce((sum, t) => sum + t, 0);
+            this.autoEngaged = gpuTime > this.autoEngageMs;
+        }
     }
 }
 

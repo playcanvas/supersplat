@@ -150,6 +150,20 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
             output.color = vec4f(vec4u(id, id >> 8u, id >> 16u, id >> 24u) & vec4u(255u)) / 255.0;
         }
     #else
+        let selected = (gaussianFlags & 1u) != 0u;
+        let locked = (gaussianFlags & 2u) != 0u;
+        let norm = normExp(radius);
+        var alpha = norm * gaussianColor.a;
+        // rings apply only to the selected splat's gaussians (gaussianId is the
+        // cache entry index in the forward pass, where pickBase is 0). The
+        // reshaped alpha feeds both paths: the sorted blend directly, and the
+        // stochastic coverage test as its probability, so the ring edge dithers
+        // at ~60% coverage and the interior at ~5% and the resolve filter
+        // averages that back to roughly the sorted look.
+        let rings = gaussianId >= uniform.ringsBase && gaussianId < uniform.ringsBase + uniform.ringsCount;
+        if (!locked && rings && uniform.ringSize > 0.0) {
+            alpha = select(0.6, max(0.05, alpha), radius < 1.0 - uniform.ringSize);
+        }
       #ifdef STOCHASTIC
         // 1 spp stochastic transparency (StochasticSplats, Listing 1): keep this
         // fragment with raw probability alpha, write it opaque; the depth test
@@ -163,8 +177,6 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         // splat id keeps overlapping splats decorrelated and each pixel's
         // threshold marginally uniform. The settle still renders the exact
         // sorted blend.
-        let norm = normExp(radius);
-        let alpha = norm * gaussianColor.a;
         let pix = vec2u(pcPosition.xy);
         let quad = pix >> vec2u(1u);
         // WGSL requires parentheses when mixing bitwise (^) with arithmetic (*)
@@ -182,16 +194,6 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         output.color = vec4f(gaussianColor.rgb, 2.0);
         output.color1 = vec4f(0.0);
       #else
-        let selected = (gaussianFlags & 1u) != 0u;
-        let locked = (gaussianFlags & 2u) != 0u;
-        let norm = normExp(radius);
-        var alpha = norm * gaussianColor.a;
-        // rings apply only to the selected splat's gaussians (gaussianId is the
-        // cache entry index in the forward pass, where pickBase is 0)
-        let rings = gaussianId >= uniform.ringsBase && gaussianId < uniform.ringsBase + uniform.ringsCount;
-        if (!locked && rings && uniform.ringSize > 0.0) {
-            alpha = select(0.6, max(0.05, alpha), radius < 1.0 - uniform.ringSize);
-        }
         if (uniform.outlineMode != 0u) {
             output.color = vec4f(gaussianColor.rgb * alpha, alpha);
             output.color1 = vec4f(0.0, 0.0, 0.0, select(0.0, norm, selected));

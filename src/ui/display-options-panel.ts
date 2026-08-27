@@ -1,12 +1,13 @@
-import { BooleanInput, Button, Container, Label, SliderInput } from '@playcanvas/pcui';
+import { BooleanInput, Button, ColorPicker, Container, Label, SliderInput } from '@playcanvas/pcui';
+import { Color } from 'playcanvas';
 
 import { Events } from '../events';
 import { i18n } from './localization';
+import appearanceSvg from './svg/appearance.svg';
 import centersSvg from './svg/centers.svg';
 import colorsSvg from './svg/colors.svg';
 import ringsSvg from './svg/rings.svg';
 import selectAllSvg from './svg/select-all.svg';
-import showHideSplatsSvg from './svg/show-hide-splats.svg';
 import { Tooltips } from './tooltips';
 
 const createSvg = (svgString: string) => {
@@ -36,7 +37,7 @@ class DisplayOptionsPanel extends Container {
         const icon = new Label({
             class: 'panel-header-icon'
         });
-        icon.dom.appendChild(createSvg(showHideSplatsSvg));
+        icon.dom.appendChild(createSvg(appearanceSvg));
 
         const label = new Label({
             class: 'panel-header-label'
@@ -205,12 +206,80 @@ class DisplayOptionsPanel extends Container {
         selectionDisplayRow.append(selectionRingsButton);
         selectionDisplayRow.append(outlineSelectionButton);
 
+        // viewport colors
+
+        const colorsRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const colorsLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(colorsLabel, 'panel.settings.colors');
+
+        const colorPickers = new Container({
+            class: 'settings-panel-row-pickers'
+        });
+
+        const bgClrPicker = new ColorPicker({
+            class: 'settings-panel-row-picker',
+            channels: 3,
+            value: [0, 0, 0]
+        });
+
+        const selectedClrPicker = new ColorPicker({
+            class: 'settings-panel-row-picker',
+            channels: 4,
+            value: [0, 0, 0, 1]
+        });
+
+        const unselectedClrPicker = new ColorPicker({
+            class: 'settings-panel-row-picker',
+            channels: 4,
+            value: [0, 0, 0, 1]
+        });
+
+        const lockedClrPicker = new ColorPicker({
+            class: 'settings-panel-row-picker',
+            channels: 4,
+            value: [0, 0, 0, 1]
+        });
+
+        const toArray = (clr: Color) => {
+            return [clr.r, clr.g, clr.b, clr.a];
+        };
+
+        events.on('bgClr', (clr: Color) => {
+            bgClrPicker.value = toArray(clr);
+        });
+
+        events.on('selectedClr', (clr: Color) => {
+            selectedClrPicker.value = toArray(clr);
+        });
+
+        events.on('unselectedClr', (clr: Color) => {
+            unselectedClrPicker.value = toArray(clr);
+        });
+
+        events.on('lockedClr', (clr: Color) => {
+            lockedClrPicker.value = toArray(clr);
+        });
+
+        colorPickers.append(bgClrPicker);
+        colorPickers.append(selectedClrPicker);
+        colorPickers.append(unselectedClrPicker);
+        colorPickers.append(lockedClrPicker);
+
+        colorsRow.append(colorsLabel);
+        colorsRow.append(colorPickers);
+
         rowToggles(centersColorRow, centersColorToggle);
         rowToggles(ringsColorRow, ringsColorToggle);
 
         this.append(header);
         this.append(displayRow);
         this.append(selectionDisplayRow);
+        this.append(colorsRow);
         this.append(sectionHeader('panel.display.centers'));
         this.append(centersSizeRow);
         this.append(centersColorRow);
@@ -338,6 +407,27 @@ class DisplayOptionsPanel extends Container {
         outlineSelectionButton.on('click', () => {
             events.fire('view.setOutlineSelection', !events.invoke('view.outlineSelection'));
         });
+
+        bgClrPicker.on('change', (value: number[]) => {
+            events.fire('setBgClr', new Color(value[0], value[1], value[2]));
+        });
+
+        selectedClrPicker.on('change', (value: number[]) => {
+            events.fire('setSelectedClr', new Color(value[0], value[1], value[2], value[3]));
+        });
+
+        unselectedClrPicker.on('change', (value: number[]) => {
+            events.fire('setUnselectedClr', new Color(value[0], value[1], value[2], value[3]));
+        });
+
+        lockedClrPicker.on('change', (value: number[]) => {
+            events.fire('setLockedClr', new Color(value[0], value[1], value[2], value[3]));
+        });
+
+        tooltips.register(bgClrPicker, () => i18n.t('panel.settings.background-color'), 'left');
+        tooltips.register(selectedClrPicker, () => i18n.t('panel.settings.selected-color'), 'top');
+        tooltips.register(unselectedClrPicker, () => i18n.t('panel.settings.unselected-color'), 'top');
+        tooltips.register(lockedClrPicker, () => i18n.t('panel.settings.locked-color'), 'top');
 
     }
 }

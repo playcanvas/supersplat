@@ -1,5 +1,4 @@
-import { BooleanInput, Button, ColorPicker, Container, Label, SelectInput, SliderInput } from '@playcanvas/pcui';
-import { Color } from 'playcanvas';
+import { BooleanInput, Button, Container, Label, SelectInput, SliderInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { i18n } from './localization';
@@ -7,7 +6,7 @@ import resetSvg from './svg/edit-undo.svg';
 import { Tooltips } from './tooltips';
 
 // application preferences: set-and-forget options, as opposed to the viewport
-// state that lives in the view options panel
+// state that lives in the appearance and overlays panels
 class SettingsPanel extends Container {
     constructor(events: Events, tooltips: Tooltips, args = {}) {
         args = {
@@ -98,73 +97,6 @@ class SettingsPanel extends Container {
 
         languageRow.append(languageLabel);
         languageRow.append(languageSelection);
-
-        // colors
-
-        const clrRow = new Container({
-            class: 'settings-panel-row'
-        });
-
-        const clrLabel = new Label({
-            class: 'settings-panel-row-label'
-        });
-        i18n.bindText(clrLabel, 'panel.settings.colors');
-
-        const clrPickers = new Container({
-            class: 'settings-panel-row-pickers'
-        });
-
-        const bgClrPicker = new ColorPicker({
-            class: 'settings-panel-row-picker',
-            channels: 3,
-            value: [0, 0, 0]
-        });
-
-        const selectedClrPicker = new ColorPicker({
-            class: 'settings-panel-row-picker',
-            channels: 4,
-            value: [0, 0, 0, 1]
-        });
-
-        const unselectedClrPicker = new ColorPicker({
-            class: 'settings-panel-row-picker',
-            channels: 4,
-            value: [0, 0, 0, 1]
-        });
-
-        const lockedClrPicker = new ColorPicker({
-            class: 'settings-panel-row-picker',
-            channels: 4,
-            value: [0, 0, 0, 1]
-        });
-
-        const toArray = (clr: Color) => {
-            return [clr.r, clr.g, clr.b, clr.a];
-        };
-
-        events.on('bgClr', (clr: Color) => {
-            bgClrPicker.value = toArray(clr);
-        });
-
-        events.on('selectedClr', (clr: Color) => {
-            selectedClrPicker.value = toArray(clr);
-        });
-
-        events.on('unselectedClr', (clr: Color) => {
-            unselectedClrPicker.value = toArray(clr);
-        });
-
-        events.on('lockedClr', (clr: Color) => {
-            lockedClrPicker.value = toArray(clr);
-        });
-
-        clrPickers.append(bgClrPicker);
-        clrPickers.append(selectedClrPicker);
-        clrPickers.append(unselectedClrPicker);
-        clrPickers.append(lockedClrPicker);
-
-        clrRow.append(clrLabel);
-        clrRow.append(clrPickers);
 
         // tonemapping
 
@@ -324,7 +256,6 @@ class SettingsPanel extends Container {
         this.append(header);
         this.append(sectionHeader('panel.settings.section-application'));
         this.append(languageRow);
-        this.append(clrRow);
         this.append(sectionHeader('panel.settings.section-rendering'));
         this.append(stochasticRow);
         this.append(tonemappingRow);
@@ -410,22 +341,6 @@ class SettingsPanel extends Container {
 
         // background color
 
-        bgClrPicker.on('change', (value: number[]) => {
-            events.fire('setBgClr', new Color(value[0], value[1], value[2]));
-        });
-
-        selectedClrPicker.on('change', (value: number[]) => {
-            events.fire('setSelectedClr', new Color(value[0], value[1], value[2], value[3]));
-        });
-
-        unselectedClrPicker.on('change', (value: number[]) => {
-            events.fire('setUnselectedClr', new Color(value[0], value[1], value[2], value[3]));
-        });
-
-        lockedClrPicker.on('change', (value: number[]) => {
-            events.fire('setLockedClr', new Color(value[0], value[1], value[2], value[3]));
-        });
-
         // camera fov
 
         events.on('camera.fov', (fov: number) => {
@@ -459,10 +374,6 @@ class SettingsPanel extends Container {
         });
 
         // tooltips
-        tooltips.register(bgClrPicker, () => i18n.t('panel.settings.background-color'), 'left');
-        tooltips.register(selectedClrPicker, () => i18n.t('panel.settings.selected-color'), 'top');
-        tooltips.register(unselectedClrPicker, () => i18n.t('panel.settings.unselected-color'), 'top');
-        tooltips.register(lockedClrPicker, () => i18n.t('panel.settings.locked-color'), 'top');
     }
 }
 

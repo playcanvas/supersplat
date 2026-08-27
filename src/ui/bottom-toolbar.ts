@@ -1,11 +1,14 @@
-import { Button, Element, Container } from '@playcanvas/pcui';
+import { Button, Element, Container, Label } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { ShortcutManager } from '../shortcut-manager';
 import { i18n } from './localization';
+import { MenuPanel } from './menu-panel';
+import centersSvg from './svg/centers.svg';
 import measureSvg from './svg/measure.svg';
 import orientSvg from './svg/orient.svg';
 import redoSvg from './svg/redo.svg';
+import ringsSvg from './svg/rings.svg';
 import brushSvg from './svg/select-brush.svg';
 import eyedropperSvg from './svg/select-eyedropper.svg';
 import floodSvg from './svg/select-flood.svg';
@@ -48,26 +51,34 @@ class BottomToolbar extends Container {
             enabled: false
         });
 
-        const selectionMode = new Container({
-            class: 'bottom-toolbar-selection-mode'
-        });
-
-        const surfaceMode = new Button({
-            id: 'bottom-toolbar-selection-surface',
+        const selectionMode = new Button({
+            id: 'bottom-toolbar-selection-mode',
             class: 'bottom-toolbar-selection-mode-button'
         });
-        i18n.bindText(surfaceMode, 'panel.display.surface');
-        surfaceMode.dom.setAttribute('aria-label', i18n.t('panel.display.surface'));
+        selectionMode.dom.setAttribute('aria-haspopup', 'menu');
+        selectionMode.dom.setAttribute('aria-expanded', 'false');
 
-        const throughMode = new Button({
-            id: 'bottom-toolbar-selection-through',
-            class: 'bottom-toolbar-selection-mode-button'
+        const surfaceModeIcon = createSvg(ringsSvg);
+        const throughModeIcon = createSvg(centersSvg);
+        surfaceModeIcon.classList.add('bottom-toolbar-selection-mode-icon');
+        throughModeIcon.classList.add('bottom-toolbar-selection-mode-icon');
+        selectionMode.dom.appendChild(surfaceModeIcon);
+        selectionMode.dom.appendChild(throughModeIcon);
+
+        const surfaceModeCheck = new Label();
+        const throughModeCheck = new Label({ text: '\u2713' });
+
+        const selectionModeMenu = new MenuPanel([{
+            text: () => i18n.t('panel.display.surface'),
+            extra: surfaceModeCheck,
+            onSelect: () => events.fire('selection.setMode', 'surface')
+        }, {
+            text: () => i18n.t('panel.display.through'),
+            extra: throughModeCheck,
+            onSelect: () => events.fire('selection.setMode', 'through')
+        }], {
+            id: 'bottom-toolbar-selection-mode-menu'
         });
-        i18n.bindText(throughMode, 'panel.display.through');
-        throughMode.dom.setAttribute('aria-label', i18n.t('panel.display.through'));
-
-        selectionMode.append(surfaceMode);
-        selectionMode.append(throughMode);
 
         const picker = new Button({
             id: 'bottom-toolbar-picker',
@@ -191,11 +202,18 @@ class BottomToolbar extends Container {
         this.append(orient);
         this.append(coordSpace);
         this.append(origin);
+        this.append(selectionModeMenu);
 
         undo.dom.addEventListener('click', () => events.fire('edit.undo'));
         redo.dom.addEventListener('click', () => events.fire('edit.redo'));
-        surfaceMode.dom.addEventListener('click', () => events.fire('selection.setMode', 'surface'));
-        throughMode.dom.addEventListener('click', () => events.fire('selection.setMode', 'through'));
+        selectionMode.dom.addEventListener('click', () => {
+            if (selectionModeMenu.hidden) {
+                selectionModeMenu.hidden = false;
+                selectionModeMenu.position(selectionMode.dom, 'top', 4);
+            } else {
+                selectionModeMenu.hidden = true;
+            }
+        });
         polygon.dom.addEventListener('click', () => events.fire('tool.polygonSelection'));
         lasso.dom.addEventListener('click', () => events.fire('tool.lassoSelection'));
         brush.dom.addEventListener('click', () => events.fire('tool.brushSelection'));
@@ -225,15 +243,36 @@ class BottomToolbar extends Container {
             redo.enabled = value;
         });
 
+        let activeSelectionMode: 'surface' | 'through' = 'through';
+
         const updateSelectionMode = (mode: 'surface' | 'through') => {
-            surfaceMode.class[mode === 'surface' ? 'add' : 'remove']('active');
-            throughMode.class[mode === 'through' ? 'add' : 'remove']('active');
-            surfaceMode.dom.setAttribute('aria-pressed', String(mode === 'surface'));
-            throughMode.dom.setAttribute('aria-pressed', String(mode === 'through'));
+            activeSelectionMode = mode;
+            surfaceModeIcon.style.display = mode === 'surface' ? '' : 'none';
+            throughModeIcon.style.display = mode === 'through' ? '' : 'none';
+            surfaceModeCheck.text = mode === 'surface' ? '\u2713' : '';
+            throughModeCheck.text = mode === 'through' ? '\u2713' : '';
+            selectionMode.dom.setAttribute('aria-label', i18n.t(
+                mode === 'surface' ? 'panel.display.surface' : 'panel.display.through'
+            ));
         };
 
         events.on('selection.mode', updateSelectionMode);
         updateSelectionMode('through');
+
+        selectionModeMenu.on('show', () => {
+            selectionMode.dom.setAttribute('aria-expanded', 'true');
+        });
+
+        selectionModeMenu.on('hide', () => {
+            selectionMode.dom.setAttribute('aria-expanded', 'false');
+        });
+
+        window.addEventListener('pointerdown', (event: PointerEvent) => {
+            const target = event.target as Node;
+            if (!selectionMode.dom.contains(target) && !selectionModeMenu.dom.contains(target)) {
+                selectionModeMenu.hidden = true;
+            }
+        }, true);
 
         events.on('tool.activated', (toolName: string) => {
             picker.class[toolName === 'rectSelection' ? 'add' : 'remove']('active');
@@ -272,8 +311,11 @@ class BottomToolbar extends Container {
         // register tooltips
         tooltips.register(undo, tooltip('tooltip.bottom-toolbar.undo', 'edit.undo'));
         tooltips.register(redo, tooltip('tooltip.bottom-toolbar.redo', 'edit.redo'));
-        tooltips.register(surfaceMode, tooltip('panel.display.surface', 'selection.toggleMode'));
-        tooltips.register(throughMode, tooltip('panel.display.through', 'selection.toggleMode'));
+        tooltips.register(selectionMode, () => {
+            const text = i18n.t(activeSelectionMode === 'surface' ? 'panel.display.surface' : 'panel.display.through');
+            const shortcut = shortcutManager.formatShortcut('selection.toggleMode');
+            return shortcut ? i18n.formatTooltipWithShortcut(text, shortcut) : text;
+        });
         tooltips.register(picker, tooltip('tooltip.bottom-toolbar.rectangle-selection', 'tool.rectSelection'));
         tooltips.register(lasso, tooltip('tooltip.bottom-toolbar.lasso-selection', 'tool.lassoSelection'));
         tooltips.register(polygon, tooltip('tooltip.bottom-toolbar.polygon-selection', 'tool.polygonSelection'));

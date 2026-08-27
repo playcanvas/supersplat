@@ -41,29 +41,40 @@
     background-color: $bcg-primary;
 }
 
-.bottom-toolbar-selection-mode {
-    display: flex;
-    flex-direction: row;
-    gap: 2px;
-    margin-right: 7px;
-    padding: 3px;
-    border-radius: 3px;
-    background-color: $bcg-primary;
-}
-
 .bottom-toolbar-selection-mode-button {
-    width: 74px;
-    height: 32px;
-    margin: 0;
-    padding: 0 6px;
+    position: relative;
+    width: 38px;
+    height: 38px;
+    margin-right: 7px;
+    padding: 8px;
     border: 0;
     border-radius: 2px;
-    background-color: transparent;
-    font-size: 11px;
+    background-color: $bcg-primary;
 
-    &.active {
-        color: $clr-active;
-        background-color: $clr-hilight;
+    svg {
+        width: 20px;
+        height: 20px;
+        color: $clr-icon-hilight;
+    }
+
+    &::after {
+        content: '';
+        position: absolute;
+        right: 3px;
+        bottom: 3px;
+        width: 0;
+        height: 0;
+        border-left: 3px solid transparent;
+        border-right: 3px solid transparent;
+        border-top: 4px solid $clr-default;
+    }
+}
+
+#bottom-toolbar-selection-mode-menu {
+    z-index: 1;
+
+    .menu-row {
+        min-width: 130px;
     }
 }
 

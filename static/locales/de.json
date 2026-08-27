@@ -339,7 +339,7 @@
     "tooltip.status-bar.timeline": "Zeitleisten-Panel umschalten",
     "tooltip.status-bar.splat-data": "Splat-Daten-Panel umschalten",
     "tooltip.splat-data.on-screen-only": "Nur Splats zählen, die in der Kameraansicht sichtbar sind. Splats außerhalb des Bildschirms werden aus dem Histogramm ausgeschlossen.",
-    "tooltip.splat-data.log-counts": "Histogrammklassen logarithmisch skalieren, damit kleine Häufigkeiten neben großen sichtbar bleiben.",
+    "tooltip.splat-data.log-counts": "Häufigkeiten der Histogrammklassen logarithmisch skalieren, damit kleine Häufigkeiten neben großen sichtbar bleiben.",
     "tooltip.splat-data.log-bins": "Eigenschaftswerte logarithmisch klassieren, damit Gruppen über große Wertebereiche hinweg unterscheidbar bleiben.",
     "tooltip.splat-data.show-all": "Alle Eigenschaften pro Splat in der Liste anzeigen, einschließlich roher DC- und Kugelflächenfunktions-Koeffizienten."
 }

@@ -340,6 +340,6 @@
     "tooltip.status-bar.splat-data": "Afficher/Masquer le panneau Données Splat",
     "tooltip.splat-data.on-screen-only": "Ne compter que les splats visibles dans la caméra. Les splats hors écran sont exclus de l'histogramme.",
     "tooltip.splat-data.log-counts": "Mettre les comptages de l'histogramme à l'échelle logarithmique afin que les petits restent visibles à côté des grands.",
-    "tooltip.splat-data.log-bins": "Répartir les classes de valeurs selon une échelle logarithmique signée afin de distinguer les groupes sur de grandes plages. Les valeurs négatives et nulles sont prises en charge.",
+    "tooltip.splat-data.log-bins": "Répartir les classes de valeurs logarithmiquement afin de distinguer les groupes sur de grandes plages.",
     "tooltip.splat-data.show-all": "Afficher toutes les propriétés des splats dans la liste, y compris les coefficients DC bruts et harmoniques sphériques."
 }

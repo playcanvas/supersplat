@@ -340,6 +340,6 @@
     "tooltip.status-bar.splat-data": "スプラットデータパネルの切り替え",
     "tooltip.splat-data.on-screen-only": "カメラに映っているスプラットのみをヒストグラムに含めます。画面外のスプラットは除外されます。",
     "tooltip.splat-data.log-counts": "ヒストグラムのビン数を対数スケールで表示し、小さいカウントと大きいカウントの両方を見やすくします。",
-    "tooltip.splat-data.log-bins": "値のビンを符号付き対数間隔で配置し、広い範囲にわたるグループを識別しやすくします。負の値とゼロにも対応します。",
+    "tooltip.splat-data.log-bins": "値のビンを対数間隔で配置し、広い範囲にわたるグループを識別しやすくします。",
     "tooltip.splat-data.show-all": "未加工のDC係数や球面調和関数係数を含む、すべてのスプラットプロパティをリストに表示します。"
 }

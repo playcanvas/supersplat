@@ -340,6 +340,6 @@
     "tooltip.status-bar.splat-data": "Alternar painel de Dados de Splat",
     "tooltip.splat-data.on-screen-only": "Contar apenas os splats visíveis pela câmera. Splats fora da tela são excluídos do histograma.",
     "tooltip.splat-data.log-counts": "Escala as contagens do histograma logaritmicamente para que contagens pequenas permaneçam visíveis ao lado das grandes.",
-    "tooltip.splat-data.log-bins": "Distribui os intervalos de valores em uma escala logarítmica com sinal para distinguir grupos em faixas amplas. Valores negativos e zero são compatíveis.",
+    "tooltip.splat-data.log-bins": "Distribui os intervalos de valores logaritmicamente para distinguir grupos em faixas amplas.",
     "tooltip.splat-data.show-all": "Mostrar todas as propriedades dos splats na lista, incluindo coeficientes DC brutos e harmônicos esféricos."
 }

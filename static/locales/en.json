@@ -340,6 +340,6 @@
     "tooltip.status-bar.splat-data": "Toggle Splat Data Panel",
     "tooltip.splat-data.on-screen-only": "Only count splats visible in the camera's view. Off-screen splats are excluded from the histogram.",
     "tooltip.splat-data.log-counts": "Scale histogram bin counts logarithmically so small counts remain visible alongside large ones.",
-    "tooltip.splat-data.log-bins": "Space property-value bins using a signed logarithmic scale so groups across large ranges remain distinguishable. Negative and zero values are supported.",
+    "tooltip.splat-data.log-bins": "Space property-value bins logarithmically so groups across large ranges remain distinguishable.",
     "tooltip.splat-data.show-all": "Show all per-splat properties in the list, including raw DC and spherical harmonic coefficients."
 }

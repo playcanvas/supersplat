@@ -8,6 +8,7 @@ const storageKey = 'supersplat:preferences';
 const storageVersion = 1;
 
 type PrefValue = boolean | number | string | number[];
+type PreferenceGroup = 'appearance' | 'overlays' | 'preferences';
 
 type Descriptor = {
     // storage key, which doubles as the notify event fired when the setting changes
@@ -22,6 +23,8 @@ type Descriptor = {
     getDefault: () => any;
     // validate a stored (json) value
     validate: (value: PrefValue) => boolean;
+    // owning panel for scoped reset; omitted for toolbar-only settings
+    group?: PreferenceGroup;
     // stored (json) value -> event payload
     toEvent?: (value: PrefValue) => any;
     // notify payload -> stored (json) value
@@ -60,6 +63,7 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
     const color = (key: string, setCommand: string, getDefault: () => { r: number, g: number, b: number, a: number }): Descriptor => ({
         key,
         setCommand,
+        group: 'appearance',
         urlPath: key,
         getDefault: () => {
             const c = getDefault();
@@ -78,29 +82,29 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         color('selectedClr', 'setSelectedClr', () => config.selectedClr),
         color('unselectedClr', 'setUnselectedClr', () => config.unselectedClr),
         color('lockedClr', 'setLockedClr', () => config.lockedClr),
-        { key: 'camera.tonemapping', setCommand: 'camera.setTonemapping', urlPath: 'camera.toneMapping', getDefault: () => config.camera.toneMapping, validate: isEnum(['linear', 'neutral', 'aces', 'aces2', 'filmic', 'hejl']) },
-        { key: 'camera.fovDolly', setCommand: 'camera.setFovDolly', getDefault: () => false, validate: isBool },
-        { key: 'camera.fov', setCommand: 'camera.setFov', urlPath: 'camera.fov', getDefault: () => config.camera.fov, validate: isNumber(10, 120) },
-        { key: 'view.bands', setCommand: 'view.setBands', urlPath: 'show.shBands', getDefault: () => config.show.shBands, validate: v => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 3 },
-        { key: 'camera.flySpeed', setCommand: 'camera.setFlySpeed', getDefault: () => 1, validate: isNumber(0.1, 30) },
-        { key: 'camera.splatSize', setCommand: 'camera.setSplatSize', getDefault: () => 2, validate: isNumber(0, 10) },
-        { key: 'view.gaussians', setCommand: 'view.setGaussians', getDefault: () => true, validate: isBool },
-        { key: 'view.centers', setCommand: 'view.setCenters', getDefault: () => false, validate: isBool },
-        { key: 'view.rings', setCommand: 'view.setRings', getDefault: () => false, validate: isBool },
-        { key: 'view.ringSize', setCommand: 'view.setRingSize', getDefault: () => 4, validate: isNumber(1, 50) },
-        { key: 'view.centersUseGaussianColor', setCommand: 'view.setCentersUseGaussianColor', getDefault: () => false, validate: isBool },
-        { key: 'view.ringsUseGaussianColor', setCommand: 'view.setRingsUseGaussianColor', getDefault: () => true, validate: isBool },
-        { key: 'view.selectionColor', setCommand: 'view.setSelectionColor', getDefault: () => false, validate: isBool },
-        { key: 'view.selectionCenters', setCommand: 'view.setSelectionCenters', getDefault: () => true, validate: isBool },
-        { key: 'view.selectionRings', setCommand: 'view.setSelectionRings', getDefault: () => false, validate: isBool },
-        { key: 'view.outlineSelection', setCommand: 'view.setOutlineSelection', getDefault: () => false, validate: isBool },
-        { key: 'view.stochastic', setCommand: 'view.setStochastic', getDefault: () => 'auto', validate: isEnum(['disabled', 'enabled', 'movement', 'auto']) },
-        { key: 'view.perfOverlay', setCommand: 'view.setPerfOverlay', getDefault: () => false, validate: isBool },
-        { key: 'grid.visible', setCommand: 'grid.setVisible', urlPath: 'show.grid', getDefault: () => config.show.grid, validate: isBool },
-        { key: 'camera.bound', setCommand: 'camera.setBound', urlPath: 'show.bound', getDefault: () => config.show.bound, validate: isBool },
-        { key: 'camera.boundDimensions', setCommand: 'camera.setBoundDimensions', urlPath: 'show.boundDimensions', getDefault: () => config.show.boundDimensions, validate: isBool },
-        { key: 'camera.showPoses', setCommand: 'camera.setShowPoses', urlPath: 'show.cameraPoses', getDefault: () => config.show.cameraPoses, validate: isBool },
-        { key: 'camera.showInfo', setCommand: 'camera.setShowInfo', urlPath: 'show.cameraInfo', getDefault: () => config.show.cameraInfo, validate: isBool },
+        { key: 'camera.tonemapping', setCommand: 'camera.setTonemapping', urlPath: 'camera.toneMapping', getDefault: () => config.camera.toneMapping, validate: isEnum(['linear', 'neutral', 'aces', 'aces2', 'filmic', 'hejl']), group: 'preferences' },
+        { key: 'camera.fovDolly', setCommand: 'camera.setFovDolly', getDefault: () => false, validate: isBool, group: 'preferences' },
+        { key: 'camera.fov', setCommand: 'camera.setFov', urlPath: 'camera.fov', getDefault: () => config.camera.fov, validate: isNumber(10, 120), group: 'preferences' },
+        { key: 'view.bands', setCommand: 'view.setBands', urlPath: 'show.shBands', getDefault: () => config.show.shBands, validate: v => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 3, group: 'preferences' },
+        { key: 'camera.flySpeed', setCommand: 'camera.setFlySpeed', getDefault: () => 1, validate: isNumber(0.1, 30), group: 'preferences' },
+        { key: 'camera.splatSize', setCommand: 'camera.setSplatSize', getDefault: () => 2, validate: isNumber(0, 10), group: 'appearance' },
+        { key: 'view.gaussians', setCommand: 'view.setGaussians', getDefault: () => true, validate: isBool, group: 'appearance' },
+        { key: 'view.centers', setCommand: 'view.setCenters', getDefault: () => false, validate: isBool, group: 'appearance' },
+        { key: 'view.rings', setCommand: 'view.setRings', getDefault: () => false, validate: isBool, group: 'appearance' },
+        { key: 'view.ringSize', setCommand: 'view.setRingSize', getDefault: () => 4, validate: isNumber(1, 50), group: 'appearance' },
+        { key: 'view.centersUseGaussianColor', setCommand: 'view.setCentersUseGaussianColor', getDefault: () => false, validate: isBool, group: 'appearance' },
+        { key: 'view.ringsUseGaussianColor', setCommand: 'view.setRingsUseGaussianColor', getDefault: () => true, validate: isBool, group: 'appearance' },
+        { key: 'view.selectionColor', setCommand: 'view.setSelectionColor', getDefault: () => false, validate: isBool, group: 'appearance' },
+        { key: 'view.selectionCenters', setCommand: 'view.setSelectionCenters', getDefault: () => true, validate: isBool, group: 'appearance' },
+        { key: 'view.selectionRings', setCommand: 'view.setSelectionRings', getDefault: () => false, validate: isBool, group: 'appearance' },
+        { key: 'view.outlineSelection', setCommand: 'view.setOutlineSelection', getDefault: () => false, validate: isBool, group: 'appearance' },
+        { key: 'view.stochastic', setCommand: 'view.setStochastic', getDefault: () => 'auto', validate: isEnum(['disabled', 'enabled', 'movement', 'auto']), group: 'preferences' },
+        { key: 'view.perfOverlay', setCommand: 'view.setPerfOverlay', getDefault: () => false, validate: isBool, group: 'overlays' },
+        { key: 'grid.visible', setCommand: 'grid.setVisible', urlPath: 'show.grid', getDefault: () => config.show.grid, validate: isBool, group: 'overlays' },
+        { key: 'camera.bound', setCommand: 'camera.setBound', urlPath: 'show.bound', getDefault: () => config.show.bound, validate: isBool, group: 'overlays' },
+        { key: 'camera.boundDimensions', setCommand: 'camera.setBoundDimensions', urlPath: 'show.boundDimensions', getDefault: () => config.show.boundDimensions, validate: isBool, group: 'overlays' },
+        { key: 'camera.showPoses', setCommand: 'camera.setShowPoses', urlPath: 'show.cameraPoses', getDefault: () => config.show.cameraPoses, validate: isBool, group: 'overlays' },
+        { key: 'camera.showInfo', setCommand: 'camera.setShowInfo', urlPath: 'show.cameraInfo', getDefault: () => config.show.cameraInfo, validate: isBool, group: 'overlays' },
         { key: 'selection.mode', setCommand: 'selection.setMode', getDefault: () => 'through', validate: isEnum(['surface', 'through']) },
         { key: 'camera.controlMode', setCommand: 'camera.setControlMode', getDefault: () => 'orbit', validate: isEnum(['orbit', 'fly']) }
     ];
@@ -167,10 +171,10 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
     // apply stored preferences (or defaults) to the live state. every setting
     // is applied so side effects between settings self-heal, and the resolved
     // sceneConfig already contains url overrides, which win over stored values.
-    const apply = () => {
+    const apply = (targets = descriptors) => {
         events.fire('preferences.suspend');
         try {
-            for (const descriptor of descriptors) {
+            for (const descriptor of targets) {
                 const stored = urlHas(descriptor.urlPath) ? undefined : values[descriptor.key];
                 const payload = stored !== undefined ? (descriptor.toEvent ? descriptor.toEvent(stored) : stored) : descriptor.getDefault();
                 events.fire(descriptor.setCommand, payload);
@@ -208,13 +212,16 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
 
     // clear stored preferences and restore defaults. language lives in its
     // own store (i18nextLng) but its default is 'automatic', so reset it too.
-    events.on('preferences.reset', () => {
-        for (const key in values) {
-            delete values[key];
+    events.on('preferences.reset', (group?: PreferenceGroup) => {
+        const targets = group ? descriptors.filter(descriptor => descriptor.group === group) : descriptors;
+        for (const descriptor of targets) {
+            delete values[descriptor.key];
         }
         scheduleWrite();
-        apply();
-        i18n.setLanguage(null);
+        apply(targets);
+        if (!group || group === 'preferences') {
+            i18n.setLanguage(null);
+        }
     });
 };
 

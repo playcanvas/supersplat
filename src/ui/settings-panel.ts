@@ -1,9 +1,14 @@
-import { BooleanInput, Button, Container, Label, SelectInput, SliderInput } from '@playcanvas/pcui';
+import { BooleanInput, Container, Label, SelectInput, SliderInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { i18n } from './localization';
-import resetSvg from './svg/edit-undo.svg';
+import resetSvg from './svg/reset.svg';
 import { Tooltips } from './tooltips';
+
+const createSvg = (svgString: string) => {
+    const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
+    return new DOMParser().parseFromString(decodedStr, 'image/svg+xml').documentElement;
+};
 
 // application preferences: set-and-forget options, as opposed to the viewport
 // state that lives in the appearance and overlays panels
@@ -39,8 +44,15 @@ class SettingsPanel extends Container {
         });
         i18n.bindText(label, 'panel.settings');
 
+        const resetButton = new Container({
+            class: ['panel-header-button', 'panel-header-reset-button']
+        });
+        resetButton.dom.appendChild(createSvg(resetSvg));
+        resetButton.dom.setAttribute('aria-label', i18n.t('panel.settings.reset'));
+
         header.append(icon);
         header.append(label);
+        header.append(resetButton);
 
         // section bars share the panel-header styling, like the scene
         // manager's transform header
@@ -235,26 +247,9 @@ class SettingsPanel extends Container {
         stochasticRow.append(stochasticLabel);
         stochasticRow.append(stochasticSelection);
 
-        // reset preferences to defaults
-
-        const resetRow = new Container({
-            class: ['settings-panel-row', 'options-panel-row-footer']
-        });
-
-        const resetButton = new Button({
-            class: 'settings-panel-row-button'
-        });
-        i18n.bindText(resetButton, 'panel.settings.reset');
-        // the icon renders as a css mask (a child svg would be wiped by the
-        // button's text setter whenever the language changes)
-        resetButton.dom.style.setProperty('--icon', `url("${resetSvg}")`);
-
-        resetRow.append(resetButton);
-
         rowToggles(fovDollyRow, fovDollyToggle);
 
         this.append(header);
-        this.append(sectionHeader('panel.settings.section-application'));
         this.append(languageRow);
         this.append(sectionHeader('panel.settings.section-rendering'));
         this.append(stochasticRow);
@@ -264,7 +259,6 @@ class SettingsPanel extends Container {
         this.append(cameraFlySpeedRow);
         this.append(fovRow);
         this.append(fovDollyRow);
-        this.append(resetRow);
 
         // handle panel visibility
 
@@ -339,8 +333,6 @@ class SettingsPanel extends Container {
             events.fire('view.setStochastic', value);
         });
 
-        // background color
-
         // camera fov
 
         events.on('camera.fov', (fov: number) => {
@@ -364,16 +356,19 @@ class SettingsPanel extends Container {
         // reset preferences
 
         resetButton.on('click', () => {
-            events.fire('preferences.reset');
+            events.fire('preferences.reset', 'preferences');
         });
 
         // reset reverts language to automatic; sync the selector (its change
         // handler makes the equivalent setLanguage(null) call idempotently)
-        events.on('preferences.reset', () => {
-            languageSelection.value = 'auto';
+        events.on('preferences.reset', (group?: string) => {
+            if (!group || group === 'preferences') {
+                languageSelection.value = 'auto';
+            }
         });
 
         // tooltips
+        tooltips.register(resetButton, () => i18n.t('panel.settings.reset'), 'left');
     }
 }
 

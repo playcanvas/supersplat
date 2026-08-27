@@ -4,6 +4,7 @@ import { Events } from '../events';
 import type { GridPlane } from '../infinite-grid';
 import { ShortcutManager } from '../shortcut-manager';
 import { i18n } from './localization';
+import resetSvg from './svg/reset.svg';
 import shownSvg from './svg/shown.svg';
 import { Tooltips } from './tooltips';
 
@@ -47,8 +48,15 @@ class ViewOptionsPanel extends Container {
         });
         i18n.bindText(label, 'panel.view');
 
+        const resetButton = new Container({
+            class: ['panel-header-button', 'panel-header-reset-button']
+        });
+        resetButton.dom.appendChild(createSvg(resetSvg));
+        resetButton.dom.setAttribute('aria-label', i18n.t('panel.settings.reset'));
+
         header.append(icon);
         header.append(label);
+        header.append(resetButton);
 
         // section bars share the panel-header styling, like the scene
         // manager's transform header
@@ -292,6 +300,11 @@ class ViewOptionsPanel extends Container {
             }
         });
 
+        resetButton.on('click', () => {
+            events.fire('preferences.reset', 'overlays');
+            events.fire('grid.setPlane', 'xz');
+        });
+
         // show grid
 
         events.on('grid.visible', (visible: boolean) => {
@@ -370,6 +383,7 @@ class ViewOptionsPanel extends Container {
         tooltips.register(showGridLabel, () => i18n.formatTooltipWithShortcut(i18n.t('panel.view.grid'), shortcut), 'left');
         const cameraInfoShortcut = shortcutManager.formatShortcut('camera.toggleShowInfo');
         tooltips.register(showCameraInfoLabel, () => i18n.formatTooltipWithShortcut(i18n.t('panel.view.camera-info'), cameraInfoShortcut), 'left');
+        tooltips.register(resetButton, () => i18n.t('panel.settings.reset'), 'left');
     }
 }
 

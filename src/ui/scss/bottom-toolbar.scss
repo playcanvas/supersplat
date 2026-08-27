@@ -45,6 +45,7 @@
     position: relative;
     width: 38px;
     height: 38px;
+    margin-left: 1px;
     margin-right: 7px;
     padding: 8px;
     border: 0;
@@ -54,19 +55,19 @@
     svg {
         width: 20px;
         height: 20px;
-        color: $clr-icon-hilight;
+        color: $clr-default;
     }
 
     &::after {
         content: '';
         position: absolute;
         right: 3px;
-        bottom: 3px;
+        top: 3px;
         width: 0;
         height: 0;
         border-left: 3px solid transparent;
         border-right: 3px solid transparent;
-        border-top: 4px solid $clr-default;
+        border-bottom: 4px solid $clr-default;
     }
 }
 

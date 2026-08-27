@@ -36,6 +36,7 @@ class EditorUI {
     appContainer: Container;
     topContainer: Container;
     canvasContainer: Container;
+    annotationContainer: Container;
     toolsContainer: Container;
     canvas: HTMLCanvasElement;
     popup: Popup;
@@ -83,6 +84,12 @@ class EditorUI {
             id: 'canvas-container'
         });
 
+        // world-space annotations paint above the canvas but below all editor
+        // chrome, so panels and toolbars naturally occlude them
+        const annotationContainer = new Container({
+            id: 'annotation-container'
+        });
+
         // tools container
         const toolsContainer = new Container({
             id: 'tools-container'
@@ -104,6 +111,7 @@ class EditorUI {
         const perfOverlay = new PerfOverlay(events);
 
         canvasContainer.dom.appendChild(canvas);
+        canvasContainer.append(annotationContainer);
         canvasContainer.append(appLabel);
         canvasContainer.append(cameraInfoOverlay);
         canvasContainer.append(perfOverlay);
@@ -186,6 +194,7 @@ class EditorUI {
         this.appContainer = appContainer;
         this.topContainer = topContainer;
         this.canvasContainer = canvasContainer;
+        this.annotationContainer = annotationContainer;
         this.toolsContainer = toolsContainer;
         this.canvas = canvas;
         this.popup = popup;

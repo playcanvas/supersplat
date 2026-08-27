@@ -206,14 +206,29 @@ class BottomToolbar extends Container {
 
         undo.dom.addEventListener('click', () => events.fire('edit.undo'));
         redo.dom.addEventListener('click', () => events.fire('edit.redo'));
-        selectionMode.dom.addEventListener('click', () => {
-            if (selectionModeMenu.hidden) {
-                selectionModeMenu.hidden = false;
-                selectionModeMenu.position(selectionMode.dom, 'top', 4);
-            } else {
-                selectionModeMenu.hidden = true;
+        let selectionModeMenuTimer = -1;
+        const clearSelectionModeMenuTimer = () => {
+            if (selectionModeMenuTimer !== -1) {
+                window.clearTimeout(selectionModeMenuTimer);
+                selectionModeMenuTimer = -1;
             }
+        };
+
+        selectionMode.dom.addEventListener('pointerdown', () => {
+            clearSelectionModeMenuTimer();
+            selectionModeMenuTimer = window.setTimeout(() => {
+                selectionModeMenuTimer = -1;
+                selectionModeMenu.position(selectionMode.dom, 'top', 4);
+                selectionModeMenu.hidden = false;
+            }, 150);
         });
+        selectionMode.dom.addEventListener('click', () => {
+            clearSelectionModeMenuTimer();
+            events.fire('selection.toggleMode');
+            selectionModeMenu.hidden = true;
+        });
+        window.addEventListener('pointerup', clearSelectionModeMenuTimer, true);
+        window.addEventListener('pointercancel', clearSelectionModeMenuTimer, true);
         polygon.dom.addEventListener('click', () => events.fire('tool.polygonSelection'));
         lasso.dom.addEventListener('click', () => events.fire('tool.lassoSelection'));
         brush.dom.addEventListener('click', () => events.fire('tool.brushSelection'));

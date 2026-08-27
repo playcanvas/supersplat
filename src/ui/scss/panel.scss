@@ -57,6 +57,19 @@
         }
     }
 
+    .panel-header-reset-button {
+        color: $text-secondary;
+
+        svg {
+            color: $text-secondary;
+        }
+
+        &:hover,
+        &:hover svg {
+            color: #ff9900;
+        }
+    }
+
     .panel-header-spacer {
         flex-grow: 1;
         padding: 0px;

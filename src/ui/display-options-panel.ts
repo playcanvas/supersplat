@@ -6,6 +6,7 @@ import { i18n } from './localization';
 import appearanceSvg from './svg/appearance.svg';
 import centersSvg from './svg/centers.svg';
 import colorsSvg from './svg/colors.svg';
+import resetSvg from './svg/reset.svg';
 import ringsSvg from './svg/rings.svg';
 import selectAllSvg from './svg/select-all.svg';
 import { Tooltips } from './tooltips';
@@ -44,8 +45,15 @@ class DisplayOptionsPanel extends Container {
         });
         i18n.bindText(label, 'panel.display');
 
+        const resetButton = new Container({
+            class: ['panel-header-button', 'panel-header-reset-button']
+        });
+        resetButton.dom.appendChild(createSvg(resetSvg));
+        resetButton.dom.setAttribute('aria-label', i18n.t('panel.settings.reset'));
+
         header.append(icon);
         header.append(label);
+        header.append(resetButton);
 
         const sectionHeader = (key: string) => {
             const section = new Container({
@@ -98,11 +106,16 @@ class DisplayOptionsPanel extends Container {
         const centersButton = iconButton(centersSvg, 'panel.display.centers');
         const ringsButton = iconButton(ringsSvg, 'panel.display.rings');
 
+        const displayToggles = new Container({
+            class: 'options-panel-toggle-grid'
+        });
+        displayToggles.append(gaussiansButton);
+        displayToggles.append(centersButton);
+        displayToggles.append(ringsButton);
+        displayToggles.append(new Container({ class: 'options-panel-icon-spacer' }));
+
         displayRow.append(displayLabel);
-        displayRow.append(gaussiansButton);
-        displayRow.append(centersButton);
-        displayRow.append(ringsButton);
-        displayRow.append(new Container({ class: 'options-panel-icon-spacer' }));
+        displayRow.append(displayToggles);
 
         // centers
 
@@ -200,11 +213,16 @@ class DisplayOptionsPanel extends Container {
         const selectionRingsButton = iconButton(ringsSvg, 'panel.display.selection-rings');
         const outlineSelectionButton = iconButton(selectAllSvg, 'panel.display.selection-outline');
 
+        const selectionToggles = new Container({
+            class: 'options-panel-toggle-grid'
+        });
+        selectionToggles.append(selectionColorButton);
+        selectionToggles.append(selectionCentersButton);
+        selectionToggles.append(selectionRingsButton);
+        selectionToggles.append(outlineSelectionButton);
+
         selectionDisplayRow.append(selectionDisplayLabel);
-        selectionDisplayRow.append(selectionColorButton);
-        selectionDisplayRow.append(selectionCentersButton);
-        selectionDisplayRow.append(selectionRingsButton);
-        selectionDisplayRow.append(outlineSelectionButton);
+        selectionDisplayRow.append(selectionToggles);
 
         // viewport colors
 
@@ -339,6 +357,10 @@ class DisplayOptionsPanel extends Container {
             }
         });
 
+        resetButton.on('click', () => {
+            events.fire('preferences.reset', 'appearance');
+        });
+
         events.on('view.gaussians', updateDisplay);
         events.on('view.centers', updateDisplay);
         events.on('view.rings', updateDisplay);
@@ -428,6 +450,7 @@ class DisplayOptionsPanel extends Container {
         tooltips.register(selectedClrPicker, () => i18n.t('panel.settings.selected-color'), 'top');
         tooltips.register(unselectedClrPicker, () => i18n.t('panel.settings.unselected-color'), 'top');
         tooltips.register(lockedClrPicker, () => i18n.t('panel.settings.locked-color'), 'top');
+        tooltips.register(resetButton, () => i18n.t('panel.settings.reset'), 'left');
 
     }
 }

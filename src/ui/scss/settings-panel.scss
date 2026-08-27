@@ -84,9 +84,14 @@
             }
         }
 
-        & > .settings-panel-row-slider {
-            margin: 0px;
+        & > .settings-panel-row-slider,
+        & > .settings-panel-row-select {
+            flex: 0 0 187px;
+            width: 187px;
+            margin: 0;
+        }
 
+        & > .settings-panel-row-slider {
             & > .pcui-slider-container {
                 & > .pcui-slider-bar {
                     & > .pcui-slider-handle {
@@ -111,11 +116,6 @@
             }
         }
 
-        & > .settings-panel-row-select {
-            width: 187px;
-            margin: 0;
-        }
-
         & > .settings-panel-row-button {
             flex-grow: 1;
             margin: 0;
@@ -135,65 +135,42 @@
             background-color: transparent;
         }
 
-        & > .options-panel-icon-button {
-            flex-shrink: 0;
-            width: 42px;
-            height: 28px;
-            margin: 0;
-            padding: 4px;
-            border: 0;
-            border-radius: 3px;
-            background-color: $bcg-dark;
+        & > .options-panel-toggle-grid {
+            display: flex;
+            flex: 0 0 187px;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
 
-            svg {
-                width: 18px;
-                height: 18px;
-                color: $clr-default;
-            }
-
-            &.active {
-                background-color: $clr-hilight;
+            & > .options-panel-icon-button {
+                flex-shrink: 0;
+                width: 42px;
+                height: 24px;
+                margin: 0;
+                padding: 4px;
+                border: 0;
+                border-radius: 3px;
+                background-color: $bcg-dark;
 
                 svg {
-                    color: $clr-active;
+                    width: 18px;
+                    height: 18px;
+                    color: $clr-default;
+                }
+
+                &.active {
+                    background-color: $clr-hilight;
+
+                    svg {
+                        color: $clr-active;
+                    }
                 }
             }
-        }
 
-        & > .options-panel-icon-spacer {
-            flex-shrink: 0;
-            width: 42px;
-            height: 28px;
-        }
-    }
-
-    & > .settings-panel-row.options-panel-row-footer {
-        height: auto;
-        margin-top: 2px;
-
-        &:hover {
-            background-color: transparent;
-        }
-
-        // flex-center the label (the default line-height rendering sits low)
-        // and lead it with the reset icon, drawn as a mask so it tracks the
-        // text color
-        & > .settings-panel-row-button {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            height: 28px;
-            line-height: normal;
-
-            &::before {
-                content: '';
+            & > .options-panel-icon-spacer {
                 flex-shrink: 0;
-                width: 13px;
-                height: 13px;
-                background-color: currentColor;
-                mask: var(--icon) center / contain no-repeat;
-                -webkit-mask: var(--icon) center / contain no-repeat;
+                width: 42px;
+                height: 24px;
             }
         }
     }

@@ -43,8 +43,8 @@ const axisEdges: number[][][] = [
 ];
 
 class BoundDimensionsOverlay {
-    constructor(events: Events, scene: Scene, canvasContainer: Container) {
-        const dimLabels = new DimensionLabels(scene, canvasContainer.dom, canvasContainer.dom, 'bound-dimensions-svg', 3);
+    constructor(events: Events, scene: Scene, canvasContainer: Container, annotationParent: HTMLElement) {
+        const dimLabels = new DimensionLabels(scene, canvasContainer.dom, annotationParent, 'bound-dimensions-svg', 3);
         dimLabels.labels.forEach((label, i) => {
             label.classList.add(['bound-dim-x', 'bound-dim-y', 'bound-dim-z'][i]);
         });

@@ -112,6 +112,14 @@ const registerDocEvents = (scene: Scene, events: Events) => {
             // below so a failed load can't leave capture suspended.
             events.fire('preferences.suspend');
 
+            // the document is applied piecewise: each layer becomes visible
+            // before its saved transform is applied (scene.add awaits a GPU
+            // bound readback in between) and the camera pose is restored last,
+            // so frames rendered mid-load would show a half-assembled scene.
+            // Suspend viewport rendering until the load settles; the finally
+            // below resumes it and forces a render of the final state.
+            scene.suspendRender = true;
+
             // reset the scene. This closes the *previous* document's archive, so
             // adopt this one only afterwards
             resetScene();
@@ -196,6 +204,8 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 message: `'${error.message ?? error}'`
             });
         } finally {
+            scene.suspendRender = false;
+            scene.forceRender = true;
             events.fire('preferences.resume');
             events.fire('stopSpinner');
         }

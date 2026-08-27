@@ -127,6 +127,12 @@ class Scene {
     lockedRenderMode = false;
     lockedRender = false;
 
+    // viewport rendering is suspended while a document load applies its pieces:
+    // layers become visible before their saved transforms arrive and the camera
+    // pose is restored last, so intermediate frames would show a half-assembled
+    // scene. Set by doc.ts, which forces a render once the load completes.
+    suspendRender = false;
+
     // devtools switch for the stochastic resolve, set from the console as
     // `scene.resolveMode = 'old'`. 'new' is the masked quad+bilinear filter that
     // ships; 'old' is the original aligned 2x2 block average, held across the quad
@@ -504,7 +510,9 @@ class Scene {
         this.app.graphicsDevice.gpuProfiler.enabled =
             (profiling || this.autoSampling) && !this.lockedRenderMode;
 
-        if (this.lockedRenderMode) {
+        if (this.suspendRender) {
+            this.app.renderNextFrame = false;
+        } else if (this.lockedRenderMode) {
             this.app.renderNextFrame = this.lockedRender;
             this.lockedRender = false;
         } else if (!this.app.renderNextFrame) {

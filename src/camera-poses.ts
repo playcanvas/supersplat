@@ -207,8 +207,10 @@ class CameraAnimTrack implements AnimTrack {
         const defaultFov = this.events.invoke('camera.fov');
         this.poses.length = 0;
         posesData.forEach((pose) => {
-            pose.fov ??= defaultFov;
-            this.poses.push(pose);
+            this.poses.push({
+                ...pose,
+                fov: pose.fov ?? defaultFov
+            });
         });
         this.rebuildSpline();
         this.events.fire('track.keysLoaded');

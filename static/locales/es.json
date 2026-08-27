@@ -117,7 +117,8 @@
     "panel.splat-data.dc-blue": "DC Azul",
     "panel.splat-data.sh": "SH",
     "panel.splat-data.on-screen-only": "Solo splats visibles",
-    "panel.splat-data.log-scale": "Escala logarítmica",
+    "panel.splat-data.log-counts": "Recuentos log.",
+    "panel.splat-data.log-bins": "Intervalos log.",
     "panel.splat-data.show-all": "Todas las propiedades",
     "panel.splat-data.totals.splats": "Splats",
     "panel.splat-data.totals.selected": "Seleccionados",
@@ -338,6 +339,7 @@
     "tooltip.status-bar.timeline": "Alternar panel de Línea de tiempo",
     "tooltip.status-bar.splat-data": "Alternar panel de Datos de Splat",
     "tooltip.splat-data.on-screen-only": "Contar solo los splats visibles desde la cámara. Los splats fuera de pantalla se excluyen del histograma.",
-    "tooltip.splat-data.log-scale": "Usar una escala vertical logarítmica para que los valores pequeños sean visibles junto a los grandes.",
+    "tooltip.splat-data.log-counts": "Escala logarítmicamente los recuentos del histograma para que los pequeños sean visibles junto a los grandes.",
+    "tooltip.splat-data.log-bins": "Distribuye los intervalos de valores logarítmicamente para distinguir grupos en rangos amplios.",
     "tooltip.splat-data.show-all": "Mostrar todas las propiedades de los splats en la lista, incluyendo coeficientes DC y armónicos esféricos."
 }

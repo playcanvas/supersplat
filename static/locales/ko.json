@@ -117,7 +117,8 @@
     "panel.splat-data.dc-blue": "DC 파랑",
     "panel.splat-data.sh": "SH",
     "panel.splat-data.on-screen-only": "보이는 스플랫만",
-    "panel.splat-data.log-scale": "로그 크기",
+    "panel.splat-data.log-counts": "로그 개수",
+    "panel.splat-data.log-bins": "로그 구간",
     "panel.splat-data.show-all": "모든 속성",
     "panel.splat-data.totals.splats": "Splat",
     "panel.splat-data.totals.selected": "선택",
@@ -338,6 +339,7 @@
     "tooltip.status-bar.timeline": "타임라인 패널 전환",
     "tooltip.status-bar.splat-data": "스플랫 데이터 패널 전환",
     "tooltip.splat-data.on-screen-only": "카메라에 보이는 스플랫만 히스토그램에 집계합니다. 화면 밖의 스플랫은 제외됩니다.",
-    "tooltip.splat-data.log-scale": "세로축을 로그 스케일로 표시하여 작은 값과 큰 값이 함께 잘 보이도록 합니다.",
+    "tooltip.splat-data.log-counts": "히스토그램 각 구간에 포함된 값의 개수를 로그 스케일로 표시하여 작은 개수와 큰 개수가 함께 잘 보이도록 합니다.",
+    "tooltip.splat-data.log-bins": "값 구간을 로그 간격으로 배치하여 넓은 범위의 그룹을 구분할 수 있게 합니다.",
     "tooltip.splat-data.show-all": "원시 DC 계수 및 구면 조화 함수 계수를 포함한 모든 스플랫 속성을 목록에 표시합니다."
 }

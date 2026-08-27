@@ -117,7 +117,8 @@
     "panel.splat-data.dc-blue": "DC Синий",
     "panel.splat-data.sh": "SH",
     "panel.splat-data.on-screen-only": "Только видимые сплаты",
-    "panel.splat-data.log-scale": "Логарифмическая шкала",
+    "panel.splat-data.log-counts": "Лог. количества",
+    "panel.splat-data.log-bins": "Лог. интервалы",
     "panel.splat-data.show-all": "Все свойства",
     "panel.splat-data.totals.splats": "Сплаты",
     "panel.splat-data.totals.selected": "Выбрано",
@@ -338,6 +339,7 @@
     "tooltip.status-bar.timeline": "Переключить панель временной шкалы",
     "tooltip.status-bar.splat-data": "Переключить панель данных сплатов",
     "tooltip.splat-data.on-screen-only": "Учитывать только сплаты, видимые в поле зрения камеры. Сплаты вне экрана исключаются из гистограммы.",
-    "tooltip.splat-data.log-scale": "Использовать логарифмическую вертикальную шкалу, чтобы малые значения были видны рядом с большими.",
+    "tooltip.splat-data.log-counts": "Масштабировать количества в интервалах гистограммы логарифмически, чтобы малые количества были видны рядом с большими.",
+    "tooltip.splat-data.log-bins": "Распределять интервалы значений логарифмически, чтобы различать группы в широких диапазонах.",
     "tooltip.splat-data.show-all": "Показать все свойства сплатов в списке, включая необработанные коэффициенты DC и сферических гармоник."
 }

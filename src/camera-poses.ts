@@ -204,9 +204,13 @@ class CameraAnimTrack implements AnimTrack {
      * Load poses from serialized data.
      */
     loadPoses(posesData: Pose[]): void {
+        const defaultFov = this.events.invoke('camera.fov');
         this.poses.length = 0;
         posesData.forEach((pose) => {
-            this.poses.push(pose);
+            this.poses.push({
+                ...pose,
+                fov: pose.fov ?? defaultFov
+            });
         });
         this.rebuildSpline();
         this.events.fire('track.keysLoaded');
@@ -284,6 +288,10 @@ const registerCameraPosesEvents = (events: Events) => {
     // Legacy support: add pose directly
     events.on('camera.addPose', (pose: Pose) => {
         track.addPose(pose);
+    });
+
+    events.on('camera.loadPoses', (poses: Pose[]) => {
+        track.loadPoses(poses);
     });
 
     // Serialization

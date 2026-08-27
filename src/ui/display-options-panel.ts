@@ -77,17 +77,6 @@ class DisplayOptionsPanel extends Container {
             return button;
         };
 
-        const modeButton = (localeKey: string) => {
-            const button = new Button({
-                class: 'options-panel-mode-button'
-            });
-            const buttonLabel = new Label();
-            i18n.bindText(buttonLabel, localeKey);
-            button.dom.appendChild(buttonLabel.dom);
-            button.dom.setAttribute('aria-label', i18n.t(localeKey));
-            return button;
-        };
-
         const setActive = (button: Button, active: boolean) => {
             button.class[active ? 'add' : 'remove']('active');
             button.dom.setAttribute('aria-pressed', String(active));
@@ -99,13 +88,20 @@ class DisplayOptionsPanel extends Container {
             class: ['settings-panel-row', 'options-panel-icon-row']
         });
 
+        const displayLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(displayLabel, 'panel.display.section-display');
+
         const gaussiansButton = iconButton(colorsSvg, 'panel.display.gaussians');
         const centersButton = iconButton(centersSvg, 'panel.display.centers');
         const ringsButton = iconButton(ringsSvg, 'panel.display.rings');
 
+        displayRow.append(displayLabel);
         displayRow.append(gaussiansButton);
         displayRow.append(centersButton);
         displayRow.append(ringsButton);
+        displayRow.append(new Container({ class: 'options-panel-icon-spacer' }));
 
         // centers
 
@@ -193,41 +189,34 @@ class DisplayOptionsPanel extends Container {
             class: ['settings-panel-row', 'options-panel-icon-row']
         });
 
+        const selectionDisplayLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(selectionDisplayLabel, 'panel.display.section-selection');
+
         const selectionColorButton = iconButton(colorsSvg, 'panel.display.selection-color');
         const selectionCentersButton = iconButton(centersSvg, 'panel.display.selection-centers');
         const selectionRingsButton = iconButton(ringsSvg, 'panel.display.selection-rings');
         const outlineSelectionButton = iconButton(selectAllSvg, 'panel.display.selection-outline');
 
+        selectionDisplayRow.append(selectionDisplayLabel);
         selectionDisplayRow.append(selectionColorButton);
         selectionDisplayRow.append(selectionCentersButton);
         selectionDisplayRow.append(selectionRingsButton);
         selectionDisplayRow.append(outlineSelectionButton);
 
-        const selectionModeRow = new Container({
-            class: ['settings-panel-row', 'options-panel-mode-row']
-        });
-
-        const surfaceButton = modeButton('panel.display.surface');
-        const throughButton = modeButton('panel.display.through');
-
-        selectionModeRow.append(surfaceButton);
-        selectionModeRow.append(throughButton);
-
         rowToggles(centersColorRow, centersColorToggle);
         rowToggles(ringsColorRow, ringsColorToggle);
 
         this.append(header);
-        this.append(sectionHeader('panel.display.section-display'));
         this.append(displayRow);
+        this.append(selectionDisplayRow);
         this.append(sectionHeader('panel.display.centers'));
         this.append(centersSizeRow);
         this.append(centersColorRow);
         this.append(sectionHeader('panel.display.rings'));
         this.append(ringSizeRow);
         this.append(ringsColorRow);
-        this.append(sectionHeader('panel.display.section-selection'));
-        this.append(selectionDisplayRow);
-        this.append(selectionModeRow);
 
         const updateDisplay = () => {
             setActive(gaussiansButton, events.invoke('view.gaussians'));
@@ -242,11 +231,6 @@ class DisplayOptionsPanel extends Container {
             setActive(outlineSelectionButton, events.invoke('view.outlineSelection'));
         };
 
-        const updateSelectionMode = (mode: 'surface' | 'through') => {
-            setActive(surfaceButton, mode === 'surface');
-            setActive(throughButton, mode === 'through');
-        };
-
         const sync = () => {
             updateDisplay();
             centersSizeSlider.value = events.invoke('camera.splatSize');
@@ -254,7 +238,6 @@ class DisplayOptionsPanel extends Container {
             ringSizeSlider.value = events.invoke('view.ringSize');
             ringsColorToggle.value = events.invoke('view.ringsUseGaussianColor');
             updateSelectionDisplay();
-            updateSelectionMode(events.invoke('selection.mode'));
         };
 
         const setVisible = (visible: boolean) => {
@@ -356,15 +339,6 @@ class DisplayOptionsPanel extends Container {
             events.fire('view.setOutlineSelection', !events.invoke('view.outlineSelection'));
         });
 
-        events.on('selection.mode', updateSelectionMode);
-
-        surfaceButton.on('click', () => {
-            events.fire('selection.setMode', 'surface');
-        });
-
-        throughButton.on('click', () => {
-            events.fire('selection.setMode', 'through');
-        });
     }
 }
 

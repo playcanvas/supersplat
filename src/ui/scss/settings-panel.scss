@@ -136,6 +136,7 @@
         }
 
         & > .options-panel-icon-button {
+            flex-shrink: 0;
             width: 42px;
             height: 28px;
             margin: 0;
@@ -158,30 +159,11 @@
                 }
             }
         }
-    }
 
-    & > .settings-panel-row.options-panel-mode-row {
-        justify-content: center;
-        gap: 4px;
-        height: 36px;
-
-        &:hover {
-            background-color: transparent;
-        }
-
-        & > .options-panel-mode-button {
-            width: 84px;
+        & > .options-panel-icon-spacer {
+            flex-shrink: 0;
+            width: 42px;
             height: 28px;
-            margin: 0;
-            padding: 0;
-            border: 0;
-            border-radius: 3px;
-            background-color: $bcg-dark;
-
-            &.active {
-                color: $clr-active;
-                background-color: $clr-hilight;
-            }
         }
     }
 

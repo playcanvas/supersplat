@@ -525,13 +525,12 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
         for (const splat of selectedSplats()) {
             if (mode === 'through') {
-                const splatSize = events.invoke('camera.splatSize');
                 await runSelectIntersect(splat, op, {
                     rect: {
-                        x1: point.x - splatSize / width,
-                        y1: point.y - splatSize / height,
-                        x2: point.x + splatSize / width,
-                        y2: point.y + splatSize / height
+                        x1: point.x,
+                        y1: point.y,
+                        x2: point.x + 1 / width,
+                        y2: point.y + 1 / height
                     }
                 });
             } else if (mode === 'surface') {

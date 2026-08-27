@@ -41,6 +41,32 @@
     background-color: $bcg-primary;
 }
 
+.bottom-toolbar-selection-mode {
+    display: flex;
+    flex-direction: row;
+    gap: 2px;
+    margin-right: 7px;
+    padding: 3px;
+    border-radius: 3px;
+    background-color: $bcg-primary;
+}
+
+.bottom-toolbar-selection-mode-button {
+    width: 74px;
+    height: 32px;
+    margin: 0;
+    padding: 0 6px;
+    border: 0;
+    border-radius: 2px;
+    background-color: transparent;
+    font-size: 11px;
+
+    &.active {
+        color: $clr-active;
+        background-color: $clr-hilight;
+    }
+}
+
 .bottom-toolbar-button {
     svg {
         color: $clr-default;

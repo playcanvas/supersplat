@@ -48,6 +48,27 @@ class BottomToolbar extends Container {
             enabled: false
         });
 
+        const selectionMode = new Container({
+            class: 'bottom-toolbar-selection-mode'
+        });
+
+        const surfaceMode = new Button({
+            id: 'bottom-toolbar-selection-surface',
+            class: 'bottom-toolbar-selection-mode-button'
+        });
+        i18n.bindText(surfaceMode, 'panel.display.surface');
+        surfaceMode.dom.setAttribute('aria-label', i18n.t('panel.display.surface'));
+
+        const throughMode = new Button({
+            id: 'bottom-toolbar-selection-through',
+            class: 'bottom-toolbar-selection-mode-button'
+        });
+        i18n.bindText(throughMode, 'panel.display.through');
+        throughMode.dom.setAttribute('aria-label', i18n.t('panel.display.through'));
+
+        selectionMode.append(surfaceMode);
+        selectionMode.append(throughMode);
+
         const picker = new Button({
             id: 'bottom-toolbar-picker',
             class: 'bottom-toolbar-tool'
@@ -150,13 +171,14 @@ class BottomToolbar extends Container {
         this.append(undo);
         this.append(redo);
         this.append(new Element({ class: 'bottom-toolbar-separator' }));
+        this.append(selectionMode);
         this.append(picker);
         this.append(lasso);
         this.append(polygon);
         this.append(brush);
         this.append(flood);
-        this.append(eyedropper);
         this.append(new Element({ class: 'bottom-toolbar-separator' }));
+        this.append(eyedropper);
         this.append(sphere);
         this.append(box);
         // this.append(crop);
@@ -172,6 +194,8 @@ class BottomToolbar extends Container {
 
         undo.dom.addEventListener('click', () => events.fire('edit.undo'));
         redo.dom.addEventListener('click', () => events.fire('edit.redo'));
+        surfaceMode.dom.addEventListener('click', () => events.fire('selection.setMode', 'surface'));
+        throughMode.dom.addEventListener('click', () => events.fire('selection.setMode', 'through'));
         polygon.dom.addEventListener('click', () => events.fire('tool.polygonSelection'));
         lasso.dom.addEventListener('click', () => events.fire('tool.lassoSelection'));
         brush.dom.addEventListener('click', () => events.fire('tool.brushSelection'));
@@ -200,6 +224,16 @@ class BottomToolbar extends Container {
         events.on('edit.canRedo', (value: boolean) => {
             redo.enabled = value;
         });
+
+        const updateSelectionMode = (mode: 'surface' | 'through') => {
+            surfaceMode.class[mode === 'surface' ? 'add' : 'remove']('active');
+            throughMode.class[mode === 'through' ? 'add' : 'remove']('active');
+            surfaceMode.dom.setAttribute('aria-pressed', String(mode === 'surface'));
+            throughMode.dom.setAttribute('aria-pressed', String(mode === 'through'));
+        };
+
+        events.on('selection.mode', updateSelectionMode);
+        updateSelectionMode('through');
 
         events.on('tool.activated', (toolName: string) => {
             picker.class[toolName === 'rectSelection' ? 'add' : 'remove']('active');
@@ -238,6 +272,8 @@ class BottomToolbar extends Container {
         // register tooltips
         tooltips.register(undo, tooltip('tooltip.bottom-toolbar.undo', 'edit.undo'));
         tooltips.register(redo, tooltip('tooltip.bottom-toolbar.redo', 'edit.redo'));
+        tooltips.register(surfaceMode, tooltip('panel.display.surface', 'selection.toggleMode'));
+        tooltips.register(throughMode, tooltip('panel.display.through', 'selection.toggleMode'));
         tooltips.register(picker, tooltip('tooltip.bottom-toolbar.rectangle-selection', 'tool.rectSelection'));
         tooltips.register(lasso, tooltip('tooltip.bottom-toolbar.lasso-selection', 'tool.lassoSelection'));
         tooltips.register(polygon, tooltip('tooltip.bottom-toolbar.polygon-selection', 'tool.polygonSelection'));

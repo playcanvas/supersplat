@@ -73,9 +73,6 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         fromEvent: (c: Color) => [c.r, c.g, c.b, c.a]
     });
 
-    // the order of this table is the application order. camera.mode and
-    // camera.overlay must come after camera.splatSize because the view panel's
-    // centers size slider side-fires setOverlay/setMode when its value changes.
     const descriptors: Descriptor[] = [
         color('bgClr', 'setBgClr', () => config.bgClr),
         color('selectedClr', 'setSelectedClr', () => config.selectedClr),
@@ -87,7 +84,15 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         { key: 'view.bands', setCommand: 'view.setBands', urlPath: 'show.shBands', getDefault: () => config.show.shBands, validate: v => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 3 },
         { key: 'camera.flySpeed', setCommand: 'camera.setFlySpeed', getDefault: () => 1, validate: isNumber(0.1, 30) },
         { key: 'camera.splatSize', setCommand: 'camera.setSplatSize', getDefault: () => 2, validate: isNumber(0, 10) },
+        { key: 'view.gaussians', setCommand: 'view.setGaussians', getDefault: () => true, validate: isBool },
+        { key: 'view.centers', setCommand: 'view.setCenters', getDefault: () => false, validate: isBool },
+        { key: 'view.rings', setCommand: 'view.setRings', getDefault: () => false, validate: isBool },
+        { key: 'view.ringSize', setCommand: 'view.setRingSize', getDefault: () => 4, validate: isNumber(1, 50) },
         { key: 'view.centersUseGaussianColor', setCommand: 'view.setCentersUseGaussianColor', getDefault: () => false, validate: isBool },
+        { key: 'view.ringsUseGaussianColor', setCommand: 'view.setRingsUseGaussianColor', getDefault: () => true, validate: isBool },
+        { key: 'view.selectionColor', setCommand: 'view.setSelectionColor', getDefault: () => false, validate: isBool },
+        { key: 'view.selectionCenters', setCommand: 'view.setSelectionCenters', getDefault: () => true, validate: isBool },
+        { key: 'view.selectionRings', setCommand: 'view.setSelectionRings', getDefault: () => false, validate: isBool },
         { key: 'view.outlineSelection', setCommand: 'view.setOutlineSelection', getDefault: () => false, validate: isBool },
         { key: 'view.stochastic', setCommand: 'view.setStochastic', getDefault: () => 'auto', validate: isEnum(['disabled', 'enabled', 'movement', 'auto']) },
         { key: 'view.perfOverlay', setCommand: 'view.setPerfOverlay', getDefault: () => false, validate: isBool },
@@ -96,8 +101,7 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         { key: 'camera.boundDimensions', setCommand: 'camera.setBoundDimensions', urlPath: 'show.boundDimensions', getDefault: () => config.show.boundDimensions, validate: isBool },
         { key: 'camera.showPoses', setCommand: 'camera.setShowPoses', urlPath: 'show.cameraPoses', getDefault: () => config.show.cameraPoses, validate: isBool },
         { key: 'camera.showInfo', setCommand: 'camera.setShowInfo', urlPath: 'show.cameraInfo', getDefault: () => config.show.cameraInfo, validate: isBool },
-        { key: 'camera.mode', setCommand: 'camera.setMode', getDefault: () => 'centers', validate: isEnum(['centers', 'rings']) },
-        { key: 'camera.overlay', setCommand: 'camera.setOverlay', urlPath: 'camera.overlay', getDefault: () => config.camera.overlay, validate: isBool },
+        { key: 'selection.mode', setCommand: 'selection.setMode', getDefault: () => 'through', validate: isEnum(['surface', 'through']) },
         { key: 'camera.controlMode', setCommand: 'camera.setControlMode', getDefault: () => 'orbit', validate: isEnum(['orbit', 'fly']) }
     ];
 

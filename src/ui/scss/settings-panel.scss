@@ -126,6 +126,65 @@
         padding-left: 24px;
     }
 
+    & > .settings-panel-row.options-panel-icon-row {
+        justify-content: center;
+        gap: 4px;
+        height: 36px;
+
+        &:hover {
+            background-color: transparent;
+        }
+
+        & > .options-panel-icon-button {
+            width: 42px;
+            height: 28px;
+            margin: 0;
+            padding: 4px;
+            border: 0;
+            border-radius: 3px;
+            background-color: $bcg-dark;
+
+            svg {
+                width: 18px;
+                height: 18px;
+                color: $clr-default;
+            }
+
+            &.active {
+                background-color: $clr-hilight;
+
+                svg {
+                    color: $clr-active;
+                }
+            }
+        }
+    }
+
+    & > .settings-panel-row.options-panel-mode-row {
+        justify-content: center;
+        gap: 4px;
+        height: 36px;
+
+        &:hover {
+            background-color: transparent;
+        }
+
+        & > .options-panel-mode-button {
+            width: 84px;
+            height: 28px;
+            margin: 0;
+            padding: 0;
+            border: 0;
+            border-radius: 3px;
+            background-color: $bcg-dark;
+
+            &.active {
+                color: $clr-active;
+                background-color: $clr-hilight;
+            }
+        }
+    }
+
     & > .settings-panel-row.options-panel-row-footer {
         height: auto;
         margin-top: 2px;

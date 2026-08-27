@@ -2,6 +2,7 @@ import { Container, Label } from '@playcanvas/pcui';
 import { Mat4 } from 'playcanvas';
 
 import { DataPanel } from './data-panel';
+import { DisplayOptionsPanel } from './display-options-panel';
 import { Events } from '../events';
 import { AboutPopup } from './about-popup';
 import { BottomToolbar } from './bottom-toolbar';
@@ -10,7 +11,6 @@ import { ExportPopup } from './export-popup';
 import { ImageSettingsDialog } from './image-settings-dialog';
 import { i18n } from './localization';
 import { Menu } from './menu';
-import { ModeToggle } from './mode-toggle';
 import { PerfOverlay } from './perf-overlay';
 import logo from './playcanvas-logo.png';
 import { Popup, ShowOptions } from './popup';
@@ -95,10 +95,10 @@ class EditorUI {
         // bottom toolbar
         const scenePanel = new ScenePanel(events, tooltips);
         const settingsPanel = new SettingsPanel(events, tooltips);
+        const displayOptionsPanel = new DisplayOptionsPanel(events, tooltips);
         const viewOptionsPanel = new ViewOptionsPanel(events, tooltips);
         const bottomToolbar = new BottomToolbar(events, tooltips);
         const rightToolbar = new RightToolbar(events, tooltips);
-        const modeToggle = new ModeToggle(events, tooltips);
         const menu = new Menu(events);
         const cameraInfoOverlay = new CameraInfoOverlay(events, tooltips);
         const perfOverlay = new PerfOverlay(events);
@@ -111,12 +111,12 @@ class EditorUI {
         canvasContainer.append(scenePanel);
         canvasContainer.append(bottomToolbar);
         canvasContainer.append(rightToolbar);
-        canvasContainer.append(modeToggle);
         canvasContainer.append(menu);
 
         // the option popups come after the toolbars so their select dropdowns,
         // which can extend past the panel bounds, paint above them
         canvasContainer.append(settingsPanel);
+        canvasContainer.append(displayOptionsPanel);
         canvasContainer.append(viewOptionsPanel);
 
         // view axes container

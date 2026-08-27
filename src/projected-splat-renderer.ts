@@ -174,9 +174,13 @@ class ProjectedSplatRenderer {
         this.material.setParameter('pickCount', 0);
         this.material.setParameter('pickOp', 2);
         this.material.setParameter('outlineMode', 0);
+        this.material.setParameter('showGaussians', 1);
+        this.material.setParameter('showSelectedGaussians', 0);
         this.material.setParameter('ringSize', 0);
         this.material.setParameter('ringSelectionOnly', 0);
+        this.material.setParameter('ringsUseGaussianColor', 1);
         this.material.setParameter('ringColor', [0, 0, 0, 0]);
+        this.material.setParameter('selectedRingColor', [0, 0, 0, 0]);
         this.material.setParameter('ringsBase', 0);
         this.material.setParameter('ringsCount', 0);
         this.material.setParameter('pickMode', 0);
@@ -433,6 +437,7 @@ class ProjectedSplatRenderer {
         ];
         const selectedSplat = events.invoke('selection') as Splat;
         const selectedColor = events.invoke('selectedClr');
+        const unselectedColor = events.invoke('unselectedClr');
         const lockedColor = events.invoke('lockedClr');
         const viewBands = events.invoke('view.bands') as number;
         const minPixelSize = (events.invoke('view.minPixelSize') as number) ?? 0;
@@ -510,7 +515,12 @@ class ProjectedSplatRenderer {
             compute.setParameter('colorRow0', this.previewRows.subarray(0, 4));
             compute.setParameter('colorRow1', this.previewRows.subarray(4, 8));
             compute.setParameter('colorRow2', this.previewRows.subarray(8, 12));
-            compute.setParameter('selectedColor', [0, 0, 0, 0]);
+            compute.setParameter('selectedColor', selectionEnabled && events.invoke('view.selectionColor') && !pending ? [
+                selectedColor.r,
+                selectedColor.g,
+                selectedColor.b,
+                selectedColor.a * splat.selectionAlpha
+            ] : [0, 0, 0, 0]);
             compute.setParameter('lockedColor', [lockedColor.r, lockedColor.g, lockedColor.b, lockedColor.a]);
             compute.setParameter('visible', splat.visible ? 1 : 0);
             compute.setParameter('selectionEnabled', selectionEnabled ? 1 : 0);
@@ -547,15 +557,26 @@ class ProjectedSplatRenderer {
             2 / targetSize.height
         ]);
         this.material.setParameter('outlineMode', outlineSelection ? 1 : 0);
-        const showRings = events.invoke('camera.mode') === 'rings' &&
-            (events.invoke('camera.overlay') || (selectedSplat?.instances.numSelected ?? 0) > 0);
-        this.material.setParameter('ringSize', showRings ? 0.04 : 0);
-        this.material.setParameter('ringSelectionOnly', events.invoke('camera.overlay') ? 0 : 1);
+        this.material.setParameter('showGaussians', events.invoke('view.gaussians') || pending ? 1 : 0);
+        this.material.setParameter('showSelectedGaussians', events.invoke('view.selectionColor') && !pending ? 1 : 0);
+        const showAllRings = events.invoke('view.rings');
+        const showSelectedRings = events.invoke('view.selectionRings') &&
+            (selectedSplat?.instances.numSelected ?? 0) > 0;
+        const showRings = showAllRings || showSelectedRings;
+        this.material.setParameter('ringSize', showRings ? events.invoke('view.ringSize') * 0.01 : 0);
+        this.material.setParameter('ringSelectionOnly', showAllRings ? 0 : 1);
+        this.material.setParameter('ringsUseGaussianColor', events.invoke('view.ringsUseGaussianColor') ? 1 : 0);
         this.material.setParameter('ringColor', [
+            unselectedColor.r,
+            unselectedColor.g,
+            unselectedColor.b,
+            unselectedColor.a
+        ]);
+        this.material.setParameter('selectedRingColor', [
             selectedColor.r,
             selectedColor.g,
             selectedColor.b,
-            outlineSelection ? 0 : selectedColor.a * (selectedSplat?.selectionAlpha ?? 1)
+            events.invoke('view.selectionRings') ? selectedColor.a * (selectedSplat?.selectionAlpha ?? 1) : 0
         ]);
         this.material.setParameter('ringsBase', ringsBase);
         this.material.setParameter('ringsCount', ringsCount);

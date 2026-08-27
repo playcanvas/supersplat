@@ -362,6 +362,12 @@ class SettingsPanel extends Container {
             }
         });
 
+        events.on('displayPanel.visible', (visible: boolean) => {
+            if (visible) {
+                setVisible(false);
+            }
+        });
+
         // sh bands
 
         events.on('view.bands', (bands: number) => {

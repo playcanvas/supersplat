@@ -137,14 +137,14 @@ class SplatOverlay extends Element {
             // delete/undo resizes the instance list, so the draw count is per-frame
             this.meshInstance.instancingCount = this.splat.instances.count;
             const splatSize = events.invoke('camera.splatSize');
-            const outlineSelection = events.invoke('view.outlineSelection') || !!events.invoke('colorPanel.pending');
-            const selectedClr = outlineSelection ? nullClr : events.invoke('selectedClr');
+            const selectedClr = events.invoke('view.selectionCenters') ? events.invoke('selectedClr') : nullClr;
             const unselectedClr = events.invoke('unselectedClr');
             const useGaussianColor = events.invoke('view.centersUseGaussianColor') ? 1.0 : 0.0;
+            const showAllCenters = events.invoke('view.centers');
 
             material.setParameter('splatSize', splatSize * window.devicePixelRatio);
             material.setParameter('viewportSize', [scene.targetSize.width, scene.targetSize.height]);
-            material.setParameter('selectionOnly', events.invoke('camera.overlay') ? 0 : 1);
+            material.setParameter('selectionOnly', showAllCenters ? 0 : 1);
             material.setParameter('selectedClr', [selectedClr.r, selectedClr.g, selectedClr.b, selectedClr.a]);
             material.setParameter('unselectedClr', [unselectedClr.r, unselectedClr.g, unselectedClr.b, unselectedClr.a]);
             material.setParameter('useGaussianColor', useGaussianColor);
@@ -159,11 +159,12 @@ class SplatOverlay extends Element {
     get enabled() {
         const { scene, splat } = this;
         const { events } = scene;
+        const showAllCenters = events.invoke('view.centers');
+        const showSelectedCenters = events.invoke('view.selectionCenters') && (splat?.instances.numSelected ?? 0) > 0;
         return splat &&
             events.invoke('camera.splatSize') > 0 &&
             scene.camera.renderOverlays &&
-            events.invoke('camera.mode') === 'centers' &&
-            (events.invoke('camera.overlay') || splat.instances.numSelected > 0);
+            (showAllCenters || showSelectedCenters);
     }
 }
 

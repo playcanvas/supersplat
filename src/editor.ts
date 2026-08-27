@@ -65,8 +65,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // force render on some events
 
     [
-        'camera.mode', 'camera.overlay', 'camera.splatSize', 'view.outlineSelection',
-        'view.centersUseGaussianColor', 'view.bands', 'view.minPixelSize', 'view.stochastic', 'view.perfOverlay', 'camera.bound', 'camera.boundDimensions', 'camera.showPoses',
+        'camera.splatSize', 'view.outlineSelection', 'view.gaussians', 'view.centers', 'view.rings',
+        'view.ringSize', 'view.ringsUseGaussianColor', 'selection.mode',
+        'view.selectionColor', 'view.selectionCenters', 'view.selectionRings', 'view.centersUseGaussianColor',
+        'view.bands', 'view.minPixelSize', 'view.stochastic', 'view.perfOverlay', 'camera.bound', 'camera.boundDimensions', 'camera.showPoses',
         'camera.showInfo', 'selection.changed', 'tool.coordSpace', 'colorPanel.pendingChanged'
     ].forEach((eventName) => {
         events.on(eventName, () => {
@@ -420,14 +422,14 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     });
 
     events.function('select.rect', async (op: 'add'|'remove'|'set'|'intersect', rect: any) => {
-        const mode = events.invoke('camera.mode');
+        const mode = events.invoke('selection.mode');
 
         for (const splat of selectedSplats()) {
-            if (mode === 'centers') {
+            if (mode === 'through') {
                 await runSelectIntersect(splat, op, {
                     rect: { x1: rect.start.x, y1: rect.start.y, x2: rect.end.x, y2: rect.end.y }
                 });
-            } else if (mode === 'rings') {
+            } else if (mode === 'surface') {
                 scene.camera.pickPrep(splat, op);
                 const pick = await scene.camera.pickRect(
                     rect.start.x,
@@ -445,10 +447,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     let maskTexture: Texture = null;
 
     events.function('select.byMask', async (op: 'add'|'remove'|'set'|'intersect', canvas: HTMLCanvasElement, context: CanvasRenderingContext2D) => {
-        const mode = events.invoke('camera.mode');
+        const mode = events.invoke('selection.mode');
 
         for (const splat of selectedSplats()) {
-            if (mode === 'centers') {
+            if (mode === 'through') {
                 // create mask texture
                 if (!maskTexture || maskTexture.width !== canvas.width || maskTexture.height !== canvas.height) {
                     if (maskTexture) {
@@ -461,7 +463,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 await runSelectIntersect(splat, op, {
                     mask: maskTexture
                 });
-            } else if (mode === 'rings') {
+            } else if (mode === 'surface') {
                 const mask = context.getImageData(0, 0, canvas.width, canvas.height);
 
                 // calculate mask bound so we limit pixel operations
@@ -519,10 +521,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.function('select.point', async (op: 'add'|'remove'|'set'|'intersect', point: { x: number, y: number }) => {
         const { width, height } = scene.targetSize;
-        const mode = events.invoke('camera.mode');
+        const mode = events.invoke('selection.mode');
 
         for (const splat of selectedSplats()) {
-            if (mode === 'centers') {
+            if (mode === 'through') {
                 const splatSize = events.invoke('camera.splatSize');
                 await runSelectIntersect(splat, op, {
                     rect: {
@@ -532,7 +534,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                         y2: point.y + splatSize / height
                     }
                 });
-            } else if (mode === 'rings') {
+            } else if (mode === 'surface') {
                 scene.camera.pickPrep(splat, op);
 
                 // Use normalized coordinates with minimal size for single pixel pick
@@ -684,27 +686,72 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
     });
 
-    // camera mode (visual: centers/rings)
+    // display
 
-    let activeMode = 'centers';
+    let showGaussians = true;
+    let showCenters = false;
+    let showRings = false;
+    let ringSize = 4;
+    let ringsUseGaussianColor = true;
 
-    const setCameraMode = (mode: string) => {
-        if (mode !== activeMode) {
-            activeMode = mode;
-            events.fire('camera.mode', activeMode);
+    events.function('view.gaussians', () => showGaussians);
+    events.function('view.centers', () => showCenters);
+    events.function('view.rings', () => showRings);
+    events.function('view.ringSize', () => ringSize);
+    events.function('view.ringsUseGaussianColor', () => ringsUseGaussianColor);
+
+    events.on('view.setGaussians', (value: boolean) => {
+        if (value !== showGaussians) {
+            showGaussians = value;
+            events.fire('view.gaussians', value);
+        }
+    });
+
+    events.on('view.setCenters', (value: boolean) => {
+        if (value !== showCenters) {
+            showCenters = value;
+            events.fire('view.centers', value);
+        }
+    });
+
+    events.on('view.setRings', (value: boolean) => {
+        if (value !== showRings) {
+            showRings = value;
+            events.fire('view.rings', value);
+        }
+    });
+
+    events.on('view.setRingSize', (value: number) => {
+        if (value !== ringSize) {
+            ringSize = value;
+            events.fire('view.ringSize', value);
+        }
+    });
+
+    events.on('view.setRingsUseGaussianColor', (value: boolean) => {
+        if (value !== ringsUseGaussianColor) {
+            ringsUseGaussianColor = value;
+            events.fire('view.ringsUseGaussianColor', value);
+        }
+    });
+
+    // selection mode
+
+    let selectionMode: 'surface' | 'through' = 'through';
+
+    const setSelectionMode = (mode: 'surface' | 'through') => {
+        if (mode !== selectionMode) {
+            selectionMode = mode;
+            events.fire('selection.mode', mode);
         }
     };
 
-    events.function('camera.mode', () => {
-        return activeMode;
-    });
+    events.function('selection.mode', () => selectionMode);
 
-    events.on('camera.setMode', (mode: string) => {
-        setCameraMode(mode);
-    });
+    events.on('selection.setMode', setSelectionMode);
 
-    events.on('camera.toggleMode', () => {
-        setCameraMode(events.invoke('camera.mode') === 'centers' ? 'rings' : 'centers');
+    events.on('selection.toggleMode', () => {
+        setSelectionMode(selectionMode === 'surface' ? 'through' : 'surface');
     });
 
     // camera control mode (orbit/fly)
@@ -729,29 +776,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('camera.toggleControlMode', () => {
         setControlMode(controlMode === 'orbit' ? 'fly' : 'orbit');
-    });
-
-    // camera overlay
-
-    let cameraOverlay = scene.config.camera.overlay;
-
-    const setCameraOverlay = (enabled: boolean) => {
-        if (enabled !== cameraOverlay) {
-            cameraOverlay = enabled;
-            events.fire('camera.overlay', cameraOverlay);
-        }
-    };
-
-    events.function('camera.overlay', () => {
-        return cameraOverlay;
-    });
-
-    events.on('camera.setOverlay', (value: boolean) => {
-        setCameraOverlay(value);
-    });
-
-    events.on('camera.toggleOverlay', () => {
-        setCameraOverlay(!events.invoke('camera.overlay'));
     });
 
     // splat size
@@ -788,6 +812,37 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('camera.setFlySpeed', (value: number) => {
         setFlySpeed(value);
+    });
+
+    // selection display
+
+    let selectionColor = false;
+    let selectionCenters = true;
+    let selectionRings = false;
+
+    events.function('view.selectionColor', () => selectionColor);
+    events.function('view.selectionCenters', () => selectionCenters);
+    events.function('view.selectionRings', () => selectionRings);
+
+    events.on('view.setSelectionColor', (value: boolean) => {
+        if (value !== selectionColor) {
+            selectionColor = value;
+            events.fire('view.selectionColor', value);
+        }
+    });
+
+    events.on('view.setSelectionCenters', (value: boolean) => {
+        if (value !== selectionCenters) {
+            selectionCenters = value;
+            events.fire('view.selectionCenters', value);
+        }
+    });
+
+    events.on('view.setSelectionRings', (value: boolean) => {
+        if (value !== selectionRings) {
+            selectionRings = value;
+            events.fire('view.selectionRings', value);
+        }
     });
 
     // outline selection
@@ -916,7 +971,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     // hack: fire events to initialize UI
     events.fire('camera.fov', scene.camera.fov);
-    events.fire('camera.overlay', cameraOverlay);
     events.fire('view.bands', viewBands);
     events.fire('camera.showInfo', showInfo);
     // needed because view.setStochastic only notifies on a change, so a stored

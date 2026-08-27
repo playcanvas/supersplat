@@ -1,4 +1,4 @@
-import { BooleanInput, Container, Label, SelectInput, SliderInput } from '@playcanvas/pcui';
+import { BooleanInput, Container, Label, SelectInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import type { GridPlane } from '../infinite-grid';
@@ -198,68 +198,6 @@ class ViewOptionsPanel extends Container {
         showCameraInfoRow.append(showCameraInfoLabel);
         showCameraInfoRow.append(showCameraInfoToggle);
 
-        // centers size
-
-        const centersSizeRow = new Container({
-            class: 'settings-panel-row'
-        });
-
-        const centersSizeLabel = new Label({
-            class: 'settings-panel-row-label'
-        });
-        i18n.bindText(centersSizeLabel, 'panel.view.center-size');
-
-        const centersSizeSlider = new SliderInput({
-            class: 'settings-panel-row-slider',
-            min: 0,
-            max: 10,
-            precision: 1,
-            value: 2
-        });
-
-        centersSizeRow.append(centersSizeLabel);
-        centersSizeRow.append(centersSizeSlider);
-
-        // centers gaussian color
-
-        const centersColorRow = new Container({
-            class: 'settings-panel-row'
-        });
-
-        const centersColorLabel = new Label({
-            class: 'settings-panel-row-label'
-        });
-        i18n.bindText(centersColorLabel, 'panel.view.use-splat-colors');
-
-        const centersColorToggle = new BooleanInput({
-            type: 'toggle',
-            class: 'settings-panel-row-toggle',
-            value: false
-        });
-
-        centersColorRow.append(centersColorLabel);
-        centersColorRow.append(centersColorToggle);
-
-        // outline selection
-
-        const outlineSelectionRow = new Container({
-            class: 'settings-panel-row'
-        });
-
-        const outlineSelectionLabel = new Label({
-            class: 'settings-panel-row-label'
-        });
-        i18n.bindText(outlineSelectionLabel, 'panel.view.outline-selection');
-
-        const outlineSelectionToggle = new BooleanInput({
-            type: 'toggle',
-            class: 'settings-panel-row-toggle',
-            value: false
-        });
-
-        outlineSelectionRow.append(outlineSelectionLabel);
-        outlineSelectionRow.append(outlineSelectionToggle);
-
         // frame timings overlay
 
         const perfOverlayRow = new Container({
@@ -285,8 +223,6 @@ class ViewOptionsPanel extends Container {
         rowToggles(showBoundDimensionsRow, showBoundDimensionsToggle);
         rowToggles(showCameraPosesRow, showCameraPosesToggle);
         rowToggles(showCameraInfoRow, showCameraInfoToggle);
-        rowToggles(centersColorRow, centersColorToggle);
-        rowToggles(outlineSelectionRow, outlineSelectionToggle);
         rowToggles(perfOverlayRow, perfOverlayToggle);
 
         this.append(header);
@@ -297,10 +233,6 @@ class ViewOptionsPanel extends Container {
         this.append(showBoundDimensionsRow);
         this.append(showCameraPosesRow);
         this.append(showCameraInfoRow);
-        this.append(sectionHeader('panel.view.section-overlay'));
-        this.append(centersSizeRow);
-        this.append(centersColorRow);
-        this.append(outlineSelectionRow);
         this.append(sectionHeader('panel.view.section-diagnostics'));
         this.append(perfOverlayRow);
 
@@ -310,10 +242,7 @@ class ViewOptionsPanel extends Container {
         // live state whenever the panel opens instead; assigning an unchanged
         // value is a no-op, and a changed one round-trips through the setter
         // idempotently.
-        let syncing = false;
-
         const sync = () => {
-            syncing = true;
             const grid = events.invoke('grid.visible') as boolean;
             showGridToggle.value = grid;
             gridPlaneRow.enabled = grid;
@@ -324,11 +253,7 @@ class ViewOptionsPanel extends Container {
             showBoundDimensionsToggle.value = events.invoke('camera.boundDimensions');
             showCameraPosesToggle.value = events.invoke('camera.showPoses');
             showCameraInfoToggle.value = events.invoke('camera.showInfo');
-            centersSizeSlider.value = events.invoke('camera.splatSize');
-            centersColorToggle.value = events.invoke('view.centersUseGaussianColor');
-            outlineSelectionToggle.value = events.invoke('view.outlineSelection');
             perfOverlayToggle.value = events.invoke('view.perfOverlay');
-            syncing = false;
         };
 
         // handle panel visibility
@@ -356,6 +281,12 @@ class ViewOptionsPanel extends Container {
         });
 
         events.on('settingsPanel.visible', (visible: boolean) => {
+            if (visible) {
+                setVisible(false);
+            }
+        });
+
+        events.on('displayPanel.visible', (visible: boolean) => {
             if (visible) {
                 setVisible(false);
             }
@@ -421,42 +352,6 @@ class ViewOptionsPanel extends Container {
 
         showCameraInfoToggle.on('change', () => {
             events.fire('camera.setShowInfo', showCameraInfoToggle.value);
-        });
-
-        // splat size
-
-        events.on('camera.splatSize', (value: number) => {
-            centersSizeSlider.value = value;
-        });
-
-        centersSizeSlider.on('change', (value: number) => {
-            events.fire('camera.setSplatSize', value);
-            // only a user drag should force the centers overlay on - a stale
-            // slider being synced on panel open must not switch modes
-            if (!syncing) {
-                events.fire('camera.setOverlay', true);
-                events.fire('camera.setMode', 'centers');
-            }
-        });
-
-        // centers gaussian color
-
-        events.on('view.centersUseGaussianColor', (value: boolean) => {
-            centersColorToggle.value = value;
-        });
-
-        centersColorToggle.on('change', (value: boolean) => {
-            events.fire('view.setCentersUseGaussianColor', value);
-        });
-
-        // outline selection
-
-        events.on('view.outlineSelection', (value: boolean) => {
-            outlineSelectionToggle.value = value;
-        });
-
-        outlineSelectionToggle.on('change', (value: boolean) => {
-            events.fire('view.setOutlineSelection', value);
         });
 
         // frame timings overlay

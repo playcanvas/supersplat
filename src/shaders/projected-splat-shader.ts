@@ -17,10 +17,12 @@ uniform pickBase: u32;
 uniform pickCount: u32;
 uniform pickOp: i32;
 uniform ringColor: vec4f;
+uniform selectedRingColor: vec4f;
 
 varying gaussianUV: vec2f;
 varying gaussianColor: vec4f;
 varying ringColor: vec4f;
+varying selectedRingColor: vec4f;
 varying @interpolate(flat) gaussianFlags: u32;
 varying @interpolate(flat) gaussianId: u32;
 varying gaussianDepth: f32;
@@ -91,6 +93,10 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     output.gaussianUV = corner;
     output.gaussianColor = vec4f(prepareOutputFromGamma(color, clip.w), alpha);
     output.ringColor = vec4f(prepareOutputFromGamma(uniform.ringColor.rgb, clip.w), uniform.ringColor.a);
+    output.selectedRingColor = vec4f(
+        prepareOutputFromGamma(uniform.selectedRingColor.rgb, clip.w),
+        uniform.selectedRingColor.a
+    );
     output.gaussianFlags = flags;
     output.gaussianId = entry - uniform.pickBase;
     output.gaussianDepth = clip.w;
@@ -102,13 +108,17 @@ const fragmentShader = /* wgsl */`
 varying gaussianUV: vec2f;
 varying gaussianColor: vec4f;
 varying ringColor: vec4f;
+varying selectedRingColor: vec4f;
 varying @interpolate(flat) gaussianFlags: u32;
 varying @interpolate(flat) gaussianId: u32;
 varying gaussianDepth: f32;
 
 uniform outlineMode: u32;
+uniform showGaussians: u32;
+uniform showSelectedGaussians: u32;
 uniform ringSize: f32;
 uniform ringSelectionOnly: u32;
+uniform ringsUseGaussianColor: u32;
 uniform ringsBase: u32;
 uniform ringsCount: u32;
 uniform pickMode: i32;
@@ -158,20 +168,23 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         let selected = (gaussianFlags & 1u) != 0u;
         let locked = (gaussianFlags & 2u) != 0u;
         let norm = normExp(radius);
-        var alpha = norm * gaussianColor.a;
+        let showGaussian = uniform.showGaussians != 0u || (selected && uniform.showSelectedGaussians != 0u);
+        var alpha = select(0.0, norm * gaussianColor.a, showGaussian);
         var color = gaussianColor.rgb;
-        // rings apply only to the selected splat's gaussians (gaussianId is the
-        // cache entry index in the forward pass, where pickBase is 0). The
-        // reshaped alpha feeds both paths: the sorted blend directly, and the
-        // stochastic coverage test as its probability, so the ring edge dithers
-        // at ~60% coverage and the interior at ~5% and the resolve filter
-        // averages that back to roughly the sorted look.
+        // Rings apply only to the selected splat's gaussians (gaussianId is the
+        // cache entry index in the forward pass, where pickBase is 0). Their
+        // alpha is composed with the independently-controlled gaussian fill.
         let rings = gaussianId >= uniform.ringsBase && gaussianId < uniform.ringsBase + uniform.ringsCount;
         if (!locked && rings && uniform.ringSize > 0.0 && (uniform.ringSelectionOnly == 0u || selected)) {
-            let interior = radius < 1.0 - uniform.ringSize;
-            alpha = select(0.6, max(0.05, alpha), interior);
-            if (selected && !interior) {
-                color = mix(color, ringColor.rgb, ringColor.a);
+            let ringBand = radius >= 1.0 - uniform.ringSize;
+            if (ringBand) {
+                alpha = max(alpha, 0.6);
+                if (uniform.ringsUseGaussianColor == 0u) {
+                    color = ringColor.rgb;
+                }
+                if (selected) {
+                    color = mix(color, selectedRingColor.rgb, selectedRingColor.a);
+                }
             }
         }
       #ifdef STOCHASTIC

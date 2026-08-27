@@ -7,10 +7,12 @@
 
     background-color: $bcg-primary;
 
-    & > .panel-header {
+    & .panel-header {
         display: flex;
         flex-direction: row;
         align-items: center;
+        box-sizing: border-box;
+        height: 32px;
         padding: 2px;
 
         background-color: $bcg-dark;
@@ -54,19 +56,6 @@
             color: #ff9900;
             background-color: $bcg-darkest;
             cursor: pointer;
-        }
-    }
-
-    .panel-header-reset-button {
-        color: $text-secondary;
-
-        svg {
-            color: $text-secondary;
-        }
-
-        &:hover,
-        &:hover svg {
-            color: #ff9900;
         }
     }
 

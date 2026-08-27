@@ -36,12 +36,8 @@
         display: flex;
     }
 
-    // section bars match the row height; their labels drop the bold weight to
-    // sit a step below the panel title
+    // section labels sit a step below the panel title
     & > .options-panel-section {
-        box-sizing: border-box;
-        height: 32px;
-
         & > .panel-header-label {
             font-size: 11px;
         }

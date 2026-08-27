@@ -65,15 +65,26 @@ class BottomToolbar extends Container {
         selectionMode.dom.appendChild(surfaceModeIcon);
         selectionMode.dom.appendChild(throughModeIcon);
 
+        const surfaceModeMenuIcon = new Element({
+            dom: createSvg(ringsSvg),
+            class: 'bottom-toolbar-selection-mode-menu-icon'
+        });
+        const throughModeMenuIcon = new Element({
+            dom: createSvg(centersSvg),
+            class: 'bottom-toolbar-selection-mode-menu-icon'
+        });
+
         const surfaceModeCheck = new Label();
         const throughModeCheck = new Label({ text: '\u2713' });
 
         const selectionModeMenu = new MenuPanel([{
             text: () => i18n.t('panel.display.surface'),
+            icon: surfaceModeMenuIcon,
             extra: surfaceModeCheck,
             onSelect: () => events.fire('selection.setMode', 'surface')
         }, {
             text: () => i18n.t('panel.display.through'),
+            icon: throughModeMenuIcon,
             extra: throughModeCheck,
             onSelect: () => events.fire('selection.setMode', 'through')
         }], {

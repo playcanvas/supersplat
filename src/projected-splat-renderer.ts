@@ -175,6 +175,8 @@ class ProjectedSplatRenderer {
         this.material.setParameter('pickOp', 2);
         this.material.setParameter('outlineMode', 0);
         this.material.setParameter('ringSize', 0);
+        this.material.setParameter('ringSelectionOnly', 0);
+        this.material.setParameter('ringColor', [0, 0, 0, 0]);
         this.material.setParameter('ringsBase', 0);
         this.material.setParameter('ringsCount', 0);
         this.material.setParameter('pickMode', 0);
@@ -439,6 +441,7 @@ class ProjectedSplatRenderer {
         // Packed once per frame: it is the same for every placement, only the
         // preview mode differs.
         const pending = events.invoke('colorPanel.pending') as GradeParams;
+        const outlineSelection = events.invoke('view.outlineSelection') || !!pending;
         if (pending) {
             gradeRows(gradeTerms(pending, this.previewTerms), this.previewRows);
         }
@@ -507,12 +510,7 @@ class ProjectedSplatRenderer {
             compute.setParameter('colorRow0', this.previewRows.subarray(0, 4));
             compute.setParameter('colorRow1', this.previewRows.subarray(4, 8));
             compute.setParameter('colorRow2', this.previewRows.subarray(8, 12));
-            compute.setParameter('selectedColor', selectionEnabled && !events.invoke('view.outlineSelection') ? [
-                selectedColor.r,
-                selectedColor.g,
-                selectedColor.b,
-                selectedColor.a * splat.selectionAlpha
-            ] : [0, 0, 0, 0]);
+            compute.setParameter('selectedColor', [0, 0, 0, 0]);
             compute.setParameter('lockedColor', [lockedColor.r, lockedColor.g, lockedColor.b, lockedColor.a]);
             compute.setParameter('visible', splat.visible ? 1 : 0);
             compute.setParameter('selectionEnabled', selectionEnabled ? 1 : 0);
@@ -548,8 +546,17 @@ class ProjectedSplatRenderer {
             2 / targetSize.width,
             2 / targetSize.height
         ]);
-        this.material.setParameter('outlineMode', events.invoke('view.outlineSelection') ? 1 : 0);
-        this.material.setParameter('ringSize', (events.invoke('camera.mode') === 'rings' && events.invoke('camera.overlay')) ? 0.04 : 0);
+        this.material.setParameter('outlineMode', outlineSelection ? 1 : 0);
+        const showRings = events.invoke('camera.mode') === 'rings' &&
+            (events.invoke('camera.overlay') || (selectedSplat?.instances.numSelected ?? 0) > 0);
+        this.material.setParameter('ringSize', showRings ? 0.04 : 0);
+        this.material.setParameter('ringSelectionOnly', events.invoke('camera.overlay') ? 0 : 1);
+        this.material.setParameter('ringColor', [
+            selectedColor.r,
+            selectedColor.g,
+            selectedColor.b,
+            outlineSelection ? 0 : selectedColor.a * (selectedSplat?.selectionAlpha ?? 1)
+        ]);
         this.material.setParameter('ringsBase', ringsBase);
         this.material.setParameter('ringsCount', ringsCount);
         this.material.setParameter('cameraParams', [1 / cameraComponent.farClip, cameraComponent.farClip, cameraComponent.nearClip, cameraComponent.projection]);

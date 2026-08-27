@@ -271,6 +271,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // camera.focus
 
     events.on('camera.focus', () => {
+        events.fire('camera.setControlMode', 'orbit');
+
         // the active tool's focus target (e.g. orient points) takes precedence
         const toolFocus: { position: Vec3, radius: number } | null = events.invoke('tool.focus');
         if (toolFocus) {

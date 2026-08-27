@@ -11,6 +11,7 @@ uniform instanceBase: u32;
 uniform splatSize: f32;
 uniform viewportSize: vec2f;
 uniform useGaussianColor: f32;
+uniform selectionOnly: u32;
 uniform selectedClr: vec4f;
 uniform unselectedClr: vec4f;
 
@@ -109,7 +110,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     let instance = uniform.instanceBase + pcInstanceIndex;
     let uv = splatUv(instanceSource[instance]);
     let state = instanceFlagByte(instance);
-    if ((state & 2u) != 0u) {
+    if ((state & 2u) != 0u || (uniform.selectionOnly != 0u && (state & 1u) == 0u)) {
         output.position = vec4f(0.0, 0.0, 2.0, 1.0);
         return output;
     }

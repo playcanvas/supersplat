@@ -30,7 +30,8 @@ class Outline extends Element {
 
         camera.camera.on('postRenderLayer', (layer: Layer, transparent: boolean) => {
             // only apply when outline mode is enabled
-            if (!this.enabled || !events.invoke('view.outlineSelection')) {
+            const outlineSelection = events.invoke('view.outlineSelection') || !!events.invoke('colorPanel.pending');
+            if (!this.enabled || !outlineSelection) {
                 return;
             }
 

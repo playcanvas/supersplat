@@ -16,9 +16,11 @@ uniform clipZParams: vec4f;
 uniform pickBase: u32;
 uniform pickCount: u32;
 uniform pickOp: i32;
+uniform ringColor: vec4f;
 
 varying gaussianUV: vec2f;
 varying gaussianColor: vec4f;
+varying ringColor: vec4f;
 varying @interpolate(flat) gaussianFlags: u32;
 varying @interpolate(flat) gaussianId: u32;
 varying gaussianDepth: f32;
@@ -88,6 +90,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     output.position = clip + vec4f(clipOffset, 0.0, 0.0);
     output.gaussianUV = corner;
     output.gaussianColor = vec4f(prepareOutputFromGamma(color, clip.w), alpha);
+    output.ringColor = vec4f(prepareOutputFromGamma(uniform.ringColor.rgb, clip.w), uniform.ringColor.a);
     output.gaussianFlags = flags;
     output.gaussianId = entry - uniform.pickBase;
     output.gaussianDepth = clip.w;
@@ -98,12 +101,14 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 const fragmentShader = /* wgsl */`
 varying gaussianUV: vec2f;
 varying gaussianColor: vec4f;
+varying ringColor: vec4f;
 varying @interpolate(flat) gaussianFlags: u32;
 varying @interpolate(flat) gaussianId: u32;
 varying gaussianDepth: f32;
 
 uniform outlineMode: u32;
 uniform ringSize: f32;
+uniform ringSelectionOnly: u32;
 uniform ringsBase: u32;
 uniform ringsCount: u32;
 uniform pickMode: i32;
@@ -154,6 +159,7 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         let locked = (gaussianFlags & 2u) != 0u;
         let norm = normExp(radius);
         var alpha = norm * gaussianColor.a;
+        var color = gaussianColor.rgb;
         // rings apply only to the selected splat's gaussians (gaussianId is the
         // cache entry index in the forward pass, where pickBase is 0). The
         // reshaped alpha feeds both paths: the sorted blend directly, and the
@@ -161,8 +167,12 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         // at ~60% coverage and the interior at ~5% and the resolve filter
         // averages that back to roughly the sorted look.
         let rings = gaussianId >= uniform.ringsBase && gaussianId < uniform.ringsBase + uniform.ringsCount;
-        if (!locked && rings && uniform.ringSize > 0.0) {
-            alpha = select(0.6, max(0.05, alpha), radius < 1.0 - uniform.ringSize);
+        if (!locked && rings && uniform.ringSize > 0.0 && (uniform.ringSelectionOnly == 0u || selected)) {
+            let interior = radius < 1.0 - uniform.ringSize;
+            alpha = select(0.6, max(0.05, alpha), interior);
+            if (selected && !interior) {
+                color = mix(color, ringColor.rgb, ringColor.a);
+            }
         }
       #ifdef STOCHASTIC
         // 1 spp stochastic transparency (StochasticSplats, Listing 1): keep this
@@ -191,17 +201,17 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         // it can exceed 1, which lets the blit composite splats against the rest
         // of the frame instead of blurring all of it. Never exported: captures set
         // lockedRenderMode, which forces the sorted path.
-        output.color = vec4f(gaussianColor.rgb, 2.0);
+        output.color = vec4f(color, 2.0);
         output.color1 = vec4f(0.0);
       #else
         if (uniform.outlineMode != 0u) {
-            output.color = vec4f(gaussianColor.rgb * alpha, alpha);
+            output.color = vec4f(color * alpha, alpha);
             output.color1 = vec4f(0.0, 0.0, 0.0, select(0.0, norm, selected));
         } else if (selected) {
-            output.color = vec4f(gaussianColor.rgb * alpha * 0.8, alpha);
-            output.color1 = vec4f(gaussianColor.rgb * alpha * 0.2, alpha);
+            output.color = vec4f(color * alpha * 0.8, alpha);
+            output.color1 = vec4f(color * alpha * 0.2, alpha);
         } else {
-            output.color = vec4f(gaussianColor.rgb * alpha, alpha);
+            output.color = vec4f(color * alpha, alpha);
             output.color1 = vec4f(0.0);
         }
       #endif

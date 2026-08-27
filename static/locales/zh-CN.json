@@ -117,7 +117,8 @@
     "panel.splat-data.dc-blue": "DC 蓝",
     "panel.splat-data.sh": "SH",
     "panel.splat-data.on-screen-only": "仅可见的高斯点",
-    "panel.splat-data.log-scale": "对数缩放",
+    "panel.splat-data.log-counts": "对数计数",
+    "panel.splat-data.log-bins": "对数分组",
     "panel.splat-data.show-all": "全部属性",
     "panel.splat-data.totals.splats": "Splat",
     "panel.splat-data.totals.selected": "选择",
@@ -338,6 +339,7 @@
     "tooltip.status-bar.timeline": "切换时间线面板",
     "tooltip.status-bar.splat-data": "切换高斯点数据面板",
     "tooltip.splat-data.on-screen-only": "仅统计相机视野内可见的高斯点。屏幕外的高斯点将从直方图中排除。",
-    "tooltip.splat-data.log-scale": "对纵轴使用对数刻度，让小数值与大数值同时清晰可见。",
+    "tooltip.splat-data.log-counts": "以对数方式缩放直方图分组的计数，让较小和较大的计数都清晰可见。",
+    "tooltip.splat-data.log-bins": "使用带符号的对数间距划分数值分组，以便区分跨越较大范围的数值组。支持负值和零。",
     "tooltip.splat-data.show-all": "在列表中显示所有高斯点属性，包括原始 DC 系数和球谐函数系数。"
 }

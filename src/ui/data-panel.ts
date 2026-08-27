@@ -78,7 +78,8 @@ type HistogramInputs = {
     splatId: number;
     mode: number;
     onScreenOnly: boolean;
-    logScale: boolean;
+    logCounts: boolean;
+    logBins: boolean;
     cameraVersion: number;
     stateVersion: number;
     colorGradeVersion: number;
@@ -90,7 +91,7 @@ const hashInputs = (i: HistogramInputs): string => {
     const camMatters = i.onScreenOnly || isCameraDependentMode(m);
     const posMatters = isPositionDependentMode(m);
     const cgMatters = isColorGradeDependentMode(m);
-    return `${i.splatId}|${m}|${i.onScreenOnly ? 1 : 0}|${i.logScale ? 1 : 0}|` +
+    return `${i.splatId}|${m}|${i.onScreenOnly ? 1 : 0}|${i.logBins ? 1 : 0}|` +
         `${camMatters ? i.cameraVersion : 0}|${i.stateVersion}|` +
         `${cgMatters ? i.colorGradeVersion : 0}|${posMatters ? i.positionsVersion : 0}`;
 };
@@ -129,7 +130,7 @@ class DataPanel extends Container {
         resizeHandle.addEventListener('pointermove', (event: PointerEvent) => {
             if (resizing) {
                 const delta = startY - event.clientY;
-                const newHeight = Math.max(120, Math.min(1000, startHeight + delta));
+                const newHeight = Math.max(148, Math.min(1000, startHeight + delta));
                 this.dom.style.height = `${newHeight}px`;
             }
         });
@@ -161,25 +162,45 @@ class DataPanel extends Container {
             id: 'data-list-box'
         });
 
-        const logScale = new Container({
+        const logCounts = new Container({
             class: 'data-panel-toggle-row',
             flex: true,
             flexDirection: 'row'
         });
 
-        const logScaleLabel = new Label({
+        const logCountsLabel = new Label({
             class: 'data-panel-toggle-label'
         });
-        i18n.bindText(logScaleLabel, 'panel.splat-data.log-scale');
+        i18n.bindText(logCountsLabel, 'panel.splat-data.log-counts');
 
-        const logScaleValue = new BooleanInput({
+        const logCountsValue = new BooleanInput({
             type: 'toggle',
             class: 'data-panel-toggle',
             value: false
         });
 
-        logScale.append(logScaleLabel);
-        logScale.append(logScaleValue);
+        logCounts.append(logCountsLabel);
+        logCounts.append(logCountsValue);
+
+        const logBins = new Container({
+            class: 'data-panel-toggle-row',
+            flex: true,
+            flexDirection: 'row'
+        });
+
+        const logBinsLabel = new Label({
+            class: 'data-panel-toggle-label'
+        });
+        i18n.bindText(logBinsLabel, 'panel.splat-data.log-bins');
+
+        const logBinsValue = new BooleanInput({
+            type: 'toggle',
+            class: 'data-panel-toggle',
+            value: false
+        });
+
+        logBins.append(logBinsLabel);
+        logBins.append(logBinsValue);
 
         const showAll = new Container({
             class: 'data-panel-toggle-row',
@@ -319,11 +340,12 @@ class DataPanel extends Container {
             });
         };
 
-        // ordered: visible-only (histogram filter), log scale (histogram
-        // display), then all-properties (list filter, sitting right above the
-        // property list it affects).
+        // ordered: visible-only (histogram filter), log counts (vertical
+        // display), log bins (horizontal display), then all-properties (list
+        // filter, sitting right above the property list it affects).
         controls.append(onScreenOnly);
-        controls.append(logScale);
+        controls.append(logCounts);
+        controls.append(logBins);
         controls.append(showAll);
         controls.append(dataListBox);
 
@@ -331,7 +353,8 @@ class DataPanel extends Container {
         // row containers so the entire row (label + toggle) shares one
         // hover target.
         tooltips.register(onScreenOnly, () => i18n.t('tooltip.splat-data.on-screen-only'), 'right');
-        tooltips.register(logScale, () => i18n.t('tooltip.splat-data.log-scale'), 'right');
+        tooltips.register(logCounts, () => i18n.t('tooltip.splat-data.log-counts'), 'right');
+        tooltips.register(logBins, () => i18n.t('tooltip.splat-data.log-bins'), 'right');
         tooltips.register(showAll, () => i18n.t('tooltip.splat-data.show-all'), 'right');
 
         controlsContainer.append(controls);
@@ -430,6 +453,7 @@ class DataPanel extends Container {
 
         let pendingToken = 0;
         let lastGpuMode = 0;
+        let lastGpuLogBins = false;
         let lastHash = '';
         const shaderProjection = new Mat4();
         const viewProjection = new Mat4();
@@ -442,7 +466,8 @@ class DataPanel extends Container {
             splatId: -1,
             mode: 0,
             onScreenOnly: false,
-            logScale: false,
+            logCounts: false,
+            logBins: false,
             cameraVersion: 0,
             stateVersion: 0,
             colorGradeVersion: 0,
@@ -454,7 +479,8 @@ class DataPanel extends Container {
             const opts: any = {
                 entityMatrix: splat.entity.getWorldTransform(),
                 viewMatrix: cam.viewMatrix,
-                cameraPos: splat.scene.camera.position
+                cameraPos: splat.scene.camera.position,
+                logBins: inputs.logBins
             };
             if (inputs.onScreenOnly) {
                 const projection = Camera.applyShaderProjectionTransform(
@@ -470,6 +496,7 @@ class DataPanel extends Container {
         const scheduleUpdate = () => {
             if (!splat || this.hidden) return;
             const mode = inputs.mode;
+            const logBins_ = inputs.logBins;
             const opts = buildGpuOpts();
             // pendingToken collapses bursts of triggers within a single queue
             // tick (e.g. rapid camera-settle + color-grade) so only the latest
@@ -483,6 +510,7 @@ class DataPanel extends Container {
                     if (myToken !== pendingToken) return;
 
                     lastGpuMode = mode;
+                    lastGpuLogBins = logBins_;
 
                     histogram.setData({
                         selected: result.selected,
@@ -490,7 +518,8 @@ class DataPanel extends Container {
                         min: result.min,
                         max: result.max,
                         numValues: result.numValues,
-                        logScale: inputs.logScale
+                        logCounts: inputs.logCounts,
+                        logBins: logBins_
                     });
 
                     // eslint-disable-next-line no-use-before-define
@@ -522,8 +551,8 @@ class DataPanel extends Container {
                 histogramInfoMin.textContent = '';
                 histogramInfoMax.textContent = '';
             } else {
-                histogramInfoMin.textContent = formatValue(h.minValue);
-                histogramInfoMax.textContent = formatValue(h.maxValue);
+                histogramInfoMin.textContent = formatValue(h.valueAt(0));
+                histogramInfoMax.textContent = formatValue(h.valueAt(1));
             }
         };
         refreshRange();
@@ -633,8 +662,13 @@ class DataPanel extends Container {
             }
         });
 
-        logScaleValue.on('change', () => {
-            inputs.logScale = logScaleValue.value;
+        logCountsValue.on('change', () => {
+            inputs.logCounts = logCountsValue.value;
+            histogram.setLogCounts(inputs.logCounts);
+        });
+
+        logBinsValue.on('change', () => {
+            inputs.logBins = logBinsValue.value;
             tick();
         });
 
@@ -819,6 +853,7 @@ class DataPanel extends Container {
             // checks are needed.
             const targetSplat = splat;
             const mode = lastGpuMode;
+            const logBins_ = lastGpuLogBins;
             const minValue = histogram.histogram.minValue;
             const maxValue = histogram.histogram.maxValue;
             const numBins = histogram.histogram.bins.length;
@@ -827,6 +862,7 @@ class DataPanel extends Container {
             targetSplat.scene.commandQueue.enqueue(async () => {
                 const data = await targetSplat.scene.dataProcessor.selectByRange(targetSplat, mode, {
                     ...opts,
+                    logBins: logBins_,
                     min: minValue,
                     max: maxValue,
                     numBins,

@@ -117,7 +117,8 @@
     "panel.splat-data.dc-blue": "DC B",
     "panel.splat-data.sh": "SH",
     "panel.splat-data.on-screen-only": "Visible Splats Only",
-    "panel.splat-data.log-scale": "Log Scale",
+    "panel.splat-data.log-counts": "Log Counts",
+    "panel.splat-data.log-bins": "Log Bins",
     "panel.splat-data.show-all": "All Properties",
     "panel.splat-data.totals.splats": "Splats",
     "panel.splat-data.totals.selected": "Selected",
@@ -338,6 +339,7 @@
     "tooltip.status-bar.timeline": "Toggle Timeline Panel",
     "tooltip.status-bar.splat-data": "Toggle Splat Data Panel",
     "tooltip.splat-data.on-screen-only": "Only count splats visible in the camera's view. Off-screen splats are excluded from the histogram.",
-    "tooltip.splat-data.log-scale": "Use a logarithmic vertical scale so small bucket counts remain visible alongside large ones.",
+    "tooltip.splat-data.log-counts": "Scale histogram bin counts logarithmically so small counts remain visible alongside large ones.",
+    "tooltip.splat-data.log-bins": "Space property-value bins using a signed logarithmic scale so groups across large ranges remain distinguishable. Negative and zero values are supported.",
     "tooltip.splat-data.show-all": "Show all per-splat properties in the list, including raw DC and spherical harmonic coefficients."
 }

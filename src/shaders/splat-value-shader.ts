@@ -94,6 +94,7 @@ struct SplatValueUniforms {
     numSplats: u32,
     propMode: i32,
     onScreenOnly: u32,
+    logBins: u32,
     entityMatrix: mat4x4f,
     viewMatrix: mat4x4f,
     viewProjection: mat4x4f,
@@ -131,6 +132,16 @@ fn rgbToHsv(color: vec3f) -> vec3f {
     let q = select(vec4f(p.xyw, color.r), vec4f(color.r, p.yzx), color.r >= p.x);
     let d = q.x - min(q.w, q.y);
     return vec3f(abs(q.z + (q.w - q.y) / (6.0 * d + 1e-10)), d / (q.x + 1e-10), q.x);
+}
+
+fn signedLog1p(value: f32) -> f32 {
+    let magnitude = abs(value);
+    // log(1 + x) rounds to zero for small f32 values; use its series there.
+    var mapped = magnitude - 0.5 * magnitude * magnitude;
+    if (magnitude > 1e-4) {
+        mapped = log(1.0 + magnitude);
+    }
+    return sign(value) * mapped;
 }
 
 fn instanceFlagByte(instance: u32) -> u32 {
@@ -213,6 +224,9 @@ fn computeSplatValue(index: u32, valueOut: ptr<function, f32>, selectedOut: ptr<
         if (uniforms.propMode == 18) { value *= 360.0; }
     } ${shDispatch} else if (uniforms.propMode >= 66 && uniforms.propMode <= 68) {
         value = (textureLoad(splatColor, s.uv, 0).rgb[uniforms.propMode - 66] - 0.5) / 0.28209479177387814;
+    }
+    if (uniforms.logBins != 0u) {
+        value = signedLog1p(value);
     }
     (*valueOut) = value;
     return true;

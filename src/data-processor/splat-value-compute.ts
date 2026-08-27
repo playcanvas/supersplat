@@ -31,6 +31,7 @@ type SplatValueOptions = {
     viewProjection?: Mat4;
     cameraPos?: Vec3;
     onScreenOnly?: boolean;
+    logBins?: boolean;
 };
 
 const createSplatValueUniformFormat = (device: GraphicsDevice) => new UniformBufferFormat(device, [
@@ -38,6 +39,7 @@ const createSplatValueUniformFormat = (device: GraphicsDevice) => new UniformBuf
     new UniformFormat('numSplats', UNIFORMTYPE_UINT),
     new UniformFormat('propMode', UNIFORMTYPE_INT),
     new UniformFormat('onScreenOnly', UNIFORMTYPE_UINT),
+    new UniformFormat('logBins', UNIFORMTYPE_UINT),
     new UniformFormat('entityMatrix', UNIFORMTYPE_MAT4),
     new UniformFormat('viewMatrix', UNIFORMTYPE_MAT4),
     new UniformFormat('viewProjection', UNIFORMTYPE_MAT4),
@@ -113,6 +115,7 @@ const setSplatValueParameters = (
     compute.setParameter('numSplats', splat.instances.count);
     compute.setParameter('propMode', mode);
     compute.setParameter('onScreenOnly', options?.onScreenOnly ? 1 : 0);
+    compute.setParameter('logBins', options?.logBins ? 1 : 0);
     compute.setParameter('entityMatrix', entityMatrix.data);
     compute.setParameter('viewMatrix', viewMatrix.data);
     compute.setParameter('viewProjection', viewProjection.data);

@@ -7,6 +7,7 @@ class HistogramData {
     numValues: number;
     minValue: number;
     maxValue: number;
+    logBins = false;
 
     constructor(numBins: number) {
         this.bins = [];
@@ -18,17 +19,28 @@ class HistogramData {
         this.maxValue = 0;
     }
 
-    bucketValue(bucket: number) {
-        return this.minValue + bucket * this.bucketSize;
+    valueAt(n: number) {
+        const value = this.minValue + n * (this.maxValue - this.minValue);
+        return this.logBins ? Math.sign(value) * Math.expm1(Math.abs(value)) : value;
     }
 
-    get bucketSize() {
-        return (this.maxValue - this.minValue) / this.bins.length;
+    edgeValue(edge: number) {
+        return this.valueAt(edge / this.bins.length);
+    }
+
+    bucketValue(bucket: number) {
+        return this.edgeValue(bucket);
+    }
+
+    bucketSizeAt(bucket: number) {
+        return this.edgeValue(bucket + 1) - this.edgeValue(bucket);
     }
 
     valueToBucket(value: number) {
-        const n = this.minValue === this.maxValue ? 0 : (value - this.minValue) / (this.maxValue - this.minValue);
-        return Math.min(this.bins.length - 1, Math.floor(n * this.bins.length));
+        const transformed = this.logBins ? Math.sign(value) * Math.log1p(Math.abs(value)) : value;
+        const n = this.minValue === this.maxValue ? 0 :
+            (transformed - this.minValue) / (this.maxValue - this.minValue);
+        return Math.max(0, Math.min(this.bins.length - 1, Math.floor(n * this.bins.length)));
     }
 }
 
@@ -38,7 +50,8 @@ interface SetDataOptions {
     min: number;
     max: number;
     numValues: number;
-    logScale?: boolean
+    logCounts?: boolean;
+    logBins?: boolean;
 }
 
 class Histogram {
@@ -47,6 +60,9 @@ class Histogram {
     histogram: HistogramData;
     pixelData: ImageData;
     events = new Events();
+    private logCounts = false;
+    private mappedTotal: Float32Array;
+    private mappedUnselected: Float32Array;
 
     constructor(numBins: number, height: number) {
         const canvas = document.createElement('canvas');
@@ -66,6 +82,8 @@ class Histogram {
         this.context = context;
         this.histogram = new HistogramData(numBins);
         this.pixelData = context.createImageData(canvas.width, canvas.height);
+        this.mappedTotal = new Float32Array(numBins);
+        this.mappedUnselected = new Float32Array(numBins);
 
         let dragging = false;
         let dragStart = 0;
@@ -100,7 +118,7 @@ class Histogram {
             const anchorEdge = draggingRight ? dragStart : dragStart + 1;
             const cursorEdge = draggingRight ? dragEnd + 1 : dragEnd;
             const edgeX = (i: number) => i / bins * rect.width;
-            const edgeValue = (i: number) => h.minValue + i * h.bucketSize;
+            const edgeValue = (i: number) => h.edgeValue(i);
             this.events.fire('highlight', {
                 x: bucketToOffset(start),
                 y: 0,
@@ -199,14 +217,14 @@ class Histogram {
 
                 // continuous (non-bucketed) value at the cursor's pixel x.
                 // x is already clamped to [0, 1] above.
-                const cursorValue = h.minValue + x * (h.maxValue - h.minValue);
+                const cursorValue = h.valueAt(x);
 
                 this.events.fire('updateOverlay', {
                     x: e.offsetX,
                     y: e.offsetY,
                     bucketIndex: binIndex,
                     value: h.bucketValue(binIndex),
-                    size: h.bucketSize,
+                    size: h.bucketSizeAt(binIndex),
                     cursorValue,
                     selected: bin.selected,
                     unselected: bin.unselected,
@@ -244,32 +262,35 @@ class Histogram {
         window.addEventListener('blur', () => applyOpCursor(this.canvas, 'set'));
     }
 
-    private render(logScale: boolean) {
+    private render() {
         const canvas = this.canvas;
         const context = this.context;
         const pixelData = this.pixelData;
         const pixels = new Uint32Array(pixelData.data.buffer);
+        const mappedTotal = this.mappedTotal;
+        const mappedUnselected = this.mappedUnselected;
 
-        const binMap = logScale ? (x: number) => Math.log(x + 1) : (x: number) => x;
-        const bins = this.histogram.bins.map((v) => {
-            return {
-                selected: binMap(v.unselected + v.selected),
-                unselected: binMap(v.unselected)
-            };
-        });
-        const binMax = bins.reduce((a, v) => Math.max(a, v.selected), 0);
+        const binMap = this.logCounts ? (x: number) => Math.log(x + 1) : (x: number) => x;
+        let binMax = 0;
+        for (let i = 0; i < this.histogram.bins.length; i++) {
+            const bin = this.histogram.bins[i];
+            mappedTotal[i] = binMap(bin.unselected + bin.selected);
+            mappedUnselected[i] = binMap(bin.unselected);
+            binMax = Math.max(binMax, mappedTotal[i]);
+        }
 
         let i = 0;
         for (let y = 0; y < canvas.height; y++) {
-            for (let x = 0; x < bins.length; x++) {
-                const bin = bins[x];
+            for (let x = 0; x < mappedTotal.length; x++) {
+                const total = mappedTotal[x];
+                const unselected = mappedUnselected[x];
                 const targetMin = binMax / canvas.height * (canvas.height - 1 - y);
 
-                if (targetMin >= bin.selected) {
+                if (targetMin >= total) {
                     pixels[i++] = 0xff000000;
                 } else {
                     const targetMax = targetMin + binMax / canvas.height;
-                    if (bin.selected === bin.unselected || targetMax < bin.unselected) {
+                    if (total === unselected || targetMax < unselected) {
                         pixels[i++] = 0xffff7777;
                     } else {
                         pixels[i++] = 0xff00ffff;
@@ -281,6 +302,12 @@ class Histogram {
         context.putImageData(pixelData, 0, 0);
     }
 
+    setLogCounts(logCounts: boolean) {
+        if (this.logCounts === logCounts) return;
+        this.logCounts = logCounts;
+        this.render();
+    }
+
     setData(options: SetDataOptions) {
         const bins = this.histogram.bins;
         const n = Math.min(bins.length, options.selected.length);
@@ -289,9 +316,11 @@ class Histogram {
             bins[i].unselected = options.unselected[i];
         }
         this.histogram.numValues = options.numValues;
+        this.histogram.logBins = !!options.logBins;
         this.histogram.minValue = options.min;
         this.histogram.maxValue = options.max;
-        this.render(options.logScale);
+        this.logCounts = !!options.logCounts;
+        this.render();
     }
 }
 

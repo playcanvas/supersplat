@@ -117,7 +117,8 @@
     "panel.splat-data.dc-blue": "DC 青",
     "panel.splat-data.sh": "SH",
     "panel.splat-data.on-screen-only": "表示中のスプラットのみ",
-    "panel.splat-data.log-scale": "対数スケール",
+    "panel.splat-data.log-counts": "対数カウント",
+    "panel.splat-data.log-bins": "対数ビン",
     "panel.splat-data.show-all": "すべてのプロパティ",
     "panel.splat-data.totals.splats": "スプラット数",
     "panel.splat-data.totals.selected": "選択中",
@@ -338,6 +339,7 @@
     "tooltip.status-bar.timeline": "タイムラインパネルの切り替え",
     "tooltip.status-bar.splat-data": "スプラットデータパネルの切り替え",
     "tooltip.splat-data.on-screen-only": "カメラに映っているスプラットのみをヒストグラムに含めます。画面外のスプラットは除外されます。",
-    "tooltip.splat-data.log-scale": "縦軸を対数スケールで表示し、小さい値と大きい値の両方を見やすくします。",
+    "tooltip.splat-data.log-counts": "ヒストグラムのビン数を対数スケールで表示し、小さいカウントと大きいカウントの両方を見やすくします。",
+    "tooltip.splat-data.log-bins": "値のビンを符号付き対数間隔で配置し、広い範囲にわたるグループを識別しやすくします。負の値とゼロにも対応します。",
     "tooltip.splat-data.show-all": "未加工のDC係数や球面調和関数係数を含む、すべてのスプラットプロパティをリストに表示します。"
 }

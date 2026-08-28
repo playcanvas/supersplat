@@ -118,21 +118,28 @@ struct ProjectorUniforms {
     minPixelSize: f32
 }
 
+// compaction output: surviving splats are appended to a dense list, so the sort
+// and the draw cover the visible count instead of the whole capacity. sortKeys
+// and compactEntries are indexed by compact slot, not by entry; the cache stays
+// indexed by entry, and the entry index rides along as the sort payload so
+// gaussian ids keep their meaning downstream (picking, rings, stochastic dither)
 @group(0) @binding(0) var<storage, read_write> sortKeys: array<u32>;
-@group(0) @binding(1) var cacheA: texture_storage_2d<rgba32uint, write>;
-@group(0) @binding(2) var cacheB: texture_storage_2d<r32uint, write>;
-@group(0) @binding(3) var<storage, read> instanceSource: array<u32>;
-@group(0) @binding(4) var<storage, read> instanceFlags: array<u32>;
-@group(0) @binding(5) var<storage, read> instancePalette: array<u32>;
-@group(0) @binding(6) var transformA: texture_2d<u32>;
-@group(0) @binding(7) var transformB: texture_2d<f32>;
-@group(0) @binding(8) var splatColor: texture_2d<f32>;
-@group(0) @binding(9) var transformPalette: texture_2d<f32>;
-@group(0) @binding(10) var colorPalette: texture_2d<f32>;
-${bands > 0 ? '@group(0) @binding(11) var splatSH_1to3: texture_2d<u32>;' : ''}
-${bands > 1 ? '@group(0) @binding(12) var splatSH_4to7: texture_2d<u32>;\n@group(0) @binding(13) var splatSH_8to11: texture_2d<u32>;' : ''}
-${bands > 2 ? '@group(0) @binding(14) var splatSH_12to15: texture_2d<u32>;' : ''}
-@group(0) @binding(${11 + (bands > 0 ? 1 : 0) + (bands > 1 ? 2 : 0) + (bands > 2 ? 1 : 0)}) var<uniform> uniforms: ProjectorUniforms;
+@group(0) @binding(1) var<storage, read_write> compactEntries: array<u32>;
+@group(0) @binding(2) var<storage, read_write> splatCounter: array<atomic<u32>>;
+@group(0) @binding(3) var cacheA: texture_storage_2d<rgba32uint, write>;
+@group(0) @binding(4) var cacheB: texture_storage_2d<r32uint, write>;
+@group(0) @binding(5) var<storage, read> instanceSource: array<u32>;
+@group(0) @binding(6) var<storage, read> instanceFlags: array<u32>;
+@group(0) @binding(7) var<storage, read> instancePalette: array<u32>;
+@group(0) @binding(8) var transformA: texture_2d<u32>;
+@group(0) @binding(9) var transformB: texture_2d<f32>;
+@group(0) @binding(10) var splatColor: texture_2d<f32>;
+@group(0) @binding(11) var transformPalette: texture_2d<f32>;
+@group(0) @binding(12) var colorPalette: texture_2d<f32>;
+${bands > 0 ? '@group(0) @binding(13) var splatSH_1to3: texture_2d<u32>;' : ''}
+${bands > 1 ? '@group(0) @binding(14) var splatSH_4to7: texture_2d<u32>;\n@group(0) @binding(15) var splatSH_8to11: texture_2d<u32>;' : ''}
+${bands > 2 ? '@group(0) @binding(16) var splatSH_12to15: texture_2d<u32>;' : ''}
+@group(0) @binding(${13 + (bands > 0 ? 1 : 0) + (bands > 1 ? 2 : 0) + (bands > 2 ? 1 : 0)}) var<uniform> uniforms: ProjectorUniforms;
 
 ${shCode(bands)}
 ${indexToUvWGSL('sourceCoord', 'uniforms.sourceWidth')}
@@ -154,13 +161,6 @@ fn rotationMatrix(qIn: vec4f) -> mat3x3f {
     );
 }
 
-fn writeInvalid(entry: u32) {
-    sortKeys[entry] = 0x000fffffu;
-    let uv = cacheCoord(entry);
-    textureStore(cacheA, uv, vec4u(0u));
-    textureStore(cacheB, uv, vec4u(0u));
-}
-
 // per-instance editor state, packed 4 bytes to a word
 fn instanceFlagByte(instance: u32) -> u32 {
     return (instanceFlags[instance >> 2u] >> ((instance & 3u) * 8u)) & 0xffu;
@@ -179,7 +179,6 @@ fn main(
     // entries beyond the live instance count are reserved slack
     let entry = uniforms.entryBase + localIndex;
     if (localIndex >= uniforms.numSplats || uniforms.visible == 0u) {
-        writeInvalid(entry);
         return;
     }
 
@@ -192,7 +191,6 @@ fn main(
     if ((uniforms.pickOp == 0 && state != 0u)
         || (uniforms.pickOp == 1 && state != 1u)
         || (uniforms.pickOp == 2 && (state & 2u) != 0u)) {
-        writeInvalid(entry);
         return;
     }
 
@@ -207,13 +205,11 @@ fn main(
     let viewCenter = uniforms.view * worldCenter;
     let depth = -viewCenter.z;
     if (uniforms.isOrtho == 0u && depth <= 0.0) {
-        writeInvalid(entry);
         return;
     }
 
     let clip = uniforms.viewProj * worldCenter;
     if (clip.w == 0.0) {
-        writeInvalid(entry);
         return;
     }
 
@@ -265,7 +261,6 @@ fn main(
     cov11 += 0.3;
     let determinant = cov00 * cov11 - cov01 * cov01;
     if (determinant <= 0.0) {
-        writeInvalid(entry);
         return;
     }
 
@@ -285,7 +280,6 @@ fn main(
 
     // skip splats whose projected size falls below the cull threshold
     if (2.0 * sqrt(2.0 * lambda1) < uniforms.minPixelSize) {
-        writeInvalid(entry);
         return;
     }
 
@@ -299,7 +293,6 @@ fn main(
     let centerPixels = (ndc * 0.5 + 0.5) * viewport;
     if (centerPixels.x + extent.x < 0.0 || centerPixels.x - extent.x > viewport.x
         || centerPixels.y + extent.y < 0.0 || centerPixels.y - extent.y > viewport.y) {
-        writeInvalid(entry);
         return;
     }
 
@@ -330,7 +323,6 @@ fn main(
     }
     color = vec4f(max(color.rgb, vec3f(0.0)), color.a);
     if (color.a <= 0.0) {
-        writeInvalid(entry);
         return;
     }
 
@@ -364,7 +356,11 @@ fn main(
             | select(0u, 0x01000000u, selected)
             | select(0u, 0x02000000u, locked)
     ));
-    sortKeys[entry] = (~bitcast<u32>(depth)) >> 12u;
+    // survivor: claim a slot in the compact list. Only surviving threads contend,
+    // which is 0.1-10% of the dispatch in practice
+    let slot = atomicAdd(&splatCounter[0], 1u);
+    sortKeys[slot] = (~bitcast<u32>(depth)) >> 12u;
+    compactEntries[slot] = entry;
 }
 `;
 

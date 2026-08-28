@@ -723,6 +723,11 @@ class Camera extends Element {
         let closestDepth = Infinity;
         let closestSplat: Splat | null = null;
 
+        // the depth pass reuses the projected cache but composites front to back,
+        // so it needs a sorted order under it - which the last rendered frame only
+        // provides if the scene had settled
+        scene.projectedSplatRenderer.renderSortedForPick();
+
         // Find the splat with the smallest depth at this screen position
         for (let i = 0; i < splats.length; ++i) {
             const splat = splats[i] as Splat;

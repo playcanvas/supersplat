@@ -17,6 +17,7 @@ import {
     UNIFORMTYPE_INT,
     UNIFORMTYPE_MAT4,
     UNIFORMTYPE_UINT,
+    UNIFORMTYPE_UVEC4,
     UNIFORMTYPE_VEC2,
     UNIFORMTYPE_VEC3,
     UNIFORMTYPE_VEC4,
@@ -44,6 +45,7 @@ import {
 
 import { createGradeTerms, gradeRows, gradeTerms, type GradeParams } from './color-grade';
 import type { Scene } from './scene';
+import { projectedSplatIndirectArgs } from './shaders/projected-splat-indirect-args';
 import { projectedSplatProjector } from './shaders/projected-splat-projector';
 import { fragmentShader, vertexShader } from './shaders/projected-splat-shader';
 import type { Splat } from './splat';
@@ -138,6 +140,19 @@ class ProjectedSplatRenderer {
     private readonly entity: Entity;
 
     private sortKeys: StorageBuffer | null = null;
+    // entry index per compact slot: the sort payload, and what the stochastic draw
+    // reads directly. Keeping the entry index means gaussian ids are unchanged by
+    // compaction, so picking, rings and the stochastic dither all still work
+    private compactEntries: StorageBuffer | null = null;
+    // single u32 the projector atomically appends into, consumed by the indirect
+    // draw args, the sort's element count and the vertex shader's bounds check
+    private splatCounter: StorageBuffer | null = null;
+    private argsCompute: Compute | null = null;
+    // indirect draw slot claimed by the last rendered frame. Draw commands are
+    // bound per frame, so the pick passes - which render on user input, outside a
+    // frame - have to re-arm them from the same slot
+    private drawSlot = -1;
+    private forceSorted = false;
     private cacheA: Texture | null = null;
     private cacheB: Texture | null = null;
     private cacheWidth = 1;
@@ -151,7 +166,10 @@ class ProjectedSplatRenderer {
         this.scene = scene;
         this.device = scene.graphicsDevice;
 
-        this.sorter = new ComputeRadixSort(this.device);
+        // indirect only: the survivor count lives on the gpu, so every sort this
+        // renderer issues is an indirect dispatch
+        this.sorter = new ComputeRadixSort(this.device, { indirect: true } as any);
+        this.splatCounter = new StorageBuffer(this.device, 4, BUFFERUSAGE_COPY_SRC | BUFFERUSAGE_COPY_DST);
 
         this.material = new ShaderMaterial({
             uniqueName: 'ProjectedSplatMaterial',
@@ -166,7 +184,6 @@ class ProjectedSplatRenderer {
         this.material.cull = CULLFACE_NONE;
         this.material.depthWrite = false;
         this.material.depthTest = true;
-        this.material.setParameter('numProjectedSplats', 0);
         this.material.setParameter('cacheWidth', 1);
         this.material.setParameter('viewportSize', [1, 1, 2, 2]);
         this.material.setParameter('clipZParams', [0, 0, 0, 0]);
@@ -239,7 +256,22 @@ class ProjectedSplatRenderer {
         }
     }
 
+    // Project and sort once, outside the frame loop, for a depth pick. The pick
+    // composites front to back, which only means anything in sorted order, and a
+    // stochastic frame leaves the compact list in atomicAdd order. Projection and
+    // sort are global - which splat is being picked is a shader-side filter - so
+    // one call covers a whole multi-splat pick. It also refreshes the indirect
+    // args, so the pick draw no longer leans on the previous frame's.
+    renderSortedForPick() {
+        this.forceSorted = true;
+        this.render();
+        this.forceSorted = false;
+    }
+
     preparePick(splat: Splat, pickOp: number, depth: boolean) {
+        if (this.drawSlot >= 0) {
+            this.meshInstance.setIndirect(null, this.drawSlot, 1);
+        }
         const placement = this.placements.find(item => item.splat === splat);
         this.material.setParameter('pickBase', placement?.entryBase ?? 0);
         this.material.setParameter('pickCount', placement?.count ?? 0);
@@ -321,6 +353,8 @@ class ProjectedSplatRenderer {
         ]);
         const bindGroupFormat = new BindGroupFormat(this.device, [
             new BindStorageBufferFormat('sortKeys', SHADERSTAGE_COMPUTE),
+            new BindStorageBufferFormat('compactEntries', SHADERSTAGE_COMPUTE),
+            new BindStorageBufferFormat('splatCounter', SHADERSTAGE_COMPUTE),
             new BindStorageTextureFormat('cacheA', PIXELFORMAT_RGBA32U),
             new BindStorageTextureFormat('cacheB', PIXELFORMAT_R32U),
             new BindStorageBufferFormat('instanceSource', SHADERSTAGE_COMPUTE, true),
@@ -352,6 +386,35 @@ class ProjectedSplatRenderer {
         return placement.compute;
     }
 
+    // gpu-driven arguments: one workgroup turns the projector's survivor count into
+    // the indexed draw args and the sort's dispatch args
+    private getArgsCompute() {
+        if (!this.argsCompute) {
+            const uniformBufferFormat = new UniformBufferFormat(this.device, [
+                new UniformFormat('drawSlot', UNIFORMTYPE_UINT),
+                new UniformFormat('indexCount', UNIFORMTYPE_UINT),
+                new UniformFormat('sortSlotBase', UNIFORMTYPE_UINT),
+                new UniformFormat('pad0', UNIFORMTYPE_UINT),
+                new UniformFormat('sortIndirectInfo', UNIFORMTYPE_UVEC4)
+            ]);
+            const bindGroupFormat = new BindGroupFormat(this.device, [
+                new BindStorageBufferFormat('splatCounter', SHADERSTAGE_COMPUTE, true),
+                new BindStorageBufferFormat('indirectDrawArgs', SHADERSTAGE_COMPUTE),
+                new BindStorageBufferFormat('indirectDispatchArgs', SHADERSTAGE_COMPUTE),
+                new BindUniformBufferFormat('uniforms', SHADERSTAGE_COMPUTE)
+            ]);
+            const shader = new Shader(this.device, {
+                name: 'ProjectedSplatIndirectArgs',
+                shaderLanguage: SHADERLANGUAGE_WGSL,
+                cshader: projectedSplatIndirectArgs(INSTANCE_SIZE),
+                computeBindGroupFormat: bindGroupFormat,
+                computeUniformBufferFormats: { uniforms: uniformBufferFormat }
+            } as any);
+            this.argsCompute = new Compute(this.device, shader, 'ProjectedSplatIndirectArgs');
+        }
+        return this.argsCompute;
+    }
+
     private rebuildLayout() {
         let count = 0;
         for (const placement of this.placements) {
@@ -368,9 +431,11 @@ class ProjectedSplatRenderer {
 
         if (count !== this.capacity) {
             this.sortKeys?.destroy();
+            this.compactEntries?.destroy();
             this.cacheA?.destroy();
             this.cacheB?.destroy();
             this.sortKeys = null;
+            this.compactEntries = null;
             this.cacheA = null;
             this.cacheB = null;
             this.capacity = count;
@@ -399,10 +464,20 @@ class ProjectedSplatRenderer {
                     count * 4,
                     BUFFERUSAGE_COPY_SRC | BUFFERUSAGE_COPY_DST
                 );
+                this.compactEntries = new StorageBuffer(
+                    this.device,
+                    count * 4,
+                    BUFFERUSAGE_COPY_SRC | BUFFERUSAGE_COPY_DST
+                );
                 this.sorter.capacity = count;
             }
         }
 
+        // The forward draw is gpu-driven, but indirect draw commands are bound per
+        // frame (the engine clears them in frameEnd), so passes that render outside
+        // a frame - the id and depth picker - fall back to this count. It has to
+        // cover the whole capacity for them: the vertex shader trims the draw to
+        // the live count either way, so this only costs the picker, never a frame.
         this.meshInstance.instancingCount = Math.ceil(count / INSTANCE_SIZE);
         this.entity.enabled = count > 0;
         this.layoutDirty = false;
@@ -413,7 +488,7 @@ class ProjectedSplatRenderer {
         if (this.layoutDirty) {
             this.rebuildLayout();
         }
-        if (this.capacity === 0 || !this.sortKeys || !this.cacheA || !this.cacheB) {
+        if (this.capacity === 0 || !this.sortKeys || !this.compactEntries || !this.cacheA || !this.cacheB) {
             return;
         }
 
@@ -453,10 +528,15 @@ class ProjectedSplatRenderer {
 
         // motion-adaptive: fast stochastic (no-sort) while interacting, clean
         // sorted & blended when the scene settles (driven by Scene.onUpdate)
-        this.setStochastic(this.scene.movingRender);
+        this.setStochastic(this.scene.movingRender && !this.forceSorted);
 
         let ringsBase = 0;
         let ringsCount = 0;
+
+        // the projector appends survivors, so the count starts each frame at zero.
+        // The clear is recorded on the shared command encoder, which orders it
+        // ahead of the dispatches below
+        this.splatCounter.clear();
 
         for (const placement of this.placements) {
             const { splat } = placement;
@@ -476,6 +556,8 @@ class ProjectedSplatRenderer {
             }
 
             compute.setParameter('sortKeys', this.sortKeys);
+            compute.setParameter('compactEntries', this.compactEntries);
+            compute.setParameter('splatCounter', this.splatCounter);
             compute.setParameter('cacheA', this.cacheA);
             compute.setParameter('cacheB', this.cacheB);
             compute.setParameter('instanceSource', instances.instanceSource);
@@ -533,6 +615,28 @@ class ProjectedSplatRenderer {
             this.device.computeDispatch([compute], `project-splats-${splat.uid}`);
         }
 
+        // Turn the survivor count into indirect draw and sort arguments. Indirect
+        // slots are recycled at frame end, so they are claimed fresh every frame.
+        const sortInfo = this.sorter.prepareIndirect();
+        const drawSlot = (this.device as any).getIndirectDrawSlot();
+        this.drawSlot = drawSlot;
+        const sortSlotBase = (this.device as any).getIndirectDispatchSlot(sortInfo[0]);
+        const args = this.getArgsCompute();
+        args.setParameter('splatCounter', this.splatCounter);
+        args.setParameter('indirectDrawArgs', (this.device as any).indirectDrawBuffer);
+        args.setParameter('indirectDispatchArgs', (this.device as any).indirectDispatchBuffer);
+        args.setParameter('drawSlot', drawSlot);
+        args.setParameter('indexCount', INSTANCE_SIZE * 6);
+        args.setParameter('sortSlotBase', sortSlotBase);
+        args.setParameter('pad0', 0);
+        // sorter-owned Uint32Array, uploaded as a vec4u - setParameter's types only cover f32 arrays
+        args.setParameter('sortIndirectInfo', sortInfo as any);
+        args.setupDispatch(1, 1);
+        this.device.computeDispatch([args], 'ProjectedSplatIndirectArgs');
+        this.meshInstance.setIndirect(null, drawSlot, 1);
+        this.material.setParameter('compactEntries', this.compactEntries);
+        this.material.setParameter('splatCount', this.splatCounter);
+
         if (!this.stochastic) {
             // the sort requires numBits to be a multiple of the active backend's
             // radix width, and the backend is chosen from the device: 4 bits for
@@ -542,13 +646,17 @@ class ProjectedSplatRenderer {
             // engine's guard is a Debug.assert, so release builds fail silently.
             // Rounding up is free: the extra bits of the key are always zero.
             const sortBits = roundUp(SORT_KEY_BITS, this.sorter.radixBits);
-            const sortedIndices = this.sorter.sort(this.sortKeys, this.capacity, sortBits, undefined, true, true);
+            // capacity is the worst-case element count; the live count comes from
+            // splatCounter, and compactEntries seeds the payload so the sorted
+            // output is cache entry indices, exactly as before compaction
+            const sortedIndices = this.sorter.sortIndirect(
+                this.sortKeys, this.capacity, sortBits, sortSlotBase,
+                this.splatCounter, this.compactEntries, true, true);
             this.material.setParameter('sortedIndices', sortedIndices);
         }
         this.material.setParameter('cacheA', this.cacheA);
         this.material.setParameter('cacheB', this.cacheB);
         this.material.setParameter('cacheWidth', this.cacheWidth);
-        this.material.setParameter('numProjectedSplats', this.capacity);
         this.finishPick();
         this.material.setParameter('viewportSize', [
             targetSize.width,
@@ -590,7 +698,8 @@ class ProjectedSplatRenderer {
 
     get stats(): ProjectedRendererStats {
         const cacheBytes = this.cacheWidth * this.cacheHeight * 20 * (this.capacity > 0 ? 1 : 0);
-        const keyBytes = this.capacity * 4;
+        // 4 bytes of sort key plus 4 of compacted entry index, per slot
+        const keyBytes = this.capacity * 8;
         const estimatedRadixBytes = this.capacity * 12;
         const resources = new Set(this.placements.map(placement => placement.splat.resource));
         const splats = new Set(this.placements.map(placement => placement.splat));
@@ -625,6 +734,9 @@ class ProjectedSplatRenderer {
             variant.bindGroupFormat.destroy();
         }
         this.sortKeys?.destroy();
+        this.compactEntries?.destroy();
+        this.splatCounter?.destroy();
+        this.argsCompute?.destroy();
         this.cacheA?.destroy();
         this.cacheB?.destroy();
         this.sorter.destroy();

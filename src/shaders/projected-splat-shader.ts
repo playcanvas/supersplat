@@ -6,11 +6,14 @@ attribute vertex_position: vec3f;
 #ifndef STOCHASTIC
 var<storage, read> sortedIndices: array<u32>;
 #endif
+// dense list of surviving entries and their count, both written by the projector.
+// The draw is indirect over the count, so the cpu never knows it
+var<storage, read> compactEntries: array<u32>;
+var<storage, read> splatCount: array<u32>;
 var cacheA: texture_2d<u32>;
 var cacheB: texture_2d<u32>;
 
 uniform cacheWidth: u32;
-uniform numProjectedSplats: u32;
 uniform viewportSize: vec4f;
 uniform clipZParams: vec4f;
 uniform pickBase: u32;
@@ -33,15 +36,18 @@ const discardPosition = vec4f(0.0, 0.0, 2.0, 1.0);
 fn vertexMain(input: VertexInput) -> VertexOutput {
     var output: VertexOutput;
     let order = pcInstanceIndex * 128u + u32(vertex_position.z);
-    if (order >= uniform.numProjectedSplats) {
+    // the indirect instance count is rounded up to whole 128-quad instances, so
+    // the tail of the last one has to be discarded here
+    if (order >= splatCount[0]) {
         output.position = discardPosition;
         return output;
     }
 
-    // stochastic mode skips the sort, so the draw reads cache entries in identity
-    // order; the sorted path indexes through the globally-sorted index buffer
+    // both paths resolve to a cache entry index: stochastic reads the compact
+    // list directly (it needs no ordering), the sorted path reads it through the
+    // sort, which carries the same entry indices as its payload
     #ifdef STOCHASTIC
-        let entry = order;
+        let entry = compactEntries[order];
     #else
         let entry = sortedIndices[order];
     #endif

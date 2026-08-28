@@ -1,5 +1,6 @@
 import {
-    BLEND_NORMAL,
+    BLEND_NONE,
+    FUNC_LESS,
     PRIMITIVE_TRIANGLES,
     SEMANTIC_POSITION,
     Color,
@@ -38,9 +39,17 @@ class SplatOverlay extends Element {
             vertexWGSL: vertexShader,
             fragmentWGSL: fragmentShader
         });
-        this.material.blendType = BLEND_NORMAL;
-        this.material.depthWrite = false;
+        // opaque and depth resolved: centers own the depth buffer of their layer,
+        // so each pixel keeps the frontmost center whatever order the instances
+        // draw in. Blending them instead makes the result order-dependent - a
+        // pixel takes one blend or several depending on which center reached it
+        // first - which reads as patches of differing density across a large
+        // scene. FUNC_LESS matters: the LESSEQUAL default admits every coincident
+        // fragment, putting the overdraw cost straight back
+        this.material.blendType = BLEND_NONE;
+        this.material.depthWrite = true;
         this.material.depthTest = true;
+        this.material.depthFunc = FUNC_LESS;
         this.material.update();
 
         this.mesh = new Mesh(device);
@@ -50,15 +59,13 @@ class SplatOverlay extends Element {
 
         this.meshInstance = new MeshInstance(this.mesh, this.material, null);
         this.meshInstance.setInstancing(true, false);
-        // slightly higher priority so it renders before gizmos
-        this.meshInstance.drawBucket = 128;
         // disable frustum culling since mesh has no vertex buffer for AABB calculation
         this.meshInstance.cull = false;
 
         this.entity = new Entity('splatOverlay');
         this.entity.addComponent('render', {
             meshInstances: [this.meshInstance],
-            layers: [scene.gizmoLayer.id]
+            layers: [scene.centersLayer.id]
         });
 
         scene.events.on('selection.changed', (selection: Splat) => {

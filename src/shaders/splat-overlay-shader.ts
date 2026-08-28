@@ -110,7 +110,11 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     let instance = uniform.instanceBase + pcInstanceIndex;
     let uv = splatUv(instanceSource[instance]);
     let state = instanceFlagByte(instance);
-    if ((state & 2u) != 0u || (uniform.selectionOnly != 0u && (state & 1u) == 0u)) {
+    // centers draw opaque, so the unselected colour's alpha can no longer shade
+    // them - it only says whether they are drawn at all, keeping the picker's
+    // "alpha 0 hides the centers" behaviour
+    if ((state & 2u) != 0u || uniform.unselectedClr.a <= 0.0
+        || (uniform.selectionOnly != 0u && (state & 1u) == 0u)) {
         output.position = vec4f(0.0, 0.0, 2.0, 1.0);
         return output;
     }
@@ -120,7 +124,10 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     let worldPosition = model * vec4f(center, 1.0);
     let projected = uniform.matrix_viewProjection * worldPosition;
     let offset = input.vertex_position * uniform.splatSize * 2.0 / uniform.viewportSize * projected.w;
-    output.position = projected + vec4f(offset, -projected.z, 0.0);
+    // keep the center's own depth so overlapping centers resolve nearest-first in
+    // the depth buffer instead of by instance order. Clamped into [0, w] like the
+    // gaussian renderer does, so a center straddling the near plane still draws
+    output.position = vec4f(projected.xy + offset, clamp(projected.z, 0.0, projected.w), projected.w);
 
     var gaussianColor = uniform.unselectedClr.rgb;
     if (uniform.useGaussianColor > 0.0) {
@@ -132,7 +139,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
         #endif
     }
     let selected = select(0.0, uniform.selectedClr.a, state == 1u);
-    output.overlayColor = vec4f(mix(gaussianColor, uniform.selectedClr.rgb, selected), uniform.unselectedClr.a);
+    output.overlayColor = vec4f(mix(gaussianColor, uniform.selectedClr.rgb, selected), 1.0);
     return output;
 }
 `;

@@ -38,8 +38,9 @@ class Underlay extends Element {
                 return;
             }
 
-            // apply at the start of the gizmo layer
-            if (layer !== this.scene.gizmoLayer || transparent) {
+            // apply at the start of the centers layer, which is the last thing
+            // drawn before the centers themselves
+            if (layer !== this.scene.centersLayer || transparent) {
                 return;
             }
 

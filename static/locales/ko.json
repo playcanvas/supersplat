@@ -323,6 +323,7 @@
     "tooltip.right-toolbar.view-options": "보기 옵션",
     "tooltip.bottom-toolbar.undo": "실행 취소",
     "tooltip.bottom-toolbar.redo": "다시 실행",
+    "tooltip.bottom-toolbar.selection-mode": "선택 모드",
     "tooltip.bottom-toolbar.rectangle-selection": "사각형 선택",
     "tooltip.bottom-toolbar.lasso-selection": "올가미 선택",
     "tooltip.bottom-toolbar.polygon-selection": "다각형 선택",

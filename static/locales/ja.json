@@ -323,6 +323,7 @@
     "tooltip.right-toolbar.view-options": "表示オプション",
     "tooltip.bottom-toolbar.undo": "元に戻す",
     "tooltip.bottom-toolbar.redo": "やり直し",
+    "tooltip.bottom-toolbar.selection-mode": "選択モード",
     "tooltip.bottom-toolbar.rectangle-selection": "四角形選択",
     "tooltip.bottom-toolbar.lasso-selection": "なげなわ選択",
     "tooltip.bottom-toolbar.polygon-selection": "ポリゴン選択",

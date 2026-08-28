@@ -323,6 +323,7 @@
     "tooltip.right-toolbar.view-options": "Ansichtsoptionen",
     "tooltip.bottom-toolbar.undo": "Rückgängig",
     "tooltip.bottom-toolbar.redo": "Wiederholen",
+    "tooltip.bottom-toolbar.selection-mode": "Auswahlmodus",
     "tooltip.bottom-toolbar.rectangle-selection": "Rechteckselektion",
     "tooltip.bottom-toolbar.lasso-selection": "Lassoselektion",
     "tooltip.bottom-toolbar.polygon-selection": "Polygonselektion",

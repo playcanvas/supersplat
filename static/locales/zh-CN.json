@@ -323,6 +323,7 @@
     "tooltip.right-toolbar.view-options": "视图选项",
     "tooltip.bottom-toolbar.undo": "撤销",
     "tooltip.bottom-toolbar.redo": "重做",
+    "tooltip.bottom-toolbar.selection-mode": "选择模式",
     "tooltip.bottom-toolbar.rectangle-selection": "矩形选择",
     "tooltip.bottom-toolbar.lasso-selection": "套索选择",
     "tooltip.bottom-toolbar.polygon-selection": "多边形选择",

@@ -323,6 +323,7 @@
     "tooltip.right-toolbar.view-options": "Opções de Visualização",
     "tooltip.bottom-toolbar.undo": "Desfazer",
     "tooltip.bottom-toolbar.redo": "Refazer",
+    "tooltip.bottom-toolbar.selection-mode": "Modo de seleção",
     "tooltip.bottom-toolbar.rectangle-selection": "Seleção Retangular",
     "tooltip.bottom-toolbar.lasso-selection": "Seleção com Laço",
     "tooltip.bottom-toolbar.polygon-selection": "Seleção com Polígono",

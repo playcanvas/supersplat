@@ -323,6 +323,7 @@
     "tooltip.right-toolbar.view-options": "Параметры вида",
     "tooltip.bottom-toolbar.undo": "Отменить",
     "tooltip.bottom-toolbar.redo": "Повторить",
+    "tooltip.bottom-toolbar.selection-mode": "Режим выделения",
     "tooltip.bottom-toolbar.rectangle-selection": "Прямоугольное выделение",
     "tooltip.bottom-toolbar.lasso-selection": "Выделение лассо",
     "tooltip.bottom-toolbar.polygon-selection": "Выделение полигоном",

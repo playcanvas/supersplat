@@ -4,11 +4,9 @@ import { Events } from '../events';
 import { ShortcutManager } from '../shortcut-manager';
 import { i18n } from './localization';
 import { MenuPanel } from './menu-panel';
-import centersSvg from './svg/centers.svg';
 import measureSvg from './svg/measure.svg';
 import orientSvg from './svg/orient.svg';
 import redoSvg from './svg/redo.svg';
-import ringsSvg from './svg/rings.svg';
 import brushSvg from './svg/select-brush.svg';
 import eyedropperSvg from './svg/select-eyedropper.svg';
 import floodSvg from './svg/select-flood.svg';
@@ -16,6 +14,8 @@ import lassoSvg from './svg/select-lasso.svg';
 import pickerSvg from './svg/select-picker.svg';
 import polygonSvg from './svg/select-poly.svg';
 import sphereSvg from './svg/select-sphere.svg';
+import surfaceSvg from './svg/selection-surface.svg';
+import throughSvg from './svg/selection-through.svg';
 import boxSvg from './svg/show-hide-splats.svg';
 import undoSvg from './svg/undo.svg';
 import { Tooltips } from './tooltips';
@@ -58,19 +58,19 @@ class BottomToolbar extends Container {
         selectionMode.dom.setAttribute('aria-haspopup', 'menu');
         selectionMode.dom.setAttribute('aria-expanded', 'false');
 
-        const surfaceModeIcon = createSvg(ringsSvg);
-        const throughModeIcon = createSvg(centersSvg);
+        const surfaceModeIcon = createSvg(surfaceSvg);
+        const throughModeIcon = createSvg(throughSvg);
         surfaceModeIcon.classList.add('bottom-toolbar-selection-mode-icon');
         throughModeIcon.classList.add('bottom-toolbar-selection-mode-icon');
         selectionMode.dom.appendChild(surfaceModeIcon);
         selectionMode.dom.appendChild(throughModeIcon);
 
         const surfaceModeMenuIcon = new Element({
-            dom: createSvg(ringsSvg),
+            dom: createSvg(surfaceSvg),
             class: 'bottom-toolbar-selection-mode-menu-icon'
         });
         const throughModeMenuIcon = new Element({
-            dom: createSvg(centersSvg),
+            dom: createSvg(throughSvg),
             class: 'bottom-toolbar-selection-mode-menu-icon'
         });
 
@@ -337,11 +337,7 @@ class BottomToolbar extends Container {
         // register tooltips
         tooltips.register(undo, tooltip('tooltip.bottom-toolbar.undo', 'edit.undo'));
         tooltips.register(redo, tooltip('tooltip.bottom-toolbar.redo', 'edit.redo'));
-        tooltips.register(selectionMode, () => {
-            const text = i18n.t(activeSelectionMode === 'surface' ? 'panel.display.surface' : 'panel.display.through');
-            const shortcut = shortcutManager.formatShortcut('selection.toggleMode');
-            return shortcut ? i18n.formatTooltipWithShortcut(text, shortcut) : text;
-        });
+        tooltips.register(selectionMode, tooltip('tooltip.bottom-toolbar.selection-mode', 'selection.toggleMode'));
         tooltips.register(picker, tooltip('tooltip.bottom-toolbar.rectangle-selection', 'tool.rectSelection'));
         tooltips.register(lasso, tooltip('tooltip.bottom-toolbar.lasso-selection', 'tool.lassoSelection'));
         tooltips.register(polygon, tooltip('tooltip.bottom-toolbar.polygon-selection', 'tool.polygonSelection'));

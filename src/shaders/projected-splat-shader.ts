@@ -26,6 +26,9 @@ uniform ringSize: f32;
 uniform ringSelectionOnly: u32;
 uniform ringsBase: u32;
 uniform ringsCount: u32;
+uniform outlineMode: u32;
+uniform showGaussians: u32;
+uniform showSelectedGaussians: u32;
 
 varying gaussianUV: vec2f;
 varying gaussianColor: vec4f;
@@ -80,6 +83,17 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
         output.position = discardPosition;
         return output;
     }
+    #ifndef PICK_PASS
+        // with gaussian display off (e.g. a centers-only view), quads whose
+        // fragments could not contribute anything skip rasterization entirely
+        // instead of blending transparent pixels - only ring bands, the
+        // selected-gaussian display and the selection outline still need them
+        if (uniform.showGaussians == 0u && !ringEligible
+            && !((flags & 1u) != 0u && (uniform.showSelectedGaussians != 0u || uniform.outlineMode != 0u))) {
+            output.position = discardPosition;
+            return output;
+        }
+    #endif
     #ifdef PICK_PASS
         if ((uniform.pickOp == 0 && flags != 0u)
             || (uniform.pickOp == 1 && flags != 1u)

@@ -4,10 +4,11 @@
 // render-target pixels. Exact to mask resolution - no depth test, so it selects
 // through all layers, and reading the compact list means it covers exactly the
 // splats the frame projected (including zero-alpha ones, which stay projected).
-
-// words per region row: interval count + INTERVALS_PER_ROW (x0, x1) pairs
-const INTERVALS_PER_ROW = 8;
-const ROW_STRIDE = 1 + INTERVALS_PER_ROW * 2;
+//
+// Interval buffer layout: (rowCount + 1) offsets followed by (x0, x1) run
+// pairs. offsets[r]..offsets[r+1] are the u32 indices of row r's runs within
+// this same buffer, so a row holds any number of runs and the region is
+// represented exactly
 
 const footprintIntersect = /* wgsl */`
 struct Uniforms {
@@ -28,8 +29,6 @@ struct Uniforms {
 @group(0) @binding(4) var cacheA: texture_2d<u32>;
 @group(0) @binding(5) var cacheB: texture_2d<u32>;
 @group(0) @binding(6) var<uniform> uniforms: Uniforms;
-
-const ROW_STRIDE = ${ROW_STRIDE}u;
 
 @compute @workgroup_size(256)
 fn main(@builtin(global_invocation_id) gid: vec3u) {
@@ -92,11 +91,11 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         let x0 = center.x + (-q12 * dy - sq) / q11;
         let x1 = center.x + (-q12 * dy + sq) / q11;
 
-        let rowBase = u32(y - uniforms.regionY0) * ROW_STRIDE;
-        let count = intervals[rowBase];
-        for (var k = 0u; k < count; k++) {
-            let ix0 = f32(intervals[rowBase + 1u + k * 2u]);
-            let ix1 = f32(intervals[rowBase + 2u + k * 2u]);
+        let row = u32(y - uniforms.regionY0);
+        let runEnd = intervals[row + 1u];
+        for (var i = intervals[row]; i < runEnd; i += 2u) {
+            let ix0 = f32(intervals[i]);
+            let ix1 = f32(intervals[i + 1u]);
             if (x1 >= ix0 && x0 <= ix1) {
                 let instance = entry - uniforms.entryBase;
                 let word = instance >> 2u;
@@ -109,4 +108,4 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     }
 }`;
 
-export { footprintIntersect, INTERVALS_PER_ROW, ROW_STRIDE };
+export { footprintIntersect };

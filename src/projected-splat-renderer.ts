@@ -151,6 +151,8 @@ class ProjectedSplatRenderer {
     private splatCounter: StorageBuffer | null = null;
     private argsCompute: Compute | null = null;
     private footprintCompute: Compute | null = null;
+    private footprintShader: Shader | null = null;
+    private footprintBindGroupFormat: BindGroupFormat | null = null;
     private footprintOutput: StorageBuffer | null = null;
     private footprintIntervals: StorageBuffer | null = null;
     // indirect draw slot claimed by the last rendered frame. Draw commands are
@@ -449,14 +451,15 @@ class ProjectedSplatRenderer {
                 new BindTextureFormat('cacheB', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false),
                 new BindUniformBufferFormat('uniforms', SHADERSTAGE_COMPUTE)
             ]);
-            const shader = new Shader(this.device, {
+            this.footprintShader = new Shader(this.device, {
                 name: 'FootprintIntersect',
                 shaderLanguage: SHADERLANGUAGE_WGSL,
                 cshader: footprintIntersect,
                 computeBindGroupFormat: bindGroupFormat,
                 computeUniformBufferFormats: { uniforms: uniformBufferFormat }
             } as any);
-            this.footprintCompute = new Compute(this.device, shader, 'FootprintIntersect');
+            this.footprintBindGroupFormat = bindGroupFormat;
+            this.footprintCompute = new Compute(this.device, this.footprintShader, 'FootprintIntersect');
         }
         return this.footprintCompute;
     }
@@ -853,6 +856,8 @@ class ProjectedSplatRenderer {
         this.splatCounter?.destroy();
         this.argsCompute?.destroy();
         this.footprintCompute?.destroy();
+        this.footprintShader?.destroy();
+        this.footprintBindGroupFormat?.destroy();
         this.footprintOutput?.destroy();
         this.footprintIntervals?.destroy();
         this.cacheA?.destroy();

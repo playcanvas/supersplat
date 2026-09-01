@@ -7,7 +7,6 @@ import { Element, ElementType } from './element';
 import { Events } from './events';
 import type { GridPlane } from './infinite-grid';
 import { Scene } from './scene';
-import { INTERVALS_PER_ROW, ROW_STRIDE } from './shaders/footprint-intersect';
 import { Splat } from './splat';
 
 // register for editor and scene events
@@ -447,10 +446,30 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
     };
 
-    // per-row x-interval tables in render-target pixels for the footprint pass
+    // per-row x-interval tables in render-target pixels for the footprint
+    // pass: (rowCount + 1) offsets into the same buffer, then (x0, x1) pairs,
+    // so every row's runs are represented exactly
+
+    const packRegion = (py0: number, py1: number, rowRuns: number[][]): SelectRegion => {
+        const rows = py1 - py0 + 1;
+        const table = rows + 1;
+        let total = 0;
+        for (const runs of rowRuns) {
+            total += runs.length;
+        }
+        const intervals = new Uint32Array(table + total);
+        let cursor = table;
+        for (let r = 0; r < rows; r++) {
+            intervals[r] = cursor;
+            intervals.set(rowRuns[r], cursor);
+            cursor += rowRuns[r].length;
+        }
+        intervals[rows] = cursor;
+        return { y0: py0, y1: py1, intervals };
+    };
 
     const emptyRegion = (): SelectRegion => {
-        return { y0: 0, y1: 0, intervals: new Uint32Array(ROW_STRIDE) };
+        return packRegion(0, 0, [[]]);
     };
 
     const rectRegion = (x0: number, y0: number, x1: number, y1: number): SelectRegion => {
@@ -462,15 +481,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         if (py1 < py0 || px1 < px0) {
             return emptyRegion();
         }
-        const rows = py1 - py0 + 1;
-        const intervals = new Uint32Array(rows * ROW_STRIDE);
-        for (let r = 0; r < rows; r++) {
-            const base = r * ROW_STRIDE;
-            intervals[base] = 1;
-            intervals[base + 1] = px0;
-            intervals[base + 2] = px1;
+        const rowRuns: number[][] = [];
+        for (let r = py0; r <= py1; r++) {
+            rowRuns.push([px0, px1]);
         }
-        return { y0: py0, y1: py1, intervals };
+        return packRegion(py0, py1, rowRuns);
     };
 
     const maskRegion = (context: CanvasRenderingContext2D, maskWidth: number, maskHeight: number): SelectRegion => {
@@ -478,10 +493,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         const mask = context.getImageData(0, 0, maskWidth, maskHeight);
         const xScale = width / maskWidth;
 
-        // covered runs of a mask row, merged down to the table's capacity by
-        // closing the smallest gaps (a conservative superset of the mask)
+        // covered runs of a mask row, scaled to render-target pixels
         const rowRuns = (maskY: number) => {
-            const runs: number[][] = [];
+            const runs: number[] = [];
             const rowBase = maskY * maskWidth * 4;
             let start = -1;
             for (let x = 0; x <= maskWidth; x++) {
@@ -489,21 +503,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 if (covered && start === -1) {
                     start = x;
                 } else if (!covered && start !== -1) {
-                    runs.push([start, x - 1]);
+                    runs.push(Math.floor(start * xScale), Math.ceil(x * xScale) - 1);
                     start = -1;
                 }
             }
-            while (runs.length > INTERVALS_PER_ROW) {
-                let best = 1;
-                for (let i = 2; i < runs.length; i++) {
-                    if (runs[i][0] - runs[i - 1][1] < runs[best][0] - runs[best - 1][1]) {
-                        best = i;
-                    }
-                }
-                runs[best - 1][1] = runs[best][1];
-                runs.splice(best, 1);
-            }
-            return runs.map(([a, b]) => [Math.floor(a * xScale), Math.ceil((b + 1) * xScale) - 1]);
+            return runs;
         };
 
         // mask row bounds
@@ -525,24 +529,18 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
         const py0 = Math.max(0, Math.floor(my0 / maskHeight * height));
         const py1 = Math.min(height - 1, Math.ceil((my1 + 1) / maskHeight * height) - 1);
-        const rows = py1 - py0 + 1;
-        const intervals = new Uint32Array(rows * ROW_STRIDE);
-        const cache = new Map<number, number[][]>();
-        for (let r = 0; r < rows; r++) {
-            const maskY = Math.min(maskHeight - 1, Math.floor((py0 + r + 0.5) / height * maskHeight));
+        const cache = new Map<number, number[]>();
+        const rows: number[][] = [];
+        for (let r = py0; r <= py1; r++) {
+            const maskY = Math.min(maskHeight - 1, Math.floor((r + 0.5) / height * maskHeight));
             let runs = cache.get(maskY);
             if (!runs) {
                 runs = rowRuns(maskY);
                 cache.set(maskY, runs);
             }
-            const base = r * ROW_STRIDE;
-            intervals[base] = runs.length;
-            for (let k = 0; k < runs.length; k++) {
-                intervals[base + 1 + k * 2] = runs[k][0];
-                intervals[base + 2 + k * 2] = runs[k][1];
-            }
+            rows.push(runs);
         }
-        return { y0: py0, y1: py1, intervals };
+        return packRegion(py0, py1, rows);
     };
 
     // transform maps the unit sphere (diameter 1) to world space
@@ -702,6 +700,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 await runFootprintSelect(splat, op, rectRegion(
                     point.x, point.y, point.x + 1 / width, point.y + 1 / height));
             } else {
+                // depth-mode clicks deliberately ignore the footprint toggle
+                // and pick the frontmost splat under the cursor: requiring a
+                // visible center at the clicked pixel (as rect/mask gestures do
+                // in centers mode) would make clicking practically never land
                 scene.camera.pickPrep(splat, op);
 
                 // Use normalized coordinates with minimal size for single pixel pick

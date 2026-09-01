@@ -41,6 +41,25 @@
     background-color: $bcg-primary;
 }
 
+.bottom-toolbar-selection-mode-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    margin: 0px 1px;
+    padding: 0;
+    border: 0;
+    border-radius: 2px;
+    background-color: $bcg-primary;
+
+    svg {
+        width: 20px;
+        height: 20px;
+        color: $clr-default;
+    }
+}
+
 .bottom-toolbar-button {
     svg {
         color: $clr-default;

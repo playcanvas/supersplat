@@ -318,6 +318,7 @@ class Camera extends Element {
             scene.worldLayer.id,
             scene.splatLayer.id,
             scene.overlayLayer.id,
+            scene.centersLayer.id,
             scene.gizmoLayer.id
         ];
 
@@ -566,11 +567,15 @@ class Camera extends Element {
             this.splatPass.addLayer(this.camera, scene.splatLayer, false, false);
             this.splatPass.addLayer(this.camera, scene.splatLayer, true, false);
 
-            // configure gizmo pass. the gizmo layer clears depth and stencil
-            // before its opaque step, after the depth-independent tool overlay
+            // configure gizmo pass. the centers and gizmo layers each clear depth
+            // before their opaque step, after the depth-independent tool overlay,
+            // so centers depth-test against each other alone and the gizmos then
+            // start from a clean buffer again
             this.gizmoPass.init(this.mainTarget);
             this.gizmoPass.addLayer(this.camera, scene.overlayLayer, false, false);
             this.gizmoPass.addLayer(this.camera, scene.overlayLayer, true, false);
+            this.gizmoPass.addLayer(this.camera, scene.centersLayer, false, true);
+            this.gizmoPass.addLayer(this.camera, scene.centersLayer, true, false);
             this.gizmoPass.addLayer(this.camera, scene.gizmoLayer, false, true);
             this.gizmoPass.addLayer(this.camera, scene.gizmoLayer, true, false);
 
@@ -717,6 +722,11 @@ class Camera extends Element {
 
         let closestDepth = Infinity;
         let closestSplat: Splat | null = null;
+
+        // the depth pass reuses the projected cache but composites front to back,
+        // so it needs a sorted order under it - which the last rendered frame only
+        // provides if the scene had settled
+        scene.projectedSplatRenderer.renderSortedForPick();
 
         // Find the splat with the smallest depth at this screen position
         for (let i = 0; i < splats.length; ++i) {

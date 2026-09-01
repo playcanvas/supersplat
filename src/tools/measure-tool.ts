@@ -35,11 +35,11 @@ class MeasureTool {
     deactivate: () => void;
     getFocus: () => { position: Vec3, radius: number } | null;
 
-    constructor(events: Events, scene: Scene, canvasContainer: Container) {
+    constructor(events: Events, scene: Scene, canvasContainer: Container, annotationParent: HTMLElement) {
         // the length label along the measured line (shown when 'show
         // dimensions' is enabled); the points and line render in the scene
         // via the shared tool overlay
-        const dimLabels = new DimensionLabels(scene, canvasContainer.dom, canvasContainer.dom, 'measure-tool-svg', 1);
+        const dimLabels = new DimensionLabels(scene, canvasContainer.dom, annotationParent, 'measure-tool-svg', 1);
 
         // ui
         const hintLabel = new Label({ class: 'select-toolbar-label' });

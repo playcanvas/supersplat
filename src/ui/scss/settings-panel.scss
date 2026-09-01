@@ -36,12 +36,8 @@
         display: flex;
     }
 
-    // section bars match the row height; their labels drop the bold weight to
-    // sit a step below the panel title
+    // section labels sit a step below the panel title
     & > .options-panel-section {
-        box-sizing: border-box;
-        height: 32px;
-
         & > .panel-header-label {
             font-size: 11px;
         }
@@ -84,9 +80,14 @@
             }
         }
 
-        & > .settings-panel-row-slider {
-            margin: 0px;
+        & > .settings-panel-row-slider,
+        & > .settings-panel-row-select {
+            flex: 0 0 187px;
+            width: 187px;
+            margin: 0;
+        }
 
+        & > .settings-panel-row-slider {
             & > .pcui-slider-container {
                 & > .pcui-slider-bar {
                     & > .pcui-slider-handle {
@@ -111,11 +112,6 @@
             }
         }
 
-        & > .settings-panel-row-select {
-            width: 187px;
-            margin: 0;
-        }
-
         & > .settings-panel-row-button {
             flex-grow: 1;
             margin: 0;
@@ -126,33 +122,51 @@
         padding-left: 24px;
     }
 
-    & > .settings-panel-row.options-panel-row-footer {
-        height: auto;
-        margin-top: 2px;
+    & > .settings-panel-row.options-panel-icon-row {
+        justify-content: center;
+        gap: 4px;
+        height: 28px;
 
         &:hover {
             background-color: transparent;
         }
 
-        // flex-center the label (the default line-height rendering sits low)
-        // and lead it with the reset icon, drawn as a mask so it tracks the
-        // text color
-        & > .settings-panel-row-button {
+        & > .options-panel-toggle-grid {
             display: flex;
+            flex: 0 0 187px;
+            flex-direction: row;
             align-items: center;
-            justify-content: center;
-            gap: 6px;
-            height: 28px;
-            line-height: normal;
+            justify-content: space-between;
 
-            &::before {
-                content: '';
+            & > .options-panel-icon-button {
                 flex-shrink: 0;
-                width: 13px;
-                height: 13px;
-                background-color: currentColor;
-                mask: var(--icon) center / contain no-repeat;
-                -webkit-mask: var(--icon) center / contain no-repeat;
+                width: 42px;
+                height: 24px;
+                margin: 0;
+                padding: 4px;
+                border: 0;
+                border-radius: 3px;
+                background-color: $bcg-dark;
+
+                svg {
+                    width: 18px;
+                    height: 18px;
+                    color: $clr-default;
+                }
+
+                &.active {
+                    background-color: $clr-hilight;
+
+                    svg {
+                        color: $clr-active;
+                    }
+                }
+            }
+
+            & > .options-panel-icon-spacer {
+                flex-shrink: 0;
+                width: 42px;
+                height: 24px;
             }
         }
     }

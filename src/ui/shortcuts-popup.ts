@@ -45,8 +45,6 @@ const popupConfig: Record<string, CategoryConfig> = {
     show: {
         localeKey: 'popup.shortcuts.show',
         shortcuts: [
-            { id: 'camera.toggleOverlay', localeKey: 'popup.shortcuts.toggle-splat-overlay' },
-            { id: 'camera.toggleMode', localeKey: 'popup.shortcuts.toggle-overlay-mode' },
             { id: 'grid.toggleVisible', localeKey: 'popup.shortcuts.toggle-grid' },
             { id: 'camera.toggleShowInfo', localeKey: 'popup.shortcuts.toggle-camera-info' },
             { id: 'select.hide', localeKey: 'popup.shortcuts.lock-selected-splats' },
@@ -59,7 +57,10 @@ const popupConfig: Record<string, CategoryConfig> = {
             { id: 'select.all', localeKey: 'popup.shortcuts.select-all' },
             { id: 'select.none', localeKey: 'popup.shortcuts.deselect-all' },
             { id: 'select.invert', localeKey: 'popup.shortcuts.invert-selection' },
-            { id: 'select.delete', localeKey: 'popup.shortcuts.delete-selected-splats' }
+            { id: 'select.delete', localeKey: 'popup.shortcuts.delete-selected-splats' },
+            { id: 'selection.toggleUseDepth', localeKey: 'popup.shortcuts.toggle-depth' },
+            { id: 'selection.toggleFootprint', localeKey: 'popup.shortcuts.toggle-footprint' },
+            { id: 'view.toggleOverlay', localeKey: 'popup.shortcuts.toggle-overlays' }
         ],
         hints: [
             { displayKey: 'Shift', localeKey: 'popup.shortcuts.add-to-selection' },

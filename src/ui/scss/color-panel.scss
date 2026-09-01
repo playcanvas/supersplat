@@ -5,31 +5,15 @@
     display: flex;
     flex-direction: column;
 
-    // .panel's own header styling only reaches direct children, so restate it
-    // for this nested header
     & > .color-panel-header {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        padding: 2px;
-        background-color: $bcg-dark;
         cursor: pointer;
 
         & > .panel-header-icon {
-            color: $clr-hilight;
-
             & > svg {
                 display: block;
                 width: 16px;
                 height: 16px;
             }
-        }
-
-        & > .panel-header-label {
-            color: $text-primary;
-            font-weight: bold;
-            flex-grow: 1;
-            text-transform: uppercase;
         }
 
         & > .color-panel-collapse {
@@ -64,7 +48,8 @@
             display: flex;
             flex-direction: row;
             justify-content: flex-start;
-            width: 205px;
+            flex-shrink: 0;
+            width: 215px;
 
             & > .color-panel-row-picker {
                 margin: 0px 0px;
@@ -75,7 +60,8 @@
         }
 
         & > .color-panel-row-slider {
-            width: 205px;
+            flex-shrink: 0;
+            width: 215px;
             margin: 0px;
 
             & > .pcui-slider-container {

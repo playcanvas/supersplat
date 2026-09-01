@@ -65,8 +65,13 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // force render on some events
 
     [
-        'camera.mode', 'camera.overlay', 'camera.splatSize', 'view.outlineSelection',
-        'view.centersUseGaussianColor', 'view.bands', 'view.minPixelSize', 'view.stochastic', 'view.perfOverlay', 'camera.bound', 'camera.boundDimensions', 'camera.showPoses',
+        'camera.splatSize', 'view.outlineSelection', 'view.gaussians', 'view.centers', 'view.rings',
+        'view.ringSize', 'view.overlay',
+        'view.selectionColor', 'view.selectionCenters', 'view.selectionRings',
+        'view.splatsColorBlend', 'view.splatsSelectionBlend',
+        'view.centersColorBlend', 'view.centersSelectionBlend',
+        'view.ringsColorBlend', 'view.ringsSelectionBlend',
+        'view.bands', 'view.minPixelSize', 'view.stochastic', 'view.perfOverlay', 'camera.bound', 'camera.boundDimensions', 'camera.showPoses',
         'camera.showInfo', 'selection.changed', 'tool.coordSpace', 'colorPanel.pendingChanged'
     ].forEach((eventName) => {
         events.on(eventName, () => {
@@ -271,6 +276,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // camera.focus
 
     events.on('camera.focus', () => {
+        events.fire('camera.setControlMode', 'orbit');
+
         // the active tool's focus target (e.g. orient points) takes precedence
         const toolFocus: { position: Vec3, radius: number } | null = events.invoke('tool.focus');
         if (toolFocus) {
@@ -399,11 +406,148 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
     };
 
+    // which machinery a screen-space select gesture runs on: depth on -> the
+    // per-pixel id pick (frontmost wins, op-aware peeling); depth off -> the
+    // centers intersect at footprint 0, otherwise the footprint pass, which
+    // tests each splat's projected ellipse against the region through all depths
+    const selectionMethod = () => {
+        if (events.invoke('selection.useDepth')) {
+            return 'pick';
+        }
+        return (events.invoke('selection.footprint') as number) > 0 ? 'footprint' : 'centers';
+    };
+
+    type SelectRegion = { y0: number, y1: number, intervals: Uint32Array };
+
+    const runFootprintSelect = (splat: Splat, op: 'add'|'remove'|'set'|'intersect', region: SelectRegion) => {
+        return scene.commandQueue.enqueue(async () => {
+            const footprint = events.invoke('selection.footprint') as number;
+            const data = await scene.projectedSplatRenderer.footprintIntersect(splat, region, footprint);
+            if (data) {
+                events.fire('edit.add', new SelectOp(splat, op, data));
+            }
+        });
+    };
+
+    // centers + depth: exactly the surface (rings) pick - the splats visible
+    // in the region, rendered at full footprint with the same op filtering so
+    // peeling works identically - narrowed to those whose center lies in the
+    // region. The centers test reuses the through-mode intersect compute
+    const runVisibleCentersSelect = (splat: Splat, op: 'add'|'remove'|'set'|'intersect', visible: Set<number>, options: any) => {
+        return scene.commandQueue.enqueue(async () => {
+            const data = await scene.dataProcessor.intersect(options, splat);
+            for (let i = 0; i < splat.instances.count; i++) {
+                if (data[i] && !visible.has(i)) {
+                    data[i] = 0;
+                }
+            }
+            events.fire('edit.add', new SelectOp(splat, op, data));
+            scene.dataProcessor.releaseMask(data);
+        });
+    };
+
+    // per-row x-interval tables in render-target pixels for the footprint
+    // pass: (rowCount + 1) offsets into the same buffer, then (x0, x1) pairs,
+    // so every row's runs are represented exactly
+
+    const packRegion = (py0: number, py1: number, rowRuns: number[][]): SelectRegion => {
+        const rows = py1 - py0 + 1;
+        const table = rows + 1;
+        let total = 0;
+        for (const runs of rowRuns) {
+            total += runs.length;
+        }
+        const intervals = new Uint32Array(table + total);
+        let cursor = table;
+        for (let r = 0; r < rows; r++) {
+            intervals[r] = cursor;
+            intervals.set(rowRuns[r], cursor);
+            cursor += rowRuns[r].length;
+        }
+        intervals[rows] = cursor;
+        return { y0: py0, y1: py1, intervals };
+    };
+
+    const emptyRegion = (): SelectRegion => {
+        return packRegion(0, 0, [[]]);
+    };
+
+    const rectRegion = (x0: number, y0: number, x1: number, y1: number): SelectRegion => {
+        const { width, height } = scene.targetSize;
+        const py0 = Math.max(0, Math.floor(y0 * height));
+        const py1 = Math.min(height - 1, Math.ceil(y1 * height) - 1);
+        const px0 = Math.max(0, Math.floor(x0 * width));
+        const px1 = Math.min(width - 1, Math.ceil(x1 * width) - 1);
+        if (py1 < py0 || px1 < px0) {
+            return emptyRegion();
+        }
+        const rowRuns: number[][] = [];
+        for (let r = py0; r <= py1; r++) {
+            rowRuns.push([px0, px1]);
+        }
+        return packRegion(py0, py1, rowRuns);
+    };
+
+    const maskRegion = (context: CanvasRenderingContext2D, maskWidth: number, maskHeight: number): SelectRegion => {
+        const { width, height } = scene.targetSize;
+        const mask = context.getImageData(0, 0, maskWidth, maskHeight);
+        const xScale = width / maskWidth;
+
+        // covered runs of a mask row, scaled to render-target pixels
+        const rowRuns = (maskY: number) => {
+            const runs: number[] = [];
+            const rowBase = maskY * maskWidth * 4;
+            let start = -1;
+            for (let x = 0; x <= maskWidth; x++) {
+                const covered = x < maskWidth && mask.data[rowBase + x * 4 + 3] === 255;
+                if (covered && start === -1) {
+                    start = x;
+                } else if (!covered && start !== -1) {
+                    runs.push(Math.floor(start * xScale), Math.ceil(x * xScale) - 1);
+                    start = -1;
+                }
+            }
+            return runs;
+        };
+
+        // mask row bounds
+        let my0 = maskHeight;
+        let my1 = -1;
+        for (let y = 0; y < maskHeight; y++) {
+            const rowBase = y * maskWidth * 4;
+            for (let x = 0; x < maskWidth; x++) {
+                if (mask.data[rowBase + x * 4 + 3] === 255) {
+                    my0 = Math.min(my0, y);
+                    my1 = Math.max(my1, y);
+                    break;
+                }
+            }
+        }
+        if (my1 < my0) {
+            return emptyRegion();
+        }
+
+        const py0 = Math.max(0, Math.floor(my0 / maskHeight * height));
+        const py1 = Math.min(height - 1, Math.ceil((my1 + 1) / maskHeight * height) - 1);
+        const cache = new Map<number, number[]>();
+        const rows: number[][] = [];
+        for (let r = py0; r <= py1; r++) {
+            const maskY = Math.min(maskHeight - 1, Math.floor((r + 0.5) / height * maskHeight));
+            let runs = cache.get(maskY);
+            if (!runs) {
+                runs = rowRuns(maskY);
+                cache.set(maskY, runs);
+            }
+            rows.push(runs);
+        }
+        return packRegion(py0, py1, rows);
+    };
+
     // transform maps the unit sphere (diameter 1) to world space
     events.on('select.bySphere', async (op: 'add'|'remove'|'set'|'intersect', transform: Mat4) => {
         for (const splat of selectedSplats()) {
             await runSelectIntersect(splat, op, {
-                sphere: { transform }
+                sphere: { transform, footprint: events.invoke('selection.footprint') as number }
             });
         }
     });
@@ -412,20 +556,22 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.on('select.byBox', async (op: 'add'|'remove'|'set'|'intersect', transform: Mat4) => {
         for (const splat of selectedSplats()) {
             await runSelectIntersect(splat, op, {
-                box: { transform }
+                box: { transform, footprint: events.invoke('selection.footprint') as number }
             });
         }
     });
 
     events.function('select.rect', async (op: 'add'|'remove'|'set'|'intersect', rect: any) => {
-        const mode = events.invoke('camera.mode');
+        const method = selectionMethod();
 
         for (const splat of selectedSplats()) {
-            if (mode === 'centers') {
+            if (method === 'centers') {
                 await runSelectIntersect(splat, op, {
                     rect: { x1: rect.start.x, y1: rect.start.y, x2: rect.end.x, y2: rect.end.y }
                 });
-            } else if (mode === 'rings') {
+            } else if (method === 'footprint') {
+                await runFootprintSelect(splat, op, rectRegion(rect.start.x, rect.start.y, rect.end.x, rect.end.y));
+            } else {
                 scene.camera.pickPrep(splat, op);
                 const pick = await scene.camera.pickRect(
                     rect.start.x,
@@ -434,8 +580,14 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     rect.end.y - rect.start.y
                 );
 
-                const sortedIds = new Uint32Array(new Set(pick)).sort();
-                events.fire('edit.add', new SelectOp(splat, op, sortedIds));
+                if ((events.invoke('selection.footprint') as number) === 0) {
+                    await runVisibleCentersSelect(splat, op, new Set(pick), {
+                        rect: { x1: rect.start.x, y1: rect.start.y, x2: rect.end.x, y2: rect.end.y }
+                    });
+                } else {
+                    const sortedIds = new Uint32Array(new Set(pick)).sort();
+                    events.fire('edit.add', new SelectOp(splat, op, sortedIds));
+                }
             }
         }
     });
@@ -443,10 +595,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     let maskTexture: Texture = null;
 
     events.function('select.byMask', async (op: 'add'|'remove'|'set'|'intersect', canvas: HTMLCanvasElement, context: CanvasRenderingContext2D) => {
-        const mode = events.invoke('camera.mode');
+        const method = selectionMethod();
 
         for (const splat of selectedSplats()) {
-            if (mode === 'centers') {
+            if (method === 'centers') {
                 // create mask texture
                 if (!maskTexture || maskTexture.width !== canvas.width || maskTexture.height !== canvas.height) {
                     if (maskTexture) {
@@ -459,7 +611,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 await runSelectIntersect(splat, op, {
                     mask: maskTexture
                 });
-            } else if (mode === 'rings') {
+            } else if (method === 'footprint') {
+                await runFootprintSelect(splat, op, maskRegion(context, canvas.width, canvas.height));
+            } else {
                 const mask = context.getImageData(0, 0, canvas.width, canvas.height);
 
                 // calculate mask bound so we limit pixel operations
@@ -509,28 +663,47 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     }
                 }
 
-                const sortedIds = new Uint32Array(selected).sort();
-                events.fire('edit.add', new SelectOp(splat, op, sortedIds));
+                if ((events.invoke('selection.footprint') as number) === 0) {
+                    // create mask texture
+                    if (!maskTexture || maskTexture.width !== canvas.width || maskTexture.height !== canvas.height) {
+                        if (maskTexture) {
+                            maskTexture.destroy();
+                        }
+                        maskTexture = new Texture(scene.graphicsDevice);
+                    }
+                    maskTexture.setSource(canvas);
+
+                    await runVisibleCentersSelect(splat, op, selected, { mask: maskTexture });
+                } else {
+                    const sortedIds = new Uint32Array(selected).sort();
+                    events.fire('edit.add', new SelectOp(splat, op, sortedIds));
+                }
             }
         }
     });
 
     events.function('select.point', async (op: 'add'|'remove'|'set'|'intersect', point: { x: number, y: number }) => {
         const { width, height } = scene.targetSize;
-        const mode = events.invoke('camera.mode');
+        const method = selectionMethod();
 
         for (const splat of selectedSplats()) {
-            if (mode === 'centers') {
-                const splatSize = events.invoke('camera.splatSize');
+            if (method === 'centers') {
                 await runSelectIntersect(splat, op, {
                     rect: {
-                        x1: point.x - splatSize / width,
-                        y1: point.y - splatSize / height,
-                        x2: point.x + splatSize / width,
-                        y2: point.y + splatSize / height
+                        x1: point.x,
+                        y1: point.y,
+                        x2: point.x + 1 / width,
+                        y2: point.y + 1 / height
                     }
                 });
-            } else if (mode === 'rings') {
+            } else if (method === 'footprint') {
+                await runFootprintSelect(splat, op, rectRegion(
+                    point.x, point.y, point.x + 1 / width, point.y + 1 / height));
+            } else {
+                // depth-mode clicks deliberately ignore the footprint toggle
+                // and pick the frontmost splat under the cursor: requiring a
+                // visible center at the clicked pixel (as rect/mask gestures do
+                // in centers mode) would make clicking practically never land
                 scene.camera.pickPrep(splat, op);
 
                 // Use normalized coordinates with minimal size for single pixel pick
@@ -682,27 +855,101 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
     });
 
-    // camera mode (visual: centers/rings)
+    // display
 
-    let activeMode = 'centers';
+    let showGaussians = true;
+    let showCenters = false;
+    let showRings = false;
+    let ringSize = 4;
 
-    const setCameraMode = (mode: string) => {
-        if (mode !== activeMode) {
-            activeMode = mode;
-            events.fire('camera.mode', activeMode);
+    events.function('view.gaussians', () => showGaussians);
+    events.function('view.centers', () => showCenters);
+    events.function('view.rings', () => showRings);
+    events.function('view.ringSize', () => ringSize);
+
+    events.on('view.setGaussians', (value: boolean) => {
+        if (value !== showGaussians) {
+            showGaussians = value;
+            events.fire('view.gaussians', value);
         }
-    };
-
-    events.function('camera.mode', () => {
-        return activeMode;
     });
 
-    events.on('camera.setMode', (mode: string) => {
-        setCameraMode(mode);
+    events.on('view.setCenters', (value: boolean) => {
+        if (value !== showCenters) {
+            showCenters = value;
+            events.fire('view.centers', value);
+        }
     });
 
-    events.on('camera.toggleMode', () => {
-        setCameraMode(events.invoke('camera.mode') === 'centers' ? 'rings' : 'centers');
+    events.on('view.setRings', (value: boolean) => {
+        if (value !== showRings) {
+            showRings = value;
+            events.fire('view.rings', value);
+        }
+    });
+
+    events.on('view.setRingSize', (value: number) => {
+        if (value !== ringSize) {
+            ringSize = value;
+            events.fire('view.ringSize', value);
+        }
+    });
+
+    // per-surface colour blend weights. colorBlend mixes the base colour from
+    // the gaussian's own colour (0) toward the flat unselected colour (1);
+    // selectionBlend mixes a selected splat from that base toward the
+    // selection colour
+    const blends: [name: string, value: number][] = [
+        ['splatsColorBlend', 0],
+        ['splatsSelectionBlend', 1],
+        ['centersColorBlend', 1],
+        ['centersSelectionBlend', 1],
+        ['ringsColorBlend', 0],
+        ['ringsSelectionBlend', 1]
+    ];
+    blends.forEach(([name, initial]) => {
+        let value = initial;
+        const setEvent = `view.set${name[0].toUpperCase()}${name.slice(1)}`;
+        events.function(`view.${name}`, () => value);
+        events.on(setEvent, (next: number) => {
+            if (next !== value) {
+                value = next;
+                events.fire(`view.${name}`, next);
+            }
+        });
+    });
+
+    // selection controls: depth on = the per-pixel id pick (frontmost wins),
+    // depth off = through all layers; footprint scales how much of each splat's
+    // projected ellipse counts, from its center point (0) to the full footprint (1)
+
+    let selectionUseDepth = false;
+    let selectionFootprint = 0;
+
+    events.function('selection.useDepth', () => selectionUseDepth);
+
+    events.on('selection.setUseDepth', (value: boolean) => {
+        if (value !== selectionUseDepth) {
+            selectionUseDepth = value;
+            events.fire('selection.useDepth', value);
+        }
+    });
+
+    events.on('selection.toggleUseDepth', () => {
+        events.fire('selection.setUseDepth', !selectionUseDepth);
+    });
+
+    events.function('selection.footprint', () => selectionFootprint);
+
+    events.on('selection.setFootprint', (value: number) => {
+        if (value !== selectionFootprint) {
+            selectionFootprint = value;
+            events.fire('selection.footprint', value);
+        }
+    });
+
+    events.on('selection.toggleFootprint', () => {
+        events.fire('selection.setFootprint', selectionFootprint > 0 ? 0 : 1);
     });
 
     // camera control mode (orbit/fly)
@@ -727,29 +974,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('camera.toggleControlMode', () => {
         setControlMode(controlMode === 'orbit' ? 'fly' : 'orbit');
-    });
-
-    // camera overlay
-
-    let cameraOverlay = scene.config.camera.overlay;
-
-    const setCameraOverlay = (enabled: boolean) => {
-        if (enabled !== cameraOverlay) {
-            cameraOverlay = enabled;
-            events.fire('camera.overlay', cameraOverlay);
-        }
-    };
-
-    events.function('camera.overlay', () => {
-        return cameraOverlay;
-    });
-
-    events.on('camera.setOverlay', (value: boolean) => {
-        setCameraOverlay(value);
-    });
-
-    events.on('camera.toggleOverlay', () => {
-        setCameraOverlay(!events.invoke('camera.overlay'));
     });
 
     // splat size
@@ -786,6 +1010,121 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('camera.setFlySpeed', (value: number) => {
         setFlySpeed(value);
+    });
+
+    // selection display
+
+    let selectionColor = false;
+    let selectionCenters = true;
+    let selectionRings = false;
+
+    events.function('view.selectionColor', () => selectionColor);
+    events.function('view.selectionCenters', () => selectionCenters);
+    events.function('view.selectionRings', () => selectionRings);
+
+    events.on('view.setSelectionColor', (value: boolean) => {
+        if (value !== selectionColor) {
+            selectionColor = value;
+            events.fire('view.selectionColor', value);
+        }
+    });
+
+    events.on('view.setSelectionCenters', (value: boolean) => {
+        if (value !== selectionCenters) {
+            selectionCenters = value;
+            events.fire('view.selectionCenters', value);
+        }
+    });
+
+    events.on('view.setSelectionRings', (value: boolean) => {
+        if (value !== selectionRings) {
+            selectionRings = value;
+            events.fire('view.selectionRings', value);
+        }
+    });
+
+    // per-footprint-mode view profiles: each footprint mode (centers/rings)
+    // remembers its own overlay arrangement. The live view flags are the
+    // active mode's profile; this holds the other mode's, applied when the
+    // footprint toggle crosses the centers/rings boundary. Encoded as 0/1 in
+    // [gaussians, centers, rings, selectionCenters, selectionRings] order
+    const profileFlags: [get: string, set: string][] = [
+        ['view.gaussians', 'view.setGaussians'],
+        ['view.centers', 'view.setCenters'],
+        ['view.rings', 'view.setRings'],
+        ['view.selectionCenters', 'view.setSelectionCenters'],
+        ['view.selectionRings', 'view.setSelectionRings']
+    ];
+    let inactiveProfile = [1, 0, 1, 0, 1];
+    let profileMode = (events.invoke('selection.footprint') as number) > 0;
+
+    // preference application sets the footprint, the live flags and the
+    // inactive profile explicitly, so the boundary-crossing swap below must
+    // stay out of its way or it shuffles the slots it is being loaded into
+    let prefsSuspendDepth = 0;
+    events.on('preferences.suspend', () => {
+        prefsSuspendDepth++;
+    });
+    events.on('preferences.resume', () => {
+        prefsSuspendDepth = Math.max(0, prefsSuspendDepth - 1);
+    });
+
+    events.function('view.inactiveProfile', () => inactiveProfile.slice());
+
+    events.on('view.setInactiveProfile', (profile: number[]) => {
+        inactiveProfile = profile.slice();
+    });
+
+    events.on('selection.footprint', (value: number) => {
+        const mode = value > 0;
+        if (mode !== profileMode) {
+            profileMode = mode;
+            if (prefsSuspendDepth > 0) {
+                return;
+            }
+            const snapshot = profileFlags.map(([get]) => (events.invoke(get) ? 1 : 0));
+            profileFlags.forEach(([, set], i) => {
+                events.fire(set, !!inactiveProfile[i]);
+            });
+            inactiveProfile = snapshot;
+            events.fire('view.inactiveProfile', inactiveProfile.slice());
+        }
+    });
+
+    // master overlay switch (tab): while off, the non-selection overlays hide
+    // and gaussians render regardless of the profile, so it toggles between
+    // the editing view and the raw scene. Session-only by design - it is not
+    // a preference, and any appearance edit below switches it back on so
+    // settings are never adjusted blind
+    let overlay = true;
+
+    const setOverlay = (value: boolean) => {
+        if (value !== overlay) {
+            overlay = value;
+            events.fire('view.overlay', value);
+        }
+    };
+
+    events.function('view.overlay', () => overlay);
+
+    events.on('view.setOverlay', setOverlay);
+
+    events.on('view.toggleOverlay', () => {
+        setOverlay(!overlay);
+    });
+
+    [
+        'view.gaussians', 'view.centers', 'view.rings',
+        'view.selectionCenters', 'view.selectionRings', 'view.selectionColor', 'view.outlineSelection',
+        'camera.splatSize', 'view.ringSize',
+        'view.splatsColorBlend', 'view.splatsSelectionBlend',
+        'view.centersColorBlend', 'view.centersSelectionBlend',
+        'view.ringsColorBlend', 'view.ringsSelectionBlend',
+        'bgClr', 'selectedClr', 'unselectedClr', 'lockedClr'
+    ].forEach((eventName) => {
+        events.on(eventName, () => {
+            setOverlay(true);
+        });
     });
 
     // outline selection
@@ -876,14 +1215,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     });
 
-    // centers gaussian color toggle
-    let centersUseGaussianColor = false;
-    events.function('view.centersUseGaussianColor', () => centersUseGaussianColor);
-    events.on('view.setCentersUseGaussianColor', (value: boolean) => {
-        centersUseGaussianColor = value;
-        events.fire('view.centersUseGaussianColor', value);
-    });
-
     events.function('camera.getPose', () => {
         const camera = scene.camera;
         const position = camera.position;
@@ -914,7 +1245,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     // hack: fire events to initialize UI
     events.fire('camera.fov', scene.camera.fov);
-    events.fire('camera.overlay', cameraOverlay);
     events.fire('view.bands', viewBands);
     events.fire('camera.showInfo', showInfo);
     // needed because view.setStochastic only notifies on a change, so a stored

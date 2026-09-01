@@ -84,6 +84,7 @@ class Scene {
     worldLayer: Layer;
     splatLayer: Layer;
     overlayLayer: Layer;
+    centersLayer: Layer;
     gizmoLayer: Layer;
     sceneState = [new SceneState(), new SceneState()];
     elements: Element[] = [];
@@ -309,6 +310,17 @@ class Scene {
         // measure/orient tool overlays, which show through occluding gaussians)
         this.overlayLayer = new Layer({ name: 'ToolOverlay' });
 
+        // splat centers - depth tested and written against a cleared buffer, so
+        // overlapping centers resolve nearest-first and the gaussians never
+        // occlude them. Its own layer because the gizmo shapes share the gizmo
+        // layer's depth buffer, and some of them write a constant fragment depth
+        // (see the engine's gizmo unlitShader) which no ordering can reconcile
+        // with real per-center depth
+        this.centersLayer = new Layer({
+            name: 'Centers',
+            clearDepthBuffer: true
+        });
+
         // gizmo layer - clear scene depth before drawing gizmos so they remain visible
         this.gizmoLayer = new Layer({
             name: 'Gizmo',
@@ -319,6 +331,7 @@ class Scene {
         const layers = this.app.scene.layers;
         layers.push(this.splatLayer);
         layers.push(this.overlayLayer);
+        layers.push(this.centersLayer);
         layers.push(this.gizmoLayer);
 
         this.projectedSplatRenderer = new ProjectedSplatRenderer(this);

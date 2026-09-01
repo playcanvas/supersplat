@@ -1,7 +1,7 @@
 @use 'colors.scss' as *;
 
 // shares the scene panel's row grid: 10px side gutters, 2px section
-// boundaries, and a 95px label column so the edit controls align with the
+// boundaries, and a fixed control column so the edit controls align with the
 // colors section's control column below
 #transform {
     display: flex;
@@ -23,14 +23,16 @@
 }
 
 .transform-label {
-    width: 95px;
-    flex-shrink: 0;
-    flex-grow: 0;
+    flex-grow: 1;
     margin: 0px;
 }
 
+// pinned to the same width as the colors section's control column below, so
+// the two sections' edit controls align whatever the label lengths are
 .transform-expand {
-    flex-grow: 1;
+    flex-grow: 0;
+    flex-shrink: 0;
+    width: 215px;
 }
 
 $height: 22px;
@@ -63,4 +65,12 @@ $height: 22px;
         margin: 0px 0px 0px 4px;
         height: $height;
     }
+}
+// scale is a single value: match the width of one vector component and keep it
+// aligned with the x column (the rest of the control column stays empty).
+// Placed after the numeric-input rules above, whose equal specificity would
+// otherwise zero the margin
+#transform > div > div.transform-scale {
+    width: calc((215px - 20px) / 3);
+    margin-right: calc(215px - (215px - 20px) / 3);
 }

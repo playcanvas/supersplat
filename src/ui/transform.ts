@@ -71,7 +71,7 @@ class Transform extends Container {
         i18n.bindText(scaleLabel, 'panel.scene.transform.scale');
 
         const scaleInput = new NumericInput({
-            class: 'transform-expand',
+            class: ['transform-expand', 'transform-scale'],
             precision: 3,
             value: 1,
             min: 0.001,

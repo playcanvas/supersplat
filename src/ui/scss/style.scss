@@ -14,7 +14,6 @@
 @use 'select-toolbar.scss';
 @use 'data-panel.scss';
 @use 'popup.scss';
-@use 'mode-toggle.scss';
 @use 'settings-dialog.scss';
 @use 'spinner.scss';
 @use 'progress.scss';
@@ -249,6 +248,13 @@ body {
     padding: 0;
     margin: 0;
     flex-grow: 1;
+}
+
+#annotation-container {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
 }
 
 #tools-container {

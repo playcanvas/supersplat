@@ -50,11 +50,11 @@ class OrientTool {
     deactivate: () => void;
     getFocus: () => { position: Vec3, radius: number } | null;
 
-    constructor(events: Events, scene: Scene, parent: HTMLElement, canvasContainer: Container) {
+    constructor(events: Events, scene: Scene, parent: HTMLElement, canvasContainer: Container, annotationParent: HTMLElement) {
         // the edge length labels (shown when 'show dimensions' is enabled);
         // the points, edges and plane fill render in the scene via the shared
         // tool overlay
-        const dimLabels = new DimensionLabels(scene, canvasContainer.dom, parent, 'orient-tool-svg', 3);
+        const dimLabels = new DimensionLabels(scene, canvasContainer.dom, annotationParent, 'orient-tool-svg', 3);
 
         // ui
         const hintLabel = new Label({ class: 'select-toolbar-label' });

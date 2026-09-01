@@ -1,13 +1,17 @@
-import { BooleanInput, Button, ColorPicker, Container, Label, SelectInput, SliderInput } from '@playcanvas/pcui';
-import { Color } from 'playcanvas';
+import { BooleanInput, Container, Label, SelectInput, SliderInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { i18n } from './localization';
-import resetSvg from './svg/edit-undo.svg';
+import resetSvg from './svg/reset.svg';
 import { Tooltips } from './tooltips';
 
+const createSvg = (svgString: string) => {
+    const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
+    return new DOMParser().parseFromString(decodedStr, 'image/svg+xml').documentElement;
+};
+
 // application preferences: set-and-forget options, as opposed to the viewport
-// state that lives in the view options panel
+// state that lives in the appearance and overlays panels
 class SettingsPanel extends Container {
     constructor(events: Events, tooltips: Tooltips, args = {}) {
         args = {
@@ -40,8 +44,23 @@ class SettingsPanel extends Container {
         });
         i18n.bindText(label, 'panel.settings');
 
+        const resetButton = new Container({
+            class: ['panel-header-button', 'panel-header-reset-button']
+        });
+        resetButton.dom.appendChild(createSvg(resetSvg));
+        resetButton.dom.setAttribute('role', 'button');
+        resetButton.dom.setAttribute('tabindex', '0');
+        i18n.onChange(() => resetButton.dom.setAttribute('aria-label', i18n.t('panel.settings.reset')), resetButton);
+        resetButton.dom.addEventListener('keydown', (event: KeyboardEvent) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                resetButton.dom.click();
+            }
+        });
+
         header.append(icon);
         header.append(label);
+        header.append(resetButton);
 
         // section bars share the panel-header styling, like the scene
         // manager's transform header
@@ -98,73 +117,6 @@ class SettingsPanel extends Container {
 
         languageRow.append(languageLabel);
         languageRow.append(languageSelection);
-
-        // colors
-
-        const clrRow = new Container({
-            class: 'settings-panel-row'
-        });
-
-        const clrLabel = new Label({
-            class: 'settings-panel-row-label'
-        });
-        i18n.bindText(clrLabel, 'panel.settings.colors');
-
-        const clrPickers = new Container({
-            class: 'settings-panel-row-pickers'
-        });
-
-        const bgClrPicker = new ColorPicker({
-            class: 'settings-panel-row-picker',
-            channels: 3,
-            value: [0, 0, 0]
-        });
-
-        const selectedClrPicker = new ColorPicker({
-            class: 'settings-panel-row-picker',
-            channels: 4,
-            value: [0, 0, 0, 1]
-        });
-
-        const unselectedClrPicker = new ColorPicker({
-            class: 'settings-panel-row-picker',
-            channels: 4,
-            value: [0, 0, 0, 1]
-        });
-
-        const lockedClrPicker = new ColorPicker({
-            class: 'settings-panel-row-picker',
-            channels: 4,
-            value: [0, 0, 0, 1]
-        });
-
-        const toArray = (clr: Color) => {
-            return [clr.r, clr.g, clr.b, clr.a];
-        };
-
-        events.on('bgClr', (clr: Color) => {
-            bgClrPicker.value = toArray(clr);
-        });
-
-        events.on('selectedClr', (clr: Color) => {
-            selectedClrPicker.value = toArray(clr);
-        });
-
-        events.on('unselectedClr', (clr: Color) => {
-            unselectedClrPicker.value = toArray(clr);
-        });
-
-        events.on('lockedClr', (clr: Color) => {
-            lockedClrPicker.value = toArray(clr);
-        });
-
-        clrPickers.append(bgClrPicker);
-        clrPickers.append(selectedClrPicker);
-        clrPickers.append(unselectedClrPicker);
-        clrPickers.append(lockedClrPicker);
-
-        clrRow.append(clrLabel);
-        clrRow.append(clrPickers);
 
         // tonemapping
 
@@ -303,28 +255,10 @@ class SettingsPanel extends Container {
         stochasticRow.append(stochasticLabel);
         stochasticRow.append(stochasticSelection);
 
-        // reset preferences to defaults
-
-        const resetRow = new Container({
-            class: ['settings-panel-row', 'options-panel-row-footer']
-        });
-
-        const resetButton = new Button({
-            class: 'settings-panel-row-button'
-        });
-        i18n.bindText(resetButton, 'panel.settings.reset');
-        // the icon renders as a css mask (a child svg would be wiped by the
-        // button's text setter whenever the language changes)
-        resetButton.dom.style.setProperty('--icon', `url("${resetSvg}")`);
-
-        resetRow.append(resetButton);
-
         rowToggles(fovDollyRow, fovDollyToggle);
 
         this.append(header);
-        this.append(sectionHeader('panel.settings.section-application'));
         this.append(languageRow);
-        this.append(clrRow);
         this.append(sectionHeader('panel.settings.section-rendering'));
         this.append(stochasticRow);
         this.append(tonemappingRow);
@@ -333,7 +267,6 @@ class SettingsPanel extends Container {
         this.append(cameraFlySpeedRow);
         this.append(fovRow);
         this.append(fovDollyRow);
-        this.append(resetRow);
 
         // handle panel visibility
 
@@ -357,6 +290,12 @@ class SettingsPanel extends Container {
         });
 
         events.on('viewPanel.visible', (visible: boolean) => {
+            if (visible) {
+                setVisible(false);
+            }
+        });
+
+        events.on('displayPanel.visible', (visible: boolean) => {
             if (visible) {
                 setVisible(false);
             }
@@ -402,24 +341,6 @@ class SettingsPanel extends Container {
             events.fire('view.setStochastic', value);
         });
 
-        // background color
-
-        bgClrPicker.on('change', (value: number[]) => {
-            events.fire('setBgClr', new Color(value[0], value[1], value[2]));
-        });
-
-        selectedClrPicker.on('change', (value: number[]) => {
-            events.fire('setSelectedClr', new Color(value[0], value[1], value[2], value[3]));
-        });
-
-        unselectedClrPicker.on('change', (value: number[]) => {
-            events.fire('setUnselectedClr', new Color(value[0], value[1], value[2], value[3]));
-        });
-
-        lockedClrPicker.on('change', (value: number[]) => {
-            events.fire('setLockedClr', new Color(value[0], value[1], value[2], value[3]));
-        });
-
         // camera fov
 
         events.on('camera.fov', (fov: number) => {
@@ -443,20 +364,19 @@ class SettingsPanel extends Container {
         // reset preferences
 
         resetButton.on('click', () => {
-            events.fire('preferences.reset');
+            events.fire('preferences.reset', 'preferences');
         });
 
         // reset reverts language to automatic; sync the selector (its change
         // handler makes the equivalent setLanguage(null) call idempotently)
-        events.on('preferences.reset', () => {
-            languageSelection.value = 'auto';
+        events.on('preferences.reset', (group?: string) => {
+            if (!group || group === 'preferences') {
+                languageSelection.value = 'auto';
+            }
         });
 
         // tooltips
-        tooltips.register(bgClrPicker, () => i18n.t('panel.settings.background-color'), 'left');
-        tooltips.register(selectedClrPicker, () => i18n.t('panel.settings.selected-color'), 'top');
-        tooltips.register(unselectedClrPicker, () => i18n.t('panel.settings.unselected-color'), 'top');
-        tooltips.register(lockedClrPicker, () => i18n.t('panel.settings.locked-color'), 'top');
+        tooltips.register(resetButton, () => i18n.t('panel.settings.reset'), 'left');
     }
 }
 

@@ -115,6 +115,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             scene.camera.startOffscreenMode(width, height);
             scene.camera.renderOverlays = false;
             scene.gizmoLayer.enabled = false;
+            scene.centersLayer.enabled = false;
 
             // render the next frame
             scene.forceRender = true;
@@ -141,6 +142,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             scene.camera.endOffscreenMode();
             scene.camera.renderOverlays = true;
             scene.gizmoLayer.enabled = true;
+            scene.centersLayer.enabled = true;
             scene.camera.camera.clearColor.set(0, 0, 0, 0);
             scene.forceRender = true;       // repaint the viewport with normal rendering
         }
@@ -165,6 +167,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             scene.camera.startOffscreenMode(is360 ? faceSize : width, is360 ? faceSize : height);
             scene.camera.renderOverlays = is360 ? false : showDebug;
             scene.gizmoLayer.enabled = false;
+            scene.centersLayer.enabled = false;
             if (!transparentBg) {
                 scene.camera.clearPass.setClearColor(events.invoke('bgClr'));
             }
@@ -323,6 +326,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             scene.camera.endOffscreenMode();
             scene.camera.renderOverlays = true;
             scene.gizmoLayer.enabled = true;
+            scene.centersLayer.enabled = true;
             scene.camera.clearPass.setClearColor(nullClr);
             scene.forceRender = true;       // repaint the viewport with normal rendering
 
@@ -437,6 +441,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 scene.camera.startOffscreenMode(is360 ? faceSize : width, is360 ? faceSize : height);
                 scene.camera.renderOverlays = is360 ? false : showDebug;
                 scene.gizmoLayer.enabled = false;
+                scene.centersLayer.enabled = false;
                 if (!transparentBg) {
                     scene.camera.clearPass.setClearColor(events.invoke('bgClr'));
                 }
@@ -739,6 +744,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 scene.camera.endOffscreenMode();
                 scene.camera.renderOverlays = true;
                 scene.gizmoLayer.enabled = true;
+                scene.centersLayer.enabled = true;
                 scene.camera.clearPass.setClearColor(nullClr);
                 scene.lockedRenderMode = false;
                 scene.forceRender = true;       // camera likely moved, finish with normal render

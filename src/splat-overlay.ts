@@ -1,8 +1,8 @@
 import {
-    BLEND_NORMAL,
+    BLEND_NONE,
+    FUNC_LESS,
     PRIMITIVE_TRIANGLES,
     SEMANTIC_POSITION,
-    Color,
     Entity,
     ShaderMaterial,
     Mesh,
@@ -12,8 +12,6 @@ import {
 import { ElementType, Element } from './element';
 import { vertexShader, fragmentShader } from './shaders/splat-overlay-shader';
 import { Splat } from './splat';
-
-const nullClr = new Color(0, 0, 0, 0);
 
 class SplatOverlay extends Element {
     entity: Entity;
@@ -38,9 +36,17 @@ class SplatOverlay extends Element {
             vertexWGSL: vertexShader,
             fragmentWGSL: fragmentShader
         });
-        this.material.blendType = BLEND_NORMAL;
-        this.material.depthWrite = false;
+        // opaque and depth resolved: centers own the depth buffer of their layer,
+        // so each pixel keeps the frontmost center whatever order the instances
+        // draw in. Blending them instead makes the result order-dependent - a
+        // pixel takes one blend or several depending on which center reached it
+        // first - which reads as patches of differing density across a large
+        // scene. FUNC_LESS matters: the LESSEQUAL default admits every coincident
+        // fragment, putting the overdraw cost straight back
+        this.material.blendType = BLEND_NONE;
+        this.material.depthWrite = true;
         this.material.depthTest = true;
+        this.material.depthFunc = FUNC_LESS;
         this.material.update();
 
         this.mesh = new Mesh(device);
@@ -50,15 +56,13 @@ class SplatOverlay extends Element {
 
         this.meshInstance = new MeshInstance(this.mesh, this.material, null);
         this.meshInstance.setInstancing(true, false);
-        // slightly higher priority so it renders before gizmos
-        this.meshInstance.drawBucket = 128;
         // disable frustum culling since mesh has no vertex buffer for AABB calculation
         this.meshInstance.cull = false;
 
         this.entity = new Entity('splatOverlay');
         this.entity.addComponent('render', {
             meshInstances: [this.meshInstance],
-            layers: [scene.gizmoLayer.id]
+            layers: [scene.centersLayer.id]
         });
 
         scene.events.on('selection.changed', (selection: Splat) => {
@@ -137,15 +141,20 @@ class SplatOverlay extends Element {
             // delete/undo resizes the instance list, so the draw count is per-frame
             this.meshInstance.instancingCount = this.splat.instances.count;
             const splatSize = events.invoke('camera.splatSize');
-            const selectedClr = events.invoke('view.outlineSelection') ? nullClr : events.invoke('selectedClr');
+            const selectedClr = events.invoke('selectedClr');
             const unselectedClr = events.invoke('unselectedClr');
-            const useGaussianColor = events.invoke('view.centersUseGaussianColor') ? 1.0 : 0.0;
+            // the master overlay switch (tab) hides the non-selection centers;
+            // selection centers stay visible
+            const showAllCenters = events.invoke('view.centers') && events.invoke('view.overlay');
 
             material.setParameter('splatSize', splatSize * window.devicePixelRatio);
             material.setParameter('viewportSize', [scene.targetSize.width, scene.targetSize.height]);
+            material.setParameter('selectionOnly', showAllCenters ? 0 : 1);
+            material.setParameter('selectionCenters', events.invoke('view.selectionCenters') ? 1 : 0);
             material.setParameter('selectedClr', [selectedClr.r, selectedClr.g, selectedClr.b, selectedClr.a]);
             material.setParameter('unselectedClr', [unselectedClr.r, unselectedClr.g, unselectedClr.b, unselectedClr.a]);
-            material.setParameter('useGaussianColor', useGaussianColor);
+            material.setParameter('colorBlend', events.invoke('view.centersColorBlend'));
+            material.setParameter('selectionBlend', events.invoke('view.centersSelectionBlend'));
             material.setParameter('transformPalette', this.splat.transformPalette.texture);
 
             // pass camera position for SH evaluation
@@ -157,11 +166,12 @@ class SplatOverlay extends Element {
     get enabled() {
         const { scene, splat } = this;
         const { events } = scene;
+        const showAllCenters = events.invoke('view.centers') && events.invoke('view.overlay');
+        const showSelectedCenters = events.invoke('view.selectionCenters') && (splat?.instances.numSelected ?? 0) > 0;
         return splat &&
             events.invoke('camera.splatSize') > 0 &&
             scene.camera.renderOverlays &&
-            events.invoke('camera.overlay') &&
-            events.invoke('camera.mode') === 'centers';
+            (showAllCenters || showSelectedCenters);
     }
 }
 

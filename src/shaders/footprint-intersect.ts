@@ -94,8 +94,10 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         let row = u32(y - uniforms.regionY0);
         let runEnd = intervals[row + 1u];
         for (var i = intervals[row]; i < runEnd; i += 2u) {
-            let ix0 = f32(intervals[i]);
-            let ix1 = f32(intervals[i + 1u]);
+            // runs are inclusive pixel indices; like the row above, compare at
+            // pixel centers to match what the rasterized footprint would cover
+            let ix0 = f32(intervals[i]) + 0.5;
+            let ix1 = f32(intervals[i + 1u]) + 0.5;
             if (x1 >= ix0 && x0 <= ix1) {
                 let instance = entry - uniforms.entryBase;
                 let word = instance >> 2u;

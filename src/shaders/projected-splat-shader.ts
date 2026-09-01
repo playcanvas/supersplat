@@ -22,6 +22,8 @@ uniform pickOp: i32;
 uniform pickFootprint: f32;
 uniform ringColor: vec4f;
 uniform selectedRingColor: vec4f;
+uniform unselectedColor: vec4f;
+uniform selectedColor: vec4f;
 uniform ringSize: f32;
 uniform ringSelectionOnly: u32;
 uniform ringsBase: u32;
@@ -113,8 +115,23 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     let clip = vec4f(ndc * w, clamp(uniform.clipZParams.x * depth + uniform.clipZParams.y, 0.0, w), w);
 
     let rgbBits = a.z;
+    // the splat's own colour: the cache rgb carries no selection tint, so the
+    // gaussian and ring blends below each start from it independently. The
+    // tint alphas are blend weights; they only apply inside the selection
+    // entry range (the edit target with overlays enabled)
     let color = vec3f(vec3u(rgbBits, rgbBits >> 10u, rgbBits >> 20u) & vec3u(1023u))
         * (f32(1u << (rgbBits >> 30u)) / 1023.0);
+    var gaussianRgb = color;
+    if (entry >= uniform.ringsBase && entry < uniform.ringsBase + uniform.ringsCount && (flags & 2u) == 0u) {
+        gaussianRgb = mix(gaussianRgb, uniform.unselectedColor.rgb, uniform.unselectedColor.a);
+        if ((flags & 1u) != 0u) {
+            gaussianRgb = mix(gaussianRgb, uniform.selectedColor.rgb, uniform.selectedColor.a);
+        }
+    }
+    // ring band colours, resolved here from the untinted base: gaussian colour
+    // -> flat unselected colour -> selection colour
+    let ringRgb = mix(color, uniform.ringColor.rgb, uniform.ringColor.a);
+    let selectedRingRgb = mix(ringRgb, uniform.selectedRingColor.rgb, uniform.selectedRingColor.a);
 
     var axis1 = unpack2x16float(a.w);
     var axis2 = unpack2x16float(b).x * normalize(vec2f(axis1.y, -axis1.x));
@@ -131,12 +148,9 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     let clipOffset = pixelOffset * clip.w * uniform.viewportSize.zw;
     output.position = clip + vec4f(clipOffset, 0.0, 0.0);
     output.gaussianUV = corner;
-    output.gaussianColor = vec4f(prepareOutputFromGamma(color, clip.w), alpha);
-    output.ringColor = vec4f(prepareOutputFromGamma(uniform.ringColor.rgb, clip.w), uniform.ringColor.a);
-    output.selectedRingColor = vec4f(
-        prepareOutputFromGamma(uniform.selectedRingColor.rgb, clip.w),
-        uniform.selectedRingColor.a
-    );
+    output.gaussianColor = vec4f(prepareOutputFromGamma(gaussianRgb, clip.w), alpha);
+    output.ringColor = vec4f(prepareOutputFromGamma(ringRgb, clip.w), 1.0);
+    output.selectedRingColor = vec4f(prepareOutputFromGamma(selectedRingRgb, clip.w), 1.0);
     output.gaussianFlags = flags;
     output.gaussianId = entry - uniform.pickBase;
     output.gaussianDepth = clip.w;
@@ -218,12 +232,10 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
             let ringBand = radius >= 1.0 - uniform.ringSize;
             if (ringBand) {
                 alpha = 0.6;
-                // the ring colours' alphas are blend weights (see the renderer):
-                // gaussian colour -> flat unselected colour -> selection colour
-                color = mix(color, ringColor.rgb, ringColor.a);
-                if (selected) {
-                    color = mix(color, selectedRingColor.rgb, selectedRingColor.a);
-                }
+                // ring colours arrive fully resolved from the vertex stage,
+                // blended from the splat's own colour so they stay independent
+                // of the gaussian tints
+                color = select(ringColor.rgb, selectedRingColor.rgb, selected);
             } else {
                 // rings mode shades the whole gaussian: the interior keeps its
                 // fill but never drops below a faint floor, so even invisible

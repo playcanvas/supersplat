@@ -110,8 +110,6 @@ struct ProjectorUniforms {
     colorRow0: vec4f,
     colorRow1: vec4f,
     colorRow2: vec4f,
-    selectedColor: vec4f,
-    unselectedColor: vec4f,
     lockedColor: vec4f,
     visible: u32,
     selectionEnabled: u32,
@@ -319,16 +317,10 @@ fn main(
     let locked = (state & 2u) != 0u;
     if (locked) {
         color *= uniforms.lockedColor;
-    } else {
-        // the colour alphas carry blend weights, not opacity: the unselected
-        // weight tints every unlocked splat's base colour toward the flat
-        // unselected colour, and the selected weight tints on top of that
-        var rgb = mix(color.rgb, uniforms.unselectedColor.rgb, uniforms.unselectedColor.a);
-        if (selected) {
-            rgb = mix(rgb, uniforms.selectedColor.rgb, uniforms.selectedColor.a);
-        }
-        color = vec4f(rgb, color.a);
     }
+    // the cache colour stays untinted: the render shader's vertex stage applies
+    // the gaussian selection blends, so the ring path can blend from the
+    // splat's own colour independently of them
     // zero-alpha gaussians stay in the frame: they are real, editable splats,
     // so rings mode must still draw and pick them. The render shader's vertex
     // stage skips their quads unless a ring would show, so keeping them here

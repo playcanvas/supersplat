@@ -150,6 +150,8 @@ class ProjectedSplatRenderer {
     // draw args, the sort's element count and the vertex shader's bounds check
     private splatCounter: StorageBuffer | null = null;
     private argsCompute: Compute | null = null;
+    private argsShader: Shader | null = null;
+    private argsBindGroupFormat: BindGroupFormat | null = null;
     private footprintCompute: Compute | null = null;
     private footprintShader: Shader | null = null;
     private footprintBindGroupFormat: BindGroupFormat | null = null;
@@ -358,8 +360,6 @@ class ProjectedSplatRenderer {
             new UniformFormat('colorRow0', UNIFORMTYPE_VEC4),
             new UniformFormat('colorRow1', UNIFORMTYPE_VEC4),
             new UniformFormat('colorRow2', UNIFORMTYPE_VEC4),
-            new UniformFormat('selectedColor', UNIFORMTYPE_VEC4),
-            new UniformFormat('unselectedColor', UNIFORMTYPE_VEC4),
             new UniformFormat('lockedColor', UNIFORMTYPE_VEC4),
             new UniformFormat('visible', UNIFORMTYPE_UINT),
             new UniformFormat('selectionEnabled', UNIFORMTYPE_UINT),
@@ -418,14 +418,15 @@ class ProjectedSplatRenderer {
                 new BindStorageBufferFormat('indirectDispatchArgs', SHADERSTAGE_COMPUTE),
                 new BindUniformBufferFormat('uniforms', SHADERSTAGE_COMPUTE)
             ]);
-            const shader = new Shader(this.device, {
+            this.argsShader = new Shader(this.device, {
                 name: 'ProjectedSplatIndirectArgs',
                 shaderLanguage: SHADERLANGUAGE_WGSL,
                 cshader: projectedSplatIndirectArgs(INSTANCE_SIZE),
                 computeBindGroupFormat: bindGroupFormat,
                 computeUniformBufferFormats: { uniforms: uniformBufferFormat }
             } as any);
-            this.argsCompute = new Compute(this.device, shader, 'ProjectedSplatIndirectArgs');
+            this.argsBindGroupFormat = bindGroupFormat;
+            this.argsCompute = new Compute(this.device, this.argsShader, 'ProjectedSplatIndirectArgs');
         }
         return this.argsCompute;
     }
@@ -704,18 +705,6 @@ class ProjectedSplatRenderer {
             compute.setParameter('colorRow0', this.previewRows.subarray(0, 4));
             compute.setParameter('colorRow1', this.previewRows.subarray(4, 8));
             compute.setParameter('colorRow2', this.previewRows.subarray(8, 12));
-            compute.setParameter('selectedColor', selectionEnabled && events.invoke('view.selectionColor') && !pending ? [
-                selectedColor.r,
-                selectedColor.g,
-                selectedColor.b,
-                events.invoke('view.splatsSelectionBlend') * splat.selectionAlpha
-            ] : [0, 0, 0, 0]);
-            compute.setParameter('unselectedColor', selectionEnabled && !pending ? [
-                unselectedColor.r,
-                unselectedColor.g,
-                unselectedColor.b,
-                events.invoke('view.splatsColorBlend')
-            ] : [0, 0, 0, 0]);
             compute.setParameter('lockedColor', [lockedColor.r, lockedColor.g, lockedColor.b, lockedColor.a]);
             compute.setParameter('visible', splat.visible ? 1 : 0);
             compute.setParameter('selectionEnabled', selectionEnabled ? 1 : 0);
@@ -789,9 +778,26 @@ class ProjectedSplatRenderer {
         const showRings = showAllRings || showSelectedRings;
         this.material.setParameter('ringSize', showRings ? events.invoke('view.ringSize') * 0.01 : 0);
         this.material.setParameter('ringSelectionOnly', showAllRings ? 0 : 1);
-        // the ring colours' alpha channels carry blend weights: unselected
-        // blends the ring band from gaussian colour toward the flat unselected
-        // colour, selected blends from that result toward the selection colour
+        // the colour alphas carry blend weights, not opacity. The gaussian
+        // tints blend the fill from the splat's own colour toward the flat
+        // unselected colour, then toward the selection colour; the vertex
+        // shader applies them inside the selection entry range (ringsBase /
+        // ringsCount), which stands in for the projector's per-placement
+        // selectionEnabled
+        this.material.setParameter('selectedColor', events.invoke('view.selectionColor') && !pending ? [
+            selectedColor.r,
+            selectedColor.g,
+            selectedColor.b,
+            events.invoke('view.splatsSelectionBlend') * (selectedSplat?.selectionAlpha ?? 1)
+        ] : [0, 0, 0, 0]);
+        this.material.setParameter('unselectedColor', !pending ? [
+            unselectedColor.r,
+            unselectedColor.g,
+            unselectedColor.b,
+            events.invoke('view.splatsColorBlend')
+        ] : [0, 0, 0, 0]);
+        // the ring blends start from the splat's own colour too, so they stay
+        // independent of the gaussian tints
         this.material.setParameter('ringColor', [
             unselectedColor.r,
             unselectedColor.g,
@@ -855,6 +861,8 @@ class ProjectedSplatRenderer {
         this.compactEntries?.destroy();
         this.splatCounter?.destroy();
         this.argsCompute?.destroy();
+        this.argsShader?.destroy();
+        this.argsBindGroupFormat?.destroy();
         this.footprintCompute?.destroy();
         this.footprintShader?.destroy();
         this.footprintBindGroupFormat?.destroy();

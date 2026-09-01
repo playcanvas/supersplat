@@ -88,8 +88,13 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         { key: 'view.bands', setCommand: 'view.setBands', urlPath: 'show.shBands', getDefault: () => config.show.shBands, validate: v => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 3, group: 'preferences' },
         { key: 'camera.flySpeed', setCommand: 'camera.setFlySpeed', getDefault: () => 1, validate: isNumber(0.1, 30), group: 'preferences' },
         { key: 'camera.splatSize', setCommand: 'camera.setSplatSize', getDefault: () => 2, validate: isNumber(0, 10), group: 'appearance' },
+        // the footprint mode applies before the visibility flags: crossing the
+        // centers/rings boundary swaps in that mode's view profile, which the
+        // stored flags (the active profile) then overwrite
+        { key: 'selection.useDepth', setCommand: 'selection.setUseDepth', getDefault: () => false, validate: isBool },
+        { key: 'selection.footprint', setCommand: 'selection.setFootprint', getDefault: () => 0, validate: isNumber(0, 1) },
         { key: 'view.gaussians', setCommand: 'view.setGaussians', getDefault: () => true, validate: isBool, group: 'appearance' },
-        { key: 'view.centers', setCommand: 'view.setCenters', getDefault: () => false, validate: isBool, group: 'appearance' },
+        { key: 'view.centers', setCommand: 'view.setCenters', getDefault: () => true, validate: isBool, group: 'appearance' },
         { key: 'view.rings', setCommand: 'view.setRings', getDefault: () => false, validate: isBool, group: 'appearance' },
         { key: 'view.ringSize', setCommand: 'view.setRingSize', getDefault: () => 4, validate: isNumber(1, 50), group: 'appearance' },
         { key: 'view.splatsColorBlend', setCommand: 'view.setSplatsColorBlend', getDefault: () => 0, validate: isNumber(0, 1), group: 'appearance' },
@@ -101,6 +106,9 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         { key: 'view.selectionColor', setCommand: 'view.setSelectionColor', getDefault: () => false, validate: isBool, group: 'appearance' },
         { key: 'view.selectionCenters', setCommand: 'view.setSelectionCenters', getDefault: () => true, validate: isBool, group: 'appearance' },
         { key: 'view.selectionRings', setCommand: 'view.setSelectionRings', getDefault: () => false, validate: isBool, group: 'appearance' },
+        // the inactive footprint mode's view profile: 0/1 flags in
+        // [gaussians, centers, rings, selectionCenters, selectionRings] order
+        { key: 'view.inactiveProfile', setCommand: 'view.setInactiveProfile', getDefault: () => [1, 0, 1, 0, 1], validate: v => Array.isArray(v) && v.length === 5 && v.every(x => x === 0 || x === 1), group: 'appearance' },
         { key: 'view.outlineSelection', setCommand: 'view.setOutlineSelection', getDefault: () => false, validate: isBool, group: 'appearance' },
         { key: 'view.stochastic', setCommand: 'view.setStochastic', getDefault: () => 'auto', validate: isEnum(['disabled', 'enabled', 'movement', 'auto']), group: 'preferences' },
         { key: 'view.perfOverlay', setCommand: 'view.setPerfOverlay', getDefault: () => false, validate: isBool, group: 'overlays' },
@@ -109,8 +117,6 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         { key: 'camera.boundDimensions', setCommand: 'camera.setBoundDimensions', urlPath: 'show.boundDimensions', getDefault: () => config.show.boundDimensions, validate: isBool, group: 'overlays' },
         { key: 'camera.showPoses', setCommand: 'camera.setShowPoses', urlPath: 'show.cameraPoses', getDefault: () => config.show.cameraPoses, validate: isBool, group: 'overlays' },
         { key: 'camera.showInfo', setCommand: 'camera.setShowInfo', urlPath: 'show.cameraInfo', getDefault: () => config.show.cameraInfo, validate: isBool, group: 'overlays' },
-        { key: 'selection.useDepth', setCommand: 'selection.setUseDepth', getDefault: () => false, validate: isBool },
-        { key: 'selection.footprint', setCommand: 'selection.setFootprint', getDefault: () => 0, validate: isNumber(0, 1) },
         { key: 'camera.controlMode', setCommand: 'camera.setControlMode', getDefault: () => 'orbit', validate: isEnum(['orbit', 'fly']) }
     ];
 

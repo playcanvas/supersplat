@@ -1041,6 +1041,40 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     });
 
+    // per-footprint-mode view profiles: each footprint mode (centers/rings)
+    // remembers its own overlay arrangement. The live view flags are the
+    // active mode's profile; this holds the other mode's, applied when the
+    // footprint toggle crosses the centers/rings boundary. Encoded as 0/1 in
+    // [gaussians, centers, rings, selectionCenters, selectionRings] order
+    const profileFlags: [get: string, set: string][] = [
+        ['view.gaussians', 'view.setGaussians'],
+        ['view.centers', 'view.setCenters'],
+        ['view.rings', 'view.setRings'],
+        ['view.selectionCenters', 'view.setSelectionCenters'],
+        ['view.selectionRings', 'view.setSelectionRings']
+    ];
+    let inactiveProfile = [1, 0, 1, 0, 1];
+    let profileMode = (events.invoke('selection.footprint') as number) > 0;
+
+    events.function('view.inactiveProfile', () => inactiveProfile.slice());
+
+    events.on('view.setInactiveProfile', (profile: number[]) => {
+        inactiveProfile = profile.slice();
+    });
+
+    events.on('selection.footprint', (value: number) => {
+        const mode = value > 0;
+        if (mode !== profileMode) {
+            profileMode = mode;
+            const snapshot = profileFlags.map(([get]) => (events.invoke(get) ? 1 : 0));
+            profileFlags.forEach(([, set], i) => {
+                events.fire(set, !!inactiveProfile[i]);
+            });
+            inactiveProfile = snapshot;
+            events.fire('view.inactiveProfile', inactiveProfile.slice());
+        }
+    });
+
     // outline selection
 
     let outlineSelection = false;

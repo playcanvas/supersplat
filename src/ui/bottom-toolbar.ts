@@ -250,7 +250,6 @@ class BottomToolbar extends Container {
         };
 
         events.on('selection.useDepth', updateUseDepth);
-        updateUseDepth(false);
 
         const updateFootprint = (footprint: number) => {
             const rings = footprint > 0;
@@ -261,7 +260,13 @@ class BottomToolbar extends Container {
         };
 
         events.on('selection.footprint', updateFootprint);
-        updateFootprint(0);
+
+        // runs now (initial state) and on language change, so the accessible
+        // names never go stale
+        i18n.onChange(() => {
+            updateUseDepth(!!events.invoke('selection.useDepth'));
+            updateFootprint((events.invoke('selection.footprint') as number) ?? 0);
+        }, this);
 
         events.on('tool.activated', (toolName: string) => {
             picker.class[toolName === 'rectSelection' ? 'add' : 'remove']('active');

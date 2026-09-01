@@ -852,6 +852,9 @@ class ProjectedSplatRenderer {
         this.compactEntries?.destroy();
         this.splatCounter?.destroy();
         this.argsCompute?.destroy();
+        this.footprintCompute?.destroy();
+        this.footprintOutput?.destroy();
+        this.footprintIntervals?.destroy();
         this.cacheA?.destroy();
         this.cacheB?.destroy();
         this.sorter.destroy();

@@ -203,13 +203,21 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         if (!locked && rings && uniform.ringSize > 0.0 && (uniform.ringSelectionOnly == 0u || selected)) {
             let ringBand = radius >= 1.0 - uniform.ringSize;
             if (ringBand) {
-                alpha = max(alpha, 0.6);
+                alpha = 0.6;
                 // the ring colours' alphas are blend weights (see the renderer):
                 // gaussian colour -> flat unselected colour -> selection colour
                 color = mix(color, ringColor.rgb, ringColor.a);
                 if (selected) {
                     color = mix(color, selectedRingColor.rgb, selectedRingColor.a);
                 }
+            } else {
+                // rings mode shades the whole gaussian: the interior keeps its
+                // fill but never drops below a faint floor, so even invisible
+                // splats read as discs inside their rings. Skipped in stochastic
+                // mode, where a floor would dither every footprint with noise
+                #ifndef STOCHASTIC
+                    alpha = max(0.05, alpha);
+                #endif
             }
         }
       #ifdef STOCHASTIC

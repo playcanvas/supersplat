@@ -35,6 +35,7 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'select.delete': { keys: ['Delete', 'Backspace'] },
     'selection.toggleUseDepth': { keys: ['n'] },
     'selection.toggleFootprint': { keys: ['m'] },
+    'view.toggleOverlay': { keys: ['Tab'] },
 
     // Tools
     // 1/2/3 don't fire tool.move/rotate/scale directly: while a shape

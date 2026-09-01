@@ -326,8 +326,8 @@
     "tooltip.bottom-toolbar.undo": "실행 취소",
     "tooltip.bottom-toolbar.redo": "다시 실행",
     "tooltip.bottom-toolbar.selection-mode": "선택 모드",
-    "tooltip.bottom-toolbar.use-depth": "깊이",
-    "tooltip.bottom-toolbar.footprint": "풋프린트",
+    "tooltip.bottom-toolbar.use-depth": "선택 깊이",
+    "tooltip.bottom-toolbar.footprint": "선택 풋프린트",
     "tooltip.bottom-toolbar.rectangle-selection": "사각형 선택",
     "tooltip.bottom-toolbar.lasso-selection": "올가미 선택",
     "tooltip.bottom-toolbar.polygon-selection": "다각형 선택",
@@ -364,5 +364,6 @@
     "tooltip.splat-data.log-bins": "값 구간을 로그 간격으로 배치하여 넓은 범위의 그룹을 구분할 수 있게 합니다.",
     "tooltip.splat-data.show-all": "원시 DC 계수 및 구면 조화 함수 계수를 포함한 모든 스플랫 속성을 목록에 표시합니다.",
     "popup.shortcuts.toggle-depth": "깊이 선택 전환",
-    "popup.shortcuts.toggle-footprint": "풋프린트 전환"
+    "popup.shortcuts.toggle-footprint": "풋프린트 전환",
+    "popup.shortcuts.toggle-overlays": "오버레이 표시 전환"
 }

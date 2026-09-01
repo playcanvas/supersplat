@@ -326,8 +326,8 @@
     "tooltip.bottom-toolbar.undo": "Deshacer",
     "tooltip.bottom-toolbar.redo": "Rehacer",
     "tooltip.bottom-toolbar.selection-mode": "Modo de selección",
-    "tooltip.bottom-toolbar.use-depth": "Profundidad",
-    "tooltip.bottom-toolbar.footprint": "Huella",
+    "tooltip.bottom-toolbar.use-depth": "Profundidad de selección",
+    "tooltip.bottom-toolbar.footprint": "Huella de selección",
     "tooltip.bottom-toolbar.rectangle-selection": "Selección rectangular",
     "tooltip.bottom-toolbar.lasso-selection": "Selección con lazo",
     "tooltip.bottom-toolbar.polygon-selection": "Selección poligonal",
@@ -364,5 +364,6 @@
     "tooltip.splat-data.log-bins": "Distribuye los intervalos de valores logarítmicamente para distinguir grupos en rangos amplios.",
     "tooltip.splat-data.show-all": "Mostrar todas las propiedades de los splats en la lista, incluyendo coeficientes DC y armónicos esféricos.",
     "popup.shortcuts.toggle-depth": "Alternar selección por profundidad",
-    "popup.shortcuts.toggle-footprint": "Alternar huella de selección"
+    "popup.shortcuts.toggle-footprint": "Alternar huella de selección",
+    "popup.shortcuts.toggle-overlays": "Alternar superposiciones"
 }

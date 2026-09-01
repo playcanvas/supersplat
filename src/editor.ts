@@ -67,7 +67,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     [
         'camera.splatSize', 'view.outlineSelection', 'view.gaussians', 'view.centers', 'view.rings',
-        'view.ringSize',
+        'view.ringSize', 'view.overlay',
         'view.selectionColor', 'view.selectionCenters', 'view.selectionRings',
         'view.splatsColorBlend', 'view.splatsSelectionBlend',
         'view.centersColorBlend', 'view.centersSelectionBlend',
@@ -1087,6 +1087,42 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             inactiveProfile = snapshot;
             events.fire('view.inactiveProfile', inactiveProfile.slice());
         }
+    });
+
+    // master overlay switch (tab): while off, the non-selection overlays hide
+    // and gaussians render regardless of the profile, so it toggles between
+    // the editing view and the raw scene. Session-only by design - it is not
+    // a preference, and any appearance edit below switches it back on so
+    // settings are never adjusted blind
+    let overlay = true;
+
+    const setOverlay = (value: boolean) => {
+        if (value !== overlay) {
+            overlay = value;
+            events.fire('view.overlay', value);
+        }
+    };
+
+    events.function('view.overlay', () => overlay);
+
+    events.on('view.setOverlay', setOverlay);
+
+    events.on('view.toggleOverlay', () => {
+        setOverlay(!overlay);
+    });
+
+    [
+        'view.gaussians', 'view.centers', 'view.rings',
+        'view.selectionCenters', 'view.selectionRings', 'view.selectionColor', 'view.outlineSelection',
+        'camera.splatSize', 'view.ringSize',
+        'view.splatsColorBlend', 'view.splatsSelectionBlend',
+        'view.centersColorBlend', 'view.centersSelectionBlend',
+        'view.ringsColorBlend', 'view.ringsSelectionBlend',
+        'bgClr', 'selectedClr', 'unselectedClr', 'lockedClr'
+    ].forEach((eventName) => {
+        events.on(eventName, () => {
+            setOverlay(true);
+        });
     });
 
     // outline selection

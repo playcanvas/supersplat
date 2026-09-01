@@ -143,7 +143,9 @@ class SplatOverlay extends Element {
             const splatSize = events.invoke('camera.splatSize');
             const selectedClr = events.invoke('selectedClr');
             const unselectedClr = events.invoke('unselectedClr');
-            const showAllCenters = events.invoke('view.centers');
+            // the master overlay switch (tab) hides the non-selection centers;
+            // selection centers stay visible
+            const showAllCenters = events.invoke('view.centers') && events.invoke('view.overlay');
 
             material.setParameter('splatSize', splatSize * window.devicePixelRatio);
             material.setParameter('viewportSize', [scene.targetSize.width, scene.targetSize.height]);
@@ -164,7 +166,7 @@ class SplatOverlay extends Element {
     get enabled() {
         const { scene, splat } = this;
         const { events } = scene;
-        const showAllCenters = events.invoke('view.centers');
+        const showAllCenters = events.invoke('view.centers') && events.invoke('view.overlay');
         const showSelectedCenters = events.invoke('view.selectionCenters') && (splat?.instances.numSelected ?? 0) > 0;
         return splat &&
             events.invoke('camera.splatSize') > 0 &&

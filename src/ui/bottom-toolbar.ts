@@ -180,8 +180,8 @@ class BottomToolbar extends Container {
         this.append(undo);
         this.append(redo);
         this.append(new Element({ class: 'bottom-toolbar-separator' }));
-        this.append(selectionMode);
         this.append(footprintMode);
+        this.append(selectionMode);
         this.append(new Element({ class: 'bottom-toolbar-separator' }));
         this.append(picker);
         this.append(lasso);

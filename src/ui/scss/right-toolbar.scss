@@ -16,6 +16,9 @@
     align-items: center;
 
     &>.right-toolbar-button, .right-toolbar-tool, .right-toolbar-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
         width: 38px;
         height: 38px;
         margin: 1px 1px;

@@ -326,8 +326,8 @@
     "tooltip.bottom-toolbar.undo": "Annuler",
     "tooltip.bottom-toolbar.redo": "Rétablir",
     "tooltip.bottom-toolbar.selection-mode": "Mode de sélection",
-    "tooltip.bottom-toolbar.use-depth": "Profondeur",
-    "tooltip.bottom-toolbar.footprint": "Empreinte",
+    "tooltip.bottom-toolbar.use-depth": "Profondeur de sélection",
+    "tooltip.bottom-toolbar.footprint": "Empreinte de sélection",
     "tooltip.bottom-toolbar.rectangle-selection": "Sélection avec rectangle",
     "tooltip.bottom-toolbar.lasso-selection": "Sélection avec lasso",
     "tooltip.bottom-toolbar.polygon-selection": "Sélection avec polygone",
@@ -364,5 +364,6 @@
     "tooltip.splat-data.log-bins": "Répartir les classes de valeurs logarithmiquement afin de distinguer les groupes sur de grandes plages.",
     "tooltip.splat-data.show-all": "Afficher toutes les propriétés des splats dans la liste, y compris les coefficients DC bruts et harmoniques sphériques.",
     "popup.shortcuts.toggle-depth": "Basculer la sélection en profondeur",
-    "popup.shortcuts.toggle-footprint": "Basculer l'empreinte de sélection"
+    "popup.shortcuts.toggle-footprint": "Basculer l'empreinte de sélection",
+    "popup.shortcuts.toggle-overlays": "Afficher/masquer les overlays"
 }

@@ -326,8 +326,8 @@
     "tooltip.bottom-toolbar.undo": "元に戻す",
     "tooltip.bottom-toolbar.redo": "やり直し",
     "tooltip.bottom-toolbar.selection-mode": "選択モード",
-    "tooltip.bottom-toolbar.use-depth": "深度",
-    "tooltip.bottom-toolbar.footprint": "フットプリント",
+    "tooltip.bottom-toolbar.use-depth": "選択深度",
+    "tooltip.bottom-toolbar.footprint": "選択フットプリント",
     "tooltip.bottom-toolbar.rectangle-selection": "四角形選択",
     "tooltip.bottom-toolbar.lasso-selection": "なげなわ選択",
     "tooltip.bottom-toolbar.polygon-selection": "ポリゴン選択",
@@ -364,5 +364,6 @@
     "tooltip.splat-data.log-bins": "値のビンを対数間隔で配置し、広い範囲にわたるグループを識別しやすくします。",
     "tooltip.splat-data.show-all": "未加工のDC係数や球面調和関数係数を含む、すべてのスプラットプロパティをリストに表示します。",
     "popup.shortcuts.toggle-depth": "深度選択の切り替え",
-    "popup.shortcuts.toggle-footprint": "フットプリントの切り替え"
+    "popup.shortcuts.toggle-footprint": "フットプリントの切り替え",
+    "popup.shortcuts.toggle-overlays": "オーバーレイ表示の切り替え"
 }

@@ -775,9 +775,12 @@ class ProjectedSplatRenderer {
             2 / targetSize.height
         ]);
         this.material.setParameter('outlineMode', outlineSelection ? 1 : 0);
-        this.material.setParameter('showGaussians', events.invoke('view.gaussians') || pending ? 1 : 0);
+        // the master overlay switch (tab) shows the raw scene: gaussians render
+        // regardless of the profile flag and the non-selection rings hide
+        const overlay = events.invoke('view.overlay');
+        this.material.setParameter('showGaussians', events.invoke('view.gaussians') || !overlay || pending ? 1 : 0);
         this.material.setParameter('showSelectedGaussians', events.invoke('view.selectionColor') && !pending ? 1 : 0);
-        const showAllRings = events.invoke('view.rings');
+        const showAllRings = events.invoke('view.rings') && overlay;
         const showSelectedRings = events.invoke('view.selectionRings') &&
             (selectedSplat?.instances.numSelected ?? 0) > 0;
         const showRings = showAllRings || showSelectedRings;

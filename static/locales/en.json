@@ -326,8 +326,8 @@
     "tooltip.bottom-toolbar.undo": "Undo",
     "tooltip.bottom-toolbar.redo": "Redo",
     "tooltip.bottom-toolbar.selection-mode": "Selection Mode",
-    "tooltip.bottom-toolbar.use-depth": "Depth",
-    "tooltip.bottom-toolbar.footprint": "Footprint",
+    "tooltip.bottom-toolbar.use-depth": "Selection Depth",
+    "tooltip.bottom-toolbar.footprint": "Selection Footprint",
     "tooltip.bottom-toolbar.rectangle-selection": "Rectangle Selection",
     "tooltip.bottom-toolbar.lasso-selection": "Lasso Selection",
     "tooltip.bottom-toolbar.polygon-selection": "Polygon Selection",
@@ -364,5 +364,6 @@
     "tooltip.splat-data.log-bins": "Space property-value bins logarithmically so groups across large ranges remain distinguishable.",
     "tooltip.splat-data.show-all": "Show all per-splat properties in the list, including raw DC and spherical harmonic coefficients.",
     "popup.shortcuts.toggle-depth": "Toggle Depth Selection",
-    "popup.shortcuts.toggle-footprint": "Toggle Selection Footprint"
+    "popup.shortcuts.toggle-footprint": "Toggle Selection Footprint",
+    "popup.shortcuts.toggle-overlays": "Toggle Display Overlays"
 }

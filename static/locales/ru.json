@@ -326,8 +326,8 @@
     "tooltip.bottom-toolbar.undo": "Отменить",
     "tooltip.bottom-toolbar.redo": "Повторить",
     "tooltip.bottom-toolbar.selection-mode": "Режим выделения",
-    "tooltip.bottom-toolbar.use-depth": "Глубина",
-    "tooltip.bottom-toolbar.footprint": "Отпечаток",
+    "tooltip.bottom-toolbar.use-depth": "Глубина выделения",
+    "tooltip.bottom-toolbar.footprint": "Отпечаток выделения",
     "tooltip.bottom-toolbar.rectangle-selection": "Прямоугольное выделение",
     "tooltip.bottom-toolbar.lasso-selection": "Выделение лассо",
     "tooltip.bottom-toolbar.polygon-selection": "Выделение полигоном",
@@ -364,5 +364,6 @@
     "tooltip.splat-data.log-bins": "Распределять интервалы значений логарифмически, чтобы различать группы в широких диапазонах.",
     "tooltip.splat-data.show-all": "Показать все свойства сплатов в списке, включая необработанные коэффициенты DC и сферических гармоник.",
     "popup.shortcuts.toggle-depth": "Переключить выбор по глубине",
-    "popup.shortcuts.toggle-footprint": "Переключить отпечаток выбора"
+    "popup.shortcuts.toggle-footprint": "Переключить отпечаток выбора",
+    "popup.shortcuts.toggle-overlays": "Переключить оверлеи"
 }

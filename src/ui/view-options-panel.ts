@@ -52,7 +52,15 @@ class ViewOptionsPanel extends Container {
             class: ['panel-header-button', 'panel-header-reset-button']
         });
         resetButton.dom.appendChild(createSvg(resetSvg));
-        resetButton.dom.setAttribute('aria-label', i18n.t('panel.settings.reset'));
+        resetButton.dom.setAttribute('role', 'button');
+        resetButton.dom.setAttribute('tabindex', '0');
+        i18n.onChange(() => resetButton.dom.setAttribute('aria-label', i18n.t('panel.settings.reset')), resetButton);
+        resetButton.dom.addEventListener('keydown', (event: KeyboardEvent) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                resetButton.dom.click();
+            }
+        });
 
         header.append(icon);
         header.append(label);

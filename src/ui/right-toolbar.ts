@@ -72,6 +72,20 @@ class RightToolbar extends Container {
         cameraReset.dom.appendChild(createSvg(cameraResetSvg));
         viewOptions.dom.appendChild(createSvg(viewOptionsSvg));
 
+        // icon-only buttons: keep accessible names in sync with the language
+        const buttonLabels: [Button, string][] = [
+            [displayOptions, 'panel.display'],
+            [viewOptions, 'panel.view'],
+            [orbitMode, 'tooltip.right-toolbar.orbit-camera'],
+            [flyMode, 'tooltip.right-toolbar.fly-camera'],
+            [cameraFrameSelection, 'tooltip.right-toolbar.frame-selection'],
+            [cameraReset, 'tooltip.right-toolbar.reset-camera'],
+            [options, 'panel.settings']
+        ];
+        buttonLabels.forEach(([button, key]) => {
+            i18n.onChange(() => button.dom.setAttribute('aria-label', i18n.t(key)), button);
+        });
+
         this.append(displayOptions);
         this.append(viewOptions);
         this.append(new Element({ class: 'right-toolbar-separator' }));

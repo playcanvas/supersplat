@@ -49,7 +49,15 @@ class DisplayOptionsPanel extends Container {
             class: ['panel-header-button', 'panel-header-reset-button']
         });
         resetButton.dom.appendChild(createSvg(resetSvg));
-        resetButton.dom.setAttribute('aria-label', i18n.t('panel.settings.reset'));
+        resetButton.dom.setAttribute('role', 'button');
+        resetButton.dom.setAttribute('tabindex', '0');
+        i18n.onChange(() => resetButton.dom.setAttribute('aria-label', i18n.t('panel.settings.reset')), resetButton);
+        resetButton.dom.addEventListener('keydown', (event: KeyboardEvent) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                resetButton.dom.click();
+            }
+        });
 
         header.append(icon);
         header.append(label);
@@ -72,7 +80,7 @@ class DisplayOptionsPanel extends Container {
                 class: 'options-panel-icon-button'
             });
             button.dom.appendChild(createSvg(svg));
-            button.dom.setAttribute('aria-label', i18n.t(localeKey));
+            i18n.onChange(() => button.dom.setAttribute('aria-label', i18n.t(localeKey)), button);
             tooltips.register(button, () => i18n.t(localeKey), 'top');
             return button;
         };

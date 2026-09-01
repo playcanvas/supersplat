@@ -188,8 +188,8 @@ class BottomToolbar extends Container {
         this.append(polygon);
         this.append(brush);
         this.append(flood);
-        this.append(new Element({ class: 'bottom-toolbar-separator' }));
         this.append(eyedropper);
+        this.append(new Element({ class: 'bottom-toolbar-separator' }));
         this.append(sphere);
         this.append(box);
         // this.append(crop);

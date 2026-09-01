@@ -48,7 +48,8 @@
             display: flex;
             flex-direction: row;
             justify-content: flex-start;
-            width: 205px;
+            flex-shrink: 0;
+            width: 215px;
 
             & > .color-panel-row-picker {
                 margin: 0px 0px;
@@ -59,7 +60,8 @@
         }
 
         & > .color-panel-row-slider {
-            width: 205px;
+            flex-shrink: 0;
+            width: 215px;
             margin: 0px;
 
             & > .pcui-slider-container {

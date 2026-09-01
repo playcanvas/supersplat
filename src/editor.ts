@@ -549,7 +549,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.on('select.bySphere', async (op: 'add'|'remove'|'set'|'intersect', transform: Mat4) => {
         for (const splat of selectedSplats()) {
             await runSelectIntersect(splat, op, {
-                sphere: { transform }
+                sphere: { transform, footprint: events.invoke('selection.footprint') as number }
             });
         }
     });
@@ -558,7 +558,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.on('select.byBox', async (op: 'add'|'remove'|'set'|'intersect', transform: Mat4) => {
         for (const splat of selectedSplats()) {
             await runSelectIntersect(splat, op, {
-                box: { transform }
+                box: { transform, footprint: events.invoke('selection.footprint') as number }
             });
         }
     });
@@ -1056,6 +1056,17 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     let inactiveProfile = [1, 0, 1, 0, 1];
     let profileMode = (events.invoke('selection.footprint') as number) > 0;
 
+    // preference application sets the footprint, the live flags and the
+    // inactive profile explicitly, so the boundary-crossing swap below must
+    // stay out of its way or it shuffles the slots it is being loaded into
+    let prefsSuspendDepth = 0;
+    events.on('preferences.suspend', () => {
+        prefsSuspendDepth++;
+    });
+    events.on('preferences.resume', () => {
+        prefsSuspendDepth = Math.max(0, prefsSuspendDepth - 1);
+    });
+
     events.function('view.inactiveProfile', () => inactiveProfile.slice());
 
     events.on('view.setInactiveProfile', (profile: number[]) => {
@@ -1066,6 +1077,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         const mode = value > 0;
         if (mode !== profileMode) {
             profileMode = mode;
+            if (prefsSuspendDepth > 0) {
+                return;
+            }
             const snapshot = profileFlags.map(([get]) => (events.invoke(get) ? 1 : 0));
             profileFlags.forEach(([, set], i) => {
                 events.fire(set, !!inactiveProfile[i]);

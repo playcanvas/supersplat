@@ -88,14 +88,17 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         { key: 'view.bands', setCommand: 'view.setBands', urlPath: 'show.shBands', getDefault: () => config.show.shBands, validate: v => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 3, group: 'preferences' },
         { key: 'camera.flySpeed', setCommand: 'camera.setFlySpeed', getDefault: () => 1, validate: isNumber(0.1, 30), group: 'preferences' },
         { key: 'camera.splatSize', setCommand: 'camera.setSplatSize', getDefault: () => 2, validate: isNumber(0, 10), group: 'appearance' },
-        // the footprint mode applies before the visibility flags: crossing the
-        // centers/rings boundary swaps in that mode's view profile, which the
-        // stored flags (the active profile) then overwrite
+        // the editor skips its footprint-crossing profile swap while preference
+        // application is in flight (see preferences.suspend), so the footprint,
+        // the live flags and the inactive profile all apply verbatim here. The
+        // live visibility flags are the ACTIVE footprint mode's profile, so
+        // their defaults depend on the live footprint - which sits earlier in
+        // this table and has already been applied when they are evaluated
         { key: 'selection.useDepth', setCommand: 'selection.setUseDepth', getDefault: () => false, validate: isBool },
         { key: 'selection.footprint', setCommand: 'selection.setFootprint', getDefault: () => 0, validate: isNumber(0, 1) },
         { key: 'view.gaussians', setCommand: 'view.setGaussians', getDefault: () => true, validate: isBool, group: 'appearance' },
-        { key: 'view.centers', setCommand: 'view.setCenters', getDefault: () => true, validate: isBool, group: 'appearance' },
-        { key: 'view.rings', setCommand: 'view.setRings', getDefault: () => false, validate: isBool, group: 'appearance' },
+        { key: 'view.centers', setCommand: 'view.setCenters', getDefault: () => (events.invoke('selection.footprint') as number) === 0, validate: isBool, group: 'appearance' },
+        { key: 'view.rings', setCommand: 'view.setRings', getDefault: () => (events.invoke('selection.footprint') as number) > 0, validate: isBool, group: 'appearance' },
         { key: 'view.ringSize', setCommand: 'view.setRingSize', getDefault: () => 4, validate: isNumber(1, 50), group: 'appearance' },
         { key: 'view.splatsColorBlend', setCommand: 'view.setSplatsColorBlend', getDefault: () => 0, validate: isNumber(0, 1), group: 'appearance' },
         { key: 'view.splatsSelectionBlend', setCommand: 'view.setSplatsSelectionBlend', getDefault: () => 1, validate: isNumber(0, 1), group: 'appearance' },
@@ -104,11 +107,14 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         { key: 'view.ringsColorBlend', setCommand: 'view.setRingsColorBlend', getDefault: () => 0, validate: isNumber(0, 1), group: 'appearance' },
         { key: 'view.ringsSelectionBlend', setCommand: 'view.setRingsSelectionBlend', getDefault: () => 1, validate: isNumber(0, 1), group: 'appearance' },
         { key: 'view.selectionColor', setCommand: 'view.setSelectionColor', getDefault: () => false, validate: isBool, group: 'appearance' },
-        { key: 'view.selectionCenters', setCommand: 'view.setSelectionCenters', getDefault: () => true, validate: isBool, group: 'appearance' },
-        { key: 'view.selectionRings', setCommand: 'view.setSelectionRings', getDefault: () => false, validate: isBool, group: 'appearance' },
+        { key: 'view.selectionCenters', setCommand: 'view.setSelectionCenters', getDefault: () => (events.invoke('selection.footprint') as number) === 0, validate: isBool, group: 'appearance' },
+        { key: 'view.selectionRings', setCommand: 'view.setSelectionRings', getDefault: () => (events.invoke('selection.footprint') as number) > 0, validate: isBool, group: 'appearance' },
         // the inactive footprint mode's view profile: 0/1 flags in
-        // [gaussians, centers, rings, selectionCenters, selectionRings] order
-        { key: 'view.inactiveProfile', setCommand: 'view.setInactiveProfile', getDefault: () => [1, 0, 1, 0, 1], validate: v => Array.isArray(v) && v.length === 5 && v.every(x => x === 0 || x === 1), group: 'appearance' },
+        // [gaussians, centers, rings, selectionCenters, selectionRings] order.
+        // The default is the opposite mode's arrangement, so it reads the live
+        // footprint - selection.footprint sits earlier in this table and has
+        // already been applied by the time this default is evaluated
+        { key: 'view.inactiveProfile', setCommand: 'view.setInactiveProfile', getDefault: () => ((events.invoke('selection.footprint') as number) > 0 ? [1, 1, 0, 1, 0] : [1, 0, 1, 0, 1]), validate: v => Array.isArray(v) && v.length === 5 && v.every(x => x === 0 || x === 1), group: 'appearance' },
         { key: 'view.outlineSelection', setCommand: 'view.setOutlineSelection', getDefault: () => false, validate: isBool, group: 'appearance' },
         { key: 'view.stochastic', setCommand: 'view.setStochastic', getDefault: () => 'auto', validate: isEnum(['disabled', 'enabled', 'movement', 'auto']), group: 'preferences' },
         { key: 'view.perfOverlay', setCommand: 'view.setPerfOverlay', getDefault: () => false, validate: isBool, group: 'overlays' },

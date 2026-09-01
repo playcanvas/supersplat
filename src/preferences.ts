@@ -92,8 +92,12 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         { key: 'view.centers', setCommand: 'view.setCenters', getDefault: () => false, validate: isBool, group: 'appearance' },
         { key: 'view.rings', setCommand: 'view.setRings', getDefault: () => false, validate: isBool, group: 'appearance' },
         { key: 'view.ringSize', setCommand: 'view.setRingSize', getDefault: () => 4, validate: isNumber(1, 50), group: 'appearance' },
-        { key: 'view.centersUseGaussianColor', setCommand: 'view.setCentersUseGaussianColor', getDefault: () => false, validate: isBool, group: 'appearance' },
-        { key: 'view.ringsUseGaussianColor', setCommand: 'view.setRingsUseGaussianColor', getDefault: () => true, validate: isBool, group: 'appearance' },
+        { key: 'view.splatsColorBlend', setCommand: 'view.setSplatsColorBlend', getDefault: () => 0, validate: isNumber(0, 1), group: 'appearance' },
+        { key: 'view.splatsSelectionBlend', setCommand: 'view.setSplatsSelectionBlend', getDefault: () => 1, validate: isNumber(0, 1), group: 'appearance' },
+        { key: 'view.centersColorBlend', setCommand: 'view.setCentersColorBlend', getDefault: () => 1, validate: isNumber(0, 1), group: 'appearance' },
+        { key: 'view.centersSelectionBlend', setCommand: 'view.setCentersSelectionBlend', getDefault: () => 1, validate: isNumber(0, 1), group: 'appearance' },
+        { key: 'view.ringsColorBlend', setCommand: 'view.setRingsColorBlend', getDefault: () => 0, validate: isNumber(0, 1), group: 'appearance' },
+        { key: 'view.ringsSelectionBlend', setCommand: 'view.setRingsSelectionBlend', getDefault: () => 1, validate: isNumber(0, 1), group: 'appearance' },
         { key: 'view.selectionColor', setCommand: 'view.setSelectionColor', getDefault: () => false, validate: isBool, group: 'appearance' },
         { key: 'view.selectionCenters', setCommand: 'view.setSelectionCenters', getDefault: () => true, validate: isBool, group: 'appearance' },
         { key: 'view.selectionRings', setCommand: 'view.setSelectionRings', getDefault: () => false, validate: isBool, group: 'appearance' },
@@ -105,7 +109,8 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         { key: 'camera.boundDimensions', setCommand: 'camera.setBoundDimensions', urlPath: 'show.boundDimensions', getDefault: () => config.show.boundDimensions, validate: isBool, group: 'overlays' },
         { key: 'camera.showPoses', setCommand: 'camera.setShowPoses', urlPath: 'show.cameraPoses', getDefault: () => config.show.cameraPoses, validate: isBool, group: 'overlays' },
         { key: 'camera.showInfo', setCommand: 'camera.setShowInfo', urlPath: 'show.cameraInfo', getDefault: () => config.show.cameraInfo, validate: isBool, group: 'overlays' },
-        { key: 'selection.mode', setCommand: 'selection.setMode', getDefault: () => 'through', validate: isEnum(['surface', 'through']) },
+        { key: 'selection.useDepth', setCommand: 'selection.setUseDepth', getDefault: () => false, validate: isBool },
+        { key: 'selection.footprint', setCommand: 'selection.setFootprint', getDefault: () => 0, validate: isNumber(0, 1) },
         { key: 'camera.controlMode', setCommand: 'camera.setControlMode', getDefault: () => 'orbit', validate: isEnum(['orbit', 'fly']) }
     ];
 

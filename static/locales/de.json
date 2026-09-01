@@ -92,6 +92,8 @@
     "panel.display.size": "Größe",
     "panel.display.thickness": "Dicke",
     "panel.display.use-gaussian-colors": "Gaussian-Farben verwenden",
+    "panel.display.unselected-blend": "Unselektiert-Tönung",
+    "panel.display.selection-blend": "Auswahl-Tönung",
     "panel.display.section-selection": "Auswahl",
     "panel.display.selection-color": "Auswahlfarbe",
     "panel.display.selection-centers": "Auswahlzentren",
@@ -324,6 +326,8 @@
     "tooltip.bottom-toolbar.undo": "Rückgängig",
     "tooltip.bottom-toolbar.redo": "Wiederholen",
     "tooltip.bottom-toolbar.selection-mode": "Auswahlmodus",
+    "tooltip.bottom-toolbar.use-depth": "Tiefe",
+    "tooltip.bottom-toolbar.footprint": "Footprint",
     "tooltip.bottom-toolbar.rectangle-selection": "Rechteckselektion",
     "tooltip.bottom-toolbar.lasso-selection": "Lassoselektion",
     "tooltip.bottom-toolbar.polygon-selection": "Polygonselektion",
@@ -358,5 +362,7 @@
     "tooltip.splat-data.on-screen-only": "Nur Splats zählen, die in der Kameraansicht sichtbar sind. Splats außerhalb des Bildschirms werden aus dem Histogramm ausgeschlossen.",
     "tooltip.splat-data.log-counts": "Häufigkeiten der Histogrammklassen logarithmisch skalieren, damit kleine Häufigkeiten neben großen sichtbar bleiben.",
     "tooltip.splat-data.log-bins": "Eigenschaftswerte logarithmisch klassieren, damit Gruppen über große Wertebereiche hinweg unterscheidbar bleiben.",
-    "tooltip.splat-data.show-all": "Alle Eigenschaften pro Splat in der Liste anzeigen, einschließlich roher DC- und Kugelflächenfunktions-Koeffizienten."
+    "tooltip.splat-data.show-all": "Alle Eigenschaften pro Splat in der Liste anzeigen, einschließlich roher DC- und Kugelflächenfunktions-Koeffizienten.",
+    "popup.shortcuts.toggle-depth": "Tiefenauswahl umschalten",
+    "popup.shortcuts.toggle-footprint": "Auswahl-Footprint umschalten"
 }

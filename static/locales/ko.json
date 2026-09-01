@@ -92,6 +92,8 @@
     "panel.display.size": "크기",
     "panel.display.thickness": "두께",
     "panel.display.use-gaussian-colors": "가우시안 색상 사용",
+    "panel.display.unselected-blend": "비선택 틴트",
+    "panel.display.selection-blend": "선택 틴트",
     "panel.display.section-selection": "선택",
     "panel.display.selection-color": "선택 색상",
     "panel.display.selection-centers": "선택 중심",
@@ -324,6 +326,8 @@
     "tooltip.bottom-toolbar.undo": "실행 취소",
     "tooltip.bottom-toolbar.redo": "다시 실행",
     "tooltip.bottom-toolbar.selection-mode": "선택 모드",
+    "tooltip.bottom-toolbar.use-depth": "깊이",
+    "tooltip.bottom-toolbar.footprint": "풋프린트",
     "tooltip.bottom-toolbar.rectangle-selection": "사각형 선택",
     "tooltip.bottom-toolbar.lasso-selection": "올가미 선택",
     "tooltip.bottom-toolbar.polygon-selection": "다각형 선택",
@@ -358,5 +362,7 @@
     "tooltip.splat-data.on-screen-only": "카메라에 보이는 스플랫만 히스토그램에 집계합니다. 화면 밖의 스플랫은 제외됩니다.",
     "tooltip.splat-data.log-counts": "히스토그램 각 구간에 포함된 값의 개수를 로그 스케일로 표시하여 작은 개수와 큰 개수가 함께 잘 보이도록 합니다.",
     "tooltip.splat-data.log-bins": "값 구간을 로그 간격으로 배치하여 넓은 범위의 그룹을 구분할 수 있게 합니다.",
-    "tooltip.splat-data.show-all": "원시 DC 계수 및 구면 조화 함수 계수를 포함한 모든 스플랫 속성을 목록에 표시합니다."
+    "tooltip.splat-data.show-all": "원시 DC 계수 및 구면 조화 함수 계수를 포함한 모든 스플랫 속성을 목록에 표시합니다.",
+    "popup.shortcuts.toggle-depth": "깊이 선택 전환",
+    "popup.shortcuts.toggle-footprint": "풋프린트 전환"
 }

@@ -1,9 +1,8 @@
-import { Button, Element, Container, Label } from '@playcanvas/pcui';
+import { Button, Element, Container } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { ShortcutManager } from '../shortcut-manager';
 import { i18n } from './localization';
-import { MenuPanel } from './menu-panel';
 import measureSvg from './svg/measure.svg';
 import orientSvg from './svg/orient.svg';
 import redoSvg from './svg/redo.svg';
@@ -14,8 +13,10 @@ import lassoSvg from './svg/select-lasso.svg';
 import pickerSvg from './svg/select-picker.svg';
 import polygonSvg from './svg/select-poly.svg';
 import sphereSvg from './svg/select-sphere.svg';
-import surfaceSvg from './svg/selection-surface.svg';
-import throughSvg from './svg/selection-through.svg';
+import depthOffSvg from './svg/selection-depth-off.svg';
+import depthOnSvg from './svg/selection-depth-on.svg';
+import footprintCentersSvg from './svg/selection-footprint-centers.svg';
+import footprintRingsSvg from './svg/selection-footprint-rings.svg';
 import boxSvg from './svg/show-hide-splats.svg';
 import undoSvg from './svg/undo.svg';
 import { Tooltips } from './tooltips';
@@ -51,45 +52,31 @@ class BottomToolbar extends Container {
             enabled: false
         });
 
+        // depth toggle: on = only the visible surface picks, off = through all layers
         const selectionMode = new Button({
             id: 'bottom-toolbar-selection-mode',
             class: 'bottom-toolbar-selection-mode-button'
         });
-        selectionMode.dom.setAttribute('aria-haspopup', 'menu');
-        selectionMode.dom.setAttribute('aria-expanded', 'false');
 
-        const surfaceModeIcon = createSvg(surfaceSvg);
-        const throughModeIcon = createSvg(throughSvg);
-        surfaceModeIcon.classList.add('bottom-toolbar-selection-mode-icon');
-        throughModeIcon.classList.add('bottom-toolbar-selection-mode-icon');
-        selectionMode.dom.appendChild(surfaceModeIcon);
-        selectionMode.dom.appendChild(throughModeIcon);
+        const depthOnIcon = createSvg(depthOnSvg);
+        const depthOffIcon = createSvg(depthOffSvg);
+        depthOnIcon.classList.add('bottom-toolbar-selection-mode-icon');
+        depthOffIcon.classList.add('bottom-toolbar-selection-mode-icon');
+        selectionMode.dom.appendChild(depthOnIcon);
+        selectionMode.dom.appendChild(depthOffIcon);
 
-        const surfaceModeMenuIcon = new Element({
-            dom: createSvg(surfaceSvg),
-            class: 'bottom-toolbar-selection-mode-menu-icon'
-        });
-        const throughModeMenuIcon = new Element({
-            dom: createSvg(throughSvg),
-            class: 'bottom-toolbar-selection-mode-menu-icon'
+        // footprint toggle: centers (footprint 0) or the full splat footprint
+        const footprintMode = new Button({
+            id: 'bottom-toolbar-selection-footprint',
+            class: 'bottom-toolbar-selection-mode-button'
         });
 
-        const surfaceModeCheck = new Label();
-        const throughModeCheck = new Label({ text: '\u2713' });
-
-        const selectionModeMenu = new MenuPanel([{
-            text: () => i18n.t('panel.display.surface'),
-            icon: surfaceModeMenuIcon,
-            extra: surfaceModeCheck,
-            onSelect: () => events.fire('selection.setMode', 'surface')
-        }, {
-            text: () => i18n.t('panel.display.through'),
-            icon: throughModeMenuIcon,
-            extra: throughModeCheck,
-            onSelect: () => events.fire('selection.setMode', 'through')
-        }], {
-            id: 'bottom-toolbar-selection-mode-menu'
-        });
+        const footprintCentersIcon = createSvg(footprintCentersSvg);
+        const footprintRingsIcon = createSvg(footprintRingsSvg);
+        footprintCentersIcon.classList.add('bottom-toolbar-selection-mode-icon');
+        footprintRingsIcon.classList.add('bottom-toolbar-selection-mode-icon');
+        footprintMode.dom.appendChild(footprintCentersIcon);
+        footprintMode.dom.appendChild(footprintRingsIcon);
 
         const picker = new Button({
             id: 'bottom-toolbar-picker',
@@ -194,6 +181,8 @@ class BottomToolbar extends Container {
         this.append(redo);
         this.append(new Element({ class: 'bottom-toolbar-separator' }));
         this.append(selectionMode);
+        this.append(footprintMode);
+        this.append(new Element({ class: 'bottom-toolbar-separator' }));
         this.append(picker);
         this.append(lasso);
         this.append(polygon);
@@ -213,33 +202,17 @@ class BottomToolbar extends Container {
         this.append(orient);
         this.append(coordSpace);
         this.append(origin);
-        this.append(selectionModeMenu);
 
         undo.dom.addEventListener('click', () => events.fire('edit.undo'));
         redo.dom.addEventListener('click', () => events.fire('edit.redo'));
-        let selectionModeMenuTimer = -1;
-        const clearSelectionModeMenuTimer = () => {
-            if (selectionModeMenuTimer !== -1) {
-                window.clearTimeout(selectionModeMenuTimer);
-                selectionModeMenuTimer = -1;
-            }
-        };
 
-        selectionMode.dom.addEventListener('pointerdown', () => {
-            clearSelectionModeMenuTimer();
-            selectionModeMenuTimer = window.setTimeout(() => {
-                selectionModeMenuTimer = -1;
-                selectionModeMenu.position(selectionMode.dom, 'top', 4);
-                selectionModeMenu.hidden = false;
-            }, 150);
-        });
         selectionMode.dom.addEventListener('click', () => {
-            clearSelectionModeMenuTimer();
-            events.fire('selection.toggleMode');
-            selectionModeMenu.hidden = true;
+            events.fire('selection.toggleUseDepth');
         });
-        window.addEventListener('pointerup', clearSelectionModeMenuTimer, true);
-        window.addEventListener('pointercancel', clearSelectionModeMenuTimer, true);
+
+        footprintMode.dom.addEventListener('click', () => {
+            events.fire('selection.toggleFootprint');
+        });
         polygon.dom.addEventListener('click', () => events.fire('tool.polygonSelection'));
         lasso.dom.addEventListener('click', () => events.fire('tool.lassoSelection'));
         brush.dom.addEventListener('click', () => events.fire('tool.brushSelection'));
@@ -269,36 +242,26 @@ class BottomToolbar extends Container {
             redo.enabled = value;
         });
 
-        let activeSelectionMode: 'surface' | 'through' = 'through';
-
-        const updateSelectionMode = (mode: 'surface' | 'through') => {
-            activeSelectionMode = mode;
-            surfaceModeIcon.style.display = mode === 'surface' ? '' : 'none';
-            throughModeIcon.style.display = mode === 'through' ? '' : 'none';
-            surfaceModeCheck.text = mode === 'surface' ? '\u2713' : '';
-            throughModeCheck.text = mode === 'through' ? '\u2713' : '';
-            selectionMode.dom.setAttribute('aria-label', i18n.t(
-                mode === 'surface' ? 'panel.display.surface' : 'panel.display.through'
-            ));
+        const updateUseDepth = (useDepth: boolean) => {
+            depthOnIcon.style.display = useDepth ? '' : 'none';
+            depthOffIcon.style.display = useDepth ? 'none' : '';
+            selectionMode.dom.setAttribute('aria-pressed', String(useDepth));
+            selectionMode.dom.setAttribute('aria-label', i18n.t('tooltip.bottom-toolbar.use-depth'));
         };
 
-        events.on('selection.mode', updateSelectionMode);
-        updateSelectionMode('through');
+        events.on('selection.useDepth', updateUseDepth);
+        updateUseDepth(false);
 
-        selectionModeMenu.on('show', () => {
-            selectionMode.dom.setAttribute('aria-expanded', 'true');
-        });
+        const updateFootprint = (footprint: number) => {
+            const rings = footprint > 0;
+            footprintRingsIcon.style.display = rings ? '' : 'none';
+            footprintCentersIcon.style.display = rings ? 'none' : '';
+            footprintMode.dom.setAttribute('aria-pressed', String(rings));
+            footprintMode.dom.setAttribute('aria-label', i18n.t('tooltip.bottom-toolbar.footprint'));
+        };
 
-        selectionModeMenu.on('hide', () => {
-            selectionMode.dom.setAttribute('aria-expanded', 'false');
-        });
-
-        window.addEventListener('pointerdown', (event: PointerEvent) => {
-            const target = event.target as Node;
-            if (!selectionMode.dom.contains(target) && !selectionModeMenu.dom.contains(target)) {
-                selectionModeMenu.hidden = true;
-            }
-        }, true);
+        events.on('selection.footprint', updateFootprint);
+        updateFootprint(0);
 
         events.on('tool.activated', (toolName: string) => {
             picker.class[toolName === 'rectSelection' ? 'add' : 'remove']('active');
@@ -337,7 +300,8 @@ class BottomToolbar extends Container {
         // register tooltips
         tooltips.register(undo, tooltip('tooltip.bottom-toolbar.undo', 'edit.undo'));
         tooltips.register(redo, tooltip('tooltip.bottom-toolbar.redo', 'edit.redo'));
-        tooltips.register(selectionMode, tooltip('tooltip.bottom-toolbar.selection-mode', 'selection.toggleMode'));
+        tooltips.register(selectionMode, tooltip('tooltip.bottom-toolbar.use-depth', 'selection.toggleUseDepth'));
+        tooltips.register(footprintMode, tooltip('tooltip.bottom-toolbar.footprint', 'selection.toggleFootprint'));
         tooltips.register(picker, tooltip('tooltip.bottom-toolbar.rectangle-selection', 'tool.rectSelection'));
         tooltips.register(lasso, tooltip('tooltip.bottom-toolbar.lasso-selection', 'tool.lassoSelection'));
         tooltips.register(polygon, tooltip('tooltip.bottom-toolbar.polygon-selection', 'tool.polygonSelection'));

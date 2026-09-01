@@ -10,8 +10,10 @@ uniform texParams: vec2u;
 uniform instanceBase: u32;
 uniform splatSize: f32;
 uniform viewportSize: vec2f;
-uniform useGaussianColor: f32;
+uniform colorBlend: f32;
+uniform selectionBlend: f32;
 uniform selectionOnly: u32;
+uniform selectionCenters: u32;
 uniform selectedClr: vec4f;
 uniform unselectedClr: vec4f;
 
@@ -110,10 +112,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     let instance = uniform.instanceBase + pcInstanceIndex;
     let uv = splatUv(instanceSource[instance]);
     let state = instanceFlagByte(instance);
-    // centers draw opaque, so the unselected colour's alpha can no longer shade
-    // them - it only says whether they are drawn at all, keeping the picker's
-    // "alpha 0 hides the centers" behaviour
-    if ((state & 2u) != 0u || uniform.unselectedClr.a <= 0.0
+    if ((state & 2u) != 0u
         || (uniform.selectionOnly != 0u && (state & 1u) == 0u)) {
         output.position = vec4f(0.0, 0.0, 2.0, 1.0);
         return output;
@@ -129,16 +128,19 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     // gaussian renderer does, so a center straddling the near plane still draws
     output.position = vec4f(projected.xy + offset, clamp(projected.z, 0.0, projected.w), projected.w);
 
+    // colorBlend mixes the base from the gaussian's own colour toward the flat
+    // unselected colour; at 1 the (expensive) texture and SH reads are skipped
     var gaussianColor = uniform.unselectedClr.rgb;
-    if (uniform.useGaussianColor > 0.0) {
-        gaussianColor = textureLoad(splatColor, uv, 0).rgb;
+    if (uniform.colorBlend < 1.0) {
+        var texColor = textureLoad(splatColor, uv, 0).rgb;
         #if SH_BANDS > 0
             let worldDirection = normalize(worldPosition.xyz - uniform.view_position);
             let modelDirection = normalize(transpose(mat3x3f(model[0].xyz, model[1].xyz, model[2].xyz)) * worldDirection);
-            gaussianColor += evaluateSH(uv, modelDirection);
+            texColor += evaluateSH(uv, modelDirection);
         #endif
+        gaussianColor = mix(texColor, uniform.unselectedClr.rgb, uniform.colorBlend);
     }
-    let selected = select(0.0, uniform.selectedClr.a, state == 1u);
+    let selected = select(0.0, uniform.selectionBlend, state == 1u && uniform.selectionCenters != 0u);
     output.overlayColor = vec4f(mix(gaussianColor, uniform.selectedClr.rgb, selected), 1.0);
     return output;
 }

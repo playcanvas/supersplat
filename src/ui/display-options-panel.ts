@@ -1,4 +1,4 @@
-import { BooleanInput, Button, ColorPicker, Container, Label, SliderInput } from '@playcanvas/pcui';
+import { Button, ColorPicker, Container, Label, SliderInput } from '@playcanvas/pcui';
 import { Color } from 'playcanvas';
 
 import { Events } from '../events';
@@ -67,15 +67,6 @@ class DisplayOptionsPanel extends Container {
             return section;
         };
 
-        const rowToggles = (row: Container, toggle: BooleanInput) => {
-            row.class.add('options-panel-row-clickable');
-            row.dom.addEventListener('click', (event: MouseEvent) => {
-                if (toggle.enabled && !toggle.dom.contains(event.target as Node)) {
-                    toggle.value = !toggle.value;
-                }
-            });
-        };
-
         const iconButton = (svg: string, localeKey: string) => {
             const button = new Button({
                 class: 'options-panel-icon-button'
@@ -89,6 +80,33 @@ class DisplayOptionsPanel extends Container {
         const setActive = (button: Button, active: boolean) => {
             button.class[active ? 'add' : 'remove']('active');
             button.dom.setAttribute('aria-pressed', String(active));
+        };
+
+        // a 0-1 blend weight slider bound to a view.<name> value
+        const blendSlider = (labelKey: string, name: string) => {
+            const row = new Container({
+                class: 'settings-panel-row'
+            });
+            const rowLabel = new Label({
+                class: 'settings-panel-row-label'
+            });
+            i18n.bindText(rowLabel, labelKey);
+            const slider = new SliderInput({
+                class: 'settings-panel-row-slider',
+                min: 0,
+                max: 1,
+                precision: 2,
+                value: 1
+            });
+            row.append(rowLabel);
+            row.append(slider);
+            events.on(`view.${name}`, (value: number) => {
+                slider.value = value;
+            });
+            slider.on('change', (value: number) => {
+                events.fire(`view.set${name[0].toUpperCase()}${name.slice(1)}`, value);
+            });
+            return { row, slider, name };
         };
 
         // display
@@ -139,23 +157,8 @@ class DisplayOptionsPanel extends Container {
         centersSizeRow.append(centersSizeLabel);
         centersSizeRow.append(centersSizeSlider);
 
-        const centersColorRow = new Container({
-            class: 'settings-panel-row'
-        });
-
-        const centersColorLabel = new Label({
-            class: 'settings-panel-row-label'
-        });
-        i18n.bindText(centersColorLabel, 'panel.display.use-gaussian-colors');
-
-        const centersColorToggle = new BooleanInput({
-            type: 'toggle',
-            class: 'settings-panel-row-toggle',
-            value: false
-        });
-
-        centersColorRow.append(centersColorLabel);
-        centersColorRow.append(centersColorToggle);
+        const centersColorBlend = blendSlider('panel.display.unselected-blend', 'centersColorBlend');
+        const centersSelectionBlend = blendSlider('panel.display.selection-blend', 'centersSelectionBlend');
 
         // rings
 
@@ -179,23 +182,13 @@ class DisplayOptionsPanel extends Container {
         ringSizeRow.append(ringSizeLabel);
         ringSizeRow.append(ringSizeSlider);
 
-        const ringsColorRow = new Container({
-            class: 'settings-panel-row'
-        });
+        const ringsColorBlend = blendSlider('panel.display.unselected-blend', 'ringsColorBlend');
+        const ringsSelectionBlend = blendSlider('panel.display.selection-blend', 'ringsSelectionBlend');
 
-        const ringsColorLabel = new Label({
-            class: 'settings-panel-row-label'
-        });
-        i18n.bindText(ringsColorLabel, 'panel.display.use-gaussian-colors');
+        // gaussians
 
-        const ringsColorToggle = new BooleanInput({
-            type: 'toggle',
-            class: 'settings-panel-row-toggle',
-            value: true
-        });
-
-        ringsColorRow.append(ringsColorLabel);
-        ringsColorRow.append(ringsColorToggle);
+        const splatsColorBlend = blendSlider('panel.display.unselected-blend', 'splatsColorBlend');
+        const splatsSelectionBlend = blendSlider('panel.display.selection-blend', 'splatsSelectionBlend');
 
         // selection display
 
@@ -291,19 +284,21 @@ class DisplayOptionsPanel extends Container {
         colorsRow.append(colorsLabel);
         colorsRow.append(colorPickers);
 
-        rowToggles(centersColorRow, centersColorToggle);
-        rowToggles(ringsColorRow, ringsColorToggle);
-
         this.append(header);
         this.append(displayRow);
         this.append(selectionDisplayRow);
         this.append(colorsRow);
+        this.append(sectionHeader('panel.display.gaussians'));
+        this.append(splatsColorBlend.row);
+        this.append(splatsSelectionBlend.row);
         this.append(sectionHeader('panel.display.centers'));
         this.append(centersSizeRow);
-        this.append(centersColorRow);
+        this.append(centersColorBlend.row);
+        this.append(centersSelectionBlend.row);
         this.append(sectionHeader('panel.display.rings'));
         this.append(ringSizeRow);
-        this.append(ringsColorRow);
+        this.append(ringsColorBlend.row);
+        this.append(ringsSelectionBlend.row);
 
         const updateDisplay = () => {
             setActive(gaussiansButton, events.invoke('view.gaussians'));
@@ -321,9 +316,14 @@ class DisplayOptionsPanel extends Container {
         const sync = () => {
             updateDisplay();
             centersSizeSlider.value = events.invoke('camera.splatSize');
-            centersColorToggle.value = events.invoke('view.centersUseGaussianColor');
             ringSizeSlider.value = events.invoke('view.ringSize');
-            ringsColorToggle.value = events.invoke('view.ringsUseGaussianColor');
+            [
+                splatsColorBlend, splatsSelectionBlend,
+                centersColorBlend, centersSelectionBlend,
+                ringsColorBlend, ringsSelectionBlend
+            ].forEach(({ slider, name }) => {
+                slider.value = events.invoke(`view.${name}`);
+            });
             updateSelectionDisplay();
         };
 
@@ -385,28 +385,12 @@ class DisplayOptionsPanel extends Container {
             events.fire('camera.setSplatSize', value);
         });
 
-        events.on('view.centersUseGaussianColor', (value: boolean) => {
-            centersColorToggle.value = value;
-        });
-
-        centersColorToggle.on('change', (value: boolean) => {
-            events.fire('view.setCentersUseGaussianColor', value);
-        });
-
         events.on('view.ringSize', (value: number) => {
             ringSizeSlider.value = value;
         });
 
         ringSizeSlider.on('change', (value: number) => {
             events.fire('view.setRingSize', value);
-        });
-
-        events.on('view.ringsUseGaussianColor', (value: boolean) => {
-            ringsColorToggle.value = value;
-        });
-
-        ringsColorToggle.on('change', (value: boolean) => {
-            events.fire('view.setRingsUseGaussianColor', value);
         });
 
         events.on('view.selectionColor', updateSelectionDisplay);

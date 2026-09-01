@@ -92,6 +92,8 @@
     "panel.display.size": "Tamanho",
     "panel.display.thickness": "Espessura",
     "panel.display.use-gaussian-colors": "Usar cores gaussianas",
+    "panel.display.unselected-blend": "Tonalidade não selecionada",
+    "panel.display.selection-blend": "Tonalidade de seleção",
     "panel.display.section-selection": "Seleção",
     "panel.display.selection-color": "Cor da seleção",
     "panel.display.selection-centers": "Centros selecionados",
@@ -324,6 +326,8 @@
     "tooltip.bottom-toolbar.undo": "Desfazer",
     "tooltip.bottom-toolbar.redo": "Refazer",
     "tooltip.bottom-toolbar.selection-mode": "Modo de seleção",
+    "tooltip.bottom-toolbar.use-depth": "Profundidade",
+    "tooltip.bottom-toolbar.footprint": "Pegada",
     "tooltip.bottom-toolbar.rectangle-selection": "Seleção Retangular",
     "tooltip.bottom-toolbar.lasso-selection": "Seleção com Laço",
     "tooltip.bottom-toolbar.polygon-selection": "Seleção com Polígono",
@@ -358,5 +362,7 @@
     "tooltip.splat-data.on-screen-only": "Contar apenas os splats visíveis pela câmera. Splats fora da tela são excluídos do histograma.",
     "tooltip.splat-data.log-counts": "Escala as contagens do histograma logaritmicamente para que contagens pequenas permaneçam visíveis ao lado das grandes.",
     "tooltip.splat-data.log-bins": "Distribui os intervalos de valores logaritmicamente para distinguir grupos em faixas amplas.",
-    "tooltip.splat-data.show-all": "Mostrar todas as propriedades dos splats na lista, incluindo coeficientes DC brutos e harmônicos esféricos."
+    "tooltip.splat-data.show-all": "Mostrar todas as propriedades dos splats na lista, incluindo coeficientes DC brutos e harmônicos esféricos.",
+    "popup.shortcuts.toggle-depth": "Alternar seleção por profundidade",
+    "popup.shortcuts.toggle-footprint": "Alternar pegada de seleção"
 }

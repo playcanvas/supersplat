@@ -19,8 +19,13 @@ uniform clipZParams: vec4f;
 uniform pickBase: u32;
 uniform pickCount: u32;
 uniform pickOp: i32;
+uniform pickFootprint: f32;
 uniform ringColor: vec4f;
 uniform selectedRingColor: vec4f;
+uniform ringSize: f32;
+uniform ringSelectionOnly: u32;
+uniform ringsBase: u32;
+uniform ringsCount: u32;
 
 varying gaussianUV: vec2f;
 varying gaussianColor: vec4f;
@@ -62,11 +67,19 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     let b = textureLoad(cacheB, uv, 0).x;
 
     let alpha = f32((b >> 16u) & 0xffu) / 255.0;
-    if (alpha == 0.0) {
+    let flags = (b >> 24u) & 3u;
+    // a zero-alpha splat is invisible to the gaussian pass but is still a real,
+    // editable splat: keep its quad wherever rings mode would draw its ring band
+    // (mirroring the fragment shader's eligibility test) so it renders and picks
+    // there. Everywhere else skip it as before, so an invisible splat can't
+    // steal frontmost picks or burn fill
+    let ringEligible = uniform.ringSize > 0.0 && (flags & 2u) == 0u
+        && entry >= uniform.ringsBase && entry < uniform.ringsBase + uniform.ringsCount
+        && (uniform.ringSelectionOnly == 0u || (flags & 1u) != 0u);
+    if (alpha == 0.0 && !ringEligible) {
         output.position = discardPosition;
         return output;
     }
-    let flags = (b >> 24u) & 3u;
     #ifdef PICK_PASS
         if ((uniform.pickOp == 0 && flags != 0u)
             || (uniform.pickOp == 1 && flags != 1u)
@@ -89,8 +102,15 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     let color = vec3f(vec3u(rgbBits, rgbBits >> 10u, rgbBits >> 20u) & vec3u(1023u))
         * (f32(1u << (rgbBits >> 30u)) / 1023.0);
 
-    let axis1 = unpack2x16float(a.w);
-    let axis2 = unpack2x16float(b).x * normalize(vec2f(axis1.y, -axis1.x));
+    var axis1 = unpack2x16float(a.w);
+    var axis2 = unpack2x16float(b).x * normalize(vec2f(axis1.y, -axis1.x));
+    #ifdef PICK_PASS
+        // id picks select by the footprint slider: scale each axis, clamped so
+        // the quad still covers ~a pixel at 0 (centers semantics). Depth picks
+        // pass 1 so surface estimation always sees the true footprint
+        axis1 *= max(uniform.pickFootprint, 1.0 / max(length(axis1), 1e-6));
+        axis2 *= max(uniform.pickFootprint, 1.0 / max(length(axis2), 1e-6));
+    #endif
 
     let corner = vertex_position.xy;
     let pixelOffset = corner.x * axis1 + corner.y * axis2;
@@ -124,7 +144,6 @@ uniform showGaussians: u32;
 uniform showSelectedGaussians: u32;
 uniform ringSize: f32;
 uniform ringSelectionOnly: u32;
-uniform ringsUseGaussianColor: u32;
 uniform ringsBase: u32;
 uniform ringsCount: u32;
 uniform pickMode: i32;
@@ -185,9 +204,9 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
             let ringBand = radius >= 1.0 - uniform.ringSize;
             if (ringBand) {
                 alpha = max(alpha, 0.6);
-                if (uniform.ringsUseGaussianColor == 0u) {
-                    color = ringColor.rgb;
-                }
+                // the ring colours' alphas are blend weights (see the renderer):
+                // gaussian colour -> flat unselected colour -> selection colour
+                color = mix(color, ringColor.rgb, ringColor.a);
                 if (selected) {
                     color = mix(color, selectedRingColor.rgb, selectedRingColor.a);
                 }

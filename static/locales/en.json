@@ -92,6 +92,8 @@
     "panel.display.size": "Size",
     "panel.display.thickness": "Thickness",
     "panel.display.use-gaussian-colors": "Use Gaussian Colors",
+    "panel.display.unselected-blend": "Unselected Tint",
+    "panel.display.selection-blend": "Selection Tint",
     "panel.display.section-selection": "Selection",
     "panel.display.selection-color": "Selection Color",
     "panel.display.selection-centers": "Selection Centers",
@@ -324,6 +326,8 @@
     "tooltip.bottom-toolbar.undo": "Undo",
     "tooltip.bottom-toolbar.redo": "Redo",
     "tooltip.bottom-toolbar.selection-mode": "Selection Mode",
+    "tooltip.bottom-toolbar.use-depth": "Depth",
+    "tooltip.bottom-toolbar.footprint": "Footprint",
     "tooltip.bottom-toolbar.rectangle-selection": "Rectangle Selection",
     "tooltip.bottom-toolbar.lasso-selection": "Lasso Selection",
     "tooltip.bottom-toolbar.polygon-selection": "Polygon Selection",
@@ -358,5 +362,7 @@
     "tooltip.splat-data.on-screen-only": "Only count splats visible in the camera's view. Off-screen splats are excluded from the histogram.",
     "tooltip.splat-data.log-counts": "Scale histogram bin counts logarithmically so small counts remain visible alongside large ones.",
     "tooltip.splat-data.log-bins": "Space property-value bins logarithmically so groups across large ranges remain distinguishable.",
-    "tooltip.splat-data.show-all": "Show all per-splat properties in the list, including raw DC and spherical harmonic coefficients."
+    "tooltip.splat-data.show-all": "Show all per-splat properties in the list, including raw DC and spherical harmonic coefficients.",
+    "popup.shortcuts.toggle-depth": "Toggle Depth Selection",
+    "popup.shortcuts.toggle-footprint": "Toggle Selection Footprint"
 }

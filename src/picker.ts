@@ -95,6 +95,11 @@ class Picker {
             return;
         }
 
+        // the id pass draws the compact list through the sort, so it needs a
+        // current sorted projection: a stochastic frame leaves sortedIndices
+        // stale (old camera, old survivor set)
+        this.scene.projectedSplatRenderer.renderSortedForPick();
+
         const { splatLayer } = this.scene;
 
         // Hide non-selected elements

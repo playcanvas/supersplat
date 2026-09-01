@@ -3,7 +3,6 @@ import {
     FUNC_LESS,
     PRIMITIVE_TRIANGLES,
     SEMANTIC_POSITION,
-    Color,
     Entity,
     ShaderMaterial,
     Mesh,
@@ -13,8 +12,6 @@ import {
 import { ElementType, Element } from './element';
 import { vertexShader, fragmentShader } from './shaders/splat-overlay-shader';
 import { Splat } from './splat';
-
-const nullClr = new Color(0, 0, 0, 0);
 
 class SplatOverlay extends Element {
     entity: Entity;
@@ -144,17 +141,18 @@ class SplatOverlay extends Element {
             // delete/undo resizes the instance list, so the draw count is per-frame
             this.meshInstance.instancingCount = this.splat.instances.count;
             const splatSize = events.invoke('camera.splatSize');
-            const selectedClr = events.invoke('view.selectionCenters') ? events.invoke('selectedClr') : nullClr;
+            const selectedClr = events.invoke('selectedClr');
             const unselectedClr = events.invoke('unselectedClr');
-            const useGaussianColor = events.invoke('view.centersUseGaussianColor') ? 1.0 : 0.0;
             const showAllCenters = events.invoke('view.centers');
 
             material.setParameter('splatSize', splatSize * window.devicePixelRatio);
             material.setParameter('viewportSize', [scene.targetSize.width, scene.targetSize.height]);
             material.setParameter('selectionOnly', showAllCenters ? 0 : 1);
+            material.setParameter('selectionCenters', events.invoke('view.selectionCenters') ? 1 : 0);
             material.setParameter('selectedClr', [selectedClr.r, selectedClr.g, selectedClr.b, selectedClr.a]);
             material.setParameter('unselectedClr', [unselectedClr.r, unselectedClr.g, unselectedClr.b, unselectedClr.a]);
-            material.setParameter('useGaussianColor', useGaussianColor);
+            material.setParameter('colorBlend', events.invoke('view.centersColorBlend'));
+            material.setParameter('selectionBlend', events.invoke('view.centersSelectionBlend'));
             material.setParameter('transformPalette', this.splat.transformPalette.texture);
 
             // pass camera position for SH evaluation

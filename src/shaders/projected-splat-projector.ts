@@ -111,6 +111,7 @@ struct ProjectorUniforms {
     colorRow1: vec4f,
     colorRow2: vec4f,
     selectedColor: vec4f,
+    unselectedColor: vec4f,
     lockedColor: vec4f,
     visible: u32,
     selectionEnabled: u32,
@@ -318,13 +319,21 @@ fn main(
     let locked = (state & 2u) != 0u;
     if (locked) {
         color *= uniforms.lockedColor;
-    } else if (selected) {
-        color = vec4f(mix(color.rgb, uniforms.selectedColor.rgb, uniforms.selectedColor.a), color.a);
+    } else {
+        // the colour alphas carry blend weights, not opacity: the unselected
+        // weight tints every unlocked splat's base colour toward the flat
+        // unselected colour, and the selected weight tints on top of that
+        var rgb = mix(color.rgb, uniforms.unselectedColor.rgb, uniforms.unselectedColor.a);
+        if (selected) {
+            rgb = mix(rgb, uniforms.selectedColor.rgb, uniforms.selectedColor.a);
+        }
+        color = vec4f(rgb, color.a);
     }
+    // zero-alpha gaussians stay in the frame: they are real, editable splats,
+    // so rings mode must still draw and pick them. The render shader's vertex
+    // stage skips their quads unless a ring would show, so keeping them here
+    // costs only cache slots and sort keys
     color = vec4f(max(color.rgb, vec3f(0.0)), color.a);
-    if (color.a <= 0.0) {
-        return;
-    }
 
     // rgb: 10/10/10 unorm with a 2-bit shared exponent (scale 1/2/4/8, range [0, 8])
     let maxChannel = max(color.r, max(color.g, color.b));

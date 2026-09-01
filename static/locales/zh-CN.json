@@ -92,6 +92,8 @@
     "panel.display.size": "大小",
     "panel.display.thickness": "粗细",
     "panel.display.use-gaussian-colors": "使用高斯颜色",
+    "panel.display.unselected-blend": "未选中着色",
+    "panel.display.selection-blend": "选中着色",
     "panel.display.section-selection": "选择",
     "panel.display.selection-color": "选择颜色",
     "panel.display.selection-centers": "选择中心",
@@ -324,6 +326,8 @@
     "tooltip.bottom-toolbar.undo": "撤销",
     "tooltip.bottom-toolbar.redo": "重做",
     "tooltip.bottom-toolbar.selection-mode": "选择模式",
+    "tooltip.bottom-toolbar.use-depth": "深度",
+    "tooltip.bottom-toolbar.footprint": "覆盖范围",
     "tooltip.bottom-toolbar.rectangle-selection": "矩形选择",
     "tooltip.bottom-toolbar.lasso-selection": "套索选择",
     "tooltip.bottom-toolbar.polygon-selection": "多边形选择",
@@ -358,5 +362,7 @@
     "tooltip.splat-data.on-screen-only": "仅统计相机视野内可见的高斯点。屏幕外的高斯点将从直方图中排除。",
     "tooltip.splat-data.log-counts": "以对数方式缩放直方图分组的计数，让较小和较大的计数都清晰可见。",
     "tooltip.splat-data.log-bins": "使用对数间距划分数值分组，以便区分跨越较大范围的数值组。",
-    "tooltip.splat-data.show-all": "在列表中显示所有高斯点属性，包括原始 DC 系数和球谐函数系数。"
+    "tooltip.splat-data.show-all": "在列表中显示所有高斯点属性，包括原始 DC 系数和球谐函数系数。",
+    "popup.shortcuts.toggle-depth": "切换深度选择",
+    "popup.shortcuts.toggle-footprint": "切换选择覆盖范围"
 }

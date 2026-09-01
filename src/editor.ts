@@ -7,6 +7,7 @@ import { Element, ElementType } from './element';
 import { Events } from './events';
 import type { GridPlane } from './infinite-grid';
 import { Scene } from './scene';
+import { INTERVALS_PER_ROW, ROW_STRIDE } from './shaders/footprint-intersect';
 import { Splat } from './splat';
 
 // register for editor and scene events
@@ -66,8 +67,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     [
         'camera.splatSize', 'view.outlineSelection', 'view.gaussians', 'view.centers', 'view.rings',
-        'view.ringSize', 'view.ringsUseGaussianColor', 'selection.mode',
-        'view.selectionColor', 'view.selectionCenters', 'view.selectionRings', 'view.centersUseGaussianColor',
+        'view.ringSize',
+        'view.selectionColor', 'view.selectionCenters', 'view.selectionRings',
+        'view.splatsColorBlend', 'view.splatsSelectionBlend',
+        'view.centersColorBlend', 'view.centersSelectionBlend',
+        'view.ringsColorBlend', 'view.ringsSelectionBlend',
         'view.bands', 'view.minPixelSize', 'view.stochastic', 'view.perfOverlay', 'camera.bound', 'camera.boundDimensions', 'camera.showPoses',
         'camera.showInfo', 'selection.changed', 'tool.coordSpace', 'colorPanel.pendingChanged'
     ].forEach((eventName) => {
@@ -403,6 +407,144 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
     };
 
+    // which machinery a screen-space select gesture runs on: depth on -> the
+    // per-pixel id pick (frontmost wins, op-aware peeling); depth off -> the
+    // centers intersect at footprint 0, otherwise the footprint pass, which
+    // tests each splat's projected ellipse against the region through all depths
+    const selectionMethod = () => {
+        if (events.invoke('selection.useDepth')) {
+            return 'pick';
+        }
+        return (events.invoke('selection.footprint') as number) > 0 ? 'footprint' : 'centers';
+    };
+
+    type SelectRegion = { y0: number, y1: number, intervals: Uint32Array };
+
+    const runFootprintSelect = (splat: Splat, op: 'add'|'remove'|'set'|'intersect', region: SelectRegion) => {
+        return scene.commandQueue.enqueue(async () => {
+            const footprint = events.invoke('selection.footprint') as number;
+            const data = await scene.projectedSplatRenderer.footprintIntersect(splat, region, footprint);
+            if (data) {
+                events.fire('edit.add', new SelectOp(splat, op, data));
+            }
+        });
+    };
+
+    // centers + depth: exactly the surface (rings) pick - the splats visible
+    // in the region, rendered at full footprint with the same op filtering so
+    // peeling works identically - narrowed to those whose center lies in the
+    // region. The centers test reuses the through-mode intersect compute
+    const runVisibleCentersSelect = (splat: Splat, op: 'add'|'remove'|'set'|'intersect', visible: Set<number>, options: any) => {
+        return scene.commandQueue.enqueue(async () => {
+            const data = await scene.dataProcessor.intersect(options, splat);
+            for (let i = 0; i < splat.instances.count; i++) {
+                if (data[i] && !visible.has(i)) {
+                    data[i] = 0;
+                }
+            }
+            events.fire('edit.add', new SelectOp(splat, op, data));
+            scene.dataProcessor.releaseMask(data);
+        });
+    };
+
+    // per-row x-interval tables in render-target pixels for the footprint pass
+
+    const emptyRegion = (): SelectRegion => {
+        return { y0: 0, y1: 0, intervals: new Uint32Array(ROW_STRIDE) };
+    };
+
+    const rectRegion = (x0: number, y0: number, x1: number, y1: number): SelectRegion => {
+        const { width, height } = scene.targetSize;
+        const py0 = Math.max(0, Math.floor(y0 * height));
+        const py1 = Math.min(height - 1, Math.ceil(y1 * height) - 1);
+        const px0 = Math.max(0, Math.floor(x0 * width));
+        const px1 = Math.min(width - 1, Math.ceil(x1 * width) - 1);
+        if (py1 < py0 || px1 < px0) {
+            return emptyRegion();
+        }
+        const rows = py1 - py0 + 1;
+        const intervals = new Uint32Array(rows * ROW_STRIDE);
+        for (let r = 0; r < rows; r++) {
+            const base = r * ROW_STRIDE;
+            intervals[base] = 1;
+            intervals[base + 1] = px0;
+            intervals[base + 2] = px1;
+        }
+        return { y0: py0, y1: py1, intervals };
+    };
+
+    const maskRegion = (context: CanvasRenderingContext2D, maskWidth: number, maskHeight: number): SelectRegion => {
+        const { width, height } = scene.targetSize;
+        const mask = context.getImageData(0, 0, maskWidth, maskHeight);
+        const xScale = width / maskWidth;
+
+        // covered runs of a mask row, merged down to the table's capacity by
+        // closing the smallest gaps (a conservative superset of the mask)
+        const rowRuns = (maskY: number) => {
+            const runs: number[][] = [];
+            const rowBase = maskY * maskWidth * 4;
+            let start = -1;
+            for (let x = 0; x <= maskWidth; x++) {
+                const covered = x < maskWidth && mask.data[rowBase + x * 4 + 3] === 255;
+                if (covered && start === -1) {
+                    start = x;
+                } else if (!covered && start !== -1) {
+                    runs.push([start, x - 1]);
+                    start = -1;
+                }
+            }
+            while (runs.length > INTERVALS_PER_ROW) {
+                let best = 1;
+                for (let i = 2; i < runs.length; i++) {
+                    if (runs[i][0] - runs[i - 1][1] < runs[best][0] - runs[best - 1][1]) {
+                        best = i;
+                    }
+                }
+                runs[best - 1][1] = runs[best][1];
+                runs.splice(best, 1);
+            }
+            return runs.map(([a, b]) => [Math.floor(a * xScale), Math.ceil((b + 1) * xScale) - 1]);
+        };
+
+        // mask row bounds
+        let my0 = maskHeight;
+        let my1 = -1;
+        for (let y = 0; y < maskHeight; y++) {
+            const rowBase = y * maskWidth * 4;
+            for (let x = 0; x < maskWidth; x++) {
+                if (mask.data[rowBase + x * 4 + 3] === 255) {
+                    my0 = Math.min(my0, y);
+                    my1 = Math.max(my1, y);
+                    break;
+                }
+            }
+        }
+        if (my1 < my0) {
+            return emptyRegion();
+        }
+
+        const py0 = Math.max(0, Math.floor(my0 / maskHeight * height));
+        const py1 = Math.min(height - 1, Math.ceil((my1 + 1) / maskHeight * height) - 1);
+        const rows = py1 - py0 + 1;
+        const intervals = new Uint32Array(rows * ROW_STRIDE);
+        const cache = new Map<number, number[][]>();
+        for (let r = 0; r < rows; r++) {
+            const maskY = Math.min(maskHeight - 1, Math.floor((py0 + r + 0.5) / height * maskHeight));
+            let runs = cache.get(maskY);
+            if (!runs) {
+                runs = rowRuns(maskY);
+                cache.set(maskY, runs);
+            }
+            const base = r * ROW_STRIDE;
+            intervals[base] = runs.length;
+            for (let k = 0; k < runs.length; k++) {
+                intervals[base + 1 + k * 2] = runs[k][0];
+                intervals[base + 2 + k * 2] = runs[k][1];
+            }
+        }
+        return { y0: py0, y1: py1, intervals };
+    };
+
     // transform maps the unit sphere (diameter 1) to world space
     events.on('select.bySphere', async (op: 'add'|'remove'|'set'|'intersect', transform: Mat4) => {
         for (const splat of selectedSplats()) {
@@ -422,14 +564,16 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     });
 
     events.function('select.rect', async (op: 'add'|'remove'|'set'|'intersect', rect: any) => {
-        const mode = events.invoke('selection.mode');
+        const method = selectionMethod();
 
         for (const splat of selectedSplats()) {
-            if (mode === 'through') {
+            if (method === 'centers') {
                 await runSelectIntersect(splat, op, {
                     rect: { x1: rect.start.x, y1: rect.start.y, x2: rect.end.x, y2: rect.end.y }
                 });
-            } else if (mode === 'surface') {
+            } else if (method === 'footprint') {
+                await runFootprintSelect(splat, op, rectRegion(rect.start.x, rect.start.y, rect.end.x, rect.end.y));
+            } else {
                 scene.camera.pickPrep(splat, op);
                 const pick = await scene.camera.pickRect(
                     rect.start.x,
@@ -438,8 +582,14 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     rect.end.y - rect.start.y
                 );
 
-                const sortedIds = new Uint32Array(new Set(pick)).sort();
-                events.fire('edit.add', new SelectOp(splat, op, sortedIds));
+                if ((events.invoke('selection.footprint') as number) === 0) {
+                    await runVisibleCentersSelect(splat, op, new Set(pick), {
+                        rect: { x1: rect.start.x, y1: rect.start.y, x2: rect.end.x, y2: rect.end.y }
+                    });
+                } else {
+                    const sortedIds = new Uint32Array(new Set(pick)).sort();
+                    events.fire('edit.add', new SelectOp(splat, op, sortedIds));
+                }
             }
         }
     });
@@ -447,10 +597,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     let maskTexture: Texture = null;
 
     events.function('select.byMask', async (op: 'add'|'remove'|'set'|'intersect', canvas: HTMLCanvasElement, context: CanvasRenderingContext2D) => {
-        const mode = events.invoke('selection.mode');
+        const method = selectionMethod();
 
         for (const splat of selectedSplats()) {
-            if (mode === 'through') {
+            if (method === 'centers') {
                 // create mask texture
                 if (!maskTexture || maskTexture.width !== canvas.width || maskTexture.height !== canvas.height) {
                     if (maskTexture) {
@@ -463,7 +613,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 await runSelectIntersect(splat, op, {
                     mask: maskTexture
                 });
-            } else if (mode === 'surface') {
+            } else if (method === 'footprint') {
+                await runFootprintSelect(splat, op, maskRegion(context, canvas.width, canvas.height));
+            } else {
                 const mask = context.getImageData(0, 0, canvas.width, canvas.height);
 
                 // calculate mask bound so we limit pixel operations
@@ -513,18 +665,31 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     }
                 }
 
-                const sortedIds = new Uint32Array(selected).sort();
-                events.fire('edit.add', new SelectOp(splat, op, sortedIds));
+                if ((events.invoke('selection.footprint') as number) === 0) {
+                    // create mask texture
+                    if (!maskTexture || maskTexture.width !== canvas.width || maskTexture.height !== canvas.height) {
+                        if (maskTexture) {
+                            maskTexture.destroy();
+                        }
+                        maskTexture = new Texture(scene.graphicsDevice);
+                    }
+                    maskTexture.setSource(canvas);
+
+                    await runVisibleCentersSelect(splat, op, selected, { mask: maskTexture });
+                } else {
+                    const sortedIds = new Uint32Array(selected).sort();
+                    events.fire('edit.add', new SelectOp(splat, op, sortedIds));
+                }
             }
         }
     });
 
     events.function('select.point', async (op: 'add'|'remove'|'set'|'intersect', point: { x: number, y: number }) => {
         const { width, height } = scene.targetSize;
-        const mode = events.invoke('selection.mode');
+        const method = selectionMethod();
 
         for (const splat of selectedSplats()) {
-            if (mode === 'through') {
+            if (method === 'centers') {
                 await runSelectIntersect(splat, op, {
                     rect: {
                         x1: point.x,
@@ -533,7 +698,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                         y2: point.y + 1 / height
                     }
                 });
-            } else if (mode === 'surface') {
+            } else if (method === 'footprint') {
+                await runFootprintSelect(splat, op, rectRegion(
+                    point.x, point.y, point.x + 1 / width, point.y + 1 / height));
+            } else {
                 scene.camera.pickPrep(splat, op);
 
                 // Use normalized coordinates with minimal size for single pixel pick
@@ -691,13 +859,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     let showCenters = false;
     let showRings = false;
     let ringSize = 4;
-    let ringsUseGaussianColor = true;
 
     events.function('view.gaussians', () => showGaussians);
     events.function('view.centers', () => showCenters);
     events.function('view.rings', () => showRings);
     events.function('view.ringSize', () => ringSize);
-    events.function('view.ringsUseGaussianColor', () => ringsUseGaussianColor);
 
     events.on('view.setGaussians', (value: boolean) => {
         if (value !== showGaussians) {
@@ -727,30 +893,61 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     });
 
-    events.on('view.setRingsUseGaussianColor', (value: boolean) => {
-        if (value !== ringsUseGaussianColor) {
-            ringsUseGaussianColor = value;
-            events.fire('view.ringsUseGaussianColor', value);
+    // per-surface colour blend weights. colorBlend mixes the base colour from
+    // the gaussian's own colour (0) toward the flat unselected colour (1);
+    // selectionBlend mixes a selected splat from that base toward the
+    // selection colour
+    const blends: [name: string, value: number][] = [
+        ['splatsColorBlend', 0],
+        ['splatsSelectionBlend', 1],
+        ['centersColorBlend', 1],
+        ['centersSelectionBlend', 1],
+        ['ringsColorBlend', 0],
+        ['ringsSelectionBlend', 1]
+    ];
+    blends.forEach(([name, initial]) => {
+        let value = initial;
+        const setEvent = `view.set${name[0].toUpperCase()}${name.slice(1)}`;
+        events.function(`view.${name}`, () => value);
+        events.on(setEvent, (next: number) => {
+            if (next !== value) {
+                value = next;
+                events.fire(`view.${name}`, next);
+            }
+        });
+    });
+
+    // selection controls: depth on = the per-pixel id pick (frontmost wins),
+    // depth off = through all layers; footprint scales how much of each splat's
+    // projected ellipse counts, from its center point (0) to the full footprint (1)
+
+    let selectionUseDepth = false;
+    let selectionFootprint = 0;
+
+    events.function('selection.useDepth', () => selectionUseDepth);
+
+    events.on('selection.setUseDepth', (value: boolean) => {
+        if (value !== selectionUseDepth) {
+            selectionUseDepth = value;
+            events.fire('selection.useDepth', value);
         }
     });
 
-    // selection mode
+    events.on('selection.toggleUseDepth', () => {
+        events.fire('selection.setUseDepth', !selectionUseDepth);
+    });
 
-    let selectionMode: 'surface' | 'through' = 'through';
+    events.function('selection.footprint', () => selectionFootprint);
 
-    const setSelectionMode = (mode: 'surface' | 'through') => {
-        if (mode !== selectionMode) {
-            selectionMode = mode;
-            events.fire('selection.mode', mode);
+    events.on('selection.setFootprint', (value: number) => {
+        if (value !== selectionFootprint) {
+            selectionFootprint = value;
+            events.fire('selection.footprint', value);
         }
-    };
+    });
 
-    events.function('selection.mode', () => selectionMode);
-
-    events.on('selection.setMode', setSelectionMode);
-
-    events.on('selection.toggleMode', () => {
-        setSelectionMode(selectionMode === 'surface' ? 'through' : 'surface');
+    events.on('selection.toggleFootprint', () => {
+        events.fire('selection.setFootprint', selectionFootprint > 0 ? 0 : 1);
     });
 
     // camera control mode (orbit/fly)
@@ -930,14 +1127,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             perfOverlay = value;
             events.fire('view.perfOverlay', value);
         }
-    });
-
-    // centers gaussian color toggle
-    let centersUseGaussianColor = false;
-    events.function('view.centersUseGaussianColor', () => centersUseGaussianColor);
-    events.on('view.setCentersUseGaussianColor', (value: boolean) => {
-        centersUseGaussianColor = value;
-        events.fire('view.centersUseGaussianColor', value);
     });
 
     events.function('camera.getPose', () => {

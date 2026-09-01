@@ -44,7 +44,9 @@ import {
 } from 'playcanvas';
 
 import { createGradeTerms, gradeRows, gradeTerms, type GradeParams } from './color-grade';
+import { maskByteSize } from './data-processor/histogram-config';
 import type { Scene } from './scene';
+import { footprintIntersect } from './shaders/footprint-intersect';
 import { projectedSplatIndirectArgs } from './shaders/projected-splat-indirect-args';
 import { projectedSplatProjector } from './shaders/projected-splat-projector';
 import { fragmentShader, vertexShader } from './shaders/projected-splat-shader';
@@ -148,6 +150,9 @@ class ProjectedSplatRenderer {
     // draw args, the sort's element count and the vertex shader's bounds check
     private splatCounter: StorageBuffer | null = null;
     private argsCompute: Compute | null = null;
+    private footprintCompute: Compute | null = null;
+    private footprintOutput: StorageBuffer | null = null;
+    private footprintIntervals: StorageBuffer | null = null;
     // indirect draw slot claimed by the last rendered frame. Draw commands are
     // bound per frame, so the pick passes - which render on user input, outside a
     // frame - have to re-arm them from the same slot
@@ -195,12 +200,12 @@ class ProjectedSplatRenderer {
         this.material.setParameter('showSelectedGaussians', 0);
         this.material.setParameter('ringSize', 0);
         this.material.setParameter('ringSelectionOnly', 0);
-        this.material.setParameter('ringsUseGaussianColor', 1);
         this.material.setParameter('ringColor', [0, 0, 0, 0]);
         this.material.setParameter('selectedRingColor', [0, 0, 0, 0]);
         this.material.setParameter('ringsBase', 0);
         this.material.setParameter('ringsCount', 0);
         this.material.setParameter('pickMode', 0);
+        this.material.setParameter('pickFootprint', 1);
         this.material.setParameter('cameraParams', [0, 1, 0, 0]);
         this.material.update();
 
@@ -277,6 +282,12 @@ class ProjectedSplatRenderer {
         this.material.setParameter('pickCount', placement?.count ?? 0);
         this.material.setParameter('pickOp', pickOp);
         this.material.setParameter('pickMode', depth ? 1 : 0);
+        // id picks select by the footprint value when it is fractional. At 0
+        // (centers mode) the id pass is the full-size occlusion surface for the
+        // visibility compute, and depth estimation always uses true footprints,
+        // so both render at 1
+        const footprint = (this.scene.events.invoke('selection.footprint') as number) ?? 1;
+        this.material.setParameter('pickFootprint', depth || footprint === 0 ? 1 : footprint);
     }
 
     finishPick() {
@@ -284,6 +295,7 @@ class ProjectedSplatRenderer {
         this.material.setParameter('pickCount', this.capacity);
         this.material.setParameter('pickOp', 2);
         this.material.setParameter('pickMode', 0);
+        this.material.setParameter('pickFootprint', 1);
     }
 
     // Switch between the default sorted premultiplied-alpha renderer and the
@@ -345,6 +357,7 @@ class ProjectedSplatRenderer {
             new UniformFormat('colorRow1', UNIFORMTYPE_VEC4),
             new UniformFormat('colorRow2', UNIFORMTYPE_VEC4),
             new UniformFormat('selectedColor', UNIFORMTYPE_VEC4),
+            new UniformFormat('unselectedColor', UNIFORMTYPE_VEC4),
             new UniformFormat('lockedColor', UNIFORMTYPE_VEC4),
             new UniformFormat('visible', UNIFORMTYPE_UINT),
             new UniformFormat('selectionEnabled', UNIFORMTYPE_UINT),
@@ -413,6 +426,97 @@ class ProjectedSplatRenderer {
             this.argsCompute = new Compute(this.device, shader, 'ProjectedSplatIndirectArgs');
         }
         return this.argsCompute;
+    }
+
+    private getFootprintCompute() {
+        if (!this.footprintCompute) {
+            const uniformBufferFormat = new UniformBufferFormat(this.device, [
+                new UniformFormat('cacheWidth', UNIFORMTYPE_UINT),
+                new UniformFormat('viewport', UNIFORMTYPE_VEC2),
+                new UniformFormat('entryBase', UNIFORMTYPE_UINT),
+                new UniformFormat('entryCount', UNIFORMTYPE_UINT),
+                new UniformFormat('regionY0', UNIFORMTYPE_INT),
+                new UniformFormat('regionY1', UNIFORMTYPE_INT),
+                new UniformFormat('footprint', UNIFORMTYPE_FLOAT),
+                new UniformFormat('outputWords', UNIFORMTYPE_UINT)
+            ]);
+            const bindGroupFormat = new BindGroupFormat(this.device, [
+                new BindStorageBufferFormat('result', SHADERSTAGE_COMPUTE),
+                new BindStorageBufferFormat('compactEntries', SHADERSTAGE_COMPUTE, true),
+                new BindStorageBufferFormat('splatCounter', SHADERSTAGE_COMPUTE, true),
+                new BindStorageBufferFormat('intervals', SHADERSTAGE_COMPUTE, true),
+                new BindTextureFormat('cacheA', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false),
+                new BindTextureFormat('cacheB', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false),
+                new BindUniformBufferFormat('uniforms', SHADERSTAGE_COMPUTE)
+            ]);
+            const shader = new Shader(this.device, {
+                name: 'FootprintIntersect',
+                shaderLanguage: SHADERLANGUAGE_WGSL,
+                cshader: footprintIntersect,
+                computeBindGroupFormat: bindGroupFormat,
+                computeUniformBufferFormats: { uniforms: uniformBufferFormat }
+            } as any);
+            this.footprintCompute = new Compute(this.device, shader, 'FootprintIntersect');
+        }
+        return this.footprintCompute;
+    }
+
+    // Through-mode footprint selection: test every projected splat's screen
+    // ellipse, scaled by the footprint factor, against the gesture region
+    // (per-row x-intervals in render-target pixels). Returns the per-instance
+    // byte mask consumed by SelectOp. No depth test - selects through all
+    // layers, like the centers intersect, but by footprint instead of center.
+    async footprintIntersect(
+        splat: Splat,
+        region: { y0: number, y1: number, intervals: Uint32Array },
+        footprint: number
+    ): Promise<Uint8Array | null> {
+        const placement = this.placements.find(item => item.splat === splat);
+        if (!placement) {
+            return null;
+        }
+
+        // re-project so the cache matches the current camera even if no frame
+        // rendered since it moved
+        this.renderSortedForPick();
+
+        const byteSize = maskByteSize(placement.count);
+        if (!this.footprintOutput || this.footprintOutput.byteSize !== byteSize) {
+            this.footprintOutput?.destroy();
+            this.footprintOutput = new StorageBuffer(
+                this.device, byteSize, BUFFERUSAGE_COPY_DST | BUFFERUSAGE_COPY_SRC);
+        }
+        this.footprintOutput.clear();
+
+        if (!this.footprintIntervals || this.footprintIntervals.byteSize < region.intervals.byteLength) {
+            this.footprintIntervals?.destroy();
+            this.footprintIntervals = new StorageBuffer(
+                this.device, region.intervals.byteLength, BUFFERUSAGE_COPY_DST);
+        }
+        this.footprintIntervals.write(0, region.intervals, 0, region.intervals.length);
+
+        const compute = this.getFootprintCompute();
+        compute.setParameter('result', this.footprintOutput);
+        compute.setParameter('compactEntries', this.compactEntries);
+        compute.setParameter('splatCounter', this.splatCounter);
+        compute.setParameter('intervals', this.footprintIntervals);
+        compute.setParameter('cacheA', this.cacheA);
+        compute.setParameter('cacheB', this.cacheB);
+        compute.setParameter('cacheWidth', this.cacheWidth);
+        compute.setParameter('viewport', [this.scene.targetSize.width, this.scene.targetSize.height]);
+        compute.setParameter('entryBase', placement.entryBase);
+        compute.setParameter('entryCount', placement.count);
+        compute.setParameter('regionY0', region.y0);
+        compute.setParameter('regionY1', region.y1);
+        compute.setParameter('footprint', footprint);
+        compute.setParameter('outputWords', byteSize / 4);
+        Compute.calcDispatchSize(Math.ceil(this.capacity / WORKGROUP_SIZE), this.dispatchSize);
+        compute.setupDispatch(this.dispatchSize.x, this.dispatchSize.y);
+        this.device.computeDispatch([compute], 'footprintIntersect');
+
+        const readback = this.footprintOutput.read(0, byteSize, null, false);
+        (this.device as any).submit();
+        return await readback as Uint8Array;
     }
 
     private rebuildLayout() {
@@ -601,7 +705,13 @@ class ProjectedSplatRenderer {
                 selectedColor.r,
                 selectedColor.g,
                 selectedColor.b,
-                selectedColor.a * splat.selectionAlpha
+                events.invoke('view.splatsSelectionBlend') * splat.selectionAlpha
+            ] : [0, 0, 0, 0]);
+            compute.setParameter('unselectedColor', selectionEnabled && !pending ? [
+                unselectedColor.r,
+                unselectedColor.g,
+                unselectedColor.b,
+                events.invoke('view.splatsColorBlend')
             ] : [0, 0, 0, 0]);
             compute.setParameter('lockedColor', [lockedColor.r, lockedColor.g, lockedColor.b, lockedColor.a]);
             compute.setParameter('visible', splat.visible ? 1 : 0);
@@ -673,18 +783,20 @@ class ProjectedSplatRenderer {
         const showRings = showAllRings || showSelectedRings;
         this.material.setParameter('ringSize', showRings ? events.invoke('view.ringSize') * 0.01 : 0);
         this.material.setParameter('ringSelectionOnly', showAllRings ? 0 : 1);
-        this.material.setParameter('ringsUseGaussianColor', events.invoke('view.ringsUseGaussianColor') ? 1 : 0);
+        // the ring colours' alpha channels carry blend weights: unselected
+        // blends the ring band from gaussian colour toward the flat unselected
+        // colour, selected blends from that result toward the selection colour
         this.material.setParameter('ringColor', [
             unselectedColor.r,
             unselectedColor.g,
             unselectedColor.b,
-            unselectedColor.a
+            events.invoke('view.ringsColorBlend')
         ]);
         this.material.setParameter('selectedRingColor', [
             selectedColor.r,
             selectedColor.g,
             selectedColor.b,
-            events.invoke('view.selectionRings') ? selectedColor.a * (selectedSplat?.selectionAlpha ?? 1) : 0
+            events.invoke('view.selectionRings') ? events.invoke('view.ringsSelectionBlend') * (selectedSplat?.selectionAlpha ?? 1) : 0
         ]);
         this.material.setParameter('ringsBase', ringsBase);
         this.material.setParameter('ringsCount', ringsCount);

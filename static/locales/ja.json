@@ -92,6 +92,8 @@
     "panel.display.size": "サイズ",
     "panel.display.thickness": "太さ",
     "panel.display.use-gaussian-colors": "ガウシアンカラーを使用",
+    "panel.display.unselected-blend": "非選択ティント",
+    "panel.display.selection-blend": "選択ティント",
     "panel.display.section-selection": "選択",
     "panel.display.selection-color": "選択色",
     "panel.display.selection-centers": "選択した中心",
@@ -324,6 +326,8 @@
     "tooltip.bottom-toolbar.undo": "元に戻す",
     "tooltip.bottom-toolbar.redo": "やり直し",
     "tooltip.bottom-toolbar.selection-mode": "選択モード",
+    "tooltip.bottom-toolbar.use-depth": "深度",
+    "tooltip.bottom-toolbar.footprint": "フットプリント",
     "tooltip.bottom-toolbar.rectangle-selection": "四角形選択",
     "tooltip.bottom-toolbar.lasso-selection": "なげなわ選択",
     "tooltip.bottom-toolbar.polygon-selection": "ポリゴン選択",
@@ -358,5 +362,7 @@
     "tooltip.splat-data.on-screen-only": "カメラに映っているスプラットのみをヒストグラムに含めます。画面外のスプラットは除外されます。",
     "tooltip.splat-data.log-counts": "各ビン内の値の数を対数スケールで表示し、小さいカウントと大きいカウントの両方を見やすくします。",
     "tooltip.splat-data.log-bins": "値のビンを対数間隔で配置し、広い範囲にわたるグループを識別しやすくします。",
-    "tooltip.splat-data.show-all": "未加工のDC係数や球面調和関数係数を含む、すべてのスプラットプロパティをリストに表示します。"
+    "tooltip.splat-data.show-all": "未加工のDC係数や球面調和関数係数を含む、すべてのスプラットプロパティをリストに表示します。",
+    "popup.shortcuts.toggle-depth": "深度選択の切り替え",
+    "popup.shortcuts.toggle-footprint": "フットプリントの切り替え"
 }

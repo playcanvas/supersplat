@@ -92,6 +92,8 @@
     "panel.display.size": "Taille",
     "panel.display.thickness": "Épaisseur",
     "panel.display.use-gaussian-colors": "Utiliser les couleurs gaussiennes",
+    "panel.display.unselected-blend": "Teinte non sélectionnée",
+    "panel.display.selection-blend": "Teinte de sélection",
     "panel.display.section-selection": "Sélection",
     "panel.display.selection-color": "Couleur de sélection",
     "panel.display.selection-centers": "Centres sélectionnés",
@@ -324,6 +326,8 @@
     "tooltip.bottom-toolbar.undo": "Annuler",
     "tooltip.bottom-toolbar.redo": "Rétablir",
     "tooltip.bottom-toolbar.selection-mode": "Mode de sélection",
+    "tooltip.bottom-toolbar.use-depth": "Profondeur",
+    "tooltip.bottom-toolbar.footprint": "Empreinte",
     "tooltip.bottom-toolbar.rectangle-selection": "Sélection avec rectangle",
     "tooltip.bottom-toolbar.lasso-selection": "Sélection avec lasso",
     "tooltip.bottom-toolbar.polygon-selection": "Sélection avec polygone",
@@ -358,5 +362,7 @@
     "tooltip.splat-data.on-screen-only": "Ne compter que les splats visibles dans la caméra. Les splats hors écran sont exclus de l'histogramme.",
     "tooltip.splat-data.log-counts": "Mettre les comptages de l'histogramme à l'échelle logarithmique afin que les petits restent visibles à côté des grands.",
     "tooltip.splat-data.log-bins": "Répartir les classes de valeurs logarithmiquement afin de distinguer les groupes sur de grandes plages.",
-    "tooltip.splat-data.show-all": "Afficher toutes les propriétés des splats dans la liste, y compris les coefficients DC bruts et harmoniques sphériques."
+    "tooltip.splat-data.show-all": "Afficher toutes les propriétés des splats dans la liste, y compris les coefficients DC bruts et harmoniques sphériques.",
+    "popup.shortcuts.toggle-depth": "Basculer la sélection en profondeur",
+    "popup.shortcuts.toggle-footprint": "Basculer l'empreinte de sélection"
 }

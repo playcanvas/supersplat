@@ -92,6 +92,8 @@
     "panel.display.size": "Размер",
     "panel.display.thickness": "Толщина",
     "panel.display.use-gaussian-colors": "Использовать цвета гауссиан",
+    "panel.display.unselected-blend": "Оттенок невыбранных",
+    "panel.display.selection-blend": "Оттенок выделения",
     "panel.display.section-selection": "Выделение",
     "panel.display.selection-color": "Цвет выделения",
     "panel.display.selection-centers": "Центры выделения",
@@ -324,6 +326,8 @@
     "tooltip.bottom-toolbar.undo": "Отменить",
     "tooltip.bottom-toolbar.redo": "Повторить",
     "tooltip.bottom-toolbar.selection-mode": "Режим выделения",
+    "tooltip.bottom-toolbar.use-depth": "Глубина",
+    "tooltip.bottom-toolbar.footprint": "Отпечаток",
     "tooltip.bottom-toolbar.rectangle-selection": "Прямоугольное выделение",
     "tooltip.bottom-toolbar.lasso-selection": "Выделение лассо",
     "tooltip.bottom-toolbar.polygon-selection": "Выделение полигоном",
@@ -358,5 +362,7 @@
     "tooltip.splat-data.on-screen-only": "Учитывать только сплаты, видимые в поле зрения камеры. Сплаты вне экрана исключаются из гистограммы.",
     "tooltip.splat-data.log-counts": "Масштабировать количества в интервалах гистограммы логарифмически, чтобы малые количества были видны рядом с большими.",
     "tooltip.splat-data.log-bins": "Распределять интервалы значений логарифмически, чтобы различать группы в широких диапазонах.",
-    "tooltip.splat-data.show-all": "Показать все свойства сплатов в списке, включая необработанные коэффициенты DC и сферических гармоник."
+    "tooltip.splat-data.show-all": "Показать все свойства сплатов в списке, включая необработанные коэффициенты DC и сферических гармоник.",
+    "popup.shortcuts.toggle-depth": "Переключить выбор по глубине",
+    "popup.shortcuts.toggle-footprint": "Переключить отпечаток выбора"
 }

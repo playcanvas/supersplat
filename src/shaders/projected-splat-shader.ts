@@ -153,7 +153,11 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     output.selectedRingColor = vec4f(prepareOutputFromGamma(selectedRingRgb, clip.w), 1.0);
     output.gaussianFlags = flags;
     output.gaussianId = entry - uniform.pickBase;
-    output.gaussianDepth = clip.w;
+    // linear view depth for the depth pick (fragment normalizes it by near/far).
+    // clip.w carries this for perspective but is a constant 1 in ortho, which
+    // collapsed every ortho pick to the same depth; the stored view depth works
+    // for both (it equals clip.w under perspective).
+    output.gaussianDepth = depth;
     return output;
 }
 `;

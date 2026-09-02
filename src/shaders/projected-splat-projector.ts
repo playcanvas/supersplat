@@ -114,7 +114,10 @@ struct ProjectorUniforms {
     visible: u32,
     selectionEnabled: u32,
     pickOp: i32,
-    minPixelSize: f32
+    minPixelSize: f32,
+    // camera clip planes, used to linearly normalize view depth for the sort key
+    near: f32,
+    far: f32
 }
 
 // compaction output: surviving splats are appended to a dense list, so the sort
@@ -282,7 +285,16 @@ fn main(
         return;
     }
 
-    let direction = normalize(vec2f(cov01, lambda1 - cov00));
+    // principal-axis direction. When the projected covariance is (near-)circular
+    // the eigenvector is undefined and vec2f(cov01, lambda1 - cov00) collapses to
+    // zero, so normalize() would yield NaN and poison the whole quad. Isotropic
+    // gaussians project to exact circles under an orthographic camera (the
+    // perspective Jacobian never breaks the symmetry), so this is the common case
+    // for spherical skybox splats, not a corner case - fall back to an arbitrary
+    // axis, which is correct for a circle.
+    let eigenVec = vec2f(cov01, lambda1 - cov00);
+    let eigenLen = length(eigenVec);
+    let direction = select(vec2f(1.0, 0.0), eigenVec / eigenLen, eigenLen > 1e-9);
     let axis1 = 2.0 * min(sqrt(2.0 * lambda1), maxRadius) * direction;
     let len2 = 2.0 * min(sqrt(2.0 * lambda2), maxRadius);
     let axis2 = len2 * vec2f(direction.y, -direction.x);
@@ -360,7 +372,14 @@ fn main(
     // survivor: claim a slot in the compact list. Only surviving threads contend,
     // which is 0.1-10% of the dispatch in practice
     let slot = atomicAdd(&splatCounter[0], 1u);
-    sortKeys[slot] = (~bitcast<u32>(depth)) >> 12u;
+    // depth sort key, back-to-front: linearly normalize view depth to [0,1] over
+    // the clip range and invert so the farthest splat gets the smallest key and
+    // composites first. Linear in both projections (ortho's clip.z is this same
+    // ratio; perspective's clip.z would be hyperbolic, so we normalize the raw
+    // view depth instead). near may be negative in ortho (the camera sits inside
+    // the bound); the subtraction handles that with no sign special-case.
+    let normDepth = (depth - uniforms.near) / (uniforms.far - uniforms.near);
+    sortKeys[slot] = u32(saturate(1.0 - normDepth) * f32((1u << 20u) - 1u));
     compactEntries[slot] = entry;
 }
 `;

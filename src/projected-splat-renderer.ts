@@ -364,7 +364,9 @@ class ProjectedSplatRenderer {
             new UniformFormat('visible', UNIFORMTYPE_UINT),
             new UniformFormat('selectionEnabled', UNIFORMTYPE_UINT),
             new UniformFormat('pickOp', UNIFORMTYPE_INT),
-            new UniformFormat('minPixelSize', UNIFORMTYPE_FLOAT)
+            new UniformFormat('minPixelSize', UNIFORMTYPE_FLOAT),
+            new UniformFormat('near', UNIFORMTYPE_FLOAT),
+            new UniformFormat('far', UNIFORMTYPE_FLOAT)
         ]);
         const bindGroupFormat = new BindGroupFormat(this.device, [
             new BindStorageBufferFormat('sortKeys', SHADERSTAGE_COMPUTE),
@@ -710,6 +712,8 @@ class ProjectedSplatRenderer {
             compute.setParameter('selectionEnabled', selectionEnabled ? 1 : 0);
             compute.setParameter('pickOp', -1);
             compute.setParameter('minPixelSize', minPixelSize);
+            compute.setParameter('near', cameraComponent.nearClip);
+            compute.setParameter('far', cameraComponent.farClip);
 
             const workgroups = Math.ceil(placement.entryCapacity / WORKGROUP_SIZE);
             Compute.calcDispatchSize(workgroups, this.dispatchSize);

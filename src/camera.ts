@@ -776,10 +776,14 @@ class Camera extends Element {
         const position = new Vec3();
         position.copy(ray.origin).add(vec.copy(ray.direction).mulScalar(t));
 
-        // distance from the camera to the picked point, always positive: a
-        // behind-camera ortho splat has negative view depth, and passing that
-        // straight to setDistance() would clamp to minZoom and collapse the view.
-        const distance = position.distance(cameraPos);
+        // dolly distance for the caller: the along-view distance to the surface,
+        // |linearDepth| / cosAngle. abs keeps behind-camera ortho depths positive
+        // (a negative distance would clamp to minZoom and collapse the view), and
+        // dividing by cosAngle reproduces perspective's ray distance unchanged.
+        // Deliberately the along-view distance, not position.distance(cameraPos):
+        // the latter includes the lateral offset for an off-axis ortho pick, which
+        // would couple orthoHeight to where in the viewport the click landed.
+        const distance = Math.abs(linearDepth) / cosAngle;
 
         return {
             splat: closestSplat,

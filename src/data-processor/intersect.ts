@@ -334,9 +334,11 @@ class Intersect {
         const box = (options as BoxOptions).box;
         const mode = volumeBrush ? 4 : mask ? 0 : rect ? 1 : sphere ? 2 : 3;
 
+        // grow-only: the shader reads pathCount entries, so a larger retained
+        // buffer avoids reallocating on every stroke's different sample count
         const points = volumeBrush?.points;
         const pathByteSize = Math.max(16, points?.byteLength ?? 0);
-        if (this.pathPoints.byteSize !== pathByteSize) {
+        if (this.pathPoints.byteSize < pathByteSize) {
             this.pathPoints.destroy();
             this.pathPoints = new StorageBuffer(this.device, pathByteSize, BUFFERUSAGE_COPY_DST);
         }

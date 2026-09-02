@@ -748,6 +748,8 @@ class Camera extends Element {
         // behind) the near plane for ortho - so each origin's own view depth is
         // measured here rather than assuming near.
         const cameraPos = this.mainCamera.getPosition().clone();
+        const cameraRot = this.mainCamera.getRotation().clone();
+        const orthoHeight = this.camera.orthoHeight;
         const forward = this.mainCamera.forward.clone();
         const { near, far } = this;
         const rays = points.map(({ x, y }) => {
@@ -760,16 +762,31 @@ class Camera extends Element {
             };
         });
 
-        // the depth pass reuses the projected cache but composites front to back,
-        // so it needs a sorted order under it - which the last rendered frame only
-        // provides if the scene had settled
-        scene.projectedSplatRenderer.renderSortedForPick();
+        // each depth pass (and the sorted projection it composites through -
+        // the pass reuses the projected cache front to back, so it needs a
+        // sorted order under it) renders with the camera swapped to the
+        // snapshotted pose and restored before yielding: the loop awaits
+        // between splats, and a camera moved mid-batch would otherwise render
+        // later passes through a different camera than the rays above
+        const renderDepthPass = (splat: Splat) => {
+            const livePos = this.mainCamera.getPosition().clone();
+            const liveRot = this.mainCamera.getRotation().clone();
+            const liveOrthoHeight = this.camera.orthoHeight;
+            this.mainCamera.setPosition(cameraPos);
+            this.mainCamera.setRotation(cameraRot);
+            this.camera.orthoHeight = orthoHeight;
+            scene.projectedSplatRenderer.renderSortedForPick();
+            this.picker.prepareDepth(splat);
+            this.mainCamera.setPosition(livePos);
+            this.mainCamera.setRotation(liveRot);
+            this.camera.orthoHeight = liveOrthoHeight;
+        };
 
         // Find the splat with the smallest depth at each screen position
         for (let i = 0; i < splats.length; ++i) {
             const splat = splats[i];
 
-            this.picker.prepareDepth(splat);
+            renderDepthPass(splat);
             const depths = await this.picker.readDepths(points);
             for (let j = 0; j < depths.length; ++j) {
                 const depth = depths[j];

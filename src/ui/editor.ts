@@ -76,7 +76,8 @@ class EditorUI {
         // app label
         const appLabel = new Label({
             id: 'app-label',
-            text: `SUPERSPLAT v${version}`
+            unsafe: true,
+            text: `SUPERSPLAT <span>v${version}</span>`
         });
 
         // canvas container

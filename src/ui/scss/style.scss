@@ -104,6 +104,10 @@ body {
     bottom: 20px;
     color: $text-primary;
     text-shadow: 1px 1px 4px black;
+
+    span {
+        color: $clr-hilight;
+    }
 }
 
 #startup-error {

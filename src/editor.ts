@@ -594,22 +594,35 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     let maskTexture: Texture = null;
 
+    // the texture upload from setSource is deferred until the queued intersect
+    // dispatches, so the stroke is first copied synchronously into a private
+    // canvas that later gestures can't repaint
+    const maskSnapshot = document.createElement('canvas');
+    const maskSnapshotContext = maskSnapshot.getContext('2d');
+
     const updateMaskTexture = (canvas: HTMLCanvasElement) => {
+        maskSnapshot.width = canvas.width;
+        maskSnapshot.height = canvas.height;
+        maskSnapshotContext.drawImage(canvas, 0, 0);
+
         if (!maskTexture || maskTexture.width !== canvas.width || maskTexture.height !== canvas.height) {
             maskTexture?.destroy();
             maskTexture = new Texture(scene.graphicsDevice);
         }
-        maskTexture.setSource(canvas);
+        maskTexture.setSource(maskSnapshot);
         return maskTexture;
     };
 
     events.function('select.byMask', async (op: 'add'|'remove'|'set'|'intersect', canvas: HTMLCanvasElement, context: CanvasRenderingContext2D) => {
         const method = selectionMethod();
 
+        // snapshot the stroke before yielding
+        const mask = method === 'centers' ? updateMaskTexture(canvas) : null;
+
         for (const splat of selectedSplats()) {
             if (method === 'centers') {
                 await runSelectIntersect(splat, op, {
-                    mask: updateMaskTexture(canvas)
+                    mask
                 });
             } else if (method === 'footprint') {
                 await runFootprintSelect(splat, op, maskRegion(context, canvas.width, canvas.height));
@@ -683,6 +696,17 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         canvas: HTMLCanvasElement
     ) => {
         const splats = selectedSplats();
+
+        // snapshot everything gesture-dependent before yielding: the shared
+        // stroke canvas may be repainted by another tool, the camera moved and
+        // the footprint toggled while the depth readbacks are in flight
+        const mask = updateMaskTexture(canvas);
+        const projection = scene.camera.camera.projectionMatrix.clone();
+        const view = scene.camera.camera.viewMatrix.clone();
+        const footprint = events.invoke('selection.footprint') as number;
+        const pixelScale = scene.camera.worldSizePerPixel(1);
+        const ortho = scene.camera.ortho;
+
         const hits = await scene.camera.intersectMany(points, splats);
         const path: number[] = [];
         let previous: { position: Vec3, radius: number } | null = null;
@@ -694,17 +718,16 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 continue;
             }
 
-            const radius = points[i].radius * scene.camera.worldSizePerPixel(hit.depth);
+            const radius = points[i].radius * pixelScale * (ortho ? 1 : hit.depth);
             const startsPath = !previous || previous.position.distance(hit.position) > Math.max(previous.radius, radius) * 2;
             path.push(hit.position.x, hit.position.y, hit.position.z, startsPath ? -radius : radius);
             previous = { position: hit.position, radius };
         }
 
-        const mask = updateMaskTexture(canvas);
         const pathPoints = new Float32Array(path);
         for (const splat of splats) {
             await runSelectIntersect(splat, op, {
-                volumeBrush: { points: pathPoints, mask, footprint: events.invoke('selection.footprint') as number }
+                volumeBrush: { points: pathPoints, mask, footprint, projection, view }
             });
         }
     });

@@ -740,6 +740,26 @@ class Camera extends Element {
         const closestDepths = points.map(() => Infinity);
         const closestSplats: (Splat | null)[] = new Array(points.length).fill(null);
 
+        // snapshot the rays and camera frame before the first asynchronous
+        // readback: the camera can move while results stream back (wheel,
+        // right-drag, fly keys), and depths measured now must not be
+        // reconstructed through a later camera. getRay seeds the ray origin
+        // differently per projection - at the camera for perspective, on (just
+        // behind) the near plane for ortho - so each origin's own view depth is
+        // measured here rather than assuming near.
+        const cameraPos = this.mainCamera.getPosition().clone();
+        const forward = this.mainCamera.forward.clone();
+        const { near, far } = this;
+        const rays = points.map(({ x, y }) => {
+            this.getRay(x * scene.canvas.clientWidth, y * scene.canvas.clientHeight, ray);
+            return {
+                origin: ray.origin.clone(),
+                direction: ray.direction.clone(),
+                cosAngle: ray.direction.dot(forward),
+                originDepth: vecb.sub2(ray.origin, cameraPos).dot(forward)
+            };
+        });
+
         // the depth pass reuses the projected cache but composites front to back,
         // so it needs a sorted order under it - which the last rendered frame only
         // provides if the scene had settled
@@ -760,29 +780,20 @@ class Camera extends Element {
             }
         }
 
-        const cameraPos = this.mainCamera.getPosition();
-        const forward = this.mainCamera.forward;
-
-        return points.map(({ x, y }, index) => {
+        return points.map((point, index) => {
             const splat = closestSplats[index];
             if (!splat) {
                 return null;
             }
 
             // Convert normalized depth to linear depth
-            const linearDepth = closestDepths[index] * (this.far - this.near) + this.near;
+            const linearDepth = closestDepths[index] * (far - near) + near;
 
-            // Calculate world position from ray and depth. linearDepth is the view
-            // depth from the camera, but getRay seeds the ray origin differently per
-            // projection: at the camera for perspective, on (just behind) the near
-            // plane for ortho. Measure the origin's own view depth and offset by it,
-            // rather than assuming near, so the point lands exactly on the surface.
-            this.getRay(x * scene.canvas.clientWidth, y * scene.canvas.clientHeight, ray);
-            const cosAngle = ray.direction.dot(forward);
-            const originDepth = vecb.sub2(ray.origin, cameraPos).dot(forward);
+            // Calculate world position from the snapshotted ray and view depth
+            const { origin, direction, cosAngle, originDepth } = rays[index];
             const t = (linearDepth - originDepth) / cosAngle;
             const position = new Vec3();
-            position.copy(ray.origin).add(vec.copy(ray.direction).mulScalar(t));
+            position.copy(origin).add(vec.copy(direction).mulScalar(t));
 
             // dolly distance for the caller: the along-view distance to the surface,
             // |linearDepth| / cosAngle. abs keeps behind-camera ortho depths positive

@@ -107,9 +107,15 @@ class VolumeBrushSelection {
         };
 
         const pointerdown = (e: PointerEvent) => {
-            if (!mask.busy && dragId === undefined && (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary)) {
+            if (dragId === undefined && (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary)) {
                 e.preventDefault();
                 e.stopPropagation();
+
+                // a stroke attempted while the previous selection is still
+                // pending is swallowed rather than left to orbit the camera
+                if (mask.busy) {
+                    return;
+                }
 
                 dragId = e.pointerId;
                 parent.setPointerCapture(dragId);

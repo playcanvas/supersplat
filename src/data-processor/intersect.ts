@@ -59,8 +59,10 @@ type VolumeBrushOptions = {
     // starts a new subpath while preserving the point's sphere. At footprint 0
     // the mask limits the selection to splat centers projecting inside the
     // on-screen stroke; otherwise the splat extent is tested against the path
-    // (0 = center point) and the mask is ignored.
-    volumeBrush: { points: Float32Array, mask: Texture, footprint?: number };
+    // (0 = center point) and the mask is ignored. projection/view snapshot the
+    // stroke-time camera so the mask gate isn't evaluated through a camera that
+    // moved while the selection was in flight.
+    volumeBrush: { points: Float32Array, mask: Texture, footprint?: number, projection?: Mat4, view?: Mat4 };
 };
 
 type IntersectOptions = MaskOptions | RectOptions | SphereOptions | BoxOptions | VolumeBrushOptions;
@@ -320,12 +322,12 @@ class Intersect {
             this.output = new StorageBuffer(this.device, byteSize, BUFFERUSAGE_COPY_DST | BUFFERUSAGE_COPY_SRC);
         }
 
+        const volumeBrush = (options as VolumeBrushOptions).volumeBrush;
         const camera = splat.scene.camera.camera;
         const projection = Camera.applyShaderProjectionTransform(
-            camera.projectionMatrix, this.shaderProjection, false, this.device.isWebGPU
+            volumeBrush?.projection ?? camera.projectionMatrix, this.shaderProjection, false, this.device.isWebGPU
         );
-        this.viewProjection.mul2(projection, camera.viewMatrix);
-        const volumeBrush = (options as VolumeBrushOptions).volumeBrush;
+        this.viewProjection.mul2(projection, volumeBrush?.view ?? camera.viewMatrix);
         const mask = (options as MaskOptions).mask ?? volumeBrush?.mask;
         const rect = (options as RectOptions).rect;
         const sphere = (options as SphereOptions).sphere;

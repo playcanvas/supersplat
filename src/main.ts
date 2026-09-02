@@ -235,7 +235,10 @@ const main = async () => {
 
     const mask = {
         canvas: maskCanvas,
-        context: maskContext
+        context: maskContext,
+        // set while an async selection is still consuming the canvas; brush
+        // strokes must not start (and clear it) until then
+        busy: false
     };
 
     // tool manager

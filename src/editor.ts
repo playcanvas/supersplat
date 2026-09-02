@@ -594,22 +594,22 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     let maskTexture: Texture = null;
 
+    const updateMaskTexture = (canvas: HTMLCanvasElement) => {
+        if (!maskTexture || maskTexture.width !== canvas.width || maskTexture.height !== canvas.height) {
+            maskTexture?.destroy();
+            maskTexture = new Texture(scene.graphicsDevice);
+        }
+        maskTexture.setSource(canvas);
+        return maskTexture;
+    };
+
     events.function('select.byMask', async (op: 'add'|'remove'|'set'|'intersect', canvas: HTMLCanvasElement, context: CanvasRenderingContext2D) => {
         const method = selectionMethod();
 
         for (const splat of selectedSplats()) {
             if (method === 'centers') {
-                // create mask texture
-                if (!maskTexture || maskTexture.width !== canvas.width || maskTexture.height !== canvas.height) {
-                    if (maskTexture) {
-                        maskTexture.destroy();
-                    }
-                    maskTexture = new Texture(scene.graphicsDevice);
-                }
-                maskTexture.setSource(canvas);
-
                 await runSelectIntersect(splat, op, {
-                    mask: maskTexture
+                    mask: updateMaskTexture(canvas)
                 });
             } else if (method === 'footprint') {
                 await runFootprintSelect(splat, op, maskRegion(context, canvas.width, canvas.height));
@@ -664,16 +664,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 }
 
                 if ((events.invoke('selection.footprint') as number) === 0) {
-                    // create mask texture
-                    if (!maskTexture || maskTexture.width !== canvas.width || maskTexture.height !== canvas.height) {
-                        if (maskTexture) {
-                            maskTexture.destroy();
-                        }
-                        maskTexture = new Texture(scene.graphicsDevice);
-                    }
-                    maskTexture.setSource(canvas);
-
-                    await runVisibleCentersSelect(splat, op, selected, { mask: maskTexture });
+                    await runVisibleCentersSelect(splat, op, selected, { mask: updateMaskTexture(canvas) });
                 } else {
                     const sortedIds = new Uint32Array(selected).sort();
                     events.fire('edit.add', new SelectOp(splat, op, sortedIds));
@@ -693,8 +684,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     ) => {
         const splats = selectedSplats();
         const hits = await scene.camera.intersectMany(points, splats);
-        const projection = scene.camera.camera.projectionMatrix;
-        const pixelScale = (2 / projection.data[5]) / Math.max(1, scene.canvas.clientHeight);
         const path: number[] = [];
         let previous: { position: Vec3, radius: number } | null = null;
 
@@ -705,25 +694,17 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 continue;
             }
 
-            const radius = points[i].radius * pixelScale * (scene.camera.ortho ? 1 : hit.depth);
+            const radius = points[i].radius * scene.camera.worldSizePerPixel(hit.depth);
             const startsPath = !previous || previous.position.distance(hit.position) > Math.max(previous.radius, radius) * 2;
             path.push(hit.position.x, hit.position.y, hit.position.z, startsPath ? -radius : radius);
             previous = { position: hit.position, radius };
         }
 
-        // create mask texture
-        if (!maskTexture || maskTexture.width !== canvas.width || maskTexture.height !== canvas.height) {
-            if (maskTexture) {
-                maskTexture.destroy();
-            }
-            maskTexture = new Texture(scene.graphicsDevice);
-        }
-        maskTexture.setSource(canvas);
-
+        const mask = updateMaskTexture(canvas);
         const pathPoints = new Float32Array(path);
         for (const splat of splats) {
             await runSelectIntersect(splat, op, {
-                volumeBrush: { points: pathPoints, mask: maskTexture, footprint: events.invoke('selection.footprint') as number }
+                volumeBrush: { points: pathPoints, mask, footprint: events.invoke('selection.footprint') as number }
             });
         }
     });

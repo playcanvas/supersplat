@@ -5,7 +5,7 @@ class BrushSelection {
     activate: () => void;
     deactivate: () => void;
 
-    constructor(events: Events, parent: HTMLElement, mask: { canvas: HTMLCanvasElement, context: CanvasRenderingContext2D }) {
+    constructor(events: Events, parent: HTMLElement, mask: { canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, busy: boolean }) {
         // create svg
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.classList.add('tool-svg', 'hidden');
@@ -24,6 +24,15 @@ class BrushSelection {
 
         const prev = { x: 0, y: 0 };
         let dragId: number | undefined;
+
+        // track the pointer while the tool is inactive too (the tools overlay is
+        // hidden then), so activation places the cursor at the mouse rather than
+        // wherever the previous stroke ended
+        const pointer = { x: 0, y: 0 };
+        window.addEventListener('pointermove', (e: PointerEvent) => {
+            pointer.x = e.clientX;
+            pointer.y = e.clientY;
+        }, { capture: true, passive: true });
 
         const update = (e: PointerEvent) => {
             const x = e.offsetX;
@@ -47,7 +56,7 @@ class BrushSelection {
         };
 
         const pointerdown = (e: PointerEvent) => {
-            if (dragId === undefined && (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary)) {
+            if (!mask.busy && dragId === undefined && (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary)) {
                 e.preventDefault();
                 e.stopPropagation();
 
@@ -95,12 +104,19 @@ class BrushSelection {
 
                 dragEnd();
 
-                await events.invoke(
-                    'select.byMask',
-                    opFromModifiers(e),
-                    canvas,
-                    context
-                );
+                // block new strokes until the async selection has consumed the
+                // shared mask canvas
+                mask.busy = true;
+                try {
+                    await events.invoke(
+                        'select.byMask',
+                        opFromModifiers(e),
+                        canvas,
+                        context
+                    );
+                } finally {
+                    mask.busy = false;
+                }
             }
         };
 
@@ -116,6 +132,9 @@ class BrushSelection {
         this.activate = () => {
             svg.classList.remove('hidden');
             parent.style.display = 'block';
+            const rect = parent.getBoundingClientRect();
+            circle.setAttribute('cx', (pointer.x - rect.left).toString());
+            circle.setAttribute('cy', (pointer.y - rect.top).toString());
             parent.addEventListener('pointerdown', pointerdown);
             parent.addEventListener('pointermove', pointermove);
             parent.addEventListener('pointerup', pointerup);

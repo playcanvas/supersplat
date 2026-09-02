@@ -5,7 +5,7 @@ class VolumeBrushSelection {
     activate: () => void;
     deactivate: () => void;
 
-    constructor(events: Events, parent: HTMLElement, mask: { canvas: HTMLCanvasElement, context: CanvasRenderingContext2D }) {
+    constructor(events: Events, parent: HTMLElement, mask: { canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, busy: boolean }) {
         // create svg
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.classList.add('tool-svg', 'hidden');
@@ -42,6 +42,15 @@ class VolumeBrushSelection {
         const prev = { x: 0, y: 0 };
         let dragId: number | undefined;
         const points: { x: number, y: number, radius: number }[] = [];
+
+        // track the pointer while the tool is inactive too (the tools overlay is
+        // hidden then), so activation places the cursor at the mouse rather than
+        // wherever the previous stroke ended
+        const pointer = { x: 0, y: 0 };
+        window.addEventListener('pointermove', (e: PointerEvent) => {
+            pointer.x = e.clientX;
+            pointer.y = e.clientY;
+        }, { capture: true, passive: true });
 
         // append a stroke sample, interpolating extra samples so consecutive
         // points sit at most a fraction of the brush radius apart
@@ -98,7 +107,7 @@ class VolumeBrushSelection {
         };
 
         const pointerdown = (e: PointerEvent) => {
-            if (dragId === undefined && (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary)) {
+            if (!mask.busy && dragId === undefined && (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary)) {
                 e.preventDefault();
                 e.stopPropagation();
 
@@ -150,16 +159,23 @@ class VolumeBrushSelection {
 
                 dragEnd();
 
-                await events.invoke(
-                    'select.byVolumeBrush',
-                    opFromModifiers(e),
-                    points.map(point => ({
-                        x: point.x / canvas.width,
-                        y: point.y / canvas.height,
-                        radius: point.radius
-                    })),
-                    canvas
-                );
+                // block new strokes until the async selection has consumed the
+                // shared mask canvas and finished its depth picking
+                mask.busy = true;
+                try {
+                    await events.invoke(
+                        'select.byVolumeBrush',
+                        opFromModifiers(e),
+                        points.map(point => ({
+                            x: point.x / canvas.width,
+                            y: point.y / canvas.height,
+                            radius: point.radius
+                        })),
+                        canvas
+                    );
+                } finally {
+                    mask.busy = false;
+                }
             }
         };
 
@@ -175,6 +191,9 @@ class VolumeBrushSelection {
         this.activate = () => {
             svg.classList.remove('hidden');
             parent.style.display = 'block';
+            const rect = parent.getBoundingClientRect();
+            circle.setAttribute('cx', (pointer.x - rect.left).toString());
+            circle.setAttribute('cy', (pointer.y - rect.top).toString());
             parent.addEventListener('pointerdown', pointerdown);
             parent.addEventListener('pointermove', pointermove);
             parent.addEventListener('pointerup', pointerup);

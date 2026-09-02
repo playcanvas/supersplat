@@ -708,6 +708,13 @@ class Camera extends Element {
         return Math.sin(this.fov * math.DEG_TO_RAD * 0.5);
     }
 
+    // world size of one screen pixel at the given view depth (ortho is
+    // depth-independent)
+    worldSizePerPixel(depth: number) {
+        const pixelScale = (2 / this.camera.projectionMatrix.data[5]) / Math.max(1, this.scene.canvas.clientHeight);
+        return this.ortho ? pixelScale : pixelScale * depth;
+    }
+
     getRay(screenX: number, screenY: number, ray: Ray) {
         const { camera, ortho } = this;
         const cameraPos = this.mainCamera.getPosition();

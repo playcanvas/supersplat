@@ -76,9 +76,11 @@ class EditorUI {
         // app label
         const appLabel = new Label({
             id: 'app-label',
-            unsafe: true,
-            text: `SUPERSPLAT <span>v${version}</span>`
+            text: 'SUPERSPLAT '
         });
+        const versionSpan = document.createElement('span');
+        versionSpan.textContent = `v${version}`;
+        appLabel.dom.appendChild(versionSpan);
 
         // canvas container
         const canvasContainer = new Container({

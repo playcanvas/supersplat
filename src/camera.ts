@@ -763,17 +763,23 @@ class Camera extends Element {
         const screenY = y * scene.canvas.clientHeight;
 
         // Calculate world position from ray and depth. linearDepth is the view
-        // depth measured from the camera, but the ray origin differs by
-        // projection: perspective starts at the camera (depth 0), ortho on the
-        // near plane (depth = near). Offset the along-ray parameter by the
-        // origin's depth so the point lands on the surface, while distance stays
-        // camera-relative for the caller's dolly/zoom.
+        // depth from the camera, but getRay seeds the ray origin differently per
+        // projection: at the camera for perspective, on (just behind) the near
+        // plane for ortho. Measure the origin's own view depth and offset by it,
+        // rather than assuming near, so the point lands exactly on the surface.
         this.getRay(screenX, screenY, ray);
-        const cosAngle = ray.direction.dot(this.mainCamera.forward);
-        const distance = linearDepth / cosAngle;
-        const t = (linearDepth - (this.ortho ? this.near : 0)) / cosAngle;
+        const cameraPos = this.mainCamera.getPosition();
+        const forward = this.mainCamera.forward;
+        const cosAngle = ray.direction.dot(forward);
+        const originDepth = vecb.sub2(ray.origin, cameraPos).dot(forward);
+        const t = (linearDepth - originDepth) / cosAngle;
         const position = new Vec3();
         position.copy(ray.origin).add(vec.copy(ray.direction).mulScalar(t));
+
+        // distance from the camera to the picked point, always positive: a
+        // behind-camera ortho splat has negative view depth, and passing that
+        // straight to setDistance() would clamp to minZoom and collapse the view.
+        const distance = position.distance(cameraPos);
 
         return {
             splat: closestSplat,

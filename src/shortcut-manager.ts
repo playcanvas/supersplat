@@ -48,6 +48,7 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'tool.lassoSelection': { keys: ['l'] },
     'tool.polygonSelection': { keys: ['p'] },
     'tool.brushSelection': { keys: ['b'] },
+    'tool.volumeBrushSelection': { keys: ['b'], shift: 'required' },
     'tool.floodSelection': { keys: ['o'] },
     'tool.eyedropperSelection': { keys: ['e'], ctrl: 'required', capture: true },
     'tool.brushSelection.smaller': { keys: ['['], repeat: true },

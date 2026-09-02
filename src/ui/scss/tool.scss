@@ -18,6 +18,17 @@
         }
     }
 
+    // same dashed outline as the 2d brush, but the interior shades like a lit
+    // sphere (gradient defined in volume-brush-selection.ts)
+    &#volume-brush-select-svg {
+        >circle {
+            fill: url(#volume-brush-gradient);
+            stroke: #f60;
+            stroke-width: 1;
+            stroke-dasharray: 5, 5;
+        }
+    }
+
     &#rect-select-svg {
         >rect {
             fill: none;

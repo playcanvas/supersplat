@@ -682,6 +682,52 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     });
 
+    // points are stroke samples in normalized screen coordinates with radii in
+    // css pixels. Each sample is depth-picked to a world position and the world
+    // radius matched to the on-screen brush size, giving a capsule path the
+    // compute pass tests splat centers against.
+    events.function('select.byVolumeBrush', async (
+        op: 'add'|'remove'|'set'|'intersect',
+        points: { x: number, y: number, radius: number }[],
+        canvas: HTMLCanvasElement
+    ) => {
+        const splats = selectedSplats();
+        const hits = await scene.camera.intersectMany(points, splats);
+        const projection = scene.camera.camera.projectionMatrix;
+        const pixelScale = (2 / projection.data[5]) / Math.max(1, scene.canvas.clientHeight);
+        const path: number[] = [];
+        let previous: { position: Vec3, radius: number } | null = null;
+
+        for (let i = 0; i < points.length; ++i) {
+            const hit = hits[i];
+            if (!hit) {
+                previous = null;
+                continue;
+            }
+
+            const radius = points[i].radius * pixelScale * (scene.camera.ortho ? 1 : hit.depth);
+            const startsPath = !previous || previous.position.distance(hit.position) > Math.max(previous.radius, radius) * 2;
+            path.push(hit.position.x, hit.position.y, hit.position.z, startsPath ? -radius : radius);
+            previous = { position: hit.position, radius };
+        }
+
+        // create mask texture
+        if (!maskTexture || maskTexture.width !== canvas.width || maskTexture.height !== canvas.height) {
+            if (maskTexture) {
+                maskTexture.destroy();
+            }
+            maskTexture = new Texture(scene.graphicsDevice);
+        }
+        maskTexture.setSource(canvas);
+
+        const pathPoints = new Float32Array(path);
+        for (const splat of splats) {
+            await runSelectIntersect(splat, op, {
+                volumeBrush: { points: pathPoints, mask: maskTexture, footprint: events.invoke('selection.footprint') as number }
+            });
+        }
+    });
+
     events.function('select.point', async (op: 'add'|'remove'|'set'|'intersect', point: { x: number, y: number }) => {
         const { width, height } = scene.targetSize;
         const method = selectionMethod();

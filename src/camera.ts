@@ -655,11 +655,21 @@ class Camera extends Element {
         vec.sub2(bound.center, cameraPosition);
         const dist = vec.dot(forwardVec);
 
-        const far = Math.max(dist + boundRadius, 1e-2);
-        const near = Math.max(dist - boundRadius, far / (1024 * 16));
+        if (this.ortho) {
+            // orthographic has no perspective divide, so the near plane can sit
+            // behind the camera. Span the whole scene bound (near goes negative
+            // when the camera is inside it) so scene content is never clipped in
+            // front of or behind the camera.
+            const radius = Math.max(boundRadius, 1e-2);
+            this.far = dist + radius;
+            this.near = dist - radius;
+        } else {
+            const far = Math.max(dist + boundRadius, 1e-2);
+            const near = Math.max(dist - boundRadius, far / (1024 * 16));
 
-        this.far = far;
-        this.near = Math.min(1.0, near);
+            this.far = far;
+            this.near = Math.min(1.0, near);
+        }
     }
 
     onPreRender() {
@@ -752,16 +762,23 @@ class Camera extends Element {
         const screenX = x * scene.canvas.clientWidth;
         const screenY = y * scene.canvas.clientHeight;
 
-        // Calculate world position from ray and depth
+        // Calculate world position from ray and depth. linearDepth is the view
+        // depth measured from the camera, but the ray origin differs by
+        // projection: perspective starts at the camera (depth 0), ortho on the
+        // near plane (depth = near). Offset the along-ray parameter by the
+        // origin's depth so the point lands on the surface, while distance stays
+        // camera-relative for the caller's dolly/zoom.
         this.getRay(screenX, screenY, ray);
-        const t = linearDepth / ray.direction.dot(this.mainCamera.forward);
+        const cosAngle = ray.direction.dot(this.mainCamera.forward);
+        const distance = linearDepth / cosAngle;
+        const t = (linearDepth - (this.ortho ? this.near : 0)) / cosAngle;
         const position = new Vec3();
         position.copy(ray.origin).add(vec.copy(ray.direction).mulScalar(t));
 
         return {
             splat: closestSplat,
             position: position,
-            distance: t
+            distance: distance
         };
     }
 

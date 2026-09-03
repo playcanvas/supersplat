@@ -181,7 +181,7 @@ class SplatsTransformHandler implements TransformHandler {
         this.events.fire('edit.add', new MultiOp([top, pop]), true);
 
         // enqueue the GPU readback onto the same shared queue so any subsequent
-        // undo/redo waits for it to finish before mutating the sorter's centers buffer.
+        // undo/redo waits for it to finish before mutating the positions the projector sorts from.
         // TODO: consider moving this to update() function above so splats are sorted correctly
         // for render during drag (which is slower).
         await this.events.invoke('queue', () => splat.updatePositions());

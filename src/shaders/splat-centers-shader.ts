@@ -8,7 +8,7 @@ uniform matrix_viewProjection: mat4x4f;
 uniform view_position: vec3f;
 uniform texParams: vec2u;
 uniform instanceBase: u32;
-uniform splatSize: f32;
+uniform centerSize: f32;
 uniform viewportSize: vec2f;
 uniform colorBlend: f32;
 uniform selectionBlend: f32;
@@ -122,7 +122,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     let center = bitcast<vec3f>(textureLoad(splatPosition, uv, 0).xyz);
     let worldPosition = model * vec4f(center, 1.0);
     let projected = uniform.matrix_viewProjection * worldPosition;
-    let offset = input.vertex_position * uniform.splatSize / uniform.viewportSize * projected.w;
+    let offset = input.vertex_position * uniform.centerSize / uniform.viewportSize * projected.w;
     // keep the center's own depth so overlapping centers resolve nearest-first in
     // the depth buffer instead of by instance order. Clamped into [0, w] like the
     // gaussian renderer does, so a center straddling the near plane still draws

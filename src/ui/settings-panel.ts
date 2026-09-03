@@ -289,13 +289,13 @@ class SettingsPanel extends Container {
             setVisible(this.hidden);
         });
 
-        events.on('viewPanel.visible', (visible: boolean) => {
+        events.on('overlaysPanel.visible', (visible: boolean) => {
             if (visible) {
                 setVisible(false);
             }
         });
 
-        events.on('displayPanel.visible', (visible: boolean) => {
+        events.on('appearancePanel.visible', (visible: boolean) => {
             if (visible) {
                 setVisible(false);
             }

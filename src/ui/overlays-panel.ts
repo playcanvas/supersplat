@@ -1,11 +1,11 @@
-import { BooleanInput, Container, Label, SelectInput } from '@playcanvas/pcui';
+import { BooleanInput, Button, Container, Label } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import type { GridPlane } from '../infinite-grid';
 import { ShortcutManager } from '../shortcut-manager';
 import { i18n } from './localization';
+import overlaysSvg from './svg/overlays.svg';
 import resetSvg from './svg/reset.svg';
-import shownSvg from './svg/shown.svg';
 import { Tooltips } from './tooltips';
 
 const createSvg = (svgString: string) => {
@@ -15,11 +15,11 @@ const createSvg = (svgString: string) => {
 
 // viewport state: overlays, helpers and diagnostics the user flips while
 // working, as opposed to the preferences that live in the settings panel
-class ViewOptionsPanel extends Container {
+class OverlaysPanel extends Container {
     constructor(events: Events, tooltips: Tooltips, args = {}) {
         args = {
             ...args,
-            id: 'view-options-panel',
+            id: 'overlays-panel',
             class: ['panel', 'options-panel'],
             hidden: true
         };
@@ -41,12 +41,12 @@ class ViewOptionsPanel extends Container {
         const icon = new Label({
             class: 'panel-header-icon'
         });
-        icon.dom.appendChild(createSvg(shownSvg));
+        icon.dom.appendChild(createSvg(overlaysSvg));
 
         const label = new Label({
             class: 'panel-header-label'
         });
-        i18n.bindText(label, 'panel.view');
+        i18n.bindText(label, 'panel.overlays');
 
         const resetButton = new Container({
             class: ['panel-header-button', 'panel-header-reset-button']
@@ -99,7 +99,7 @@ class ViewOptionsPanel extends Container {
         const showGridLabel = new Label({
             class: 'settings-panel-row-label'
         });
-        i18n.bindText(showGridLabel, 'panel.view.grid');
+        i18n.bindText(showGridLabel, 'panel.overlays.grid');
 
         const showGridToggle = new BooleanInput({
             type: 'toggle',
@@ -110,29 +110,51 @@ class ViewOptionsPanel extends Container {
         showGridRow.append(showGridLabel);
         showGridRow.append(showGridToggle);
 
-        // grid plane
+        // grid planes: one toggle per plane, any combination
 
-        const gridPlaneRow = new Container({
-            class: ['settings-panel-row', 'options-panel-row-indent']
+        const gridPlanesRow = new Container({
+            class: ['settings-panel-row', 'options-panel-icon-row', 'options-panel-row-indent']
         });
 
-        const gridPlaneLabel = new Label({
+        const gridPlanesLabel = new Label({
             class: 'settings-panel-row-label'
         });
-        i18n.bindText(gridPlaneLabel, 'panel.view.grid-plane');
+        i18n.bindText(gridPlanesLabel, 'panel.overlays.grid-planes');
 
-        const gridPlaneSelection = new SelectInput({
-            class: 'settings-panel-row-select',
-            defaultValue: 'xz',
-            options: [
-                { v: 'xz', t: 'XZ' },
-                { v: 'xy', t: 'XY' },
-                { v: 'yz', t: 'YZ' }
-            ]
+        const planeButton = (plane: GridPlane) => {
+            const button = new Button({
+                class: 'options-panel-icon-button',
+                text: plane.toUpperCase()
+            });
+            const label = () => `${i18n.t('panel.overlays.grid-planes')}: ${plane.toUpperCase()}`;
+            i18n.onChange(() => button.dom.setAttribute('aria-label', label()), button);
+            tooltips.register(button, label, 'top');
+            button.on('click', () => events.fire('grid.togglePlane', plane));
+            return button;
+        };
+
+        const planeButtons: [GridPlane, Button][] = [
+            ['xz', planeButton('xz')],
+            ['xy', planeButton('xy')],
+            ['yz', planeButton('yz')]
+        ];
+
+        const gridPlanesToggles = new Container({
+            class: 'options-panel-toggle-grid'
         });
+        planeButtons.forEach(([, button]) => gridPlanesToggles.append(button));
+        gridPlanesToggles.append(new Container({ class: 'options-panel-icon-spacer' }));
 
-        gridPlaneRow.append(gridPlaneLabel);
-        gridPlaneRow.append(gridPlaneSelection);
+        gridPlanesRow.append(gridPlanesLabel);
+        gridPlanesRow.append(gridPlanesToggles);
+
+        const syncPlanes = (planes: GridPlane[]) => {
+            planeButtons.forEach(([plane, button]) => {
+                const active = planes.includes(plane);
+                button.class[active ? 'add' : 'remove']('active');
+                button.dom.setAttribute('aria-pressed', String(active));
+            });
+        };
 
         // show bound
 
@@ -143,7 +165,7 @@ class ViewOptionsPanel extends Container {
         const showBoundLabel = new Label({
             class: 'settings-panel-row-label'
         });
-        i18n.bindText(showBoundLabel, 'panel.view.bounding-box');
+        i18n.bindText(showBoundLabel, 'panel.overlays.bounding-box');
 
         const showBoundToggle = new BooleanInput({
             type: 'toggle',
@@ -163,7 +185,7 @@ class ViewOptionsPanel extends Container {
         const showBoundDimensionsLabel = new Label({
             class: 'settings-panel-row-label'
         });
-        i18n.bindText(showBoundDimensionsLabel, 'panel.view.dimensions');
+        i18n.bindText(showBoundDimensionsLabel, 'panel.overlays.dimensions');
 
         const showBoundDimensionsToggle = new BooleanInput({
             type: 'toggle',
@@ -183,7 +205,7 @@ class ViewOptionsPanel extends Container {
         const showCameraPosesLabel = new Label({
             class: 'settings-panel-row-label'
         });
-        i18n.bindText(showCameraPosesLabel, 'panel.view.camera-poses');
+        i18n.bindText(showCameraPosesLabel, 'panel.overlays.camera-poses');
 
         const showCameraPosesToggle = new BooleanInput({
             type: 'toggle',
@@ -203,7 +225,7 @@ class ViewOptionsPanel extends Container {
         const showCameraInfoLabel = new Label({
             class: 'settings-panel-row-label'
         });
-        i18n.bindText(showCameraInfoLabel, 'panel.view.camera-info');
+        i18n.bindText(showCameraInfoLabel, 'panel.overlays.camera-info');
 
         const showCameraInfoToggle = new BooleanInput({
             type: 'toggle',
@@ -223,7 +245,7 @@ class ViewOptionsPanel extends Container {
         const perfOverlayLabel = new Label({
             class: 'settings-panel-row-label'
         });
-        i18n.bindText(perfOverlayLabel, 'panel.view.frame-timings');
+        i18n.bindText(perfOverlayLabel, 'panel.overlays.frame-timings');
 
         const perfOverlayToggle = new BooleanInput({
             type: 'toggle',
@@ -242,14 +264,14 @@ class ViewOptionsPanel extends Container {
         rowToggles(perfOverlayRow, perfOverlayToggle);
 
         this.append(header);
-        this.append(sectionHeader('panel.view.section-show'));
+        this.append(sectionHeader('panel.overlays.section-helpers'));
         this.append(showGridRow);
-        this.append(gridPlaneRow);
+        this.append(gridPlanesRow);
         this.append(showBoundRow);
         this.append(showBoundDimensionsRow);
         this.append(showCameraPosesRow);
         this.append(showCameraInfoRow);
-        this.append(sectionHeader('panel.view.section-diagnostics'));
+        this.append(sectionHeader('panel.overlays.section-diagnostics'));
         this.append(perfOverlayRow);
 
         // the panel is constructed before the editor registers its state, and
@@ -261,8 +283,8 @@ class ViewOptionsPanel extends Container {
         const sync = () => {
             const grid = events.invoke('grid.visible') as boolean;
             showGridToggle.value = grid;
-            gridPlaneRow.enabled = grid;
-            gridPlaneSelection.value = events.invoke('grid.plane');
+            gridPlanesRow.enabled = grid;
+            syncPlanes(events.invoke('grid.planes'));
             const bound = events.invoke('camera.bound') as boolean;
             showBoundToggle.value = bound;
             showBoundDimensionsRow.enabled = bound;
@@ -280,19 +302,19 @@ class ViewOptionsPanel extends Container {
                     sync();
                 }
                 this.hidden = !visible;
-                events.fire('viewPanel.visible', visible);
+                events.fire('overlaysPanel.visible', visible);
             }
         };
 
-        events.function('viewPanel.visible', () => {
+        events.function('overlaysPanel.visible', () => {
             return !this.hidden;
         });
 
-        events.on('viewPanel.setVisible', (visible: boolean) => {
+        events.on('overlaysPanel.setVisible', (visible: boolean) => {
             setVisible(visible);
         });
 
-        events.on('viewPanel.toggleVisible', () => {
+        events.on('overlaysPanel.toggleVisible', () => {
             setVisible(this.hidden);
         });
 
@@ -302,7 +324,7 @@ class ViewOptionsPanel extends Container {
             }
         });
 
-        events.on('displayPanel.visible', (visible: boolean) => {
+        events.on('appearancePanel.visible', (visible: boolean) => {
             if (visible) {
                 setVisible(false);
             }
@@ -310,29 +332,22 @@ class ViewOptionsPanel extends Container {
 
         resetButton.on('click', () => {
             events.fire('preferences.reset', 'overlays');
-            events.fire('grid.setPlane', 'xz');
         });
 
         // show grid
 
         events.on('grid.visible', (visible: boolean) => {
             showGridToggle.value = visible;
-            gridPlaneRow.enabled = visible;
+            gridPlanesRow.enabled = visible;
         });
 
         showGridToggle.on('change', () => {
             events.fire('grid.setVisible', showGridToggle.value);
         });
 
-        // grid plane
+        // grid planes
 
-        events.on('grid.plane', (plane: GridPlane) => {
-            gridPlaneSelection.value = plane;
-        });
-
-        gridPlaneSelection.on('change', (value: GridPlane) => {
-            events.fire('grid.setPlane', value);
-        });
+        events.on('grid.planes', syncPlanes);
 
         // show bound
 
@@ -388,11 +403,11 @@ class ViewOptionsPanel extends Container {
         // tooltips
         const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
         const shortcut = shortcutManager.formatShortcut('grid.toggleVisible');
-        tooltips.register(showGridLabel, () => i18n.formatTooltipWithShortcut(i18n.t('panel.view.grid'), shortcut), 'left');
+        tooltips.register(showGridLabel, () => i18n.formatTooltipWithShortcut(i18n.t('panel.overlays.grid'), shortcut), 'left');
         const cameraInfoShortcut = shortcutManager.formatShortcut('camera.toggleShowInfo');
-        tooltips.register(showCameraInfoLabel, () => i18n.formatTooltipWithShortcut(i18n.t('panel.view.camera-info'), cameraInfoShortcut), 'left');
+        tooltips.register(showCameraInfoLabel, () => i18n.formatTooltipWithShortcut(i18n.t('panel.overlays.camera-info'), cameraInfoShortcut), 'left');
         tooltips.register(resetButton, () => i18n.t('panel.settings.reset'), 'left');
     }
 }
 
-export { ViewOptionsPanel };
+export { OverlaysPanel };

@@ -31,8 +31,12 @@ struct Uniforms {
 @group(0) @binding(6) var<uniform> uniforms: Uniforms;
 
 @compute @workgroup_size(256)
-fn main(@builtin(global_invocation_id) gid: vec3u) {
-    let idx = gid.x;
+fn main(
+    @builtin(global_invocation_id) gid: vec3u,
+    @builtin(num_workgroups) numWorkgroups: vec3u
+) {
+    // the dispatch is split into rows once it exceeds the per-dimension limit
+    let idx = gid.y * numWorkgroups.x * 256u + gid.x;
     if (idx >= splatCounter[0]) {
         return;
     }

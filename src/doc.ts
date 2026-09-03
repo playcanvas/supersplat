@@ -2,13 +2,13 @@ import { ZipFileSystem, ZipReadFileSystem } from '@playcanvas/splat-transform';
 import type { Asset, Quat } from 'playcanvas';
 
 import { decodeInstances, encodeInstances, restorePalettes } from './doc-instances';
+import type { EditorSplatResource } from './editor-splat-resource';
 import { Events } from './events';
 import { GaussianInstances } from './gaussian-instances';
 import { BrowserFileSystem, BlobReadSource } from './io';
 import { recentFiles } from './recent-files';
 import { Scene } from './scene';
 import { Splat } from './splat';
-import type { EditorSplatResource } from './splat-resource';
 import { writeResourceFile } from './splat-serialize';
 import { Transform } from './transform';
 import { i18n } from './ui/localization';

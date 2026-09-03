@@ -27,7 +27,7 @@ import { ProjectedSplatRenderer } from './projected-splat-renderer';
 import { SceneConfig } from './scene-config';
 import { SceneState } from './scene-state';
 import { Splat } from './splat';
-import { SplatOverlay } from './splat-overlay';
+import { SplatCenters } from './splat-centers';
 import { Underlay } from './underlay';
 
 // sort meshInstances by the aabb corner furthest from the camera
@@ -173,7 +173,7 @@ class Scene {
     assetLoader: AssetLoader;
     camera: Camera;
     cameraPoseGizmos: CameraPoseGizmos;
-    splatOverlay: SplatOverlay;
+    splatCenters: SplatCenters;
     grid: Grid;
     outline: Outline;
     underlay: Underlay;
@@ -352,8 +352,8 @@ class Scene {
         this.cameraPoseGizmos = new CameraPoseGizmos();
         this.add(this.cameraPoseGizmos);
 
-        this.splatOverlay = new SplatOverlay();
-        this.add(this.splatOverlay);
+        this.splatCenters = new SplatCenters();
+        this.add(this.splatCenters);
 
         this.grid = new Grid();
         this.add(this.grid);

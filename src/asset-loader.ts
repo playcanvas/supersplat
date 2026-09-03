@@ -1,10 +1,10 @@
 import { ReadFileSystem } from '@playcanvas/splat-transform';
 import { AppBase, Asset } from 'playcanvas';
 
+import { EditorSplatResource } from './editor-splat-resource';
 import { Events } from './events';
 import { defaultLodIndex, loadSplatSource } from './io';
 import { Splat } from './splat';
-import { EditorSplatResource } from './splat-resource';
 import { i18n } from './ui/localization';
 
 // handles loading gsplat assets using splat-transform

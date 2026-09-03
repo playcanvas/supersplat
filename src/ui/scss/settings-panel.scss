@@ -1,6 +1,6 @@
 @use 'colors.scss' as *;
 
-// shared shell for the settings and view options popups
+// shared shell for the appearance, overlays and settings popups
 .options-panel {
     top: 50%;
     transform: translate(0, -50%);
@@ -147,6 +147,9 @@
                 border: 0;
                 border-radius: 3px;
                 background-color: $bcg-dark;
+                font-size: 11px;
+                line-height: 16px;
+                color: $clr-default;
 
                 svg {
                     width: 18px;
@@ -156,6 +159,7 @@
 
                 &.active {
                     background-color: $clr-hilight;
+                    color: $clr-active;
 
                     svg {
                         color: $clr-active;

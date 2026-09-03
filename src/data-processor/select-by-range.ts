@@ -81,8 +81,8 @@ fn selectedByRange(index: u32) -> bool {
 }
 
 @compute @workgroup_size(${WORKGROUP_SIZE})
-fn main(@builtin(global_invocation_id) gid: vec3u) {
-    let word = gid.x;
+fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(num_workgroups) numWorkgroups: vec3u) {
+    let word = gid.y * numWorkgroups.x * ${WORKGROUP_SIZE}u + gid.x;
     let first = word * 4u;
     if (first >= uniforms.numSplats) { return; }
     var packed = 0u;

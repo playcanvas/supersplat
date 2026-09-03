@@ -14,7 +14,6 @@ import {
     ScopeSpace,
     Shader,
     ShaderUtils,
-    Vec3,
     Mat4
 } from 'playcanvas';
 
@@ -30,8 +29,10 @@ const resolve = (scope: ScopeSpace, values: any) => {
 
 type GridPlane = 'xz' | 'xy' | 'yz';
 
-// map plane name to the shader's plane index (0: x (yz), 1: y (xz), 2: z (xy))
+// map plane name to the shader's plane bit (0: x (yz), 1: y (xz), 2: z (xy))
 const planeIndices = { yz: 0, xz: 1, xy: 2 };
+
+const planeMask = (planes: GridPlane[]) => planes.reduce((mask, plane) => mask | (1 << planeIndices[plane]), 0);
 
 class InfiniteGrid extends Element {
     shader: Shader;
@@ -40,7 +41,9 @@ class InfiniteGrid extends Element {
     depthState = new DepthState(FUNC_LESSEQUAL, true);
 
     visible = true;
-    plane: GridPlane = 'xz';
+    // the planes drawn, any combination. Planes the camera views edge-on
+    // produce no intersections and simply don't show
+    planes: GridPlane[] = ['xz'];
 
     constructor() {
         super(ElementType.debug);
@@ -66,34 +69,20 @@ class InfiniteGrid extends Element {
             BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE_MINUS_SRC_ALPHA
         );
 
-        const view_position = [0, 0, 0];
         const shaderProjection = new Mat4();
         const viewProjectionMatrix = new Mat4();
-        let plane;
+        const viewPosition = [0, 0, 0];
+        const viewportSize = [0, 0];
 
         this.scene.camera.camera.on('preRenderLayer', (layer: Layer, transparent: boolean) => {
             const { scene } = this;
-            if (this.visible && layer === scene.worldLayer && !transparent && scene.camera.renderOverlays) {
+            if (this.visible && this.planes.length > 0 && layer === scene.worldLayer && !transparent && scene.camera.renderOverlays) {
                 const { camera } = scene;
 
                 device.setBlendState(blendState);
                 device.setCullMode(CULLFACE_NONE);
                 device.setDepthState(DepthState.WRITEDEPTH);
                 device.setStencilState(null, null);
-
-                // select the correctly plane in orthographic mode
-                if (camera.ortho) {
-                    const cmp = (a:Vec3, b: Vec3) => 1.0 - Math.abs(a.dot(b)) < 1e-03;
-                    const z = camera.worldTransform.getZ();
-                    plane = cmp(z, Vec3.RIGHT) ? 0 : (cmp(z, Vec3.BACK) ? 2 : 1);
-                } else {
-                    plane = planeIndices[this.plane];
-                }
-
-                const p = camera.position;
-                view_position[0] = p.x;
-                view_position[1] = p.y;
-                view_position[2] = p.z;
 
                 // the shader writes fragDepth from this matrix: apply the same
                 // clip-z transform the engine applies for meshes (and the splat
@@ -103,10 +92,18 @@ class InfiniteGrid extends Element {
                     camera.camera.viewMatrix
                 );
 
+                const p = camera.position;
+                viewPosition[0] = p.x;
+                viewPosition[1] = p.y;
+                viewPosition[2] = p.z;
+                viewportSize[0] = camera.targetSize.width;
+                viewportSize[1] = camera.targetSize.height;
+
                 resolve(device.scope, {
-                    plane,
-                    view_position,
-                    matrix_viewProjection: viewProjectionMatrix.data
+                    planeMask: planeMask(this.planes),
+                    matrix_viewProjection: viewProjectionMatrix.data,
+                    grid_view_position: viewPosition,
+                    grid_viewport_size: viewportSize
                 });
 
                 this.quadRender.render();
@@ -120,7 +117,7 @@ class InfiniteGrid extends Element {
     }
 
     serialize(serializer: Serializer): void {
-        serializer.pack(this.visible, this.plane);
+        serializer.pack(this.visible, planeMask(this.planes));
     }
 }
 

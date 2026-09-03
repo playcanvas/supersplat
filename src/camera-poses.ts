@@ -172,7 +172,7 @@ class CameraAnimTrack implements AnimTrack {
     }
 
     /**
-     * Add a pose directly (used for deserialization and legacy import).
+     * Add a pose directly (used for deserialization).
      */
     addPose(pose: Pose): void {
         if (pose.frame === undefined) {
@@ -194,7 +194,7 @@ class CameraAnimTrack implements AnimTrack {
     }
 
     /**
-     * Get all poses (used for serialization and legacy consumers).
+     * Get all poses (used for serialization).
      */
     getPoses(): readonly Pose[] {
         return this.poses;
@@ -280,14 +280,9 @@ const registerCameraPosesEvents = (events: Events) => {
         return track;
     });
 
-    // Legacy support: expose poses
+    // expose poses
     events.function('camera.poses', () => {
         return track.getPoses();
-    });
-
-    // Legacy support: add pose directly
-    events.on('camera.addPose', (pose: Pose) => {
-        track.addPose(pose);
     });
 
     events.on('camera.loadPoses', (poses: Pose[]) => {

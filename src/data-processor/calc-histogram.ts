@@ -95,11 +95,12 @@ fn floatToOrdered(value: f32) -> u32 {
 }
 
 @compute @workgroup_size(${WORKGROUP_SIZE})
-fn main(@builtin(global_invocation_id) gid: vec3u) {
+fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(num_workgroups) numWorkgroups: vec3u) {
     var value = 0.0;
     var selected = false;
     var visible = false;
-    if (computeSplatValue(gid.x, &value, &selected, &visible) && visible && value == value) {
+    let thread = gid.y * numWorkgroups.x * ${WORKGROUP_SIZE}u + gid.x;
+    if (computeSplatValue(thread, &value, &selected, &visible) && visible && value == value) {
         let ordered = floatToOrdered(value);
         atomicMin(&minMax[0], ordered);
         atomicMax(&minMax[1], ordered);
@@ -132,11 +133,12 @@ fn orderedToFloat(value: u32) -> f32 {
 }
 
 @compute @workgroup_size(${WORKGROUP_SIZE})
-fn main(@builtin(global_invocation_id) gid: vec3u) {
+fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(num_workgroups) numWorkgroups: vec3u) {
     var value = 0.0;
     var selected = false;
     var visible = false;
-    if (!computeSplatValue(gid.x, &value, &selected, &visible) || !visible) { return; }
+    let thread = gid.y * numWorkgroups.x * ${WORKGROUP_SIZE}u + gid.x;
+    if (!computeSplatValue(thread, &value, &selected, &visible) || !visible) { return; }
     let minValue = orderedToFloat(minMax[0]);
     let maxValue = orderedToFloat(minMax[1]);
     var normalized = 0.0;

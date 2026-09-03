@@ -16,11 +16,11 @@ const createSvg = (svgString: string) => {
     return new DOMParser().parseFromString(decodedStr, 'image/svg+xml').documentElement;
 };
 
-class DisplayOptionsPanel extends Container {
+class AppearancePanel extends Container {
     constructor(events: Events, tooltips: Tooltips, args = {}) {
         args = {
             ...args,
-            id: 'display-options-panel',
+            id: 'appearance-panel',
             class: ['panel', 'options-panel'],
             hidden: true
         };
@@ -43,7 +43,7 @@ class DisplayOptionsPanel extends Container {
         const label = new Label({
             class: 'panel-header-label'
         });
-        i18n.bindText(label, 'panel.display');
+        i18n.bindText(label, 'panel.appearance');
 
         const resetButton = new Container({
             class: ['panel-header-button', 'panel-header-reset-button']
@@ -126,11 +126,11 @@ class DisplayOptionsPanel extends Container {
         const displayLabel = new Label({
             class: 'settings-panel-row-label'
         });
-        i18n.bindText(displayLabel, 'panel.display.section-display');
+        i18n.bindText(displayLabel, 'panel.appearance.section-display');
 
-        const gaussiansButton = iconButton(colorsSvg, 'panel.display.gaussians');
-        const centersButton = iconButton(centersSvg, 'panel.display.centers');
-        const ringsButton = iconButton(ringsSvg, 'panel.display.rings');
+        const gaussiansButton = iconButton(colorsSvg, 'panel.appearance.gaussians');
+        const centersButton = iconButton(centersSvg, 'panel.appearance.centers');
+        const ringsButton = iconButton(ringsSvg, 'panel.appearance.rings');
 
         const displayToggles = new Container({
             class: 'options-panel-toggle-grid'
@@ -152,7 +152,7 @@ class DisplayOptionsPanel extends Container {
         const centersSizeLabel = new Label({
             class: 'settings-panel-row-label'
         });
-        i18n.bindText(centersSizeLabel, 'panel.display.size');
+        i18n.bindText(centersSizeLabel, 'panel.appearance.size');
 
         const centersSizeSlider = new SliderInput({
             class: 'settings-panel-row-slider',
@@ -165,8 +165,8 @@ class DisplayOptionsPanel extends Container {
         centersSizeRow.append(centersSizeLabel);
         centersSizeRow.append(centersSizeSlider);
 
-        const centersColorBlend = blendSlider('panel.display.unselected-blend', 'centersColorBlend');
-        const centersSelectionBlend = blendSlider('panel.display.selection-blend', 'centersSelectionBlend');
+        const centersColorBlend = blendSlider('panel.appearance.unselected-blend', 'centersColorBlend');
+        const centersSelectionBlend = blendSlider('panel.appearance.selection-blend', 'centersSelectionBlend');
 
         // rings
 
@@ -177,7 +177,7 @@ class DisplayOptionsPanel extends Container {
         const ringSizeLabel = new Label({
             class: 'settings-panel-row-label'
         });
-        i18n.bindText(ringSizeLabel, 'panel.display.thickness');
+        i18n.bindText(ringSizeLabel, 'panel.appearance.thickness');
 
         const ringSizeSlider = new SliderInput({
             class: 'settings-panel-row-slider',
@@ -190,13 +190,13 @@ class DisplayOptionsPanel extends Container {
         ringSizeRow.append(ringSizeLabel);
         ringSizeRow.append(ringSizeSlider);
 
-        const ringsColorBlend = blendSlider('panel.display.unselected-blend', 'ringsColorBlend');
-        const ringsSelectionBlend = blendSlider('panel.display.selection-blend', 'ringsSelectionBlend');
+        const ringsColorBlend = blendSlider('panel.appearance.unselected-blend', 'ringsColorBlend');
+        const ringsSelectionBlend = blendSlider('panel.appearance.selection-blend', 'ringsSelectionBlend');
 
         // gaussians
 
-        const splatsColorBlend = blendSlider('panel.display.unselected-blend', 'splatsColorBlend');
-        const splatsSelectionBlend = blendSlider('panel.display.selection-blend', 'splatsSelectionBlend');
+        const splatsColorBlend = blendSlider('panel.appearance.unselected-blend', 'splatsColorBlend');
+        const splatsSelectionBlend = blendSlider('panel.appearance.selection-blend', 'splatsSelectionBlend');
 
         // selection display
 
@@ -207,12 +207,12 @@ class DisplayOptionsPanel extends Container {
         const selectionDisplayLabel = new Label({
             class: 'settings-panel-row-label'
         });
-        i18n.bindText(selectionDisplayLabel, 'panel.display.section-selection');
+        i18n.bindText(selectionDisplayLabel, 'panel.appearance.section-selection');
 
-        const selectionColorButton = iconButton(colorsSvg, 'panel.display.selection-color');
-        const selectionCentersButton = iconButton(centersSvg, 'panel.display.selection-centers');
-        const selectionRingsButton = iconButton(ringsSvg, 'panel.display.selection-rings');
-        const outlineSelectionButton = iconButton(selectAllSvg, 'panel.display.selection-outline');
+        const selectionColorButton = iconButton(colorsSvg, 'panel.appearance.selection-color');
+        const selectionCentersButton = iconButton(centersSvg, 'panel.appearance.selection-centers');
+        const selectionRingsButton = iconButton(ringsSvg, 'panel.appearance.selection-rings');
+        const outlineSelectionButton = iconButton(selectAllSvg, 'panel.appearance.selection-outline');
 
         const selectionToggles = new Container({
             class: 'options-panel-toggle-grid'
@@ -296,14 +296,14 @@ class DisplayOptionsPanel extends Container {
         this.append(displayRow);
         this.append(selectionDisplayRow);
         this.append(colorsRow);
-        this.append(sectionHeader('panel.display.gaussians'));
+        this.append(sectionHeader('panel.appearance.gaussians'));
         this.append(splatsColorBlend.row);
         this.append(splatsSelectionBlend.row);
-        this.append(sectionHeader('panel.display.centers'));
+        this.append(sectionHeader('panel.appearance.centers'));
         this.append(centersSizeRow);
         this.append(centersColorBlend.row);
         this.append(centersSelectionBlend.row);
-        this.append(sectionHeader('panel.display.rings'));
+        this.append(sectionHeader('panel.appearance.rings'));
         this.append(ringSizeRow);
         this.append(ringsColorBlend.row);
         this.append(ringsSelectionBlend.row);
@@ -323,7 +323,7 @@ class DisplayOptionsPanel extends Container {
 
         const sync = () => {
             updateDisplay();
-            centersSizeSlider.value = events.invoke('camera.splatSize');
+            centersSizeSlider.value = events.invoke('view.centerSize');
             ringSizeSlider.value = events.invoke('view.ringSize');
             [
                 splatsColorBlend, splatsSelectionBlend,
@@ -341,19 +341,19 @@ class DisplayOptionsPanel extends Container {
                     sync();
                 }
                 this.hidden = !visible;
-                events.fire('displayPanel.visible', visible);
+                events.fire('appearancePanel.visible', visible);
             }
         };
 
-        events.function('displayPanel.visible', () => !this.hidden);
+        events.function('appearancePanel.visible', () => !this.hidden);
 
-        events.on('displayPanel.setVisible', setVisible);
+        events.on('appearancePanel.setVisible', setVisible);
 
-        events.on('displayPanel.toggleVisible', () => {
+        events.on('appearancePanel.toggleVisible', () => {
             setVisible(this.hidden);
         });
 
-        events.on('viewPanel.visible', (visible: boolean) => {
+        events.on('overlaysPanel.visible', (visible: boolean) => {
             if (visible) {
                 setVisible(false);
             }
@@ -385,12 +385,12 @@ class DisplayOptionsPanel extends Container {
             events.fire('view.setRings', !events.invoke('view.rings'));
         });
 
-        events.on('camera.splatSize', (value: number) => {
+        events.on('view.centerSize', (value: number) => {
             centersSizeSlider.value = value;
         });
 
         centersSizeSlider.on('change', (value: number) => {
-            events.fire('camera.setSplatSize', value);
+            events.fire('view.setCenterSize', value);
         });
 
         events.on('view.ringSize', (value: number) => {
@@ -447,4 +447,4 @@ class DisplayOptionsPanel extends Container {
     }
 }
 
-export { DisplayOptionsPanel };
+export { AppearancePanel };

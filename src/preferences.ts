@@ -7,7 +7,7 @@ import { i18n } from './ui/localization';
 const storageKey = 'supersplat:preferences';
 const storageVersion = 1;
 
-type PrefValue = boolean | number | string | number[];
+type PrefValue = boolean | number | string | number[] | string[];
 type PreferenceGroup = 'appearance' | 'overlays' | 'preferences';
 
 type Descriptor = {
@@ -58,6 +58,13 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
     const isBool = (v: PrefValue) => typeof v === 'boolean';
     const isNumber = (min: number, max: number) => (v: PrefValue) => typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max;
     const isEnum = (options: string[]) => (v: PrefValue) => typeof v === 'string' && options.includes(v);
+    const isPlanes = (v: PrefValue) => {
+        if (!Array.isArray(v)) {
+            return false;
+        }
+        const planes = v as string[];
+        return planes.length <= 3 && new Set(planes).size === planes.length && planes.every(p => ['xz', 'xy', 'yz'].includes(p));
+    };
     const isColor = (v: PrefValue) => Array.isArray(v) && v.length === 4 && v.every(c => typeof c === 'number' && c >= 0 && c <= 1);
 
     const color = (key: string, setCommand: string, getDefault: () => { r: number, g: number, b: number, a: number }): Descriptor => ({
@@ -87,7 +94,7 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         { key: 'camera.fov', setCommand: 'camera.setFov', urlPath: 'camera.fov', getDefault: () => config.camera.fov, validate: isNumber(10, 120), group: 'preferences' },
         { key: 'view.bands', setCommand: 'view.setBands', urlPath: 'show.shBands', getDefault: () => config.show.shBands, validate: v => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 3, group: 'preferences' },
         { key: 'camera.flySpeed', setCommand: 'camera.setFlySpeed', getDefault: () => 1, validate: isNumber(0.1, 30), group: 'preferences' },
-        { key: 'camera.splatSize', setCommand: 'camera.setSplatSize', getDefault: () => 2, validate: isNumber(0, 10), group: 'appearance' },
+        { key: 'view.centerSize', setCommand: 'view.setCenterSize', getDefault: () => 2, validate: isNumber(0, 10), group: 'appearance' },
         // the editor skips its footprint-crossing profile swap while preference
         // application is in flight (see preferences.suspend), so the footprint,
         // the live flags and the inactive profile all apply verbatim here. The
@@ -119,6 +126,7 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         { key: 'view.stochastic', setCommand: 'view.setStochastic', getDefault: () => 'auto', validate: isEnum(['disabled', 'enabled', 'movement', 'auto']), group: 'preferences' },
         { key: 'view.perfOverlay', setCommand: 'view.setPerfOverlay', getDefault: () => false, validate: isBool, group: 'overlays' },
         { key: 'grid.visible', setCommand: 'grid.setVisible', urlPath: 'show.grid', getDefault: () => config.show.grid, validate: isBool, group: 'overlays' },
+        { key: 'grid.planes', setCommand: 'grid.setPlanes', getDefault: () => ['xz'], validate: isPlanes, group: 'overlays' },
         { key: 'camera.bound', setCommand: 'camera.setBound', urlPath: 'show.bound', getDefault: () => config.show.bound, validate: isBool, group: 'overlays' },
         { key: 'camera.boundDimensions', setCommand: 'camera.setBoundDimensions', urlPath: 'show.boundDimensions', getDefault: () => config.show.boundDimensions, validate: isBool, group: 'overlays' },
         { key: 'camera.showPoses', setCommand: 'camera.setShowPoses', urlPath: 'show.cameraPoses', getDefault: () => config.show.cameraPoses, validate: isBool, group: 'overlays' },

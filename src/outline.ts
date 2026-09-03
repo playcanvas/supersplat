@@ -53,10 +53,6 @@ class Outline extends Element {
     remove() {
         // event listeners are cleaned up when camera is destroyed
     }
-
-    onPreRender() {
-        // no longer need to manage a separate camera
-    }
 }
 
 export { Outline };

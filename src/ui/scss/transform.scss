@@ -1,65 +1,76 @@
 @use 'colors.scss' as *;
 
 // shares the scene panel's row grid: 10px side gutters, 2px section
-// boundaries, and a fixed control column so the values block aligns with the
+// boundaries, and a fixed control column so the edit controls align with the
 // colors section's control column below
 #transform {
     display: flex;
-    flex-direction: row;
-    align-items: flex-start;
+    flex-direction: column;
 
     background-color: $bcg-primary;
 
-    padding: 6px 10px;
+    padding: 2px 10px;
 }
 
-$line-height: 22px;
-
-.transform-labels {
+.transform-row {
+    height: 32px;
+    line-height: 32px;
+    width: 100%;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     flex-grow: 1;
+    align-items: center;
 }
 
 .transform-label {
+    flex-grow: 1;
     margin: 0px;
-    height: $line-height;
-    line-height: $line-height;
 }
 
 // pinned to the same width as the colors section's control column below, so
-// the two sections' edit controls align whatever the label lengths are.
-// nested under the id so the font rules outrank pcui's .font-regular
-#transform .transform-values {
+// the two sections' edit controls align whatever the label lengths are
+.transform-expand {
     flex-grow: 0;
     flex-shrink: 0;
-    box-sizing: border-box;
     width: 215px;
+}
+
+$height: 22px;
+
+#transform > div > div.pcui-vector-input {
     margin: 0px;
-    line-height: $line-height;
-    font-family: ui-monospace, Menlo, Consolas, monospace;
-    font-variant-numeric: tabular-nums;
-    white-space: pre;
-    overflow-x: auto;
+    gap: 10px;
+    height: $height;
+}
 
-    // match pcui input elements: dark box, grey text, white while editing
-    background-color: $bcg-dark;
-    border-color: $bcg-darker;
-    border-radius: 2px;
-    color: $text-secondary;
+#transform > div > div.pcui-numeric-input {
+    margin: 0px;
+    height: $height;
+    line-height: $height;
 
-    &:hover {
-        background-color: $bcg-darker;
+    & > input {
+        padding: 0px;
+        margin: 0px 0px 0px 4px;
+        height: $height;
     }
+}
 
-    &:focus {
-        background-color: $bcg-darkest;
-        border-color: $clr-hilight;
-        color: $text-primary;
-    }
+#transform > div > div > div.pcui-numeric-input {
+    margin: 0px;
+    height: $height;
+    line-height: $height;
 
-    &.pcui-disabled {
-        cursor: default;
-        opacity: 0.5;
+    & > input {
+        padding: 0px;
+        margin: 0px 0px 0px 4px;
+        height: $height;
     }
+}
+// scale is a single value: match the width of one vector component and keep it
+// aligned with the x column (the rest of the control column stays empty).
+// Placed after the numeric-input rules above, whose equal specificity would
+// otherwise zero the margin
+#transform > div > div.transform-scale {
+    width: calc((215px - 20px) / 3);
+    margin-right: calc(215px - (215px - 20px) / 3);
 }

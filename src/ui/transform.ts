@@ -1,18 +1,11 @@
-import { Container, ContainerArgs, Label } from '@playcanvas/pcui';
+import { Container, ContainerArgs, Label, NumericInput, VectorInput } from '@playcanvas/pcui';
 import { Quat, Vec3 } from 'playcanvas';
 
-import { alignColumns, makeEditable, parseNumbers } from './editable-text';
 import { Events } from '../events';
 import { i18n } from './localization';
 import { Pivot } from '../pivot';
 
 const v = new Vec3();
-
-// fixed decimals so columns line up; avoids "-0.00"
-const fixed = (n: number, decimals: number) => {
-    const s = n.toFixed(decimals);
-    return parseFloat(s) === 0 ? (0).toFixed(decimals) : s;
-};
 
 class Transform extends Container {
     constructor(events: Events, args: ContainerArgs = {}) {
@@ -23,77 +16,161 @@ class Transform extends Container {
 
         super(args);
 
-        // one label per line of the values block
-        const labels = new Container({
-            class: 'transform-labels'
+        // position
+        const position = new Container({
+            class: 'transform-row'
         });
 
-        ['position', 'rotation', 'scale'].forEach((key) => {
-            const label = new Label({
-                class: 'transform-label'
-            });
-            i18n.bindText(label, `panel.scene.transform.${key}`);
-            labels.append(label);
+        const positionLabel = new Label({
+            class: 'transform-label'
+        });
+        i18n.bindText(positionLabel, 'panel.scene.transform.position');
+
+        const positionVector = new VectorInput({
+            class: 'transform-expand',
+            precision: 3,
+            dimensions: 3,
+            placeholder: ['X', 'Y', 'Z'],
+            value: [0, 0, 0],
+            enabled: false
         });
 
-        // position, rotation and scale as a single editable text block so the
-        // whole transform can be selected, copied and pasted
-        const values = new Label({
-            class: 'transform-values'
+        position.append(positionLabel);
+        position.append(positionVector);
+
+        // rotation
+        const rotation = new Container({
+            class: 'transform-row'
         });
 
-        this.append(labels);
-        this.append(values);
+        const rotationLabel = new Label({
+            class: 'transform-label'
+        });
+        i18n.bindText(rotationLabel, 'panel.scene.transform.rotation');
+
+        const rotationVector = new VectorInput({
+            class: 'transform-expand',
+            precision: 2,
+            dimensions: 3,
+            placeholder: ['X', 'Y', 'Z'],
+            value: [0, 0, 0],
+            enabled: false
+        });
+
+        rotation.append(rotationLabel);
+        rotation.append(rotationVector);
+
+        // scale
+        const scale = new Container({
+            class: 'transform-row'
+        });
+
+        const scaleLabel = new Label({
+            class: 'transform-label'
+        });
+        i18n.bindText(scaleLabel, 'panel.scene.transform.scale');
+
+        const scaleInput = new NumericInput({
+            class: ['transform-expand', 'transform-scale'],
+            precision: 3,
+            value: 1,
+            min: 0.001,
+            max: 10000,
+            enabled: false
+        });
+
+        scale.append(scaleLabel);
+        scale.append(scaleInput);
+
+        this.append(position);
+        this.append(rotation);
+        this.append(scale);
+
+        const toArray = (v: Vec3) => {
+            return [v.x, v.y, v.z];
+        };
+
+        let uiUpdating = false;
+        let mouseUpdating = false;
 
         // the panel shows the pivot in world coordinates. with a user-defined
         // local frame set (see Splat.getPivot), the pivot is that frame, so
         // zeroing the values aligns the frame with the world origin and axes
-        const editable = makeEditable(values.dom, (text) => {
-            const n = parseNumbers(text, 7);
-            if (!n) {
-                return false;
-            }
+        const updateUI = (pivot: Pivot) => {
+            uiUpdating = true;
+            const transform = pivot.transform;
+            transform.rotation.getEulerAngles(v);
+            positionVector.value = toArray(transform.position);
+            rotationVector.value = toArray(v);
+            scaleInput.value = transform.scale.x;
+            uiUpdating = false;
+        };
 
-            const p = new Vec3(n[0], n[1], n[2]);
-            const q = new Quat().setFromEulerAngles(n[3], n[4], n[5]);
-            const s = Math.min(10000, Math.max(0.001, n[6]));
+        // update pivot with UI
+        const updatePivot = (pivot: Pivot) => {
+            const p = positionVector.value;
+            const r = rotationVector.value;
+            const q = new Quat().setFromEulerAngles(r[0], r[1], r[2]);
+            const s = scaleInput.value;
 
             if (q.w < 0) {
                 q.mulScalar(-1);
             }
 
+            pivot.moveTRS(new Vec3(p[0], p[1], p[2]), q, new Vec3(s, s, s));
+        };
+
+        // handle a change in the UI state
+        const change = () => {
+            if (!uiUpdating) {
+                const pivot = events.invoke('pivot') as Pivot;
+                if (mouseUpdating) {
+                    updatePivot(pivot);
+                } else {
+                    pivot.start();
+                    updatePivot(pivot);
+                    pivot.end();
+                }
+            }
+        };
+
+        const mousedown = () => {
+            mouseUpdating = true;
             const pivot = events.invoke('pivot') as Pivot;
             pivot.start();
-            pivot.moveTRS(p, q, new Vec3(s, s, s));
-            pivot.end();
-
-            return true;
-        });
-
-        const updateUI = (pivot: Pivot) => {
-            const { position, rotation, scale } = pivot.transform;
-            rotation.getEulerAngles(v);
-
-            editable.update(alignColumns([
-                [fixed(position.x, 3), fixed(position.y, 3), fixed(position.z, 3)],
-                [fixed(v.x, 3), fixed(v.y, 3), fixed(v.z, 3)],
-                [fixed(scale.x, 3)]
-            ]), alignColumns([
-                [`${position.x}`, `${position.y}`, `${position.z}`],
-                [`${v.x}`, `${v.y}`, `${v.z}`],
-                [`${scale.x}`]
-            ]));
         };
+
+        const mouseup = () => {
+            const pivot = events.invoke('pivot') as Pivot;
+            updatePivot(pivot);
+            mouseUpdating = false;
+            pivot.end();
+        };
+
+        [positionVector.inputs, rotationVector.inputs, scaleInput].flat().forEach((input) => {
+            input.on('change', change);
+            input.on('slider:mousedown', mousedown);
+            input.on('slider:mouseup', mouseup);
+        });
 
         // toggle ui availability based on selection
         events.on('selection.changed', (selection) => {
-            values.dom.setAttribute('contenteditable', selection ? 'plaintext-only' : 'false');
-            values.enabled = !!selection;
+            positionVector.enabled = rotationVector.enabled = scaleInput.enabled = !!selection;
         });
 
-        events.on('pivot.placed', updateUI);
-        events.on('pivot.moved', updateUI);
-        events.on('pivot.ended', updateUI);
+        events.on('pivot.placed', (pivot: Pivot) => {
+            updateUI(pivot);
+        });
+
+        events.on('pivot.moved', (pivot: Pivot) => {
+            if (!mouseUpdating) {
+                updateUI(pivot);
+            }
+        });
+
+        events.on('pivot.ended', (pivot: Pivot) => {
+            updateUI(pivot);
+        });
     }
 }
 

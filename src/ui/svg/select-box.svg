@@ -1,0 +1,6 @@
+<svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+<!-- isometric cube: top, left and right faces shaded by opacity -->
+<path d="M19 10.5L26.5 14.75L19 19L11.5 14.75Z" fill="currentColor" fill-opacity="0.9"/>
+<path d="M11.5 14.75L19 19V27.5L11.5 23.25Z" fill="currentColor" fill-opacity="0.55"/>
+<path d="M19 19L26.5 14.75V23.25L19 27.5Z" fill="currentColor" fill-opacity="0.35"/>
+</svg>

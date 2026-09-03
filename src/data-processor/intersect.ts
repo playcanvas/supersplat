@@ -54,7 +54,7 @@ type BoxOptions = {
     box: { transform: Mat4, footprint?: number };
 };
 
-type VolumeBrushOptions = {
+type SphereBrushOptions = {
     // world-space xyz and radius for each sampled path point. A negative radius
     // starts a new subpath while preserving the point's sphere. At footprint 0
     // the mask limits the selection to splat centers projecting inside the
@@ -62,10 +62,10 @@ type VolumeBrushOptions = {
     // (0 = center point) and the mask is ignored. projection/view snapshot the
     // stroke-time camera so the mask gate isn't evaluated through a camera that
     // moved while the selection was in flight.
-    volumeBrush: { points: Float32Array, mask: Texture, footprint?: number, projection?: Mat4, view?: Mat4 };
+    sphereBrush: { points: Float32Array, mask: Texture, footprint?: number, projection?: Mat4, view?: Mat4 };
 };
 
-type IntersectOptions = MaskOptions | RectOptions | SphereOptions | BoxOptions | VolumeBrushOptions;
+type IntersectOptions = MaskOptions | RectOptions | SphereOptions | BoxOptions | SphereBrushOptions;
 
 const shapeInvMat = new Mat4();
 const identityMat = new Mat4();
@@ -117,7 +117,7 @@ fn brushHit(world: vec3f, closest: vec3f, radius: f32, basisT: mat3x3f, useFootp
     return dist - radius <= length(basisT * (d / dist));
 }
 
-fn intersectsVolumeBrush(world: vec3f, basisT: mat3x3f, useFootprint: bool) -> bool {
+fn intersectsSphereBrush(world: vec3f, basisT: mat3x3f, useFootprint: bool) -> bool {
     for (var i = 0u; i < uniforms.pathCount; i++) {
         let point = pathPoints[i];
         let radius = abs(point.w);
@@ -180,7 +180,7 @@ fn intersects(index: u32) -> bool {
     let paletteIndex = instancePalette[index] & 0xffffu;
     let toWorld = uniforms.model * paletteMatrix(paletteIndex);
     let world = (toWorld * vec4f(center, 1.0)).xyz;
-    // the on-screen stroke mask gates the volume brush only at footprint 0:
+    // the on-screen stroke mask gates the sphere brush only at footprint 0:
     // with a footprint, splats whose extent grazes the brushed volume count
     // even where their center projects outside the stroke (or off screen)
     if (uniforms.mode <= 1 || (uniforms.mode == 4 && uniforms.footprint <= 0.0)) {
@@ -213,7 +213,7 @@ fn intersects(index: u32) -> bool {
         if (any(world < uniforms.pathBoundsMin.xyz - vec3f(margin)) || any(world > uniforms.pathBoundsMax.xyz + vec3f(margin))) {
             return false;
         }
-        return intersectsVolumeBrush(world, basisT, uniforms.footprint > 0.0);
+        return intersectsSphereBrush(world, basisT, uniforms.footprint > 0.0);
     }
 
     let local = (uniforms.shapeInverse * vec4f(world, 1.0)).xyz;
@@ -322,21 +322,21 @@ class Intersect {
             this.output = new StorageBuffer(this.device, byteSize, BUFFERUSAGE_COPY_DST | BUFFERUSAGE_COPY_SRC);
         }
 
-        const volumeBrush = (options as VolumeBrushOptions).volumeBrush;
+        const sphereBrush = (options as SphereBrushOptions).sphereBrush;
         const camera = splat.scene.camera.camera;
         const projection = Camera.applyShaderProjectionTransform(
-            volumeBrush?.projection ?? camera.projectionMatrix, this.shaderProjection, false, this.device.isWebGPU
+            sphereBrush?.projection ?? camera.projectionMatrix, this.shaderProjection, false, this.device.isWebGPU
         );
-        this.viewProjection.mul2(projection, volumeBrush?.view ?? camera.viewMatrix);
-        const mask = (options as MaskOptions).mask ?? volumeBrush?.mask;
+        this.viewProjection.mul2(projection, sphereBrush?.view ?? camera.viewMatrix);
+        const mask = (options as MaskOptions).mask ?? sphereBrush?.mask;
         const rect = (options as RectOptions).rect;
         const sphere = (options as SphereOptions).sphere;
         const box = (options as BoxOptions).box;
-        const mode = volumeBrush ? 4 : mask ? 0 : rect ? 1 : sphere ? 2 : 3;
+        const mode = sphereBrush ? 4 : mask ? 0 : rect ? 1 : sphere ? 2 : 3;
 
         // grow-only: the shader reads pathCount entries, so a larger retained
         // buffer avoids reallocating on every stroke's different sample count
-        const points = volumeBrush?.points;
+        const points = sphereBrush?.points;
         const pathByteSize = Math.max(16, points?.byteLength ?? 0);
         if (this.pathPoints.byteSize < pathByteSize) {
             this.pathPoints.destroy();
@@ -382,7 +382,7 @@ class Intersect {
         this.compute.setParameter('pathBoundsMin', pathBoundsMin);
         this.compute.setParameter('pathBoundsMax', pathBoundsMax);
         this.compute.setParameter('shapeInverse', shapeInverse.data);
-        this.compute.setParameter('footprint', sphere?.footprint ?? box?.footprint ?? volumeBrush?.footprint ?? 0);
+        this.compute.setParameter('footprint', sphere?.footprint ?? box?.footprint ?? sphereBrush?.footprint ?? 0);
         Compute.calcDispatchSize(Math.ceil(outputWords / WORKGROUP_SIZE), this.dispatchSize);
         this.compute.setupDispatch(this.dispatchSize.x, this.dispatchSize.y);
         this.device.computeDispatch([this.compute], 'intersect');
@@ -393,4 +393,4 @@ class Intersect {
     }
 }
 
-export { Intersect, IntersectOptions, MaskOptions, RectOptions, SphereOptions, BoxOptions, VolumeBrushOptions };
+export { Intersect, IntersectOptions, MaskOptions, RectOptions, SphereOptions, BoxOptions, SphereBrushOptions };

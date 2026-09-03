@@ -1,0 +1,12 @@
+<svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<radialGradient id="select-sphere-brush-shade" cx="37%" cy="33%" r="72%">
+<stop offset="0%" stop-color="currentColor" stop-opacity="0.9"/>
+<stop offset="55%" stop-color="currentColor" stop-opacity="0.45"/>
+<stop offset="100%" stop-color="currentColor" stop-opacity="0.1"/>
+</radialGradient>
+</defs>
+<circle cx="19" cy="19" r="8" fill="url(#select-sphere-brush-shade)"/>
+<!-- 8 dashes: 2πr / 8 = 6.2832 per dash+gap -->
+<circle cx="19" cy="19" r="8" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4.1888 2.0944" fill-opacity="0" />
+</svg>

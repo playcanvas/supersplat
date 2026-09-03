@@ -91,6 +91,26 @@
     }
 }
 
+// tool group buttons carry a corner triangle, the usual flyout marker,
+// so users know press-and-hold reveals more tools
+.bottom-toolbar-group {
+    position: relative;
+
+    &::after {
+        content: '';
+        position: absolute;
+        right: 3px;
+        bottom: 3px;
+        border-style: solid;
+        border-width: 0 0 5px 5px;
+        border-color: transparent transparent $clr-default transparent;
+    }
+
+    &.active::after {
+        border-color: transparent transparent $clr-active transparent;
+    }
+}
+
 .bottom-toolbar-toggle.active {
     &::before {
         color: $clr-hilight;

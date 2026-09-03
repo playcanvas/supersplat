@@ -1,7 +1,7 @@
 import { Events } from '../events';
 import { opFromModifiers } from '../select-op';
 
-class VolumeBrushSelection {
+class SphereBrushSelection {
     activate: () => void;
     deactivate: () => void;
 
@@ -9,13 +9,13 @@ class VolumeBrushSelection {
         // create svg
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.classList.add('tool-svg', 'hidden');
-        svg.id = 'volume-brush-select-svg';
+        svg.id = 'sphere-brush-select-svg';
         parent.appendChild(svg);
 
         // shaded-sphere fill for the cursor circle, referenced from tool.scss
         const defs = document.createElementNS(svg.namespaceURI, 'defs');
         const gradient = document.createElementNS(svg.namespaceURI, 'radialGradient');
-        gradient.id = 'volume-brush-gradient';
+        gradient.id = 'sphere-brush-gradient';
         gradient.setAttribute('cx', '37%');
         gradient.setAttribute('cy', '33%');
         gradient.setAttribute('r', '72%');
@@ -170,7 +170,7 @@ class VolumeBrushSelection {
                 mask.busy = true;
                 try {
                     await events.invoke(
-                        'select.byVolumeBrush',
+                        'select.bySphereBrush',
                         opFromModifiers(e),
                         points.map(point => ({
                             x: point.x / canvas.width,
@@ -233,4 +233,4 @@ class VolumeBrushSelection {
     }
 }
 
-export { VolumeBrushSelection };
+export { SphereBrushSelection };

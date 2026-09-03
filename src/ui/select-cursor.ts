@@ -8,7 +8,7 @@ import removeCursor from './svg/cursor-remove.svg';
 const pointerTools = new Set([
     'rectSelection',
     'brushSelection',
-    'volumeBrushSelection',
+    'sphereBrushSelection',
     'floodSelection',
     'polygonSelection',
     'lassoSelection'

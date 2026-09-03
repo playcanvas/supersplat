@@ -46,9 +46,9 @@ import {
 import { createGradeTerms, gradeRows, gradeTerms, type GradeParams } from './color-grade';
 import { maskByteSize } from './data-processor/histogram-config';
 import type { Scene } from './scene';
-import { footprintIntersect } from './shaders/footprint-intersect';
-import { projectedSplatIndirectArgs } from './shaders/projected-splat-indirect-args';
-import { projectedSplatProjector } from './shaders/projected-splat-projector';
+import { footprintIntersect } from './shaders/footprint-intersect-shader';
+import { projectedSplatIndirectArgs } from './shaders/projected-splat-indirect-args-shader';
+import { projectedSplatProjector } from './shaders/projected-splat-projector-shader';
 import { fragmentShader, vertexShader } from './shaders/projected-splat-shader';
 import type { Splat } from './splat';
 
@@ -227,6 +227,7 @@ class ProjectedSplatRenderer {
         this.entity.enabled = false;
         scene.app.root.addChild(this.entity);
 
+        // diagnostics hook, not consumed by the ui: invoke it from the console
         scene.events.function('splat.projectedRendererStats', () => this.stats);
     }
 
@@ -591,7 +592,6 @@ class ProjectedSplatRenderer {
         this.meshInstance.instancingCount = Math.ceil(count / INSTANCE_SIZE);
         this.entity.enabled = count > 0;
         this.layoutDirty = false;
-        this.scene.events.fire('splat.projectedRendererResized', this.stats);
     }
 
     render() {
@@ -771,12 +771,12 @@ class ProjectedSplatRenderer {
             2 / targetSize.height
         ]);
         this.material.setParameter('outlineMode', outlineSelection ? 1 : 0);
-        // the master overlay switch (tab) shows the raw scene: gaussians render
+        // the edit view switch (tab) shows the raw scene: gaussians render
         // regardless of the profile flag and the non-selection rings hide
-        const overlay = events.invoke('view.overlay');
-        this.material.setParameter('showGaussians', events.invoke('view.gaussians') || !overlay || pending ? 1 : 0);
+        const editView = events.invoke('view.editView');
+        this.material.setParameter('showGaussians', events.invoke('view.gaussians') || !editView || pending ? 1 : 0);
         this.material.setParameter('showSelectedGaussians', events.invoke('view.selectionColor') && !pending ? 1 : 0);
-        const showAllRings = events.invoke('view.rings') && overlay;
+        const showAllRings = events.invoke('view.rings') && editView;
         const showSelectedRings = events.invoke('view.selectionRings') &&
             (selectedSplat?.instances.numSelected ?? 0) > 0;
         const showRings = showAllRings || showSelectedRings;

@@ -8,7 +8,7 @@ import cameraFrameSelectionSvg from './svg/camera-frame-selection.svg';
 import cameraResetSvg from './svg/camera-reset.svg';
 import flyCameraSvg from './svg/fly-camera.svg';
 import orbitCameraSvg from './svg/orbit-camera.svg';
-import viewOptionsSvg from './svg/view-options.svg';
+import overlaysSvg from './svg/overlays.svg';
 import { Tooltips } from './tooltips';
 
 const createSvg = (svgString: string) => {
@@ -29,8 +29,8 @@ class RightToolbar extends Container {
             event.stopPropagation();
         });
 
-        const displayOptions = new Button({
-            id: 'right-toolbar-display-options',
+        const appearance = new Button({
+            id: 'right-toolbar-appearance',
             class: 'right-toolbar-toggle'
         });
 
@@ -54,40 +54,40 @@ class RightToolbar extends Container {
             class: 'right-toolbar-button'
         });
 
-        const viewOptions = new Button({
-            id: 'right-toolbar-view-options',
+        const overlays = new Button({
+            id: 'right-toolbar-overlays',
             class: 'right-toolbar-toggle'
         });
 
-        const options = new Button({
-            id: 'right-toolbar-options',
+        const settings = new Button({
+            id: 'right-toolbar-settings',
             class: 'right-toolbar-toggle',
             icon: 'E283'
         });
 
-        displayOptions.dom.appendChild(createSvg(appearanceSvg));
+        appearance.dom.appendChild(createSvg(appearanceSvg));
         orbitMode.dom.appendChild(createSvg(orbitCameraSvg));
         flyMode.dom.appendChild(createSvg(flyCameraSvg));
         cameraFrameSelection.dom.appendChild(createSvg(cameraFrameSelectionSvg));
         cameraReset.dom.appendChild(createSvg(cameraResetSvg));
-        viewOptions.dom.appendChild(createSvg(viewOptionsSvg));
+        overlays.dom.appendChild(createSvg(overlaysSvg));
 
         // icon-only buttons: keep accessible names in sync with the language
         const buttonLabels: [Button, string][] = [
-            [displayOptions, 'panel.display'],
-            [viewOptions, 'panel.view'],
+            [appearance, 'panel.appearance'],
+            [overlays, 'panel.overlays'],
             [orbitMode, 'tooltip.right-toolbar.orbit-camera'],
             [flyMode, 'tooltip.right-toolbar.fly-camera'],
             [cameraFrameSelection, 'tooltip.right-toolbar.frame-selection'],
             [cameraReset, 'tooltip.right-toolbar.reset-camera'],
-            [options, 'panel.settings']
+            [settings, 'panel.settings']
         ];
         buttonLabels.forEach(([button, key]) => {
             i18n.onChange(() => button.dom.setAttribute('aria-label', i18n.t(key)), button);
         });
 
-        this.append(displayOptions);
-        this.append(viewOptions);
+        this.append(appearance);
+        this.append(overlays);
         this.append(new Element({ class: 'right-toolbar-separator' }));
         this.append(orbitMode);
         this.append(flyMode);
@@ -95,7 +95,7 @@ class RightToolbar extends Container {
         this.append(cameraFrameSelection);
         this.append(cameraReset);
         this.append(new Element({ class: 'right-toolbar-separator' }));
-        this.append(options);
+        this.append(settings);
 
         // Helper to compose localized tooltip text with shortcut
         const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
@@ -110,26 +110,26 @@ class RightToolbar extends Container {
             return text;
         };
 
-        tooltips.register(displayOptions, tooltip('panel.display'), 'left');
+        tooltips.register(appearance, tooltip('panel.appearance'), 'left');
         tooltips.register(orbitMode, tooltip('tooltip.right-toolbar.orbit-camera', 'camera.toggleControlMode'), 'left');
         tooltips.register(flyMode, tooltip('tooltip.right-toolbar.fly-camera', 'camera.toggleControlMode'), 'left');
         tooltips.register(cameraFrameSelection, tooltip('tooltip.right-toolbar.frame-selection', 'camera.focus'), 'left');
         tooltips.register(cameraReset, tooltip('tooltip.right-toolbar.reset-camera', 'camera.reset'), 'left');
-        tooltips.register(viewOptions, tooltip('panel.view'), 'left');
-        tooltips.register(options, tooltip('panel.settings'), 'left');
+        tooltips.register(overlays, tooltip('panel.overlays'), 'left');
+        tooltips.register(settings, tooltip('panel.settings'), 'left');
 
         // add event handlers
 
-        displayOptions.on('click', () => events.fire('displayPanel.toggleVisible'));
+        appearance.on('click', () => events.fire('appearancePanel.toggleVisible'));
         orbitMode.on('click', () => events.fire('camera.setControlMode', 'orbit'));
         flyMode.on('click', () => events.fire('camera.setControlMode', 'fly'));
         cameraFrameSelection.on('click', () => events.fire('camera.focus'));
         cameraReset.on('click', () => events.fire('camera.reset'));
-        viewOptions.on('click', () => events.fire('viewPanel.toggleVisible'));
-        options.on('click', () => events.fire('settingsPanel.toggleVisible'));
+        overlays.on('click', () => events.fire('overlaysPanel.toggleVisible'));
+        settings.on('click', () => events.fire('settingsPanel.toggleVisible'));
 
-        events.on('displayPanel.visible', (visible: boolean) => {
-            displayOptions.class[visible ? 'add' : 'remove']('active');
+        events.on('appearancePanel.visible', (visible: boolean) => {
+            appearance.class[visible ? 'add' : 'remove']('active');
         });
 
         events.on('camera.controlMode', (mode: 'orbit' | 'fly') => {
@@ -137,12 +137,12 @@ class RightToolbar extends Container {
             flyMode.class[mode === 'fly' ? 'add' : 'remove']('active');
         });
 
-        events.on('viewPanel.visible', (visible: boolean) => {
-            viewOptions.class[visible ? 'add' : 'remove']('active');
+        events.on('overlaysPanel.visible', (visible: boolean) => {
+            overlays.class[visible ? 'add' : 'remove']('active');
         });
 
         events.on('settingsPanel.visible', (visible: boolean) => {
-            options.class[visible ? 'add' : 'remove']('active');
+            settings.class[visible ? 'add' : 'remove']('active');
         });
     }
 }

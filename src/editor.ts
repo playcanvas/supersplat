@@ -65,8 +65,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // force render on some events
 
     [
-        'camera.splatSize', 'view.outlineSelection', 'view.gaussians', 'view.centers', 'view.rings',
-        'view.ringSize', 'view.overlay',
+        'view.centerSize', 'view.outlineSelection', 'view.gaussians', 'view.centers', 'view.rings',
+        'view.ringSize', 'view.editView',
         'view.selectionColor', 'view.selectionCenters', 'view.selectionRings',
         'view.splatsColorBlend', 'view.splatsSelectionBlend',
         'view.centersColorBlend', 'view.centersSelectionBlend',
@@ -1055,23 +1055,23 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         setControlMode(controlMode === 'orbit' ? 'fly' : 'orbit');
     });
 
-    // splat size
+    // center size
 
-    let splatSize = 2;
+    let centerSize = 2;
 
-    const setSplatSize = (value: number) => {
-        if (value !== splatSize) {
-            splatSize = value;
-            events.fire('camera.splatSize', splatSize);
+    const setCenterSize = (value: number) => {
+        if (value !== centerSize) {
+            centerSize = value;
+            events.fire('view.centerSize', centerSize);
         }
     };
 
-    events.function('camera.splatSize', () => {
-        return splatSize;
+    events.function('view.centerSize', () => {
+        return centerSize;
     });
 
-    events.on('camera.setSplatSize', (value: number) => {
-        setSplatSize(value);
+    events.on('view.setCenterSize', (value: number) => {
+        setCenterSize(value);
     });
 
     // camera fly speed
@@ -1170,39 +1170,39 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     });
 
-    // master overlay switch (tab): while off, the non-selection overlays hide
+    // edit view switch (tab): while off, the non-selection overlays hide
     // and gaussians render regardless of the profile, so it toggles between
     // the editing view and the raw scene. Session-only by design - it is not
     // a preference, and any appearance edit below switches it back on so
     // settings are never adjusted blind
-    let overlay = true;
+    let editView = true;
 
-    const setOverlay = (value: boolean) => {
-        if (value !== overlay) {
-            overlay = value;
-            events.fire('view.overlay', value);
+    const setEditView = (value: boolean) => {
+        if (value !== editView) {
+            editView = value;
+            events.fire('view.editView', value);
         }
     };
 
-    events.function('view.overlay', () => overlay);
+    events.function('view.editView', () => editView);
 
-    events.on('view.setOverlay', setOverlay);
+    events.on('view.setEditView', setEditView);
 
-    events.on('view.toggleOverlay', () => {
-        setOverlay(!overlay);
+    events.on('view.toggleEditView', () => {
+        setEditView(!editView);
     });
 
     [
         'view.gaussians', 'view.centers', 'view.rings',
         'view.selectionCenters', 'view.selectionRings', 'view.selectionColor', 'view.outlineSelection',
-        'camera.splatSize', 'view.ringSize',
+        'view.centerSize', 'view.ringSize',
         'view.splatsColorBlend', 'view.splatsSelectionBlend',
         'view.centersColorBlend', 'view.centersSelectionBlend',
         'view.ringsColorBlend', 'view.ringsSelectionBlend',
         'bgClr', 'selectedClr', 'unselectedClr', 'lockedClr'
     ].forEach((eventName) => {
         events.on(eventName, () => {
-            setOverlay(true);
+            setEditView(true);
         });
     });
 
@@ -1339,7 +1339,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             unselectedColor: packC(events.invoke('unselectedClr')),
             lockedColor: packC(events.invoke('lockedClr')),
             shBands: events.invoke('view.bands'),
-            centersSize: events.invoke('camera.splatSize'),
+            centersSize: events.invoke('view.centerSize'),
             outlineSelection: events.invoke('view.outlineSelection'),
             showGrid: events.invoke('grid.visible'),
             gridPlane: events.invoke('grid.plane'),
@@ -1358,7 +1358,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         events.fire('setUnselectedClr', new Color(docView.unselectedColor));
         events.fire('setLockedClr', new Color(docView.lockedColor));
         events.fire('view.setBands', docView.shBands);
-        events.fire('camera.setSplatSize', docView.centersSize);
+        events.fire('view.setCenterSize', docView.centersSize);
         events.fire('view.setOutlineSelection', docView.outlineSelection);
         events.fire('grid.setVisible', docView.showGrid);
         events.fire('grid.setPlane', docView.gridPlane ?? 'xz');

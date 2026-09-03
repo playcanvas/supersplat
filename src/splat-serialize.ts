@@ -38,12 +38,12 @@ import {
 
 import { version } from '../package.json';
 import { ColorGrade, createGradeTerms, dcDecode, dcEncode, sigmoid } from './color-grade';
+import type { EditorSplatResource } from './editor-splat-resource';
 import { Events } from './events';
 import { groupInstancesByChunk } from './gaussian-instances';
 import { PermutedChunkSource } from './io';
 import { SHRotation } from './sh-utils';
 import { Splat } from './splat';
-import type { EditorSplatResource } from './splat-resource';
 import { State } from './splat-state';
 
 type SerializeSettings = {
@@ -654,9 +654,10 @@ const writeSplatFile = async (
  * Write a resource's static gaussian data, restricted to `rows` (in-memory row
  * indices, ascending) and in that order. Nothing is baked - no entity transform,
  * no palette, no grade - because a .ssproj stores the static tier untouched and
- * keeps every per-layer edit in a side blob. Writing to PLY is a no-op bake for
- * all our inputs: `Transform.PLY` is the convention for PLY, splat, KSplat, SPZ
- * and SOG alike, which is every format the editor loads.
+ * keeps every per-layer edit in a side blob. The saved entity rotation already
+ * carries the import transform the reader reported (LCC reports one; the other
+ * formats report `Transform.PLY`), so the rows are written verbatim: the source
+ * is relabelled as PLY space and the writer's bakeTransform becomes a no-op.
  *
  * The source is NOT closed here - it belongs to the resource and outlives the save.
  */
@@ -682,9 +683,16 @@ const writeResourceFile = async (
         source = new PermutedChunkSource(retained, rows);
     }
 
-    const pool = createChunkDataPool({ chunkSize: source.meta.chunkSize });
+    // relabel as PLY space so the writer bakes nothing (see above)
+    const raw: ChunkSource = {
+        meta: { ...source.meta, transform: Transform.PLY.clone() },
+        read: request => source.read(request),
+        close: () => source.close()
+    };
+
+    const pool = createChunkDataPool({ chunkSize: raw.meta.chunkSize });
     try {
-        await writeSource({ filename, outputFormat: 'ply', source, pool, options: {}, createDevice: createGpuDevice }, fs);
+        await writeSource({ filename, outputFormat: 'ply', source: raw, pool, options: {}, createDevice: createGpuDevice }, fs);
     } finally {
         pool.destroy();
     }

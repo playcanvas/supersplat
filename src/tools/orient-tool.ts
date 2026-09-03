@@ -7,7 +7,7 @@ import type { GridPlane } from '../infinite-grid';
 import { Pivot } from '../pivot';
 import { Scene } from '../scene';
 import { Splat } from '../splat';
-import { pickSplatSurfacePoint } from '../splat-pick';
+import { pickSplatSurfacePoint } from '../splat-surface-pick';
 import { ToolOverlay, OverlayWriter } from '../tool-overlay';
 import { Transform } from '../transform';
 import { DimensionLabels } from '../ui/dimension-labels';
@@ -374,7 +374,7 @@ class OrientTool {
             }
         });
 
-        // place a point at the visible surface under the click (see splat-pick.ts)
+        // place a point at the visible surface under the click (see splat-surface-pick.ts)
         const placePoint = async (offsetX: number, offsetY: number) => {
             const target = splat;
             const picked = new Vec3();

@@ -60,7 +60,7 @@ const popupConfig: Record<string, CategoryConfig> = {
             { id: 'select.delete', localeKey: 'popup.shortcuts.delete-selected-splats' },
             { id: 'selection.toggleUseDepth', localeKey: 'popup.shortcuts.toggle-depth' },
             { id: 'selection.toggleFootprint', localeKey: 'popup.shortcuts.toggle-footprint' },
-            { id: 'view.toggleOverlay', localeKey: 'popup.shortcuts.toggle-overlays' }
+            { id: 'view.toggleEditView', localeKey: 'popup.shortcuts.toggle-edit-view' }
         ],
         hints: [
             { displayKey: 'Shift', localeKey: 'popup.shortcuts.add-to-selection' },

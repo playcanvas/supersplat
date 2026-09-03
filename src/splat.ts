@@ -10,11 +10,11 @@ import {
 
 import { ColorGrade, createGradeTerms, gradeTerms } from './color-grade';
 import { ColorPalette } from './color-palette';
+import { EditorSplatResource } from './editor-splat-resource';
 import { Element, ElementType } from './element';
 import { GaussianInstances } from './gaussian-instances';
 import { IndexRanges } from './index-ranges';
 import { Serializer } from './serializer';
-import { EditorSplatResource } from './splat-resource';
 import { Transform } from './transform';
 import { TransformPalette } from './transform-palette';
 

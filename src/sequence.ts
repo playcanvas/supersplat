@@ -1,10 +1,10 @@
 import { Asset, Quat } from 'playcanvas';
 
+import { EditorSplatResource } from './editor-splat-resource';
 import { Events } from './events';
 import { loadSplatSource, MappedReadFileSystem } from './io';
 import { Scene } from './scene';
 import { Splat } from './splat';
-import { EditorSplatResource } from './splat-resource';
 
 type FrameData = {
     asset: Asset;

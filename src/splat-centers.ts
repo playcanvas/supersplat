@@ -10,10 +10,10 @@ import {
 } from 'playcanvas';
 
 import { ElementType, Element } from './element';
-import { vertexShader, fragmentShader } from './shaders/splat-overlay-shader';
+import { vertexShader, fragmentShader } from './shaders/splat-centers-shader';
 import { Splat } from './splat';
 
-class SplatOverlay extends Element {
+class SplatCenters extends Element {
     entity: Entity;
     mesh: Mesh;
     material: ShaderMaterial;
@@ -29,7 +29,7 @@ class SplatOverlay extends Element {
         const device = scene.graphicsDevice;
 
         this.material = new ShaderMaterial({
-            uniqueName: 'splatOverlayMaterial',
+            uniqueName: 'splatCentersMaterial',
             attributes: {
                 vertex_position: SEMANTIC_POSITION
             },
@@ -59,7 +59,7 @@ class SplatOverlay extends Element {
         // disable frustum culling since mesh has no vertex buffer for AABB calculation
         this.meshInstance.cull = false;
 
-        this.entity = new Entity('splatOverlay');
+        this.entity = new Entity('splatCenters');
         this.entity.addComponent('render', {
             meshInstances: [this.meshInstance],
             layers: [scene.centersLayer.id]
@@ -140,14 +140,14 @@ class SplatOverlay extends Element {
             const { material } = this;
             // delete/undo resizes the instance list, so the draw count is per-frame
             this.meshInstance.instancingCount = this.splat.instances.count;
-            const splatSize = events.invoke('camera.splatSize');
+            const centerSize = events.invoke('view.centerSize');
             const selectedClr = events.invoke('selectedClr');
             const unselectedClr = events.invoke('unselectedClr');
-            // the master overlay switch (tab) hides the non-selection centers;
+            // the edit view switch (tab) hides the non-selection centers;
             // selection centers stay visible
-            const showAllCenters = events.invoke('view.centers') && events.invoke('view.overlay');
+            const showAllCenters = events.invoke('view.centers') && events.invoke('view.editView');
 
-            material.setParameter('splatSize', splatSize * window.devicePixelRatio);
+            material.setParameter('centerSize', centerSize * window.devicePixelRatio);
             material.setParameter('viewportSize', [scene.targetSize.width, scene.targetSize.height]);
             material.setParameter('selectionOnly', showAllCenters ? 0 : 1);
             material.setParameter('selectionCenters', events.invoke('view.selectionCenters') ? 1 : 0);
@@ -166,13 +166,13 @@ class SplatOverlay extends Element {
     get enabled() {
         const { scene, splat } = this;
         const { events } = scene;
-        const showAllCenters = events.invoke('view.centers') && events.invoke('view.overlay');
+        const showAllCenters = events.invoke('view.centers') && events.invoke('view.editView');
         const showSelectedCenters = events.invoke('view.selectionCenters') && (splat?.instances.numSelected ?? 0) > 0;
         return splat &&
-            events.invoke('camera.splatSize') > 0 &&
+            events.invoke('view.centerSize') > 0 &&
             scene.camera.renderOverlays &&
             (showAllCenters || showSelectedCenters);
     }
 }
 
-export { SplatOverlay };
+export { SplatCenters };

@@ -203,30 +203,34 @@ body {
         font-family: inherit;
         font-variant-numeric: tabular-nums;
         overflow: visible;
-        cursor: text;
-        user-select: text;
-        padding: 0 4px;
-        border-radius: 4px;
-        border: 1px solid transparent;
-        outline: none;
-        transition: background-color 0.15s ease;
+    }
+}
 
-        &:hover {
-            background-color: rgba(0, 0, 0, 0.25);
-        }
+// inline editable text (see editable-text.ts)
+.editable-text {
+    cursor: text;
+    user-select: text;
+    padding: 0 4px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    outline: none;
+    transition: background-color 0.15s ease;
 
-        &:focus {
-            border-color: $clr-hilight;
-            background-color: rgba(0, 0, 0, 0.25);
-        }
+    &:hover {
+        background-color: rgba(0, 0, 0, 0.25);
+    }
 
-        &.flash-ok {
-            background-color: rgba(120, 220, 140, 0.35);
-        }
+    &:focus {
+        border-color: $clr-hilight;
+        background-color: rgba(0, 0, 0, 0.25);
+    }
 
-        &.flash-bad {
-            background-color: rgba(220, 100, 100, 0.45);
-        }
+    &.flash-ok {
+        background-color: rgba(120, 220, 140, 0.35);
+    }
+
+    &.flash-bad {
+        background-color: rgba(220, 100, 100, 0.45);
     }
 }
 

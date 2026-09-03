@@ -1,8 +1,8 @@
 import { Container, Label } from '@playcanvas/pcui';
 import { Mat4 } from 'playcanvas';
 
+import { AppearancePanel } from './appearance-panel';
 import { DataPanel } from './data-panel';
-import { DisplayOptionsPanel } from './display-options-panel';
 import { Events } from '../events';
 import { AboutPopup } from './about-popup';
 import { BottomToolbar } from './bottom-toolbar';
@@ -11,6 +11,7 @@ import { ExportPopup } from './export-popup';
 import { ImageSettingsDialog } from './image-settings-dialog';
 import { i18n } from './localization';
 import { Menu } from './menu';
+import { OverlaysPanel } from './overlays-panel';
 import { PerfOverlay } from './perf-overlay';
 import logo from './playcanvas-logo.png';
 import { Popup, ShowOptions } from './popup';
@@ -26,7 +27,6 @@ import { TimelinePanel } from './timeline-panel';
 import { Tooltips } from './tooltips';
 import { VideoSettingsDialog } from './video-settings-dialog';
 import { ViewCube } from './view-cube';
-import { ViewOptionsPanel } from './view-options-panel';
 import { version } from '../../package.json';
 
 // ts compiler and vscode find this type, but eslint does not
@@ -105,8 +105,8 @@ class EditorUI {
         // bottom toolbar
         const scenePanel = new ScenePanel(events, tooltips);
         const settingsPanel = new SettingsPanel(events, tooltips);
-        const displayOptionsPanel = new DisplayOptionsPanel(events, tooltips);
-        const viewOptionsPanel = new ViewOptionsPanel(events, tooltips);
+        const appearancePanel = new AppearancePanel(events, tooltips);
+        const overlaysPanel = new OverlaysPanel(events, tooltips);
         const bottomToolbar = new BottomToolbar(events, tooltips);
         const rightToolbar = new RightToolbar(events, tooltips);
         const menu = new Menu(events);
@@ -127,8 +127,8 @@ class EditorUI {
         // the option popups come after the toolbars so their select dropdowns,
         // which can extend past the panel bounds, paint above them
         canvasContainer.append(settingsPanel);
-        canvasContainer.append(displayOptionsPanel);
-        canvasContainer.append(viewOptionsPanel);
+        canvasContainer.append(appearancePanel);
+        canvasContainer.append(overlaysPanel);
 
         // view axes container
         const viewCube = new ViewCube(events);

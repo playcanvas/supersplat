@@ -1,6 +1,6 @@
 @use 'colors.scss' as *;
 
-// shared shell for the settings and view options popups
+// shared shell for the appearance, overlays and settings popups
 .options-panel {
     top: 50%;
     transform: translate(0, -50%);

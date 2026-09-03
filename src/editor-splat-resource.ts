@@ -55,7 +55,7 @@ class EditorSplatResource extends GSplatContainer {
     // gaussians rather than copying them - so the asset behind it must outlive
     // any single layer. Deliberately not the engine's inherited `refCount`: that
     // one means "in use by the sorter this frame" and is drained by
-    // GSplatDirector, which this branch's custom renderer replaced, so a
+    // GSplatDirector, which the editor's custom renderer replaced, so a
     // deferred destroy queued there would never be processed.
     private layerRefs = 0;
 

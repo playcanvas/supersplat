@@ -47,10 +47,13 @@ const axis0 = array<i32, 3>(1, 0, 0);
 const axis1 = array<i32, 3>(2, 2, 1);
 
 // a decade level starts to fade in once its cells span this many pixels and is
-// fully visible one decade later; the level after that is drawn bold. Three
-// levels are evaluated per pixel whatever the scale, so the grid never runs out
-// of lines on large scenes and never floods the view with sub-pixel ones
-const MIN_CELL_PIXELS = 8.0;
+// fully visible one decade later. Three levels are evaluated per pixel whatever
+// the scale, so the grid never runs out of lines on large scenes and never
+// floods the view with sub-pixel ones
+const MIN_CELL_PIXELS = 7.0;
+// its lines start occluding the splats behind them, and the level after next
+// starts going bold, once its cells span this many pixels instead
+const OCCLUDE_CELL_PIXELS = 8.0;
 
 struct GridSample {
     // premultiplied colour and coverage
@@ -204,7 +207,9 @@ fn shadePlane(position: vec2f, ddxValue: vec2f, ddyValue: vec2f, plane: i32, emp
         // bold over the second
         let s = log10(cell / (footprint * MIN_CELL_PIXELS));
         let minor = smoothstep(0.0, 1.0, s);
-        let major = smoothstep(1.0, 2.0, s) * emphasis;
+        let sOcclude = s - log10(OCCLUDE_CELL_PIXELS / MIN_CELL_PIXELS);
+        let occlude = smoothstep(0.0, 1.0, sOcclude);
+        let major = smoothstep(1.0, 2.0, sOcclude) * emphasis;
         // each line family is widthPixels wide on screen, so its width in cell
         // units follows the footprint across that family, not the larger one
         let widthPixels = 1.0 + major;
@@ -215,7 +220,7 @@ fn shadePlane(position: vec2f, ddxValue: vec2f, ddyValue: vec2f, plane: i32, emp
         // occlusion dithers in with the line's own strength, so a faint line is
         // a faintly dotted cut through the splats behind it, and fades out
         // radially around the camera with the grazing term
-        result.depthAlpha = max(result.depthAlpha, line * minor * grazing);
+        result.depthAlpha = max(result.depthAlpha, line * occlude * grazing);
     }
 
     return result;

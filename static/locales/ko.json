@@ -99,7 +99,7 @@
     "panel.overlays.section-helpers": "도우미",
     "panel.overlays.section-diagnostics": "진단",
     "panel.overlays.grid": "그리드",
-    "panel.overlays.grid-plane": "평면",
+    "panel.overlays.grid-planes": "평면",
     "panel.overlays.bounding-box": "경계 상자",
     "panel.overlays.dimensions": "치수",
     "panel.overlays.camera-poses": "카메라 포즈",

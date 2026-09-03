@@ -99,7 +99,7 @@
     "panel.overlays.section-helpers": "辅助项",
     "panel.overlays.section-diagnostics": "诊断",
     "panel.overlays.grid": "网格",
-    "panel.overlays.grid-plane": "平面",
+    "panel.overlays.grid-planes": "平面",
     "panel.overlays.bounding-box": "边界框",
     "panel.overlays.dimensions": "尺寸",
     "panel.overlays.camera-poses": "相机位姿",

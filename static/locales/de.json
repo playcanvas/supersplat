@@ -99,7 +99,7 @@
     "panel.overlays.section-helpers": "Hilfen",
     "panel.overlays.section-diagnostics": "Diagnose",
     "panel.overlays.grid": "Raster",
-    "panel.overlays.grid-plane": "Ebene",
+    "panel.overlays.grid-planes": "Ebenen",
     "panel.overlays.bounding-box": "Objektbox",
     "panel.overlays.dimensions": "Abmessungen",
     "panel.overlays.camera-poses": "Kameras",

@@ -290,8 +290,8 @@ class OrientTool {
                 n.copy(snapped);
             }
 
-            // the grid plane's positive axis
-            const gridPlane: GridPlane = events.invoke('grid.plane');
+            // the positive axis of the first enabled grid plane (xz when none is)
+            const gridPlane: GridPlane = (events.invoke('grid.planes') as GridPlane[])[0] ?? 'xz';
             const a = gridPlane === 'xy' ? Vec3.BACK : (gridPlane === 'yz' ? Vec3.RIGHT : Vec3.UP);
 
             // shortest arc rotation from the plane normal to the grid axis

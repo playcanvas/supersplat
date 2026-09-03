@@ -99,7 +99,7 @@
     "panel.overlays.section-helpers": "Вспомогательные элементы",
     "panel.overlays.section-diagnostics": "Диагностика",
     "panel.overlays.grid": "Сетка",
-    "panel.overlays.grid-plane": "Плоскость",
+    "panel.overlays.grid-planes": "Плоскости",
     "panel.overlays.bounding-box": "Границы",
     "panel.overlays.dimensions": "Размеры",
     "panel.overlays.camera-poses": "Позы камер",

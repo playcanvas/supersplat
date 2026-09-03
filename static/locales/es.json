@@ -99,7 +99,7 @@
     "panel.overlays.section-helpers": "Ayudas",
     "panel.overlays.section-diagnostics": "Diagnóstico",
     "panel.overlays.grid": "Cuadrícula",
-    "panel.overlays.grid-plane": "Plano",
+    "panel.overlays.grid-planes": "Planos",
     "panel.overlays.bounding-box": "Límites",
     "panel.overlays.dimensions": "Dimensiones",
     "panel.overlays.camera-poses": "Cámaras",

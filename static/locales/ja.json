@@ -99,7 +99,7 @@
     "panel.overlays.section-helpers": "補助表示",
     "panel.overlays.section-diagnostics": "診断",
     "panel.overlays.grid": "グリッド",
-    "panel.overlays.grid-plane": "平面",
+    "panel.overlays.grid-planes": "平面",
     "panel.overlays.bounding-box": "バウンディングボックス",
     "panel.overlays.dimensions": "寸法",
     "panel.overlays.camera-poses": "カメラポーズ",

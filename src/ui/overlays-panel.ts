@@ -1,4 +1,4 @@
-import { BooleanInput, Container, Label, SelectInput } from '@playcanvas/pcui';
+import { BooleanInput, Button, Container, Label } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import type { GridPlane } from '../infinite-grid';
@@ -110,29 +110,51 @@ class OverlaysPanel extends Container {
         showGridRow.append(showGridLabel);
         showGridRow.append(showGridToggle);
 
-        // grid plane
+        // grid planes: one toggle per plane, any combination
 
-        const gridPlaneRow = new Container({
-            class: ['settings-panel-row', 'options-panel-row-indent']
+        const gridPlanesRow = new Container({
+            class: ['settings-panel-row', 'options-panel-icon-row', 'options-panel-row-indent']
         });
 
-        const gridPlaneLabel = new Label({
+        const gridPlanesLabel = new Label({
             class: 'settings-panel-row-label'
         });
-        i18n.bindText(gridPlaneLabel, 'panel.overlays.grid-plane');
+        i18n.bindText(gridPlanesLabel, 'panel.overlays.grid-planes');
 
-        const gridPlaneSelection = new SelectInput({
-            class: 'settings-panel-row-select',
-            defaultValue: 'xz',
-            options: [
-                { v: 'xz', t: 'XZ' },
-                { v: 'xy', t: 'XY' },
-                { v: 'yz', t: 'YZ' }
-            ]
+        const planeButton = (plane: GridPlane) => {
+            const button = new Button({
+                class: 'options-panel-icon-button',
+                text: plane.toUpperCase()
+            });
+            const label = () => `${i18n.t('panel.overlays.grid-planes')}: ${plane.toUpperCase()}`;
+            i18n.onChange(() => button.dom.setAttribute('aria-label', label()), button);
+            tooltips.register(button, label, 'top');
+            button.on('click', () => events.fire('grid.togglePlane', plane));
+            return button;
+        };
+
+        const planeButtons: [GridPlane, Button][] = [
+            ['xz', planeButton('xz')],
+            ['xy', planeButton('xy')],
+            ['yz', planeButton('yz')]
+        ];
+
+        const gridPlanesToggles = new Container({
+            class: 'options-panel-toggle-grid'
         });
+        planeButtons.forEach(([, button]) => gridPlanesToggles.append(button));
+        gridPlanesToggles.append(new Container({ class: 'options-panel-icon-spacer' }));
 
-        gridPlaneRow.append(gridPlaneLabel);
-        gridPlaneRow.append(gridPlaneSelection);
+        gridPlanesRow.append(gridPlanesLabel);
+        gridPlanesRow.append(gridPlanesToggles);
+
+        const syncPlanes = (planes: GridPlane[]) => {
+            planeButtons.forEach(([plane, button]) => {
+                const active = planes.includes(plane);
+                button.class[active ? 'add' : 'remove']('active');
+                button.dom.setAttribute('aria-pressed', String(active));
+            });
+        };
 
         // show bound
 
@@ -244,7 +266,7 @@ class OverlaysPanel extends Container {
         this.append(header);
         this.append(sectionHeader('panel.overlays.section-helpers'));
         this.append(showGridRow);
-        this.append(gridPlaneRow);
+        this.append(gridPlanesRow);
         this.append(showBoundRow);
         this.append(showBoundDimensionsRow);
         this.append(showCameraPosesRow);
@@ -261,8 +283,8 @@ class OverlaysPanel extends Container {
         const sync = () => {
             const grid = events.invoke('grid.visible') as boolean;
             showGridToggle.value = grid;
-            gridPlaneRow.enabled = grid;
-            gridPlaneSelection.value = events.invoke('grid.plane');
+            gridPlanesRow.enabled = grid;
+            syncPlanes(events.invoke('grid.planes'));
             const bound = events.invoke('camera.bound') as boolean;
             showBoundToggle.value = bound;
             showBoundDimensionsRow.enabled = bound;
@@ -310,29 +332,23 @@ class OverlaysPanel extends Container {
 
         resetButton.on('click', () => {
             events.fire('preferences.reset', 'overlays');
-            events.fire('grid.setPlane', 'xz');
+            events.fire('grid.setPlanes', ['xz']);
         });
 
         // show grid
 
         events.on('grid.visible', (visible: boolean) => {
             showGridToggle.value = visible;
-            gridPlaneRow.enabled = visible;
+            gridPlanesRow.enabled = visible;
         });
 
         showGridToggle.on('change', () => {
             events.fire('grid.setVisible', showGridToggle.value);
         });
 
-        // grid plane
+        // grid planes
 
-        events.on('grid.plane', (plane: GridPlane) => {
-            gridPlaneSelection.value = plane;
-        });
-
-        gridPlaneSelection.on('change', (value: GridPlane) => {
-            events.fire('grid.setPlane', value);
-        });
+        events.on('grid.planes', syncPlanes);
 
         // show bound
 

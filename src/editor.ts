@@ -102,21 +102,29 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     setGridVisible(scene.config.show.grid);
 
-    // grid.plane
+    // grid.planes: the set of planes drawn, in xz, xy, yz order
 
-    const setGridPlane = (plane: GridPlane) => {
-        if (plane !== scene.grid.plane) {
-            scene.grid.plane = plane;
-            events.fire('grid.plane', plane);
+    const planeOrder: GridPlane[] = ['xz', 'xy', 'yz'];
+
+    const setGridPlanes = (planes: GridPlane[]) => {
+        const next = planeOrder.filter(plane => planes.includes(plane));
+        if (next.join() !== scene.grid.planes.join()) {
+            scene.grid.planes = next;
+            events.fire('grid.planes', next.slice());
         }
     };
 
-    events.function('grid.plane', () => {
-        return scene.grid.plane;
+    events.function('grid.planes', () => {
+        return scene.grid.planes.slice();
     });
 
-    events.on('grid.setPlane', (plane: GridPlane) => {
-        setGridPlane(plane);
+    events.on('grid.setPlanes', (planes: GridPlane[]) => {
+        setGridPlanes(planes);
+    });
+
+    events.on('grid.togglePlane', (plane: GridPlane) => {
+        const planes = scene.grid.planes;
+        setGridPlanes(planes.includes(plane) ? planes.filter(p => p !== plane) : [...planes, plane]);
     });
 
     // camera.fovDolly
@@ -1342,7 +1350,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             centersSize: events.invoke('view.centerSize'),
             outlineSelection: events.invoke('view.outlineSelection'),
             showGrid: events.invoke('grid.visible'),
-            gridPlane: events.invoke('grid.plane'),
+            gridPlanes: events.invoke('grid.planes'),
             showBound: events.invoke('camera.bound'),
             showBoundDimensions: events.invoke('camera.boundDimensions'),
             showCameraPoses: events.invoke('camera.showPoses'),
@@ -1361,7 +1369,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         events.fire('view.setCenterSize', docView.centersSize);
         events.fire('view.setOutlineSelection', docView.outlineSelection);
         events.fire('grid.setVisible', docView.showGrid);
-        events.fire('grid.setPlane', docView.gridPlane ?? 'xz');
+        // documents before the per-plane toggles stored a single gridPlane
+        events.fire('grid.setPlanes', docView.gridPlanes ?? [docView.gridPlane ?? 'xz']);
         events.fire('camera.setBound', docView.showBound);
         events.fire('camera.setBoundDimensions', docView.showBoundDimensions ?? false);
         events.fire('camera.setShowPoses', docView.showCameraPoses ?? false);

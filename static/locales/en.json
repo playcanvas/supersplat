@@ -99,7 +99,7 @@
     "panel.overlays.section-helpers": "Helpers",
     "panel.overlays.section-diagnostics": "Diagnostics",
     "panel.overlays.grid": "Grid",
-    "panel.overlays.grid-plane": "Plane",
+    "panel.overlays.grid-planes": "Planes",
     "panel.overlays.bounding-box": "Bounding Box",
     "panel.overlays.dimensions": "Dimensions",
     "panel.overlays.camera-poses": "Camera Poses",

@@ -697,7 +697,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // css pixels. Each sample is depth-picked to a world position and the world
     // radius matched to the on-screen brush size, giving a capsule path the
     // compute pass tests splat centers against.
-    events.function('select.byVolumeBrush', async (
+    events.function('select.bySphereBrush', async (
         op: 'add'|'remove'|'set'|'intersect',
         points: { x: number, y: number, radius: number }[],
         canvas: HTMLCanvasElement
@@ -748,7 +748,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 const pathPoints = new Float32Array(path);
                 for (const splat of splats) {
                     const data = await scene.dataProcessor.intersect({
-                        volumeBrush: { points: pathPoints, mask, footprint, projection, view }
+                        sphereBrush: { points: pathPoints, mask, footprint, projection, view }
                     }, splat);
                     // SelectOp consumes `data` synchronously in its constructor
                     events.fire('edit.add', new SelectOp(splat, op, data));

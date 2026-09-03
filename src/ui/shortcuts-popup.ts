@@ -77,7 +77,7 @@ const popupConfig: Record<string, CategoryConfig> = {
             { id: 'tool.lassoSelection', localeKey: 'popup.shortcuts.lasso-selection' },
             { id: 'tool.polygonSelection', localeKey: 'popup.shortcuts.polygon-selection' },
             { id: 'tool.brushSelection', localeKey: 'popup.shortcuts.brush-selection' },
-            { id: 'tool.volumeBrushSelection', localeKey: 'popup.shortcuts.volume-brush-selection' },
+            { id: 'tool.sphereBrushSelection', localeKey: 'popup.shortcuts.sphere-brush-selection' },
             { id: 'tool.floodSelection', localeKey: 'popup.shortcuts.flood-selection' },
             { id: 'tool.eyedropperSelection', localeKey: 'popup.shortcuts.eyedropper-selection' },
             { id: 'tool.deactivate', localeKey: 'popup.shortcuts.deactivate-tool' },

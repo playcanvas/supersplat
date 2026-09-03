@@ -19,10 +19,10 @@
     }
 
     // same dashed outline as the 2d brush, but the interior shades like a lit
-    // sphere (gradient defined in volume-brush-selection.ts)
-    &#volume-brush-select-svg {
+    // sphere (gradient defined in sphere-brush-selection.ts)
+    &#sphere-brush-select-svg {
         >circle {
-            fill: url(#volume-brush-gradient);
+            fill: url(#sphere-brush-gradient);
             stroke: #f60;
             stroke-width: 1;
             stroke-dasharray: 5, 5;

@@ -251,17 +251,25 @@ class BottomToolbar extends Container {
             redo.enabled = value;
         });
 
-        const updateUseDepth = (useDepth: boolean) => {
-            depthOnIcon.style.display = useDepth ? '' : 'none';
-            depthOffIcon.style.display = useDepth ? 'none' : '';
-            selectionMode.dom.setAttribute('aria-pressed', String(useDepth));
+        // last state received from the editor, matching its defaults: the
+        // toolbar is constructed before the editor registers its state
+        // functions, so they can't be invoked here
+        let useDepth = false;
+        let footprint = 0;
+
+        const updateUseDepth = (value: boolean) => {
+            useDepth = value;
+            depthOnIcon.style.display = value ? '' : 'none';
+            depthOffIcon.style.display = value ? 'none' : '';
+            selectionMode.dom.setAttribute('aria-pressed', String(value));
             selectionMode.dom.setAttribute('aria-label', i18n.t('tooltip.bottom-toolbar.use-depth'));
         };
 
         events.on('selection.useDepth', updateUseDepth);
 
-        const updateFootprint = (footprint: number) => {
-            const rings = footprint > 0;
+        const updateFootprint = (value: number) => {
+            footprint = value;
+            const rings = value > 0;
             footprintRingsIcon.style.display = rings ? '' : 'none';
             footprintCentersIcon.style.display = rings ? 'none' : '';
             footprintMode.dom.setAttribute('aria-pressed', String(rings));
@@ -273,8 +281,8 @@ class BottomToolbar extends Container {
         // runs now (initial state) and on language change, so the accessible
         // names never go stale
         i18n.onChange(() => {
-            updateUseDepth(!!events.invoke('selection.useDepth'));
-            updateFootprint((events.invoke('selection.footprint') as number) ?? 0);
+            updateUseDepth(useDepth);
+            updateFootprint(footprint);
         }, this);
 
         events.on('tool.activated', (toolName: string) => {

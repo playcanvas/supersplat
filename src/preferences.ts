@@ -58,6 +58,13 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
     const isBool = (v: PrefValue) => typeof v === 'boolean';
     const isNumber = (min: number, max: number) => (v: PrefValue) => typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max;
     const isEnum = (options: string[]) => (v: PrefValue) => typeof v === 'string' && options.includes(v);
+    const isPlanes = (v: PrefValue) => {
+        if (!Array.isArray(v)) {
+            return false;
+        }
+        const planes = v as string[];
+        return planes.length <= 3 && new Set(planes).size === planes.length && planes.every(p => ['xz', 'xy', 'yz'].includes(p));
+    };
     const isColor = (v: PrefValue) => Array.isArray(v) && v.length === 4 && v.every(c => typeof c === 'number' && c >= 0 && c <= 1);
 
     const color = (key: string, setCommand: string, getDefault: () => { r: number, g: number, b: number, a: number }): Descriptor => ({
@@ -119,7 +126,7 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         { key: 'view.stochastic', setCommand: 'view.setStochastic', getDefault: () => 'auto', validate: isEnum(['disabled', 'enabled', 'movement', 'auto']), group: 'preferences' },
         { key: 'view.perfOverlay', setCommand: 'view.setPerfOverlay', getDefault: () => false, validate: isBool, group: 'overlays' },
         { key: 'grid.visible', setCommand: 'grid.setVisible', urlPath: 'show.grid', getDefault: () => config.show.grid, validate: isBool, group: 'overlays' },
-        { key: 'grid.planes', setCommand: 'grid.setPlanes', getDefault: () => ['xz'], validate: v => Array.isArray(v) && v.length <= 3 && new Set(v).size === v.length && v.every(p => ['xz', 'xy', 'yz'].includes(p as string)), group: 'overlays' },
+        { key: 'grid.planes', setCommand: 'grid.setPlanes', getDefault: () => ['xz'], validate: isPlanes, group: 'overlays' },
         { key: 'camera.bound', setCommand: 'camera.setBound', urlPath: 'show.bound', getDefault: () => config.show.bound, validate: isBool, group: 'overlays' },
         { key: 'camera.boundDimensions', setCommand: 'camera.setBoundDimensions', urlPath: 'show.boundDimensions', getDefault: () => config.show.boundDimensions, validate: isBool, group: 'overlays' },
         { key: 'camera.showPoses', setCommand: 'camera.setShowPoses', urlPath: 'show.cameraPoses', getDefault: () => config.show.cameraPoses, validate: isBool, group: 'overlays' },

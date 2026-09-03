@@ -610,9 +610,12 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.function('select.byMask', async (op: 'add'|'remove'|'set'|'intersect', canvas: HTMLCanvasElement, context: CanvasRenderingContext2D) => {
         const method = selectionMethod();
 
-        // snapshot the stroke before yielding ('footprint' reads the canvas
-        // synchronously instead)
+        // snapshot everything read from the stroke canvas before yielding, so
+        // later gestures repainting it can't leak into this selection (or make
+        // splats within one gesture see different masks)
         const maskTexture = method === 'footprint' ? null : createMaskTexture(canvas);
+        const region = method === 'footprint' ? maskRegion(context, canvas.width, canvas.height) : null;
+        const maskPixels = method === 'pick' ? context.getImageData(0, 0, canvas.width, canvas.height) : null;
 
         try {
             for (const splat of selectedSplats()) {
@@ -621,9 +624,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                         mask: maskTexture
                     });
                 } else if (method === 'footprint') {
-                    await runFootprintSelect(splat, op, maskRegion(context, canvas.width, canvas.height));
+                    await runFootprintSelect(splat, op, region);
                 } else {
-                    const mask = context.getImageData(0, 0, canvas.width, canvas.height);
+                    const mask = maskPixels;
 
                     // calculate mask bound so we limit pixel operations
                     let mx0 = mask.width - 1;
@@ -696,40 +699,57 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     ) => {
         const splats = selectedSplats();
 
-        // snapshot everything gesture-dependent before yielding: the shared
-        // stroke canvas may be repainted by another tool, the camera moved and
-        // the footprint toggled while the depth readbacks are in flight
+        // snapshot everything gesture-dependent now: the shared stroke canvas
+        // may be repainted by another tool, the camera moved and the footprint
+        // toggled before the queued work below runs
         const mask = createMaskTexture(canvas);
         const projection = scene.camera.camera.projectionMatrix.clone();
         const view = scene.camera.camera.viewMatrix.clone();
         const footprint = events.invoke('selection.footprint') as number;
         const pixelScale = scene.camera.worldSizePerPixel(1);
         const ortho = scene.camera.ortho;
+        const pose = {
+            position: scene.camera.mainCamera.getPosition().clone(),
+            rotation: scene.camera.mainCamera.getRotation().clone(),
+            orthoHeight: scene.camera.camera.orthoHeight,
+            near: scene.camera.near,
+            far: scene.camera.far
+        };
 
+        // one queued operation reserves the stroke's place in history now and
+        // runs the depth picking and the intersect against the same scene
+        // state; enqueueing only after the readbacks would let a queued
+        // delete/undo apply in between. The intersect is inlined rather than
+        // going through runSelectIntersect because nesting enqueues deadlocks.
         try {
-            const hits = await scene.camera.intersectMany(points, splats);
-            const path: number[] = [];
-            let previous: { position: Vec3, radius: number } | null = null;
+            await scene.commandQueue.enqueue(async () => {
+                const hits = await scene.camera.intersectMany(points, splats, pose);
+                const path: number[] = [];
+                let previous: { position: Vec3, radius: number } | null = null;
 
-            for (let i = 0; i < points.length; ++i) {
-                const hit = hits[i];
-                if (!hit) {
-                    previous = null;
-                    continue;
+                for (let i = 0; i < points.length; ++i) {
+                    const hit = hits[i];
+                    if (!hit) {
+                        previous = null;
+                        continue;
+                    }
+
+                    const radius = points[i].radius * pixelScale * (ortho ? 1 : hit.depth);
+                    const startsPath = !previous || previous.position.distance(hit.position) > Math.max(previous.radius, radius) * 2;
+                    path.push(hit.position.x, hit.position.y, hit.position.z, startsPath ? -radius : radius);
+                    previous = { position: hit.position, radius };
                 }
 
-                const radius = points[i].radius * pixelScale * (ortho ? 1 : hit.depth);
-                const startsPath = !previous || previous.position.distance(hit.position) > Math.max(previous.radius, radius) * 2;
-                path.push(hit.position.x, hit.position.y, hit.position.z, startsPath ? -radius : radius);
-                previous = { position: hit.position, radius };
-            }
-
-            const pathPoints = new Float32Array(path);
-            for (const splat of splats) {
-                await runSelectIntersect(splat, op, {
-                    volumeBrush: { points: pathPoints, mask, footprint, projection, view }
-                });
-            }
+                const pathPoints = new Float32Array(path);
+                for (const splat of splats) {
+                    const data = await scene.dataProcessor.intersect({
+                        volumeBrush: { points: pathPoints, mask, footprint, projection, view }
+                    }, splat);
+                    // SelectOp consumes `data` synchronously in its constructor
+                    events.fire('edit.add', new SelectOp(splat, op, data));
+                    scene.dataProcessor.releaseMask(data);
+                }
+            });
         } finally {
             mask.destroy();
         }

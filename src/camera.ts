@@ -734,59 +734,77 @@ class Camera extends Element {
 
     // intersect the scene at normalized screen coordinates (0-1 range) using
     // depth picking. The depth pass is rendered once per splat for the whole
-    // batch, which keeps sampled brush strokes practical.
-    async intersectMany(points: { x: number, y: number }[], splats = this.scene.getElementsByType(ElementType.splat) as Splat[]) {
+    // batch, which keeps sampled brush strokes practical. The whole batch runs
+    // under one camera frame: the caller's gesture-time pose if provided (the
+    // call may run from the command queue well after the gesture), the live
+    // camera otherwise.
+    async intersectMany(
+        points: { x: number, y: number }[],
+        splats = this.scene.getElementsByType(ElementType.splat) as Splat[],
+        pose?: { position: Vec3, rotation: Quat, orthoHeight: number, near: number, far: number }
+    ) {
         const { scene } = this;
         const closestDepths = points.map(() => Infinity);
         const closestSplats: (Splat | null)[] = new Array(points.length).fill(null);
 
-        // snapshot the rays and camera frame before the first asynchronous
-        // readback: the camera can move while results stream back (wheel,
-        // right-drag, fly keys), and depths measured now must not be
-        // reconstructed through a later camera. getRay seeds the ray origin
-        // differently per projection - at the camera for perspective, on (just
-        // behind) the near plane for ortho - so each origin's own view depth is
-        // measured here rather than assuming near.
-        const cameraPos = this.mainCamera.getPosition().clone();
-        const cameraRot = this.mainCamera.getRotation().clone();
-        const orthoHeight = this.camera.orthoHeight;
-        const forward = this.mainCamera.forward.clone();
-        const { near, far } = this;
-        const rays = points.map(({ x, y }) => {
-            this.getRay(x * scene.canvas.clientWidth, y * scene.canvas.clientHeight, ray);
-            return {
-                origin: ray.origin.clone(),
-                direction: ray.direction.clone(),
-                cosAngle: ray.direction.dot(forward),
-                originDepth: vecb.sub2(ray.origin, cameraPos).dot(forward)
-            };
-        });
+        const cameraPos = pose?.position ?? this.mainCamera.getPosition().clone();
+        const cameraRot = pose?.rotation ?? this.mainCamera.getRotation().clone();
+        const orthoHeight = pose?.orthoHeight ?? this.camera.orthoHeight;
+        const near = pose?.near ?? this.near;
+        const far = pose?.far ?? this.far;
+        const forward = cameraRot.transformVector(Vec3.FORWARD, new Vec3());
 
-        // each depth pass (and the sorted projection it composites through -
-        // the pass reuses the projected cache front to back, so it needs a
-        // sorted order under it) renders with the camera swapped to the
-        // snapshotted pose and restored before yielding: the loop awaits
-        // between splats, and a camera moved mid-batch would otherwise render
-        // later passes through a different camera than the rays above
-        const renderDepthPass = (splat: Splat) => {
+        // run fn with the camera swapped to the snapshot frame and restored
+        // before returning. The camera can move between the awaits below
+        // (wheel, right-drag, fly keys, or the command queue delaying the
+        // call), and the rays, every depth pass, and the near/far encoding
+        // the depths are decoded with must all share one frame.
+        const withSnapshotCamera = (fn: () => void) => {
             const livePos = this.mainCamera.getPosition().clone();
             const liveRot = this.mainCamera.getRotation().clone();
             const liveOrthoHeight = this.camera.orthoHeight;
+            const liveNear = this.camera.nearClip;
+            const liveFar = this.camera.farClip;
             this.mainCamera.setPosition(cameraPos);
             this.mainCamera.setRotation(cameraRot);
             this.camera.orthoHeight = orthoHeight;
-            scene.projectedSplatRenderer.renderSortedForPick();
-            this.picker.prepareDepth(splat);
+            this.camera.nearClip = near;
+            this.camera.farClip = far;
+            fn();
             this.mainCamera.setPosition(livePos);
             this.mainCamera.setRotation(liveRot);
             this.camera.orthoHeight = liveOrthoHeight;
+            this.camera.nearClip = liveNear;
+            this.camera.farClip = liveFar;
         };
 
-        // Find the splat with the smallest depth at each screen position
+        // build the pick rays under the snapshot frame. getRay seeds the ray
+        // origin differently per projection - at the camera for perspective, on
+        // (just behind) the near plane for ortho - so each origin's own view
+        // depth is measured here rather than assuming near.
+        const rays: { origin: Vec3, direction: Vec3, cosAngle: number, originDepth: number }[] = [];
+        withSnapshotCamera(() => {
+            for (const { x, y } of points) {
+                this.getRay(x * scene.canvas.clientWidth, y * scene.canvas.clientHeight, ray);
+                rays.push({
+                    origin: ray.origin.clone(),
+                    direction: ray.direction.clone(),
+                    cosAngle: ray.direction.dot(forward),
+                    originDepth: vecb.sub2(ray.origin, cameraPos).dot(forward)
+                });
+            }
+        });
+
+        // Find the splat with the smallest depth at each screen position. Each
+        // depth pass composites through the projected cache front to back, so
+        // it needs a sorted order under it, rendered under the same frame
         for (let i = 0; i < splats.length; ++i) {
             const splat = splats[i];
 
-            renderDepthPass(splat);
+            withSnapshotCamera(() => {
+                scene.projectedSplatRenderer.renderSortedForPick();
+                this.picker.prepareDepth(splat);
+            });
             const depths = await this.picker.readDepths(points);
             for (let j = 0; j < depths.length; ++j) {
                 const depth = depths[j];

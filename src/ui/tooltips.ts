@@ -34,6 +34,10 @@ class Tooltips extends Container {
         this.register = (target: Element, textString: TooltipText, direction: Direction = 'bottom') => {
 
             const activate = () => {
+                // the target may have been destroyed while the show timer ran
+                if (!target.dom) {
+                    return;
+                }
                 const rect = target.dom.getBoundingClientRect();
                 const midx = Math.floor((rect.left + rect.right) * 0.5);
                 const midy = Math.floor((rect.top + rect.bottom) * 0.5);

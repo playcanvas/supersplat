@@ -378,7 +378,8 @@ class OrientTool {
         const placePoint = async (offsetX: number, offsetY: number) => {
             const target = splat;
             const picked = new Vec3();
-            if (!await pickSplatSurfacePoint(scene, target, offsetX, offsetY, picked) || !active || splat !== target) {
+            // another click may have landed a point while the pick was in flight
+            if (!await pickSplatSurfacePoint(scene, target, offsetX, offsetY, picked) || !active || splat !== target || splat.orientPoints.length >= 3) {
                 return false;
             }
             splat.orientSelection = splat.orientPoints.length;

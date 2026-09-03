@@ -558,7 +558,8 @@ class DataPanel extends Container {
         refreshRange();
 
         const tick = () => {
-            if (!splat || this.hidden) return;
+            // a splat removed from the scene has no scene to query
+            if (!splat?.scene || this.hidden) return;
             const h = hashInputs(inputs);
             if (h === lastHash) return;
             lastHash = h;
@@ -641,6 +642,10 @@ class DataPanel extends Container {
                 inputs.mode = propModeFor(selectedDataProp) ?? 0;
                 populateDataSelector(splat);
                 tick();
+            } else {
+                splat = null;
+                // invalidate any histogram task already queued against it
+                pendingToken++;
             }
         });
 

@@ -154,10 +154,7 @@ fn axisPixelDistance(dir: vec3f) -> f32 {
     return abs(dot(line, vec3f(pcPosition.xy, 1.0))) / len;
 }
 
-// emphasis scales the bold treatment of the coarse level: planes drawn behind
-// another plane get it halved along with their alpha, otherwise their bold far
-// lines read as bright as the near plane's thin ones and the dimming is lost
-fn shadePlane(position: vec2f, ddxValue: vec2f, ddyValue: vec2f, plane: i32, emphasis: f32, distance: f32) -> GridSample {
+fn shadePlane(position: vec2f, ddxValue: vec2f, ddyValue: vec2f, plane: i32, distance: f32) -> GridSample {
     var result = GridSample(vec3f(0.0), 0.0, 0.0);
 
     // world units per pixel along each plane axis, and the larger of the two
@@ -185,11 +182,12 @@ fn shadePlane(position: vec2f, ddxValue: vec2f, ddyValue: vec2f, plane: i32, emp
     // the finest decade whose cells span at least MIN_CELL_PIXELS
     let base = ceil(log10(footprint * MIN_CELL_PIXELS));
 
-    // axis lines: always drawn, 1.5 pixels wide, on top of the levels. Their
-    // screen-space distance is exact, so unlike the levels they need no
-    // horizon fade and run crisply into their vanishing point
+    // axis lines: 1.5 pixels wide, on top of the levels, from their exact
+    // screen-space distance, so they run crisply into their vanishing point.
+    // Every level has a line under each axis, so fading them out any earlier
+    // than the other lines would only reveal that bold grey line
     let axisCoverage = clamp(vec2f(1.5) - vec2f(axisPixelDistance(normals[axis0[plane]]), axisPixelDistance(normals[axis1[plane]])), vec2f(0.0), vec2f(1.0));
-    let axisAlpha = max(axisCoverage.x, axisCoverage.y);
+    let axisAlpha = max(axisCoverage.x, axisCoverage.y) * horizon;
     var axisColor = colors[axis0[plane]];
     if (axisCoverage.y > axisCoverage.x) {
         axisColor = colors[axis1[plane]];
@@ -209,7 +207,7 @@ fn shadePlane(position: vec2f, ddxValue: vec2f, ddyValue: vec2f, plane: i32, emp
         let minor = smoothstep(0.0, 1.0, s);
         let sOcclude = s - log10(OCCLUDE_CELL_PIXELS / MIN_CELL_PIXELS);
         let occlude = smoothstep(0.0, 1.0, sOcclude);
-        let major = smoothstep(1.0, 2.0, sOcclude) * emphasis;
+        let major = smoothstep(1.0, 2.0, sOcclude);
         // each line family is widthPixels wide on screen, so its width in cell
         // units follows the footprint across that family, not the larger one
         let widthPixels = 1.0 + major;
@@ -268,18 +266,20 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         if ((uniform.planeMask & (1 << u32(i))) == 0 || t[i] <= 0.0) {
             continue;
         }
-        // with several planes enabled, the part of a plane on the far side of
-        // another enabled plane (as seen from the camera) is drawn at half
-        // strength, so the planes read as a room corner with the walls
-        // continuing faintly behind it instead of crossing at equal weight
-        var behind = 1.0;
+        // with several planes enabled, only the part of a plane on the camera's
+        // side of every other enabled plane is drawn, so the planes read as a
+        // room corner instead of crossing each other
+        var behind = false;
         for (var j = 0; j < 3; j++) {
             if (j != i && (uniform.planeMask & (1 << u32(j))) != 0 && dot(worldPosition[i], normals[j]) * dot(uniform.grid_view_position, normals[j]) < 0.0) {
-                behind = 0.25;
+                behind = true;
             }
         }
-        let sample = shadePlane(position[i], derivativeX[i], derivativeY[i], i, behind, length(worldPosition[i] - uniform.grid_view_position));
-        over(&result, sample.color / max(sample.alpha, 1e-6), sample.alpha * behind);
+        if (behind) {
+            continue;
+        }
+        let sample = shadePlane(position[i], derivativeX[i], derivativeY[i], i, length(worldPosition[i] - uniform.grid_view_position));
+        over(&result, sample.color / max(sample.alpha, 1e-6), sample.alpha);
         if (!depthWritten && writeDepth(sample.depthAlpha)) {
             depth = calcDepth(worldPosition[i]);
             depthWritten = true;

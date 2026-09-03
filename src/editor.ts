@@ -419,9 +419,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     type SelectRegion = { y0: number, y1: number, intervals: Uint32Array };
 
-    const runFootprintSelect = (splat: Splat, op: 'add'|'remove'|'set'|'intersect', region: SelectRegion) => {
+    // footprint is passed in rather than read here: the task runs from the
+    // queue after the gesture, and toggling the footprint in between must not
+    // change an already-finished stroke's semantics
+    const runFootprintSelect = (splat: Splat, op: 'add'|'remove'|'set'|'intersect', region: SelectRegion, footprint: number) => {
         return scene.commandQueue.enqueue(async () => {
-            const footprint = events.invoke('selection.footprint') as number;
             const data = await scene.projectedSplatRenderer.footprintIntersect(splat, region, footprint);
             if (data) {
                 events.fire('edit.add', new SelectOp(splat, op, data));
@@ -563,6 +565,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.function('select.rect', async (op: 'add'|'remove'|'set'|'intersect', rect: any) => {
         const method = selectionMethod();
+        const footprint = events.invoke('selection.footprint') as number;
 
         for (const splat of selectedSplats()) {
             if (method === 'centers') {
@@ -570,7 +573,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     rect: { x1: rect.start.x, y1: rect.start.y, x2: rect.end.x, y2: rect.end.y }
                 });
             } else if (method === 'footprint') {
-                await runFootprintSelect(splat, op, rectRegion(rect.start.x, rect.start.y, rect.end.x, rect.end.y));
+                await runFootprintSelect(splat, op, rectRegion(rect.start.x, rect.start.y, rect.end.x, rect.end.y), footprint);
             } else {
                 scene.camera.pickPrep(splat, op);
                 const pick = await scene.camera.pickRect(
@@ -580,7 +583,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     rect.end.y - rect.start.y
                 );
 
-                if ((events.invoke('selection.footprint') as number) === 0) {
+                if (footprint === 0) {
                     await runVisibleCentersSelect(splat, op, new Set(pick), {
                         rect: { x1: rect.start.x, y1: rect.start.y, x2: rect.end.x, y2: rect.end.y }
                     });
@@ -610,12 +613,14 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.function('select.byMask', async (op: 'add'|'remove'|'set'|'intersect', canvas: HTMLCanvasElement, context: CanvasRenderingContext2D) => {
         const method = selectionMethod();
 
-        // snapshot everything read from the stroke canvas before yielding, so
-        // later gestures repainting it can't leak into this selection (or make
-        // splats within one gesture see different masks)
+        // snapshot everything the stroke depends on before yielding - the
+        // canvas reads so later gestures repainting it can't leak into this
+        // selection (or make splats within one gesture see different masks),
+        // and the footprint so toggling it can't change a finished stroke
         const maskTexture = method === 'footprint' ? null : createMaskTexture(canvas);
         const region = method === 'footprint' ? maskRegion(context, canvas.width, canvas.height) : null;
         const maskPixels = method === 'pick' ? context.getImageData(0, 0, canvas.width, canvas.height) : null;
+        const footprint = events.invoke('selection.footprint') as number;
 
         try {
             for (const splat of selectedSplats()) {
@@ -624,7 +629,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                         mask: maskTexture
                     });
                 } else if (method === 'footprint') {
-                    await runFootprintSelect(splat, op, region);
+                    await runFootprintSelect(splat, op, region, footprint);
                 } else {
                     const mask = maskPixels;
 
@@ -675,7 +680,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                         }
                     }
 
-                    if ((events.invoke('selection.footprint') as number) === 0) {
+                    if (footprint === 0) {
                         await runVisibleCentersSelect(splat, op, selected, { mask: maskTexture });
                     } else {
                         const sortedIds = new Uint32Array(selected).sort();
@@ -758,6 +763,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.function('select.point', async (op: 'add'|'remove'|'set'|'intersect', point: { x: number, y: number }) => {
         const { width, height } = scene.targetSize;
         const method = selectionMethod();
+        const footprint = events.invoke('selection.footprint') as number;
 
         for (const splat of selectedSplats()) {
             if (method === 'centers') {
@@ -771,7 +777,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 });
             } else if (method === 'footprint') {
                 await runFootprintSelect(splat, op, rectRegion(
-                    point.x, point.y, point.x + 1 / width, point.y + 1 / height));
+                    point.x, point.y, point.x + 1 / width, point.y + 1 / height), footprint);
             } else {
                 // depth-mode clicks deliberately ignore the footprint toggle
                 // and pick the frontmost splat under the cursor: requiring a

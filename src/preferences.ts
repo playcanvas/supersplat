@@ -7,7 +7,7 @@ import { i18n } from './ui/localization';
 const storageKey = 'supersplat:preferences';
 const storageVersion = 1;
 
-type PrefValue = boolean | number | string | number[];
+type PrefValue = boolean | number | string | number[] | string[];
 type PreferenceGroup = 'appearance' | 'overlays' | 'preferences';
 
 type Descriptor = {
@@ -119,6 +119,7 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         { key: 'view.stochastic', setCommand: 'view.setStochastic', getDefault: () => 'auto', validate: isEnum(['disabled', 'enabled', 'movement', 'auto']), group: 'preferences' },
         { key: 'view.perfOverlay', setCommand: 'view.setPerfOverlay', getDefault: () => false, validate: isBool, group: 'overlays' },
         { key: 'grid.visible', setCommand: 'grid.setVisible', urlPath: 'show.grid', getDefault: () => config.show.grid, validate: isBool, group: 'overlays' },
+        { key: 'grid.planes', setCommand: 'grid.setPlanes', getDefault: () => ['xz'], validate: v => Array.isArray(v) && v.length <= 3 && new Set(v).size === v.length && v.every(p => ['xz', 'xy', 'yz'].includes(p as string)), group: 'overlays' },
         { key: 'camera.bound', setCommand: 'camera.setBound', urlPath: 'show.bound', getDefault: () => config.show.bound, validate: isBool, group: 'overlays' },
         { key: 'camera.boundDimensions', setCommand: 'camera.setBoundDimensions', urlPath: 'show.boundDimensions', getDefault: () => config.show.boundDimensions, validate: isBool, group: 'overlays' },
         { key: 'camera.showPoses', setCommand: 'camera.setShowPoses', urlPath: 'show.cameraPoses', getDefault: () => config.show.cameraPoses, validate: isBool, group: 'overlays' },

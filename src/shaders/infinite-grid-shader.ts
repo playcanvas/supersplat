@@ -208,11 +208,10 @@ fn shadePlane(position: vec2f, ddxValue: vec2f, ddyValue: vec2f, plane: i32, dis
         let sOcclude = s - log10(OCCLUDE_CELL_PIXELS / MIN_CELL_PIXELS);
         let occlude = smoothstep(0.0, 1.0, sOcclude);
         let major = smoothstep(1.0, 2.0, sOcclude);
-        // each line family is widthPixels wide on screen, so its width in cell
+        // each line family is one pixel wide on screen, so its width in cell
         // units follows the footprint across that family, not the larger one
-        let widthPixels = 1.0 + major;
-        let line = pristineGrid(position / cell, ddxValue / cell, ddyValue / cell, widthPixels * pixel / cell);
-        let levelColor = mix(vec3f(0.55), vec3f(0.9), major);
+        let line = pristineGrid(position / cell, ddxValue / cell, ddyValue / cell, pixel / cell);
+        let levelColor = mix(vec3f(0.4), vec3f(0.65), major);
         over(&result, levelColor, line * minor * horizon);
 
         // occlusion dithers in with the line's own strength, so a faint line is

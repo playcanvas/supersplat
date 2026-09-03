@@ -332,7 +332,6 @@ class OverlaysPanel extends Container {
 
         resetButton.on('click', () => {
             events.fire('preferences.reset', 'overlays');
-            events.fire('grid.setPlanes', ['xz']);
         });
 
         // show grid

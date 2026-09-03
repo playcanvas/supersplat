@@ -644,6 +644,8 @@ class DataPanel extends Container {
                 tick();
             } else {
                 splat = null;
+                // invalidate any histogram task already queued against it
+                pendingToken++;
             }
         });
 

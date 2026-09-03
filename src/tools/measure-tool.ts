@@ -340,7 +340,7 @@ class MeasureTool {
                     const target = splat;
                     const result = await scene.camera.intersect(clickX / canvasContainer.dom.clientWidth, clickY / canvasContainer.dom.clientHeight);
                     // another click may have landed a point while the pick was in flight
-                    if (result && splat === target && splat.measurePoints.length < 2) {
+                    if (result && active && splat === target && splat.measurePoints.length < 2) {
                         mat.invert(splat.worldTransform);
                         mat.transformPoint(result.position, p);
                         splat.measureSelection = splat.measurePoints.length;

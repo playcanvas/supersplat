@@ -117,7 +117,6 @@ class Tooltips extends Container {
             target.dom.addEventListener('pointerleave', leave);
 
             target.on('destroy', () => {
-                cancelTimer();
                 this.unregister(target);
             });
 

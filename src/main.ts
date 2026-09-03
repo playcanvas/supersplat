@@ -32,6 +32,7 @@ import { RotateTool } from './tools/rotate-tool';
 import { ScaleTool } from './tools/scale-tool';
 import { SphereSelection } from './tools/sphere-selection';
 import { ToolManager } from './tools/tool-manager';
+import { VolumeBrushSelection } from './tools/volume-brush-selection';
 import { registerTrackManagerEvents } from './track-manager';
 import { registerTransformHandlerEvents } from './transform-handler';
 import { BoundDimensionsOverlay } from './ui/bound-dimensions-overlay';
@@ -234,13 +235,17 @@ const main = async () => {
 
     const mask = {
         canvas: maskCanvas,
-        context: maskContext
+        context: maskContext,
+        // set while an async selection is still consuming the canvas; brush
+        // strokes must not start (and clear it) until then
+        busy: false
     };
 
     // tool manager
     const toolManager = new ToolManager(events);
     toolManager.register('rectSelection', new RectSelection(events, editorUI.toolsContainer.dom));
     toolManager.register('brushSelection', new BrushSelection(events, editorUI.toolsContainer.dom, mask));
+    toolManager.register('volumeBrushSelection', new VolumeBrushSelection(events, editorUI.toolsContainer.dom, mask));
     toolManager.register('floodSelection', new FloodSelection(events, editorUI.toolsContainer.dom, mask, editorUI.canvasContainer));
     toolManager.register('polygonSelection', new PolygonSelection(events, editorUI.toolsContainer.dom, mask));
     toolManager.register('lassoSelection', new LassoSelection(events, editorUI.toolsContainer.dom, mask));

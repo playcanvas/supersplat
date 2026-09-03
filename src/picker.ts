@@ -245,11 +245,69 @@ class Picker {
             immediate: true
         });
 
-        // Convert half-float values to floats
+        return this.decodeDepth(pixels, 0);
+    }
+
+    // Read normalized depth at scattered screen positions. Points are grouped
+    // into small tiles so a brush stroke needs a handful of readbacks instead
+    // of one readback per sample or one large read of its whole screen bound.
+    async readDepths(points: { x: number, y: number }[]): Promise<(number | null)[]> {
+        if (!this.depthRenderTarget) {
+            return new Array(points.length).fill(null);
+        }
+
+        const rt = this.depthRenderTarget;
+        const pixelsX = new Int32Array(points.length);
+        const pixelsY = new Int32Array(points.length);
+        const result: (number | null)[] = new Array(points.length).fill(null);
+        const tiles = new Map<string, { indices: number[], minX: number, minY: number, maxX: number, maxY: number }>();
+        const tileSize = 64;
+
+        for (let i = 0; i < points.length; ++i) {
+            const { x, y } = points[i];
+            if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 1 || y < 0 || y > 1 || rt.width < 1 || rt.height < 1) {
+                continue;
+            }
+
+            const px = Math.min(Math.floor(x * rt.width), rt.width - 1);
+            const py = Math.min(Math.floor(y * rt.height), rt.height - 1);
+            pixelsX[i] = px;
+            pixelsY[i] = py;
+            const key = `${Math.floor(px / tileSize)},${Math.floor(py / tileSize)}`;
+            const tile = tiles.get(key);
+            if (tile) {
+                tile.indices.push(i);
+                tile.minX = Math.min(tile.minX, px);
+                tile.minY = Math.min(tile.minY, py);
+                tile.maxX = Math.max(tile.maxX, px);
+                tile.maxY = Math.max(tile.maxY, py);
+            } else {
+                tiles.set(key, { indices: [i], minX: px, minY: py, maxX: px, maxY: py });
+            }
+        }
+
+        for (const tile of tiles.values()) {
+            const width = tile.maxX - tile.minX + 1;
+            const height = tile.maxY - tile.minY + 1;
+            const pixels = await rt.colorBuffer.read(tile.minX, tile.minY, width, height, {
+                renderTarget: rt,
+                immediate: true
+            });
+
+            for (const index of tile.indices) {
+                const offset = ((pixelsY[index] - tile.minY) * width + pixelsX[index] - tile.minX) * 4;
+                result[index] = this.decodeDepth(pixels, offset);
+            }
+        }
+
+        return result;
+    }
+
+    private decodeDepth(pixels: any, offset: number): number | null {
         // R channel: accumulated depth * alpha
         // A channel: transmittance (1 - alpha)
-        const r = half2Float(pixels[0]);
-        const transmittance = half2Float(pixels[3]);
+        const r = half2Float(pixels[offset]);
+        const transmittance = half2Float(pixels[offset + 3]);
         const alpha = 1 - transmittance;
 
         // Check alpha (transmittance close to 1 means nothing visible)

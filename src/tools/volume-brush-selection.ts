@@ -1,7 +1,7 @@
 import { Events } from '../events';
 import { opFromModifiers } from '../select-op';
 
-class BrushSelection {
+class VolumeBrushSelection {
     activate: () => void;
     deactivate: () => void;
 
@@ -9,8 +9,25 @@ class BrushSelection {
         // create svg
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.classList.add('tool-svg', 'hidden');
-        svg.id = 'brush-select-svg';
+        svg.id = 'volume-brush-select-svg';
         parent.appendChild(svg);
+
+        // shaded-sphere fill for the cursor circle, referenced from tool.scss
+        const defs = document.createElementNS(svg.namespaceURI, 'defs');
+        const gradient = document.createElementNS(svg.namespaceURI, 'radialGradient');
+        gradient.id = 'volume-brush-gradient';
+        gradient.setAttribute('cx', '37%');
+        gradient.setAttribute('cy', '33%');
+        gradient.setAttribute('r', '72%');
+        [['0%', '0.5'], ['55%', '0.25'], ['100%', '0.08']].forEach(([offset, opacity]) => {
+            const stop = document.createElementNS(svg.namespaceURI, 'stop');
+            stop.setAttribute('offset', offset);
+            stop.setAttribute('stop-color', '#f60');
+            stop.setAttribute('stop-opacity', opacity);
+            gradient.appendChild(stop);
+        });
+        defs.appendChild(gradient);
+        svg.appendChild(defs);
 
         // create circle element
         const circle = document.createElementNS(svg.namespaceURI, 'circle') as SVGCircleElement;
@@ -24,6 +41,7 @@ class BrushSelection {
 
         const prev = { x: 0, y: 0 };
         let dragId: number | undefined;
+        const points: { x: number, y: number, radius: number }[] = [];
 
         // track the pointer while the tool is inactive too (the tools overlay is
         // hidden then), so activation places the cursor at the mouse rather than
@@ -34,6 +52,37 @@ class BrushSelection {
             pointer.y = e.clientY;
         }, { capture: true, passive: true });
 
+        // append a stroke sample, interpolating extra samples so consecutive
+        // points sit at most a fraction of the brush radius apart
+        const appendPoint = (x: number, y: number, force = false) => {
+            const last = points[points.length - 1];
+            if (!last) {
+                points.push({ x, y, radius });
+                return;
+            }
+
+            const dx = x - last.x;
+            const dy = y - last.y;
+            const distance = Math.hypot(dx, dy);
+            const spacing = Math.max(2, Math.min(last.radius, radius) * 0.25);
+            const steps = Math.floor(distance / spacing);
+            for (let i = 1; i <= steps; ++i) {
+                const t = i * spacing / distance;
+                points.push({
+                    x: last.x + dx * t,
+                    y: last.y + dy * t,
+                    radius: last.radius + (radius - last.radius) * t
+                });
+            }
+
+            if (force) {
+                const tail = points[points.length - 1];
+                if (tail.x !== x || tail.y !== y || tail.radius !== radius) {
+                    points.push({ x, y, radius });
+                }
+            }
+        };
+
         const update = (e: PointerEvent) => {
             const x = e.offsetX;
             const y = e.offsetY;
@@ -42,6 +91,8 @@ class BrushSelection {
             circle.setAttribute('cy', y.toString());
 
             if (dragId !== undefined) {
+                appendPoint(x, y);
+
                 context.beginPath();
                 context.strokeStyle = '#f60';
                 context.lineCap = 'round';
@@ -83,6 +134,8 @@ class BrushSelection {
 
                 prev.x = e.offsetX;
                 prev.y = e.offsetY;
+                points.length = 0;
+                appendPoint(prev.x, prev.y);
 
                 update(e);
             }
@@ -108,17 +161,23 @@ class BrushSelection {
                 e.preventDefault();
                 e.stopPropagation();
 
+                appendPoint(e.offsetX, e.offsetY, true);
+
                 dragEnd();
 
                 // block new strokes until the async selection has consumed the
-                // shared mask canvas
+                // shared mask canvas and finished its depth picking
                 mask.busy = true;
                 try {
                     await events.invoke(
-                        'select.byMask',
+                        'select.byVolumeBrush',
                         opFromModifiers(e),
-                        canvas,
-                        context
+                        points.map(point => ({
+                            x: point.x / canvas.width,
+                            y: point.y / canvas.height,
+                            radius: point.radius
+                        })),
+                        canvas
                     );
                 } finally {
                     mask.busy = false;
@@ -160,6 +219,8 @@ class BrushSelection {
             parent.removeEventListener('wheel', wheel);
         };
 
+        // share the 2d brush's size events so the [ and ] shortcuts (and
+        // alt+wheel) adjust whichever brush is active
         events.on('tool.brushSelection.smaller', () => {
             radius = Math.max(1, radius / 1.05);
             circle.setAttribute('r', radius.toString());
@@ -172,4 +233,4 @@ class BrushSelection {
     }
 }
 
-export { BrushSelection };
+export { VolumeBrushSelection };

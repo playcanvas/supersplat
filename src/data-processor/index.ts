@@ -118,4 +118,4 @@ class DataProcessor {
 
 export { DataProcessor };
 export type { IntersectOptions, CalcHistogramOptions, SelectByRangeOptions };
-export { MaskOptions, RectOptions, SphereOptions, BoxOptions } from './intersect';
+export { MaskOptions, RectOptions, SphereOptions, BoxOptions, VolumeBrushOptions } from './intersect';

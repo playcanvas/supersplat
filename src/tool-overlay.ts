@@ -347,11 +347,7 @@ class ToolOverlay extends Element {
         const cameraPos = camera.mainCamera.getPosition();
         const cameraFwd = camera.mainCamera.forward;
 
-        // world size of one screen pixel at the near plane (perspective scales by view depth)
-        const clientHeight = Math.max(1, this.scene.canvas.clientHeight);
-        const proj = camera.camera.projectionMatrix;
-        const pixelScale = (2 / proj.data[5]) / clientHeight;
-        const worldSize = (px: number, depth: number) => px * pixelScale * (camera.ortho ? 1 : depth);
+        const worldSize = (px: number, depth: number) => px * camera.worldSizePerPixel(depth);
 
         const viewDepth = (p: Vec3) => tmp.sub2(p, cameraPos).dot(cameraFwd);
 

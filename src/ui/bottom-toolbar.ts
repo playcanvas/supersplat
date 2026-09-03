@@ -128,10 +128,12 @@ class BottomToolbar extends Container {
             button.dom.addEventListener('pointerdown', (event: PointerEvent) => {
                 if (event.button !== 0) return;
 
-                // pressing the button while its popup is open just closes it
-                if (!popup.hidden) {
+                // pressing the button while its popup is open just closes it,
+                // and the release must not toggle the tool. reset per press:
+                // a release off the button never reaches pointerup below.
+                suppressToggle = !popup.hidden;
+                if (suppressToggle) {
                     popup.hidden = true;
-                    suppressToggle = true;
                     return;
                 }
 
@@ -159,7 +161,14 @@ class BottomToolbar extends Container {
                         events.fire(`tool.${current.tool}`);
                     }
                 }
-                suppressToggle = false;
+            });
+
+            // keyboard activation (Enter/Space) and assistive tech arrive as a
+            // click with detail 0; pointer clicks are handled above
+            button.dom.addEventListener('click', (event: MouseEvent) => {
+                if (event.detail === 0) {
+                    events.fire(`tool.${current.tool}`);
+                }
             });
 
             button.dom.addEventListener('pointerleave', cancelHold);

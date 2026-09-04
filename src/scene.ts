@@ -376,19 +376,35 @@ class Scene {
         });
     }
 
+    // elements removed while their add() was still awaiting element.add().
+    // Element lifecycles aren't cancellation safe (a Splat's add awaits a
+    // bounds readback and then dereferences its scene), so the removal is
+    // deferred until the add settles instead of pulling the scene out from
+    // under it
+    private pendingRemovals = new Set<Element>();
+
     // add a scene element
     async add(element: Element) {
+        if (element.scene === this && this.pendingRemovals.has(element)) {
+            // re-added while the earlier add is still in flight: cancel the
+            // deferred removal and let that add register it
+            this.pendingRemovals.delete(element);
+            return;
+        }
+
         if (!element.scene) {
             // add the new element
             element.scene = this;
             await element.add();
-            // remove() may have run during the await: it already cleared
-            // element.scene, and registering now would leave a dead element
-            // in the list. And if a second add() followed that remove, both
-            // continuations resume here, so only the first may register
-            if (element.scene !== this || this.elements.includes(element)) {
+
+            // removed while adding: it was never registered or announced, so
+            // just tear it down
+            if (this.pendingRemovals.delete(element)) {
+                element.remove();
+                element.scene = null;
                 return;
             }
+
             this.elements.push(element);
 
             // notify all elements of scene addition
@@ -402,13 +418,14 @@ class Scene {
     // remove an element from the scene
     remove(element: Element) {
         if (element.scene === this) {
-            // remove from list. guard the index: if add() hasn't completed its
-            // await yet the element isn't registered, and splice(-1) would
-            // evict an unrelated element
+            // not registered yet: add() is still awaiting element.add(), so
+            // defer the removal to its continuation (see pendingRemovals)
             const index = this.elements.indexOf(element);
-            if (index !== -1) {
-                this.elements.splice(index, 1);
+            if (index === -1) {
+                this.pendingRemovals.add(element);
+                return;
             }
+            this.elements.splice(index, 1);
 
             // notify listeners
             this.events.fire('scene.elementRemoved', element);

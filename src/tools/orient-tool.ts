@@ -375,10 +375,15 @@ class OrientTool {
             }
         });
 
-        // place a point at the visible surface under the click
+        // place a point at the visible surface under the click. the pick is
+        // scoped to the selected splat: the points belong to it, so another
+        // layer in front must not supply the surface
         const placePoint = async (offsetX: number, offsetY: number) => {
             const target = splat;
-            const result = await scene.camera.intersect(offsetX / canvasContainer.dom.clientWidth, offsetY / canvasContainer.dom.clientHeight);
+            const [result] = await scene.camera.intersectMany([{
+                x: offsetX / canvasContainer.dom.clientWidth,
+                y: offsetY / canvasContainer.dom.clientHeight
+            }], [target]);
             // another click may have landed a point while the pick was in flight
             if (!result || !active || splat !== target || splat.orientPoints.length >= 3) {
                 return false;

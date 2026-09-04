@@ -384,8 +384,9 @@ class Scene {
             await element.add();
             // remove() may have run during the await: it already cleared
             // element.scene, and registering now would leave a dead element
-            // in the list
-            if (element.scene !== this) {
+            // in the list. And if a second add() followed that remove, both
+            // continuations resume here, so only the first may register
+            if (element.scene !== this || this.elements.includes(element)) {
                 return;
             }
             this.elements.push(element);

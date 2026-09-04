@@ -366,5 +366,11 @@
     "tooltip.splat-data.show-all": "Alle Eigenschaften pro Splat in der Liste anzeigen, einschließlich roher DC- und Kugelflächenfunktions-Koeffizienten.",
     "popup.shortcuts.toggle-depth": "Tiefenauswahl umschalten",
     "popup.shortcuts.toggle-footprint": "Auswahl-Footprint umschalten",
-    "popup.shortcuts.toggle-edit-view": "Bearbeitungsansicht umschalten"
+    "popup.shortcuts.toggle-edit-view": "Anzeige-Overlays umschalten",
+    "popup.shortcuts.intersect-selection": "Mit Selektion schneiden",
+    "popup.shortcuts.close-polygon": "Polygonselektion schließen",
+    "popup.shortcuts.remove-last-polygon-point": "Letzten Polygonpunkt entfernen",
+    "popup.shortcuts.remove-tool-point": "Ausgewählten Mess-/Ausrichtungspunkt entfernen",
+    "popup.shortcuts.stamp-key": "Schlüssel mit aktueller Kamerapose überschreiben",
+    "popup.shortcuts.copy-key": "Kopie des Schlüssels ziehen"
 }

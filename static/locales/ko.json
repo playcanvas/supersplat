@@ -366,5 +366,11 @@
     "tooltip.splat-data.show-all": "원시 DC 계수 및 구면 조화 함수 계수를 포함한 모든 스플랫 속성을 목록에 표시합니다.",
     "popup.shortcuts.toggle-depth": "깊이 선택 전환",
     "popup.shortcuts.toggle-footprint": "풋프린트 전환",
-    "popup.shortcuts.toggle-edit-view": "편집 보기 전환"
+    "popup.shortcuts.toggle-edit-view": "표시 오버레이 전환",
+    "popup.shortcuts.intersect-selection": "선택과 교차",
+    "popup.shortcuts.close-polygon": "다각형 선택 닫기",
+    "popup.shortcuts.remove-last-polygon-point": "마지막 다각형 점 제거",
+    "popup.shortcuts.remove-tool-point": "선택한 측정/정렬 점 제거",
+    "popup.shortcuts.stamp-key": "키를 현재 카메라 포즈로 덮어쓰기",
+    "popup.shortcuts.copy-key": "키 복사본 드래그"
 }

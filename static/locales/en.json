@@ -366,5 +366,11 @@
     "tooltip.splat-data.show-all": "Show all per-splat properties in the list, including raw DC and spherical harmonic coefficients.",
     "popup.shortcuts.toggle-depth": "Toggle Depth Selection",
     "popup.shortcuts.toggle-footprint": "Toggle Selection Footprint",
-    "popup.shortcuts.toggle-edit-view": "Toggle Edit View"
+    "popup.shortcuts.toggle-edit-view": "Toggle Display Overlays",
+    "popup.shortcuts.intersect-selection": "Intersect with Selection",
+    "popup.shortcuts.close-polygon": "Close Polygon Selection",
+    "popup.shortcuts.remove-last-polygon-point": "Remove Last Polygon Point",
+    "popup.shortcuts.remove-tool-point": "Remove Selected Measure/Orient Point",
+    "popup.shortcuts.stamp-key": "Overwrite Key with Current Camera Pose",
+    "popup.shortcuts.copy-key": "Drag a Copy of the Key"
 }

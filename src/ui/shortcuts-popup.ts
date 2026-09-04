@@ -46,6 +46,7 @@ const popupConfig: Record<string, CategoryConfig> = {
         localeKey: 'popup.shortcuts.show',
         shortcuts: [
             { id: 'grid.toggleVisible', localeKey: 'popup.shortcuts.toggle-grid' },
+            { id: 'view.toggleEditView', localeKey: 'popup.shortcuts.toggle-edit-view' },
             { id: 'camera.toggleShowInfo', localeKey: 'popup.shortcuts.toggle-camera-info' },
             { id: 'select.hide', localeKey: 'popup.shortcuts.lock-selected-splats' },
             { id: 'select.unhide', localeKey: 'popup.shortcuts.unlock-all-splats' }
@@ -59,12 +60,12 @@ const popupConfig: Record<string, CategoryConfig> = {
             { id: 'select.invert', localeKey: 'popup.shortcuts.invert-selection' },
             { id: 'select.delete', localeKey: 'popup.shortcuts.delete-selected-splats' },
             { id: 'selection.toggleUseDepth', localeKey: 'popup.shortcuts.toggle-depth' },
-            { id: 'selection.toggleFootprint', localeKey: 'popup.shortcuts.toggle-footprint' },
-            { id: 'view.toggleEditView', localeKey: 'popup.shortcuts.toggle-edit-view' }
+            { id: 'selection.toggleFootprint', localeKey: 'popup.shortcuts.toggle-footprint' }
         ],
         hints: [
             { displayKey: 'Shift', localeKey: 'popup.shortcuts.add-to-selection' },
-            { displayKey: 'Ctrl', localeKey: 'popup.shortcuts.remove-from-selection' }
+            { displayKey: 'Ctrl', localeKey: 'popup.shortcuts.remove-from-selection' },
+            { displayKey: 'Shift + Ctrl', localeKey: 'popup.shortcuts.intersect-selection' }
         ]
     },
     tools: {
@@ -84,7 +85,11 @@ const popupConfig: Record<string, CategoryConfig> = {
             { id: 'tool.toggleCoordSpace', localeKey: 'popup.shortcuts.toggle-gizmo-coordinate-space' }
         ],
         hints: [
-            { displayKey: '[ ]', localeKey: 'popup.shortcuts.brush-size' }
+            { displayKey: '[ ]', localeKey: 'popup.shortcuts.brush-size' },
+            { displayKey: 'Alt + Wheel', localeKey: 'popup.shortcuts.brush-size' },
+            { displayKey: 'Enter', localeKey: 'popup.shortcuts.close-polygon' },
+            { displayKey: 'Backspace', localeKey: 'popup.shortcuts.remove-last-polygon-point' },
+            { displayKey: 'Backspace', localeKey: 'popup.shortcuts.remove-tool-point' }
         ]
     },
     playback: {
@@ -97,6 +102,10 @@ const popupConfig: Record<string, CategoryConfig> = {
             { id: 'timeline.nextKey', localeKey: 'popup.shortcuts.next-key' },
             { id: 'track.addKey', localeKey: 'popup.shortcuts.add-key' },
             { id: 'track.removeKey', localeKey: 'popup.shortcuts.remove-key' }
+        ],
+        hints: [
+            { displayKey: 'Ctrl + Click', localeKey: 'popup.shortcuts.stamp-key' },
+            { displayKey: 'Shift + Drag', localeKey: 'popup.shortcuts.copy-key' }
         ]
     },
     other: {

@@ -366,5 +366,11 @@
     "tooltip.splat-data.show-all": "在列表中显示所有高斯点属性，包括原始 DC 系数和球谐函数系数。",
     "popup.shortcuts.toggle-depth": "切换深度选择",
     "popup.shortcuts.toggle-footprint": "切换选择覆盖范围",
-    "popup.shortcuts.toggle-edit-view": "切换编辑视图"
+    "popup.shortcuts.toggle-edit-view": "切换显示叠加层",
+    "popup.shortcuts.intersect-selection": "与选择相交",
+    "popup.shortcuts.close-polygon": "闭合多边形选择",
+    "popup.shortcuts.remove-last-polygon-point": "删除最后一个多边形点",
+    "popup.shortcuts.remove-tool-point": "删除选中的测量/对齐点",
+    "popup.shortcuts.stamp-key": "用当前相机姿态覆盖关键帧",
+    "popup.shortcuts.copy-key": "拖动关键帧的副本"
 }

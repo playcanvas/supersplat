@@ -366,5 +366,11 @@
     "tooltip.splat-data.show-all": "Afficher toutes les propriétés des splats dans la liste, y compris les coefficients DC bruts et harmoniques sphériques.",
     "popup.shortcuts.toggle-depth": "Basculer la sélection en profondeur",
     "popup.shortcuts.toggle-footprint": "Basculer l'empreinte de sélection",
-    "popup.shortcuts.toggle-edit-view": "Basculer la vue d'édition"
+    "popup.shortcuts.toggle-edit-view": "Afficher/Cacher les superpositions",
+    "popup.shortcuts.intersect-selection": "Intersecter avec la sélection",
+    "popup.shortcuts.close-polygon": "Fermer la sélection polygonale",
+    "popup.shortcuts.remove-last-polygon-point": "Supprimer le dernier point du polygone",
+    "popup.shortcuts.remove-tool-point": "Supprimer le point de mesure/orientation sélectionné",
+    "popup.shortcuts.stamp-key": "Remplacer la clé par la pose actuelle de la caméra",
+    "popup.shortcuts.copy-key": "Glisser une copie de la clé"
 }

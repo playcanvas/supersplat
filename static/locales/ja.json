@@ -366,5 +366,11 @@
     "tooltip.splat-data.show-all": "未加工のDC係数や球面調和関数係数を含む、すべてのスプラットプロパティをリストに表示します。",
     "popup.shortcuts.toggle-depth": "深度選択の切り替え",
     "popup.shortcuts.toggle-footprint": "フットプリントの切り替え",
-    "popup.shortcuts.toggle-edit-view": "編集ビューの切り替え"
+    "popup.shortcuts.toggle-edit-view": "表示オーバーレイの切り替え",
+    "popup.shortcuts.intersect-selection": "選択との交差",
+    "popup.shortcuts.close-polygon": "ポリゴン選択を閉じる",
+    "popup.shortcuts.remove-last-polygon-point": "ポリゴンの最後の点を削除",
+    "popup.shortcuts.remove-tool-point": "選択中の計測／整列ポイントを削除",
+    "popup.shortcuts.stamp-key": "キーを現在のカメラポーズで上書き",
+    "popup.shortcuts.copy-key": "キーのコピーをドラッグ"
 }

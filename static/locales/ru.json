@@ -366,5 +366,11 @@
     "tooltip.splat-data.show-all": "Показать все свойства сплатов в списке, включая необработанные коэффициенты DC и сферических гармоник.",
     "popup.shortcuts.toggle-depth": "Переключить выбор по глубине",
     "popup.shortcuts.toggle-footprint": "Переключить отпечаток выбора",
-    "popup.shortcuts.toggle-edit-view": "Переключить вид редактирования"
+    "popup.shortcuts.toggle-edit-view": "Переключить наложения отображения",
+    "popup.shortcuts.intersect-selection": "Пересечь с выделением",
+    "popup.shortcuts.close-polygon": "Замкнуть выделение полигоном",
+    "popup.shortcuts.remove-last-polygon-point": "Удалить последнюю точку полигона",
+    "popup.shortcuts.remove-tool-point": "Удалить выбранную точку измерения/ориентации",
+    "popup.shortcuts.stamp-key": "Перезаписать ключ текущей позой камеры",
+    "popup.shortcuts.copy-key": "Перетащить копию ключа"
 }

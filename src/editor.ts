@@ -1187,9 +1187,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // edit view switch (tab): while off, the non-selection overlays hide
     // and gaussians render regardless of the profile, so it toggles between
     // the editing view and the raw scene. Off by default and stored as a
-    // preference. Any appearance edit below switches it back on so settings
-    // are never adjusted blind - but not preference application or the
-    // footprint profile swap, which are not the user adjusting appearance
+    // preference. Toggling one of the display overlays below switches it
+    // back on so the toggle is never adjusted blind - but not preference
+    // application or the footprint profile swap, which are not the user
+    // toggling a display overlay
     let editView = false;
 
     const setEditView = (value: boolean) => {
@@ -1207,15 +1208,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         setEditView(!editView);
     });
 
-    [
-        'view.gaussians', 'view.centers', 'view.rings',
-        'view.selectionCenters', 'view.selectionRings', 'view.selectionColor', 'view.outlineSelection',
-        'view.centerSize', 'view.ringSize',
-        'view.splatsColorBlend', 'view.splatsSelectionBlend',
-        'view.centersColorBlend', 'view.centersSelectionBlend',
-        'view.ringsColorBlend', 'view.ringsSelectionBlend',
-        'bgClr', 'selectedClr', 'unselectedClr', 'lockedClr'
-    ].forEach((eventName) => {
+    ['view.gaussians', 'view.centers', 'view.rings'].forEach((eventName) => {
         events.on(eventName, () => {
             if (prefsSuspendDepth === 0 && !swappingProfile) {
                 setEditView(true);

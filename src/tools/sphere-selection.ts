@@ -24,6 +24,7 @@ class SphereSelection {
     activate: () => void;
     deactivate: () => void;
     setTransformMode: (mode: Exclude<ShapeGizmoMode, 'none'>) => boolean;
+    getFocus: () => { position: Vec3, radius: number } | null;
 
     active = false;
 
@@ -244,6 +245,13 @@ class SphereSelection {
         tooltips.register(addButton, () => i18n.t('select-toolbar.add'), 'top');
         tooltips.register(removeButton, () => i18n.t('select-toolbar.remove'), 'top');
         tooltips.register(intersectButton, () => i18n.t('select-toolbar.intersect'), 'top');
+
+        // frame the volume instead of the selection ('f' shortcut), sized like
+        // the selection bound: half its world aabb diagonal
+        this.getFocus = () => {
+            const bound = sphere.worldBound;
+            return { position: bound.center.clone(), radius: bound.halfExtents.length() };
+        };
 
         this.activate = () => {
             this.active = true;

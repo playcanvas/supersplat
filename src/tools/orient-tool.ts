@@ -7,7 +7,6 @@ import type { GridPlane } from '../infinite-grid';
 import { Pivot } from '../pivot';
 import { Scene } from '../scene';
 import { Splat } from '../splat';
-import { pickSplatSurfacePoint } from '../splat-surface-pick';
 import { ToolOverlay, OverlayWriter } from '../tool-overlay';
 import { Transform } from '../transform';
 import { DimensionLabels } from '../ui/dimension-labels';
@@ -32,6 +31,8 @@ const c = new Vec3();
 const v = new Vec3();
 const axis = new Vec3();
 const snapped = new Vec3();
+const bmin = new Vec3();
+const bmax = new Vec3();
 const newPos = new Vec3();
 const q = new Quat();
 const newRot = new Quat();
@@ -374,14 +375,22 @@ class OrientTool {
             }
         });
 
-        // place a point at the visible surface under the click (see splat-surface-pick.ts)
+        // place a point at the visible surface under the click. the pick is
+        // scoped to the selected splat: the points belong to it, so another
+        // layer in front must not supply the surface
         const placePoint = async (offsetX: number, offsetY: number) => {
             const target = splat;
-            const picked = new Vec3();
+            const [result] = await scene.camera.intersectMany([{
+                x: offsetX / canvasContainer.dom.clientWidth,
+                y: offsetY / canvasContainer.dom.clientHeight
+            }], [target]);
             // another click may have landed a point while the pick was in flight
-            if (!await pickSplatSurfacePoint(scene, target, offsetX, offsetY, picked) || !active || splat !== target || splat.orientPoints.length >= 3) {
+            if (!result || !active || splat !== target || splat.orientPoints.length >= 3) {
                 return false;
             }
+            const picked = new Vec3();
+            mat.invert(splat.worldTransform);
+            mat.transformPoint(result.position, picked);
             splat.orientSelection = splat.orientPoints.length;
             splat.orientPoints.push(picked);
             return true;
@@ -509,24 +518,22 @@ class OrientTool {
                 return null;
             }
 
-            const position = new Vec3();
-            for (let i = 0; i < count; i++) {
+            // the points' world aabb, framed like the selection bound: its
+            // center at half its diagonal
+            getPoint(0, bmin);
+            bmax.copy(bmin);
+            for (let i = 1; i < count; i++) {
                 getPoint(i, v);
-                position.add(v);
+                bmin.min(v);
+                bmax.max(v);
             }
-            position.mulScalar(1 / count);
+            const position = new Vec3().add2(bmin, bmax).mulScalar(0.5);
+            let radius = bmax.sub(bmin).length() * 0.5;
 
-            let radius = 0;
-            for (let i = 0; i < count; i++) {
-                getPoint(i, v);
-                radius = Math.max(radius, v.distance(position));
+            // a lone point has no extent: center it and keep the current zoom
+            if (radius === 0) {
+                radius = scene.camera.distance * scene.camera.sceneRadius;
             }
-
-            // frame with some margin; a lone point falls back to a radius
-            // relative to the splat's world size
-            splat.worldTransform.getScale(v);
-            const maxScale = Math.max(Math.abs(v.x), Math.abs(v.y), Math.abs(v.z));
-            radius = Math.max(radius * 1.5, splat.localBound.halfExtents.length() * maxScale * 0.05);
 
             return { position, radius };
         };

@@ -1,8 +1,7 @@
 import { Container, NumericInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
-
-type PointerOp = 'set' | 'add' | 'remove';
+import { opFromModifiers } from '../select-op';
 
 type NormalizedPoint = { x: number, y: number };
 
@@ -37,15 +36,6 @@ class EyedropperSelection {
         selectToolbar.append(thresholdInput);
         canvasContainer.append(selectToolbar);
 
-        const getPointerOp = (event: PointerEvent): PointerOp => {
-            if (event.shiftKey) {
-                return 'add';
-            }
-            if (event.ctrlKey) {
-                return 'remove';
-            }
-            return 'set';
-        };
         // Convert pointer event to normalized coordinates within the parent element
         const toNormalizedPoint = (event: PointerEvent): NormalizedPoint => {
             const width = parent.clientWidth || 1;
@@ -90,7 +80,7 @@ class EyedropperSelection {
 
                 await events.invoke(
                     'select.colorMatch',
-                    getPointerOp(event),
+                    opFromModifiers(event),
                     toNormalizedPoint(event),
                     threshold
                 );

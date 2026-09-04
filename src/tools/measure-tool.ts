@@ -20,6 +20,8 @@ const mat3 = new Mat4();
 const p = new Vec3();
 const p0 = new Vec3();
 const p1 = new Vec3();
+const bmin = new Vec3();
+const bmax = new Vec3();
 const r = new Quat();
 const s = new Vec3();
 
@@ -397,24 +399,22 @@ class MeasureTool {
                 return null;
             }
 
-            const position = new Vec3();
-            for (let i = 0; i < count; i++) {
+            // the points' world aabb, framed like the selection bound: its
+            // center at half its diagonal
+            getPoint(0, bmin);
+            bmax.copy(bmin);
+            for (let i = 1; i < count; i++) {
                 getPoint(i, p);
-                position.add(p);
+                bmin.min(p);
+                bmax.max(p);
             }
-            position.mulScalar(1 / count);
+            const position = new Vec3().add2(bmin, bmax).mulScalar(0.5);
+            let radius = bmax.sub(bmin).length() * 0.5;
 
-            let radius = 0;
-            for (let i = 0; i < count; i++) {
-                getPoint(i, p);
-                radius = Math.max(radius, p.distance(position));
+            // a lone point has no extent: center it and keep the current zoom
+            if (radius === 0) {
+                radius = scene.camera.distance * scene.camera.sceneRadius;
             }
-
-            // frame with some margin; a lone point falls back to a radius
-            // relative to the splat's world size
-            splat.worldTransform.getScale(p);
-            const maxScale = Math.max(Math.abs(p.x), Math.abs(p.y), Math.abs(p.z));
-            radius = Math.max(radius * 1.5, splat.localBound.halfExtents.length() * maxScale * 0.05);
 
             return { position, radius };
         };

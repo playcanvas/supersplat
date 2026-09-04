@@ -811,7 +811,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // TO DO:
     // -  alternative distance metrics such as HSV.
     // -  alternative UI for threshold, two handles for min/max?
-    events.function('select.colorMatch', async (op: 'add'|'remove'|'set', point: { x: number, y: number }, threshold = 0) => {
+    events.function('select.colorMatch', async (op: 'add'|'remove'|'set'|'intersect', point: { x: number, y: number }, threshold = 0) => {
         const splats = selectedSplats();
         const targetSize = scene.targetSize;
         if (!splats.length || !targetSize || !point) {
@@ -1162,6 +1162,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         inactiveProfile = profile.slice();
     });
 
+    // the swap is a mode change, not an appearance edit: it must not switch
+    // the edit view back on (see below)
+    let swappingProfile = false;
+
     events.on('selection.footprint', (value: number) => {
         const mode = value > 0;
         if (mode !== profileMode) {
@@ -1170,9 +1174,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 return;
             }
             const snapshot = profileFlags.map(([get]) => (events.invoke(get) ? 1 : 0));
+            swappingProfile = true;
             profileFlags.forEach(([, set], i) => {
                 events.fire(set, !!inactiveProfile[i]);
             });
+            swappingProfile = false;
             inactiveProfile = snapshot;
             events.fire('view.inactiveProfile', inactiveProfile.slice());
         }
@@ -1180,10 +1186,12 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     // edit view switch (tab): while off, the non-selection overlays hide
     // and gaussians render regardless of the profile, so it toggles between
-    // the editing view and the raw scene. Session-only by design - it is not
-    // a preference, and any appearance edit below switches it back on so
-    // settings are never adjusted blind
-    let editView = true;
+    // the editing view and the raw scene. Off by default and stored as a
+    // preference. Toggling one of the display overlays below switches it
+    // back on so the toggle is never adjusted blind - but not preference
+    // application or the footprint profile swap, which are not the user
+    // toggling a display overlay
+    let editView = false;
 
     const setEditView = (value: boolean) => {
         if (value !== editView) {
@@ -1200,17 +1208,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         setEditView(!editView);
     });
 
-    [
-        'view.gaussians', 'view.centers', 'view.rings',
-        'view.selectionCenters', 'view.selectionRings', 'view.selectionColor', 'view.outlineSelection',
-        'view.centerSize', 'view.ringSize',
-        'view.splatsColorBlend', 'view.splatsSelectionBlend',
-        'view.centersColorBlend', 'view.centersSelectionBlend',
-        'view.ringsColorBlend', 'view.ringsSelectionBlend',
-        'bgClr', 'selectedClr', 'unselectedClr', 'lockedClr'
-    ].forEach((eventName) => {
+    ['view.gaussians', 'view.centers', 'view.rings'].forEach((eventName) => {
         events.on(eventName, () => {
-            setEditView(true);
+            if (prefsSuspendDepth === 0 && !swappingProfile) {
+                setEditView(true);
+            }
         });
     });
 

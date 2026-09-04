@@ -123,6 +123,10 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         // already been applied by the time this default is evaluated
         { key: 'view.inactiveProfile', setCommand: 'view.setInactiveProfile', getDefault: () => ((events.invoke('selection.footprint') as number) > 0 ? [1, 1, 0, 1, 0] : [1, 0, 1, 0, 1]), validate: v => Array.isArray(v) && v.length === 5 && v.every(x => x === 0 || x === 1), group: 'appearance' },
         { key: 'view.outlineSelection', setCommand: 'view.setOutlineSelection', getDefault: () => false, validate: isBool, group: 'appearance' },
+        // after the view flags above: applying those must not re-enable the
+        // edit view over the stored value (the editor skips its auto-enable
+        // while preference application is suspended, and this applies last)
+        { key: 'view.editView', setCommand: 'view.setEditView', getDefault: () => false, validate: isBool, group: 'appearance' },
         { key: 'view.stochastic', setCommand: 'view.setStochastic', getDefault: () => 'auto', validate: isEnum(['disabled', 'enabled', 'movement', 'auto']), group: 'preferences' },
         { key: 'view.perfOverlay', setCommand: 'view.setPerfOverlay', getDefault: () => false, validate: isBool, group: 'overlays' },
         { key: 'grid.visible', setCommand: 'grid.setVisible', urlPath: 'show.grid', getDefault: () => config.show.grid, validate: isBool, group: 'overlays' },

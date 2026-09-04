@@ -165,6 +165,12 @@
                         color: $clr-active;
                     }
                 }
+
+                // setting has no effect right now (hidden by the edit view
+                // switch); still clickable
+                &.overridden {
+                    opacity: 0.4;
+                }
             }
 
             & > .options-panel-icon-spacer {

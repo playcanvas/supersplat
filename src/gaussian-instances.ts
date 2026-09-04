@@ -439,7 +439,7 @@ class GaussianInstances {
 }
 
 // Group instance indices by the source chunk they read from, so a CPU pass that
-// must walk the source file sequentially (splat-surface-pick, export filtering) can
+// must walk the source file sequentially (export filtering) can
 // visit every instance referencing the chunk it just read. A counting sort, so
 // it costs O(count) and leaves each group in ascending instance order.
 const groupInstancesByChunk = (instances: GaussianInstances, chunkSize: number, numChunks: number) => {

@@ -382,6 +382,12 @@ class Scene {
             // add the new element
             element.scene = this;
             await element.add();
+            // remove() may have run during the await: it already cleared
+            // element.scene, and registering now would leave a dead element
+            // in the list
+            if (element.scene !== this) {
+                return;
+            }
             this.elements.push(element);
 
             // notify all elements of scene addition

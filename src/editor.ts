@@ -1162,6 +1162,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         inactiveProfile = profile.slice();
     });
 
+    // the swap is a mode change, not an appearance edit: it must not switch
+    // the edit view back on (see below)
+    let swappingProfile = false;
+
     events.on('selection.footprint', (value: number) => {
         const mode = value > 0;
         if (mode !== profileMode) {
@@ -1170,9 +1174,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 return;
             }
             const snapshot = profileFlags.map(([get]) => (events.invoke(get) ? 1 : 0));
+            swappingProfile = true;
             profileFlags.forEach(([, set], i) => {
                 events.fire(set, !!inactiveProfile[i]);
             });
+            swappingProfile = false;
             inactiveProfile = snapshot;
             events.fire('view.inactiveProfile', inactiveProfile.slice());
         }
@@ -1180,10 +1186,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     // edit view switch (tab): while off, the non-selection overlays hide
     // and gaussians render regardless of the profile, so it toggles between
-    // the editing view and the raw scene. Session-only by design - it is not
-    // a preference, and any appearance edit below switches it back on so
-    // settings are never adjusted blind
-    let editView = true;
+    // the editing view and the raw scene. Off by default and stored as a
+    // preference. Any appearance edit below switches it back on so settings
+    // are never adjusted blind - but not preference application or the
+    // footprint profile swap, which are not the user adjusting appearance
+    let editView = false;
 
     const setEditView = (value: boolean) => {
         if (value !== editView) {
@@ -1210,7 +1217,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         'bgClr', 'selectedClr', 'unselectedClr', 'lockedClr'
     ].forEach((eventName) => {
         events.on(eventName, () => {
-            setEditView(true);
+            if (prefsSuspendDepth === 0 && !swappingProfile) {
+                setEditView(true);
+            }
         });
     });
 

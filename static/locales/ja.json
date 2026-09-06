@@ -74,6 +74,7 @@
     "panel.settings.fov": "視野 ( FOV )",
     "panel.settings.fov-dolly": "FOV自動ドリー",
     "panel.settings.sh-bands": "球面調和関数のバンド",
+    "panel.settings.min-splat-size": "Min Splat Size",
     "panel.settings.fly-speed": "カメラの移動速度",
     "panel.settings.stochastic-alpha": "確率的アルファ",
     "panel.settings.stochastic-alpha.disabled": "無効",

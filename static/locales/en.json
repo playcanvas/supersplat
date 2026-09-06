@@ -74,6 +74,7 @@
     "panel.settings.fov": "Field of View",
     "panel.settings.fov-dolly": "FOV Auto Dolly",
     "panel.settings.sh-bands": "SH Bands",
+    "panel.settings.min-splat-size": "Min Splat Size",
     "panel.settings.fly-speed": "Fly Speed",
     "panel.settings.stochastic-alpha": "Stochastic Alpha",
     "panel.settings.stochastic-alpha.disabled": "Disabled",

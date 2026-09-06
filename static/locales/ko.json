@@ -74,6 +74,7 @@
     "panel.settings.fov": "시야각",
     "panel.settings.fov-dolly": "FOV 자동 달리",
     "panel.settings.sh-bands": "SH 밴드",
+    "panel.settings.min-splat-size": "Min Splat Size",
     "panel.settings.fly-speed": "카메라 이동 속도",
     "panel.settings.stochastic-alpha": "확률적 알파",
     "panel.settings.stochastic-alpha.disabled": "비활성",

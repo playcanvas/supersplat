@@ -74,6 +74,7 @@
     "panel.settings.fov": "Sichtfeld (FoV)",
     "panel.settings.fov-dolly": "FOV-Auto-Dolly",
     "panel.settings.sh-bands": "SH Bänder",
+    "panel.settings.min-splat-size": "Min Splat Size",
     "panel.settings.fly-speed": "Kamera Geschwindigkeit",
     "panel.settings.stochastic-alpha": "Stochastisches Alpha",
     "panel.settings.stochastic-alpha.disabled": "Deaktiviert",

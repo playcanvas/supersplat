@@ -276,7 +276,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
     };
 
     // import splat model(s) - handles single files, SOG, and LCC formats
-    const importSplatModel = async (files: ImportFile[], animationFrame: boolean) => {
+    const importSplatModel = async (files: ImportFile[], animationFrame: boolean, throwOnError = false) => {
         try {
             const filenames = files.map(f => f.filename.toLowerCase());
 
@@ -318,13 +318,18 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             await scene.add(model);
             return model;
         } catch (error) {
+            // callers that report failures themselves (the WebMCP tools) take
+            // the error instead of the modal, which would block until dismissed
+            if (throwOnError) {
+                throw error;
+            }
             const displayName = files[0]?.filename ?? 'unknown';
             await showLoadError(error.message ?? error, displayName);
         }
     };
 
     // figure out what the set of files are (ply sequence, document, sog set, ply) and then import them
-    const importFiles = async (files: ImportFile[], animationFrame = false) => {
+    const importFiles = async (files: ImportFile[], animationFrame = false, throwOnError = false) => {
         const filenames = files.map(f => f.filename.toLowerCase());
 
         const result: Splat[] = [];
@@ -334,13 +339,16 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             events.fire('sequence.setPlyFrames', files.map(f => f.contents));
             events.fire('timeline.frame', 0);
         } else if (isSog(filenames) || isLcc(filenames)) {
-            const model = await importSplatModel(files, animationFrame);
+            const model = await importSplatModel(files, animationFrame, throwOnError);
             if (model) result.push(model);
         } else {
             // check for unrecognized file types
             for (let i = 0; i < filenames.length; i++) {
                 const filename = filenames[i].toLowerCase();
                 if (['.ssproj', '.ply', '.splat', '.sog', '.webp', 'images.txt', '.json', '.ksplat', '.spz'].every(ext => !filename.endsWith(ext))) {
+                    if (throwOnError) {
+                        throw new Error(`Unrecognized file type '${filename}'`);
+                    }
                     await showLoadError('Unrecognized file type', filename);
                     return;
                 }
@@ -358,7 +366,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                     await events.invoke('doc.load', contents, files[i].handle);
                 } else if (['.ply', '.splat', '.sog', '.ksplat', '.spz'].some(ext => filename.endsWith(ext))) {
                     // load gaussian splat model
-                    const model = await importSplatModel([files[i]], animationFrame);
+                    const model = await importSplatModel([files[i]], animationFrame, throwOnError);
                     if (model) result.push(model);
                 } else if (filename.endsWith('images.txt')) {
                     // load colmap frames
@@ -373,8 +381,9 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         return result;
     };
 
-    events.function('import', (files: ImportFile[], animationFrame = false) => {
-        return importFiles(files, animationFrame);
+    // throwOnError: reject with the load error instead of showing the error popup
+    events.function('import', (files: ImportFile[], animationFrame = false, throwOnError = false) => {
+        return importFiles(files, animationFrame, throwOnError);
     });
 
     // create a file selector element as fallback when showOpenFilePicker isn't available
@@ -536,7 +545,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         }
     });
 
-    events.function('scene.write', async (fileType: FileType, options: SceneExportOptions, stream?: FileSystemWritableFileStream) => {
+    // throwOnError: reject with the write error instead of showing the error popup
+    events.function('scene.write', async (fileType: FileType, options: SceneExportOptions, stream?: FileSystemWritableFileStream, throwOnError = false) => {
         // SOG, SPZ and viewer exports have their own progress UI, other formats use spinner
         const useSpinner = fileType !== 'sog' && fileType !== 'spz' && fileType !== 'htmlViewer' && fileType !== 'packageViewer';
 
@@ -598,6 +608,9 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             }
 
         } catch (error) {
+            if (throwOnError) {
+                throw error;
+            }
             if (error instanceof WebGPUUnavailableError) {
                 await events.invoke('showPopup', {
                     type: 'error',
@@ -620,4 +633,4 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
     });
 };
 
-export { initFileHandler, ExportType, SceneExportOptions };
+export { initFileHandler, ExportType, FileType, SceneExportOptions };

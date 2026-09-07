@@ -405,6 +405,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // undo, drag-while-camera-settling, etc).
     const runSelectIntersect = (splat: Splat, op: 'add'|'remove'|'set'|'intersect', options: any) => {
         return scene.commandQueue.enqueue(async () => {
+            // the splat may have been deleted while the task was queued
+            if (!splat.scene) return;
             const data = await scene.dataProcessor.intersect(options, splat);
             // SelectOp consumes `data` synchronously in its constructor
             // (IndexRanges.fromPredicate iterates immediately), so we can
@@ -432,6 +434,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // change an already-finished stroke's semantics
     const runFootprintSelect = (splat: Splat, op: 'add'|'remove'|'set'|'intersect', region: SelectRegion, footprint: number) => {
         return scene.commandQueue.enqueue(async () => {
+            if (!splat.scene) return;
             const data = await scene.projectedSplatRenderer.footprintIntersect(splat, region, footprint);
             if (data) {
                 events.fire('edit.add', new SelectOp(splat, op, data));
@@ -445,6 +448,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // region. The centers test reuses the through-mode intersect compute
     const runVisibleCentersSelect = (splat: Splat, op: 'add'|'remove'|'set'|'intersect', visible: Set<number>, options: any) => {
         return scene.commandQueue.enqueue(async () => {
+            if (!splat.scene) return;
             const data = await scene.dataProcessor.intersect(options, splat);
             for (let i = 0; i < splat.instances.count; i++) {
                 if (data[i] && !visible.has(i)) {

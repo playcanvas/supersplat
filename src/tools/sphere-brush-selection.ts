@@ -151,7 +151,11 @@ class SphereBrushSelection {
         };
 
         const dragEnd = () => {
-            parent.releasePointerCapture(dragId);
+            // a touch that has lifted, or was cancelled, no longer holds the
+            // capture and releasing it throws
+            if (parent.hasPointerCapture(dragId)) {
+                parent.releasePointerCapture(dragId);
+            }
             dragId = undefined;
             canvas.style.display = 'none';
         };
@@ -185,6 +189,14 @@ class SphereBrushSelection {
             }
         };
 
+        // a cancelled touch gets no pointerup, and a drag left open blocks
+        // every later one
+        const pointercancel = (e: PointerEvent) => {
+            if (e.pointerId === dragId) {
+                dragEnd();
+            }
+        };
+
         const wheel = (e: WheelEvent) => {
             if (e.altKey || e.metaKey) {
                 const { deltaX, deltaY } = e;
@@ -203,6 +215,7 @@ class SphereBrushSelection {
             parent.addEventListener('pointerdown', pointerdown);
             parent.addEventListener('pointermove', pointermove);
             parent.addEventListener('pointerup', pointerup);
+            parent.addEventListener('pointercancel', pointercancel);
             parent.addEventListener('wheel', wheel);
         };
 
@@ -216,6 +229,7 @@ class SphereBrushSelection {
             parent.removeEventListener('pointerdown', pointerdown);
             parent.removeEventListener('pointermove', pointermove);
             parent.removeEventListener('pointerup', pointerup);
+            parent.removeEventListener('pointercancel', pointercancel);
             parent.removeEventListener('wheel', wheel);
         };
 

@@ -432,9 +432,29 @@ class TimelinePanel extends Container {
             loop.class.add('active');
         }
 
+        // track mode: which target 'add key' etc. operate on - the camera,
+        // or the selected object's own transform
+        const trackMode = new SelectInput({
+            id: 'track-mode',
+            defaultValue: 'camera',
+            options: [
+                { v: 'camera', t: i18n.t('panel.timeline.track-mode.camera') },
+                { v: 'object', t: i18n.t('panel.timeline.track-mode.object') }
+            ]
+        });
+
+        trackMode.on('change', (value: string) => {
+            events.fire('trackManager.setMode', value);
+        });
+
+        events.on('trackManager.mode', (value: string) => {
+            trackMode.value = value;
+        });
+
         const settingsControls = new Container({
             id: 'settings-controls'
         });
+        settingsControls.append(trackMode);
         settingsControls.append(speed);
         settingsControls.append(frames);
         settingsControls.append(smoothness);
@@ -575,6 +595,7 @@ class TimelinePanel extends Container {
         tooltips.register(frames, () => i18n.t('tooltip.timeline.total-frames'), 'top');
         tooltips.register(smoothness, () => i18n.t('tooltip.timeline.smoothness'), 'top');
         tooltips.register(loop, () => i18n.t('tooltip.timeline.loop'), 'top');
+        tooltips.register(trackMode, () => i18n.t('tooltip.timeline.track-mode'), 'top');
     }
 }
 

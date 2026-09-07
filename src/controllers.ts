@@ -103,14 +103,17 @@ class PointerController {
 
         const pointerup = (event: PointerEvent) => {
             if (event.pointerType === 'mouse') {
-                // Only release if this is the button that was initially pressed
-                if (event.button === pressedButton) {
+                // Only release if this is the button that was initially pressed.
+                // pointercancel carries button -1, so it releases whatever is held
+                if (event.button === pressedButton || event.type === 'pointercancel') {
                     // MMB tap (no significant movement) -> focus on cursor point (orbit only; fly uses MMB for zoom)
-                    if (pressedButton === 1 && camera.controlMode === 'orbit' && !mmbDragged) {
+                    if (pressedButton === 1 && camera.controlMode === 'orbit' && !mmbDragged && event.type === 'pointerup') {
                         pickFocalPoint(event);
                     }
                     pressedButton = -1;
-                    target.releasePointerCapture(event.pointerId);
+                    if (target.hasPointerCapture(event.pointerId)) {
+                        target.releasePointerCapture(event.pointerId);
+                    }
                 }
             } else {
                 touches = touches.filter(touch => touch.id !== event.pointerId);
@@ -195,6 +198,11 @@ class PointerController {
             } else {
                 if (touches.length === 1) {
                     const touch = touches[0];
+                    // a touch whose pointerdown landed elsewhere (a tool overlay
+                    // that was then hidden) is not one of ours
+                    if (touch.id !== event.pointerId) {
+                        return;
+                    }
                     const dx = event.offsetX - touch.x;
                     const dy = event.offsetY - touch.y;
                     touch.x = event.offsetX;

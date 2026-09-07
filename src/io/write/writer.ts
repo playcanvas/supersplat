@@ -37,8 +37,16 @@ class GZipWriter implements Writer {
                 // backpressure and the error would only surface as an unhandled
                 // rejection
                 await streamWriter.abort(err);
+                // aborting an already-closed writable resolves, so the error must
+                // be rethrown or a sink failure on the final chunk would be lost
+                throw err;
             }
         })();
+
+        // close() awaits reader and surfaces its error; this handler only keeps
+        // the rejection from being reported as unhandled when the caller aborts
+        // instead of closing
+        reader.catch(() => {});
 
         this.write = async (data: Uint8Array) => {
             this.cursor += data.byteLength;

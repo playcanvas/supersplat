@@ -38,8 +38,11 @@ const registerSelectionEvents = (events: Events, scene: Scene) => {
 
     events.on('scene.elementRemoved', (element: Element) => {
         if (element === selection) {
+            // the removed splat is already out of the list. the candidate must be
+            // visible or setSelection ignores it and the selection is left
+            // pointing at a splat that is no longer in the scene
             const splats = scene.getElementsByType(ElementType.splat) as Splat[];
-            setSelection(splats.length === 1 ? null : splats.find(v => v !== element));
+            setSelection(splats.find(v => v.visible) ?? null);
         }
     });
 

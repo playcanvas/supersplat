@@ -65,10 +65,17 @@ class RectSelection {
         };
 
         const dragEnd = () => {
-            parent.releasePointerCapture(dragId);
+            // a touch that has lifted, or was cancelled, no longer holds the
+            // capture and releasing it throws
+            if (parent.hasPointerCapture(dragId)) {
+                parent.releasePointerCapture(dragId);
+            }
             dragId = undefined;
             svg.classList.add('hidden');
         };
+
+        // the pointer is captured, so a drag can leave the canvas
+        const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
         const pointerup = async (e: PointerEvent) => {
             if (e.pointerId === dragId) {
@@ -83,8 +90,8 @@ class RectSelection {
                     await events.invoke(
                         'select.rect',
                         opFromModifiers(e), {
-                            start: { x: Math.min(start.x, end.x) / w, y: Math.min(start.y, end.y) / h },
-                            end: { x: Math.max(start.x, end.x) / w, y: Math.max(start.y, end.y) / h }
+                            start: { x: clamp01(Math.min(start.x, end.x) / w), y: clamp01(Math.min(start.y, end.y) / h) },
+                            end: { x: clamp01(Math.max(start.x, end.x) / w), y: clamp01(Math.max(start.y, end.y) / h) }
                         });
                 } else {
                     // pick - wait for selection to complete before hiding rect
@@ -99,11 +106,20 @@ class RectSelection {
             }
         };
 
+        // a cancelled touch gets no pointerup, and a drag left open blocks
+        // every later one
+        const pointercancel = (e: PointerEvent) => {
+            if (e.pointerId === dragId) {
+                dragEnd();
+            }
+        };
+
         this.activate = () => {
             parent.style.display = 'block';
             parent.addEventListener('pointerdown', pointerdown);
             parent.addEventListener('pointermove', pointermove);
             parent.addEventListener('pointerup', pointerup);
+            parent.addEventListener('pointercancel', pointercancel);
         };
 
         this.deactivate = () => {
@@ -114,6 +130,7 @@ class RectSelection {
             parent.removeEventListener('pointerdown', pointerdown);
             parent.removeEventListener('pointermove', pointermove);
             parent.removeEventListener('pointerup', pointerup);
+            parent.removeEventListener('pointercancel', pointercancel);
         };
     }
 

@@ -114,7 +114,7 @@ class PointerController {
                 }
             } else {
                 touches = touches.filter(touch => touch.id !== event.pointerId);
-                if (touches.length === 0) {
+                if (touches.length === 0 && target.hasPointerCapture(event.pointerId)) {
                     target.releasePointerCapture(event.pointerId);
                 }
             }
@@ -207,6 +207,11 @@ class PointerController {
                     }
                 } else if (touches.length === 2) {
                     const touch = touches[touches.map(t => t.id).indexOf(event.pointerId)];
+                    // a touch whose pointerdown landed elsewhere (a tool overlay
+                    // that was then hidden) is not one of ours
+                    if (!touch) {
+                        return;
+                    }
                     touch.x = event.offsetX;
                     touch.y = event.offsetY;
 
@@ -456,6 +461,9 @@ class PointerController {
 
         wrap(target, 'pointerdown', pointerdown);
         wrap(target, 'pointerup', pointerup);
+        // a cancelled touch gets no pointerup; without this its entry stays in
+        // `touches` and later gestures are misread
+        wrap(target, 'pointercancel', pointerup);
         wrap(target, 'pointermove', pointermove);
         wrap(target, 'wheel', wheel, { passive: false });
         wrap(target, 'dblclick', dblclick);

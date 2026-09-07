@@ -25,10 +25,18 @@ class GZipWriter implements Writer {
 
         // hook up the reader side of the compressed stream
         const reader = (async () => {
-            while (true) {
-                const { done, value } = await streamReader.read();
-                if (done) break;
-                await writer.write(value);
+            try {
+                while (true) {
+                    const { done, value } = await streamReader.read();
+                    if (done) break;
+                    await writer.write(value);
+                }
+            } catch (err) {
+                // fail the write side with the sink's error: with nothing draining
+                // the compressed stream, writes would otherwise stall on
+                // backpressure and the error would only surface as an unhandled
+                // rejection
+                await streamWriter.abort(err);
             }
         })();
 

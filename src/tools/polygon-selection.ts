@@ -94,6 +94,10 @@ class PolygonSelection {
                 e.preventDefault();
                 e.stopPropagation();
 
+                // a tap, or a click right after a keyboard tool switch, arrives
+                // without a preceding pointermove
+                currentPoint = { x: e.offsetX, y: e.offsetY };
+
                 if (isClosed()) {
                     await commitSelection(e);
                 } else if (points.length === 0 || dist(points[points.length - 1], currentPoint) > 0) {

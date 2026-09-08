@@ -10,7 +10,8 @@ import {
     Layer,
     GraphicsDevice,
     MeshInstance,
-    Vec3
+    Vec3,
+    WireRenderer
 } from 'playcanvas';
 
 import { AssetLoader } from './asset-loader';
@@ -81,6 +82,7 @@ class Scene {
     config: SceneConfig;
     canvas: HTMLCanvasElement;
     app: PCApp;
+    wire: WireRenderer;
     worldLayer: Layer;
     splatLayer: Layer;
     overlayLayer: Layer;
@@ -201,6 +203,7 @@ class Scene {
         // configure the playcanvas application. we render to an offscreen buffer so require
         // only the simplest of backbuffers.
         this.app = new PCApp(canvas, { graphicsDevice });
+        this.wire = new WireRenderer(this.app);
 
         // only render the scene when instructed
         this.app.autoRender = false;
@@ -297,6 +300,7 @@ class Scene {
 
         // get the world layer
         this.worldLayer = this.app.scene.layers.getLayerByName('World');
+        this.wire.layer = this.worldLayer;
 
         // splat layer - dedicated layer for splat rendering with MRT
         this.splatLayer = new Layer({
@@ -599,24 +603,20 @@ class Scene {
                     const splat = e as Splat;
 
                     const local = splat.localBound;
-                    this.app.drawWireAlignedBox(
-                        local.getMin(),
-                        local.getMax(),
-                        Color.RED,
-                        true,
-                        undefined,
-                        splat.entity.getWorldTransform());
+                    this.wire.color = Color.RED;
+                    this.wire.transform = splat.entity.getWorldTransform();
+                    this.wire.boxMinMax(local.getMin(), local.getMax());
 
                     const world = splat.worldBound;
-                    this.app.drawWireAlignedBox(
-                        world.getMin(),
-                        world.getMax(),
-                        Color.GREEN);
+                    this.wire.color = Color.GREEN;
+                    this.wire.transform = null;
+                    this.wire.boxMinMax(world.getMin(), world.getMax());
                 }
             });
 
             // draw scene bound
-            this.app.drawWireAlignedBox(this.bound.getMin(), this.bound.getMax(), Color.BLUE);
+            this.wire.color = Color.BLUE;
+            this.wire.boxMinMax(this.bound.getMin(), this.bound.getMax());
         }
     }
 

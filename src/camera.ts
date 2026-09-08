@@ -520,7 +520,6 @@ class Camera extends Element {
             this.mainTarget = new RenderTarget({
                 colorBuffer,
                 depthBuffer,
-                flipY: false,
                 autoResolve: false
             });
 
@@ -531,7 +530,6 @@ class Camera extends Element {
                     workBuffer          // RT1: overlay output (shared with workTarget)
                 ],
                 depthBuffer,
-                flipY: false,
                 autoResolve: false
             });
 

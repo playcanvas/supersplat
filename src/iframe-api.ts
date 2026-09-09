@@ -1,6 +1,7 @@
 import { Events } from './events';
 
 const IS_SCENE_DIRTY = 'supersplat:is-scene-dirty';
+const NAVIGATE_HOME = 'supersplat:navigate-home';
 
 interface IsSceneDirtyQuery {
     type: typeof IS_SCENE_DIRTY;
@@ -36,4 +37,22 @@ const registerIframeApi = (events: Events) => {
     });
 };
 
-export { registerIframeApi };
+interface NavigateHomeRequest {
+    type: typeof NAVIGATE_HOME;
+}
+
+const isEmbedded = () => window.parent !== window;
+
+// The menubar logo. Embedded (superspl.at/editor), the host decides how to
+// leave — it owns navigation, the unsaved-changes guard and any transition.
+// Standalone, go to the SuperSplat site directly.
+const requestNavigateHome = () => {
+    if (isEmbedded()) {
+        const request: NavigateHomeRequest = { type: NAVIGATE_HOME };
+        window.parent.postMessage(request, '*');
+        return;
+    }
+    window.location.assign('https://superspl.at/');
+};
+
+export { registerIframeApi, requestNavigateHome };

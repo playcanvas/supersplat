@@ -1,6 +1,7 @@
 import { Container, Element, Label } from '@playcanvas/pcui';
 
 import { Events } from '../events';
+import { requestNavigateHome } from '../iframe-api';
 import { recentFiles } from '../recent-files';
 import { ShortcutManager } from '../shortcut-manager';
 import { i18n } from './localization';
@@ -12,6 +13,7 @@ import editRedo from './svg/edit-redo.svg';
 import editUndo from './svg/edit-undo.svg';
 import sceneExport from './svg/export.svg';
 import sceneImport from './svg/import.svg';
+import logoSvg from './svg/logo.svg';
 import sceneNew from './svg/new.svg';
 import sceneOpen from './svg/open.svg';
 import scenePublish from './svg/publish.svg';
@@ -113,9 +115,19 @@ class Menu extends Container {
         arrow.dom.setAttribute('id', 'menu-arrow');
         arrow.dom.addEventListener('click', toggleCollapsed);
 
+        // SuperSplat home: leftmost, before File.
+        const logo = createSvg(logoSvg);
+        logo.dom.classList.add('menu-icon');
+        logo.dom.setAttribute('id', 'menu-logo');
+        logo.dom.setAttribute('role', 'link');
+        logo.dom.setAttribute('aria-label', 'SuperSplat');
+        logo.dom.setAttribute('title', 'SuperSplat');
+        logo.dom.addEventListener('click', requestNavigateHome);
+
         const buttonsContainer = new Container({
             id: 'menu-bar-options'
         });
+        buttonsContainer.append(logo);
         buttonsContainer.append(scene);
         buttonsContainer.append(edit);
         buttonsContainer.append(selection);

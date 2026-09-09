@@ -26,6 +26,13 @@
     display: none;
 }
 
+#menu-logo {
+    width: 22px;
+    height: 22px;
+    padding: 13px 12px;
+    flex-grow: 0;
+}
+
 #menu-container {
     display: flex;
     flex-direction: column;
@@ -34,6 +41,7 @@
 #menu-bar-options {
     display: flex;
     flex-direction: row;
+    align-items: center;
     flex-grow: 1;
 }
 

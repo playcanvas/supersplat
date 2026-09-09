@@ -55,6 +55,23 @@ const resolveDirectories = (entries: Array<FileSystemEntry>): Promise<Array<File
     });
 };
 
+// collect the files under a dropped handle, named by their path relative to the
+// drop (so a dropped folder 'foo' yields 'foo/a.ply', matching resolveDirectories)
+const resolveHandles = async (handle: FileSystemHandle, prefix: string, result: Array<DroppedFile>) => {
+    if (handle.name === '.DS_Store') {
+        return;
+    }
+
+    if (handle.kind === 'file') {
+        const fileHandle = handle as FileSystemFileHandle;
+        result.push(new DroppedFile(prefix + handle.name, await fileHandle.getFile(), fileHandle));
+    } else {
+        for await (const child of (handle as FileSystemDirectoryHandle).values()) {
+            await resolveHandles(child, `${prefix}${handle.name}${path.delimiter}`, result);
+        }
+    }
+};
+
 const removeCommonPrefix = (urls: Array<DroppedFile>) => {
     const split = (pathname: string) => {
         const parts = pathname.split(path.delimiter);
@@ -99,19 +116,26 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
 
         const items = Array.from(ev.dataTransfer.items);
 
-        // handle single file drops so documents can propagate the filesystemfilehandle
-        if (items.length === 1) {
-            const item = items[0];
-            if (item.getAsFileSystemHandle && item.webkitGetAsEntry()?.isFile) {
-                const handle = await item.getAsFileSystemHandle();
-                if (handle?.kind === 'file') {
-                    const fileHandle = handle as FileSystemFileHandle;
-                    const file = await fileHandle.getFile();
-                    const droppedFile = new DroppedFile(file.name, file, fileHandle);
-                    dropHandler([droppedFile], ev.shiftKey);
-                    return;
+        // Prefer file system handles where the browser provides them (Chromium):
+        // a document keeps its handle for later saves, and every imported file
+        // keeps one so a save can recognise a file the scene still reads from.
+        // The handles must be requested before the handler first yields, after
+        // which the items are no longer readable.
+        if (items.every(item => item.getAsFileSystemHandle)) {
+            const handles = await Promise.all(items.map(item => item.getAsFileSystemHandle()));
+            const files: Array<DroppedFile> = [];
+            for (const handle of handles) {
+                if (handle) {
+                    await resolveHandles(handle, '', files);
                 }
             }
+
+            if (files.length > 1) {
+                removeCommonPrefix(files);
+            }
+
+            dropHandler(files, ev.shiftKey);
+            return;
         }
 
         // Map to entries first

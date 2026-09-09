@@ -416,6 +416,14 @@ const registerDocEvents = (scene: Scene, events: Events) => {
         return true;
     });
 
+    // reset without the confirmation popup, for callers that have already
+    // obtained consent through another channel (the WebMCP new_scene tool is
+    // flagged consequential, so the browser agent confirms with the user)
+    events.function('doc.reset', () => {
+        resetScene();
+        events.fire('preferences.apply');
+    });
+
     // handle document file being dropped
     // NOTE: on chrome it's possible to get the FileSystemFileHandle from the DataTransferItem
     // (which would result in more seamless user experience), but this is not yet supported in

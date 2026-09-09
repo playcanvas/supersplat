@@ -39,6 +39,7 @@ import { BoundDimensionsOverlay } from './ui/bound-dimensions-overlay';
 import { EditorUI } from './ui/editor';
 import { i18n } from './ui/localization';
 import { registerSelectCursor } from './ui/select-cursor';
+import { registerWebMCP } from './webmcp';
 
 declare global {
     interface LaunchParams {
@@ -279,6 +280,10 @@ const main = async () => {
     // registered after the boot-time initialization events above so they are
     // never captured as user changes.
     registerPreferences(events, sceneConfig, urlArgs);
+
+    // expose the editor to browser AI agents (WebMCP). after everything the
+    // tools introspect is registered, before the first frame and any ?load=
+    registerWebMCP(events, scene);
 
     // load async models
     scene.start();

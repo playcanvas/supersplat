@@ -51,10 +51,9 @@ class BlobReadSource implements ReadSource {
     readonly size: number;
     readonly seekable: boolean = true;
 
-    // the on-disk file `blob` came from, when known. The browser invalidates a
-    // File object once its file changes, so writes to it are refused while the
-    // source is in use (see readsFromFile)
-    readonly handle: FileSystemFileHandle | null;
+    // The on-disk file `blob` came from, when known. Writes to it are refused
+    // while the source is in use (see scene.sourcesOf).
+    handle: FileSystemFileHandle | null;
 
     private blob: Blob;
     private closed: boolean = false;
@@ -79,18 +78,21 @@ class BlobReadSource implements ReadSource {
     }
 
     close(): void {
+        if (this.closed) return;
         this.closed = true;
+        this.handle = null;
     }
 }
 
-// true if any of `sources` reads from the file behind `handle`
-const readsFromFile = async (sources: Iterable<BlobReadSource>, handle: FileSystemFileHandle) => {
-    for (const source of sources) {
+// Every live source reading from the file behind `handle`.
+const sourcesOf = async (sources: Iterable<BlobReadSource>, handle: FileSystemFileHandle): Promise<BlobReadSource[]> => {
+    const result: BlobReadSource[] = [];
+    for (const source of new Set(sources)) {
         if (source.handle && await handle.isSameEntry(source.handle)) {
-            return true;
+            result.push(source);
         }
     }
-    return false;
+    return result;
 };
 
 /**
@@ -168,5 +170,5 @@ class MappedReadFileSystem implements ReadFileSystem {
 export {
     BlobReadSource,
     MappedReadFileSystem,
-    readsFromFile
+    sourcesOf
 };

@@ -161,7 +161,6 @@ class ProjectedSplatRenderer {
     // bound per frame, so the pick passes - which render on user input, outside a
     // frame - have to re-arm them from the same slot
     private drawSlot = -1;
-    private forceSorted = false;
     private cacheA: Texture | null = null;
     private cacheB: Texture | null = null;
     private cacheWidth = 1;
@@ -266,16 +265,14 @@ class ProjectedSplatRenderer {
         }
     }
 
-    // Project and sort once, outside the frame loop, for a depth pick. The pick
+    // Project and sort once, outside the frame loop, for selection or a depth pick. The pick
     // composites front to back, which only means anything in sorted order, and a
     // stochastic frame leaves the compact list in atomicAdd order. Projection and
     // sort are global - which splat is being picked is a shader-side filter - so
     // one call covers a whole multi-splat pick. It also refreshes the indirect
     // args, so the pick draw no longer leans on the previous frame's.
     renderSortedForPick() {
-        this.forceSorted = true;
-        this.render();
-        this.forceSorted = false;
+        this.render(true);
     }
 
     preparePick(splat: Splat, pickOp: number, depth: boolean) {
@@ -594,7 +591,7 @@ class ProjectedSplatRenderer {
         this.layoutDirty = false;
     }
 
-    render() {
+    render(forPick = false) {
         if (this.layoutDirty) {
             this.rebuildLayout();
         }
@@ -625,7 +622,8 @@ class ProjectedSplatRenderer {
         const unselectedColor = events.invoke('unselectedClr');
         const lockedColor = events.invoke('lockedClr');
         const viewBands = events.invoke('view.bands') as number;
-        const minPixelSize = (events.invoke('view.minPixelSize') as number) ?? 0;
+        // Size culling is visual only: selection and depth queries need every footprint.
+        const minPixelSize = forPick ? 0 : (events.invoke('view.minPixelSize') as number) ?? 0;
 
         // the colour panel's uncommitted grade, previewed on the layer it targets.
         // Packed once per frame: it is the same for every placement, only the
@@ -638,7 +636,7 @@ class ProjectedSplatRenderer {
 
         // motion-adaptive: fast stochastic (no-sort) while interacting, clean
         // sorted & blended when the scene settles (driven by Scene.onUpdate)
-        this.setStochastic(this.scene.movingRender && !this.forceSorted);
+        this.setStochastic(this.scene.movingRender && !forPick);
 
         let ringsBase = 0;
         let ringsCount = 0;

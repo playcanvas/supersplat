@@ -6,7 +6,7 @@
 export {
     BlobReadSource,
     MappedReadFileSystem,
-    readsFromFile,
+    sourcesOf,
     defaultLodIndex,
     loadSplatSource,
     PermutedChunkSource,
@@ -17,5 +17,7 @@ export {
 export {
     BrowserFileSystem,
     GZipWriter,
-    ProgressWriter
+    pickWriteTarget,
+    ProgressWriter,
+    WriteTarget
 } from './write';

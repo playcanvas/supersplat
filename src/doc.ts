@@ -5,7 +5,7 @@ import { decodeInstances, encodeInstances, restorePalettes } from './doc-instanc
 import type { EditorSplatResource } from './editor-splat-resource';
 import { Events } from './events';
 import { GaussianInstances } from './gaussian-instances';
-import { BrowserFileSystem, BlobReadSource, loadSplatSource, readsFromFile } from './io';
+import { BrowserFileSystem, BlobReadSource, loadSplatSource, sourcesOf } from './io';
 import { recentFiles } from './recent-files';
 import { Scene } from './scene';
 import { Splat } from './splat';
@@ -75,6 +75,8 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     // has to move them all onto the new archive afterwards (see rebindDocument)
     let documentSource: BlobReadSource = null;
     let documentResources = new Set<EditorSplatResource>();
+
+    events.function('doc.fileSources', () => (documentSource ? [documentSource] : []));
 
     // show the user a reset confirmation popup
     const getResetConfirmation = async () => {
@@ -346,6 +348,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
 
             return groups;
         } catch (error) {
+            await options.stream?.abort().catch(() => { /* the writer may already have aborted */ });
             await events.invoke('showPopup', {
                 type: 'error',
                 header: i18n.t('doc.save-failed'),
@@ -382,18 +385,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     // write the document to `handle`, which may be the file it is open from.
     // returns false if nothing was written
     const writeDocument = async (handle: FileSystemFileHandle) => {
-        // a file an imported splat still streams from can't be overwritten: the
-        // exported data is baked, so there is no way to read it back afterwards
-        if (await events.invoke('scene.readsFromFile', handle)) {
-            await events.invoke('showPopup', {
-                type: 'error',
-                header: i18n.t('doc.save-failed'),
-                message: i18n.t('popup.overwrite-source')
-            });
-            return false;
-        }
-
-        const inPlace = documentSource && await readsFromFile([documentSource], handle);
+        const inPlace = documentSource && (await sourcesOf([documentSource], handle)).length > 0;
         const groups = await saveDocument({ stream: await handle.createWritable(), compact: !inPlace });
         if (!groups) {
             return false;
@@ -520,30 +512,43 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     });
 
     events.function('doc.saveAs', async () => {
-        if (window.showSaveFilePicker) {
-            try {
-                const handle = await window.showSaveFilePicker({
-                    id: 'SuperSplatDocumentSave',
-                    types: SuperFileType,
-                    suggestedName: 'scene.ssproj'
-                });
-                if (!await writeDocument(handle)) {
-                    return false;
+        try {
+            const hasFilePicker = !!window.showDirectoryPicker;
+            const directory = hasFilePicker ? await events.invoke('scene.getExportDirectory') : undefined;
+            if (hasFilePicker && !directory) return false;
+
+            const options = await events.invoke('show.savePopup', events.invoke('doc.name') || 'scene.ssproj', directory, documentSource);
+            if (!options) return false;
+
+            if (hasFilePicker) {
+                const target = options.fileTarget;
+                const handle = target.handle;
+                let written = false;
+                try {
+                    written = await writeDocument(handle);
+                    if (!written) return false;
+                } finally {
+                    if (!written) await target.discard?.();
                 }
                 documentFileHandle = handle;
                 events.fire('doc.setName', handle.name);
-                events.fire('doc.saved');
                 recentFiles.add(handle);
-            } catch (error) {
-                if (error.name !== 'AbortError') {
-                    console.error(error);
+            } else {
+                if (!await saveDocument({ filename: options.filename })) {
+                    return false;
                 }
+                events.fire('doc.setName', options.filename);
             }
-        } else {
-            await saveDocument({
-                filename: 'scene.ssproj'
-            });
             events.fire('doc.saved');
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                console.error(error);
+                await events.invoke('showPopup', {
+                    type: 'error',
+                    header: i18n.t('doc.save-failed'),
+                    message: `${error.message ?? error}`
+                });
+            }
         }
     });
 

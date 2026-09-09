@@ -1,7 +1,6 @@
 // Resolve a filename in a chosen folder without modifying an existing file.
 // showSaveFilePicker can truncate the selection before we can protect sources.
 const pickWriteTarget = async (id: string, filename: string): Promise<{
-    dir: FileSystemDirectoryHandle;
     handle: FileSystemFileHandle;
     exists: boolean;
 } | null> => {
@@ -14,10 +13,10 @@ const pickWriteTarget = async (id: string, filename: string): Promise<{
     }
 
     try {
-        return { dir, handle: await dir.getFileHandle(filename), exists: true };
+        return { handle: await dir.getFileHandle(filename), exists: true };
     } catch (error) {
         if (error.name !== 'NotFoundError') throw error;
-        return { dir, handle: await dir.getFileHandle(filename, { create: true }), exists: false };
+        return { handle: await dir.getFileHandle(filename, { create: true }), exists: false };
     }
 };
 

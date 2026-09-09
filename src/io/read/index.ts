@@ -4,8 +4,6 @@
 
 // File system implementations
 export {
-    backupName,
-    backupSources,
     BlobReadSource,
     MappedReadFileSystem,
     sourcesOf

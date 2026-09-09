@@ -80,7 +80,8 @@ class Popup extends Container {
         selectRow.append(selectInput);
 
         const textInput = new TextInput({
-            id: 'popup-input'
+            id: 'popup-input',
+            blurOnEnter: false
         });
 
         const warningText = new Label({
@@ -139,6 +140,19 @@ class Popup extends Container {
 
         cancelButton.on('click', () => {
             cancelFn();
+        });
+
+        textInput.on('keydown', (event: KeyboardEvent) => {
+            if (event.isComposing) return;
+            if (event.key === 'Enter' && !okButton.hidden) {
+                event.preventDefault();
+                event.stopPropagation();
+                okFn();
+            } else if (event.key === 'Escape' && !cancelButton.hidden) {
+                event.preventDefault();
+                event.stopPropagation();
+                cancelFn();
+            }
         });
 
         yesButton.on('click', () => {

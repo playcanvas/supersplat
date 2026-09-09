@@ -523,7 +523,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 if (name.action !== 'ok') return false;
                 let filename = name.value.trim() || 'scene.ssproj';
                 if (!filename.toLowerCase().endsWith('.ssproj')) filename += '.ssproj';
-                const target = await events.invoke('scene.pickWriteTarget', 'SuperSplatDocumentSave', filename, documentSource);
+                const target = await events.invoke('scene.pickWriteTarget', 'SuperSplatDocumentSave', filename, i18n.t('popup.save-as'), documentSource);
                 if (!target) return false;
                 const { handle } = target;
                 if (!await writeDocument(handle)) {

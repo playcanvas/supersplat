@@ -4,8 +4,6 @@
 
 // Read operations
 export {
-    backupName,
-    backupSources,
     BlobReadSource,
     MappedReadFileSystem,
     sourcesOf,

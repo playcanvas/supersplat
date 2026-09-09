@@ -4,7 +4,7 @@ import type { Pose } from './camera-poses';
 import { CreateDropHandler } from './drop-handler';
 import { ElementType } from './element';
 import { Events } from './events';
-import { backupName, backupSources, BlobReadSource, BrowserFileSystem, MappedReadFileSystem, pickWriteTarget, sourcesOf } from './io';
+import { BlobReadSource, BrowserFileSystem, MappedReadFileSystem, pickWriteTarget, sourcesOf } from './io';
 import { Scene } from './scene';
 import { Splat } from './splat';
 import { SerializeSettings, serializeSog, serializeSpz, serializeViewer, SogSettings, SpzSettings, ViewerExportSettings, WebGPUUnavailableError, writeSplatFile } from './splat-serialize';
@@ -440,13 +440,13 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
 
     // Shared by document and splat writes. The document may exclude
     // its own archive source because an in-place save rebinds it afterwards.
-    events.function('scene.pickWriteTarget', async (id: string, filename: string, exclude?: BlobReadSource) => {
+    events.function('scene.pickWriteTarget', async (id: string, filename: string, header: string, exclude?: BlobReadSource) => {
         const target = await pickWriteTarget(id, filename);
         if (!target) return null;
         if (target.exists) {
             const sources = (await events.invoke('scene.sourcesOf', target.handle) as BlobReadSource[])
             .filter(source => source !== exclude);
-            if (sources.length && target.handle.name.toLowerCase().endsWith('.ply')) {
+            if (sources.length > 0) {
                 await events.invoke('showPopup', {
                     type: 'error',
                     header: i18n.t('popup.error'),
@@ -454,23 +454,12 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                 });
                 return null;
             }
-            const backup = sources.length ? await backupName(target.dir, target.handle.name) : null;
             const result = await events.invoke('showPopup', {
                 type: 'yesno',
-                header: i18n.t('popup.save-as'),
-                message: i18n.t(backup ? 'popup.replace-source' : 'popup.replace-file', {
-                    name: target.handle.name, backup
-                })
+                header,
+                message: i18n.t('popup.replace-file', { name: target.handle.name })
             });
             if (result.action !== 'yes') return null;
-            if (backup) {
-                events.fire('startSpinner');
-                try {
-                    await backupSources(sources, target.dir, target.handle, backup);
-                } finally {
-                    events.fire('stopSpinner');
-                }
-            }
         }
         return target;
     });
@@ -565,7 +554,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
 
         if (hasFilePicker) {
             try {
-                const target = await events.invoke('scene.pickWriteTarget', 'SuperSplatFileExport', options.filename);
+                const target = await events.invoke('scene.pickWriteTarget', 'SuperSplatFileExport', options.filename, i18n.t('popup.export.header'));
                 if (!target) return;
                 await events.invoke('scene.write', fileType, options, await target.handle.createWritable());
             } catch (error) {

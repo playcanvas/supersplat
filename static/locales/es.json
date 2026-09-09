@@ -168,7 +168,6 @@
     "popup.webgpu-unavailable": "Esta exportación requiere WebGPU, que no está disponible en este navegador. Pruebe con una versión reciente de Chrome, Edge o Safari.",
     "popup.overwrite-source": "Este archivo está en uso por la escena actual y no se puede sobrescribir. Elige otro nombre de archivo.",
     "popup.replace-file": "'{{name}}' ya existe. ¿Reemplazarlo?",
-    "popup.replace-source": "'{{name}}' está abierto en la escena. Se reemplazará y el original se conservará como '{{backup}}' hasta que se cierre la escena. ¿Continuar?",
     "popup.save-as": "Guardar como",
     "startup.failed": "SuperSplat no se pudo iniciar. Consulte la consola del navegador para más detalles.",
     "startup.webgpu-unavailable": "SuperSplat requiere WebGPU, que no está disponible en este navegador. Pruebe con una versión reciente de Chrome, Edge o Safari.",

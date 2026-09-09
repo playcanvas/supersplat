@@ -20,7 +20,7 @@ import {
     Vec3
 } from 'playcanvas';
 
-import { PermutedChunkSource } from './io';
+import { type BlobReadSource, PermutedChunkSource } from './io';
 
 const SH_REST_COUNTS = [0, 9, 24, 45];
 
@@ -42,7 +42,11 @@ const acquire = (pool: ChunkDataPool, source: ChunkSource, layer: ChunkLayer, co
 };
 
 class EditorSplatResource extends GSplatContainer {
-    readonly source: ChunkSource;
+    // the lazily-read static data. replaced only by rebind()
+    source: ChunkSource;
+    // the local files `source` lazily reads through, when it was loaded from
+    // any. Saves must not overwrite them (see scene.readsFromFile)
+    fileSources: BlobReadSource[] = [];
     readonly sourcePool: ChunkDataPool;
     readonly shBands: SHBands;
     // the state column as loaded from file. read-only after upload: the live
@@ -350,6 +354,19 @@ class EditorSplatResource extends GSplatContainer {
     release() {
         this.layerRefs--;
         return this.layerRefs <= 0;
+    }
+
+    // Read from `source` instead: an identical view of the same rows, in the
+    // same order, from elsewhere. Used after the document is saved over the file
+    // this resource was loaded from, when the freshly written archive replaces
+    // the now-invalid original (see doc.ts). The GPU data is untouched.
+    async rebind(source: ChunkSource) {
+        if (source.meta.numGaussians !== this.numRows) {
+            throw new Error(`Cannot rebind resource: expected ${this.numRows} rows, got ${source.meta.numGaussians}`);
+        }
+        const previous = this.source;
+        this.source = source;
+        await previous.close();
     }
 
     async close() {

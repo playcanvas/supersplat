@@ -166,6 +166,7 @@
     "popup.error": "Fehler",
     "popup.error-loading": "Fehler beim Laden der Datei",
     "popup.webgpu-unavailable": "Dieser Export erfordert WebGPU, das in diesem Browser nicht verfügbar ist. Bitte verwenden Sie eine aktuelle Version von Chrome, Edge oder Safari.",
+    "popup.overwrite-source": "Diese Datei wird von der aktuellen Szene verwendet und kann nicht überschrieben werden. Bitte wählen Sie einen anderen Dateinamen.",
     "startup.failed": "SuperSplat konnte nicht gestartet werden. Details finden Sie in der Browser-Konsole.",
     "startup.webgpu-unavailable": "SuperSplat erfordert WebGPU, das in diesem Browser nicht verfügbar ist. Bitte verwenden Sie eine aktuelle Version von Chrome, Edge oder Safari.",
     "popup.load-options-header": "Ladeoptionen",

@@ -4,7 +4,7 @@ import type { Pose } from './camera-poses';
 import { CreateDropHandler } from './drop-handler';
 import { ElementType } from './element';
 import { Events } from './events';
-import { BrowserFileSystem, MappedReadFileSystem } from './io';
+import { BrowserFileSystem, MappedReadFileSystem, readsFromFile } from './io';
 import { Scene } from './scene';
 import { Splat } from './splat';
 import { SerializeSettings, serializeSog, serializeSpz, serializeViewer, SogSettings, SpzSettings, ViewerExportSettings, WebGPUUnavailableError, writeSplatFile } from './splat-serialize';
@@ -296,7 +296,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             // Create file system with all local files, falling back to URL loading
             const fileSystem = new MappedReadFileSystem(baseUrl);
             files.forEach((f) => {
-                if (f.contents) fileSystem.addFile(f.filename, f.contents);
+                if (f.contents) fileSystem.addFile(f.filename, f.contents, f.handle ?? null);
             });
 
             // Multi-file container formats must load by their relative name so the
@@ -315,6 +315,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                 // user cancelled the load
                 return null;
             }
+            model.resource.fileSources = fileSystem.sources;
             await scene.add(model);
             return model;
         } catch (error) {
@@ -431,6 +432,15 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         return getSplats().length === 0;
     });
 
+    // true if a resource in the scene still streams from the file behind
+    // `handle`. Overwriting that file would invalidate its File object and every
+    // later read - so every later save or export - would fail, so writes to it
+    // are refused
+    events.function('scene.readsFromFile', (handle: FileSystemFileHandle) => {
+        const splats = scene.getElementsByType(ElementType.splat) as Splat[];
+        return readsFromFile(new Set(splats.flatMap(splat => splat.resource.fileSources)), handle);
+    });
+
     events.function('scene.import', async () => {
         if (fileSelector) {
             fileSelector.click();
@@ -457,7 +467,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                 for (let i = 0; i < handles.length; i++) {
                     files.push({
                         filename: handles[i].name,
-                        contents: await handles[i].getFile()
+                        contents: await handles[i].getFile(),
+                        handle: handles[i]
                     });
                 }
 
@@ -525,6 +536,14 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                     types: [filePickerTypes[fileType]],
                     suggestedName: options.filename
                 });
+                if (await events.invoke('scene.readsFromFile', fileHandle)) {
+                    await events.invoke('showPopup', {
+                        type: 'error',
+                        header: i18n.t('popup.error'),
+                        message: i18n.t('popup.overwrite-source')
+                    });
+                    return;
+                }
                 await events.invoke('scene.write', fileType, options, await fileHandle.createWritable());
             } catch (error) {
                 if (error.name !== 'AbortError') {

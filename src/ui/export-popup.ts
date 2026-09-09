@@ -356,11 +356,12 @@ class ExportPopup extends Container {
         let existingHandle: FileSystemFileHandle;
         let submitting = false;
         let saveProject = false;
+        let filenameExtension: string;
         let excludedSource: BlobReadSource;
 
         const getFilename = () => {
             const filename = filenameEntry.value;
-            return saveProject && filename && !filename.toLowerCase().endsWith('.ssproj') ? `${filename}.ssproj` : filename;
+            return filename && !filename.toLowerCase().endsWith(filenameExtension) ? `${filename}${filenameExtension}` : filename;
         };
 
         const validateFilename = async (suggest = false): Promise<void> => {
@@ -488,6 +489,7 @@ class ExportPopup extends Container {
         filenameEntry.on('keydown', keydown);
 
         const updateExtension = (ext: string) => {
+            filenameExtension = ext === '.compressed.ply' ? '.ply' : ext;
             filenameEntry.value = removeKnownExtension(filenameEntry.value) + ext;
             validateFilename();
         };
@@ -552,6 +554,7 @@ class ExportPopup extends Container {
                     updateExtension(viewerTypeSelect.value === 'html' ? '.html' : '.zip');
                     break;
                 case 'ssproj':
+                    filenameExtension = '.ssproj';
                     filenameEntry.value = getFilename();
                     break;
             }
@@ -598,7 +601,7 @@ class ExportPopup extends Container {
 
             const assemblePlyOptions = () : SceneExportOptions => {
                 return {
-                    filename: filenameEntry.value,
+                    filename: getFilename(),
                     splatIdx: 'all',
                     serializeSettings: {
                         maxSHBands: bandsSlider.value
@@ -609,7 +612,7 @@ class ExportPopup extends Container {
 
             const assembleSplatOptions = () : SceneExportOptions => {
                 return {
-                    filename: filenameEntry.value,
+                    filename: getFilename(),
                     splatIdx: 'all',
                     serializeSettings: { }
                 };
@@ -617,7 +620,7 @@ class ExportPopup extends Container {
 
             const assembleSogOptions = () : SceneExportOptions => {
                 return {
-                    filename: filenameEntry.value,
+                    filename: getFilename(),
                     splatIdx: 'all',
                     serializeSettings: {
                         maxSHBands: bandsSlider.value
@@ -628,7 +631,7 @@ class ExportPopup extends Container {
 
             const assembleSpzOptions = () : SceneExportOptions => {
                 return {
-                    filename: filenameEntry.value,
+                    filename: getFilename(),
                     splatIdx: 'all',
                     serializeSettings: {
                         maxSHBands: bandsSlider.value
@@ -697,7 +700,7 @@ class ExportPopup extends Container {
                 };
 
                 return {
-                    filename: filenameEntry.value,
+                    filename: getFilename(),
                     splatIdx: 'all',
                     serializeSettings: {
                         maxSHBands: bandsSlider.value
@@ -745,6 +748,8 @@ class ExportPopup extends Container {
                         }
                         resolve({ ...options, fileTarget });
                     } catch (error) {
+                        submitting = false;
+                        await validateFilename();
                         filenameMessage.text = `${error.message ?? error}`;
                         filenameMessage.hidden = false;
                         filenameMessage.dom.classList.add('error');

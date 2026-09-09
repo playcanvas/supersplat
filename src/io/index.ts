@@ -4,9 +4,11 @@
 
 // Read operations
 export {
+    backupName,
+    backupSources,
     BlobReadSource,
     MappedReadFileSystem,
-    readsFromFile,
+    sourcesOf,
     defaultLodIndex,
     loadSplatSource,
     PermutedChunkSource,
@@ -17,5 +19,6 @@ export {
 export {
     BrowserFileSystem,
     GZipWriter,
+    pickWriteTarget,
     ProgressWriter
 } from './write';

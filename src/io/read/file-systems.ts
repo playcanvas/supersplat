@@ -13,6 +13,13 @@ import {
 // Read blob in 4MB chunks to balance async overhead vs memory usage
 const BLOB_CHUNK_SIZE = 4 * 1024 * 1024;
 
+type Backup = {
+    dir: FileSystemDirectoryHandle;
+    sources: Set<BlobReadSource>;
+};
+
+const backups = new Map<FileSystemFileHandle, Backup>();
+
 /**
  * ReadStream implementation for reading from Blob/File.
  */
@@ -51,13 +58,13 @@ class BlobReadSource implements ReadSource {
     readonly size: number;
     readonly seekable: boolean = true;
 
-    // the on-disk file `blob` came from, when known. The browser invalidates a
-    // File object once its file changes, so writes to it are refused while the
-    // source is in use (see readsFromFile)
-    readonly handle: FileSystemFileHandle | null;
+    // The on-disk file `blob` came from, when known. Before overwriting it,
+    // backupSources redirects reads to an identical sibling copy.
+    handle: FileSystemFileHandle | null;
 
     private blob: Blob;
     private closed: boolean = false;
+    private backup: FileSystemFileHandle | null = null;
 
     constructor(blob: Blob, handle: FileSystemFileHandle | null = null) {
         this.blob = blob;
@@ -78,19 +85,74 @@ class BlobReadSource implements ReadSource {
         return new BufferedReadStream(raw, BLOB_CHUNK_SIZE);
     }
 
+    private releaseBackup(): void {
+        if (!this.backup) return;
+        const handle = this.backup;
+        const backup = backups.get(handle);
+        this.backup = null;
+        backup.sources.delete(this);
+        if (backup.sources.size === 0) {
+            backup.dir.removeEntry(handle.name).catch(() => {}).finally(() => backups.delete(handle));
+        }
+    }
+
+    redirect(blob: Blob, handle: FileSystemFileHandle, dir: FileSystemDirectoryHandle): void {
+        this.releaseBackup();
+        this.blob = blob;
+        this.handle = handle;
+        this.backup = handle;
+        if (!backups.has(handle)) {
+            backups.set(handle, { dir, sources: new Set() });
+        }
+        backups.get(handle).sources.add(this);
+    }
+
     close(): void {
+        if (this.closed) return;
         this.closed = true;
+        this.handle = null;
+        this.releaseBackup();
     }
 }
 
-// true if any of `sources` reads from the file behind `handle`
-const readsFromFile = async (sources: Iterable<BlobReadSource>, handle: FileSystemFileHandle) => {
-    for (const source of sources) {
+// Every live source reading from the file behind `handle`.
+const sourcesOf = async (sources: Iterable<BlobReadSource>, handle: FileSystemFileHandle): Promise<BlobReadSource[]> => {
+    const result: BlobReadSource[] = [];
+    for (const source of new Set(sources)) {
         if (source.handle && await handle.isSameEntry(source.handle)) {
-            return true;
+            result.push(source);
         }
     }
-    return false;
+    return result;
+};
+
+const backupName = async (dir: FileSystemDirectoryHandle, name: string): Promise<string> => {
+    for (let i = 0; ; ++i) {
+        const candidate = `${name}${i ? `.${i}` : ''}.ssbak`;
+        try {
+            await dir.getFileHandle(candidate);
+        } catch (error) {
+            if (error.name === 'NotFoundError') return candidate;
+            if (error.name !== 'TypeMismatchError') throw error;
+        }
+    }
+};
+
+// Finish the streaming copy before redirecting any source or touching the target.
+const backupSources = async (sources: BlobReadSource[], dir: FileSystemDirectoryHandle, handle: FileSystemFileHandle, name: string): Promise<void> => {
+    const file = await handle.getFile();
+    const backup = await dir.getFileHandle(name, { create: true });
+    let blob: File;
+    try {
+        await file.stream().pipeTo(await backup.createWritable());
+        blob = await backup.getFile();
+    } catch (error) {
+        await dir.removeEntry(name).catch(() => {});
+        throw error;
+    }
+    for (const source of sources) {
+        source.redirect(blob, backup, dir);
+    }
 };
 
 /**
@@ -166,7 +228,9 @@ class MappedReadFileSystem implements ReadFileSystem {
 }
 
 export {
+    backupName,
+    backupSources,
     BlobReadSource,
     MappedReadFileSystem,
-    readsFromFile
+    sourcesOf
 };

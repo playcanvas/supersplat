@@ -45,7 +45,7 @@ class EditorSplatResource extends GSplatContainer {
     // the lazily-read static data. replaced only by rebind()
     source: ChunkSource;
     // the local files `source` lazily reads through, when it was loaded from
-    // any. Saves must not overwrite them (see scene.readsFromFile)
+    // any. Overwrites redirect these to backups first (see scene.sourcesOf).
     fileSources: BlobReadSource[] = [];
     readonly sourcePool: ChunkDataPool;
     readonly shBands: SHBands;

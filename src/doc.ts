@@ -5,7 +5,7 @@ import { decodeInstances, encodeInstances, restorePalettes } from './doc-instanc
 import type { EditorSplatResource } from './editor-splat-resource';
 import { Events } from './events';
 import { GaussianInstances } from './gaussian-instances';
-import { BrowserFileSystem, BlobReadSource, loadSplatSource, readsFromFile } from './io';
+import { BrowserFileSystem, BlobReadSource, loadSplatSource, sourcesOf } from './io';
 import { recentFiles } from './recent-files';
 import { Scene } from './scene';
 import { Splat } from './splat';
@@ -75,6 +75,8 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     // has to move them all onto the new archive afterwards (see rebindDocument)
     let documentSource: BlobReadSource = null;
     let documentResources = new Set<EditorSplatResource>();
+
+    events.function('doc.fileSources', () => (documentSource ? [documentSource] : []));
 
     // show the user a reset confirmation popup
     const getResetConfirmation = async () => {
@@ -382,18 +384,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     // write the document to `handle`, which may be the file it is open from.
     // returns false if nothing was written
     const writeDocument = async (handle: FileSystemFileHandle) => {
-        // a file an imported splat still streams from can't be overwritten: the
-        // exported data is baked, so there is no way to read it back afterwards
-        if (await events.invoke('scene.readsFromFile', handle)) {
-            await events.invoke('showPopup', {
-                type: 'error',
-                header: i18n.t('doc.save-failed'),
-                message: i18n.t('popup.overwrite-source')
-            });
-            return false;
-        }
-
-        const inPlace = documentSource && await readsFromFile([documentSource], handle);
+        const inPlace = documentSource && (await sourcesOf([documentSource], handle)).length > 0;
         const groups = await saveDocument({ stream: await handle.createWritable(), compact: !inPlace });
         if (!groups) {
             return false;
@@ -520,13 +511,21 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     });
 
     events.function('doc.saveAs', async () => {
-        if (window.showSaveFilePicker) {
+        if (window.showDirectoryPicker) {
             try {
-                const handle = await window.showSaveFilePicker({
-                    id: 'SuperSplatDocumentSave',
-                    types: SuperFileType,
-                    suggestedName: 'scene.ssproj'
+                const name = await events.invoke('showPopup', {
+                    type: 'okcancel',
+                    header: i18n.t('popup.save-as'),
+                    message: i18n.t('popup.export.filename'),
+                    icon: false,
+                    input: { value: events.invoke('doc.name') || 'scene.ssproj' }
                 });
+                if (name.action !== 'ok') return false;
+                let filename = name.value.trim() || 'scene.ssproj';
+                if (!filename.toLowerCase().endsWith('.ssproj')) filename += '.ssproj';
+                const target = await events.invoke('scene.pickWriteTarget', 'SuperSplatDocumentSave', filename, documentSource);
+                if (!target) return false;
+                const { handle } = target;
                 if (!await writeDocument(handle)) {
                     return false;
                 }
@@ -537,6 +536,11 @@ const registerDocEvents = (scene: Scene, events: Events) => {
             } catch (error) {
                 if (error.name !== 'AbortError') {
                     console.error(error);
+                    await events.invoke('showPopup', {
+                        type: 'error',
+                        header: i18n.t('doc.save-failed'),
+                        message: `${error.message ?? error}`
+                    });
                 }
             }
         } else {

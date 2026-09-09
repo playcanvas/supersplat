@@ -423,7 +423,7 @@ class ExportPopup extends Container {
 
             reset(exportType, splatNames, orderedPoses.length > 0);
 
-            // filename is only shown in safari where file picker is not supported
+            // Folder picks and downloads both use the filename entered here.
             filenameRow.hidden = !showFilenameEdit;
 
             this.hidden = false;

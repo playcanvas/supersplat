@@ -4,7 +4,7 @@ import type { Pose } from './camera-poses';
 import { CreateDropHandler } from './drop-handler';
 import { ElementType } from './element';
 import { Events } from './events';
-import { BrowserFileSystem, MappedReadFileSystem, readsFromFile } from './io';
+import { backupName, backupSources, BlobReadSource, BrowserFileSystem, MappedReadFileSystem, pickWriteTarget, sourcesOf } from './io';
 import { Scene } from './scene';
 import { Splat } from './splat';
 import { SerializeSettings, serializeSog, serializeSpz, serializeViewer, SogSettings, SpzSettings, ViewerExportSettings, WebGPUUnavailableError, writeSplatFile } from './splat-serialize';
@@ -432,13 +432,47 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         return getSplats().length === 0;
     });
 
-    // true if a resource in the scene still streams from the file behind
-    // `handle`. Overwriting that file would invalidate its File object and every
-    // later read - so every later save or export - would fail, so writes to it
-    // are refused
-    events.function('scene.readsFromFile', (handle: FileSystemFileHandle) => {
+    // Include the document archive as well as imported files, including hidden layers.
+    events.function('scene.sourcesOf', (handle: FileSystemFileHandle) => {
         const splats = scene.getElementsByType(ElementType.splat) as Splat[];
-        return readsFromFile(new Set(splats.flatMap(splat => splat.resource.fileSources)), handle);
+        return sourcesOf(splats.flatMap(splat => splat.resource.fileSources).concat(events.invoke('doc.fileSources')), handle);
+    });
+
+    // Shared by document and splat writes. The document may exclude
+    // its own archive source because an in-place save rebinds it afterwards.
+    events.function('scene.pickWriteTarget', async (id: string, filename: string, exclude?: BlobReadSource) => {
+        const target = await pickWriteTarget(id, filename);
+        if (!target) return null;
+        if (target.exists) {
+            const sources = (await events.invoke('scene.sourcesOf', target.handle) as BlobReadSource[])
+            .filter(source => source !== exclude);
+            if (sources.length && target.handle.name.toLowerCase().endsWith('.ply')) {
+                await events.invoke('showPopup', {
+                    type: 'error',
+                    header: i18n.t('popup.error'),
+                    message: i18n.t('popup.overwrite-source')
+                });
+                return null;
+            }
+            const backup = sources.length ? await backupName(target.dir, target.handle.name) : null;
+            const result = await events.invoke('showPopup', {
+                type: 'yesno',
+                header: i18n.t('popup.save-as'),
+                message: i18n.t(backup ? 'popup.replace-source' : 'popup.replace-file', {
+                    name: target.handle.name, backup
+                })
+            });
+            if (result.action !== 'yes') return null;
+            if (backup) {
+                events.fire('startSpinner');
+                try {
+                    await backupSources(sources, target.dir, target.handle, backup);
+                } finally {
+                    events.fire('stopSpinner');
+                }
+            }
+        }
+        return target;
     });
 
     events.function('scene.import', async () => {
@@ -513,10 +547,10 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
     events.function('scene.export', async (exportType: ExportType) => {
         const splats = getSplats();
 
-        const hasFilePicker = !!window.showSaveFilePicker;
+        const hasFilePicker = !!window.showDirectoryPicker;
 
         // show viewer export options
-        const options = await events.invoke('show.exportPopup', exportType, splats.map(s => s.name), !hasFilePicker) as SceneExportOptions;
+        const options = await events.invoke('show.exportPopup', exportType, splats.map(s => s.name), true) as SceneExportOptions;
 
         // return if user cancelled
         if (!options) {
@@ -531,23 +565,17 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
 
         if (hasFilePicker) {
             try {
-                const fileHandle = await window.showSaveFilePicker({
-                    id: 'SuperSplatFileExport',
-                    types: [filePickerTypes[fileType]],
-                    suggestedName: options.filename
-                });
-                if (await events.invoke('scene.readsFromFile', fileHandle)) {
-                    await events.invoke('showPopup', {
-                        type: 'error',
-                        header: i18n.t('popup.error'),
-                        message: i18n.t('popup.overwrite-source')
-                    });
-                    return;
-                }
-                await events.invoke('scene.write', fileType, options, await fileHandle.createWritable());
+                const target = await events.invoke('scene.pickWriteTarget', 'SuperSplatFileExport', options.filename);
+                if (!target) return;
+                await events.invoke('scene.write', fileType, options, await target.handle.createWritable());
             } catch (error) {
                 if (error.name !== 'AbortError') {
                     console.error(error);
+                    await events.invoke('showPopup', {
+                        type: 'error',
+                        header: i18n.t('popup.error'),
+                        message: `${error.message ?? error}`
+                    });
                 }
             }
         } else {

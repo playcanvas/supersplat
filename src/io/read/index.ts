@@ -4,9 +4,11 @@
 
 // File system implementations
 export {
+    backupName,
+    backupSources,
     BlobReadSource,
     MappedReadFileSystem,
-    readsFromFile
+    sourcesOf
 } from './file-systems';
 
 // Loading functions

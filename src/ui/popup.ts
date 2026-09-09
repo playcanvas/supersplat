@@ -13,6 +13,7 @@ interface ShowOptions {
         options: { v: string, t: string }[];
         value: string;
     };
+    input?: { value: string };
     warning?: {         // secondary note below the select
         text: string;
         link?: string;  // optional link rendered inline after the text
@@ -78,6 +79,10 @@ class Popup extends Container {
 
         selectRow.append(selectInput);
 
+        const textInput = new TextInput({
+            id: 'popup-input'
+        });
+
         const warningText = new Label({
             id: 'popup-warning-text'
         });
@@ -113,6 +118,7 @@ class Popup extends Container {
 
         dialog.append(header);
         dialog.append(text);
+        dialog.append(textInput);
         dialog.append(selectRow);
         dialog.append(warningText);
         dialog.append(linkRow);
@@ -159,7 +165,7 @@ class Popup extends Container {
             header.text = options.header;
             text.text = options.message;
 
-            const { type, link, select, warning } = options;
+            const { type, link, select, input, warning } = options;
 
             ['error', 'info', 'yesno', 'okcancel'].forEach((t) => {
                 text.class[t === type && options.icon !== false ? 'add' : 'remove'](t);
@@ -186,6 +192,11 @@ class Popup extends Container {
                 selectInput.value = select.value;
             }
 
+            textInput.hidden = input === undefined;
+            if (input !== undefined) {
+                textInput.value = input.value;
+            }
+
             warningText.hidden = warning === undefined;
             warningText.dom.textContent = warning?.text ?? '';
             if (warning?.link) {
@@ -199,13 +210,16 @@ class Popup extends Container {
 
             // take keyboard focus so shortcuts stop working
             this.dom.focus();
+            if (input) {
+                textInput.focus();
+            }
 
             return new Promise<ShowResult>((resolve) => {
                 okFn = () => {
                     this.hide();
                     resolve({
                         action: 'ok',
-                        value: select ? selectInput.value : undefined
+                        value: input ? textInput.value : select ? selectInput.value : undefined
                     });
                 };
                 cancelFn = () => {

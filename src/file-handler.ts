@@ -573,8 +573,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         let directory = exportSettings.directory;
         if (directory) {
             try {
-                if (await directory.queryPermission({ mode: 'readwrite' }) !== 'granted' &&
-                    await directory.requestPermission({ mode: 'readwrite' }) !== 'granted') {
+                if (await directory.queryPermission({ mode: 'readwrite' }) !== 'granted') {
                     directory = undefined;
                 } else {
                     // A saved handle can outlive the folder it refers to.
@@ -588,7 +587,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                 await persistExportSettings();
             }
         }
-        return directory ?? await events.invoke('scene.pickExportDirectory');
+        return directory;
     });
 
     events.function('scene.export', async (exportType: ExportType) => {
@@ -597,7 +596,6 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
 
         await exportSettingsReady;
         const directory = hasFilePicker ? await events.invoke('scene.getExportDirectory') : undefined;
-        if (hasFilePicker && !directory) return;
 
         const options = await events.invoke('show.exportPopup', exportType, splats.map(s => s.name), { directory }) as SceneExportOptions;
 

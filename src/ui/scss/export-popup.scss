@@ -116,6 +116,12 @@
                         height: 24px;
                         line-height: 22px;
                     }
+
+                    .location-name.pcui-hidden + .change-location {
+                        flex-grow: 1;
+                        margin-left: 0;
+                        text-align: left;
+                    }
                 }
             }
         }

@@ -515,7 +515,6 @@ const registerDocEvents = (scene: Scene, events: Events) => {
         try {
             const hasFilePicker = !!window.showDirectoryPicker;
             const directory = hasFilePicker ? await events.invoke('scene.getExportDirectory') : undefined;
-            if (hasFilePicker && !directory) return false;
 
             const options = await events.invoke('show.savePopup', events.invoke('doc.name') || 'scene.ssproj', directory, documentSource);
             if (!options) return false;

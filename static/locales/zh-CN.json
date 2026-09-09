@@ -286,6 +286,7 @@
     "popup.export.spz-version.3": "SPZ 3（旧版 gzip）",
     "popup.export.location": "保存位置",
     "popup.export.change-location": "更改…",
+    "popup.export.choose-location": "选择输出文件夹…",
     "popup.export.filename": "文件名",
     "popup.export.overwrite": "覆盖",
     "popup.export.overwrite-message": "此文件已存在。请覆盖它或选择其他文件名。",

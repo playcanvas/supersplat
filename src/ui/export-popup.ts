@@ -68,6 +68,8 @@ class ExportPopup extends Container {
 
         super(args);
 
+        const hasFilePicker = !!window.showDirectoryPicker;
+
         // UI
 
         const dialog = new Container({
@@ -278,7 +280,6 @@ class ExportPopup extends Container {
         const locationValue = new Container({ class: 'location' });
         const locationName = new Label({ class: 'location-name' });
         const changeLocationButton = new Button({ class: 'change-location' });
-        i18n.bindText(changeLocationButton, 'popup.export.change-location');
         locationValue.append(locationName);
         locationValue.append(changeLocationButton);
         locationRow.append(locationLabel);
@@ -370,6 +371,10 @@ class ExportPopup extends Container {
             const filename = getFilename();
             const actionKey = saveProject ? 'menu.file.save' : 'popup.export';
             headerText.text = i18n.t(saveProject ? 'popup.save-as' : 'popup.export.header');
+            locationName.hidden = !directory;
+            locationName.text = directory ? `…/${directory.name}` : '';
+            locationName.dom.title = locationName.text;
+            changeLocationButton.text = i18n.t(directory ? 'popup.export.change-location' : 'popup.export.choose-location');
             exportButton.enabled = false;
             exportButton.text = i18n.t(actionKey);
 
@@ -447,7 +452,7 @@ class ExportPopup extends Container {
             filenameMessage.dom.classList.toggle('error', !!message);
             filenameEntry.input.setAttribute('aria-invalid', String(!!message));
             exportButton.text = i18n.t(handle && !message ? 'popup.export.overwrite' : actionKey);
-            exportButton.enabled = !message && changeLocationButton.enabled && !submitting;
+            exportButton.enabled = !message && (!hasFilePicker || !!directory) && changeLocationButton.enabled && !submitting;
         };
 
         i18n.onChange(validateFilename, this);
@@ -460,8 +465,6 @@ class ExportPopup extends Container {
             const selected = await events.invoke('scene.pickExportDirectory');
             if (selected) {
                 directory = selected;
-                locationName.text = `…/${directory.name}`;
-                locationName.dom.title = locationName.text;
             }
             changeLocationButton.enabled = true;
             validateFilename();
@@ -588,9 +591,7 @@ class ExportPopup extends Container {
             reset(exportType, splatNames, orderedPoses.length > 0);
 
             directory = settings.directory;
-            locationRow.hidden = !directory;
-            locationName.text = directory ? `…/${directory.name}` : '';
-            locationName.dom.title = locationName.text;
+            locationRow.hidden = !hasFilePicker;
 
             filenameMessage.text = '';
             filenameMessage.hidden = true;

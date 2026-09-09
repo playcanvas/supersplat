@@ -286,6 +286,7 @@
     "popup.export.spz-version.3": "SPZ 3（レガシー gzip）",
     "popup.export.location": "保存先",
     "popup.export.change-location": "変更…",
+    "popup.export.choose-location": "出力先フォルダーを選択…",
     "popup.export.filename": "ファイル名",
     "popup.export.overwrite": "上書き",
     "popup.export.overwrite-message": "このファイルは既に存在します。上書きするか、別のファイル名を選択してください。",

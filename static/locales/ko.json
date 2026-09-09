@@ -286,6 +286,7 @@
     "popup.export.spz-version.3": "SPZ 3 (레거시 gzip)",
     "popup.export.location": "저장 위치",
     "popup.export.change-location": "변경…",
+    "popup.export.choose-location": "출력 폴더 선택…",
     "popup.export.filename": "파일 이름",
     "popup.export.overwrite": "덮어쓰기",
     "popup.export.overwrite-message": "이 파일이 이미 존재합니다. 덮어쓰거나 다른 파일 이름을 선택하세요.",

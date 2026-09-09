@@ -348,6 +348,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
 
             return groups;
         } catch (error) {
+            await options.stream?.abort().catch(() => { /* the writer may already have aborted */ });
             await events.invoke('showPopup', {
                 type: 'error',
                 header: i18n.t('doc.save-failed'),
@@ -520,9 +521,14 @@ const registerDocEvents = (scene: Scene, events: Events) => {
             if (!options) return false;
 
             if (hasFilePicker) {
-                const handle = options.fileHandle;
-                if (!await writeDocument(handle)) {
-                    return false;
+                const target = options.fileTarget;
+                const handle = target.handle;
+                let written = false;
+                try {
+                    written = await writeDocument(handle);
+                    if (!written) return false;
+                } finally {
+                    if (!written) await target.discard?.();
                 }
                 documentFileHandle = handle;
                 events.fire('doc.setName', handle.name);

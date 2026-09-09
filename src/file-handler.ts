@@ -5,7 +5,7 @@ import { CreateDropHandler } from './drop-handler';
 import { ElementType } from './element';
 import { Events } from './events';
 import { ExportSettings, loadExportSettings, saveExportSettings } from './export-settings';
-import { BlobReadSource, BrowserFileSystem, MappedReadFileSystem, pickWriteTarget, sourcesOf } from './io';
+import { BlobReadSource, BrowserFileSystem, MappedReadFileSystem, pickWriteTarget, sourcesOf, WriteTarget } from './io';
 import { Scene } from './scene';
 import { Splat } from './splat';
 import { SerializeSettings, serializeSog, serializeSpz, serializeViewer, SogSettings, SpzSettings, ViewerExportSettings, WebGPUUnavailableError, writeSplatFile } from './splat-serialize';
@@ -20,7 +20,7 @@ type FileType = 'ply' | 'compressedPly' | 'splat' | 'sog' | 'spz' | 'htmlViewer'
 
 interface SceneExportOptions {
     filename: string;
-    fileHandle?: FileSystemFileHandle;
+    fileTarget?: WriteTarget;
     splatIdx: 'all' | number;
     serializeSettings: SerializeSettings;
 
@@ -588,6 +588,10 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             } catch {
                 directory = undefined;
             }
+            if (!directory) {
+                exportSettings.directory = undefined;
+                await persistExportSettings();
+            }
         }
         return directory ?? await events.invoke('scene.pickExportDirectory');
     });
@@ -608,10 +612,6 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             return;
         }
 
-        exportSettings.filename = options.filename;
-        exportSettings.exportType = exportType;
-        await persistExportSettings();
-
         const fileType: FileType =
             (exportType === 'viewer') ? (options.viewerExportSettings!.type === 'zip' ? 'packageViewer' : 'htmlViewer') :
                 (exportType === 'ply') ? (options.compressedPly ? 'compressedPly' : 'ply') :
@@ -620,7 +620,12 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
 
         if (hasFilePicker) {
             try {
-                await events.invoke('scene.write', fileType, options, await options.fileHandle.createWritable());
+                let written = false;
+                try {
+                    written = await events.invoke('scene.write', fileType, options, await options.fileTarget.handle.createWritable());
+                } finally {
+                    if (!written) await options.fileTarget.discard?.();
+                }
             } catch (error) {
                 if (error.name !== 'AbortError') {
                     console.error(error);
@@ -696,8 +701,10 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                     await serializeViewer(splats, serializeSettings, { ...viewerExportSettings!, events }, fs);
                     break;
             }
-
+            return true;
         } catch (error) {
+            // Release the writable stream before a newly created target is removed.
+            await stream?.abort().catch(() => { /* the writer may already have aborted */ });
             if (error instanceof WebGPUUnavailableError) {
                 await events.invoke('showPopup', {
                     type: 'error',
@@ -712,6 +719,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                     message: `${message} while saving file`
                 });
             }
+            return false;
         } finally {
             if (useSpinner) {
                 events.fire('stopSpinner');

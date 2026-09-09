@@ -1,9 +1,5 @@
-import type { ExportType } from './file-handler';
-
 interface ExportSettings {
     directory?: FileSystemDirectoryHandle;
-    filename?: string;
-    exportType?: ExportType;
 }
 
 let database: Promise<IDBDatabase>;
@@ -21,9 +17,19 @@ const openDatabase = () => {
 const loadExportSettings = async (): Promise<ExportSettings> => {
     const db = await openDatabase();
     return new Promise((resolve, reject) => {
-        const request = db.transaction('settings').objectStore('settings').get('export');
-        request.onsuccess = () => resolve(request.result ?? {});
-        request.onerror = () => reject(request.error);
+        const transaction = db.transaction('settings', 'readwrite');
+        const store = transaction.objectStore('settings');
+        const request = store.get('export');
+        let settings: ExportSettings;
+        request.onsuccess = () => {
+            settings = { directory: request.result?.directory };
+            if (request.result?.filename !== undefined || request.result?.exportType !== undefined) {
+                store.put(settings, 'export');
+            }
+        };
+        transaction.oncomplete = () => resolve(settings);
+        transaction.onabort = () => reject(transaction.error);
+        transaction.onerror = () => reject(transaction.error);
     });
 };
 

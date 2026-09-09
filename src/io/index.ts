@@ -18,5 +18,6 @@ export {
     BrowserFileSystem,
     GZipWriter,
     pickWriteTarget,
-    ProgressWriter
+    ProgressWriter,
+    WriteTarget
 } from './write';

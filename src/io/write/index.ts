@@ -4,7 +4,7 @@
 
 // Browser file system
 export { BrowserFileSystem } from './browser-file-system';
-export { pickWriteTarget } from './pick-target';
+export { pickWriteTarget, WriteTarget } from './pick-target';
 
 // Writer utilities
 export {

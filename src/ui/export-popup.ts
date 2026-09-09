@@ -5,13 +5,13 @@ import { i18n } from './localization';
 import { Events } from '../events';
 import { ExportSettings } from '../export-settings';
 import { ExportType, SceneExportOptions } from '../file-handler';
-import type { BlobReadSource } from '../io';
+import type { BlobReadSource, WriteTarget } from '../io';
 import { AnimTrack, ExperienceSettings, defaultPostEffectSettings } from '../splat-serialize';
 import sceneExport from './svg/export.svg';
 import projectSave from './svg/save.svg';
 
 type FileDialogType = ExportType | 'ssproj';
-type SaveOptions = Pick<SceneExportOptions, 'filename' | 'fileHandle'>;
+type SaveOptions = Pick<SceneExportOptions, 'filename' | 'fileTarget'>;
 
 const createSvg = (svgString: string, args = {}) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -504,8 +504,7 @@ class ExportPopup extends Container {
             loopSelect.enabled = value;
         });
 
-        const reset = (exportType: FileDialogType, splatNames: string[], hasPoses: boolean, settings: ExportSettings) => {
-            const { filename: previousFilename, exportType: previousExportType } = settings;
+        const reset = (exportType: FileDialogType, splatNames: string[], hasPoses: boolean) => {
             const allRows = [
                 viewerTypeRow, animationRow, loopRow, colorRow, fovRow, compressRow, bandsRow, iterationsRow, spzVersionRow
             ];
@@ -535,7 +534,7 @@ class ExportPopup extends Container {
             spzVersionSelect.value = '4';
 
             // filename
-            filenameEntry.value = previousFilename ?? splatNames[0];
+            filenameEntry.value = splatNames[0];
             switch (exportType) {
                 case 'ply':
                     updateExtension('.ply');
@@ -556,10 +555,6 @@ class ExportPopup extends Container {
                     filenameEntry.value = getFilename();
                     break;
             }
-            if (exportType === previousExportType) {
-                filenameEntry.value = previousFilename;
-            }
-
             // viewer
             const bgClr = events.invoke('bgClr');
 
@@ -587,7 +582,7 @@ class ExportPopup extends Container {
             .filter(p => p.frame >= 0 && p.frame < frames)
             .sort((a, b) => a.frame - b.frame);
 
-            reset(exportType, splatNames, orderedPoses.length > 0, settings);
+            reset(exportType, splatNames, orderedPoses.length > 0);
 
             directory = settings.directory;
             locationRow.hidden = !directory;
@@ -726,21 +721,6 @@ class ExportPopup extends Container {
                     submitting = true;
                     exportButton.enabled = false;
                     try {
-                        let fileHandle: FileSystemFileHandle;
-                        if (directory) {
-                            const target = await events.invoke('scene.pickWriteTarget', directory, getFilename(),
-                                async (handle: FileSystemFileHandle) => !!overwriteHandle && await handle.isSameEntry(overwriteHandle), excludedSource);
-
-                            // A newly detected file needs an explicit Overwrite click.
-                            // Keep the dialog open if its filename or folder changed while checking.
-                            if (!target || id !== validationId || this.hidden) {
-                                submitting = false;
-                                await validateFilename();
-                                return;
-                            }
-                            fileHandle = target.handle;
-                        }
-
                         const options = exportType === 'ssproj' ? { filename: getFilename() } : {
                             ply: assemblePlyOptions,
                             splat: assembleSplatOptions,
@@ -748,7 +728,22 @@ class ExportPopup extends Container {
                             spz: assembleSpzOptions,
                             viewer: assembleViewerOptions
                         }[exportType]();
-                        resolve({ ...options, fileHandle });
+                        let fileTarget: WriteTarget;
+                        if (directory) {
+                            const target = await events.invoke('scene.pickWriteTarget', directory, getFilename(),
+                                async (handle: FileSystemFileHandle) => !!overwriteHandle && await handle.isSameEntry(overwriteHandle), excludedSource);
+
+                            // A newly detected file needs an explicit Overwrite click.
+                            // Keep the dialog open if its filename or folder changed while checking.
+                            if (!target || id !== validationId || this.hidden) {
+                                await target?.discard?.();
+                                submitting = false;
+                                await validateFilename();
+                                return;
+                            }
+                            fileTarget = target;
+                        }
+                        resolve({ ...options, fileTarget });
                     } catch (error) {
                         filenameMessage.text = `${error.message ?? error}`;
                         filenameMessage.hidden = false;

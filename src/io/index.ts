@@ -6,6 +6,7 @@
 export {
     BlobReadSource,
     MappedReadFileSystem,
+    readsFromFile,
     defaultLodIndex,
     loadSplatSource,
     PermutedChunkSource,

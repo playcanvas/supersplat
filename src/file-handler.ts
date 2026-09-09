@@ -4,6 +4,7 @@ import type { Pose } from './camera-poses';
 import { CreateDropHandler } from './drop-handler';
 import { ElementType } from './element';
 import { Events } from './events';
+import { ExportSettings, loadExportSettings, saveExportSettings } from './export-settings';
 import { BlobReadSource, BrowserFileSystem, MappedReadFileSystem, pickWriteTarget, sourcesOf } from './io';
 import { Scene } from './scene';
 import { Splat } from './splat';
@@ -19,6 +20,7 @@ type FileType = 'ply' | 'compressedPly' | 'splat' | 'sog' | 'spz' | 'htmlViewer'
 
 interface SceneExportOptions {
     filename: string;
+    fileHandle?: FileSystemFileHandle;
     splatIdx: 'all' | number;
     serializeSettings: SerializeSettings;
 
@@ -440,8 +442,13 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
 
     // Shared by document and splat writes. The document may exclude
     // its own archive source because an in-place save rebinds it afterwards.
-    events.function('scene.pickWriteTarget', async (id: string, filename: string, header: string, exclude?: BlobReadSource) => {
-        const target = await pickWriteTarget(id, filename);
+    events.function('scene.pickWriteTarget', async (
+        location: string | FileSystemDirectoryHandle,
+        filename: string,
+        confirm: string | ((handle: FileSystemFileHandle) => Promise<boolean>),
+        exclude?: BlobReadSource
+    ) => {
+        const target = await pickWriteTarget(location, filename);
         if (!target) return null;
         if (target.exists) {
             const sources = (await events.invoke('scene.sourcesOf', target.handle) as BlobReadSource[])
@@ -454,12 +461,12 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                 });
                 return null;
             }
-            const result = await events.invoke('showPopup', {
+            const confirmed = typeof confirm === 'function' ? await confirm(target.handle) : (await events.invoke('showPopup', {
                 type: 'yesno',
-                header,
+                header: confirm,
                 message: i18n.t('popup.replace-file', { name: target.handle.name })
-            });
-            if (result.action !== 'yes') return null;
+            })).action === 'yes';
+            if (!confirmed) return null;
         }
         return target;
     });
@@ -533,18 +540,76 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         }
     });
 
+    let exportSettings: ExportSettings = {};
+    const exportSettingsReady = loadExportSettings().then((settings) => {
+        exportSettings = settings;
+    }).catch((error) => {
+        console.warn('Export settings could not be restored', error);
+    });
+
+    const persistExportSettings = () => saveExportSettings(exportSettings).catch((error) => {
+        console.warn('Export settings could not be saved', error);
+    });
+
+    events.function('scene.pickExportDirectory', async () => {
+        await exportSettingsReady;
+        try {
+            exportSettings.directory = await window.showDirectoryPicker({
+                id: 'SuperSplatFileExport',
+                mode: 'readwrite',
+                startIn: exportSettings.directory
+            });
+            await persistExportSettings();
+            return exportSettings.directory;
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                await events.invoke('showPopup', {
+                    type: 'error',
+                    header: i18n.t('popup.error'),
+                    message: `${error.message ?? error}`
+                });
+            }
+            return null;
+        }
+    });
+
     events.function('scene.export', async (exportType: ExportType) => {
         const splats = getSplats();
-
         const hasFilePicker = !!window.showDirectoryPicker;
 
-        // show viewer export options
-        const options = await events.invoke('show.exportPopup', exportType, splats.map(s => s.name), true) as SceneExportOptions;
+        await exportSettingsReady;
+
+        if (hasFilePicker) {
+            let directory = exportSettings.directory;
+            if (directory) {
+                try {
+                    if (await directory.queryPermission({ mode: 'readwrite' }) !== 'granted' &&
+                        await directory.requestPermission({ mode: 'readwrite' }) !== 'granted') {
+                        directory = undefined;
+                    } else {
+                        // A saved handle can outlive the folder it refers to.
+                        await directory.values().next();
+                    }
+                } catch {
+                    directory = undefined;
+                }
+            }
+            if (!directory && !await events.invoke('scene.pickExportDirectory')) {
+                return;
+            }
+        }
+
+        const settings = hasFilePicker ? exportSettings : { ...exportSettings, directory: undefined };
+        const options = await events.invoke('show.exportPopup', exportType, splats.map(s => s.name), settings) as SceneExportOptions;
 
         // return if user cancelled
         if (!options) {
             return;
         }
+
+        exportSettings.filename = options.filename;
+        exportSettings.exportType = exportType;
+        await persistExportSettings();
 
         const fileType: FileType =
             (exportType === 'viewer') ? (options.viewerExportSettings!.type === 'zip' ? 'packageViewer' : 'htmlViewer') :
@@ -554,9 +619,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
 
         if (hasFilePicker) {
             try {
-                const target = await events.invoke('scene.pickWriteTarget', 'SuperSplatFileExport', options.filename, i18n.t('popup.export.header'));
-                if (!target) return;
-                await events.invoke('scene.write', fileType, options, await target.handle.createWritable());
+                await events.invoke('scene.write', fileType, options, await options.fileHandle.createWritable());
             } catch (error) {
                 if (error.name !== 'AbortError') {
                     console.error(error);

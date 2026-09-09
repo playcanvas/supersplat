@@ -443,13 +443,12 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
     // Shared by document and splat writes. The document may exclude
     // its own archive source because an in-place save rebinds it afterwards.
     events.function('scene.pickWriteTarget', async (
-        location: string | FileSystemDirectoryHandle,
+        location: FileSystemDirectoryHandle,
         filename: string,
         confirm: (handle: FileSystemFileHandle) => Promise<boolean>,
         exclude?: BlobReadSource
     ) => {
         const target = await pickWriteTarget(location, filename);
-        if (!target) return null;
         if (target.exists) {
             const sources = (await events.invoke('scene.sourcesOf', target.handle) as BlobReadSource[])
             .filter(source => source !== exclude);
@@ -546,9 +545,14 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         console.warn('Export settings could not be saved', error);
     });
 
-    events.function('scene.pickExportDirectory', async () => {
+    events.function('scene.pickExportDirectory', async (reuse = false) => {
         await exportSettingsReady;
         try {
+            if (reuse && exportSettings.directory) {
+                await exportSettings.directory.requestPermission({ mode: 'readwrite' });
+                return await events.invoke('scene.getExportDirectory');
+            }
+
             exportSettings.directory = await window.showDirectoryPicker({
                 id: 'SuperSplatFileExport',
                 mode: 'readwrite',
@@ -573,8 +577,10 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         let directory = exportSettings.directory;
         if (directory) {
             try {
-                if (await directory.queryPermission({ mode: 'readwrite' }) !== 'granted' &&
-                    await directory.requestPermission({ mode: 'readwrite' }) !== 'granted') {
+                const permission = await directory.queryPermission({ mode: 'readwrite' });
+                // Keep the handle so the folder button can restore access.
+                if (permission === 'prompt') return undefined;
+                if (permission !== 'granted') {
                     directory = undefined;
                 } else {
                     // A saved handle can outlive the folder it refers to.
@@ -588,7 +594,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                 await persistExportSettings();
             }
         }
-        return directory ?? await events.invoke('scene.pickExportDirectory');
+        return directory;
     });
 
     events.function('scene.export', async (exportType: ExportType) => {
@@ -597,7 +603,6 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
 
         await exportSettingsReady;
         const directory = hasFilePicker ? await events.invoke('scene.getExportDirectory') : undefined;
-        if (hasFilePicker && !directory) return;
 
         const options = await events.invoke('show.exportPopup', exportType, splats.map(s => s.name), { directory }) as SceneExportOptions;
 

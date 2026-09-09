@@ -286,6 +286,7 @@
     "popup.export.spz-version.3": "SPZ 3 (gzip hérité)",
     "popup.export.location": "Emplacement",
     "popup.export.change-location": "Modifier…",
+    "popup.export.choose-location": "Choisir un dossier de sortie…",
     "popup.export.filename": "Nom de fichier",
     "popup.export.overwrite": "Écraser",
     "popup.export.overwrite-message": "Ce fichier existe déjà. Écrasez-le ou choisissez un autre nom de fichier.",

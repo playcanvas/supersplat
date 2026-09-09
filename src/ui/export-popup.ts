@@ -462,12 +462,12 @@ class ExportPopup extends Container {
             validationId++;
             changeLocationButton.enabled = false;
             exportButton.enabled = false;
-            const selected = await events.invoke('scene.pickExportDirectory');
+            const selected = await events.invoke('scene.pickExportDirectory', !directory);
             if (selected) {
                 directory = selected;
             }
             changeLocationButton.enabled = true;
-            validateFilename();
+            validateFilename(!!selected);
         });
 
         cancelButton.on('click', () => onCancel());

@@ -42,7 +42,7 @@
             background-color: $bcg-darker;
             text-transform: uppercase;
 
-            #icon {
+            #icon, #save-icon {
                 vertical-align: middle;
                 color: $clr-icon-hilight;
             }
@@ -123,8 +123,9 @@
         #export-filename-message {
             position: absolute;
             z-index: 10;
-            top: 100%;
-            right: 0;
+            top: 50%;
+            left: calc(100% + 24px);
+            transform: translateY(-50%);
             width: 280px;
             margin: 0;
             padding: 10px 12px;

@@ -573,33 +573,34 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         }
     });
 
+    events.function('scene.getExportDirectory', async () => {
+        await exportSettingsReady;
+        let directory = exportSettings.directory;
+        if (directory) {
+            try {
+                if (await directory.queryPermission({ mode: 'readwrite' }) !== 'granted' &&
+                    await directory.requestPermission({ mode: 'readwrite' }) !== 'granted') {
+                    directory = undefined;
+                } else {
+                    // A saved handle can outlive the folder it refers to.
+                    await directory.values().next();
+                }
+            } catch {
+                directory = undefined;
+            }
+        }
+        return directory ?? await events.invoke('scene.pickExportDirectory');
+    });
+
     events.function('scene.export', async (exportType: ExportType) => {
         const splats = getSplats();
         const hasFilePicker = !!window.showDirectoryPicker;
 
         await exportSettingsReady;
+        const directory = hasFilePicker ? await events.invoke('scene.getExportDirectory') : undefined;
+        if (hasFilePicker && !directory) return;
 
-        if (hasFilePicker) {
-            let directory = exportSettings.directory;
-            if (directory) {
-                try {
-                    if (await directory.queryPermission({ mode: 'readwrite' }) !== 'granted' &&
-                        await directory.requestPermission({ mode: 'readwrite' }) !== 'granted') {
-                        directory = undefined;
-                    } else {
-                        // A saved handle can outlive the folder it refers to.
-                        await directory.values().next();
-                    }
-                } catch {
-                    directory = undefined;
-                }
-            }
-            if (!directory && !await events.invoke('scene.pickExportDirectory')) {
-                return;
-            }
-        }
-
-        const settings = hasFilePicker ? exportSettings : { ...exportSettings, directory: undefined };
+        const settings = { ...exportSettings, directory };
         const options = await events.invoke('show.exportPopup', exportType, splats.map(s => s.name), settings) as SceneExportOptions;
 
         // return if user cancelled

@@ -511,43 +511,38 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     });
 
     events.function('doc.saveAs', async () => {
-        if (window.showDirectoryPicker) {
-            try {
-                const name = await events.invoke('showPopup', {
-                    type: 'okcancel',
-                    header: i18n.t('popup.save-as'),
-                    message: i18n.t('popup.export.filename'),
-                    icon: false,
-                    input: { value: events.invoke('doc.name') || 'scene.ssproj' }
-                });
-                if (name.action !== 'ok') return false;
-                let filename = name.value.trim() || 'scene.ssproj';
-                if (!filename.toLowerCase().endsWith('.ssproj')) filename += '.ssproj';
-                const target = await events.invoke('scene.pickWriteTarget', 'SuperSplatDocumentSave', filename, i18n.t('popup.save-as'), documentSource);
-                if (!target) return false;
-                const { handle } = target;
+        try {
+            const hasFilePicker = !!window.showDirectoryPicker;
+            const directory = hasFilePicker ? await events.invoke('scene.getExportDirectory') : undefined;
+            if (hasFilePicker && !directory) return false;
+
+            const options = await events.invoke('show.savePopup', events.invoke('doc.name') || 'scene.ssproj', directory, documentSource);
+            if (!options) return false;
+
+            if (hasFilePicker) {
+                const handle = options.fileHandle;
                 if (!await writeDocument(handle)) {
                     return false;
                 }
                 documentFileHandle = handle;
                 events.fire('doc.setName', handle.name);
-                events.fire('doc.saved');
                 recentFiles.add(handle);
-            } catch (error) {
-                if (error.name !== 'AbortError') {
-                    console.error(error);
-                    await events.invoke('showPopup', {
-                        type: 'error',
-                        header: i18n.t('doc.save-failed'),
-                        message: `${error.message ?? error}`
-                    });
+            } else {
+                if (!await saveDocument({ filename: options.filename })) {
+                    return false;
                 }
+                events.fire('doc.setName', options.filename);
             }
-        } else {
-            await saveDocument({
-                filename: 'scene.ssproj'
-            });
             events.fire('doc.saved');
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                console.error(error);
+                await events.invoke('showPopup', {
+                    type: 'error',
+                    header: i18n.t('doc.save-failed'),
+                    message: `${error.message ?? error}`
+                });
+            }
         }
     });
 

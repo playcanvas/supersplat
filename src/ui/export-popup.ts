@@ -5,8 +5,13 @@ import { i18n } from './localization';
 import { Events } from '../events';
 import { ExportSettings } from '../export-settings';
 import { ExportType, SceneExportOptions } from '../file-handler';
+import type { BlobReadSource } from '../io';
 import { AnimTrack, ExperienceSettings, defaultPostEffectSettings } from '../splat-serialize';
 import sceneExport from './svg/export.svg';
+import projectSave from './svg/save.svg';
+
+type FileDialogType = ExportType | 'ssproj';
+type SaveOptions = Pick<SceneExportOptions, 'filename' | 'fileHandle'>;
 
 const createSvg = (svgString: string, args = {}) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -48,7 +53,7 @@ const isValidFilename = (filename: string) => {
 };
 
 class ExportPopup extends Container {
-    show: (exportType: ExportType, splatNames: string[], settings?: ExportSettings) => Promise<null | SceneExportOptions>;
+    show: (exportType: FileDialogType, splatNames: string[], settings?: ExportSettings, exclude?: BlobReadSource) => Promise<null | SceneExportOptions | SaveOptions>;
     hide: () => void;
     destroy: () => void;
 
@@ -78,11 +83,10 @@ class ExportPopup extends Container {
         const headerText = new Label({
             id: 'header'
         });
-        i18n.bindText(headerText, 'popup.export.header');
-
-        header.append(createSvg(sceneExport, {
-            id: 'icon'
-        }));
+        const exportIcon = createSvg(sceneExport, { id: 'icon' });
+        const saveIcon = createSvg(projectSave, { id: 'save-icon', hidden: true });
+        header.append(exportIcon);
+        header.append(saveIcon);
 
         header.append(headerText);
 
@@ -351,24 +355,34 @@ class ExportPopup extends Container {
         let validationId = 0;
         let existingHandle: FileSystemFileHandle;
         let submitting = false;
+        let saveProject = false;
+        let excludedSource: BlobReadSource;
+
+        const getFilename = () => {
+            const filename = filenameEntry.value;
+            return saveProject && filename && !filename.toLowerCase().endsWith('.ssproj') ? `${filename}.ssproj` : filename;
+        };
 
         const validateFilename = async (suggest = false): Promise<void> => {
             if (this.hidden) return;
             const id = ++validationId;
-            const filename = filenameEntry.value;
+            const filename = getFilename();
+            const actionKey = saveProject ? 'menu.file.save' : 'popup.export';
+            headerText.text = i18n.t(saveProject ? 'popup.save-as' : 'popup.export.header');
             exportButton.enabled = false;
-            exportButton.text = i18n.t('popup.export');
+            exportButton.text = i18n.t(actionKey);
 
             let message = '';
             let handle: FileSystemFileHandle;
             let needsSuggestion = false;
-            if (!isValidFilename(filename)) {
+            if (!isValidFilename(filenameEntry.value)) {
                 message = i18n.t('popup.export.invalid-filename');
                 needsSuggestion = true;
             } else if (directory) {
                 try {
                     handle = await directory.getFileHandle(filename);
-                    if ((await events.invoke('scene.sourcesOf', handle)).length > 0) {
+                    const sources = await events.invoke('scene.sourcesOf', handle) as BlobReadSource[];
+                    if (sources.some(source => source !== excludedSource)) {
                         message = i18n.t('popup.overwrite-source');
                         needsSuggestion = true;
                     }
@@ -431,7 +445,7 @@ class ExportPopup extends Container {
             filenameMessage.hidden = !filenameMessage.text;
             filenameMessage.dom.classList.toggle('error', !!message);
             filenameEntry.input.setAttribute('aria-invalid', String(!!message));
-            exportButton.text = i18n.t(handle && !message ? 'popup.export.overwrite' : 'popup.export');
+            exportButton.text = i18n.t(handle && !message ? 'popup.export.overwrite' : actionKey);
             exportButton.enabled = !message && changeLocationButton.enabled && !submitting;
         };
 
@@ -490,7 +504,7 @@ class ExportPopup extends Container {
             loopSelect.enabled = value;
         });
 
-        const reset = (exportType: ExportType, splatNames: string[], hasPoses: boolean, settings: ExportSettings) => {
+        const reset = (exportType: FileDialogType, splatNames: string[], hasPoses: boolean, settings: ExportSettings) => {
             const { filename: previousFilename, exportType: previousExportType } = settings;
             const allRows = [
                 viewerTypeRow, animationRow, loopRow, colorRow, fovRow, compressRow, bandsRow, iterationsRow, spzVersionRow
@@ -499,6 +513,7 @@ class ExportPopup extends Container {
             const activeRows: Container[] = {
                 ply: [compressRow, bandsRow],
                 splat: [],
+                ssproj: [],
                 sog: [bandsRow, iterationsRow],
                 spz: [bandsRow, spzVersionRow],
                 viewer: [viewerTypeRow, animationRow, loopRow, colorRow, fovRow, bandsRow]
@@ -537,6 +552,9 @@ class ExportPopup extends Container {
                 case 'viewer':
                     updateExtension(viewerTypeSelect.value === 'html' ? '.html' : '.zip');
                     break;
+                case 'ssproj':
+                    filenameEntry.value = getFilename();
+                    break;
             }
             if (exportType === previousExportType) {
                 filenameEntry.value = previousFilename;
@@ -555,7 +573,12 @@ class ExportPopup extends Container {
             fovSlider.value = events.invoke('camera.fov');
         };
 
-        this.show = (exportType: ExportType, splatNames: string[], settings: ExportSettings = {}) => {
+        this.show = (exportType: FileDialogType, splatNames: string[], settings: ExportSettings = {}, exclude?: BlobReadSource) => {
+            saveProject = exportType === 'ssproj';
+            excludedSource = exclude;
+            exportIcon.hidden = saveProject;
+            saveIcon.hidden = !saveProject;
+
             const frames = events.invoke('timeline.frames');
             const frameRate = events.invoke('timeline.frameRate');
             const smoothness = events.invoke('timeline.smoothness');
@@ -691,7 +714,7 @@ class ExportPopup extends Container {
                 };
             };
 
-            return new Promise<null | SceneExportOptions>((resolve) => {
+            return new Promise<null | SceneExportOptions | SaveOptions>((resolve) => {
                 onCancel = () => {
                     resolve(null);
                 };
@@ -705,8 +728,8 @@ class ExportPopup extends Container {
                     try {
                         let fileHandle: FileSystemFileHandle;
                         if (directory) {
-                            const target = await events.invoke('scene.pickWriteTarget', directory, filenameEntry.value,
-                                async (handle: FileSystemFileHandle) => !!overwriteHandle && await handle.isSameEntry(overwriteHandle));
+                            const target = await events.invoke('scene.pickWriteTarget', directory, getFilename(),
+                                async (handle: FileSystemFileHandle) => !!overwriteHandle && await handle.isSameEntry(overwriteHandle), excludedSource);
 
                             // A newly detected file needs an explicit Overwrite click.
                             // Keep the dialog open if its filename or folder changed while checking.
@@ -718,7 +741,7 @@ class ExportPopup extends Container {
                             fileHandle = target.handle;
                         }
 
-                        const options = {
+                        const options = exportType === 'ssproj' ? { filename: getFilename() } : {
                             ply: assemblePlyOptions,
                             splat: assembleSplatOptions,
                             sog: assembleSogOptions,

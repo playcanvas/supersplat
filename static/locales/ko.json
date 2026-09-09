@@ -167,7 +167,6 @@
     "popup.error-loading": "파일 로드 오류",
     "popup.webgpu-unavailable": "이 내보내기에는 WebGPU가 필요하지만 이 브라우저에서는 사용할 수 없습니다. 최신 버전의 Chrome, Edge 또는 Safari를 사용해 보세요.",
     "popup.overwrite-source": "이 파일은 현재 씬에서 사용 중이므로 덮어쓸 수 없습니다. 다른 파일 이름을 선택하세요.",
-    "popup.replace-file": "'{{name}}'이(가) 이미 존재합니다. 바꾸시겠습니까?",
     "popup.save-as": "다른 이름으로 저장",
     "startup.failed": "SuperSplat을 시작하지 못했습니다. 자세한 내용은 브라우저 콘솔을 확인하세요.",
     "startup.webgpu-unavailable": "SuperSplat에는 WebGPU가 필요하지만 이 브라우저에서는 사용할 수 없습니다. 최신 버전의 Chrome, Edge 또는 Safari를 사용해 보세요.",

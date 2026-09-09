@@ -445,7 +445,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
     events.function('scene.pickWriteTarget', async (
         location: string | FileSystemDirectoryHandle,
         filename: string,
-        confirm: string | ((handle: FileSystemFileHandle) => Promise<boolean>),
+        confirm: (handle: FileSystemFileHandle) => Promise<boolean>,
         exclude?: BlobReadSource
     ) => {
         const target = await pickWriteTarget(location, filename);
@@ -461,12 +461,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                 });
                 return null;
             }
-            const confirmed = typeof confirm === 'function' ? await confirm(target.handle) : (await events.invoke('showPopup', {
-                type: 'yesno',
-                header: confirm,
-                message: i18n.t('popup.replace-file', { name: target.handle.name })
-            })).action === 'yes';
-            if (!confirmed) return null;
+            if (!await confirm(target.handle)) return null;
         }
         return target;
     });
@@ -604,8 +599,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         const directory = hasFilePicker ? await events.invoke('scene.getExportDirectory') : undefined;
         if (hasFilePicker && !directory) return;
 
-        const settings = { ...exportSettings, directory };
-        const options = await events.invoke('show.exportPopup', exportType, splats.map(s => s.name), settings) as SceneExportOptions;
+        const options = await events.invoke('show.exportPopup', exportType, splats.map(s => s.name), { directory }) as SceneExportOptions;
 
         // return if user cancelled
         if (!options) {

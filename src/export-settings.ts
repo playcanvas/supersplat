@@ -17,19 +17,9 @@ const openDatabase = () => {
 const loadExportSettings = async (): Promise<ExportSettings> => {
     const db = await openDatabase();
     return new Promise((resolve, reject) => {
-        const transaction = db.transaction('settings', 'readwrite');
-        const store = transaction.objectStore('settings');
-        const request = store.get('export');
-        let settings: ExportSettings;
-        request.onsuccess = () => {
-            settings = { directory: request.result?.directory };
-            if (request.result?.filename !== undefined || request.result?.exportType !== undefined) {
-                store.put(settings, 'export');
-            }
-        };
-        transaction.oncomplete = () => resolve(settings);
-        transaction.onabort = () => reject(transaction.error);
-        transaction.onerror = () => reject(transaction.error);
+        const request = db.transaction('settings', 'readonly').objectStore('settings').get('export');
+        request.onsuccess = () => resolve({ directory: request.result?.directory });
+        request.onerror = () => reject(request.error);
     });
 };
 

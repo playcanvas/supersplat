@@ -50,7 +50,7 @@ fn main(
 
     // decode the projected ellipse exactly as the render shader does
     let maxRadius = min(1024.0, min(uniforms.viewport.x, uniforms.viewport.y));
-    let ndcRange = vec2f(1.0) + vec2f(8.0 * maxRadius) / uniforms.viewport;
+    let ndcRange = vec2f(1.0) + vec2f(4.0 * maxRadius) / uniforms.viewport;
     let ndc = unpack2x16snorm(a.x) * ndcRange;
     // ndc y is up, target rows run down
     let center = (vec2f(ndc.x, -ndc.y) * 0.5 + 0.5) * uniforms.viewport;

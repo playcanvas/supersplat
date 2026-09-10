@@ -266,15 +266,6 @@ fn main(
         return;
     }
 
-    let maxRadius = min(1024.0, min(viewport.x, viewport.y));
-    let radiusXUncapped = sqrt(2.0 * cov00);
-    let radiusYUncapped = sqrt(2.0 * cov11);
-    let capScale = max(1.0, max(radiusXUncapped, radiusYUncapped) / maxRadius);
-    let invCapScale2 = 1.0 / (capScale * capScale);
-    cov00 *= invCapScale2;
-    cov01 *= invCapScale2;
-    cov11 *= invCapScale2;
-
     let mid = 0.5 * (cov00 + cov11);
     let radius = length(vec2f(0.5 * (cov00 - cov11), cov01));
     let lambda1 = mid + radius;
@@ -295,8 +286,13 @@ fn main(
     let eigenVec = vec2f(cov01, lambda1 - cov00);
     let eigenLen = length(eigenVec);
     let direction = select(vec2f(1.0, 0.0), eigenVec / eigenLen, eigenLen > 1e-9);
-    let axis1 = 2.0 * min(sqrt(2.0 * lambda1), maxRadius) * direction;
-    let len2 = 2.0 * min(sqrt(2.0 * lambda2), maxRadius);
+    // Cap the longest radius in screen pixels and scale both axes equally
+    // to preserve the ellipse's aspect ratio.
+    let maxRadius = min(1024.0, min(viewport.x, viewport.y));
+    let len1 = 2.0 * sqrt(2.0 * lambda1);
+    let radiusScale = min(1.0, maxRadius / len1);
+    let axis1 = len1 * radiusScale * direction;
+    let len2 = 2.0 * sqrt(2.0 * lambda2) * radiusScale;
     let axis2 = len2 * vec2f(direction.y, -direction.x);
 
     let ndc = clip.xy / clip.w;
@@ -352,9 +348,9 @@ fn main(
     let rgb = vec3u(clamp(color.rgb / f32(1u << exponent), vec3f(0.0), vec3f(1.0)) * 1023.0 + 0.5);
 
     // center: ndc as snorm16. The offscreen cull above bounds visible centers to
-    // |ndc| <= 1 + 2 * extentMax / viewport with extentMax = 4 * maxRadius; the
+    // |ndc| <= 1 + 2 * extentMax / viewport with extentMax = 2 * maxRadius; the
     // render shader derives the same range from its viewport uniform
-    let ndcRange = vec2f(1.0) + vec2f(8.0 * maxRadius) / viewport;
+    let ndcRange = vec2f(1.0) + vec2f(4.0 * maxRadius) / viewport;
 
     let cacheUv = cacheCoord(entry);
     textureStore(cacheA, cacheUv, vec4u(

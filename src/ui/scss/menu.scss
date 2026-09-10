@@ -26,6 +26,44 @@
     display: none;
 }
 
+// SuperSplat home: mark + wordmark, hover like the other menubar items,
+// and the same 48px height so the highlight fills the bar.
+#menu-home {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    height: 48px;
+    padding: 0 14px 0 12px;
+    margin: 0;
+    flex-grow: 0;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+        background-color: $bcg-dark;
+        outline: none;
+
+        #menu-wordmark {
+            color: $text-primary;
+        }
+    }
+}
+
+#menu-logo {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+}
+
+#menu-wordmark {
+    margin: 0;
+    padding: 0;
+    font-weight: 600;
+    color: $text-primary;
+    white-space: nowrap;
+}
+
 #menu-container {
     display: flex;
     flex-direction: column;
@@ -34,6 +72,7 @@
 #menu-bar-options {
     display: flex;
     flex-direction: row;
+    align-items: center;
     flex-grow: 1;
 }
 
@@ -81,7 +120,11 @@
 
     #menu-arrow {
         display: block;
-        padding: 10px;
+        padding: 16px 10px;
+    }
+
+    #menu-wordmark {
+        display: none;
     }
 
     .menu-option {

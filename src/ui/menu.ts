@@ -129,9 +129,16 @@ class Menu extends Container {
             id: 'menu-home'
         });
         home.dom.setAttribute('role', 'link');
+        home.dom.setAttribute('tabindex', '0');
         home.dom.setAttribute('aria-label', 'SuperSplat');
         home.dom.setAttribute('title', 'SuperSplat');
         home.dom.addEventListener('click', requestNavigateHome);
+        home.dom.addEventListener('keydown', (event: KeyboardEvent) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                requestNavigateHome();
+            }
+        });
         home.append(logo);
         home.append(wordmark);
 

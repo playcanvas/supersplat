@@ -55,7 +55,9 @@ class AboutPopup extends Container {
         const logoContainer = new Container({
             id: 'about-logo'
         });
-        logoContainer.dom.innerHTML = logoSvg;
+        // svg imports are data URIs (rollup plugin-image); parse to a real element
+        const logoMarkup = decodeURIComponent(logoSvg.substring('data:image/svg+xml,'.length));
+        logoContainer.dom.appendChild(new DOMParser().parseFromString(logoMarkup, 'image/svg+xml').documentElement);
         logoContainer.dom.addEventListener('click', () => {
             window.open('https://github.com/playcanvas/supersplat', '_blank')?.focus();
         });

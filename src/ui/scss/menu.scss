@@ -39,8 +39,10 @@
     flex-grow: 0;
     cursor: pointer;
 
-    &:hover {
+    &:hover,
+    &:focus-visible {
         background-color: $bcg-dark;
+        outline: none;
 
         #menu-wordmark {
             color: $text-primary;

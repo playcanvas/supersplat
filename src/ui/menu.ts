@@ -115,19 +115,30 @@ class Menu extends Container {
         arrow.dom.setAttribute('id', 'menu-arrow');
         arrow.dom.addEventListener('click', toggleCollapsed);
 
-        // SuperSplat home: leftmost, before File.
+        // SuperSplat home: leftmost, before File. Mark + wordmark; the
+        // wordmark hides when the menubar is collapsed.
         const logo = createSvg(logoSvg);
-        logo.dom.classList.add('menu-icon');
         logo.dom.setAttribute('id', 'menu-logo');
-        logo.dom.setAttribute('role', 'link');
-        logo.dom.setAttribute('aria-label', 'SuperSplat');
-        logo.dom.setAttribute('title', 'SuperSplat');
-        logo.dom.addEventListener('click', requestNavigateHome);
+
+        const wordmark = new Label({
+            id: 'menu-wordmark',
+            text: 'SuperSplat'
+        });
+
+        const home = new Container({
+            id: 'menu-home'
+        });
+        home.dom.setAttribute('role', 'link');
+        home.dom.setAttribute('aria-label', 'SuperSplat');
+        home.dom.setAttribute('title', 'SuperSplat');
+        home.dom.addEventListener('click', requestNavigateHome);
+        home.append(logo);
+        home.append(wordmark);
 
         const buttonsContainer = new Container({
             id: 'menu-bar-options'
         });
-        buttonsContainer.append(logo);
+        buttonsContainer.append(home);
         buttonsContainer.append(scene);
         buttonsContainer.append(edit);
         buttonsContainer.append(selection);

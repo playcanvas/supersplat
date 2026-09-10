@@ -108,7 +108,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     // reconstruct clip position: ndc from snorm16 over the projector's range,
     // w = view depth (1 for ortho), z affine in view depth via clipZParams.xy
     let maxRadius = min(1024.0, min(uniform.viewportSize.x, uniform.viewportSize.y));
-    let ndcRange = vec2f(1.0) + vec2f(8.0 * maxRadius) / uniform.viewportSize.xy;
+    let ndcRange = vec2f(1.0) + vec2f(4.0 * maxRadius) / uniform.viewportSize.xy;
     let ndc = unpack2x16snorm(a.x) * ndcRange;
     let depth = bitcast<f32>(a.y);
     let w = select(depth, 1.0, uniform.clipZParams.z != 0.0);

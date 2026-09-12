@@ -208,6 +208,28 @@ class SettingsPanel extends Container {
         shBandsRow.append(shBandsLabel);
         shBandsRow.append(shBandsSlider);
 
+        // minimum projected splat size
+
+        const minSplatSizeRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const minSplatSizeLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(minSplatSizeLabel, 'panel.settings.min-splat-size');
+
+        const minSplatSizeSlider = new SliderInput({
+            class: 'settings-panel-row-slider',
+            min: 0,
+            max: 20,
+            precision: 1,
+            value: 2
+        });
+
+        minSplatSizeRow.append(minSplatSizeLabel);
+        minSplatSizeRow.append(minSplatSizeSlider);
+
         // camera fly speed
 
         const cameraFlySpeedRow = new Container({
@@ -263,6 +285,7 @@ class SettingsPanel extends Container {
         this.append(stochasticRow);
         this.append(tonemappingRow);
         this.append(shBandsRow);
+        this.append(minSplatSizeRow);
         this.append(sectionHeader('panel.settings.section-camera'));
         this.append(cameraFlySpeedRow);
         this.append(fovRow);
@@ -309,6 +332,16 @@ class SettingsPanel extends Container {
 
         shBandsSlider.on('change', (value: number) => {
             events.fire('view.setBands', value);
+        });
+
+        // minimum projected splat size
+
+        events.on('view.minPixelSize', (value: number) => {
+            minSplatSizeSlider.value = value;
+        });
+
+        minSplatSizeSlider.on('change', (value: number) => {
+            events.fire('view.setMinPixelSize', value);
         });
 
         // camera speed

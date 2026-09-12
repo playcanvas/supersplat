@@ -117,14 +117,28 @@ struct ProjectorUniforms {
     minPixelSize: f32,
     // camera clip planes, used to linearly normalize view depth for the sort key
     near: f32,
-    far: f32
+    far: f32,
+    // total cache entries: the size-culled tail of the compact list grows down
+    // from here
+    capacity: u32,
+    // keep size-culled splats projected, for the centres overlay, instead of
+    // dropping them
+    keepCulled: u32,
+    // stochastic frames: write a 256-bucket front-to-back key instead of the
+    // full back-to-front one (see the tail of main)
+    bucketed: u32,
+    // minimum alpha mass of a projected gaussian, in pixels; 0 = off
+    minContribution: f32
 }
 
 // compaction output: surviving splats are appended to a dense list, so the sort
 // and the draw cover the visible count instead of the whole capacity. sortKeys
 // and compactEntries are indexed by compact slot, not by entry; the cache stays
 // indexed by entry, and the entry index rides along as the sort payload so
-// gaussian ids keep their meaning downstream (picking, rings, stochastic dither)
+// gaussian ids keep their meaning downstream (picking, rings, stochastic dither).
+// With the centres overlay up, splats that fail the size cull are appended to a
+// second list growing down from the end of compactEntries (counted in
+// splatCounter[1]); only the centres draw reads that tail
 @group(0) @binding(0) var<storage, read_write> sortKeys: array<u32>;
 @group(0) @binding(1) var<storage, read_write> compactEntries: array<u32>;
 @group(0) @binding(2) var<storage, read_write> splatCounter: array<atomic<u32>>;
@@ -271,8 +285,11 @@ fn main(
     let lambda1 = mid + radius;
     let lambda2 = max(mid - radius, 0.1);
 
-    // skip splats whose projected size falls below the cull threshold
-    if (2.0 * sqrt(2.0 * lambda1) < uniforms.minPixelSize) {
+    // skip splats whose projected size falls below the cull threshold. With the
+    // centres overlay up they are projected anyway - their centre still draws -
+    // but land in the tail list below instead of among the survivors
+    let sizeCulled = 2.0 * sqrt(2.0 * lambda1) < uniforms.minPixelSize;
+    if (sizeCulled && uniforms.keepCulled == 0u) {
         return;
     }
 
@@ -304,6 +321,14 @@ fn main(
     }
 
     var color = textureLoad(splatColor, uv, 0);
+    // stochastic frames also cull by contribution - the gaussian's alpha mass in
+    // pixels, alpha * 2 pi * sqrt(det) of the dilated covariance, the engine's
+    // minContribution rule - on top of the size cull. It reads the stored
+    // opacity ahead of the SH and grade work, so a culled splat costs no more
+    // than a size-culled one
+    if (color.a * 6.283185 * sqrt(determinant) < uniforms.minContribution) {
+        return;
+    }
     if (${bands}u > 0u) {
         let worldDirection = normalize(worldCenter.xyz - uniforms.cameraPosition);
         let localDirection = normalize(transpose(mat3x3f(model[0].xyz, model[1].xyz, model[2].xyz)) * worldDirection);
@@ -365,6 +390,11 @@ fn main(
             | select(0u, 0x01000000u, selected)
             | select(0u, 0x02000000u, locked)
     ));
+    if (sizeCulled) {
+        let tail = atomicAdd(&splatCounter[1], 1u);
+        compactEntries[uniforms.capacity - 1u - tail] = entry;
+        return;
+    }
     // survivor: claim a slot in the compact list. Only surviving threads contend,
     // which is 0.1-10% of the dispatch in practice
     let slot = atomicAdd(&splatCounter[0], 1u);
@@ -374,8 +404,19 @@ fn main(
     // ratio; perspective's clip.z would be hyperbolic, so we normalize the raw
     // view depth instead). near may be negative in ortho (the camera sits inside
     // the bound); the subtraction handles that with no sign special-case.
-    let normDepth = (depth - uniforms.near) / (uniforms.far - uniforms.near);
-    sortKeys[slot] = u32(saturate(1.0 - normDepth) * f32((1u << 20u) - 1u));
+    let normDepth = saturate((depth - uniforms.near) / (uniforms.far - uniforms.near));
+    if (uniforms.bucketed != 0u) {
+        // stochastic frames draw opaque and depth tested, so the order that pays
+        // is front to back: hidden fragments then fail the depth test before
+        // they shade. A fine order scatters consecutive quads across the screen
+        // and costs the tiler more than it saves, so the key is one of 256
+        // depth buckets - near/far carry the scene bound's depth range here -
+        // and compact order survives inside a bucket. The bucket passes count
+        // and place them (projected-splat-bucket-scatter-shader)
+        sortKeys[slot] = min(u32(normDepth * 256.0), 255u);
+    } else {
+        sortKeys[slot] = u32((1.0 - normDepth) * f32((1u << 20u) - 1u));
+    }
     compactEntries[slot] = entry;
 }
 `;

@@ -1,153 +1,93 @@
-import { indexToUvWGSL, paletteMatrixWGSL } from './palette-chunk';
-
+// Splat centres overlay, drawn from the projector's output: one quad per
+// projected splat of the selected layer, over the compact list - survivors from
+// the front, size-culled splats from the tail - with the gaussian renderer's
+// indirect draw args. Reading the cached screen position instead of transforming
+// the source means no matrix or SH work per vertex, and no work at all for
+// splats the projector culled
 const vertexShader = /* wgsl */`
-attribute vertex_position: vec2f;
+attribute vertex_position: vec3f;
 
-uniform matrix_model: mat4x4f;
-uniform matrix_viewProjection: mat4x4f;
-uniform view_position: vec3f;
-uniform texParams: vec2u;
-uniform instanceBase: u32;
+var<storage, read> compactEntries: array<u32>;
+var<storage, read> splatCount: array<u32>;
+var cacheA: texture_2d<u32>;
+var cacheB: texture_2d<u32>;
+
+uniform cacheWidth: u32;
+uniform capacity: u32;
+uniform viewportSize: vec4f;
+uniform clipZParams: vec4f;
+uniform centersBase: u32;
+uniform centersCount: u32;
 uniform centerSize: f32;
-uniform viewportSize: vec2f;
-uniform colorBlend: f32;
-uniform selectionBlend: f32;
 uniform selectionOnly: u32;
 uniform selectionCenters: u32;
+uniform colorBlend: f32;
+uniform selectionBlend: f32;
 uniform selectedClr: vec4f;
 uniform unselectedClr: vec4f;
 
-var<storage, read> instanceSource: array<u32>;
-var<storage, read> instanceFlags: array<u32>;
-var<storage, read> instancePalette: array<u32>;
-var splatPosition: texture_2d<u32>;
-var transformPalette: texture_2d<f32>;
-var splatColor: texture_2d<f32>;
+varying @interpolate(flat) overlayColor: vec4f;
 
-#if SH_BANDS > 0
-var splatSH_1to3: texture_2d<u32>;
-#if SH_BANDS > 1
-var splatSH_4to7: texture_2d<u32>;
-var splatSH_8to11: texture_2d<u32>;
-#if SH_BANDS > 2
-var splatSH_12to15: texture_2d<u32>;
-#endif
-#endif
-#endif
-
-varying overlayColor: vec4f;
-
-${indexToUvWGSL('splatUv', 'uniform.texParams.x')}
-${paletteMatrixWGSL}
-
-fn instanceFlagByte(instance: u32) -> u32 {
-    return (instanceFlags[instance >> 2u] >> ((instance & 3u) * 8u)) & 0xffu;
-}
-
-#if SH_BANDS > 0
-fn unpack111011s(bits: u32) -> vec3f {
-    let value = vec3u((vec3u(bits) >> vec3u(21u, 11u, 0u)) & vec3u(0x7ffu, 0x3ffu, 0x7ffu));
-    return vec3f(value) / vec3f(2047.0, 1023.0, 2047.0) * 2.0 - 1.0;
-}
-
-fn evaluateSH(uv: vec2i, direction: vec3f) -> vec3f {
-    var coefficients: array<vec3f, 15>;
-    let first = textureLoad(splatSH_1to3, uv, 0);
-    let scale = bitcast<f32>(first.x);
-    coefficients[0] = unpack111011s(first.y);
-    coefficients[1] = unpack111011s(first.z);
-    coefficients[2] = unpack111011s(first.w);
-    var result = 0.4886025119029199 * (
-        -coefficients[0] * direction.y
-        + coefficients[1] * direction.z
-        - coefficients[2] * direction.x
-    );
-    #if SH_BANDS > 1
-        let second = textureLoad(splatSH_4to7, uv, 0);
-        coefficients[3] = unpack111011s(second.x);
-        coefficients[4] = unpack111011s(second.y);
-        coefficients[5] = unpack111011s(second.z);
-        coefficients[6] = unpack111011s(second.w);
-        coefficients[7] = unpack111011s(textureLoad(splatSH_8to11, uv, 0).x);
-        let xx = direction.x * direction.x;
-        let yy = direction.y * direction.y;
-        let zz = direction.z * direction.z;
-        let xy = direction.x * direction.y;
-        let yz = direction.y * direction.z;
-        let xz = direction.x * direction.z;
-        result += coefficients[3] * (1.0925484305920792 * xy)
-            + coefficients[4] * (-1.0925484305920792 * yz)
-            + coefficients[5] * (0.31539156525252005 * (2.0 * zz - xx - yy))
-            + coefficients[6] * (-1.0925484305920792 * xz)
-            + coefficients[7] * (0.5462742152960396 * (xx - yy));
-        #if SH_BANDS > 2
-            let third = textureLoad(splatSH_8to11, uv, 0);
-            coefficients[7] = unpack111011s(third.x);
-            coefficients[8] = unpack111011s(third.y);
-            coefficients[9] = unpack111011s(third.z);
-            coefficients[10] = unpack111011s(third.w);
-            let fourth = textureLoad(splatSH_12to15, uv, 0);
-            coefficients[11] = unpack111011s(fourth.x);
-            coefficients[12] = unpack111011s(fourth.y);
-            coefficients[13] = unpack111011s(fourth.z);
-            coefficients[14] = unpack111011s(fourth.w);
-            result += coefficients[8] * (-0.5900435899266435 * direction.y * (3.0 * xx - yy))
-                + coefficients[9] * (2.890611442640554 * xy * direction.z)
-                + coefficients[10] * (-0.4570457994644658 * direction.y * (4.0 * zz - xx - yy))
-                + coefficients[11] * (0.3731763325901154 * direction.z * (2.0 * zz - 3.0 * xx - 3.0 * yy))
-                + coefficients[12] * (-0.4570457994644658 * direction.x * (4.0 * zz - xx - yy))
-                + coefficients[13] * (1.445305721320277 * direction.z * (xx - yy))
-                + coefficients[14] * (-0.5900435899266435 * direction.x * (xx - 3.0 * yy));
-        #endif
-    #endif
-    return result * scale;
-}
-#endif
+const discardPosition = vec4f(0.0, 0.0, 2.0, 1.0);
 
 @vertex
 fn vertexMain(input: VertexInput) -> VertexOutput {
     var output: VertexOutput;
-    // one draw instance per gaussian instance; the static data is reached
-    // through the instance's source row
-    let instance = uniform.instanceBase + pcInstanceIndex;
-    let uv = splatUv(instanceSource[instance]);
-    let state = instanceFlagByte(instance);
-    if ((state & 2u) != 0u
-        || (uniform.selectionOnly != 0u && (state & 1u) == 0u)) {
-        output.position = vec4f(0.0, 0.0, 2.0, 1.0);
+    let order = pcInstanceIndex * 128u + u32(vertex_position.z);
+    let survivors = splatCount[0];
+    if (order >= survivors + splatCount[1]) {
+        output.position = discardPosition;
+        return output;
+    }
+    // survivors fill the compact list from the front, size-culled splats from
+    // the back; the depth test resolves overlap, so neither needs sorting
+    var entry: u32;
+    if (order < survivors) {
+        entry = compactEntries[order];
+    } else {
+        entry = compactEntries[uniform.capacity - 1u - (order - survivors)];
+    }
+    // only the selected layer draws centres
+    if (entry < uniform.centersBase || entry >= uniform.centersBase + uniform.centersCount) {
+        output.position = discardPosition;
         return output;
     }
 
-    let model = uniform.matrix_model * paletteMatrix(instancePalette[instance] & 0xffffu);
-    let center = bitcast<vec3f>(textureLoad(splatPosition, uv, 0).xyz);
-    let worldPosition = model * vec4f(center, 1.0);
-    let projected = uniform.matrix_viewProjection * worldPosition;
-    let offset = input.vertex_position * uniform.centerSize / uniform.viewportSize * projected.w;
-    // keep the center's own depth so overlapping centers resolve nearest-first in
-    // the depth buffer instead of by instance order. Clamped into [0, w] like the
-    // gaussian renderer does, so a center straddling the near plane still draws
-    output.position = vec4f(projected.xy + offset, clamp(projected.z, 0.0, projected.w), projected.w);
-
-    // colorBlend mixes the base from the gaussian's own colour toward the flat
-    // unselected colour; at 1 the (expensive) texture and SH reads are skipped
-    var gaussianColor = uniform.unselectedClr.rgb;
-    if (uniform.colorBlend < 1.0) {
-        var texColor = textureLoad(splatColor, uv, 0).rgb;
-        #if SH_BANDS > 0
-            let worldDirection = normalize(worldPosition.xyz - uniform.view_position);
-            let modelDirection = normalize(transpose(mat3x3f(model[0].xyz, model[1].xyz, model[2].xyz)) * worldDirection);
-            texColor += evaluateSH(uv, modelDirection);
-        #endif
-        gaussianColor = mix(texColor, uniform.unselectedClr.rgb, uniform.colorBlend);
+    let uv = vec2i(i32(entry % uniform.cacheWidth), i32(entry / uniform.cacheWidth));
+    let flags = (textureLoad(cacheB, uv, 0).x >> 24u) & 3u;
+    if ((flags & 2u) != 0u || (uniform.selectionOnly != 0u && (flags & 1u) == 0u)) {
+        output.position = discardPosition;
+        return output;
     }
-    let selected = select(0.0, uniform.selectionBlend, state == 1u && uniform.selectionCenters != 0u);
-    output.overlayColor = vec4f(mix(gaussianColor, uniform.selectedClr.rgb, selected), 1.0);
+    let a = textureLoad(cacheA, uv, 0);
+
+    // clip position reconstructed exactly as the gaussian renderer does, so the
+    // centre sits on its gaussian and carries the same depth
+    let maxRadius = min(1024.0, min(uniform.viewportSize.x, uniform.viewportSize.y));
+    let ndcRange = vec2f(1.0) + vec2f(4.0 * maxRadius) / uniform.viewportSize.xy;
+    let ndc = unpack2x16snorm(a.x) * ndcRange;
+    let depth = bitcast<f32>(a.y);
+    let w = select(depth, 1.0, uniform.clipZParams.z != 0.0);
+    let clip = vec4f(ndc * w, clamp(uniform.clipZParams.x * depth + uniform.clipZParams.y, 0.0, w), w);
+    // a centerSize-pixel square
+    let clipOffset = vertex_position.xy * (0.5 * uniform.centerSize) * w * uniform.viewportSize.zw;
+    output.position = clip + vec4f(clipOffset, 0.0, 0.0);
+
+    // colorBlend mixes the base from the gaussian's own colour (as cached, so
+    // graded) toward the flat unselected colour; selectionBlend takes a selected
+    // centre from there toward the selection colour
+    let rgbBits = a.z;
+    let color = vec3f(vec3u(rgbBits, rgbBits >> 10u, rgbBits >> 20u) & vec3u(1023u))
+        * (f32(1u << (rgbBits >> 30u)) / 1023.0);
+    let base = mix(color, uniform.unselectedClr.rgb, uniform.colorBlend);
+    let selected = select(0.0, uniform.selectionBlend, (flags & 1u) != 0u && uniform.selectionCenters != 0u);
+    output.overlayColor = vec4f(mix(base, uniform.selectedClr.rgb, selected), 1.0);
     return output;
 }
 `;
 
 const fragmentShader = /* wgsl */`
-varying overlayColor: vec4f;
+varying @interpolate(flat) overlayColor: vec4f;
 
 @fragment
 fn fragmentMain(input: FragmentInput) -> FragmentOutput {

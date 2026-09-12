@@ -33,12 +33,17 @@ uniform showGaussians: u32;
 uniform showSelectedGaussians: u32;
 
 varying gaussianUV: vec2f;
-varying gaussianColor: vec4f;
-varying ringColor: vec4f;
-varying selectedRingColor: vec4f;
+// the two resolved colours - gaussian fill and ring band - travel as six halves
+// in three flat words: (fill.r, fill.g), (fill.b, ring.r), (ring.g, ring.b).
+// The vertex stage is bound by writing its outputs, not by arithmetic, and the
+// three float colours were more than half of them
+varying @interpolate(flat) packedColor0: u32;
+varying @interpolate(flat) packedColor1: u32;
+varying @interpolate(flat) packedColor2: u32;
+// bits 0-1 selected/locked, bits 8-15 the opacity byte
 varying @interpolate(flat) gaussianFlags: u32;
 varying @interpolate(flat) gaussianId: u32;
-varying gaussianDepth: f32;
+varying @interpolate(flat) gaussianDepth: f32;
 
 const discardPosition = vec4f(0.0, 0.0, 2.0, 1.0);
 
@@ -71,7 +76,8 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     let a = textureLoad(cacheA, uv, 0);
     let b = textureLoad(cacheB, uv, 0).x;
 
-    let alpha = f32((b >> 16u) & 0xffu) / 255.0;
+    let alphaByte = (b >> 16u) & 0xffu;
+    let alpha = f32(alphaByte) / 255.0;
     let flags = (b >> 24u) & 3u;
     // a zero-alpha splat is invisible to the gaussian pass but is still a real,
     // editable splat: keep its quad wherever rings mode would draw its ring band
@@ -148,10 +154,12 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     let clipOffset = pixelOffset * clip.w * uniform.viewportSize.zw;
     output.position = clip + vec4f(clipOffset, 0.0, 0.0);
     output.gaussianUV = corner;
-    output.gaussianColor = vec4f(prepareOutputFromGamma(gaussianRgb, clip.w), alpha);
-    output.ringColor = vec4f(prepareOutputFromGamma(ringRgb, clip.w), 1.0);
-    output.selectedRingColor = vec4f(prepareOutputFromGamma(selectedRingRgb, clip.w), 1.0);
-    output.gaussianFlags = flags;
+    let fill = prepareOutputFromGamma(gaussianRgb, clip.w);
+    let ring = prepareOutputFromGamma(select(ringRgb, selectedRingRgb, (flags & 1u) != 0u), clip.w);
+    output.packedColor0 = pack2x16float(fill.rg);
+    output.packedColor1 = pack2x16float(vec2f(fill.b, ring.r));
+    output.packedColor2 = pack2x16float(ring.gb);
+    output.gaussianFlags = flags | (alphaByte << 8u);
     output.gaussianId = entry - uniform.pickBase;
     // linear view depth for the depth pick (fragment normalizes it by near/far).
     // clip.w carries this for perspective but is a constant 1 in ortho, which
@@ -164,12 +172,12 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 
 const fragmentShader = /* wgsl */`
 varying gaussianUV: vec2f;
-varying gaussianColor: vec4f;
-varying ringColor: vec4f;
-varying selectedRingColor: vec4f;
+varying @interpolate(flat) packedColor0: u32;
+varying @interpolate(flat) packedColor1: u32;
+varying @interpolate(flat) packedColor2: u32;
 varying @interpolate(flat) gaussianFlags: u32;
 varying @interpolate(flat) gaussianId: u32;
-varying gaussianDepth: f32;
+varying @interpolate(flat) gaussianDepth: f32;
 
 uniform outlineMode: u32;
 uniform showGaussians: u32;
@@ -208,15 +216,16 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         discard;
     }
 
+    let opacity = f32((gaussianFlags >> 8u) & 0xffu) / 255.0;
+
     #ifdef PICK_PASS
         if (uniform.pickMode == 1) {
             let depth = (gaussianDepth - uniform.cameraParams.z) / (uniform.cameraParams.y - uniform.cameraParams.z);
-            let contribution = normExp(radius) * gaussianColor.a;
+            let contribution = normExp(radius) * opacity;
             if (contribution < 1.0 / 255.0) {
                 discard;
             }
-            let alpha = gaussianColor.a;
-            output.color = vec4f(depth * alpha, 0.0, 0.0, alpha);
+            output.color = vec4f(depth * opacity, 0.0, 0.0, opacity);
         } else {
             let id = gaussianId;
             output.color = vec4f(vec4u(id, id >> 8u, id >> 16u, id >> 24u) & vec4u(255u)) / 255.0;
@@ -226,8 +235,9 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         let locked = (gaussianFlags & 2u) != 0u;
         let norm = normExp(radius);
         let showGaussian = uniform.showGaussians != 0u || (selected && uniform.showSelectedGaussians != 0u);
-        var alpha = select(0.0, norm * gaussianColor.a, showGaussian);
-        var color = gaussianColor.rgb;
+        var alpha = select(0.0, norm * opacity, showGaussian);
+        let packedMid = unpack2x16float(packedColor1);
+        var color = vec3f(unpack2x16float(packedColor0), packedMid.x);
         // Rings apply only to the selected splat's gaussians (gaussianId is the
         // cache entry index in the forward pass, where pickBase is 0). Their
         // alpha is composed with the independently-controlled gaussian fill.
@@ -236,10 +246,10 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
             let ringBand = radius >= 1.0 - uniform.ringSize;
             if (ringBand) {
                 alpha = 0.6;
-                // ring colours arrive fully resolved from the vertex stage,
-                // blended from the splat's own colour so they stay independent
-                // of the gaussian tints
-                color = select(ringColor.rgb, selectedRingColor.rgb, selected);
+                // the ring colour arrives fully resolved from the vertex stage:
+                // blended from the splat's own colour so it stays independent
+                // of the gaussian tints, and already the selected variant
+                color = vec3f(packedMid.y, unpack2x16float(packedColor2));
             } else {
                 // rings mode shades the whole gaussian: the interior keeps its
                 // fill but never drops below a faint floor, so even invisible

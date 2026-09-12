@@ -117,14 +117,23 @@ struct ProjectorUniforms {
     minPixelSize: f32,
     // camera clip planes, used to linearly normalize view depth for the sort key
     near: f32,
-    far: f32
+    far: f32,
+    // total cache entries: the size-culled tail of the compact list grows down
+    // from here
+    capacity: u32,
+    // keep size-culled splats projected, for the centres overlay, instead of
+    // dropping them
+    keepCulled: u32
 }
 
 // compaction output: surviving splats are appended to a dense list, so the sort
 // and the draw cover the visible count instead of the whole capacity. sortKeys
 // and compactEntries are indexed by compact slot, not by entry; the cache stays
 // indexed by entry, and the entry index rides along as the sort payload so
-// gaussian ids keep their meaning downstream (picking, rings, stochastic dither)
+// gaussian ids keep their meaning downstream (picking, rings, stochastic dither).
+// With the centres overlay up, splats that fail the size cull are appended to a
+// second list growing down from the end of compactEntries (counted in
+// splatCounter[1]); only the centres draw reads that tail
 @group(0) @binding(0) var<storage, read_write> sortKeys: array<u32>;
 @group(0) @binding(1) var<storage, read_write> compactEntries: array<u32>;
 @group(0) @binding(2) var<storage, read_write> splatCounter: array<atomic<u32>>;
@@ -271,8 +280,11 @@ fn main(
     let lambda1 = mid + radius;
     let lambda2 = max(mid - radius, 0.1);
 
-    // skip splats whose projected size falls below the cull threshold
-    if (2.0 * sqrt(2.0 * lambda1) < uniforms.minPixelSize) {
+    // skip splats whose projected size falls below the cull threshold. With the
+    // centres overlay up they are projected anyway - their centre still draws -
+    // but land in the tail list below instead of among the survivors
+    let sizeCulled = 2.0 * sqrt(2.0 * lambda1) < uniforms.minPixelSize;
+    if (sizeCulled && uniforms.keepCulled == 0u) {
         return;
     }
 
@@ -365,6 +377,11 @@ fn main(
             | select(0u, 0x01000000u, selected)
             | select(0u, 0x02000000u, locked)
     ));
+    if (sizeCulled) {
+        let tail = atomicAdd(&splatCounter[1], 1u);
+        compactEntries[uniforms.capacity - 1u - tail] = entry;
+        return;
+    }
     // survivor: claim a slot in the compact list. Only surviving threads contend,
     // which is 0.1-10% of the dispatch in practice
     let slot = atomicAdd(&splatCounter[0], 1u);

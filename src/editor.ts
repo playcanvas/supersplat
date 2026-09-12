@@ -1273,7 +1273,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     });
 
-    // experimental stochastic-transparency splat renderer (1 spp, no sort).
+    // stochastic-transparency splat renderer (1 spp, bucketed front to back
+    // instead of sorted).
     // 'disabled' never uses it, 'enabled' always does, 'movement' uses it only
     // while the scene is changing - trading the sort for speed exactly when the
     // eye is least able to see the sampling noise - and 'auto' behaves like

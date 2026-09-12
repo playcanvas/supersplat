@@ -3,12 +3,11 @@ const vertexShader = /* wgsl */`
 
 attribute vertex_position: vec3f;
 
-#ifndef STOCHASTIC
+// the frame's draw order over the projector's survivors: sorted back to front
+// for blending, bucketed front to back for the stochastic depth test (see
+// ProjectedSplatRenderer.render). The draw is indirect over the survivor count,
+// so the cpu never knows it
 var<storage, read> sortedIndices: array<u32>;
-#endif
-// dense list of surviving entries and their count, both written by the projector.
-// The draw is indirect over the count, so the cpu never knows it
-var<storage, read> compactEntries: array<u32>;
 var<storage, read> splatCount: array<u32>;
 var cacheA: texture_2d<u32>;
 var cacheB: texture_2d<u32>;
@@ -58,14 +57,9 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
         return output;
     }
 
-    // both paths resolve to a cache entry index: stochastic reads the compact
-    // list directly (it needs no ordering), the sorted path reads it through the
-    // sort, which carries the same entry indices as its payload
-    #ifdef STOCHASTIC
-        let entry = compactEntries[order];
-    #else
-        let entry = sortedIndices[order];
-    #endif
+    // the ordered list carries cache entry indices, so gaussian ids mean the
+    // same on both paths
+    let entry = sortedIndices[order];
     #ifdef PICK_PASS
         if (entry < uniform.pickBase || entry >= uniform.pickBase + uniform.pickCount) {
             output.position = discardPosition;

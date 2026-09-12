@@ -543,8 +543,10 @@ class Scene {
         // high-resolution capture span could otherwise land in _frameTime
         // after unlock and be mistaken for an editor frame (disabling also
         // zeroes the report, so nothing stale survives the capture).
+        // Stochastic frames are timed too: the renderer's contribution cull
+        // adapts to their span (see onGpuReport).
         this.app.graphicsDevice.gpuProfiler.enabled =
-            (profiling || this.autoSampling) && !this.lockedRenderMode;
+            (profiling || this.autoSampling || this.movingRender) && !this.lockedRenderMode;
 
         if (this.suspendRender) {
             this.app.renderNextFrame = false;
@@ -646,8 +648,9 @@ class Scene {
 
     // handle an asynchronously resolved gpu timing report. Only sorted frames
     // measure the cost 'auto' mode trades away, so only their spans update the
-    // engage decision; stochastic-frame reports are ignored. timings is null
-    // when the backend discards a frame (e.g. a disjoint timer event).
+    // engage decision; stochastic-frame spans drive the renderer's motion cull
+    // instead. timings is null when the backend discards a frame (e.g. a
+    // disjoint timer event).
     private onGpuReport(renderVersion: number, timings: number[] | null, frameTime?: number) {
         const moving = this.frameModes.get(renderVersion);
 
@@ -659,8 +662,13 @@ class Scene {
             }
         });
 
-        if (moving === false && timings && timings.length > 0) {
-            const gpuTime = frameTime ?? timings.reduce((sum, t) => sum + t, 0);
+        if (moving === undefined || !timings || timings.length === 0) {
+            return;
+        }
+        const gpuTime = frameTime ?? timings.reduce((sum, t) => sum + t, 0);
+        if (moving) {
+            this.projectedSplatRenderer.reportStochasticFrame(gpuTime);
+        } else {
             this.autoEngaged = gpuTime > this.autoEngageMs;
         }
     }

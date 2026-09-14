@@ -103,6 +103,7 @@ class Camera extends Element {
     mainPass: RenderPassForward;
     splatPass: RenderPassForward;
     gizmoPass: RenderPassForward;
+    depthReducePass: RenderPass;
     finalPass: SimpleRenderPass;
 
     // overridden target size
@@ -335,6 +336,13 @@ class Camera extends Element {
         this.mainPass = new RenderPassForward(device, composition, app.scene, renderer);
         this.splatPass = new RenderPassForward(device, composition, app.scene, renderer);
         this.gizmoPass = new RenderPassForward(device, composition, app.scene, renderer);
+        // compute-only pass between the splat and gizmo passes - never given a
+        // render target, so RenderPass.render runs it without opening one. It
+        // folds a stochastic frame's splat depth into the projected renderer's
+        // occlusion map before the gizmo pass clears the depth buffer
+        this.depthReducePass = new RenderPass(device);
+        this.depthReducePass.name = 'depthReduce';
+        this.depthReducePass.execute = () => scene.projectedSplatRenderer.reduceDepth();
         this.finalPass = new SimpleRenderPass(device,
             new ShaderQuad(device, vertexShader, fragmentShader, 'final-blit'), {
                 vars: () => {
@@ -455,6 +463,7 @@ class Camera extends Element {
         this.mainPass?.destroy();
         this.splatPass?.destroy();
         this.gizmoPass?.destroy();
+        this.depthReducePass?.destroy();
         this.finalPass?.destroy();
         this.camera.framePasses = null;
 
@@ -581,7 +590,7 @@ class Camera extends Element {
             this.finalPass.init(null);
 
             // assign render passes to camera
-            this.camera.framePasses = [this.clearPass, this.mainPass, this.splatPass, this.gizmoPass, this.finalPass];
+            this.camera.framePasses = [this.clearPass, this.mainPass, this.splatPass, this.depthReducePass, this.gizmoPass, this.finalPass];
         } else {
             // resize existing render targets
             const { splatTarget, colorTarget, workTarget } = this;

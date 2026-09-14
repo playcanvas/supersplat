@@ -127,9 +127,22 @@ struct ProjectorUniforms {
     keepCulled: u32,
     // minimum alpha mass of a projected gaussian, in pixels; 0 = off
     minContribution: f32,
-    // splats exempt from the contribution cull because their ring would draw:
-    // 0 none, 1 the selected ones, 2 the whole layer (overlayEligible decides)
-    keepRings: u32
+    // splats exempt from the contribution and occlusion culls because their
+    // ring would draw: 0 none, 1 the selected ones, 2 the whole layer
+    // (overlayEligible decides)
+    keepRings: u32,
+    // the previous stochastic frame, for the occlusion cull: its view and
+    // view-projection, its clip-z mapping (a, b, isOrtho - the render shader's
+    // clipZParams) and viewport in pixels, and the block grid of its max-depth
+    // map. occlusionEnabled is 0 when no usable previous frame exists
+    prevViewProj: mat4x4f,
+    prevView: mat4x4f,
+    prevClipZ: vec4f,
+    prevViewport: vec2f,
+    occlusionBlocksX: u32,
+    occlusionBlocksY: u32,
+    occlusionBlock: f32,
+    occlusionEnabled: u32
 }
 
 // compaction output: surviving splats are appended to a dense list, so the sort
@@ -137,9 +150,10 @@ struct ProjectorUniforms {
 // and compactEntries are indexed by compact slot, not by entry; the cache stays
 // indexed by entry, and the entry index rides along as the sort payload so
 // gaussian ids keep their meaning downstream (picking, rings, stochastic dither).
-// With the centres overlay up, splats that fail the size or contribution cull
-// are appended to a tail growing down from the end of compactEntries (counted
-// in splatCounter[1], placed by compactTailSlot); only the centres draw reads it
+// With the centres overlay up, splats that fail the size, contribution or
+// occlusion cull are appended to a tail growing down from the end of
+// compactEntries (counted in splatCounter[1], placed by compactTailSlot); only
+// the centres draw reads it
 @group(0) @binding(0) var<storage, read_write> sortKeys: array<u32>;
 @group(0) @binding(1) var<storage, read_write> compactEntries: array<u32>;
 @group(0) @binding(2) var<storage, read_write> splatCounter: array<atomic<u32>>;
@@ -148,15 +162,17 @@ struct ProjectorUniforms {
 @group(0) @binding(5) var<storage, read> instanceSource: array<u32>;
 @group(0) @binding(6) var<storage, read> instanceFlags: array<u32>;
 @group(0) @binding(7) var<storage, read> instancePalette: array<u32>;
-@group(0) @binding(8) var transformA: texture_2d<u32>;
-@group(0) @binding(9) var transformB: texture_2d<f32>;
-@group(0) @binding(10) var splatColor: texture_2d<f32>;
-@group(0) @binding(11) var transformPalette: texture_2d<f32>;
-@group(0) @binding(12) var colorPalette: texture_2d<f32>;
-${bands > 0 ? '@group(0) @binding(13) var splatSH_1to3: texture_2d<u32>;' : ''}
-${bands > 1 ? '@group(0) @binding(14) var splatSH_4to7: texture_2d<u32>;\n@group(0) @binding(15) var splatSH_8to11: texture_2d<u32>;' : ''}
-${bands > 2 ? '@group(0) @binding(16) var splatSH_12to15: texture_2d<u32>;' : ''}
-@group(0) @binding(${13 + (bands > 0 ? 1 : 0) + (bands > 1 ? 2 : 0) + (bands > 2 ? 1 : 0)}) var<uniform> uniforms: ProjectorUniforms;
+// max depth per block of the previous stochastic frame (projected-splat-depth-reduce-shader)
+@group(0) @binding(8) var<storage, read> prevDepthMax: array<f32>;
+@group(0) @binding(9) var transformA: texture_2d<u32>;
+@group(0) @binding(10) var transformB: texture_2d<f32>;
+@group(0) @binding(11) var splatColor: texture_2d<f32>;
+@group(0) @binding(12) var transformPalette: texture_2d<f32>;
+@group(0) @binding(13) var colorPalette: texture_2d<f32>;
+${bands > 0 ? '@group(0) @binding(14) var splatSH_1to3: texture_2d<u32>;' : ''}
+${bands > 1 ? '@group(0) @binding(15) var splatSH_4to7: texture_2d<u32>;\n@group(0) @binding(16) var splatSH_8to11: texture_2d<u32>;' : ''}
+${bands > 2 ? '@group(0) @binding(17) var splatSH_12to15: texture_2d<u32>;' : ''}
+@group(0) @binding(${14 + (bands > 0 ? 1 : 0) + (bands > 1 ? 2 : 0) + (bands > 2 ? 1 : 0)}) var<uniform> uniforms: ProjectorUniforms;
 
 ${shCode(bands)}
 ${indexToUvWGSL('sourceCoord', 'uniforms.sourceWidth')}
@@ -323,6 +339,58 @@ fn main(
         return;
     }
 
+    // splats whose ring would draw are exempt from the motion culls below:
+    // rings draw from the survivor list
+    let ringKept = uniforms.keepRings != 0u && overlayEligible(state, uniforms.keepRings == 1u);
+
+    // occlusion cull on stochastic frames. The previous stochastic frame's
+    // depth buffer samples the visibility function: each pixel kept the
+    // nearest fragment that passed its coverage test, so the chance a pixel's
+    // depth lies beyond d is the transmittance to d, and the farthest depth
+    // over the blocks around a splat bounds what could still have shown
+    // behind it there. A splat whose front lies beyond that bound was
+    // invisible last frame, up to sampling - a splat with transmittance T
+    // escapes a block of N samples with probability (1 - T)^N - and is routed
+    // like a size-culled one. Static splats reproject exactly through the
+    // previous view, so only true disocclusions arrive a frame late. The
+    // gather widens with the footprint - g blocks around the centre covers at
+    // least g blocks from it in every direction - and splats wider than two
+    // blocks skip the test
+    let gather = max(i32(ceil(len1 / uniforms.occlusionBlock)), 1);
+    var occluded = false;
+    if (uniforms.occlusionEnabled != 0u && !ringKept && gather <= 2) {
+        let prevClip = uniforms.prevViewProj * worldCenter;
+        let prevDepth = -(uniforms.prevView * worldCenter).z;
+        let prevOrtho = uniforms.prevClipZ.z != 0.0;
+        if (prevClip.w > 0.0 && (prevOrtho || prevDepth > 0.0)) {
+            let prevNdc = prevClip.xy / prevClip.w;
+            // texture rows run top-down
+            let prevPixel = vec2f(prevNdc.x * 0.5 + 0.5, 0.5 - prevNdc.y * 0.5) * uniforms.prevViewport;
+            let block = vec2i(floor(prevPixel / uniforms.occlusionBlock));
+            let blocks = vec2i(i32(uniforms.occlusionBlocksX), i32(uniforms.occlusionBlocksY));
+            if (block.x >= gather && block.y >= gather && block.x < blocks.x - gather && block.y < blocks.y - gather) {
+                var farthest = 0.0;
+                for (var dy = -gather; dy <= gather; dy++) {
+                    for (var dx = -gather; dx <= gather; dx++) {
+                        farthest = max(farthest, prevDepthMax[u32((block.y + dy) * blocks.x + block.x + dx)]);
+                    }
+                }
+                // the splat's front along the previous view ray, at the same
+                // cut-off as the quad's edge, mapped to the depth buffer's
+                // clip z the way the render shader maps the centre
+                let front = prevDepth - 2.8284 * sqrt(c22);
+                let w = select(front, 1.0, prevOrtho);
+                if (w > 0.0) {
+                    let frontZ = clamp(uniforms.prevClipZ.x * front + uniforms.prevClipZ.y, 0.0, w) / w;
+                    occluded = frontZ > farthest;
+                }
+            }
+        }
+    }
+    if (occluded && uniforms.keepCulled == 0u) {
+        return;
+    }
+
     var color = textureLoad(splatColor, uv, 0);
     // the gaussian's committed grade, then the panel's pending one if this
     // gaussian is part of what an Apply would affect. The alpha factors are
@@ -340,10 +408,8 @@ fn main(
     // pixels, alpha * 2 pi * sqrt(det) of the dilated covariance, the engine's
     // minContribution rule - on top of the size cull. It runs ahead of the SH
     // and colour grade work, so a culled splat costs little more than a
-    // size-culled one. Rings draw from the survivor list, so a splat whose
-    // ring would show is exempt; otherwise it is routed like a size-culled
-    // one - dropped, or kept for its centre
-    let ringKept = uniforms.keepRings != 0u && overlayEligible(state, uniforms.keepRings == 1u);
+    // size-culled one. A splat whose ring would show is exempt; otherwise it
+    // is routed like a size-culled one - dropped, or kept for its centre
     let contributionCulled = !ringKept
         && gradedAlpha * 6.283185 * sqrt(determinant) < uniforms.minContribution;
     if (contributionCulled && uniforms.keepCulled == 0u) {
@@ -404,7 +470,7 @@ fn main(
             | select(0u, 0x01000000u, selected)
             | select(0u, 0x02000000u, locked)
     ));
-    if (sizeCulled || contributionCulled) {
+    if (sizeCulled || contributionCulled || occluded) {
         let tail = atomicAdd(&splatCounter[1], 1u);
         compactEntries[compactTailSlot(tail, uniforms.capacity)] = entry;
         return;

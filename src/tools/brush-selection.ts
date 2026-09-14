@@ -84,6 +84,14 @@ class BrushSelection {
                 prev.x = e.offsetX;
                 prev.y = e.offsetY;
 
+                // a click has no pointermove, and the zero-length stroke that
+                // update() draws for it leaves no mark in safari, so paint the
+                // starting dot explicitly
+                context.beginPath();
+                context.fillStyle = '#f60';
+                context.arc(prev.x, prev.y, radius, 0, Math.PI * 2);
+                context.fill();
+
                 update(e);
             }
         };

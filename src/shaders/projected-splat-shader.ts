@@ -37,14 +37,16 @@ varying gaussianUV: vec2f;
 // the two resolved colours - gaussian fill and ring band - travel as six halves
 // in three flat words: (fill.r, fill.g), (fill.b, ring.r), (ring.g, ring.b).
 // The vertex stage is bound by writing its outputs, not by arithmetic, and the
-// three float colours were more than half of them
-varying @interpolate(flat) packedColor0: u32;
-varying @interpolate(flat) packedColor1: u32;
-varying @interpolate(flat) packedColor2: u32;
+// three float colours were more than half of them. Every flat varying here is
+// the same at all four corners of the quad, so 'either' lets the backend take
+// its native provoking vertex instead of emulating WebGPU's first-vertex rule
+varying @interpolate(flat, either) packedColor0: u32;
+varying @interpolate(flat, either) packedColor1: u32;
+varying @interpolate(flat, either) packedColor2: u32;
 // bits 0-1 selected/locked, bits 8-15 the opacity byte
-varying @interpolate(flat) gaussianFlags: u32;
-varying @interpolate(flat) gaussianId: u32;
-varying @interpolate(flat) gaussianDepth: f32;
+varying @interpolate(flat, either) gaussianFlags: u32;
+varying @interpolate(flat, either) gaussianId: u32;
+varying @interpolate(flat, either) gaussianDepth: f32;
 
 ${overlayEligibleWGSL}
 
@@ -170,14 +172,17 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 
 const fragmentShader = /* wgsl */`
 varying gaussianUV: vec2f;
-varying @interpolate(flat) packedColor0: u32;
-varying @interpolate(flat) packedColor1: u32;
-varying @interpolate(flat) packedColor2: u32;
-varying @interpolate(flat) gaussianFlags: u32;
-varying @interpolate(flat) gaussianId: u32;
-varying @interpolate(flat) gaussianDepth: f32;
+varying @interpolate(flat, either) packedColor0: u32;
+varying @interpolate(flat, either) packedColor1: u32;
+varying @interpolate(flat, either) packedColor2: u32;
+varying @interpolate(flat, either) gaussianFlags: u32;
+varying @interpolate(flat, either) gaussianId: u32;
+varying @interpolate(flat, either) gaussianDepth: f32;
 
 uniform outlineMode: u32;
+// whether the Underlay pass will add the selection's work-buffer share back
+// this frame; when it will not, selected gaussians draw in full like the rest
+uniform selectionUnderlay: u32;
 uniform showGaussians: u32;
 uniform showSelectedGaussians: u32;
 uniform ringSize: f32;
@@ -300,7 +305,12 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         if (uniform.outlineMode != 0u) {
             output.color = vec4f(color * alpha, alpha);
             output.color1 = vec4f(0.0, 0.0, 0.0, select(0.0, norm, selected));
-        } else if (selected) {
+        } else if (selected && uniform.selectionUnderlay != 0u) {
+            // 80% composited in place, 20% into the work buffer for the
+            // Underlay pass to add back unoccluded after the splat pass, so a
+            // selected gaussian shows through whatever is in front of it. Only
+            // while that pass runs: the transform handler disables it for a
+            // drag, and splitting then would leave the selection 20% dark
             output.color = vec4f(color * alpha * 0.8, alpha);
             output.color1 = vec4f(color * alpha * 0.2, alpha);
         } else {

@@ -28,7 +28,7 @@ uniform selectionBlend: f32;
 uniform selectedClr: vec4f;
 uniform unselectedClr: vec4f;
 
-varying @interpolate(flat) overlayColor: vec4f;
+varying @interpolate(flat, either) overlayColor: vec4f;
 
 ${overlayEligibleWGSL}
 ${compactTailWGSL}
@@ -92,7 +92,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 `;
 
 const fragmentShader = /* wgsl */`
-varying @interpolate(flat) overlayColor: vec4f;
+varying @interpolate(flat, either) overlayColor: vec4f;
 
 @fragment
 fn fragmentMain(input: FragmentInput) -> FragmentOutput {

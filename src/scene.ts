@@ -117,6 +117,10 @@ class Scene {
     // Overlays, never for flood selection's offscreen read or 360 captures
     overdrawRender = false;
     pendingResolve = false;
+    // anything but the camera changed this frame: the projected renderer's
+    // occlusion cull skips a frame whose previous depth no longer describes
+    // the scene (see ProjectedSplatRenderer.render)
+    editedRender = false;
 
     // 'auto' stochastic mode follows the timing of the last rendered sorted
     // frame: engaged (stochastic-during-movement) while that frame's GPU span
@@ -527,6 +531,9 @@ class Scene {
         // compare with previously serialized
         const changed = this.forceRender || profiling || all.size > 0;
         const interacting = this.forceInteracting || all.size > 0;
+        // per-gaussian edits reach here only through forceRender; layer moves,
+        // visibility and grade changes through the state diff
+        this.editedRender = this.forceRender || [...all].some(type => type !== ElementType.camera);
         const stochastic = this.events.invoke('view.stochastic');
 
         // 'movement' takes the fast no-sort stochastic path only while actively

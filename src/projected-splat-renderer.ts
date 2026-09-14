@@ -226,10 +226,12 @@ class ProjectedSplatRenderer {
     private readonly prevView = new Mat4();
     private prevClipZ = [0, 0, 0, 0];
     private readonly prevViewport = new Vec2();
+    private readonly prevFocal = new Vec2();
     // this frame's, staged by render() for reduceDepth to promote
     private frameStochastic = false;
     private readonly frameView = new Mat4();
     private frameClipZ = [0, 0, 0, 0];
+    private readonly frameFocal = new Vec2();
 
     constructor(scene: Scene) {
         this.scene = scene;
@@ -480,6 +482,7 @@ class ProjectedSplatRenderer {
             new UniformFormat('prevView', UNIFORMTYPE_MAT4),
             new UniformFormat('prevClipZ', UNIFORMTYPE_VEC4),
             new UniformFormat('prevViewport', UNIFORMTYPE_VEC2),
+            new UniformFormat('prevFocal', UNIFORMTYPE_VEC2),
             new UniformFormat('occlusionBlocksX', UNIFORMTYPE_UINT),
             new UniformFormat('occlusionBlocksY', UNIFORMTYPE_UINT),
             new UniformFormat('occlusionBlock', UNIFORMTYPE_FLOAT),
@@ -637,6 +640,7 @@ class ProjectedSplatRenderer {
         this.prevView.copy(this.frameView);
         this.prevClipZ = this.frameClipZ;
         this.prevViewport.set(depthBuffer.width, depthBuffer.height);
+        this.prevFocal.copy(this.frameFocal);
         this.prevValid = true;
     }
 
@@ -872,9 +876,15 @@ class ProjectedSplatRenderer {
         this.setOverdraw(this.scene.overdrawRender);
 
         // the occlusion cull reads the previous stochastic frame's map, which
-        // a sorted frame or a resize in between has invalidated
+        // a sorted frame or a resize in between has invalidated. An edit to the
+        // scene content makes it stale for this frame - splats would test
+        // against the depth of what moved or vanished, their own included -
+        // and a projection switch changes its depth mapping; both skip the
+        // cull, and the frame writes a fresh map
         this.updateDepthMap(targetSize.width, targetSize.height);
-        const occlusion = this.stochastic && this.occlusionCull && this.prevValid;
+        const isOrtho = cameraComponent.projection === 1;
+        const occlusion = this.stochastic && this.occlusionCull && this.prevValid &&
+            !this.scene.editedRender && this.prevClipZ[2] === (isOrtho ? 1 : 0);
 
         let ringsBase = 0;
         let ringsCount = 0;
@@ -970,6 +980,7 @@ class ProjectedSplatRenderer {
             compute.setParameter('prevView', this.prevView.data);
             compute.setParameter('prevClipZ', this.prevClipZ);
             compute.setParameter('prevViewport', [this.prevViewport.x, this.prevViewport.y]);
+            compute.setParameter('prevFocal', [this.prevFocal.x, this.prevFocal.y]);
             compute.setParameter('occlusionBlocksX', this.occlusionBlocks.x);
             compute.setParameter('occlusionBlocksY', this.occlusionBlocks.y);
             compute.setParameter('occlusionBlock', OCCLUSION_BLOCK);
@@ -1082,6 +1093,7 @@ class ProjectedSplatRenderer {
         this.frameStochastic = this.stochastic;
         this.frameView.copy(view);
         this.frameClipZ = clipZParams;
+        this.frameFocal.set(focal[0], focal[1]);
 
         // the centres overlay reads this frame's projection through the same
         // compact list, counter and cache. Its entry range is the selected

@@ -133,12 +133,14 @@ struct ProjectorUniforms {
     keepRings: u32,
     // the previous stochastic frame, for the occlusion cull: its view and
     // view-projection, its clip-z mapping (a, b, isOrtho - the render shader's
-    // clipZParams) and viewport in pixels, and the block grid of its max-depth
-    // map. occlusionEnabled is 0 when no usable previous frame exists
+    // clipZParams), viewport in pixels and focal length, and the block grid of
+    // its max-depth map. occlusionEnabled is 0 when no usable previous frame
+    // exists
     prevViewProj: mat4x4f,
     prevView: mat4x4f,
     prevClipZ: vec4f,
     prevViewport: vec2f,
+    prevFocal: vec2f,
     occlusionBlocksX: u32,
     occlusionBlocksY: u32,
     occlusionBlock: f32,
@@ -355,14 +357,18 @@ fn main(
     // previous view, so only true disocclusions arrive a frame late. The
     // gather widens with the footprint - g blocks around the centre covers at
     // least g blocks from it in every direction - and splats wider than two
-    // blocks skip the test
-    let gather = max(i32(ceil(len1 / uniforms.occlusionBlock)), 1);
+    // blocks skip the test. The blocks are the previous frame's, so the
+    // footprint the splat had there bounds the gather as well: footprints
+    // scale with focal length over depth (focal length alone in ortho)
     var occluded = false;
-    if (uniforms.occlusionEnabled != 0u && !ringKept && gather <= 2) {
+    if (uniforms.occlusionEnabled != 0u && !ringKept) {
         let prevClip = uniforms.prevViewProj * worldCenter;
         let prevDepth = -(uniforms.prevView * worldCenter).z;
         let prevOrtho = uniforms.prevClipZ.z != 0.0;
-        if (prevClip.w > 0.0 && (prevOrtho || prevDepth > 0.0)) {
+        let prevLen1 = len1 * (uniforms.prevFocal.x / focal.x)
+            * select(depth / max(prevDepth, 0.001), 1.0, prevOrtho);
+        let gather = max(i32(ceil(max(len1, prevLen1) / uniforms.occlusionBlock)), 1);
+        if (gather <= 2 && prevClip.w > 0.0 && (prevOrtho || prevDepth > 0.0)) {
             let prevNdc = prevClip.xy / prevClip.w;
             // texture rows run top-down
             let prevPixel = vec2f(prevNdc.x * 0.5 + 0.5, 0.5 - prevNdc.y * 0.5) * uniforms.prevViewport;

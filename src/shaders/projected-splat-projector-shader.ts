@@ -1,5 +1,6 @@
 import { applyColorGradeWGSL, paletteGradeWGSL } from './color-grade-chunk';
 import { indexToUvWGSL, paletteMatrixWGSL } from './palette-chunk';
+import { compactTailWGSL, overlayEligibleWGSL } from './projected-splat-chunk';
 
 const shCode = (bands: number) => {
     if (bands === 0) {
@@ -117,14 +118,28 @@ struct ProjectorUniforms {
     minPixelSize: f32,
     // camera clip planes, used to linearly normalize view depth for the sort key
     near: f32,
-    far: f32
+    far: f32,
+    // total cache entries: the culled tail of the compact list grows down from
+    // here (compactTailSlot)
+    capacity: u32,
+    // keep culled splats projected, for the centres overlay, instead of
+    // dropping them
+    keepCulled: u32,
+    // minimum alpha mass of a projected gaussian, in pixels; 0 = off
+    minContribution: f32,
+    // splats exempt from the contribution cull because their ring would draw:
+    // 0 none, 1 the selected ones, 2 the whole layer (overlayEligible decides)
+    keepRings: u32
 }
 
 // compaction output: surviving splats are appended to a dense list, so the sort
 // and the draw cover the visible count instead of the whole capacity. sortKeys
 // and compactEntries are indexed by compact slot, not by entry; the cache stays
 // indexed by entry, and the entry index rides along as the sort payload so
-// gaussian ids keep their meaning downstream (picking, rings, stochastic dither)
+// gaussian ids keep their meaning downstream (picking, rings, stochastic dither).
+// With the centres overlay up, splats that fail the size or contribution cull
+// are appended to a tail growing down from the end of compactEntries (counted
+// in splatCounter[1], placed by compactTailSlot); only the centres draw reads it
 @group(0) @binding(0) var<storage, read_write> sortKeys: array<u32>;
 @group(0) @binding(1) var<storage, read_write> compactEntries: array<u32>;
 @group(0) @binding(2) var<storage, read_write> splatCounter: array<atomic<u32>>;
@@ -149,6 +164,8 @@ ${indexToUvWGSL('cacheCoord', 'uniforms.cacheWidth')}
 ${paletteMatrixWGSL}
 ${applyColorGradeWGSL}
 ${paletteGradeWGSL}
+${overlayEligibleWGSL}
+${compactTailWGSL}
 
 fn rotationMatrix(qIn: vec4f) -> mat3x3f {
     let q = normalize(qIn);
@@ -271,8 +288,11 @@ fn main(
     let lambda1 = mid + radius;
     let lambda2 = max(mid - radius, 0.1);
 
-    // skip splats whose projected size falls below the cull threshold
-    if (2.0 * sqrt(2.0 * lambda1) < uniforms.minPixelSize) {
+    // skip splats whose projected size falls below the cull threshold. With the
+    // centres overlay up they are projected anyway - their centre still draws -
+    // but land in the tail list below instead of among the survivors
+    let sizeCulled = 2.0 * sqrt(2.0 * lambda1) < uniforms.minPixelSize;
+    if (sizeCulled && uniforms.keepCulled == 0u) {
         return;
     }
 
@@ -304,22 +324,41 @@ fn main(
     }
 
     var color = textureLoad(splatColor, uv, 0);
+    // the gaussian's committed grade, then the panel's pending one if this
+    // gaussian is part of what an Apply would affect. The alpha factors are
+    // resolved first, because the contribution cull below needs the opacity
+    // the splat will actually draw with; the colour rows wait until after SH
+    let grade = paletteGrade(paletteWord >> 16u);
+    let previewed = (state & 2u) == 0u &&
+        (uniforms.previewMode == 2u || (uniforms.previewMode == 1u && (state & 1u) != 0u));
+    var gradedAlpha = color.a * grade.alpha;
+    if (previewed) {
+        gradedAlpha *= uniforms.colorAlpha;
+    }
+    gradedAlpha = clamp(gradedAlpha, 0.0, 1.0);
+    // stochastic frames also cull by contribution - the gaussian's alpha mass in
+    // pixels, alpha * 2 pi * sqrt(det) of the dilated covariance, the engine's
+    // minContribution rule - on top of the size cull. It runs ahead of the SH
+    // and colour grade work, so a culled splat costs little more than a
+    // size-culled one. Rings draw from the survivor list, so a splat whose
+    // ring would show is exempt; otherwise it is routed like a size-culled
+    // one - dropped, or kept for its centre
+    let ringKept = uniforms.keepRings != 0u && overlayEligible(state, uniforms.keepRings == 1u);
+    let contributionCulled = !ringKept
+        && gradedAlpha * 6.283185 * sqrt(determinant) < uniforms.minContribution;
+    if (contributionCulled && uniforms.keepCulled == 0u) {
+        return;
+    }
     if (${bands}u > 0u) {
         let worldDirection = normalize(worldCenter.xyz - uniforms.cameraPosition);
         let localDirection = normalize(transpose(mat3x3f(model[0].xyz, model[1].xyz, model[2].xyz)) * worldDirection);
         color = vec4f(color.rgb + evaluateSH(uv, localDirection), color.a);
     }
-    // the gaussian's committed grade, then the panel's pending one if this
-    // gaussian is part of what an Apply would affect
-    let grade = paletteGrade(paletteWord >> 16u);
     var graded = applyColorGrade(color.rgb, grade.row0, grade.row1, grade.row2);
-    var gradedAlpha = color.a * grade.alpha;
-    if ((state & 2u) == 0u &&
-        (uniforms.previewMode == 2u || (uniforms.previewMode == 1u && (state & 1u) != 0u))) {
+    if (previewed) {
         graded = applyColorGrade(graded, uniforms.colorRow0, uniforms.colorRow1, uniforms.colorRow2);
-        gradedAlpha *= uniforms.colorAlpha;
     }
-    color = vec4f(graded, clamp(gradedAlpha, 0.0, 1.0));
+    color = vec4f(graded, gradedAlpha);
 
     let selected = (state & 1u) != 0u && uniforms.selectionEnabled != 0u;
     let locked = (state & 2u) != 0u;
@@ -365,6 +404,11 @@ fn main(
             | select(0u, 0x01000000u, selected)
             | select(0u, 0x02000000u, locked)
     ));
+    if (sizeCulled || contributionCulled) {
+        let tail = atomicAdd(&splatCounter[1], 1u);
+        compactEntries[compactTailSlot(tail, uniforms.capacity)] = entry;
+        return;
+    }
     // survivor: claim a slot in the compact list. Only surviving threads contend,
     // which is 0.1-10% of the dispatch in practice
     let slot = atomicAdd(&splatCounter[0], 1u);
@@ -374,8 +418,8 @@ fn main(
     // ratio; perspective's clip.z would be hyperbolic, so we normalize the raw
     // view depth instead). near may be negative in ortho (the camera sits inside
     // the bound); the subtraction handles that with no sign special-case.
-    let normDepth = (depth - uniforms.near) / (uniforms.far - uniforms.near);
-    sortKeys[slot] = u32(saturate(1.0 - normDepth) * f32((1u << 20u) - 1u));
+    let normDepth = saturate((depth - uniforms.near) / (uniforms.far - uniforms.near));
+    sortKeys[slot] = u32((1.0 - normDepth) * f32((1u << 20u) - 1u));
     compactEntries[slot] = entry;
 }
 `;

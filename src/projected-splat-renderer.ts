@@ -186,6 +186,7 @@ class ProjectedSplatRenderer {
     private layoutDirty = true;
     private submissionCpuMs = 0;
     private stochastic = false;
+    private overdraw = false;
     // contribution cull on stochastic frames, adapted from each stochastic
     // frame's gpu span toward motionBudgetMs: raised while frames run over the
     // budget, relaxed toward zero when they have headroom. Splats it removes are
@@ -371,6 +372,18 @@ class ProjectedSplatRenderer {
         this.material.setDefine('STOCHASTIC', value ? '' : undefined);
         this.material.blendType = value ? BLEND_NONE : BLEND_PREMULTIPLIED;
         this.material.depthWrite = value;
+        this.material.update();
+    }
+
+    // the overdraw view keeps the sorted path's blend state and swaps the
+    // fragment shader's colour for a fill count (see projected-splat-shader).
+    // The define is outside the pick branch, so picks are unaffected
+    private setOverdraw(value: boolean) {
+        if (value === this.overdraw) {
+            return;
+        }
+        this.overdraw = value;
+        this.material.setDefine('OVERDRAW', value ? '' : undefined);
         this.material.update();
     }
 
@@ -721,8 +734,10 @@ class ProjectedSplatRenderer {
         const showAllCenters = events.invoke('view.centers') && editView;
         const showSelectedCenters = events.invoke('view.selectionCenters') &&
             (selectedSplat?.instances.numSelected ?? 0) > 0;
+        // centres draw opaque over the overdraw view's fragment counts, so a
+        // selection would blank the heat map under its dots: skip them there
         const showCenters = !!selectedSplat && camera.renderOverlays && centerSize > 0 &&
-            (showAllCenters || showSelectedCenters);
+            !this.scene.overdrawRender && (showAllCenters || showSelectedCenters);
         // rings likewise: every ring in the edit view with rings on, otherwise
         // the selection's alone. Decided here because the projector exempts
         // ringed splats from the contribution cull
@@ -743,6 +758,7 @@ class ProjectedSplatRenderer {
         // motion-adaptive: fast stochastic while interacting, clean sorted &
         // blended when the scene settles (driven by Scene.onUpdate)
         this.setStochastic(this.scene.movingRender && !forPick);
+        this.setOverdraw(this.scene.overdrawRender);
 
         let ringsBase = 0;
         let ringsCount = 0;

@@ -256,12 +256,33 @@ class OverlaysPanel extends Container {
         perfOverlayRow.append(perfOverlayLabel);
         perfOverlayRow.append(perfOverlayToggle);
 
+        // overdraw heat map
+
+        const overdrawRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const overdrawLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(overdrawLabel, 'panel.overlays.overdraw');
+
+        const overdrawToggle = new BooleanInput({
+            type: 'toggle',
+            class: 'settings-panel-row-toggle',
+            value: false
+        });
+
+        overdrawRow.append(overdrawLabel);
+        overdrawRow.append(overdrawToggle);
+
         rowToggles(showGridRow, showGridToggle);
         rowToggles(showBoundRow, showBoundToggle);
         rowToggles(showBoundDimensionsRow, showBoundDimensionsToggle);
         rowToggles(showCameraPosesRow, showCameraPosesToggle);
         rowToggles(showCameraInfoRow, showCameraInfoToggle);
         rowToggles(perfOverlayRow, perfOverlayToggle);
+        rowToggles(overdrawRow, overdrawToggle);
 
         this.append(header);
         this.append(sectionHeader('panel.overlays.section-helpers'));
@@ -273,6 +294,7 @@ class OverlaysPanel extends Container {
         this.append(showCameraInfoRow);
         this.append(sectionHeader('panel.overlays.section-diagnostics'));
         this.append(perfOverlayRow);
+        this.append(overdrawRow);
 
         // the panel is constructed before the editor registers its state, and
         // the notify events only fire on change - so a value initialized from
@@ -292,6 +314,7 @@ class OverlaysPanel extends Container {
             showCameraPosesToggle.value = events.invoke('camera.showPoses');
             showCameraInfoToggle.value = events.invoke('camera.showInfo');
             perfOverlayToggle.value = events.invoke('view.perfOverlay');
+            overdrawToggle.value = events.invoke('view.overdraw');
         };
 
         // handle panel visibility
@@ -398,6 +421,16 @@ class OverlaysPanel extends Container {
 
         perfOverlayToggle.on('change', (value: boolean) => {
             events.fire('view.setPerfOverlay', value);
+        });
+
+        // overdraw heat map
+
+        events.on('view.overdraw', (value: boolean) => {
+            overdrawToggle.value = value;
+        });
+
+        overdrawToggle.on('change', (value: boolean) => {
+            events.fire('view.setOverdraw', value);
         });
 
         // tooltips

@@ -126,6 +126,7 @@
     "panel.overlays.camera-poses": "카메라 포즈",
     "panel.overlays.camera-info": "카메라 정보",
     "panel.overlays.frame-timings": "프레임 시간",
+    "panel.overlays.overdraw": "오버드로",
     "panel.splat-data.position": "위치",
     "panel.splat-data.opacity": "불투명도",
     "panel.splat-data.red": "빨강",

@@ -108,6 +108,12 @@ class Scene {
     // the mode for the current frame; pendingResolve marks that a clean settled
     // frame is still owed after motion ends.
     movingRender = false;
+
+    // the overdraw diagnostic view (view.overdraw): the splat pass counts
+    // fragments per pixel and the final blit maps the count through a heat
+    // ramp. Always the sorted path - the count needs blending, not the
+    // stochastic depth test - and never a locked-mode (capture) frame
+    overdrawRender = false;
     pendingResolve = false;
 
     // 'auto' stochastic mode follows the timing of the last rendered sorted
@@ -533,7 +539,8 @@ class Scene {
         this.autoSampling = auto && this.frameTimings.gpuSupported;
         const adaptive = stochastic === 'movement' ||
             (auto && (this.autoEngaged || !this.frameTimings.gpuSupported));
-        this.movingRender = !this.lockedRenderMode &&
+        this.overdrawRender = !this.lockedRenderMode && !!this.events.invoke('view.overdraw');
+        this.movingRender = !this.lockedRenderMode && !this.overdrawRender &&
             (stochastic === 'enabled' || (adaptive && interacting));
 
         // timestamp queries cost a per-frame staging-buffer map and a resolve,

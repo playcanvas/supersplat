@@ -126,6 +126,7 @@
     "panel.overlays.camera-poses": "Позы камер",
     "panel.overlays.camera-info": "Информация о камере",
     "panel.overlays.frame-timings": "Время кадра",
+    "panel.overlays.overdraw": "Перерисовка",
     "panel.splat-data.position": "Позиция",
     "panel.splat-data.opacity": "Непрозрачность",
     "panel.splat-data.red": "Красный",

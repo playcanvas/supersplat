@@ -423,7 +423,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
 
         if (handle) {
             documentFileHandle = handle;
-            recentFiles.add(handle);
+            recentFiles.add({ handle, name: handle.name });
         }
     });
 
@@ -455,7 +455,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                     // store file handle for subsequent saves
                     documentFileHandle = fileHandle;
                     events.fire('doc.setName', fileHandle.name);
-                    recentFiles.add(fileHandle);
+                    recentFiles.add({ handle: fileHandle, name: fileHandle.name });
                 }
             } catch (error) {
                 if (error.name !== 'AbortError') {
@@ -482,7 +482,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
             // store file handle for subsequent saves
             documentFileHandle = fileHandle;
             events.fire('doc.setName', fileHandle.name);
-            recentFiles.add(fileHandle);
+            recentFiles.add({ handle: fileHandle, name: fileHandle.name });
         } catch (error) {
             if (error.name !== 'AbortError') {
                 console.error(error);
@@ -531,7 +531,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 }
                 documentFileHandle = handle;
                 events.fire('doc.setName', handle.name);
-                recentFiles.add(handle);
+                recentFiles.add({ handle, name: handle.name });
             } else {
                 if (!await saveDocument({ filename: options.filename })) {
                     return false;

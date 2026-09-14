@@ -4,11 +4,14 @@ class DroppedFile {
     filename: string;
     file: File;
     handle?: FileSystemFileHandle;
+    // the dropped item this file came from: the file itself or an enclosing folder
+    root?: FileSystemHandle;
 
-    constructor(filename: string, file: File, handle?: FileSystemFileHandle) {
+    constructor(filename: string, file: File, handle?: FileSystemFileHandle, root?: FileSystemHandle) {
         this.filename = filename;
         this.file = file;
         this.handle = handle;
+        this.root = root;
     }
 }
 
@@ -57,17 +60,17 @@ const resolveDirectories = (entries: Array<FileSystemEntry>): Promise<Array<File
 
 // collect the files under a dropped handle, named by their path relative to the
 // drop (so a dropped folder 'foo' yields 'foo/a.ply', matching resolveDirectories)
-const resolveHandles = async (handle: FileSystemHandle, prefix: string, result: Array<DroppedFile>) => {
+const resolveHandles = async (handle: FileSystemHandle, prefix: string, result: Array<DroppedFile>, root: FileSystemHandle) => {
     if (handle.name === '.DS_Store') {
         return;
     }
 
     if (handle.kind === 'file') {
         const fileHandle = handle as FileSystemFileHandle;
-        result.push(new DroppedFile(prefix + handle.name, await fileHandle.getFile(), fileHandle));
+        result.push(new DroppedFile(prefix + handle.name, await fileHandle.getFile(), fileHandle, root));
     } else {
         for await (const child of (handle as FileSystemDirectoryHandle).values()) {
-            await resolveHandles(child, `${prefix}${handle.name}${path.delimiter}`, result);
+            await resolveHandles(child, `${prefix}${handle.name}${path.delimiter}`, result, root);
         }
     }
 };
@@ -94,6 +97,20 @@ const removeCommonPrefix = (urls: Array<DroppedFile>) => {
             urls[i].filename = split(urls[i].filename)[1];
         }
     }
+};
+
+// expand picked or dropped handles into files, descending into folders
+const resolveHandleFiles = async (handles: FileSystemHandle[]) => {
+    const files: Array<DroppedFile> = [];
+    for (const handle of handles) {
+        await resolveHandles(handle, '', files, handle);
+    }
+
+    if (files.length > 1) {
+        removeCommonPrefix(files);
+    }
+
+    return files;
 };
 
 // configure drag and drop
@@ -123,18 +140,7 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
         // which the items are no longer readable.
         if (items.every(item => item.getAsFileSystemHandle)) {
             const handles = await Promise.all(items.map(item => item.getAsFileSystemHandle()));
-            const files: Array<DroppedFile> = [];
-            for (const handle of handles) {
-                if (handle) {
-                    await resolveHandles(handle, '', files);
-                }
-            }
-
-            if (files.length > 1) {
-                removeCommonPrefix(files);
-            }
-
-            dropHandler(files, ev.shiftKey);
+            dropHandler(await resolveHandleFiles(handles.filter(handle => handle)), ev.shiftKey);
             return;
         }
 
@@ -170,4 +176,4 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
     target.addEventListener('drop', drop, true);
 };
 
-export { CreateDropHandler };
+export { CreateDropHandler, resolveHandleFiles };

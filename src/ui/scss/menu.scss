@@ -64,6 +64,15 @@
     white-space: nowrap;
 }
 
+// divider between the SuperSplat home button and the menus
+#menu-separator {
+    width: 2px;
+    height: 24px;
+    margin: 0 4px;
+    flex-shrink: 0;
+    background-color: $bcg-light;
+}
+
 #menu-container {
     display: flex;
     flex-direction: column;
@@ -123,7 +132,8 @@
         padding: 16px 10px;
     }
 
-    #menu-wordmark {
+    #menu-wordmark,
+    #menu-separator {
         display: none;
     }
 

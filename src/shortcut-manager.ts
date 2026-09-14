@@ -61,6 +61,7 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'edit.redo': { keys: ['z'], ctrl: 'required', shift: 'required', repeat: true, capture: true },
     'dataPanel.toggle': { keys: ['d'], ctrl: 'required', capture: true },
     'timelinePanel.toggle': { keys: ['t'], ctrl: 'required', capture: true },
+    'scene.reexport': { keys: ['e'], ctrl: 'required', shift: 'required', capture: true },
 
     // Camera fly keys - use physical positions (codes) for WASD layout on non-QWERTY keyboards
     'camera.fly.forward': { codes: ['KeyW'], held: true, shift: 'optional', alt: 'optional' },

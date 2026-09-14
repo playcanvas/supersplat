@@ -3,15 +3,13 @@ import { BooleanInput, Button, ColorPicker, Container, Element, Label, SelectInp
 import { Pose } from '../camera-poses';
 import { i18n } from './localization';
 import { Events } from '../events';
+import { ExportChoices, ExportDialogResult, ExportType } from '../export-options';
 import { ExportSettings } from '../export-settings';
-import { ExportType, SceneExportOptions } from '../file-handler';
 import type { BlobReadSource, WriteTarget } from '../io';
-import { AnimTrack, ExperienceSettings, defaultPostEffectSettings } from '../splat-serialize';
 import sceneExport from './svg/export.svg';
 import projectSave from './svg/save.svg';
 
 type FileDialogType = ExportType | 'ssproj';
-type SaveOptions = Pick<SceneExportOptions, 'filename' | 'fileTarget'>;
 
 const createSvg = (svgString: string, args = {}) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -53,7 +51,7 @@ const isValidFilename = (filename: string) => {
 };
 
 class ExportPopup extends Container {
-    show: (exportType: FileDialogType, splatNames: string[], settings?: ExportSettings, exclude?: BlobReadSource) => Promise<null | SceneExportOptions | SaveOptions>;
+    show: (exportType: FileDialogType, splatNames: string[], settings?: ExportSettings, exclude?: BlobReadSource) => Promise<null | ExportDialogResult>;
     hide: () => void;
     destroy: () => void;
 
@@ -581,14 +579,9 @@ class ExportPopup extends Container {
             saveIcon.hidden = !saveProject;
 
             const frames = events.invoke('timeline.frames');
-            const frameRate = events.invoke('timeline.frameRate');
-            const smoothness = events.invoke('timeline.smoothness');
-            const orderedPoses = (events.invoke('camera.poses') as Pose[])
-            .slice()
-            .filter(p => p.frame >= 0 && p.frame < frames)
-            .sort((a, b) => a.frame - b.frame);
+            const hasPoses = (events.invoke('camera.poses') as Pose[]).some(p => p.frame >= 0 && p.frame < frames);
 
-            reset(exportType, splatNames, orderedPoses.length > 0);
+            reset(exportType, splatNames, hasPoses);
 
             directory = settings.directory;
             locationRow.hidden = !hasFilePicker;
@@ -600,120 +593,32 @@ class ExportPopup extends Container {
             this.dom.addEventListener('keydown', keydown);
             filenameEntry.focus(true);
 
-            const assemblePlyOptions = () : SceneExportOptions => {
-                return {
-                    filename: getFilename(),
-                    splatIdx: 'all',
-                    serializeSettings: {
-                        maxSHBands: bandsSlider.value
-                    },
-                    compressedPly: compressBoolean.value
-                };
-            };
-
-            const assembleSplatOptions = () : SceneExportOptions => {
-                return {
-                    filename: getFilename(),
-                    splatIdx: 'all',
-                    serializeSettings: { }
-                };
-            };
-
-            const assembleSogOptions = () : SceneExportOptions => {
-                return {
-                    filename: getFilename(),
-                    splatIdx: 'all',
-                    serializeSettings: {
-                        maxSHBands: bandsSlider.value
-                    },
-                    sogIterations: iterationsSlider.value
-                };
-            };
-
-            const assembleSpzOptions = () : SceneExportOptions => {
-                return {
-                    filename: getFilename(),
-                    splatIdx: 'all',
-                    serializeSettings: {
-                        maxSHBands: bandsSlider.value
-                    },
-                    spzVersion: spzVersionSelect.value === '3' ? 3 : 4
-                };
-            };
-
-            const assembleViewerOptions = () : SceneExportOptions => {
-                const fov = fovSlider.value;
-
-                // use current viewport as start pose
-                const pose = events.invoke('camera.getPose');
-                const p = pose?.position;
-                const t = pose?.target;
-                const cameras = (p && t) ? [{
-                    initial: {
-                        position: [p.x, p.y, p.z] as [number, number, number],
-                        target: [t.x, t.y, t.z] as [number, number, number],
-                        fov
-                    }
-                }] : [];
-
-                const includeAnimation = animationToggle.value;
-                const animTracks: AnimTrack[] = [];
-
-                if (includeAnimation && orderedPoses.length > 0) {
-                    const times: number[] = [];
-                    const position: number[] = [];
-                    const target: number[] = [];
-                    const fovKeys: number[] = [];
-                    for (let i = 0; i < orderedPoses.length; ++i) {
-                        const op = orderedPoses[i];
-                        times.push(op.frame);
-                        position.push(op.position.x, op.position.y, op.position.z);
-                        target.push(op.target.x, op.target.y, op.target.z);
-                        fovKeys.push(op.fov ?? fov);
-                    }
-
-                    animTracks.push({
-                        name: 'cameraAnim',
-                        duration: frames / frameRate,
-                        frameRate,
-                        loopMode: loopSelect.value as 'none' | 'repeat' | 'pingpong',
-                        interpolation: 'spline',
-                        smoothness,
-                        keyframes: {
-                            times,
-                            values: { position, target, fov: fovKeys }
-                        }
-                    });
+            const getChoices = (): ExportChoices => {
+                const filename = getFilename();
+                switch (exportType) {
+                    case 'ply':
+                        return { filename, maxSHBands: bandsSlider.value, compressedPly: compressBoolean.value };
+                    case 'sog':
+                        return { filename, maxSHBands: bandsSlider.value, sogIterations: iterationsSlider.value };
+                    case 'spz':
+                        return { filename, maxSHBands: bandsSlider.value, spzVersion: spzVersionSelect.value === '3' ? 3 : 4 };
+                    case 'viewer':
+                        return {
+                            filename,
+                            maxSHBands: bandsSlider.value,
+                            viewerType: viewerTypeSelect.value === 'zip' ? 'zip' : 'html',
+                            includeAnimation: animationToggle.value,
+                            loopMode: loopSelect.value as ExportChoices['loopMode'],
+                            backgroundColor: colorPicker.value.slice(0, 3) as [number, number, number],
+                            fov: fovSlider.value
+                        };
+                    default:
+                        // splat and ssproj have no settings
+                        return { filename };
                 }
-
-                const bgColor = colorPicker.value.slice(0, 3) as [number, number, number];
-
-                const experienceSettings: ExperienceSettings = {
-                    version: 2,
-                    tonemapping: 'none',
-                    highPrecisionRendering: false,
-                    background: { color: bgColor },
-                    postEffectSettings: defaultPostEffectSettings(),
-                    animTracks,
-                    cameras,
-                    annotations: [],
-                    startMode: includeAnimation ? 'animTrack' : 'default'
-                };
-
-                return {
-                    filename: getFilename(),
-                    splatIdx: 'all',
-                    serializeSettings: {
-                        maxSHBands: bandsSlider.value
-                    },
-                    viewerExportSettings: {
-                        type: viewerTypeSelect.value,
-                        experienceSettings
-                    }
-                };
             };
 
-            return new Promise<null | SceneExportOptions | SaveOptions>((resolve) => {
+            return new Promise<null | ExportDialogResult>((resolve) => {
                 onCancel = () => {
                     resolve(null);
                 };
@@ -725,13 +630,7 @@ class ExportPopup extends Container {
                     submitting = true;
                     exportButton.enabled = false;
                     try {
-                        const options = exportType === 'ssproj' ? { filename: getFilename() } : {
-                            ply: assemblePlyOptions,
-                            splat: assembleSplatOptions,
-                            sog: assembleSogOptions,
-                            spz: assembleSpzOptions,
-                            viewer: assembleViewerOptions
-                        }[exportType]();
+                        const choices = getChoices();
                         let fileTarget: WriteTarget;
                         if (directory) {
                             const target = await events.invoke('scene.pickWriteTarget', directory, getFilename(),
@@ -747,7 +646,7 @@ class ExportPopup extends Container {
                             }
                             fileTarget = target;
                         }
-                        resolve({ ...options, fileTarget });
+                        resolve({ ...choices, directory, fileTarget });
                     } catch (error) {
                         submitting = false;
                         await validateFilename();

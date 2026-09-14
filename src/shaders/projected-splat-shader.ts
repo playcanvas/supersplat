@@ -231,6 +231,14 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
             output.color = vec4f(vec4u(id, id >> 8u, id >> 16u, id >> 24u) & vec4u(255u)) / 255.0;
         }
     #else
+      #ifdef OVERDRAW
+        // overdraw view: every fragment past the ellipse discard is one unit of
+        // fill, whatever its alpha. Red 1 with alpha 0 turns the premultiplied
+        // blend into plain addition, so the RGBA16F target accumulates the
+        // per-pixel fragment count for the final blit's heat ramp
+        output.color = vec4f(1.0, 0.0, 0.0, 0.0);
+        output.color1 = vec4f(0.0);
+      #else
         let selected = (gaussianFlags & 1u) != 0u;
         let norm = normExp(radius);
         let showGaussian = uniform.showGaussians != 0u || (selected && uniform.showSelectedGaussians != 0u);
@@ -299,6 +307,7 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
             output.color = vec4f(color * alpha, alpha);
             output.color1 = vec4f(0.0);
         }
+      #endif
       #endif
     #endif
     return output;

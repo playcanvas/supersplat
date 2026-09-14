@@ -126,6 +126,7 @@
     "panel.overlays.camera-poses": "相机位姿",
     "panel.overlays.camera-info": "相机信息",
     "panel.overlays.frame-timings": "帧耗时",
+    "panel.overlays.overdraw": "过度绘制",
     "panel.splat-data.position": "位置",
     "panel.splat-data.opacity": "不透明度",
     "panel.splat-data.red": "红",

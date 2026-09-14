@@ -126,6 +126,7 @@
     "panel.overlays.camera-poses": "Camera Poses",
     "panel.overlays.camera-info": "Camera Info",
     "panel.overlays.frame-timings": "Frame Timings",
+    "panel.overlays.overdraw": "Overdraw",
     "panel.splat-data.position": "Position",
     "panel.splat-data.opacity": "Opacity",
     "panel.splat-data.red": "Red",

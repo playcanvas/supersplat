@@ -174,6 +174,22 @@ body {
     }
 }
 
+#overdraw-legend {
+    position: absolute;
+    left: 12px;
+    bottom: 66px;
+    pointer-events: none;
+
+    canvas {
+        display: block;
+    }
+}
+
+// both diagnostics up: the legend stacks above the frame timings
+#perf-overlay:not(.pcui-hidden) ~ #overdraw-legend {
+    bottom: 176px;
+}
+
 #camera-info-overlay {
     position: absolute;
     left: 12px;

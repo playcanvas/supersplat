@@ -346,7 +346,8 @@ class Camera extends Element {
                         blitScale: [ts.width / gd.width, ts.height / gd.height],
                         // stochastic frames composite their samples through the
                         // quad resolve; settled frames blit unfiltered
-                        quadResolve: this.scene.movingRender ? RESOLVE_UNIFORM[this.scene.resolveMode] : 0
+                        quadResolve: this.scene.movingRender ? RESOLVE_UNIFORM[this.scene.resolveMode] : 0,
+                        overdraw: this.scene.overdrawRender ? 1 : 0
                     };
                 }
             });

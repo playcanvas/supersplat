@@ -229,7 +229,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
                 const { mainTarget, workTarget } = scene.camera;
 
-                scene.dataProcessor.copyRt(mainTarget, workTarget);
+                scene.dataProcessor.copyRt(mainTarget, workTarget, scene.overdrawRender);
 
                 // read the rendered frame (immediate: see render.offscreen)
                 await workTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workTarget, data, immediate: true });
@@ -545,7 +545,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 const captureFrame = async (frameTime: number) => {
                     const { mainTarget, workTarget } = scene.camera;
 
-                    scene.dataProcessor.copyRt(mainTarget, workTarget);
+                    scene.dataProcessor.copyRt(mainTarget, workTarget, scene.overdrawRender);
 
                     // read the rendered frame (immediate: see render.offscreen)
                     await workTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workTarget, data, immediate: true });

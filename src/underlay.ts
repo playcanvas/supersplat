@@ -49,7 +49,8 @@ class Underlay extends Element {
                 // 1:1 copy - source and destination are both targetSize, and the
                 // underlay must not be quad-averaged like a stochastic frame
                 blitScale: [1, 1],
-                quadResolve: 0
+                quadResolve: 0,
+                overdraw: 0
             });
         });
     }

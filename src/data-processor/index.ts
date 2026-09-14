@@ -101,14 +101,18 @@ class DataProcessor {
         this.bufferPool.release(mask);
     }
 
-    copyRt(source: RenderTarget, dest: RenderTarget) {
+    // overdraw: the source holds an overdraw frame's fragment counts, so resolve
+    // them through the heat ramp as the final blit would have (captures run
+    // with the final blit disabled)
+    copyRt(source: RenderTarget, dest: RenderTarget, overdraw = false) {
         const { device } = this;
 
         resolve(device.scope, {
             srcTexture: source.colorBuffer,
             // straight 1:1 copy, no upscale or stochastic quad resolve
             blitScale: [1, 1],
-            quadResolve: 0
+            quadResolve: 0,
+            overdraw: overdraw ? 1 : 0
         });
 
         device.setBlendState(BlendState.NOBLEND);

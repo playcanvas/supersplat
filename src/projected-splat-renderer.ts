@@ -65,9 +65,13 @@ const SORT_KEY_BITS = 20;
 // the contribution cull on stochastic frames steps from zero to this floor and
 // never above this ceiling (alpha * area in pixels), at most once per interval:
 // a frame's span reports several frames after the threshold that produced it,
-// so stepping every report overshoots
+// so stepping every report overshoots. The ceiling is deliberately low: the
+// mass of an opaque splat at the 2 px size cull is ~pi, so 1 never removes an
+// opaque splat the size cull kept and only thins faint content (a 3 px splat
+// below alpha 0.14). A ceiling of 8 culled 88% of the Bowes aerial survivors
+// and doubled the error against the sorted frame; 1 costs ~2 RMS for -26% gpu
 const MOTION_CONTRIBUTION_STEP = 0.05;
-const MOTION_CONTRIBUTION_MAX = 8;
+const MOTION_CONTRIBUTION_MAX = 1;
 const MOTION_STEP_MS = 50;
 
 const roundUp = (value: number, alignment: number) => Math.ceil(value / alignment) * alignment;
@@ -189,9 +193,9 @@ class ProjectedSplatRenderer {
     private overdraw = false;
     // contribution cull on stochastic frames, adapted from each stochastic
     // frame's gpu span toward motionBudgetMs: raised while frames run over the
-    // budget, relaxed toward zero when they have headroom. Splats it removes are
-    // ones that could not have shown; the settled frame never culls this way.
-    // Console-tweakable like scene.autoEngageMs
+    // budget, relaxed toward zero when they have headroom. It is a lossy motion
+    // LOD, bounded by MOTION_CONTRIBUTION_MAX; the settled frame never culls
+    // this way. Console-tweakable like scene.autoEngageMs
     motionBudgetMs = 12;
     private motionContribution = 0;
     private motionStepTime = 0;

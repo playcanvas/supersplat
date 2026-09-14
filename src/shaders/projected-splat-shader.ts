@@ -37,14 +37,16 @@ varying gaussianUV: vec2f;
 // the two resolved colours - gaussian fill and ring band - travel as six halves
 // in three flat words: (fill.r, fill.g), (fill.b, ring.r), (ring.g, ring.b).
 // The vertex stage is bound by writing its outputs, not by arithmetic, and the
-// three float colours were more than half of them
-varying @interpolate(flat) packedColor0: u32;
-varying @interpolate(flat) packedColor1: u32;
-varying @interpolate(flat) packedColor2: u32;
+// three float colours were more than half of them. Every flat varying here is
+// the same at all four corners of the quad, so 'either' lets the backend take
+// its native provoking vertex instead of emulating WebGPU's first-vertex rule
+varying @interpolate(flat, either) packedColor0: u32;
+varying @interpolate(flat, either) packedColor1: u32;
+varying @interpolate(flat, either) packedColor2: u32;
 // bits 0-1 selected/locked, bits 8-15 the opacity byte
-varying @interpolate(flat) gaussianFlags: u32;
-varying @interpolate(flat) gaussianId: u32;
-varying @interpolate(flat) gaussianDepth: f32;
+varying @interpolate(flat, either) gaussianFlags: u32;
+varying @interpolate(flat, either) gaussianId: u32;
+varying @interpolate(flat, either) gaussianDepth: f32;
 
 ${overlayEligibleWGSL}
 
@@ -170,12 +172,12 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 
 const fragmentShader = /* wgsl */`
 varying gaussianUV: vec2f;
-varying @interpolate(flat) packedColor0: u32;
-varying @interpolate(flat) packedColor1: u32;
-varying @interpolate(flat) packedColor2: u32;
-varying @interpolate(flat) gaussianFlags: u32;
-varying @interpolate(flat) gaussianId: u32;
-varying @interpolate(flat) gaussianDepth: f32;
+varying @interpolate(flat, either) packedColor0: u32;
+varying @interpolate(flat, either) packedColor1: u32;
+varying @interpolate(flat, either) packedColor2: u32;
+varying @interpolate(flat, either) gaussianFlags: u32;
+varying @interpolate(flat, either) gaussianId: u32;
+varying @interpolate(flat, either) gaussianDepth: f32;
 
 uniform outlineMode: u32;
 uniform showGaussians: u32;

@@ -112,7 +112,9 @@ class Scene {
     // the overdraw diagnostic view (view.overdraw): the splat pass counts
     // fragments per pixel and the final blit maps the count through a heat
     // ramp. Always the sorted path - the count needs blending, not the
-    // stochastic depth test - and never a locked-mode (capture) frame
+    // stochastic depth test. It is a debug overlay, so it follows the camera's
+    // overlay flag: always in the viewport, in captures only with Show Debug
+    // Overlays, never for flood selection's offscreen read or 360 captures
     overdrawRender = false;
     pendingResolve = false;
 
@@ -539,7 +541,7 @@ class Scene {
         this.autoSampling = auto && this.frameTimings.gpuSupported;
         const adaptive = stochastic === 'movement' ||
             (auto && (this.autoEngaged || !this.frameTimings.gpuSupported));
-        this.overdrawRender = !this.lockedRenderMode && !!this.events.invoke('view.overdraw');
+        this.overdrawRender = this.camera.renderOverlays && !!this.events.invoke('view.overdraw');
         this.movingRender = !this.lockedRenderMode && !this.overdrawRender &&
             (stochastic === 'enabled' || (adaptive && interacting));
 

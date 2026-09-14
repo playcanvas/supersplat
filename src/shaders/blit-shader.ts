@@ -11,6 +11,9 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 
 const fragmentShader = /* wgsl */`
 var srcTexture: texture_2d<f32>;
+// every pass that draws with this shader (final blit, Underlay, DataProcessor.copyRt)
+// must set all three: uniforms resolve through the shared device scope, so one left
+// unset holds whatever the last pass wrote
 uniform blitScale: vec2f;
 uniform quadResolve: u32;
 uniform overdraw: u32;

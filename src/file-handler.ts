@@ -681,32 +681,41 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         setLastExport(null);
     });
 
+    // One export at a time: the progress overlays don't take focus, so the
+    // re-export shortcut could otherwise start a second write mid-export.
+    let exporting = false;
+
     events.function('scene.export', async (exportType: ExportType) => {
-        const splats = getSplats();
-        const hasFilePicker = !!window.showDirectoryPicker;
+        if (exporting) return;
+        exporting = true;
+        try {
+            const splats = getSplats();
+            const hasFilePicker = !!window.showDirectoryPicker;
 
-        await exportSettingsReady;
-        const directory = hasFilePicker ? await events.invoke('scene.getExportDirectory') : undefined;
+            await exportSettingsReady;
+            const directory = hasFilePicker ? await events.invoke('scene.getExportDirectory') : undefined;
 
-        const result = await events.invoke('show.exportPopup', exportType, splats.map(s => s.name), { directory }) as ExportDialogResult;
+            const result = await events.invoke('show.exportPopup', exportType, splats.map(s => s.name), { directory }) as ExportDialogResult;
 
-        // return if user cancelled
-        if (!result) {
-            return;
-        }
+            // return if user cancelled
+            if (!result) {
+                return;
+            }
 
-        const { directory: exportDirectory, fileTarget, ...choices } = result;
-        if (await exportScene(exportType, choices, fileTarget)) {
-            setLastExport({ exportType, choices, directory: exportDirectory });
+            const { directory: exportDirectory, fileTarget, ...choices } = result;
+            if (await exportScene(exportType, choices, fileTarget)) {
+                setLastExport({ exportType, choices, directory: exportDirectory });
+            }
+        } finally {
+            exporting = false;
         }
     });
 
     // Repeat the last export against the current scene, overwriting its file.
     // A file the scene still reads from is refused as usual.
-    let reexporting = false;
     events.on('scene.reexport', async () => {
-        if (reexporting || !lastExport || getSplats().length === 0) return;
-        reexporting = true;
+        if (exporting || !lastExport || getSplats().length === 0) return;
+        exporting = true;
         try {
             const { exportType, choices, directory } = lastExport;
             let fileTarget: WriteTarget;
@@ -718,7 +727,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         } catch (error) {
             await showExportError(error);
         } finally {
-            reexporting = false;
+            exporting = false;
         }
     });
 

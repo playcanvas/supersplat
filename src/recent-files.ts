@@ -1,11 +1,3 @@
-const DB_NAME = 'supersplat';
-const DB_VERSION = 2;
-
-const stores = {
-    files: 'recent-files',
-    imports: 'recent-imports'
-};
-
 // a recently opened document
 interface RecentFile {
     handle: FileSystemFileHandle;
@@ -32,37 +24,31 @@ const wrap = (IDBRequest: IDBRequest): Promise<any> => {
     });
 };
 
-let database: Promise<IDBDatabase>;
+// Each store is its own single-store database, so adding a store never
+// upgrades an existing database (an older tab holding it open would block that).
+class RecentStore<T extends { name: string, date: number }> {
+    private db: Promise<IDBDatabase>;
+    private storeName: string;
 
-const openDatabase = () => {
-    if (!database) {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
+    constructor(dbName: string, storeName: string) {
+        this.storeName = storeName;
+
+        const request = indexedDB.open(dbName, 1);
         request.onupgradeneeded = (event) => {
             const db = (event.target as IDBOpenDBRequest).result;
-            // NOTE: for now we store by filename even though files in
-            // loaded from different directories could have the same name.
-            // We do this because we can't distinguish files from different
-            // directories anyway due to File System Access API limitations.
-            for (const name of Object.values(stores)) {
-                if (!db.objectStoreNames.contains(name)) {
-                    db.createObjectStore(name, { keyPath: 'name' });
-                }
+            if (!db.objectStoreNames.contains(storeName)) {
+                // NOTE: for now we store by filename even though files in
+                // loaded from different directories could have the same name.
+                // We do this because we can't distinguish files from different
+                // directories anyway due to File System Access API limitations.
+                db.createObjectStore(storeName, { keyPath: 'name' });
             }
         };
-        database = wrap(request);
-    }
-    return database;
-};
-
-class RecentStore<T extends { name: string, date: number }> {
-    storeName: string;
-
-    constructor(storeName: string) {
-        this.storeName = storeName;
+        this.db = wrap(request);
     }
 
     private async objectStore(mode: 'readonly' | 'readwrite') {
-        const db = await openDatabase();
+        const db = await this.db;
         return db.transaction([this.storeName], mode).objectStore(this.storeName);
     }
 
@@ -91,7 +77,7 @@ class RecentStore<T extends { name: string, date: number }> {
     }
 }
 
-const recentFiles = new RecentStore<RecentFile>(stores.files);
-const recentImports = new RecentStore<RecentImport>(stores.imports);
+const recentFiles = new RecentStore<RecentFile>('supersplat', 'recent-files');
+const recentImports = new RecentStore<RecentImport>('supersplat-imports', 'recent-imports');
 
 export { recentFiles, recentImports, RecentImport, RecentStore };

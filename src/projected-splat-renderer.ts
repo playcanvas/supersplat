@@ -262,6 +262,7 @@ class ProjectedSplatRenderer {
         this.material.setParameter('pickCount', 0);
         this.material.setParameter('pickOp', 2);
         this.material.setParameter('outlineMode', 0);
+        this.material.setParameter('selectionUnderlay', 1);
         this.material.setParameter('showGaussians', 1);
         this.material.setParameter('showSelectedGaussians', 0);
         this.material.setParameter('ringSize', 0);
@@ -1043,6 +1044,10 @@ class ProjectedSplatRenderer {
         const viewportParams = [targetSize.width, targetSize.height, 2 / targetSize.width, 2 / targetSize.height];
         this.material.setParameter('viewportSize', viewportParams);
         this.material.setParameter('outlineMode', outlineSelection ? 1 : 0);
+        // the selection's 80/20 split only pays off if the Underlay pass adds
+        // the 20% back this frame; the transform handler disables that pass
+        // for the length of a drag
+        this.material.setParameter('selectionUnderlay', this.scene.underlay.enabled ? 1 : 0);
         // the edit view switch (tab) shows the raw scene: gaussians render
         // regardless of the profile flag and the non-selection rings hide
         this.material.setParameter('showGaussians', events.invoke('view.gaussians') || !editView || pending ? 1 : 0);

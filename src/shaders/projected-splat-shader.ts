@@ -180,6 +180,9 @@ varying @interpolate(flat, either) gaussianId: u32;
 varying @interpolate(flat, either) gaussianDepth: f32;
 
 uniform outlineMode: u32;
+// whether the Underlay pass will add the selection's work-buffer share back
+// this frame; when it will not, selected gaussians draw in full like the rest
+uniform selectionUnderlay: u32;
 uniform showGaussians: u32;
 uniform showSelectedGaussians: u32;
 uniform ringSize: f32;
@@ -302,7 +305,12 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         if (uniform.outlineMode != 0u) {
             output.color = vec4f(color * alpha, alpha);
             output.color1 = vec4f(0.0, 0.0, 0.0, select(0.0, norm, selected));
-        } else if (selected) {
+        } else if (selected && uniform.selectionUnderlay != 0u) {
+            // 80% composited in place, 20% into the work buffer for the
+            // Underlay pass to add back unoccluded after the splat pass, so a
+            // selected gaussian shows through whatever is in front of it. Only
+            // while that pass runs: the transform handler disables it for a
+            // drag, and splitting then would leave the selection 20% dark
             output.color = vec4f(color * alpha * 0.8, alpha);
             output.color1 = vec4f(color * alpha * 0.2, alpha);
         } else {

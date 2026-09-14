@@ -259,8 +259,8 @@ class Menu extends Container {
         }, {
             text: () => {
                 return lastExport ?
-                    i18n.t('menu.file.export-again-file', { filename: lastExport.choices.filename }) :
-                    i18n.t('menu.file.export-again');
+                    i18n.t('menu.file.reexport-to', { filename: lastExport.choices.filename }) :
+                    i18n.t('menu.file.reexport');
             },
             icon: createSvg(sceneExport),
             extra: shortcutManager.formatShortcut('scene.reexport'),

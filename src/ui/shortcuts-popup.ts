@@ -115,7 +115,7 @@ const popupConfig: Record<string, CategoryConfig> = {
             { id: 'edit.redo', localeKey: 'popup.shortcuts.redo' },
             { id: 'dataPanel.toggle', localeKey: 'popup.shortcuts.toggle-data-panel' },
             { id: 'timelinePanel.toggle', localeKey: 'popup.shortcuts.toggle-timeline-panel' },
-            { id: 'scene.reexport', localeKey: 'popup.shortcuts.export-again' }
+            { id: 'scene.reexport', localeKey: 'popup.shortcuts.reexport' }
         ]
     }
 };

@@ -1,12 +1,14 @@
+import { overlayEligibleWGSL } from './projected-splat-chunk';
+
 const vertexShader = /* wgsl */`
 #include "gsplatOutputVS"
 
 attribute vertex_position: vec3f;
 
 // the frame's draw order over the projector's survivors: sorted back to front
-// for blending, bucketed front to back for the stochastic depth test (see
-// ProjectedSplatRenderer.render). The draw is indirect over the survivor count,
-// so the cpu never knows it
+// for blending, or the compact list itself on stochastic frames, whose depth
+// test needs no order (see ProjectedSplatRenderer.render). The draw is indirect
+// over the survivor count, so the cpu never knows it
 var<storage, read> sortedIndices: array<u32>;
 var<storage, read> splatCount: array<u32>;
 var cacheA: texture_2d<u32>;
@@ -44,6 +46,8 @@ varying @interpolate(flat) gaussianFlags: u32;
 varying @interpolate(flat) gaussianId: u32;
 varying @interpolate(flat) gaussianDepth: f32;
 
+${overlayEligibleWGSL}
+
 const discardPosition = vec4f(0.0, 0.0, 2.0, 1.0);
 
 @vertex
@@ -78,9 +82,9 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     // (mirroring the fragment shader's eligibility test) so it renders and picks
     // there. Everywhere else skip it as before, so an invisible splat can't
     // steal frontmost picks or burn fill
-    let ringEligible = uniform.ringSize > 0.0 && (flags & 2u) == 0u
+    let ringEligible = uniform.ringSize > 0.0
         && entry >= uniform.ringsBase && entry < uniform.ringsBase + uniform.ringsCount
-        && (uniform.ringSelectionOnly == 0u || (flags & 1u) != 0u);
+        && overlayEligible(flags, uniform.ringSelectionOnly != 0u);
     if (alpha == 0.0 && !ringEligible) {
         output.position = discardPosition;
         return output;
@@ -183,6 +187,8 @@ uniform ringsCount: u32;
 uniform pickMode: i32;
 uniform cameraParams: vec4f;
 
+${overlayEligibleWGSL}
+
 const EXP4 = exp(-4.0);
 const INV_EXP4 = 1.0 / (1.0 - EXP4);
 
@@ -226,7 +232,6 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         }
     #else
         let selected = (gaussianFlags & 1u) != 0u;
-        let locked = (gaussianFlags & 2u) != 0u;
         let norm = normExp(radius);
         let showGaussian = uniform.showGaussians != 0u || (selected && uniform.showSelectedGaussians != 0u);
         var alpha = select(0.0, norm * opacity, showGaussian);
@@ -236,7 +241,7 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         // cache entry index in the forward pass, where pickBase is 0). Their
         // alpha is composed with the independently-controlled gaussian fill.
         let rings = gaussianId >= uniform.ringsBase && gaussianId < uniform.ringsBase + uniform.ringsCount;
-        if (!locked && rings && uniform.ringSize > 0.0 && (uniform.ringSelectionOnly == 0u || selected)) {
+        if (rings && uniform.ringSize > 0.0 && overlayEligible(gaussianFlags, uniform.ringSelectionOnly != 0u)) {
             let ringBand = radius >= 1.0 - uniform.ringSize;
             if (ringBand) {
                 alpha = 0.6;

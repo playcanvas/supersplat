@@ -1,6 +1,8 @@
+import { compactTailWGSL, overlayEligibleWGSL } from './projected-splat-chunk';
+
 // Splat centres overlay, drawn from the projector's output: one quad per
 // projected splat of the selected layer, over the compact list - survivors from
-// the front, size-culled splats from the tail - with the gaussian renderer's
+// the front, culled splats from the tail - with the gaussian renderer's
 // indirect draw args. Reading the cached screen position instead of transforming
 // the source means no matrix or SH work per vertex, and no work at all for
 // splats the projector culled
@@ -28,6 +30,9 @@ uniform unselectedClr: vec4f;
 
 varying @interpolate(flat) overlayColor: vec4f;
 
+${overlayEligibleWGSL}
+${compactTailWGSL}
+
 const discardPosition = vec4f(0.0, 0.0, 2.0, 1.0);
 
 @vertex
@@ -39,13 +44,13 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
         output.position = discardPosition;
         return output;
     }
-    // survivors fill the compact list from the front, size-culled splats from
-    // the back; the depth test resolves overlap, so neither needs sorting
+    // survivors fill the compact list from the front, culled splats the tail
+    // from the back; the depth test resolves overlap, so neither needs sorting
     var entry: u32;
     if (order < survivors) {
         entry = compactEntries[order];
     } else {
-        entry = compactEntries[uniform.capacity - 1u - (order - survivors)];
+        entry = compactEntries[compactTailSlot(order - survivors, uniform.capacity)];
     }
     // only the selected layer draws centres
     if (entry < uniform.centersBase || entry >= uniform.centersBase + uniform.centersCount) {
@@ -55,7 +60,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 
     let uv = vec2i(i32(entry % uniform.cacheWidth), i32(entry / uniform.cacheWidth));
     let flags = (textureLoad(cacheB, uv, 0).x >> 24u) & 3u;
-    if ((flags & 2u) != 0u || (uniform.selectionOnly != 0u && (flags & 1u) == 0u)) {
+    if (!overlayEligible(flags, uniform.selectionOnly != 0u)) {
         output.position = discardPosition;
         return output;
     }

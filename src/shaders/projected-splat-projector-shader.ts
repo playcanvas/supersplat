@@ -1,5 +1,6 @@
 import { applyColorGradeWGSL, paletteGradeWGSL } from './color-grade-chunk';
 import { indexToUvWGSL, paletteMatrixWGSL } from './palette-chunk';
+import { compactTailWGSL, overlayEligibleWGSL } from './projected-splat-chunk';
 
 const shCode = (bands: number) => {
     if (bands === 0) {
@@ -118,19 +119,16 @@ struct ProjectorUniforms {
     // camera clip planes, used to linearly normalize view depth for the sort key
     near: f32,
     far: f32,
-    // total cache entries: the size-culled tail of the compact list grows down
-    // from here
+    // total cache entries: the culled tail of the compact list grows down from
+    // here (compactTailSlot)
     capacity: u32,
     // keep culled splats projected, for the centres overlay, instead of
     // dropping them
     keepCulled: u32,
-    // stochastic frames: write a 256-bucket front-to-back key instead of the
-    // full back-to-front one (see the tail of main)
-    bucketed: u32,
     // minimum alpha mass of a projected gaussian, in pixels; 0 = off
     minContribution: f32,
     // splats exempt from the contribution cull because their ring would draw:
-    // 0 none, 1 the selected ones, 2 every unlocked one in the layer
+    // 0 none, 1 the selected ones, 2 the whole layer (overlayEligible decides)
     keepRings: u32
 }
 
@@ -140,8 +138,8 @@ struct ProjectorUniforms {
 // indexed by entry, and the entry index rides along as the sort payload so
 // gaussian ids keep their meaning downstream (picking, rings, stochastic dither).
 // With the centres overlay up, splats that fail the size or contribution cull
-// are appended to a second list growing down from the end of compactEntries
-// (counted in splatCounter[1]); only the centres draw reads that tail
+// are appended to a tail growing down from the end of compactEntries (counted
+// in splatCounter[1], placed by compactTailSlot); only the centres draw reads it
 @group(0) @binding(0) var<storage, read_write> sortKeys: array<u32>;
 @group(0) @binding(1) var<storage, read_write> compactEntries: array<u32>;
 @group(0) @binding(2) var<storage, read_write> splatCounter: array<atomic<u32>>;
@@ -166,6 +164,8 @@ ${indexToUvWGSL('cacheCoord', 'uniforms.cacheWidth')}
 ${paletteMatrixWGSL}
 ${applyColorGradeWGSL}
 ${paletteGradeWGSL}
+${overlayEligibleWGSL}
+${compactTailWGSL}
 
 fn rotationMatrix(qIn: vec4f) -> mat3x3f {
     let q = normalize(qIn);
@@ -343,8 +343,7 @@ fn main(
     // size-culled one. Rings draw from the survivor list, so a splat whose
     // ring would show is exempt; otherwise it is routed like a size-culled
     // one - dropped, or kept for its centre
-    let ringKept = (state & 2u) == 0u
-        && (uniforms.keepRings == 2u || (uniforms.keepRings == 1u && (state & 1u) != 0u));
+    let ringKept = uniforms.keepRings != 0u && overlayEligible(state, uniforms.keepRings == 1u);
     let contributionCulled = !ringKept
         && gradedAlpha * 6.283185 * sqrt(determinant) < uniforms.minContribution;
     if (contributionCulled && uniforms.keepCulled == 0u) {
@@ -407,7 +406,7 @@ fn main(
     ));
     if (sizeCulled || contributionCulled) {
         let tail = atomicAdd(&splatCounter[1], 1u);
-        compactEntries[uniforms.capacity - 1u - tail] = entry;
+        compactEntries[compactTailSlot(tail, uniforms.capacity)] = entry;
         return;
     }
     // survivor: claim a slot in the compact list. Only surviving threads contend,
@@ -420,18 +419,7 @@ fn main(
     // view depth instead). near may be negative in ortho (the camera sits inside
     // the bound); the subtraction handles that with no sign special-case.
     let normDepth = saturate((depth - uniforms.near) / (uniforms.far - uniforms.near));
-    if (uniforms.bucketed != 0u) {
-        // stochastic frames draw opaque and depth tested, so the order that pays
-        // is front to back: hidden fragments then fail the depth test before
-        // they shade. A fine order scatters consecutive quads across the screen
-        // and costs the tiler more than it saves, so the key is one of 256
-        // depth buckets - near/far carry the scene bound's depth range here -
-        // and compact order survives inside a bucket. The bucket passes count
-        // and place them (projected-splat-bucket-scatter-shader)
-        sortKeys[slot] = min(u32(normDepth * 256.0), 255u);
-    } else {
-        sortKeys[slot] = u32((1.0 - normDepth) * f32((1u << 20u) - 1u));
-    }
+    sortKeys[slot] = u32((1.0 - normDepth) * f32((1u << 20u) - 1u));
     compactEntries[slot] = entry;
 }
 `;

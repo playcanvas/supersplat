@@ -1,9 +1,14 @@
-const DB_NAME = 'supersplat';
-const DB_VERSION = 1;
-const STORE_NAME = 'recent-files';
-
+// a recently opened document
 interface RecentFile {
     handle: FileSystemFileHandle;
+    name: string;
+    date: number;
+}
+
+// a recent import: the items the user picked, dropped or launched together (a
+// dropped folder is one item), so they can be imported again as a set
+interface RecentImport {
+    handles: FileSystemHandle[];
     name: string;
     date: number;
 }
@@ -19,43 +24,42 @@ const wrap = (IDBRequest: IDBRequest): Promise<any> => {
     });
 };
 
-class RecentFiles {
-    db: Promise<IDBDatabase>;
+// Each store is its own single-store database, so adding a store never
+// upgrades an existing database (an older tab holding it open would block that).
+class RecentStore<T extends { name: string, date: number }> {
+    private db: Promise<IDBDatabase>;
+    private storeName: string;
 
-    constructor() {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
+    constructor(dbName: string, storeName: string) {
+        this.storeName = storeName;
+
+        const request = indexedDB.open(dbName, 1);
         request.onupgradeneeded = (event) => {
             const db = (event.target as IDBOpenDBRequest).result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
+            if (!db.objectStoreNames.contains(storeName)) {
                 // NOTE: for now we store by filename even though files in
                 // loaded from different directories could have the same name.
                 // We do this because we can't distinguish files from different
                 // directories anyway due to File System Access API limitations.
-                db.createObjectStore(STORE_NAME, { keyPath: 'name' });
+                db.createObjectStore(storeName, { keyPath: 'name' });
             }
         };
         this.db = wrap(request);
     }
 
-    async add(handle: FileSystemFileHandle) {
+    private async objectStore(mode: 'readonly' | 'readwrite') {
         const db = await this.db;
-
-        const transaction = db.transaction([STORE_NAME], 'readwrite');
-        const store = transaction.objectStore(STORE_NAME);
-        const request = store.put({
-            handle: handle,
-            name: handle.name,
-            date: Date.now()
-        });
-
-        await wrap(request);
+        return db.transaction([this.storeName], mode).objectStore(this.storeName);
     }
 
-    async get(): Promise<RecentFile[]> {
-        const db = await this.db;
-        const transaction = db.transaction([STORE_NAME], 'readonly');
-        const store = transaction.objectStore(STORE_NAME);
-        const result = await wrap(store.getAll()) as RecentFile[];
+    async add(entry: Omit<T, 'date'>) {
+        const store = await this.objectStore('readwrite');
+        await wrap(store.put({ ...entry, date: Date.now() }));
+    }
+
+    async get(): Promise<T[]> {
+        const store = await this.objectStore('readonly');
+        const result = await wrap(store.getAll()) as T[];
 
         // Sort by date descending
         result.sort((a, b) => b.date - a.date);
@@ -63,20 +67,17 @@ class RecentFiles {
     }
 
     async clear() {
-        const db = await this.db;
-        const transaction = db.transaction([STORE_NAME], 'readwrite');
-        const store = transaction.objectStore(STORE_NAME);
+        const store = await this.objectStore('readwrite');
         await wrap(store.clear());
     }
 
     async count(): Promise<number> {
-        const db = await this.db;
-        const transaction = db.transaction([STORE_NAME], 'readonly');
-        const store = transaction.objectStore(STORE_NAME);
+        const store = await this.objectStore('readonly');
         return wrap(store.count());
     }
 }
 
-const recentFiles = new RecentFiles();
+const recentFiles = new RecentStore<RecentFile>('supersplat', 'recent-files');
+const recentImports = new RecentStore<RecentImport>('supersplat-imports', 'recent-imports');
 
-export { recentFiles };
+export { recentFiles, recentImports, RecentImport, RecentStore };

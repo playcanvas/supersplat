@@ -446,7 +446,8 @@ class ProjectedSplatRenderer {
             new UniformFormat('capacity', UNIFORMTYPE_UINT),
             new UniformFormat('keepCulled', UNIFORMTYPE_UINT),
             new UniformFormat('bucketed', UNIFORMTYPE_UINT),
-            new UniformFormat('minContribution', UNIFORMTYPE_FLOAT)
+            new UniformFormat('minContribution', UNIFORMTYPE_FLOAT),
+            new UniformFormat('keepRings', UNIFORMTYPE_UINT)
         ]);
         const bindGroupFormat = new BindGroupFormat(this.device, [
             new BindStorageBufferFormat('sortKeys', SHADERSTAGE_COMPUTE),
@@ -777,6 +778,13 @@ class ProjectedSplatRenderer {
             (selectedSplat?.instances.numSelected ?? 0) > 0;
         const showCenters = !!selectedSplat && camera.renderOverlays && centerSize > 0 &&
             (showAllCenters || showSelectedCenters);
+        // rings likewise: every ring in the edit view with rings on, otherwise
+        // the selection's alone. Decided here because the projector exempts
+        // ringed splats from the contribution cull
+        const showAllRings = events.invoke('view.rings') && editView;
+        const showSelectedRings = events.invoke('view.selectionRings') &&
+            (selectedSplat?.instances.numSelected ?? 0) > 0;
+        const showRings = showAllRings || showSelectedRings;
 
         // the colour panel's uncommitted grade, previewed on the layer it targets.
         // Packed once per frame: it is the same for every placement, only the
@@ -887,11 +895,21 @@ class ProjectedSplatRenderer {
             compute.setParameter('near', keyNear);
             compute.setParameter('far', keyFar);
             compute.setParameter('capacity', this.capacity);
-            // size-culled splats of the selected layer stay projected while the
+            // culled splats of the selected layer stay projected while the
             // centres overlay is up, so their centres still draw
             compute.setParameter('keepCulled', showCenters && selectedSplat === splat ? 1 : 0);
             compute.setParameter('bucketed', this.stochastic ? 1 : 0);
             compute.setParameter('minContribution', this.stochastic ? this.motionContribution : 0);
+            // rings draw from the survivor list, so the projector never culls a
+            // splat whose ring would show: the whole layer in rings mode, the
+            // selection alone with selection rings
+            let keepRings = 0;
+            if (selectionEnabled && showAllRings) {
+                keepRings = 2;
+            } else if (selectionEnabled && showSelectedRings) {
+                keepRings = 1;
+            }
+            compute.setParameter('keepRings', keepRings);
 
             const workgroups = Math.ceil(placement.entryCapacity / WORKGROUP_SIZE);
             Compute.calcDispatchSize(workgroups, this.dispatchSize);
@@ -972,10 +990,6 @@ class ProjectedSplatRenderer {
         // regardless of the profile flag and the non-selection rings hide
         this.material.setParameter('showGaussians', events.invoke('view.gaussians') || !editView || pending ? 1 : 0);
         this.material.setParameter('showSelectedGaussians', events.invoke('view.selectionColor') && !pending ? 1 : 0);
-        const showAllRings = events.invoke('view.rings') && editView;
-        const showSelectedRings = events.invoke('view.selectionRings') &&
-            (selectedSplat?.instances.numSelected ?? 0) > 0;
-        const showRings = showAllRings || showSelectedRings;
         this.material.setParameter('ringSize', showRings ? events.invoke('view.ringSize') * 0.01 : 0);
         this.material.setParameter('ringSelectionOnly', showAllRings ? 0 : 1);
         // the colour alphas carry blend weights, not opacity. The gaussian

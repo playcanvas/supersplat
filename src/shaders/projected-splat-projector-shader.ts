@@ -121,14 +121,17 @@ struct ProjectorUniforms {
     // total cache entries: the size-culled tail of the compact list grows down
     // from here
     capacity: u32,
-    // keep size-culled splats projected, for the centres overlay, instead of
+    // keep culled splats projected, for the centres overlay, instead of
     // dropping them
     keepCulled: u32,
     // stochastic frames: write a 256-bucket front-to-back key instead of the
     // full back-to-front one (see the tail of main)
     bucketed: u32,
     // minimum alpha mass of a projected gaussian, in pixels; 0 = off
-    minContribution: f32
+    minContribution: f32,
+    // splats exempt from the contribution cull because their ring would draw:
+    // 0 none, 1 the selected ones, 2 every unlocked one in the layer
+    keepRings: u32
 }
 
 // compaction output: surviving splats are appended to a dense list, so the sort
@@ -136,9 +139,9 @@ struct ProjectorUniforms {
 // and compactEntries are indexed by compact slot, not by entry; the cache stays
 // indexed by entry, and the entry index rides along as the sort payload so
 // gaussian ids keep their meaning downstream (picking, rings, stochastic dither).
-// With the centres overlay up, splats that fail the size cull are appended to a
-// second list growing down from the end of compactEntries (counted in
-// splatCounter[1]); only the centres draw reads that tail
+// With the centres overlay up, splats that fail the size or contribution cull
+// are appended to a second list growing down from the end of compactEntries
+// (counted in splatCounter[1]); only the centres draw reads that tail
 @group(0) @binding(0) var<storage, read_write> sortKeys: array<u32>;
 @group(0) @binding(1) var<storage, read_write> compactEntries: array<u32>;
 @group(0) @binding(2) var<storage, read_write> splatCounter: array<atomic<u32>>;
@@ -321,12 +324,30 @@ fn main(
     }
 
     var color = textureLoad(splatColor, uv, 0);
+    // the gaussian's committed grade, then the panel's pending one if this
+    // gaussian is part of what an Apply would affect. The alpha factors are
+    // resolved first, because the contribution cull below needs the opacity
+    // the splat will actually draw with; the colour rows wait until after SH
+    let grade = paletteGrade(paletteWord >> 16u);
+    let previewed = (state & 2u) == 0u &&
+        (uniforms.previewMode == 2u || (uniforms.previewMode == 1u && (state & 1u) != 0u));
+    var gradedAlpha = color.a * grade.alpha;
+    if (previewed) {
+        gradedAlpha *= uniforms.colorAlpha;
+    }
+    gradedAlpha = clamp(gradedAlpha, 0.0, 1.0);
     // stochastic frames also cull by contribution - the gaussian's alpha mass in
     // pixels, alpha * 2 pi * sqrt(det) of the dilated covariance, the engine's
-    // minContribution rule - on top of the size cull. It reads the stored
-    // opacity ahead of the SH and grade work, so a culled splat costs no more
-    // than a size-culled one
-    if (color.a * 6.283185 * sqrt(determinant) < uniforms.minContribution) {
+    // minContribution rule - on top of the size cull. It runs ahead of the SH
+    // and colour grade work, so a culled splat costs little more than a
+    // size-culled one. Rings draw from the survivor list, so a splat whose
+    // ring would show is exempt; otherwise it is routed like a size-culled
+    // one - dropped, or kept for its centre
+    let ringKept = (state & 2u) == 0u
+        && (uniforms.keepRings == 2u || (uniforms.keepRings == 1u && (state & 1u) != 0u));
+    let contributionCulled = !ringKept
+        && gradedAlpha * 6.283185 * sqrt(determinant) < uniforms.minContribution;
+    if (contributionCulled && uniforms.keepCulled == 0u) {
         return;
     }
     if (${bands}u > 0u) {
@@ -334,17 +355,11 @@ fn main(
         let localDirection = normalize(transpose(mat3x3f(model[0].xyz, model[1].xyz, model[2].xyz)) * worldDirection);
         color = vec4f(color.rgb + evaluateSH(uv, localDirection), color.a);
     }
-    // the gaussian's committed grade, then the panel's pending one if this
-    // gaussian is part of what an Apply would affect
-    let grade = paletteGrade(paletteWord >> 16u);
     var graded = applyColorGrade(color.rgb, grade.row0, grade.row1, grade.row2);
-    var gradedAlpha = color.a * grade.alpha;
-    if ((state & 2u) == 0u &&
-        (uniforms.previewMode == 2u || (uniforms.previewMode == 1u && (state & 1u) != 0u))) {
+    if (previewed) {
         graded = applyColorGrade(graded, uniforms.colorRow0, uniforms.colorRow1, uniforms.colorRow2);
-        gradedAlpha *= uniforms.colorAlpha;
     }
-    color = vec4f(graded, clamp(gradedAlpha, 0.0, 1.0));
+    color = vec4f(graded, gradedAlpha);
 
     let selected = (state & 1u) != 0u && uniforms.selectionEnabled != 0u;
     let locked = (state & 2u) != 0u;
@@ -390,7 +405,7 @@ fn main(
             | select(0u, 0x01000000u, selected)
             | select(0u, 0x02000000u, locked)
     ));
-    if (sizeCulled) {
+    if (sizeCulled || contributionCulled) {
         let tail = atomicAdd(&splatCounter[1], 1u);
         compactEntries[uniforms.capacity - 1u - tail] = entry;
         return;

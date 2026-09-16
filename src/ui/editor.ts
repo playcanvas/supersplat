@@ -185,7 +185,7 @@ class EditorUI {
         const videoSettingsDialog = new VideoSettingsDialog(events);
 
         // about popup
-        const aboutPopup = new AboutPopup();
+        const aboutPopup = new AboutPopup(events);
 
         topContainer.append(popup);
         topContainer.append(exportPopup);

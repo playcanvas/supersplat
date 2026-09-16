@@ -109,9 +109,8 @@ class DataProcessor {
 
         resolve(device.scope, {
             srcTexture: source.colorBuffer,
-            // straight 1:1 copy, no upscale or stochastic quad resolve
+            // straight 1:1 copy, no upscale
             blitScale: [1, 1],
-            quadResolve: 0,
             overdraw: overdraw ? 1 : 0
         });
 

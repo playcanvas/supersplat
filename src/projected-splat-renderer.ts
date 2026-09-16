@@ -220,6 +220,7 @@ class ProjectedSplatRenderer {
     private depthReduceCompute: Compute | null = null;
     private depthReduceShader: Shader | null = null;
     private depthReduceBindGroupFormat: BindGroupFormat | null = null;
+    private depthReduceSubgroups = false;
     private readonly occlusionBlocks = new Vec2();
     private prevValid = false;
     private readonly prevViewProjection = new Mat4();
@@ -229,6 +230,7 @@ class ProjectedSplatRenderer {
     private readonly prevFocal = new Vec2();
     // this frame's, staged by render() for reduceDepth to promote
     private frameStochastic = false;
+    private frameWarped = false;
     private readonly frameView = new Mat4();
     private frameClipZ = [0, 0, 0, 0];
     private readonly frameFocal = new Vec2();
@@ -273,6 +275,7 @@ class ProjectedSplatRenderer {
         this.material.setParameter('ringsCount', 0);
         this.material.setParameter('pickMode', 0);
         this.material.setParameter('pickFootprint', 1);
+        this.material.setParameter('warpStrength', 0);
         this.material.setParameter('cameraParams', [0, 1, 0, 0]);
         this.material.update();
 
@@ -578,9 +581,13 @@ class ProjectedSplatRenderer {
         }
     }
 
-    // one workgroup per block of the depth buffer, writing the block's max
+    // Reduce each depth block to its maximum, batching four blocks with subgroups.
     private getDepthReduceCompute() {
         if (!this.depthReduceCompute) {
+            const device = this.device;
+            // Pin 32 lanes so each subgroup owns exactly one 8x8 block.
+            this.depthReduceSubgroups = device.supportsSubgroups && device.supportsSubgroupSizeControl &&
+                device.supportsSubgroupId && device.minSubgroupSize <= 32 && device.maxSubgroupSize >= 32;
             const uniformBufferFormat = new UniformBufferFormat(this.device, [
                 new UniformFormat('width', UNIFORMTYPE_UINT),
                 new UniformFormat('height', UNIFORMTYPE_UINT),
@@ -595,7 +602,7 @@ class ProjectedSplatRenderer {
             this.depthReduceShader = new Shader(this.device, {
                 name: 'ProjectedSplatDepthReduce',
                 shaderLanguage: SHADERLANGUAGE_WGSL,
-                cshader: projectedSplatDepthReduce(OCCLUSION_BLOCK),
+                cshader: projectedSplatDepthReduce(OCCLUSION_BLOCK, this.depthReduceSubgroups),
                 computeBindGroupFormat: bindGroupFormat,
                 computeUniformBufferFormats: { uniforms: uniformBufferFormat }
             } as any);
@@ -623,7 +630,8 @@ class ProjectedSplatRenderer {
     // max-depth map and promote this frame's matrices for the next frame's
     // projector; otherwise the map goes stale
     reduceDepth() {
-        const depthBuffer = this.scene.camera.mainTarget?.depthBuffer;
+        const camera = this.scene.camera;
+        const depthBuffer = (this.frameWarped ? camera.warpTarget : camera.mainTarget)?.depthBuffer;
         if (!this.frameStochastic || !this.occlusionCull || !this.depthMax || !depthBuffer) {
             this.prevValid = false;
             return;
@@ -635,7 +643,7 @@ class ProjectedSplatRenderer {
         compute.setParameter('height', depthBuffer.height);
         compute.setParameter('blocksX', this.occlusionBlocks.x);
         compute.setParameter('pad0', 0);
-        compute.setupDispatch(this.occlusionBlocks.x, this.occlusionBlocks.y);
+        compute.setupDispatch(Math.ceil(this.occlusionBlocks.x / (this.depthReduceSubgroups ? 4 : 1)), this.occlusionBlocks.y);
         this.device.computeDispatch([compute], 'ProjectedSplatDepthReduce');
         this.prevViewProjection.copy(this.viewProjection);
         this.prevView.copy(this.frameView);
@@ -875,6 +883,7 @@ class ProjectedSplatRenderer {
         // blended when the scene settles (driven by Scene.onUpdate)
         this.setStochastic(this.scene.movingRender && !forPick);
         this.setOverdraw(this.scene.overdrawRender);
+        this.material.setParameter('warpStrength', this.scene.warpedRender ? this.scene.stochastic.warpStrength - 1 : 0);
 
         // the occlusion cull reads the previous stochastic frame's map, which
         // a sorted frame or a resize in between has invalidated. An edit to the
@@ -1096,8 +1105,10 @@ class ProjectedSplatRenderer {
         this.material.setParameter('clipZParams', clipZParams);
         // staged for reduceDepth, which runs after the splat pass
         this.frameStochastic = this.stochastic;
+        this.frameWarped = this.stochastic && this.scene.warpedRender;
         this.frameView.copy(view);
-        this.frameClipZ = clipZParams;
+        this.frameClipZ = [clipZParams[0], clipZParams[1], clipZParams[2],
+            this.frameWarped ? this.scene.stochastic.warpStrength - 1 : 0];
         this.frameFocal.set(focal[0], focal[1]);
 
         // the centres overlay reads this frame's projection through the same

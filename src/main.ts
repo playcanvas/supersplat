@@ -134,6 +134,15 @@ const main = async () => {
         powerPreference: 'high-performance'
     });
 
+    events.function('scene.gpu', () => {
+        // Use the renderer's adapter, rather than requesting another GPU.
+        const device = graphicsDevice as unknown as {
+            gpuAdapter?: { info?: { description: string, vendor: string, architecture: string, device: string } }
+        };
+        const info = device.gpuAdapter?.info;
+        return info?.description || [info?.vendor, info?.architecture, info?.device].filter(Boolean).join(' / ');
+    });
+
     const urlArgs = getURLArgs();
 
     const overrides = [

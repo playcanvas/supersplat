@@ -69,8 +69,6 @@ const specialSort = (instances: MeshInstance[], numInstances: number, cameraPos:
     instances.sort((a, b) => distances.get(b) - distances.get(a));
 };
 
-type ResolveMode = 'none' | 'old' | 'new';
-
 // rendered frames of timing history kept for the performance overlay. The
 // overlay plots all of them but summarises only the most recent second's worth,
 // so this is graph history rather than the averaging window.
@@ -147,13 +145,8 @@ class Scene {
     // scene. Set by doc.ts, which forces a render once the load completes.
     suspendRender = false;
 
-    // devtools switch for the stochastic resolve, set from the console as
-    // `scene.resolveMode = 'old'`. 'new' is the masked quad+bilinear filter that
-    // ships; 'old' is the original aligned 2x2 block average, held across the quad
-    // and unmasked so it filters the grid and overlays too; 'none' shows the raw
-    // 1 spp samples unfiltered. Only affects stochastic frames, so pair it with
-    // Stochastic Alpha = Enabled to compare without having to keep dragging.
-    private _resolveMode: ResolveMode = 'new';
+    // Console controls for stochastic rendering; setters request a repaint.
+    readonly stochastic;
 
     canvasResize: {width: number; height: number} | null = null;
     targetSize = {
@@ -209,6 +202,46 @@ class Scene {
         this.config = config;
         this.canvas = canvas;
         this.commandQueue = commandQueue;
+
+        let resolve = true;
+        let warp = false;
+        let warpStrength = 1.5;
+        let undistort = true;
+        const repaint = () => {
+            this.forceRender = true;
+        };
+        this.stochastic = {
+            set resolve(value: boolean) {
+                resolve = value;
+                repaint();
+            },
+            get resolve() {
+                return resolve;
+            },
+            set warp(value: boolean) {
+                warp = value;
+                repaint();
+            },
+            get warp() {
+                return warp;
+            },
+            // Centre magnification: 1 = identity, 2 = 2x per axis.
+            set warpStrength(value: number) {
+                warpStrength = Math.max(1, Math.min(2, value));
+                repaint();
+            },
+            get warpStrength() {
+                return warpStrength;
+            },
+            // Disable to inspect the warped sampling layout before undistortion.
+            set undistort(value: boolean) {
+                undistort = value;
+                repaint();
+            },
+            get undistort() {
+                return undistort;
+            }
+        };
 
         // configure the playcanvas application. we render to an offscreen buffer so require
         // only the simplest of backbuffers.
@@ -480,14 +513,8 @@ class Scene {
         return this.app.graphicsDevice;
     }
 
-    set resolveMode(value: ResolveMode) {
-        this._resolveMode = value;
-        // repaint so setting this from the console takes effect immediately
-        this.forceRender = true;
-    }
-
-    get resolveMode() {
-        return this._resolveMode;
+    get warpedRender() {
+        return this.movingRender && this.stochastic.warp && this.stochastic.warpStrength > 1;
     }
 
     private forEachElement(action: (e: Element) => void) {

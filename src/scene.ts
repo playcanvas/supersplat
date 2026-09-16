@@ -205,7 +205,7 @@ class Scene {
 
         let resolve = true;
         let warp = true;
-        let warpStrength = 2;
+        let warpStrength = 1.5;
         let undistort = true;
         const repaint = () => {
             this.forceRender = true;

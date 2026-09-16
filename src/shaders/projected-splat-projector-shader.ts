@@ -1,6 +1,7 @@
 import { applyColorGradeWGSL, paletteGradeWGSL } from './color-grade-chunk';
 import { indexToUvWGSL, paletteMatrixWGSL } from './palette-chunk';
 import { compactTailWGSL, overlayEligibleWGSL } from './projected-splat-chunk';
+import { stochasticWarpWGSL } from './stochastic-warp-chunk';
 
 const shCode = (bands: number) => {
     if (bands === 0) {
@@ -133,9 +134,9 @@ struct ProjectorUniforms {
     keepRings: u32,
     // the previous stochastic frame, for the occlusion cull: its view and
     // view-projection, its clip-z mapping (a, b, isOrtho - the render shader's
-    // clipZParams), viewport in pixels and focal length, and the block grid of
-    // its max-depth map. occlusionEnabled is 0 when no usable previous frame
-    // exists
+    // clipZParams, with warp strength in w), viewport and focal length, and
+    // the block grid of its max-depth map. occlusionEnabled is 0 when no
+    // usable previous frame exists
     prevViewProj: mat4x4f,
     prevView: mat4x4f,
     prevClipZ: vec4f,
@@ -184,6 +185,7 @@ ${applyColorGradeWGSL}
 ${paletteGradeWGSL}
 ${overlayEligibleWGSL}
 ${compactTailWGSL}
+${stochasticWarpWGSL}
 
 fn rotationMatrix(qIn: vec4f) -> mat3x3f {
     let q = normalize(qIn);
@@ -367,11 +369,21 @@ fn main(
         let prevOrtho = uniforms.prevClipZ.z != 0.0;
         let prevLen1 = len1 * (uniforms.prevFocal.x / focal.x)
             * select(depth / max(prevDepth, 0.001), 1.0, prevOrtho);
-        let gather = max(i32(ceil(max(len1, prevLen1) / uniforms.occlusionBlock)), 1);
+        let prevNdc = prevClip.xy / max(prevClip.w, 1e-6);
+        // The depth map stays in the coordinates it was rasterized in. Match
+        // the vertex shader's affine warp, bounding its footprint by the
+        // largest axis scale of the local Jacobian (also handles warp toggles).
+        var warpedNdc = prevNdc;
+        var radius = max(len1, prevLen1);
+        if (uniforms.prevClipZ.w > 0.0) {
+            let warpScale = warpOffset(prevNdc, vec2f(1.0), uniforms.prevClipZ.w);
+            radius *= max(warpScale.x, warpScale.y);
+            warpedNdc = warpPosition(prevNdc, uniforms.prevClipZ.w);
+        }
+        let gather = max(i32(ceil(radius / uniforms.occlusionBlock)), 1);
         if (gather <= 2 && prevClip.w > 0.0 && (prevOrtho || prevDepth > 0.0)) {
-            let prevNdc = prevClip.xy / prevClip.w;
             // texture rows run top-down
-            let prevPixel = vec2f(prevNdc.x * 0.5 + 0.5, 0.5 - prevNdc.y * 0.5) * uniforms.prevViewport;
+            let prevPixel = vec2f(warpedNdc.x * 0.5 + 0.5, 0.5 - warpedNdc.y * 0.5) * uniforms.prevViewport;
             let block = vec2i(floor(prevPixel / uniforms.occlusionBlock));
             let blocks = vec2i(i32(uniforms.occlusionBlocksX), i32(uniforms.occlusionBlocksY));
             if (block.x >= gather && block.y >= gather && block.x < blocks.x - gather && block.y < blocks.y - gather) {

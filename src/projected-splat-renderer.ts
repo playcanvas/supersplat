@@ -230,6 +230,7 @@ class ProjectedSplatRenderer {
     private readonly prevFocal = new Vec2();
     // this frame's, staged by render() for reduceDepth to promote
     private frameStochastic = false;
+    private frameWarped = false;
     private readonly frameView = new Mat4();
     private frameClipZ = [0, 0, 0, 0];
     private readonly frameFocal = new Vec2();
@@ -629,7 +630,8 @@ class ProjectedSplatRenderer {
     // max-depth map and promote this frame's matrices for the next frame's
     // projector; otherwise the map goes stale
     reduceDepth() {
-        const depthBuffer = this.scene.camera.mainTarget?.depthBuffer;
+        const camera = this.scene.camera;
+        const depthBuffer = (this.frameWarped ? camera.warpTarget : camera.mainTarget)?.depthBuffer;
         if (!this.frameStochastic || !this.occlusionCull || !this.depthMax || !depthBuffer) {
             this.prevValid = false;
             return;
@@ -891,7 +893,7 @@ class ProjectedSplatRenderer {
         // cull, and the frame writes a fresh map
         this.updateDepthMap(targetSize.width, targetSize.height);
         const isOrtho = cameraComponent.projection === 1;
-        const occlusion = this.stochastic && !this.scene.warpedRender && this.occlusionCull && this.prevValid &&
+        const occlusion = this.stochastic && this.occlusionCull && this.prevValid &&
             !this.scene.editedRender && this.prevClipZ[2] === (isOrtho ? 1 : 0);
 
         let ringsBase = 0;
@@ -1102,10 +1104,11 @@ class ProjectedSplatRenderer {
         const clipZParams = [-shaderProj[10], shaderProj[14], cameraComponent.projection === 1 ? 1 : 0, 0];
         this.material.setParameter('clipZParams', clipZParams);
         // staged for reduceDepth, which runs after the splat pass
-        // Warped depth is not integrated with the occlusion map in this prototype.
-        this.frameStochastic = this.stochastic && !this.scene.warpedRender;
+        this.frameStochastic = this.stochastic;
+        this.frameWarped = this.stochastic && this.scene.warpedRender;
         this.frameView.copy(view);
-        this.frameClipZ = clipZParams;
+        this.frameClipZ = [clipZParams[0], clipZParams[1], clipZParams[2],
+            this.frameWarped ? this.scene.stochastic.warpStrength - 1 : 0];
         this.frameFocal.set(focal[0], focal[1]);
 
         // the centres overlay reads this frame's projection through the same

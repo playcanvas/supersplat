@@ -204,7 +204,7 @@ class Scene {
         this.commandQueue = commandQueue;
 
         let resolve = true;
-        let warp = true;
+        let warp = false;
         let warpStrength = 1.5;
         let undistort = true;
         const repaint = () => {

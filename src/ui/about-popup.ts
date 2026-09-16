@@ -1,13 +1,15 @@
-import { Container, Label, version as pcuiVersion, revision as pcuiRevision } from '@playcanvas/pcui';
-import { version as engineVersion, revision as engineRevision } from 'playcanvas';
+import { Container, Label, version as pcuiVersion } from '@playcanvas/pcui';
+import { version as stVersion } from '@playcanvas/splat-transform';
+import { version as engineVersion } from 'playcanvas';
 
+import { Events } from '../events';
 import { i18n } from './localization';
 import logoSvg from './svg/logo.svg';
 import { version as appVersion } from '../../package.json';
 
 
 class AboutPopup extends Container {
-    constructor(args = {}) {
+    constructor(events: Events, args = {}) {
         args = {
             ...args,
             id: 'about-popup',
@@ -44,7 +46,7 @@ class AboutPopup extends Container {
         const header = new Label({
             id: 'about-header'
         });
-        i18n.bindText(header, 'menu.help.about');
+        i18n.bindText(header, 'popup.about.title');
 
         // Content area
         const content = new Container({
@@ -97,10 +99,8 @@ class AboutPopup extends Container {
         });
         const pcuiName = new Label({ class: 'about-dep-name', text: 'PCUI' });
         const pcuiVersionL = new Label({ class: 'about-dep-version', text: `v${pcuiVersion}` });
-        const pcuiRev = new Label({ class: 'about-dep-revision', text: `(${pcuiRevision.substring(0, 7)})` });
         pcuiRow.append(pcuiName);
         pcuiRow.append(pcuiVersionL);
-        pcuiRow.append(pcuiRev);
 
         // Engine
         const engineRow = new Container({
@@ -109,20 +109,45 @@ class AboutPopup extends Container {
         engineRow.dom.addEventListener('click', () => {
             window.open('https://github.com/playcanvas/engine', '_blank')?.focus();
         });
-        const engineName = new Label({ class: 'about-dep-name', text: 'PlayCanvas' });
+        const engineName = new Label({ class: 'about-dep-name', text: 'Engine' });
         const engineVer = new Label({ class: 'about-dep-version', text: `v${engineVersion}` });
-        const engineRev = new Label({ class: 'about-dep-revision', text: `(${engineRevision.substring(0, 7)})` });
         engineRow.append(engineName);
         engineRow.append(engineVer);
-        engineRow.append(engineRev);
 
-        depsContainer.append(pcuiRow);
+        // Splat Transform
+        const stRow = new Container({
+            class: 'about-dep-row'
+        });
+        stRow.dom.addEventListener('click', () => {
+            window.open('https://github.com/playcanvas/splat-transform', '_blank')?.focus();
+        });
+        const stName = new Label({ class: 'about-dep-name', text: 'Splat Transform' });
+        const stVer = new Label({ class: 'about-dep-version', text: `v${stVersion}` });
+        stRow.append(stName);
+        stRow.append(stVer);
+
         depsContainer.append(engineRow);
+        depsContainer.append(stRow);
+        depsContainer.append(pcuiRow);
+
+        const gpuRow = new Container({ id: 'about-gpu' });
+        const gpuLabel = new Label({ class: 'about-dep-name' });
+        i18n.bindText(gpuLabel, 'popup.about.gpu');
+        const gpuName = new Label({ id: 'about-gpu-name', class: 'about-dep-version' });
+        gpuRow.append(gpuLabel);
+        gpuRow.append(gpuName);
+
+        const brand = new Container({ id: 'about-brand' });
+        brand.append(logoContainer);
+        brand.append(appInfo);
+
+        const details = new Container({ id: 'about-details' });
+        details.append(gpuRow);
+        details.append(depsContainer);
 
         // Assemble content
-        content.append(logoContainer);
-        content.append(appInfo);
-        content.append(depsContainer);
+        content.append(brand);
+        content.append(details);
 
         // Assemble dialog
         dialog.append(header);
@@ -132,6 +157,7 @@ class AboutPopup extends Container {
 
         // Focus when shown so keyboard events work
         this.on('show', () => {
+            gpuName.text = events.invoke('scene.gpu') || i18n.t('popup.about.gpu-unavailable');
             this.dom.focus();
         });
     }

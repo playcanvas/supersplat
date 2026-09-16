@@ -158,9 +158,11 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     output.position = clip + vec4f(clipOffset, 0.0, 0.0);
     #ifdef STOCHASTIC
         #ifndef PICK_PASS
-            let warpedCenter = warpPosition(ndc, uniform.warpStrength);
-            let warpedOffset = warpOffset(ndc, pixelOffset * uniform.viewportSize.zw, uniform.warpStrength);
-            output.position = vec4f((warpedCenter + warpedOffset) * w, clip.z, w);
+            if (uniform.warpStrength > 0.0) {
+                let warpedCenter = warpPosition(ndc, uniform.warpStrength);
+                let warpedOffset = warpOffset(ndc, pixelOffset * uniform.viewportSize.zw, uniform.warpStrength);
+                output.position = vec4f((warpedCenter + warpedOffset) * w, clip.z, w);
+            }
         #endif
     #endif
     output.gaussianUV = corner;

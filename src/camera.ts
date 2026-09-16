@@ -106,6 +106,7 @@ class Camera extends Element {
     // Render passes
     clearPass: RenderPass;
     stochasticClearPass: RenderPass;
+    warpClearPass: RenderPass;
     mainPass: RenderPassForward;
     splatPass: RenderPassForward;
     stochasticSplatPass: RenderPassForward;
@@ -343,6 +344,7 @@ class Camera extends Element {
 
         this.clearPass = new RenderPass(device);
         this.stochasticClearPass = new RenderPass(device);
+        this.warpClearPass = new RenderPass(device);
         this.mainPass = new RenderPassForward(device, composition, app.scene, renderer);
         this.splatPass = new RenderPassForward(device, composition, app.scene, renderer);
         this.stochasticSplatPass = new RenderPassForward(device, composition, app.scene, renderer);
@@ -480,6 +482,7 @@ class Camera extends Element {
         // cleanup render passes
         this.clearPass?.destroy();
         this.stochasticClearPass?.destroy();
+        this.warpClearPass?.destroy();
         this.mainPass?.destroy();
         this.splatPass?.destroy();
         this.stochasticSplatPass?.destroy();
@@ -582,14 +585,6 @@ class Camera extends Element {
                 autoResolve: false
             });
 
-            // Warped samples need their own depth coordinates. The unwarped
-            // target shares world depth for normal depth testing and overlays.
-            this.warpTarget = new RenderTarget({
-                colorBuffers: [stochasticColor, workBuffer],
-                depthBuffer: createTexture('warpedDepth', width, height, PIXELFORMAT_DEPTH),
-                autoResolve: false
-            });
-
             this.colorTarget = new RenderTarget({
                 colorBuffer,
                 depth: false,
@@ -625,12 +620,8 @@ class Camera extends Element {
             this.stochasticSplatPass.init(this.stochasticTarget);
             this.stochasticSplatPass.addLayer(this.camera, scene.splatLayer, false, false);
             this.stochasticSplatPass.addLayer(this.camera, scene.splatLayer, true, false);
-            this.warpSplatPass.init(this.warpTarget);
-            this.stochasticClearPass.init(this.warpTarget);
+            this.stochasticClearPass.init(this.stochasticTarget);
             this.stochasticClearPass.setClearColor(new Color(0, 0, 0, 0));
-            this.stochasticClearPass.setClearDepth(1);
-            this.warpSplatPass.addLayer(this.camera, scene.splatLayer, false, false);
-            this.warpSplatPass.addLayer(this.camera, scene.splatLayer, true, false);
             this.stochasticResolvePass.init(this.colorTarget);
 
             // configure gizmo pass. the centers and gizmo layers each clear depth
@@ -649,7 +640,7 @@ class Camera extends Element {
 
             // assign render passes to camera
             this.camera.framePasses = [this.clearPass, this.stochasticClearPass, this.mainPass, this.splatPass,
-                this.stochasticSplatPass, this.warpSplatPass, this.depthReducePass, this.stochasticResolvePass,
+                this.stochasticSplatPass, this.warpClearPass, this.warpSplatPass, this.depthReducePass, this.stochasticResolvePass,
                 this.gizmoPass, this.finalPass];
         } else {
             // resize existing render targets
@@ -660,7 +651,7 @@ class Camera extends Element {
             colorTarget.resize(width, height);
             splatTarget.resize(width, height);
             this.stochasticTarget.resize(width, height);
-            this.warpTarget.resize(width, height);
+            this.warpTarget?.resize(width, height);
         }
 
         this.camera.horizontalFov = width > height;
@@ -744,9 +735,35 @@ class Camera extends Element {
 
     onPreRender() {
         this.rebuildRenderTargets();
+        // Allocate the experimental warp's private depth only when first used.
+        if (this.scene.warpedRender && !this.warpTarget) {
+            const { scene } = this;
+            const { width, height } = this.targetSize;
+            this.warpTarget = new RenderTarget({
+                colorBuffers: [this.stochasticTarget.colorBuffer, this.workTarget.colorBuffer],
+                depthBuffer: new Texture(scene.graphicsDevice, {
+                    name: 'warpedDepth',
+                    width,
+                    height,
+                    format: PIXELFORMAT_DEPTH,
+                    mipmaps: false,
+                    minFilter: FILTER_NEAREST,
+                    magFilter: FILTER_NEAREST,
+                    addressU: ADDRESS_CLAMP_TO_EDGE,
+                    addressV: ADDRESS_CLAMP_TO_EDGE
+                }),
+                autoResolve: false
+            });
+            this.warpClearPass.init(this.warpTarget);
+            this.warpClearPass.setClearDepth(1);
+            this.warpSplatPass.init(this.warpTarget);
+            this.warpSplatPass.addLayer(this.camera, scene.splatLayer, false, false);
+            this.warpSplatPass.addLayer(this.camera, scene.splatLayer, true, false);
+        }
         this.splatPass.enabled = !this.scene.movingRender;
         this.stochasticClearPass.enabled = this.scene.movingRender;
         this.stochasticSplatPass.enabled = this.scene.movingRender && !this.scene.warpedRender;
+        this.warpClearPass.enabled = this.scene.warpedRender;
         this.warpSplatPass.enabled = this.scene.warpedRender;
         this.stochasticResolvePass.enabled = this.scene.movingRender;
         this.updateCameraUniforms();

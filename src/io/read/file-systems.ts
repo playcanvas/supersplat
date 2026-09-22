@@ -220,8 +220,21 @@ class MappedReadFileSystem implements LoadProgressFileSystem {
             return this.track(await this.blobFs.createSource(filename), filename);
         }
 
-        // Fall back to URL loading
-        return this.track(await this.urlFs.createSource(filename), filename);
+        // Fall back to URL loading. A server without range support (or one
+        // that hides Content-Range behind CORS) makes the URL file system
+        // download the whole file inside createSource, before any stream exists
+        // to count, so forward its native progress for that transfer. The
+        // source it then returns is in memory and needs no counting. A ranged
+        // source only reports a zero-byte start here and is counted per read.
+        let creating = true;
+        let downloaded = false;
+        const source = await this.urlFs.createSource(filename, (loaded, total) => {
+            if (!creating) return;
+            if (loaded > 0) downloaded = true;
+            this.onProgress?.(loaded, total, filename);
+        });
+        creating = false;
+        return downloaded ? source : this.track(source, filename);
     }
 }
 

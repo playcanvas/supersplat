@@ -6,7 +6,9 @@
 export {
     BlobReadSource,
     MappedReadFileSystem,
-    sourcesOf
+    hasLoadProgress,
+    sourcesOf,
+    type LoadProgressFileSystem
 } from './file-systems';
 
 // Loading functions

@@ -5,7 +5,8 @@ import {
     ChunkLayer,
     ChunkSource,
     SHBands,
-    createChunkDataPool
+    createChunkDataPool,
+    sortMortonInterleaved
 } from '@playcanvas/splat-transform';
 import {
     PIXELFORMAT_R32U,
@@ -23,6 +24,17 @@ import {
 import { type BlobReadSource, PermutedChunkSource } from './io';
 
 const SH_REST_COUNTS = [0, 9, 24, 45];
+
+// Stages of EditorSplatResource.upload after the read sweep. Both block the
+// main thread, so the UI is given a frame to paint the announcement first.
+type UploadPhase = 'sort' | 'upload';
+
+// Yield to the event loop so pending DOM changes can be painted before a long
+// synchronous stage. A macrotask, not requestAnimationFrame: rAF never fires
+// in a hidden tab, which would stall the load until the tab is shown again.
+const yieldToPaint = () => new Promise<void>((resolve) => {
+    setTimeout(resolve, 0);
+});
 
 // One SH texture filled by the upload sweep: which packed coefficient words it
 // stores and its per-row component count.
@@ -118,10 +130,14 @@ class EditorSplatResource extends GSplatContainer {
         return this.numSplats;
     }
 
-    static async create(device: GraphicsDevice, source: ChunkSource) {
+    // `reorder` Morton-orders the gaussians during upload (see loadSplatSource's
+    // `reorder`); the resource then reads through a PermutedChunkSource over
+    // `source` so rows and texels agree. `onPhase` is told when the read sweep
+    // is over and the remaining (synchronous) stages begin, for progress UI.
+    static async create(device: GraphicsDevice, source: ChunkSource, reorder = false, onPhase?: (phase: UploadPhase) => void) {
         const resource = new EditorSplatResource(device, source);
         try {
-            await resource.upload();
+            await resource.upload(reorder, onPhase);
             return resource;
         } catch (err) {
             await resource.close();
@@ -151,11 +167,11 @@ class EditorSplatResource extends GSplatContainer {
         }
     }
 
-    private fillTransformA(packed: Uint32Array, position: Float32Array, geometric: Float32Array, base: number, count: number, remap: Uint32Array | null) {
+    private fillTransformA(packed: Uint32Array, position: Float32Array, geometric: Float32Array, base: number, count: number) {
         const floats = new Float32Array(packed.buffer);
         const quat = new Quat();
         for (let i = 0; i < count; ++i) {
-            const dst = (remap ? remap[base + i] : base + i) * 4;
+            const dst = (base + i) * 4;
             const pos = i * 3;
             const geo = i * 8;
             quat.set(geometric[geo + 1], geometric[geo + 2], geometric[geo + 3], geometric[geo]).normalize();
@@ -167,10 +183,10 @@ class EditorSplatResource extends GSplatContainer {
         }
     }
 
-    private fillTransformB(packed: Uint16Array, geometric: Float32Array, base: number, count: number, remap: Uint32Array | null) {
+    private fillTransformB(packed: Uint16Array, geometric: Float32Array, base: number, count: number) {
         const quat = new Quat();
         for (let i = 0; i < count; ++i) {
-            const dst = (remap ? remap[base + i] : base + i) * 4;
+            const dst = (base + i) * 4;
             const geo = i * 8;
             quat.set(geometric[geo + 1], geometric[geo + 2], geometric[geo + 3], geometric[geo]).normalize();
             if (quat.w < 0) quat.mulScalar(-1);
@@ -181,10 +197,10 @@ class EditorSplatResource extends GSplatContainer {
         }
     }
 
-    private fillColor(packed: Uint16Array, geometric: Float32Array, color: Float32Array, colorStride: number, base: number, count: number, remap: Uint32Array | null) {
+    private fillColor(packed: Uint16Array, geometric: Float32Array, color: Float32Array, colorStride: number, base: number, count: number) {
         const SH_C0 = 0.28209479177387814;
         for (let i = 0; i < count; ++i) {
-            const dst = (remap ? remap[base + i] : base + i) * 4;
+            const dst = (base + i) * 4;
             const col = i * colorStride;
             packed[dst] = FloatPacking.float2Half(color[col] * SH_C0 + 0.5);
             packed[dst + 1] = FloatPacking.float2Half(color[col + 1] * SH_C0 + 0.5);
@@ -196,7 +212,7 @@ class EditorSplatResource extends GSplatContainer {
     // Quantize each row's SH coefficients once (11/10/11-bit triples against
     // the row's max, whose float bits are stored as coefficient word 0) and
     // write all SH textures from the shared result.
-    private fillSH(targets: SHTarget[], color: Float32Array, colorStride: number, base: number, count: number, remap: Uint32Array | null) {
+    private fillSH(targets: SHTarget[], color: Float32Array, colorStride: number, base: number, count: number) {
         const numCoeffs = SH_REST_COUNTS[this.shBands] / 3;
         const t11 = (1 << 11) - 1;
         const t10 = (1 << 10) - 1;
@@ -220,7 +236,7 @@ class EditorSplatResource extends GSplatContainer {
                 coeffs[j + 2] = Math.max(0, Math.min(t11, Math.floor((coeffs[j + 2] / max * 0.5 + 0.5) * t11 + 0.5)));
             }
             value[0] = max;
-            const row = remap ? remap[base + i] : base + i;
+            const row = base + i;
             for (const target of targets) {
                 const dst = row * target.components;
                 for (let c = 0; c < target.coeffCount; ++c) {
@@ -236,34 +252,48 @@ class EditorSplatResource extends GSplatContainer {
         }
     }
 
-    private fillState(stateField: ChunkField, other: ChunkData, base: number, count: number, remap: Uint32Array | null) {
+    private fillState(stateField: ChunkField, other: ChunkData, base: number, count: number) {
         const data = new DataView(other.data);
         const stride = other.stride;
         for (let i = 0; i < count; ++i) {
             const offset = i * stride + stateField.byteOffset;
             const value = stateField.type === 'uint32' ? data.getUint32(offset, true) : data.getFloat32(offset, true);
-            this.initialState[remap ? remap[base + i] : base + i] = value;
+            this.initialState[base + i] = value;
         }
     }
 
-    private async upload() {
-        const { source, shBands } = this;
-
-        // The loader Morton-permutes lazily-read sources (PermutedChunkSource);
-        // reading that wrapper sequentially degenerates into full-file random
-        // gathers on the underlying file. Sweep the parent in its native file
-        // order instead — fast sequential reads — and scatter each row to its
-        // permuted destination through the inverse permutation.
-        let sweepSource: ChunkSource = source;
-        let remap: Uint32Array | null = null;
-        if (source instanceof PermutedChunkSource) {
-            const { order } = source;
-            sweepSource = source.parent;
-            remap = new Uint32Array(order.length);
-            for (let i = 0; i < order.length; ++i) {
-                remap[order[i]] = i;
+    // Reorder rows of `components` elements each: the row at `i` before the
+    // call moves to row `inverse[i]`. Written as a scatter (sequential read,
+    // random write) rather than a gather: random writes retire through the
+    // store buffer while random reads stall, and at ~23M rows the gather form
+    // measured ~1 s against a fraction of that for the scatter. `slice()` is a
+    // sequential copy, so peak extra memory is one texture at a time.
+    private static permuteRows(data: Uint8Array | Uint16Array | Uint32Array, components: number, inverse: Uint32Array) {
+        const src = data.slice();
+        const n = inverse.length;
+        if (components === 4) {
+            for (let i = 0; i < n; ++i) {
+                const s = i * 4;
+                const d = inverse[i] * 4;
+                data[d] = src[s];
+                data[d + 1] = src[s + 1];
+                data[d + 2] = src[s + 2];
+                data[d + 3] = src[s + 3];
+            }
+        } else {
+            for (let i = 0; i < n; ++i) {
+                const s = i * components;
+                const d = inverse[i] * components;
+                for (let c = 0; c < components; ++c) {
+                    data[d + c] = src[s + c];
+                }
             }
         }
+    }
+
+    private async upload(reorder: boolean, onPhase?: (phase: UploadPhase) => void) {
+        const { source, shBands } = this;
+        const numRows = source.meta.numGaussians;
 
         const shDefs: { name: string, firstCoeff: number, coeffCount: number, components: number }[] = [];
         if (shBands > 0) {
@@ -295,21 +325,21 @@ class EditorSplatResource extends GSplatContainer {
         const max = new Vec3(-Infinity, -Infinity, -Infinity);
 
         try {
-            // Single sequential sweep: read each chunk once and fill all
-            // textures, the state array and the source AABB from it.
-            await this.forEachChunk(sweepSource, layers, (base, count, chunks) => {
+            // Single sequential sweep in file order: read each chunk once and
+            // fill all textures, the state array and the source AABB from it.
+            await this.forEachChunk(source, layers, (base, count, chunks) => {
                 const position = new Float32Array(chunks.position.data, 0, count * 3);
                 const geometric = new Float32Array(chunks.geometric.data, 0, count * 8);
                 const color = new Float32Array(chunks.color.data, 0, count * colorStride);
 
-                this.fillTransformA(targets[0] as Uint32Array, position, geometric, base, count, remap);
-                this.fillTransformB(targets[1] as Uint16Array, geometric, base, count, remap);
-                this.fillColor(targets[2] as Uint16Array, geometric, color, colorStride, base, count, remap);
+                this.fillTransformA(targets[0] as Uint32Array, position, geometric, base, count);
+                this.fillTransformB(targets[1] as Uint16Array, geometric, base, count);
+                this.fillColor(targets[2] as Uint16Array, geometric, color, colorStride, base, count);
                 if (shTargets.length > 0) {
-                    this.fillSH(shTargets, color, colorStride, base, count, remap);
+                    this.fillSH(shTargets, color, colorStride, base, count);
                 }
                 if (stateField) {
-                    this.fillState(stateField, chunks.other, base, count, remap);
+                    this.fillState(stateField, chunks.other, base, count);
                 }
                 for (let i = 0; i < count; ++i) {
                     const o = i * 3;
@@ -321,9 +351,43 @@ class EditorSplatResource extends GSplatContainer {
                     max.z = Math.max(max.z, position[o + 2]);
                 }
             });
+
+            if (reorder) {
+                if (onPhase) {
+                    onPhase('sort');
+                    await yieldToPaint();
+                }
+
+                // Morton ordering needs every position before any row can be
+                // placed, so rather than a separate positions pass over the
+                // file, sort from the positions the sweep has already written:
+                // transformA rows are [x, y, z, packed quat] as 32-bit words,
+                // so a float view at stride 4 is the sort's input as-is (the
+                // fourth word is never read). Then permute the filled textures.
+                // order[i] is the file row that lands at texel/row i
+                const transformA = targets[0];
+                const positions = new Float32Array(transformA.buffer, transformA.byteOffset, numRows * 4);
+                const order = new Uint32Array(numRows);
+                for (let i = 0; i < numRows; ++i) order[i] = i;
+                sortMortonInterleaved(positions, order, 4);
+
+                // inverse[fileRow] is the texel/row it moves to
+                const inverse = new Uint32Array(numRows);
+                for (let i = 0; i < numRows; ++i) inverse[order[i]] = i;
+
+                const components = [4, 4, 4, ...shDefs.map(sh => sh.components)];
+                targets.forEach((target, i) => EditorSplatResource.permuteRows(target, components[i], inverse));
+                EditorSplatResource.permuteRows(this.initialState, 1, inverse);
+                this.source = new PermutedChunkSource(source, order);
+            }
         } catch (err) {
             textures.forEach(texture => texture.unlock());
             throw err;
+        }
+
+        if (onPhase) {
+            onPhase('upload');
+            await yieldToPaint();
         }
 
         textures.forEach((texture) => {
@@ -341,7 +405,7 @@ class EditorSplatResource extends GSplatContainer {
         this.aabb.setMinMax(min, max);
 
         this.sourcePool.trim(0);
-        this.update(source.meta.numGaussians, false);
+        this.update(numRows, false);
     }
 
     // register a layer's interest in this static data

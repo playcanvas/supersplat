@@ -12,17 +12,19 @@ import {
     ReadRequest,
     Transform,
     ZipReadFileSystem,
-    createChunkDataPool,
     getInputFormat,
-    materializeToDataTable,
     readFile,
-    selectLod,
-    sortMortonOrder
+    selectLod
 } from '@playcanvas/splat-transform';
 
 type LoadResult = {
     source: ChunkSource;
     transform: Transform;
+    // whether the consumer should Morton-order the gaussians. The loader no
+    // longer does this itself: computing the order needs every position, and
+    // reading them here would scan the file once more than the upload already
+    // does. EditorSplatResource orders during its single sweep instead.
+    reorder: boolean;
 };
 
 // invoked when a file contains multiple LODs. returns the LOD index to load,
@@ -58,9 +60,8 @@ const defaultOptions: Options = {
 /**
  * Presents `parent` reordered by `order` (`order[row]` is the parent row that
  * appears at `row`). `parent` and `order` are public so consumers doing bulk
- * sequential work (e.g. the initial texture upload) can iterate the parent in
- * its native order — fast sequential reads — and scatter rows to their
- * permuted destination, instead of gathering the whole file in permuted order.
+ * work (e.g. export) can compose the permutation with their own row selection
+ * and read the parent directly, instead of gathering through two levels.
  */
 class PermutedChunkSource implements ChunkSource {
     readonly meta: ChunkSourceMetadata;
@@ -146,19 +147,6 @@ const selectFirst = async (sources: ChunkSource[], pickLod?: PickLod) => {
     return new OwnedChunkSource(selectLod(first, lod), () => first.close());
 };
 
-const mortonOrderSource = async (source: ChunkSource) => {
-    const pool = createChunkDataPool({ chunkSize: source.meta.chunkSize });
-    try {
-        const positions = await materializeToDataTable(source, pool, new Set<ChunkLayer>(['position']));
-        const indices = new Uint32Array(source.meta.numGaussians);
-        for (let i = 0; i < indices.length; ++i) indices[i] = i;
-        sortMortonOrder(positions, indices);
-        return new PermutedChunkSource(source, indices);
-    } finally {
-        pool.destroy();
-    }
-};
-
 const validateSplatSource = (source: ChunkSource): void => {
     const required: ChunkLayer[] = ['position', 'geometric', 'color'];
     const missing = required.filter(layer => !source.meta.availableLayers.has(layer));
@@ -217,12 +205,13 @@ const loadSplatSource = async (
     try {
         validateSplatSource(source);
 
+        // SOG and compressed PLY are written in Morton order already; ssproj
+        // resources and animation frames ask to skip it (already ordered, or
+        // load speed matters more)
         const isCompressedPly = lowerFilename.endsWith('.compressed.ply');
-        if (inputFormat !== 'sog' && !isCompressedPly && !skipReorder) {
-            source = await mortonOrderSource(source);
-        }
+        const reorder = inputFormat !== 'sog' && !isCompressedPly && !skipReorder;
 
-        return { source, transform: source.meta.transform };
+        return { source, transform: source.meta.transform, reorder };
     } catch (err) {
         await source.close();
         throw err;

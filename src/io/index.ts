@@ -6,7 +6,9 @@
 export {
     BlobReadSource,
     MappedReadFileSystem,
+    hasLoadProgress,
     sourcesOf,
+    type LoadProgressFileSystem,
     defaultLodIndex,
     loadSplatSource,
     PermutedChunkSource,

@@ -130,18 +130,76 @@ class BlobReadFileSystem implements ReadFileSystem {
     }
 }
 
+// Progress through one file: bytes pulled from it so far, its size when known,
+// and its name. Reported per file rather than summed over the load because
+// multi-file formats open files one after another, each read to the end before
+// the next is opened, so a running total would sit at 100% nearly throughout.
+type LoadProgressCallback = (bytesLoaded: number, totalBytes: number | undefined, filename: string) => void;
+
+// A file system that can report how much of its sources has been read.
+interface LoadProgressFileSystem extends ReadFileSystem {
+    onProgress: LoadProgressCallback | null;
+}
+
+const hasLoadProgress = (fs: ReadFileSystem): fs is LoadProgressFileSystem => 'onProgress' in fs;
+
+// Forwards pulls to `inner`, reporting each pulled byte count. Progress is only
+// as fine as the consumer's pulls: a whole-file pull (URL sources read this
+// way) reports once, at 100%. Capping pulls to get finer steps was measured at
+// ~0.1 s per GB on local files, so the bar isn't worth it.
+class CountingReadStream extends ReadStream {
+    constructor(private inner: ReadStream, private onBytes: (n: number) => void) {
+        super(inner.expectedSize);
+    }
+
+    async pull(target: Uint8Array): Promise<number> {
+        const n = await this.inner.pull(target);
+        this.bytesRead += n;
+        this.onBytes(n);
+        return n;
+    }
+
+    close(): void {
+        this.inner.close();
+    }
+}
+
 /**
  * ReadFileSystem that combines URL-based loading with local file storage.
  * Used for multi-file formats (SOG, LCC) where some files may be local
  * and others may need to be fetched from URLs.
+ *
+ * Reads through every source it hands out are counted and reported per file
+ * via `onProgress`, so a caller can show load progress by bytes whatever the
+ * format. Set it for the duration of a load and clear it afterwards: the
+ * retained sources keep reading later (export, save) and those reads count
+ * too.
  */
-class MappedReadFileSystem implements ReadFileSystem {
+class MappedReadFileSystem implements LoadProgressFileSystem {
     private blobFs: BlobReadFileSystem;
     private urlFs: UrlReadFileSystem;
+
+    onProgress: LoadProgressCallback | null = null;
 
     constructor(baseUrl?: string) {
         this.blobFs = new BlobReadFileSystem();
         this.urlFs = new UrlReadFileSystem(baseUrl);
+    }
+
+    // Wrap a source so its reads feed `onProgress`. `sources` still exposes the
+    // underlying blob sources (file identity checks rely on the real objects).
+    private track(source: ReadSource, filename: string): ReadSource {
+        let bytesLoaded = 0;
+        const onBytes = (n: number) => {
+            bytesLoaded += n;
+            this.onProgress?.(bytesLoaded, source.size, filename);
+        };
+        return {
+            size: source.size,
+            seekable: source.seekable,
+            read: (start?: number, end?: number) => new CountingReadStream(source.read(start, end), onBytes),
+            close: () => source.close()
+        };
     }
 
     /**
@@ -159,16 +217,31 @@ class MappedReadFileSystem implements ReadFileSystem {
     async createSource(filename: string): Promise<ReadSource> {
         // First check if we have a local blob
         if (this.blobFs.get(filename)) {
-            return await this.blobFs.createSource(filename);
+            return this.track(await this.blobFs.createSource(filename), filename);
         }
 
-        // Fall back to URL loading
-        return await this.urlFs.createSource(filename);
+        // Fall back to URL loading. A server without range support (or one
+        // that hides Content-Range behind CORS) makes the URL file system
+        // download the whole file inside createSource, before any stream exists
+        // to count, so forward its native progress for that transfer. The
+        // source it then returns is in memory and needs no counting. A ranged
+        // source only reports a zero-byte start here and is counted per read.
+        let creating = true;
+        let downloaded = false;
+        const source = await this.urlFs.createSource(filename, (loaded, total) => {
+            if (!creating) return;
+            if (loaded > 0) downloaded = true;
+            this.onProgress?.(loaded, total, filename);
+        });
+        creating = false;
+        return downloaded ? source : this.track(source, filename);
     }
 }
 
 export {
     BlobReadSource,
     MappedReadFileSystem,
-    sourcesOf
+    hasLoadProgress,
+    sourcesOf,
+    type LoadProgressFileSystem
 };

@@ -25,6 +25,17 @@ import { type BlobReadSource, PermutedChunkSource } from './io';
 
 const SH_REST_COUNTS = [0, 9, 24, 45];
 
+// Stages of EditorSplatResource.upload after the read sweep. Both block the
+// main thread, so the UI is given a frame to paint the announcement first.
+type UploadPhase = 'sort' | 'upload';
+
+// Yield to the event loop so pending DOM changes can be painted before a long
+// synchronous stage. A macrotask, not requestAnimationFrame: rAF never fires
+// in a hidden tab, which would stall the load until the tab is shown again.
+const yieldToPaint = () => new Promise<void>((resolve) => {
+    setTimeout(resolve, 0);
+});
+
 // One SH texture filled by the upload sweep: which packed coefficient words it
 // stores and its per-row component count.
 type SHTarget = {
@@ -121,11 +132,12 @@ class EditorSplatResource extends GSplatContainer {
 
     // `reorder` Morton-orders the gaussians during upload (see loadSplatSource's
     // `reorder`); the resource then reads through a PermutedChunkSource over
-    // `source` so rows and texels agree.
-    static async create(device: GraphicsDevice, source: ChunkSource, reorder = false) {
+    // `source` so rows and texels agree. `onPhase` is told when the read sweep
+    // is over and the remaining (synchronous) stages begin, for progress UI.
+    static async create(device: GraphicsDevice, source: ChunkSource, reorder = false, onPhase?: (phase: UploadPhase) => void) {
         const resource = new EditorSplatResource(device, source);
         try {
-            await resource.upload(reorder);
+            await resource.upload(reorder, onPhase);
             return resource;
         } catch (err) {
             await resource.close();
@@ -279,7 +291,7 @@ class EditorSplatResource extends GSplatContainer {
         }
     }
 
-    private async upload(reorder: boolean) {
+    private async upload(reorder: boolean, onPhase?: (phase: UploadPhase) => void) {
         const { source, shBands } = this;
         const numRows = source.meta.numGaussians;
 
@@ -341,6 +353,11 @@ class EditorSplatResource extends GSplatContainer {
             });
 
             if (reorder) {
+                if (onPhase) {
+                    onPhase('sort');
+                    await yieldToPaint();
+                }
+
                 // Morton ordering needs every position before any row can be
                 // placed, so rather than a separate positions pass over the
                 // file, sort from the positions the sweep has already written:
@@ -366,6 +383,11 @@ class EditorSplatResource extends GSplatContainer {
         } catch (err) {
             textures.forEach(texture => texture.unlock());
             throw err;
+        }
+
+        if (onPhase) {
+            onPhase('upload');
+            await yieldToPaint();
         }
 
         textures.forEach((texture) => {

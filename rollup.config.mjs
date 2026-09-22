@@ -58,6 +58,9 @@ const application = {
                 { src: 'static/images', dest: 'static' },
                 { src: 'static/icons', dest: 'static' },
                 { src: 'static/lib', dest: 'static' },
+                // the WebP decoder's wasm must match the JS glue bundled from
+                // splat-transform, so take it from the installed package
+                { src: 'node_modules/@playcanvas/splat-transform/lib/webp.wasm', dest: 'static/lib/webp' },
                 { src: 'static/locales', dest: 'static' }
             ]
         }),

@@ -34,9 +34,10 @@ const removeKnownExtension = (filename: string) => {
         '.zip'
     ];
 
+    const lower = filename.toLowerCase();
     for (let i = 0; i < knownExtensions.length; ++i) {
         const ext = knownExtensions[i];
-        if (filename.endsWith(ext)) {
+        if (lower.endsWith(ext)) {
             return filename.slice(0, -ext.length);
         }
     }

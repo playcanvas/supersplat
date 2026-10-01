@@ -3,6 +3,7 @@ import { Container, Label, Element as PcuiElement, TextInput } from '@playcanvas
 import { SplatRenameOp } from '../edit-ops';
 import { Element, ElementType } from '../element';
 import { Events } from '../events';
+import { Model } from '../model';
 import { Splat } from '../splat';
 import deleteSvg from './svg/delete.svg';
 import hiddenSvg from './svg/hidden.svg';
@@ -174,6 +175,7 @@ class SplatList extends Container {
         super(args);
 
         const items = new Map<Splat, SplatItem>();
+        const modelItems = new Map<Model, SplatItem>();
         let soloMode = false;
         const savedVisibility = new Map<Splat, boolean>();
 
@@ -208,6 +210,53 @@ class SplatList extends Container {
                 item.on('rename', (value: string) => {
                     events.fire('edit.add', new SplatRenameOp(splat, value));
                 });
+            }
+        });
+
+        // reference models share the list but not the splat selection: clicking
+        // one focuses the camera on it
+        events.on('scene.elementAdded', (element: Element) => {
+            if (element.type === ElementType.model) {
+                const model = element as Model;
+                const item = new SplatItem(model.name, edit);
+                item.class.add('model-item');
+                item.visible = model.visible;
+                this.append(item);
+                modelItems.set(model, item);
+
+                item.on('visible', () => {
+                    model.visible = true;
+                });
+                item.on('invisible', () => {
+                    model.visible = false;
+                });
+                item.on('rename', (value: string) => {
+                    model.name = value;
+                });
+            }
+        });
+
+        events.on('scene.elementRemoved', (element: Element) => {
+            if (element.type === ElementType.model) {
+                const item = modelItems.get(element as Model);
+                if (item) {
+                    this.remove(item);
+                    modelItems.delete(element as Model);
+                }
+            }
+        });
+
+        events.on('model.name', (model: Model) => {
+            const item = modelItems.get(model);
+            if (item) {
+                item.name = model.name;
+            }
+        });
+
+        events.on('model.visibility', (model: Model) => {
+            const item = modelItems.get(model);
+            if (item) {
+                item.visible = model.visible;
             }
         });
 
@@ -271,6 +320,12 @@ class SplatList extends Container {
         });
 
         this.on('click', (item: SplatItem) => {
+            for (const [model, value] of modelItems) {
+                if (item === value) {
+                    events.fire('model.focus', model);
+                    return;
+                }
+            }
             for (const [key, value] of items) {
                 if (item === value) {
                     if (soloMode && !key.visible) {
@@ -283,6 +338,20 @@ class SplatList extends Container {
         });
 
         this.on('removeClicked', async (item: SplatItem) => {
+            for (const [model, value] of modelItems) {
+                if (item === value) {
+                    const result = await events.invoke('showPopup', {
+                        type: 'yesno',
+                        header: 'Remove Model',
+                        message: `Are you sure you want to remove '${model.name}' from the scene? This operation can not be undone.`
+                    });
+                    if (result?.action === 'yes') {
+                        model.destroy();
+                    }
+                    return;
+                }
+            }
+
             let splat;
             for (const [key, value] of items) {
                 if (item === value) {

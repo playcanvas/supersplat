@@ -4,10 +4,13 @@ import { AppBase, Asset } from 'playcanvas';
 import { EditorSplatResource } from './editor-splat-resource';
 import { Events } from './events';
 import { defaultLodIndex, hasLoadProgress, loadSplatSource } from './io';
+import { Model } from './model';
 import { Splat } from './splat';
 import { i18n } from './ui/localization';
 
-// handles loading gsplat assets using splat-transform
+let nextModelId = 1;
+
+// handles loading gsplat assets using splat-transform, and glTF/GLB models
 class AssetLoader {
     app: AppBase;
     events: Events;
@@ -22,6 +25,33 @@ class AssetLoader {
         this.app.assets.add(asset);
         asset.resource = resource;
         return asset;
+    }
+
+    // load a glTF/GLB model from its file contents. Each load gets its own asset
+    // url so loading the same file twice never returns the registry's cached
+    // asset.
+    loadModel(filename: string, contents: ArrayBuffer): Promise<Model> {
+        return new Promise((resolve, reject) => {
+            const asset = new Asset(filename, 'container', {
+                url: `local-model-${nextModelId++}`,
+                filename,
+                // @ts-ignore - contents is supported by the container handler
+                contents
+            });
+            asset.once('load', () => {
+                try {
+                    resolve(new Model(asset, contents, filename));
+                } catch (error) {
+                    reject(error);
+                }
+            });
+            asset.once('error', (error: string) => {
+                this.app.assets.remove(asset);
+                reject(new Error(error));
+            });
+            this.app.assets.add(asset);
+            this.app.assets.load(asset);
+        });
     }
 
     async load(filename: string, fileSystem: ReadFileSystem, animationFrame?: boolean, skipReorder?: boolean) {

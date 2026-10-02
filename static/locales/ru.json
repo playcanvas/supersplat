@@ -308,6 +308,7 @@
     "popup.publish.override-model": "Заменить модель",
     "popup.publish.override-animation": "Заменить анимацию",
     "popup.publish.generate-lods": "Создавать LOD",
+    "popup.publish.generate-lods-required": "Обязательно для сцен, содержащих более 40 миллионов сплатов.",
     "popup.publish.cancel": "Отмена",
     "popup.publish.ok": "Опубликовать",
     "popup.publish.converting": "Конвертация",

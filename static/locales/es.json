@@ -308,6 +308,7 @@
     "popup.publish.override-model": "Reemplazar modelo",
     "popup.publish.override-animation": "Reemplazar animación",
     "popup.publish.generate-lods": "Generar LOD",
+    "popup.publish.generate-lods-required": "Obligatorio para escenas con más de 40 millones de splats.",
     "popup.publish.cancel": "Cancelar",
     "popup.publish.ok": "Publicar",
     "popup.publish.converting": "Convirtiendo",

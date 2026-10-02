@@ -308,6 +308,7 @@
     "popup.publish.override-model": "모델 덮어쓰기",
     "popup.publish.override-animation": "애니메이션 덮어쓰기",
     "popup.publish.generate-lods": "LOD 생성",
+    "popup.publish.generate-lods-required": "스플랫이 4,000만 개를 초과하는 장면에서는 필수입니다.",
     "popup.publish.cancel": "취소",
     "popup.publish.ok": "게시",
     "popup.publish.converting": "변환 중",

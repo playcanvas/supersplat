@@ -7,6 +7,11 @@ import { PublishSettings, UserStatus } from '../publish';
 import { AnimTrack, ExperienceSettings, defaultPostEffectSettings } from '../splat-serialize';
 import sceneExport from './svg/export.svg';
 
+// Largest scene that can be published without LODs: it is written as a
+// single-file SOG, and splat-transform's WASM WebP encoder runs out of memory
+// between 45M and 50M splats. Keep in sync with the publish server's limit.
+const MAX_SINGLE_FILE_SPLATS = 40_000_000;
+
 const createSvg = (svgString: string, args = {}) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
     return new Element({
@@ -139,6 +144,9 @@ class PublishSettingsDialog extends Container {
         generateLodsRow.append(generateLodsLabel);
         generateLodsRow.append(generateLodsToggle);
 
+        const generateLodsRequiredMessage = new Label({ class: 'lods-required-message', hidden: true });
+        i18n.bindText(generateLodsRequiredMessage, 'popup.publish.generate-lods-required');
+
         // fov
 
         const fovLabel = new Label({ class: 'label' });
@@ -167,6 +175,7 @@ class PublishSettingsDialog extends Container {
         content.append(animationRow);
         content.append(loopRow);
         content.append(generateLodsRow);
+        content.append(generateLodsRequiredMessage);
 
         // footer
 
@@ -214,6 +223,7 @@ class PublishSettingsDialog extends Container {
         };
 
         let hasPosesState = false;
+        let lodsRequired = false;
 
         const updateLayout = () => {
             const isNew = overwriteSelect.value === '0';
@@ -230,6 +240,9 @@ class PublishSettingsDialog extends Container {
             overrideAnimationRow.hidden = isNew;
             // generateLods only matters when a model is uploaded — hide when republishing animation-only
             generateLodsRow.hidden = !isNew && !modelOn;
+            // too many splats for a single-file publish: LODs are forced on
+            generateLodsToggle.enabled = !lodsRequired;
+            generateLodsRequiredMessage.hidden = generateLodsRow.hidden || !lodsRequired;
 
             if (isNew) {
                 animationToggle.enabled = hasPosesState;
@@ -259,6 +272,8 @@ class PublishSettingsDialog extends Container {
             const dot = splats[0].filename.lastIndexOf('.');
             const bgClr = events.invoke('bgClr');
             const totalSplats = splats.reduce((sum: number, s: any) => sum + (s.numSplats ?? 0), 0);
+            // numSplats is the live count (deleted splats are already excluded)
+            lodsRequired = totalSplats > MAX_SINGLE_FILE_SPLATS;
 
             // union scene bounds to decide LOD default for large scenes
             const sceneMin = [Infinity, Infinity, Infinity];
@@ -290,7 +305,7 @@ class PublishSettingsDialog extends Container {
             loopSelect.value = events.invoke('timeline.loop') ? 'repeat' : 'none';
             colorPicker.value = [bgClr.r, bgClr.g, bgClr.b];
             fovSlider.value = events.invoke('camera.fov');
-            generateLodsToggle.value = totalSplats >= 1_000_000 && isLargeScene;
+            generateLodsToggle.value = lodsRequired || (totalSplats >= 1_000_000 && isLargeScene);
 
             updateLayout();
         };

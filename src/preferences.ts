@@ -93,6 +93,7 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         { key: 'camera.fovDolly', setCommand: 'camera.setFovDolly', getDefault: () => false, validate: isBool, group: 'preferences' },
         { key: 'camera.fov', setCommand: 'camera.setFov', urlPath: 'camera.fov', getDefault: () => config.camera.fov, validate: isNumber(10, 120), group: 'preferences' },
         { key: 'view.bands', setCommand: 'view.setBands', urlPath: 'show.shBands', getDefault: () => config.show.shBands, validate: v => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 3, group: 'preferences' },
+        { key: 'view.minPixelSize', setCommand: 'view.setMinPixelSize', getDefault: () => 2, validate: isNumber(0, 20), group: 'preferences' },
         { key: 'camera.flySpeed', setCommand: 'camera.setFlySpeed', getDefault: () => 1, validate: isNumber(0.1, 30), group: 'preferences' },
         { key: 'view.centerSize', setCommand: 'view.setCenterSize', getDefault: () => 2, validate: isNumber(0, 10), group: 'appearance' },
         // the editor skips its footprint-crossing profile swap while preference

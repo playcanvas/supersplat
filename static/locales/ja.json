@@ -308,6 +308,7 @@
     "popup.publish.override-model": "モデルを上書き",
     "popup.publish.override-animation": "アニメーションを上書き",
     "popup.publish.generate-lods": "LODを生成",
+    "popup.publish.generate-lods-required": "4,000万スプラットを超えるシーンでは必須です。",
     "popup.publish.cancel": "キャンセル",
     "popup.publish.ok": "公開",
     "popup.publish.converting": "変換中",

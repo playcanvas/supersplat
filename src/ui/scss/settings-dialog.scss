@@ -104,6 +104,15 @@
                 }
             }
 
+            .lods-required-message {
+                display: block;
+                margin: 0;
+                padding: 0 0 8px;
+                line-height: 18px;
+                text-wrap: wrap;
+                color: $text-secondary;
+            }
+
             .video-compatibility-message {
                 display: block;
                 margin: 0;

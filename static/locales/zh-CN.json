@@ -308,6 +308,7 @@
     "popup.publish.override-model": "覆盖模型",
     "popup.publish.override-animation": "覆盖动画",
     "popup.publish.generate-lods": "生成 LOD",
+    "popup.publish.generate-lods-required": "超过 4000 万个 splat 的场景必须启用。",
     "popup.publish.cancel": "取消",
     "popup.publish.ok": "发布",
     "popup.publish.converting": "转换中",

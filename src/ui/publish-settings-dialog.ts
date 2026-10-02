@@ -272,9 +272,8 @@ class PublishSettingsDialog extends Container {
             const dot = splats[0].filename.lastIndexOf('.');
             const bgClr = events.invoke('bgClr');
             const totalSplats = splats.reduce((sum: number, s: any) => sum + (s.numSplats ?? 0), 0);
-            // deleted splats aren't serialized, so they don't count towards the limit
-            const publishedSplats = splats.reduce((sum: number, s: any) => sum + (s.numSplats ?? 0) - (s.numDeleted ?? 0), 0);
-            lodsRequired = publishedSplats > MAX_SINGLE_FILE_SPLATS;
+            // numSplats is the live count (deleted splats are already excluded)
+            lodsRequired = totalSplats > MAX_SINGLE_FILE_SPLATS;
 
             // union scene bounds to decide LOD default for large scenes
             const sceneMin = [Infinity, Infinity, Infinity];

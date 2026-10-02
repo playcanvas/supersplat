@@ -3,9 +3,11 @@ import type { Asset, Quat } from 'playcanvas';
 
 import { decodeInstances, encodeInstances, restorePalettes } from './doc-instances';
 import type { EditorSplatResource } from './editor-splat-resource';
+import { ElementType } from './element';
 import { Events } from './events';
 import { GaussianInstances } from './gaussian-instances';
 import { BrowserFileSystem, BlobReadSource, loadSplatSource, sourcesOf } from './io';
+import type { Model } from './model';
 import { recentFiles } from './recent-files';
 import { Scene } from './scene';
 import { Splat } from './splat';
@@ -190,6 +192,19 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 }
             }
 
+            // reference models (optional: older documents have none). They are
+            // read fully into memory, so unlike splat resources they don't keep
+            // reading from the archive.
+            for (const modelSettings of document.models ?? []) {
+                const source = await zipFs.createSource(modelSettings.file);
+                const contents = await source.read().readAll();
+                source.close();
+                const buffer = contents.buffer.slice(contents.byteOffset, contents.byteOffset + contents.byteLength) as ArrayBuffer;
+                const model = await scene.assetLoader.loadModel(modelSettings.file, buffer);
+                await scene.add(model);
+                model.docDeserialize(modelSettings);
+            }
+
             // reading the bound forces a recalculation (and its
             // scene.boundChanged event) so the deserialize steps below observe
             // the loaded scene's extents. The result must be consumed: the
@@ -292,6 +307,10 @@ const registerDocEvents = (scene: Scene, events: Events) => {
         try {
             const splats = events.invoke('scene.allSplats') as Splat[];
             const groups = groupByResource(splats, options.compact ?? true);
+            const models = scene.getElementsByType(ElementType.model) as Model[];
+            const modelFile = (model: Model, i: number) => {
+                return `model_${i}${model.filename.toLowerCase().endsWith('.gltf') ? '.gltf' : '.glb'}`;
+            };
 
             // layer -> the resource file it reads from, and its remapped records
             const layerInfo = new Map<Splat, { resource: number, records: ArrayBuffer }>();
@@ -318,6 +337,10 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                     ...splat.docSerialize(),
                     resource: layerInfo.get(splat).resource,
                     instances: `instances_${i}.bin`
+                })),
+                models: models.map((model, i) => ({
+                    ...model.docSerialize(),
+                    file: modelFile(model, i)
                 }))
             };
 
@@ -340,6 +363,13 @@ const registerDocEvents = (scene: Scene, events: Events) => {
             for (let i = 0; i < splats.length; ++i) {
                 const writer = await zipFs.createWriter(`instances_${i}.bin`);
                 await writer.write(new Uint8Array(layerInfo.get(splats[i]).records));
+                await writer.close();
+            }
+
+            // Write each reference model's original file
+            for (let i = 0; i < models.length; ++i) {
+                const writer = await zipFs.createWriter(modelFile(models[i], i));
+                await writer.write(new Uint8Array(models[i].contents));
                 await writer.close();
             }
 

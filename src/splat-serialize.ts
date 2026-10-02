@@ -48,6 +48,7 @@ import { State } from './splat-state';
 
 type SerializeSettings = {
     maxSHBands?: number;            // specifies the maximum number of bands to be exported
+    padSHBands?: boolean;           // pad missing coefficients to maxSHBands with zeros
     selected?: boolean;             // only export selected gaussians. used for copy/paste
     minOpacity?: number;            // filter out gaussians with alpha less than or equal to minAlpha
     removeInvalid?: boolean;        // filter out gaussians with invalid data (NaN/Infinity)
@@ -368,7 +369,9 @@ class SuperSplatChunkSource implements ChunkSource {
     }
 
     static async create(splats: Splat[], settings: SerializeSettings) {
-        const outputBands = Math.min(settings.maxSHBands ?? 3, splats.length ? Math.max(...splats.map(s => s.resource.shBands)) : 0);
+        const sourceBands = splats.length ? Math.max(...splats.map(s => s.resource.shBands)) : 0;
+        const targetBands = settings.maxSHBands ?? 3;
+        const outputBands = settings.padSHBands ? targetBands : Math.min(targetBands, sourceBands);
         const entries: ExportEntry[] = [];
         let start = 0;
         for (const splat of splats) {

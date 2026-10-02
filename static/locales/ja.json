@@ -289,6 +289,7 @@
     "popup.export.fov": "視野角",
     "popup.export.compress-ply": "PLYを圧縮",
     "popup.export.sh-bands": "SHバンド",
+    "popup.export.pad-sh-bands": "SHゼロ埋め",
     "popup.export.iterations": "Iterations",
     "popup.export.spz-version": "バージョン",
     "popup.export.spz-version.4": "SPZ 4（最新）",

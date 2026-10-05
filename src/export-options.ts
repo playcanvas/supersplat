@@ -11,6 +11,7 @@ type ExportType = 'ply' | 'splat' | 'sog' | 'spz' | 'viewer';
 interface ExportChoices {
     filename: string;
     maxSHBands?: number;
+    padSHBands?: boolean;
 
     // ply
     compressedPly?: boolean;
@@ -127,7 +128,11 @@ const buildExportOptions = (events: Events, exportType: ExportType, choices: Exp
     const options: SceneExportOptions = {
         filename: choices.filename,
         splatIdx: 'all',
-        serializeSettings: { maxSHBands: choices.maxSHBands }
+        serializeSettings: {
+            maxSHBands: choices.maxSHBands,
+            padSHBands: exportType === 'splat' || (exportType === 'ply' && choices.compressedPly) ?
+                false : choices.padSHBands
+        }
     };
 
     switch (exportType) {

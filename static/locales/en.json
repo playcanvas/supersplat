@@ -289,6 +289,7 @@
     "popup.export.fov": "Field of View",
     "popup.export.compress-ply": "Compress PLY",
     "popup.export.sh-bands": "SH Bands",
+    "popup.export.pad-sh-bands": "Zero-pad SH",
     "popup.export.iterations": "Iterations",
     "popup.export.spz-version": "Version",
     "popup.export.spz-version.4": "SPZ 4 (latest)",

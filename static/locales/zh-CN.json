@@ -289,6 +289,7 @@
     "popup.export.fov": "视野角",
     "popup.export.compress-ply": "压缩 PLY",
     "popup.export.sh-bands": "SH 带",
+    "popup.export.pad-sh-bands": "SH 补零",
     "popup.export.iterations": "Iterations",
     "popup.export.spz-version": "版本",
     "popup.export.spz-version.4": "SPZ 4（最新）",

@@ -104,7 +104,8 @@
                 }
             }
 
-            .lods-required-message {
+            .lods-required-message,
+            .publish-blocked-message {
                 margin: 0;
                 padding: 0 0 8px;
                 line-height: 18px;
@@ -114,6 +115,10 @@
                 &:not(.pcui-hidden) {
                     display: block;
                 }
+            }
+
+            .publish-blocked-message {
+                color: $error;
             }
 
             .video-compatibility-message {

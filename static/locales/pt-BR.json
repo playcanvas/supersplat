@@ -309,6 +309,8 @@
     "popup.publish.override-animation": "Substituir Animação",
     "popup.publish.generate-lods": "Gerar LODs",
     "popup.publish.generate-lods-required": "Obrigatório para cenas com mais de 40 milhões de splats.",
+    "popup.publish.allowance-used": "Você usou sua cota de publicação de {{limit}} de hoje. Você poderá publicar novamente em {{time}}.",
+    "popup.publish.too-many-processing": "Você tem {{scenes}} cenas em processamento. Poderá publicar outra quando uma terminar.",
     "popup.publish.cancel": "Cancelar",
     "popup.publish.ok": "Publicar",
     "popup.publish.converting": "Convertendo",

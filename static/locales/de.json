@@ -309,6 +309,8 @@
     "popup.publish.override-animation": "Animation überschreiben",
     "popup.publish.generate-lods": "LODs erzeugen",
     "popup.publish.generate-lods-required": "Erforderlich für Szenen mit mehr als 40 Millionen Splats.",
+    "popup.publish.allowance-used": "Sie haben Ihr heutiges Veröffentlichungskontingent von {{limit}} aufgebraucht. Sie können in {{time}} wieder veröffentlichen.",
+    "popup.publish.too-many-processing": "Es werden gerade {{scenes}} Szenen verarbeitet. Sie können eine weitere veröffentlichen, sobald eine fertig ist.",
     "popup.publish.cancel": "Abbrechen",
     "popup.publish.ok": "Veröffentlichen",
     "popup.publish.converting": "Konvertieren",

@@ -414,9 +414,9 @@ class Scene {
     }
 
     clear() {
-        const splats = this.getElementsByType(ElementType.splat);
-        splats.forEach((splat) => {
-            (splat as Splat).destroy();
+        const content = [...this.getElementsByType(ElementType.splat), ...this.getElementsByType(ElementType.model)];
+        content.forEach((element) => {
+            element.destroy();
         });
     }
 

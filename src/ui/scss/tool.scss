@@ -56,6 +56,20 @@
         }
     }
 
+    &#vertical-tool-svg {
+        pointer-events: none;
+
+        > line {
+            stroke: #f60;
+            stroke-width: 2px;
+
+            &:first-child {
+                stroke: white;
+                stroke-width: 5px;
+            }
+        }
+    }
+
     // shared edge length labels: the bound dimensions overlay and the
     // measure/orient tools (see dimension-labels.ts)
     &.dimension-labels-svg {

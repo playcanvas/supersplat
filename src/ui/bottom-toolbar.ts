@@ -21,6 +21,7 @@ import depthOnSvg from './svg/selection-depth-on.svg';
 import footprintCentersSvg from './svg/selection-footprint-centers.svg';
 import footprintRingsSvg from './svg/selection-footprint-rings.svg';
 import undoSvg from './svg/undo.svg';
+import verticalSvg from './svg/vertical.svg';
 import { Tooltips } from './tooltips';
 // import cropSvg from './svg/crop.svg';
 
@@ -303,6 +304,11 @@ class BottomToolbar extends Container {
             class: 'bottom-toolbar-tool'
         });
 
+        const vertical = new Button({
+            id: 'bottom-toolbar-vertical',
+            class: 'bottom-toolbar-tool'
+        });
+
         const coordSpace = new Button({
             id: 'bottom-toolbar-coord-space',
             class: 'bottom-toolbar-toggle',
@@ -324,6 +330,7 @@ class BottomToolbar extends Container {
         box.dom.appendChild(createSvg(boxSvg));
         measure.dom.appendChild(createSvg(measureSvg));
         orient.dom.appendChild(createSvg(orientSvg));
+        vertical.dom.appendChild(createSvg(verticalSvg));
         // crop.dom.appendChild(createSvg(cropSvg));
 
         this.append(undo);
@@ -348,6 +355,7 @@ class BottomToolbar extends Container {
         this.append(new Element({ class: 'bottom-toolbar-separator' }));
         this.append(measure);
         this.append(orient);
+        this.append(vertical);
         this.append(coordSpace);
         this.append(origin);
 
@@ -371,6 +379,7 @@ class BottomToolbar extends Container {
         scale.dom.addEventListener('click', () => events.fire('tool.scale'));
         measure.dom.addEventListener('click', () => events.fire('tool.measure'));
         orient.dom.addEventListener('click', () => events.fire('tool.orient'));
+        vertical.dom.addEventListener('click', () => events.fire('tool.vertical'));
         coordSpace.dom.addEventListener('click', () => events.fire('tool.toggleCoordSpace'));
         origin.dom.addEventListener('click', (e: MouseEvent) => {
             if (events.invoke('tool.active') === 'orient') {
@@ -432,6 +441,8 @@ class BottomToolbar extends Container {
             scale.class[toolName === 'scale' ? 'add' : 'remove']('active');
             measure.class[toolName === 'measure' ? 'add' : 'remove']('active');
             orient.class[toolName === 'orient' ? 'add' : 'remove']('active');
+            vertical.class[toolName === 'vertical' ? 'add' : 'remove']('active');
+            vertical.dom.setAttribute('aria-pressed', String(toolName === 'vertical'));
         });
 
         events.on('tool.coordSpace', (space: 'local' | 'world') => {
@@ -453,6 +464,10 @@ class BottomToolbar extends Container {
         tooltips.register(scale, tooltip('tooltip.bottom-toolbar.scale', 'tool.scaleShortcut'));
         tooltips.register(measure, tooltip('tooltip.bottom-toolbar.measure'));
         tooltips.register(orient, tooltip('tooltip.bottom-toolbar.orient'));
+        tooltips.register(vertical, tooltip('tooltip.bottom-toolbar.vertical'));
+        i18n.onChange(() => {
+            vertical.dom.setAttribute('aria-label', i18n.t('tooltip.bottom-toolbar.vertical'));
+        }, vertical);
         tooltips.register(coordSpace, tooltip('tooltip.bottom-toolbar.local-space', 'tool.toggleCoordSpace'));
         tooltips.register(origin, () => i18n.t(
             events.invoke('tool.active') === 'orient' ? 'orient.set-pivot' : 'tooltip.bottom-toolbar.reset-pivot'

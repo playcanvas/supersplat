@@ -309,6 +309,8 @@
     "popup.publish.override-animation": "애니메이션 덮어쓰기",
     "popup.publish.generate-lods": "LOD 생성",
     "popup.publish.generate-lods-required": "스플랫이 4,000만 개를 초과하는 장면에서는 필수입니다.",
+    "popup.publish.allowance-used": "오늘의 게시 한도 {{limit}}를 모두 사용했습니다. {{time}} 후에 다시 게시할 수 있습니다.",
+    "popup.publish.too-many-processing": "{{scenes}}개의 장면이 처리 중입니다. 하나가 완료되면 다른 장면을 게시할 수 있습니다.",
     "popup.publish.cancel": "취소",
     "popup.publish.ok": "게시",
     "popup.publish.converting": "변환 중",

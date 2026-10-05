@@ -51,9 +51,18 @@ type Scene = {
     format: string;
 };
 
+// What the user can publish right now. Fields are absent when the server doesn't report them.
+type PublishLimits = {
+    // compressed output the user may publish per day, and how much is used
+    publishAllowance?: { limitBytes: number, usedBytes: number, resetsAt: string };
+    // scenes with a publish queued or running, and how many may be at once
+    processing?: { count: number, limit: number };
+};
+
 type UserStatus = {
     user: User;
     scenes: Scene[];
+    limits: PublishLimits | null;
 };
 
 type PublishSettings = {
@@ -94,6 +103,31 @@ const fetchSceneList = async (user: User) => {
     }
 
     return (await response.json()).result as Scene[];
+};
+
+// null when the server doesn't report limits; it still enforces them when publishing
+const fetchLimits = async (user: User): Promise<PublishLimits | null> => {
+    try {
+        const response = await fetch(`${user.apiServer}/splats/limits`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${user.token}`
+            }
+        });
+        return response.ok ? await response.json() as PublishLimits : null;
+    } catch (e) {
+        return null;
+    }
+};
+
+// the server's error message if it sent one, otherwise the fallback
+const readErrorMessage = async (response: Response, fallback: string) => {
+    try {
+        const body = await response.json();
+        return typeof body?.error === 'string' ? body.error : fallback;
+    } catch (e) {
+        return fallback;
+    }
 };
 
 const fetchSceneSettings = async (user: User, sceneHash: string): Promise<ExperienceSettings> => {
@@ -147,8 +181,13 @@ class PublishWriter implements Writer {
                 'Authorization': `Bearer ${user.token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ fileName: filename })
+            // the format lets the server refuse an upload it couldn't publish before any data is sent
+            body: JSON.stringify({ filename, format: 'ply' })
         });
+
+        if (!startResponse.ok) {
+            throw new Error(await readErrorMessage(startResponse, `failed to start upload (${startResponse.statusText})`));
+        }
 
         const startJson = await startResponse.json();
 
@@ -284,15 +323,7 @@ class PublishWriter implements Writer {
             const publishResponse = await (publishSettings.overwriteHash ? doRepublish() : doPublish());
 
             if (!publishResponse.ok) {
-                let msg;
-                try {
-                    const err = await publishResponse.json();
-                    msg = err.error ?? msg;
-                } catch (e) {
-                    msg = 'Failed to publish';
-                }
-
-                throw new Error(msg);
+                throw new Error(await readErrorMessage(publishResponse, 'Failed to publish'));
             }
 
             return await publishResponse.json();
@@ -309,8 +340,8 @@ const registerPublishEvents = (events: Events) => {
         if (!user || !user.username) {
             return null;
         }
-        const scenes = await fetchSceneList(user);
-        return { user, scenes };
+        const [scenes, limits] = await Promise.all([fetchSceneList(user), fetchLimits(user)]);
+        return { user, scenes, limits };
     });
 
     events.function('scene.publish', async (publishSettings: PublishSettings) => {
@@ -417,4 +448,4 @@ const registerPublishEvents = (events: Events) => {
     });
 };
 
-export { PublishSettings, UserStatus, registerPublishEvents };
+export { PublishLimits, PublishSettings, UserStatus, registerPublishEvents };

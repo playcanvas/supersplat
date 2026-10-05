@@ -3,7 +3,7 @@ import { BooleanInput, Button, ColorPicker, Container, Element, Label, SelectInp
 import { Pose } from '../camera-poses';
 import { Events } from '../events';
 import { i18n } from './localization';
-import { PublishSettings, UserStatus } from '../publish';
+import { PublishLimits, PublishSettings, UserStatus } from '../publish';
 import { AnimTrack, ExperienceSettings, defaultPostEffectSettings } from '../splat-serialize';
 import sceneExport from './svg/export.svg';
 
@@ -11,6 +11,33 @@ import sceneExport from './svg/export.svg';
 // single-file SOG, and splat-transform's WASM WebP encoder runs out of memory
 // between 45M and 50M splats. Keep in sync with the publish server's limit.
 const MAX_SINGLE_FILE_SPLATS = 40_000_000;
+
+// e.g. "10 GB"
+const formatGigabytes = (bytes: number) => `${Math.round(bytes / (1024 * 1024 * 1024) * 10) / 10} GB`;
+
+// e.g. "6 h 12 min"
+const formatTimeUntil = (time: string) => {
+    const minutes = Math.max(1, Math.ceil((Date.parse(time) - Date.now()) / 60000));
+    const hours = Math.floor(minutes / 60);
+    const remainder = minutes % 60;
+    return hours === 0 ? `${minutes} min` : remainder ? `${hours} h ${remainder} min` : `${hours} h`;
+};
+
+// why the server would refuse a new upload right now, if it would
+const getPublishBlockedMessage = (limits: PublishLimits | null) => {
+    const allowance = limits?.publishAllowance;
+    if (allowance && allowance.usedBytes >= allowance.limitBytes) {
+        return i18n.t('popup.publish.allowance-used', {
+            limit: formatGigabytes(allowance.limitBytes),
+            time: formatTimeUntil(allowance.resetsAt)
+        });
+    }
+    const processing = limits?.processing;
+    if (processing && processing.count >= processing.limit) {
+        return i18n.t('popup.publish.too-many-processing', { scenes: processing.count });
+    }
+    return null;
+};
 
 const createSvg = (svgString: string, args = {}) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -147,6 +174,9 @@ class PublishSettingsDialog extends Container {
         const generateLodsRequiredMessage = new Label({ class: 'lods-required-message', hidden: true });
         i18n.bindText(generateLodsRequiredMessage, 'popup.publish.generate-lods-required');
 
+        // shown when the server would refuse a new upload (daily allowance used, too many processing)
+        const publishBlockedMessage = new Label({ class: 'publish-blocked-message', hidden: true });
+
         // fov
 
         const fovLabel = new Label({ class: 'label' });
@@ -176,6 +206,7 @@ class PublishSettingsDialog extends Container {
         content.append(loopRow);
         content.append(generateLodsRow);
         content.append(generateLodsRequiredMessage);
+        content.append(publishBlockedMessage);
 
         // footer
 
@@ -224,6 +255,7 @@ class PublishSettingsDialog extends Container {
 
         let hasPosesState = false;
         let lodsRequired = false;
+        let publishBlocked: string | null = null;
 
         const updateLayout = () => {
             const isNew = overwriteSelect.value === '0';
@@ -254,8 +286,13 @@ class PublishSettingsDialog extends Container {
                 loopSelect.enabled = animOn && hasPosesState;
             }
 
-            // disable publish when existing scene with no overrides selected
-            okButton.disabled = !isNew && !modelOn && !animOn;
+            // uploading a model is what the limits apply to; an animation-only update is always allowed
+            const uploadsModel = isNew || modelOn;
+            publishBlockedMessage.text = publishBlocked ?? '';
+            publishBlockedMessage.hidden = !uploadsModel || !publishBlocked;
+
+            // disable publish when existing scene with no overrides selected, or the upload would be refused
+            okButton.disabled = (!isNew && !modelOn && !animOn) || (uploadsModel && !!publishBlocked);
         };
 
         overwriteSelect.on('change', updateLayout);
@@ -327,6 +364,8 @@ class PublishSettingsDialog extends Container {
             const overwriteList = userStatus.scenes.map((s) => {
                 return `${s.hash} - ${s.title}`;
             });
+
+            publishBlocked = getPublishBlockedMessage(userStatus.limits);
 
             // reset UI
             reset(orderedPoses.length > 0, overwriteList);

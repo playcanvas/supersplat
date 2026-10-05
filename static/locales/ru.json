@@ -309,6 +309,8 @@
     "popup.publish.override-animation": "Заменить анимацию",
     "popup.publish.generate-lods": "Создавать LOD",
     "popup.publish.generate-lods-required": "Обязательно для сцен, содержащих более 40 миллионов сплатов.",
+    "popup.publish.allowance-used": "Вы исчерпали сегодняшний лимит публикации в {{limit}}. Публиковать снова можно будет через {{time}}.",
+    "popup.publish.too-many-processing": "Сейчас обрабатываются сцены: {{scenes}}. Опубликовать новую можно, когда одна из них будет готова.",
     "popup.publish.cancel": "Отмена",
     "popup.publish.ok": "Опубликовать",
     "popup.publish.converting": "Конвертация",

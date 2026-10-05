@@ -309,6 +309,8 @@
     "popup.publish.override-animation": "覆盖动画",
     "popup.publish.generate-lods": "生成 LOD",
     "popup.publish.generate-lods-required": "超过 4000 万个 splat 的场景必须启用。",
+    "popup.publish.allowance-used": "今天的 {{limit}} 发布额度已用完。{{time}}后可再次发布。",
+    "popup.publish.too-many-processing": "当前有 {{scenes}} 个场景正在处理。待其中一个完成后即可发布新的场景。",
     "popup.publish.cancel": "取消",
     "popup.publish.ok": "发布",
     "popup.publish.converting": "转换中",

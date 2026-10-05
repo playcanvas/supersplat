@@ -80,6 +80,16 @@ type PublishSettings = {
 
 const origin = location.origin;
 
+// Signed part URLs expire 20 minutes after signing, so they are requested in
+// batches as the upload goes and a batch is replaced once it is 15 minutes old.
+// Batching also keeps a large upload well under the API's request rate limit.
+const SIGNED_URL_BATCH_PARTS = 20;
+const SIGNED_URL_MAX_AGE_MS = 15 * 60 * 1000;
+
+// a failed part is retried, each time with a freshly signed URL
+const MAX_PART_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 1000;
+
 // check whether user is logged in
 const fetchUser = async () => {
     try {
@@ -198,10 +208,20 @@ class PublishWriter implements Writer {
         let partNumber = 1;
         let cursor = 0;
 
-        const upload = async () => {
-            if (cursor === 0) return;
+        // the current batch of signed URLs, starting at part batchStart
+        let batchStart = 0;
+        let batchUrls: string[] = [];
+        let batchSignedAt = 0;
 
-            // get signed url for this part
+        // signed URL for a part, from the current batch while it's fresh. Otherwise, or
+        // on a retry, sign a new batch starting at this part.
+        const getSignedUrl = async (part: number, isRetry: boolean) => {
+            const index = part - batchStart;
+            const fresh = Date.now() - batchSignedAt < SIGNED_URL_MAX_AGE_MS;
+            if (!isRetry && fresh && index >= 0 && index < batchUrls.length) {
+                return batchUrls[index];
+            }
+
             const urlResponse = await fetch(`${user.apiServer}/upload/signed-urls`, {
                 method: 'POST',
                 headers: {
@@ -211,33 +231,59 @@ class PublishWriter implements Writer {
                 body: JSON.stringify({
                     uploadId: startJson.uploadId,
                     key: startJson.key,
-                    parts: 1,
-                    partBase: partNumber
+                    parts: SIGNED_URL_BATCH_PARTS,
+                    partBase: part
                 })
             });
 
             if (!urlResponse.ok) {
-                throw new Error(`failed to get signed url (${urlResponse.statusText})`);
+                throw new Error(await readErrorMessage(urlResponse, `failed to get signed url (${urlResponse.statusText})`));
             }
 
-            const urlJson = await urlResponse.json();
+            batchUrls = (await urlResponse.json()).signedUrls;
+            batchStart = part;
+            batchSignedAt = Date.now();
+            return batchUrls[0];
+        };
 
-            const uploadResponse = await fetch(urlJson.signedUrls[0], {
-                method: 'PUT',
-                body: uploadBuf.slice(0, cursor),
-                headers: {
-                    'Content-Type': 'application/octet-stream'
+        const upload = async () => {
+            if (cursor === 0) return;
+
+            const body = uploadBuf.slice(0, cursor);
+
+            for (let attempt = 1; ; attempt++) {
+                try {
+                    const uploadResponse = await fetch(await getSignedUrl(partNumber, attempt > 1), {
+                        method: 'PUT',
+                        body,
+                        headers: {
+                            'Content-Type': 'application/octet-stream'
+                        }
+                    });
+
+                    if (!uploadResponse.ok) {
+                        throw new Error(`failed to upload data (${uploadResponse.statusText})`);
+                    }
+
+                    const etag = uploadResponse.headers.get('etag');
+                    if (!etag) {
+                        throw new Error(`missing ETag for part ${partNumber}`);
+                    }
+
+                    parts.push({
+                        PartNumber: partNumber,
+                        ETag: etag.replace(/^"|"$/g, '')
+                    });
+                    break;
+                } catch (error) {
+                    if (attempt >= MAX_PART_ATTEMPTS) {
+                        throw error;
+                    }
+                    await new Promise((resolve) => {
+                        setTimeout(resolve, RETRY_DELAY_MS * attempt);
+                    });
                 }
-            });
-
-            if (!uploadResponse.ok) {
-                throw new Error(`failed to upload data (${uploadResponse.statusText})`);
             }
-
-            parts.push({
-                PartNumber: partNumber,
-                ETag: uploadResponse.headers.get('etag').replace(/^"|"$/g, '')
-            });
 
             cursor = 0;
             partNumber++;

@@ -12,31 +12,51 @@ import sceneExport from './svg/export.svg';
 // between 45M and 50M splats. Keep in sync with the publish server's limit.
 const MAX_SINGLE_FILE_SPLATS = 40_000_000;
 
-// e.g. "10 GB"
-const formatGigabytes = (bytes: number) => `${Math.round(bytes / (1024 * 1024 * 1024) * 10) / 10} GB`;
+// locale-aware unit formatting, e.g. "10 GB" / "10,5 GB", "45 min" / "45 Min."
+const formatUnit = (value: number, unit: string, maximumFractionDigits = 0) => {
+    return new Intl.NumberFormat(i18n.locale, { style: 'unit', unit, unitDisplay: 'short', maximumFractionDigits }).format(value);
+};
 
-// e.g. "6 h 12 min"
+const formatGigabytes = (bytes: number) => formatUnit(bytes / (1024 * 1024 * 1024), 'gigabyte', 1);
+
+// e.g. "6 hr 12 min" / "6 Std., 12 Min."
 const formatTimeUntil = (time: string) => {
     const minutes = Math.max(1, Math.ceil((Date.parse(time) - Date.now()) / 60000));
     const hours = Math.floor(minutes / 60);
     const remainder = minutes % 60;
-    return hours === 0 ? `${minutes} min` : remainder ? `${hours} h ${remainder} min` : `${hours} h`;
+    const parts = [
+        ...(hours > 0 ? [formatUnit(hours, 'hour')] : []),
+        ...(hours === 0 || remainder > 0 ? [formatUnit(hours === 0 ? minutes : remainder, 'minute')] : [])
+    ];
+    return new Intl.ListFormat(i18n.locale, { type: 'unit', style: 'narrow' }).format(parts);
 };
 
-// why the server would refuse a new upload right now, if it would
-const getPublishBlockedMessage = (limits: PublishLimits | null) => {
+// which limit, if any, the server would refuse a new upload for right now
+const getPublishBlock = (limits: PublishLimits | null) => {
     const allowance = limits?.publishAllowance;
     if (allowance && allowance.usedBytes >= allowance.limitBytes) {
-        return i18n.t('popup.publish.allowance-used', {
-            limit: formatGigabytes(allowance.limitBytes),
-            time: formatTimeUntil(allowance.resetsAt)
-        });
+        return { allowance };
     }
     const processing = limits?.processing;
     if (processing && processing.count >= processing.limit) {
-        return i18n.t('popup.publish.too-many-processing', { scenes: processing.count });
+        return { processing };
     }
     return null;
+};
+
+// the reason, in the current language; built when shown so the time is current
+const getPublishBlockedMessage = (limits: PublishLimits | null) => {
+    const block = getPublishBlock(limits);
+    if (block?.allowance) {
+        return i18n.t('popup.publish.allowance-used', {
+            limit: formatGigabytes(block.allowance.limitBytes),
+            time: formatTimeUntil(block.allowance.resetsAt)
+        });
+    }
+    if (block?.processing) {
+        return i18n.t('popup.publish.too-many-processing', { scenes: i18n.formatInteger(block.processing.count) });
+    }
+    return '';
 };
 
 const createSvg = (svgString: string, args = {}) => {
@@ -176,6 +196,11 @@ class PublishSettingsDialog extends Container {
 
         // shown when the server would refuse a new upload (daily allowance used, too many processing)
         const publishBlockedMessage = new Label({ class: 'publish-blocked-message', hidden: true });
+        let publishLimits: PublishLimits | null = null;
+        const updatePublishBlockedMessage = () => {
+            publishBlockedMessage.text = getPublishBlockedMessage(publishLimits);
+        };
+        i18n.onChange(updatePublishBlockedMessage, publishBlockedMessage);
 
         // fov
 
@@ -255,7 +280,6 @@ class PublishSettingsDialog extends Container {
 
         let hasPosesState = false;
         let lodsRequired = false;
-        let publishBlocked: string | null = null;
 
         const updateLayout = () => {
             const isNew = overwriteSelect.value === '0';
@@ -288,11 +312,11 @@ class PublishSettingsDialog extends Container {
 
             // uploading a model is what the limits apply to; an animation-only update is always allowed
             const uploadsModel = isNew || modelOn;
-            publishBlockedMessage.text = publishBlocked ?? '';
+            const publishBlocked = !!getPublishBlock(publishLimits);
             publishBlockedMessage.hidden = !uploadsModel || !publishBlocked;
 
             // disable publish when existing scene with no overrides selected, or the upload would be refused
-            okButton.disabled = (!isNew && !modelOn && !animOn) || (uploadsModel && !!publishBlocked);
+            okButton.disabled = (!isNew && !modelOn && !animOn) || (uploadsModel && publishBlocked);
         };
 
         overwriteSelect.on('change', updateLayout);
@@ -365,7 +389,8 @@ class PublishSettingsDialog extends Container {
                 return `${s.hash} - ${s.title}`;
             });
 
-            publishBlocked = getPublishBlockedMessage(userStatus.limits);
+            publishLimits = userStatus.limits;
+            updatePublishBlockedMessage();
 
             // reset UI
             reset(orderedPoses.length > 0, overwriteList);

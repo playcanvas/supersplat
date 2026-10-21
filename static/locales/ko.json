@@ -330,7 +330,7 @@
     "measure.length": "길이",
     "measure.hint": "2개의 점을 배치하여 측정",
     "measure.clear": "지우기",
-    "orient.hint": "3개의 점을 배치하여 평면 정의",
+    "orient.hint": "2개의 점(아래, 위 순서)으로 수직을, 3개의 점으로 평면을 정의",
     "orient.align": "그리드에 정렬",
     "orient.set-pivot": "피벗 설정",
     "orient.clear": "지우기",

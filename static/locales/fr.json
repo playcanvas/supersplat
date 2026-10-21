@@ -330,7 +330,7 @@
     "measure.length": "Longueur",
     "measure.hint": "Placez 2 points pour mesurer",
     "measure.clear": "Effacer",
-    "orient.hint": "Placez 3 points pour définir un plan",
+    "orient.hint": "Placez 2 points (bas, puis haut) pour définir la verticale, ou 3 pour définir un plan",
     "orient.align": "Aligner sur la grille",
     "orient.set-pivot": "Définir le pivot",
     "orient.clear": "Effacer",

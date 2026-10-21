@@ -1,12 +1,12 @@
 import { BooleanInput, Button, ColorPicker, Container, Element, Label, SelectInput, SliderInput, TextInput } from '@playcanvas/pcui';
 
 import { Pose } from '../camera-poses';
-import type { Splat } from '../splat';
 import { i18n } from './localization';
 import { Events } from '../events';
 import { ExportChoices, ExportDialogResult, ExportType } from '../export-options';
 import { ExportSettings } from '../export-settings';
 import type { BlobReadSource, WriteTarget } from '../io';
+import type { Splat } from '../splat';
 import sceneExport from './svg/export.svg';
 import projectSave from './svg/save.svg';
 
@@ -227,16 +227,6 @@ class ExportPopup extends Container {
         bandsRow.append(bandsLabel);
         bandsRow.append(bandsSlider);
 
-        // pad missing spherical harmonic coefficients to the selected band count
-
-        let hasPaddingOption = false;
-        const padSHRow = new Container({ class: 'row' });
-        const padSHLabel = new Label({ class: 'label' });
-        i18n.bindText(padSHLabel, 'popup.export.pad-sh-bands');
-        const padSHBoolean = new BooleanInput({ class: 'boolean', type: 'toggle', value: false });
-        padSHRow.append(padSHLabel);
-        padSHRow.append(padSHBoolean);
-
         // sog iterations
 
         const iterationsRow = new Container({
@@ -333,7 +323,6 @@ class ExportPopup extends Container {
         content.append(fovRow);
         content.append(compressRow);
         content.append(bandsRow);
-        content.append(padSHRow);
         content.append(iterationsRow);
         content.append(spzVersionRow);
 
@@ -508,19 +497,8 @@ class ExportPopup extends Container {
             validateFilename();
         };
 
-        const updatePadSH = () => {
-            padSHRow.hidden = !hasPaddingOption || (!compressRow.hidden && compressBoolean.value);
-            padSHBoolean.enabled = !padSHRow.hidden && (events.invoke('scene.splats') as Splat[])
-            .some(splat => splat.resource.shBands < bandsSlider.value);
-            if (!padSHBoolean.enabled) {
-                padSHBoolean.value = false;
-            }
-        };
-
-        bandsSlider.on('change', updatePadSH);
         compressBoolean.on('change', () => {
             updateExtension(compressBoolean.value ? '.compressed.ply' : '.ply');
-            updatePadSH();
         });
 
         viewerTypeSelect.on('change', () => {
@@ -533,29 +511,29 @@ class ExportPopup extends Container {
 
         const reset = (exportType: FileDialogType, splatNames: string[], hasPoses: boolean) => {
             const allRows = [
-                viewerTypeRow, animationRow, loopRow, colorRow, fovRow, compressRow, bandsRow, padSHRow, iterationsRow, spzVersionRow
+                viewerTypeRow, animationRow, loopRow, colorRow, fovRow, compressRow, bandsRow, iterationsRow, spzVersionRow
             ];
 
             const activeRows: Container[] = {
-                ply: [compressRow, bandsRow, padSHRow],
+                ply: [compressRow, bandsRow],
                 splat: [],
                 ssproj: [],
-                sog: [bandsRow, padSHRow, iterationsRow],
-                spz: [bandsRow, padSHRow, spzVersionRow],
-                viewer: [viewerTypeRow, animationRow, loopRow, colorRow, fovRow, bandsRow, padSHRow]
+                sog: [bandsRow, iterationsRow],
+                spz: [bandsRow, spzVersionRow],
+                viewer: [viewerTypeRow, animationRow, loopRow, colorRow, fovRow, bandsRow]
             }[exportType];
 
-            hasPaddingOption = activeRows.includes(padSHRow);
             allRows.forEach((r) => {
                 r.hidden = activeRows.indexOf(r) === -1;
             });
 
-            bandsSlider.value = events.invoke('view.bands');
+            // default to the scene's band count, capped by the viewport setting.
+            // higher values pad the missing coefficients with zeros
+            const sceneBands = Math.max(0, ...(events.invoke('scene.splats') as Splat[]).map(s => s.resource.shBands));
+            bandsSlider.value = Math.min(events.invoke('view.bands'), sceneBands);
 
             // ply
             compressBoolean.value = false;
-            padSHBoolean.value = false;
-            updatePadSH();
 
             // sog
             iterationsSlider.value = 10;
@@ -622,25 +600,17 @@ class ExportPopup extends Container {
 
             const getChoices = (): ExportChoices => {
                 const filename = getFilename();
-                const shChoices = {
-                    maxSHBands: bandsSlider.value,
-                    padSHBands: padSHBoolean.enabled && padSHBoolean.value
-                };
                 switch (exportType) {
                     case 'ply':
-                        return {
-                            filename,
-                            ...shChoices,
-                            compressedPly: compressBoolean.value
-                        };
+                        return { filename, shBands: bandsSlider.value, compressedPly: compressBoolean.value };
                     case 'sog':
-                        return { filename, ...shChoices, sogIterations: iterationsSlider.value };
+                        return { filename, shBands: bandsSlider.value, sogIterations: iterationsSlider.value };
                     case 'spz':
-                        return { filename, ...shChoices, spzVersion: spzVersionSelect.value === '3' ? 3 : 4 };
+                        return { filename, shBands: bandsSlider.value, spzVersion: spzVersionSelect.value === '3' ? 3 : 4 };
                     case 'viewer':
                         return {
                             filename,
-                            ...shChoices,
+                            shBands: bandsSlider.value,
                             viewerType: viewerTypeSelect.value === 'zip' ? 'zip' : 'html',
                             includeAnimation: animationToggle.value,
                             loopMode: loopSelect.value as ExportChoices['loopMode'],

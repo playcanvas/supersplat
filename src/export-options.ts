@@ -10,7 +10,7 @@ type ExportType = 'ply' | 'splat' | 'sog' | 'spz' | 'viewer';
 // choices picks up the current camera pose and animation.
 interface ExportChoices {
     filename: string;
-    maxSHBands?: number;
+    shBands?: number;
 
     // ply
     compressedPly?: boolean;
@@ -127,7 +127,7 @@ const buildExportOptions = (events: Events, exportType: ExportType, choices: Exp
     const options: SceneExportOptions = {
         filename: choices.filename,
         splatIdx: 'all',
-        serializeSettings: { maxSHBands: choices.maxSHBands }
+        serializeSettings: { shBands: choices.shBands }
     };
 
     switch (exportType) {

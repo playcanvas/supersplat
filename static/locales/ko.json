@@ -58,6 +58,8 @@
     "panel.colors.transparency": "투명도",
     "panel.colors.apply": "적용",
     "panel.colors.reset": "리셋",
+    "panel.clipboard.copy": "복사",
+    "panel.clipboard.paste": "붙여넣기",
     "panel.settings": "환경 설정",
     "panel.settings.section-camera": "카메라",
     "panel.settings.section-rendering": "렌더링",

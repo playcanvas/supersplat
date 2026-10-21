@@ -330,7 +330,7 @@
     "measure.length": "Length",
     "measure.hint": "Place 2 points to measure",
     "measure.clear": "Clear",
-    "orient.hint": "Place 3 points to define a plane",
+    "orient.hint": "Place 2 points (bottom, then top) to define vertical, or 3 to define a plane",
     "orient.align": "Align to Grid",
     "orient.set-pivot": "Set Pivot",
     "orient.clear": "Clear",

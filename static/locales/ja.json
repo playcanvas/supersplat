@@ -330,7 +330,7 @@
     "measure.length": "長さ",
     "measure.hint": "2点を配置して計測",
     "measure.clear": "クリア",
-    "orient.hint": "3点を配置して平面を定義",
+    "orient.hint": "2点（下、上の順）で垂直を、3点で平面を定義",
     "orient.align": "グリッドに合わせる",
     "orient.set-pivot": "ピボットを設定",
     "orient.clear": "クリア",

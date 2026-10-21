@@ -51,9 +51,18 @@ type Scene = {
     format: string;
 };
 
+// What the user can publish right now. Fields are absent when the server doesn't report them.
+type PublishLimits = {
+    // compressed output the user may publish per day, and how much is used
+    publishAllowance?: { limitBytes: number, usedBytes: number, resetsAt: string };
+    // scenes with a publish queued or running, and how many may be at once
+    processing?: { count: number, limit: number };
+};
+
 type UserStatus = {
     user: User;
     scenes: Scene[];
+    limits: PublishLimits | null;
 };
 
 type PublishSettings = {
@@ -70,6 +79,16 @@ type PublishSettings = {
 };
 
 const origin = location.origin;
+
+// Signed part URLs expire 20 minutes after signing, so they are requested in
+// batches as the upload goes and a batch is replaced once it is 15 minutes old.
+// Batching also keeps a large upload well under the API's request rate limit.
+const SIGNED_URL_BATCH_PARTS = 20;
+const SIGNED_URL_MAX_AGE_MS = 15 * 60 * 1000;
+
+// a failed part is retried, each time with a freshly signed URL
+const MAX_PART_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 1000;
 
 // check whether user is logged in
 const fetchUser = async () => {
@@ -94,6 +113,31 @@ const fetchSceneList = async (user: User) => {
     }
 
     return (await response.json()).result as Scene[];
+};
+
+// null when the server doesn't report limits; it still enforces them when publishing
+const fetchLimits = async (user: User): Promise<PublishLimits | null> => {
+    try {
+        const response = await fetch(`${user.apiServer}/splats/limits`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${user.token}`
+            }
+        });
+        return response.ok ? await response.json() as PublishLimits : null;
+    } catch (e) {
+        return null;
+    }
+};
+
+// the server's error message if it sent one, otherwise the fallback
+const readErrorMessage = async (response: Response, fallback: string) => {
+    try {
+        const body = await response.json();
+        return typeof body?.error === 'string' ? body.error : fallback;
+    } catch (e) {
+        return fallback;
+    }
 };
 
 const fetchSceneSettings = async (user: User, sceneHash: string): Promise<ExperienceSettings> => {
@@ -147,8 +191,13 @@ class PublishWriter implements Writer {
                 'Authorization': `Bearer ${user.token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ fileName: filename })
+            // the format lets the server refuse an upload it couldn't publish before any data is sent
+            body: JSON.stringify({ filename, format: 'ply' })
         });
+
+        if (!startResponse.ok) {
+            throw new Error(await readErrorMessage(startResponse, `failed to start upload (${startResponse.statusText})`));
+        }
 
         const startJson = await startResponse.json();
 
@@ -159,10 +208,20 @@ class PublishWriter implements Writer {
         let partNumber = 1;
         let cursor = 0;
 
-        const upload = async () => {
-            if (cursor === 0) return;
+        // the current batch of signed URLs, starting at part batchStart
+        let batchStart = 0;
+        let batchUrls: string[] = [];
+        let batchSignedAt = 0;
 
-            // get signed url for this part
+        // signed URL for a part, from the current batch while it's fresh. Otherwise, or
+        // on a retry, sign a new batch starting at this part.
+        const getSignedUrl = async (part: number, isRetry: boolean) => {
+            const index = part - batchStart;
+            const fresh = Date.now() - batchSignedAt < SIGNED_URL_MAX_AGE_MS;
+            if (!isRetry && fresh && index >= 0 && index < batchUrls.length) {
+                return batchUrls[index];
+            }
+
             const urlResponse = await fetch(`${user.apiServer}/upload/signed-urls`, {
                 method: 'POST',
                 headers: {
@@ -172,33 +231,59 @@ class PublishWriter implements Writer {
                 body: JSON.stringify({
                     uploadId: startJson.uploadId,
                     key: startJson.key,
-                    parts: 1,
-                    partBase: partNumber
+                    parts: SIGNED_URL_BATCH_PARTS,
+                    partBase: part
                 })
             });
 
             if (!urlResponse.ok) {
-                throw new Error(`failed to get signed url (${urlResponse.statusText})`);
+                throw new Error(await readErrorMessage(urlResponse, `failed to get signed url (${urlResponse.statusText})`));
             }
 
-            const urlJson = await urlResponse.json();
+            batchUrls = (await urlResponse.json()).signedUrls;
+            batchStart = part;
+            batchSignedAt = Date.now();
+            return batchUrls[0];
+        };
 
-            const uploadResponse = await fetch(urlJson.signedUrls[0], {
-                method: 'PUT',
-                body: uploadBuf.slice(0, cursor),
-                headers: {
-                    'Content-Type': 'application/octet-stream'
+        const upload = async () => {
+            if (cursor === 0) return;
+
+            const body = uploadBuf.slice(0, cursor);
+
+            for (let attempt = 1; ; attempt++) {
+                try {
+                    const uploadResponse = await fetch(await getSignedUrl(partNumber, attempt > 1), {
+                        method: 'PUT',
+                        body,
+                        headers: {
+                            'Content-Type': 'application/octet-stream'
+                        }
+                    });
+
+                    if (!uploadResponse.ok) {
+                        throw new Error(`failed to upload data (${uploadResponse.statusText})`);
+                    }
+
+                    const etag = uploadResponse.headers.get('etag');
+                    if (!etag) {
+                        throw new Error(`missing ETag for part ${partNumber}`);
+                    }
+
+                    parts.push({
+                        PartNumber: partNumber,
+                        ETag: etag.replace(/^"|"$/g, '')
+                    });
+                    break;
+                } catch (error) {
+                    if (attempt >= MAX_PART_ATTEMPTS) {
+                        throw error;
+                    }
+                    await new Promise((resolve) => {
+                        setTimeout(resolve, RETRY_DELAY_MS * attempt);
+                    });
                 }
-            });
-
-            if (!uploadResponse.ok) {
-                throw new Error(`failed to upload data (${uploadResponse.statusText})`);
             }
-
-            parts.push({
-                PartNumber: partNumber,
-                ETag: uploadResponse.headers.get('etag').replace(/^"|"$/g, '')
-            });
 
             cursor = 0;
             partNumber++;
@@ -284,15 +369,7 @@ class PublishWriter implements Writer {
             const publishResponse = await (publishSettings.overwriteHash ? doRepublish() : doPublish());
 
             if (!publishResponse.ok) {
-                let msg;
-                try {
-                    const err = await publishResponse.json();
-                    msg = err.error ?? msg;
-                } catch (e) {
-                    msg = 'Failed to publish';
-                }
-
-                throw new Error(msg);
+                throw new Error(await readErrorMessage(publishResponse, 'Failed to publish'));
             }
 
             return await publishResponse.json();
@@ -309,8 +386,8 @@ const registerPublishEvents = (events: Events) => {
         if (!user || !user.username) {
             return null;
         }
-        const scenes = await fetchSceneList(user);
-        return { user, scenes };
+        const [scenes, limits] = await Promise.all([fetchSceneList(user), fetchLimits(user)]);
+        return { user, scenes, limits };
     });
 
     events.function('scene.publish', async (publishSettings: PublishSettings) => {
@@ -417,4 +494,4 @@ const registerPublishEvents = (events: Events) => {
     });
 };
 
-export { PublishSettings, UserStatus, registerPublishEvents };
+export { PublishLimits, PublishSettings, UserStatus, registerPublishEvents };

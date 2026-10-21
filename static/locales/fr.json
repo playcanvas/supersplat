@@ -58,6 +58,8 @@
     "panel.colors.transparency": "Transparence",
     "panel.colors.apply": "Appliquer",
     "panel.colors.reset": "Réinitialiser",
+    "panel.clipboard.copy": "Copier",
+    "panel.clipboard.paste": "Coller",
     "panel.settings": "Préférences",
     "panel.settings.section-camera": "Caméra",
     "panel.settings.section-rendering": "Rendu",

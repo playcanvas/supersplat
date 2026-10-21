@@ -58,6 +58,8 @@
     "panel.colors.transparency": "Прозрачность",
     "panel.colors.apply": "Применить",
     "panel.colors.reset": "Сбросить",
+    "panel.clipboard.copy": "Копировать",
+    "panel.clipboard.paste": "Вставить",
     "panel.settings": "Параметры",
     "panel.settings.section-camera": "Камера",
     "panel.settings.section-rendering": "Рендеринг",

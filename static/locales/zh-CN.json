@@ -58,6 +58,8 @@
     "panel.colors.transparency": "透明度",
     "panel.colors.apply": "应用",
     "panel.colors.reset": "重置",
+    "panel.clipboard.copy": "复制",
+    "panel.clipboard.paste": "粘贴",
     "panel.settings": "首选项",
     "panel.settings.section-camera": "相机",
     "panel.settings.section-rendering": "渲染",

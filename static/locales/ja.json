@@ -58,6 +58,8 @@
     "panel.colors.transparency": "透明度",
     "panel.colors.apply": "適用",
     "panel.colors.reset": "リセット",
+    "panel.clipboard.copy": "コピー",
+    "panel.clipboard.paste": "貼り付け",
     "panel.settings": "環境設定",
     "panel.settings.section-camera": "カメラ",
     "panel.settings.section-rendering": "レンダリング",

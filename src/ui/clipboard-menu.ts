@@ -2,6 +2,15 @@ import { Container, Element } from '@playcanvas/pcui';
 
 import { i18n } from './localization';
 import { MenuPanel } from './menu-panel';
+import copySvg from './svg/copy.svg';
+import pasteSvg from './svg/paste.svg';
+
+const createSvg = (svgString: string) => {
+    const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
+    return new Element({
+        dom: new DOMParser().parseFromString(decodedStr, 'image/svg+xml').documentElement
+    });
+};
 
 // a value that can be copied and pasted. parse validates (and clamps) a
 // pasted value, returning undefined to reject it
@@ -113,10 +122,12 @@ class ClipboardMenu extends Container {
 
         this.menu = new MenuPanel([{
             text: () => i18n.t('panel.clipboard.copy'),
+            icon: createSvg(copySvg),
             isEnabled: enabled,
             onSelect: () => this.copy()
         }, {
             text: () => i18n.t('panel.clipboard.paste'),
+            icon: createSvg(pasteSvg),
             isEnabled: enabled,
             onSelect: () => this.paste()
         }]);

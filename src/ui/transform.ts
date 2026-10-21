@@ -65,20 +65,20 @@ class Transform extends PanelSection {
             uiUpdating = false;
         };
 
-        // move the pivot to position, euler rotation (degrees) and uniform scale
-        const setPivot = (pivot: Pivot, p: number[], r: number[], s: number) => {
+        // pivot TRS from position, euler rotation (degrees) and uniform scale
+        const toTRS = (p: number[], r: number[], s: number): [Vec3, Quat, Vec3] => {
             const q = new Quat().setFromEulerAngles(r[0], r[1], r[2]);
 
             if (q.w < 0) {
                 q.mulScalar(-1);
             }
 
-            pivot.moveTRS(new Vec3(p[0], p[1], p[2]), q, new Vec3(s, s, s));
+            return [new Vec3(p[0], p[1], p[2]), q, new Vec3(s, s, s)];
         };
 
         // update pivot with UI
         const updatePivot = (pivot: Pivot) => {
-            setPivot(pivot, positionVector.value, rotationVector.value, scaleInput.value);
+            pivot.moveTRS(...toTRS(positionVector.value, rotationVector.value, scaleInput.value));
         };
 
         // handle a change in the UI state
@@ -134,10 +134,15 @@ class Transform extends PanelSection {
             },
             apply: (values) => {
                 const { position, rotation, scale } = { ...pivotTRS(), ...values } as ReturnType<typeof pivotTRS>;
+                const trs = toTRS(position, rotation, scale);
                 const pivot = events.invoke('pivot') as Pivot;
-                pivot.start();
-                setPivot(pivot, position, rotation, scale);
-                pivot.end();
+                // an unchanged pivot fires no move, so the transform handlers
+                // would record their previous transform as a new undo step
+                if (!pivot.transform.equalsTRS(...trs)) {
+                    pivot.start();
+                    pivot.moveTRS(...trs);
+                    pivot.end();
+                }
             },
             enabled: () => positionVector.enabled
         };

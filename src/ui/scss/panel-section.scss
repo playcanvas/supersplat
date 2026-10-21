@@ -66,6 +66,16 @@
 // right-click copy/paste (see clipboard-menu.ts)
 .clipboard-menu > .menu-panel {
     pointer-events: auto;
+
+    // two short items: size to the text rather than the main menus' 180px
+    // minimum, and drop the empty shortcut slot
+    & > .menu-row {
+        min-width: 0;
+
+        & > .menu-row-postscript:empty {
+            display: none;
+        }
+    }
 }
 
 // outlines what the open copy/paste menu applies to

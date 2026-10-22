@@ -6,6 +6,7 @@ import { CommandQueue } from './command-queue';
 import { registerDocEvents } from './doc';
 import { EditHistory } from './edit-history';
 import { registerEditorEvents } from './editor';
+import { createEditorAPI, type EditorAPI } from './editor-api';
 import { Events } from './events';
 import { initFileHandler } from './file-handler';
 import { registerIframeApi } from './iframe-api';
@@ -50,6 +51,7 @@ declare global {
             setConsumer: (callback: (launchParams: LaunchParams) => void) => void;
         };
         scene: Scene;
+        editor: EditorAPI;
     }
 }
 
@@ -276,8 +278,12 @@ const main = async () => {
 
     window.scene = scene;
 
+    // the typed command/query surface the UI adapters and scripts share
+    const editor = createEditorAPI(events, scene, editHistory, commandQueue);
+    window.editor = editor;
+
     // register events that need scene or other dependencies
-    registerEditorEvents(events, editHistory, scene);
+    registerEditorEvents(events, editHistory, scene, editor);
     registerSelectionEvents(events, scene);
     registerSequenceEvents(events, scene);
     registerDocEvents(scene, events);

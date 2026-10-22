@@ -1,10 +1,11 @@
 import { Color, Mat4, Quat, Texture, Vec3 } from 'playcanvas';
 
 import type { CameraFrame } from './camera';
-import { createGradeTerms, gradeTerms, type GradeParams } from './color-grade';
+import type { GradeParams } from './color-grade';
 import type { CommandContext } from './command-queue';
 import { EditHistory } from './edit-history';
-import { selectedRanges, EditOp, SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, RemoveInstancesOp, RestoreMissingInstancesOp, MultiOp, AddSplatOp, SetLocalFrameOp, SplatsColorOp } from './edit-ops';
+import { selectedRanges, SelectOp, RemoveInstancesOp, MultiOp, AddSplatOp, SetLocalFrameOp } from './edit-ops';
+import { intersectSelect, PUBLIC_OP, type EditorAPI } from './editor-api';
 import { Element, ElementType } from './element';
 import { Events } from './events';
 import type { GridPlane } from './infinite-grid';
@@ -13,7 +14,7 @@ import { runSelectionGesture } from './selection-gesture';
 import { Splat } from './splat';
 
 // register for editor and scene events
-const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: Scene) => {
+const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: Scene, api: EditorAPI) => {
     const vec = new Vec3();
     const vec2 = new Vec3();
 
@@ -379,32 +380,20 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         return splat?.numSelected > 0;
     });
 
-    // selection ops read the instance flags in their constructors, so they are
-    // built inside their command slot: an op built at click time and applied
-    // after a pending gesture's op would act on the flags of the wrong moment.
-    // the target layers are the intent, read at call time
-    const applyToSelected = (make: (splat: Splat) => EditOp) => {
-        const splats = selectedSplats();
-        return scene.commandQueue.enqueue(async (ctx) => {
-            for (const splat of splats) {
-                // the splat may have been deleted while the task was queued
-                if (!splat.scene) continue;
-                await ctx.apply(make(splat));
-            }
-        });
+    // the UI entry points adapt to the editor API, which owns the commands:
+    // same ops, same command-slot discipline. As before, they do nothing
+    // without an active visible layer (the API would reject instead)
+    const withActive = (command: () => Promise<void>) => {
+        if (selectedSplats().length > 0) {
+            command();
+        }
     };
 
-    events.on('select.all', () => {
-        applyToSelected(splat => new SelectAllOp(splat));
-    });
+    events.on('select.all', () => withActive(() => api.selection.all()));
 
-    events.on('select.none', () => {
-        applyToSelected(splat => new SelectNoneOp(splat));
-    });
+    events.on('select.none', () => withActive(() => api.selection.none()));
 
-    events.on('select.invert', () => {
-        applyToSelected(splat => new SelectInvertOp(splat));
-    });
+    events.on('select.invert', () => withActive(() => api.selection.invert()));
 
     // fire-and-forget mask application. SelectOp consumes the mask in its
     // constructor, which runs here, synchronously, so a pooled mask can be
@@ -432,21 +421,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // drag + undo, drag-while-camera-settling, etc) and the op lands in that
     // slot rather than behind whatever was queued during the readback. the
     // in-slot functions take the slot's context and never enqueue: the gesture
-    // that owns the slot (runSelectionGesture) calls them directly
-    const selectIntersect = async (ctx: CommandContext, splat: Splat, op: 'add'|'remove'|'set'|'intersect', options: any, frame?: CameraFrame) => {
-        // the splat may have been deleted while the task was queued
-        if (!splat.scene) return;
-        const data = await scene.dataProcessor.intersect(options, splat, frame);
-        // SelectOp consumes `data` synchronously in its constructor
-        // (IndexRanges.fromPredicate iterates immediately), so the buffer goes
-        // back to the pool as soon as the op is constructed
-        let selectOp: SelectOp;
-        try {
-            selectOp = new SelectOp(splat, op, data);
-        } finally {
-            scene.dataProcessor.releaseMask(data);
-        }
-        await ctx.apply(selectOp);
+    // that owns the slot (runSelectionGesture) calls them directly. The
+    // implementation is the editor API's
+    const selectIntersect = (ctx: CommandContext, splat: Splat, op: 'add'|'remove'|'set'|'intersect', options: any, frame?: CameraFrame) => {
+        return intersectSelect(scene, ctx, splat, op, options, frame);
     };
 
     // which machinery a screen-space select gesture runs on: depth on -> the
@@ -591,29 +569,14 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         return packRegion(py0, py1, rows);
     };
 
-    // world-space volume selection: the tools pass a clone of their shape
-    // transform, so the queued work never sees the gizmo move. transform maps
-    // the unit sphere (diameter 1) / unit cube (side 1) to world space
-    const selectByVolume = (shape: 'sphere' | 'box', op: 'add'|'remove'|'set'|'intersect', transform: Mat4) => {
-        return runSelectionGesture(scene.commandQueue, {
-            snapshot: () => ({
-                footprint: events.invoke('selection.footprint') as number,
-                splats: selectedSplats()
-            }),
-            run: async ({ footprint, splats }, ctx) => {
-                for (const splat of splats) {
-                    await selectIntersect(ctx, splat, op, { [shape]: { transform, footprint } });
-                }
-            }
-        });
-    };
-
+    // world-space volume selection. transform maps the unit sphere (diameter 1)
+    // / unit cube (side 1) to world space
     events.on('select.bySphere', (op: 'add'|'remove'|'set'|'intersect', transform: Mat4) => {
-        selectByVolume('sphere', op, transform);
+        withActive(() => api.selection.byVolume('sphere', transform, PUBLIC_OP[op]));
     });
 
     events.on('select.byBox', (op: 'add'|'remove'|'set'|'intersect', transform: Mat4) => {
-        selectByVolume('box', op, transform);
+        withActive(() => api.selection.byVolume('box', transform, PUBLIC_OP[op]));
     });
 
     // the screen-space gestures snapshot their inputs at invocation - the
@@ -885,20 +848,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         });
     });
 
-    events.on('select.hide', () => {
-        applyToSelected(splat => new HideSelectionOp(splat));
-    });
+    events.on('select.hide', () => withActive(() => api.selection.hide()));
 
     events.on('select.unhide', () => {
-        scene.commandQueue.enqueue(async (ctx) => {
-            const ops = (scene.getElementsByType(ElementType.splat) as Splat[])
-            .map(splat => new UnhideAllOp(splat))
-            .filter(op => !op.ranges.empty);
-
-            if (ops.length > 0) {
-                await ctx.apply(ops.length === 1 ? ops[0] : new MultiOp(ops));
-            }
-        });
+        api.selection.unhide();
     });
 
     events.on('select.delete', () => {
@@ -910,7 +863,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         if (events.invoke('polygonSelection.removeLastPoint')) {
             return;
         }
-        applyToSelected(splat => new RemoveInstancesOp(splat));
+        withActive(() => api.selection.delete());
     });
 
     // Duplicate and separate both create a new layer holding the selected
@@ -958,26 +911,12 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // bake the panel's pending grade into the selected gaussians. `params` are the
     // seven authored values; the op composes them onto whatever grade the targets
     // already carry, so applying twice is the same as applying the composition.
-    events.on('edit.applyColor', (params: GradeParams) => {
-        const splat = events.invoke('selection') as Splat;
-        if (splat) {
-            editHistory.add(new SplatsColorOp({ splat, grade: gradeTerms(params, createGradeTerms()) }));
-        }
-    });
+    events.on('edit.applyColor', (params: GradeParams) => withActive(() => api.color.apply(params)));
 
     // clear the grade on the selected gaussians
-    events.on('edit.resetColor', () => {
-        const splat = events.invoke('selection') as Splat;
-        if (splat) {
-            editHistory.add(new SplatsColorOp({ splat, grade: null }));
-        }
-    });
+    events.on('edit.resetColor', () => withActive(() => api.color.reset()));
 
-    events.on('scene.reset', () => {
-        selectedSplats().forEach((splat) => {
-            editHistory.add(new RestoreMissingInstancesOp(splat));
-        });
-    });
+    events.on('scene.reset', () => withActive(() => api.selection.restoreDeleted()));
 
     // display
 

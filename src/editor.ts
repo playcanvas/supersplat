@@ -1,8 +1,9 @@
 import { Color, Mat4, Quat, Texture, Vec3 } from 'playcanvas';
 
 import { createGradeTerms, gradeTerms, type GradeParams } from './color-grade';
+import type { CommandContext } from './command-queue';
 import { EditHistory } from './edit-history';
-import { selectedRanges, SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, RemoveInstancesOp, RestoreMissingInstancesOp, MultiOp, AddSplatOp, SetLocalFrameOp, SplatsColorOp } from './edit-ops';
+import { selectedRanges, EditOp, SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, RemoveInstancesOp, RestoreMissingInstancesOp, MultiOp, AddSplatOp, SetLocalFrameOp, SplatsColorOp } from './edit-ops';
 import { Element, ElementType } from './element';
 import { Events } from './events';
 import type { GridPlane } from './infinite-grid';
@@ -376,44 +377,87 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         return splat?.numSelected > 0;
     });
 
-    events.on('select.all', () => {
-        selectedSplats().forEach((splat) => {
-            events.fire('edit.add', new SelectAllOp(splat));
+    // selection ops read the instance flags in their constructors, so they are
+    // built inside their command slot: an op built at click time and applied
+    // after a pending gesture's op would act on the flags of the wrong moment.
+    // the target layers are the intent, read at call time
+    const applyToSelected = (make: (splat: Splat) => EditOp) => {
+        const splats = selectedSplats();
+        return scene.commandQueue.enqueue(async (ctx) => {
+            for (const splat of splats) {
+                // the splat may have been deleted while the task was queued
+                if (!splat.scene) continue;
+                await ctx.apply(make(splat));
+            }
         });
+    };
+
+    // same, for one op on one splat
+    const applyOp = (splat: Splat, make: () => EditOp) => {
+        return scene.commandQueue.enqueue(async (ctx) => {
+            if (!splat.scene) return;
+            await ctx.apply(make());
+        });
+    };
+
+    events.on('select.all', () => {
+        applyToSelected(splat => new SelectAllOp(splat));
     });
 
     events.on('select.none', () => {
-        selectedSplats().forEach((splat) => {
-            events.fire('edit.add', new SelectNoneOp(splat));
-        });
+        applyToSelected(splat => new SelectNoneOp(splat));
     });
 
     events.on('select.invert', () => {
-        selectedSplats().forEach((splat) => {
-            events.fire('edit.add', new SelectInvertOp(splat));
-        });
+        applyToSelected(splat => new SelectInvertOp(splat));
     });
 
+    // fire-and-forget mask application. SelectOp consumes the mask in its
+    // constructor, which runs here, synchronously, so a pooled mask can be
+    // released as soon as this returns. callers already running in a command
+    // slot should use select.applyMask so the op is built and applied in that
+    // slot rather than queued behind it
     events.on('select.mask', (op: 'add'|'remove'|'set'|'intersect', mask: Uint8Array | Uint32Array) => {
         selectedSplats().forEach((splat) => {
             events.fire('edit.add', new SelectOp(splat, op, mask));
         });
     });
 
-    // run the GPU intersect + the resulting SelectOp inside one queued task so the
-    // gpu readback is ordered relative to other queued history ops (rapid drag +
-    // undo, drag-while-camera-settling, etc).
-    const runSelectIntersect = (splat: Splat, op: 'add'|'remove'|'set'|'intersect', options: any) => {
-        return scene.commandQueue.enqueue(async () => {
-            // the splat may have been deleted while the task was queued
-            if (!splat.scene) return;
-            const data = await scene.dataProcessor.intersect(options, splat);
-            // SelectOp consumes `data` synchronously in its constructor
-            // (IndexRanges.fromPredicate iterates immediately), so we can
-            // return the buffer to the pool as soon as the op is constructed.
-            events.fire('edit.add', new SelectOp(splat, op, data));
+    // in-slot mask application: builds the SelectOp from the flags as they are
+    // in the slot and applies it before resolving. the caller releases the
+    // mask after this resolves
+    events.function('select.applyMask', async (ctx: CommandContext, op: 'add'|'remove'|'set'|'intersect', mask: Uint8Array | Uint32Array) => {
+        for (const splat of selectedSplats()) {
+            if (!splat.scene) continue;
+            await ctx.apply(new SelectOp(splat, op, mask));
+        }
+    });
+
+    // the GPU intersect and the resulting SelectOp run inside one command slot
+    // so the readback is ordered relative to other queued history ops (rapid
+    // drag + undo, drag-while-camera-settling, etc) and the op lands in that
+    // slot rather than behind whatever was queued during the readback. the
+    // in-slot functions take the slot's context and never enqueue, so a
+    // gesture that already owns a slot calls them directly; the run* wrappers
+    // are the queue entries for callers that don't
+    const selectIntersect = async (ctx: CommandContext, splat: Splat, op: 'add'|'remove'|'set'|'intersect', options: any) => {
+        // the splat may have been deleted while the task was queued
+        if (!splat.scene) return;
+        const data = await scene.dataProcessor.intersect(options, splat);
+        // SelectOp consumes `data` synchronously in its constructor
+        // (IndexRanges.fromPredicate iterates immediately), so the buffer goes
+        // back to the pool as soon as the op is constructed
+        let selectOp: SelectOp;
+        try {
+            selectOp = new SelectOp(splat, op, data);
+        } finally {
             scene.dataProcessor.releaseMask(data);
-        });
+        }
+        await ctx.apply(selectOp);
+    };
+
+    const runSelectIntersect = (splat: Splat, op: 'add'|'remove'|'set'|'intersect', options: any) => {
+        return scene.commandQueue.enqueue(ctx => selectIntersect(ctx, splat, op, options));
     };
 
     // which machinery a screen-space select gesture runs on: depth on -> the
@@ -432,32 +476,41 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // footprint is passed in rather than read here: the task runs from the
     // queue after the gesture, and toggling the footprint in between must not
     // change an already-finished stroke's semantics
+    const footprintSelect = async (ctx: CommandContext, splat: Splat, op: 'add'|'remove'|'set'|'intersect', region: SelectRegion, footprint: number) => {
+        if (!splat.scene) return;
+        const data = await scene.projectedSplatRenderer.footprintIntersect(splat, region, footprint);
+        if (data) {
+            await ctx.apply(new SelectOp(splat, op, data));
+        }
+    };
+
     const runFootprintSelect = (splat: Splat, op: 'add'|'remove'|'set'|'intersect', region: SelectRegion, footprint: number) => {
-        return scene.commandQueue.enqueue(async () => {
-            if (!splat.scene) return;
-            const data = await scene.projectedSplatRenderer.footprintIntersect(splat, region, footprint);
-            if (data) {
-                events.fire('edit.add', new SelectOp(splat, op, data));
-            }
-        });
+        return scene.commandQueue.enqueue(ctx => footprintSelect(ctx, splat, op, region, footprint));
     };
 
     // centers + depth: exactly the surface (rings) pick - the splats visible
     // in the region, rendered at full footprint with the same op filtering so
     // peeling works identically - narrowed to those whose center lies in the
     // region. The centers test reuses the through-mode intersect compute
-    const runVisibleCentersSelect = (splat: Splat, op: 'add'|'remove'|'set'|'intersect', visible: Set<number>, options: any) => {
-        return scene.commandQueue.enqueue(async () => {
-            if (!splat.scene) return;
-            const data = await scene.dataProcessor.intersect(options, splat);
+    const visibleCentersSelect = async (ctx: CommandContext, splat: Splat, op: 'add'|'remove'|'set'|'intersect', visible: Set<number>, options: any) => {
+        if (!splat.scene) return;
+        const data = await scene.dataProcessor.intersect(options, splat);
+        let selectOp: SelectOp;
+        try {
             for (let i = 0; i < splat.instances.count; i++) {
                 if (data[i] && !visible.has(i)) {
                     data[i] = 0;
                 }
             }
-            events.fire('edit.add', new SelectOp(splat, op, data));
+            selectOp = new SelectOp(splat, op, data);
+        } finally {
             scene.dataProcessor.releaseMask(data);
-        });
+        }
+        await ctx.apply(selectOp);
+    };
+
+    const runVisibleCentersSelect = (splat: Splat, op: 'add'|'remove'|'set'|'intersect', visible: Set<number>, options: any) => {
+        return scene.commandQueue.enqueue(ctx => visibleCentersSelect(ctx, splat, op, visible, options));
     };
 
     // per-row x-interval tables in render-target pixels for the footprint
@@ -601,7 +654,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     });
                 } else {
                     const sortedIds = new Uint32Array(new Set(pick)).sort();
-                    events.fire('edit.add', new SelectOp(splat, op, sortedIds));
+                    await applyOp(splat, () => new SelectOp(splat, op, sortedIds));
                 }
             }
         }
@@ -696,7 +749,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                         await runVisibleCentersSelect(splat, op, selected, { mask: maskTexture });
                     } else {
                         const sortedIds = new Uint32Array(selected).sort();
-                        events.fire('edit.add', new SelectOp(splat, op, sortedIds));
+                        await applyOp(splat, () => new SelectOp(splat, op, sortedIds));
                     }
                 }
             }
@@ -736,10 +789,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         // one queued operation reserves the stroke's place in history now and
         // runs the depth picking and the intersect against the same scene
         // state; enqueueing only after the readbacks would let a queued
-        // delete/undo apply in between. The intersect is inlined rather than
-        // going through runSelectIntersect because nesting enqueues deadlocks.
+        // delete/undo apply in between. The intersect goes through the in-slot
+        // selectIntersect: runSelectIntersect would enqueue behind this task
+        // and deadlock.
         try {
-            await scene.commandQueue.enqueue(async () => {
+            await scene.commandQueue.enqueue(async (ctx) => {
                 const hits = await scene.camera.intersectMany(points, splats, pose);
                 const path: number[] = [];
                 let previous: { position: Vec3, radius: number } | null = null;
@@ -759,12 +813,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
                 const pathPoints = new Float32Array(path);
                 for (const splat of splats) {
-                    const data = await scene.dataProcessor.intersect({
+                    await selectIntersect(ctx, splat, op, {
                         sphereBrush: { points: pathPoints, mask, footprint, projection, view }
-                    }, splat);
-                    // SelectOp consumes `data` synchronously in its constructor
-                    events.fire('edit.add', new SelectOp(splat, op, data));
-                    scene.dataProcessor.releaseMask(data);
+                    });
                 }
             });
         } finally {
@@ -805,7 +856,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     1 / height
                 );
                 const pickId = pickResult[0];
-                events.fire('edit.add', new SelectOp(splat, op, new Uint32Array([pickId])));
+                await applyOp(splat, () => new SelectOp(splat, op, new Uint32Array([pickId])));
             }
         }
     });
@@ -844,31 +895,37 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             if (pickId < 0 || pickId >= splat.instances.count) {
                 continue;
             }
-            await scene.commandQueue.enqueue(async () => {
+            await scene.commandQueue.enqueue(async (ctx) => {
+                if (!splat.scene) return;
                 const mask = await scene.dataProcessor.colorMatch(splat, pickId, colorThreshold, {
                     entityMatrix: splat.entity.getWorldTransform(),
                     cameraPos: scene.camera.position
                 });
-                events.fire('edit.add', new SelectOp(splat, op, mask));
-                scene.dataProcessor.releaseMask(mask);
+                let selectOp: SelectOp;
+                try {
+                    selectOp = new SelectOp(splat, op, mask);
+                } finally {
+                    scene.dataProcessor.releaseMask(mask);
+                }
+                await ctx.apply(selectOp);
             });
         }
     });
 
     events.on('select.hide', () => {
-        selectedSplats().forEach((splat) => {
-            events.fire('edit.add', new HideSelectionOp(splat));
-        });
+        applyToSelected(splat => new HideSelectionOp(splat));
     });
 
     events.on('select.unhide', () => {
-        const ops = (scene.getElementsByType(ElementType.splat) as Splat[])
-        .map(splat => new UnhideAllOp(splat))
-        .filter(op => !op.ranges.empty);
+        scene.commandQueue.enqueue(async (ctx) => {
+            const ops = (scene.getElementsByType(ElementType.splat) as Splat[])
+            .map(splat => new UnhideAllOp(splat))
+            .filter(op => !op.ranges.empty);
 
-        if (ops.length > 0) {
-            events.fire('edit.add', ops.length === 1 ? ops[0] : new MultiOp(ops));
-        }
+            if (ops.length > 0) {
+                await ctx.apply(ops.length === 1 ? ops[0] : new MultiOp(ops));
+            }
+        });
     });
 
     events.on('select.delete', () => {
@@ -880,9 +937,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         if (events.invoke('polygonSelection.removeLastPoint')) {
             return;
         }
-        selectedSplats().forEach((splat) => {
-            editHistory.add(new RemoveInstancesOp(splat));
-        });
+        applyToSelected(splat => new RemoveInstancesOp(splat));
     });
 
     // Duplicate and separate both create a new layer holding the selected
@@ -896,21 +951,26 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             return;
         }
 
-        const ranges = selectedRanges(splat);
-        if (ranges.count === 0) {
-            return;
-        }
+        // the selection is read in the slot, after any pending gesture's op
+        return scene.commandQueue.enqueue(async (ctx) => {
+            if (!splat.scene) return;
 
-        const copy = splat.createLayer(ranges, splat.name);
+            const ranges = selectedRanges(splat);
+            if (ranges.count === 0) {
+                return;
+            }
 
-        if (func === 'separate') {
-            editHistory.add(new MultiOp([
-                new RemoveInstancesOp(splat),
-                new AddSplatOp(scene, copy)
-            ]));
-        } else {
-            editHistory.add(new AddSplatOp(scene, copy));
-        }
+            const copy = splat.createLayer(ranges, splat.name);
+
+            if (func === 'separate') {
+                await ctx.apply(new MultiOp([
+                    new RemoveInstancesOp(splat),
+                    new AddSplatOp(scene, copy)
+                ]));
+            } else {
+                await ctx.apply(new AddSplatOp(scene, copy));
+            }
+        });
     };
 
     // duplicate the current selection

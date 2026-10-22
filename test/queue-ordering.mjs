@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 import { CommandQueue } from './.build/src/command-queue.js';
 import { EditHistory } from './.build/src/edit-history.js';
 import { Events } from './.build/src/events.js';
+import { runSelectionGesture } from './.build/src/selection-gesture.js';
 
 const barrier = () => {
     let release;
@@ -190,6 +191,64 @@ const checks = {
         const nested = queue.enqueue(() => queue.enqueue(() => 'inner'));
         const outcome = await Promise.race([nested.then(() => 'resolved'), tick().then(() => 'pending')]);
         assert.equal(outcome, 'pending');
+    },
+
+    // runSelectionGesture: snapshot before any yield, one slot for the whole
+    // gesture, release after run settles
+    async 'a gesture snapshots synchronously and owns one slot until its last op'() {
+        const { queue, history, log } = setup();
+        const readback = barrier();
+        const gesture = runSelectionGesture(queue, {
+            snapshot: () => {
+                log.push('snapshot');
+                return { targets: ['A', 'B'] };
+            },
+            run: async ({ targets }, ctx) => {
+                for (const name of targets) {
+                    // one GPU readback per target
+                    await readback.promise;
+                    await ctx.apply(makeOp(log, name));
+                }
+            },
+            release: () => log.push('release')
+        });
+        // the snapshot ran before runSelectionGesture returned
+        assert.deepEqual(log, ['snapshot']);
+        // queued after the gesture was invoked: must wait for both targets
+        const undo = history.undo();
+        readback.release();
+        await Promise.all([gesture, undo]);
+        assert.deepEqual(log, ['snapshot', 'do:A', 'do:B', 'release', 'undo:B']);
+        assert.equal(history.cursor, 1);
+    },
+
+    async 'a failing gesture releases its snapshot, rejects its caller and leaves the queue usable'() {
+        await quietly(async () => {
+            const { queue, log } = setup();
+            const gesture = runSelectionGesture(queue, {
+                snapshot: () => 'texture',
+                run: async () => {
+                    throw new Error('readback failed');
+                },
+                release: snapshot => log.push(`release:${snapshot}`)
+            });
+            await assert.rejects(gesture, /readback failed/);
+            assert.deepEqual(log, ['release:texture']);
+            assert.equal(await queue.enqueue(() => 'next'), 'next');
+        });
+    },
+
+    async 'a snapshot that throws reserves no slot and releases nothing'() {
+        const { queue, log } = setup();
+        assert.throws(() => runSelectionGesture(queue, {
+            snapshot: () => {
+                throw new Error('no canvas');
+            },
+            run: async () => log.push('run'),
+            release: () => log.push('release')
+        }), /no canvas/);
+        await queue.enqueue(() => log.push('next'));
+        assert.deepEqual(log, ['next']);
     }
 };
 

@@ -17,6 +17,7 @@ import { ColorMatch } from './color-match';
 import { Intersect, IntersectOptions } from './intersect';
 import { SelectByRange, SelectByRangeOptions } from './select-by-range';
 import { SplatValueOptions } from './splat-value-compute';
+import type { CameraFrame } from '../camera';
 import { fragmentShader as blitFragmentShader, vertexShader as blitVertexShader } from '../shaders/blit-shader';
 import { Splat } from '../splat';
 
@@ -65,10 +66,11 @@ class DataProcessor {
         this.selectByRangeImpl = new SelectByRange(device);
     }
 
-    // calculate the intersection of a mask canvas with splat centers.
+    // calculate the intersection of a mask canvas with splat centers. frame is
+    // the gesture-time camera for the screen-space modes (see Intersect.run).
     // returns an owned mask buffer the caller must release via releaseMask().
-    intersect(options: IntersectOptions, splat: Splat) {
-        return this.intersectImpl.run(options, splat, this.bufferPool);
+    intersect(options: IntersectOptions, splat: Splat, frame?: CameraFrame) {
+        return this.intersectImpl.run(options, splat, this.bufferPool, frame);
     }
 
     // use gpu to calculate both selected and visible bounds in a single pass

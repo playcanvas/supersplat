@@ -15,6 +15,18 @@ import { Scene } from './scene';
 import { Splat } from './splat';
 
 const idClearColor = new Color(1, 1, 1, 1);
+
+// result of an id readback: ids row-major over the pixel rectangle read
+// (x, y, width, height in render-target pixels) and the target's size then
+type IdPick = {
+    ids: number[],
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    targetWidth: number,
+    targetHeight: number
+};
 const depthClearColor = new Color(0, 0, 0, 1);
 
 // Shared buffer for half-to-float conversion
@@ -89,8 +101,9 @@ class Picker {
         this.idRenderTarget = idRT;
     }
 
-    // Prepare for ID picking by rendering the specified splat
-    prepareId(splat: Splat, mode: 'add' | 'remove' | 'set' | 'intersect') {
+    // Prepare for ID picking by rendering the specified splat. footprint is the
+    // gesture's selection footprint, passed in rather than read live
+    prepareId(splat: Splat, mode: 'add' | 'remove' | 'set' | 'intersect', footprint: number) {
         if (!this.idRenderTarget) {
             return;
         }
@@ -116,7 +129,7 @@ class Picker {
         // Set picker uniforms
         this.device.scope.resolve('pickOp').setValue(pickOpIndex);
         this.device.scope.resolve('pickMode').setValue(0);
-        this.scene.projectedSplatRenderer.preparePick(splat, pickOpIndex, false);
+        this.scene.projectedSplatRenderer.preparePick(splat, pickOpIndex, false, footprint);
 
         // Render ID picking pass
         const emptyMap = new Map();
@@ -140,14 +153,18 @@ class Picker {
         }
         // For single pixel read, use a minimal normalized size
         const rt = this.idRenderTarget;
-        const ids = await this.readIds(x, y, 1 / rt.width, 1 / rt.height);
+        const { ids } = await this.readIds(x, y, 1 / rt.width, 1 / rt.height);
         return ids[0];
     }
 
-    // Read rectangle of splat IDs using normalized coordinates (0-1 range) (after prepareId)
-    async readIds(x: number, y: number, width: number, height: number): Promise<number[]> {
+    // Read rectangle of splat IDs using normalized coordinates (0-1 range) (after
+    // prepareId). The ids are row-major over the pixel rectangle actually read:
+    // the request rounded outward to whole pixels of the render target at its
+    // current size. Callers that index the ids as a grid must map pixels through
+    // the returned rectangle and target size, not a size captured earlier
+    async readIds(x: number, y: number, width: number, height: number): Promise<IdPick> {
         if (!this.idRenderTarget) {
-            return [];
+            return { ids: [], x: 0, y: 0, width: 0, height: 0, targetWidth: 0, targetHeight: 0 };
         }
 
         const rt = this.idRenderTarget;
@@ -184,7 +201,7 @@ class Picker {
             }
         }
 
-        return result;
+        return { ids: result, x: px, y: py, width: pw, height: ph, targetWidth: rt.width, targetHeight: rt.height };
     }
 
     // Prepare for depth picking by rendering the specified splat
@@ -206,7 +223,7 @@ class Picker {
         // Set depth estimation mode uniform
         this.device.scope.resolve('pickOp').setValue(2); // 'set' mode - don't skip any visible splats
         this.device.scope.resolve('pickMode').setValue(1);
-        scene.projectedSplatRenderer.preparePick(splat, 2, true);
+        scene.projectedSplatRenderer.preparePick(splat, 2, true, 1);
 
         // Render scene with depth pass
         this.renderPass.blendState = this.depthBlendState;

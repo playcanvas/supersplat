@@ -119,7 +119,7 @@ class CalcBound {
         this.compute = new Compute(device, shader, 'CalcBoundCompute');
     }
 
-    async run(splat: Splat, selectionBound: BoundingBox, localBound: BoundingBox): Promise<void> {
+    async run(splat: Splat, selectionBound: BoundingBox, localBound: BoundingBox, flags?: StorageBuffer): Promise<void> {
         const transformA = splat.resource.getTexture('transformA');
         // 4 vec4 partials per thread, and the thread count is fixed
         const byteSize = NUM_THREADS * 4 * 16;
@@ -129,7 +129,7 @@ class CalcBound {
         }
         this.compute.setParameter('bounds', this.output);
         this.compute.setParameter('instanceSource', splat.instances.instanceSource);
-        this.compute.setParameter('instanceFlags', splat.instances.instanceFlags);
+        this.compute.setParameter('instanceFlags', flags ?? splat.instances.instanceFlags);
         this.compute.setParameter('instancePalette', splat.instances.instancePalette);
         this.compute.setParameter('transformA', transformA);
         this.compute.setParameter('transformPalette', splat.transformPalette.texture);

@@ -24,15 +24,15 @@ class AssetLoader {
         return asset;
     }
 
-    async load(filename: string, fileSystem: ReadFileSystem, animationFrame?: boolean, skipReorder?: boolean) {
-        const loaded = await this.loadAsset(filename, fileSystem, animationFrame, skipReorder);
+    async load(filename: string, fileSystem: ReadFileSystem, animationFrame?: boolean, skipReorder?: boolean, options?: { lod?: number }) {
+        const loaded = await this.loadAsset(filename, fileSystem, animationFrame, skipReorder, options);
         return loaded && new Splat(loaded.asset, loaded.rotation);
     }
 
     // Load the static tier only, without a layer over it. A .ssproj can have
     // several layers sharing one resource, so the document loader creates the
     // asset once here and then builds each layer's own instance list.
-    async loadAsset(filename: string, fileSystem: ReadFileSystem, animationFrame?: boolean, skipReorder?: boolean) {
+    async loadAsset(filename: string, fileSystem: ReadFileSystem, animationFrame?: boolean, skipReorder?: boolean, options?: { lod?: number }) {
         // Animation frames load silently; everything else shows the progress
         // dialog: bytes read while the file is streamed in (when the file
         // system can count them), then the synchronous sort and GPU upload
@@ -89,7 +89,12 @@ class AssetLoader {
             };
 
             // Skip reordering for animation frames (speed) or when explicitly requested (already ordered)
-            const result = await loadSplatSource(filename, fileSystem, skipReorder || animationFrame, animationFrame ? undefined : pickLod);
+            const chooseLod = options ? (counts: readonly number[]) => {
+                const lod = options.lod ?? defaultLodIndex(counts);
+                if (!Number.isInteger(lod) || lod < 0 || lod >= counts.length) throw new Error('Requested LOD is unavailable');
+                return Promise.resolve(lod);
+            } : pickLod;
+            const result = await loadSplatSource(filename, fileSystem, skipReorder || animationFrame, animationFrame ? undefined : chooseLod);
             if (!result) {
                 // user cancelled LOD selection
                 return null;

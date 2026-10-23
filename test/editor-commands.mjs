@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 
-import { NullGraphicsDevice, PIXELFORMAT_RGBA8, PIXELFORMAT_RGBA16F, RenderTarget, Texture } from 'playcanvas';
+import { BoundingBox, Entity, Mat4, NullGraphicsDevice, PIXELFORMAT_RGBA8, PIXELFORMAT_RGBA16F, RenderTarget, Texture } from 'playcanvas';
 
 import { Camera } from './.build/src/camera.js';
 import { CommandQueue } from './.build/src/command-queue.js';
@@ -25,7 +25,8 @@ const setup = () => {
     for (let uid = 0; uid < 2; uid++) {
         layers.push({
             uid, scene, visible: true, name: `layer-${uid}`,
-            resource: { numRows: 3 },
+            resource: { numRows: 3, shBands: 0 },
+            entity: new Entity(), worldBound: new BoundingBox(), selectionBound: new BoundingBox(), worldTransform: new Mat4(),
             instances: new GaussianInstances(device, 3),
             async updateState() {
                 this.instances.flush();
@@ -35,7 +36,7 @@ const setup = () => {
     }
     events.function('selection', () => layers[0]);
     const api = createEditorAPI(events, scene, history, queue);
-    return { api, layers };
+    return { api, layers, scene, queue, history, events };
 };
 
 const checks = {
@@ -167,4 +168,4 @@ const checks = {
     }
 };
 
-export { checks as editorCommandChecks };
+export { checks as editorCommandChecks, setup };

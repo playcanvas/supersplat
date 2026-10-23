@@ -178,6 +178,7 @@ class CountingReadStream extends ReadStream {
 class MappedReadFileSystem implements LoadProgressFileSystem {
     private blobFs: BlobReadFileSystem;
     private urlFs: UrlReadFileSystem;
+    private urls = new Map<string, string>();
 
     onProgress: LoadProgressCallback | null = null;
 
@@ -209,6 +210,11 @@ class MappedReadFileSystem implements LoadProgressFileSystem {
         this.blobFs.set(name, blob, handle);
     }
 
+    // Preserve a format-bearing filename for signed or extensionless URLs.
+    addUrl(name: string, url: string): void {
+        this.urls.set(name, url);
+    }
+
     // the sources handed out over local files
     get sources(): BlobReadSource[] {
         return this.blobFs.sources;
@@ -228,7 +234,7 @@ class MappedReadFileSystem implements LoadProgressFileSystem {
         // source only reports a zero-byte start here and is counted per read.
         let creating = true;
         let downloaded = false;
-        const source = await this.urlFs.createSource(filename, (loaded, total) => {
+        const source = await this.urlFs.createSource(this.urls.get(filename) ?? filename, (loaded, total) => {
             if (!creating) return;
             if (loaded > 0) downloaded = true;
             this.onProgress?.(loaded, total, filename);

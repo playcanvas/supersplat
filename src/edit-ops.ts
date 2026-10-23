@@ -357,10 +357,12 @@ class SplatsColorOp {
     // the block undo freed.
     private oldIndices: number[];
     private paletteMap: Map<number, number>;
+    private scope: 'selection' | 'layer';
 
-    constructor(options: { splat: Splat, grade: GradeTerms | null }) {
+    constructor(options: { splat: Splat, grade: GradeTerms | null, scope?: 'selection' | 'layer' }) {
         this.splat = options.splat;
         this.grade = options.grade;
+        this.scope = options.scope ?? (options.splat.instances.numSelected === 0 ? 'layer' : 'selection');
 
         const seen = new Set<number>();
         this.forEachTarget(i => seen.add(options.splat.instances.colorIndex(i)));
@@ -375,7 +377,7 @@ class SplatsColorOp {
     private forEachTarget(fn: (i: number) => void) {
         const { instances } = this.splat;
         const { flags } = instances;
-        const all = instances.numSelected === 0;
+        const all = this.scope === 'layer';
         for (let i = 0; i < instances.count; ++i) {
             const f = flags[i];
             if ((f & State.locked) === 0 && (all || (f & State.selected) !== 0)) {

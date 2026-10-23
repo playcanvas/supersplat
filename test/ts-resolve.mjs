@@ -11,6 +11,9 @@ export async function resolve(specifier, context, nextResolve) {
         const candidate = new URL(`${specifier}.js`, context.parentURL);
         if (existsSync(fileURLToPath(candidate))) {
             specifier = candidate.href;
+        } else {
+            const index = new URL(`${specifier}/index.js`, context.parentURL);
+            if (existsSync(fileURLToPath(index))) specifier = index.href;
         }
     }
     const result = await nextResolve(specifier, context);

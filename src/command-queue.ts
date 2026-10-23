@@ -1,4 +1,5 @@
 import type { EditOp } from './edit-ops';
+import { EditorError } from './editor-command';
 
 // the handle a queued task receives. It is the proof that the caller is
 // running inside its slot: history application through it happens in that
@@ -48,8 +49,12 @@ class CommandQueue {
         });
         // swallow errors on the chain itself so a failed task doesn't poison
         // subsequent ones. the caller still sees the rejection on its own promise.
+        // an EditorError is a typed outcome (empty selection, removed layer,
+        // cancellation) the caller handles, so only unexpected failures are logged
         this.tail = next.then(() => {}, (err) => {
-            console.error('CommandQueue task failed', err);
+            if (!(err instanceof EditorError)) {
+                console.error('CommandQueue task failed', err);
+            }
         });
         return next;
     }

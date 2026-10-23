@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 
-import { BoundingBox, Entity, Mat4, NullGraphicsDevice, PIXELFORMAT_RGBA8, PIXELFORMAT_RGBA16F, RenderTarget, Texture } from 'playcanvas';
+import { BoundingBox, Entity, Mat4, NullGraphicsDevice, PIXELFORMAT_RGBA8, PIXELFORMAT_RGBA16F, RenderTarget, Texture, Vec3 } from 'playcanvas';
 
 import { Camera } from './.build/src/camera.js';
 import { CommandQueue } from './.build/src/command-queue.js';
@@ -111,6 +111,30 @@ const checks = {
             notices.length = 0;
             await api.history.undo();
             assert.deepEqual(notices, [0, 1]);
+        } finally {
+            layers.forEach(layer => layer.instances.destroy());
+        }
+    },
+
+    // fire-and-forget UI callers only attach .catch, so a command must never
+    // throw at its call site
+    async 'invalid commands reject instead of throwing and leave history unchanged'() {
+        const { api, layers, history } = setup();
+        const grade = { tintClr: { r: 1, g: 1, b: 1 }, temperature: 0, saturation: 1, brightness: 0, blackPoint: 0.5, whitePoint: 0.5, transparency: 1 };
+        const commands = [
+            ['invalid_input', () => api.color.apply(grade, 0)],
+            ['invalid_input', () => api.transform(0, 'layer', { scale: -1 })],
+            ['invalid_input', () => api.viewport.setCamera({ position: new Vec3() })],
+            ['layer_not_found', () => api.selection.all(99)],
+            ['layer_not_found', () => api.layers.rename(99, 'name')],
+            ['cancelled', () => api.selection.delete(0, { signal: AbortSignal.abort() })]
+        ];
+        try {
+            for (const [code, command] of commands) {
+                const pending = command();
+                await assert.rejects(pending, error => error.code === code);
+            }
+            assert.equal(history.history.length, 0);
         } finally {
             layers.forEach(layer => layer.instances.destroy());
         }

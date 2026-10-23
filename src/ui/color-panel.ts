@@ -187,24 +187,44 @@ class ColorPanel extends PanelSection {
             }
         };
 
-        [temperatureSlider, saturationSlider, brightnessSlider, whitePointSlider, transparencySlider].forEach((slider) => {
+        [temperatureSlider, saturationSlider, brightnessSlider, transparencySlider].forEach((slider) => {
             slider.on('change', changed);
         });
         tintPicker.on('change', changed);
 
-        // black and white point can't cross
-        blackPointSlider.on('change', (value: number) => {
-            if (value > whitePointSlider.value) {
-                whitePointSlider.value = value;
-            }
-            changed();
-        });
+        // black and white point can't meet: the grade divides by their
+        // difference, and the editor rejects a range that doesn't increase. The
+        // point that moved wins and pushes the other one a slider step along; at
+        // the end of the range, where the other can't move, it stops a step short
+        const POINT_STEP = 0.01;
 
-        whitePointSlider.on('change', (value: number) => {
-            if (value < blackPointSlider.value) {
-                blackPointSlider.value = value;
+        const separatePoints = (points: { blackPoint: number, whitePoint: number }, moved: 'blackPoint' | 'whitePoint') => {
+            const { blackPoint, whitePoint } = points;
+            if (blackPoint < whitePoint) {
+                return { blackPoint, whitePoint };
             }
-        });
+            if (moved === 'blackPoint') {
+                return blackPoint + POINT_STEP <= 1 ?
+                    { blackPoint, whitePoint: blackPoint + POINT_STEP } :
+                    { blackPoint: 1 - POINT_STEP, whitePoint: 1 };
+            }
+            return whitePoint - POINT_STEP >= 0 ?
+                { blackPoint: whitePoint - POINT_STEP, whitePoint } :
+                { blackPoint: 0, whitePoint: POINT_STEP };
+        };
+
+        // the sliders round to their step and only fire on a real change, so
+        // the nested change this triggers settles at once
+        const keepPointsApart = (moved: 'blackPoint' | 'whitePoint') => {
+            const points = separatePoints({ blackPoint: blackPointSlider.value, whitePoint: whitePointSlider.value }, moved);
+            blackPointSlider.value = points.blackPoint;
+            whitePointSlider.value = points.whitePoint;
+            changed();
+        };
+
+        blackPointSlider.on('change', () => keepPointsApart('blackPoint'));
+
+        whitePointSlider.on('change', () => keepPointsApart('whitePoint'));
 
         apply.on('click', () => {
             if (selected && !isNeutral()) {
@@ -249,14 +269,7 @@ class ColorPanel extends PanelSection {
                 const merged = { ...controlValues(), ...values } as typeof NEUTRAL;
                 // resolve a crossing up front, as the sliders would: the pasted
                 // point wins and pushes the other one along
-                if (merged.blackPoint > merged.whitePoint) {
-                    if ('whitePoint' in values) {
-                        merged.blackPoint = merged.whitePoint;
-                    } else {
-                        merged.whitePoint = merged.blackPoint;
-                    }
-                }
-                setControls(merged);
+                setControls({ ...merged, ...separatePoints(merged, 'whitePoint' in values ? 'whitePoint' : 'blackPoint') });
             },
             enabled: () => !!selected
         };

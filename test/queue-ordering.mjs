@@ -11,6 +11,7 @@ import { CommandQueue } from './.build/src/command-queue.js';
 import { EditHistory } from './.build/src/edit-history.js';
 import { Events } from './.build/src/events.js';
 import { runSelectionGesture } from './.build/src/selection-gesture.js';
+import { editorCommandChecks } from './editor-commands.mjs';
 
 const barrier = () => {
     let release;
@@ -60,6 +61,8 @@ const quietly = async (fn) => {
 };
 
 const checks = {
+    ...editorCommandChecks,
+
     async 'enqueue is strictly FIFO'() {
         const { queue, log } = setup();
         const gate = barrier();

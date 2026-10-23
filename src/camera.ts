@@ -973,7 +973,7 @@ class Camera extends Element {
         const closestDepths = points.map(() => Infinity);
         const closestSplats: (Splat | null)[] = new Array(points.length).fill(null);
 
-        await this.holdFrames(async () => {
+        await this.holdFrames(() => this.picker.withTargetSize('depth', frame.target, async () => {
             // Find the splat with the smallest depth at each screen position.
             // Each depth pass composites through the projected cache front to
             // back, so it needs a sorted order under it, projected under the
@@ -983,7 +983,7 @@ class Camera extends Element {
                 if (!splat.scene) continue;
 
                 this.withFrame(frame, () => {
-                    scene.projectedSplatRenderer.renderSortedForPick();
+                    scene.projectedSplatRenderer.renderSortedForPick(frame.target);
                     this.picker.prepareDepth(splat);
                 });
                 const depths = await this.picker.readDepths(points);
@@ -995,7 +995,7 @@ class Camera extends Element {
                     }
                 }
             }
-        });
+        }));
 
         const { near, far } = frame;
         return points.map((point, index) => {
@@ -1041,10 +1041,10 @@ class Camera extends Element {
         width: number,
         height: number
     ) {
-        return this.holdFrames(() => {
+        return this.holdFrames(() => this.picker.withTargetSize('id', frame.target, () => {
             this.withFrame(frame, () => this.picker.prepareId(splat, mode, footprint));
             return this.picker.readIds(x, y, width, height);
-        });
+        }));
     }
 
     // depth-pick from outside the command queue: captures the live frame now
@@ -1052,7 +1052,9 @@ class Camera extends Element {
     // runs under the camera the caller saw, however long the queue delays it
     intersectMany(points: { x: number, y: number }[], splats?: Splat[]) {
         const frame = this.captureFrame();
-        return this.scene.commandQueue.enqueue(ctx => this.pickDepths(ctx, frame, points, splats));
+        const pickPoints = points.map(({ x, y }) => ({ x, y }));
+        const pickSplats = splats?.slice();
+        return this.scene.commandQueue.enqueue(ctx => this.pickDepths(ctx, frame, pickPoints, pickSplats));
     }
 
     // intersect the scene at the given normalized screen coordinate (0-1 range) using depth picking

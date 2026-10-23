@@ -63,8 +63,8 @@ type ScreenRect = { start: ScreenPoint, end: ScreenPoint };
 // a depth-pick hit: world position, along-view distance and linear depth
 type DepthHit = { layer: LayerId, position: Vec3, distance: number, depth: number };
 
-// selectionChanged: the active layer or the selection flags (session state,
-// undoable but not a document mutation). documentChanged: layers added,
+// selectionChanged: the active layer or effective selection, including changes
+// caused by hiding or deleting instances. documentChanged: layers added,
 // removed, renamed or shown/hidden, instances or colours edited.
 // historyChanged: canUndo/canRedo.
 type ChangeEvent = 'documentChanged' | 'selectionChanged' | 'historyChanged';
@@ -209,8 +209,9 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
     const changed = (event: ChangeEvent, detail: ChangeDetail = {}) => changes.fire(event, detail);
 
     events.on('selection.changed', (splat: Splat | null) => changed('selectionChanged', { layer: splat?.uid }));
+    events.on('splat.stateChanged', (splat: Splat) => changed('selectionChanged', { layer: splat.uid }));
     events.on('edit.apply', (op: EditOp) => {
-        changed(isSelectionOp(op) ? 'selectionChanged' : 'documentChanged', { layer: (op as any).splat?.uid });
+        if (!isSelectionOp(op)) changed('documentChanged', { layer: (op as any).splat?.uid });
     });
     events.on('scene.elementAdded', (element: Element) => {
         if (element.type === ElementType.splat) changed('documentChanged', { layer: element.uid });

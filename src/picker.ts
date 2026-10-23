@@ -1,13 +1,16 @@
 import {
+    ADDRESS_CLAMP_TO_EDGE,
     BLENDEQUATION_ADD,
     BLENDMODE_ONE,
     BLENDMODE_ZERO,
     BLENDMODE_ONE_MINUS_SRC_ALPHA,
     BlendState,
     Color,
+    FILTER_NEAREST,
     GraphicsDevice,
     RenderPassPicker,
-    RenderTarget
+    RenderTarget,
+    Texture
 } from 'playcanvas';
 
 import { ElementType } from './element';
@@ -101,6 +104,40 @@ class Picker {
         this.idRenderTarget = idRT;
     }
 
+    // A queued gesture may outlive a viewport resize. Borrow the camera target
+    // at matching sizes; otherwise keep a private target until readback settles.
+    async withTargetSize<T>(kind: 'id' | 'depth', size: { width: number, height: number }, fn: () => Promise<T>): Promise<T> {
+        const key = kind === 'id' ? 'idRenderTarget' : 'depthRenderTarget';
+        const liveTarget = this[key];
+        if (!liveTarget || (liveTarget.width === size.width && liveTarget.height === size.height)) {
+            return fn();
+        }
+
+        const target = new RenderTarget({
+            colorBuffer: new Texture(this.device, {
+                name: `pick-${kind}`,
+                width: size.width,
+                height: size.height,
+                format: liveTarget.colorBuffer.format,
+                mipmaps: false,
+                minFilter: FILTER_NEAREST,
+                magFilter: FILTER_NEAREST,
+                addressU: ADDRESS_CLAMP_TO_EDGE,
+                addressV: ADDRESS_CLAMP_TO_EDGE
+            }),
+            depth: false,
+            autoResolve: false
+        });
+        this[key] = target;
+        try {
+            return await fn();
+        } finally {
+            this[key] = liveTarget;
+            target.destroyTextureBuffers();
+            target.destroy();
+        }
+    }
+
     // Prepare for ID picking by rendering the specified splat. footprint is the
     // gesture's selection footprint, passed in rather than read live
     prepareId(splat: Splat, mode: 'add' | 'remove' | 'set' | 'intersect', footprint: number) {
@@ -111,7 +148,7 @@ class Picker {
         // the id pass draws the compact list through the sort, so it needs a
         // current sorted projection: a stochastic frame leaves sortedIndices
         // stale (old camera, old survivor set)
-        this.scene.projectedSplatRenderer.renderSortedForPick();
+        this.scene.projectedSplatRenderer.renderSortedForPick(this.idRenderTarget);
 
         const { splatLayer } = this.scene;
 

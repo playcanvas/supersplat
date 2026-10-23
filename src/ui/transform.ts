@@ -1,33 +1,22 @@
-import { Container, ContainerArgs, Label, NumericInput, VectorInput } from '@playcanvas/pcui';
+import { NumericInput, VectorInput } from '@playcanvas/pcui';
 import { Quat, Vec3 } from 'playcanvas';
 
 import { Events } from '../events';
-import { i18n } from './localization';
+import { ClipboardMenu, ClipboardSource, numberField, vectorField } from './clipboard-menu';
+import { PanelSection } from './panel-section';
 import { Pivot } from '../pivot';
 
 const v = new Vec3();
 
-class Transform extends Container {
-    constructor(events: Events, args: ContainerArgs = {}) {
-        args = {
-            ...args,
-            id: 'transform'
-        };
-
-        super(args);
-
-        // position
-        const position = new Container({
-            class: 'transform-row'
+class Transform extends PanelSection {
+    constructor(events: Events, clipboardMenu: ClipboardMenu) {
+        super({
+            id: 'transform',
+            icon: '',
+            localeKey: 'panel.scene.transform'
         });
-
-        const positionLabel = new Label({
-            class: 'transform-label'
-        });
-        i18n.bindText(positionLabel, 'panel.scene.transform.position');
 
         const positionVector = new VectorInput({
-            class: 'transform-expand',
             precision: 3,
             dimensions: 3,
             placeholder: ['X', 'Y', 'Z'],
@@ -35,21 +24,7 @@ class Transform extends Container {
             enabled: false
         });
 
-        position.append(positionLabel);
-        position.append(positionVector);
-
-        // rotation
-        const rotation = new Container({
-            class: 'transform-row'
-        });
-
-        const rotationLabel = new Label({
-            class: 'transform-label'
-        });
-        i18n.bindText(rotationLabel, 'panel.scene.transform.rotation');
-
         const rotationVector = new VectorInput({
-            class: 'transform-expand',
             precision: 2,
             dimensions: 3,
             placeholder: ['X', 'Y', 'Z'],
@@ -57,21 +32,8 @@ class Transform extends Container {
             enabled: false
         });
 
-        rotation.append(rotationLabel);
-        rotation.append(rotationVector);
-
-        // scale
-        const scale = new Container({
-            class: 'transform-row'
-        });
-
-        const scaleLabel = new Label({
-            class: 'transform-label'
-        });
-        i18n.bindText(scaleLabel, 'panel.scene.transform.scale');
-
         const scaleInput = new NumericInput({
-            class: ['transform-expand', 'transform-scale'],
+            class: 'transform-scale',
             precision: 3,
             value: 1,
             min: 0.001,
@@ -79,12 +41,9 @@ class Transform extends Container {
             enabled: false
         });
 
-        scale.append(scaleLabel);
-        scale.append(scaleInput);
-
-        this.append(position);
-        this.append(rotation);
-        this.append(scale);
+        const positionRow = this.addRow('panel.scene.transform.position', positionVector);
+        const rotationRow = this.addRow('panel.scene.transform.rotation', rotationVector);
+        const scaleRow = this.addRow('panel.scene.transform.scale', scaleInput);
 
         const toArray = (v: Vec3) => {
             return [v.x, v.y, v.z];
@@ -106,18 +65,20 @@ class Transform extends Container {
             uiUpdating = false;
         };
 
-        // update pivot with UI
-        const updatePivot = (pivot: Pivot) => {
-            const p = positionVector.value;
-            const r = rotationVector.value;
+        // pivot TRS from position, euler rotation (degrees) and uniform scale
+        const toTRS = (p: number[], r: number[], s: number): [Vec3, Quat, Vec3] => {
             const q = new Quat().setFromEulerAngles(r[0], r[1], r[2]);
-            const s = scaleInput.value;
 
             if (q.w < 0) {
                 q.mulScalar(-1);
             }
 
-            pivot.moveTRS(new Vec3(p[0], p[1], p[2]), q, new Vec3(s, s, s));
+            return [new Vec3(p[0], p[1], p[2]), q, new Vec3(s, s, s)];
+        };
+
+        // update pivot with UI
+        const updatePivot = (pivot: Pivot) => {
+            pivot.moveTRS(...toTRS(positionVector.value, rotationVector.value, scaleInput.value));
         };
 
         // handle a change in the UI state
@@ -152,6 +113,44 @@ class Transform extends Container {
             input.on('slider:mousedown', mousedown);
             input.on('slider:mouseup', mouseup);
         });
+
+        // copy/paste reads and writes the pivot directly rather than the
+        // inputs, which round to their display precision. A paste is a single
+        // pivot move, so a single undo step
+        const pivotTRS = () => {
+            const transform = (events.invoke('pivot') as Pivot).transform;
+            return {
+                position: toArray(transform.position),
+                rotation: toArray(transform.rotation.getEulerAngles(new Vec3())),
+                scale: transform.scale.x
+            };
+        };
+
+        const clipboard: ClipboardSource = {
+            fields: {
+                position: vectorField(() => pivotTRS().position, 3),
+                rotation: vectorField(() => pivotTRS().rotation, 3),
+                scale: numberField(() => pivotTRS().scale, 0.001, 10000)
+            },
+            apply: (values) => {
+                const { position, rotation, scale } = { ...pivotTRS(), ...values } as ReturnType<typeof pivotTRS>;
+                const trs = toTRS(position, rotation, scale);
+                const pivot = events.invoke('pivot') as Pivot;
+                // an unchanged pivot fires no move, so the transform handlers
+                // would record their previous transform as a new undo step
+                if (!pivot.transform.equalsTRS(...trs)) {
+                    pivot.start();
+                    pivot.moveTRS(...trs);
+                    pivot.end();
+                }
+            },
+            enabled: () => positionVector.enabled
+        };
+
+        clipboardMenu.register(this.header, clipboard);
+        clipboardMenu.register(positionRow, clipboard, 'position');
+        clipboardMenu.register(rotationRow, clipboard, 'rotation');
+        clipboardMenu.register(scaleRow, clipboard, 'scale');
 
         // toggle ui availability based on selection
         events.on('selection.changed', (selection) => {

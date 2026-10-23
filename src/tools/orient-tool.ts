@@ -167,6 +167,24 @@ class OrientTool {
             return true;
         };
 
+        // calculate the world space up direction (first point to second) and
+        // midpoint of the two points. returns false if the points coincide.
+        const calcLine = () => {
+            getPoint(0, p0);
+            getPoint(1, p1);
+
+            n.sub2(p1, p0);
+
+            if (n.length() === 0) {
+                return false;
+            }
+
+            n.normalize();
+            c.add2(p0, p1).mulScalar(0.5);
+
+            return true;
+        };
+
         // calculate the rotation aligning +y with the plane normal (on the
         // camera-facing side, matching the align convention) and +x with the
         // first edge. requires a valid calcPlane result in p0/p1, n and c.
@@ -181,8 +199,8 @@ class OrientTool {
         };
 
         const updateButtons = () => {
-            const planeReady = !!splat && splat.orientPoints.length === 3 && calcPlane();
-            alignButton.enabled = planeReady;
+            const count = splat ? splat.orientPoints.length : 0;
+            alignButton.enabled = count === 3 ? calcPlane() : count === 2 && calcLine();
             clearButton.enabled = !!splat && splat.orientPoints.length > 0;
         };
 
@@ -258,14 +276,18 @@ class OrientTool {
             }
         });
 
-        // rotate and translate the splat so the picked plane lands on the grid plane
+        // rotate and translate the splat so the picked plane lands on the grid
+        // plane, or rotate it so the picked line (first point to second) points
+        // along the grid's positive axis
         const alignToGrid = () => {
-            if (!splat || splat.orientPoints.length !== 3 || !calcPlane()) {
+            const count = splat ? splat.orientPoints.length : 0;
+            const isPlane = count === 3;
+            if (isPlane ? !calcPlane() : (count !== 2 || !calcLine())) {
                 return;
             }
 
             // the side of the plane facing the camera becomes the grid's positive side
-            if (n.dot(v.sub2(scene.camera.position, c)) < 0) {
+            if (isPlane && n.dot(v.sub2(scene.camera.position, c)) < 0) {
                 n.mulScalar(-1);
             }
 
@@ -304,12 +326,15 @@ class OrientTool {
                 splat.entity.getLocalScale()
             );
 
-            // rotate the entity about the plane centroid so the picked points
-            // don't move laterally, then settle the plane onto the grid
+            // rotate the entity about the plane centroid (or line midpoint) so
+            // the picked points don't move laterally, then settle the plane
+            // onto the grid
             newPos.sub2(oldt.position, c);
             q.transformVector(newPos, newPos);
             newPos.add(c);
-            newPos.sub(v.copy(a).mulScalar(c.dot(a)));
+            if (isPlane) {
+                newPos.sub(v.copy(a).mulScalar(c.dot(a)));
+            }
 
             newRot.mul2(q, oldt.rotation);
 

@@ -9,6 +9,7 @@ import type { BlobReadSource } from '../io';
 import { AboutPopup } from './about-popup';
 import { BottomToolbar } from './bottom-toolbar';
 import { CameraInfoOverlay } from './camera-info-overlay';
+import { ClipboardMenu } from './clipboard-menu';
 import { ExportPopup } from './export-popup';
 import { ImageSettingsDialog } from './image-settings-dialog';
 import { i18n } from './localization';
@@ -106,7 +107,9 @@ class EditorUI {
         tooltipsContainer.append(tooltips);
 
         // bottom toolbar
-        const scenePanel = new ScenePanel(events, tooltips);
+        // shared right-click copy/paste menu for panel sections
+        const clipboardMenu = new ClipboardMenu();
+        const scenePanel = new ScenePanel(events, tooltips, clipboardMenu);
         const settingsPanel = new SettingsPanel(events, tooltips);
         const appearancePanel = new AppearancePanel(events, tooltips);
         const overlaysPanel = new OverlaysPanel(events, tooltips);
@@ -194,6 +197,7 @@ class EditorUI {
         topContainer.append(videoSettingsDialog);
         topContainer.append(shortcutsPopup);
         topContainer.append(aboutPopup);
+        topContainer.append(clipboardMenu);
 
         appContainer.append(editorContainer);
         appContainer.append(topContainer);

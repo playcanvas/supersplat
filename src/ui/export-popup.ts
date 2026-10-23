@@ -6,6 +6,7 @@ import { Events } from '../events';
 import { ExportChoices, ExportDialogResult, ExportType } from '../export-options';
 import { ExportSettings } from '../export-settings';
 import type { BlobReadSource, WriteTarget } from '../io';
+import type { Splat } from '../splat';
 import sceneExport from './svg/export.svg';
 import projectSave from './svg/save.svg';
 
@@ -526,7 +527,10 @@ class ExportPopup extends Container {
                 r.hidden = activeRows.indexOf(r) === -1;
             });
 
-            bandsSlider.value = events.invoke('view.bands');
+            // default to the scene's band count, capped by the viewport setting.
+            // higher values pad the missing coefficients with zeros
+            const sceneBands = Math.max(0, ...(events.invoke('scene.splats') as Splat[]).map(s => s.resource.shBands));
+            bandsSlider.value = Math.min(events.invoke('view.bands'), sceneBands);
 
             // ply
             compressBoolean.value = false;
@@ -598,15 +602,15 @@ class ExportPopup extends Container {
                 const filename = getFilename();
                 switch (exportType) {
                     case 'ply':
-                        return { filename, maxSHBands: bandsSlider.value, compressedPly: compressBoolean.value };
+                        return { filename, shBands: bandsSlider.value, compressedPly: compressBoolean.value };
                     case 'sog':
-                        return { filename, maxSHBands: bandsSlider.value, sogIterations: iterationsSlider.value };
+                        return { filename, shBands: bandsSlider.value, sogIterations: iterationsSlider.value };
                     case 'spz':
-                        return { filename, maxSHBands: bandsSlider.value, spzVersion: spzVersionSelect.value === '3' ? 3 : 4 };
+                        return { filename, shBands: bandsSlider.value, spzVersion: spzVersionSelect.value === '3' ? 3 : 4 };
                     case 'viewer':
                         return {
                             filename,
-                            maxSHBands: bandsSlider.value,
+                            shBands: bandsSlider.value,
                             viewerType: viewerTypeSelect.value === 'zip' ? 'zip' : 'html',
                             includeAnimation: animationToggle.value,
                             loopMode: loopSelect.value as ExportChoices['loopMode'],

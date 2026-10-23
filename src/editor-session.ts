@@ -137,14 +137,14 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
             assertIdle,
             ready,
             info: viewportInfo,
-            setCamera: (settings: CameraSettings, options?: CommandOptions) => {
+            setCamera: async (settings: CameraSettings, options?: CommandOptions) => {
                 const s = { ...settings, position: settings.position?.clone(), target: settings.target?.clone() };
                 if (!!s.position !== !!s.target) throw new EditorError('invalid_input', 'position and target must be supplied together.');
                 if (s.position && (s.view || s.azimuth !== undefined || s.elevation !== undefined || s.distance !== undefined)) {
                     throw new EditorError('invalid_input', 'Use position/target or orbit parameters in one command.');
                 }
                 if (s.position?.equals(s.target)) throw new EditorError('invalid_input', 'Camera position and target must differ.');
-                return queue.enqueue(() => {
+                return await queue.enqueue(() => {
                     checkCancelled(options);
                     assertIdle();
                     const camera = scene.camera;
@@ -162,9 +162,9 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
                     return { camera: cameraInfo(), viewport: viewportInfo() };
                 });
             },
-            focus: (scope: 'selection' | 'layer' | 'scene', layer?: number, options?: CommandOptions) => {
+            focus: async (scope: 'selection' | 'layer' | 'scene', layer?: number, options?: CommandOptions) => {
                 const splat = scope === 'scene' ? null : layerById(layer);
-                return queue.enqueue(() => {
+                return await queue.enqueue(() => {
                     checkCancelled(options);
                     assertIdle();
                     if (splat && splat.scene !== scene) throw new EditorError('layer_removed', 'The target layer was removed.');
@@ -223,10 +223,10 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
                     throw error;
                 }
             },
-            export: (request: ExportRequest, options?: CommandOptions) => {
+            export: async (request: ExportRequest, options?: CommandOptions) => {
                 const r = { ...request };
                 const targets = r.scope === 'visible_layers' ? allSplats().filter(s => s.visible) : [layerById(r.layer)];
-                return queue.enqueue(async () => {
+                return await queue.enqueue(async () => {
                     checkCancelled(options);
                     assertIdle();
                     if (!targets.length) throw new EditorError('empty_scene', 'There are no layers to export.');

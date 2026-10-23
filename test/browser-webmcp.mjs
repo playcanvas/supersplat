@@ -120,10 +120,9 @@ try {
         console.log('PASS real pointer rectangle selection and shared undo');
     }
     console.log(JSON.stringify(result, null, 2));
-    // The command queue logs rejected operations even when the caller handles
-    // them. These three errors are deliberately exercised below.
-    const expected = /^CommandQueue task failed EditorError: (No splats are selected\.|Layer 'fixture.ply' is hidden\.|The command was cancelled before it committed\.)/;
-    assert.deepEqual(errors.filter(error => !expected.test(error)), [], 'Unexpected browser errors');
+    // Rejected commands (empty selection, hidden layer, cancellation) are
+    // exercised above; their typed errors reach the caller without logging.
+    assert.deepEqual(errors, [], 'Unexpected browser errors');
     if (process.env.WEBMCP_SCREENSHOT) {
         const { data } = await send('Page.captureScreenshot', { format: 'png' });
         await fs.writeFile(process.env.WEBMCP_SCREENSHOT, Buffer.from(data, 'base64'));

@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 
 import { CommandQueue } from './.build/src/command-queue.js';
 import { EditHistory } from './.build/src/edit-history.js';
+import { EditorError } from './.build/src/editor-command.js';
 import { Events } from './.build/src/events.js';
 import { runSelectionGesture } from './.build/src/selection-gesture.js';
 import { editorCommandChecks } from './editor-commands.mjs';
@@ -170,6 +171,29 @@ const checks = {
             }), /boom/);
             assert.equal(await queue.enqueue(() => 42), 42);
         });
+    },
+
+    // typed editor errors are outcomes the caller handles (pressing Delete with
+    // nothing selected); only unexpected failures reach the console
+    async 'typed editor errors reject their caller without being logged'() {
+        const { queue } = setup();
+        const logged = [];
+        const error = console.error;
+        console.error = (...args) => logged.push(args);
+        try {
+            await assert.rejects(queue.enqueue(() => {
+                throw new EditorError('empty_selection', 'No splats are selected.');
+            }), failure => failure.code === 'empty_selection');
+            await assert.rejects(queue.enqueue(() => {
+                throw new Error('boom');
+            }), /boom/);
+            // the chain's handlers have run once a later task settles
+            await queue.enqueue(() => {});
+        } finally {
+            console.error = error;
+        }
+        assert.equal(logged.length, 1);
+        assert.match(String(logged[0][1]), /boom/);
     },
 
     async 'a failing op rejects its caller and the queue keeps running'() {

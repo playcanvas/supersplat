@@ -9,6 +9,7 @@ import { intersectSelect, PUBLIC_OP, type EditorAPI } from './editor-api';
 import { Element, ElementType } from './element';
 import { Events } from './events';
 import type { GridPlane } from './infinite-grid';
+import type { Model } from './model';
 import { Scene } from './scene';
 import { runSelectionGesture } from './selection-gesture';
 import { Splat } from './splat';
@@ -316,6 +317,18 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             scene.camera.focus({
                 focalPoint: vec,
                 radius: bound.halfExtents.length() * vec2.x,
+                speed: 1
+            });
+        }
+    });
+
+    events.on('model.focus', (model: Model) => {
+        const bound = model.visible && model.worldBound;
+        if (bound) {
+            events.fire('camera.setControlMode', 'orbit');
+            scene.camera.focus({
+                focalPoint: bound.center,
+                radius: bound.halfExtents.length(),
                 speed: 1
             });
         }

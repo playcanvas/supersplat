@@ -62,6 +62,13 @@ const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
             'application/x-gaussian-splat': ['.spz']
         }
     },
+    'model': {
+        description: 'glTF Model',
+        accept: {
+            'model/gltf-binary': ['.glb'],
+            'model/gltf+json': ['.gltf']
+        }
+    },
     'indexTxt': {
         description: 'Colmap Poses (Images.txt)',
         accept: {
@@ -89,6 +96,8 @@ const allImportTypes = {
         'application/x-gaussian-splat': ['.json', '.sog', '.splat', '.ksplat', '.spz'],
         'image/webp': ['.webp'],
         'application/x-lcc': ['.lcc', '.lcc2', '.bin'],
+        'model/gltf-binary': ['.glb'],
+        'model/gltf+json': ['.gltf'],
         'text/plain': ['.txt']
     }
 };
@@ -328,6 +337,25 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         }
     };
 
+    // import a glTF/GLB reference model. Only self-contained files are supported:
+    // a .gltf must embed its buffers and images as data URIs.
+    const importModel = async (file: ImportFile) => {
+        try {
+            const contents = file.contents ?
+                await file.contents.arrayBuffer() :
+                await (await fetch(file.url)).arrayBuffer();
+            const model = await scene.assetLoader.loadModel(file.filename, contents);
+            const empty = scene.elements.every(e => e.type !== ElementType.splat && e.type !== ElementType.model);
+            await scene.add(model);
+            if (empty) {
+                scene.camera.focus();
+            }
+            return model;
+        } catch (error) {
+            await showLoadError(error.message ?? error, file.filename);
+        }
+    };
+
     // figure out what the set of files are (ply sequence, document, sog set, ply) and then import them
     const importFiles = async (files: ImportFile[], animationFrame = false) => {
         const filenames = files.map(f => f.filename.toLowerCase());
@@ -345,7 +373,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             // check for unrecognized file types
             for (let i = 0; i < filenames.length; i++) {
                 const filename = filenames[i].toLowerCase();
-                if (['.ssproj', '.ply', '.splat', '.sog', '.webp', 'images.txt', '.json', '.ksplat', '.spz'].every(ext => !filename.endsWith(ext))) {
+                if (['.ssproj', '.ply', '.splat', '.sog', '.webp', 'images.txt', '.json', '.ksplat', '.spz', '.glb', '.gltf'].every(ext => !filename.endsWith(ext))) {
                     await showLoadError('Unrecognized file type', filename);
                     return;
                 }
@@ -365,6 +393,9 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                     // load gaussian splat model
                     const model = await importSplatModel([files[i]], animationFrame);
                     if (model) result.push(model);
+                } else if (filename.endsWith('.glb') || filename.endsWith('.gltf')) {
+                    // load glTF reference model
+                    await importModel(files[i]);
                 } else if (filename.endsWith('images.txt')) {
                     // load colmap frames
                     await loadImagesTxt(files[i], events);
@@ -392,7 +423,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         fileSelector = document.createElement('input');
         fileSelector.setAttribute('id', 'file-selector');
         fileSelector.setAttribute('type', 'file');
-        fileSelector.setAttribute('accept', '.ply,.splat,meta.json,.json,.webp,.ssproj,.sog,.lcc,.lcc2,.bin,.txt,.ksplat,.spz');
+        fileSelector.setAttribute('accept', '.ply,.splat,meta.json,.json,.webp,.ssproj,.sog,.lcc,.lcc2,.bin,.txt,.ksplat,.spz,.glb,.gltf');
         fileSelector.setAttribute('multiple', 'true');
 
         fileSelector.onchange = () => {
@@ -490,6 +521,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                         filePickerTypes.lcc,
                         filePickerTypes.ksplat,
                         filePickerTypes.spz,
+                        filePickerTypes.model,
                         filePickerTypes.indexTxt
                     ]
                 });

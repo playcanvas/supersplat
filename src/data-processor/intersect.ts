@@ -31,6 +31,7 @@ import {
 
 import { BufferPool } from './buffer-pool';
 import { maskByteSize } from './histogram-config';
+import type { CameraFrame } from '../camera';
 import { indexToUvWGSL, paletteMatrixWGSL } from '../shaders/palette-chunk';
 import { Splat } from '../splat';
 
@@ -59,10 +60,8 @@ type SphereBrushOptions = {
     // starts a new subpath while preserving the point's sphere. At footprint 0
     // the mask limits the selection to splat centers projecting inside the
     // on-screen stroke; otherwise the splat extent is tested against the path
-    // (0 = center point) and the mask is ignored. projection/view snapshot the
-    // stroke-time camera so the mask gate isn't evaluated through a camera that
-    // moved while the selection was in flight.
-    sphereBrush: { points: Float32Array, mask: Texture, footprint?: number, projection?: Mat4, view?: Mat4 };
+    // (0 = center point) and the mask is ignored.
+    sphereBrush: { points: Float32Array, mask: Texture, footprint?: number };
 };
 
 type IntersectOptions = MaskOptions | RectOptions | SphereOptions | BoxOptions | SphereBrushOptions;
@@ -312,7 +311,11 @@ class Intersect {
         this.pathPoints = new StorageBuffer(device, 16, BUFFERUSAGE_COPY_DST);
     }
 
-    async run(options: IntersectOptions, splat: Splat, bufferPool: BufferPool): Promise<Uint8Array> {
+    // frame is the gesture-time camera for the screen-space modes (mask, rect
+    // and the sphere brush's mask gate), so a camera that moved while the
+    // selection was queued doesn't change what the stroke covered. The
+    // world-space sphere/box modes don't project and may omit it.
+    async run(options: IntersectOptions, splat: Splat, bufferPool: BufferPool, frame?: CameraFrame): Promise<Uint8Array> {
         const count = splat.instances.count;
         const transformA = splat.resource.getTexture('transformA');
         const byteSize = maskByteSize(count);
@@ -325,9 +328,9 @@ class Intersect {
         const sphereBrush = (options as SphereBrushOptions).sphereBrush;
         const camera = splat.scene.camera.camera;
         const projection = Camera.applyShaderProjectionTransform(
-            sphereBrush?.projection ?? camera.projectionMatrix, this.shaderProjection, false, this.device.isWebGPU
+            frame?.projection ?? camera.projectionMatrix, this.shaderProjection, false, this.device.isWebGPU
         );
-        this.viewProjection.mul2(projection, sphereBrush?.view ?? camera.viewMatrix);
+        this.viewProjection.mul2(projection, frame?.view ?? camera.viewMatrix);
         const mask = (options as MaskOptions).mask ?? sphereBrush?.mask;
         const rect = (options as RectOptions).rect;
         const sphere = (options as SphereOptions).sphere;

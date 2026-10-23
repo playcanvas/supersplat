@@ -122,8 +122,10 @@ class BrushSelection {
 
                 dragEnd();
 
-                // block new strokes until the async selection has consumed the
-                // shared mask canvas
+                // the selection snapshots the canvas synchronously when
+                // invoked, so busy is UX policy rather than correctness: it
+                // keeps strokes from piling up invisibly behind a slow
+                // selection (pointerdown swallows them)
                 mask.busy = true;
                 try {
                     await events.invoke(

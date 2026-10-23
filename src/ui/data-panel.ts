@@ -864,7 +864,7 @@ class DataPanel extends Container {
             const numBins = histogram.histogram.bins.length;
             const opts = buildGpuOpts();
 
-            targetSplat.scene.commandQueue.enqueue(async () => {
+            targetSplat.scene.commandQueue.enqueue(async (ctx) => {
                 const data = await targetSplat.scene.dataProcessor.selectByRange(targetSplat, mode, {
                     ...opts,
                     logBins: logBins_,
@@ -874,11 +874,13 @@ class DataPanel extends Container {
                     rangeStart: start,
                     rangeEnd: end
                 });
-                // SelectOp (via 'select.mask') consumes the bytes synchronously
-                // in its constructor, so the buffer is safe to release once
-                // events.fire returns.
-                events.fire('select.mask', op, data);
-                targetSplat.scene.dataProcessor.releaseMask(data);
+                // applied in this slot rather than queued behind it, so no
+                // other command can land between the GPU pass and the op
+                try {
+                    await events.invoke('select.applyMask', ctx, op, data);
+                } finally {
+                    targetSplat.scene.dataProcessor.releaseMask(data);
+                }
             });
         });
     }

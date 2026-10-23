@@ -1,16 +1,20 @@
 import { Color, Mat4, Quat, Texture, Vec3 } from 'playcanvas';
 
-import { createGradeTerms, gradeTerms, type GradeParams } from './color-grade';
+import type { CameraFrame } from './camera';
+import type { GradeParams } from './color-grade';
+import type { CommandContext } from './command-queue';
 import { EditHistory } from './edit-history';
-import { selectedRanges, SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, RemoveInstancesOp, RestoreMissingInstancesOp, MultiOp, AddSplatOp, SetLocalFrameOp, SplatsColorOp } from './edit-ops';
+import { selectedRanges, SelectOp, RemoveInstancesOp, MultiOp, AddSplatOp, SetLocalFrameOp } from './edit-ops';
+import { intersectSelect, PUBLIC_OP, type EditorAPI } from './editor-api';
 import { Element, ElementType } from './element';
 import { Events } from './events';
 import type { GridPlane } from './infinite-grid';
 import { Scene } from './scene';
+import { runSelectionGesture } from './selection-gesture';
 import { Splat } from './splat';
 
 // register for editor and scene events
-const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: Scene) => {
+const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: Scene, api: EditorAPI) => {
     const vec = new Vec3();
     const vec2 = new Vec3();
 
@@ -376,44 +380,51 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         return splat?.numSelected > 0;
     });
 
-    events.on('select.all', () => {
-        selectedSplats().forEach((splat) => {
-            events.fire('edit.add', new SelectAllOp(splat));
-        });
-    });
+    // the UI entry points adapt to the editor API, which owns the commands:
+    // same ops, same command-slot discipline. As before, they do nothing
+    // without an active visible layer (the API would reject instead)
+    const withActive = (command: () => Promise<void>) => {
+        if (selectedSplats().length > 0) {
+            command();
+        }
+    };
 
-    events.on('select.none', () => {
-        selectedSplats().forEach((splat) => {
-            events.fire('edit.add', new SelectNoneOp(splat));
-        });
-    });
+    events.on('select.all', () => withActive(() => api.selection.all()));
 
-    events.on('select.invert', () => {
-        selectedSplats().forEach((splat) => {
-            events.fire('edit.add', new SelectInvertOp(splat));
-        });
-    });
+    events.on('select.none', () => withActive(() => api.selection.none()));
 
+    events.on('select.invert', () => withActive(() => api.selection.invert()));
+
+    // fire-and-forget mask application. SelectOp consumes the mask in its
+    // constructor, which runs here, synchronously, so a pooled mask can be
+    // released as soon as this returns. callers already running in a command
+    // slot should use select.applyMask so the op is built and applied in that
+    // slot rather than queued behind it
     events.on('select.mask', (op: 'add'|'remove'|'set'|'intersect', mask: Uint8Array | Uint32Array) => {
         selectedSplats().forEach((splat) => {
             events.fire('edit.add', new SelectOp(splat, op, mask));
         });
     });
 
-    // run the GPU intersect + the resulting SelectOp inside one queued task so the
-    // gpu readback is ordered relative to other queued history ops (rapid drag +
-    // undo, drag-while-camera-settling, etc).
-    const runSelectIntersect = (splat: Splat, op: 'add'|'remove'|'set'|'intersect', options: any) => {
-        return scene.commandQueue.enqueue(async () => {
-            // the splat may have been deleted while the task was queued
-            if (!splat.scene) return;
-            const data = await scene.dataProcessor.intersect(options, splat);
-            // SelectOp consumes `data` synchronously in its constructor
-            // (IndexRanges.fromPredicate iterates immediately), so we can
-            // return the buffer to the pool as soon as the op is constructed.
-            events.fire('edit.add', new SelectOp(splat, op, data));
-            scene.dataProcessor.releaseMask(data);
-        });
+    // in-slot mask application: builds the SelectOp from the flags as they are
+    // in the slot and applies it before resolving. the caller releases the
+    // mask after this resolves
+    events.function('select.applyMask', async (ctx: CommandContext, op: 'add'|'remove'|'set'|'intersect', mask: Uint8Array | Uint32Array) => {
+        for (const splat of selectedSplats()) {
+            if (!splat.scene) continue;
+            await ctx.apply(new SelectOp(splat, op, mask));
+        }
+    });
+
+    // the GPU intersect and the resulting SelectOp run inside one command slot
+    // so the readback is ordered relative to other queued history ops (rapid
+    // drag + undo, drag-while-camera-settling, etc) and the op lands in that
+    // slot rather than behind whatever was queued during the readback. the
+    // in-slot functions take the slot's context and never enqueue: the gesture
+    // that owns the slot (runSelectionGesture) calls them directly. The
+    // implementation is the editor API's
+    const selectIntersect = (ctx: CommandContext, splat: Splat, op: 'add'|'remove'|'set'|'intersect', options: any, frame?: CameraFrame) => {
+        return intersectSelect(scene, ctx, splat, op, options, frame);
     };
 
     // which machinery a screen-space select gesture runs on: depth on -> the
@@ -432,32 +443,33 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // footprint is passed in rather than read here: the task runs from the
     // queue after the gesture, and toggling the footprint in between must not
     // change an already-finished stroke's semantics
-    const runFootprintSelect = (splat: Splat, op: 'add'|'remove'|'set'|'intersect', region: SelectRegion, footprint: number) => {
-        return scene.commandQueue.enqueue(async () => {
-            if (!splat.scene) return;
-            const data = await scene.projectedSplatRenderer.footprintIntersect(splat, region, footprint);
-            if (data) {
-                events.fire('edit.add', new SelectOp(splat, op, data));
-            }
-        });
+    const footprintSelect = async (ctx: CommandContext, splat: Splat, op: 'add'|'remove'|'set'|'intersect', region: SelectRegion, footprint: number, frame: CameraFrame) => {
+        if (!splat.scene) return;
+        const data = await scene.projectedSplatRenderer.footprintIntersect(splat, region, footprint, frame);
+        if (data) {
+            await ctx.apply(new SelectOp(splat, op, data));
+        }
     };
 
     // centers + depth: exactly the surface (rings) pick - the splats visible
     // in the region, rendered at full footprint with the same op filtering so
     // peeling works identically - narrowed to those whose center lies in the
     // region. The centers test reuses the through-mode intersect compute
-    const runVisibleCentersSelect = (splat: Splat, op: 'add'|'remove'|'set'|'intersect', visible: Set<number>, options: any) => {
-        return scene.commandQueue.enqueue(async () => {
-            if (!splat.scene) return;
-            const data = await scene.dataProcessor.intersect(options, splat);
+    const visibleCentersSelect = async (ctx: CommandContext, splat: Splat, op: 'add'|'remove'|'set'|'intersect', visible: Set<number>, options: any, frame: CameraFrame) => {
+        if (!splat.scene) return;
+        const data = await scene.dataProcessor.intersect(options, splat, frame);
+        let selectOp: SelectOp;
+        try {
             for (let i = 0; i < splat.instances.count; i++) {
                 if (data[i] && !visible.has(i)) {
                     data[i] = 0;
                 }
             }
-            events.fire('edit.add', new SelectOp(splat, op, data));
+            selectOp = new SelectOp(splat, op, data);
+        } finally {
             scene.dataProcessor.releaseMask(data);
-        });
+        }
+        await ctx.apply(selectOp);
     };
 
     // per-row x-interval tables in render-target pixels for the footprint
@@ -486,8 +498,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         return packRegion(0, 0, [[]]);
     };
 
-    const rectRegion = (x0: number, y0: number, x1: number, y1: number): SelectRegion => {
-        const { width, height } = scene.targetSize;
+    const rectRegion = (frame: CameraFrame, x0: number, y0: number, x1: number, y1: number): SelectRegion => {
+        const { width, height } = frame.target;
         const py0 = Math.max(0, Math.floor(y0 * height));
         const py1 = Math.min(height - 1, Math.ceil(y1 * height) - 1);
         const px0 = Math.max(0, Math.floor(x0 * width));
@@ -502,8 +514,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         return packRegion(py0, py1, rowRuns);
     };
 
-    const maskRegion = (context: CanvasRenderingContext2D, maskWidth: number, maskHeight: number): SelectRegion => {
-        const { width, height } = scene.targetSize;
+    const maskRegion = (frame: CameraFrame, context: CanvasRenderingContext2D, maskWidth: number, maskHeight: number): SelectRegion => {
+        const { width, height } = frame.target;
         const mask = context.getImageData(0, 0, maskWidth, maskHeight);
         const xScale = width / maskWidth;
 
@@ -557,54 +569,55 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         return packRegion(py0, py1, rows);
     };
 
-    // transform maps the unit sphere (diameter 1) to world space
-    events.on('select.bySphere', async (op: 'add'|'remove'|'set'|'intersect', transform: Mat4) => {
-        for (const splat of selectedSplats()) {
-            await runSelectIntersect(splat, op, {
-                sphere: { transform, footprint: events.invoke('selection.footprint') as number }
-            });
-        }
+    // world-space volume selection. transform maps the unit sphere (diameter 1)
+    // / unit cube (side 1) to world space
+    events.on('select.bySphere', (op: 'add'|'remove'|'set'|'intersect', transform: Mat4) => {
+        withActive(() => api.selection.byVolume('sphere', transform, PUBLIC_OP[op]));
     });
 
-    // transform maps the unit cube (side 1) to world space
-    events.on('select.byBox', async (op: 'add'|'remove'|'set'|'intersect', transform: Mat4) => {
-        for (const splat of selectedSplats()) {
-            await runSelectIntersect(splat, op, {
-                box: { transform, footprint: events.invoke('selection.footprint') as number }
-            });
-        }
+    events.on('select.byBox', (op: 'add'|'remove'|'set'|'intersect', transform: Mat4) => {
+        withActive(() => api.selection.byVolume('box', transform, PUBLIC_OP[op]));
     });
 
-    events.function('select.rect', async (op: 'add'|'remove'|'set'|'intersect', rect: any) => {
-        const method = selectionMethod();
-        const footprint = events.invoke('selection.footprint') as number;
+    // the screen-space gestures snapshot their inputs at invocation - the
+    // camera frame, target size and footprint the user saw, the target layers
+    // and a private copy of the stroke - and run every pick, intersect and op
+    // for every target in one command slot (see runSelectionGesture)
+    const gestureSnapshot = () => ({
+        frame: scene.camera.captureFrame(),
+        method: selectionMethod(),
+        footprint: events.invoke('selection.footprint') as number,
+        splats: selectedSplats()
+    });
 
-        for (const splat of selectedSplats()) {
-            if (method === 'centers') {
-                await runSelectIntersect(splat, op, {
-                    rect: { x1: rect.start.x, y1: rect.start.y, x2: rect.end.x, y2: rect.end.y }
-                });
-            } else if (method === 'footprint') {
-                await runFootprintSelect(splat, op, rectRegion(rect.start.x, rect.start.y, rect.end.x, rect.end.y), footprint);
-            } else {
-                scene.camera.pickPrep(splat, op);
-                const pick = await scene.camera.pickRect(
-                    rect.start.x,
-                    rect.start.y,
-                    rect.end.x - rect.start.x,
-                    rect.end.y - rect.start.y
-                );
+    events.function('select.rect', (op: 'add'|'remove'|'set'|'intersect', rect: any) => {
+        // copy the coordinates: the caller owns rect and may reuse it before
+        // the slot runs
+        const { x: x1, y: y1 } = rect.start;
+        const { x: x2, y: y2 } = rect.end;
+        const region = { x1, y1, x2, y2 };
 
-                if (footprint === 0) {
-                    await runVisibleCentersSelect(splat, op, new Set(pick), {
-                        rect: { x1: rect.start.x, y1: rect.start.y, x2: rect.end.x, y2: rect.end.y }
-                    });
-                } else {
-                    const sortedIds = new Uint32Array(new Set(pick)).sort();
-                    events.fire('edit.add', new SelectOp(splat, op, sortedIds));
+        return runSelectionGesture(scene.commandQueue, {
+            snapshot: gestureSnapshot,
+            run: async ({ frame, method, footprint, splats }, ctx) => {
+                for (const splat of splats) {
+                    if (!splat.scene) continue;
+                    if (method === 'centers') {
+                        await selectIntersect(ctx, splat, op, { rect: region }, frame);
+                    } else if (method === 'footprint') {
+                        await footprintSelect(ctx, splat, op, rectRegion(frame, x1, y1, x2, y2), footprint, frame);
+                    } else {
+                        const { ids } = await scene.camera.pickIds(ctx, frame, splat, op, footprint, x1, y1, x2 - x1, y2 - y1);
+
+                        if (footprint === 0) {
+                            await visibleCentersSelect(ctx, splat, op, new Set(ids), { rect: region }, frame);
+                        } else {
+                            await ctx.apply(new SelectOp(splat, op, new Uint32Array(new Set(ids)).sort()));
+                        }
+                    }
                 }
             }
-        }
+        });
     });
 
     // build an operation-private mask texture from the stroke canvas: the gpu
@@ -622,125 +635,106 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         return texture;
     };
 
-    events.function('select.byMask', async (op: 'add'|'remove'|'set'|'intersect', canvas: HTMLCanvasElement, context: CanvasRenderingContext2D) => {
-        const method = selectionMethod();
-
-        // snapshot everything the stroke depends on before yielding - the
-        // canvas reads so later gestures repainting it can't leak into this
-        // selection (or make splats within one gesture see different masks),
-        // and the footprint so toggling it can't change a finished stroke
-        const maskTexture = method === 'footprint' ? null : createMaskTexture(canvas);
-        const region = method === 'footprint' ? maskRegion(context, canvas.width, canvas.height) : null;
-        const maskPixels = method === 'pick' ? context.getImageData(0, 0, canvas.width, canvas.height) : null;
-        const footprint = events.invoke('selection.footprint') as number;
-
-        try {
-            for (const splat of selectedSplats()) {
-                if (method === 'centers') {
-                    await runSelectIntersect(splat, op, {
-                        mask: maskTexture
-                    });
-                } else if (method === 'footprint') {
-                    await runFootprintSelect(splat, op, region, footprint);
-                } else {
-                    const mask = maskPixels;
-
-                    // calculate mask bound so we limit pixel operations
-                    let mx0 = mask.width - 1;
-                    let my0 = mask.height - 1;
-                    let mx1 = 0;
-                    let my1 = 0;
-                    for (let y = 0; y < mask.height; ++y) {
-                        for (let x = 0; x < mask.width; ++x) {
-                            if (mask.data[(y * mask.width + x) * 4 + 3] === 255) {
-                                mx0 = Math.min(mx0, x);
-                                my0 = Math.min(my0, y);
-                                mx1 = Math.max(mx1, x);
-                                my1 = Math.max(my1, y);
-                            }
-                        }
-                    }
-
-                    // Convert mask bounds to normalized coordinates
-                    const nx0 = mx0 / mask.width;
-                    const ny0 = my0 / mask.height;
-                    const nx1 = (mx1 + 1) / mask.width;
-                    const ny1 = (my1 + 1) / mask.height;
-                    const nw = nx1 - nx0;
-                    const nh = ny1 - ny0;
-
-                    scene.camera.pickPrep(splat, op);
-                    const pick = await scene.camera.pickRect(nx0, ny0, nw, nh);
-
-                    // Calculate actual pixel dimensions for iteration
-                    const { width, height } = scene.targetSize;
-
-                    // Convert normalized coordinates to render target pixels
-                    const px = Math.floor(nx0 * width);
-                    const py = Math.floor(ny0 * height);
-                    const pw = Math.max(1, Math.ceil((nx0 + nw) * width) - px);
-                    const ph = Math.max(1, Math.ceil((ny0 + nh) * height) - py);
-
-                    const selected = new Set<number>();
-                    for (let y = 0; y < ph; ++y) {
-                        for (let x = 0; x < pw; ++x) {
-                            const mx = Math.floor((nx0 + x / width) * mask.width);
-                            const my = Math.floor((ny0 + y / height) * mask.height);
-                            if (mask.data[(my * mask.width + mx) * 4] === 255) {
-                                selected.add(pick[y * pw + x]);
-                            }
-                        }
-                    }
-
-                    if (footprint === 0) {
-                        await runVisibleCentersSelect(splat, op, selected, { mask: maskTexture });
+    events.function('select.byMask', (op: 'add'|'remove'|'set'|'intersect', canvas: HTMLCanvasElement, context: CanvasRenderingContext2D) => {
+        return runSelectionGesture(scene.commandQueue, {
+            // the canvas reads are part of the snapshot so later gestures
+            // repainting it can't leak into this selection (or make splats
+            // within one gesture see different masks). the texture is
+            // allocated last: nothing after it can throw and leak it
+            snapshot: () => {
+                const inputs = gestureSnapshot();
+                const { frame, method } = inputs;
+                return {
+                    ...inputs,
+                    region: method === 'footprint' ? maskRegion(frame, context, canvas.width, canvas.height) : null,
+                    maskPixels: method === 'pick' ? context.getImageData(0, 0, canvas.width, canvas.height) : null,
+                    maskTexture: method === 'footprint' ? null : createMaskTexture(canvas)
+                };
+            },
+            run: async ({ frame, method, footprint, splats, region, maskPixels, maskTexture }, ctx) => {
+                for (const splat of splats) {
+                    if (!splat.scene) continue;
+                    if (method === 'centers') {
+                        await selectIntersect(ctx, splat, op, {
+                            mask: maskTexture
+                        }, frame);
+                    } else if (method === 'footprint') {
+                        await footprintSelect(ctx, splat, op, region, footprint, frame);
                     } else {
-                        const sortedIds = new Uint32Array(selected).sort();
-                        events.fire('edit.add', new SelectOp(splat, op, sortedIds));
+                        const mask = maskPixels;
+
+                        // calculate mask bound so we limit pixel operations
+                        let mx0 = mask.width - 1;
+                        let my0 = mask.height - 1;
+                        let mx1 = 0;
+                        let my1 = 0;
+                        for (let y = 0; y < mask.height; ++y) {
+                            for (let x = 0; x < mask.width; ++x) {
+                                if (mask.data[(y * mask.width + x) * 4 + 3] === 255) {
+                                    mx0 = Math.min(mx0, x);
+                                    my0 = Math.min(my0, y);
+                                    mx1 = Math.max(mx1, x);
+                                    my1 = Math.max(my1, y);
+                                }
+                            }
+                        }
+
+                        // Convert mask bounds to normalized coordinates
+                        const nx0 = mx0 / mask.width;
+                        const ny0 = my0 / mask.height;
+                        const nx1 = (mx1 + 1) / mask.width;
+                        const ny1 = (my1 + 1) / mask.height;
+                        const nw = nx1 - nx0;
+                        const nh = ny1 - ny0;
+
+                        // map each pixel actually read back into the mask through
+                        // the readback's own rectangle and target size: the read
+                        // is rounded outward to whole pixels, and the render target
+                        // may have been resized while this gesture waited for its slot
+                        const pick = await scene.camera.pickIds(ctx, frame, splat, op, footprint, nx0, ny0, nw, nh);
+                        const { ids, width: pw, height: ph } = pick;
+
+                        const selected = new Set<number>();
+                        for (let y = 0; y < ph; ++y) {
+                            const my = Math.floor((pick.y + y + 0.5) / pick.targetHeight * mask.height);
+                            for (let x = 0; x < pw; ++x) {
+                                const mx = Math.floor((pick.x + x + 0.5) / pick.targetWidth * mask.width);
+                                if (mask.data[(my * mask.width + mx) * 4] === 255) {
+                                    selected.add(ids[y * pw + x]);
+                                }
+                            }
+                        }
+
+                        if (footprint === 0) {
+                            await visibleCentersSelect(ctx, splat, op, selected, { mask: maskTexture }, frame);
+                        } else {
+                            await ctx.apply(new SelectOp(splat, op, new Uint32Array(selected).sort()));
+                        }
                     }
                 }
-            }
-        } finally {
-            maskTexture?.destroy();
-        }
+            },
+            release: ({ maskTexture }) => maskTexture?.destroy()
+        });
     });
 
     // points are stroke samples in normalized screen coordinates with radii in
     // css pixels. Each sample is depth-picked to a world position and the world
     // radius matched to the on-screen brush size, giving a capsule path the
     // compute pass tests splat centers against.
-    events.function('select.bySphereBrush', async (
+    events.function('select.bySphereBrush', (
         op: 'add'|'remove'|'set'|'intersect',
         points: { x: number, y: number, radius: number }[],
         canvas: HTMLCanvasElement
     ) => {
-        const splats = selectedSplats();
-
-        // snapshot everything gesture-dependent now: the shared stroke canvas
-        // may be repainted by another tool, the camera moved and the footprint
-        // toggled before the queued work below runs
-        const mask = createMaskTexture(canvas);
-        const projection = scene.camera.camera.projectionMatrix.clone();
-        const view = scene.camera.camera.viewMatrix.clone();
-        const footprint = events.invoke('selection.footprint') as number;
-        const pixelScale = scene.camera.worldSizePerPixel(1);
-        const ortho = scene.camera.ortho;
-        const pose = {
-            position: scene.camera.mainCamera.getPosition().clone(),
-            rotation: scene.camera.mainCamera.getRotation().clone(),
-            orthoHeight: scene.camera.camera.orthoHeight,
-            near: scene.camera.near,
-            far: scene.camera.far
-        };
-
-        // one queued operation reserves the stroke's place in history now and
-        // runs the depth picking and the intersect against the same scene
-        // state; enqueueing only after the readbacks would let a queued
-        // delete/undo apply in between. The intersect is inlined rather than
-        // going through runSelectIntersect because nesting enqueues deadlocks.
-        try {
-            await scene.commandQueue.enqueue(async () => {
-                const hits = await scene.camera.intersectMany(points, splats, pose);
+        return runSelectionGesture(scene.commandQueue, {
+            // the shared stroke canvas may be repainted by another tool before
+            // the queued work runs, so the mask is a private copy
+            snapshot: () => ({ ...gestureSnapshot(), mask: createMaskTexture(canvas) }),
+            // the depth picking and the intersect run against the same scene
+            // state through the in-slot pickDepths and selectIntersect: the
+            // public intersectMany would enqueue behind this task and deadlock
+            run: async ({ frame, footprint, splats, mask }, ctx) => {
+                const hits = await scene.camera.pickDepths(ctx, frame, points, splats);
                 const path: number[] = [];
                 let previous: { position: Vec3, radius: number } | null = null;
 
@@ -751,7 +745,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                         continue;
                     }
 
-                    const radius = points[i].radius * pixelScale * (ortho ? 1 : hit.depth);
+                    const radius = points[i].radius * frame.pixelScale * (frame.ortho ? 1 : hit.depth);
                     const startsPath = !previous || previous.position.distance(hit.position) > Math.max(previous.radius, radius) * 2;
                     path.push(hit.position.x, hit.position.y, hit.position.z, startsPath ? -radius : radius);
                     previous = { position: hit.position, radius };
@@ -759,55 +753,47 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
                 const pathPoints = new Float32Array(path);
                 for (const splat of splats) {
-                    const data = await scene.dataProcessor.intersect({
-                        sphereBrush: { points: pathPoints, mask, footprint, projection, view }
-                    }, splat);
-                    // SelectOp consumes `data` synchronously in its constructor
-                    events.fire('edit.add', new SelectOp(splat, op, data));
-                    scene.dataProcessor.releaseMask(data);
+                    await selectIntersect(ctx, splat, op, {
+                        sphereBrush: { points: pathPoints, mask, footprint }
+                    }, frame);
                 }
-            });
-        } finally {
-            mask.destroy();
-        }
+            },
+            release: ({ mask }) => mask.destroy()
+        });
     });
 
-    events.function('select.point', async (op: 'add'|'remove'|'set'|'intersect', point: { x: number, y: number }) => {
-        const { width, height } = scene.targetSize;
-        const method = selectionMethod();
-        const footprint = events.invoke('selection.footprint') as number;
-
-        for (const splat of selectedSplats()) {
-            if (method === 'centers') {
-                await runSelectIntersect(splat, op, {
-                    rect: {
-                        x1: point.x,
-                        y1: point.y,
-                        x2: point.x + 1 / width,
-                        y2: point.y + 1 / height
+    events.function('select.point', (op: 'add'|'remove'|'set'|'intersect', point: { x: number, y: number }) => {
+        return runSelectionGesture(scene.commandQueue, {
+            snapshot: gestureSnapshot,
+            run: async ({ frame, method, footprint, splats }, ctx) => {
+                const { width, height } = frame.target;
+                for (const splat of splats) {
+                    if (!splat.scene) continue;
+                    if (method === 'centers') {
+                        await selectIntersect(ctx, splat, op, {
+                            rect: {
+                                x1: point.x,
+                                y1: point.y,
+                                x2: point.x + 1 / width,
+                                y2: point.y + 1 / height
+                            }
+                        }, frame);
+                    } else if (method === 'footprint') {
+                        await footprintSelect(ctx, splat, op, rectRegion(
+                            frame, point.x, point.y, point.x + 1 / width, point.y + 1 / height), footprint, frame);
+                    } else {
+                        // depth-mode clicks deliberately ignore the footprint toggle
+                        // and pick the frontmost splat under the cursor: requiring a
+                        // visible center at the clicked pixel (as rect/mask gestures do
+                        // in centers mode) would make clicking practically never land.
+                        // Use normalized coordinates with minimal size for single pixel pick
+                        const { ids } = await scene.camera.pickIds(ctx, frame, splat, op, footprint,
+                            point.x, point.y, 1 / width, 1 / height);
+                        await ctx.apply(new SelectOp(splat, op, new Uint32Array([ids[0]])));
                     }
-                });
-            } else if (method === 'footprint') {
-                await runFootprintSelect(splat, op, rectRegion(
-                    point.x, point.y, point.x + 1 / width, point.y + 1 / height), footprint);
-            } else {
-                // depth-mode clicks deliberately ignore the footprint toggle
-                // and pick the frontmost splat under the cursor: requiring a
-                // visible center at the clicked pixel (as rect/mask gestures do
-                // in centers mode) would make clicking practically never land
-                scene.camera.pickPrep(splat, op);
-
-                // Use normalized coordinates with minimal size for single pixel pick
-                const pickResult = await scene.camera.pickRect(
-                    point.x,
-                    point.y,
-                    1 / width,
-                    1 / height
-                );
-                const pickId = pickResult[0];
-                events.fire('edit.add', new SelectOp(splat, op, new Uint32Array([pickId])));
+                }
             }
-        }
+        });
     });
 
     // Eyedropper selection with SelectOp so undo/redo and selection state updates remain consistent.
@@ -815,15 +801,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // TO DO:
     // -  alternative distance metrics such as HSV.
     // -  alternative UI for threshold, two handles for min/max?
-    events.function('select.colorMatch', async (op: 'add'|'remove'|'set'|'intersect', point: { x: number, y: number }, threshold = 0) => {
-        const splats = selectedSplats();
-        const targetSize = scene.targetSize;
-        if (!splats.length || !targetSize || !point) {
-            return;
-        }
-
-        const { width, height } = targetSize;
-        if (!width || !height) {
+    events.function('select.colorMatch', (op: 'add'|'remove'|'set'|'intersect', point: { x: number, y: number }, threshold = 0) => {
+        if (!point) {
             return;
         }
 
@@ -832,43 +811,47 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         const ny = Math.max(0, Math.min(1, point.y));
         const colorThreshold = Math.min(1, Math.max(0, Number.isFinite(threshold) ? threshold : 0));
 
-        for (const splat of splats) {
-            scene.camera.pickPrep(splat, 'set');
-            // Use normalized coordinates with minimal size for single pixel pick
-            const pickBuffer = await scene.camera.pickRect(nx, ny, 1 / width, 1 / height);
-            const pickId = pickBuffer?.[0];
-            if (pickId === undefined || pickId === 0xffffffff) {
-                continue;
-            }
+        return runSelectionGesture(scene.commandQueue, {
+            snapshot: gestureSnapshot,
+            run: async ({ frame, footprint, splats }, ctx) => {
+                const { width, height } = frame.target;
+                if (!width || !height) {
+                    return;
+                }
 
-            if (pickId < 0 || pickId >= splat.instances.count) {
-                continue;
-            }
-            await scene.commandQueue.enqueue(async () => {
-                const mask = await scene.dataProcessor.colorMatch(splat, pickId, colorThreshold, {
-                    entityMatrix: splat.entity.getWorldTransform(),
-                    cameraPos: scene.camera.position
-                });
-                events.fire('edit.add', new SelectOp(splat, op, mask));
-                scene.dataProcessor.releaseMask(mask);
-            });
-        }
-    });
+                for (const splat of splats) {
+                    if (!splat.scene) continue;
+                    // Use normalized coordinates with minimal size for single pixel pick
+                    const { ids } = await scene.camera.pickIds(ctx, frame, splat, 'set', footprint, nx, ny, 1 / width, 1 / height);
+                    const pickId = ids[0];
+                    if (pickId === undefined || pickId === 0xffffffff) {
+                        continue;
+                    }
 
-    events.on('select.hide', () => {
-        selectedSplats().forEach((splat) => {
-            events.fire('edit.add', new HideSelectionOp(splat));
+                    if (pickId < 0 || pickId >= splat.instances.count) {
+                        continue;
+                    }
+                    // the view-dependent colour is evaluated from the gesture's camera
+                    const mask = await scene.dataProcessor.colorMatch(splat, pickId, colorThreshold, {
+                        entityMatrix: splat.entity.getWorldTransform(),
+                        cameraPos: frame.position
+                    });
+                    let selectOp: SelectOp;
+                    try {
+                        selectOp = new SelectOp(splat, op, mask);
+                    } finally {
+                        scene.dataProcessor.releaseMask(mask);
+                    }
+                    await ctx.apply(selectOp);
+                }
+            }
         });
     });
 
-    events.on('select.unhide', () => {
-        const ops = (scene.getElementsByType(ElementType.splat) as Splat[])
-        .map(splat => new UnhideAllOp(splat))
-        .filter(op => !op.ranges.empty);
+    events.on('select.hide', () => withActive(() => api.selection.hide()));
 
-        if (ops.length > 0) {
-            events.fire('edit.add', ops.length === 1 ? ops[0] : new MultiOp(ops));
-        }
+    events.on('select.unhide', () => {
+        api.selection.unhide();
     });
 
     events.on('select.delete', () => {
@@ -880,9 +863,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         if (events.invoke('polygonSelection.removeLastPoint')) {
             return;
         }
-        selectedSplats().forEach((splat) => {
-            editHistory.add(new RemoveInstancesOp(splat));
-        });
+        withActive(() => api.selection.delete());
     });
 
     // Duplicate and separate both create a new layer holding the selected
@@ -896,21 +877,26 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             return;
         }
 
-        const ranges = selectedRanges(splat);
-        if (ranges.count === 0) {
-            return;
-        }
+        // the selection is read in the slot, after any pending gesture's op
+        return scene.commandQueue.enqueue(async (ctx) => {
+            if (!splat.scene) return;
 
-        const copy = splat.createLayer(ranges, splat.name);
+            const ranges = selectedRanges(splat);
+            if (ranges.count === 0) {
+                return;
+            }
 
-        if (func === 'separate') {
-            editHistory.add(new MultiOp([
-                new RemoveInstancesOp(splat),
-                new AddSplatOp(scene, copy)
-            ]));
-        } else {
-            editHistory.add(new AddSplatOp(scene, copy));
-        }
+            const copy = splat.createLayer(ranges, splat.name);
+
+            if (func === 'separate') {
+                await ctx.apply(new MultiOp([
+                    new RemoveInstancesOp(splat),
+                    new AddSplatOp(scene, copy)
+                ]));
+            } else {
+                await ctx.apply(new AddSplatOp(scene, copy));
+            }
+        });
     };
 
     // duplicate the current selection
@@ -925,26 +911,12 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // bake the panel's pending grade into the selected gaussians. `params` are the
     // seven authored values; the op composes them onto whatever grade the targets
     // already carry, so applying twice is the same as applying the composition.
-    events.on('edit.applyColor', (params: GradeParams) => {
-        const splat = events.invoke('selection') as Splat;
-        if (splat) {
-            editHistory.add(new SplatsColorOp({ splat, grade: gradeTerms(params, createGradeTerms()) }));
-        }
-    });
+    events.on('edit.applyColor', (params: GradeParams) => withActive(() => api.color.apply(params)));
 
     // clear the grade on the selected gaussians
-    events.on('edit.resetColor', () => {
-        const splat = events.invoke('selection') as Splat;
-        if (splat) {
-            editHistory.add(new SplatsColorOp({ splat, grade: null }));
-        }
-    });
+    events.on('edit.resetColor', () => withActive(() => api.color.reset()));
 
-    events.on('scene.reset', () => {
-        selectedSplats().forEach((splat) => {
-            editHistory.add(new RestoreMissingInstancesOp(splat));
-        });
-    });
+    events.on('scene.reset', () => withActive(() => api.selection.restoreDeleted()));
 
     // display
 

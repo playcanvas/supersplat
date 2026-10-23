@@ -145,6 +145,13 @@ class Scene {
     // scene. Set by doc.ts, which forces a render once the load completes.
     suspendRender = false;
 
+    // > 0 while a pick batch owns the camera's colour and work buffers as its
+    // depth/id targets: a frame rendered between its passes and readbacks
+    // would overwrite them, and since the targets are rebuilt from onPreRender
+    // a held frame also keeps their dimensions fixed for the batch. Counted
+    // and released by Camera, which forces a render when the hold ends.
+    renderHold = 0;
+
     // Console controls for stochastic rendering; setters request a repaint.
     readonly stochastic;
 
@@ -591,7 +598,7 @@ class Scene {
         this.app.graphicsDevice.gpuProfiler.enabled =
             (profiling || this.autoSampling || this.movingRender) && !this.lockedRenderMode;
 
-        if (this.suspendRender) {
+        if (this.suspendRender || this.renderHold > 0) {
             this.app.renderNextFrame = false;
         } else if (this.lockedRenderMode) {
             this.app.renderNextFrame = this.lockedRender;

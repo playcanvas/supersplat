@@ -27,6 +27,10 @@ class EditHistory {
         this.events = events;
         this.commandQueue = commandQueue;
 
+        // in-slot application for tasks that already own a command slot
+        // (CommandContext.apply); add() below is the queue entry for the rest
+        commandQueue.setEditApplier((editOp, suppressOp) => this._add(editOp, suppressOp));
+
         events.on('edit.undo', () => this.undo());
         events.on('edit.redo', () => this.redo());
         events.on('edit.add', (editOp: EditOp, suppressOp = false) => this.add(editOp, suppressOp));

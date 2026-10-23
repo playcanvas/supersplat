@@ -117,7 +117,7 @@ struct ProjectorUniforms {
     selectionEnabled: u32,
     pickOp: i32,
     minPixelSize: f32,
-    // camera clip planes, used to linearly normalize view depth for the sort key
+    // camera clip planes, used to normalize view depth for the sort key
     near: f32,
     far: f32,
     // total cache entries: the culled tail of the compact list grows down from
@@ -496,13 +496,15 @@ fn main(
     // survivor: claim a slot in the compact list. Only surviving threads contend,
     // which is 0.1-10% of the dispatch in practice
     let slot = atomicAdd(&splatCounter[0], 1u);
-    // depth sort key, back-to-front: linearly normalize view depth to [0,1] over
-    // the clip range and invert so the farthest splat gets the smallest key and
-    // composites first. Linear in both projections (ortho's clip.z is this same
-    // ratio; perspective's clip.z would be hyperbolic, so we normalize the raw
-    // view depth instead). near may be negative in ortho (the camera sits inside
-    // the bound); the subtraction handles that with no sign special-case.
-    let normDepth = saturate((depth - uniforms.near) / (uniforms.far - uniforms.near));
+    // depth sort key, back-to-front: the farthest splat gets the smallest key. Perspective
+    // is logarithmic, so a key step is a fixed fraction of the depth however far the
+    // far plane is. Ortho is linear, and near may be negative there (camera inside the bound).
+    var normDepth: f32;
+    if (uniforms.isOrtho == 0u) {
+        normDepth = saturate(log(depth / uniforms.near) / log(uniforms.far / uniforms.near));
+    } else {
+        normDepth = saturate((depth - uniforms.near) / (uniforms.far - uniforms.near));
+    }
     sortKeys[slot] = u32((1.0 - normDepth) * f32((1u << 20u) - 1u));
     compactEntries[slot] = entry;
 }

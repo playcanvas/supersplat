@@ -1,121 +1,42 @@
-import { EventHandler, Mat4, Quat, Vec3 } from 'playcanvas';
+import { BoundingBox, EventHandler, Mat4, Quat, Vec3 } from 'playcanvas';
 
 import type { CameraFrame } from './camera';
 import { createGradeTerms, gradeTerms, type GradeParams } from './color-grade';
 import type { CommandContext, CommandQueue } from './command-queue';
 import { EditHistory } from './edit-history';
-import { EditOp, HideSelectionOp, MultiOp, RemoveInstancesOp, RestoreMissingInstancesOp, SelectAllOp, SelectInvertOp, SelectNoneOp, SelectOp, SplatRenameOp, SplatsColorOp, UnhideAllOp } from './edit-ops';
+import { AddSplatOp, EditOp, EntityTransformOp, HideSelectionOp, MultiOp, RemoveInstancesOp, RestoreMissingInstancesOp, SelectAllOp, SelectInvertOp, SelectNoneOp, SelectOp, SplatRenameOp, SplatsColorOp, SplatsTransformOp, UnhideAllOp, selectedRanges } from './edit-ops';
+import { checkCancelled, CommandOptions, EditScope, EditorError } from './editor-command';
+import { createEditorSession } from './editor-session';
 import { Element, ElementType } from './element';
 import { Events } from './events';
 import { Scene } from './scene';
+import { rectangleOp } from './selection-rectangle';
 import { Splat } from './splat';
-
-// The typed editor API: one awaitable surface for the UI and for scripts
-// (window.editor). Commands take a command-queue slot, apply their edit op in
-// that slot and resolve once the op and its history bookkeeping have settled;
-// they reject on failure and leave the queue usable. State is read through
-// the queries after awaiting. Screen-space operations live under `viewport`,
-// which is the explicit dependency on a camera and GPU; everything else is
-// document and session logic that needs neither.
-//
-// Interim contracts, replaced when stable identity lands (editor-api-plan.md,
-// phase 3): layer ids are Element.uid, stable for the session but not saved;
-// no per-instance identity is exposed, so selection is set operations,
-// volumes and viewport queries.
+import { isFinalColorMode, propModeFor, PROP_MODE, SH_NUM_COEFFS } from './splat-properties';
+import { State } from './splat-state';
+import { Transform } from './transform';
 
 type LayerId = number;
-
-// replace/add/subtract/intersect rather than the internal set/add/remove/
-// intersect: 'remove' reads as delete to agents
 type SelectionOp = 'replace' | 'add' | 'subtract' | 'intersect';
 type InternalOp = 'set' | 'add' | 'remove' | 'intersect';
-
-const INTERNAL_OP: Record<SelectionOp, InternalOp> = {
-    replace: 'set',
-    add: 'add',
-    subtract: 'remove',
-    intersect: 'intersect'
-};
-
-const PUBLIC_OP: Record<InternalOp, SelectionOp> = {
-    set: 'replace',
-    add: 'add',
-    remove: 'subtract',
-    intersect: 'intersect'
-};
+const INTERNAL_OP: Record<SelectionOp, InternalOp> = { replace: 'set', add: 'add', subtract: 'remove', intersect: 'intersect' };
+const PUBLIC_OP: Record<InternalOp, SelectionOp> = { set: 'replace', add: 'add', remove: 'subtract', intersect: 'intersect' };
 
 type LayerInfo = {
-    id: LayerId;
-    name: string;
-    visible: boolean;
-    total: number;
-    selected: number;
-    hidden: number;
-    deleted: number;
-    position: Vec3;
-    rotation: Quat;
-    scale: Vec3;
+    id: LayerId; name: string; visible: boolean;
+    total: number; selected: number; hidden: number; deleted: number;
+    position: Vec3; rotation: Quat; scale: Vec3;
+    bounds: BoundingBox | null; selectionBounds: BoundingBox | null;
+    shBands: number;
 };
-
 type ScreenPoint = { x: number, y: number };
 type ScreenRect = { start: ScreenPoint, end: ScreenPoint };
-
-// a depth-pick hit: world position, along-view distance and linear depth
 type DepthHit = { layer: LayerId, position: Vec3, distance: number, depth: number };
-
-// selectionChanged: the active layer or effective selection, including changes
-// caused by hiding or deleting instances. documentChanged: layers added,
-// removed, renamed or shown/hidden, instances or colours edited.
-// historyChanged: canUndo/canRedo.
 type ChangeEvent = 'documentChanged' | 'selectionChanged' | 'historyChanged';
 type ChangeDetail = { layer?: LayerId };
-
-interface EditorAPI {
-    layers: {
-        list(): LayerInfo[];
-        active(): LayerId | null;
-        setActive(id: LayerId | null): void;
-        setVisible(id: LayerId, visible: boolean): void;
-        rename(id: LayerId, name: string): Promise<void>;
-    };
-    // all commands target one layer, the active one by default. A hidden
-    // layer or a missing id rejects; a layer removed before the command runs
-    // makes it a no-op
-    selection: {
-        all(layer?: LayerId): Promise<void>;
-        none(layer?: LayerId): Promise<void>;
-        invert(layer?: LayerId): Promise<void>;
-        // transform maps the unit sphere (diameter 1) / unit cube (side 1) to
-        // world space; tested against splat centers, or their footprint when
-        // the selection footprint setting is on
-        byVolume(shape: 'sphere' | 'box', transform: Mat4, op?: SelectionOp, layer?: LayerId): Promise<void>;
-        hide(layer?: LayerId): Promise<void>;
-        // every layer
-        unhide(): Promise<void>;
-        delete(layer?: LayerId): Promise<void>;
-        restoreDeleted(layer?: LayerId): Promise<void>;
-    };
-    color: {
-        // grades the selection, or the whole layer when nothing is selected
-        apply(params: GradeParams, layer?: LayerId): Promise<void>;
-        reset(layer?: LayerId): Promise<void>;
-    };
-    history: {
-        undo(): Promise<void>;
-        redo(): Promise<void>;
-        canUndo(): boolean;
-        canRedo(): boolean;
-    };
-    viewport: {
-        captureFrame(): CameraFrame;
-        // normalized 0-1 screen points; null where nothing is hit
-        pickDepth(points: ScreenPoint[], layers?: LayerId[]): Promise<(DepthHit | null)[]>;
-        // normalized 0-1 rect, on the active layer, through the rect tool's
-        // machinery (centers / footprint / depth per the selection settings)
-        selectRect(rect: ScreenRect, op?: SelectionOp): Promise<void>;
-    };
-    on(event: ChangeEvent, fn: (detail: ChangeDetail) => void): () => void;
-}
+type SelectionOptions = CommandOptions & { preview?: boolean, outside?: boolean, footprint?: number, viewToken?: string };
+type RectangleOptions = CommandOptions & { layer?: LayerId, depth?: boolean, footprint?: number, viewToken?: string };
+type TransformOptions = { translate?: Vec3, rotate?: Quat, scale?: number, center?: Vec3 };
 
 // in-slot GPU intersect followed by the SelectOp it produces, in the same
 // slot. Shared with the screen-space gestures in editor.ts
@@ -144,62 +65,125 @@ const isSelectionOp = (op: EditOp): boolean => {
     return SELECTION_OPS.has(op.name);
 };
 
-const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory, commandQueue: CommandQueue): EditorAPI => {
+// Commands own their queue slot, including the result snapshot. The UI and
+// WebMCP both use these methods; no caller should enqueue an API command inside
+// another queue task. Layer IDs identify layers for this editor session only.
+const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory, commandQueue: CommandQueue) => {
     const allSplats = () => scene.getElementsByType(ElementType.splat) as Splat[];
-
+    const historyInfo = () => ({ canUndo: editHistory.canUndo(), canRedo: editHistory.canRedo() });
     const layerById = (id: LayerId): Splat => {
         const splat = allSplats().find(s => s.uid === id);
-        if (!splat) {
-            throw new Error(`No layer with id ${id}`);
-        }
+        if (!splat) throw new EditorError('layer_not_found', `No layer with id ${id}. Read the scene again.`);
         return splat;
     };
-
-    // the command's target: the given layer, else the active one
-    const target = (id?: LayerId): Splat => {
-        if (id !== undefined) {
-            return layerById(id);
-        }
-        const active = events.invoke('selection') as Splat | null;
-        if (!active) {
-            throw new Error('No active layer');
-        }
-        return active;
-    };
-
-    const visibleTarget = (id?: LayerId): Splat => {
-        const splat = target(id);
-        if (!splat.visible) {
-            throw new Error(`Layer '${splat.name}' is hidden`);
-        }
+    const target = (id?: LayerId) => {
+        const splat = id === undefined ? events.invoke('selection') as Splat : layerById(id);
+        if (!splat) throw new EditorError('no_active_layer', 'No active layer. Specify a layer ID.');
         return splat;
     };
-
-    // ops read the instance flags in their constructors, so they are built in
-    // the slot, after earlier commands have applied. make may return null to
-    // skip the command once it sees the up-to-date state
-    const apply = (splat: Splat, make: () => EditOp | null) => {
-        return commandQueue.enqueue(async (ctx) => {
-            if (!splat.scene) return;
-            const op = make();
-            if (op) await ctx.apply(op);
-        });
+    const checkTarget = (splat: Splat, visible = true) => {
+        if (splat.scene !== scene) throw new EditorError('layer_removed', 'The target layer was removed before the command completed.');
+        if (visible && !splat.visible) throw new EditorError('layer_hidden', `Layer '${splat.name}' is hidden.`);
     };
-
     const layerInfo = (splat: Splat): LayerInfo => {
-        const { entity } = splat;
-        return {
+        const selectionBounds = splat.instances.numSelected ? new BoundingBox() : null;
+        selectionBounds?.setFromTransformedAabb(splat.selectionBound, splat.worldTransform);
+        return ({
             id: splat.uid,
             name: splat.name,
             visible: splat.visible,
-            total: splat.numSplats,
-            selected: splat.numSelected,
-            hidden: splat.numLocked,
-            deleted: splat.numDeleted,
-            position: entity.getLocalPosition().clone(),
-            rotation: entity.getLocalRotation().clone(),
-            scale: entity.getLocalScale().clone()
-        };
+            total: splat.instances.count,
+            selected: splat.instances.numSelected,
+            hidden: splat.instances.numLocked,
+            deleted: splat.instances.numRemoved,
+            position: splat.entity.getLocalPosition().clone(),
+            rotation: splat.entity.getLocalRotation().clone(),
+            scale: splat.entity.getLocalScale().clone(),
+            bounds: splat.instances.count ? splat.worldBound.clone() : null,
+            selectionBounds,
+            shBands: splat.resource.shBands
+        });
+    };
+    const result = (splats: Splat[], affected: number) => ({ affected, layers: splats.map(layerInfo), history: historyInfo() });
+    const run = <T>(splat: Splat, fn: (ctx: CommandContext) => T | Promise<T>, options?: CommandOptions, visible = true) => {
+        checkCancelled(options);
+        return commandQueue.enqueue((ctx) => {
+            checkCancelled(options);
+            checkTarget(splat, visible);
+            return fn(ctx);
+        });
+    };
+    const applyState = (layer: LayerId | undefined, make: (splat: Splat) => SelectAllOp | SelectNoneOp | SelectInvertOp | HideSelectionOp | RemoveInstancesOp,
+        options?: CommandOptions, requireSelection = false) => {
+        const splat = target(layer);
+        return run(splat, async (ctx) => {
+            if (requireSelection && !splat.instances.numSelected) throw new EditorError('empty_selection', 'No splats are selected.');
+            const op = make(splat);
+            const affected = op.ranges.count;
+            if (affected) await ctx.apply(op);
+            return result([splat], affected);
+        }, options);
+    };
+    const scopeCount = (splat: Splat, scope?: EditScope) => {
+        const count = scope === 'layer' ? splat.instances.count - splat.instances.numLocked : splat.instances.numSelected;
+        if (scope === 'selection' && !count) throw new EditorError('empty_selection', 'No splats are selected. Use scope layer to edit the layer.');
+        return scope === undefined && !count ? splat.instances.count - splat.instances.numLocked : count;
+    };
+    const session = createEditorSession(events, scene, commandQueue, { allSplats, layerById, layerInfo, historyInfo });
+    const propertyMode = (splat: Splat, property: string) => {
+        const mode = propModeFor(property);
+        const rest = /^f_rest_(\d+)$/.exec(property);
+        if (mode === undefined || (rest && Number(rest[1]) >= SH_NUM_COEFFS[splat.resource.shBands] * 3)) {
+            throw new EditorError('unsupported_property', `Property '${property}' is not available on this layer.`);
+        }
+        return mode;
+    };
+    const propertyOptions = (splat: Splat, frame: CameraFrame) => ({
+        entityMatrix: splat.worldTransform.clone(),
+        viewMatrix: frame.view,
+        viewProjection: new Mat4().mul2(frame.projection, frame.view),
+        cameraPos: frame.position
+    });
+    const applyMask = async (ctx: CommandContext, splat: Splat, mask: Uint8Array, op: SelectionOp, options: SelectionOptions) => {
+        try {
+            checkCancelled(options);
+            checkTarget(splat);
+            let matched = 0;
+            for (let i = 0; i < splat.instances.count; i++) {
+                const hit = (mask[i] === 255) !== !!options.outside;
+                mask[i] = hit && (splat.instances.flags[i] & State.locked) === 0 ? 255 : 0;
+                if (mask[i]) matched++;
+            }
+            const edit = new SelectOp(splat, INTERNAL_OP[op], mask);
+            const bounds = options.preview && matched ? await scene.dataProcessor.calcMaskBound(splat, mask) : null;
+            checkCancelled(options);
+            checkTarget(splat);
+            if (options.viewToken) session.checkView(options.viewToken);
+            if (!options.preview && edit.ranges.count) await ctx.apply(edit);
+            return { ...result([splat], options.preview ? 0 : edit.ranges.count), preview: !!options.preview, matched, bounds };
+        } finally {
+            scene.dataProcessor.releaseMask(mask);
+        }
+    };
+    const copySelection = (separate: boolean, layer?: LayerId, options?: CommandOptions) => {
+        const splat = target(layer);
+        return run(splat, async (ctx) => {
+            const ranges = selectedRanges(splat);
+            if (!ranges.count) throw new EditorError('empty_selection', 'No splats are selected.');
+            const copy = splat.createLayer(ranges, splat.name);
+            await ctx.apply(separate ? new MultiOp([new RemoveInstancesOp(splat), new AddSplatOp(scene, copy)]) : new AddSplatOp(scene, copy));
+            return { ...result([splat, copy], ranges.count), createdLayer: copy.uid };
+        }, options);
+    };
+    const colorEdit = (params: GradeParams | null, layer?: LayerId, scope?: EditScope, options?: CommandOptions) => {
+        const splat = target(layer);
+        if (params && !(params.whitePoint > params.blackPoint)) throw new EditorError('invalid_input', 'whitePoint must be greater than blackPoint.');
+        const grade = params && gradeTerms(params, createGradeTerms());
+        return run(splat, async (ctx) => {
+            const affected = scopeCount(splat, scope);
+            if (affected) await ctx.apply(new SplatsColorOp({ splat, grade, scope }));
+            return result([splat], affected);
+        }, options);
     };
 
     // change notifications, derived from the bus events the modules already
@@ -223,113 +207,215 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
     // fired once per history mutation (alongside edit.canRedo)
     events.on('edit.canUndo', () => changed('historyChanged'));
 
+
     return {
+        inspect: {
+            scene: (options?: CommandOptions) => commandQueue.enqueue(() => {
+                checkCancelled(options);
+                return { ...session.read(), layers: allSplats().map(layerInfo), activeLayer: (events.invoke('selection') as Splat | null)?.uid ?? null, history: historyInfo() };
+            }),
+            layer: (id: LayerId, options?: CommandOptions) => run(layerById(id), () => layerInfo(layerById(id)), options, false),
+            histogram: (id: LayerId, property: string, options?: CommandOptions) => {
+                const splat = layerById(id);
+                const frame = scene.camera.captureFrame();
+                const viewToken = session.viewport.info().viewToken;
+                return run(splat, async () => {
+                    const mode = propertyMode(splat, property);
+                    const viewDependent = mode === 4 || isFinalColorMode(mode);
+                    const data = await scene.dataProcessor.calcHistogram(splat, mode, propertyOptions(splat, frame));
+                    checkCancelled(options);
+                    if (viewDependent) session.checkView(viewToken);
+                    return { layer: id, property, ...data, viewDependent, ...(viewDependent ? { viewToken } : {}) };
+                }, options);
+            },
+            properties: (shBands = 0) => [...Object.keys(PROP_MODE), ...Array.from({ length: SH_NUM_COEFFS[shBands] * 3 }, (_, i) => `f_rest_${i}`)]
+        },
         layers: {
             list: () => allSplats().map(layerInfo),
             active: () => (events.invoke('selection') as Splat | null)?.uid ?? null,
-            setActive: (id) => {
-                events.fire('selection', id === null ? null : layerById(id));
-            },
-            setVisible: (id, visible) => {
+            setActive: (id: LayerId | null) => events.fire('selection', id === null ? null : layerById(id)),
+            setVisible: (id: LayerId, visible: boolean) => {
                 layerById(id).visible = visible;
             },
-            rename: (id, name) => {
+            rename: (id: LayerId, name: string, options?: CommandOptions) => {
                 const splat = layerById(id);
-                // compared in the slot: an earlier queued rename may still be pending
-                return apply(splat, () => (name === splat.name ? null : new SplatRenameOp(splat, name)));
-            }
-        },
-
-        selection: {
-            all: (layer) => {
-                const splat = visibleTarget(layer);
-                return apply(splat, () => new SelectAllOp(splat));
+                return run(splat, async (ctx) => {
+                    const changed = name !== splat.name;
+                    if (changed) await ctx.apply(new SplatRenameOp(splat, name));
+                    return result([splat], changed ? 1 : 0);
+                }, options, false);
             },
-            none: (layer) => {
-                const splat = visibleTarget(layer);
-                return apply(splat, () => new SelectNoneOp(splat));
-            },
-            invert: (layer) => {
-                const splat = visibleTarget(layer);
-                return apply(splat, () => new SelectInvertOp(splat));
-            },
-            byVolume: (shape, transform, op = 'replace', layer) => {
-                const splat = visibleTarget(layer);
-                // the caller keeps its matrix; the queued work must not see it move
-                const shapeTransform = transform.clone();
-                const footprint = events.invoke('selection.footprint') as number;
-                return commandQueue.enqueue(ctx => intersectSelect(scene, ctx, splat, INTERNAL_OP[op], {
-                    [shape]: { transform: shapeTransform, footprint }
-                }));
-            },
-            hide: (layer) => {
-                const splat = visibleTarget(layer);
-                return apply(splat, () => new HideSelectionOp(splat));
-            },
-            unhide: () => {
-                return commandQueue.enqueue(async (ctx) => {
-                    const ops = allSplats()
-                    .map(splat => new UnhideAllOp(splat))
-                    .filter(op => !op.ranges.empty);
-                    if (ops.length > 0) {
-                        await ctx.apply(ops.length === 1 ? ops[0] : new MultiOp(ops));
+            update: (id: LayerId, changes: { name?: string, visible?: boolean, active?: boolean }, options?: CommandOptions) => {
+                const splat = layerById(id);
+                const values = { ...changes };
+                return run(splat, async (ctx) => {
+                    if (values.active && !(values.visible ?? splat.visible)) throw new EditorError('layer_hidden', 'Show the layer before activating it.');
+                    let affected = 0;
+                    if (values.name !== undefined && values.name !== splat.name) {
+                        await ctx.apply(new SplatRenameOp(splat, values.name));
+                        affected++;
                     }
-                });
-            },
-            delete: (layer) => {
-                const splat = visibleTarget(layer);
-                return apply(splat, () => new RemoveInstancesOp(splat));
-            },
-            restoreDeleted: (layer) => {
-                const splat = visibleTarget(layer);
-                return apply(splat, () => new RestoreMissingInstancesOp(splat));
+                    if (values.visible !== undefined && values.visible !== splat.visible) {
+                        splat.visible = values.visible;
+                        affected++;
+                    }
+                    const active = events.invoke('selection');
+                    if (values.active === true && active !== splat) {
+                        events.fire('selection', splat); affected++;
+                    }
+                    if (values.active === false && active === splat) {
+                        events.fire('selection', null); affected++;
+                    }
+                    return result([splat], affected);
+                }, options, false);
             }
         },
-
+        selection: {
+            all: (layer?: LayerId, options?: CommandOptions) => applyState(layer, s => new SelectAllOp(s), options),
+            none: (layer?: LayerId, options?: CommandOptions) => applyState(layer, s => new SelectNoneOp(s), options),
+            invert: (layer?: LayerId, options?: CommandOptions) => applyState(layer, s => new SelectInvertOp(s), options),
+            byVolume: (shape: 'sphere' | 'box', transform: Mat4, op: SelectionOp = 'replace', layer?: LayerId, options: SelectionOptions = {}) => {
+                const splat = target(layer);
+                const shapeTransform = transform.clone();
+                const settings = { ...options };
+                const footprint = settings.footprint ?? events.invoke('selection.footprint') as number;
+                return run(splat, async (ctx) => {
+                    const volume = { transform: shapeTransform, footprint };
+                    const mask = await scene.dataProcessor.intersect(shape === 'sphere' ? { sphere: volume } : { box: volume }, splat);
+                    return applyMask(ctx, splat, mask, op, settings);
+                }, settings);
+            },
+            byProperty: (id: LayerId, property: string, min: number, max: number, op: SelectionOp = 'replace', options: SelectionOptions = {}) => {
+                const splat = layerById(id);
+                const frame = scene.camera.captureFrame();
+                const settings = { ...options };
+                if (!Number.isFinite(min) || !Number.isFinite(max) || min > max) throw new EditorError('invalid_input', 'The property range must have finite min <= max.');
+                if (settings.viewToken) session.checkView(settings.viewToken);
+                return run(splat, async (ctx) => {
+                    const mode = propertyMode(splat, property);
+                    const mask = await scene.dataProcessor.selectByRange(splat, mode, { ...propertyOptions(splat, frame), min, max, numBins: 0, rangeStart: 0, rangeEnd: 0 });
+                    return applyMask(ctx, splat, mask, op, settings);
+                }, settings);
+            },
+            hide: (layer?: LayerId, options?: CommandOptions) => applyState(layer, s => new HideSelectionOp(s), options, true),
+            unhide: (options?: CommandOptions) => commandQueue.enqueue(async (ctx) => {
+                checkCancelled(options);
+                const splats = allSplats();
+                const ops = splats.map(s => new UnhideAllOp(s)).filter(op => !op.ranges.empty);
+                if (ops.length) await ctx.apply(ops.length === 1 ? ops[0] : new MultiOp(ops));
+                return result(splats, ops.reduce((n, op) => n + op.ranges.count, 0));
+            }),
+            delete: (layer?: LayerId, options?: CommandOptions) => applyState(layer, s => new RemoveInstancesOp(s), options, true),
+            restoreDeleted: (layer?: LayerId, options?: CommandOptions) => {
+                const splat = target(layer);
+                return run(splat, async (ctx) => {
+                    const before = splat.instances.count;
+                    if (splat.instances.numRemoved) await ctx.apply(new RestoreMissingInstancesOp(splat));
+                    return result([splat], splat.instances.count - before);
+                }, options);
+            },
+            restore: (id: LayerId, what: 'hidden' | 'deleted' | 'both', options?: CommandOptions) => {
+                const splat = layerById(id);
+                return run(splat, async (ctx) => {
+                    const before = splat.instances.count;
+                    const hidden = what !== 'deleted' ? splat.instances.numLocked : 0;
+                    const ops: EditOp[] = [];
+                    if (hidden) ops.push(new UnhideAllOp(splat));
+                    if (what !== 'hidden' && splat.instances.numRemoved) ops.push(new RestoreMissingInstancesOp(splat));
+                    if (ops.length) await ctx.apply(ops.length === 1 ? ops[0] : new MultiOp(ops));
+                    return result([splat], hidden + splat.instances.count - before);
+                }, options);
+            },
+            duplicate: (layer?: LayerId, options?: CommandOptions) => copySelection(false, layer, options),
+            separate: (layer?: LayerId, options?: CommandOptions) => copySelection(true, layer, options)
+        },
         color: {
-            apply: (params, layer) => {
-                const splat = visibleTarget(layer);
-                const grade = gradeTerms(params, createGradeTerms());
-                return apply(splat, () => new SplatsColorOp({ splat, grade }));
-            },
-            reset: (layer) => {
-                const splat = visibleTarget(layer);
-                return apply(splat, () => new SplatsColorOp({ splat, grade: null }));
-            }
+            apply: (params: GradeParams, layer?: LayerId, scope?: EditScope, options?: CommandOptions) => colorEdit(params, layer, scope, options),
+            reset: (layer?: LayerId, scope?: EditScope, options?: CommandOptions) => colorEdit(null, layer, scope, options)
         },
-
+        transform: (id: LayerId, scope: EditScope, delta: TransformOptions, options?: CommandOptions) => {
+            const splat = layerById(id);
+            const translation = delta.translate?.clone() ?? new Vec3();
+            const rotation = delta.rotate?.clone() ?? new Quat();
+            const factor = delta.scale ?? 1;
+            const center = delta.center?.clone();
+            if (!Number.isFinite(factor) || factor <= 0) throw new EditorError('invalid_input', 'Scale must be positive.');
+            return run(splat, async (ctx) => {
+                const affected = scope === 'layer' ? splat.instances.count : scopeCount(splat, scope);
+                if (!affected || (translation.lengthSq() === 0 && rotation.equals(Quat.IDENTITY) && factor === 1)) return result([splat], 0);
+                const origin = center ?? (scope === 'selection' ? splat.worldTransform.transformPoint(splat.selectionBound.center, new Vec3()) : splat.worldBound.center.clone());
+                const position = rotation.transformVector(origin.clone().mulScalar(-factor)).add(origin).add(translation);
+                const matrix = new Mat4().setTRS(position, rotation, new Vec3(factor, factor, factor));
+                if (scope === 'layer') {
+                    const oldt = new Transform(splat.entity.getLocalPosition(), splat.entity.getLocalRotation(), splat.entity.getLocalScale());
+                    const world = new Mat4().mul2(matrix, splat.worldTransform);
+                    const parent = splat.entity.parent;
+                    if (parent) world.mul2(new Mat4().invert(parent.getWorldTransform()), world);
+                    const newt = new Transform(world.getTranslation(), new Quat().setFromMat4(world), world.getScale());
+                    await ctx.apply(new EntityTransformOp({ splat, oldt, newt }));
+                } else {
+                    const local = new Mat4().mul2(new Mat4().invert(splat.worldTransform), matrix).mul(splat.worldTransform);
+                    const paletteMap = new Map<number, number>();
+                    selectedRanges(splat).forEach((i) => {
+                        const index = splat.instances.transformIndex(i);
+                        if (!paletteMap.has(index)) paletteMap.set(index, splat.transformPalette.size + paletteMap.size);
+                    });
+                    await ctx.apply(new SplatsTransformOp({ splat, transform: local, paletteMap }));
+                }
+                return result([splat], affected);
+            }, options);
+        },
         history: {
-            undo: () => editHistory.undo(),
-            redo: () => editHistory.redo(),
+            undo: (options?: CommandOptions) => editHistory.undo(options),
+            redo: (options?: CommandOptions) => editHistory.redo(false, options),
             canUndo: () => editHistory.canUndo(),
             canRedo: () => editHistory.canRedo()
         },
-
         viewport: {
+            ...session.viewport,
             captureFrame: () => scene.camera.captureFrame(),
-            pickDepth: async (points, layers) => {
-                const splats = layers?.map(layerById);
-                const hits = await scene.camera.intersectMany(points, splats);
-                return hits.map(hit => (hit ? {
-                    layer: hit.splat.uid,
-                    position: hit.position,
-                    distance: hit.distance,
-                    depth: hit.depth
-                } : null));
+            pickDepth: (points: ScreenPoint[], layers?: LayerId[], options: CommandOptions & { viewToken?: string } = {}) => {
+                const frame = scene.camera.captureFrame();
+                const capturedPoints = points.map(p => ({ ...p }));
+                const splats = layers?.map(layerById) ?? allSplats().filter(s => s.visible);
+                if (options.viewToken) session.checkView(options.viewToken);
+                return commandQueue.enqueue(async (ctx) => {
+                    checkCancelled(options);
+                    for (const splat of splats) checkTarget(splat);
+                    if (options.viewToken) session.checkView(options.viewToken);
+                    const hits = await scene.camera.pickDepths(ctx, frame, capturedPoints, splats);
+                    checkCancelled(options);
+                    if (options.viewToken) session.checkView(options.viewToken);
+                    return hits.map(hit => (hit ? { layer: hit.splat.uid, position: hit.position, distance: hit.distance, depth: hit.depth } as DepthHit : null));
+                });
             },
-            // the rect gesture's implementation still lives in editor.ts; it
-            // moves here with the rest of the screen-space machinery
-            selectRect: (rect, op = 'replace') => {
-                return events.invoke('select.rect', INTERNAL_OP[op], rect) as Promise<void>;
+            selectRect: (rect: ScreenRect, op: SelectionOp = 'replace', options: RectangleOptions = {}) => {
+                const splat = target(options.layer);
+                const frame = scene.camera.captureFrame();
+                const captured = { start: { ...rect.start }, end: { ...rect.end } };
+                const settings = { ...options };
+                const depth = settings.depth ?? events.invoke('selection.useDepth') as boolean;
+                const footprint = settings.footprint ?? events.invoke('selection.footprint') as number;
+                if (settings.viewToken) session.checkView(settings.viewToken);
+                return run(splat, async (ctx) => {
+                    if (settings.viewToken) session.checkView(settings.viewToken);
+                    const edit = await rectangleOp(scene, ctx, splat, frame, captured, INTERNAL_OP[op], depth, footprint);
+                    checkCancelled(settings);
+                    checkTarget(splat);
+                    if (settings.viewToken) session.checkView(settings.viewToken);
+                    if (edit.ranges.count) await ctx.apply(edit);
+                    return result([splat], edit.ranges.count);
+                }, settings);
             }
         },
-
-        on: (event, fn) => {
+        files: session.files,
+        on: (event: ChangeEvent, fn: (detail: ChangeDetail) => void) => {
             const handle = changes.on(event, fn);
             return () => handle.off();
         }
     };
 };
 
+type EditorAPI = ReturnType<typeof createEditorAPI>;
 export { createEditorAPI, intersectSelect, PUBLIC_OP };
-export type { EditorAPI, LayerId, LayerInfo, SelectionOp, ScreenPoint, ScreenRect, DepthHit, ChangeEvent, ChangeDetail };
+export type { EditorAPI, LayerId, LayerInfo, SelectionOp, ScreenPoint, ScreenRect, DepthHit, ChangeEvent, ChangeDetail, SelectionOptions, RectangleOptions };

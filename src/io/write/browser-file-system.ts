@@ -79,7 +79,7 @@ class BrowserDownloadWriter implements Writer {
     private innerWriter: Writer;
     private filename: string;
 
-    constructor(filename: string) {
+    constructor(filename: string, private signal?: AbortSignal) {
         this.filename = filename;
         this.memFs = new MemoryFileSystem();
         this.innerWriter = this.memFs.createWriter(filename);
@@ -90,10 +90,12 @@ class BrowserDownloadWriter implements Writer {
     }
 
     write(data: Uint8Array): void {
+        this.signal?.throwIfAborted();
         this.innerWriter.write(data);
     }
 
     close(): void {
+        this.signal?.throwIfAborted();
         this.innerWriter.close();
         const data = this.memFs.results.get(this.filename);
         if (data) {
@@ -120,7 +122,7 @@ class BrowserFileSystem implements FileSystem {
      * @param filename - The filename for downloads (fallback mode)
      * @param stream - Optional FileSystemWritableFileStream for direct file access
      */
-    constructor(filename: string, stream?: FileSystemWritableFileStream) {
+    constructor(filename: string, stream?: FileSystemWritableFileStream, private signal?: AbortSignal) {
         this.filename = filename;
         this.stream = stream;
     }
@@ -129,7 +131,7 @@ class BrowserFileSystem implements FileSystem {
         if (this.stream) {
             return new BrowserFileWriter(this.stream);
         }
-        return new BrowserDownloadWriter(this.filename);
+        return new BrowserDownloadWriter(this.filename, this.signal);
     }
 
     mkdir(_path: string): Promise<void> {

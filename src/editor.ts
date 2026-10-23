@@ -4,13 +4,15 @@ import type { CameraFrame } from './camera';
 import type { GradeParams } from './color-grade';
 import type { CommandContext } from './command-queue';
 import { EditHistory } from './edit-history';
-import { selectedRanges, SelectOp, RemoveInstancesOp, MultiOp, AddSplatOp, SetLocalFrameOp } from './edit-ops';
+import { SelectOp, MultiOp, SetLocalFrameOp } from './edit-ops';
 import { intersectSelect, PUBLIC_OP, type EditorAPI } from './editor-api';
+import { EditorError } from './editor-command';
 import { Element, ElementType } from './element';
 import { Events } from './events';
 import type { GridPlane } from './infinite-grid';
 import { Scene } from './scene';
 import { runSelectionGesture } from './selection-gesture';
+import { packRegion, emptyRegion, rectRegion } from './selection-rectangle';
 import { Splat } from './splat';
 
 // register for editor and scene events
@@ -383,9 +385,14 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // the UI entry points adapt to the editor API, which owns the commands:
     // same ops, same command-slot discipline. As before, they do nothing
     // without an active visible layer (the API would reject instead)
-    const withActive = (command: () => Promise<void>) => {
+    const withActive = (command: () => Promise<unknown>) => {
         if (selectedSplats().length > 0) {
-            command();
+            command().catch((error) => {
+                // UI shortcuts can run with an empty selection, or lose their
+                // target while waiting for a previous command.
+                if (error instanceof EditorError && ['empty_selection', 'layer_removed', 'layer_hidden'].includes(error.code)) return;
+                console.error(error);
+            });
         }
     };
 
@@ -472,48 +479,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         await ctx.apply(selectOp);
     };
 
-    // per-row x-interval tables in render-target pixels for the footprint
-    // pass: (rowCount + 1) offsets into the same buffer, then (x0, x1) pairs,
-    // so every row's runs are represented exactly
-
-    const packRegion = (py0: number, py1: number, rowRuns: number[][]): SelectRegion => {
-        const rows = py1 - py0 + 1;
-        const table = rows + 1;
-        let total = 0;
-        for (const runs of rowRuns) {
-            total += runs.length;
-        }
-        const intervals = new Uint32Array(table + total);
-        let cursor = table;
-        for (let r = 0; r < rows; r++) {
-            intervals[r] = cursor;
-            intervals.set(rowRuns[r], cursor);
-            cursor += rowRuns[r].length;
-        }
-        intervals[rows] = cursor;
-        return { y0: py0, y1: py1, intervals };
-    };
-
-    const emptyRegion = (): SelectRegion => {
-        return packRegion(0, 0, [[]]);
-    };
-
-    const rectRegion = (frame: CameraFrame, x0: number, y0: number, x1: number, y1: number): SelectRegion => {
-        const { width, height } = frame.target;
-        const py0 = Math.max(0, Math.floor(y0 * height));
-        const py1 = Math.min(height - 1, Math.ceil(y1 * height) - 1);
-        const px0 = Math.max(0, Math.floor(x0 * width));
-        const px1 = Math.min(width - 1, Math.ceil(x1 * width) - 1);
-        if (py1 < py0 || px1 < px0) {
-            return emptyRegion();
-        }
-        const rowRuns: number[][] = [];
-        for (let r = py0; r <= py1; r++) {
-            rowRuns.push([px0, px1]);
-        }
-        return packRegion(py0, py1, rowRuns);
-    };
-
     const maskRegion = (frame: CameraFrame, context: CanvasRenderingContext2D, maskWidth: number, maskHeight: number): SelectRegion => {
         const { width, height } = frame.target;
         const mask = context.getImageData(0, 0, maskWidth, maskHeight);
@@ -591,33 +556,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     });
 
     events.function('select.rect', (op: 'add'|'remove'|'set'|'intersect', rect: any) => {
-        // copy the coordinates: the caller owns rect and may reuse it before
-        // the slot runs
-        const { x: x1, y: y1 } = rect.start;
-        const { x: x2, y: y2 } = rect.end;
-        const region = { x1, y1, x2, y2 };
-
-        return runSelectionGesture(scene.commandQueue, {
-            snapshot: gestureSnapshot,
-            run: async ({ frame, method, footprint, splats }, ctx) => {
-                for (const splat of splats) {
-                    if (!splat.scene) continue;
-                    if (method === 'centers') {
-                        await selectIntersect(ctx, splat, op, { rect: region }, frame);
-                    } else if (method === 'footprint') {
-                        await footprintSelect(ctx, splat, op, rectRegion(frame, x1, y1, x2, y2), footprint, frame);
-                    } else {
-                        const { ids } = await scene.camera.pickIds(ctx, frame, splat, op, footprint, x1, y1, x2 - x1, y2 - y1);
-
-                        if (footprint === 0) {
-                            await visibleCentersSelect(ctx, splat, op, new Set(ids), { rect: region }, frame);
-                        } else {
-                            await ctx.apply(new SelectOp(splat, op, new Uint32Array(new Set(ids)).sort()));
-                        }
-                    }
-                }
-            }
-        });
+        if (selectedSplats().length > 0) return api.viewport.selectRect(rect, PUBLIC_OP[op]);
     });
 
     // build an operation-private mask texture from the stroke canvas: the gpu
@@ -871,42 +810,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // copies the instance list only: no gaussians are duplicated, and there is no
     // PLY round trip to lose SH precision, drop extra columns or reorder out of
     // Morton. The asset is reference counted, so it outlives either layer.
-    const performSelectionFunc = (func: 'duplicate' | 'separate') => {
-        const splat = selectedSplats()[0];
-        if (!splat) {
-            return;
-        }
+    events.on('edit.duplicate', () => withActive(() => api.selection.duplicate()));
 
-        // the selection is read in the slot, after any pending gesture's op
-        return scene.commandQueue.enqueue(async (ctx) => {
-            if (!splat.scene) return;
-
-            const ranges = selectedRanges(splat);
-            if (ranges.count === 0) {
-                return;
-            }
-
-            const copy = splat.createLayer(ranges, splat.name);
-
-            if (func === 'separate') {
-                await ctx.apply(new MultiOp([
-                    new RemoveInstancesOp(splat),
-                    new AddSplatOp(scene, copy)
-                ]));
-            } else {
-                await ctx.apply(new AddSplatOp(scene, copy));
-            }
-        });
-    };
-
-    // duplicate the current selection
-    events.on('edit.duplicate', () => {
-        performSelectionFunc('duplicate');
-    });
-
-    events.on('edit.separate', () => {
-        performSelectionFunc('separate');
-    });
+    events.on('edit.separate', () => withActive(() => api.selection.separate()));
 
     // bake the panel's pending grade into the selected gaussians. `params` are the
     // seven authored values; the op composes them onto whatever grade the targets

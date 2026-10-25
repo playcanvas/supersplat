@@ -72,6 +72,11 @@ fn selectedByRange(index: u32) -> bool {
     var selected = false;
     var visible = false;
     if (!computeSplatValue(index, &value, &selected, &visible) || !visible) { return false; }
+    // Zero bins requests an inclusive range in property units, independent of
+    // the histogram's binning. The editor API and the Data panel share values.
+    if (uniforms.numBins == 0) {
+        return value >= uniforms.minValue && value <= uniforms.maxValue;
+    }
     var normalized = 0.0;
     if (uniforms.maxValue != uniforms.minValue) {
         normalized = (value - uniforms.minValue) / (uniforms.maxValue - uniforms.minValue);

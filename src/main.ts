@@ -6,6 +6,7 @@ import { CommandQueue } from './command-queue';
 import { registerDocEvents } from './doc';
 import { EditHistory } from './edit-history';
 import { registerEditorEvents } from './editor';
+import { createEditorAPI, type EditorAPI } from './editor-api';
 import { Events } from './events';
 import { initFileHandler } from './file-handler';
 import { registerIframeApi } from './iframe-api';
@@ -39,6 +40,7 @@ import { BoundDimensionsOverlay } from './ui/bound-dimensions-overlay';
 import { EditorUI } from './ui/editor';
 import { i18n } from './ui/localization';
 import { registerSelectCursor } from './ui/select-cursor';
+import { registerWebMCP } from './webmcp';
 
 declare global {
     interface LaunchParams {
@@ -50,6 +52,7 @@ declare global {
             setConsumer: (callback: (launchParams: LaunchParams) => void) => void;
         };
         scene: Scene;
+        editor: EditorAPI;
     }
 }
 
@@ -276,8 +279,12 @@ const main = async () => {
 
     window.scene = scene;
 
+    // the typed command/query surface the UI adapters and scripts share
+    const editor = createEditorAPI(events, scene, editHistory, commandQueue);
+    window.editor = editor;
+
     // register events that need scene or other dependencies
-    registerEditorEvents(events, editHistory, scene);
+    registerEditorEvents(events, editHistory, scene, editor);
     registerSelectionEvents(events, scene);
     registerSequenceEvents(events, scene);
     registerDocEvents(scene, events);
@@ -288,6 +295,9 @@ const main = async () => {
     // registered after the boot-time initialization events above so they are
     // never captured as user changes.
     registerPreferences(events, sceneConfig, urlArgs);
+
+    // Register after the editor services and preferences are available.
+    registerWebMCP(editor);
 
     // load async models
     scene.start();

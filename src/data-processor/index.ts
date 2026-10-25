@@ -1,4 +1,5 @@
 import {
+    BUFFERUSAGE_COPY_DST,
     SEMANTIC_POSITION,
     drawQuadWithShader,
     BoundingBox,
@@ -7,9 +8,13 @@ import {
     ScopeSpace,
     Shader,
     ShaderUtils,
-    BlendState
+    BlendState,
+    StorageBuffer
 } from 'playcanvas';
 
+import type { CameraFrame } from '../camera';
+import { fragmentShader as blitFragmentShader, vertexShader as blitVertexShader } from '../shaders/blit-shader';
+import { Splat } from '../splat';
 import { BufferPool } from './buffer-pool';
 import { CalcBound } from './calc-bound';
 import { CalcHistogram, CalcHistogramOptions } from './calc-histogram';
@@ -17,8 +22,6 @@ import { ColorMatch } from './color-match';
 import { Intersect, IntersectOptions } from './intersect';
 import { SelectByRange, SelectByRangeOptions } from './select-by-range';
 import { SplatValueOptions } from './splat-value-compute';
-import { fragmentShader as blitFragmentShader, vertexShader as blitVertexShader } from '../shaders/blit-shader';
-import { Splat } from '../splat';
 
 const resolve = (scope: ScopeSpace, values: any) => {
     for (const key in values) {
@@ -65,15 +68,34 @@ class DataProcessor {
         this.selectByRangeImpl = new SelectByRange(device);
     }
 
-    // calculate the intersection of a mask canvas with splat centers.
+    // calculate the intersection of a mask canvas with splat centers. frame is
+    // the gesture-time camera for the screen-space modes (see Intersect.run).
     // returns an owned mask buffer the caller must release via releaseMask().
-    intersect(options: IntersectOptions, splat: Splat) {
-        return this.intersectImpl.run(options, splat, this.bufferPool);
+    intersect(options: IntersectOptions, splat: Splat, frame?: CameraFrame) {
+        return this.intersectImpl.run(options, splat, this.bufferPool, frame);
     }
 
     // use gpu to calculate both selected and visible bounds in a single pass
     calcBound(splat: Splat, selectionBound: BoundingBox, localBound: BoundingBox): Promise<void> {
         return this.calcBoundImpl.run(splat, selectionBound, localBound);
+    }
+
+    // Bounds for a query mask without changing selection or history. The
+    // caller owns a command slot, just as for calcBound and intersect.
+    async calcMaskBound(splat: Splat, mask: Uint8Array): Promise<BoundingBox> {
+        const flags = new Uint8Array(Math.max(4, Math.ceil(mask.length / 4) * 4));
+        for (let i = 0; i < splat.instances.count; i++) flags[i] = mask[i] === 255 ? 1 : 0;
+        const buffer = new StorageBuffer(this.device, flags.byteLength, BUFFERUSAGE_COPY_DST);
+        try {
+            buffer.write(0, flags, 0, flags.byteLength);
+            const bound = new BoundingBox();
+            await this.calcBoundImpl.run(splat, bound, new BoundingBox(), buffer);
+            const world = new BoundingBox();
+            world.setFromTransformedAabb(bound, splat.worldTransform);
+            return world;
+        } finally {
+            buffer.destroy();
+        }
     }
 
     // calculate histogram (bin counts + min/max) entirely on GPU

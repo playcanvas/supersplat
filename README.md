@@ -46,6 +46,10 @@ To initialize a local development environment for SuperSplat, ensure you have [N
 
 When changes to the source are detected, SuperSplat is rebuilt automatically. Simply refresh your browser to see your changes.
 
+## WebMCP
+
+SuperSplat exposes native browser WebMCP tools for scene inspection, selection, editing, camera control and import/export. See [WebMCP](docs/webmcp.md) for the tool contract, browser requirements and verification commands.
+
 ## Localizing the SuperSplat Editor
 
 The currently supported languages are available here:

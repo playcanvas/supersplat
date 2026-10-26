@@ -77,7 +77,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         'view.splatsColorBlend', 'view.splatsSelectionBlend',
         'view.centersColorBlend', 'view.centersSelectionBlend',
         'view.ringsColorBlend', 'view.ringsSelectionBlend',
-        'view.bands', 'view.minPixelSize', 'view.stochastic', 'view.perfOverlay', 'view.overdraw', 'camera.bound', 'camera.boundDimensions', 'camera.showPoses',
+        'view.bands', 'view.minPixelSize', 'view.stochastic', 'view.sortMode', 'view.perfOverlay', 'view.overdraw', 'camera.bound', 'camera.boundDimensions', 'camera.showPoses',
         'camera.showInfo', 'selection.changed', 'tool.coordSpace', 'colorPanel.pendingChanged'
     ].forEach((eventName) => {
         events.on(eventName, () => {
@@ -1171,6 +1171,22 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     });
 
+    // splat sort order: 'radial' sorts by distance to the camera, 'depth' by
+    // depth along its forward axis
+
+    let sortMode = 'radial';
+
+    events.function('view.sortMode', () => {
+        return sortMode;
+    });
+
+    events.on('view.setSortMode', (value: string) => {
+        if (value !== sortMode) {
+            sortMode = value;
+            events.fire('view.sortMode', value);
+        }
+    });
+
     // gpu/cpu frame timing overlay
 
     let perfOverlay = false;
@@ -1234,9 +1250,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.fire('camera.fov', scene.camera.fov);
     events.fire('view.bands', viewBands);
     events.fire('camera.showInfo', showInfo);
-    // needed because view.setStochastic only notifies on a change, so a stored
-    // preference equal to the initial value leaves the ui showing its own default
+    // needed because view.setStochastic and view.setSortMode only notify on a
+    // change, so a stored preference equal to the initial value leaves the ui
+    // showing its own default
     events.fire('view.stochastic', stochastic);
+    events.fire('view.sortMode', sortMode);
 
     // doc serialization
     events.function('docSerialize.view', () => {

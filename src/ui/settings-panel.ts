@@ -255,17 +255,41 @@ class SettingsPanel extends Container {
         stochasticRow.append(stochasticLabel);
         stochasticRow.append(stochasticSelection);
 
+        // sort mode
+
+        const sortModeRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const sortModeLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(sortModeLabel, 'panel.settings.sort-mode');
+
+        const sortModeSelection = new SelectInput({
+            class: 'settings-panel-row-select',
+            defaultValue: 'radial'
+        });
+        i18n.bindOptions(sortModeSelection, () => [
+            { v: 'radial', t: i18n.t('panel.settings.sort-mode.radial') },
+            { v: 'depth', t: i18n.t('panel.settings.sort-mode.depth') }
+        ]);
+
+        sortModeRow.append(sortModeLabel);
+        sortModeRow.append(sortModeSelection);
+
         rowToggles(fovDollyRow, fovDollyToggle);
 
         this.append(header);
         this.append(languageRow);
         this.append(sectionHeader('panel.settings.section-rendering'));
-        this.append(stochasticRow);
         this.append(tonemappingRow);
         this.append(shBandsRow);
+        this.append(sortModeRow);
+        this.append(stochasticRow);
         this.append(sectionHeader('panel.settings.section-camera'));
-        this.append(cameraFlySpeedRow);
         this.append(fovRow);
+        this.append(cameraFlySpeedRow);
         this.append(fovDollyRow);
 
         // handle panel visibility
@@ -341,6 +365,16 @@ class SettingsPanel extends Container {
             events.fire('view.setStochastic', value);
         });
 
+        // sort mode
+
+        events.on('view.sortMode', (value: string) => {
+            sortModeSelection.value = value;
+        });
+
+        sortModeSelection.on('change', (value: string) => {
+            events.fire('view.setSortMode', value);
+        });
+
         // camera fov
 
         events.on('camera.fov', (fov: number) => {
@@ -377,6 +411,17 @@ class SettingsPanel extends Container {
 
         // tooltips
         tooltips.register(resetButton, () => i18n.t('panel.settings.reset'), 'left');
+
+        // row help: what each setting controls
+        const help = (localeKey: string) => () => i18n.t(localeKey);
+        tooltips.register(languageLabel, help('panel.settings.language.tooltip'), 'top');
+        tooltips.register(tonemappingLabel, help('panel.settings.tone-mapping.tooltip'), 'top');
+        tooltips.register(shBandsLabel, help('panel.settings.sh-bands.tooltip'), 'top');
+        tooltips.register(sortModeLabel, help('panel.settings.sort-mode.tooltip'), 'top');
+        tooltips.register(stochasticLabel, help('panel.settings.stochastic-alpha.tooltip'), 'top');
+        tooltips.register(fovLabel, help('panel.settings.fov.tooltip'), 'top');
+        tooltips.register(cameraFlySpeedLabel, help('panel.settings.fly-speed.tooltip'), 'top');
+        tooltips.register(fovDollyLabel, help('panel.settings.fov-dolly.tooltip'), 'top');
     }
 }
 

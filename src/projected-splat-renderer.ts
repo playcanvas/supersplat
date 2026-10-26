@@ -482,6 +482,7 @@ class ProjectedSplatRenderer {
             new UniformFormat('minPixelSize', UNIFORMTYPE_FLOAT),
             new UniformFormat('near', UNIFORMTYPE_FLOAT),
             new UniformFormat('far', UNIFORMTYPE_FLOAT),
+            new UniformFormat('radialSort', UNIFORMTYPE_UINT),
             new UniformFormat('capacity', UNIFORMTYPE_UINT),
             new UniformFormat('keepCulled', UNIFORMTYPE_UINT),
             new UniformFormat('minContribution', UNIFORMTYPE_FLOAT),
@@ -905,6 +906,18 @@ class ProjectedSplatRenderer {
         const occlusion = this.stochastic && this.occlusionCull && this.prevValid &&
             !this.scene.editedRender && this.prevClipZ[2] === (isOrtho ? 1 : 0);
 
+        // radial sorting orders by distance to the camera instead of depth along
+        // its forward axis. Orthographic rays are parallel, so depth is the only
+        // order there. The projector keeps splats whose centres are off-screen
+        // but whose footprints reach it, so the frustum does not bound their
+        // distance; the scene bound does: no centre lies farther than the
+        // bound's centre plus its radius
+        const radialSort = !isOrtho && events.invoke('view.sortMode') === 'radial';
+        const bound = this.scene.bound;
+        const sortFar = radialSort ?
+            cameraPosition.distance(bound.center) + bound.halfExtents.length() :
+            cameraComponent.farClip;
+
         let ringsBase = 0;
         let ringsCount = 0;
 
@@ -978,7 +991,8 @@ class ProjectedSplatRenderer {
             compute.setParameter('pickOp', -1);
             compute.setParameter('minPixelSize', minPixelSize);
             compute.setParameter('near', cameraComponent.nearClip);
-            compute.setParameter('far', cameraComponent.farClip);
+            compute.setParameter('far', sortFar);
+            compute.setParameter('radialSort', radialSort ? 1 : 0);
             compute.setParameter('capacity', this.capacity);
             // culled splats of the selected layer stay projected while the
             // centres overlay is up, so their centres still draw

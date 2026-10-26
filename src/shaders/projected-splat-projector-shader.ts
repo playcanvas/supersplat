@@ -117,9 +117,11 @@ struct ProjectorUniforms {
     selectionEnabled: u32,
     pickOp: i32,
     minPixelSize: f32,
-    // camera clip planes, used to linearly normalize view depth for the sort key
+    // the sort key's range: the camera clip planes, with far raised to the scene
+    // bound's farthest distance when radialSort keys on the distance to the camera
     near: f32,
     far: f32,
+    radialSort: u32,
     // total cache entries: the culled tail of the compact list grows down from
     // here (compactTailSlot)
     capacity: u32,
@@ -502,7 +504,10 @@ fn main(
     // ratio; perspective's clip.z would be hyperbolic, so we normalize the raw
     // view depth instead). near may be negative in ortho (the camera sits inside
     // the bound); the subtraction handles that with no sign special-case.
-    let normDepth = saturate((depth - uniforms.near) / (uniforms.far - uniforms.near));
+    // Radial sorting keys on the distance to the camera instead, so the order
+    // does not change as the camera turns in place
+    let sortDepth = select(depth, length(viewCenter.xyz), uniforms.radialSort != 0u);
+    let normDepth = saturate((sortDepth - uniforms.near) / (uniforms.far - uniforms.near));
     sortKeys[slot] = u32((1.0 - normDepth) * f32((1u << 20u) - 1u));
     compactEntries[slot] = entry;
 }

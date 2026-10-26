@@ -117,8 +117,8 @@ struct ProjectorUniforms {
     selectionEnabled: u32,
     pickOp: i32,
     minPixelSize: f32,
-    // the sort key's range: the camera clip planes, with far widened to the far
-    // plane's corners when radialSort keys on the distance to the camera
+    // the sort key's range: the camera clip planes, with far raised to the scene
+    // bound's farthest distance when radialSort keys on the distance to the camera
     near: f32,
     far: f32,
     radialSort: u32,

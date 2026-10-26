@@ -14,6 +14,7 @@ import { Scene } from './scene';
 import { runSelectionGesture } from './selection-gesture';
 import { packRegion, emptyRegion, rectRegion } from './selection-rectangle';
 import { Splat } from './splat';
+import { MODE_SETTING_KEYS, VIEW_MODES, modeDefaults, type ModeSettingKey, type ModeSettings, type ViewMode } from './view-mode';
 
 // register for editor and scene events
 const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: Scene, api: EditorAPI) => {
@@ -71,9 +72,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // force render on some events
 
     [
-        'view.centerSize', 'view.outlineSelection', 'view.gaussians', 'view.centers', 'view.rings',
+        'view.mode', 'view.centerSize', 'view.outlineSelection', 'view.gaussians', 'view.centers', 'view.rings',
         'view.ringSize', 'view.editView',
-        'view.selectionColor', 'view.selectionCenters', 'view.selectionRings',
+        'view.selectionGaussians', 'view.selectionColor', 'view.selectionCenters', 'view.selectionRings',
         'view.splatsColorBlend', 'view.splatsSelectionBlend',
         'view.centersColorBlend', 'view.centersSelectionBlend',
         'view.ringsColorBlend', 'view.ringsSelectionBlend',
@@ -824,38 +825,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('scene.reset', () => withActive(() => api.selection.restoreDeleted()));
 
-    // display
+    // ring thickness, shared by both modes
 
-    let showGaussians = true;
-    let showCenters = false;
-    let showRings = false;
     let ringSize = 4;
 
-    events.function('view.gaussians', () => showGaussians);
-    events.function('view.centers', () => showCenters);
-    events.function('view.rings', () => showRings);
     events.function('view.ringSize', () => ringSize);
-
-    events.on('view.setGaussians', (value: boolean) => {
-        if (value !== showGaussians) {
-            showGaussians = value;
-            events.fire('view.gaussians', value);
-        }
-    });
-
-    events.on('view.setCenters', (value: boolean) => {
-        if (value !== showCenters) {
-            showCenters = value;
-            events.fire('view.centers', value);
-        }
-    });
-
-    events.on('view.setRings', (value: boolean) => {
-        if (value !== showRings) {
-            showRings = value;
-            events.fire('view.rings', value);
-        }
-    });
 
     events.on('view.setRingSize', (value: number) => {
         if (value !== ringSize) {
@@ -864,61 +838,154 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     });
 
-    // per-surface colour blend weights. colorBlend mixes the base colour from
-    // the gaussian's own colour (0) toward the flat unselected colour (1);
-    // selectionBlend mixes a selected splat from that base toward the
-    // selection colour
-    const blends: [name: string, value: number][] = [
-        ['splatsColorBlend', 0],
-        ['splatsSelectionBlend', 1],
-        ['centersColorBlend', 1],
-        ['centersSelectionBlend', 1],
-        ['ringsColorBlend', 0],
-        ['ringsSelectionBlend', 1]
-    ];
-    blends.forEach(([name, initial]) => {
-        let value = initial;
-        const setEvent = `view.set${name[0].toUpperCase()}${name.slice(1)}`;
-        events.function(`view.${name}`, () => value);
-        events.on(setEvent, (next: number) => {
-            if (next !== value) {
-                value = next;
-                events.fire(`view.${name}`, next);
+    // preference application sets the mode, both modes' settings and the
+    // markers switch explicitly: the user-facing side effects below (a mode
+    // switch or an unselected marker toggle showing the markers) must stay
+    // out of its way
+    let prefsSuspendDepth = 0;
+    events.on('preferences.suspend', () => {
+        prefsSuspendDepth++;
+    });
+    events.on('preferences.resume', () => {
+        prefsSuspendDepth = Math.max(0, prefsSuspendDepth - 1);
+    });
+
+    // markers switch (tab): while off, unselected gaussians render raw - no
+    // centres or rings, no tint, gaussians on - whatever the mode's settings
+    // say, so it toggles between the editing view and the plain scene. The
+    // selected gaussians keep their indicators. Off by default and stored as
+    // a preference
+    let editView = false;
+
+    const setEditView = (value: boolean) => {
+        if (value !== editView) {
+            editView = value;
+            events.fire('view.editView', value);
+        }
+    };
+
+    events.function('view.editView', () => editView);
+
+    events.on('view.setEditView', setEditView);
+
+    events.on('view.toggleEditView', () => {
+        setEditView(!editView);
+    });
+
+    // view mode and the settings each mode owns (see view-mode.ts). The live
+    // view.* and selection.useDepth values are the active mode's; the other
+    // mode's are kept and applied in full when the mode switches, so each
+    // mode remembers its own arrangement
+
+    const modeSettings: Record<ViewMode, ModeSettings> = {
+        centers: modeDefaults('centers'),
+        rings: modeDefaults('rings')
+    };
+    let viewMode: ViewMode = 'centers';
+
+    const capitalize = (s: string) => `${s[0].toUpperCase()}${s.slice(1)}`;
+
+    // depth is the selection's event, the rest are the view's
+    const notifyEvent = (key: ModeSettingKey) => (key === 'useDepth' ? 'selection.useDepth' : `view.${key}`);
+    const setEvent = (key: ModeSettingKey) => (key === 'useDepth' ? 'selection.setUseDepth' : `view.set${capitalize(key)}`);
+
+    // a mode's settings changed: notify as a whole, for persistence
+    const notifySettings = (mode: ViewMode) => {
+        events.fire(`view.${mode}Settings`, { ...modeSettings[mode] });
+    };
+
+    const setSetting = (mode: ViewMode, key: ModeSettingKey, value: boolean | number) => {
+        const settings = modeSettings[mode] as Record<ModeSettingKey, boolean | number>;
+        if (settings[key] === value) {
+            return false;
+        }
+        settings[key] = value;
+        if (mode === viewMode) {
+            events.fire(notifyEvent(key), value);
+        }
+        return true;
+    };
+
+    MODE_SETTING_KEYS.forEach((key) => {
+        events.function(notifyEvent(key), () => modeSettings[viewMode][key]);
+        events.on(setEvent(key), (value: boolean | number) => {
+            if (setSetting(viewMode, key, value)) {
+                notifySettings(viewMode);
             }
         });
     });
 
-    // selection controls: depth on = the per-pixel id pick (frontmost wins),
-    // depth off = through all layers; footprint scales how much of each splat's
-    // projected ellipse counts, from its center point (0) to the full footprint (1)
-
-    let selectionUseDepth = false;
-    let selectionFootprint = 0;
-
-    events.function('selection.useDepth', () => selectionUseDepth);
-
-    events.on('selection.setUseDepth', (value: boolean) => {
-        if (value !== selectionUseDepth) {
-            selectionUseDepth = value;
-            events.fire('selection.useDepth', value);
-        }
-    });
-
     events.on('selection.toggleUseDepth', () => {
-        events.fire('selection.setUseDepth', !selectionUseDepth);
+        events.fire('selection.setUseDepth', !modeSettings[viewMode].useDepth);
     });
 
-    events.function('selection.footprint', () => selectionFootprint);
+    // whole-object access per mode, for preferences and reset. Keys left out
+    // keep their values
+    VIEW_MODES.forEach((mode) => {
+        events.function(`view.${mode}Settings`, () => ({ ...modeSettings[mode] }));
+        events.on(`view.set${capitalize(mode)}Settings`, (settings: Partial<ModeSettings>) => {
+            let changed = false;
+            MODE_SETTING_KEYS.forEach((key) => {
+                if (settings[key] !== undefined && setSetting(mode, key, settings[key])) {
+                    changed = true;
+                }
+            });
+            if (changed) {
+                notifySettings(mode);
+            }
+        });
+    });
 
-    events.on('selection.setFootprint', (value: number) => {
-        if (value !== selectionFootprint) {
-            selectionFootprint = value;
-            events.fire('selection.footprint', value);
+    // the active mode back to its defaults
+    events.on('view.resetModeSettings', () => {
+        events.fire(`view.set${capitalize(viewMode)}Settings`, modeDefaults(viewMode));
+    });
+
+    events.function('view.mode', () => viewMode);
+
+    const setViewMode = (mode: ViewMode) => {
+        if (mode === viewMode) {
+            return;
+        }
+        const previous = modeSettings[viewMode];
+        viewMode = mode;
+        const next = modeSettings[mode];
+        MODE_SETTING_KEYS.forEach((key) => {
+            if (next[key] !== previous[key]) {
+                events.fire(notifyEvent(key), next[key]);
+            }
+        });
+        events.fire('view.mode', mode);
+        events.fire('selection.footprint', mode === 'rings' ? 1 : 0);
+        // choosing a mode is asking to see its markers
+        if (prefsSuspendDepth === 0) {
+            setEditView(true);
+        }
+    };
+
+    events.on('view.setMode', (mode: ViewMode) => {
+        if (VIEW_MODES.includes(mode)) {
+            setViewMode(mode);
         }
     });
 
-    events.on('selection.toggleFootprint', () => {
-        events.fire('selection.setFootprint', selectionFootprint > 0 ? 0 : 1);
+    events.on('view.toggleMode', () => {
+        setViewMode(viewMode === 'centers' ? 'rings' : 'centers');
+    });
+
+    // what geometry counts for a screen-space pick: the mode's marker. 0 is
+    // the centre point, 1 the full projected footprint
+    events.function('selection.footprint', () => (viewMode === 'rings' ? 1 : 0));
+
+    // turning the unselected gaussians or their markers on or off adjusts the
+    // editing view, so it switches the markers back on rather than being made
+    // blind. A mode switch fires these too, to the same effect
+    ['view.gaussians', 'view.centers', 'view.rings'].forEach((eventName) => {
+        events.on(eventName, () => {
+            if (prefsSuspendDepth === 0) {
+                setEditView(true);
+            }
+        });
     });
 
     // camera control mode (orbit/fly)
@@ -979,142 +1046,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('camera.setFlySpeed', (value: number) => {
         setFlySpeed(value);
-    });
-
-    // selection display
-
-    let selectionColor = false;
-    let selectionCenters = true;
-    let selectionRings = false;
-
-    events.function('view.selectionColor', () => selectionColor);
-    events.function('view.selectionCenters', () => selectionCenters);
-    events.function('view.selectionRings', () => selectionRings);
-
-    events.on('view.setSelectionColor', (value: boolean) => {
-        if (value !== selectionColor) {
-            selectionColor = value;
-            events.fire('view.selectionColor', value);
-        }
-    });
-
-    events.on('view.setSelectionCenters', (value: boolean) => {
-        if (value !== selectionCenters) {
-            selectionCenters = value;
-            events.fire('view.selectionCenters', value);
-        }
-    });
-
-    events.on('view.setSelectionRings', (value: boolean) => {
-        if (value !== selectionRings) {
-            selectionRings = value;
-            events.fire('view.selectionRings', value);
-        }
-    });
-
-    // per-footprint-mode view profiles: each footprint mode (centers/rings)
-    // remembers its own overlay arrangement. The live view flags are the
-    // active mode's profile; this holds the other mode's, applied when the
-    // footprint toggle crosses the centers/rings boundary. Encoded as 0/1 in
-    // [gaussians, centers, rings, selectionCenters, selectionRings] order
-    const profileFlags: [get: string, set: string][] = [
-        ['view.gaussians', 'view.setGaussians'],
-        ['view.centers', 'view.setCenters'],
-        ['view.rings', 'view.setRings'],
-        ['view.selectionCenters', 'view.setSelectionCenters'],
-        ['view.selectionRings', 'view.setSelectionRings']
-    ];
-    let inactiveProfile = [1, 0, 1, 0, 1];
-    let profileMode = (events.invoke('selection.footprint') as number) > 0;
-
-    // preference application sets the footprint, the live flags and the
-    // inactive profile explicitly, so the boundary-crossing swap below must
-    // stay out of its way or it shuffles the slots it is being loaded into
-    let prefsSuspendDepth = 0;
-    events.on('preferences.suspend', () => {
-        prefsSuspendDepth++;
-    });
-    events.on('preferences.resume', () => {
-        prefsSuspendDepth = Math.max(0, prefsSuspendDepth - 1);
-    });
-
-    events.function('view.inactiveProfile', () => inactiveProfile.slice());
-
-    events.on('view.setInactiveProfile', (profile: number[]) => {
-        inactiveProfile = profile.slice();
-    });
-
-    // the swap is a mode change, not an appearance edit: it must not switch
-    // the edit view back on (see below)
-    let swappingProfile = false;
-
-    events.on('selection.footprint', (value: number) => {
-        const mode = value > 0;
-        if (mode !== profileMode) {
-            profileMode = mode;
-            if (prefsSuspendDepth > 0) {
-                return;
-            }
-            const snapshot = profileFlags.map(([get]) => (events.invoke(get) ? 1 : 0));
-            swappingProfile = true;
-            profileFlags.forEach(([, set], i) => {
-                events.fire(set, !!inactiveProfile[i]);
-            });
-            swappingProfile = false;
-            inactiveProfile = snapshot;
-            events.fire('view.inactiveProfile', inactiveProfile.slice());
-        }
-    });
-
-    // edit view switch (tab): while off, the non-selection overlays hide
-    // and gaussians render regardless of the profile, so it toggles between
-    // the editing view and the raw scene. Off by default and stored as a
-    // preference. Toggling one of the display overlays below switches it
-    // back on so the toggle is never adjusted blind - but not preference
-    // application or the footprint profile swap, which are not the user
-    // toggling a display overlay
-    let editView = false;
-
-    const setEditView = (value: boolean) => {
-        if (value !== editView) {
-            editView = value;
-            events.fire('view.editView', value);
-        }
-    };
-
-    events.function('view.editView', () => editView);
-
-    events.on('view.setEditView', setEditView);
-
-    events.on('view.toggleEditView', () => {
-        setEditView(!editView);
-    });
-
-    ['view.gaussians', 'view.centers', 'view.rings'].forEach((eventName) => {
-        events.on(eventName, () => {
-            if (prefsSuspendDepth === 0 && !swappingProfile) {
-                setEditView(true);
-            }
-        });
-    });
-
-    // outline selection
-
-    let outlineSelection = false;
-
-    const setOutlineSelection = (value: boolean) => {
-        if (value !== outlineSelection) {
-            outlineSelection = value;
-            events.fire('view.outlineSelection', outlineSelection);
-        }
-    };
-
-    events.function('view.outlineSelection', () => {
-        return outlineSelection;
-    });
-
-    events.on('view.setOutlineSelection', (value: boolean) => {
-        setOutlineSelection(value);
     });
 
     // view spherical harmonic bands

@@ -21,7 +21,7 @@ The adapter uses `document.modelContext`, with feature detection for preview bro
 | `apply_color`, `reset_color` | Compose or reset colour adjustments on an explicit scope. |
 | `undo`, `redo` | Step through the shared editor history, including user edits. |
 | `set_camera`, `focus_camera`, `pick_points` | Position the camera, frame content or find world positions under viewport points. |
-| `set_view` | Change display preferences without changing splat data. |
+| `set_view` | Change display preferences without changing splat data, including the editing mode (`centers` or `rings`) and the current mode's marker settings. |
 | `import_url` | Add a CORS-accessible PLY, SPLAT, SOG, SPZ or KSPLAT URL as an undoable layer. |
 | `export_scene` | Download PLY, compressed PLY, SPLAT, SOG, SPZ, or a standalone HTML/ZIP viewer. |
 

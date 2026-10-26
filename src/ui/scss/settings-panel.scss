@@ -2,6 +2,42 @@
 
 // shared shell for the appearance, overlays and settings popups
 .options-panel {
+    // the appearance and overlays panels drop down from the mode toolbar,
+    // whose buttons open them
+    &#appearance-panel,
+    &#overlays-panel {
+        top: 74px;
+        right: 164px;
+        transform: none;
+    }
+
+    // a collapsible section's header carries an arrow that turns when open
+    & > .options-panel-section.options-panel-collapsible {
+        cursor: pointer;
+
+        & > .options-panel-collapse {
+            margin: 0 6px;
+            color: $clr-default;
+
+            & > svg {
+                display: block;
+                width: 12px;
+                height: 12px;
+                transform: rotate(90deg);
+                transition: transform 0.1s ease-out;
+            }
+        }
+
+        &.collapsed > .options-panel-collapse > svg {
+            transform: none;
+        }
+    }
+
+    // the panel header icon follows the mode: one of two svgs is shown
+    & > .panel-header:first-child .panel-header-icon > svg.hidden {
+        display: none;
+    }
+
     top: 50%;
     transform: translate(0, -50%);
     right: 102px;
@@ -37,13 +73,13 @@
     }
 
     // section labels sit a step below the panel title
-    & > .options-panel-section {
+    .options-panel-section {
         & > .panel-header-label {
             font-size: 11px;
         }
     }
 
-    & > .settings-panel-row {
+    .settings-panel-row {
         display: flex;
         flex-direction: row;
         align-items: center;
@@ -56,6 +92,12 @@
 
         &.options-panel-row-clickable {
             cursor: pointer;
+        }
+
+        // setting has no effect right now (the markers switch hides what it
+        // controls); still editable
+        &.overridden {
+            opacity: 0.4;
         }
 
         // the label carries the row's tooltip, so it spans the row's full
@@ -123,11 +165,11 @@
         }
     }
 
-    & > .settings-panel-row.options-panel-row-indent {
+    .settings-panel-row.options-panel-row-indent {
         padding-left: 24px;
     }
 
-    & > .settings-panel-row.options-panel-icon-row {
+    .settings-panel-row.options-panel-icon-row {
         justify-content: center;
         gap: 4px;
         height: 28px;

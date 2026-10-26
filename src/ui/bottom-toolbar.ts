@@ -16,10 +16,6 @@ import pickerSvg from './svg/select-picker.svg';
 import polygonSvg from './svg/select-poly.svg';
 import sphereBrushSvg from './svg/select-sphere-brush.svg';
 import sphereSvg from './svg/select-sphere.svg';
-import depthOffSvg from './svg/selection-depth-off.svg';
-import depthOnSvg from './svg/selection-depth-on.svg';
-import footprintCentersSvg from './svg/selection-footprint-centers.svg';
-import footprintRingsSvg from './svg/selection-footprint-rings.svg';
 import undoSvg from './svg/undo.svg';
 import { Tooltips } from './tooltips';
 // import cropSvg from './svg/crop.svg';
@@ -209,32 +205,6 @@ class BottomToolbar extends Container {
             enabled: false
         });
 
-        // depth toggle: on = only the visible surface picks, off = through all layers
-        const selectionMode = new Button({
-            id: 'bottom-toolbar-selection-mode',
-            class: 'bottom-toolbar-selection-mode-button'
-        });
-
-        const depthOnIcon = createSvg(depthOnSvg);
-        const depthOffIcon = createSvg(depthOffSvg);
-        depthOnIcon.classList.add('bottom-toolbar-selection-mode-icon');
-        depthOffIcon.classList.add('bottom-toolbar-selection-mode-icon');
-        selectionMode.dom.appendChild(depthOnIcon);
-        selectionMode.dom.appendChild(depthOffIcon);
-
-        // footprint toggle: centers (footprint 0) or the full splat footprint
-        const footprintMode = new Button({
-            id: 'bottom-toolbar-selection-footprint',
-            class: 'bottom-toolbar-selection-mode-button'
-        });
-
-        const footprintCentersIcon = createSvg(footprintCentersSvg);
-        const footprintRingsIcon = createSvg(footprintRingsSvg);
-        footprintCentersIcon.classList.add('bottom-toolbar-selection-mode-icon');
-        footprintRingsIcon.classList.add('bottom-toolbar-selection-mode-icon');
-        footprintMode.dom.appendChild(footprintCentersIcon);
-        footprintMode.dom.appendChild(footprintRingsIcon);
-
         const picker = new Button({
             id: 'bottom-toolbar-picker',
             class: 'bottom-toolbar-tool'
@@ -329,9 +299,6 @@ class BottomToolbar extends Container {
         this.append(undo);
         this.append(redo);
         this.append(new Element({ class: 'bottom-toolbar-separator' }));
-        this.append(footprintMode);
-        this.append(selectionMode);
-        this.append(new Element({ class: 'bottom-toolbar-separator' }));
         this.append(picker);
         this.append(brush);
         this.append(polygon);
@@ -354,13 +321,6 @@ class BottomToolbar extends Container {
         undo.dom.addEventListener('click', () => events.fire('edit.undo'));
         redo.dom.addEventListener('click', () => events.fire('edit.redo'));
 
-        selectionMode.dom.addEventListener('click', () => {
-            events.fire('selection.toggleUseDepth');
-        });
-
-        footprintMode.dom.addEventListener('click', () => {
-            events.fire('selection.toggleFootprint');
-        });
         brush.dom.addEventListener('click', () => events.fire('tool.brushSelection'));
         sphereBrush.dom.addEventListener('click', () => events.fire('tool.sphereBrushSelection'));
         picker.dom.addEventListener('click', () => events.fire('tool.rectSelection'));
@@ -387,40 +347,6 @@ class BottomToolbar extends Container {
             redo.enabled = value;
         });
 
-        // last state received from the editor, matching its defaults: the
-        // toolbar is constructed before the editor registers its state
-        // functions, so they can't be invoked here
-        let useDepth = false;
-        let footprint = 0;
-
-        const updateUseDepth = (value: boolean) => {
-            useDepth = value;
-            depthOnIcon.style.display = value ? '' : 'none';
-            depthOffIcon.style.display = value ? 'none' : '';
-            selectionMode.dom.setAttribute('aria-pressed', String(value));
-            selectionMode.dom.setAttribute('aria-label', i18n.t('tooltip.bottom-toolbar.use-depth'));
-        };
-
-        events.on('selection.useDepth', updateUseDepth);
-
-        const updateFootprint = (value: number) => {
-            footprint = value;
-            const rings = value > 0;
-            footprintRingsIcon.style.display = rings ? '' : 'none';
-            footprintCentersIcon.style.display = rings ? 'none' : '';
-            footprintMode.dom.setAttribute('aria-pressed', String(rings));
-            footprintMode.dom.setAttribute('aria-label', i18n.t('tooltip.bottom-toolbar.footprint'));
-        };
-
-        events.on('selection.footprint', updateFootprint);
-
-        // runs now (initial state) and on language change, so the accessible
-        // names never go stale
-        i18n.onChange(() => {
-            updateUseDepth(useDepth);
-            updateFootprint(footprint);
-        }, this);
-
         events.on('tool.activated', (toolName: string) => {
             picker.class[toolName === 'rectSelection' ? 'add' : 'remove']('active');
             brush.class[toolName === 'brushSelection' ? 'add' : 'remove']('active');
@@ -441,8 +367,6 @@ class BottomToolbar extends Container {
         // register tooltips
         tooltips.register(undo, tooltip('tooltip.bottom-toolbar.undo', 'edit.undo'));
         tooltips.register(redo, tooltip('tooltip.bottom-toolbar.redo', 'edit.redo'));
-        tooltips.register(selectionMode, tooltip('tooltip.bottom-toolbar.use-depth', 'selection.toggleUseDepth'));
-        tooltips.register(footprintMode, tooltip('tooltip.bottom-toolbar.footprint', 'selection.toggleFootprint'));
         tooltips.register(picker, tooltip('tooltip.bottom-toolbar.rectangle-selection', 'tool.rectSelection'));
         tooltips.register(brush, tooltip('tooltip.bottom-toolbar.brush-selection', 'tool.brushSelection'));
         tooltips.register(sphereBrush, tooltip('tooltip.bottom-toolbar.sphere-brush-selection', 'tool.sphereBrushSelection'));

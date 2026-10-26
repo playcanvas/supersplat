@@ -18,8 +18,9 @@ type CameraSettings = {
 };
 type ViewSettings = {
     background?: Color; showGrid?: boolean; shBands?: number; tonemapping?: string;
+    mode?: 'centers' | 'rings'; showMarkers?: boolean;
     showGaussians?: boolean; showCenters?: boolean; showRings?: boolean;
-    selectionColor?: boolean; selectionCenters?: boolean; selectionRings?: boolean;
+    selectionGaussians?: boolean; selectionColor?: boolean; selectionCenters?: boolean; selectionRings?: boolean;
 };
 type ExportRequest = ExportChoices & {
     format: 'ply' | 'compressed-ply' | 'splat' | 'sog' | 'spz' | 'viewer-html' | 'viewer-zip';
@@ -34,13 +35,17 @@ type SessionQueries = {
 };
 
 const VIEW_ANGLES = { front: [0, 0], back: [180, 0], left: [270, 0], right: [90, 0], top: [0, -90], bottom: [0, 90] };
+// mode first: the per-mode settings that follow apply to the mode just set
 const VIEW_EVENTS = {
     showGrid: 'grid.setVisible',
     shBands: 'view.setBands',
     tonemapping: 'camera.setTonemapping',
+    mode: 'view.setMode',
+    showMarkers: 'view.setEditView',
     showGaussians: 'view.setGaussians',
     showCenters: 'view.setCenters',
     showRings: 'view.setRings',
+    selectionGaussians: 'view.setSelectionGaussians',
     selectionColor: 'view.setSelectionColor',
     selectionCenters: 'view.setSelectionCenters',
     selectionRings: 'view.setSelectionRings'
@@ -49,9 +54,12 @@ const VIEW_QUERIES = {
     showGrid: 'grid.visible',
     shBands: 'view.bands',
     tonemapping: 'camera.tonemapping',
+    mode: 'view.mode',
+    showMarkers: 'view.editView',
     showGaussians: 'view.gaussians',
     showCenters: 'view.centers',
     showRings: 'view.rings',
+    selectionGaussians: 'view.selectionGaussians',
     selectionColor: 'view.selectionColor',
     selectionCenters: 'view.selectionCenters',
     selectionRings: 'view.selectionRings'

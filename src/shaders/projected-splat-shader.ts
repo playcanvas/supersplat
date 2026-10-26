@@ -27,7 +27,7 @@ uniform selectedRingColor: vec4f;
 uniform unselectedColor: vec4f;
 uniform selectedColor: vec4f;
 uniform ringSize: f32;
-uniform ringSelectionOnly: u32;
+uniform ringMask: u32;
 uniform ringsBase: u32;
 uniform ringsCount: u32;
 uniform outlineMode: u32;
@@ -89,18 +89,18 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     // steal frontmost picks or burn fill
     let ringEligible = uniform.ringSize > 0.0
         && entry >= uniform.ringsBase && entry < uniform.ringsBase + uniform.ringsCount
-        && overlayEligible(flags, uniform.ringSelectionOnly != 0u);
+        && overlayEligible(flags, uniform.ringMask);
     if (alpha == 0.0 && !ringEligible) {
         output.position = discardPosition;
         return output;
     }
     #ifndef PICK_PASS
-        // with gaussian display off (e.g. a centers-only view), quads whose
-        // fragments could not contribute anything skip rasterization entirely
-        // instead of blending transparent pixels - only ring bands, the
-        // selected-gaussian display and the selection outline still need them
-        if (uniform.showGaussians == 0u && !ringEligible
-            && !((flags & 1u) != 0u && (uniform.showSelectedGaussians != 0u || uniform.outlineMode != 0u))) {
+        // with the gaussian display off for this splat's group (unselected or
+        // selected), quads whose fragments could not contribute anything skip
+        // rasterization entirely instead of blending transparent pixels - only
+        // ring bands and the selection outline still need them
+        let drawn = select(uniform.showGaussians != 0u, uniform.showSelectedGaussians != 0u || uniform.outlineMode != 0u, (flags & 1u) != 0u);
+        if (!drawn && !ringEligible) {
             output.position = discardPosition;
             return output;
         }
@@ -132,15 +132,18 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
         * (f32(1u << (rgbBits >> 30u)) / 1023.0);
     var gaussianRgb = color;
     if (entry >= uniform.ringsBase && entry < uniform.ringsBase + uniform.ringsCount && (flags & 2u) == 0u) {
-        gaussianRgb = mix(gaussianRgb, uniform.unselectedColor.rgb, uniform.unselectedColor.a);
+        // unselected and selected gaussians tint independently, each from the
+        // splat's own colour toward its group's colour
         if ((flags & 1u) != 0u) {
             gaussianRgb = mix(gaussianRgb, uniform.selectedColor.rgb, uniform.selectedColor.a);
+        } else {
+            gaussianRgb = mix(gaussianRgb, uniform.unselectedColor.rgb, uniform.unselectedColor.a);
         }
     }
-    // ring band colours, resolved here from the untinted base: gaussian colour
-    // -> flat unselected colour -> selection colour
+    // ring band colours, likewise from the untinted base: an unselected ring
+    // toward the flat unselected colour, a selected one toward the selection colour
     let ringRgb = mix(color, uniform.ringColor.rgb, uniform.ringColor.a);
-    let selectedRingRgb = mix(ringRgb, uniform.selectedRingColor.rgb, uniform.selectedRingColor.a);
+    let selectedRingRgb = mix(color, uniform.selectedRingColor.rgb, uniform.selectedRingColor.a);
 
     var axis1 = unpack2x16float(a.w);
     var axis2 = unpack2x16float(b).x * normalize(vec2f(axis1.y, -axis1.x));
@@ -198,7 +201,7 @@ uniform selectionUnderlay: u32;
 uniform showGaussians: u32;
 uniform showSelectedGaussians: u32;
 uniform ringSize: f32;
-uniform ringSelectionOnly: u32;
+uniform ringMask: u32;
 uniform ringsBase: u32;
 uniform ringsCount: u32;
 uniform pickMode: i32;
@@ -258,7 +261,7 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
       #else
         let selected = (gaussianFlags & 1u) != 0u;
         let norm = normExp(radius);
-        let showGaussian = uniform.showGaussians != 0u || (selected && uniform.showSelectedGaussians != 0u);
+        let showGaussian = select(uniform.showGaussians != 0u, uniform.showSelectedGaussians != 0u, selected);
         var alpha = select(0.0, norm * opacity, showGaussian);
         let packedMid = unpack2x16float(packedColor1);
         var color = vec3f(unpack2x16float(packedColor0), packedMid.x);
@@ -266,7 +269,7 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         // cache entry index in the forward pass, where pickBase is 0). Their
         // alpha is composed with the independently-controlled gaussian fill.
         let rings = gaussianId >= uniform.ringsBase && gaussianId < uniform.ringsBase + uniform.ringsCount;
-        if (rings && uniform.ringSize > 0.0 && overlayEligible(gaussianFlags, uniform.ringSelectionOnly != 0u)) {
+        if (rings && uniform.ringSize > 0.0 && overlayEligible(gaussianFlags, uniform.ringMask)) {
             let ringBand = radius >= 1.0 - uniform.ringSize;
             if (ringBand) {
                 alpha = 0.6;

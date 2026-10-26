@@ -269,7 +269,7 @@ class ProjectedSplatRenderer {
         this.material.setParameter('showGaussians', 1);
         this.material.setParameter('showSelectedGaussians', 0);
         this.material.setParameter('ringSize', 0);
-        this.material.setParameter('ringSelectionOnly', 0);
+        this.material.setParameter('ringMask', 0);
         this.material.setParameter('ringColor', [0, 0, 0, 0]);
         this.material.setParameter('selectedRingColor', [0, 0, 0, 0]);
         this.material.setParameter('ringsBase', 0);
@@ -860,24 +860,25 @@ class ProjectedSplatRenderer {
         const minPixelSize = forPick ? 0 : (events.invoke('view.minPixelSize') as number) ?? 0;
 
         // the centres overlay draws the selected layer's centres from this
-        // frame's projection: all of them in the edit view with centres on,
-        // otherwise the selection's alone
+        // frame's projection: the unselected ones while the markers (tab) are
+        // up with centres on, the selected ones with selection centres on.
+        // Each overlay takes a group mask: bit 0 unselected, bit 1 selected
         const editView = events.invoke('view.editView');
         const centerSize = events.invoke('view.centerSize') as number;
-        const showAllCenters = events.invoke('view.centers') && editView;
-        const showSelectedCenters = events.invoke('view.selectionCenters') &&
-            (selectedSplat?.instances.numSelected ?? 0) > 0;
+        const numSelected = selectedSplat?.instances.numSelected ?? 0;
+        const showUnselectedCenters = events.invoke('view.centers') && editView;
+        const showSelectedCenters = events.invoke('view.selectionCenters') && numSelected > 0;
+        const centersMask = (showUnselectedCenters ? 1 : 0) | (showSelectedCenters ? 2 : 0);
         // centres draw opaque over the overdraw view's fragment counts, so a
         // selection would blank the heat map under its dots: skip them there
         const showCenters = !!selectedSplat && camera.renderOverlays && centerSize > 0 &&
-            !this.scene.overdrawRender && (showAllCenters || showSelectedCenters);
-        // rings likewise: every ring in the edit view with rings on, otherwise
-        // the selection's alone. Decided here because the projector exempts
-        // ringed splats from the contribution cull
-        const showAllRings = events.invoke('view.rings') && editView;
-        const showSelectedRings = events.invoke('view.selectionRings') &&
-            (selectedSplat?.instances.numSelected ?? 0) > 0;
-        const showRings = showAllRings || showSelectedRings;
+            !this.scene.overdrawRender && centersMask !== 0;
+        // rings likewise. Decided here because the projector exempts ringed
+        // splats from the contribution cull
+        const showUnselectedRings = events.invoke('view.rings') && editView;
+        const showSelectedRings = events.invoke('view.selectionRings') && numSelected > 0;
+        const ringsMask = (showUnselectedRings ? 1 : 0) | (showSelectedRings ? 2 : 0);
+        const showRings = ringsMask !== 0;
 
         // the colour panel's uncommitted grade, previewed on the layer it targets.
         // Packed once per frame: it is the same for every placement, only the
@@ -999,15 +1000,8 @@ class ProjectedSplatRenderer {
             compute.setParameter('keepCulled', showCenters && selectedSplat === splat ? 1 : 0);
             compute.setParameter('minContribution', this.stochastic ? this.motionContribution : 0);
             // rings draw from the survivor list, so the projector never culls a
-            // splat whose ring would show: the whole layer in rings mode, the
-            // selection alone with selection rings
-            let keepRings = 0;
-            if (selectionEnabled && showAllRings) {
-                keepRings = 2;
-            } else if (selectionEnabled && showSelectedRings) {
-                keepRings = 1;
-            }
-            compute.setParameter('keepRings', keepRings);
+            // splat whose ring would show: the groups with rings on, as a mask
+            compute.setParameter('keepRings', selectionEnabled ? ringsMask : 0);
             compute.setParameter('prevDepthMax', this.depthMax);
             compute.setParameter('prevViewProj', this.prevViewProjection.data);
             compute.setParameter('prevView', this.prevView.data);
@@ -1080,12 +1074,13 @@ class ProjectedSplatRenderer {
         // the 20% back this frame; the transform handler disables that pass
         // for the length of a drag
         this.material.setParameter('selectionUnderlay', this.scene.underlay.enabled ? 1 : 0);
-        // the edit view switch (tab) shows the raw scene: gaussians render
-        // regardless of the profile flag and the non-selection rings hide
+        // the markers switch (tab) shows the unselected gaussians raw: drawn
+        // regardless of the mode's flag, untinted, without their markers. A
+        // colour preview draws both groups so the grade can be seen
         this.material.setParameter('showGaussians', events.invoke('view.gaussians') || !editView || pending ? 1 : 0);
-        this.material.setParameter('showSelectedGaussians', events.invoke('view.selectionColor') && !pending ? 1 : 0);
+        this.material.setParameter('showSelectedGaussians', events.invoke('view.selectionGaussians') || pending ? 1 : 0);
         this.material.setParameter('ringSize', showRings ? events.invoke('view.ringSize') * 0.01 : 0);
-        this.material.setParameter('ringSelectionOnly', showAllRings ? 0 : 1);
+        this.material.setParameter('ringMask', ringsMask);
         // the colour alphas carry blend weights, not opacity. The gaussian
         // tints blend the fill from the splat's own colour toward the flat
         // unselected colour, then toward the selection colour; the vertex
@@ -1098,7 +1093,7 @@ class ProjectedSplatRenderer {
             selectedColor.b,
             events.invoke('view.splatsSelectionBlend') * (selectedSplat?.selectionAlpha ?? 1)
         ] : [0, 0, 0, 0]);
-        this.material.setParameter('unselectedColor', !pending ? [
+        this.material.setParameter('unselectedColor', !pending && editView ? [
             unselectedColor.r,
             unselectedColor.g,
             unselectedColor.b,
@@ -1152,8 +1147,7 @@ class ProjectedSplatRenderer {
             centers.setParameter('centersBase', ringsBase);
             centers.setParameter('centersCount', ringsCount);
             centers.setParameter('centerSize', centerSize * window.devicePixelRatio);
-            centers.setParameter('selectionOnly', showAllCenters ? 0 : 1);
-            centers.setParameter('selectionCenters', events.invoke('view.selectionCenters') ? 1 : 0);
+            centers.setParameter('drawMask', centersMask);
             centers.setParameter('colorBlend', events.invoke('view.centersColorBlend'));
             centers.setParameter('selectionBlend', events.invoke('view.centersSelectionBlend'));
             centers.setParameter('selectedClr', [selectedColor.r, selectedColor.g, selectedColor.b, selectedColor.a]);

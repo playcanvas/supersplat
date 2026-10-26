@@ -14,6 +14,7 @@ import { ExportPopup } from './export-popup';
 import { ImageSettingsDialog } from './image-settings-dialog';
 import { i18n } from './localization';
 import { Menu } from './menu';
+import { ModeToolbar } from './mode-toolbar';
 import { OverdrawLegend } from './overdraw-legend';
 import { OverlaysPanel } from './overlays-panel';
 import { PerfOverlay } from './perf-overlay';
@@ -124,6 +125,7 @@ class EditorUI {
         const overlaysPanel = new OverlaysPanel(events, tooltips);
         const bottomToolbar = new BottomToolbar(events, tooltips);
         const rightToolbar = new RightToolbar(events, tooltips);
+        const modeToolbar = new ModeToolbar(events, tooltips);
         const menu = new Menu(events);
         const cameraInfoOverlay = new CameraInfoOverlay(events, tooltips);
         const perfOverlay = new PerfOverlay(events);
@@ -140,6 +142,7 @@ class EditorUI {
         canvasContainer.append(scenePanel);
         canvasContainer.append(bottomToolbar);
         canvasContainer.append(rightToolbar);
+        canvasContainer.append(modeToolbar);
         canvasContainer.append(menu);
 
         // the option popups come after the toolbars so their select dropdowns,

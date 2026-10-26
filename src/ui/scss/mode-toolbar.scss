@@ -1,0 +1,97 @@
+@use 'colors.scss' as *;
+
+// the active segment: a step above the pill, well short of the orange fill the
+// tool toolbars use for the active tool. The mode is state, not a tool, and
+// the pill should read as one quiet control
+$segment-active: #3a3a3a;
+
+// the mode toolbar: a slim pill at the right end of the header row, beside
+// the view cube (which owns the top-right 140px), vertically centred on the
+// menu bar. Right-anchored rather than centred so it never lands on the menu
+// bar at narrow widths
+#mode-toolbar {
+    position: absolute;
+    right: 164px;
+    top: 33px;
+    height: 32px;
+    padding: 0px 3px;
+    border-radius: 16px;
+
+    background-color: $bcg-dark;
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+
+    // icon + text segments: the two modes, the markers switch, the depth switch
+    .mode-toolbar-labelled {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 6px;
+        height: 26px;
+        margin: 0px;
+        padding: 0px 11px 0px 9px;
+        border: 0px;
+        border-radius: 13px;
+        background-color: transparent;
+
+        svg {
+            display: block;
+            flex-shrink: 0;
+            width: 12px;
+            height: 12px;
+            color: $clr-default;
+        }
+
+        .mode-toolbar-label {
+            margin: 0;
+            font-size: 11px;
+            color: $text-secondary;
+            white-space: nowrap;
+        }
+
+        &.active {
+            background-color: $segment-active !important;
+
+            svg {
+                color: $clr-hilight;
+            }
+
+            .mode-toolbar-label {
+                color: $clr-active;
+            }
+        }
+    }
+
+    // icon-only: the overlays and appearance panel buttons, lit while open
+    .mode-toolbar-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 26px;
+        height: 26px;
+        margin: 0px;
+        padding: 0px;
+        border: 0px;
+        border-radius: 13px;
+
+        svg {
+            display: block;
+            width: 26px;
+            height: 26px;
+            color: $clr-default;
+        }
+
+        &.active svg {
+            color: $clr-hilight;
+        }
+    }
+
+    .mode-toolbar-separator {
+        width: 1px;
+        height: 16px;
+        margin: 0px 4px;
+        background-color: $bcg-lighter;
+    }
+}

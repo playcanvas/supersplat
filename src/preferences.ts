@@ -3,11 +3,12 @@ import { Color } from 'playcanvas';
 import { Events } from './events';
 import { SceneConfig } from './scene-config';
 import { i18n } from './ui/localization';
+import { isModeSettings, modeDefaults, type ModeSettings, type ViewMode } from './view-mode';
 
 const storageKey = 'supersplat:preferences';
 const storageVersion = 1;
 
-type PrefValue = boolean | number | string | number[] | string[];
+type PrefValue = boolean | number | string | number[] | string[] | Record<string, boolean | number>;
 type PreferenceGroup = 'appearance' | 'overlays' | 'preferences';
 
 type Descriptor = {
@@ -95,36 +96,15 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         { key: 'view.bands', setCommand: 'view.setBands', urlPath: 'show.shBands', getDefault: () => config.show.shBands, validate: v => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 3, group: 'preferences' },
         { key: 'camera.flySpeed', setCommand: 'camera.setFlySpeed', getDefault: () => 1, validate: isNumber(0.1, 30), group: 'preferences' },
         { key: 'view.centerSize', setCommand: 'view.setCenterSize', getDefault: () => 2, validate: isNumber(0, 10), group: 'appearance' },
-        // the editor skips its footprint-crossing profile swap while preference
-        // application is in flight (see preferences.suspend), so the footprint,
-        // the live flags and the inactive profile all apply verbatim here. The
-        // live visibility flags are the ACTIVE footprint mode's profile, so
-        // their defaults depend on the live footprint - which sits earlier in
-        // this table and has already been applied when they are evaluated
-        { key: 'selection.useDepth', setCommand: 'selection.setUseDepth', getDefault: () => false, validate: isBool },
-        { key: 'selection.footprint', setCommand: 'selection.setFootprint', getDefault: () => 0, validate: isNumber(0, 1) },
-        { key: 'view.gaussians', setCommand: 'view.setGaussians', getDefault: () => true, validate: isBool, group: 'appearance' },
-        { key: 'view.centers', setCommand: 'view.setCenters', getDefault: () => (events.invoke('selection.footprint') as number) === 0, validate: isBool, group: 'appearance' },
-        { key: 'view.rings', setCommand: 'view.setRings', getDefault: () => (events.invoke('selection.footprint') as number) > 0, validate: isBool, group: 'appearance' },
+        // the mode and each mode's settings. The settings objects apply before
+        // view.mode so the switch finds both arranged; a stored object may
+        // predate a key, which then takes its default
+        { key: 'view.centersSettings', setCommand: 'view.setCentersSettings', getDefault: () => modeDefaults('centers'), validate: isModeSettings, group: 'appearance', toEvent: v => ({ ...modeDefaults('centers'), ...(v as Partial<ModeSettings>) }) },
+        { key: 'view.ringsSettings', setCommand: 'view.setRingsSettings', getDefault: () => modeDefaults('rings'), validate: isModeSettings, group: 'appearance', toEvent: v => ({ ...modeDefaults('rings'), ...(v as Partial<ModeSettings>) }) },
+        { key: 'view.mode', setCommand: 'view.setMode', getDefault: () => 'centers', validate: isEnum(['centers', 'rings']), group: 'appearance' },
         { key: 'view.ringSize', setCommand: 'view.setRingSize', getDefault: () => 4, validate: isNumber(1, 50), group: 'appearance' },
-        { key: 'view.splatsColorBlend', setCommand: 'view.setSplatsColorBlend', getDefault: () => 0, validate: isNumber(0, 1), group: 'appearance' },
-        { key: 'view.splatsSelectionBlend', setCommand: 'view.setSplatsSelectionBlend', getDefault: () => 1, validate: isNumber(0, 1), group: 'appearance' },
-        { key: 'view.centersColorBlend', setCommand: 'view.setCentersColorBlend', getDefault: () => 1, validate: isNumber(0, 1), group: 'appearance' },
-        { key: 'view.centersSelectionBlend', setCommand: 'view.setCentersSelectionBlend', getDefault: () => 1, validate: isNumber(0, 1), group: 'appearance' },
-        { key: 'view.ringsColorBlend', setCommand: 'view.setRingsColorBlend', getDefault: () => 0, validate: isNumber(0, 1), group: 'appearance' },
-        { key: 'view.ringsSelectionBlend', setCommand: 'view.setRingsSelectionBlend', getDefault: () => 1, validate: isNumber(0, 1), group: 'appearance' },
-        { key: 'view.selectionColor', setCommand: 'view.setSelectionColor', getDefault: () => false, validate: isBool, group: 'appearance' },
-        { key: 'view.selectionCenters', setCommand: 'view.setSelectionCenters', getDefault: () => (events.invoke('selection.footprint') as number) === 0, validate: isBool, group: 'appearance' },
-        { key: 'view.selectionRings', setCommand: 'view.setSelectionRings', getDefault: () => (events.invoke('selection.footprint') as number) > 0, validate: isBool, group: 'appearance' },
-        // the inactive footprint mode's view profile: 0/1 flags in
-        // [gaussians, centers, rings, selectionCenters, selectionRings] order.
-        // The default is the opposite mode's arrangement, so it reads the live
-        // footprint - selection.footprint sits earlier in this table and has
-        // already been applied by the time this default is evaluated
-        { key: 'view.inactiveProfile', setCommand: 'view.setInactiveProfile', getDefault: () => ((events.invoke('selection.footprint') as number) > 0 ? [1, 1, 0, 1, 0] : [1, 0, 1, 0, 1]), validate: v => Array.isArray(v) && v.length === 5 && v.every(x => x === 0 || x === 1), group: 'appearance' },
-        { key: 'view.outlineSelection', setCommand: 'view.setOutlineSelection', getDefault: () => false, validate: isBool, group: 'appearance' },
-        // after the view flags above: applying those must not re-enable the
-        // edit view over the stored value (the editor skips its auto-enable
+        // after the mode and its settings above: applying those must not
+        // switch the markers on over the stored value (the editor skips that
         // while preference application is suspended, and this applies last)
         { key: 'view.editView', setCommand: 'view.setEditView', getDefault: () => false, validate: isBool, group: 'appearance' },
         { key: 'view.stochastic', setCommand: 'view.setStochastic', getDefault: () => 'auto', validate: isEnum(['disabled', 'enabled', 'movement', 'auto']), group: 'preferences' },
@@ -139,6 +119,55 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         { key: 'camera.controlMode', setCommand: 'camera.setControlMode', getDefault: () => 'orbit', validate: isEnum(['orbit', 'fly']) }
     ];
 
+    // 3.0-3.7 stored the appearance as flat per-flag keys for the active
+    // footprint mode plus the other mode's five visibility flags. Fold them
+    // into the two per-mode settings objects, once, so nothing a user set is
+    // lost. The flat keys are no longer descriptors, so they drop out of the
+    // blob on the next write
+    const migrate = (stored: Record<string, any>) => {
+        if (stored['view.centersSettings'] !== undefined || stored['view.ringsSettings'] !== undefined) {
+            return;
+        }
+        const legacyKeys = ['selection.footprint', 'selection.useDepth', 'view.gaussians', 'view.centers', 'view.rings',
+            'view.selectionColor', 'view.selectionCenters', 'view.selectionRings', 'view.outlineSelection', 'view.inactiveProfile',
+            'view.splatsColorBlend', 'view.splatsSelectionBlend', 'view.centersColorBlend', 'view.centersSelectionBlend',
+            'view.ringsColorBlend', 'view.ringsSelectionBlend'];
+        if (!legacyKeys.some(key => stored[key] !== undefined)) {
+            return;
+        }
+        const footprint = typeof stored['selection.footprint'] === 'number' ? stored['selection.footprint'] : 0;
+        const activeMode: ViewMode = footprint > 0 ? 'rings' : 'centers';
+        const otherMode: ViewMode = footprint > 0 ? 'centers' : 'rings';
+        const active = modeDefaults(activeMode);
+        const other = modeDefaults(otherMode);
+        const take = (target: ModeSettings, key: keyof ModeSettings, legacy: string) => {
+            const value = stored[legacy];
+            if (typeof value === typeof target[key]) {
+                (target as Record<string, boolean | number>)[key] = value;
+            }
+        };
+        // the live flags were the active mode's
+        (['gaussians', 'centers', 'rings', 'selectionCenters', 'selectionRings'] as const).forEach(key => take(active, key, `view.${key}`));
+        take(active, 'useDepth', 'selection.useDepth');
+        // these were global: both modes keep them
+        [active, other].forEach((target) => {
+            (['selectionColor', 'outlineSelection', 'splatsColorBlend', 'splatsSelectionBlend', 'centersColorBlend',
+                'centersSelectionBlend', 'ringsColorBlend', 'ringsSelectionBlend'] as const).forEach(key => take(target, key, `view.${key}`));
+        });
+        // the other mode's profile: [gaussians, centers, rings, selectionCenters, selectionRings] as 0/1
+        const profile = stored['view.inactiveProfile'];
+        if (Array.isArray(profile) && profile.length === 5) {
+            other.gaussians = !!profile[0];
+            other.centers = !!profile[1];
+            other.rings = !!profile[2];
+            other.selectionCenters = !!profile[3];
+            other.selectionRings = !!profile[4];
+        }
+        stored['view.mode'] = activeMode;
+        stored[`view.${activeMode}Settings`] = active;
+        stored[`view.${otherMode}Settings`] = other;
+    };
+
     // load and validate the stored blob. unknown keys and invalid values are
     // discarded so preferences survive settings being added, removed or
     // reshaped between releases.
@@ -149,6 +178,7 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
             if (raw) {
                 const blob = JSON.parse(raw);
                 if (blob?.version === storageVersion && typeof blob.values === 'object' && blob.values) {
+                    migrate(blob.values);
                     for (const descriptor of descriptors) {
                         const value = blob.values[descriptor.key];
                         if (value !== undefined && descriptor.validate(value)) {

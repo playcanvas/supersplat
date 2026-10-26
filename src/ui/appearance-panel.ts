@@ -1,15 +1,14 @@
-import { Button, ColorPicker, Container, Label, SliderInput } from '@playcanvas/pcui';
+import { BooleanInput, ColorPicker, Container, Label, SliderInput } from '@playcanvas/pcui';
 import { Color } from 'playcanvas';
 
 import { Events } from '../events';
 import { ShortcutManager } from '../shortcut-manager';
+import type { ViewMode } from '../view-mode';
 import { i18n } from './localization';
-import appearanceSvg from './svg/appearance.svg';
+import arrowSvg from './svg/arrow.svg';
 import centersSvg from './svg/centers.svg';
-import colorsSvg from './svg/colors.svg';
 import resetSvg from './svg/reset.svg';
 import ringsSvg from './svg/rings.svg';
-import selectAllSvg from './svg/select-all.svg';
 import { Tooltips } from './tooltips';
 
 const createSvg = (svgString: string) => {
@@ -17,6 +16,19 @@ const createSvg = (svgString: string) => {
     return new DOMParser().parseFromString(decodedStr, 'image/svg+xml').documentElement;
 };
 
+const capitalize = (s: string) => `${s[0].toUpperCase()}${s.slice(1)}`;
+
+type Row = {
+    row: Container;
+    // pull the live value and the (mode-dependent) label
+    sync: () => void;
+};
+
+// The appearance panel: the current mode's configuration, opened from the mode
+// toolbar. The primary rows cover the mode's own marker for unselected and
+// selected gaussians; the other marker, the continuous marker tints and the
+// selection tint strengths sit in a collapsed Advanced section, and the
+// shared colours in a collapsed Colors section
 class AppearancePanel extends Container {
     constructor(events: Events, tooltips: Tooltips, args = {}) {
         args = {
@@ -32,6 +44,21 @@ class AppearancePanel extends Container {
             this.dom.addEventListener(eventName, (event: Event) => event.stopPropagation());
         });
 
+        const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
+        const help = (localeKey: string) => () => i18n.t(localeKey);
+        const helpWithShortcut = (localeKey: string, shortcutId: string) => () => {
+            const shortcut = shortcutManager.formatShortcut(shortcutId);
+            return shortcut ? i18n.formatTooltipWithShortcut(i18n.t(localeKey), shortcut) : i18n.t(localeKey);
+        };
+        const text = (localeKey: string) => () => i18n.t(localeKey);
+
+        // the mode the panel shows. Followed from the editor's notify event
+        // and pulled whenever the panel opens
+        let mode: ViewMode = 'centers';
+        const otherMode = () => (mode === 'centers' ? 'rings' : 'centers');
+
+        // header: the mode's icon and name, and a reset of the mode's settings
+
         const header = new Container({
             class: 'panel-header'
         });
@@ -39,12 +66,16 @@ class AppearancePanel extends Container {
         const icon = new Label({
             class: 'panel-header-icon'
         });
-        icon.dom.appendChild(createSvg(appearanceSvg));
+        const modeIcons: Record<ViewMode, SVGElement> = {
+            centers: createSvg(centersSvg) as unknown as SVGElement,
+            rings: createSvg(ringsSvg) as unknown as SVGElement
+        };
+        icon.dom.appendChild(modeIcons.centers);
+        icon.dom.appendChild(modeIcons.rings);
 
         const label = new Label({
             class: 'panel-header-label'
         });
-        i18n.bindText(label, 'panel.appearance');
 
         const resetButton = new Container({
             class: ['panel-header-button', 'panel-header-reset-button']
@@ -64,182 +95,202 @@ class AppearancePanel extends Container {
         header.append(label);
         header.append(resetButton);
 
-        const sectionHeader = (key: string) => {
-            const section = new Container({
+        const updateHeader = () => {
+            label.text = i18n.t(`panel.appearance.mode.${mode}`);
+            modeIcons.centers.classList[mode === 'centers' ? 'remove' : 'add']('hidden');
+            modeIcons.rings.classList[mode === 'rings' ? 'remove' : 'add']('hidden');
+        };
+
+        // sections: a header bar and the content container its rows live in.
+        // Collapsible ones fold on a click of the header and start folded
+
+        const section = (localeKey: string, collapsible = false) => {
+            const bar = new Container({
                 class: ['panel-header', 'options-panel-section']
             });
             const sectionLabel = new Label({
                 class: 'panel-header-label'
             });
-            i18n.bindText(sectionLabel, key);
-            section.append(sectionLabel);
-            return section;
-        };
+            i18n.bindText(sectionLabel, localeKey);
+            bar.append(sectionLabel);
 
-        // tooltip resolvers: plain help text, or help text naming the edit
-        // view shortcut (tab) that hides the display overlays
-        const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
-        const help = (localeKey: string) => () => i18n.t(localeKey);
-        const helpWithShortcut = (localeKey: string) => () => i18n.t(localeKey, {
-            shortcut: shortcutManager.formatShortcut('view.toggleEditView')
-        });
-
-        const iconButton = (svg: string, localeKey: string, tooltip: () => string) => {
-            const button = new Button({
-                class: 'options-panel-icon-button'
+            const content = new Container({
+                class: 'options-panel-section-content'
             });
-            button.dom.appendChild(createSvg(svg));
-            i18n.onChange(() => button.dom.setAttribute('aria-label', i18n.t(localeKey)), button);
-            tooltips.register(button, tooltip, 'top');
-            return button;
+
+            if (collapsible) {
+                bar.class.add('options-panel-collapsible');
+                const arrow = new Label({
+                    class: 'options-panel-collapse'
+                });
+                arrow.dom.appendChild(createSvg(arrowSvg));
+                bar.append(arrow);
+                bar.dom.setAttribute('role', 'button');
+                bar.dom.setAttribute('tabindex', '0');
+
+                const setCollapsed = (collapsed: boolean) => {
+                    content.hidden = collapsed;
+                    bar.class[collapsed ? 'add' : 'remove']('collapsed');
+                    bar.dom.setAttribute('aria-expanded', String(!collapsed));
+                };
+                setCollapsed(true);
+
+                bar.on('click', () => setCollapsed(!content.hidden));
+                bar.dom.addEventListener('keydown', (event: KeyboardEvent) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setCollapsed(!content.hidden);
+                    }
+                });
+            }
+
+            return { bar, content };
         };
 
-        const setActive = (button: Button, active: boolean) => {
-            button.class[active ? 'add' : 'remove']('active');
-            button.dom.setAttribute('aria-pressed', String(active));
+        // rows. A sync pulls the live value without echoing it back as an
+        // edit: a value stored between a toggle's two positions (e.g. a
+        // marker tint of 0.3 behind the splat colours switch) must survive
+        // the panel opening
+
+        let syncing = false;
+
+        const toggleRow = (labelText: () => string, tooltip: () => string, get: () => boolean, set: (value: boolean) => void): Row => {
+            const row = new Container({
+                class: ['settings-panel-row', 'options-panel-row-clickable']
+            });
+            const rowLabel = new Label({
+                class: 'settings-panel-row-label'
+            });
+            const toggle = new BooleanInput({
+                type: 'toggle',
+                class: 'settings-panel-row-toggle',
+                value: false
+            });
+            row.append(rowLabel);
+            row.append(toggle);
+            tooltips.register(rowLabel, tooltip, 'top');
+
+            // the whole row flips the switch
+            row.dom.addEventListener('click', (event: MouseEvent) => {
+                if (toggle.enabled && !toggle.dom.contains(event.target as Node)) {
+                    toggle.value = !toggle.value;
+                }
+            });
+            toggle.on('change', (value: boolean) => {
+                if (!syncing) {
+                    set(value);
+                }
+            });
+
+            return {
+                row,
+                sync: () => {
+                    rowLabel.text = labelText();
+                    toggle.value = get();
+                }
+            };
         };
 
-        // a 0-1 blend weight slider bound to a view.<name> value
-        const blendSlider = (labelKey: string, name: string, tooltipKey: string) => {
+        const sliderRow = (labelText: () => string, tooltip: () => string, min: number, max: number, precision: number, get: () => number, set: (value: number) => void): Row => {
             const row = new Container({
                 class: 'settings-panel-row'
             });
             const rowLabel = new Label({
                 class: 'settings-panel-row-label'
             });
-            i18n.bindText(rowLabel, labelKey);
-            tooltips.register(rowLabel, help(tooltipKey), 'top');
             const slider = new SliderInput({
                 class: 'settings-panel-row-slider',
-                min: 0,
-                max: 1,
-                precision: 2,
-                value: 1
+                min,
+                max,
+                precision,
+                value: min
             });
             row.append(rowLabel);
             row.append(slider);
-            events.on(`view.${name}`, (value: number) => {
-                slider.value = value;
-            });
+            tooltips.register(rowLabel, tooltip, 'top');
+
             slider.on('change', (value: number) => {
-                events.fire(`view.set${name[0].toUpperCase()}${name.slice(1)}`, value);
+                if (!syncing) {
+                    set(value);
+                }
             });
-            return { row, slider, name };
+
+            return {
+                row,
+                sync: () => {
+                    rowLabel.text = labelText();
+                    slider.value = get();
+                }
+            };
         };
 
-        // display
+        const viewToggle = (name: string, labelText: () => string, tooltip: () => string) => toggleRow(
+            labelText, tooltip,
+            () => events.invoke(`view.${name}`),
+            value => events.fire(`view.set${capitalize(name)}`, value)
+        );
 
-        const displayRow = new Container({
-            class: ['settings-panel-row', 'options-panel-icon-row']
-        });
+        const viewSlider = (name: string, labelText: () => string, tooltip: () => string, min: number, max: number, precision: number) => sliderRow(
+            labelText, tooltip, min, max, precision,
+            () => events.invoke(`view.${name}`),
+            value => events.fire(`view.set${capitalize(name)}`, value)
+        );
 
-        const displayLabel = new Label({
-            class: 'settings-panel-row-label'
-        });
-        i18n.bindText(displayLabel, 'panel.appearance.section-display');
-        tooltips.register(displayLabel, helpWithShortcut('panel.appearance.section-display.tooltip'), 'top');
+        // the mode's marker reads "Centers" / "Rings" in the primary sections;
+        // the other marker is named in full in Advanced
+        const markerText = (marker: ViewMode, group: 'unselected' | 'selected') => () => i18n.t(mode === marker ? `panel.appearance.${marker}` : `panel.appearance.${group}-${marker}`);
 
-        const gaussiansButton = iconButton(colorsSvg, 'panel.appearance.gaussians', helpWithShortcut('panel.appearance.gaussians.tooltip'));
-        const centersButton = iconButton(centersSvg, 'panel.appearance.centers', helpWithShortcut('panel.appearance.centers.tooltip'));
-        const ringsButton = iconButton(ringsSvg, 'panel.appearance.rings', helpWithShortcut('panel.appearance.rings.tooltip'));
+        // top rows
 
-        const displayToggles = new Container({
-            class: 'options-panel-toggle-grid'
-        });
-        displayToggles.append(gaussiansButton);
-        displayToggles.append(centersButton);
-        displayToggles.append(ringsButton);
-        displayToggles.append(new Container({ class: 'options-panel-icon-spacer' }));
+        const showMarkers = toggleRow(
+            text('panel.appearance.show-markers'), helpWithShortcut('panel.appearance.show-markers.tooltip', 'view.toggleEditView'),
+            () => events.invoke('view.editView'),
+            value => events.fire('view.setEditView', value)
+        );
 
-        displayRow.append(displayLabel);
-        displayRow.append(displayToggles);
+        const sizeRows: Record<ViewMode, Row> = {
+            centers: viewSlider('centerSize', text('panel.appearance.center-size'), help('panel.appearance.center-size.tooltip'), 0, 10, 1),
+            rings: viewSlider('ringSize', text('panel.appearance.ring-thickness'), help('panel.appearance.ring-thickness.tooltip'), 1, 50, 1)
+        };
 
-        // centers
+        // unselected gaussians
 
-        const centersSizeRow = new Container({
-            class: 'settings-panel-row'
-        });
+        const unselectedGaussians = viewToggle('gaussians', text('panel.appearance.gaussians'), help('panel.appearance.unselected-gaussians.tooltip'));
+        const unselectedMarkers: Record<ViewMode, Row> = {
+            centers: viewToggle('centers', markerText('centers', 'unselected'), help('panel.appearance.unselected-centers.tooltip')),
+            rings: viewToggle('rings', markerText('rings', 'unselected'), help('panel.appearance.unselected-rings.tooltip'))
+        };
+        const unselectedTint = viewSlider('splatsColorBlend', text('panel.appearance.tint'), help('panel.appearance.gaussians-unselected-blend.tooltip'), 0, 1, 2);
 
-        const centersSizeLabel = new Label({
-            class: 'settings-panel-row-label'
-        });
-        i18n.bindText(centersSizeLabel, 'panel.appearance.size');
-        tooltips.register(centersSizeLabel, help('panel.appearance.size.tooltip'), 'top');
+        // the mode's marker tint as a switch: own colours (blend 0) or the
+        // flat unselected colour (blend 1). The continuous value is in Advanced
+        const markerBlend: Record<ViewMode, string> = { centers: 'centersColorBlend', rings: 'ringsColorBlend' };
+        const splatColors = toggleRow(
+            text('panel.appearance.splat-colors'), help('panel.appearance.splat-colors.tooltip'),
+            () => (events.invoke(`view.${markerBlend[mode]}`) as number) < 0.5,
+            value => events.fire(`view.set${capitalize(markerBlend[mode])}`, value ? 0 : 1)
+        );
 
-        const centersSizeSlider = new SliderInput({
-            class: 'settings-panel-row-slider',
-            min: 0,
-            max: 10,
-            precision: 1,
-            value: 2
-        });
+        // selected gaussians
 
-        centersSizeRow.append(centersSizeLabel);
-        centersSizeRow.append(centersSizeSlider);
+        const selectedGaussians = viewToggle('selectionGaussians', text('panel.appearance.gaussians'), help('panel.appearance.selected-gaussians.tooltip'));
+        const selectedMarkers: Record<ViewMode, Row> = {
+            centers: viewToggle('selectionCenters', markerText('centers', 'selected'), help('panel.appearance.selected-centers.tooltip')),
+            rings: viewToggle('selectionRings', markerText('rings', 'selected'), help('panel.appearance.selected-rings.tooltip'))
+        };
+        const selectedTint = viewToggle('selectionColor', text('panel.appearance.tint'), help('panel.appearance.selected-tint.tooltip'));
+        const outline = viewToggle('outlineSelection', text('panel.appearance.outline'), help('panel.appearance.outline.tooltip'));
 
-        const centersColorBlend = blendSlider('panel.appearance.unselected-blend', 'centersColorBlend', 'panel.appearance.centers-unselected-blend.tooltip');
-        const centersSelectionBlend = blendSlider('panel.appearance.selection-blend', 'centersSelectionBlend', 'panel.appearance.centers-selection-blend.tooltip');
+        // advanced: the continuous marker tints and the selection tint
+        // strengths; the other marker's rows join these per mode
 
-        // rings
+        const centersTint = viewSlider('centersColorBlend', text('panel.appearance.centers-tint'), help('panel.appearance.centers-unselected-blend.tooltip'), 0, 1, 2);
+        const ringsTint = viewSlider('ringsColorBlend', text('panel.appearance.rings-tint'), help('panel.appearance.rings-unselected-blend.tooltip'), 0, 1, 2);
+        const gaussiansSelectionTint = viewSlider('splatsSelectionBlend', text('panel.appearance.gaussians'), help('panel.appearance.gaussians-selection-blend.tooltip'), 0, 1, 2);
+        const centersSelectionTint = viewSlider('centersSelectionBlend', text('panel.appearance.centers'), help('panel.appearance.centers-selection-blend.tooltip'), 0, 1, 2);
+        const ringsSelectionTint = viewSlider('ringsSelectionBlend', text('panel.appearance.rings'), help('panel.appearance.rings-selection-blend.tooltip'), 0, 1, 2);
 
-        const ringSizeRow = new Container({
-            class: 'settings-panel-row'
-        });
-
-        const ringSizeLabel = new Label({
-            class: 'settings-panel-row-label'
-        });
-        i18n.bindText(ringSizeLabel, 'panel.appearance.thickness');
-        tooltips.register(ringSizeLabel, help('panel.appearance.thickness.tooltip'), 'top');
-
-        const ringSizeSlider = new SliderInput({
-            class: 'settings-panel-row-slider',
-            min: 1,
-            max: 50,
-            precision: 1,
-            value: 4
-        });
-
-        ringSizeRow.append(ringSizeLabel);
-        ringSizeRow.append(ringSizeSlider);
-
-        const ringsColorBlend = blendSlider('panel.appearance.unselected-blend', 'ringsColorBlend', 'panel.appearance.rings-unselected-blend.tooltip');
-        const ringsSelectionBlend = blendSlider('panel.appearance.selection-blend', 'ringsSelectionBlend', 'panel.appearance.rings-selection-blend.tooltip');
-
-        // gaussians
-
-        const splatsColorBlend = blendSlider('panel.appearance.unselected-blend', 'splatsColorBlend', 'panel.appearance.gaussians-unselected-blend.tooltip');
-        const splatsSelectionBlend = blendSlider('panel.appearance.selection-blend', 'splatsSelectionBlend', 'panel.appearance.gaussians-selection-blend.tooltip');
-
-        // selection display
-
-        const selectionDisplayRow = new Container({
-            class: ['settings-panel-row', 'options-panel-icon-row']
-        });
-
-        const selectionDisplayLabel = new Label({
-            class: 'settings-panel-row-label'
-        });
-        i18n.bindText(selectionDisplayLabel, 'panel.appearance.section-selection');
-        tooltips.register(selectionDisplayLabel, help('panel.appearance.section-selection.tooltip'), 'top');
-
-        const selectionColorButton = iconButton(colorsSvg, 'panel.appearance.selection-color', help('panel.appearance.selection-color.tooltip'));
-        const selectionCentersButton = iconButton(centersSvg, 'panel.appearance.selection-centers', help('panel.appearance.selection-centers.tooltip'));
-        const selectionRingsButton = iconButton(ringsSvg, 'panel.appearance.selection-rings', help('panel.appearance.selection-rings.tooltip'));
-        const outlineSelectionButton = iconButton(selectAllSvg, 'panel.appearance.selection-outline', help('panel.appearance.selection-outline.tooltip'));
-
-        const selectionToggles = new Container({
-            class: 'options-panel-toggle-grid'
-        });
-        selectionToggles.append(selectionColorButton);
-        selectionToggles.append(selectionCentersButton);
-        selectionToggles.append(selectionRingsButton);
-        selectionToggles.append(outlineSelectionButton);
-
-        selectionDisplayRow.append(selectionDisplayLabel);
-        selectionDisplayRow.append(selectionToggles);
-
-        // viewport colors
+        // colours, shared by both modes
 
         const colorsRow = new Container({
             class: 'settings-panel-row'
@@ -306,55 +357,111 @@ class AppearancePanel extends Container {
         colorsRow.append(colorsLabel);
         colorsRow.append(colorPickers);
 
+        bgClrPicker.on('change', (value: number[]) => {
+            events.fire('setBgClr', new Color(value[0], value[1], value[2]));
+        });
+
+        selectedClrPicker.on('change', (value: number[]) => {
+            events.fire('setSelectedClr', new Color(value[0], value[1], value[2], value[3]));
+        });
+
+        unselectedClrPicker.on('change', (value: number[]) => {
+            events.fire('setUnselectedClr', new Color(value[0], value[1], value[2], value[3]));
+        });
+
+        lockedClrPicker.on('change', (value: number[]) => {
+            events.fire('setLockedClr', new Color(value[0], value[1], value[2], value[3]));
+        });
+
+        tooltips.register(bgClrPicker, () => i18n.t('panel.settings.background-color'), 'left');
+        tooltips.register(selectedClrPicker, () => i18n.t('panel.settings.selected-color'), 'top');
+        tooltips.register(unselectedClrPicker, () => i18n.t('panel.settings.unselected-color'), 'top');
+        tooltips.register(lockedClrPicker, () => i18n.t('panel.settings.locked-color'), 'top');
+        tooltips.register(resetButton, () => i18n.t('panel.settings.reset'), 'left');
+
+        // assembly
+
+        const top = new Container({
+            class: 'options-panel-section-content'
+        });
+        const unselected = section('panel.appearance.section-unselected');
+        const selected = section('panel.appearance.section-selected');
+        const advanced = section('panel.appearance.section-advanced', true);
+        const selectionTint = section('panel.appearance.section-selection-tint');
+        const colors = section('panel.settings.colors', true);
+
+        top.append(showMarkers.row);
+        unselected.content.append(unselectedGaussians.row);
+        unselected.content.append(unselectedTint.row);
+        unselected.content.append(splatColors.row);
+        selected.content.append(selectedGaussians.row);
+        selected.content.append(selectedTint.row);
+        selected.content.append(outline.row);
+        advanced.content.append(centersTint.row);
+        advanced.content.append(ringsTint.row);
+        advanced.content.append(selectionTint.bar);
+        advanced.content.append(gaussiansSelectionTint.row);
+        advanced.content.append(centersSelectionTint.row);
+        advanced.content.append(ringsSelectionTint.row);
+        colors.content.append(colorsRow);
+
         this.append(header);
-        this.append(displayRow);
-        this.append(selectionDisplayRow);
-        this.append(colorsRow);
-        this.append(sectionHeader('panel.appearance.gaussians'));
-        this.append(splatsColorBlend.row);
-        this.append(splatsSelectionBlend.row);
-        this.append(sectionHeader('panel.appearance.centers'));
-        this.append(centersSizeRow);
-        this.append(centersColorBlend.row);
-        this.append(centersSelectionBlend.row);
-        this.append(sectionHeader('panel.appearance.rings'));
-        this.append(ringSizeRow);
-        this.append(ringsColorBlend.row);
-        this.append(ringsSelectionBlend.row);
+        this.append(top);
+        this.append(unselected.bar);
+        this.append(unselected.content);
+        this.append(selected.bar);
+        this.append(selected.content);
+        this.append(advanced.bar);
+        this.append(advanced.content);
+        this.append(colors.bar);
+        this.append(colors.content);
 
-        const updateDisplay = () => {
-            setActive(gaussiansButton, events.invoke('view.gaussians'));
-            setActive(centersButton, events.invoke('view.centers'));
-            setActive(ringsButton, events.invoke('view.rings'));
-
-            // the edit view switch (tab) hides centers and rings without
-            // touching their settings: dim the toggles so the stored state
-            // stays readable while they have no effect
-            const overridden = !events.invoke('view.editView');
-            centersButton.class[overridden ? 'add' : 'remove']('overridden');
-            ringsButton.class[overridden ? 'add' : 'remove']('overridden');
+        // the mode's marker rows and size sit in the primary sections, the
+        // other marker's in Advanced
+        const layout = () => {
+            const other = otherMode();
+            [sizeRows, unselectedMarkers, selectedMarkers].forEach((rows) => {
+                (Object.values(rows) as Row[]).forEach(({ row }) => (row.parent as Container)?.remove(row));
+            });
+            top.append(sizeRows[mode].row);
+            unselected.content.appendAfter(unselectedMarkers[mode].row, unselectedGaussians.row);
+            selected.content.appendAfter(selectedMarkers[mode].row, selectedGaussians.row);
+            advanced.content.appendBefore(unselectedMarkers[other].row, centersTint.row);
+            advanced.content.appendBefore(selectedMarkers[other].row, centersTint.row);
+            advanced.content.appendBefore(sizeRows[other].row, centersTint.row);
         };
 
-        const updateSelectionDisplay = () => {
-            setActive(selectionColorButton, events.invoke('view.selectionColor'));
-            setActive(selectionCentersButton, events.invoke('view.selectionCenters'));
-            setActive(selectionRingsButton, events.invoke('view.selectionRings'));
-            setActive(outlineSelectionButton, events.invoke('view.outlineSelection'));
+        const rows: Row[] = [
+            showMarkers, sizeRows.centers, sizeRows.rings,
+            unselectedGaussians, unselectedMarkers.centers, unselectedMarkers.rings, unselectedTint, splatColors,
+            selectedGaussians, selectedMarkers.centers, selectedMarkers.rings, selectedTint, outline,
+            centersTint, ringsTint, gaussiansSelectionTint, centersSelectionTint, ringsSelectionTint
+        ];
+
+        // the unselected rows have no effect while the markers are hidden:
+        // dim them, with the switch that explains why directly above. The
+        // size rows stay lit: they size the selected markers too
+        const unselectedRows = [unselectedGaussians, unselectedMarkers.centers, unselectedMarkers.rings, unselectedTint, splatColors];
+
+        const syncRows = () => {
+            syncing = true;
+            try {
+                rows.forEach(row => row.sync());
+                const overridden = !events.invoke('view.editView');
+                unselectedRows.forEach(({ row }) => row.class[overridden ? 'add' : 'remove']('overridden'));
+            } finally {
+                syncing = false;
+            }
         };
 
         const sync = () => {
-            updateDisplay();
-            centersSizeSlider.value = events.invoke('view.centerSize');
-            ringSizeSlider.value = events.invoke('view.ringSize');
-            [
-                splatsColorBlend, splatsSelectionBlend,
-                centersColorBlend, centersSelectionBlend,
-                ringsColorBlend, ringsSelectionBlend
-            ].forEach(({ slider, name }) => {
-                slider.value = events.invoke(`view.${name}`);
-            });
-            updateSelectionDisplay();
+            mode = events.invoke('view.mode');
+            updateHeader();
+            layout();
+            syncRows();
         };
+
+        // visibility
 
         const setVisible = (visible: boolean) => {
             if (visible === this.hidden) {
@@ -387,85 +494,38 @@ class AppearancePanel extends Container {
         });
 
         resetButton.on('click', () => {
-            events.fire('preferences.reset', 'appearance');
+            events.fire('view.resetModeSettings');
         });
 
-        events.on('view.gaussians', updateDisplay);
-        events.on('view.centers', updateDisplay);
-        events.on('view.rings', updateDisplay);
-        events.on('view.editView', updateDisplay);
+        // follow the live state while open
 
-        gaussiansButton.on('click', () => {
-            events.fire('view.setGaussians', !events.invoke('view.gaussians'));
+        events.on('view.mode', () => {
+            if (!this.hidden) {
+                sync();
+            }
         });
 
-        centersButton.on('click', () => {
-            events.fire('view.setCenters', !events.invoke('view.centers'));
+        [
+            'view.editView', 'view.centerSize', 'view.ringSize',
+            'view.gaussians', 'view.centers', 'view.rings', 'view.splatsColorBlend', 'view.centersColorBlend', 'view.ringsColorBlend',
+            'view.selectionGaussians', 'view.selectionCenters', 'view.selectionRings', 'view.selectionColor', 'view.outlineSelection',
+            'view.splatsSelectionBlend', 'view.centersSelectionBlend', 'view.ringsSelectionBlend'
+        ].forEach((eventName) => {
+            events.on(eventName, () => {
+                if (!this.hidden) {
+                    syncRows();
+                }
+            });
         });
 
-        ringsButton.on('click', () => {
-            events.fire('view.setRings', !events.invoke('view.rings'));
-        });
+        i18n.onChange(() => {
+            updateHeader();
+            if (!this.hidden) {
+                syncRows();
+            }
+        }, this);
 
-        events.on('view.centerSize', (value: number) => {
-            centersSizeSlider.value = value;
-        });
-
-        centersSizeSlider.on('change', (value: number) => {
-            events.fire('view.setCenterSize', value);
-        });
-
-        events.on('view.ringSize', (value: number) => {
-            ringSizeSlider.value = value;
-        });
-
-        ringSizeSlider.on('change', (value: number) => {
-            events.fire('view.setRingSize', value);
-        });
-
-        events.on('view.selectionColor', updateSelectionDisplay);
-        events.on('view.selectionCenters', updateSelectionDisplay);
-        events.on('view.selectionRings', updateSelectionDisplay);
-        events.on('view.outlineSelection', updateSelectionDisplay);
-
-        selectionColorButton.on('click', () => {
-            events.fire('view.setSelectionColor', !events.invoke('view.selectionColor'));
-        });
-
-        selectionCentersButton.on('click', () => {
-            events.fire('view.setSelectionCenters', !events.invoke('view.selectionCenters'));
-        });
-
-        selectionRingsButton.on('click', () => {
-            events.fire('view.setSelectionRings', !events.invoke('view.selectionRings'));
-        });
-
-        outlineSelectionButton.on('click', () => {
-            events.fire('view.setOutlineSelection', !events.invoke('view.outlineSelection'));
-        });
-
-        bgClrPicker.on('change', (value: number[]) => {
-            events.fire('setBgClr', new Color(value[0], value[1], value[2]));
-        });
-
-        selectedClrPicker.on('change', (value: number[]) => {
-            events.fire('setSelectedClr', new Color(value[0], value[1], value[2], value[3]));
-        });
-
-        unselectedClrPicker.on('change', (value: number[]) => {
-            events.fire('setUnselectedClr', new Color(value[0], value[1], value[2], value[3]));
-        });
-
-        lockedClrPicker.on('change', (value: number[]) => {
-            events.fire('setLockedClr', new Color(value[0], value[1], value[2], value[3]));
-        });
-
-        tooltips.register(bgClrPicker, () => i18n.t('panel.settings.background-color'), 'left');
-        tooltips.register(selectedClrPicker, () => i18n.t('panel.settings.selected-color'), 'top');
-        tooltips.register(unselectedClrPicker, () => i18n.t('panel.settings.unselected-color'), 'top');
-        tooltips.register(lockedClrPicker, () => i18n.t('panel.settings.locked-color'), 'top');
-        tooltips.register(resetButton, () => i18n.t('panel.settings.reset'), 'left');
-
+        layout();
     }
 }
 

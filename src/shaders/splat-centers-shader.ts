@@ -21,8 +21,7 @@ uniform clipZParams: vec4f;
 uniform centersBase: u32;
 uniform centersCount: u32;
 uniform centerSize: f32;
-uniform selectionOnly: u32;
-uniform selectionCenters: u32;
+uniform drawMask: u32;
 uniform colorBlend: f32;
 uniform selectionBlend: f32;
 uniform selectedClr: vec4f;
@@ -60,7 +59,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 
     let uv = vec2i(i32(entry % uniform.cacheWidth), i32(entry / uniform.cacheWidth));
     let flags = (textureLoad(cacheB, uv, 0).x >> 24u) & 3u;
-    if (!overlayEligible(flags, uniform.selectionOnly != 0u)) {
+    if (!overlayEligible(flags, uniform.drawMask)) {
         output.position = discardPosition;
         return output;
     }
@@ -78,15 +77,16 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     let clipOffset = vertex_position.xy * (0.5 * uniform.centerSize) * w * uniform.viewportSize.zw;
     output.position = clip + vec4f(clipOffset, 0.0, 0.0);
 
-    // colorBlend mixes the base from the gaussian's own colour (as cached, so
-    // graded) toward the flat unselected colour; selectionBlend takes a selected
-    // centre from there toward the selection colour
+    // an unselected centre blends from the gaussian's own colour (as cached,
+    // so graded) toward the flat unselected colour by colorBlend; a selected
+    // one toward the selection colour by selectionBlend
     let rgbBits = a.z;
     let color = vec3f(vec3u(rgbBits, rgbBits >> 10u, rgbBits >> 20u) & vec3u(1023u))
         * (f32(1u << (rgbBits >> 30u)) / 1023.0);
-    let base = mix(color, uniform.unselectedClr.rgb, uniform.colorBlend);
-    let selected = select(0.0, uniform.selectionBlend, (flags & 1u) != 0u && uniform.selectionCenters != 0u);
-    output.overlayColor = vec4f(mix(base, uniform.selectedClr.rgb, selected), 1.0);
+    let selected = (flags & 1u) != 0u;
+    let tint = select(uniform.unselectedClr.rgb, uniform.selectedClr.rgb, selected);
+    let blend = select(uniform.colorBlend, uniform.selectionBlend, selected);
+    output.overlayColor = vec4f(mix(color, tint, blend), 1.0);
     return output;
 }
 `;

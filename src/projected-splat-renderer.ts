@@ -482,6 +482,7 @@ class ProjectedSplatRenderer {
             new UniformFormat('minPixelSize', UNIFORMTYPE_FLOAT),
             new UniformFormat('near', UNIFORMTYPE_FLOAT),
             new UniformFormat('far', UNIFORMTYPE_FLOAT),
+            new UniformFormat('radialSort', UNIFORMTYPE_UINT),
             new UniformFormat('capacity', UNIFORMTYPE_UINT),
             new UniformFormat('keepCulled', UNIFORMTYPE_UINT),
             new UniformFormat('minContribution', UNIFORMTYPE_FLOAT),
@@ -905,6 +906,14 @@ class ProjectedSplatRenderer {
         const occlusion = this.stochastic && this.occlusionCull && this.prevValid &&
             !this.scene.editedRender && this.prevClipZ[2] === (isOrtho ? 1 : 0);
 
+        // radial sorting orders by distance to the camera instead of depth along
+        // its forward axis. Orthographic rays are parallel, so depth is the only
+        // order there. An on-screen splat at depth d is at most d times the
+        // frustum's corner ray length per unit depth away, so the key's range
+        // widens by that factor
+        const radialSort = !isOrtho && events.invoke('view.sortMode') === 'radial';
+        const sortFar = cameraComponent.farClip * (radialSort ? Math.hypot(1, 1 / projection[0], 1 / projection[5]) : 1);
+
         let ringsBase = 0;
         let ringsCount = 0;
 
@@ -978,7 +987,8 @@ class ProjectedSplatRenderer {
             compute.setParameter('pickOp', -1);
             compute.setParameter('minPixelSize', minPixelSize);
             compute.setParameter('near', cameraComponent.nearClip);
-            compute.setParameter('far', cameraComponent.farClip);
+            compute.setParameter('far', sortFar);
+            compute.setParameter('radialSort', radialSort ? 1 : 0);
             compute.setParameter('capacity', this.capacity);
             // culled splats of the selected layer stay projected while the
             // centres overlay is up, so their centres still draw

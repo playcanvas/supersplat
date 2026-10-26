@@ -128,6 +128,7 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         // while preference application is suspended, and this applies last)
         { key: 'view.editView', setCommand: 'view.setEditView', getDefault: () => false, validate: isBool, group: 'appearance' },
         { key: 'view.stochastic', setCommand: 'view.setStochastic', getDefault: () => 'auto', validate: isEnum(['disabled', 'enabled', 'movement', 'auto']), group: 'preferences' },
+        { key: 'view.sortMode', setCommand: 'view.setSortMode', getDefault: () => 'radial', validate: isEnum(['radial', 'depth']), group: 'preferences' },
         { key: 'view.perfOverlay', setCommand: 'view.setPerfOverlay', getDefault: () => false, validate: isBool, group: 'overlays' },
         { key: 'grid.visible', setCommand: 'grid.setVisible', urlPath: 'show.grid', getDefault: () => config.show.grid, validate: isBool, group: 'overlays' },
         { key: 'grid.planes', setCommand: 'grid.setPlanes', getDefault: () => ['xz'], validate: isPlanes, group: 'overlays' },

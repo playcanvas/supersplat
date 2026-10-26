@@ -58,9 +58,14 @@
             cursor: pointer;
         }
 
+        // the label carries the row's tooltip, so it spans the row's full
+        // height (padding included) rather than just its text. Centred by
+        // line-height, not flex, which would lose the ellipsis on long labels
         & > .settings-panel-row-label {
             flex-grow: 1;
-            margin: 0;
+            align-self: stretch;
+            margin: -2px 0;
+            line-height: 32px;
         }
 
         & > .settings-panel-row-toggle {

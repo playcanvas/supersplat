@@ -1,0 +1,21 @@
+{
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["verdict", "lost", "notes"],
+    "properties": {
+        "verdict": { "type": "string", "enum": ["merge", "hold"] },
+        "lost": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["file", "what"],
+                "properties": {
+                    "file": { "type": "string" },
+                    "what": { "type": "string" }
+                }
+            }
+        },
+        "notes": { "type": "string" }
+    }
+}

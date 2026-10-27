@@ -2,8 +2,7 @@
 # NOTE: scheduled runs only fire from the workflow file on the DEFAULT branch (main).
 name: Sync with Upstream
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 on:
   schedule:
@@ -11,13 +10,21 @@ on:
     - cron: '0 9 */2 * *'
   workflow_dispatch: # Allow manual trigger
 
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
 jobs:
   sync:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      behind: ${{ steps.behind.outputs.behind }}
 
     steps:
       - name: Checkout main branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
@@ -28,64 +35,258 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Add upstream remote
+      - name: Merge upstream into main
         run: |
           git remote add upstream https://github.com/playcanvas/supersplat.git || true
           git fetch upstream
-
-      - name: Check for updates
-        id: check
-        run: |
-          # Get the commit hashes
-          UPSTREAM_HASH=$(git rev-parse upstream/main)
-          LOCAL_HASH=$(git rev-parse HEAD)
-
-          if [ "$UPSTREAM_HASH" = "$LOCAL_HASH" ]; then
-            echo "No updates available"
-            echo "has_updates=false" >> $GITHUB_OUTPUT
+          if git merge-base --is-ancestor upstream/main HEAD; then
+            echo "main already has upstream/main"
           else
-            echo "Updates available from upstream"
-            echo "has_updates=true" >> $GITHUB_OUTPUT
+            # main carries no fork changes outside .github, so this is always clean.
+            git merge upstream/main --no-edit
+            git push origin main
           fi
 
-      - name: Merge upstream into main
-        if: steps.check.outputs.has_updates == 'true'
+      - name: Check whether braintrance is behind main
+        id: behind
         run: |
-          # Directly merge upstream/main into main (should always be clean)
-          git merge upstream/main --no-edit
-          git push origin main
+          git fetch origin braintrance
+          if git merge-base --is-ancestor origin/main origin/braintrance; then
+            echo "behind=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "behind=true" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Create PR branch from main to braintrance
-        if: steps.check.outputs.has_updates == 'true'
-        run: |
-          BRANCH_NAME="sync-main-to-braintrance-$(date +%Y%m%d-%H%M%S)"
-          git checkout -b $BRANCH_NAME main
-          echo "branch_name=$BRANCH_NAME" >> $GITHUB_ENV
-          git push origin $BRANCH_NAME
+  # Merges main into braintrance, lets an agent resolve conflicts and fix breakage, and lands the
+  # merge only when every check passes and a second agent finds no fork behaviour lost.
+  land:
+    needs: sync
+    if: needs.sync.outputs.behind == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    env:
+      SYNC: ${{ github.workspace }}/tools/.github/sync
+      WORK: ${{ github.workspace }}/work
+      OUT: ${{ github.workspace }}/out
 
-      - name: Create Pull Request
-        if: steps.check.outputs.has_updates == 'true'
-        uses: actions/github-script@v7
+    steps:
+      # The checks and prompts come from this workflow's own commit, never from the tree being judged,
+      # which the agent can edit.
+      - name: Checkout sync tools
+        uses: actions/checkout@v7
         with:
-          script: |
-            const branchName = process.env.branch_name;
+          ref: ${{ github.sha }}
+          path: tools
+          sparse-checkout: .github/sync
+          persist-credentials: false
 
-            let body = '## 🔄 Upstream Sync: Merge main into braintrance\n\n';
-            body += 'The `main` branch has been updated with the latest changes from [playcanvas/supersplat](https://github.com/playcanvas/supersplat).\n\n';
-            body += 'This PR merges those upstream changes into the `braintrance` branch.\n\n';
-            body += '### Review the changes:\n';
-            body += '- Check what changed upstream in the Files tab\n';
-            body += '- Resolve any conflicts if they occur\n';
-            body += '- Merge when ready to pull in upstream updates\n\n';
-            body += '**Note:** The `main` branch was automatically updated with upstream changes (no conflicts since main is clean).\n';
+      - name: Checkout braintrance
+        uses: actions/checkout@v7
+        with:
+          ref: braintrance
+          fetch-depth: 0
+          path: work
+          persist-credentials: false
 
-            const { data: pr } = await github.rest.pulls.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `🔄 Sync upstream changes into braintrance (${new Date().toISOString().split('T')[0]})`,
-              head: branchName,
-              base: 'braintrance',
-              body: body
-            });
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.x
 
-            console.log(`Created PR #${pr.number}`);
+      - name: Install the smoke test's browser
+        working-directory: tools/.github/sync
+        run: |
+          npm ci --no-audit --no-fund
+          npx --no-install playwright install --with-deps chromium
+
+      - name: Merge main into braintrance
+        id: merge
+        working-directory: work
+        run: |
+          mkdir -p "$OUT"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          FORK=$(git rev-parse HEAD)
+          UPSTREAM=$(git rev-parse origin/main)
+          BASE=$(git merge-base "$FORK" "$UPSTREAM")
+          # git's own merge, conflict markers and all: the baseline the agent's edits are measured against.
+          AUTOMERGE=$(git merge-tree --write-tree "$FORK" "$UPSTREAM" | head -1 || true)
+          git merge --no-ff --no-commit origin/main || true
+          CONFLICTS=$(git diff --name-only --diff-filter=U | tr '\n' ' ')
+          {
+            echo "FORK=$FORK"
+            echo "UPSTREAM=$UPSTREAM"
+            echo "BASE=$BASE"
+            echo "AUTOMERGE=$AUTOMERGE"
+            echo "BRANCH=sync/upstream-$(date -u +%Y%m%d-%H%M)"
+          } >> "$GITHUB_ENV"
+          echo "conflicts=$CONFLICTS" >> "$GITHUB_OUTPUT"
+          echo "Conflicts: ${CONFLICTS:-none}"
+
+      - name: Install dependencies for the agent
+        if: steps.merge.outputs.conflicts != ''
+        working-directory: work
+        continue-on-error: true
+        run: |
+          # Unconflicted manifests only; scripts skipped, since this tree is not yet reviewed.
+          git diff --quiet --diff-filter=U -- package.json package-lock.json && npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Write the prompts
+        run: |
+          export LOG="$OUT/gates.log" GUARD="$OUT/guard.md"
+          # shellcheck disable=SC2016 # envsubst takes the variable names literally, to leave every other $ alone
+          for prompt in resolve fix review; do
+            envsubst '$BASE $FORK $UPSTREAM $AUTOMERGE $LOG $GUARD' < "$SYNC/$prompt-prompt.md" > "$OUT/$prompt-prompt.md"
+          done
+
+      - name: Resolve conflicts
+        id: resolve
+        if: steps.merge.outputs.conflicts != ''
+        continue-on-error: true
+        uses: openai/codex-action@83eeca45b831921e73d1f6a7955efccc568fe4e8 # v1.13
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt-file: ${{ github.workspace }}/out/resolve-prompt.md
+          output-file: ${{ github.workspace }}/out/resolve.md
+          working-directory: work
+          sandbox: workspace-write
+          effort: high
+
+      - name: Commit the merge
+        id: commit
+        continue-on-error: true
+        working-directory: work
+        env:
+          CONFLICTS: ${{ steps.merge.outputs.conflicts }}
+        run: |
+          if [[ " $CONFLICTS " == *" package-lock.json "* ]] || ! git diff --quiet "$AUTOMERGE" -- package.json; then
+            npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          fi
+          git add -A
+          git commit --no-edit -m "Merge upstream playcanvas/supersplat main into braintrance (automatic)" -m "main at $UPSTREAM"
+          bash "$SYNC/scope-check.sh" "$AUTOMERGE" | tee "$OUT/scope.log"
+
+      - name: Run the checks
+        id: gates
+        if: steps.commit.outcome == 'success'
+        continue-on-error: true
+        run: bash "$SYNC/gates.sh" "$WORK" "$SYNC" "$OUT/gates.log"
+
+      - name: Fix what the checks found
+        id: fix
+        if: steps.gates.outcome == 'failure'
+        continue-on-error: true
+        uses: openai/codex-action@83eeca45b831921e73d1f6a7955efccc568fe4e8 # v1.13
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt-file: ${{ github.workspace }}/out/fix-prompt.md
+          output-file: ${{ github.workspace }}/out/fix.md
+          working-directory: work
+          sandbox: workspace-write
+          effort: high
+
+      - name: Commit the fix and run the checks again
+        id: gates2
+        if: steps.gates.outcome == 'failure'
+        continue-on-error: true
+        working-directory: work
+        run: |
+          if ! git diff --quiet HEAD -- package.json; then
+            npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          fi
+          git add -A
+          git commit --amend --no-edit
+          bash "$SYNC/scope-check.sh" "$AUTOMERGE" | tee "$OUT/scope.log"
+          bash "$SYNC/gates.sh" "$WORK" "$SYNC" "$OUT/gates.log"
+
+      - name: Check the fork's changes survived
+        id: guard
+        if: steps.gates.outcome == 'success' || steps.gates2.outcome == 'success'
+        continue-on-error: true
+        working-directory: work
+        run: node "$SYNC/fork-guard.mjs" "$BASE" "$FORK" HEAD "$SYNC/fork-markers.json" "$OUT/guard.md"
+
+      - name: Review the merge
+        id: review
+        if: steps.guard.outcome == 'success'
+        continue-on-error: true
+        uses: openai/codex-action@83eeca45b831921e73d1f6a7955efccc568fe4e8 # v1.13
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt-file: ${{ github.workspace }}/out/review-prompt.md
+          output-file: ${{ github.workspace }}/out/review.json
+          output-schema-file: ${{ github.workspace }}/tools/.github/sync/review-schema.json
+          working-directory: work
+          sandbox: read-only
+          effort: high
+
+      - name: Open the PR and land it if everything passed
+        if: always() && steps.merge.outcome == 'success'
+        working-directory: work
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GUARD_OK: ${{ steps.guard.outcome == 'success' }}
+          CONFLICTS: ${{ steps.merge.outputs.conflicts }}
+        run: |
+          verdict=$(jq -r '.verdict // "hold"' "$OUT/review.json" 2>/dev/null || echo hold)
+          [ "$GUARD_OK" = "true" ] || verdict=hold
+
+          body="$OUT/body.md"
+          {
+            echo "Merges \`main\` ($UPSTREAM, mirroring playcanvas/supersplat) into \`braintrance\` ($FORK)."
+            echo
+            echo "| Step | Result |"
+            echo "| --- | --- |"
+            echo "| Conflicts | ${CONFLICTS:-none} |"
+            echo "| Agent resolution | ${{ steps.resolve.outcome }} |"
+            echo "| Scope check | ${{ steps.commit.outcome }} |"
+            echo "| Checks | ${{ steps.gates.outcome }} |"
+            echo "| Agent fix, checks again | ${{ steps.fix.outcome }}, ${{ steps.gates2.outcome }} |"
+            echo "| Fork guard | ${{ steps.guard.outcome }} |"
+            echo "| Review | $verdict |"
+            echo
+            for part in resolve fix; do
+              [ -s "$OUT/$part.md" ] && { echo "### Agent: $part"; echo; cat "$OUT/$part.md"; echo; }
+            done
+            [ -s "$OUT/review.json" ] && { echo "### Review"; echo; echo '```json'; cat "$OUT/review.json"; echo '```'; echo; }
+            [ -s "$OUT/scope.log" ] && { echo "### Scope check"; echo; echo '```'; cat "$OUT/scope.log"; echo '```'; echo; }
+            [ -s "$OUT/guard.md" ] && cat "$OUT/guard.md"
+            [ -s "$OUT/gates.log" ] && { echo; echo "<details><summary>Last 80 lines of the checks</summary>"; echo; echo '```'; tail -80 "$OUT/gates.log"; echo '```'; echo "</details>"; }
+          } > "$body"
+          # A PR body caps at 65536 characters.
+          head -c 60000 "$body" > "$body.cut"
+
+          remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push "$remote" "HEAD:refs/heads/$BRANCH"
+          pr=$(gh pr create --repo "$GITHUB_REPOSITORY" --base braintrance --head "$BRANCH" \
+            --title "Sync upstream into braintrance ($(date -u +%Y-%m-%d))" --body-file "$body.cut")
+          echo "Opened $pr"
+
+          if [ "$verdict" = "merge" ]; then
+            # A fast-forward only: if braintrance moved during the run, the push is refused and nothing lands.
+            if git push "$remote" "HEAD:refs/heads/braintrance"; then
+              gh pr comment "$pr" --body "Every check passed and the review found nothing lost, so this landed on \`braintrance\` automatically."
+            else
+              verdict=hold
+              gh pr comment "$pr" --body "\`braintrance\` moved while this ran, so it was not landed. The next run retries."
+            fi
+          fi
+          if [ "$verdict" != "merge" ]; then
+            gh label create sync-needs-human --repo "$GITHUB_REPOSITORY" --color D93F0B \
+              --description "An upstream sync the bot would not land" 2>/dev/null || true
+            gh pr edit "$pr" --add-label sync-needs-human
+          fi
+
+          # Each sync contains every earlier one.
+          number=${pr##*/}
+          gh pr list --repo "$GITHUB_REPOSITORY" --base braintrance --state open --json number,headRefName \
+            --jq ".[] | select(.number != $number) | select(.headRefName | startswith(\"sync-main-to-braintrance-\") or startswith(\"sync/upstream-\")) | .number" |
+            while read -r old; do
+              gh pr close "$old" --repo "$GITHUB_REPOSITORY" --delete-branch --comment "Superseded by #$number."
+            done
+
+          [ "$verdict" = "merge" ] || { echo "::warning::Not landed; see $pr"; exit 1; }

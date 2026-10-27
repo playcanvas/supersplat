@@ -19,10 +19,32 @@ upstream/main  ──►  main (mirror)  ──►  sync (merge + verify)  ─�
 
 ## Automated part: `.github/workflows/sync-upstream.yml`
 
-The workflow:
+The workflow has two jobs:
 
-1. Merges `upstream/main` into `main` and pushes it (keeping the mirror current).
-2. Opens a PR from a branch off `main` into `braintrance`.
+1. **sync** merges `upstream/main` into `main` and pushes it (keeping the mirror current).
+2. **land**, whenever `braintrance` is missing anything on `main`:
+   1. merges `main` into a copy of `braintrance`;
+   2. if git stops on conflicts, a Codex agent resolves them (`.github/sync/resolve-prompt.md`), keeping
+      upstream's change and re-applying the fork's on top;
+   3. commits, then refuses the result (`scope-check.sh`) if the agent edited anything outside
+      `src/`, `static/` and `package.json`, left conflict markers, or added `@ts-ignore`/`eslint-disable`;
+   4. runs the verification block below plus a browser smoke test (`gates.sh`, `smoke.mjs`); on failure
+      the agent gets one attempt to fix it (`fix-prompt.md`) and the checks run again;
+   5. checks the fork survived (`fork-guard.mjs`): every fork-only file and every string in
+      `fork-markers.json` must still be there, and every line the fork added that no longer appears
+      verbatim is listed;
+   6. a second, read-only agent reviews that list and the resolving agent's edits and answers `merge`
+      or `hold` (`review-prompt.md`);
+   7. opens a `sync/upstream-<date>` PR into `braintrance` with all of the above, and on `merge`
+      fast-forwards `braintrance` to it, which marks the PR merged. Anything else leaves the PR open
+      with the `sync-needs-human` label. Older open sync PRs are closed as superseded.
+
+The checks and prompts are read from the workflow's own commit on `main`, never from the tree being
+merged, so the agent cannot edit what judges it. The agent needs the `OPENAI_API_KEY` repository
+secret; without it a conflicted sync is held for a human.
+
+When the fork gains a feature, add its anchor strings to `.github/sync/fork-markers.json` and, if it
+renders something, a selector to `smoke.mjs`.
 
 Runs every 2 days at 09:00 UTC (`cron: '0 9 */2 * *'`) and can also be triggered manually
 (**Actions → Sync with Upstream → Run workflow**).
@@ -34,9 +56,8 @@ Runs every 2 days at 09:00 UTC (`cron: '0 9 */2 * *'`) and can also be triggered
 > any branch the file exists on.
 
 > [!NOTE]
-> The automated PR targets `braintrance` directly, bypassing the `sync` integration branch that the
-> manual process below uses. Whichever route is taken, **run the verification checks before merging** —
-> a clean git merge does not prove the fork-only files still compile (see gotchas).
+> The automation lands on `braintrance` directly, bypassing the `sync` integration branch that the
+> manual process below uses. Use the manual route for a sync the bot held.
 
 ## Manual sync (the reliable route)
 

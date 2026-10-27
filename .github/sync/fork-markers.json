@@ -1,0 +1,11 @@
+{
+    "// what": "Strings each file must still contain after an upstream merge. A miss blocks the auto-merge. Add a line when the fork gains a feature.",
+    "package.json": ["node scripts/patch-splat-editor-sw.mjs", "\"sortablejs\"", "\"@types/sortablejs\""],
+    "src/index.html": ["family=Rajdhani"],
+    "src/main.ts": ["AnnotationManager", "registerIframeApi", "initIframeIntegration", "ViewManager", "AnnotationOverlay"],
+    "src/editor.ts": ["revealEffect"],
+    "src/ui/editor.ts": ["RenderSubPanel", "SettingsPanel"],
+    "src/ui/right-toolbar.ts": ["cameraOrbitPointSvg"],
+    "src/ui/scss/style.scss": ["@use 'colors.scss'", "@use 'iframe-controls.scss'", "@use 'render-sub-panel.scss'", "@use 'annotation-overlay.scss'"],
+    "src/iframe-integration.ts": ["splat-editor-ready", "supersplat:ready", "supersplat:load-views", "supersplat:load-annotations"]
+}

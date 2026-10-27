@@ -1,0 +1,87 @@
+# Builds, lints and smoke-tests a candidate upstream merge for sync-upstream.yml. This runs the
+# merged tree's own code (install scripts, rollup, eslint), so it gets no secrets and a read-only
+# token, and nothing it writes is trusted beyond its own pass or fail.
+name: Sync check
+
+on:
+  workflow_call:
+    inputs:
+      bundle:
+        description: Artifact holding merge.bundle
+        type: string
+        required: true
+      sha:
+        description: The merge commit the bundle must contain
+        type: string
+        required: true
+    outputs:
+      gates:
+        value: ${{ jobs.check.outputs.gates }}
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      gates: ${{ steps.gates.outcome }}
+    env:
+      SYNC: ${{ github.workspace }}/tools/.github/sync
+      WORK: ${{ github.workspace }}/work
+      OUT: ${{ github.workspace }}/out
+
+    steps:
+      - name: Checkout sync tools
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: tools
+          sparse-checkout: .github/sync
+          persist-credentials: false
+
+      - name: Checkout braintrance
+        uses: actions/checkout@v7
+        with:
+          ref: braintrance
+          fetch-depth: 0
+          path: work
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.bundle }}
+          path: out/candidate
+
+      - name: Check out the candidate merge
+        working-directory: work
+        env:
+          SHA: ${{ inputs.sha }}
+        run: |
+          git fetch origin main
+          git fetch "$OUT/candidate/merge.bundle" "+refs/heads/merge:refs/heads/candidate"
+          git checkout --detach candidate
+          test "$(git rev-parse HEAD)" = "$SHA"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.x
+
+      - name: Install the smoke test's browser
+        working-directory: tools/.github/sync
+        run: |
+          npm ci --no-audit --no-fund
+          npx --no-install playwright install --with-deps chromium
+
+      - name: Run the checks
+        id: gates
+        continue-on-error: true
+        run: bash "$SYNC/gates.sh" "$WORK" "$SYNC" "$OUT/gates.log"
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: ${{ inputs.bundle }}-gates
+          path: out/gates.log
+          if-no-files-found: ignore

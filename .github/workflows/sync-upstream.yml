@@ -1,5 +1,10 @@
 # See .github/UPSTREAM_SYNC.md for the full sync process, branch model, and verification steps.
 # NOTE: scheduled runs only fire from the workflow file on the DEFAULT branch (main).
+#
+# Trust layout: jobs that hold the OpenAI key (resolve, fix, review) never run the merged tree's
+# install scripts or build, the job that does (sync-check.yml) has no secrets, and the only job with
+# a write token (land) runs nothing from the tree and decides from job outputs, not files. Each
+# Codex call has its own job because codex-action's drop-sudo cannot run twice in one.
 name: Sync with Upstream
 permissions:
   contents: read
@@ -57,25 +62,24 @@ jobs:
             echo "behind=true" >> "$GITHUB_OUTPUT"
           fi
 
-  # Merges main into braintrance, lets an agent resolve conflicts and fix breakage, and lands the
-  # merge only when every check passes and a second agent finds no fork behaviour lost.
-  land:
+  resolve:
     needs: sync
     if: needs.sync.outputs.behind == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 90
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write
+    timeout-minutes: 45
+    outputs:
+      sha: ${{ steps.commit.outputs.sha }}
+      fork: ${{ steps.merge.outputs.fork }}
+      upstream: ${{ steps.merge.outputs.upstream }}
+      base: ${{ steps.merge.outputs.base }}
+      conflicts: ${{ steps.merge.outputs.conflicts }}
+      agent: ${{ steps.agent.outcome }}
     env:
       SYNC: ${{ github.workspace }}/tools/.github/sync
-      WORK: ${{ github.workspace }}/work
       OUT: ${{ github.workspace }}/out
 
     steps:
-      # The checks and prompts come from this workflow's own commit, never from the tree being judged,
-      # which the agent can edit.
+      # Checks and prompts come from this workflow's commit, never from the tree being merged.
       - name: Checkout sync tools
         uses: actions/checkout@v7
         with:
@@ -96,12 +100,6 @@ jobs:
         with:
           node-version: 22.x
 
-      - name: Install the smoke test's browser
-        working-directory: tools/.github/sync
-        run: |
-          npm ci --no-audit --no-fund
-          npx --no-install playwright install --with-deps chromium
-
       - name: Merge main into braintrance
         id: merge
         working-directory: work
@@ -110,41 +108,38 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git fetch origin main
-          FORK=$(git rev-parse HEAD)
-          UPSTREAM=$(git rev-parse origin/main)
-          BASE=$(git merge-base "$FORK" "$UPSTREAM")
-          # git's own merge, conflict markers and all: the baseline the agent's edits are measured against.
-          AUTOMERGE=$(git merge-tree --write-tree "$FORK" "$UPSTREAM" | head -1 || true)
+          fork=$(git rev-parse HEAD)
+          upstream=$(git rev-parse origin/main)
           git merge --no-ff --no-commit origin/main || true
-          CONFLICTS=$(git diff --name-only --diff-filter=U | tr '\n' ' ')
+          conflicts=$(git diff --name-only --diff-filter=U | tr '\n' ' ')
           {
-            echo "FORK=$FORK"
-            echo "UPSTREAM=$UPSTREAM"
-            echo "BASE=$BASE"
-            echo "AUTOMERGE=$AUTOMERGE"
-            echo "BRANCH=sync/upstream-$(date -u +%Y%m%d-%H%M)"
-          } >> "$GITHUB_ENV"
-          echo "conflicts=$CONFLICTS" >> "$GITHUB_OUTPUT"
-          echo "Conflicts: ${CONFLICTS:-none}"
+            echo "fork=$fork"
+            echo "upstream=$upstream"
+            echo "base=$(git merge-base "$fork" "$upstream")"
+            echo "conflicts=$conflicts"
+          } >> "$GITHUB_OUTPUT"
+          echo "Conflicts: ${conflicts:-none}"
 
       - name: Install dependencies for the agent
         if: steps.merge.outputs.conflicts != ''
         working-directory: work
         continue-on-error: true
         run: |
-          # Unconflicted manifests only; scripts skipped, since this tree is not yet reviewed.
+          # Never the tree's own scripts in a job holding the key.
           git diff --quiet --diff-filter=U -- package.json package-lock.json && npm ci --ignore-scripts --no-audit --no-fund
 
-      - name: Write the prompts
+      - name: Write the prompt
+        if: steps.merge.outputs.conflicts != ''
+        env:
+          BASE: ${{ steps.merge.outputs.base }}
+          FORK: ${{ steps.merge.outputs.fork }}
+          UPSTREAM: ${{ steps.merge.outputs.upstream }}
         run: |
-          export LOG="$OUT/gates.log" GUARD="$OUT/guard.md"
           # shellcheck disable=SC2016 # envsubst takes the variable names literally, to leave every other $ alone
-          for prompt in resolve fix review; do
-            envsubst '$BASE $FORK $UPSTREAM $AUTOMERGE $LOG $GUARD' < "$SYNC/$prompt-prompt.md" > "$OUT/$prompt-prompt.md"
-          done
+          envsubst '$BASE $FORK $UPSTREAM' < "$SYNC/resolve-prompt.md" > "$OUT/resolve-prompt.md"
 
       - name: Resolve conflicts
-        id: resolve
+        id: agent
         if: steps.merge.outputs.conflicts != ''
         continue-on-error: true
         uses: openai/codex-action@83eeca45b831921e73d1f6a7955efccc568fe4e8 # v1.13
@@ -158,28 +153,99 @@ jobs:
 
       - name: Commit the merge
         id: commit
-        continue-on-error: true
         working-directory: work
         env:
-          CONFLICTS: ${{ steps.merge.outputs.conflicts }}
+          FORK: ${{ steps.merge.outputs.fork }}
+          UPSTREAM: ${{ steps.merge.outputs.upstream }}
         run: |
-          if [[ " $CONFLICTS " == *" package-lock.json "* ]] || ! git diff --quiet "$AUTOMERGE" -- package.json; then
-            npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-          fi
+          bash "$SYNC/relock.sh" "$FORK"
           git add -A
           git commit --no-edit -m "Merge upstream playcanvas/supersplat main into braintrance (automatic)" -m "main at $UPSTREAM"
-          bash "$SYNC/scope-check.sh" "$AUTOMERGE" | tee "$OUT/scope.log"
+          git branch -f merge HEAD
+          git bundle create "$OUT/merge.bundle" merge "^$FORK" "^$UPSTREAM"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
-      - name: Run the checks
-        id: gates
-        if: steps.commit.outcome == 'success'
-        continue-on-error: true
-        run: bash "$SYNC/gates.sh" "$WORK" "$SYNC" "$OUT/gates.log"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: candidate
+          path: |
+            out/merge.bundle
+            out/resolve.md
+          if-no-files-found: ignore
+
+  check:
+    needs: resolve
+    uses: ./.github/workflows/sync-check.yml
+    with:
+      bundle: candidate
+      sha: ${{ needs.resolve.outputs.sha }}
+
+  fix:
+    needs: [resolve, check]
+    if: needs.check.outputs.gates == 'failure'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      sha: ${{ steps.commit.outputs.sha }}
+    env:
+      SYNC: ${{ github.workspace }}/tools/.github/sync
+      OUT: ${{ github.workspace }}/out
+
+    steps:
+      - name: Checkout sync tools
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: tools
+          sparse-checkout: .github/sync
+          persist-credentials: false
+
+      - name: Checkout braintrance
+        uses: actions/checkout@v7
+        with:
+          ref: braintrance
+          fetch-depth: 0
+          path: work
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: candidate
+          path: out/candidate
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: candidate-gates
+          path: out/candidate
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.x
+
+      - name: Check out the candidate merge
+        working-directory: work
+        env:
+          SHA: ${{ needs.resolve.outputs.sha }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git fetch "$OUT/candidate/merge.bundle" "+refs/heads/merge:refs/heads/merge"
+          git checkout merge
+          test "$(git rev-parse HEAD)" = "$SHA"
+          npm ci --ignore-scripts --no-audit --no-fund || true
+
+      - name: Write the prompt
+        env:
+          BASE: ${{ needs.resolve.outputs.base }}
+          FORK: ${{ needs.resolve.outputs.fork }}
+          UPSTREAM: ${{ needs.resolve.outputs.upstream }}
+          LOG: ${{ github.workspace }}/out/candidate/gates.log
+        run: |
+          # shellcheck disable=SC2016 # envsubst takes the variable names literally, to leave every other $ alone
+          envsubst '$BASE $FORK $UPSTREAM $LOG' < "$SYNC/fix-prompt.md" > "$OUT/fix-prompt.md"
 
       - name: Fix what the checks found
-        id: fix
-        if: steps.gates.outcome == 'failure'
-        continue-on-error: true
         uses: openai/codex-action@83eeca45b831921e73d1f6a7955efccc568fe4e8 # v1.13
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
@@ -189,29 +255,104 @@ jobs:
           sandbox: workspace-write
           effort: high
 
-      - name: Commit the fix and run the checks again
-        id: gates2
-        if: steps.gates.outcome == 'failure'
+      - name: Commit the fix
+        id: commit
+        working-directory: work
+        env:
+          FORK: ${{ needs.resolve.outputs.fork }}
+          UPSTREAM: ${{ needs.resolve.outputs.upstream }}
+        run: |
+          bash "$SYNC/relock.sh" "$FORK"
+          git add -A
+          git commit --amend --no-edit
+          git bundle create "$OUT/merge.bundle" merge "^$FORK" "^$UPSTREAM"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: fixed
+          path: |
+            out/merge.bundle
+            out/fix.md
+
+  recheck:
+    needs: fix
+    uses: ./.github/workflows/sync-check.yml
+    with:
+      bundle: fixed
+      sha: ${{ needs.fix.outputs.sha }}
+
+  review:
+    needs: [resolve, check, fix, recheck]
+    if: >-
+      always() && needs.resolve.result == 'success' &&
+      (needs.fix.result == 'success' && needs.recheck.outputs.gates || needs.check.outputs.gates) == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      verdict: ${{ steps.verdict.outputs.verdict }}
+      sha: ${{ steps.restore.outputs.sha }}
+    env:
+      SYNC: ${{ github.workspace }}/tools/.github/sync
+      OUT: ${{ github.workspace }}/out
+      BUNDLE: ${{ needs.fix.result == 'success' && 'fixed' || 'candidate' }}
+      SHA: ${{ needs.fix.outputs.sha || needs.resolve.outputs.sha }}
+      BASE: ${{ needs.resolve.outputs.base }}
+      FORK: ${{ needs.resolve.outputs.fork }}
+      UPSTREAM: ${{ needs.resolve.outputs.upstream }}
+
+    steps:
+      - name: Checkout sync tools
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: tools
+          sparse-checkout: .github/sync
+          persist-credentials: false
+
+      - name: Checkout braintrance
+        uses: actions/checkout@v7
+        with:
+          ref: braintrance
+          fetch-depth: 0
+          path: work
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ env.BUNDLE }}
+          path: out/candidate
+
+      - name: Check out the candidate merge
+        id: restore
+        working-directory: work
+        run: |
+          git fetch origin main
+          git fetch "$OUT/candidate/merge.bundle" "+refs/heads/merge:refs/heads/candidate"
+          git checkout --detach candidate
+          test "$(git rev-parse HEAD)" = "$SHA"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+      # Pure git, run before the agent: nothing from the tree has executed in this job.
+      - name: Scope check and fork guard
+        id: guard
         continue-on-error: true
         working-directory: work
         run: |
-          if ! git diff --quiet HEAD -- package.json; then
-            npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-          fi
-          git add -A
-          git commit --amend --no-edit
-          bash "$SYNC/scope-check.sh" "$AUTOMERGE" | tee "$OUT/scope.log"
-          bash "$SYNC/gates.sh" "$WORK" "$SYNC" "$OUT/gates.log"
+          bash "$SYNC/scope-check.sh" "$FORK" "$UPSTREAM"
+          node "$SYNC/fork-guard.mjs" "$BASE" "$FORK" HEAD "$SYNC/fork-markers.json" "$OUT/guard.md"
+          echo "AUTOMERGE=$(git merge-tree --write-tree "$FORK" "$UPSTREAM" | head -1 || true)" >> "$GITHUB_ENV"
 
-      - name: Check the fork's changes survived
-        id: guard
-        if: steps.gates.outcome == 'success' || steps.gates2.outcome == 'success'
-        continue-on-error: true
-        working-directory: work
-        run: node "$SYNC/fork-guard.mjs" "$BASE" "$FORK" HEAD "$SYNC/fork-markers.json" "$OUT/guard.md"
+      - name: Write the prompt
+        if: steps.guard.outcome == 'success'
+        env:
+          GUARD: ${{ github.workspace }}/out/guard.md
+        run: |
+          # shellcheck disable=SC2016 # envsubst takes the variable names literally, to leave every other $ alone
+          envsubst '$BASE $FORK $UPSTREAM $AUTOMERGE $GUARD' < "$SYNC/review-prompt.md" > "$OUT/review-prompt.md"
 
       - name: Review the merge
-        id: review
+        id: agent
         if: steps.guard.outcome == 'success'
         continue-on-error: true
         uses: openai/codex-action@83eeca45b831921e73d1f6a7955efccc568fe4e8 # v1.13
@@ -224,16 +365,118 @@ jobs:
           sandbox: read-only
           effort: high
 
+      - name: Read the verdict
+        id: verdict
+        env:
+          AGENT: ${{ steps.agent.outcome }}
+        run: |
+          verdict=hold
+          if [ "$AGENT" = success ] && jq -e '.verdict == "merge" and (.lost | length) == 0' "$OUT/review.json" >/dev/null; then
+            verdict=merge
+          fi
+          echo "verdict=$verdict" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: review
+          path: |
+            out/review.json
+            out/guard.md
+          if-no-files-found: ignore
+
+  land:
+    needs: [resolve, check, fix, recheck, review]
+    if: always() && needs.resolve.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    env:
+      SYNC: ${{ github.workspace }}/tools/.github/sync
+      OUT: ${{ github.workspace }}/out
+      BUNDLE: ${{ needs.fix.result == 'success' && 'fixed' || 'candidate' }}
+      SHA: ${{ needs.fix.outputs.sha || needs.resolve.outputs.sha }}
+      GATES: ${{ needs.fix.result == 'success' && needs.recheck.outputs.gates || needs.check.outputs.gates }}
+      VERDICT: ${{ needs.review.outputs.verdict }}
+      REVIEWED: ${{ needs.review.outputs.sha }}
+      BASE: ${{ needs.resolve.outputs.base }}
+      FORK: ${{ needs.resolve.outputs.fork }}
+      UPSTREAM: ${{ needs.resolve.outputs.upstream }}
+      CONFLICTS: ${{ needs.resolve.outputs.conflicts }}
+      RESOLVED: ${{ needs.resolve.outputs.agent }}
+      FIXED: ${{ needs.fix.result }}
+
+    # Runs nothing from the merged tree: git, gh and the tools from this workflow's commit only.
+    steps:
+      - name: Checkout sync tools
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: tools
+          sparse-checkout: .github/sync
+          persist-credentials: false
+
+      - name: Checkout braintrance
+        uses: actions/checkout@v7
+        with:
+          ref: braintrance
+          fetch-depth: 0
+          path: work
+          persist-credentials: false
+
+      # One by name each: a pattern that matches a single artifact unpacks it without its folder.
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ env.BUNDLE }}
+          path: out/${{ env.BUNDLE }}
+
+      - uses: actions/download-artifact@v8
+        if: env.BUNDLE == 'fixed'
+        continue-on-error: true
+        with:
+          name: candidate
+          path: out/candidate
+
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: candidate-gates
+          path: out/candidate-gates
+
+      - uses: actions/download-artifact@v8
+        if: env.BUNDLE == 'fixed'
+        continue-on-error: true
+        with:
+          name: fixed-gates
+          path: out/fixed-gates
+
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: review
+          path: out/review
+
       - name: Open the PR and land it if everything passed
-        if: always() && steps.merge.outcome == 'success'
         working-directory: work
         env:
           GH_TOKEN: ${{ github.token }}
-          GUARD_OK: ${{ steps.guard.outcome == 'success' }}
-          CONFLICTS: ${{ steps.merge.outputs.conflicts }}
         run: |
-          verdict=$(jq -r '.verdict // "hold"' "$OUT/review.json" 2>/dev/null || echo hold)
-          [ "$GUARD_OK" = "true" ] || verdict=hold
+          git fetch origin main
+          git fetch "$OUT/$BUNDLE/merge.bundle" "+refs/heads/merge:refs/heads/candidate"
+          git checkout --detach candidate
+          test "$(git rev-parse HEAD)" = "$SHA"
+
+          # Recomputed here rather than taken from another job's word.
+          bash "$SYNC/scope-check.sh" "$FORK" "$UPSTREAM" > "$OUT/scope.log" 2>&1 && scope=pass || scope=fail
+          node "$SYNC/fork-guard.mjs" "$BASE" "$FORK" HEAD "$SYNC/fork-markers.json" "$OUT/guard.md" > /dev/null && guard=pass || guard=fail
+
+          land=no
+          if [ "$GATES" = success ] && [ "$scope" = pass ] && [ "$guard" = pass ] && [ "$VERDICT" = merge ] && [ "$REVIEWED" = "$SHA" ]; then
+            land=yes
+          fi
 
           body="$OUT/body.md"
           {
@@ -242,40 +485,46 @@ jobs:
             echo "| Step | Result |"
             echo "| --- | --- |"
             echo "| Conflicts | ${CONFLICTS:-none} |"
-            echo "| Agent resolution | ${{ steps.resolve.outcome }} |"
-            echo "| Scope check | ${{ steps.commit.outcome }} |"
-            echo "| Checks | ${{ steps.gates.outcome }} |"
-            echo "| Agent fix, checks again | ${{ steps.fix.outcome }}, ${{ steps.gates2.outcome }} |"
-            echo "| Fork guard | ${{ steps.guard.outcome }} |"
-            echo "| Review | $verdict |"
+            echo "| Agent resolution | ${RESOLVED:-not needed} |"
+            echo "| Checks | ${GATES:-not run} |"
+            echo "| Agent fix | ${FIXED} |"
+            echo "| Scope check | $scope |"
+            echo "| Fork guard | $guard |"
+            echo "| Review | ${VERDICT:-not run} |"
             echo
-            for part in resolve fix; do
-              [ -s "$OUT/$part.md" ] && { echo "### Agent: $part"; echo; cat "$OUT/$part.md"; echo; }
+            for part in candidate/resolve.md fixed/fix.md; do
+              [ -s "$OUT/$part" ] && { echo "### Agent: ${part#*/}"; echo; cat "$OUT/$part"; echo; }
             done
-            [ -s "$OUT/review.json" ] && { echo "### Review"; echo; echo '```json'; cat "$OUT/review.json"; echo '```'; echo; }
-            [ -s "$OUT/scope.log" ] && { echo "### Scope check"; echo; echo '```'; cat "$OUT/scope.log"; echo '```'; echo; }
-            [ -s "$OUT/guard.md" ] && cat "$OUT/guard.md"
-            [ -s "$OUT/gates.log" ] && { echo; echo "<details><summary>Last 80 lines of the checks</summary>"; echo; echo '```'; tail -80 "$OUT/gates.log"; echo '```'; echo "</details>"; }
+            [ -s "$OUT/review/review.json" ] && { echo "### Review"; echo; echo '```json'; cat "$OUT/review/review.json"; echo '```'; echo; }
+            [ "$scope" = fail ] && { echo "### Scope check"; echo; echo '```'; cat "$OUT/scope.log"; echo '```'; echo; }
+            cat "$OUT/guard.md"
+            for log in "$OUT/$BUNDLE-gates/gates.log" "$OUT/candidate-gates/gates.log"; do
+              if [ -s "$log" ]; then
+                echo; echo "<details><summary>Last 80 lines of the checks</summary>"; echo; echo '```'; tail -80 "$log"; echo '```'; echo "</details>"
+                break
+              fi
+            done
           } > "$body"
           # A PR body caps at 65536 characters.
           head -c 60000 "$body" > "$body.cut"
 
+          branch="sync/upstream-$(date -u +%Y%m%d-%H%M)"
           remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git push "$remote" "HEAD:refs/heads/$BRANCH"
-          pr=$(gh pr create --repo "$GITHUB_REPOSITORY" --base braintrance --head "$BRANCH" \
+          git push "$remote" "HEAD:refs/heads/$branch"
+          pr=$(gh pr create --repo "$GITHUB_REPOSITORY" --base braintrance --head "$branch" \
             --title "Sync upstream into braintrance ($(date -u +%Y-%m-%d))" --body-file "$body.cut")
           echo "Opened $pr"
 
-          if [ "$verdict" = "merge" ]; then
+          if [ "$land" = yes ]; then
             # A fast-forward only: if braintrance moved during the run, the push is refused and nothing lands.
             if git push "$remote" "HEAD:refs/heads/braintrance"; then
               gh pr comment "$pr" --body "Every check passed and the review found nothing lost, so this landed on \`braintrance\` automatically."
             else
-              verdict=hold
+              land=no
               gh pr comment "$pr" --body "\`braintrance\` moved while this ran, so it was not landed. The next run retries."
             fi
           fi
-          if [ "$verdict" != "merge" ]; then
+          if [ "$land" = no ]; then
             gh label create sync-needs-human --repo "$GITHUB_REPOSITORY" --color D93F0B \
               --description "An upstream sync the bot would not land" 2>/dev/null || true
             gh pr edit "$pr" --add-label sync-needs-human
@@ -289,4 +538,4 @@ jobs:
               gh pr close "$old" --repo "$GITHUB_REPOSITORY" --delete-branch --comment "Superseded by #$number."
             done
 
-          [ "$verdict" = "merge" ] || { echo "::warning::Not landed; see $pr"; exit 1; }
+          [ "$land" = yes ] || { echo "::warning::Not landed; see $pr"; exit 1; }

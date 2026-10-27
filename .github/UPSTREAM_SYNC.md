@@ -39,9 +39,27 @@ The workflow has two jobs:
       fast-forwards `braintrance` to it, which marks the PR merged. Anything else leaves the PR open
       with the `sync-needs-human` label. Older open sync PRs are closed as superseded.
 
+Each step is its own job, so that nothing the merged tree runs can reach a key or the verdict:
+
+| Job | Holds | Runs the tree's code |
+| --- | --- | --- |
+| `resolve`, `fix`, `review` | `OPENAI_API_KEY` | no (`npm ci --ignore-scripts` only) |
+| `check`, `recheck` (`sync-check.yml`) | nothing; read-only token | yes: install, build, lint, smoke |
+| `land` | write token | no; recomputes the scope check and fork guard itself |
+
+The merge travels between jobs as a git bundle and is matched against the commit id each job reports.
+
+Known limits, accepted:
+
+- The checks prove a well-meaning tree works; they do not defend against a malicious dependency. Its
+  install script runs in `check` and could stub the checks out. That is the trust the CI and Vercel
+  builds already place in upstream's dependencies; the fork guard and review read the merge itself
+  and are unaffected.
+- If upstream moves a file that `fork-markers.json` names, the guard fails and the sync is held for a
+  human, who should move the marker entry.
 The checks and prompts are read from the workflow's own commit on `main`, never from the tree being
-merged, so the agent cannot edit what judges it. The agent needs the `OPENAI_API_KEY` repository
-secret; without it a conflicted sync is held for a human.
+merged. The agent needs the `OPENAI_API_KEY` repository secret; without it a conflicted sync is held
+for a human.
 
 When the fork gains a feature, add its anchor strings to `.github/sync/fork-markers.json` and, if it
 renders something, a selector to `smoke.mjs`.

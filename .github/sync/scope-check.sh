@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 # Fails when the agent's edits on top of git's own merge reach outside the source, leave conflict
-# markers, or switch a check off. Run in the work tree after the merge is committed.
-# usage: scope-check.sh <automerge tree>
+# markers, or switch a check off. Run in the work tree with the merge checked out.
+# usage: scope-check.sh <fork commit> <upstream commit>
 set -euo pipefail
 
-automerge="$1"
+# Recomputed in every job: a merge-tree result is never referenced by the merge, so no bundle carries it.
+automerge="$(git merge-tree --write-tree "$1" "$2" | head -1 || true)"
+git cat-file -e "$automerge^{tree}"
 status=0
 
-outside="$(git diff --name-only "$automerge" HEAD | grep -Ev '^(src/|static/|package\.json$|package-lock\.json$)' || true)"
+changed="$(git diff --name-only "$automerge" HEAD)"
+outside="$(grep -Ev '^(src/|static/|package\.json$|package-lock\.json$)' <<<"$changed" || true)"
 if [ -n "$outside" ]; then
 	echo "The agent changed files outside src/, static/ and package.json:"
 	echo "$outside"
@@ -21,7 +24,8 @@ if [ -n "$markers" ]; then
 	status=1
 fi
 
-silenced="$(git diff "$automerge" HEAD -- src | grep -E '^\+.*(@ts-ignore|@ts-expect-error|@ts-nocheck|eslint-disable)' || true)"
+added="$(git diff "$automerge" HEAD -- src)"
+silenced="$(grep -E '^\+.*(@ts-ignore|@ts-expect-error|@ts-nocheck|eslint-disable)' <<<"$added" || true)"
 if [ -n "$silenced" ]; then
 	echo "The agent switched a check off:"
 	echo "$silenced"

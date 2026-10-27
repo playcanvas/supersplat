@@ -43,8 +43,13 @@ for (const [status, path] of changes) {
     if (status === 'D') continue;
 
     const merged = show(result, path);
+    if (merged === null && status === 'A') {
+        hard.push(`\`${path}\` was added by the fork and is gone from the merge.`);
+        continue;
+    }
+    // Upstream may have moved or deleted a file the fork changed; whether the change was ported is the reviewer's call.
     if (merged === null) {
-        hard.push(`\`${path}\` was ${status === 'A' ? 'added' : 'changed'} by the fork and is gone from the merge.`);
+        soft.push({ path, lost: ['(the whole file is gone from the merge; the fork changed it)'] });
         continue;
     }
 

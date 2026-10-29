@@ -1,6 +1,7 @@
 import { BooleanInput, Container, Label } from '@playcanvas/pcui';
 import { Camera, Mat4 } from 'playcanvas';
 
+import type { CalcHistogramOptions } from '../data-processor/calc-histogram';
 import type { Element } from '../element';
 import type { Events } from '../events';
 import { Splat } from '../splat';
@@ -9,6 +10,23 @@ import { propModeFor, SH_NUM_COEFFS, isFinalColorMode } from '../splat-propertie
 import { Histogram } from './histogram';
 import { i18n } from './localization';
 import type { Tooltips } from './tooltips';
+
+// payloads fired by Histogram
+type OverlayInfo = { x: number; cursorValue: number; selected: number; unselected: number; total: number };
+type HighlightInfo = {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    startBucket: number;
+    endBucket: number;
+    anchorBucket: number;
+    cursorBucket: number;
+    anchorX: number;
+    cursorX: number;
+    anchorValue: number;
+    cursorValue: number;
+};
 
 // what kinds of state changes affect a given prop's histogram. mirrors the
 // previous per-event filtering, but consulted only inside hash().
@@ -203,7 +221,7 @@ class DataPanel extends Container {
             // default prop localizations - order defines display order. "red",
             // "green", "blue" and HSV here are the final on-screen color (DC
             // + evaluated SH for the current view direction).
-            const localizations: any = {
+            const localizations: Record<string, string> = {
                 x: `${i18n.t('panel.splat-data.position')} X`,
                 y: `${i18n.t('panel.splat-data.position')} Y`,
                 z: `${i18n.t('panel.splat-data.position')} Z`,
@@ -231,7 +249,7 @@ class DataPanel extends Container {
             // harmonics coefficients labelled with their channel (R/G/B) and
             // within-channel index. all filtered by the splat's actual SH band
             // count so we never offer a mode the GPU shader can't decode.
-            const extras: any = {
+            const extras: Record<string, string> = {
                 f_dc_0: i18n.t('panel.splat-data.dc-red'),
                 f_dc_1: i18n.t('panel.splat-data.dc-green'),
                 f_dc_2: i18n.t('panel.splat-data.dc-blue')
@@ -442,7 +460,7 @@ class DataPanel extends Container {
 
         const buildGpuOpts = () => {
             const cam = splat.scene.camera.camera;
-            const opts: any = {
+            const opts: CalcHistogramOptions = {
                 entityMatrix: splat.entity.getWorldTransform(),
                 viewMatrix: cam.viewMatrix,
                 cameraPos: splat.scene.camera.position,
@@ -741,7 +759,7 @@ class DataPanel extends Container {
             }
         });
 
-        histogram.events.on('updateOverlay', (info: any) => {
+        histogram.events.on('updateOverlay', (info: OverlayInfo) => {
             if (dragging) return; // drag handler owns the labels mid-gesture
             if (!histogram.histogram.numValues) return;
             // continuous (non-bucketed) value at the cursor pixel, centered.
@@ -764,7 +782,7 @@ class DataPanel extends Container {
         svg.appendChild(rect);
         histogramCanvasArea.appendChild(svg);
 
-        histogram.events.on('highlight', (info: any) => {
+        histogram.events.on('highlight', (info: HighlightInfo) => {
             rect.setAttribute('x', info.x.toString());
             rect.setAttribute('y', info.y.toString());
             rect.setAttribute('width', info.width.toString());

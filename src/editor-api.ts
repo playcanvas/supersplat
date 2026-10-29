@@ -4,6 +4,7 @@ import type { CameraFrame } from './camera';
 import { createGradeTerms, gradeTerms } from './color-grade';
 import type { GradeParams } from './color-grade';
 import type { CommandContext, CommandQueue } from './command-queue';
+import type { IntersectOptions } from './data-processor/intersect';
 import type { EditHistory } from './edit-history';
 import type { EditOp } from './edit-ops';
 import {
@@ -88,7 +89,7 @@ const intersectSelect = async (
     ctx: CommandContext,
     splat: Splat,
     op: InternalOp,
-    options: any,
+    options: IntersectOptions,
     frame?: CameraFrame
 ) => {
     // the splat may have been deleted while the task was queued
@@ -298,7 +299,7 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
     events.on('selection.changed', (splat: Splat | null) => changed('selectionChanged', { layer: splat?.uid }));
     events.on('splat.stateChanged', (splat: Splat) => changed('selectionChanged', { layer: splat.uid }));
     events.on('edit.apply', (op: EditOp) => {
-        if (!isSelectionOp(op)) changed('documentChanged', { layer: (op as any).splat?.uid });
+        if (!isSelectionOp(op)) changed('documentChanged', { layer: (op as EditOp & { splat?: Splat }).splat?.uid });
     });
     events.on('scene.elementAdded', (element: Element) => {
         if (element.type === ElementType.splat) changed('documentChanged', { layer: element.uid });

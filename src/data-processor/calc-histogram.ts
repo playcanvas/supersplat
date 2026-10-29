@@ -1,4 +1,4 @@
-import type { GraphicsDevice } from 'playcanvas';
+import type { GraphicsDevice, WebgpuGraphicsDevice } from 'playcanvas';
 import {
     BUFFERUSAGE_COPY_DST,
     BUFFERUSAGE_COPY_SRC,
@@ -109,7 +109,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(num_workgroups) numW
 }`,
             computeBindGroupFormat: minMaxBindGroupFormat,
             computeUniformBufferFormats: { uniforms: minMaxUniforms }
-        } as any);
+        });
         const minMaxCompute = new Compute(this.device, minMaxShader, `HistogramMinMaxCompute-${bands}`);
 
         const binCommon = computeSplatValueWGSL(bands, 2);
@@ -150,7 +150,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(num_workgroups) numW
 }`,
             computeBindGroupFormat: binBindGroupFormat,
             computeUniformBufferFormats: { uniforms: binUniforms }
-        } as any);
+        });
         const binCompute = new Compute(this.device, binShader, `HistogramBinsCompute-${bands}`);
 
         variant = { minMaxCompute, binCompute, minMaxBindGroupFormat, binBindGroupFormat };
@@ -179,7 +179,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(num_workgroups) numW
             this.minMax.read(0, 8, this.minMaxData, false),
             this.bins.read(0, this.bins.byteSize, this.binData, false)
         ];
-        (this.device as any).submit();
+        (this.device as WebgpuGraphicsDevice).submit();
         await Promise.all(readbacks);
         let min = orderedToFloat(this.minMaxData[0]);
         let max = orderedToFloat(this.minMaxData[1]);

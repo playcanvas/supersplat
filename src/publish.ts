@@ -172,7 +172,8 @@ const updateSceneSettings = async (user: User, sceneHash: string, settings: Expe
 
 class PublishWriter implements Writer {
     write: (data: Uint8Array) => void;
-    close: () => Promise<any>;
+    // resolves with the publish response, or null on failure
+    close: () => Promise<void>;
     abort: () => Promise<void> = () => Promise.resolve();
 
     private cursor = 0;
@@ -472,7 +473,7 @@ const registerPublishEvents = (events: Events) => {
                 await writeSplatFile(splats, publishSettings.serializeSettings, 'ply', 'output.ply', {}, fs);
 
                 await gzipWriter.close();
-                const response = await publishWriter.close();
+                const response = (await publishWriter.close()) as unknown as { hash: string } | null;
 
                 if (!response) {
                     await events.invoke('showPopup', {

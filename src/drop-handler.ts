@@ -30,10 +30,10 @@ const resolveDirectories = (entries: FileSystemEntry[]): Promise<FileSystemFileE
             result.push(entry as FileSystemFileEntry);
         } else if (entry.isDirectory) {
             promises.push(
-                new Promise<any>((resolve) => {
+                new Promise<FileSystemFileEntry[]>((resolve) => {
                     const reader = (entry as FileSystemDirectoryEntry).createReader();
 
-                    const p: Promise<any>[] = [];
+                    const p: Promise<FileSystemFileEntry[]>[] = [];
 
                     const read = () => {
                         reader.readEntries((children: FileSystemEntry[]) => {
@@ -157,7 +157,7 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
         const files = await Promise.all(
             resolvedEntries.map((entry) => {
                 return new Promise<DroppedFile>((resolve) => {
-                    entry.file((entryFile: any) => {
+                    entry.file((entryFile: File) => {
                         resolve(new DroppedFile(entry.fullPath.substring(1), entryFile));
                     });
                 });

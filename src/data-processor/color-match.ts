@@ -1,4 +1,4 @@
-import type { GraphicsDevice } from 'playcanvas';
+import type { GraphicsDevice, WebgpuGraphicsDevice } from 'playcanvas';
 import {
     BUFFERUSAGE_COPY_DST,
     BUFFERUSAGE_COPY_SRC,
@@ -88,7 +88,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(num_workgroups) numW
 }`,
             computeBindGroupFormat: bindGroupFormat,
             computeUniformBufferFormats: { uniforms }
-        } as any);
+        });
         const compute = new Compute(this.device, shader, `ColorMatchCompute-${bands}`);
         variant = { compute, bindGroupFormat };
         this.variants.set(bands, variant);
@@ -120,7 +120,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(num_workgroups) numW
         this.device.computeDispatch([variant.compute], 'color-match');
         const data = bufferPool.acquire(byteSize);
         const readback = this.output.read(0, byteSize, data, false);
-        (this.device as any).submit();
+        (this.device as WebgpuGraphicsDevice).submit();
         return (await readback) as Uint8Array;
     }
 }

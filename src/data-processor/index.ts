@@ -24,7 +24,7 @@ import type { SelectByRangeOptions } from './select-by-range';
 import { SelectByRange } from './select-by-range';
 import type { SplatValueOptions } from './splat-value-compute';
 
-const resolve = (scope: ScopeSpace, values: any) => {
+const resolve = (scope: ScopeSpace, values: Record<string, unknown>) => {
     for (const key in values) {
         scope.resolve(key).setValue(values[key]);
     }

@@ -8,6 +8,7 @@ const storageKey = 'supersplat:preferences';
 const storageVersion = 1;
 
 type PrefValue = boolean | number | string | number[] | string[];
+type EventValue = PrefValue | Color;
 type PreferenceGroup = 'appearance' | 'overlays' | 'preferences';
 
 type Descriptor = {
@@ -20,34 +21,34 @@ type Descriptor = {
     urlPath?: string;
     // default event payload. reads the resolved sceneConfig, which already has
     // url overrides folded in, so url parameters naturally take precedence.
-    getDefault: () => any;
+    getDefault: () => EventValue;
     // validate a stored (json) value
     validate: (value: PrefValue) => boolean;
     // owning panel for scoped reset; omitted for toolbar-only settings
     group?: PreferenceGroup;
     // stored (json) value -> event payload
-    toEvent?: (value: PrefValue) => any;
+    toEvent?: (value: PrefValue) => EventValue;
     // notify payload -> stored (json) value
-    fromEvent?: (value: any) => PrefValue;
+    fromEvent?(value: EventValue): PrefValue;
 };
 
 // mirror the kebab-case matching used by scene-config's Params so url
 // detection agrees with how getSceneConfig consumed the query parameters
 const kebabize = (s: string) => s.replace(/[A-Z]+(?![a-z])|[A-Z]/g, ($, ofs) => (ofs ? '-' : '') + $.toLowerCase());
 
-const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) => {
+const registerPreferences = (events: Events, config: SceneConfig, urlArgs: object) => {
     // returns true if the url query args specify the given config path
     const urlHas = (path?: string) => {
         if (!path) {
             return false;
         }
         const lookup = (segments: string[]) => {
-            let obj = urlArgs;
+            let obj: unknown = urlArgs;
             for (const segment of segments) {
                 if (typeof obj !== 'object' || obj === null || !Object.prototype.hasOwnProperty.call(obj, segment)) {
                     return undefined;
                 }
-                obj = obj[segment];
+                obj = (obj as Record<string, unknown>)[segment];
             }
             return obj;
         };
@@ -439,11 +440,12 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
     // capture user changes. registered after the initial apply so it never
     // observes its own writes or the boot-time initialization events.
     descriptors.forEach((descriptor) => {
-        events.on(descriptor.key, (value: any) => {
+        events.on(descriptor.key, (value: EventValue) => {
             if (suspendDepth > 0) {
                 return;
             }
-            const stored = descriptor.fromEvent ? descriptor.fromEvent(value) : value;
+            // values without fromEvent are already json-safe
+            const stored = (descriptor.fromEvent ? descriptor.fromEvent(value) : value) as PrefValue;
             if (!descriptor.validate(stored)) {
                 return;
             }

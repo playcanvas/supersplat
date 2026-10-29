@@ -1,4 +1,4 @@
-import type { GraphicsDevice } from 'playcanvas';
+import type { GraphicsDevice, WebgpuGraphicsDevice } from 'playcanvas';
 import {
     BUFFERUSAGE_COPY_DST,
     BUFFERUSAGE_COPY_SRC,
@@ -313,7 +313,7 @@ class Intersect {
             cshader: shaderSource,
             computeBindGroupFormat: this.bindGroupFormat,
             computeUniformBufferFormats: { uniforms }
-        } as any);
+        });
         this.compute = new Compute(device, shader, 'IntersectCompute');
         this.pathPoints = new StorageBuffer(device, 16, BUFFERUSAGE_COPY_DST);
     }
@@ -413,7 +413,7 @@ class Intersect {
         this.device.computeDispatch([this.compute], 'intersect');
         const data = bufferPool.acquire(byteSize);
         const readback = this.output.read(0, byteSize, data, false);
-        (this.device as any).submit();
+        (this.device as WebgpuGraphicsDevice).submit();
         return (await readback) as Uint8Array;
     }
 }

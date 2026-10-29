@@ -436,7 +436,7 @@ class EditorSplatResource extends GSplatContainer {
             // sources. These immutable typed-array levels can be discarded after
             // the synchronous WebGPU upload; the retained ChunkSource is the
             // authoritative CPU-side copy.
-            const levels = (texture as any)._levels;
+            const levels = texture['_levels'];
             if (levels) levels[0] = null;
         });
 

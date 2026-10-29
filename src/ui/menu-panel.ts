@@ -15,7 +15,7 @@ type MenuItem = {
 
     isEnabled?: () => boolean | Promise<boolean>;
     isVisible?: () => boolean | Promise<boolean>;
-    onSelect?: () => any;
+    onSelect?: () => unknown;
 };
 
 const offsetParent = (elem: HTMLElement): HTMLElement => {
@@ -50,7 +50,7 @@ const arrange = (element: HTMLElement, target: HTMLElement, direction: Direction
     }
 };
 
-const isString = (value: any) => {
+const isString = (value: unknown) => {
     return !value || typeof value === 'string' || value instanceof String;
 };
 

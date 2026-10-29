@@ -182,23 +182,35 @@ const recordImports = (files: ImportFile[]) => {
     }
 };
 
+// inria camera pose json entry
+type CameraPose = {
+    id?: string | number;
+    img_name?: string;
+    position?: number[];
+    rotation?: number[][];
+    fx?: number;
+    fy?: number;
+    width?: number;
+    height?: number;
+};
+
 const vec = new Vec3();
 
 // load inria camera poses from json file
 const loadCameraPoses = async (file: ImportFile, events: Events) => {
     const response = new Response(file.contents);
-    const json = await response.json();
+    const json: CameraPose[] = await response.json();
 
     if (json.length > 0) {
         // sort entries by trailing number if it exists
-        const sorter = (a: any, b: any) => {
+        const sorter = (a: CameraPose, b: CameraPose) => {
             const avalue = a.id ?? a.img_name?.match(/\d*$/)?.[0];
             const bvalue = b.id ?? b.img_name?.match(/\d*$/)?.[0];
-            return avalue && bvalue ? parseInt(avalue, 10) - parseInt(bvalue, 10) : 0;
+            return avalue && bvalue ? parseInt(avalue as string, 10) - parseInt(bvalue as string, 10) : 0;
         };
 
         const poses: Pose[] = [];
-        json.sort(sorter).forEach((pose: any, i: number) => {
+        json.sort(sorter).forEach((pose, i) => {
             if (
                 Object.prototype.hasOwnProperty.call(pose, 'position') &&
                 Object.prototype.hasOwnProperty.call(pose, 'rotation')
@@ -688,7 +700,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         return directory;
     });
 
-    const showExportError = async (error: any) => {
+    const showExportError = async (error: Error) => {
         if (error.name !== 'AbortError') {
             console.error(error);
             await events.invoke('showPopup', {

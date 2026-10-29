@@ -60,7 +60,7 @@ import {
 } from 'playcanvas';
 
 class PCApp extends AppBase {
-    constructor(canvas: HTMLCanvasElement, options: any) {
+    constructor(canvas: HTMLCanvasElement, options: Partial<AppOptions>) {
         super(canvas);
 
         const appOptions = new AppOptions();

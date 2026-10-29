@@ -11,6 +11,17 @@ import type { Serializer } from './serializer';
 import type { Transform } from './transform';
 import { TransformPalette } from './transform-palette';
 
+// per-layer colour grade written by documents up to v0
+type LegacyGrade = {
+    tintClr?: number[];
+    temperature?: number;
+    saturation?: number;
+    brightness?: number;
+    blackPoint?: number;
+    whitePoint?: number;
+    transparency?: number;
+};
+
 const vec = new Vec3();
 const veca = new Vec3();
 const vecb = new Vec3();
@@ -115,7 +126,7 @@ class Splat extends Element {
         // name and orientation are set on the initial bind only; a frame swap
         // (replaceData, no rotation) keeps the element's name and transform
         if (rotation) {
-            this._name = (asset.file as any).filename;
+            this._name = (asset.file as { filename: string }).filename;
             this.entity.setLocalRotation(rotation);
         }
 
@@ -251,7 +262,7 @@ class Splat extends Element {
     }
 
     get filename() {
-        return (this.asset.file as any).filename;
+        return (this.asset.file as { filename: string }).filename;
     }
 
     async add() {
@@ -454,7 +465,7 @@ class Splat extends Element {
         };
     }
 
-    docDeserialize(doc: any) {
+    docDeserialize(doc: ReturnType<Splat['docSerialize']> & LegacyGrade) {
         const { name, position, rotation, scale, visible } = doc;
 
         this.name = name;
@@ -471,7 +482,7 @@ class Splat extends Element {
     // every instance references: exactly equivalent, costs one entry, and it
     // becomes editable and resettable through the colour panel like any other.
     // v1 documents don't write these fields, so this is a no-op for them.
-    private migrateLayerGrade(doc: any) {
+    private migrateLayerGrade(doc: LegacyGrade) {
         const tintClr = doc.tintClr ? new Color(doc.tintClr[0], doc.tintClr[1], doc.tintClr[2]) : Color.WHITE;
         const params = {
             tintClr,

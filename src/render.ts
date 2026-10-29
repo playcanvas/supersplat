@@ -801,7 +801,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 await events.invoke('showPopup', {
                     type: 'error',
                     header: i18n.t('panel.render.failed'),
-                    message: `'${(error as any).message ?? error}'`
+                    message: `'${(error as Error).message ?? error}'`
                 });
                 return false;
             } finally {

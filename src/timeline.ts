@@ -2,6 +2,14 @@ import type { EventHandle } from 'playcanvas';
 
 import type { Events } from './events';
 
+type TimelineData = Partial<{
+    frames: number;
+    frameRate: number;
+    frame: number;
+    smoothness: number;
+    loop: boolean;
+}>;
+
 /**
  * Register global timeline events.
  * The timeline manages playback state (frames, frameRate, current frame, playing).
@@ -205,7 +213,7 @@ const registerTimelineEvents = (events: Events) => {
         };
     });
 
-    events.function('docDeserialize.timeline', (data: any = {}) => {
+    events.function('docDeserialize.timeline', (data: TimelineData = {}) => {
         // Set values
         frames = data.frames ?? 180;
         frameRate = data.frameRate ?? 30;

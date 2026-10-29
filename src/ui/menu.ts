@@ -256,7 +256,7 @@ class Menu extends Container {
             {
                 text: () => i18n.t('menu.file.save'),
                 icon: createSvg(sceneSave),
-                isEnabled: () => events.invoke('doc.name'),
+                isEnabled: () => !!events.invoke('doc.name'),
                 onSelect: async () => await events.invoke('doc.save')
             },
             {

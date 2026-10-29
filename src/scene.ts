@@ -1,4 +1,4 @@
-import type { CameraComponent, GraphicsDevice, MeshInstance } from 'playcanvas';
+import type { CameraComponent, GraphicsDevice, MeshInstance, WebgpuGraphicsDevice } from 'playcanvas';
 import {
     EVENT_POSTRENDER_LAYER,
     EVENT_PRERENDER_LAYER,
@@ -324,14 +324,14 @@ class Scene {
         this.app.on('prerender', () => this.onPreRender());
         this.app.on('postrender', () => this.onPostRender());
 
-        this.frameTimings.gpuSupported = !!(this.app.graphicsDevice as any).supportsTimestampQuery;
+        this.frameTimings.gpuSupported = !!(this.app.graphicsDevice as WebgpuGraphicsDevice).supportsTimestampQuery;
         events.function('scene.frameTimings', () => this.frameTimings);
 
         // the profiler's report callback carries the renderVersion of the frame
         // the timings belong to, but the engine discards it before the value
         // lands in _frameTime. Wrap it so reports can be attributed to the mode
         // the frame rendered with (see onGpuReport).
-        const profiler = this.app.graphicsDevice.gpuProfiler as any;
+        const profiler = this.app.graphicsDevice.gpuProfiler;
         const originalReport = profiler.report.bind(profiler);
         profiler.report = (renderVersion: number, timings: number[] | null, frameTime?: number) => {
             originalReport(renderVersion, timings, frameTime);
@@ -675,15 +675,15 @@ class Scene {
 
         this.events.fire('postrender');
 
-        const gpuTime = (this.app.graphicsDevice.gpuProfiler as any)?._frameTime ?? 0;
+        const gpuTime = this.app.graphicsDevice.gpuProfiler?.['_frameTime'] ?? 0;
 
         // record the mode this frame rendered with, keyed by its renderVersion,
         // so the frame's asynchronously resolving profiler report can be
         // attributed in onGpuReport. Only profiled frames get reports (this
         // also excludes locked-mode frames, which are never timed - see
         // onUpdate), so only those are recorded.
-        const device = this.app.graphicsDevice as any;
-        if (device.gpuProfiler._enabled) {
+        const device = this.app.graphicsDevice;
+        if (device.gpuProfiler['_enabled']) {
             this.frameModes.set(device.renderVersion, this.movingRender);
         }
 

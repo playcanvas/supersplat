@@ -1,4 +1,4 @@
-import type { GraphicsDevice } from 'playcanvas';
+import type { GraphicsDevice, WebgpuGraphicsDevice } from 'playcanvas';
 import {
     BLEND_NONE,
     BLEND_PREMULTIPLIED,
@@ -238,7 +238,7 @@ class ProjectedSplatRenderer {
 
         // indirect only: the survivor count lives on the gpu, so every sort this
         // renderer issues is an indirect dispatch
-        this.sorter = new ComputeRadixSort(this.device, { indirect: true } as any);
+        this.sorter = new ComputeRadixSort(this.device, { indirect: true });
         this.splatCounter = new StorageBuffer(this.device, 8, BUFFERUSAGE_COPY_SRC | BUFFERUSAGE_COPY_DST);
 
         this.material = new ShaderMaterial({
@@ -526,7 +526,7 @@ class ProjectedSplatRenderer {
             cshader: projectedSplatProjector(bands),
             computeBindGroupFormat: bindGroupFormat,
             computeUniformBufferFormats: { uniforms: uniformBufferFormat }
-        } as any);
+        });
         variant = { shader, bindGroupFormat, uniformBufferFormat };
         this.variants.set(bands, variant);
         return variant;
@@ -570,7 +570,7 @@ class ProjectedSplatRenderer {
                 cshader: projectedSplatIndirectArgs(INSTANCE_SIZE),
                 computeBindGroupFormat: bindGroupFormat,
                 computeUniformBufferFormats: { uniforms: uniformBufferFormat }
-            } as any);
+            });
             this.argsBindGroupFormat = bindGroupFormat;
             this.argsCompute = new Compute(this.device, this.argsShader, 'ProjectedSplatIndirectArgs');
         }
@@ -630,7 +630,7 @@ class ProjectedSplatRenderer {
                 cshader: projectedSplatDepthReduce(OCCLUSION_BLOCK, this.depthReduceSubgroups),
                 computeBindGroupFormat: bindGroupFormat,
                 computeUniformBufferFormats: { uniforms: uniformBufferFormat }
-            } as any);
+            });
             this.depthReduceBindGroupFormat = bindGroupFormat;
             this.depthReduceCompute = new Compute(this.device, this.depthReduceShader, 'ProjectedSplatDepthReduce');
         }
@@ -708,7 +708,7 @@ class ProjectedSplatRenderer {
                 cshader: footprintIntersect,
                 computeBindGroupFormat: bindGroupFormat,
                 computeUniformBufferFormats: { uniforms: uniformBufferFormat }
-            } as any);
+            });
             this.footprintBindGroupFormat = bindGroupFormat;
             this.footprintCompute = new Compute(this.device, this.footprintShader, 'FootprintIntersect');
         }
@@ -773,7 +773,7 @@ class ProjectedSplatRenderer {
         this.device.computeDispatch([compute], 'footprintIntersect');
 
         const readback = this.footprintOutput.read(0, byteSize, null, false);
-        (this.device as any).submit();
+        (this.device as WebgpuGraphicsDevice).submit();
         return (await readback) as Uint8Array;
     }
 
@@ -1064,19 +1064,19 @@ class ProjectedSplatRenderer {
         // slots are recycled at frame end, so they are claimed fresh every frame.
         const sortInfo = this.sorter.prepareIndirect();
         // two consecutive slots: the gaussian draw, then the centres draw
-        const drawSlot = (this.device as any).getIndirectDrawSlot(2);
+        const drawSlot = this.device.getIndirectDrawSlot(2);
         this.drawSlot = drawSlot;
-        const sortSlotBase = (this.device as any).getIndirectDispatchSlot(sortInfo[0]);
+        const sortSlotBase = this.device.getIndirectDispatchSlot(sortInfo[0]);
         const args = this.getArgsCompute();
         args.setParameter('splatCounter', this.splatCounter);
-        args.setParameter('indirectDrawArgs', (this.device as any).indirectDrawBuffer);
-        args.setParameter('indirectDispatchArgs', (this.device as any).indirectDispatchBuffer);
+        args.setParameter('indirectDrawArgs', this.device.indirectDrawBuffer);
+        args.setParameter('indirectDispatchArgs', this.device.indirectDispatchBuffer);
         args.setParameter('drawSlot', drawSlot);
         args.setParameter('indexCount', INSTANCE_SIZE * 6);
         args.setParameter('sortSlotBase', sortSlotBase);
         args.setParameter('centersDrawSlot', drawSlot + 1);
         // sorter-owned Uint32Array, uploaded as a vec4u - setParameter's types only cover f32 arrays
-        args.setParameter('sortIndirectInfo', sortInfo as any);
+        args.setParameter('sortIndirectInfo', sortInfo as unknown as Float32Array);
         args.setupDispatch(1, 1);
         this.device.computeDispatch([args], 'ProjectedSplatIndirectArgs');
         this.meshInstance.setIndirect(null, drawSlot, 1);
@@ -1256,7 +1256,7 @@ class ProjectedSplatRenderer {
             totalTransientBytes,
             totalSplatGpuBytes: sourceBytes + editingBytes + totalTransientBytes,
             submissionCpuMs: this.submissionCpuMs,
-            gpuFrameMs: (this.device.gpuProfiler as any)._frameTime ?? 0,
+            gpuFrameMs: this.device.gpuProfiler['_frameTime'] ?? 0,
             motionContribution: this.motionContribution,
             occlusionActive: this.occlusionCull && this.prevValid
         };

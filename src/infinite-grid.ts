@@ -19,7 +19,7 @@ import { Element, ElementType } from './element';
 import type { Serializer } from './serializer';
 import { vertexShader, fragmentShader } from './shaders/infinite-grid-shader';
 
-const resolve = (scope: ScopeSpace, values: any) => {
+const resolve = (scope: ScopeSpace, values: Record<string, unknown>) => {
     for (const key in values) {
         scope.resolve(key).setValue(values[key]);
     }

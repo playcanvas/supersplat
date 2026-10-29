@@ -4,10 +4,11 @@ import { Color, Quat, Texture, Vec3 } from 'playcanvas';
 import type { CameraFrame } from './camera';
 import type { GradeParams } from './color-grade';
 import type { CommandContext } from './command-queue';
+import type { IntersectOptions } from './data-processor/intersect';
 import type { EditHistory } from './edit-history';
 import { SelectOp, SetLocalFrameOp } from './edit-ops';
 import { intersectSelect, PUBLIC_OP } from './editor-api';
-import type { EditorAPI } from './editor-api';
+import type { EditorAPI, ScreenRect } from './editor-api';
 import { EditorError } from './editor-command';
 import type { Element } from './element';
 import { ElementType } from './element';
@@ -17,6 +18,27 @@ import type { Scene } from './scene';
 import { runSelectionGesture } from './selection-gesture';
 import { packRegion, emptyRegion, rectRegion } from './selection-rectangle';
 import type { Splat } from './splat';
+
+// view settings as stored in documents
+type ViewSettings = {
+    bgColor: number[];
+    selectedColor: number[];
+    unselectedColor: number[];
+    lockedColor: number[];
+    shBands: number;
+    centersSize: number;
+    outlineSelection: boolean;
+    showGrid: boolean;
+    gridPlanes?: GridPlane[];
+    // documents before the per-plane toggles stored a single plane
+    gridPlane?: GridPlane;
+    showBound: boolean;
+    showBoundDimensions?: boolean;
+    showCameraPoses?: boolean;
+    showCameraInfo?: boolean;
+    flySpeed: number;
+    fovDolly?: boolean;
+};
 
 // register for editor and scene events
 const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: Scene, api: EditorAPI) => {
@@ -478,7 +500,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         ctx: CommandContext,
         splat: Splat,
         op: 'add' | 'remove' | 'set' | 'intersect',
-        options: any,
+        options: IntersectOptions,
         frame?: CameraFrame
     ) => {
         return intersectSelect(scene, ctx, splat, op, options, frame);
@@ -524,7 +546,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         splat: Splat,
         op: 'add' | 'remove' | 'set' | 'intersect',
         visible: Set<number>,
-        options: any,
+        options: IntersectOptions,
         frame: CameraFrame
     ) => {
         if (!splat.scene) return;
@@ -624,7 +646,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         splats: selectedSplats()
     });
 
-    events.function('select.rect', (op: 'add' | 'remove' | 'set' | 'intersect', rect: any) => {
+    events.function('select.rect', (op: 'add' | 'remove' | 'set' | 'intersect', rect: ScreenRect) => {
         if (selectedSplats().length > 0) return api.viewport.selectRect(rect, PUBLIC_OP[op]);
     });
 
@@ -1401,7 +1423,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         };
     });
 
-    events.function('docDeserialize.view', (docView: any) => {
+    events.function('docDeserialize.view', (docView: ViewSettings) => {
         events.fire('setBgClr', new Color(docView.bgColor));
         events.fire('setSelectedClr', new Color(docView.selectedColor));
         events.fire('setUnselectedClr', new Color(docView.unselectedColor));

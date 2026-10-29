@@ -1,4 +1,4 @@
-import type { BoundingBox, GraphicsDevice } from 'playcanvas';
+import type { BoundingBox, GraphicsDevice, WebgpuGraphicsDevice } from 'playcanvas';
 import {
     BUFFERUSAGE_COPY_DST,
     BUFFERUSAGE_COPY_SRC,
@@ -119,7 +119,7 @@ class CalcBound {
             cshader: shaderSource,
             computeBindGroupFormat: this.bindGroupFormat,
             computeUniformBufferFormats: { uniforms }
-        } as any);
+        });
         this.compute = new Compute(device, shader, 'CalcBoundCompute');
     }
 
@@ -148,7 +148,7 @@ class CalcBound {
         this.compute.setupDispatch(this.dispatchSize.x, this.dispatchSize.y);
         this.device.computeDispatch([this.compute], 'calc-bound');
         const readback = this.output.read(0, byteSize, this.data, false);
-        (this.device as any).submit();
+        (this.device as WebgpuGraphicsDevice).submit();
         const data = (await readback) as Float32Array;
 
         selectedMin.set(Infinity, Infinity, Infinity);

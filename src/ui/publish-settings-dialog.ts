@@ -367,7 +367,7 @@ class PublishSettingsDialog extends Container {
             const filename = splats[0].filename;
             const dot = splats[0].filename.lastIndexOf('.');
             const bgClr = events.invoke('bgClr');
-            const totalSplats = splats.reduce((sum: number, s: any) => sum + (s.numSplats ?? 0), 0);
+            const totalSplats = splats.reduce((sum: number, s) => sum + (s.numSplats ?? 0), 0);
             // numSplats is the live count (deleted splats are already excluded)
             lodsRequired = totalSplats > MAX_SINGLE_FILE_SPLATS;
 
@@ -407,7 +407,7 @@ class PublishSettingsDialog extends Container {
             // default to the scene's band count, capped by the viewport setting
             bandsSlider.value = Math.min(
                 events.invoke('view.bands'),
-                Math.max(0, ...splats.map((s: any) => s.resource.shBands))
+                Math.max(0, ...splats.map((s) => s.resource.shBands))
             );
             generateLodsToggle.value = lodsRequired || (totalSplats >= 1_000_000 && isLargeScene);
 

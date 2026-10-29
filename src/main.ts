@@ -62,7 +62,7 @@ const getURLArgs = () => {
     const config = {};
 
     const apply = (key: string, value: string) => {
-        let obj: any = config;
+        let obj: Record<string, unknown> = config;
         key.split('.').forEach((k, i, a) => {
             if (i === a.length - 1) {
                 obj[k] = value;
@@ -70,7 +70,7 @@ const getURLArgs = () => {
                 if (!Object.prototype.hasOwnProperty.call(obj, k)) {
                     obj[k] = {};
                 }
-                obj = obj[k];
+                obj = obj[k] as Record<string, unknown>;
             }
         });
     };

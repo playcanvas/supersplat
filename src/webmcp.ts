@@ -1,7 +1,9 @@
 import { BoundingBox, Color, Mat4, Quat, Vec3 } from 'playcanvas';
 
-import type { EditorAPI } from './editor-api';
+import type { EditorAPI, ScreenPoint, SelectionOp } from './editor-api';
+import type { EditScope } from './editor-command';
 import { checkCancelled, EditorError } from './editor-command';
+import type { CameraSettings } from './editor-session';
 import { isFinalColorMode, propModeFor } from './splat-properties';
 import { i18n } from './ui/localization';
 
@@ -20,7 +22,7 @@ type Schema = {
     maxLength?: number;
     enum?: readonly string[];
 };
-type Input = Record<string, any>;
+type Input = Record<string, unknown>;
 type Tool = {
     name: string;
     description: string;
@@ -128,7 +130,7 @@ const validate = (schema: Schema, value: unknown, path = 'input'): void => {
     } else if (typeof value !== 'boolean') invalid('expected a boolean');
 };
 
-const jsonValue = (value: any): any => {
+const jsonValue = (value: unknown): unknown => {
     if (value instanceof Vec3) return [value.x, value.y, value.z];
     if (value instanceof Quat) return [value.x, value.y, value.z, value.w];
     if (value instanceof Color) return [value.r, value.g, value.b];
@@ -149,12 +151,12 @@ const requireChange = (input: Input, fields: string[]) => {
 const createWebMCPTools = (editor: EditorAPI): Tool[] => {
     const tools: Tool[] = [];
     let tail: Promise<unknown> = Promise.resolve();
-    const add = (
+    const add = <T extends object>(
         name: string,
         description: string,
         properties: Record<string, Schema>,
         required: string[],
-        run: (input: Input, options: { signal?: AbortSignal }) => unknown | Promise<unknown>,
+        run: (input: T, options: { signal?: AbortSignal }) => unknown | Promise<unknown>,
         annotations: Tool['annotations'] = {},
         render = !annotations.readOnlyHint
     ) => {
@@ -165,10 +167,10 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
             inputSchema,
             annotations,
             execute: (input, options = {}) => {
-                let args: Input;
+                let args: T;
                 try {
                     validate(inputSchema, input);
-                    args = structuredClone(input) as Input;
+                    args = structuredClone(input) as T;
                 } catch (error) {
                     return Promise.resolve({ ok: false, error: { code: 'invalid_input', message: error.message } });
                 }
@@ -179,8 +181,12 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
                         const result = await run(args, options);
                         // Once committed, cancellation must not misreport an edit
                         // as unapplied. Rendering is best-effort after the result.
-                        const rendered = render && !args.preview ? await editor.viewport.ready() : undefined;
-                        return { ok: true, ...jsonValue(result), ...(rendered === undefined ? {} : { rendered }) };
+                        const rendered = render && !(args as Input).preview ? await editor.viewport.ready() : undefined;
+                        return {
+                            ok: true,
+                            ...(jsonValue(result) as Record<string, unknown>),
+                            ...(rendered === undefined ? {} : { rendered })
+                        };
                     } catch (error) {
                         const code =
                             error instanceof EditorError
@@ -213,7 +219,7 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
             limit: integer('Maximum layers to return; default 32.', 1, 128)
         },
         [],
-        async (i, o) => {
+        async (i: { offset?: number; limit?: number }, o) => {
             const state = await editor.inspect.scene(o);
             const offset = i.offset ?? 0;
             const end = offset + (i.limit ?? 32);
@@ -231,7 +237,7 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
         'Inspect one layer, including world bounds and selection bounds. Hidden splats remain in the layer and are exported; deleted splats are excluded.',
         { layer },
         ['layer'],
-        async (i, o) => {
+        async (i: { layer: number }, o) => {
             const info = await editor.inspect.layer(i.layer, o);
             return { layer: info, properties: editor.inspect.properties(info.shBands) };
         },
@@ -242,7 +248,7 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
         'Read a property distribution without editing. x/y/z and distance are world-space (distance from origin); camera-depth is along the current view. opacity is graded alpha (0-1 normally); scale_0/1/2 are source-axis scales, volume their product, surface-area the sum of their squares. RGB/HSV include committed grades and view-dependent SH; hue is degrees. f_dc_N and f_rest_N are raw source coefficients.',
         { layer, property: string('Data panel property name from get_layer.', 32) },
         ['layer', 'property'],
-        (i, o) => editor.inspect.histogram(i.layer, i.property, o),
+        (i: { layer: number; property: string }, o) => editor.inspect.histogram(i.layer, i.property, o),
         { readOnlyHint: true }
     );
     add(
@@ -250,7 +256,7 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
         'Select all, clear selection or invert it on the named layer. Hidden splats are excluded. Undoable.',
         { layer, mode: enumeration(['all', 'none', 'invert'], 'Selection operation.') },
         ['layer', 'mode'],
-        (i, o) => editor.selection[i.mode as 'all' | 'none' | 'invert'](i.layer, o)
+        (i: { layer: number; mode: string }, o) => editor.selection[i.mode as 'all' | 'none' | 'invert'](i.layer, o)
     );
     add(
         'select_region',
@@ -268,7 +274,21 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
             footprint
         },
         ['layer', 'shape', 'center'],
-        (i, o) => {
+        (
+            i: {
+                layer: number;
+                shape: 'sphere' | 'box';
+                center: number[];
+                size?: number[];
+                radius?: number;
+                rotate?: number[];
+                op?: SelectionOp;
+                outside?: boolean;
+                preview?: boolean;
+                footprint?: number;
+            },
+            o
+        ) => {
             if ((i.size !== undefined) === (i.radius !== undefined))
                 throw new EditorError('invalid_input', 'Provide exactly one of size or radius.');
             if (i.radius !== undefined && i.shape !== 'sphere')
@@ -299,7 +319,18 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
             viewToken
         },
         ['layer', 'start', 'end', 'visibility', 'viewToken'],
-        (i, o) =>
+        (
+            i: {
+                layer: number;
+                start: ScreenPoint;
+                end: ScreenPoint;
+                visibility: 'visible' | 'through';
+                footprint?: number;
+                op?: SelectionOp;
+                viewToken: string;
+            },
+            o
+        ) =>
             editor.viewport.selectRect({ start: i.start, end: i.end }, i.op ?? 'replace', {
                 ...o,
                 layer: i.layer,
@@ -322,7 +353,19 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
             viewToken
         },
         ['layer', 'property', 'min', 'max'],
-        (i, o) => {
+        (
+            i: {
+                layer: number;
+                property: string;
+                min: number;
+                max: number;
+                op?: SelectionOp;
+                outside?: boolean;
+                preview?: boolean;
+                viewToken?: string;
+            },
+            o
+        ) => {
             const mode = propModeFor(i.property);
             if ((mode === 4 || isFinalColorMode(mode)) && !i.viewToken)
                 throw new EditorError(
@@ -359,13 +402,13 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
             'Move selected splats into a new layer. Undoable as one edit; returns createdLayer.'
         ]
     ] as const)
-        add(name, description, { layer }, ['layer'], (i, o) => editor.selection[method](i.layer, o));
+        add(name, description, { layer }, ['layer'], (i: { layer: number }, o) => editor.selection[method](i.layer, o));
     add(
         'restore_splats',
         'Restore hidden or deleted splats on one layer. Restoring deleted splats appends missing source splats with their original state; undo is the way to recover the exact deleted edits. Undoable.',
         { layer, what: enumeration(['hidden', 'deleted', 'both'], 'What to restore.') },
         ['layer', 'what'],
-        (i, o) => editor.selection.restore(i.layer, i.what, o)
+        (i: { layer: number; what: 'hidden' | 'deleted' | 'both' }, o) => editor.selection.restore(i.layer, i.what, o)
     );
     add(
         'update_layer',
@@ -377,7 +420,7 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
             active: boolean('Make active, or deactivate if currently active.')
         },
         ['layer'],
-        (i, o) => {
+        (i: { layer: number; name?: string; visible?: boolean; active?: boolean }, o) => {
             requireChange(i, ['name', 'visible', 'active']);
             return editor.layers.update(i.layer, { name: i.name, visible: i.visible, active: i.active }, o);
         }
@@ -394,7 +437,17 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
             center: vector('World-space rotation/scaling centre.')
         },
         ['layer', 'scope'],
-        (i, o) => {
+        (
+            i: {
+                layer: number;
+                scope: EditScope;
+                translate?: number[];
+                rotate?: number[];
+                scale?: number;
+                center?: number[];
+            },
+            o
+        ) => {
             requireChange(i, ['translate', 'rotate', 'scale']);
             return editor.transform(
                 i.layer,
@@ -424,7 +477,20 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
             opacity: number('Alpha multiplier; default 1. The UI expresses this as stops.', 0, 64)
         },
         ['layer', 'scope'],
-        (i, o) => {
+        (
+            i: {
+                layer: number;
+                scope: EditScope;
+                tint?: number[];
+                temperature?: number;
+                saturation?: number;
+                brightness?: number;
+                blackPoint?: number;
+                whitePoint?: number;
+                opacity?: number;
+            },
+            o
+        ) => {
             requireChange(i, [
                 'tint',
                 'temperature',
@@ -455,7 +521,7 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
         'Remove committed colour adjustments from the explicit scope, restoring original colours. Hidden splats are excluded. Undoable.',
         { layer, scope },
         ['layer', 'scope'],
-        (i, o) => editor.color.reset(i.layer, i.scope, o)
+        (i: { layer: number; scope: EditScope }, o) => editor.color.reset(i.layer, i.scope, o)
     );
     add(
         'undo',
@@ -488,7 +554,19 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
             orthographic: boolean('Orthographic projection.')
         },
         [],
-        (i, o) => {
+        (
+            i: {
+                position?: number[];
+                target?: number[];
+                view?: CameraSettings['view'];
+                azimuth?: number;
+                elevation?: number;
+                distance?: number;
+                fov?: number;
+                orthographic?: boolean;
+            },
+            o
+        ) => {
             requireChange(i, ['position', 'view', 'azimuth', 'elevation', 'distance', 'fov', 'orthographic']);
             return editor.viewport.setCamera(
                 { ...i, position: i.position && xyz(i.position), target: i.target && xyz(i.target) },
@@ -501,7 +579,7 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
         'Frame a selection, a layer, or the scene. Switches to orbit control and moves instantly. Returns the resulting camera and viewToken.',
         { scope: enumeration(['selection', 'layer', 'scene'], 'What to frame.'), layer },
         ['scope'],
-        (i, o) => {
+        (i: { scope: 'selection' | 'layer' | 'scene'; layer?: number }, o) => {
             if (i.scope !== 'scene' && i.layer === undefined)
                 throw new EditorError('invalid_input', 'layer is required for this scope.');
             return editor.viewport.focus(i.scope, i.layer, o);
@@ -516,7 +594,7 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
             viewToken
         },
         ['points', 'viewToken'],
-        async (i, o) => ({
+        async (i: { points: ScreenPoint[]; layers?: number[]; viewToken: string }, o) => ({
             hits: await editor.viewport.pickDepth(i.points, i.layers, { ...o, viewToken: i.viewToken })
         }),
         { readOnlyHint: true }
@@ -537,7 +615,21 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
             selectionRings: boolean('Show selection rings.')
         },
         [],
-        (i, o) => {
+        (
+            i: {
+                background?: number[];
+                showGrid?: boolean;
+                shBands?: number;
+                tonemapping?: string;
+                showGaussians?: boolean;
+                showCenters?: boolean;
+                showRings?: boolean;
+                selectionColor?: boolean;
+                selectionCenters?: boolean;
+                selectionRings?: boolean;
+            },
+            o
+        ) => {
             if (!Object.keys(i).length) throw new EditorError('invalid_input', 'Provide a display setting.');
             return editor.viewport.setView({ ...i, background: i.background && color(i.background) }, o);
         }
@@ -551,7 +643,8 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
             lod: integer('LOD index, if the source has multiple LODs.', 0, 255)
         },
         ['url'],
-        (i, o) => editor.files.importUrl(i.url, i.filename, { ...o, lod: i.lod }),
+        (i: { url: string; filename?: string; lod?: number }, o) =>
+            editor.files.importUrl(i.url, i.filename, { ...o, lod: i.lod }),
         { untrustedContentHint: true }
     );
     add(
@@ -570,7 +663,18 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
             spzVersion: integer('SPZ version, 3 or 4; default 4.', 3, 4)
         },
         ['format', 'filename', 'scope'],
-        (i, o) => {
+        (
+            i: {
+                format: string;
+                filename: string;
+                scope: 'selection' | 'layer' | 'visible_layers';
+                layer?: number;
+                shBands?: number;
+                sogIterations?: number;
+                spzVersion?: number;
+            },
+            o
+        ) => {
             if (/[\\/:*?"<>|]/.test(i.filename) || i.filename === '.' || i.filename === '..')
                 throw new EditorError('invalid_input', 'filename must be a filename without path separators.');
             if (i.scope !== 'visible_layers' && i.layer === undefined)

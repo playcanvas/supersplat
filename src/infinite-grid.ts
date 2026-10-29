@@ -1,7 +1,4 @@
-import type {
-    Layer,
-    ScopeSpace,
-    Shader } from 'playcanvas';
+import type { Layer, ScopeSpace, Shader } from 'playcanvas';
 import {
     BLENDMODE_ONE,
     BLENDMODE_ONE_MINUS_SRC_ALPHA,
@@ -66,8 +63,12 @@ class InfiniteGrid extends Element {
 
         const blendState = new BlendState(
             true,
-            BLENDEQUATION_ADD, BLENDMODE_SRC_ALPHA, BLENDMODE_ONE_MINUS_SRC_ALPHA,
-            BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE_MINUS_SRC_ALPHA
+            BLENDEQUATION_ADD,
+            BLENDMODE_SRC_ALPHA,
+            BLENDMODE_ONE_MINUS_SRC_ALPHA,
+            BLENDEQUATION_ADD,
+            BLENDMODE_ONE,
+            BLENDMODE_ONE_MINUS_SRC_ALPHA
         );
 
         const shaderProjection = new Mat4();
@@ -77,7 +78,13 @@ class InfiniteGrid extends Element {
 
         this.scene.camera.camera.on('preRenderLayer', (layer: Layer, transparent: boolean) => {
             const { scene } = this;
-            if (this.visible && this.planes.length > 0 && layer === scene.worldLayer && !transparent && scene.camera.renderOverlays) {
+            if (
+                this.visible &&
+                this.planes.length > 0 &&
+                layer === scene.worldLayer &&
+                !transparent &&
+                scene.camera.renderOverlays
+            ) {
                 const { camera } = scene;
 
                 device.setBlendState(blendState);
@@ -89,7 +96,12 @@ class InfiniteGrid extends Element {
                 // clip-z transform the engine applies for meshes (and the splat
                 // renderer applies), so all depth shares one convention
                 viewProjectionMatrix.mul2(
-                    Camera.applyShaderProjectionTransform(camera.camera.projectionMatrix, shaderProjection, false, device.isWebGPU),
+                    Camera.applyShaderProjectionTransform(
+                        camera.camera.projectionMatrix,
+                        shaderProjection,
+                        false,
+                        device.isWebGPU
+                    ),
                     camera.camera.viewMatrix
                 );
 

@@ -18,12 +18,12 @@ type MenuItem = {
     onSelect?: () => any;
 };
 
-const offsetParent = (elem: HTMLElement) : HTMLElement => {
+const offsetParent = (elem: HTMLElement): HTMLElement => {
     const parent = elem.parentNode as HTMLElement;
 
-    return (parent.tagName === 'BODY' || window.getComputedStyle(parent).position !== 'static') ?
-        parent :
-        offsetParent(parent);
+    return parent.tagName === 'BODY' || window.getComputedStyle(parent).position !== 'static'
+        ? parent
+        : offsetParent(parent);
 };
 
 const arrange = (element: HTMLElement, target: HTMLElement, direction: Direction, padding: number) => {
@@ -55,9 +55,9 @@ const isString = (value: any) => {
 };
 
 const createIcon = (icon: string | Element) => {
-    return isString(icon) ?
-        new Label({ class: 'menu-row-icon', text: icon && String.fromCodePoint(parseInt(icon as string, 16)) }) :
-        icon;
+    return isString(icon)
+        ? new Label({ class: 'menu-row-icon', text: icon && String.fromCodePoint(parseInt(icon as string, 16)) })
+        : icon;
 };
 
 // create the row text label; if `text` is a resolver, bind it so the row
@@ -128,7 +128,9 @@ class MenuPanel extends Container {
                     const icon = createIcon(menuItem.icon);
                     const text = createTextLabel(menuItem.text);
                     this.textLabels.set(menuItem, text);
-                    const postscript = isString(menuItem.extra) ? new Label({ class: 'menu-row-postscript', text: menuItem.extra as string }) : menuItem.extra;
+                    const postscript = isString(menuItem.extra)
+                        ? new Label({ class: 'menu-row-postscript', text: menuItem.extra as string })
+                        : menuItem.extra;
                     row.append(icon);
                     row.append(text);
                     row.append(postscript);

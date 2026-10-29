@@ -16,12 +16,14 @@ import { i18n } from './ui/localization';
 // ts compiler and vscode find this type, but eslint does not
 type FilePickerAcceptType = unknown;
 
-const SuperFileType: FilePickerAcceptType[] = [{
-    description: 'SuperSplat document',
-    accept: {
-        'application/x-supersplat': ['.ssproj']
+const SuperFileType: FilePickerAcceptType[] = [
+    {
+        description: 'SuperSplat document',
+        accept: {
+            'application/x-supersplat': ['.ssproj']
+        }
     }
-}];
+];
 
 type FileSelectorCallback = (fileList: File) => void;
 
@@ -148,7 +150,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 // brings its own instance list and palettes. Layers sharing a
                 // resource share it here too, so a duplicated layer costs nothing
                 // beyond its list.
-                const assets: { asset: Asset, rotation: Quat }[] = [];
+                const assets: { asset: Asset; rotation: Quat }[] = [];
                 for (const resource of document.resources) {
                     const loaded = await scene.assetLoader.loadAsset(resource.filename, zipFs, false, true);
                     documentResources.add(loaded.asset.resource as EditorSplatResource);
@@ -165,7 +167,11 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                     const records = decodeInstances(blob);
 
                     const instances = GaussianInstances.fromRecords(
-                        scene.app.graphicsDevice, numRows, records.sourceRow, records.flags, records.palette
+                        scene.app.graphicsDevice,
+                        numRows,
+                        records.sourceRow,
+                        records.flags,
+                        records.palette
                     );
                     const splat = new Splat(asset, rotation, instances);
                     restorePalettes(records, splat.transformPalette, splat.colorPalette);
@@ -241,7 +247,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     // is open from, where the resources are then re-read from what was written
     // (see rebindDocument) and an undo must still find its rows.
     const groupByResource = (splats: Splat[], compact: boolean) => {
-        const groups: { resource: EditorSplatResource, layers: Splat[] }[] = [];
+        const groups: { resource: EditorSplatResource; layers: Splat[] }[] = [];
         const index = new Map<EditorSplatResource, number>();
         for (const splat of splats) {
             let at = index.get(splat.resource);
@@ -286,7 +292,11 @@ const registerDocEvents = (scene: Scene, events: Events) => {
 
     // returns the resource groups written, in resource file order, or null if
     // the save failed
-    const saveDocument = async (options: { stream?: FileSystemWritableFileStream, filename?: string, compact?: boolean }) => {
+    const saveDocument = async (options: {
+        stream?: FileSystemWritableFileStream;
+        filename?: string;
+        compact?: boolean;
+    }) => {
         events.fire('startSpinner');
 
         try {
@@ -294,7 +304,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
             const groups = groupByResource(splats, options.compact ?? true);
 
             // layer -> the resource file it reads from, and its remapped records
-            const layerInfo = new Map<Splat, { resource: number, records: ArrayBuffer }>();
+            const layerInfo = new Map<Splat, { resource: number; records: ArrayBuffer }>();
             groups.forEach((group, resourceIndex) => {
                 for (const layer of group.layers) {
                     // remap into the compacted row numbering on a copy: the live
@@ -348,7 +358,9 @@ const registerDocEvents = (scene: Scene, events: Events) => {
 
             return groups;
         } catch (error) {
-            await options.stream?.abort().catch(() => { /* the writer may already have aborted */ });
+            await options.stream?.abort().catch(() => {
+                /* the writer may already have aborted */
+            });
             await events.invoke('showPopup', {
                 type: 'error',
                 header: i18n.t('doc.save-failed'),
@@ -398,7 +410,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
 
     // handle user requesting a new document
     events.function('doc.new', async () => {
-        if (!await getResetConfirmation()) {
+        if (!(await getResetConfirmation())) {
             return false;
         }
         resetScene();
@@ -413,7 +425,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     // (which would result in more seamless user experience), but this is not yet supported in
     // other browsers.
     events.function('doc.load', async (file: File, handle?: FileSystemFileHandle) => {
-        if (!events.invoke('scene.empty') && !await getResetConfirmation()) {
+        if (!events.invoke('scene.empty') && !(await getResetConfirmation())) {
             return false;
         }
 
@@ -428,7 +440,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     });
 
     events.function('doc.open', async () => {
-        if (!events.invoke('scene.empty') && !await getResetConfirmation()) {
+        if (!events.invoke('scene.empty') && !(await getResetConfirmation())) {
             return false;
         }
 
@@ -466,13 +478,13 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     });
 
     events.function('doc.openRecent', async (fileHandle: FileSystemFileHandle) => {
-        if (!events.invoke('scene.empty') && !await getResetConfirmation()) {
+        if (!events.invoke('scene.empty') && !(await getResetConfirmation())) {
             return false;
         }
 
         try {
-            if (await fileHandle.queryPermission({ mode: 'read' }) !== 'granted') {
-                if (await fileHandle.requestPermission({ mode: 'read' }) !== 'granted') {
+            if ((await fileHandle.queryPermission({ mode: 'read' })) !== 'granted') {
+                if ((await fileHandle.requestPermission({ mode: 'read' })) !== 'granted') {
                     return false;
                 }
             }
@@ -516,7 +528,12 @@ const registerDocEvents = (scene: Scene, events: Events) => {
             const hasFilePicker = !!window.showDirectoryPicker;
             const directory = hasFilePicker ? await events.invoke('scene.getExportDirectory') : undefined;
 
-            const options = await events.invoke('show.savePopup', events.invoke('doc.name') || 'scene.ssproj', directory, documentSource);
+            const options = await events.invoke(
+                'show.savePopup',
+                events.invoke('doc.name') || 'scene.ssproj',
+                directory,
+                documentSource
+            );
             if (!options) return false;
 
             if (hasFilePicker) {
@@ -533,7 +550,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 events.fire('doc.setName', handle.name);
                 recentFiles.add({ handle, name: handle.name });
             } else {
-                if (!await saveDocument({ filename: options.filename })) {
+                if (!(await saveDocument({ filename: options.filename }))) {
                     return false;
                 }
                 events.fire('doc.setName', options.filename);

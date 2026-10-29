@@ -114,7 +114,11 @@ class RightToolbar extends Container {
         tooltips.register(appearance, tooltip('panel.appearance'), 'left');
         tooltips.register(orbitMode, tooltip('tooltip.right-toolbar.orbit-camera', 'camera.toggleControlMode'), 'left');
         tooltips.register(flyMode, tooltip('tooltip.right-toolbar.fly-camera', 'camera.toggleControlMode'), 'left');
-        tooltips.register(cameraFrameSelection, tooltip('tooltip.right-toolbar.frame-selection', 'camera.focus'), 'left');
+        tooltips.register(
+            cameraFrameSelection,
+            tooltip('tooltip.right-toolbar.frame-selection', 'camera.focus'),
+            'left'
+        );
         tooltips.register(cameraReset, tooltip('tooltip.right-toolbar.reset-camera', 'camera.reset'), 'left');
         tooltips.register(overlays, tooltip('panel.overlays'), 'left');
         tooltips.register(settings, tooltip('panel.settings'), 'left');

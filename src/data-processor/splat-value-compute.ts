@@ -1,6 +1,4 @@
-import type {
-    Compute,
-    GraphicsDevice } from 'playcanvas';
+import type { Compute, GraphicsDevice } from 'playcanvas';
 import {
     SAMPLETYPE_FLOAT,
     SAMPLETYPE_UINT,
@@ -35,25 +33,26 @@ type SplatValueOptions = {
     logBins?: boolean;
 };
 
-const createSplatValueUniformFormat = (device: GraphicsDevice) => new UniformBufferFormat(device, [
-    new UniformFormat('sourceWidth', UNIFORMTYPE_UINT),
-    new UniformFormat('numSplats', UNIFORMTYPE_UINT),
-    new UniformFormat('propMode', UNIFORMTYPE_INT),
-    new UniformFormat('onScreenOnly', UNIFORMTYPE_UINT),
-    new UniformFormat('logBins', UNIFORMTYPE_UINT),
-    new UniformFormat('entityMatrix', UNIFORMTYPE_MAT4),
-    new UniformFormat('viewMatrix', UNIFORMTYPE_MAT4),
-    new UniformFormat('viewProjection', UNIFORMTYPE_MAT4),
-    new UniformFormat('cameraWorldPos', UNIFORMTYPE_VEC3),
-    new UniformFormat('shNumCoeffs', UNIFORMTYPE_INT),
-    new UniformFormat('minValue', UNIFORMTYPE_FLOAT),
-    new UniformFormat('maxValue', UNIFORMTYPE_FLOAT),
-    new UniformFormat('numBins', UNIFORMTYPE_INT),
-    new UniformFormat('rangeStart', UNIFORMTYPE_INT),
-    new UniformFormat('rangeEnd', UNIFORMTYPE_INT),
-    new UniformFormat('colorMatchIndex', UNIFORMTYPE_UINT),
-    new UniformFormat('colorMatchThreshold', UNIFORMTYPE_FLOAT)
-]);
+const createSplatValueUniformFormat = (device: GraphicsDevice) =>
+    new UniformBufferFormat(device, [
+        new UniformFormat('sourceWidth', UNIFORMTYPE_UINT),
+        new UniformFormat('numSplats', UNIFORMTYPE_UINT),
+        new UniformFormat('propMode', UNIFORMTYPE_INT),
+        new UniformFormat('onScreenOnly', UNIFORMTYPE_UINT),
+        new UniformFormat('logBins', UNIFORMTYPE_UINT),
+        new UniformFormat('entityMatrix', UNIFORMTYPE_MAT4),
+        new UniformFormat('viewMatrix', UNIFORMTYPE_MAT4),
+        new UniformFormat('viewProjection', UNIFORMTYPE_MAT4),
+        new UniformFormat('cameraWorldPos', UNIFORMTYPE_VEC3),
+        new UniformFormat('shNumCoeffs', UNIFORMTYPE_INT),
+        new UniformFormat('minValue', UNIFORMTYPE_FLOAT),
+        new UniformFormat('maxValue', UNIFORMTYPE_FLOAT),
+        new UniformFormat('numBins', UNIFORMTYPE_INT),
+        new UniformFormat('rangeStart', UNIFORMTYPE_INT),
+        new UniformFormat('rangeEnd', UNIFORMTYPE_INT),
+        new UniformFormat('colorMatchIndex', UNIFORMTYPE_UINT),
+        new UniformFormat('colorMatchThreshold', UNIFORMTYPE_FLOAT)
+    ]);
 
 const createSplatValueTextureFormats = (bands: number) => {
     // order must match the declarations in computeSplatValueWGSL
@@ -67,7 +66,8 @@ const createSplatValueTextureFormats = (bands: number) => {
         new BindTextureFormat('transformPalette', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UNFILTERABLE_FLOAT, false),
         new BindTextureFormat('colorPalette', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UNFILTERABLE_FLOAT, false)
     ];
-    const uintTexture = (name: string) => new BindTextureFormat(name, SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false);
+    const uintTexture = (name: string) =>
+        new BindTextureFormat(name, SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false);
     if (bands > 0) formats.push(uintTexture('splatSH_1to3'));
     if (bands > 1) {
         formats.push(uintTexture('splatSH_4to7'));
@@ -131,9 +131,5 @@ const setSplatValueParameters = (
     compute.setParameter('colorMatchThreshold', 0);
 };
 
-export {
-    createSplatValueTextureFormats,
-    createSplatValueUniformFormat,
-    setSplatValueParameters
-};
+export { createSplatValueTextureFormats, createSplatValueUniformFormat, setSplatValueParameters };
 export type { SplatValueOptions };

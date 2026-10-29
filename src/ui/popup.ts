@@ -8,14 +8,15 @@ interface ShowOptions {
     message: string;
     header?: string;
     link?: string;
-    icon?: boolean;     // show the type icon before the message (default true)
+    icon?: boolean; // show the type icon before the message (default true)
     select?: {
-        options: { v: string, t: string }[];
+        options: { v: string; t: string }[];
         value: string;
     };
-    warning?: {         // secondary note below the select
+    warning?: {
+        // secondary note below the select
         text: string;
-        link?: string;  // optional link rendered inline after the text
+        link?: string; // optional link rendered inline after the text
     };
 }
 

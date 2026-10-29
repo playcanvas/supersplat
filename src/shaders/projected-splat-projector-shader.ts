@@ -47,7 +47,9 @@ fn evaluateSH(sourceUv: vec2i, direction: vec3f) -> vec3f {
     coefficients[14] = unpack111011s(fourth.w);`;
     }
 
-    const band2 = bands > 1 ? `
+    const band2 =
+        bands > 1
+            ? `
     let xx = direction.x * direction.x;
     let yy = direction.y * direction.y;
     let zz = direction.z * direction.z;
@@ -58,16 +60,20 @@ fn evaluateSH(sourceUv: vec2i, direction: vec3f) -> vec3f {
         + coefficients[4] * (-1.0925484305920792 * yz)
         + coefficients[5] * (0.31539156525252005 * (2.0 * zz - xx - yy))
         + coefficients[6] * (-1.0925484305920792 * xz)
-        + coefficients[7] * (0.5462742152960396 * (xx - yy));` : '';
+        + coefficients[7] * (0.5462742152960396 * (xx - yy));`
+            : '';
 
-    const band3 = bands > 2 ? `
+    const band3 =
+        bands > 2
+            ? `
     result += coefficients[8] * (-0.5900435899266435 * direction.y * (3.0 * xx - yy))
         + coefficients[9] * (2.890611442640554 * xy * direction.z)
         + coefficients[10] * (-0.4570457994644658 * direction.y * (4.0 * zz - xx - yy))
         + coefficients[11] * (0.3731763325901154 * direction.z * (2.0 * zz - 3.0 * xx - 3.0 * yy))
         + coefficients[12] * (-0.4570457994644658 * direction.x * (4.0 * zz - xx - yy))
         + coefficients[13] * (1.445305721320277 * direction.z * (xx - yy))
-        + coefficients[14] * (-0.5900435899266435 * direction.x * (xx - 3.0 * yy));` : '';
+        + coefficients[14] * (-0.5900435899266435 * direction.x * (xx - 3.0 * yy));`
+            : '';
 
     return `
 fn unpack111011s(bits: u32) -> vec3f {
@@ -87,7 +93,7 @@ fn evaluateSH(sourceUv: vec2i, direction: vec3f) -> vec3f {
 }`;
 };
 
-const projectedSplatProjector = (bands: number) => /* wgsl */`
+const projectedSplatProjector = (bands: number) => /* wgsl */ `
 struct ProjectorUniforms {
     numSplats: u32,
     entryBase: u32,

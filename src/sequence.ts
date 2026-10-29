@@ -33,7 +33,7 @@ class PlyFrameSource implements FrameSource {
         this.files = files.slice().sort((a, b) => {
             const av = key(a);
             const bv = key(b);
-            return (av && bv) ? parseInt(av, 10) - parseInt(bv, 10) : 0;
+            return av && bv ? parseInt(av, 10) - parseInt(bv, 10) : 0;
         });
     }
 

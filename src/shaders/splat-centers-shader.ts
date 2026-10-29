@@ -6,7 +6,7 @@ import { compactTailWGSL, overlayEligibleWGSL } from './projected-splat-chunk';
 // indirect draw args. Reading the cached screen position instead of transforming
 // the source means no matrix or SH work per vertex, and no work at all for
 // splats the projector culled
-const vertexShader = /* wgsl */`
+const vertexShader = /* wgsl */ `
 attribute vertex_position: vec3f;
 
 var<storage, read> compactEntries: array<u32>;
@@ -91,7 +91,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 }
 `;
 
-const fragmentShader = /* wgsl */`
+const fragmentShader = /* wgsl */ `
 varying @interpolate(flat, either) overlayColor: vec4f;
 
 @fragment

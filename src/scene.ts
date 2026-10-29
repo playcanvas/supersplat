@@ -1,7 +1,4 @@
-import type {
-    CameraComponent,
-    GraphicsDevice,
-    MeshInstance } from 'playcanvas';
+import type { CameraComponent, GraphicsDevice, MeshInstance } from 'playcanvas';
 import {
     EVENT_POSTRENDER_LAYER,
     EVENT_PRERENDER_LAYER,
@@ -53,9 +50,10 @@ const specialSort = (instances: MeshInstance[], numInstances: number, cameraPos:
                         center.z + cz * halfExtents.z
                     );
                     // project camera-to-corner vector onto camera direction
-                    const dist = (corner.x - cameraPos.x) * cameraDir.x +
-                                    (corner.y - cameraPos.y) * cameraDir.y +
-                                    (corner.z - cameraPos.z) * cameraDir.z;
+                    const dist =
+                        (corner.x - cameraPos.x) * cameraDir.x +
+                        (corner.y - cameraPos.y) * cameraDir.y +
+                        (corner.z - cameraPos.z) * cameraDir.z;
                     if (dist > maxDist) {
                         maxDist = dist;
                     }
@@ -157,7 +155,7 @@ class Scene {
     // Console controls for stochastic rendering; setters request a repaint.
     readonly stochastic;
 
-    canvasResize: {width: number; height: number} | null = null;
+    canvasResize: { width: number; height: number } | null = null;
     targetSize = {
         width: 0,
         height: 0
@@ -306,11 +304,15 @@ class Scene {
         // phase sees the event before any of them - including through a
         // setPointerCapture retarget. `buttons` keeps hovering out of it, so no
         // per-tool drag state is needed.
-        canvasContainer.addEventListener('pointermove', (event: PointerEvent) => {
-            if (event.buttons !== 0) {
-                this.forceInteracting = true;
-            }
-        }, true);
+        canvasContainer.addEventListener(
+            'pointermove',
+            (event: PointerEvent) => {
+                if (event.buttons !== 0) {
+                    this.forceInteracting = true;
+                }
+            },
+            true
+        );
 
         // configure depth layers to handle dynamic refraction
         const depthLayer = this.app.scene.layers.getLayerById(LAYERID_DEPTH);
@@ -461,7 +463,7 @@ class Scene {
             this.elements.push(element);
 
             // notify all elements of scene addition
-            this.forEachElement(e => e !== element && e.onAdded(element));
+            this.forEachElement((e) => e !== element && e.onAdded(element));
 
             // notify listeners
             this.events.fire('scene.elementAdded', element);
@@ -484,7 +486,7 @@ class Scene {
             this.events.fire('scene.elementRemoved', element);
 
             // notify all elements of scene removal
-            this.forEachElement(e => e.onRemoved(element));
+            this.forEachElement((e) => e.onRemoved(element));
 
             element.remove();
             element.scene = null;
@@ -515,7 +517,7 @@ class Scene {
     }
 
     getElementsByType(elementType: ElementType) {
-        return this.elements.filter(e => e.type === elementType);
+        return this.elements.filter((e) => e.type === elementType);
     }
 
     get graphicsDevice() {
@@ -540,7 +542,7 @@ class Scene {
         }
 
         // allow elements to update
-        this.forEachElement(e => e.onUpdate(deltaTime));
+        this.forEachElement((e) => e.onUpdate(deltaTime));
 
         // fire global update
         this.events.fire('update', deltaTime);
@@ -550,7 +552,7 @@ class Scene {
         const i = this.app.frame % 2;
         const state = this.sceneState[i];
         state.reset();
-        this.forEachElement(e => state.pack(e));
+        this.forEachElement((e) => state.pack(e));
 
         // diff with previous state
         const result = state.compare(this.sceneState[1 - i]);
@@ -569,7 +571,7 @@ class Scene {
         const interacting = this.forceInteracting || all.size > 0;
         // per-gaussian edits reach here only through forceRender; layer moves,
         // visibility and grade changes through the state diff
-        this.editedRender = this.forceRender || [...all].some(type => type !== ElementType.camera);
+        this.editedRender = this.forceRender || [...all].some((type) => type !== ElementType.camera);
         const stochastic = this.events.invoke('view.stochastic');
 
         // 'movement' takes the fast no-sort stochastic path only while actively
@@ -582,11 +584,10 @@ class Scene {
         // Locked-mode captures always use the sorted path.
         const auto = stochastic === 'auto';
         this.autoSampling = auto && this.frameTimings.gpuSupported;
-        const adaptive = stochastic === 'movement' ||
-            (auto && (this.autoEngaged || !this.frameTimings.gpuSupported));
+        const adaptive = stochastic === 'movement' || (auto && (this.autoEngaged || !this.frameTimings.gpuSupported));
         this.overdrawRender = this.camera.renderOverlays && !!this.events.invoke('view.overdraw');
-        this.movingRender = !this.lockedRenderMode && !this.overdrawRender &&
-            (stochastic === 'enabled' || (adaptive && interacting));
+        this.movingRender =
+            !this.lockedRenderMode && !this.overdrawRender && (stochastic === 'enabled' || (adaptive && interacting));
 
         // timestamp queries cost a per-frame staging-buffer map and a resolve,
         // so run the profiler only while something consumes it: the
@@ -629,7 +630,7 @@ class Scene {
         });
 
         // allow elements to postupdate
-        this.forEachElement(e => e.onPostUpdate());
+        this.forEachElement((e) => e.onPostUpdate());
     }
 
     private onPreRender() {
@@ -638,7 +639,7 @@ class Scene {
         this.targetSize.width = Math.ceil(this.app.graphicsDevice.width / this.config.camera.pixelScale);
         this.targetSize.height = Math.ceil(this.app.graphicsDevice.height / this.config.camera.pixelScale);
 
-        this.forEachElement(e => e.onPreRender());
+        this.forEachElement((e) => e.onPreRender());
 
         this.projectedSplatRenderer.render();
 
@@ -670,7 +671,7 @@ class Scene {
     }
 
     private onPostRender() {
-        this.forEachElement(e => e.onPostRender());
+        this.forEachElement((e) => e.onPostRender());
 
         this.events.fire('postrender');
 

@@ -1,7 +1,6 @@
 import { Button, Container, Element, Label, NumericInput, VectorInput } from '@playcanvas/pcui';
 import { Vec3 } from 'playcanvas';
 
-
 import { ShapeTransformOp } from '../edit-ops';
 import type { Events } from '../events';
 import type { Scene } from '../scene';
@@ -27,7 +26,7 @@ class SphereSelection {
     activate: () => void;
     deactivate: () => void;
     setTransformMode: (mode: Exclude<ShapeGizmoMode, 'none'>) => boolean;
-    getFocus: () => { position: Vec3, radius: number } | null;
+    getFocus: () => { position: Vec3; radius: number } | null;
 
     active = false;
 
@@ -188,16 +187,20 @@ class SphereSelection {
             gizmo.toggleMode('scale');
         });
         setButton.dom.addEventListener('pointerdown', (e) => {
-            e.stopPropagation(); apply('set');
+            e.stopPropagation();
+            apply('set');
         });
         addButton.dom.addEventListener('pointerdown', (e) => {
-            e.stopPropagation(); apply('add');
+            e.stopPropagation();
+            apply('add');
         });
         removeButton.dom.addEventListener('pointerdown', (e) => {
-            e.stopPropagation(); apply('remove');
+            e.stopPropagation();
+            apply('remove');
         });
         intersectButton.dom.addEventListener('pointerdown', (e) => {
-            e.stopPropagation(); apply('intersect');
+            e.stopPropagation();
+            apply('intersect');
         });
         position.on('change', (v: number[]) => {
             if (!uiUpdating) {
@@ -216,7 +219,7 @@ class SphereSelection {
             }
         });
 
-        events.on('camera.focalPointPicked', (details: { splat: Splat, position: Vec3 }) => {
+        events.on('camera.focalPointPicked', (details: { splat: Splat; position: Vec3 }) => {
             if (this.active) {
                 recordOp(() => {
                     sphere.pivot.setPosition(details.position);

@@ -6,7 +6,7 @@ import { CommandQueue } from './command-queue';
 import { registerDocEvents } from './doc';
 import { EditHistory } from './edit-history';
 import { registerEditorEvents } from './editor';
-import { createEditorAPI  } from './editor-api';
+import { createEditorAPI } from './editor-api';
 import type { EditorAPI } from './editor-api';
 import { Events } from './events';
 import { initFileHandler } from './file-handler';
@@ -141,7 +141,7 @@ const main = async () => {
     events.function('scene.gpu', () => {
         // Use the renderer's adapter, rather than requesting another GPU.
         const device = graphicsDevice as unknown as {
-            gpuAdapter?: { info?: { description: string, vendor: string, architecture: string, device: string } }
+            gpuAdapter?: { info?: { description: string; vendor: string; architecture: string; device: string } };
         };
         const info = device.gpuAdapter?.info;
         return info?.description || [info?.vendor, info?.architecture, info?.device].filter(Boolean).join(' / ');
@@ -149,21 +149,13 @@ const main = async () => {
 
     const urlArgs = getURLArgs();
 
-    const overrides = [
-        urlArgs
-    ];
+    const overrides = [urlArgs];
 
     // resolve scene config
     const sceneConfig = getSceneConfig(overrides);
 
     // construct the manager
-    const scene = new Scene(
-        events,
-        sceneConfig,
-        editorUI.canvas,
-        graphicsDevice,
-        commandQueue
-    );
+    const scene = new Scene(events, sceneConfig, editorUI.canvas, graphicsDevice, commandQueue);
 
     // colors
     const bgClr = new Color();
@@ -218,7 +210,7 @@ const main = async () => {
     });
 
     events.on('bgClr', (clr: Color) => {
-        const cnv = (v: number) => `${Math.max(0, Math.min(255, (v * 255))).toFixed(0)}`;
+        const cnv = (v: number) => `${Math.max(0, Math.min(255, v * 255)).toFixed(0)}`;
         document.body.style.backgroundColor = `rgba(${cnv(clr.r)},${cnv(clr.g)},${cnv(clr.b)},1)`;
     });
     events.on('selectedClr', (clr: Color) => {
@@ -232,7 +224,7 @@ const main = async () => {
     });
 
     // initialize colors from application config
-    const toColor = (value: { r: number, g: number, b: number, a: number }) => {
+    const toColor = (value: { r: number; g: number; b: number; a: number }) => {
         return new Color(value.r, value.g, value.b, value.a);
     };
     setBgClr(toColor(sceneConfig.bgClr));
@@ -259,19 +251,45 @@ const main = async () => {
     toolManager.register('rectSelection', new RectSelection(events, editorUI.toolsContainer.dom));
     toolManager.register('brushSelection', new BrushSelection(events, editorUI.toolsContainer.dom, mask));
     toolManager.register('sphereBrushSelection', new SphereBrushSelection(events, editorUI.toolsContainer.dom, mask));
-    toolManager.register('floodSelection', new FloodSelection(events, editorUI.toolsContainer.dom, mask, editorUI.canvasContainer));
+    toolManager.register(
+        'floodSelection',
+        new FloodSelection(events, editorUI.toolsContainer.dom, mask, editorUI.canvasContainer)
+    );
     toolManager.register('polygonSelection', new PolygonSelection(events, editorUI.toolsContainer.dom, mask));
     toolManager.register('lassoSelection', new LassoSelection(events, editorUI.toolsContainer.dom, mask));
-    toolManager.register('sphereSelection', new SphereSelection(events, scene, editorUI.canvasContainer, editorUI.tooltips));
+    toolManager.register(
+        'sphereSelection',
+        new SphereSelection(events, scene, editorUI.canvasContainer, editorUI.tooltips)
+    );
     toolManager.register('boxSelection', new BoxSelection(events, scene, editorUI.canvasContainer, editorUI.tooltips));
-    toolManager.register('eyedropperSelection', new EyedropperSelection(events, editorUI.toolsContainer.dom, editorUI.canvasContainer));
+    toolManager.register(
+        'eyedropperSelection',
+        new EyedropperSelection(events, editorUI.toolsContainer.dom, editorUI.canvasContainer)
+    );
     toolManager.register('move', new MoveTool(events, scene));
     toolManager.register('rotate', new RotateTool(events, scene));
     toolManager.register('scale', new ScaleTool(events, scene));
-    toolManager.register('measure', new MeasureTool(events, scene, editorUI.canvasContainer, editorUI.annotationContainer.dom));
-    toolManager.register('orient', new OrientTool(events, scene, editorUI.toolsContainer.dom, editorUI.canvasContainer, editorUI.annotationContainer.dom));
+    toolManager.register(
+        'measure',
+        new MeasureTool(events, scene, editorUI.canvasContainer, editorUI.annotationContainer.dom)
+    );
+    toolManager.register(
+        'orient',
+        new OrientTool(
+            events,
+            scene,
+            editorUI.toolsContainer.dom,
+            editorUI.canvasContainer,
+            editorUI.annotationContainer.dom
+        )
+    );
 
-    const boundDimensionsOverlay = new BoundDimensionsOverlay(events, scene, editorUI.canvasContainer, editorUI.annotationContainer.dom);
+    const boundDimensionsOverlay = new BoundDimensionsOverlay(
+        events,
+        scene,
+        editorUI.canvasContainer,
+        editorUI.annotationContainer.dom
+    );
 
     editorUI.toolsContainer.dom.appendChild(maskCanvas);
 
@@ -308,26 +326,27 @@ const main = async () => {
     const filenameList = url.searchParams.getAll('filename');
     for (const [i, value] of loadList.entries()) {
         const decoded = decodeURIComponent(value);
-        const filename = i < filenameList.length ?
-            decodeURIComponent(filenameList[i]) :
-            decoded.split('/').pop();
+        const filename = i < filenameList.length ? decodeURIComponent(filenameList[i]) : decoded.split('/').pop();
 
-        await events.invoke('import', [{
-            filename,
-            url: decoded
-        }]);
+        await events.invoke('import', [
+            {
+                filename,
+                url: decoded
+            }
+        ]);
     }
-
 
     // handle OS-based file association in PWA mode
     if ('launchQueue' in window) {
         window.launchQueue.setConsumer(async (launchParams: LaunchParams) => {
             for (const file of launchParams.files) {
-                await events.invoke('import', [{
-                    filename: file.name,
-                    contents: await file.getFile(),
-                    handle: file
-                }]);
+                await events.invoke('import', [
+                    {
+                        filename: file.name,
+                        contents: await file.getFile(),
+                        handle: file
+                    }
+                ]);
             }
         });
     }

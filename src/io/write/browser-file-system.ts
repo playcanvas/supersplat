@@ -3,7 +3,7 @@
  * Provides FileSystem abstraction for browser file operations.
  */
 
-import { MemoryFileSystem   } from '@playcanvas/splat-transform';
+import { MemoryFileSystem } from '@playcanvas/splat-transform';
 import type { FileSystem, Writer } from '@playcanvas/splat-transform';
 
 /**
@@ -59,9 +59,7 @@ const triggerDownload = (data: Uint8Array, filename: string): void => {
     // create a "fake" click-event to trigger the download
     if (document.createEvent) {
         const e = document.createEvent('MouseEvents');
-        e.initMouseEvent('click', true, true, window,
-            0, 0, 0, 0, 0, false, false, false,
-            false, 0, null);
+        e.initMouseEvent('click', true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
         lnk.dispatchEvent(e);
     } else {
         // @ts-ignore
@@ -80,7 +78,10 @@ class BrowserDownloadWriter implements Writer {
     private innerWriter: Writer;
     private filename: string;
 
-    constructor(filename: string, private signal?: AbortSignal) {
+    constructor(
+        filename: string,
+        private signal?: AbortSignal
+    ) {
         this.filename = filename;
         this.memFs = new MemoryFileSystem();
         this.innerWriter = this.memFs.createWriter(filename);
@@ -123,7 +124,11 @@ class BrowserFileSystem implements FileSystem {
      * @param filename - The filename for downloads (fallback mode)
      * @param stream - Optional FileSystemWritableFileStream for direct file access
      */
-    constructor(filename: string, stream?: FileSystemWritableFileStream, private signal?: AbortSignal) {
+    constructor(
+        filename: string,
+        stream?: FileSystemWritableFileStream,
+        private signal?: AbortSignal
+    ) {
         this.filename = filename;
         this.stream = stream;
     }

@@ -62,13 +62,18 @@ const buildViewerSettings = (events: Events, choices: ExportChoices): ViewerExpo
     const pose = events.invoke('camera.getPose');
     const p = pose?.position;
     const t = pose?.target;
-    const cameras = (p && t) ? [{
-        initial: {
-            position: [p.x, p.y, p.z] as [number, number, number],
-            target: [t.x, t.y, t.z] as [number, number, number],
-            fov
-        }
-    }] : [];
+    const cameras =
+        p && t
+            ? [
+                  {
+                      initial: {
+                          position: [p.x, p.y, p.z] as [number, number, number],
+                          target: [t.x, t.y, t.z] as [number, number, number],
+                          fov
+                      }
+                  }
+              ]
+            : [];
 
     const animTracks: AnimTrack[] = [];
 
@@ -77,8 +82,8 @@ const buildViewerSettings = (events: Events, choices: ExportChoices): ViewerExpo
         const frameRate = events.invoke('timeline.frameRate');
         const smoothness = events.invoke('timeline.smoothness');
         const orderedPoses = (events.invoke('camera.poses') as Pose[])
-        .filter(entry => entry.frame >= 0 && entry.frame < frames)
-        .sort((a, b) => a.frame - b.frame);
+            .filter((entry) => entry.frame >= 0 && entry.frame < frames)
+            .sort((a, b) => a.frame - b.frame);
 
         if (orderedPoses.length > 0) {
             const times: number[] = [];

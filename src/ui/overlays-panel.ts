@@ -437,9 +437,17 @@ class OverlaysPanel extends Container {
         // tooltips
         const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
         const shortcut = shortcutManager.formatShortcut('grid.toggleVisible');
-        tooltips.register(showGridLabel, () => i18n.formatTooltipWithShortcut(i18n.t('panel.overlays.grid'), shortcut), 'left');
+        tooltips.register(
+            showGridLabel,
+            () => i18n.formatTooltipWithShortcut(i18n.t('panel.overlays.grid'), shortcut),
+            'left'
+        );
         const cameraInfoShortcut = shortcutManager.formatShortcut('camera.toggleShowInfo');
-        tooltips.register(showCameraInfoLabel, () => i18n.formatTooltipWithShortcut(i18n.t('panel.overlays.camera-info'), cameraInfoShortcut), 'left');
+        tooltips.register(
+            showCameraInfoLabel,
+            () => i18n.formatTooltipWithShortcut(i18n.t('panel.overlays.camera-info'), cameraInfoShortcut),
+            'left'
+        );
         tooltips.register(resetButton, () => i18n.t('panel.settings.reset'), 'left');
     }
 }

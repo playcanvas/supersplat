@@ -36,7 +36,7 @@ class MeasureTransformHandler {
 class MeasureTool {
     activate: () => void;
     deactivate: () => void;
-    getFocus: () => { position: Vec3, radius: number } | null;
+    getFocus: () => { position: Vec3; radius: number } | null;
 
     constructor(events: Events, scene: Scene, canvasContainer: Container, annotationParent: HTMLElement) {
         // the length label along the measured line (shown when 'show
@@ -160,7 +160,9 @@ class MeasureTool {
         });
 
         gizmo.on('transform:move', () => {
-            events.invoke('pivot').moveTRS(entity.getLocalPosition(), entity.getLocalRotation(), entity.getLocalScale());
+            events
+                .invoke('pivot')
+                .moveTRS(entity.getLocalPosition(), entity.getLocalRotation(), entity.getLocalScale());
         });
 
         gizmo.on('transform:end', () => {
@@ -249,7 +251,11 @@ class MeasureTool {
             const top = new EntityTransformOp({
                 splat: splat,
                 oldt: new Transform(origP, origR, origS),
-                newt: new Transform(splat.entity.getLocalPosition(), splat.entity.getLocalRotation(), splat.entity.getLocalScale())
+                newt: new Transform(
+                    splat.entity.getLocalPosition(),
+                    splat.entity.getLocalRotation(),
+                    splat.entity.getLocalScale()
+                )
             });
 
             events.fire('edit.add', top);
@@ -341,7 +347,10 @@ class MeasureTool {
                 // place at the pointer-down position: that is where the user aimed
                 if (splat.measurePoints.length < 2) {
                     const target = splat;
-                    const result = await scene.camera.intersect(clickX / canvasContainer.dom.clientWidth, clickY / canvasContainer.dom.clientHeight);
+                    const result = await scene.camera.intersect(
+                        clickX / canvasContainer.dom.clientWidth,
+                        clickY / canvasContainer.dom.clientHeight
+                    );
                     // another click may have landed a point while the pick was in flight
                     if (result && active && splat === target && splat.measurePoints.length < 2) {
                         mat.invert(splat.worldTransform);

@@ -4,7 +4,7 @@ import { opFromModifiers } from '../select-op';
 import { applyOpCursor } from './select-cursor';
 
 class HistogramData {
-    bins: { selected: number, unselected: number }[];
+    bins: { selected: number; unselected: number }[];
     numValues: number;
     minValue: number;
     maxValue: number;
@@ -39,15 +39,14 @@ class HistogramData {
 
     valueToBucket(value: number) {
         const transformed = this.logBins ? Math.sign(value) * Math.log1p(Math.abs(value)) : value;
-        const n = this.minValue === this.maxValue ? 0 :
-            (transformed - this.minValue) / (this.maxValue - this.minValue);
+        const n = this.minValue === this.maxValue ? 0 : (transformed - this.minValue) / (this.maxValue - this.minValue);
         return Math.max(0, Math.min(this.bins.length - 1, Math.floor(n * this.bins.length)));
     }
 }
 
 interface SetDataOptions {
-    selected: Float32Array;     // length = numBins
-    unselected: Float32Array;   // length = numBins
+    selected: Float32Array; // length = numBins
+    unselected: Float32Array; // length = numBins
     min: number;
     max: number;
     numValues: number;
@@ -95,12 +94,12 @@ class Histogram {
         const offsetToBucket = (offset: number) => {
             const rect = this.canvas.getBoundingClientRect();
             const bins = this.histogram.bins.length;
-            return Math.max(0, Math.min(bins - 1, Math.floor((offset - rect.left) / rect.width * bins)));
+            return Math.max(0, Math.min(bins - 1, Math.floor(((offset - rect.left) / rect.width) * bins)));
         };
 
         const bucketToOffset = (bucket: number) => {
             const rect = this.canvas.getBoundingClientRect();
-            return bucket / this.histogram.bins.length * rect.width;
+            return (bucket / this.histogram.bins.length) * rect.width;
         };
 
         const updateHighlight = () => {
@@ -118,12 +117,12 @@ class Histogram {
             const draggingRight = dragEnd >= dragStart;
             const anchorEdge = draggingRight ? dragStart : dragStart + 1;
             const cursorEdge = draggingRight ? dragEnd + 1 : dragEnd;
-            const edgeX = (i: number) => i / bins * rect.width;
+            const edgeX = (i: number) => (i / bins) * rect.width;
             const edgeValue = (i: number) => h.edgeValue(i);
             this.events.fire('highlight', {
                 x: bucketToOffset(start),
                 y: 0,
-                width: (end - start + 1) / bins * rect.width,
+                width: ((end - start + 1) / bins) * rect.width,
                 height: rect.height,
                 startBucket: start,
                 endBucket: end,
@@ -237,7 +236,7 @@ class Histogram {
         // keep the cursor showing the op the modifiers will apply (add/remove/
         // intersect) while hovering the interactive histogram, matching the
         // selection tools. numValues gates it so an empty histogram is unaffected.
-        const syncCursor = (e: { shiftKey: boolean, ctrlKey: boolean }) => {
+        const syncCursor = (e: { shiftKey: boolean; ctrlKey: boolean }) => {
             if (hovering) {
                 applyOpCursor(this.canvas, this.histogram.numValues ? opFromModifiers(e) : 'set');
             }
@@ -258,8 +257,8 @@ class Histogram {
         // capture phase so a modifier press updates the cursor even while another
         // element holds focus; blur clears because a key release while unfocused
         // never fires. (mirrors the selection-tool cursor and controllers.ts)
-        window.addEventListener('keydown', e => syncCursor(e), { capture: true });
-        window.addEventListener('keyup', e => syncCursor(e), { capture: true });
+        window.addEventListener('keydown', (e) => syncCursor(e), { capture: true });
+        window.addEventListener('keyup', (e) => syncCursor(e), { capture: true });
         window.addEventListener('blur', () => applyOpCursor(this.canvas, 'set'));
     }
 
@@ -285,7 +284,7 @@ class Histogram {
             for (let x = 0; x < mappedTotal.length; x++) {
                 const total = mappedTotal[x];
                 const unselected = mappedUnselected[x];
-                const targetMin = binMax / canvas.height * (canvas.height - 1 - y);
+                const targetMin = (binMax / canvas.height) * (canvas.height - 1 - y);
 
                 if (targetMin >= total) {
                     pixels[i++] = 0xff000000;

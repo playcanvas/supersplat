@@ -1,13 +1,5 @@
-import type {
-    Asset } from 'playcanvas';
-import {
-    BoundingBox,
-    Color,
-    Entity,
-    Mat4,
-    Quat,
-    Vec3
-} from 'playcanvas';
+import type { Asset } from 'playcanvas';
+import { BoundingBox, Color, Entity, Mat4, Quat, Vec3 } from 'playcanvas';
 
 import { ColorGrade, createGradeTerms, gradeTerms } from './color-grade';
 import { ColorPalette } from './color-palette';
@@ -24,18 +16,22 @@ const veca = new Vec3();
 const vecb = new Vec3();
 const quat = new Quat();
 
-const boundingPoints =
-    [-1, 1].map((x) => {
+const boundingPoints = [-1, 1]
+    .map((x) => {
         return [-1, 1].map((y) => {
             return [-1, 1].map((z) => {
                 return [
-                    new Vec3(x, y, z), new Vec3(x * 0.75, y, z),
-                    new Vec3(x, y, z), new Vec3(x, y * 0.75, z),
-                    new Vec3(x, y, z), new Vec3(x, y, z * 0.75)
+                    new Vec3(x, y, z),
+                    new Vec3(x * 0.75, y, z),
+                    new Vec3(x, y, z),
+                    new Vec3(x, y * 0.75, z),
+                    new Vec3(x, y, z),
+                    new Vec3(x, y, z * 0.75)
                 ];
             });
         });
-    }).flat(3);
+    })
+    .flat(3);
 
 class Splat extends Element {
     asset: Asset;
@@ -126,8 +122,7 @@ class Splat extends Element {
         // a shared-data layer arrives with its instances already built; otherwise
         // build the identity list over this frame's rows, seeded with the state
         // column the file carried (if any)
-        this.instances = instances ??
-            new GaussianInstances(device, splatResource.numRows, splatResource.initialState);
+        this.instances = instances ?? new GaussianInstances(device, splatResource.numRows, splatResource.initialState);
 
         this.localBoundStorage = splatResource.aabb.clone();
         this.worldBoundStorage = new BoundingBox();
@@ -141,7 +136,7 @@ class Splat extends Element {
         return new Promise((resolve) => {
             // single finish() removes the listener and clears the timeout, so the
             // common case (postrender fires first) doesn't leave a pending timer.
-            const handles: { off?: { off: () => void }, timer?: ReturnType<typeof setTimeout> } = {};
+            const handles: { off?: { off: () => void }; timer?: ReturnType<typeof setTimeout> } = {};
             let settled = false;
             const finish = () => {
                 if (settled) return;
@@ -477,8 +472,7 @@ class Splat extends Element {
     // becomes editable and resettable through the colour panel like any other.
     // v1 documents don't write these fields, so this is a no-op for them.
     private migrateLayerGrade(doc: any) {
-        const tintClr = doc.tintClr ?
-            new Color(doc.tintClr[0], doc.tintClr[1], doc.tintClr[2]) : Color.WHITE;
+        const tintClr = doc.tintClr ? new Color(doc.tintClr[0], doc.tintClr[1], doc.tintClr[2]) : Color.WHITE;
         const params = {
             tintClr,
             temperature: doc.temperature ?? 0,

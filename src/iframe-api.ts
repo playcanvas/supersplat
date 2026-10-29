@@ -13,11 +13,7 @@ interface IsSceneDirtyResponse {
 }
 
 const isSceneDirtyQuery = (data: any): data is IsSceneDirtyQuery => {
-    return (
-        data &&
-        typeof data === 'object' &&
-        data.type === IS_SCENE_DIRTY
-    );
+    return data && typeof data === 'object' && data.type === IS_SCENE_DIRTY;
 };
 
 const registerIframeApi = (events: Events) => {

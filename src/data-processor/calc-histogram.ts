@@ -1,5 +1,4 @@
-import type {
-    GraphicsDevice } from 'playcanvas';
+import type { GraphicsDevice } from 'playcanvas';
 import {
     BUFFERUSAGE_COPY_DST,
     BUFFERUSAGE_COPY_SRC,
@@ -18,9 +17,7 @@ import { computeSplatValueWGSL } from '../shaders/splat-value-shader';
 import type { Splat } from '../splat';
 
 import { NUM_BINS } from './histogram-config';
-import type {
-    SplatValueOptions
-} from './splat-value-compute';
+import type { SplatValueOptions } from './splat-value-compute';
 import {
     createSplatValueTextureFormats,
     createSplatValueUniformFormat,
@@ -50,11 +47,11 @@ const uintBits = new Uint32Array(floatBits.buffer);
 const floatToOrdered = (value: number) => {
     floatBits[0] = value;
     const bits = uintBits[0];
-    return (bits & 0x80000000) === 0 ? (bits ^ 0x80000000) >>> 0 : (~bits) >>> 0;
+    return (bits & 0x80000000) === 0 ? (bits ^ 0x80000000) >>> 0 : ~bits >>> 0;
 };
 
 const orderedToFloat = (value: number) => {
-    uintBits[0] = (value & 0x80000000) !== 0 ? (value ^ 0x80000000) >>> 0 : (~value) >>> 0;
+    uintBits[0] = (value & 0x80000000) !== 0 ? (value ^ 0x80000000) >>> 0 : ~value >>> 0;
     return floatBits[0];
 };
 
@@ -89,7 +86,7 @@ class CalcHistogram {
         const minMaxShader = new Shader(this.device, {
             name: `HistogramMinMaxCompute-${bands}`,
             shaderLanguage: SHADERLANGUAGE_WGSL,
-            cshader: /* wgsl */`
+            cshader: /* wgsl */ `
 @group(0) @binding(0) var<storage, read_write> minMax: array<atomic<u32>>;
 ${minMaxCommon.code}
 
@@ -126,7 +123,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(num_workgroups) numW
         const binShader = new Shader(this.device, {
             name: `HistogramBinsCompute-${bands}`,
             shaderLanguage: SHADERLANGUAGE_WGSL,
-            cshader: /* wgsl */`
+            cshader: /* wgsl */ `
 @group(0) @binding(0) var<storage, read> minMax: array<u32>;
 @group(0) @binding(1) var<storage, read_write> bins: array<atomic<u32>>;
 ${binCommon.code}

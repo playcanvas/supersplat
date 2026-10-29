@@ -16,7 +16,6 @@ class Pivot {
     end: () => void;
 
     constructor(events: Events) {
-
         this.place = (transform: Transform) => {
             if (!this.transform.equals(transform)) {
                 this.transform.copy(transform);

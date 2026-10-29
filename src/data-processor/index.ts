@@ -1,8 +1,4 @@
-import type {
-    GraphicsDevice,
-    RenderTarget,
-    ScopeSpace,
-    Shader } from 'playcanvas';
+import type { GraphicsDevice, RenderTarget, ScopeSpace, Shader } from 'playcanvas';
 import {
     BUFFERUSAGE_COPY_DST,
     SEMANTIC_POSITION,

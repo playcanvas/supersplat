@@ -5,7 +5,7 @@ const outerTan = Math.tan((faceFov / 2) * (Math.PI / 180));
 const innerTan = Math.tan(blendStart * (Math.PI / 180));
 const uvScale = 0.5 / outerTan;
 
-const vertexShader = /* wgsl */`
+const vertexShader = /* wgsl */ `
 attribute vertex_position: vec2f;
 
 @vertex
@@ -16,7 +16,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 }
 `;
 
-const fragmentShader = /* wgsl */`
+const fragmentShader = /* wgsl */ `
 var uFace0: texture_2d<f32>;
 var uFace0_sampler: sampler;
 var uFace1: texture_2d<f32>;

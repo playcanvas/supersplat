@@ -60,7 +60,12 @@ const resolveDirectories = (entries: FileSystemEntry[]): Promise<FileSystemFileE
 
 // collect the files under a dropped handle, named by their path relative to the
 // drop (so a dropped folder 'foo' yields 'foo/a.ply', matching resolveDirectories)
-const resolveHandles = async (handle: FileSystemHandle, prefix: string, result: DroppedFile[], root: FileSystemHandle) => {
+const resolveHandles = async (
+    handle: FileSystemHandle,
+    prefix: string,
+    result: DroppedFile[],
+    root: FileSystemHandle
+) => {
     if (handle.name === '.DS_Store') {
         return;
     }
@@ -115,7 +120,6 @@ const resolveHandleFiles = async (handles: FileSystemHandle[]) => {
 
 // configure drag and drop
 const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) => {
-
     const dragstart = (ev: DragEvent) => {
         ev.preventDefault();
         ev.stopPropagation();
@@ -138,16 +142,14 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
         // keeps one so a save can recognise a file the scene still reads from.
         // The handles must be requested before the handler first yields, after
         // which the items are no longer readable.
-        if (items.every(item => item.getAsFileSystemHandle)) {
-            const handles = await Promise.all(items.map(item => item.getAsFileSystemHandle()));
-            dropHandler(await resolveHandleFiles(handles.filter(handle => handle)), ev.shiftKey);
+        if (items.every((item) => item.getAsFileSystemHandle)) {
+            const handles = await Promise.all(items.map((item) => item.getAsFileSystemHandle()));
+            dropHandler(await resolveHandleFiles(handles.filter((handle) => handle)), ev.shiftKey);
             return;
         }
 
         // Map to entries first
-        const entries = items
-        .map(item => item.webkitGetAsEntry())
-        .filter(v => v);
+        const entries = items.map((item) => item.webkitGetAsEntry()).filter((v) => v);
 
         // resolve directories to files
         const resolvedEntries = await resolveDirectories(entries);

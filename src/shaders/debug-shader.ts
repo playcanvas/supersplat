@@ -1,4 +1,4 @@
-const vertexShader = /* wgsl */`
+const vertexShader = /* wgsl */ `
 attribute vertex_position: vec3f;
 attribute vertex_color: vec4f;
 
@@ -19,7 +19,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 }
 `;
 
-const fragmentShader = /* wgsl */`
+const fragmentShader = /* wgsl */ `
 varying vColor: vec4f;
 varying vZW: vec2f;
 

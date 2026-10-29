@@ -1,5 +1,4 @@
-import type {
-    GraphicsDevice } from 'playcanvas';
+import type { GraphicsDevice } from 'playcanvas';
 import {
     BUFFERUSAGE_COPY_DST,
     BUFFERUSAGE_COPY_SRC,
@@ -42,19 +41,19 @@ type MaskOptions = {
 };
 
 type RectOptions = {
-    rect: { x1: number, y1: number, x2: number, y2: number };
+    rect: { x1: number; y1: number; x2: number; y2: number };
 };
 
 type SphereOptions = {
     // transform mapping the unit sphere (diameter 1) to world space; footprint
     // scales the splat extent tested against the volume (0 = center point)
-    sphere: { transform: Mat4, footprint?: number };
+    sphere: { transform: Mat4; footprint?: number };
 };
 
 type BoxOptions = {
     // transform mapping the unit cube (side 1) to world space; footprint
     // scales the splat extent tested against the volume (0 = center point)
-    box: { transform: Mat4, footprint?: number };
+    box: { transform: Mat4; footprint?: number };
 };
 
 type SphereBrushOptions = {
@@ -63,7 +62,7 @@ type SphereBrushOptions = {
     // the mask limits the selection to splat centers projecting inside the
     // on-screen stroke; otherwise the splat extent is tested against the path
     // (0 = center point) and the mask is ignored.
-    sphereBrush: { points: Float32Array, mask: Texture, footprint?: number };
+    sphereBrush: { points: Float32Array; mask: Texture; footprint?: number };
 };
 
 type IntersectOptions = MaskOptions | RectOptions | SphereOptions | BoxOptions | SphereBrushOptions;
@@ -73,7 +72,7 @@ const identityMat = new Mat4();
 
 const WORKGROUP_SIZE = 256;
 
-const shaderSource = /* wgsl */`
+const shaderSource = /* wgsl */ `
 struct Uniforms {
     sourceWidth: u32,
     numSplats: u32,
@@ -297,7 +296,13 @@ class Intersect {
             new BindStorageBufferFormat('instancePalette', SHADERSTAGE_COMPUTE, true),
             new BindTextureFormat('transformA', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false),
             new BindTextureFormat('transformB', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UNFILTERABLE_FLOAT, false),
-            new BindTextureFormat('transformPalette', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UNFILTERABLE_FLOAT, false),
+            new BindTextureFormat(
+                'transformPalette',
+                SHADERSTAGE_COMPUTE,
+                undefined,
+                SAMPLETYPE_UNFILTERABLE_FLOAT,
+                false
+            ),
             new BindTextureFormat('maskTexture', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_FLOAT, false),
             new BindUniformBufferFormat('uniforms', SHADERSTAGE_COMPUTE),
             new BindStorageBufferFormat('pathPoints', SHADERSTAGE_COMPUTE, true)
@@ -317,7 +322,12 @@ class Intersect {
     // and the sphere brush's mask gate), so a camera that moved while the
     // selection was queued doesn't change what the stroke covered. The
     // world-space sphere/box modes don't project and may omit it.
-    async run(options: IntersectOptions, splat: Splat, bufferPool: BufferPool, frame?: CameraFrame): Promise<Uint8Array> {
+    async run(
+        options: IntersectOptions,
+        splat: Splat,
+        bufferPool: BufferPool,
+        frame?: CameraFrame
+    ): Promise<Uint8Array> {
         const count = splat.instances.count;
         const transformA = splat.resource.getTexture('transformA');
         const byteSize = maskByteSize(count);
@@ -330,7 +340,10 @@ class Intersect {
         const sphereBrush = (options as SphereBrushOptions).sphereBrush;
         const camera = splat.scene.camera.camera;
         const projection = Camera.applyShaderProjectionTransform(
-            frame?.projection ?? camera.projectionMatrix, this.shaderProjection, false, this.device.isWebGPU
+            frame?.projection ?? camera.projectionMatrix,
+            this.shaderProjection,
+            false,
+            this.device.isWebGPU
         );
         this.viewProjection.mul2(projection, frame?.view ?? camera.viewMatrix);
         const mask = (options as MaskOptions).mask ?? sphereBrush?.mask;
@@ -365,7 +378,11 @@ class Intersect {
             }
         }
 
-        const shapeInverse = sphere ? shapeInvMat.copy(sphere.transform).invert() : box ? shapeInvMat.copy(box.transform).invert() : identityMat;
+        const shapeInverse = sphere
+            ? shapeInvMat.copy(sphere.transform).invert()
+            : box
+              ? shapeInvMat.copy(box.transform).invert()
+              : identityMat;
 
         this.compute.setParameter('result', this.output);
         this.compute.setParameter('instanceSource', splat.instances.instanceSource);
@@ -383,7 +400,10 @@ class Intersect {
         this.compute.setParameter('model', splat.entity.getWorldTransform().data);
         this.compute.setParameter('viewProjection', this.viewProjection.data);
         this.compute.setParameter('maskSize', mask ? [mask.width, mask.height] : [0, 0]);
-        this.compute.setParameter('rect', rect ? [rect.x1 * 2 - 1, rect.y1 * 2 - 1, rect.x2 * 2 - 1, rect.y2 * 2 - 1] : [0, 0, 0, 0]);
+        this.compute.setParameter(
+            'rect',
+            rect ? [rect.x1 * 2 - 1, rect.y1 * 2 - 1, rect.x2 * 2 - 1, rect.y2 * 2 - 1] : [0, 0, 0, 0]
+        );
         this.compute.setParameter('pathBoundsMin', pathBoundsMin);
         this.compute.setParameter('pathBoundsMax', pathBoundsMax);
         this.compute.setParameter('shapeInverse', shapeInverse.data);
@@ -394,7 +414,7 @@ class Intersect {
         const data = bufferPool.acquire(byteSize);
         const readback = this.output.read(0, byteSize, data, false);
         (this.device as any).submit();
-        return await readback as Uint8Array;
+        return (await readback) as Uint8Array;
     }
 }
 

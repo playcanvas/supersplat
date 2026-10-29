@@ -8,7 +8,6 @@ import type { Events } from '../events';
 import { i18n } from './localization';
 import logoSvg from './svg/logo.svg';
 
-
 class AboutPopup extends Container {
     constructor(events: Events, args = {}) {
         args = {

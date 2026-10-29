@@ -1,9 +1,4 @@
-import type {
-    GraphicsDevice,
-    Shader,
-    StencilParameters,
-    Vec4
-} from 'playcanvas';
+import type { GraphicsDevice, Shader, StencilParameters, Vec4 } from 'playcanvas';
 import {
     CULLFACE_NONE,
     SEMANTIC_POSITION,

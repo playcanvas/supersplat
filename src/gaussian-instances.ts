@@ -1,10 +1,5 @@
-import type {
-    GraphicsDevice } from 'playcanvas';
-import {
-    BUFFERUSAGE_COPY_DST,
-    BUFFERUSAGE_COPY_SRC,
-    StorageBuffer
-} from 'playcanvas';
+import type { GraphicsDevice } from 'playcanvas';
+import { BUFFERUSAGE_COPY_DST, BUFFERUSAGE_COPY_SRC, StorageBuffer } from 'playcanvas';
 
 import { IndexRanges } from './index-ranges';
 import { State } from './splat-state';
@@ -105,7 +100,7 @@ class GaussianInstances {
         if (initialFlags) {
             this.flags.set(initialFlags.subarray(0, numRows));
             // scene.reset brings these back by appending the unreferenced rows
-            this.remove(IndexRanges.fromPredicate(numRows, i => (this.flags[i] & FILE_STATE_DELETED) !== 0));
+            this.remove(IndexRanges.fromPredicate(numRows, (i) => (this.flags[i] & FILE_STATE_DELETED) !== 0));
         }
 
         const usage = BUFFERUSAGE_COPY_DST | BUFFERUSAGE_COPY_SRC;
@@ -201,15 +196,15 @@ class GaussianInstances {
     }
 
     setBits(ranges: IndexRanges, mask: number): void {
-        this.mutate(ranges, before => before | mask);
+        this.mutate(ranges, (before) => before | mask);
     }
 
     clearBits(ranges: IndexRanges, mask: number): void {
-        this.mutate(ranges, before => before & ~mask);
+        this.mutate(ranges, (before) => before & ~mask);
     }
 
     toggleBits(ranges: IndexRanges, mask: number): void {
-        this.mutate(ranges, before => before ^ mask);
+        this.mutate(ranges, (before) => before ^ mask);
     }
 
     // Remove instances, preserving the order of those that remain, and return

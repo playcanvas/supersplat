@@ -1,6 +1,4 @@
-import type {
-    BoundingBox,
-    GraphicsDevice } from 'playcanvas';
+import type { BoundingBox, GraphicsDevice } from 'playcanvas';
 import {
     BUFFERUSAGE_COPY_DST,
     BUFFERUSAGE_COPY_SRC,
@@ -36,7 +34,7 @@ const visibleMax = new Vec3();
 // one partial, so the readback is a constant size regardless of scene size
 const NUM_THREADS = WORKGROUP_SIZE * 64;
 
-const shaderSource = /* wgsl */`
+const shaderSource = /* wgsl */ `
 struct Uniforms {
     sourceWidth: u32,
     numSplats: u32
@@ -107,7 +105,13 @@ class CalcBound {
             new BindStorageBufferFormat('instanceFlags', SHADERSTAGE_COMPUTE, true),
             new BindStorageBufferFormat('instancePalette', SHADERSTAGE_COMPUTE, true),
             new BindTextureFormat('transformA', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false),
-            new BindTextureFormat('transformPalette', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UNFILTERABLE_FLOAT, false),
+            new BindTextureFormat(
+                'transformPalette',
+                SHADERSTAGE_COMPUTE,
+                undefined,
+                SAMPLETYPE_UNFILTERABLE_FLOAT,
+                false
+            ),
             new BindUniformBufferFormat('uniforms', SHADERSTAGE_COMPUTE)
         ]);
         const shader = new Shader(device, {
@@ -120,7 +124,12 @@ class CalcBound {
         this.compute = new Compute(device, shader, 'CalcBoundCompute');
     }
 
-    async run(splat: Splat, selectionBound: BoundingBox, localBound: BoundingBox, flags?: StorageBuffer): Promise<void> {
+    async run(
+        splat: Splat,
+        selectionBound: BoundingBox,
+        localBound: BoundingBox,
+        flags?: StorageBuffer
+    ): Promise<void> {
         const transformA = splat.resource.getTexture('transformA');
         // 4 vec4 partials per thread, and the thread count is fixed
         const byteSize = NUM_THREADS * 4 * 16;
@@ -141,7 +150,7 @@ class CalcBound {
         this.device.computeDispatch([this.compute], 'calc-bound');
         const readback = this.output.read(0, byteSize, this.data, false);
         (this.device as any).submit();
-        const data = await readback as Float32Array;
+        const data = (await readback) as Float32Array;
 
         selectedMin.set(Infinity, Infinity, Infinity);
         selectedMax.set(-Infinity, -Infinity, -Infinity);

@@ -7,7 +7,4 @@ export { BrowserFileSystem } from './browser-file-system';
 export { pickWriteTarget, WriteTarget } from './pick-target';
 
 // Writer utilities
-export {
-    GZipWriter,
-    ProgressWriter
-} from './writer';
+export { GZipWriter, ProgressWriter } from './writer';

@@ -47,8 +47,12 @@ class SphereShape extends Element {
         material.cull = CULLFACE_FRONT;
         material.blendState = new BlendState(
             true,
-            BLENDEQUATION_ADD, BLENDMODE_SRC_ALPHA, BLENDMODE_ONE_MINUS_SRC_ALPHA,
-            BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE_MINUS_SRC_ALPHA
+            BLENDEQUATION_ADD,
+            BLENDMODE_SRC_ALPHA,
+            BLENDMODE_ONE_MINUS_SRC_ALPHA,
+            BLENDEQUATION_ADD,
+            BLENDMODE_ONE,
+            BLENDMODE_ONE_MINUS_SRC_ALPHA
         );
         material.update();
 
@@ -67,9 +71,7 @@ class SphereShape extends Element {
         this.scene.boundDirty = true;
     }
 
-    destroy() {
-
-    }
+    destroy() {}
 
     serialize(serializer: Serializer): void {
         serializer.packa(this.pivot.getWorldTransform().data);

@@ -53,10 +53,12 @@ class BoundDimensionsOverlay {
         events.on('prerender', () => {
             const selection = events.invoke('selection') as Splat;
 
-            if (!selection ||
+            if (
+                !selection ||
                 !selection.visible ||
                 !events.invoke('camera.bound') ||
-                !events.invoke('camera.boundDimensions')) {
+                !events.invoke('camera.boundDimensions')
+            ) {
                 dimLabels.hide();
                 return;
             }

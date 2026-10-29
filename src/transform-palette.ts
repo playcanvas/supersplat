@@ -1,20 +1,10 @@
-import type {
-    GraphicsDevice } from 'playcanvas';
-import {
-    ADDRESS_CLAMP_TO_EDGE,
-    PIXELFORMAT_RGBA32F,
-    Mat4,
-    Texture
-} from 'playcanvas';
+import type { GraphicsDevice } from 'playcanvas';
+import { ADDRESS_CLAMP_TO_EDGE, PIXELFORMAT_RGBA32F, Mat4, Texture } from 'playcanvas';
 
 import { PALETTE_ENTRIES_PER_ROW } from './shaders/palette-chunk';
 
 // mapping from Mat4 to transposed 3x4 matrix
-const idx = [
-    0, 4, 8, 12,
-    1, 5, 9, 13,
-    2, 6, 10, 14
-];
+const idx = [0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14];
 
 // texture data stores PALETTE_ENTRIES_PER_ROW matrices per row, 3 texels each.
 // the shader-side lookup derives its row stride from the same constant
@@ -102,13 +92,17 @@ class TransformPalette {
             texture.destroy();
         };
 
-        Object.defineProperty(this, 'texture', { get() {
-            return texture;
-        } });
+        Object.defineProperty(this, 'texture', {
+            get() {
+                return texture;
+            }
+        });
 
-        Object.defineProperty(this, 'size', { get() {
-            return nextIdx;
-        } });
+        Object.defineProperty(this, 'size', {
+            get() {
+                return nextIdx;
+            }
+        });
 
         // allocate initial storage
         realloc(width, Math.ceil(initialSize / (width / 3)));

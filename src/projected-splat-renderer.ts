@@ -1,5 +1,4 @@
-import type {
-    GraphicsDevice } from 'playcanvas';
+import type { GraphicsDevice } from 'playcanvas';
 import {
     BLEND_NONE,
     BLEND_PREMULTIPLIED,
@@ -47,7 +46,7 @@ import {
 } from 'playcanvas';
 
 import type { CameraFrame } from './camera';
-import { createGradeTerms, gradeRows, gradeTerms  } from './color-grade';
+import { createGradeTerms, gradeRows, gradeTerms } from './color-grade';
 import type { GradeParams } from './color-grade';
 import { maskByteSize } from './data-processor/histogram-config';
 import type { Scene } from './scene';
@@ -56,7 +55,10 @@ import { projectedSplatDepthReduce } from './shaders/projected-splat-depth-reduc
 import { projectedSplatIndirectArgs } from './shaders/projected-splat-indirect-args-shader';
 import { projectedSplatProjector } from './shaders/projected-splat-projector-shader';
 import { fragmentShader, vertexShader } from './shaders/projected-splat-shader';
-import { fragmentShader as centersFragmentShader, vertexShader as centersVertexShader } from './shaders/splat-centers-shader';
+import {
+    fragmentShader as centersFragmentShader,
+    vertexShader as centersVertexShader
+} from './shaders/splat-centers-shader';
 import type { Splat } from './splat';
 
 const INSTANCE_SIZE = 128;
@@ -132,17 +134,9 @@ const createQuadMesh = (device: GraphicsDevice) => {
     const positions = new Float32Array(INSTANCE_SIZE * 4 * 3);
     const indices = new Uint32Array(INSTANCE_SIZE * 6);
     for (let i = 0; i < INSTANCE_SIZE; ++i) {
-        positions.set([
-            -1, -1, i,
-            1, -1, i,
-            1, 1, i,
-            -1, 1, i
-        ], i * 12);
+        positions.set([-1, -1, i, 1, -1, i, 1, 1, i, -1, 1, i], i * 12);
         const vertex = i * 4;
-        indices.set([
-            vertex, vertex + 1, vertex + 2,
-            vertex, vertex + 2, vertex + 3
-        ], i * 6);
+        indices.set([vertex, vertex + 1, vertex + 2, vertex, vertex + 2, vertex + 3], i * 6);
     }
 
     const mesh = new Mesh(device);
@@ -351,7 +345,7 @@ class ProjectedSplatRenderer {
     }
 
     remove(splat: Splat) {
-        const index = this.placements.findIndex(placement => placement.splat === splat);
+        const index = this.placements.findIndex((placement) => placement.splat === splat);
         if (index !== -1) {
             this.placements[index].compute?.destroy();
             this.placements.splice(index, 1);
@@ -362,7 +356,7 @@ class ProjectedSplatRenderer {
     // pick up a change in a splat's live instance count. called after every edit,
     // so it must stay a no-op when nothing moved
     replace(splat: Splat) {
-        const placement = this.placements.find(item => item.splat === splat);
+        const placement = this.placements.find((item) => item.splat === splat);
         if (placement && placement.count !== splat.instances.count) {
             placement.count = splat.instances.count;
             this.layoutDirty = true;
@@ -377,7 +371,7 @@ class ProjectedSplatRenderer {
     // args, so the pick draw no longer leans on the previous frame's.
     // The caller sets the engine camera to the gesture's frame (Camera.withFrame);
     // size overrides the target size the projection is laid out for.
-    renderSortedForPick(size?: { width: number, height: number }) {
+    renderSortedForPick(size?: { width: number; height: number }) {
         this.render(true, size);
     }
 
@@ -387,7 +381,7 @@ class ProjectedSplatRenderer {
         if (this.drawSlot >= 0) {
             this.meshInstance.setIndirect(null, this.drawSlot, 1);
         }
-        const placement = this.placements.find(item => item.splat === splat);
+        const placement = this.placements.find((item) => item.splat === splat);
         this.material.setParameter('pickBase', placement?.entryBase ?? 0);
         this.material.setParameter('pickCount', placement?.count ?? 0);
         this.material.setParameter('pickOp', pickOp);
@@ -444,18 +438,32 @@ class ProjectedSplatRenderer {
             new BindTextureFormat('transformA', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false),
             new BindTextureFormat('transformB', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_FLOAT, false),
             new BindTextureFormat('splatColor', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_FLOAT, false),
-            new BindTextureFormat('transformPalette', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UNFILTERABLE_FLOAT, false),
+            new BindTextureFormat(
+                'transformPalette',
+                SHADERSTAGE_COMPUTE,
+                undefined,
+                SAMPLETYPE_UNFILTERABLE_FLOAT,
+                false
+            ),
             new BindTextureFormat('colorPalette', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UNFILTERABLE_FLOAT, false)
         ];
         if (bands > 0) {
-            textureFormats.push(new BindTextureFormat('splatSH_1to3', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false));
+            textureFormats.push(
+                new BindTextureFormat('splatSH_1to3', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false)
+            );
         }
         if (bands > 1) {
-            textureFormats.push(new BindTextureFormat('splatSH_4to7', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false));
-            textureFormats.push(new BindTextureFormat('splatSH_8to11', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false));
+            textureFormats.push(
+                new BindTextureFormat('splatSH_4to7', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false)
+            );
+            textureFormats.push(
+                new BindTextureFormat('splatSH_8to11', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false)
+            );
         }
         if (bands > 2) {
-            textureFormats.push(new BindTextureFormat('splatSH_12to15', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false));
+            textureFormats.push(
+                new BindTextureFormat('splatSH_12to15', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false)
+            );
         }
 
         const uniformBufferFormat = new UniformBufferFormat(this.device, [
@@ -529,7 +537,11 @@ class ProjectedSplatRenderer {
     private getCompute(placement: Placement, bands: number) {
         if (!placement.compute || placement.bands !== bands) {
             placement.compute?.destroy();
-            placement.compute = new Compute(this.device, this.getVariant(bands).shader, `ProjectedSplatProjector-${bands}`);
+            placement.compute = new Compute(
+                this.device,
+                this.getVariant(bands).shader,
+                `ProjectedSplatProjector-${bands}`
+            );
             placement.bands = bands;
         }
         return placement.compute;
@@ -578,8 +590,10 @@ class ProjectedSplatRenderer {
         const ratio = gpuMs / this.motionBudgetMs;
         const factor = Math.min(1.2, Math.max(0.85, 1 + 0.5 * (ratio - 1)));
         if (ratio > 1.05) {
-            this.motionContribution = Math.min(MOTION_CONTRIBUTION_MAX,
-                Math.max(MOTION_CONTRIBUTION_STEP, this.motionContribution * factor));
+            this.motionContribution = Math.min(
+                MOTION_CONTRIBUTION_MAX,
+                Math.max(MOTION_CONTRIBUTION_STEP, this.motionContribution * factor)
+            );
         } else if (ratio < 0.9) {
             this.motionContribution *= factor;
             if (this.motionContribution < MOTION_CONTRIBUTION_STEP) {
@@ -593,8 +607,12 @@ class ProjectedSplatRenderer {
         if (!this.depthReduceCompute) {
             const device = this.device;
             // Pin 32 lanes so each subgroup owns exactly one 8x8 block.
-            this.depthReduceSubgroups = device.supportsSubgroups && device.supportsSubgroupSizeControl &&
-                device.supportsSubgroupId && device.minSubgroupSize <= 32 && device.maxSubgroupSize >= 32;
+            this.depthReduceSubgroups =
+                device.supportsSubgroups &&
+                device.supportsSubgroupSizeControl &&
+                device.supportsSubgroupId &&
+                device.minSubgroupSize <= 32 &&
+                device.maxSubgroupSize >= 32;
             const uniformBufferFormat = new UniformBufferFormat(this.device, [
                 new UniformFormat('width', UNIFORMTYPE_UINT),
                 new UniformFormat('height', UNIFORMTYPE_UINT),
@@ -650,7 +668,10 @@ class ProjectedSplatRenderer {
         compute.setParameter('height', depthBuffer.height);
         compute.setParameter('blocksX', this.occlusionBlocks.x);
         compute.setParameter('pad0', 0);
-        compute.setupDispatch(Math.ceil(this.occlusionBlocks.x / (this.depthReduceSubgroups ? 4 : 1)), this.occlusionBlocks.y);
+        compute.setupDispatch(
+            Math.ceil(this.occlusionBlocks.x / (this.depthReduceSubgroups ? 4 : 1)),
+            this.occlusionBlocks.y
+        );
         this.device.computeDispatch([compute], 'ProjectedSplatDepthReduce');
         this.prevViewProjection.copy(this.viewProjection);
         this.prevView.copy(this.frameView);
@@ -701,11 +722,11 @@ class ProjectedSplatRenderer {
     // layers, like the centers intersect, but by footprint instead of center.
     async footprintIntersect(
         splat: Splat,
-        region: { y0: number, y1: number, intervals: Uint32Array },
+        region: { y0: number; y1: number; intervals: Uint32Array },
         footprint: number,
         frame: CameraFrame
     ): Promise<Uint8Array | null> {
-        const placement = this.placements.find(item => item.splat === splat);
+        const placement = this.placements.find((item) => item.splat === splat);
         if (!placement) {
             return null;
         }
@@ -719,14 +740,16 @@ class ProjectedSplatRenderer {
         if (!this.footprintOutput || this.footprintOutput.byteSize !== byteSize) {
             this.footprintOutput?.destroy();
             this.footprintOutput = new StorageBuffer(
-                this.device, byteSize, BUFFERUSAGE_COPY_DST | BUFFERUSAGE_COPY_SRC);
+                this.device,
+                byteSize,
+                BUFFERUSAGE_COPY_DST | BUFFERUSAGE_COPY_SRC
+            );
         }
         this.footprintOutput.clear();
 
         if (!this.footprintIntervals || this.footprintIntervals.byteSize < region.intervals.byteLength) {
             this.footprintIntervals?.destroy();
-            this.footprintIntervals = new StorageBuffer(
-                this.device, region.intervals.byteLength, BUFFERUSAGE_COPY_DST);
+            this.footprintIntervals = new StorageBuffer(this.device, region.intervals.byteLength, BUFFERUSAGE_COPY_DST);
         }
         this.footprintIntervals.write(0, region.intervals, 0, region.intervals.length);
 
@@ -751,7 +774,7 @@ class ProjectedSplatRenderer {
 
         const readback = this.footprintOutput.read(0, byteSize, null, false);
         (this.device as any).submit();
-        return await readback as Uint8Array;
+        return (await readback) as Uint8Array;
     }
 
     private rebuildLayout() {
@@ -798,11 +821,7 @@ class ProjectedSplatRenderer {
                     mipmaps: false,
                     storage: true
                 });
-                this.sortKeys = new StorageBuffer(
-                    this.device,
-                    count * 4,
-                    BUFFERUSAGE_COPY_SRC | BUFFERUSAGE_COPY_DST
-                );
+                this.sortKeys = new StorageBuffer(this.device, count * 4, BUFFERUSAGE_COPY_SRC | BUFFERUSAGE_COPY_DST);
                 this.compactEntries = new StorageBuffer(
                     this.device,
                     count * 4,
@@ -823,7 +842,7 @@ class ProjectedSplatRenderer {
         this.layoutDirty = false;
     }
 
-    render(forPick = false, size?: { width: number, height: number }) {
+    render(forPick = false, size?: { width: number; height: number }) {
         if (this.layoutDirty) {
             this.rebuildLayout();
         }
@@ -844,7 +863,11 @@ class ProjectedSplatRenderer {
         // splat depth must be produced with the same transform to test
         // correctly against the depth they write (grid, tool overlays)
         const proj = Camera.applyShaderProjectionTransform(
-            cameraComponent.projectionMatrix, this.shaderProjection, false, this.device.isWebGPU);
+            cameraComponent.projectionMatrix,
+            this.shaderProjection,
+            false,
+            this.device.isWebGPU
+        );
         this.viewProjection.mul2(proj, view);
         const cameraPosition = camera.mainCamera.getPosition();
         const projection = cameraComponent.projectionMatrix.data;
@@ -859,7 +882,7 @@ class ProjectedSplatRenderer {
         const lockedColor = events.invoke('lockedClr');
         const viewBands = events.invoke('view.bands') as number;
         // Size culling is visual only: selection and depth queries need every footprint.
-        const minPixelSize = forPick ? 0 : (events.invoke('view.minPixelSize') as number) ?? 0;
+        const minPixelSize = forPick ? 0 : ((events.invoke('view.minPixelSize') as number) ?? 0);
 
         // the centres overlay draws the selected layer's centres from this
         // frame's projection: all of them in the edit view with centres on,
@@ -867,18 +890,22 @@ class ProjectedSplatRenderer {
         const editView = events.invoke('view.editView');
         const centerSize = events.invoke('view.centerSize') as number;
         const showAllCenters = events.invoke('view.centers') && editView;
-        const showSelectedCenters = events.invoke('view.selectionCenters') &&
-            (selectedSplat?.instances.numSelected ?? 0) > 0;
+        const showSelectedCenters =
+            events.invoke('view.selectionCenters') && (selectedSplat?.instances.numSelected ?? 0) > 0;
         // centres draw opaque over the overdraw view's fragment counts, so a
         // selection would blank the heat map under its dots: skip them there
-        const showCenters = !!selectedSplat && camera.renderOverlays && centerSize > 0 &&
-            !this.scene.overdrawRender && (showAllCenters || showSelectedCenters);
+        const showCenters =
+            !!selectedSplat &&
+            camera.renderOverlays &&
+            centerSize > 0 &&
+            !this.scene.overdrawRender &&
+            (showAllCenters || showSelectedCenters);
         // rings likewise: every ring in the edit view with rings on, otherwise
         // the selection's alone. Decided here because the projector exempts
         // ringed splats from the contribution cull
         const showAllRings = events.invoke('view.rings') && editView;
-        const showSelectedRings = events.invoke('view.selectionRings') &&
-            (selectedSplat?.instances.numSelected ?? 0) > 0;
+        const showSelectedRings =
+            events.invoke('view.selectionRings') && (selectedSplat?.instances.numSelected ?? 0) > 0;
         const showRings = showAllRings || showSelectedRings;
 
         // the colour panel's uncommitted grade, previewed on the layer it targets.
@@ -894,7 +921,10 @@ class ProjectedSplatRenderer {
         // blended when the scene settles (driven by Scene.onUpdate)
         this.setStochastic(this.scene.movingRender && !forPick);
         this.setOverdraw(this.scene.overdrawRender);
-        this.material.setParameter('warpStrength', this.scene.warpedRender ? this.scene.stochastic.warpStrength - 1 : 0);
+        this.material.setParameter(
+            'warpStrength',
+            this.scene.warpedRender ? this.scene.stochastic.warpStrength - 1 : 0
+        );
 
         // the occlusion cull reads the previous stochastic frame's map, which
         // a sorted frame or a resize in between has invalidated. An edit to the
@@ -905,8 +935,12 @@ class ProjectedSplatRenderer {
         // the live size: a pick-size projection must not reallocate the map
         this.updateDepthMap(this.scene.targetSize.width, this.scene.targetSize.height);
         const isOrtho = cameraComponent.projection === 1;
-        const occlusion = this.stochastic && this.occlusionCull && this.prevValid &&
-            !this.scene.editedRender && this.prevClipZ[2] === (isOrtho ? 1 : 0);
+        const occlusion =
+            this.stochastic &&
+            this.occlusionCull &&
+            this.prevValid &&
+            !this.scene.editedRender &&
+            this.prevClipZ[2] === (isOrtho ? 1 : 0);
 
         // radial sorting orders by distance to the camera instead of depth along
         // its forward axis. Orthographic rays are parallel, so depth is the only
@@ -916,9 +950,9 @@ class ProjectedSplatRenderer {
         // bound's centre plus its radius
         const radialSort = !isOrtho && events.invoke('view.sortMode') === 'radial';
         const bound = this.scene.bound;
-        const sortFar = radialSort ?
-            cameraPosition.distance(bound.center) + bound.halfExtents.length() :
-            cameraComponent.farClip;
+        const sortFar = radialSort
+            ? cameraPosition.distance(bound.center) + bound.halfExtents.length()
+            : cameraComponent.farClip;
 
         let ringsBase = 0;
         let ringsCount = 0;
@@ -937,8 +971,7 @@ class ProjectedSplatRenderer {
             const selectionEnabled = selectedSplat === splat && camera.renderOverlays;
             // only the layer the panel is editing previews, and an empty selection
             // means the whole layer - the rule SplatsColorOp applies
-            const previewMode = (pending && selectedSplat === splat) ?
-                (instances.numSelected === 0 ? 2 : 1) : 0;
+            const previewMode = pending && selectedSplat === splat ? (instances.numSelected === 0 ? 2 : 1) : 0;
 
             if (selectionEnabled) {
                 ringsBase = placement.entryBase;
@@ -1067,8 +1100,15 @@ class ProjectedSplatRenderer {
             // splatCounter, and compactEntries seeds the payload so the sorted
             // output is cache entry indices, exactly as before compaction
             const sortedIndices = this.sorter.sortIndirect(
-                this.sortKeys, this.capacity, sortBits, sortSlotBase,
-                this.splatCounter, this.compactEntries, true, true);
+                this.sortKeys,
+                this.capacity,
+                sortBits,
+                sortSlotBase,
+                this.splatCounter,
+                this.compactEntries,
+                true,
+                true
+            );
             this.material.setParameter('sortedIndices', sortedIndices);
         }
         this.material.setParameter('cacheA', this.cacheA);
@@ -1094,18 +1134,23 @@ class ProjectedSplatRenderer {
         // shader applies them inside the selection entry range (ringsBase /
         // ringsCount), which stands in for the projector's per-placement
         // selectionEnabled
-        this.material.setParameter('selectedColor', events.invoke('view.selectionColor') && !pending ? [
-            selectedColor.r,
-            selectedColor.g,
-            selectedColor.b,
-            events.invoke('view.splatsSelectionBlend') * (selectedSplat?.selectionAlpha ?? 1)
-        ] : [0, 0, 0, 0]);
-        this.material.setParameter('unselectedColor', !pending ? [
-            unselectedColor.r,
-            unselectedColor.g,
-            unselectedColor.b,
-            events.invoke('view.splatsColorBlend')
-        ] : [0, 0, 0, 0]);
+        this.material.setParameter(
+            'selectedColor',
+            events.invoke('view.selectionColor') && !pending
+                ? [
+                      selectedColor.r,
+                      selectedColor.g,
+                      selectedColor.b,
+                      events.invoke('view.splatsSelectionBlend') * (selectedSplat?.selectionAlpha ?? 1)
+                  ]
+                : [0, 0, 0, 0]
+        );
+        this.material.setParameter(
+            'unselectedColor',
+            !pending
+                ? [unselectedColor.r, unselectedColor.g, unselectedColor.b, events.invoke('view.splatsColorBlend')]
+                : [0, 0, 0, 0]
+        );
         // the ring blends start from the splat's own colour too, so they stay
         // independent of the gaussian tints
         this.material.setParameter('ringColor', [
@@ -1118,11 +1163,18 @@ class ProjectedSplatRenderer {
             selectedColor.r,
             selectedColor.g,
             selectedColor.b,
-            events.invoke('view.selectionRings') ? events.invoke('view.ringsSelectionBlend') * (selectedSplat?.selectionAlpha ?? 1) : 0
+            events.invoke('view.selectionRings')
+                ? events.invoke('view.ringsSelectionBlend') * (selectedSplat?.selectionAlpha ?? 1)
+                : 0
         ]);
         this.material.setParameter('ringsBase', ringsBase);
         this.material.setParameter('ringsCount', ringsCount);
-        this.material.setParameter('cameraParams', [1 / cameraComponent.farClip, cameraComponent.farClip, cameraComponent.nearClip, cameraComponent.projection]);
+        this.material.setParameter('cameraParams', [
+            1 / cameraComponent.farClip,
+            cameraComponent.farClip,
+            cameraComponent.nearClip,
+            cameraComponent.projection
+        ]);
         // clip z is affine in view depth for perspective/ortho projections:
         // z = -m22 * depth + m23, taken from the WebGPU-transformed projection
         const shaderProj = this.shaderProjection.data;
@@ -1132,8 +1184,12 @@ class ProjectedSplatRenderer {
         this.frameStochastic = this.stochastic;
         this.frameWarped = this.stochastic && this.scene.warpedRender;
         this.frameView.copy(view);
-        this.frameClipZ = [clipZParams[0], clipZParams[1], clipZParams[2],
-            this.frameWarped ? this.scene.stochastic.warpStrength - 1 : 0];
+        this.frameClipZ = [
+            clipZParams[0],
+            clipZParams[1],
+            clipZParams[2],
+            this.frameWarped ? this.scene.stochastic.warpStrength - 1 : 0
+        ];
         this.frameFocal.set(focal[0], focal[1]);
 
         // the centres overlay reads this frame's projection through the same
@@ -1159,7 +1215,12 @@ class ProjectedSplatRenderer {
             centers.setParameter('colorBlend', events.invoke('view.centersColorBlend'));
             centers.setParameter('selectionBlend', events.invoke('view.centersSelectionBlend'));
             centers.setParameter('selectedClr', [selectedColor.r, selectedColor.g, selectedColor.b, selectedColor.a]);
-            centers.setParameter('unselectedClr', [unselectedColor.r, unselectedColor.g, unselectedColor.b, unselectedColor.a]);
+            centers.setParameter('unselectedClr', [
+                unselectedColor.r,
+                unselectedColor.g,
+                unselectedColor.b,
+                unselectedColor.a
+            ]);
         }
         this.submissionCpuMs = performance.now() - start;
     }
@@ -1169,10 +1230,16 @@ class ProjectedSplatRenderer {
         // 4 bytes of sort key plus 4 of compacted entry index, per slot
         const keyBytes = this.capacity * 8;
         const estimatedRadixBytes = this.capacity * 12;
-        const resources = new Set(this.placements.map(placement => placement.splat.resource));
-        const splats = new Set(this.placements.map(placement => placement.splat));
+        const resources = new Set(this.placements.map((placement) => placement.splat.resource));
+        const splats = new Set(this.placements.map((placement) => placement.splat));
         const sourceBytes = Array.from(resources).reduce((sum, resource) => {
-            return sum + Array.from(resource.streams.textures.values()).reduce((textureSum, texture) => textureSum + texture.gpuSize, 0);
+            return (
+                sum +
+                Array.from(resource.streams.textures.values()).reduce(
+                    (textureSum, texture) => textureSum + texture.gpuSize,
+                    0
+                )
+            );
         }, 0);
         // the instance list (source row + flags + palette indices) is the whole
         // of the per-gaussian editable data now

@@ -43,7 +43,7 @@ const registerSelectionEvents = (events: Events, scene: Scene) => {
             // visible or setSelection ignores it and the selection is left
             // pointing at a splat that is no longer in the scene
             const splats = scene.getElementsByType(ElementType.splat) as Splat[];
-            setSelection(splats.find(v => v.visible) ?? null);
+            setSelection(splats.find((v) => v.visible) ?? null);
         }
     });
 

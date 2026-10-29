@@ -107,7 +107,7 @@ class SettingsPanel extends Container {
         // their native form so they're recognisable regardless of current UI lang
         i18n.bindOptions(languageSelection, () => [
             { v: 'auto', t: i18n.t('panel.settings.language.auto') },
-            ...i18n.languages.map(l => ({ v: l.code, t: l.name }))
+            ...i18n.languages.map((l) => ({ v: l.code, t: l.name }))
         ]);
 
         // switch language live (no reload). a stored choice persists across

@@ -25,7 +25,13 @@ class AssetLoader {
         return asset;
     }
 
-    async load(filename: string, fileSystem: ReadFileSystem, animationFrame?: boolean, skipReorder?: boolean, options?: { lod?: number }) {
+    async load(
+        filename: string,
+        fileSystem: ReadFileSystem,
+        animationFrame?: boolean,
+        skipReorder?: boolean,
+        options?: { lod?: number }
+    ) {
         const loaded = await this.loadAsset(filename, fileSystem, animationFrame, skipReorder, options);
         return loaded && new Splat(loaded.asset, loaded.rotation);
     }
@@ -33,7 +39,13 @@ class AssetLoader {
     // Load the static tier only, without a layer over it. A .ssproj can have
     // several layers sharing one resource, so the document loader creates the
     // asset once here and then builds each layer's own instance list.
-    async loadAsset(filename: string, fileSystem: ReadFileSystem, animationFrame?: boolean, skipReorder?: boolean, options?: { lod?: number }) {
+    async loadAsset(
+        filename: string,
+        fileSystem: ReadFileSystem,
+        animationFrame?: boolean,
+        skipReorder?: boolean,
+        options?: { lod?: number }
+    ) {
         // Animation frames load silently; everything else shows the progress
         // dialog: bytes read while the file is streamed in (when the file
         // system can count them), then the synchronous sort and GPU upload
@@ -51,9 +63,12 @@ class AssetLoader {
                 // per file: multi-file formats read one file after another
                 tracked.onProgress = (loaded, total, name) => {
                     const file = name.split('/').pop();
-                    this.events.fire('progressUpdate', total ?
-                        { text: `Reading ${file}`, progress: Math.min(100, 100 * loaded / total) } :
-                        { text: `Reading ${file} (${(loaded / 1048576).toFixed(0)} MB)`, progress: 0 });
+                    this.events.fire(
+                        'progressUpdate',
+                        total
+                            ? { text: `Reading ${file}`, progress: Math.min(100, (100 * loaded) / total) }
+                            : { text: `Reading ${file} (${(loaded / 1048576).toFixed(0)} MB)`, progress: 0 }
+                    );
                 };
             }
         }
@@ -90,20 +105,33 @@ class AssetLoader {
             };
 
             // Skip reordering for animation frames (speed) or when explicitly requested (already ordered)
-            const chooseLod = options ? (counts: readonly number[]) => {
-                const lod = options.lod ?? defaultLodIndex(counts);
-                if (!Number.isInteger(lod) || lod < 0 || lod >= counts.length) throw new Error('Requested LOD is unavailable');
-                return Promise.resolve(lod);
-            } : pickLod;
-            const result = await loadSplatSource(filename, fileSystem, skipReorder || animationFrame, animationFrame ? undefined : chooseLod);
+            const chooseLod = options
+                ? (counts: readonly number[]) => {
+                      const lod = options.lod ?? defaultLodIndex(counts);
+                      if (!Number.isInteger(lod) || lod < 0 || lod >= counts.length)
+                          throw new Error('Requested LOD is unavailable');
+                      return Promise.resolve(lod);
+                  }
+                : pickLod;
+            const result = await loadSplatSource(
+                filename,
+                fileSystem,
+                skipReorder || animationFrame,
+                animationFrame ? undefined : chooseLod
+            );
             if (!result) {
                 // user cancelled LOD selection
                 return null;
             }
             const { source, transform, reorder } = result;
-            const onPhase = showProgress ? (phase: 'sort' | 'upload') => {
-                this.events.fire('progressUpdate', { text: phase === 'sort' ? 'Sorting' : 'Uploading', progress: 100 });
-            } : undefined;
+            const onPhase = showProgress
+                ? (phase: 'sort' | 'upload') => {
+                      this.events.fire('progressUpdate', {
+                          text: phase === 'sort' ? 'Sorting' : 'Uploading',
+                          progress: 100
+                      });
+                  }
+                : undefined;
             const resource = await EditorSplatResource.create(this.app.graphicsDevice, source, reorder, onPhase);
             const asset = this.createGSplatAsset(resource, filename);
 

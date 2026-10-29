@@ -1,7 +1,6 @@
 import { Button, Container, Element, Label, VectorInput } from '@playcanvas/pcui';
 import { Vec3 } from 'playcanvas';
 
-
 import { BoxShape } from '../box-shape';
 import { ShapeTransformOp } from '../edit-ops';
 import type { Events } from '../events';
@@ -27,7 +26,7 @@ class BoxSelection {
     activate: () => void;
     deactivate: () => void;
     setTransformMode: (mode: Exclude<ShapeGizmoMode, 'none'>) => boolean;
-    getFocus: () => { position: Vec3, radius: number } | null;
+    getFocus: () => { position: Vec3; radius: number } | null;
 
     active = false;
 
@@ -267,7 +266,7 @@ class BoxSelection {
             }
         });
 
-        events.on('camera.focalPointPicked', (details: { splat: Splat, position: Vec3 }) => {
+        events.on('camera.focalPointPicked', (details: { splat: Splat; position: Vec3 }) => {
             if (this.active) {
                 recordOp(() => {
                     box.pivot.setPosition(details.position);

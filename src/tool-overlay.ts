@@ -1,5 +1,4 @@
-import type {
-    GraphicsDevice } from 'playcanvas';
+import type { GraphicsDevice } from 'playcanvas';
 import {
     BLENDEQUATION_ADD,
     BLENDMODE_ONE,
@@ -196,8 +195,12 @@ class ToolOverlay extends Element {
         const device = this.scene.graphicsDevice;
         const blend = new BlendState(
             true,
-            BLENDEQUATION_ADD, BLENDMODE_SRC_ALPHA, BLENDMODE_ONE_MINUS_SRC_ALPHA,
-            BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE_MINUS_SRC_ALPHA
+            BLENDEQUATION_ADD,
+            BLENDMODE_SRC_ALPHA,
+            BLENDMODE_ONE_MINUS_SRC_ALPHA,
+            BLENDEQUATION_ADD,
+            BLENDMODE_ONE,
+            BLENDMODE_ONE_MINUS_SRC_ALPHA
         );
 
         this.texture = createDotTexture(device);
@@ -304,7 +307,12 @@ class ToolOverlay extends Element {
         const { writer } = this;
         writer.reset();
         this.provider(writer);
-        serializer.pack(this.scene.camera.renderOverlays, writer.dots.length, writer.segments.length, writer.fills.length);
+        serializer.pack(
+            this.scene.camera.renderOverlays,
+            writer.dots.length,
+            writer.segments.length,
+            writer.fills.length
+        );
         serializer.packa(writer.dots);
         serializer.packa(writer.segments);
         serializer.packa(writer.fills);
@@ -414,14 +422,19 @@ class ToolOverlay extends Element {
             const ribbon = (out: number[], width: number) => {
                 const wa = worldSize(width, depthA) * 0.5;
                 const wb = worldSize(width, depthB) * 0.5;
-                const ax0 = va.x - perp.x * wa, ay0 = va.y - perp.y * wa, az0 = va.z - perp.z * wa;
-                const ax1 = va.x + perp.x * wa, ay1 = va.y + perp.y * wa, az1 = va.z + perp.z * wa;
-                const bx0 = vb.x - perp.x * wb, by0 = vb.y - perp.y * wb, bz0 = vb.z - perp.z * wb;
-                const bx1 = vb.x + perp.x * wb, by1 = vb.y + perp.y * wb, bz1 = vb.z + perp.z * wb;
-                out.push(
-                    ax0, ay0, az0, bx0, by0, bz0, bx1, by1, bz1,
-                    ax0, ay0, az0, bx1, by1, bz1, ax1, ay1, az1
-                );
+                const ax0 = va.x - perp.x * wa,
+                    ay0 = va.y - perp.y * wa,
+                    az0 = va.z - perp.z * wa;
+                const ax1 = va.x + perp.x * wa,
+                    ay1 = va.y + perp.y * wa,
+                    az1 = va.z + perp.z * wa;
+                const bx0 = vb.x - perp.x * wb,
+                    by0 = vb.y - perp.y * wb,
+                    bz0 = vb.z - perp.z * wb;
+                const bx1 = vb.x + perp.x * wb,
+                    by1 = vb.y + perp.y * wb,
+                    bz1 = vb.z + perp.z * wb;
+                out.push(ax0, ay0, az0, bx0, by0, bz0, bx1, by1, bz1, ax0, ay0, az0, bx1, by1, bz1, ax1, ay1, az1);
             };
 
             ribbon(linePositions, LINE_WIDTH);
@@ -439,12 +452,24 @@ class ToolOverlay extends Element {
         for (let i = 0; i < writer.fills.length; i += 9) {
             const fill = writer.fills;
             fillPositions.push(
-                fill[i], fill[i + 1], fill[i + 2],
-                fill[i + 3], fill[i + 4], fill[i + 5],
-                fill[i + 6], fill[i + 7], fill[i + 8],
-                fill[i], fill[i + 1], fill[i + 2],
-                fill[i + 6], fill[i + 7], fill[i + 8],
-                fill[i + 3], fill[i + 4], fill[i + 5]
+                fill[i],
+                fill[i + 1],
+                fill[i + 2],
+                fill[i + 3],
+                fill[i + 4],
+                fill[i + 5],
+                fill[i + 6],
+                fill[i + 7],
+                fill[i + 8],
+                fill[i],
+                fill[i + 1],
+                fill[i + 2],
+                fill[i + 6],
+                fill[i + 7],
+                fill[i + 8],
+                fill[i + 3],
+                fill[i + 4],
+                fill[i + 5]
             );
         }
         updateMesh(this.fillMesh, fillPositions);

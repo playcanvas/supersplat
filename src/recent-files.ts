@@ -26,7 +26,7 @@ const wrap = (IDBRequest: IDBRequest): Promise<any> => {
 
 // Each store is its own single-store database, so adding a store never
 // upgrades an existing database (an older tab holding it open would block that).
-class RecentStore<T extends { name: string, date: number }> {
+class RecentStore<T extends { name: string; date: number }> {
     private db: Promise<IDBDatabase>;
     private storeName: string;
 
@@ -59,7 +59,7 @@ class RecentStore<T extends { name: string, date: number }> {
 
     async get(): Promise<T[]> {
         const store = await this.objectStore('readonly');
-        const result = await wrap(store.getAll()) as T[];
+        const result = (await wrap(store.getAll())) as T[];
 
         // Sort by date descending
         result.sort((a, b) => b.date - a.date);

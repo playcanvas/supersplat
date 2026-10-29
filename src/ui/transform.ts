@@ -8,7 +8,6 @@ import type { ClipboardMenu, ClipboardSource } from './clipboard-menu';
 import { numberField, vectorField } from './clipboard-menu';
 import { PanelSection } from './panel-section';
 
-
 const v = new Vec3();
 
 class Transform extends PanelSection {

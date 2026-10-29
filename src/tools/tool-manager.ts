@@ -11,7 +11,7 @@ interface Tool {
     setTransformMode?: (mode: 'translate' | 'rotate' | 'scale') => boolean;
     // optional: world-space focus target for the frame ('f') shortcut. return
     // null to fall back to framing the selection.
-    getFocus?: () => { position: Vec3, radius: number } | null;
+    getFocus?: () => { position: Vec3; radius: number } | null;
 }
 
 class ToolManager {

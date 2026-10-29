@@ -56,7 +56,7 @@ class SplatsTransformHandler implements TransformHandler {
             }
         });
 
-        events.on('camera.focalPointPicked', (details: { splat: Splat, position: Vec3 }) => {
+        events.on('camera.focalPointPicked', (details: { splat: Splat; position: Vec3 }) => {
             if (this.splat && ['move', 'rotate', 'scale'].includes(this.events.invoke('tool.active'))) {
                 const pivot = events.invoke('pivot') as Pivot;
                 const oldt = pivot.transform.clone();
@@ -138,8 +138,8 @@ class SplatsTransformHandler implements TransformHandler {
     update(transform: Transform) {
         // calculate updated new pivot -> world transform
         mat.setTRS(transform.position, transform.rotation, transform.scale);
-        mat.mul2(mat, this.localToPivot);       // local -> world
-        mat.mul2(this.worldToLocal, mat);       // world -> local
+        mat.mul2(mat, this.localToPivot); // local -> world
+        mat.mul2(this.worldToLocal, mat); // world -> local
 
         this.transform.copy(mat);
 

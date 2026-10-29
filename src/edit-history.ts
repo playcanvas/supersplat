@@ -10,7 +10,7 @@ import type { Splat } from './splat';
 const opReferencesSplat = (op: EditOp, splat: Splat): boolean => {
     // Handle MultiOp by checking nested operations
     if (op instanceof MultiOp) {
-        return op.ops.some(nestedOp => opReferencesSplat(nestedOp, splat));
+        return op.ops.some((nestedOp) => opReferencesSplat(nestedOp, splat));
     }
     // Check for splat property on the operation
     return (op as any).splat === splat;

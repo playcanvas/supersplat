@@ -14,9 +14,14 @@ import type { Tooltips } from './tooltips';
 // previous per-event filtering, but consulted only inside hash().
 const isCameraDependentMode = (mode: number) => mode === 4 /* camera-depth */ || isFinalColorMode(mode);
 const isPositionDependentMode = (mode: number) => {
-    return mode === 0 || mode === 1 || mode === 2 || // x / y / z
-        mode === 3 || mode === 4 ||                  // distance / camera-depth
-        isFinalColorMode(mode);
+    return (
+        mode === 0 ||
+        mode === 1 ||
+        mode === 2 || // x / y / z
+        mode === 3 ||
+        mode === 4 || // distance / camera-depth
+        isFinalColorMode(mode)
+    );
 };
 // ColorGrade-dependent. f_dc_* (raw DC, modes 66..68) bypasses ColorGrade.
 const isColorGradeDependentMode = (mode: number) => mode === 8 /* opacity */ || isFinalColorMode(mode);
@@ -41,13 +46,15 @@ const hashInputs = (i: HistogramInputs): string => {
     const camMatters = i.onScreenOnly || isCameraDependentMode(m);
     const posMatters = isPositionDependentMode(m);
     const cgMatters = isColorGradeDependentMode(m);
-    return `${i.splatId}|${m}|${i.onScreenOnly ? 1 : 0}|${i.logBins ? 1 : 0}|` +
+    return (
+        `${i.splatId}|${m}|${i.onScreenOnly ? 1 : 0}|${i.logBins ? 1 : 0}|` +
         `${camMatters ? i.cameraVersion : 0}|${i.stateVersion}|` +
-        `${cgMatters ? i.colorGradeVersion : 0}|${posMatters ? i.positionsVersion : 0}`;
+        `${cgMatters ? i.colorGradeVersion : 0}|${posMatters ? i.positionsVersion : 0}`
+    );
 };
 
 class DataPanel extends Container {
-    constructor(events: Events, tooltips: Tooltips, args = { }) {
+    constructor(events: Events, tooltips: Tooltips, args = {}) {
         args = {
             ...args,
             id: 'data-panel',
@@ -240,16 +247,25 @@ class DataPanel extends Container {
             }
 
             const dataProps = [...splat.resource.propertyNames];
-            const derivedProps = ['distance', 'camera-depth', 'volume', 'surface-area', 'red', 'green', 'blue', 'hue', 'saturation', 'value'];
+            const derivedProps = [
+                'distance',
+                'camera-depth',
+                'volume',
+                'surface-area',
+                'red',
+                'green',
+                'blue',
+                'hue',
+                'saturation',
+                'value'
+            ];
             const availableProps = new Set(dataProps.concat(derivedProps));
 
             // build ordered default props from localizations keys, filtered to available
-            const defaultProps = Object.keys(localizations).filter(p => availableProps.has(p));
+            const defaultProps = Object.keys(localizations).filter((p) => availableProps.has(p));
 
             // build ordered extra props from extras keys, filtered to available
-            const extraProps = showAllValue.value ?
-                Object.keys(extras).filter(p => availableProps.has(p)) :
-                [];
+            const extraProps = showAllValue.value ? Object.keys(extras).filter((p) => availableProps.has(p)) : [];
 
             const allProps = [...defaultProps, ...extraProps];
 
@@ -260,7 +276,7 @@ class DataPanel extends Container {
             // with no active row to indicate it.
             if (allProps.length > 0 && !allProps.includes(selectedDataProp)) {
                 selectedDataProp = allProps[0];
-                 
+
                 inputs.mode = propModeFor(selectedDataProp) ?? 0;
             }
 
@@ -277,13 +293,13 @@ class DataPanel extends Container {
 
                 item.addEventListener('click', () => {
                     selectedDataProp = prop;
-                     
+
                     inputs.mode = propModeFor(prop) ?? 0;
                     dataListBox.dom.querySelectorAll('.data-list-item').forEach((el) => {
                         el.classList.remove('active');
                     });
                     item.classList.add('active');
-                    tick();  
+                    tick();
                 });
 
                 dataListBox.dom.appendChild(item);
@@ -434,7 +450,10 @@ class DataPanel extends Container {
             };
             if (inputs.onScreenOnly) {
                 const projection = Camera.applyShaderProjectionTransform(
-                    cam.projectionMatrix, shaderProjection, false, splat.scene.graphicsDevice.isWebGPU
+                    cam.projectionMatrix,
+                    shaderProjection,
+                    false,
+                    splat.scene.graphicsDevice.isWebGPU
                 );
                 viewProjection.mul2(projection, cam.viewMatrix);
                 opts.viewProjection = viewProjection;
@@ -472,7 +491,6 @@ class DataPanel extends Container {
                         logBins: logBins_
                     });
 
-                     
                     refreshRange();
                 } catch (err) {
                     // clear lastHash so the next tick with the same inputs retries
@@ -698,7 +716,7 @@ class DataPanel extends Container {
         const clearAnchorLabel = () => clearLabel(histogramInfoAnchor);
 
         const showStats = (count: number, selected: number, total: number) => {
-            const pct = total ? (count / total * 100).toFixed(1) : '0.0';
+            const pct = total ? ((count / total) * 100).toFixed(1) : '0.0';
             const fmt = (n: number) => n.toLocaleString();
             statsCountValue.textContent = `${fmt(count)} (${pct}%)`;
             statsSelectedValue.textContent = fmt(selected);

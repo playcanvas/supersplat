@@ -97,9 +97,9 @@ class ShapeTransformGizmo {
         // never shows a stale size
         const updateGizmoSize = () => {
             const { camera, canvas } = scene;
-            const size = camera.ortho ?
-                1125 / canvas.clientHeight :
-                1200 / Math.max(canvas.clientWidth, canvas.clientHeight);
+            const size = camera.ortho
+                ? 1125 / canvas.clientHeight
+                : 1200 / Math.max(canvas.clientWidth, canvas.clientHeight);
             all.forEach((gizmo) => {
                 gizmo.size = size;
             });

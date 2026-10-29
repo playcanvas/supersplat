@@ -1,4 +1,15 @@
-import { BooleanInput, Button, ColorPicker, Container, Element, Label, SelectInput, SliderInput, TextAreaInput, TextInput } from '@playcanvas/pcui';
+import {
+    BooleanInput,
+    Button,
+    ColorPicker,
+    Container,
+    Element,
+    Label,
+    SelectInput,
+    SliderInput,
+    TextAreaInput,
+    TextInput
+} from '@playcanvas/pcui';
 
 import type { Pose } from '../camera-poses';
 import type { Events } from '../events';
@@ -16,7 +27,12 @@ const MAX_SINGLE_FILE_SPLATS = 40_000_000;
 
 // locale-aware unit formatting, e.g. "10 GB" / "10,5 GB", "45 min" / "45 Min."
 const formatUnit = (value: number, unit: string, maximumFractionDigits = 0) => {
-    return new Intl.NumberFormat(i18n.locale, { style: 'unit', unit, unitDisplay: 'short', maximumFractionDigits }).format(value);
+    return new Intl.NumberFormat(i18n.locale, {
+        style: 'unit',
+        unit,
+        unitDisplay: 'short',
+        maximumFractionDigits
+    }).format(value);
 };
 
 const formatGigabytes = (bytes: number) => formatUnit(bytes / (1024 * 1024 * 1024), 'gigabyte', 1);
@@ -369,12 +385,15 @@ class PublishSettingsDialog extends Container {
                     sceneMax[i] = Math.max(sceneMax[i], c[i] + h[i]);
                 }
             }
-            const largeAxes = [0, 1, 2].filter(i => sceneMax[i] - sceneMin[i] > 16).length;
+            const largeAxes = [0, 1, 2].filter((i) => sceneMax[i] - sceneMin[i] > 16).length;
             const isLargeScene = largeAxes >= 2;
 
-            overwriteSelect.options = [{
-                v: '0', t: i18n.t('popup.publish.new-scene')
-            }].concat(overwriteList.map((s, i) => ({ v: (i + 1).toString(), t: s })));
+            overwriteSelect.options = [
+                {
+                    v: '0',
+                    t: i18n.t('popup.publish.new-scene')
+                }
+            ].concat(overwriteList.map((s, i) => ({ v: (i + 1).toString(), t: s })));
 
             overwriteSelect.value = '0';
             titleInput.value = filename.slice(0, dot > 0 ? dot : undefined);
@@ -386,7 +405,10 @@ class PublishSettingsDialog extends Container {
             colorPicker.value = [bgClr.r, bgClr.g, bgClr.b];
             fovSlider.value = events.invoke('camera.fov');
             // default to the scene's band count, capped by the viewport setting
-            bandsSlider.value = Math.min(events.invoke('view.bands'), Math.max(0, ...splats.map((s: any) => s.resource.shBands)));
+            bandsSlider.value = Math.min(
+                events.invoke('view.bands'),
+                Math.max(0, ...splats.map((s: any) => s.resource.shBands))
+            );
             generateLodsToggle.value = lodsRequired || (totalSplats >= 1_000_000 && isLargeScene);
 
             updateLayout();
@@ -401,9 +423,9 @@ class PublishSettingsDialog extends Container {
 
             // get poses
             const orderedPoses = (events.invoke('camera.poses') as Pose[])
-            .slice()
-            .filter(p => p.frame >= 0 && p.frame < frames)
-            .sort((a, b) => a.frame - b.frame);
+                .slice()
+                .filter((p) => p.frame >= 0 && p.frame < frames)
+                .sort((a, b) => a.frame - b.frame);
 
             // overwrite options
             const overwriteList = userStatus.scenes.map((s) => {
@@ -467,13 +489,18 @@ class PublishSettingsDialog extends Container {
                     const pose = events.invoke('camera.getPose');
                     const p = pose?.position;
                     const t = pose?.target;
-                    const cameras = (p && t) ? [{
-                        initial: {
-                            position: [p.x, p.y, p.z] as [number, number, number],
-                            target: [t.x, t.y, t.z] as [number, number, number],
-                            fov
-                        }
-                    }] : [];
+                    const cameras =
+                        p && t
+                            ? [
+                                  {
+                                      initial: {
+                                          position: [p.x, p.y, p.z] as [number, number, number],
+                                          target: [t.x, t.y, t.z] as [number, number, number],
+                                          fov
+                                      }
+                                  }
+                              ]
+                            : [];
 
                     const experienceSettings: ExperienceSettings = {
                         version: 2,

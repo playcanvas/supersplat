@@ -33,7 +33,6 @@ class Tooltips extends Container {
         let timer = 0;
 
         this.register = (target: Element, textString: TooltipText, direction: Direction = 'bottom') => {
-
             const activate = () => {
                 // the target may have been destroyed while the show timer ran
                 if (!target.dom) {

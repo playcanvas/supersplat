@@ -6,19 +6,19 @@ const dcDecode = (v: number) => v * SH_C0 + 0.5;
 const dcEncode = (v: number) => (v - 0.5) / SH_C0;
 
 const sigmoid = (v: number) => 1 / (1 + Math.exp(-v));
-const invSigmoid = (v: number) => ((v <= 0) ? -400 : ((v >= 1) ? 400 : -Math.log(1 / v - 1)));
+const invSigmoid = (v: number) => (v <= 0 ? -400 : v >= 1 ? 400 : -Math.log(1 / v - 1));
 
 type GradeParams = {
-    tintClr: Color,
-    temperature: number,
-    saturation: number,
-    brightness: number,
-    blackPoint: number,
-    whitePoint: number,
-    transparency: number
+    tintClr: Color;
+    temperature: number;
+    saturation: number;
+    brightness: number;
+    blackPoint: number;
+    whitePoint: number;
+    transparency: number;
 };
 
-type RGB = { r: number, g: number, b: number };
+type RGB = { r: number; g: number; b: number };
 
 // luma weights the saturation mix is taken about. They sum to 1 (to within float
 // rounding: 0.9999999999999999), which is what keeps a uniform offset uniform
@@ -35,9 +35,9 @@ const LUMA = [0.299, 0.587, 0.114];
 //
 // `m` is column-major to match WGSL's mat3x3f(c0, c1, c2), i.e. m[col * 3 + row].
 type GradeTerms = {
-    m: number[],
-    offset: RGB,
-    transparency: number
+    m: number[];
+    offset: RGB;
+    transparency: number;
 };
 
 // Sole definition of how the seven authored parameters collapse into the
@@ -124,10 +124,7 @@ const composeGrades = (first: GradeTerms, second: GradeTerms, out: GradeTerms): 
 
     for (let j = 0; j < 3; ++j) {
         for (let i = 0; i < 3; ++i) {
-            m[j * 3 + i] =
-                a[i] * b[j * 3] +
-                a[3 + i] * b[j * 3 + 1] +
-                a[6 + i] * b[j * 3 + 2];
+            m[j * 3 + i] = a[i] * b[j * 3] + a[3 + i] * b[j * 3 + 1] + a[6 + i] * b[j * 3 + 2];
         }
     }
 
@@ -164,7 +161,9 @@ class ColorGrade {
 
         this.hasTint =
             this.m.some((v, i) => v !== IDENTITY_M[i]) ||
-            this.offset.r !== 0 || this.offset.g !== 0 || this.offset.b !== 0;
+            this.offset.r !== 0 ||
+            this.offset.g !== 0 ||
+            this.offset.b !== 0;
         this.hasTransparency = this.transparency !== 1;
     }
 
@@ -202,5 +201,18 @@ class ColorGrade {
     }
 }
 
-export { ColorGrade, composeGrades, createGradeTerms, gradeFromRows, gradeRows, gradeTerms, dcDecode, dcEncode, sigmoid, invSigmoid, SH_C0, LUMA };
+export {
+    ColorGrade,
+    composeGrades,
+    createGradeTerms,
+    gradeFromRows,
+    gradeRows,
+    gradeTerms,
+    dcDecode,
+    dcEncode,
+    sigmoid,
+    invSigmoid,
+    SH_C0,
+    LUMA
+};
 export type { GradeParams, GradeTerms, RGB };

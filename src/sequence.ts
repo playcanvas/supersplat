@@ -27,7 +27,6 @@ class PlyFrameSource implements FrameSource {
     constructor(files: File[], scene: Scene) {
         this.scene = scene;
 
-        // eslint-disable-next-line regexp/no-super-linear-backtracking
         const regex = /(.*?)(\d+)(?:\.compressed)?\.ply$/;
         const key = (f: File) => f.name?.toLowerCase().match(regex)?.[2];
         this.files = files.slice().sort((a, b) => {
@@ -53,7 +52,9 @@ class PlyFrameSource implements FrameSource {
         return { asset, rotation: transform.rotation };
     }
 
-    destroy() {}
+    destroy() {
+        // nothing to release
+    }
 }
 
 /**

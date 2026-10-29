@@ -543,7 +543,7 @@ class Menu extends Container {
                 });
             };
 
-            option.dom.addEventListener('pointerdown', (event: PointerEvent) => {
+            option.dom.addEventListener('pointerdown', () => {
                 if (!option.menuPanel.hidden) {
                     option.menuPanel.hidden = true;
                 } else {
@@ -551,7 +551,7 @@ class Menu extends Container {
                 }
             });
 
-            option.dom.addEventListener('pointerenter', (event: PointerEvent) => {
+            option.dom.addEventListener('pointerenter', () => {
                 if (!options.every((opt) => opt.menuPanel.hidden)) {
                     activate();
                 }

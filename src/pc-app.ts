@@ -93,14 +93,10 @@ class PCApp extends AppBase {
             // CollisionComponentSystem,
             // JointComponentSystem,
             // AnimationComponentSystem,
-            // @ts-ignore
             AnimComponentSystem,
             // ModelComponentSystem,
-            // @ts-ignore
             RenderComponentSystem,
-            // @ts-ignore
             CameraComponentSystem,
-            // @ts-ignore
             LightComponentSystem,
             // script.legacy ? ScriptLegacyComponentSystem : ScriptComponentSystem,
             // AudioSourceComponentSystem,
@@ -122,23 +118,18 @@ class PCApp extends AppBase {
 
     addResourceHandles(appOptions: AppOptions) {
         appOptions.resourceHandlers = [
-            // @ts-ignore
             RenderHandler,
             // AnimationHandler,
-            // @ts-ignore
             AnimClipHandler,
-            // @ts-ignore
             AnimStateGraphHandler,
             // ModelHandler,
             // MaterialHandler,
-            // @ts-ignore
             TextureHandler,
             // TextHandler,
             // JsonHandler,
             // AudioHandler,
             // ScriptHandler,
             // SceneHandler,
-            // @ts-ignore
             CubemapHandler,
             // HtmlHandler,
             // CssHandler,
@@ -150,7 +141,6 @@ class PCApp extends AppBase {
             // TextureAtlasHandler,
             // SpriteHandler,
             // TemplateHandler,
-            // @ts-ignore
             ContainerHandler,
             GSplatHandler
         ];

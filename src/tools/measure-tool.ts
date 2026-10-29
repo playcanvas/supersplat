@@ -29,8 +29,13 @@ const s = new Vec3();
 const t = new Transform();
 
 class MeasureTransformHandler {
-    activate() {}
-    deactivate() {}
+    activate() {
+        // no-op
+    }
+
+    deactivate() {
+        // no-op
+    }
 }
 
 class MeasureTool {

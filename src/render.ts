@@ -405,7 +405,6 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     frameRate,
                     width,
                     height,
-                    bitrate,
                     transparentBg,
                     showDebug,
                     format,

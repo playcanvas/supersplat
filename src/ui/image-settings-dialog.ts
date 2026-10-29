@@ -4,7 +4,6 @@ import {
     Container,
     Element,
     Label,
-    NumericInput,
     SelectInput,
     SliderInput,
     VectorInput

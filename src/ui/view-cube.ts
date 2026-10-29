@@ -165,8 +165,7 @@ class ViewCube extends Container {
 
                 order.forEach((o) => {
                     o.n.forEach((n) => {
-                        // @ts-ignore
-                        fragment.appendChild(shapes[n]);
+                        fragment.appendChild(shapes[n as keyof typeof shapes]);
                     });
                 });
 

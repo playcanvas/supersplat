@@ -148,7 +148,9 @@ const createDotTexture = (device: GraphicsDevice, size = 64) => {
 // pass after the splat layer so occluded parts stay faintly visible.
 class ToolOverlay extends Element {
     // fills the writer with world-space geometry for the current frame
-    provider: (writer: OverlayWriter) => void = () => {};
+    provider: (writer: OverlayWriter) => void = () => {
+        // draws nothing by default
+    };
 
     private writer = new OverlayWriter();
     private baseEntity: Entity;

@@ -56,7 +56,7 @@ class Params {
     private resolve(configs: any[], path: string[]): any {
         const get = (obj: any): any => {
             for (const name of path) {
-                if (!obj.hasOwnProperty(name)) {
+                if (!Object.prototype.hasOwnProperty.call(obj, name)) {
                     return undefined;
                 }
                 obj = obj[name];

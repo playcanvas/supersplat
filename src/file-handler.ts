@@ -114,7 +114,6 @@ const isPlySequence = (filenames: string[]) => {
         return false;
     }
 
-    // eslint-disable-next-line regexp/no-super-linear-backtracking
     const regex = /(.*?)(\d+)(?:\.compressed)?\.ply$/;
     const baseMatch = filenames[0].match(regex);
     if (!baseMatch) {
@@ -200,7 +199,10 @@ const loadCameraPoses = async (file: ImportFile, events: Events) => {
 
         const poses: Pose[] = [];
         json.sort(sorter).forEach((pose: any, i: number) => {
-            if (pose.hasOwnProperty('position') && pose.hasOwnProperty('rotation')) {
+            if (
+                Object.prototype.hasOwnProperty.call(pose, 'position') &&
+                Object.prototype.hasOwnProperty.call(pose, 'rotation')
+            ) {
                 const p = new Vec3(pose.position);
                 const z = new Vec3(pose.rotation[0][2], pose.rotation[1][2], pose.rotation[2][2]);
 
@@ -454,7 +456,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
     }
 
     // create the file drag & drop handler
-    CreateDropHandler(dropTarget, (entries, shift) => {
+    CreateDropHandler(dropTarget, (entries) => {
         importFiles(
             entries.map((e) => {
                 return {

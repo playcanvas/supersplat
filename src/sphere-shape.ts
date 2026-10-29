@@ -71,7 +71,9 @@ class SphereShape extends Element {
         this.scene.boundDirty = true;
     }
 
-    destroy() {}
+    destroy() {
+        // nothing to release
+    }
 
     serialize(serializer: Serializer): void {
         serializer.packa(this.pivot.getWorldTransform().data);

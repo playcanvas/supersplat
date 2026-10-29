@@ -51,7 +51,7 @@ const application = {
             targets: [
                 {
                     src: 'src/index.html',
-                    transform: (contents, filename) => {
+                    transform: (contents) => {
                         return contents.toString().replace('__BASE_HREF__', HREF);
                     }
                 },

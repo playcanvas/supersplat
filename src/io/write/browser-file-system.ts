@@ -62,8 +62,8 @@ const triggerDownload = (data: Uint8Array, filename: string): void => {
         e.initMouseEvent('click', true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
         lnk.dispatchEvent(e);
     } else {
-        // @ts-ignore
-        lnk.fireEvent?.('onclick');
+        // legacy IE event api
+        (lnk as HTMLAnchorElement & { fireEvent?: (type: string) => void }).fireEvent?.('onclick');
     }
 
     window.URL.revokeObjectURL(url);

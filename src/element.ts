@@ -45,26 +45,47 @@ class Element {
         }
     }
 
-    add(): void | Promise<void> {}
+    add(): void | Promise<void> {
+        // overridden by subclasses
+    }
 
-    remove() {}
+    remove() {
+        // overridden by subclasses
+    }
 
-    serialize(serializer: Serializer) {}
+    serialize(_serializer: Serializer) {
+        // overridden by subclasses
+    }
 
-    onUpdate(deltaTime: number) {}
+    onUpdate(_deltaTime: number) {
+        // overridden by subclasses
+    }
 
-    onPostUpdate() {}
+    onPostUpdate() {
+        // overridden by subclasses
+    }
 
-    onPreRender() {}
+    onPreRender() {
+        // overridden by subclasses
+    }
 
-    onPostRender() {}
+    onPostRender() {
+        // overridden by subclasses
+    }
 
-    onAdded(element: Element) {}
+    onAdded(_element: Element) {
+        // overridden by subclasses
+    }
 
-    onRemoved(element: Element) {}
+    onRemoved(_element: Element) {
+        // overridden by subclasses
+    }
 
-    move(position?: Vec3, rotation?: Quat, scale?: Vec3) {}
+    move(_position?: Vec3, _rotation?: Quat, _scale?: Vec3) {
+        // overridden by subclasses
+    }
 
+    // eslint-disable-next-line @typescript-eslint/class-literal-property-style -- subclasses override this getter
     get worldBound(): BoundingBox | null {
         return null;
     }

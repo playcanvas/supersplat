@@ -1,4 +1,4 @@
-import { Button, Container, Element, Label } from '@playcanvas/pcui';
+import { Button, Container, Element } from '@playcanvas/pcui';
 
 import type { Events } from '../events';
 import type { ShortcutManager } from '../shortcut-manager';

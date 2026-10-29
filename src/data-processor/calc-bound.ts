@@ -2,7 +2,6 @@ import type { BoundingBox, GraphicsDevice } from 'playcanvas';
 import {
     BUFFERUSAGE_COPY_DST,
     BUFFERUSAGE_COPY_SRC,
-    SAMPLETYPE_FLOAT,
     SAMPLETYPE_UINT,
     SAMPLETYPE_UNFILTERABLE_FLOAT,
     SHADERLANGUAGE_WGSL,

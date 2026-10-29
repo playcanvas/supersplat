@@ -192,9 +192,14 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
                     }
                 };
                 const pending = tail.then(execute);
+                // keep the queue running whether or not the call succeeded
                 tail = pending.then(
-                    () => {},
-                    () => {}
+                    () => {
+                        // settled
+                    },
+                    () => {
+                        // settled
+                    }
                 );
                 return pending;
             }
@@ -598,7 +603,11 @@ const registerWebMCP = (editor: EditorAPI, context?: ModelContext) => {
         context ??
         (document as Document & { modelContext?: ModelContext }).modelContext ??
         (navigator as Navigator & { modelContext?: ModelContext }).modelContext;
-    if (!provider?.registerTool) return () => {};
+    if (!provider?.registerTool) {
+        return () => {
+            // nothing to unregister
+        };
+    }
     const tools = createWebMCPTools(editor);
     let controller: AbortController;
     let disposed = false;

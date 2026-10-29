@@ -52,7 +52,9 @@ class CommandQueue {
         // an EditorError is a typed outcome (empty selection, removed layer,
         // cancellation) the caller handles, so only unexpected failures are logged
         this.tail = next.then(
-            () => {},
+            () => {
+                // settled
+            },
             (err) => {
                 if (!(err instanceof EditorError)) {
                     console.error('CommandQueue task failed', err);

@@ -43,8 +43,13 @@ const t = new Transform();
 const cent = new Vec3();
 
 class OrientTransformHandler {
-    activate() {}
-    deactivate() {}
+    activate() {
+        // no-op
+    }
+
+    deactivate() {
+        // no-op
+    }
 }
 
 class OrientTool {

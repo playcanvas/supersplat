@@ -37,7 +37,7 @@ import { SphereSelection } from './tools/sphere-selection';
 import { ToolManager } from './tools/tool-manager';
 import { registerTrackManagerEvents } from './track-manager';
 import { registerTransformHandlerEvents } from './transform-handler';
-import { BoundDimensionsOverlay } from './ui/bound-dimensions-overlay';
+import { registerBoundDimensionsOverlay } from './ui/bound-dimensions-overlay';
 import { EditorUI } from './ui/editor';
 import { i18n } from './ui/localization';
 import { registerSelectCursor } from './ui/select-cursor';
@@ -67,7 +67,7 @@ const getURLArgs = () => {
             if (i === a.length - 1) {
                 obj[k] = value;
             } else {
-                if (!obj.hasOwnProperty(k)) {
+                if (!Object.prototype.hasOwnProperty.call(obj, k)) {
                     obj[k] = {};
                 }
                 obj = obj[k];
@@ -213,13 +213,13 @@ const main = async () => {
         const cnv = (v: number) => `${Math.max(0, Math.min(255, v * 255)).toFixed(0)}`;
         document.body.style.backgroundColor = `rgba(${cnv(clr.r)},${cnv(clr.g)},${cnv(clr.b)},1)`;
     });
-    events.on('selectedClr', (clr: Color) => {
+    events.on('selectedClr', () => {
         scene.forceRender = true;
     });
-    events.on('unselectedClr', (clr: Color) => {
+    events.on('unselectedClr', () => {
         scene.forceRender = true;
     });
-    events.on('lockedClr', (clr: Color) => {
+    events.on('lockedClr', () => {
         scene.forceRender = true;
     });
 
@@ -284,12 +284,7 @@ const main = async () => {
         )
     );
 
-    const boundDimensionsOverlay = new BoundDimensionsOverlay(
-        events,
-        scene,
-        editorUI.canvasContainer,
-        editorUI.annotationContainer.dom
-    );
+    registerBoundDimensionsOverlay(events, scene, editorUI.canvasContainer, editorUI.annotationContainer.dom);
 
     editorUI.toolsContainer.dom.appendChild(maskCanvas);
 

@@ -97,7 +97,7 @@ const fetchUser = async () => {
     try {
         const urlResponse = await fetch(`${origin}/api/id`);
         return urlResponse.ok && ((await urlResponse.json()) as User);
-    } catch (e) {
+    } catch {
         return null;
     }
 };
@@ -127,7 +127,7 @@ const fetchLimits = async (user: User): Promise<PublishLimits | null> => {
             }
         });
         return response.ok ? ((await response.json()) as PublishLimits) : null;
-    } catch (e) {
+    } catch {
         return null;
     }
 };
@@ -137,7 +137,7 @@ const readErrorMessage = async (response: Response, fallback: string) => {
     try {
         const body = await response.json();
         return typeof body?.error === 'string' ? body.error : fallback;
-    } catch (e) {
+    } catch {
         return fallback;
     }
 };
@@ -337,7 +337,7 @@ class PublishWriter implements Writer {
                 throw new Error(`failed to complete upload (${completeResult.statusText})`);
             }
 
-            const completeJson = await completeResult.json();
+            await completeResult.json();
 
             const publishFormat = publishSettings.generateLods ? 'ssog' : 'sog';
 

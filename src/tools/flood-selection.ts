@@ -6,7 +6,6 @@ import { opFromModifiers } from '../select-op';
 type Pt = { x: number; y: number };
 
 const RED = 0;
-const GREEN = 1;
 const BLUE = 2;
 const ALPHA = 3;
 const PIXEL = 4;
@@ -120,7 +119,7 @@ class FloodSelection {
             }
         };
 
-        const pointermove = (e: PointerEvent) => {
+        const pointermove = () => {
             clicked = false;
         };
 

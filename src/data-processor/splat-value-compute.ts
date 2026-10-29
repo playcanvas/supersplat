@@ -9,7 +9,6 @@ import {
     UNIFORMTYPE_MAT4,
     UNIFORMTYPE_UINT,
     UNIFORMTYPE_VEC3,
-    UNIFORMTYPE_VEC4,
     BindStorageBufferFormat,
     BindTextureFormat,
     Mat4,

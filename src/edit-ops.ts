@@ -1,5 +1,5 @@
 import type { Quat, Vec3 } from 'playcanvas';
-import { Color, Mat4 } from 'playcanvas';
+import { Mat4 } from 'playcanvas';
 
 import type { AnimTrack } from './anim-track';
 import { BoxShape } from './box-shape';

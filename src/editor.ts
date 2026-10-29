@@ -5,7 +5,7 @@ import type { CameraFrame } from './camera';
 import type { GradeParams } from './color-grade';
 import type { CommandContext } from './command-queue';
 import type { EditHistory } from './edit-history';
-import { SelectOp, MultiOp, SetLocalFrameOp } from './edit-ops';
+import { SelectOp, SetLocalFrameOp } from './edit-ops';
 import { intersectSelect, PUBLIC_OP } from './editor-api';
 import type { EditorAPI } from './editor-api';
 import { EditorError } from './editor-command';

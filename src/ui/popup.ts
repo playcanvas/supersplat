@@ -1,4 +1,4 @@
-import { Button, Container, Label, SelectInput, TextInput } from '@playcanvas/pcui';
+import { Button, Container, Label, SelectInput } from '@playcanvas/pcui';
 
 import { i18n } from './localization';
 import type { Tooltips } from './tooltips';

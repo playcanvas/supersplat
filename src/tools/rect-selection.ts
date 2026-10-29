@@ -131,7 +131,9 @@ class RectSelection {
         };
     }
 
-    destroy() {}
+    destroy() {
+        // nothing to release
+    }
 }
 
 export { RectSelection };

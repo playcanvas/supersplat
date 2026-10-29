@@ -257,14 +257,14 @@ class Scene {
 
         // only render the scene when instructed
         this.app.autoRender = false;
-        // @ts-ignore
+        // @ts-expect-error - _allowResize is an internal property
         this.app._allowResize = false;
 
         // hack: disable lightmapper first bake until we expose option for this
-        // @ts-ignore
+        // @ts-expect-error - _firstBake is an internal method
         this.app.off('prerender', this.app._firstBake, this.app);
 
-        // @ts-ignore
+        // @ts-expect-error - imgParser is an internal property
         this.app.loader.getHandler('texture').imgParser.crossOrigin = 'anonymous';
 
         // this is required to get full res AR mode backbuffer

@@ -26,8 +26,6 @@ import { defaultPostEffectSettings } from '@playcanvas/splat-transform/viewer-se
 import type { AnimTrack, Camera, ExperienceSettings } from '@playcanvas/splat-transform/viewer-settings';
 import { Mat3, Mat4, PIXELFORMAT_BGRA8, Quat, Texture, Vec3, WebgpuGraphicsDevice } from 'playcanvas';
 
-import { version } from '../package.json';
-
 import { ColorGrade, createGradeTerms, dcDecode, dcEncode, sigmoid } from './color-grade';
 import type { EditorSplatResource } from './editor-splat-resource';
 import type { Events } from './events';
@@ -55,8 +53,6 @@ type ViewerExportSettings = {
     experienceSettings: ExperienceSettings;
     events?: Events;
 };
-
-type ProgressFunc = (loaded: number, total: number) => void;
 
 const shBandCoeffs = [0, 3, 8, 15];
 
@@ -628,7 +624,7 @@ const createGpuDevice = async (): Promise<WebgpuGraphicsDevice> => {
 
     // createDevice can also resolve without creating a device (e.g.
     // blocklisted adapters)
-    // @ts-ignore - wgpu is an internal property
+    // @ts-expect-error - wgpu is an internal property
     if (!graphicsDevice.wgpu) {
         throw new WebGPUUnavailableError();
     }
@@ -642,7 +638,6 @@ const createGpuDevice = async (): Promise<WebgpuGraphicsDevice> => {
         format: PIXELFORMAT_BGRA8
     });
 
-    // @ts-ignore - externalBackbuffer is an internal property
     graphicsDevice.externalBackbuffer = cachedBackbuffer;
 
     cachedGpuDevice = graphicsDevice;

@@ -26,7 +26,7 @@ class SplatsTransformHandler implements TransformHandler {
     constructor(events: Events) {
         this.events = events;
 
-        events.on('pivot.started', (pivot: Pivot) => {
+        events.on('pivot.started', () => {
             if (this.splat) {
                 this.start();
             }
@@ -38,7 +38,7 @@ class SplatsTransformHandler implements TransformHandler {
             }
         });
 
-        events.on('pivot.ended', (pivot: Pivot) => {
+        events.on('pivot.ended', () => {
             if (this.splat) {
                 this.end();
             }

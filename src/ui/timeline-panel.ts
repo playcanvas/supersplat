@@ -553,7 +553,7 @@ class TimelinePanel extends Container {
         });
 
         // cancel animation playback if user interacts with camera
-        events.on('camera.controller', (type: string) => {
+        events.on('camera.controller', () => {
             if (events.invoke('timeline.playing')) {
                 // stop
             }

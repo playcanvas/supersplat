@@ -35,7 +35,7 @@ main().catch((err) => {
         if (localized && localized !== key) {
             message = localized;
         }
-    } catch (e) {
+    } catch {
         // keep the fallback
     }
 

@@ -818,7 +818,9 @@ class Camera extends Element {
         this.updateCameraUniforms();
     }
 
-    onPostRender() {}
+    onPostRender() {
+        // no-op
+    }
 
     focus(options?: { focalPoint: Vec3; radius: number; speed: number }) {
         const getSplatFocalPoint = () => {

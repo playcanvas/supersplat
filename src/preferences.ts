@@ -44,7 +44,7 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         const lookup = (segments: string[]) => {
             let obj = urlArgs;
             for (const segment of segments) {
-                if (typeof obj !== 'object' || obj === null || !obj.hasOwnProperty(segment)) {
+                if (typeof obj !== 'object' || obj === null || !Object.prototype.hasOwnProperty.call(obj, segment)) {
                     return undefined;
                 }
                 obj = obj[segment];
@@ -372,7 +372,7 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
                     }
                 }
             }
-        } catch (e) {
+        } catch {
             // corrupt or inaccessible storage - fall back to defaults
         }
         return result;
@@ -393,7 +393,7 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
             writeScheduled = false;
             try {
                 localStorage.setItem(storageKey, JSON.stringify({ version: storageVersion, values }));
-            } catch (e) {
+            } catch {
                 if (!storageWarned) {
                     storageWarned = true;
                     console.warn('preferences will not persist: localStorage is unavailable');

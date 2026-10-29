@@ -4,7 +4,7 @@ import { Camera, Mat4 } from 'playcanvas';
 import type { Element } from '../element';
 import type { Events } from '../events';
 import { Splat } from '../splat';
-import { PROP_MODE, propModeFor, SH_NUM_COEFFS, isFinalColorMode } from '../splat-properties';
+import { propModeFor, SH_NUM_COEFFS, isFinalColorMode } from '../splat-properties';
 
 import { Histogram } from './histogram';
 import { i18n } from './localization';

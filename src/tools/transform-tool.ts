@@ -1,5 +1,5 @@
 import type { TransformGizmo } from 'playcanvas';
-import { Entity, GraphicsDevice } from 'playcanvas';
+import { Entity } from 'playcanvas';
 
 import type { Events } from '../events';
 import type { Pivot } from '../pivot';

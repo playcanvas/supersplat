@@ -1,16 +1,18 @@
-import { Color, Mat4, Quat, Vec3 } from 'playcanvas';
+import type { Quat, Vec3 } from 'playcanvas';
+import { Color, Mat4 } from 'playcanvas';
 
-import { AnimTrack } from './anim-track';
+import type { AnimTrack } from './anim-track';
 import { BoxShape } from './box-shape';
-import { composeGrades, createGradeTerms, type GradeTerms } from './color-grade';
+import { composeGrades, createGradeTerms  } from './color-grade';
+import type { GradeTerms } from './color-grade';
 import type { RemovedInstances } from './gaussian-instances';
 import { IndexRanges, sortedPredicate } from './index-ranges';
-import { Pivot } from './pivot';
-import { Scene } from './scene';
+import type { Pivot } from './pivot';
+import type { Scene } from './scene';
 import { SphereShape } from './sphere-shape';
-import { Splat } from './splat';
+import type { Splat } from './splat';
 import { State } from './splat-state';
-import { Transform } from './transform';
+import type { Transform } from './transform';
 
 interface EditOp {
     name: string;

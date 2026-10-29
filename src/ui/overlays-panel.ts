@@ -1,12 +1,13 @@
 import { BooleanInput, Button, Container, Label } from '@playcanvas/pcui';
 
-import { Events } from '../events';
+import type { Events } from '../events';
 import type { GridPlane } from '../infinite-grid';
-import { ShortcutManager } from '../shortcut-manager';
+import type { ShortcutManager } from '../shortcut-manager';
+
 import { i18n } from './localization';
 import overlaysSvg from './svg/overlays.svg';
 import resetSvg from './svg/reset.svg';
-import { Tooltips } from './tooltips';
+import type { Tooltips } from './tooltips';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));

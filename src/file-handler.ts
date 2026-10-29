@@ -2,16 +2,22 @@ import { path, Quat, Vec3 } from 'playcanvas';
 
 import type { Pose } from './camera-poses';
 import { CreateDropHandler, resolveHandleFiles } from './drop-handler';
-import { checkCancelled, CommandOptions } from './editor-command';
+import type { CommandOptions } from './editor-command';
+import { checkCancelled } from './editor-command';
 import { ElementType } from './element';
-import { Events } from './events';
-import { buildExportOptions, ExportChoices, ExportDialogResult, ExportType, SceneExportOptions } from './export-options';
-import { ExportSettings, loadExportSettings, saveExportSettings } from './export-settings';
-import { BlobReadSource, BrowserFileSystem, MappedReadFileSystem, pickWriteTarget, sourcesOf, WriteTarget } from './io';
-import { recentImports, RecentImport } from './recent-files';
-import { Scene } from './scene';
-import { Splat } from './splat';
-import { serializeSog, serializeSpz, serializeViewer, SogSettings, SpzSettings, WebGPUUnavailableError, writeSplatFile } from './splat-serialize';
+import type { Events } from './events';
+import type { ExportChoices, ExportDialogResult, ExportType, SceneExportOptions } from './export-options';
+import { buildExportOptions } from './export-options';
+import type { ExportSettings } from './export-settings';
+import { loadExportSettings, saveExportSettings } from './export-settings';
+import type { BlobReadSource, WriteTarget } from './io';
+import { BrowserFileSystem, MappedReadFileSystem, pickWriteTarget, sourcesOf } from './io';
+import type { RecentImport } from './recent-files';
+import { recentImports } from './recent-files';
+import type { Scene } from './scene';
+import type { Splat } from './splat';
+import type { SogSettings, SpzSettings } from './splat-serialize';
+import { serializeSog, serializeSpz, serializeViewer, WebGPUUnavailableError, writeSplatFile } from './splat-serialize';
 import { i18n } from './ui/localization';
 
 // ts compiler and vscode find this type, but eslint does not
@@ -21,7 +27,7 @@ type FileOperationOptions = CommandOptions & { throwOnError?: boolean, attach?: 
 
 type FileType = 'ply' | 'compressedPly' | 'splat' | 'sog' | 'spz' | 'htmlViewer' | 'packageViewer';
 
-const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
+const filePickerTypes: Record<string, FilePickerAcceptType> = {
     'ply': {
         description: 'Gaussian Splat PLY File',
         accept: {

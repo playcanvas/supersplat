@@ -1,3 +1,7 @@
+import type {
+    Layer,
+    ScopeSpace,
+    Shader } from 'playcanvas';
 import {
     BLENDMODE_ONE,
     BLENDMODE_ONE_MINUS_SRC_ALPHA,
@@ -9,16 +13,13 @@ import {
     BlendState,
     Camera,
     DepthState,
-    Layer,
     QuadRender,
-    ScopeSpace,
-    Shader,
     ShaderUtils,
     Mat4
 } from 'playcanvas';
 
 import { Element, ElementType } from './element';
-import { Serializer } from './serializer';
+import type { Serializer } from './serializer';
 import { vertexShader, fragmentShader } from './shaders/infinite-grid-shader';
 
 const resolve = (scope: ScopeSpace, values: any) => {

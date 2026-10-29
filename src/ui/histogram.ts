@@ -1,5 +1,6 @@
 import { Events } from '../events';
 import { opFromModifiers } from '../select-op';
+
 import { applyOpCursor } from './select-cursor';
 
 class HistogramData {

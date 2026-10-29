@@ -2,10 +2,11 @@ import { Container, Label, version as pcuiVersion } from '@playcanvas/pcui';
 import { version as stVersion } from '@playcanvas/splat-transform';
 import { version as engineVersion } from 'playcanvas';
 
-import { Events } from '../events';
+import { version as appVersion } from '../../package.json';
+import type { Events } from '../events';
+
 import { i18n } from './localization';
 import logoSvg from './svg/logo.svg';
-import { version as appVersion } from '../../package.json';
 
 
 class AboutPopup extends Container {

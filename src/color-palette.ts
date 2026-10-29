@@ -1,11 +1,13 @@
+import type {
+    GraphicsDevice } from 'playcanvas';
 import {
     ADDRESS_CLAMP_TO_EDGE,
     PIXELFORMAT_RGBA32F,
-    GraphicsDevice,
     Texture
 } from 'playcanvas';
 
-import { createGradeTerms, gradeFromRows, gradeRows, type GradeTerms } from './color-grade';
+import { createGradeTerms, gradeFromRows, gradeRows  } from './color-grade';
+import type { GradeTerms } from './color-grade';
 import { COLOR_PALETTE_ENTRIES_PER_ROW } from './shaders/color-grade-chunk';
 
 // an entry is 4 texels: the three rows of the affine colour transform - exactly

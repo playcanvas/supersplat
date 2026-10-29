@@ -1,4 +1,5 @@
-import { Container, Element, Label } from '@playcanvas/pcui';
+import type { Element } from '@playcanvas/pcui';
+import { Container, Label } from '@playcanvas/pcui';
 
 type Direction = 'left' | 'right' | 'top' | 'bottom';
 
@@ -29,7 +30,7 @@ class Tooltips extends Container {
 
         const targets = new Map<Element, any>();
         const style = this.dom.style;
-        let timer: number = 0;
+        let timer = 0;
 
         this.register = (target: Element, textString: TooltipText, direction: Direction = 'bottom') => {
 

@@ -1,12 +1,15 @@
 import { Container, Element, Label } from '@playcanvas/pcui';
 
-import { Events } from '../events';
-import { ExportChoices } from '../export-options';
+import type { Events } from '../events';
+import type { ExportChoices } from '../export-options';
 import { requestNavigateHome } from '../iframe-api';
-import { recentFiles, recentImports, RecentStore } from '../recent-files';
-import { ShortcutManager } from '../shortcut-manager';
+import type { RecentStore } from '../recent-files';
+import { recentFiles, recentImports } from '../recent-files';
+import type { ShortcutManager } from '../shortcut-manager';
+
 import { i18n } from './localization';
-import { MenuPanel, MenuItem } from './menu-panel';
+import type { MenuItem } from './menu-panel';
+import { MenuPanel } from './menu-panel';
 import arrowSvg from './svg/arrow.svg';
 import collapseSvg from './svg/collapse.svg';
 import selectDelete from './svg/delete.svg';

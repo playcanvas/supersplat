@@ -1,9 +1,10 @@
 import { Button, Container, Element, NumericInput, SelectInput } from '@playcanvas/pcui';
 
-import { Events } from '../events';
-import { ShortcutManager } from '../shortcut-manager';
+import type { Events } from '../events';
+import type { ShortcutManager } from '../shortcut-manager';
+
 import { i18n } from './localization';
-import { Tooltips } from './tooltips';
+import type { Tooltips } from './tooltips';
 
 class Ticks extends Container {
     constructor(events: Events, tooltips: Tooltips, args = {}) {

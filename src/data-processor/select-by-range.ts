@@ -1,3 +1,5 @@
+import type {
+    GraphicsDevice } from 'playcanvas';
 import {
     BUFFERUSAGE_COPY_DST,
     BUFFERUSAGE_COPY_SRC,
@@ -7,22 +9,24 @@ import {
     BindStorageBufferFormat,
     BindUniformBufferFormat,
     Compute,
-    GraphicsDevice,
     Shader,
     StorageBuffer,
     Vec2
 } from 'playcanvas';
 
-import { BufferPool } from './buffer-pool';
+import { computeSplatValueWGSL } from '../shaders/splat-value-shader';
+import type { Splat } from '../splat';
+
+import type { BufferPool } from './buffer-pool';
 import { maskByteSize } from './histogram-config';
+import type {
+    SplatValueOptions
+} from './splat-value-compute';
 import {
     createSplatValueTextureFormats,
     createSplatValueUniformFormat,
-    setSplatValueParameters,
-    SplatValueOptions
+    setSplatValueParameters
 } from './splat-value-compute';
-import { computeSplatValueWGSL } from '../shaders/splat-value-shader';
-import { Splat } from '../splat';
 
 type SelectByRangeOptions = SplatValueOptions & {
     min: number;

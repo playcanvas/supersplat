@@ -1,7 +1,8 @@
 import type { Pose } from './camera-poses';
-import { Events } from './events';
+import type { Events } from './events';
 import type { WriteTarget } from './io';
-import { AnimTrack, defaultPostEffectSettings, ExperienceSettings, SerializeSettings, ViewerExportSettings } from './splat-serialize';
+import type { AnimTrack, ExperienceSettings, SerializeSettings, ViewerExportSettings } from './splat-serialize';
+import { defaultPostEffectSettings } from './splat-serialize';
 
 type ExportType = 'ply' | 'splat' | 'sog' | 'spz' | 'viewer';
 

@@ -1,7 +1,8 @@
+import type {
+    GraphicsDevice } from 'playcanvas';
 import {
     BUFFERUSAGE_COPY_DST,
     BUFFERUSAGE_COPY_SRC,
-    GraphicsDevice,
     StorageBuffer
 } from 'playcanvas';
 

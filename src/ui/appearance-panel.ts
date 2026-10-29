@@ -1,8 +1,9 @@
 import { Button, ColorPicker, Container, Label, SliderInput } from '@playcanvas/pcui';
 import { Color } from 'playcanvas';
 
-import { Events } from '../events';
-import { ShortcutManager } from '../shortcut-manager';
+import type { Events } from '../events';
+import type { ShortcutManager } from '../shortcut-manager';
+
 import { i18n } from './localization';
 import appearanceSvg from './svg/appearance.svg';
 import centersSvg from './svg/centers.svg';
@@ -10,7 +11,7 @@ import colorsSvg from './svg/colors.svg';
 import resetSvg from './svg/reset.svg';
 import ringsSvg from './svg/rings.svg';
 import selectAllSvg from './svg/select-all.svg';
-import { Tooltips } from './tooltips';
+import type { Tooltips } from './tooltips';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));

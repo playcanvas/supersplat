@@ -4,28 +4,30 @@ import {
     MemoryFileSystem,
     Transform,
     writeSource,
-    ZipFileSystem,
-    type ChunkData,
-    type ChunkDataPool,
-    type ChunkLayer,
-    type ChunkSource,
-    type ChunkSourceMetadata,
-    type FileSystem,
-    type LayerLayout,
-    type LogEvent,
-    type Options,
-    type OutputFormat,
-    type ReadRequest,
-    type Renderer,
-    type SHBands,
-    type Writer
+    ZipFileSystem
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 } from '@playcanvas/splat-transform';
+import type { ChunkData, ChunkDataPool, ChunkLayer, ChunkSource, ChunkSourceMetadata, FileSystem, LayerLayout, LogEvent, Options, OutputFormat, ReadRequest, Renderer, SHBands, Writer } from '@playcanvas/splat-transform';
 import {
-    defaultPostEffectSettings,
-    type AnimTrack,
-    type Camera,
-    type ExperienceSettings
+    defaultPostEffectSettings
+    
+    
+    
 } from '@playcanvas/splat-transform/viewer-settings';
+import type { AnimTrack, Camera, ExperienceSettings } from '@playcanvas/splat-transform/viewer-settings';
 import {
     Mat3,
     Mat4,
@@ -37,13 +39,14 @@ import {
 } from 'playcanvas';
 
 import { version } from '../package.json';
+
 import { ColorGrade, createGradeTerms, dcDecode, dcEncode, sigmoid } from './color-grade';
 import type { EditorSplatResource } from './editor-splat-resource';
-import { Events } from './events';
+import type { Events } from './events';
 import { groupInstancesByChunk } from './gaussian-instances';
 import { PermutedChunkSource } from './io';
 import { SHRotation } from './sh-utils';
-import { Splat } from './splat';
+import type { Splat } from './splat';
 import { State } from './splat-state';
 
 type SerializeSettings = {

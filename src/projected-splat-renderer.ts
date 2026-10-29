@@ -1,3 +1,5 @@
+import type {
+    GraphicsDevice } from 'playcanvas';
 import {
     BLEND_NONE,
     BLEND_PREMULTIPLIED,
@@ -32,7 +34,6 @@ import {
     Compute,
     ComputeRadixSort,
     Entity,
-    GraphicsDevice,
     Mat4,
     Mesh,
     MeshInstance,
@@ -46,7 +47,8 @@ import {
 } from 'playcanvas';
 
 import type { CameraFrame } from './camera';
-import { createGradeTerms, gradeRows, gradeTerms, type GradeParams } from './color-grade';
+import { createGradeTerms, gradeRows, gradeTerms  } from './color-grade';
+import type { GradeParams } from './color-grade';
 import { maskByteSize } from './data-processor/histogram-config';
 import type { Scene } from './scene';
 import { footprintIntersect } from './shaders/footprint-intersect-shader';

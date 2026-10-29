@@ -1,11 +1,13 @@
 import { Button, ColorPicker, Container, SliderInput } from '@playcanvas/pcui';
 import { Color } from 'playcanvas';
 
-import { Events } from '../events';
-import { ClipboardMenu, ClipboardSource, colorField, numberField } from './clipboard-menu';
+import type { Events } from '../events';
+import type { Splat } from '../splat';
+
+import type { ClipboardMenu, ClipboardSource } from './clipboard-menu';
+import { colorField, numberField } from './clipboard-menu';
 import { i18n } from './localization';
 import { PanelSection } from './panel-section';
-import { Splat } from '../splat';
 import checkSvg from './svg/check.svg';
 import colorsSvg from './svg/colors.svg';
 import editUndoSvg from './svg/edit-undo.svg';

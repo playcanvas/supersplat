@@ -1,12 +1,13 @@
 import { BooleanInput, Button, ColorPicker, Container, Element, Label, SelectInput, SliderInput, TextInput } from '@playcanvas/pcui';
 
-import { Pose } from '../camera-poses';
-import { i18n } from './localization';
-import { Events } from '../events';
-import { ExportChoices, ExportDialogResult, ExportType } from '../export-options';
-import { ExportSettings } from '../export-settings';
+import type { Pose } from '../camera-poses';
+import type { Events } from '../events';
+import type { ExportChoices, ExportDialogResult, ExportType } from '../export-options';
+import type { ExportSettings } from '../export-settings';
 import type { BlobReadSource, WriteTarget } from '../io';
 import type { Splat } from '../splat';
+
+import { i18n } from './localization';
 import sceneExport from './svg/export.svg';
 import projectSave from './svg/save.svg';
 

@@ -1,7 +1,7 @@
 import { Color } from 'playcanvas';
 
-import { Events } from './events';
-import { SceneConfig } from './scene-config';
+import type { Events } from './events';
+import type { SceneConfig } from './scene-config';
 import { i18n } from './ui/localization';
 
 const storageKey = 'supersplat:preferences';

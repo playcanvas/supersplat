@@ -1,6 +1,7 @@
 import { Mat4 } from 'playcanvas';
 
-import { createGradeTerms, gradeFromRows, gradeRows, type GradeTerms } from './color-grade';
+import { createGradeTerms, gradeFromRows, gradeRows  } from './color-grade';
+import type { GradeTerms } from './color-grade';
 import type { ColorPalette } from './color-palette';
 import type { Splat } from './splat';
 import type { TransformPalette } from './transform-palette';

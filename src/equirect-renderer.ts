@@ -1,3 +1,6 @@
+import type {
+    GraphicsDevice,
+    Shader } from 'playcanvas';
 import {
     ADDRESS_CLAMP_TO_EDGE,
     FILTER_LINEAR,
@@ -6,10 +9,8 @@ import {
     SEMANTIC_POSITION,
     drawQuadWithShader,
     BlendState,
-    GraphicsDevice,
     Quat,
     RenderTarget,
-    Shader,
     ShaderUtils,
     Texture
 } from 'playcanvas';

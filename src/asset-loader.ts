@@ -1,8 +1,9 @@
-import { ReadFileSystem } from '@playcanvas/splat-transform';
-import { AppBase, Asset } from 'playcanvas';
+import type { ReadFileSystem } from '@playcanvas/splat-transform';
+import type { AppBase } from 'playcanvas';
+import { Asset } from 'playcanvas';
 
 import { EditorSplatResource } from './editor-splat-resource';
-import { Events } from './events';
+import type { Events } from './events';
 import { defaultLodIndex, hasLoadProgress, loadSplatSource } from './io';
 import { Splat } from './splat';
 import { i18n } from './ui/localization';

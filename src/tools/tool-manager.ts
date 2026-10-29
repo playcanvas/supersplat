@@ -1,6 +1,6 @@
 import type { Vec3 } from 'playcanvas';
 
-import { Events } from '../events';
+import type { Events } from '../events';
 
 interface Tool {
     activate: () => void;

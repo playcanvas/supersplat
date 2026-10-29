@@ -1,7 +1,9 @@
 import { BooleanInput, Button, Container, Element, Label, SelectInput, VectorInput } from '@playcanvas/pcui';
 
-import { Events } from '../events';
-import { buildVideoEncoderConfig, VideoCodecChoice, VideoSettings } from '../video-config';
+import type { Events } from '../events';
+import type { VideoCodecChoice, VideoSettings } from '../video-config';
+import { buildVideoEncoderConfig } from '../video-config';
+
 import { i18n } from './localization';
 import sceneExport from './svg/export.svg';
 
@@ -207,7 +209,7 @@ class VideoSettingsDialog extends Container {
         codecRow.append(codecSelect);
 
         // Codec compatibility mapping
-        const codecOptions: Record<string, Array<{ v: string, t: string }>> = {
+        const codecOptions: Record<string, { v: string, t: string }[]> = {
             'mp4': [
                 { v: 'h264', t: 'H.264' },
                 { v: 'h265', t: 'H.265/HEVC' }

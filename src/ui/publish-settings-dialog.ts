@@ -1,10 +1,12 @@
 import { BooleanInput, Button, ColorPicker, Container, Element, Label, SelectInput, SliderInput, TextAreaInput, TextInput } from '@playcanvas/pcui';
 
-import { Pose } from '../camera-poses';
-import { Events } from '../events';
+import type { Pose } from '../camera-poses';
+import type { Events } from '../events';
+import type { PublishLimits, PublishSettings, UserStatus } from '../publish';
+import type { AnimTrack, ExperienceSettings } from '../splat-serialize';
+import { defaultPostEffectSettings } from '../splat-serialize';
+
 import { i18n } from './localization';
-import { PublishLimits, PublishSettings, UserStatus } from '../publish';
-import { AnimTrack, ExperienceSettings, defaultPostEffectSettings } from '../splat-serialize';
 import sceneExport from './svg/export.svg';
 
 // Largest scene that can be published without LODs: it is written as a

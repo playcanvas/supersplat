@@ -1,15 +1,16 @@
+import type {
+    CameraComponent,
+    GraphicsDevice,
+    MeshInstance } from 'playcanvas';
 import {
     EVENT_POSTRENDER_LAYER,
     EVENT_PRERENDER_LAYER,
     LAYERID_DEPTH,
     SORTMODE_CUSTOM,
     BoundingBox,
-    CameraComponent,
     Color,
     Entity,
     Layer,
-    GraphicsDevice,
-    MeshInstance,
     Vec3,
     WireRenderer
 } from 'playcanvas';
@@ -17,17 +18,18 @@ import {
 import { AssetLoader } from './asset-loader';
 import { Camera } from './camera';
 import { CameraPoseGizmos } from './camera-pose-gizmos';
-import { CommandQueue } from './command-queue';
+import type { CommandQueue } from './command-queue';
 import { DataProcessor } from './data-processor';
-import { Element, ElementType, ElementTypeList } from './element';
-import { Events } from './events';
+import type { Element } from './element';
+import { ElementType, ElementTypeList } from './element';
+import type { Events } from './events';
 import { InfiniteGrid as Grid } from './infinite-grid';
 import { Outline } from './outline';
 import { PCApp } from './pc-app';
 import { ProjectedSplatRenderer } from './projected-splat-renderer';
 import { SceneConfig } from './scene-config';
 import { SceneState } from './scene-state';
-import { Splat } from './splat';
+import type { Splat } from './splat';
 import { Underlay } from './underlay';
 
 // sort meshInstances by the aabb corner furthest from the camera

@@ -1,6 +1,6 @@
-import { EventHandle } from 'playcanvas';
+import type { EventHandle } from 'playcanvas';
 
-import { Events } from './events';
+import type { Events } from './events';
 
 /**
  * Register global timeline events.

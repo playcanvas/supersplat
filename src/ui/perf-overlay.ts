@@ -1,6 +1,6 @@
 import { Container, Label } from '@playcanvas/pcui';
 
-import { Events } from '../events';
+import type { Events } from '../events';
 
 // text refresh interval. The graph redraws every frame, but the numbers are
 // unreadable if they change 60 times a second.

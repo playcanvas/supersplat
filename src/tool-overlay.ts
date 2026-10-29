@@ -1,3 +1,5 @@
+import type {
+    GraphicsDevice } from 'playcanvas';
 import {
     BLENDEQUATION_ADD,
     BLENDMODE_ONE,
@@ -12,7 +14,6 @@ import {
     SEMANTIC_TEXCOORD0,
     BlendState,
     Entity,
-    GraphicsDevice,
     Mesh,
     MeshInstance,
     ShaderMaterial,
@@ -21,7 +22,7 @@ import {
 } from 'playcanvas';
 
 import { Element, ElementType } from './element';
-import { Serializer } from './serializer';
+import type { Serializer } from './serializer';
 import {
     dotVertexShader,
     dotFragmentShader,

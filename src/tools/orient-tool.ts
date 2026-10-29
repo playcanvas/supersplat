@@ -2,12 +2,13 @@ import { Button, Container, Label } from '@playcanvas/pcui';
 import { Entity, Mat4, Quat, TranslateGizmo, Vec3, math } from 'playcanvas';
 
 import { EntityTransformOp, MultiOp, PlacePivotOp, SetLocalFrameOp } from '../edit-ops';
-import { Events } from '../events';
+import type { Events } from '../events';
 import type { GridPlane } from '../infinite-grid';
-import { Pivot } from '../pivot';
-import { Scene } from '../scene';
-import { Splat } from '../splat';
-import { ToolOverlay, OverlayWriter } from '../tool-overlay';
+import type { Pivot } from '../pivot';
+import type { Scene } from '../scene';
+import type { Splat } from '../splat';
+import type { OverlayWriter } from '../tool-overlay';
+import { ToolOverlay } from '../tool-overlay';
 import { Transform } from '../transform';
 import { DimensionLabels } from '../ui/dimension-labels';
 import { i18n } from '../ui/localization';

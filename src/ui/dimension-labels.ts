@@ -1,6 +1,6 @@
 import { Vec3 } from 'playcanvas';
 
-import { Scene } from '../scene';
+import type { Scene } from '../scene';
 
 const va = new Vec3();
 const vb = new Vec3();

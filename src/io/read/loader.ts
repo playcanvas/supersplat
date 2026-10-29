@@ -2,7 +2,7 @@
  * Unified loader for all splat file formats using splat-transform.
  */
 
-import {
+import type {
     ChunkData,
     ChunkLayer,
     ChunkSource,
@@ -10,7 +10,8 @@ import {
     Options,
     ReadFileSystem,
     ReadRequest,
-    Transform,
+    Transform } from '@playcanvas/splat-transform';
+import {
     ZipReadFileSystem,
     getInputFormat,
     readFile,

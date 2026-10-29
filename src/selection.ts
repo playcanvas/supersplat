@@ -1,7 +1,8 @@
-import { Element, ElementType } from './element';
-import { Events } from './events';
-import { Scene } from './scene';
-import { Splat } from './splat';
+import type { Element } from './element';
+import { ElementType } from './element';
+import type { Events } from './events';
+import type { Scene } from './scene';
+import type { Splat } from './splat';
 
 const registerSelectionEvents = (events: Events, scene: Scene) => {
     let selection: Splat = null;

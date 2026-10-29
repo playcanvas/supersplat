@@ -1,13 +1,14 @@
 import { BooleanInput, Container, Label } from '@playcanvas/pcui';
 import { Camera, Mat4 } from 'playcanvas';
 
-import { Element } from '../element';
-import { Events } from '../events';
+import type { Element } from '../element';
+import type { Events } from '../events';
 import { Splat } from '../splat';
 import { PROP_MODE, propModeFor, SH_NUM_COEFFS, isFinalColorMode } from '../splat-properties';
+
 import { Histogram } from './histogram';
 import { i18n } from './localization';
-import { Tooltips } from './tooltips';
+import type { Tooltips } from './tooltips';
 
 // what kinds of state changes affect a given prop's histogram. mirrors the
 // previous per-event filtering, but consulted only inside hash().
@@ -259,7 +260,7 @@ class DataPanel extends Container {
             // with no active row to indicate it.
             if (allProps.length > 0 && !allProps.includes(selectedDataProp)) {
                 selectedDataProp = allProps[0];
-                // eslint-disable-next-line no-use-before-define
+                 
                 inputs.mode = propModeFor(selectedDataProp) ?? 0;
             }
 
@@ -276,13 +277,13 @@ class DataPanel extends Container {
 
                 item.addEventListener('click', () => {
                     selectedDataProp = prop;
-                    // eslint-disable-next-line no-use-before-define
+                     
                     inputs.mode = propModeFor(prop) ?? 0;
                     dataListBox.dom.querySelectorAll('.data-list-item').forEach((el) => {
                         el.classList.remove('active');
                     });
                     item.classList.add('active');
-                    tick(); // eslint-disable-line no-use-before-define
+                    tick();  
                 });
 
                 dataListBox.dom.appendChild(item);
@@ -471,7 +472,7 @@ class DataPanel extends Container {
                         logBins: logBins_
                     });
 
-                    // eslint-disable-next-line no-use-before-define
+                     
                     refreshRange();
                 } catch (err) {
                     // clear lastHash so the next tick with the same inputs retries

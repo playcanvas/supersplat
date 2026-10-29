@@ -1,4 +1,4 @@
-import { Events } from '../events';
+import type { Events } from '../events';
 import { opFromModifiers } from '../select-op';
 
 type Point = { x: number, y: number };

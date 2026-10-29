@@ -1,7 +1,7 @@
 import { Container } from '@playcanvas/pcui';
 import { Mat4, Vec3 } from 'playcanvas';
 
-import { Events } from '../events';
+import type { Events } from '../events';
 
 const vecx = new Vec3();
 const vecy = new Vec3();

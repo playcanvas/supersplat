@@ -1,6 +1,6 @@
 import { Container, NumericInput } from '@playcanvas/pcui';
 
-import { Events } from '../events';
+import type { Events } from '../events';
 import { opFromModifiers } from '../select-op';
 
 type Pt = {x : number, y: number };

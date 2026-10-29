@@ -1,3 +1,6 @@
+import type {
+    BoundingBox,
+    GraphicsDevice } from 'playcanvas';
 import {
     BUFFERUSAGE_COPY_DST,
     BUFFERUSAGE_COPY_SRC,
@@ -11,9 +14,7 @@ import {
     BindStorageBufferFormat,
     BindTextureFormat,
     BindUniformBufferFormat,
-    BoundingBox,
     Compute,
-    GraphicsDevice,
     Shader,
     StorageBuffer,
     UniformBufferFormat,
@@ -23,7 +24,7 @@ import {
 } from 'playcanvas';
 
 import { indexToUvWGSL, paletteMatrixWGSL } from '../shaders/palette-chunk';
-import { Splat } from '../splat';
+import type { Splat } from '../splat';
 
 const WORKGROUP_SIZE = 256;
 const selectedMin = new Vec3();

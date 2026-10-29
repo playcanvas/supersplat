@@ -1,12 +1,13 @@
+import type {
+    GraphicsDevice,
+    RenderTarget,
+    ScopeSpace,
+    Shader } from 'playcanvas';
 import {
     BUFFERUSAGE_COPY_DST,
     SEMANTIC_POSITION,
     drawQuadWithShader,
     BoundingBox,
-    GraphicsDevice,
-    RenderTarget,
-    ScopeSpace,
-    Shader,
     ShaderUtils,
     BlendState,
     StorageBuffer
@@ -14,14 +15,18 @@ import {
 
 import type { CameraFrame } from '../camera';
 import { fragmentShader as blitFragmentShader, vertexShader as blitVertexShader } from '../shaders/blit-shader';
-import { Splat } from '../splat';
+import type { Splat } from '../splat';
+
 import { BufferPool } from './buffer-pool';
 import { CalcBound } from './calc-bound';
-import { CalcHistogram, CalcHistogramOptions } from './calc-histogram';
+import type { CalcHistogramOptions } from './calc-histogram';
+import { CalcHistogram } from './calc-histogram';
 import { ColorMatch } from './color-match';
-import { Intersect, IntersectOptions } from './intersect';
-import { SelectByRange, SelectByRangeOptions } from './select-by-range';
-import { SplatValueOptions } from './splat-value-compute';
+import type { IntersectOptions } from './intersect';
+import { Intersect } from './intersect';
+import type { SelectByRangeOptions } from './select-by-range';
+import { SelectByRange } from './select-by-range';
+import type { SplatValueOptions } from './splat-value-compute';
 
 const resolve = (scope: ScopeSpace, values: any) => {
     for (const key in values) {

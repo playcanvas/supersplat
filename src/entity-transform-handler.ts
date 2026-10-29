@@ -1,11 +1,12 @@
-import { Mat4, Quat, Vec3 } from 'playcanvas';
+import type { Vec3 } from 'playcanvas';
+import { Mat4, Quat } from 'playcanvas';
 
 import { PlacePivotOp, EntityTransformOp, MultiOp } from './edit-ops';
-import { Events } from './events';
-import { Pivot } from './pivot';
-import { Splat } from './splat';
+import type { Events } from './events';
+import type { Pivot } from './pivot';
+import type { Splat } from './splat';
 import { Transform } from './transform';
-import { TransformHandler } from './transform-handler';
+import type { TransformHandler } from './transform-handler';
 
 const mat = new Mat4();
 const quat = new Quat();

@@ -15,11 +15,11 @@ class DroppedFile {
     }
 }
 
-type DropHandlerFunc = (files: Array<DroppedFile>, resetScene: boolean) => void;
+type DropHandlerFunc = (files: DroppedFile[], resetScene: boolean) => void;
 
-const resolveDirectories = (entries: Array<FileSystemEntry>): Promise<Array<FileSystemFileEntry>> => {
-    const promises: Promise<Array<FileSystemFileEntry>>[] = [];
-    const result: Array<FileSystemFileEntry> = [];
+const resolveDirectories = (entries: FileSystemEntry[]): Promise<FileSystemFileEntry[]> => {
+    const promises: Promise<FileSystemFileEntry[]>[] = [];
+    const result: FileSystemFileEntry[] = [];
 
     entries.forEach((entry) => {
         if (entry.name === '.DS_Store') {
@@ -36,12 +36,12 @@ const resolveDirectories = (entries: Array<FileSystemEntry>): Promise<Array<File
                     const p: Promise<any>[] = [];
 
                     const read = () => {
-                        reader.readEntries((children: Array<FileSystemEntry>) => {
+                        reader.readEntries((children: FileSystemEntry[]) => {
                             if (children.length > 0) {
                                 p.push(resolveDirectories(children));
                                 read();
                             } else {
-                                Promise.all(p).then((children: Array<Array<FileSystemFileEntry>>) => {
+                                Promise.all(p).then((children: FileSystemFileEntry[][]) => {
                                     resolve(children.flat());
                                 });
                             }
@@ -53,14 +53,14 @@ const resolveDirectories = (entries: Array<FileSystemEntry>): Promise<Array<File
         }
     });
 
-    return Promise.all(promises).then((children: Array<Array<FileSystemFileEntry>>) => {
+    return Promise.all(promises).then((children: FileSystemFileEntry[][]) => {
         return result.concat(...children);
     });
 };
 
 // collect the files under a dropped handle, named by their path relative to the
 // drop (so a dropped folder 'foo' yields 'foo/a.ply', matching resolveDirectories)
-const resolveHandles = async (handle: FileSystemHandle, prefix: string, result: Array<DroppedFile>, root: FileSystemHandle) => {
+const resolveHandles = async (handle: FileSystemHandle, prefix: string, result: DroppedFile[], root: FileSystemHandle) => {
     if (handle.name === '.DS_Store') {
         return;
     }
@@ -75,7 +75,7 @@ const resolveHandles = async (handle: FileSystemHandle, prefix: string, result: 
     }
 };
 
-const removeCommonPrefix = (urls: Array<DroppedFile>) => {
+const removeCommonPrefix = (urls: DroppedFile[]) => {
     const split = (pathname: string) => {
         const parts = pathname.split(path.delimiter);
         const base = parts[0];
@@ -101,7 +101,7 @@ const removeCommonPrefix = (urls: Array<DroppedFile>) => {
 
 // expand picked or dropped handles into files, descending into folders
 const resolveHandleFiles = async (handles: FileSystemHandle[]) => {
-    const files: Array<DroppedFile> = [];
+    const files: DroppedFile[] = [];
     for (const handle of handles) {
         await resolveHandles(handle, '', files, handle);
     }

@@ -1,7 +1,8 @@
+import type {
+    GraphicsDevice } from 'playcanvas';
 import {
     ADDRESS_CLAMP_TO_EDGE,
     PIXELFORMAT_RGBA32F,
-    GraphicsDevice,
     Mat4,
     Texture
 } from 'playcanvas';

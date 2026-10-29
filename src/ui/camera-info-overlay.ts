@@ -1,9 +1,10 @@
 import { Container, Label } from '@playcanvas/pcui';
 import { Vec3 } from 'playcanvas';
 
-import { Events } from '../events';
+import type { Events } from '../events';
+
 import { i18n } from './localization';
-import { Tooltips } from './tooltips';
+import type { Tooltips } from './tooltips';
 
 // Accepts "1,2,3", "1, 2, 3", "1 2 3", with or without trailing whitespace.
 const parseVector = (text: string): [number, number, number] | null => {

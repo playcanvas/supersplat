@@ -13,7 +13,7 @@ import {
 } from 'playcanvas';
 
 import { Element, ElementType } from './element';
-import { Serializer } from './serializer';
+import type { Serializer } from './serializer';
 import { vertexShader, fragmentShader } from './shaders/sphere-shape-shader';
 
 const v = new Vec3();

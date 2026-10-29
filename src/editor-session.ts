@@ -1,14 +1,17 @@
-import { Color, Vec3 } from 'playcanvas';
+import type { Color } from 'playcanvas';
+import { Vec3 } from 'playcanvas';
 
 import type { CommandQueue } from './command-queue';
 import { AddSplatOp } from './edit-ops';
 import type { LayerInfo } from './editor-api';
-import { checkCancelled, CommandOptions, EditorError } from './editor-command';
-import { Events } from './events';
-import { buildExportOptions, ExportChoices, ExportType } from './export-options';
+import type { CommandOptions } from './editor-command';
+import { checkCancelled, EditorError } from './editor-command';
+import type { Events } from './events';
+import type { ExportChoices, ExportType } from './export-options';
+import { buildExportOptions } from './export-options';
 import type { FileType } from './file-handler';
-import { Scene } from './scene';
-import { Splat } from './splat';
+import type { Scene } from './scene';
+import type { Splat } from './splat';
 
 type CameraSettings = {
     position?: Vec3; target?: Vec3;

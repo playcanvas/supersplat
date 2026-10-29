@@ -1,6 +1,6 @@
 import { Vec3 } from 'playcanvas';
 
-import { Camera } from './camera';
+import type { Camera } from './camera';
 
 const fromWorldPoint = new Vec3();
 const toWorldPoint = new Vec3();

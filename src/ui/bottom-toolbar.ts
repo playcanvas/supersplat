@@ -1,7 +1,8 @@
 import { Button, Element, Container } from '@playcanvas/pcui';
 
-import { Events } from '../events';
-import { ShortcutManager } from '../shortcut-manager';
+import type { Events } from '../events';
+import type { ShortcutManager } from '../shortcut-manager';
+
 import { i18n } from './localization';
 import { MenuPanel } from './menu-panel';
 import measureSvg from './svg/measure.svg';
@@ -21,7 +22,7 @@ import depthOnSvg from './svg/selection-depth-on.svg';
 import footprintCentersSvg from './svg/selection-footprint-centers.svg';
 import footprintRingsSvg from './svg/selection-footprint-rings.svg';
 import undoSvg from './svg/undo.svg';
-import { Tooltips } from './tooltips';
+import type { Tooltips } from './tooltips';
 // import cropSvg from './svg/crop.svg';
 
 const createSvg = (svgString: string) => {

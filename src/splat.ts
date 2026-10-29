@@ -1,5 +1,6 @@
+import type {
+    Asset } from 'playcanvas';
 import {
-    Asset,
     BoundingBox,
     Color,
     Entity,
@@ -10,12 +11,12 @@ import {
 
 import { ColorGrade, createGradeTerms, gradeTerms } from './color-grade';
 import { ColorPalette } from './color-palette';
-import { EditorSplatResource } from './editor-splat-resource';
+import type { EditorSplatResource } from './editor-splat-resource';
 import { Element, ElementType } from './element';
 import { GaussianInstances } from './gaussian-instances';
-import { IndexRanges } from './index-ranges';
-import { Serializer } from './serializer';
-import { Transform } from './transform';
+import type { IndexRanges } from './index-ranges';
+import type { Serializer } from './serializer';
+import type { Transform } from './transform';
 import { TransformPalette } from './transform-palette';
 
 const vec = new Vec3();

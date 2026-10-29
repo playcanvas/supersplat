@@ -1,3 +1,5 @@
+import type {
+    GraphicsDevice } from 'playcanvas';
 import {
     ADDRESS_CLAMP_TO_EDGE,
     BLENDEQUATION_ADD,
@@ -7,15 +9,14 @@ import {
     BlendState,
     Color,
     FILTER_NEAREST,
-    GraphicsDevice,
     RenderPassPicker,
     RenderTarget,
     Texture
 } from 'playcanvas';
 
 import { ElementType } from './element';
-import { Scene } from './scene';
-import { Splat } from './splat';
+import type { Scene } from './scene';
+import type { Splat } from './splat';
 
 const idClearColor = new Color(1, 1, 1, 1);
 

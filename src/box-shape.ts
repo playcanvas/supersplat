@@ -14,7 +14,7 @@ import {
 } from 'playcanvas';
 
 import { Element, ElementType } from './element';
-import { Serializer } from './serializer';
+import type { Serializer } from './serializer';
 import { vertexShader, fragmentShader } from './shaders/box-shape-shader';
 
 const invMat = new Mat4();

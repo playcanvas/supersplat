@@ -1,4 +1,4 @@
-import { ScopeSpace } from 'playcanvas';
+import type { ScopeSpace } from 'playcanvas';
 
 const resolve = (scope: ScopeSpace, values: any) => {
     for (const [key, value] of Object.entries(values)) {

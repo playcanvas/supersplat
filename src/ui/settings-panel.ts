@@ -1,9 +1,10 @@
 import { BooleanInput, Container, Label, SelectInput, SliderInput } from '@playcanvas/pcui';
 
-import { Events } from '../events';
+import type { Events } from '../events';
+
 import { i18n } from './localization';
 import resetSvg from './svg/reset.svg';
-import { Tooltips } from './tooltips';
+import type { Tooltips } from './tooltips';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));

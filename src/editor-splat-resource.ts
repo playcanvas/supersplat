@@ -1,27 +1,30 @@
-import {
+import type {
     ChunkData,
     ChunkDataPool,
     ChunkField,
     ChunkLayer,
     ChunkSource,
-    SHBands,
+    SHBands } from '@playcanvas/splat-transform';
+import {
     createChunkDataPool,
     sortMortonInterleaved
 } from '@playcanvas/splat-transform';
+import type {
+    GraphicsDevice } from 'playcanvas';
 import {
     PIXELFORMAT_R32U,
     PIXELFORMAT_RGBA16F,
     PIXELFORMAT_RGBA32U,
     BoundingBox,
     FloatPacking,
-    GraphicsDevice,
     GSplatContainer,
     GSplatFormat,
     Quat,
     Vec3
 } from 'playcanvas';
 
-import { type BlobReadSource, PermutedChunkSource } from './io';
+import {  PermutedChunkSource } from './io';
+import type { BlobReadSource } from './io';
 
 const SH_REST_COUNTS = [0, 9, 24, 45];
 

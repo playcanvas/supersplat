@@ -3,8 +3,9 @@ import { version as pcuiVersion, revision as pcuiRevision } from '@playcanvas/pc
 import { version as stVersion, revision as stRevision } from '@playcanvas/splat-transform';
 import { version as engineVersion, revision as engineRevision } from 'playcanvas';
 
-import { main } from './main';
 import { version as appVersion } from '../package.json';
+
+import { main } from './main';
 import { i18n } from './ui/localization';
 
 // print out versions of dependent packages

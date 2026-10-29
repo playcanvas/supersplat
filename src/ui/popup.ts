@@ -1,7 +1,7 @@
 import { Button, Container, Label, SelectInput, TextInput } from '@playcanvas/pcui';
 
 import { i18n } from './localization';
-import { Tooltips } from './tooltips';
+import type { Tooltips } from './tooltips';
 
 interface ShowOptions {
     type: 'error' | 'info' | 'yesno' | 'okcancel';

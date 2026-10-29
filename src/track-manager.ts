@@ -1,6 +1,6 @@
-import { AnimTrack } from './anim-track';
+import type { AnimTrack } from './anim-track';
 import { AnimTrackEditOp } from './edit-ops';
-import { Events } from './events';
+import type { Events } from './events';
 
 /**
  * Manages the active animation track and provides undo-wrapped

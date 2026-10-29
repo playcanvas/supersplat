@@ -1,19 +1,22 @@
-import { Color, Mat4, Quat, Texture, Vec3 } from 'playcanvas';
+import type { Mat4 } from 'playcanvas';
+import { Color, Quat, Texture, Vec3 } from 'playcanvas';
 
 import type { CameraFrame } from './camera';
 import type { GradeParams } from './color-grade';
 import type { CommandContext } from './command-queue';
-import { EditHistory } from './edit-history';
+import type { EditHistory } from './edit-history';
 import { SelectOp, MultiOp, SetLocalFrameOp } from './edit-ops';
-import { intersectSelect, PUBLIC_OP, type EditorAPI } from './editor-api';
+import { intersectSelect, PUBLIC_OP  } from './editor-api';
+import type { EditorAPI } from './editor-api';
 import { EditorError } from './editor-command';
-import { Element, ElementType } from './element';
-import { Events } from './events';
+import type { Element } from './element';
+import { ElementType } from './element';
+import type { Events } from './events';
 import type { GridPlane } from './infinite-grid';
-import { Scene } from './scene';
+import type { Scene } from './scene';
 import { runSelectionGesture } from './selection-gesture';
 import { packRegion, emptyRegion, rectRegion } from './selection-rectangle';
-import { Splat } from './splat';
+import type { Splat } from './splat';
 
 // register for editor and scene events
 const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: Scene, api: EditorAPI) => {

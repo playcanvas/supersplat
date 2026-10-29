@@ -4,13 +4,14 @@ import { Color, path, Quat, Vec3 } from 'playcanvas';
 
 import { ElementType } from './element';
 import { EquirectRenderer } from './equirect-renderer';
-import { Events } from './events';
+import type { Events } from './events';
 import { encodePng } from './png-writer';
-import { Scene } from './scene';
+import type { Scene } from './scene';
 import { injectSphericalMetadata } from './spherical-metadata';
-import { Splat } from './splat';
+import type { Splat } from './splat';
 import { i18n } from './ui/localization';
-import { buildVideoEncoderConfig, getVideoCodecType, VideoSettings } from './video-config';
+import type { VideoSettings } from './video-config';
+import { buildVideoEncoderConfig, getVideoCodecType } from './video-config';
 
 const nullClr = new Color(0, 0, 0, 0);
 
@@ -518,7 +519,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     }
                     // muxerQueueSize is decremented by the write chain settling
                     // during the await
-                    // eslint-disable-next-line no-unmodified-loop-condition
+                     
                     while (muxerQueueSize > MAX_QUEUE_SIZE) {
                         await muxerWrites;
                     }

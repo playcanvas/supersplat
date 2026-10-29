@@ -3,11 +3,11 @@ import type { Asset, Quat } from 'playcanvas';
 
 import { decodeInstances, encodeInstances, restorePalettes } from './doc-instances';
 import type { EditorSplatResource } from './editor-splat-resource';
-import { Events } from './events';
+import type { Events } from './events';
 import { GaussianInstances } from './gaussian-instances';
 import { BrowserFileSystem, BlobReadSource, loadSplatSource, sourcesOf } from './io';
 import { recentFiles } from './recent-files';
-import { Scene } from './scene';
+import type { Scene } from './scene';
 import { Splat } from './splat';
 import { writeResourceFile } from './splat-serialize';
 import { Transform } from './transform';

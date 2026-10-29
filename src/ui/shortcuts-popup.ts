@@ -1,7 +1,8 @@
 import { Container, Label } from '@playcanvas/pcui';
 
-import { Events } from '../events';
-import { ShortcutManager } from '../shortcut-manager';
+import type { Events } from '../events';
+import type { ShortcutManager } from '../shortcut-manager';
+
 import { i18n } from './localization';
 
 // Popup display configuration - maps shortcuts to categories and locale keys

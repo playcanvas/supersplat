@@ -1,10 +1,11 @@
-import { Container } from '@playcanvas/pcui';
+import type { Container } from '@playcanvas/pcui';
 import { Vec3 } from 'playcanvas';
 
+import type { Events } from '../events';
+import type { Scene } from '../scene';
+import type { Splat } from '../splat';
+
 import { DimensionLabels } from './dimension-labels';
-import { Events } from '../events';
-import { Scene } from '../scene';
-import { Splat } from '../splat';
 
 const corners = Array.from({ length: 8 }, () => new Vec3());
 const screenCorners = Array.from({ length: 8 }, () => new Vec3());

@@ -2,10 +2,11 @@ import { Button, Container, Label, NumericInput } from '@playcanvas/pcui';
 import { Entity, Mat4, Quat, TranslateGizmo, Vec3 } from 'playcanvas';
 
 import { EntityTransformOp } from '../edit-ops';
-import { Events } from '../events';
-import { Scene } from '../scene';
-import { Splat } from '../splat';
-import { ToolOverlay, OverlayWriter } from '../tool-overlay';
+import type { Events } from '../events';
+import type { Scene } from '../scene';
+import type { Splat } from '../splat';
+import type { OverlayWriter } from '../tool-overlay';
+import { ToolOverlay } from '../tool-overlay';
 import { Transform } from '../transform';
 import { DimensionLabels } from '../ui/dimension-labels';
 import { i18n } from '../ui/localization';

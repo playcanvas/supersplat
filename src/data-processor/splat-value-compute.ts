@@ -1,3 +1,6 @@
+import type {
+    Compute,
+    GraphicsDevice } from 'playcanvas';
 import {
     SAMPLETYPE_FLOAT,
     SAMPLETYPE_UINT,
@@ -11,15 +14,13 @@ import {
     UNIFORMTYPE_VEC4,
     BindStorageBufferFormat,
     BindTextureFormat,
-    Compute,
-    GraphicsDevice,
     Mat4,
     UniformBufferFormat,
     UniformFormat,
     Vec3
 } from 'playcanvas';
 
-import { Splat } from '../splat';
+import type { Splat } from '../splat';
 
 const identity = new Mat4();
 const zeroVec3 = new Vec3();

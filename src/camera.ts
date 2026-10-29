@@ -1,3 +1,6 @@
+import type {
+    BoundingBox,
+    Quat } from 'playcanvas';
 import {
     math,
     ADDRESS_CLAMP_TO_EDGE,
@@ -18,12 +21,10 @@ import {
     TONEMAP_HEJL,
     TONEMAP_LINEAR,
     TONEMAP_NEUTRAL,
-    BoundingBox,
     BlendState,
     Color,
     Entity,
     Mat4,
-    Quat,
     Ray,
     RenderPass,
     RenderPassForward,
@@ -37,10 +38,10 @@ import type { CommandContext } from './command-queue';
 import { PointerController } from './controllers';
 import { Element, ElementType } from './element';
 import { Picker } from './picker';
-import { Serializer } from './serializer';
+import type { Serializer } from './serializer';
 import { vertexShader, fragmentShader } from './shaders/blit-shader';
 import { fragmentShader as stochasticResolveShader } from './shaders/stochastic-warp-resolve-shader';
-import { Splat } from './splat';
+import type { Splat } from './splat';
 import { TweenValue } from './tween-value';
 import { ShaderQuad, SimpleRenderPass } from './utils/simple-render-pass';
 
@@ -263,7 +264,7 @@ class Camera extends Element {
         return this.distanceTween.target.distance;
     }
 
-    setFocalPoint(point: Vec3, dampingFactorFactor: number = 1) {
+    setFocalPoint(point: Vec3, dampingFactorFactor = 1) {
         this.lookCameraPos = null;
         this.focalPointTween.goto(point, dampingFactorFactor * this.scene.config.controls.dampingFactor);
     }
@@ -287,7 +288,7 @@ class Camera extends Element {
         this.lookCameraPos = cameraPos;
     }
 
-    setAzimElev(azim: number, elev: number, dampingFactorFactor: number = 1) {
+    setAzimElev(azim: number, elev: number, dampingFactorFactor = 1) {
         // clamp
         azim = mod(azim, 360);
         elev = Math.max(this.minElev, Math.min(this.maxElev, elev));
@@ -306,7 +307,7 @@ class Camera extends Element {
         this.ortho = false;
     }
 
-    setDistance(distance: number, dampingFactorFactor: number = 1) {
+    setDistance(distance: number, dampingFactorFactor = 1) {
         this.lookCameraPos = null;
 
         const controls = this.scene.config.controls;
@@ -318,7 +319,7 @@ class Camera extends Element {
         t.goto({ distance }, dampingFactorFactor * controls.dampingFactor);
     }
 
-    setPose(position: Vec3, target: Vec3, dampingFactorFactor: number = 1) {
+    setPose(position: Vec3, target: Vec3, dampingFactorFactor = 1) {
         vec.sub2(target, position);
         const l = vec.length();
         const azim = Math.atan2(-vec.x / l, -vec.z / l) * math.RAD_TO_DEG;

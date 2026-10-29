@@ -3,14 +3,15 @@
  * Provides FileSystem abstraction for browser file operations.
  */
 
-import { MemoryFileSystem, type FileSystem, type Writer } from '@playcanvas/splat-transform';
+import { MemoryFileSystem   } from '@playcanvas/splat-transform';
+import type { FileSystem, Writer } from '@playcanvas/splat-transform';
 
 /**
  * Writer implementation for FileSystemWritableFileStream (File System Access API).
  */
 class BrowserFileWriter implements Writer {
     private stream: FileSystemWritableFileStream;
-    private cursor: number = 0;
+    private cursor = 0;
     private ready: Promise<void>;
 
     constructor(stream: FileSystemWritableFileStream) {

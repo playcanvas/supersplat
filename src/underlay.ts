@@ -1,9 +1,11 @@
+import type {
+    Layer
+} from 'playcanvas';
 import {
     BLENDEQUATION_ADD,
     BLENDMODE_ONE,
     BLENDMODE_ZERO,
-    BlendState,
-    Layer
+    BlendState
 } from 'playcanvas';
 
 import { Element, ElementType } from './element';

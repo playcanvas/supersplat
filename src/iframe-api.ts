@@ -1,4 +1,4 @@
-import { Events } from './events';
+import type { Events } from './events';
 
 const IS_SCENE_DIRTY = 'supersplat:is-scene-dirty';
 const NAVIGATE_HOME = 'supersplat:navigate-home';

@@ -1,13 +1,17 @@
-import { Events } from '../events';
+import type { Events } from '../events';
 import { opFromModifiers } from '../select-op';
 
-type Point = { x: number, y: number };
+type Point = { x: number; y: number };
 
 class LassoSelection {
     activate: () => void;
     deactivate: () => void;
 
-    constructor(events: Events, parent: HTMLElement, mask: { canvas: HTMLCanvasElement, context: CanvasRenderingContext2D }) {
+    constructor(
+        events: Events,
+        parent: HTMLElement,
+        mask: { canvas: HTMLCanvasElement; context: CanvasRenderingContext2D }
+    ) {
         // create svg
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.classList.add('tool-svg', 'hidden');
@@ -32,7 +36,10 @@ class LassoSelection {
         };
 
         const paint = () => {
-            polygon.setAttribute('points', [...points, currentPoint].reduce((prev, current) => `${prev}${current.x}, ${current.y} `, ''));
+            polygon.setAttribute(
+                'points',
+                [...points, currentPoint].reduce((prev, current) => `${prev}${current.x}, ${current.y} `, '')
+            );
             polygon.setAttribute('stroke', isClosed() ? '#fa6' : '#f60');
         };
 
@@ -79,12 +86,7 @@ class LassoSelection {
             context.fill();
 
             // wait for selection to complete
-            await events.invoke(
-                'select.byMask',
-                opFromModifiers(e),
-                canvas,
-                context
-            );
+            await events.invoke('select.byMask', opFromModifiers(e), canvas, context);
         };
 
         const pointerdown = (e: PointerEvent) => {

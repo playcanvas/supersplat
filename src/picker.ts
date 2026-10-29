@@ -1,3 +1,4 @@
+import type { GraphicsDevice } from 'playcanvas';
 import {
     ADDRESS_CLAMP_TO_EDGE,
     BLENDEQUATION_ADD,
@@ -7,28 +8,27 @@ import {
     BlendState,
     Color,
     FILTER_NEAREST,
-    GraphicsDevice,
     RenderPassPicker,
     RenderTarget,
     Texture
 } from 'playcanvas';
 
 import { ElementType } from './element';
-import { Scene } from './scene';
-import { Splat } from './splat';
+import type { Scene } from './scene';
+import type { Splat } from './splat';
 
 const idClearColor = new Color(1, 1, 1, 1);
 
 // result of an id readback: ids row-major over the pixel rectangle read
 // (x, y, width, height in render-target pixels) and the target's size then
 type IdPick = {
-    ids: number[],
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    targetWidth: number,
-    targetHeight: number
+    ids: number[];
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    targetWidth: number;
+    targetHeight: number;
 };
 const depthClearColor = new Color(0, 0, 0, 1);
 
@@ -38,9 +38,9 @@ const uint32 = new Uint32Array(float32.buffer);
 
 // Convert 16-bit half-float to 32-bit float using bit manipulation
 const half2Float = (h: number): number => {
-    const sign = (h & 0x8000) << 16;           // Move sign to bit 31
-    const exponent = (h & 0x7C00) >> 10;       // Extract 5-bit exponent
-    const mantissa = h & 0x03FF;               // Extract 10-bit mantissa
+    const sign = (h & 0x8000) << 16; // Move sign to bit 31
+    const exponent = (h & 0x7c00) >> 10; // Extract 5-bit exponent
+    const mantissa = h & 0x03ff; // Extract 10-bit mantissa
 
     if (exponent === 0) {
         if (mantissa === 0) {
@@ -54,11 +54,11 @@ const half2Float = (h: number): number => {
                 e++;
                 m <<= 1;
             } while ((m & 0x0400) === 0);
-            uint32[0] = sign | ((127 - 15 - e) << 23) | ((m & 0x03FF) << 13);
+            uint32[0] = sign | ((127 - 15 - e) << 23) | ((m & 0x03ff) << 13);
         }
     } else if (exponent === 31) {
         // Infinity or NaN
-        uint32[0] = sign | 0x7F800000 | (mantissa << 13);
+        uint32[0] = sign | 0x7f800000 | (mantissa << 13);
     } else {
         // Normalized: adjust exponent bias from 15 to 127
         uint32[0] = sign | ((exponent + 127 - 15) << 23) | (mantissa << 13);
@@ -93,8 +93,12 @@ class Picker {
         // Alpha: multiplicative transmittance (ZERO, ONE_MINUS_SRC_ALPHA) -> T = T * (1 - alpha)
         this.depthBlendState = new BlendState(
             true,
-            BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE_MINUS_SRC_ALPHA,           // RGB blend
-            BLENDEQUATION_ADD, BLENDMODE_ZERO, BLENDMODE_ONE_MINUS_SRC_ALPHA           // Alpha blend (transmittance)
+            BLENDEQUATION_ADD,
+            BLENDMODE_ONE,
+            BLENDMODE_ONE_MINUS_SRC_ALPHA, // RGB blend
+            BLENDEQUATION_ADD,
+            BLENDMODE_ZERO,
+            BLENDMODE_ONE_MINUS_SRC_ALPHA // Alpha blend (transmittance)
         );
     }
 
@@ -106,7 +110,11 @@ class Picker {
 
     // A queued gesture may outlive a viewport resize. Borrow the camera target
     // at matching sizes; otherwise keep a private target until readback settles.
-    async withTargetSize<T>(kind: 'id' | 'depth', size: { width: number, height: number }, fn: () => Promise<T>): Promise<T> {
+    async withTargetSize<T>(
+        kind: 'id' | 'depth',
+        size: { width: number; height: number },
+        fn: () => Promise<T>
+    ): Promise<T> {
         const key = kind === 'id' ? 'idRenderTarget' : 'depthRenderTarget';
         const liveTarget = this[key];
         if (!liveTarget || (liveTarget.width === size.width && liveTarget.height === size.height)) {
@@ -229,12 +237,7 @@ class Picker {
             for (let col = 0; col < pw; ++col) {
                 const i = (src + col) * 4;
                 // Use >>> 0 to convert signed 32-bit to unsigned (so 0xffffffff instead of -1)
-                result.push(
-                    (pixels[i] |
-                    (pixels[i + 1] << 8) |
-                    (pixels[i + 2] << 16) |
-                    (pixels[i + 3] << 24)) >>> 0
-                );
+                result.push((pixels[i] | (pixels[i + 1] << 8) | (pixels[i + 2] << 16) | (pixels[i + 3] << 24)) >>> 0);
             }
         }
 
@@ -285,7 +288,16 @@ class Picker {
         const rt = this.depthRenderTarget;
         const colorBuffer = rt.colorBuffer;
 
-        if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 1 || y < 0 || y > 1 || rt.width < 1 || rt.height < 1) {
+        if (
+            !Number.isFinite(x) ||
+            !Number.isFinite(y) ||
+            x < 0 ||
+            x > 1 ||
+            y < 0 ||
+            y > 1 ||
+            rt.width < 1 ||
+            rt.height < 1
+        ) {
             return null;
         }
 
@@ -305,7 +317,7 @@ class Picker {
     // Read normalized depth at scattered screen positions. Points are grouped
     // into small tiles so a brush stroke needs a handful of readbacks instead
     // of one readback per sample or one large read of its whole screen bound.
-    async readDepths(points: { x: number, y: number }[]): Promise<(number | null)[]> {
+    async readDepths(points: { x: number; y: number }[]): Promise<(number | null)[]> {
         if (!this.depthRenderTarget) {
             return new Array(points.length).fill(null);
         }
@@ -314,12 +326,21 @@ class Picker {
         const pixelsX = new Int32Array(points.length);
         const pixelsY = new Int32Array(points.length);
         const result: (number | null)[] = new Array(points.length).fill(null);
-        const tiles = new Map<string, { indices: number[], minX: number, minY: number, maxX: number, maxY: number }>();
+        const tiles = new Map<string, { indices: number[]; minX: number; minY: number; maxX: number; maxY: number }>();
         const tileSize = 64;
 
         for (let i = 0; i < points.length; ++i) {
             const { x, y } = points[i];
-            if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 1 || y < 0 || y > 1 || rt.width < 1 || rt.height < 1) {
+            if (
+                !Number.isFinite(x) ||
+                !Number.isFinite(y) ||
+                x < 0 ||
+                x > 1 ||
+                y < 0 ||
+                y > 1 ||
+                rt.width < 1 ||
+                rt.height < 1
+            ) {
                 continue;
             }
 
@@ -357,7 +378,7 @@ class Picker {
         return result;
     }
 
-    private decodeDepth(pixels: any, offset: number): number | null {
+    private decodeDepth(pixels: Awaited<ReturnType<Texture['read']>>, offset: number): number | null {
         // R channel: accumulated depth * alpha
         // A channel: transmittance (1 - alpha)
         const r = half2Float(pixels[offset]);

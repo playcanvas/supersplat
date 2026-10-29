@@ -1,9 +1,9 @@
 import { Container, NumericInput } from '@playcanvas/pcui';
 
-import { Events } from '../events';
+import type { Events } from '../events';
 import { opFromModifiers } from '../select-op';
 
-type NormalizedPoint = { x: number, y: number };
+type NormalizedPoint = { x: number; y: number };
 
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 
@@ -78,12 +78,7 @@ class EyedropperSelection {
                 event.preventDefault();
                 event.stopPropagation();
 
-                await events.invoke(
-                    'select.colorMatch',
-                    opFromModifiers(event),
-                    toNormalizedPoint(event),
-                    threshold
-                );
+                await events.invoke('select.colorMatch', opFromModifiers(event), toNormalizedPoint(event), threshold);
 
                 resetPointer();
             }

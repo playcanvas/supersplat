@@ -1,15 +1,17 @@
 import { Container, Label } from '@playcanvas/pcui';
-import { Mat4 } from 'playcanvas';
+import type { Mat4 } from 'playcanvas';
 
-import { AppearancePanel } from './appearance-panel';
-import { DataPanel } from './data-panel';
-import { Events } from '../events';
-import { ExportSettings } from '../export-settings';
+import { version } from '../../package.json';
+import type { Events } from '../events';
+import type { ExportSettings } from '../export-settings';
 import type { BlobReadSource } from '../io';
+
 import { AboutPopup } from './about-popup';
+import { AppearancePanel } from './appearance-panel';
 import { BottomToolbar } from './bottom-toolbar';
 import { CameraInfoOverlay } from './camera-info-overlay';
 import { ClipboardMenu } from './clipboard-menu';
+import { DataPanel } from './data-panel';
 import { ExportPopup } from './export-popup';
 import { ImageSettingsDialog } from './image-settings-dialog';
 import { i18n } from './localization';
@@ -18,7 +20,8 @@ import { OverdrawLegend } from './overdraw-legend';
 import { OverlaysPanel } from './overlays-panel';
 import { PerfOverlay } from './perf-overlay';
 import logo from './playcanvas-logo.png';
-import { Popup, ShowOptions } from './popup';
+import type { ShowOptions } from './popup';
+import { Popup } from './popup';
 import { Progress } from './progress';
 import { PublishSettingsDialog } from './publish-settings-dialog';
 import { RightToolbar } from './right-toolbar';
@@ -31,7 +34,6 @@ import { TimelinePanel } from './timeline-panel';
 import { Tooltips } from './tooltips';
 import { VideoSettingsDialog } from './video-settings-dialog';
 import { ViewCube } from './view-cube';
-import { version } from '../../package.json';
 
 // ts compiler and vscode find this type, but eslint does not
 type FilePickerAcceptType = unknown;
@@ -245,9 +247,12 @@ class EditorUI {
             return exportPopup.show(exportType, splatNames, settings);
         });
 
-        events.function('show.savePopup', (filename: string, directory?: FileSystemDirectoryHandle, source?: BlobReadSource) => {
-            return exportPopup.show('ssproj', [filename], { directory }, source);
-        });
+        events.function(
+            'show.savePopup',
+            (filename: string, directory?: FileSystemDirectoryHandle, source?: BlobReadSource) => {
+                return exportPopup.show('ssproj', [filename], { directory }, source);
+            }
+        );
 
         events.function('show.publishSettingsDialog', async () => {
             // show popup if user isn't logged in
@@ -278,9 +283,20 @@ class EditorUI {
                     let writable;
                     let fileHandle: FileSystemFileHandle | undefined;
 
-                    const imageFileTypes: Record<string, { description: string, accept: Record<`${string}/${string}`, `.${string}`[]>, extension: string }> = {
+                    const imageFileTypes: Record<
+                        string,
+                        {
+                            description: string;
+                            accept: Record<`${string}/${string}`, `.${string}`[]>;
+                            extension: string;
+                        }
+                    > = {
                         png: { description: 'PNG Image', accept: { 'image/png': ['.png'] }, extension: '.png' },
-                        jpeg: { description: 'JPEG Image', accept: { 'image/jpeg': ['.jpg', '.jpeg'] }, extension: '.jpg' },
+                        jpeg: {
+                            description: 'JPEG Image',
+                            accept: { 'image/jpeg': ['.jpg', '.jpeg'] },
+                            extension: '.jpg'
+                        },
                         webp: { description: 'WebP Image', accept: { 'image/webp': ['.webp'] }, extension: '.webp' }
                     };
                     const imageFileType = imageFileTypes[imageSettings.format];
@@ -288,10 +304,12 @@ class EditorUI {
                     if (window.showSaveFilePicker) {
                         fileHandle = await window.showSaveFilePicker({
                             id: 'SuperSplatImageFileExport',
-                            types: [{
-                                description: imageFileType.description,
-                                accept: imageFileType.accept
-                            }],
+                            types: [
+                                {
+                                    description: imageFileType.description,
+                                    accept: imageFileType.accept
+                                }
+                            ],
                             suggestedName: `${events.invoke('render.baseFilename')}${imageFileType.extension}`
                         });
 
@@ -323,7 +341,6 @@ class EditorUI {
             const videoSettings = await videoSettingsDialog.show();
 
             if (videoSettings) {
-
                 try {
                     // Determine file extension and mime type based on format
                     let fileExtension: string;
@@ -331,37 +348,45 @@ class EditorUI {
 
                     // Codec name mapping for display
                     const codecNames: Record<string, string> = {
-                        'h264': 'H.264',
-                        'h265': 'H.265',
-                        'vp9': 'VP9',
-                        'av1': 'AV1'
+                        h264: 'H.264',
+                        h265: 'H.265',
+                        vp9: 'VP9',
+                        av1: 'AV1'
                     };
                     const codecName = codecNames[videoSettings.codec] || videoSettings.codec.toUpperCase();
 
                     if (videoSettings.format === 'webm') {
                         fileExtension = '.webm';
-                        filePickerTypes = [{
-                            description: `WebM Video (${codecName})`,
-                            accept: { 'video/webm': ['.webm'] }
-                        }];
+                        filePickerTypes = [
+                            {
+                                description: `WebM Video (${codecName})`,
+                                accept: { 'video/webm': ['.webm'] }
+                            }
+                        ];
                     } else if (videoSettings.format === 'mov') {
                         fileExtension = '.mov';
-                        filePickerTypes = [{
-                            description: `MOV Video (${codecName})`,
-                            accept: { 'video/quicktime': ['.mov'] }
-                        }];
+                        filePickerTypes = [
+                            {
+                                description: `MOV Video (${codecName})`,
+                                accept: { 'video/quicktime': ['.mov'] }
+                            }
+                        ];
                     } else if (videoSettings.format === 'mkv') {
                         fileExtension = '.mkv';
-                        filePickerTypes = [{
-                            description: `MKV Video (${codecName})`,
-                            accept: { 'video/x-matroska': ['.mkv'] }
-                        }];
+                        filePickerTypes = [
+                            {
+                                description: `MKV Video (${codecName})`,
+                                accept: { 'video/x-matroska': ['.mkv'] }
+                            }
+                        ];
                     } else {
                         fileExtension = '.mp4';
-                        filePickerTypes = [{
-                            description: `MP4 Video (${codecName})`,
-                            accept: { 'video/mp4': ['.mp4'] }
-                        }];
+                        filePickerTypes = [
+                            {
+                                description: `MP4 Video (${codecName})`,
+                                accept: { 'video/mp4': ['.mp4'] }
+                            }
+                        ];
                     }
 
                     const suggested = `${events.invoke('render.baseFilename')}${fileExtension}`;
@@ -443,7 +468,7 @@ class EditorUI {
             progress.onCancel = cancellable ? () => events.fire('progressCancel') : null;
         });
 
-        events.on('progressUpdate', (options: { text?: string, progress?: number }) => {
+        events.on('progressUpdate', (options: { text?: string; progress?: number }) => {
             if (options.text !== undefined) {
                 progress.setText(options.text);
             }
@@ -464,19 +489,27 @@ class EditorUI {
         canvas.height = Math.ceil(canvasContainer.dom.offsetHeight * pixelRatio);
 
         ['contextmenu', 'gesturestart', 'gesturechange', 'gestureend'].forEach((event) => {
-            document.addEventListener(event, (e) => {
-                e.preventDefault();
-            }, true);
+            document.addEventListener(
+                event,
+                (e) => {
+                    e.preventDefault();
+                },
+                true
+            );
         });
 
         // whenever the canvas container is clicked, set keyboard focus on the body
-        canvasContainer.dom.addEventListener('pointerdown', (event: PointerEvent) => {
-            // set focus on the body if user is busy pressing on the canvas or a child of the tools
-            // element
-            if (event.target === canvas || toolsContainer.dom.contains(event.target as Node)) {
-                document.body.focus();
-            }
-        }, true);
+        canvasContainer.dom.addEventListener(
+            'pointerdown',
+            (event: PointerEvent) => {
+                // set focus on the body if user is busy pressing on the canvas or a child of the tools
+                // element
+                if (event.target === canvas || toolsContainer.dom.contains(event.target as Node)) {
+                    document.body.focus();
+                }
+            },
+            true
+        );
     }
 }
 

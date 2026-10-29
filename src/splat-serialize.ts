@@ -4,59 +4,48 @@ import {
     MemoryFileSystem,
     Transform,
     writeSource,
-    ZipFileSystem,
-    type ChunkData,
-    type ChunkDataPool,
-    type ChunkLayer,
-    type ChunkSource,
-    type ChunkSourceMetadata,
-    type FileSystem,
-    type LayerLayout,
-    type LogEvent,
-    type Options,
-    type OutputFormat,
-    type ReadRequest,
-    type Renderer,
-    type SHBands,
-    type Writer
+    ZipFileSystem
 } from '@playcanvas/splat-transform';
-import {
-    defaultPostEffectSettings,
-    type AnimTrack,
-    type Camera,
-    type ExperienceSettings
-} from '@playcanvas/splat-transform/viewer-settings';
-import {
-    Mat3,
-    Mat4,
-    PIXELFORMAT_BGRA8,
-    Quat,
-    Texture,
-    Vec3,
-    WebgpuGraphicsDevice
-} from 'playcanvas';
+import type {
+    ChunkData,
+    ChunkDataPool,
+    ChunkLayer,
+    ChunkSource,
+    ChunkSourceMetadata,
+    FileSystem,
+    LayerLayout,
+    LogEvent,
+    Options,
+    OutputFormat,
+    ReadRequest,
+    Renderer,
+    SHBands,
+    Writer
+} from '@playcanvas/splat-transform';
+import { defaultPostEffectSettings } from '@playcanvas/splat-transform/viewer-settings';
+import type { AnimTrack, Camera, ExperienceSettings } from '@playcanvas/splat-transform/viewer-settings';
+import { Mat3, Mat4, PIXELFORMAT_BGRA8, Quat, Texture, Vec3, WebgpuGraphicsDevice } from 'playcanvas';
 
-import { version } from '../package.json';
 import { ColorGrade, createGradeTerms, dcDecode, dcEncode, sigmoid } from './color-grade';
 import type { EditorSplatResource } from './editor-splat-resource';
-import { Events } from './events';
+import type { Events } from './events';
 import { groupInstancesByChunk } from './gaussian-instances';
 import { PermutedChunkSource } from './io';
 import { SHRotation } from './sh-utils';
-import { Splat } from './splat';
+import type { Splat } from './splat';
 import { State } from './splat-state';
 
 type SerializeSettings = {
-    shBands?: number;               // number of bands to export, zero-padding missing coefficients. defaults to the source bands
-    selected?: boolean;             // only export selected gaussians. used for copy/paste
-    minOpacity?: number;            // filter out gaussians with alpha less than or equal to minAlpha
-    removeInvalid?: boolean;        // filter out gaussians with invalid data (NaN/Infinity)
+    shBands?: number; // number of bands to export, zero-padding missing coefficients. defaults to the source bands
+    selected?: boolean; // only export selected gaussians. used for copy/paste
+    minOpacity?: number; // filter out gaussians with alpha less than or equal to minAlpha
+    removeInvalid?: boolean; // filter out gaussians with invalid data (NaN/Infinity)
 
     // the following options are used when serializing for document save.
     // keepWorldTransform flows through the streaming source; keepStateData
     // is accepted for compatibility but the streaming writers never export state.
-    keepStateData?: boolean;        // keep the state data array
-    keepWorldTransform?: boolean;   // don't apply the world transform when resolving splat transforms
+    keepStateData?: boolean; // keep the state data array
+    keepWorldTransform?: boolean; // don't apply the world transform when resolving splat transforms
 };
 
 type ViewerExportSettings = {
@@ -64,8 +53,6 @@ type ViewerExportSettings = {
     experienceSettings: ExperienceSettings;
     events?: Events;
 };
-
-type ProgressFunc = (loaded: number, total: number) => void;
 
 const shBandCoeffs = [0, 3, 8, 15];
 
@@ -77,7 +64,10 @@ class SplatTransformCache {
     getSHRot: (index: number) => SHRotation;
 
     constructor(splat: Splat, keepWorldTransform = false) {
-        const transforms = new Map<number, { transformIndex: number, mat: Mat4, rot: Quat, scale: Vec3, shRot: SHRotation }>();
+        const transforms = new Map<
+            number,
+            { transformIndex: number; mat: Mat4; rot: Quat; scale: Vec3; shRot: SHRotation }
+        >();
         const { instances } = splat;
         const tmpMat = new Mat4();
         const tmpMat3 = new Mat3();
@@ -207,12 +197,15 @@ const buildLayouts = (numRest: number): Partial<Record<ChunkLayer, LayerLayout>>
     },
     color: {
         stride: (3 + numRest) * 4,
-        fields: numRest > 0 ? {
-            dc: { byteOffset: 0, components: 3, type: 'float32' },
-            shRest: { byteOffset: 12, components: numRest, type: 'float32' }
-        } : {
-            dc: { byteOffset: 0, components: 3, type: 'float32' }
-        }
+        fields:
+            numRest > 0
+                ? {
+                      dc: { byteOffset: 0, components: 3, type: 'float32' },
+                      shRest: { byteOffset: 12, components: numRest, type: 'float32' }
+                  }
+                : {
+                      dc: { byteOffset: 0, components: 3, type: 'float32' }
+                  }
     }
 });
 
@@ -282,7 +275,10 @@ const filteredIndices = async (splat: Splat, settings: SerializeSettings) => {
             const position = removeInvalid ? pool.acquire('position', source.meta.layouts.position, count) : undefined;
             const geometric = pool.acquire('geometric', source.meta.layouts.geometric, count);
             const color = removeInvalid ? pool.acquire('color', source.meta.layouts.color, count) : undefined;
-            const other = removeInvalid && source.meta.availableLayers.has('other') ? pool.acquire('other', source.meta.layouts.other, count) : undefined;
+            const other =
+                removeInvalid && source.meta.availableLayers.has('other')
+                    ? pool.acquire('other', source.meta.layouts.other, count)
+                    : undefined;
             try {
                 await source.read({ chunkIndex, position, geometric, color, other });
                 const opacity = new Float32Array(geometric.data);
@@ -292,8 +288,14 @@ const filteredIndices = async (splat: Splat, settings: SerializeSettings) => {
                     if (onlySelected && state[instance] !== State.selected) continue;
                     const i = splat.instances.sourceRow[instance] - base;
                     if (minOpacity > 0 && sigmoid(opacity[i * 8 + 7]) < minOpacity) continue;
-                    if (removeInvalid && (!validFloatLayer(position, i) || !validGeometric(geometric, i) ||
-                        !validFloatLayer(color, i) || (other && !validOther(other, i)))) continue;
+                    if (
+                        removeInvalid &&
+                        (!validFloatLayer(position, i) ||
+                            !validGeometric(geometric, i) ||
+                            !validFloatLayer(color, i) ||
+                            (other && !validOther(other, i)))
+                    )
+                        continue;
                     accepted[instance] = 1;
                     total++;
                 }
@@ -368,7 +370,8 @@ class SuperSplatChunkSource implements ChunkSource {
     }
 
     static async create(splats: Splat[], settings: SerializeSettings) {
-        const outputBands = settings.shBands ?? (splats.length ? Math.max(...splats.map(s => s.resource.shBands)) : 0);
+        const outputBands =
+            settings.shBands ?? (splats.length ? Math.max(...splats.map((s) => s.resource.shBands)) : 0);
         const entries: ExportEntry[] = [];
         let start = 0;
         for (const splat of splats) {
@@ -403,7 +406,12 @@ class SuperSplatChunkSource implements ChunkSource {
     // `instanceIndices` selects instances of `entry.splat`; the static data is
     // gathered by their source rows, while the palette and grade lookups stay in
     // instance space (two instances of one row can carry different transforms)
-    private async readGroup(entry: ExportEntry, instanceIndices: Uint32Array, outputOffset: number, request: ReadRequest) {
+    private async readGroup(
+        entry: ExportEntry,
+        instanceIndices: Uint32Array,
+        outputOffset: number,
+        request: ReadRequest
+    ) {
         const { splat, transform, grade: gradeCache } = entry;
         const source = splat.resource.source;
         const { sourceRow } = splat.instances;
@@ -419,7 +427,9 @@ class SuperSplatChunkSource implements ChunkSource {
 
         const count = indices.length;
         const position = request.position ? pool.acquire('position', source.meta.layouts.position, count) : undefined;
-        const geometric = request.geometric ? pool.acquire('geometric', source.meta.layouts.geometric, count) : undefined;
+        const geometric = request.geometric
+            ? pool.acquire('geometric', source.meta.layouts.geometric, count)
+            : undefined;
         const color = request.color ? pool.acquire('color', source.meta.layouts.color, count) : undefined;
         try {
             await source.read({ indices, indexOffset: 0, count, position, geometric, color });
@@ -452,7 +462,12 @@ class SuperSplatChunkSource implements ChunkSource {
                 if (dstGeometric) {
                     const src = i * 8;
                     const dst = (outputOffset + i) * 8;
-                    rotationValue.set(srcGeometric[src + 1], srcGeometric[src + 2], srcGeometric[src + 3], srcGeometric[src]);
+                    rotationValue.set(
+                        srcGeometric[src + 1],
+                        srcGeometric[src + 2],
+                        srcGeometric[src + 3],
+                        srcGeometric[src]
+                    );
                     rotationValue.mul2(transform.getRot(instance), rotationValue);
                     dstGeometric[dst] = rotationValue.w;
                     dstGeometric[dst + 1] = rotationValue.x;
@@ -463,8 +478,9 @@ class SuperSplatChunkSource implements ChunkSource {
                     dstGeometric[dst + 5] = Math.log(Math.exp(srcGeometric[src + 5]) * scale.y);
                     dstGeometric[dst + 6] = Math.log(Math.exp(srcGeometric[src + 6]) * scale.z);
                     const grade = gradeCache.get(instance);
-                    dstGeometric[dst + 7] = grade.hasTransparency ?
-                        grade.applyOpacity(srcGeometric[src + 7]) : srcGeometric[src + 7];
+                    dstGeometric[dst + 7] = grade.hasTransparency
+                        ? grade.applyOpacity(srcGeometric[src + 7])
+                        : srcGeometric[src + 7];
                 }
                 if (dstColor) {
                     const grade = gradeCache.get(instance);
@@ -525,7 +541,9 @@ class SuperSplatChunkSource implements ChunkSource {
             const maxCount = entry.splat.resource.source.meta.chunkSize;
             let groupCount = 1;
             while (offset + groupCount < count && groupCount < maxCount) {
-                const nextRow = isGather ? request.indices[request.indexOffset + offset + groupCount] : chunkBase + offset + groupCount;
+                const nextRow = isGather
+                    ? request.indices[request.indexOffset + offset + groupCount]
+                    : chunkBase + offset + groupCount;
                 if (this.findEntry(nextRow) !== entry) break;
                 groupCount++;
             }
@@ -540,7 +558,7 @@ class SuperSplatChunkSource implements ChunkSource {
     }
 
     close(): Promise<void> {
-        this.pools.forEach(pool => pool.destroy());
+        this.pools.forEach((pool) => pool.destroy());
         this.pools.clear();
         return Promise.resolve();
     }
@@ -550,7 +568,10 @@ class SuperSplatChunkSource implements ChunkSource {
  * Build a ChunkSource + matching pool over the given splats, or null if nothing
  * passes the export filter.
  */
-const createExportSource = async (splats: Splat[], settings: SerializeSettings): Promise<{ source: ChunkSource, pool: ChunkDataPool } | null> => {
+const createExportSource = async (
+    splats: Splat[],
+    settings: SerializeSettings
+): Promise<{ source: ChunkSource; pool: ChunkDataPool } | null> => {
     const source = await SuperSplatChunkSource.create(splats, settings);
     if (source.meta.numGaussians === 0) {
         return null;
@@ -603,7 +624,7 @@ const createGpuDevice = async (): Promise<WebgpuGraphicsDevice> => {
 
     // createDevice can also resolve without creating a device (e.g.
     // blocklisted adapters)
-    // @ts-ignore - wgpu is an internal property
+    // @ts-expect-error - wgpu is an internal property
     if (!graphicsDevice.wgpu) {
         throw new WebGPUUnavailableError();
     }
@@ -617,7 +638,6 @@ const createGpuDevice = async (): Promise<WebgpuGraphicsDevice> => {
         format: PIXELFORMAT_BGRA8
     });
 
-    // @ts-ignore - externalBackbuffer is an internal property
     graphicsDevice.externalBackbuffer = cachedBackbuffer;
 
     cachedGpuDevice = graphicsDevice;
@@ -686,13 +706,16 @@ const writeResourceFile = async (
     // relabel as PLY space so the writer bakes nothing (see above)
     const raw: ChunkSource = {
         meta: { ...source.meta, transform: Transform.PLY.clone() },
-        read: request => source.read(request),
+        read: (request) => source.read(request),
         close: () => source.close()
     };
 
     const pool = createChunkDataPool({ chunkSize: raw.meta.chunkSize });
     try {
-        await writeSource({ filename, outputFormat: 'ply', source: raw, pool, options: {}, createDevice: createGpuDevice }, fs);
+        await writeSource(
+            { filename, outputFormat: 'ply', source: raw, pool, options: {}, createDevice: createGpuDevice },
+            fs
+        );
     } finally {
         pool.destroy();
     }
@@ -711,9 +734,10 @@ const createProgressRenderer = (header: string, events?: Events): Renderer => ({
                     events?.fire('progressStart', header);
                 } else {
                     events?.fire('progressUpdate', {
-                        text: event.index !== undefined && event.total !== undefined ?
-                            `Step ${event.index} of ${event.total}: ${event.name}` :
-                            event.name,
+                        text:
+                            event.index !== undefined && event.total !== undefined
+                                ? `Step ${event.index} of ${event.total}: ${event.name}`
+                                : event.name,
                         progress: 0
                     });
                 }
@@ -728,7 +752,7 @@ const createProgressRenderer = (header: string, events?: Events): Renderer => ({
                 break;
             case 'barTick':
                 events?.fire('progressUpdate', {
-                    progress: event.total > 0 ? 100 * event.current / event.total : 0
+                    progress: event.total > 0 ? (100 * event.current) / event.total : 0
                 });
                 break;
             case 'barEnd':
@@ -747,7 +771,12 @@ const createProgressRenderer = (header: string, events?: Events): Renderer => ({
     }
 });
 
-const serializeViewer = async (splats: Splat[], serializeSettings: SerializeSettings, options: ViewerExportSettings, fs: FileSystem): Promise<void> => {
+const serializeViewer = async (
+    splats: Splat[],
+    serializeSettings: SerializeSettings,
+    options: ViewerExportSettings,
+    fs: FileSystem
+): Promise<void> => {
     const { experienceSettings, events } = options;
 
     splatTransformLogger.setRenderer(createProgressRenderer('Exporting HTML', events));
@@ -760,17 +789,31 @@ const serializeViewer = async (splats: Splat[], serializeSettings: SerializeSett
     try {
         if (options.type === 'html') {
             // Bundled HTML - a single self-contained file
-            await writeSplatFile(splats, serializeSettings, 'html-bundle', 'output.html', {
-                viewerSettingsJson: experienceSettings,
-                iterations: 10
-            }, fs);
+            await writeSplatFile(
+                splats,
+                serializeSettings,
+                'html-bundle',
+                'output.html',
+                {
+                    viewerSettingsJson: experienceSettings,
+                    iterations: 10
+                },
+                fs
+            );
         } else {
             // Package - write unbundled into a MemoryFileSystem, then ZIP
             const memFs = new MemoryFileSystem();
-            await writeSplatFile(splats, serializeSettings, 'html', 'index.html', {
-                viewerSettingsJson: experienceSettings,
-                iterations: 10
-            }, memFs);
+            await writeSplatFile(
+                splats,
+                serializeSettings,
+                'html',
+                'index.html',
+                {
+                    viewerSettingsJson: experienceSettings,
+                    iterations: 10
+                },
+                memFs
+            );
 
             // Create ZIP from memory filesystem results. The try/finally
             // ensures zipFs (and its underlying writer) is closed even if a

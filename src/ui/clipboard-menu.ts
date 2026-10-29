@@ -29,18 +29,19 @@ type ClipboardSource = {
 
 const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 
-const isObject = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
+const isObject = (value: unknown): value is Record<string, unknown> =>
+    value !== null && typeof value === 'object' && !Array.isArray(value);
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 const numberField = (get: () => number, min = -Infinity, max = Infinity): ClipboardField => ({
     get,
-    parse: value => (isNumber(value) ? clamp(value, min, max) : undefined)
+    parse: (value) => (isNumber(value) ? clamp(value, min, max) : undefined)
 });
 
 const vectorField = (get: () => number[], dimensions: number): ClipboardField => ({
     get,
-    parse: value => (Array.isArray(value) && value.length === dimensions && value.every(isNumber) ? value : undefined)
+    parse: (value) => (Array.isArray(value) && value.length === dimensions && value.every(isNumber) ? value : undefined)
 });
 
 // copies [r, g, b] in 0..1, and also accepts a '#rrggbb' hex string
@@ -53,9 +54,11 @@ const colorField = (get: () => number[]): ClipboardField => ({
                 return undefined;
             }
             const n = parseInt(match[1], 16);
-            return [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(c => c / 255);
+            return [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((c) => c / 255);
         }
-        return Array.isArray(value) && value.length === 3 && value.every(isNumber) ? value.map(c => clamp(c, 0, 1)) : undefined;
+        return Array.isArray(value) && value.length === 3 && value.every(isNumber)
+            ? value.map((c) => clamp(c, 0, 1))
+            : undefined;
     }
 });
 
@@ -81,9 +84,13 @@ const parseText = (text: string) => {
 // the fields a paste sets. a row (key given) takes its bare value or its own
 // key out of a copied section; a section takes any subset of its keys
 const resolve = (source: ClipboardSource, key: string | undefined, value: unknown) => {
-    const pairs = key ?
-        [[key, isObject(value) && key in value ? value[key] : value]] :
-        (isObject(value) ? Object.keys(source.fields).filter(k => k in value).map(k => [k, value[k]]) : []);
+    const pairs = key
+        ? [[key, isObject(value) && key in value ? value[key] : value]]
+        : isObject(value)
+          ? Object.keys(source.fields)
+                .filter((k) => k in value)
+                .map((k) => [k, value[k]])
+          : [];
 
     if (pairs.length === 0) {
         return null;
@@ -120,17 +127,20 @@ class ClipboardMenu extends Container {
 
         const enabled = () => this.active?.source.enabled?.() ?? true;
 
-        this.menu = new MenuPanel([{
-            text: () => i18n.t('panel.clipboard.copy'),
-            icon: createSvg(copySvg),
-            isEnabled: enabled,
-            onSelect: () => this.copy()
-        }, {
-            text: () => i18n.t('panel.clipboard.paste'),
-            icon: createSvg(pasteSvg),
-            isEnabled: enabled,
-            onSelect: () => this.paste()
-        }]);
+        this.menu = new MenuPanel([
+            {
+                text: () => i18n.t('panel.clipboard.copy'),
+                icon: createSvg(copySvg),
+                isEnabled: enabled,
+                onSelect: () => this.copy()
+            },
+            {
+                text: () => i18n.t('panel.clipboard.paste'),
+                icon: createSvg(pasteSvg),
+                isEnabled: enabled,
+                onSelect: () => this.paste()
+            }
+        ]);
         this.append(this.menu);
 
         this.menu.on('hide', () => {
@@ -147,12 +157,16 @@ class ClipboardMenu extends Container {
         window.addEventListener('blur', () => {
             this.menu.hidden = true;
         });
-        window.addEventListener('keydown', (event: KeyboardEvent) => {
-            if (event.key === 'Escape' && !this.menu.hidden) {
-                event.stopPropagation();
-                this.menu.hidden = true;
-            }
-        }, true);
+        window.addEventListener(
+            'keydown',
+            (event: KeyboardEvent) => {
+                if (event.key === 'Escape' && !this.menu.hidden) {
+                    event.stopPropagation();
+                    this.menu.hidden = true;
+                }
+            },
+            true
+        );
     }
 
     // right-clicking target copies/pastes the whole source, or just its `key` field
@@ -193,9 +207,9 @@ class ClipboardMenu extends Container {
 
     private async copy() {
         const { target, source, key } = this.active;
-        const value = key ?
-            tidy(source.fields[key].get()) :
-            Object.fromEntries(Object.entries(source.fields).map(([k, field]) => [k, tidy(field.get())]));
+        const value = key
+            ? tidy(source.fields[key].get())
+            : Object.fromEntries(Object.entries(source.fields).map(([k, field]) => [k, tidy(field.get())]));
 
         try {
             await navigator.clipboard.writeText(JSON.stringify(value));

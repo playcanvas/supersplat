@@ -1,15 +1,12 @@
+import type { GraphicsDevice, Shader, StencilParameters, Vec4 } from 'playcanvas';
 import {
     CULLFACE_NONE,
     SEMANTIC_POSITION,
     BlendState,
     DepthState,
-    GraphicsDevice,
     QuadRender,
     RenderPass,
-    Shader,
-    ShaderUtils,
-    StencilParameters,
-    Vec4
+    ShaderUtils
 } from 'playcanvas';
 
 import { resolve } from './resolve';
@@ -63,7 +60,7 @@ class SimpleRenderPass extends RenderPass {
         Object.assign(this, args);
     }
 
-    execute(vars: any = {}) {
+    execute(vars: object = {}) {
         const { device, blendState, cullMode, depthState, stencilFront, stencilBack, viewport, scissor } = this;
 
         if (this.vars) {

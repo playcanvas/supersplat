@@ -1,8 +1,9 @@
 import { Button, ColorPicker, Container, Label, SliderInput } from '@playcanvas/pcui';
 import { Color } from 'playcanvas';
 
-import { Events } from '../events';
-import { ShortcutManager } from '../shortcut-manager';
+import type { Events } from '../events';
+import type { ShortcutManager } from '../shortcut-manager';
+
 import { i18n } from './localization';
 import appearanceSvg from './svg/appearance.svg';
 import centersSvg from './svg/centers.svg';
@@ -10,7 +11,7 @@ import colorsSvg from './svg/colors.svg';
 import resetSvg from './svg/reset.svg';
 import ringsSvg from './svg/rings.svg';
 import selectAllSvg from './svg/select-all.svg';
-import { Tooltips } from './tooltips';
+import type { Tooltips } from './tooltips';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -80,9 +81,10 @@ class AppearancePanel extends Container {
         // view shortcut (tab) that hides the display overlays
         const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
         const help = (localeKey: string) => () => i18n.t(localeKey);
-        const helpWithShortcut = (localeKey: string) => () => i18n.t(localeKey, {
-            shortcut: shortcutManager.formatShortcut('view.toggleEditView')
-        });
+        const helpWithShortcut = (localeKey: string) => () =>
+            i18n.t(localeKey, {
+                shortcut: shortcutManager.formatShortcut('view.toggleEditView')
+            });
 
         const iconButton = (svg: string, localeKey: string, tooltip: () => string) => {
             const button = new Button({
@@ -139,9 +141,21 @@ class AppearancePanel extends Container {
         i18n.bindText(displayLabel, 'panel.appearance.section-display');
         tooltips.register(displayLabel, helpWithShortcut('panel.appearance.section-display.tooltip'), 'top');
 
-        const gaussiansButton = iconButton(colorsSvg, 'panel.appearance.gaussians', helpWithShortcut('panel.appearance.gaussians.tooltip'));
-        const centersButton = iconButton(centersSvg, 'panel.appearance.centers', helpWithShortcut('panel.appearance.centers.tooltip'));
-        const ringsButton = iconButton(ringsSvg, 'panel.appearance.rings', helpWithShortcut('panel.appearance.rings.tooltip'));
+        const gaussiansButton = iconButton(
+            colorsSvg,
+            'panel.appearance.gaussians',
+            helpWithShortcut('panel.appearance.gaussians.tooltip')
+        );
+        const centersButton = iconButton(
+            centersSvg,
+            'panel.appearance.centers',
+            helpWithShortcut('panel.appearance.centers.tooltip')
+        );
+        const ringsButton = iconButton(
+            ringsSvg,
+            'panel.appearance.rings',
+            helpWithShortcut('panel.appearance.rings.tooltip')
+        );
 
         const displayToggles = new Container({
             class: 'options-panel-toggle-grid'
@@ -177,8 +191,16 @@ class AppearancePanel extends Container {
         centersSizeRow.append(centersSizeLabel);
         centersSizeRow.append(centersSizeSlider);
 
-        const centersColorBlend = blendSlider('panel.appearance.unselected-blend', 'centersColorBlend', 'panel.appearance.centers-unselected-blend.tooltip');
-        const centersSelectionBlend = blendSlider('panel.appearance.selection-blend', 'centersSelectionBlend', 'panel.appearance.centers-selection-blend.tooltip');
+        const centersColorBlend = blendSlider(
+            'panel.appearance.unselected-blend',
+            'centersColorBlend',
+            'panel.appearance.centers-unselected-blend.tooltip'
+        );
+        const centersSelectionBlend = blendSlider(
+            'panel.appearance.selection-blend',
+            'centersSelectionBlend',
+            'panel.appearance.centers-selection-blend.tooltip'
+        );
 
         // rings
 
@@ -203,13 +225,29 @@ class AppearancePanel extends Container {
         ringSizeRow.append(ringSizeLabel);
         ringSizeRow.append(ringSizeSlider);
 
-        const ringsColorBlend = blendSlider('panel.appearance.unselected-blend', 'ringsColorBlend', 'panel.appearance.rings-unselected-blend.tooltip');
-        const ringsSelectionBlend = blendSlider('panel.appearance.selection-blend', 'ringsSelectionBlend', 'panel.appearance.rings-selection-blend.tooltip');
+        const ringsColorBlend = blendSlider(
+            'panel.appearance.unselected-blend',
+            'ringsColorBlend',
+            'panel.appearance.rings-unselected-blend.tooltip'
+        );
+        const ringsSelectionBlend = blendSlider(
+            'panel.appearance.selection-blend',
+            'ringsSelectionBlend',
+            'panel.appearance.rings-selection-blend.tooltip'
+        );
 
         // gaussians
 
-        const splatsColorBlend = blendSlider('panel.appearance.unselected-blend', 'splatsColorBlend', 'panel.appearance.gaussians-unselected-blend.tooltip');
-        const splatsSelectionBlend = blendSlider('panel.appearance.selection-blend', 'splatsSelectionBlend', 'panel.appearance.gaussians-selection-blend.tooltip');
+        const splatsColorBlend = blendSlider(
+            'panel.appearance.unselected-blend',
+            'splatsColorBlend',
+            'panel.appearance.gaussians-unselected-blend.tooltip'
+        );
+        const splatsSelectionBlend = blendSlider(
+            'panel.appearance.selection-blend',
+            'splatsSelectionBlend',
+            'panel.appearance.gaussians-selection-blend.tooltip'
+        );
 
         // selection display
 
@@ -223,10 +261,26 @@ class AppearancePanel extends Container {
         i18n.bindText(selectionDisplayLabel, 'panel.appearance.section-selection');
         tooltips.register(selectionDisplayLabel, help('panel.appearance.section-selection.tooltip'), 'top');
 
-        const selectionColorButton = iconButton(colorsSvg, 'panel.appearance.selection-color', help('panel.appearance.selection-color.tooltip'));
-        const selectionCentersButton = iconButton(centersSvg, 'panel.appearance.selection-centers', help('panel.appearance.selection-centers.tooltip'));
-        const selectionRingsButton = iconButton(ringsSvg, 'panel.appearance.selection-rings', help('panel.appearance.selection-rings.tooltip'));
-        const outlineSelectionButton = iconButton(selectAllSvg, 'panel.appearance.selection-outline', help('panel.appearance.selection-outline.tooltip'));
+        const selectionColorButton = iconButton(
+            colorsSvg,
+            'panel.appearance.selection-color',
+            help('panel.appearance.selection-color.tooltip')
+        );
+        const selectionCentersButton = iconButton(
+            centersSvg,
+            'panel.appearance.selection-centers',
+            help('panel.appearance.selection-centers.tooltip')
+        );
+        const selectionRingsButton = iconButton(
+            ringsSvg,
+            'panel.appearance.selection-rings',
+            help('panel.appearance.selection-rings.tooltip')
+        );
+        const outlineSelectionButton = iconButton(
+            selectAllSvg,
+            'panel.appearance.selection-outline',
+            help('panel.appearance.selection-outline.tooltip')
+        );
 
         const selectionToggles = new Container({
             class: 'options-panel-toggle-grid'
@@ -347,9 +401,12 @@ class AppearancePanel extends Container {
             centersSizeSlider.value = events.invoke('view.centerSize');
             ringSizeSlider.value = events.invoke('view.ringSize');
             [
-                splatsColorBlend, splatsSelectionBlend,
-                centersColorBlend, centersSelectionBlend,
-                ringsColorBlend, ringsSelectionBlend
+                splatsColorBlend,
+                splatsSelectionBlend,
+                centersColorBlend,
+                centersSelectionBlend,
+                ringsColorBlend,
+                ringsSelectionBlend
             ].forEach(({ slider, name }) => {
                 slider.value = events.invoke(`view.${name}`);
             });
@@ -465,7 +522,6 @@ class AppearancePanel extends Container {
         tooltips.register(unselectedClrPicker, () => i18n.t('panel.settings.unselected-color'), 'top');
         tooltips.register(lockedClrPicker, () => i18n.t('panel.settings.locked-color'), 'top');
         tooltips.register(resetButton, () => i18n.t('panel.settings.reset'), 'left');
-
     }
 }
 

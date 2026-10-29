@@ -13,7 +13,7 @@
 // colour in one shot. The DC/SH split (offset on DC only, linear part on every SH
 // coefficient) exists solely for baking on export, where the coefficients are
 // graded individually - see ColorGrade.applyDC / applySH.
-const applyColorGradeWGSL = /* wgsl */`
+const applyColorGradeWGSL = /* wgsl */ `
 fn applyColorGrade(color: vec3f, row0: vec4f, row1: vec4f, row2: vec4f) -> vec3f {
     return vec3f(dot(row0.xyz, color), dot(row1.xyz, color), dot(row2.xyz, color))
         + vec3f(row0.w, row1.w, row2.w);
@@ -28,7 +28,7 @@ const COLOR_PALETTE_ENTRIES_PER_ROW = 512;
 // `colorPalette: texture_2d<f32>` binding in scope. Entry 0 is the identity grade
 // and is what every ungraded gaussian references, so the early return is the
 // common path.
-const paletteGradeWGSL = /* wgsl */`
+const paletteGradeWGSL = /* wgsl */ `
 struct PaletteGrade {
     row0: vec4f,
     row1: vec4f,

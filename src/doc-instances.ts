@@ -1,6 +1,7 @@
 import { Mat4 } from 'playcanvas';
 
-import { createGradeTerms, gradeFromRows, gradeRows, type GradeTerms } from './color-grade';
+import { createGradeTerms, gradeFromRows, gradeRows } from './color-grade';
+import type { GradeTerms } from './color-grade';
 import type { ColorPalette } from './color-palette';
 import type { Splat } from './splat';
 import type { TransformPalette } from './transform-palette';
@@ -40,9 +41,7 @@ const encodeInstances = (splat: Splat, rowMap: Uint32Array): ArrayBuffer => {
 
     // flags are bytes; round the section out so the float sections stay aligned
     const flagWords = Math.ceil(count / 4);
-    const words =
-        HEADER_WORDS + count * 2 + flagWords +
-        numTransform * TRANSFORM_FLOATS + numColor * COLOR_FLOATS;
+    const words = HEADER_WORDS + count * 2 + flagWords + numTransform * TRANSFORM_FLOATS + numColor * COLOR_FLOATS;
 
     const buffer = new ArrayBuffer(words * 4);
     const u32 = new Uint32Array(buffer);
@@ -120,11 +119,7 @@ const decodeInstances = (bytes: Uint8Array): InstanceRecords => {
 // Refill a layer's palettes from stored entries. Entry 0 is written too: it is the
 // identity in a freshly constructed palette, so this is a no-op for it, but going
 // through the same path keeps the allocator's count honest.
-const restorePalettes = (
-    records: InstanceRecords,
-    transformPalette: TransformPalette,
-    colorPalette: ColorPalette
-) => {
+const restorePalettes = (records: InstanceRecords, transformPalette: TransformPalette, colorPalette: ColorPalette) => {
     const numTransform = records.transformEntries.length / TRANSFORM_FLOATS;
     const numColor = records.colorEntries.length / COLOR_FLOATS;
 

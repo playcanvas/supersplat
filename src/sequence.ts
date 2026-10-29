@@ -1,9 +1,9 @@
-import { Asset, Quat } from 'playcanvas';
+import type { Asset, Quat } from 'playcanvas';
 
 import { EditorSplatResource } from './editor-splat-resource';
-import { Events } from './events';
+import type { Events } from './events';
 import { loadSplatSource, MappedReadFileSystem } from './io';
-import { Scene } from './scene';
+import type { Scene } from './scene';
 import { Splat } from './splat';
 
 type FrameData = {
@@ -27,13 +27,12 @@ class PlyFrameSource implements FrameSource {
     constructor(files: File[], scene: Scene) {
         this.scene = scene;
 
-        // eslint-disable-next-line regexp/no-super-linear-backtracking
         const regex = /(.*?)(\d+)(?:\.compressed)?\.ply$/;
         const key = (f: File) => f.name?.toLowerCase().match(regex)?.[2];
         this.files = files.slice().sort((a, b) => {
             const av = key(a);
             const bv = key(b);
-            return (av && bv) ? parseInt(av, 10) - parseInt(bv, 10) : 0;
+            return av && bv ? parseInt(av, 10) - parseInt(bv, 10) : 0;
         });
     }
 
@@ -53,7 +52,9 @@ class PlyFrameSource implements FrameSource {
         return { asset, rotation: transform.rotation };
     }
 
-    destroy() {}
+    destroy() {
+        // nothing to release
+    }
 }
 
 /**

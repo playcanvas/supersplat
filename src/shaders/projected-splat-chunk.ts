@@ -7,7 +7,7 @@
 // selection-only mode neither does an unselected one. The projector exempts
 // ringed splats from the motion cull with the same test, so a rule change here
 // reaches every consumer.
-const overlayEligibleWGSL = /* wgsl */`
+const overlayEligibleWGSL = /* wgsl */ `
 fn overlayEligible(flags: u32, selectionOnly: bool) -> bool {
     return (flags & 2u) == 0u && (!selectionOnly || (flags & 1u) != 0u);
 }`;
@@ -18,7 +18,7 @@ fn overlayEligible(flags: u32, selectionOnly: bool) -> bool {
 // centres still cover every projected splat. The tail is written by the
 // projector and read only by the centres draw; nothing else may read
 // compactEntries beyond the survivor count.
-const compactTailWGSL = /* wgsl */`
+const compactTailWGSL = /* wgsl */ `
 fn compactTailSlot(tail: u32, capacity: u32) -> u32 {
     return capacity - 1u - tail;
 }`;

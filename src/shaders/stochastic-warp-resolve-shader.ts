@@ -1,6 +1,6 @@
 import { stochasticWarpWGSL } from './stochastic-warp-chunk';
 
-const fragmentShader = /* wgsl */`
+const fragmentShader = /* wgsl */ `
 var srcTexture: texture_2d<f32>;
 var srcTexture_sampler: sampler;
 uniform warpStrength: f32;

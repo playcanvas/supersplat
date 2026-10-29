@@ -1,11 +1,15 @@
-import { Events } from '../events';
+import type { Events } from '../events';
 import { opFromModifiers } from '../select-op';
 
 class BrushSelection {
     activate: () => void;
     deactivate: () => void;
 
-    constructor(events: Events, parent: HTMLElement, mask: { canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, busy: boolean }) {
+    constructor(
+        events: Events,
+        parent: HTMLElement,
+        mask: { canvas: HTMLCanvasElement; context: CanvasRenderingContext2D; busy: boolean }
+    ) {
         // create svg
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.classList.add('tool-svg', 'hidden');
@@ -29,10 +33,14 @@ class BrushSelection {
         // hidden then), so activation places the cursor at the mouse rather than
         // wherever the previous stroke ended
         const pointer = { x: 0, y: 0 };
-        window.addEventListener('pointermove', (e: PointerEvent) => {
-            pointer.x = e.clientX;
-            pointer.y = e.clientY;
-        }, { capture: true, passive: true });
+        window.addEventListener(
+            'pointermove',
+            (e: PointerEvent) => {
+                pointer.x = e.clientX;
+                pointer.y = e.clientY;
+            },
+            { capture: true, passive: true }
+        );
 
         const update = (e: PointerEvent) => {
             const x = e.offsetX;
@@ -128,12 +136,7 @@ class BrushSelection {
                 // selection (pointerdown swallows them)
                 mask.busy = true;
                 try {
-                    await events.invoke(
-                        'select.byMask',
-                        opFromModifiers(e),
-                        canvas,
-                        context
-                    );
+                    await events.invoke('select.byMask', opFromModifiers(e), canvas, context);
                 } finally {
                     mask.busy = false;
                 }
@@ -151,7 +154,11 @@ class BrushSelection {
         const wheel = (e: WheelEvent) => {
             if (e.altKey || e.metaKey) {
                 const { deltaX, deltaY } = e;
-                events.fire((Math.abs(deltaX) > Math.abs(deltaY) ? deltaX : deltaY) > 0 ? 'tool.brushSelection.smaller' : 'tool.brushSelection.bigger');
+                events.fire(
+                    (Math.abs(deltaX) > Math.abs(deltaY) ? deltaX : deltaY) > 0
+                        ? 'tool.brushSelection.smaller'
+                        : 'tool.brushSelection.bigger'
+                );
                 e.preventDefault();
                 e.stopPropagation();
             }

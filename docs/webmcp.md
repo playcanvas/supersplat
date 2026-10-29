@@ -71,6 +71,7 @@ Successful tools return `{ "ok": true, ... }`. Failures return `{ "ok": false, "
 
 ```sh
 npm test
+npm run fmt
 npm run lint
 npm run lint:locales
 npm run build

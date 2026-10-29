@@ -1,7 +1,7 @@
 import { overlayEligibleWGSL } from './projected-splat-chunk';
 import { stochasticWarpWGSL } from './stochastic-warp-chunk';
 
-const vertexShader = /* wgsl */`
+const vertexShader = /* wgsl */ `
 #include "gsplatOutputVS"
 
 attribute vertex_position: vec3f;
@@ -182,7 +182,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 }
 `;
 
-const fragmentShader = /* wgsl */`
+const fragmentShader = /* wgsl */ `
 varying gaussianUV: vec2f;
 varying @interpolate(flat, either) packedColor0: u32;
 varying @interpolate(flat, either) packedColor1: u32;

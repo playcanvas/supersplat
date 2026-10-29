@@ -1,6 +1,6 @@
 import { Vec3 } from 'playcanvas';
 
-import { Scene } from '../scene';
+import type { Scene } from '../scene';
 
 const va = new Vec3();
 const vb = new Vec3();
@@ -62,8 +62,7 @@ class DimensionLabels {
         // hide the label when either endpoint is behind the camera
         const cameraPos = camera.mainCamera.getPosition();
         const cameraFwd = camera.mainCamera.forward;
-        if (va.sub2(a, cameraPos).dot(cameraFwd) <= 0 ||
-            va.sub2(b, cameraPos).dot(cameraFwd) <= 0) {
+        if (va.sub2(a, cameraPos).dot(cameraFwd) <= 0 || va.sub2(b, cameraPos).dot(cameraFwd) <= 0) {
             label.setAttribute('visibility', 'hidden');
             return;
         }
@@ -103,8 +102,11 @@ class DimensionLabels {
         }
         const offsetPx = 10;
 
-        const thetaDeg = theta * 180 / Math.PI;
-        label.setAttribute('transform', `translate(${(mx + perpX * offsetPx * sign).toFixed(1)}, ${(my + perpY * offsetPx * sign).toFixed(1)}) rotate(${thetaDeg.toFixed(1)})`);
+        const thetaDeg = (theta * 180) / Math.PI;
+        label.setAttribute(
+            'transform',
+            `translate(${(mx + perpX * offsetPx * sign).toFixed(1)}, ${(my + perpY * offsetPx * sign).toFixed(1)}) rotate(${thetaDeg.toFixed(1)})`
+        );
         label.textContent = length.toFixed(2);
     }
 }

@@ -1,7 +1,7 @@
+import type { BoundingBox, GraphicsDevice, WebgpuGraphicsDevice } from 'playcanvas';
 import {
     BUFFERUSAGE_COPY_DST,
     BUFFERUSAGE_COPY_SRC,
-    SAMPLETYPE_FLOAT,
     SAMPLETYPE_UINT,
     SAMPLETYPE_UNFILTERABLE_FLOAT,
     SHADERLANGUAGE_WGSL,
@@ -11,9 +11,7 @@ import {
     BindStorageBufferFormat,
     BindTextureFormat,
     BindUniformBufferFormat,
-    BoundingBox,
     Compute,
-    GraphicsDevice,
     Shader,
     StorageBuffer,
     UniformBufferFormat,
@@ -23,7 +21,7 @@ import {
 } from 'playcanvas';
 
 import { indexToUvWGSL, paletteMatrixWGSL } from '../shaders/palette-chunk';
-import { Splat } from '../splat';
+import type { Splat } from '../splat';
 
 const WORKGROUP_SIZE = 256;
 const selectedMin = new Vec3();
@@ -35,7 +33,7 @@ const visibleMax = new Vec3();
 // one partial, so the readback is a constant size regardless of scene size
 const NUM_THREADS = WORKGROUP_SIZE * 64;
 
-const shaderSource = /* wgsl */`
+const shaderSource = /* wgsl */ `
 struct Uniforms {
     sourceWidth: u32,
     numSplats: u32
@@ -106,7 +104,13 @@ class CalcBound {
             new BindStorageBufferFormat('instanceFlags', SHADERSTAGE_COMPUTE, true),
             new BindStorageBufferFormat('instancePalette', SHADERSTAGE_COMPUTE, true),
             new BindTextureFormat('transformA', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false),
-            new BindTextureFormat('transformPalette', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UNFILTERABLE_FLOAT, false),
+            new BindTextureFormat(
+                'transformPalette',
+                SHADERSTAGE_COMPUTE,
+                undefined,
+                SAMPLETYPE_UNFILTERABLE_FLOAT,
+                false
+            ),
             new BindUniformBufferFormat('uniforms', SHADERSTAGE_COMPUTE)
         ]);
         const shader = new Shader(device, {
@@ -115,11 +119,16 @@ class CalcBound {
             cshader: shaderSource,
             computeBindGroupFormat: this.bindGroupFormat,
             computeUniformBufferFormats: { uniforms }
-        } as any);
+        });
         this.compute = new Compute(device, shader, 'CalcBoundCompute');
     }
 
-    async run(splat: Splat, selectionBound: BoundingBox, localBound: BoundingBox, flags?: StorageBuffer): Promise<void> {
+    async run(
+        splat: Splat,
+        selectionBound: BoundingBox,
+        localBound: BoundingBox,
+        flags?: StorageBuffer
+    ): Promise<void> {
         const transformA = splat.resource.getTexture('transformA');
         // 4 vec4 partials per thread, and the thread count is fixed
         const byteSize = NUM_THREADS * 4 * 16;
@@ -139,8 +148,8 @@ class CalcBound {
         this.compute.setupDispatch(this.dispatchSize.x, this.dispatchSize.y);
         this.device.computeDispatch([this.compute], 'calc-bound');
         const readback = this.output.read(0, byteSize, this.data, false);
-        (this.device as any).submit();
-        const data = await readback as Float32Array;
+        (this.device as WebgpuGraphicsDevice).submit();
+        const data = (await readback) as Float32Array;
 
         selectedMin.set(Infinity, Infinity, Infinity);
         selectedMax.set(-Infinity, -Infinity, -Infinity);

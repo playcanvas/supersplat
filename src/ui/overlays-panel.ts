@@ -1,12 +1,13 @@
 import { BooleanInput, Button, Container, Label } from '@playcanvas/pcui';
 
-import { Events } from '../events';
+import type { Events } from '../events';
 import type { GridPlane } from '../infinite-grid';
-import { ShortcutManager } from '../shortcut-manager';
+import type { ShortcutManager } from '../shortcut-manager';
+
 import { i18n } from './localization';
 import overlaysSvg from './svg/overlays.svg';
 import resetSvg from './svg/reset.svg';
-import { Tooltips } from './tooltips';
+import type { Tooltips } from './tooltips';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -436,9 +437,17 @@ class OverlaysPanel extends Container {
         // tooltips
         const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
         const shortcut = shortcutManager.formatShortcut('grid.toggleVisible');
-        tooltips.register(showGridLabel, () => i18n.formatTooltipWithShortcut(i18n.t('panel.overlays.grid'), shortcut), 'left');
+        tooltips.register(
+            showGridLabel,
+            () => i18n.formatTooltipWithShortcut(i18n.t('panel.overlays.grid'), shortcut),
+            'left'
+        );
         const cameraInfoShortcut = shortcutManager.formatShortcut('camera.toggleShowInfo');
-        tooltips.register(showCameraInfoLabel, () => i18n.formatTooltipWithShortcut(i18n.t('panel.overlays.camera-info'), cameraInfoShortcut), 'left');
+        tooltips.register(
+            showCameraInfoLabel,
+            () => i18n.formatTooltipWithShortcut(i18n.t('panel.overlays.camera-info'), cameraInfoShortcut),
+            'left'
+        );
         tooltips.register(resetButton, () => i18n.t('panel.settings.reset'), 'left');
     }
 }

@@ -12,9 +12,4 @@ export {
 } from './file-systems';
 
 // Loading functions
-export {
-    defaultLodIndex,
-    loadSplatSource,
-    PermutedChunkSource,
-    validateSplatSource
-} from './loader';
+export { defaultLodIndex, loadSplatSource, PermutedChunkSource, validateSplatSource } from './loader';

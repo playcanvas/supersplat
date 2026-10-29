@@ -1,15 +1,13 @@
+import type { CameraComponent, GraphicsDevice, MeshInstance, WebgpuGraphicsDevice } from 'playcanvas';
 import {
     EVENT_POSTRENDER_LAYER,
     EVENT_PRERENDER_LAYER,
     LAYERID_DEPTH,
     SORTMODE_CUSTOM,
     BoundingBox,
-    CameraComponent,
     Color,
     Entity,
     Layer,
-    GraphicsDevice,
-    MeshInstance,
     Vec3,
     WireRenderer
 } from 'playcanvas';
@@ -17,17 +15,18 @@ import {
 import { AssetLoader } from './asset-loader';
 import { Camera } from './camera';
 import { CameraPoseGizmos } from './camera-pose-gizmos';
-import { CommandQueue } from './command-queue';
+import type { CommandQueue } from './command-queue';
 import { DataProcessor } from './data-processor';
-import { Element, ElementType, ElementTypeList } from './element';
-import { Events } from './events';
+import type { Element } from './element';
+import { ElementType, ElementTypeList } from './element';
+import type { Events } from './events';
 import { InfiniteGrid as Grid } from './infinite-grid';
 import { Outline } from './outline';
 import { PCApp } from './pc-app';
 import { ProjectedSplatRenderer } from './projected-splat-renderer';
 import { SceneConfig } from './scene-config';
 import { SceneState } from './scene-state';
-import { Splat } from './splat';
+import type { Splat } from './splat';
 import { Underlay } from './underlay';
 
 // sort meshInstances by the aabb corner furthest from the camera
@@ -51,9 +50,10 @@ const specialSort = (instances: MeshInstance[], numInstances: number, cameraPos:
                         center.z + cz * halfExtents.z
                     );
                     // project camera-to-corner vector onto camera direction
-                    const dist = (corner.x - cameraPos.x) * cameraDir.x +
-                                    (corner.y - cameraPos.y) * cameraDir.y +
-                                    (corner.z - cameraPos.z) * cameraDir.z;
+                    const dist =
+                        (corner.x - cameraPos.x) * cameraDir.x +
+                        (corner.y - cameraPos.y) * cameraDir.y +
+                        (corner.z - cameraPos.z) * cameraDir.z;
                     if (dist > maxDist) {
                         maxDist = dist;
                     }
@@ -155,7 +155,7 @@ class Scene {
     // Console controls for stochastic rendering; setters request a repaint.
     readonly stochastic;
 
-    canvasResize: {width: number; height: number} | null = null;
+    canvasResize: { width: number; height: number } | null = null;
     targetSize = {
         width: 0,
         height: 0
@@ -257,14 +257,14 @@ class Scene {
 
         // only render the scene when instructed
         this.app.autoRender = false;
-        // @ts-ignore
+        // @ts-expect-error - _allowResize is an internal property
         this.app._allowResize = false;
 
         // hack: disable lightmapper first bake until we expose option for this
-        // @ts-ignore
+        // @ts-expect-error - _firstBake is an internal method
         this.app.off('prerender', this.app._firstBake, this.app);
 
-        // @ts-ignore
+        // @ts-expect-error - imgParser is an internal property
         this.app.loader.getHandler('texture').imgParser.crossOrigin = 'anonymous';
 
         // this is required to get full res AR mode backbuffer
@@ -304,11 +304,15 @@ class Scene {
         // phase sees the event before any of them - including through a
         // setPointerCapture retarget. `buttons` keeps hovering out of it, so no
         // per-tool drag state is needed.
-        canvasContainer.addEventListener('pointermove', (event: PointerEvent) => {
-            if (event.buttons !== 0) {
-                this.forceInteracting = true;
-            }
-        }, true);
+        canvasContainer.addEventListener(
+            'pointermove',
+            (event: PointerEvent) => {
+                if (event.buttons !== 0) {
+                    this.forceInteracting = true;
+                }
+            },
+            true
+        );
 
         // configure depth layers to handle dynamic refraction
         const depthLayer = this.app.scene.layers.getLayerById(LAYERID_DEPTH);
@@ -320,14 +324,14 @@ class Scene {
         this.app.on('prerender', () => this.onPreRender());
         this.app.on('postrender', () => this.onPostRender());
 
-        this.frameTimings.gpuSupported = !!(this.app.graphicsDevice as any).supportsTimestampQuery;
+        this.frameTimings.gpuSupported = !!(this.app.graphicsDevice as WebgpuGraphicsDevice).supportsTimestampQuery;
         events.function('scene.frameTimings', () => this.frameTimings);
 
         // the profiler's report callback carries the renderVersion of the frame
         // the timings belong to, but the engine discards it before the value
         // lands in _frameTime. Wrap it so reports can be attributed to the mode
         // the frame rendered with (see onGpuReport).
-        const profiler = this.app.graphicsDevice.gpuProfiler as any;
+        const profiler = this.app.graphicsDevice.gpuProfiler;
         const originalReport = profiler.report.bind(profiler);
         profiler.report = (renderVersion: number, timings: number[] | null, frameTime?: number) => {
             originalReport(renderVersion, timings, frameTime);
@@ -459,7 +463,7 @@ class Scene {
             this.elements.push(element);
 
             // notify all elements of scene addition
-            this.forEachElement(e => e !== element && e.onAdded(element));
+            this.forEachElement((e) => e !== element && e.onAdded(element));
 
             // notify listeners
             this.events.fire('scene.elementAdded', element);
@@ -482,7 +486,7 @@ class Scene {
             this.events.fire('scene.elementRemoved', element);
 
             // notify all elements of scene removal
-            this.forEachElement(e => e.onRemoved(element));
+            this.forEachElement((e) => e.onRemoved(element));
 
             element.remove();
             element.scene = null;
@@ -513,7 +517,7 @@ class Scene {
     }
 
     getElementsByType(elementType: ElementType) {
-        return this.elements.filter(e => e.type === elementType);
+        return this.elements.filter((e) => e.type === elementType);
     }
 
     get graphicsDevice() {
@@ -538,7 +542,7 @@ class Scene {
         }
 
         // allow elements to update
-        this.forEachElement(e => e.onUpdate(deltaTime));
+        this.forEachElement((e) => e.onUpdate(deltaTime));
 
         // fire global update
         this.events.fire('update', deltaTime);
@@ -548,7 +552,7 @@ class Scene {
         const i = this.app.frame % 2;
         const state = this.sceneState[i];
         state.reset();
-        this.forEachElement(e => state.pack(e));
+        this.forEachElement((e) => state.pack(e));
 
         // diff with previous state
         const result = state.compare(this.sceneState[1 - i]);
@@ -567,7 +571,7 @@ class Scene {
         const interacting = this.forceInteracting || all.size > 0;
         // per-gaussian edits reach here only through forceRender; layer moves,
         // visibility and grade changes through the state diff
-        this.editedRender = this.forceRender || [...all].some(type => type !== ElementType.camera);
+        this.editedRender = this.forceRender || [...all].some((type) => type !== ElementType.camera);
         const stochastic = this.events.invoke('view.stochastic');
 
         // 'movement' takes the fast no-sort stochastic path only while actively
@@ -580,11 +584,10 @@ class Scene {
         // Locked-mode captures always use the sorted path.
         const auto = stochastic === 'auto';
         this.autoSampling = auto && this.frameTimings.gpuSupported;
-        const adaptive = stochastic === 'movement' ||
-            (auto && (this.autoEngaged || !this.frameTimings.gpuSupported));
+        const adaptive = stochastic === 'movement' || (auto && (this.autoEngaged || !this.frameTimings.gpuSupported));
         this.overdrawRender = this.camera.renderOverlays && !!this.events.invoke('view.overdraw');
-        this.movingRender = !this.lockedRenderMode && !this.overdrawRender &&
-            (stochastic === 'enabled' || (adaptive && interacting));
+        this.movingRender =
+            !this.lockedRenderMode && !this.overdrawRender && (stochastic === 'enabled' || (adaptive && interacting));
 
         // timestamp queries cost a per-frame staging-buffer map and a resolve,
         // so run the profiler only while something consumes it: the
@@ -627,7 +630,7 @@ class Scene {
         });
 
         // allow elements to postupdate
-        this.forEachElement(e => e.onPostUpdate());
+        this.forEachElement((e) => e.onPostUpdate());
     }
 
     private onPreRender() {
@@ -636,7 +639,7 @@ class Scene {
         this.targetSize.width = Math.ceil(this.app.graphicsDevice.width / this.config.camera.pixelScale);
         this.targetSize.height = Math.ceil(this.app.graphicsDevice.height / this.config.camera.pixelScale);
 
-        this.forEachElement(e => e.onPreRender());
+        this.forEachElement((e) => e.onPreRender());
 
         this.projectedSplatRenderer.render();
 
@@ -668,19 +671,19 @@ class Scene {
     }
 
     private onPostRender() {
-        this.forEachElement(e => e.onPostRender());
+        this.forEachElement((e) => e.onPostRender());
 
         this.events.fire('postrender');
 
-        const gpuTime = (this.app.graphicsDevice.gpuProfiler as any)?._frameTime ?? 0;
+        const gpuTime = this.app.graphicsDevice.gpuProfiler?.['_frameTime'] ?? 0;
 
         // record the mode this frame rendered with, keyed by its renderVersion,
         // so the frame's asynchronously resolving profiler report can be
         // attributed in onGpuReport. Only profiled frames get reports (this
         // also excludes locked-mode frames, which are never timed - see
         // onUpdate), so only those are recorded.
-        const device = this.app.graphicsDevice as any;
-        if (device.gpuProfiler._enabled) {
+        const device = this.app.graphicsDevice;
+        if (device.gpuProfiler['_enabled']) {
             this.frameModes.set(device.renderVersion, this.movingRender);
         }
 

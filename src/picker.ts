@@ -378,7 +378,7 @@ class Picker {
         return result;
     }
 
-    private decodeDepth(pixels: ArrayLike<number>, offset: number): number | null {
+    private decodeDepth(pixels: Awaited<ReturnType<Texture['read']>>, offset: number): number | null {
         // R channel: accumulated depth * alpha
         // A channel: transmittance (1 - alpha)
         const r = half2Float(pixels[offset]);

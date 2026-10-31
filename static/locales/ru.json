@@ -428,6 +428,11 @@
     "webmcp.focus_camera": "Навести камеру",
     "webmcp.pick_points": "Определить точки поверхности",
     "webmcp.set_view": "Настроить отображение",
+    "webmcp.get_timeline": "Просмотреть временную шкалу",
+    "webmcp.set_timeline": "Настроить временную шкалу",
+    "webmcp.set_keyframes": "Задать ключи",
+    "webmcp.move_keyframe": "Переместить ключ",
+    "webmcp.delete_keyframes": "Удалить ключи",
     "webmcp.import_url": "Импортировать по URL",
     "webmcp.export_scene": "Экспортировать сцену"
 }

@@ -72,6 +72,15 @@ const registerSequenceEvents = (events: Events, scene: Scene) => {
     let loading = false;
     let nextFrame = -1;
     let loadingPromise: Promise<void> | null = null;
+    let idleWaiters: (() => void)[] = [];
+
+    // resolve waiters once no frame is loading or queued behind the current load
+    const notifyIdle = () => {
+        if (!loading) {
+            idleWaiters.forEach((resolve) => resolve());
+            idleWaiters = [];
+        }
+    };
 
     // apply a frame's data to the persistent splat, creating it on the first frame
     const applyFrame = async (data: FrameData) => {
@@ -148,6 +157,9 @@ const registerSequenceEvents = (events: Events, scene: Scene) => {
             nextFrame = -1;
             setFrame(frameToLoad);
         }
+
+        // a follow-up load above sets loading synchronously and notifies when it ends
+        notifyIdle();
     };
 
     events.on('sequence.setPlyFrames', (files: File[]) => {
@@ -203,11 +215,18 @@ const registerSequenceEvents = (events: Events, scene: Scene) => {
             } finally {
                 loading = false;
                 loadingPromise = null;
+                notifyIdle();
             }
         })();
 
         await loadingPromise;
         return splat;
+    });
+
+    // resolves once the frame for the current playhead has been swapped in, so
+    // callers that move the playhead can wait for its data (no-op without a sequence)
+    events.function('sequence.idle', (): Promise<void> => {
+        return loading ? new Promise((resolve) => idleWaiters.push(resolve)) : Promise.resolve();
     });
 };
 

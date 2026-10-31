@@ -428,6 +428,11 @@
     "webmcp.focus_camera": "カメラを合わせる",
     "webmcp.pick_points": "表面上の点を取得",
     "webmcp.set_view": "表示設定を変更",
+    "webmcp.get_timeline": "タイムラインを確認",
+    "webmcp.set_timeline": "タイムラインを設定",
+    "webmcp.set_keyframes": "キーフレームを設定",
+    "webmcp.move_keyframe": "キーフレームを移動",
+    "webmcp.delete_keyframes": "キーフレームを削除",
     "webmcp.import_url": "URLからインポート",
     "webmcp.export_scene": "シーンをエクスポート"
 }

@@ -4,6 +4,7 @@ import type { EditorAPI, ScreenPoint, SelectionOp } from './editor-api';
 import type { EditScope } from './editor-command';
 import { checkCancelled, EditorError } from './editor-command';
 import type { CameraSettings } from './editor-session';
+import type { TimelineSettings } from './editor-timeline';
 import { isFinalColorMode, propModeFor } from './splat-properties';
 import { i18n } from './ui/localization';
 
@@ -20,7 +21,7 @@ type Schema = {
     maximum?: number;
     minLength?: number;
     maxLength?: number;
-    enum?: readonly string[];
+    enum?: readonly (string | number)[];
 };
 type Input = Record<string, unknown>;
 type Tool = {
@@ -115,7 +116,8 @@ const validate = (schema: Schema, value: unknown, path = 'input'): void => {
             !Number.isFinite(value) ||
             value < schema.minimum ||
             value > schema.maximum ||
-            (schema.type === 'integer' && !Number.isInteger(value))
+            (schema.type === 'integer' && !Number.isInteger(value)) ||
+            (schema.enum && !schema.enum.includes(value))
         )
             invalid('number is outside the allowed range');
     } else if (schema.type === 'string') {
@@ -213,7 +215,7 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
     };
     add(
         'get_scene',
-        'Inspect the shared editor: document, layers, active layer, camera, viewport, display settings and global undo/redo. World axes are Y-up, right-handed; units come from the file. Rotations in results are quaternions [x,y,z,w]. Screen coordinates are normalized within viewport.rect, origin top-left. Layer IDs last for this session. total counts live instances; deleted counts removed instances.',
+        'Inspect the shared editor: document, layers, active layer, camera, viewport, display settings, timeline summary and global undo/redo. World axes are Y-up, right-handed; units come from the file. Rotations in results are quaternions [x,y,z,w]. Screen coordinates are normalized within viewport.rect, origin top-left. Layer IDs last for this session. total counts live instances; deleted counts removed instances.',
         {
             offset: integer('First layer to return.', 0),
             limit: integer('Maximum layers to return; default 32.', 1, 128)
@@ -633,6 +635,92 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
             if (!Object.keys(i).length) throw new EditorError('invalid_input', 'Provide a display setting.');
             return editor.viewport.setView({ ...i, background: i.background && color(i.background) }, o);
         }
+    );
+    add(
+        'get_timeline',
+        'Inspect the timeline: length in frames, frame rate, duration in seconds, playhead, playback, path smoothness, looping, and camera keyframes sorted by frame. Keys at or beyond frames are kept but do not play (inRange false). While keys exist the camera follows the animation at the playhead.',
+        {
+            offset: integer('First key to return.', 0),
+            limit: integer('Maximum keys to return; default 128.', 1, 1024)
+        },
+        [],
+        async (i: { offset?: number; limit?: number }, o) => {
+            const timeline = await editor.inspect.timeline(o);
+            const offset = i.offset ?? 0;
+            const end = offset + (i.limit ?? 128);
+            return {
+                ...timeline,
+                keys: timeline.keys.slice(offset, end),
+                nextOffset: end < timeline.keys.length ? end : null
+            };
+        },
+        { readOnlyHint: true }
+    );
+    add(
+        'set_timeline',
+        'Change timeline settings and the playhead as the timeline panel does. Settings apply before frame; moving the playhead during playback continues from there. With keys the camera follows the animation, so this returns the resulting camera and viewToken. Saved with the document but not undoable. Playback moves the camera every tick: pause before view-dependent tools.',
+        {
+            frames: integer('Timeline length in frames.', 1, 10000),
+            frameRate: { type: 'integer', enum: [1, 6, 12, 24, 30, 60], description: 'Frames per second.' },
+            smoothness: number('Camera path smoothness: 0 is linear, 1 smoothest.', 0, 1),
+            loop: boolean('Loop the camera path; otherwise the first and last keys hold.'),
+            frame: integer('Playhead frame, below frames.', 0, 9999),
+            playing: boolean('Start or pause playback.')
+        },
+        [],
+        (i: TimelineSettings, o) => {
+            requireChange(i, ['frames', 'frameRate', 'smoothness', 'loop', 'frame', 'playing']);
+            return editor.timeline.update(i, o);
+        }
+    );
+    add(
+        'set_keyframes',
+        "Add or replace camera keyframes as one undoable edit. Give position with target, and fov in degrees; omitted fields are captured from the current camera and an omitted frame is the playhead, like the panel's Add Key. Frames must be below the timeline length; unchanged keys are skipped. The camera then follows the animation at the playhead, so this returns the resulting camera and viewToken.",
+        {
+            keys: {
+                type: 'array',
+                items: object({
+                    frame: integer('Key frame below the timeline length; default the playhead.', 0, 9999),
+                    position: vector('Camera world position; requires target.'),
+                    target: vector('World look-at point; requires position.'),
+                    fov: number('Field of view in degrees.', 5, 170)
+                }),
+                minItems: 1,
+                maxItems: 1024,
+                description: 'Keys to write; each frame at most once.'
+            }
+        },
+        ['keys'],
+        (i: { keys: { frame?: number; position?: number[]; target?: number[]; fov?: number }[] }, o) =>
+            editor.timeline.setKeys(
+                i.keys.map((k) => ({
+                    frame: k.frame,
+                    position: k.position && xyz(k.position),
+                    target: k.target && xyz(k.target),
+                    fov: k.fov
+                })),
+                o
+            )
+    );
+    add(
+        'move_keyframe',
+        'Move or copy one camera keyframe to another frame. An occupied destination fails with key_exists unless overwrite is true (then reported as replaced). Keys stranded beyond the timeline end can be moved back into range. Undoable.',
+        {
+            from: integer('Frame of the existing key.'),
+            to: integer('Destination frame, below the timeline length.', 0, 9999),
+            copy: boolean('Keep the original key; default false.'),
+            overwrite: boolean('Replace a key at the destination; default false.')
+        },
+        ['from', 'to'],
+        (i: { from: number; to: number; copy?: boolean; overwrite?: boolean }, o) =>
+            editor.timeline.moveKey(i.from, i.to, { copy: i.copy, overwrite: i.overwrite }, o)
+    );
+    add(
+        'delete_keyframes',
+        'Delete camera keyframes at the given frames as one undoable edit. Every frame must hold a key, otherwise nothing changes.',
+        { frames: { type: 'array', items: integer('Key frame.'), minItems: 1, maxItems: 1024 } },
+        ['frames'],
+        (i: { frames: number[] }, o) => editor.timeline.deleteKeys(i.frames, o)
     );
     add(
         'import_url',

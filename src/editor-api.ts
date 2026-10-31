@@ -27,6 +27,7 @@ import {
 import type { CommandOptions, EditScope } from './editor-command';
 import { checkCancelled, EditorError } from './editor-command';
 import { createEditorSession } from './editor-session';
+import { createEditorTimeline } from './editor-timeline';
 import type { Element } from './element';
 import { ElementType } from './element';
 import type { Events } from './events';
@@ -205,6 +206,7 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
         return scope === undefined && !count ? splat.instances.count - splat.instances.numLocked : count;
     };
     const session = createEditorSession(events, scene, commandQueue, { allSplats, layerById, layerInfo, historyInfo });
+    const timeline = createEditorTimeline(events, scene, commandQueue, session.viewport.assertIdle);
     const propertyMode = (splat: Splat, property: string) => {
         const mode = propModeFor(property);
         const rest = /^f_rest_(\d+)$/.exec(property);
@@ -318,6 +320,7 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
                     checkCancelled(options);
                     return {
                         ...session.read(),
+                        timeline: timeline.read(),
                         layers: allSplats().map(layerInfo),
                         activeLayer: (events.invoke('selection') as Splat | null)?.uid ?? null,
                         history: historyInfo()
@@ -646,6 +649,7 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
                 );
             }
         },
+        timeline,
         files: session.files,
         on: (event: ChangeEvent, fn: (detail: ChangeDetail) => void) => {
             const handle = changes.on(event, fn);

@@ -197,8 +197,8 @@ const checks = {
             const registered = [];
             const dispose = registerWebMCP(api, { registerTool: (tool, options) => registered.push({ tool, options }) });
             await tick();
-            assert.equal(registered.length, 24);
-            assert.equal(new Set(registered.map(r => r.tool.name)).size, 24);
+            assert.equal(registered.length, 29);
+            assert.equal(new Set(registered.map(r => r.tool.name)).size, 29);
             assert.equal(registered.find(r => r.tool.name === 'get_scene').tool.annotations.readOnlyHint, true);
             dispose();
             assert(registered.every(r => r.options.signal.aborted));

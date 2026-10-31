@@ -165,7 +165,7 @@ async function browserChecks(url, enabled) {
         return result;
     };
     const near = (a, b) => Math.abs(a - b) < 0.001;
-    check(tools.length === 24 && tools.every(t => t.title && !t.title.startsWith('webmcp.')), 'native discovery exposes 24 titled tools');
+    check(tools.length === 29 && tools.every(t => t.title && !t.title.startsWith('webmcp.')), 'native discovery exposes 29 titled tools');
     const initial = await call('get_scene');
     check(initial.totalLayers === 0, 'empty scene inspection', initial);
     await call('set_selection', { layer: 99, mode: 'all' }, 'layer_not_found');
@@ -316,18 +316,31 @@ async function browserChecks(url, enabled) {
     // Native cancellation may settle before the callback has finished loading.
     await call('get_scene');
     check((await call('get_scene')).totalLayers === 1, 'cancelled native import does not attach a layer');
+    await call('set_timeline', { frames: 300, frameRate: 30, loop: false });
+    await call('set_camera_keyframe', { frame: 0, position: [0, 0, 6], target: [0, 0, 0], fov: 60 });
+    await call('set_camera_keyframe', { frame: 299, position: [3, 2, 6], target: [0, 0, 0], fov: 70 });
+    const timeline = await call('get_timeline');
+    check(timeline.timeline.duration === 10 && timeline.keyframes.length === 2, 'native timeline authors a ten-second camera path', timeline);
+    await call('set_timeline', { frame: 299 });
+    const endCamera = (await call('get_scene')).camera;
+    check(near(endCamera.position[0], 3) && near(endCamera.fov, 70), 'native timeline seek evaluates camera and FOV', endCamera);
+    await call('move_camera_keyframe', { fromFrame: 0, toFrame: 100, copy: true });
+    await call('remove_camera_keyframe', { frame: 100 });
+    await call('undo');
+    check((await call('get_timeline')).timeline.keyframeCount === 3, 'native keyframe edits share undo history');
+    await call('set_timeline', { frame: 0 });
     const language = document.querySelector('#settings-panel .settings-panel-row-select').ui;
     language.value = 'fr';
     let localized;
     for (let i = 0; i < 100; i++) {
         localized = await provider.getTools();
-        if (localized.length === 24 && localized.find(t => t.name === 'get_scene').title !== tools.find(t => t.name === 'get_scene').title) break;
+        if (localized.length === 29 && localized.find(t => t.name === 'get_scene').title !== tools.find(t => t.name === 'get_scene').title) break;
         await new Promise(resolve => setTimeout(resolve, 20));
     }
-    check(localized.length === 24 && new Set(localized.map(t => t.name)).size === 24 && localized.find(t => t.name === 'get_scene').title !== tools.find(t => t.name === 'get_scene').title, 'live language change replaces tool titles without duplicates');
+    check(localized.length === 29 && new Set(localized.map(t => t.name)).size === 29 && localized.find(t => t.name === 'get_scene').title !== tools.find(t => t.name === 'get_scene').title, 'live language change replaces tool titles without duplicates');
     const localizedScene = JSON.parse(await provider.executeTool(localized.find(t => t.name === 'get_scene'), {}));
     check(localizedScene.ok && localizedScene.totalLayers === 1, 'localized native tools retain the scene');
     language.value = 'en';
-    check(used.size === 24, 'all 24 native tools were executed', [...used]);
+    check(used.size === 29, 'all 29 native tools were executed', [...used]);
     return { checks, used: [...used] };
 }

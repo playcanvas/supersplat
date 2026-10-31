@@ -14,6 +14,7 @@ import { Events } from './.build/src/events.js';
 import { runSelectionGesture } from './.build/src/selection-gesture.js';
 import { editorCommandChecks } from './editor-commands.mjs';
 import { webmcpChecks } from './webmcp.mjs';
+import { timelineChecks } from './timeline.mjs';
 
 const barrier = () => {
     let release;
@@ -65,6 +66,7 @@ const quietly = async (fn) => {
 const checks = {
     ...editorCommandChecks,
     ...webmcpChecks,
+    ...timelineChecks,
 
     async 'enqueue is strictly FIFO'() {
         const { queue, log } = setup();

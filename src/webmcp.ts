@@ -4,6 +4,7 @@ import type { EditorAPI, ScreenPoint, SelectionOp } from './editor-api';
 import type { EditScope } from './editor-command';
 import { checkCancelled, EditorError } from './editor-command';
 import type { CameraSettings } from './editor-session';
+import type { TimelineSettings } from './editor-timeline';
 import { isFinalColorMode, propModeFor } from './splat-properties';
 import { i18n } from './ui/localization';
 
@@ -536,6 +537,70 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
         {},
         [],
         (_, o) => editor.history.redo(o)
+    );
+    add(
+        'get_timeline',
+        'Read timeline settings, playback and paginated camera keys sorted by frame, with position, target and FOV. Frames are zero-based; duration and time are seconds. Keys beyond the timeline are retained but do not play (inRange: false).',
+        {
+            offset: integer('First keyframe to return; default 0.'),
+            limit: integer('Maximum keys to return; default 32.', 1, 128)
+        },
+        [],
+        (i: { offset?: number; limit?: number }, o) => editor.timeline.get(i, o),
+        { readOnlyHint: true }
+    );
+    add(
+        'set_timeline',
+        'Set length, frame rate, playhead, smoothness, loop mode or playback. A 10-second clip at 30 fps uses 300 frames (0-299). Pauses first; playing: true starts afterwards. Shortening preserves keys beyond the end. Settings are not undoable. Loop joins camera endpoints; playback always wraps.',
+        {
+            frames: integer('Number of frames.', 1, 10000),
+            frameRate: integer('Playback fps: 1, 6, 12, 24, 30 or 60.', 1, 60),
+            frame: integer('Playhead frame within the resulting timeline.', 0, 9999),
+            smoothness: number('Camera interpolation smoothness.', 0, 1),
+            loop: boolean('Join the last camera key to the first; false holds endpoint poses.'),
+            playing: boolean('Start or pause playback.')
+        },
+        [],
+        (i: TimelineSettings, o) => {
+            requireChange(i, ['frames', 'frameRate', 'frame', 'smoothness', 'loop', 'playing']);
+            return editor.timeline.set(i, o);
+        }
+    );
+    add(
+        'set_camera_keyframe',
+        'Create or replace a camera key. Supply position and target together, or omit both to capture the current view. FOV defaults to the current FOV; frame defaults to the playhead and must be within the timeline. Pauses without seeking before capture. One undoable edit; evaluates the current playhead.',
+        {
+            frame: integer('Key frame; defaults to the playhead.', 0, 9999),
+            position: vector('World camera position; requires target.'),
+            target: vector('World look-at point; requires position and must differ from it.'),
+            fov: number('Field of view in degrees; defaults to current camera FOV.', 5, 170)
+        },
+        [],
+        (i: { frame?: number; position?: number[]; target?: number[]; fov?: number }, o) =>
+            editor.timeline.setKey(
+                { ...i, position: i.position && xyz(i.position), target: i.target && xyz(i.target) },
+                o
+            )
+    );
+    add(
+        'remove_camera_keyframe',
+        'Remove a camera key at a zero-based frame, including keys beyond the timeline end. Pauses playback. Undoable; changed is false if no key exists.',
+        { frame: integer('Frame of the key to remove.') },
+        ['frame'],
+        (i: { frame: number }, o) => editor.timeline.removeKey(i.frame, o)
+    );
+    add(
+        'move_camera_keyframe',
+        'Move a camera key, or copy it with copy: true. Destination must be within the timeline; source may be beyond its end. An occupied destination requires overwrite: true. Pauses playback. One undoable edit; same-frame moves have no effect.',
+        {
+            fromFrame: integer('Existing source frame.'),
+            toFrame: integer('Destination within the timeline.', 0, 9999),
+            copy: boolean('Copy instead of moving; default false.'),
+            overwrite: boolean('Replace an occupied destination; default false.')
+        },
+        ['fromFrame', 'toFrame'],
+        (i: { fromFrame: number; toFrame: number; copy?: boolean; overwrite?: boolean }, o) =>
+            editor.timeline.moveKey(i, o)
     );
     add(
         'set_camera',

@@ -1,6 +1,6 @@
 # WebMCP
 
-SuperSplat registers 24 tools with the browser's native [WebMCP API](https://webmachinelearning.github.io/webmcp/). They operate on the open editor tab and share its selection, layers and undo history. There is no separate server, network listener, MCP bridge or arbitrary JavaScript execution tool. Browsers without WebMCP continue to run the editor normally.
+SuperSplat registers 29 tools with the browser's native [WebMCP API](https://webmachinelearning.github.io/webmcp/). They operate on the open editor tab and share its selection, layers and undo history. There is no separate server, network listener, MCP bridge or arbitrary JavaScript execution tool. Browsers without WebMCP continue to run the editor normally.
 
 The adapter uses `document.modelContext`, with feature detection for preview browsers that expose `navigator.modelContext`. Tool titles follow the editor language. WebMCP is experimental: browser availability and agent integration depend on the browser version. Native discovery and execution are covered by the browser tests described below.
 
@@ -20,6 +20,8 @@ The adapter uses `document.modelContext`, with feature detection for preview bro
 | `transform` | Translate, rotate or uniformly scale a selection or layer in world space. |
 | `apply_color`, `reset_color` | Compose or reset colour adjustments on an explicit scope. |
 | `undo`, `redo` | Step through the shared editor history, including user edits. |
+| `get_timeline`, `set_timeline` | Inspect and configure timeline length, frame rate, playhead, interpolation and playback. |
+| `set_camera_keyframe`, `remove_camera_keyframe`, `move_camera_keyframe` | Capture, create, replace, remove, move or copy camera keys with undo/redo. |
 | `set_camera`, `focus_camera`, `pick_points` | Position the camera, frame content or find world positions under viewport points. |
 | `set_view` | Change display preferences without changing splat data. |
 | `import_url` | Add a CORS-accessible PLY, SPLAT, SOG, SPZ or KSPLAT URL as an undoable layer. |
@@ -35,7 +37,7 @@ Edits run through `window.editor`, the same typed API and command queue used by 
 
 `total` counts live instances, including hidden splats. `hidden` counts splats hidden within a layer, which remain in exports but are excluded from selection and colour edits. `deleted` counts removed instances; these are excluded from exports. Hiding an entire layer excludes it from export. Restoring deleted splats appends missing source splats in their original state; use undo to recover the exact edits that existed before deletion.
 
-Camera, display settings, layer visibility and active-layer changes are session settings and do not create undo entries. Renaming a layer does. `undo` and `redo` affect the shared history, not a separate agent history.
+Camera, timeline settings, display settings, layer visibility and active-layer changes are session settings and do not create undo entries. Camera keyframe edits and renaming a layer do. `undo` and `redo` affect the shared history, not a separate agent history.
 
 Coordinates use the editor's right-handed, Y-up world, in the model's units. Transform rotations are Euler degrees; inspected layer rotations are quaternions `[x,y,z,w]`. Rotation and scaling use the target bounds centre unless an explicit world-space `center` is supplied. Layer transforms include hidden splats; selection transforms do not.
 
@@ -57,11 +59,30 @@ Rectangle selection and point picking require `viewToken`. Camera-dependent prop
 
 Selection with `visibility: "visible"` uses the editor's depth picking and peeling behaviour on the named layer. `pick_points` returns composited Gaussian depth, which need not equal a splat centre or a solid mesh surface.
 
+### Timeline authoring
+
+Frames are zero-based: a 10-second animation at 30 fps has 300 frames, numbered 0-299. `get_scene` includes a timeline summary; `get_timeline` returns paginated keys sorted by frame, with their world position, target and FOV.
+
+`set_camera_keyframe` accepts explicit `position` and `target` together, or captures the current view when both are omitted. `frame` defaults to the playhead and FOV defaults to the current camera FOV. Capturing does not seek first, so an existing animation cannot overwrite the view being captured. Replacing a key, moving/copying it, or removing it creates one shared undo entry. Moving/copying onto another key requires `overwrite: true`.
+
+Changes pause playback unless `set_timeline` explicitly requests `playing: true`. Shortening the timeline clamps the playhead and retains keys beyond its end; `get_timeline` marks these `inRange: false`, and they can be moved back into range or removed. Loop mode joins the camera path's endpoints; playback wraps regardless of loop mode.
+
+For example, these public EditorAPI calls author and preview a 10-second camera move. The WebMCP tools use the corresponding names and JSON arrays for vectors:
+
+```js
+await window.editor.timeline.set({ frames: 300, frameRate: 30, loop: false });
+const start = await window.editor.timeline.setKey({ frame: 0 });
+const position = start.keyframe.position.clone();
+position.x += 2;
+await window.editor.timeline.setKey({ frame: 299, position, target: start.keyframe.target, fov: 70 });
+await window.editor.timeline.set({ frame: 0, playing: true });
+```
+
 ### Files and cancellation
 
 URL import accepts HTTP(S) URLs without embedded credentials. Supply `filename` when a signed or extensionless URL does not identify its format. Cross-origin servers must permit browser access. The recommended LOD is used unless `lod` is specified, so automated imports do not open a LOD dialog.
 
-Export requires an explicit filename, format and scope (`selection`, `layer` or `visible_layers`). It uses the existing editor exporters and preserves source SH bands unless requested otherwise. Viewer exports use the current camera and background. A successful export reports `download_requested`; browser download settings determine where or whether the file is saved. It does not grant access to arbitrary local paths. Project replacement, publishing, timeline authoring and local file pickers are outside this tool set.
+Export requires an explicit filename, format and scope (`selection`, `layer` or `visible_layers`). It uses the existing editor exporters and preserves source SH bands unless requested otherwise. Viewer exports use the current camera and background. A successful export reports `download_requested`; browser download settings determine where or whether the file is saved. It does not grant access to arbitrary local paths. Project replacement, publishing and local file pickers are outside this tool set.
 
 The native invocation signal is checked before queued mutations and again after asynchronous GPU queries. Cancellation before a commit leaves the edit unapplied. Once committed, an edit remains in history and can be undone. Loading and compression may finish their current work before cancellation is observed; a cancelled import is not attached, and the signal is checked again before an export requests its download. Native browser cancellation can reject its caller before the tool callback has finished cleaning up.
 

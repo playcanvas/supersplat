@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
-import { BoundingBox, Color, Mat4 } from 'playcanvas';
+import { BoundingBox, Color, Mat4, Vec3 } from 'playcanvas';
 
+import { registerCameraPosesEvents } from './.build/src/camera-poses.js';
+import { registerTimelineEvents } from './.build/src/timeline.js';
 import { createWebMCPTools, registerWebMCP } from './.build/src/webmcp.js';
 import { setup } from './editor-commands.mjs';
 
@@ -22,6 +24,34 @@ const use = async (fn) => {
     const call = (name, input = {}, options) => tools.get(name).execute(input, options);
     try { await fn({ ...state, tools, call }); } finally { state.layers.forEach(layer => layer.instances.destroy()); }
 };
+// The real timeline and camera track, driving a stub camera that holds the
+// last pose applied to it, as the editor camera does at speed 0.
+const useTimeline = fn => use(async (state) => {
+    const { events, scene } = state;
+    const camera = { position: new Vec3(0, 0, 10), target: new Vec3(), fov: 60 };
+    events.function('camera.getPose', () => ({ position: { ...camera.position }, target: { ...camera.target }, fov: camera.fov }));
+    events.function('camera.fov', () => camera.fov);
+    events.on('camera.setPose', (pose) => {
+        camera.position.copy(pose.position);
+        camera.target.copy(pose.target);
+        if (pose.fov !== undefined) camera.fov = pose.fov;
+    });
+    events.function('sequence.idle', () => Promise.resolve());
+    scene.camera = {
+        azim: 0, elevation: 0, distance: 1,
+        onUpdate() {},
+        captureFrame: () => ({
+            position: camera.position.clone(), fov: camera.fov, ortho: false, target: { width: 1, height: 1 },
+            view: new Mat4().setTranslate(-camera.position.x, -camera.position.y, -camera.position.z), projection: new Mat4()
+        })
+    };
+    scene.canvas = { getBoundingClientRect: () => ({ x: 0, y: 0, width: 1, height: 1 }) };
+    registerTimelineEvents(events);
+    registerCameraPosesEvents(events);
+    await fn({ ...state, camera });
+});
+const close = (a, b) => a.length === b.length && a.every((v, i) => Math.abs(v - b[i]) < 1e-6);
+const frames = async call => (await call('get_timeline')).keys.map(k => k.frame);
 
 const checks = {
     async 'WebMCP rejects malformed input without mutating history'() {
@@ -197,11 +227,97 @@ const checks = {
             const registered = [];
             const dispose = registerWebMCP(api, { registerTool: (tool, options) => registered.push({ tool, options }) });
             await tick();
-            assert.equal(registered.length, 24);
-            assert.equal(new Set(registered.map(r => r.tool.name)).size, 24);
+            assert.equal(registered.length, 29);
+            assert.equal(new Set(registered.map(r => r.tool.name)).size, 29);
             assert.equal(registered.find(r => r.tool.name === 'get_scene').tool.annotations.readOnlyHint, true);
             dispose();
             assert(registered.every(r => r.options.signal.aborted));
+        });
+    },
+
+    async 'keyframes capture the camera or take explicit poses, as one undo step'() {
+        await useTimeline(async ({ call, history, camera }) => {
+            for (const keys of [[{ frame: 0, position: [0, 0, 1] }], [{ frame: 0 }, { frame: 0 }], [{ frame: 0, position: [1, 1, 1], target: [1, 1, 1] }], [{ frame: 180 }]]) {
+                assert.equal((await call('set_keyframes', { keys })).error.code, 'invalid_input');
+            }
+            camera.position.set(1, 2, 3);
+            const written = await call('set_keyframes', { keys: [{ frame: 0 }, { frame: 60, position: [0, 0, 5], target: [0, 1, 0], fov: 40 }] });
+            assert.equal(written.affected, 2);
+            assert.deepEqual(written.keys.map(k => [k.frame, k.position, k.fov]), [[0, [1, 2, 3], 60], [60, [0, 0, 5], 40]]);
+            assert.equal(history.history.length, 1);
+            const unchanged = await call('set_keyframes', { keys: [{ frame: 60, position: [0, 0, 5], target: [0, 1, 0], fov: 40 }] });
+            assert.equal(unchanged.affected, 0);
+            assert.equal(history.history.length, 1);
+            assert.deepEqual(await frames(call), [0, 60]);
+            // moving the playhead evaluates the camera path
+            const at60 = await call('set_timeline', { frame: 60 });
+            assert(close(at60.camera.position, [0, 0, 5]), JSON.stringify(at60.camera));
+            assert.notEqual(at60.viewport.viewToken, written.viewport.viewToken);
+            await call('undo');
+            assert.deepEqual(await frames(call), []);
+            await call('redo');
+            assert.equal((await call('get_timeline')).keys[1].fov, 40);
+        });
+    },
+
+    async 'set_timeline applies settings before the playhead and is not undoable'() {
+        await useTimeline(async ({ call, history, camera }) => {
+            await call('set_keyframes', { keys: [{ frame: 0, position: [0, 0, 4], target: [0, 0, 0], fov: 60 }, { frame: 100, position: [4, 0, 0], target: [0, 0, 0], fov: 40 }] });
+            const mid = await call('set_timeline', { frame: 50, smoothness: 0, loop: false });
+            assert.equal(mid.affected, 3);
+            assert.equal(mid.rendered, true);
+            assert(close(mid.camera.position, [2, 0, 2]), JSON.stringify(mid.camera));
+            assert(Math.abs(camera.fov - 50) < 1e-6);
+            for (const input of [{}, { frameRate: 25 }, { frame: 180 }, { frames: 0 }, { smoothness: 2 }, { frames: 40, frame: 40 }]) {
+                assert.equal((await call('set_timeline', input)).error.code, 'invalid_input', JSON.stringify(input));
+            }
+            // shortening the timeline clamps the playhead and strands the later key
+            const short = await call('set_timeline', { frames: 40, frameRate: 24 });
+            assert.deepEqual([short.timeline.frame, short.timeline.outOfRangeKeys, short.timeline.duration], [39, 1, 40 / 24]);
+            assert.equal((await call('get_timeline')).keys[1].inRange, false);
+            assert.equal(history.history.length, 1);
+        });
+    },
+
+    async 'move, copy and delete keyframes, each one undo step'() {
+        await useTimeline(async ({ call, history }) => {
+            await call('set_keyframes', { keys: [0, 30, 60].map(frame => ({ frame, position: [frame, 0, 1], target: [frame, 0, 0] })) });
+            const moved = await call('move_keyframe', { from: 30, to: 60 });
+            assert.equal(moved.replaced, true);
+            assert.deepEqual(moved.keys[0].position, [30, 0, 1]);
+            assert.deepEqual(await frames(call), [0, 60]);
+            await call('undo');
+            assert.deepEqual((await call('get_timeline')).keys.map(k => k.position[0]), [0, 30, 60]);
+            const copied = await call('move_keyframe', { from: 0, to: 90, copy: true });
+            assert.equal(copied.replaced, false);
+            assert.deepEqual(await frames(call), [0, 30, 60, 90]);
+            assert.equal((await call('move_keyframe', { from: 0, to: 180 })).error.code, 'invalid_input');
+            assert.equal((await call('move_keyframe', { from: 45, to: 50 })).error.code, 'key_not_found');
+            assert.equal((await call('delete_keyframes', { frames: [0, 45] })).error.code, 'key_not_found');
+            assert.equal((await call('delete_keyframes', { frames: [0, 0] })).error.code, 'invalid_input');
+            const cursor = history.cursor;
+            const deleted = await call('delete_keyframes', { frames: [90, 0] });
+            assert.deepEqual(deleted.deleted, [0, 90]);
+            assert.equal(history.cursor, cursor + 1);
+            assert.deepEqual(await frames(call), [30, 60]);
+            await call('undo');
+            assert.deepEqual(await frames(call), [0, 30, 60, 90]);
+        });
+    },
+
+    async 'stranded keys move back into range and capture waits for a pause'() {
+        await useTimeline(async ({ call }) => {
+            await call('set_keyframes', { keys: [{ frame: 120, position: [0, 0, 1], target: [0, 0, 0] }] });
+            await call('set_timeline', { frames: 60 });
+            const back = await call('move_keyframe', { from: 120, to: 10 });
+            assert.deepEqual([back.keys[0].inRange, back.timeline.outOfRangeKeys], [true, 0]);
+            assert.equal((await call('set_timeline', { playing: true })).timeline.playing, true);
+            assert.equal((await call('set_keyframes', { keys: [{ frame: 0 }] })).error.code, 'timeline_playing');
+            assert.equal((await call('set_keyframes', { keys: [{ frame: 0, position: [1, 0, 0], target: [0, 0, 0], fov: 50 }] })).affected, 1);
+            const moved = await call('set_timeline', { frame: 5 });
+            assert.deepEqual([moved.timeline.frame, moved.timeline.playing], [5, true]);
+            const paused = await call('set_timeline', { playing: false });
+            assert.deepEqual([paused.affected, paused.timeline.playing], [1, false]);
         });
     }
 };

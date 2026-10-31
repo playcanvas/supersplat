@@ -428,6 +428,11 @@
     "webmcp.focus_camera": "Kamera fokussieren",
     "webmcp.pick_points": "Oberflächenpunkte bestimmen",
     "webmcp.set_view": "Anzeigeoptionen festlegen",
+    "webmcp.get_timeline": "Zeitleiste prüfen",
+    "webmcp.set_timeline": "Zeitleiste einstellen",
+    "webmcp.set_keyframes": "Keys festlegen",
+    "webmcp.move_keyframe": "Key verschieben",
+    "webmcp.delete_keyframes": "Keys löschen",
     "webmcp.import_url": "Von URL importieren",
     "webmcp.export_scene": "Szene exportieren"
 }

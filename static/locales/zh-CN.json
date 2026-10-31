@@ -428,6 +428,11 @@
     "webmcp.focus_camera": "聚焦相机",
     "webmcp.pick_points": "拾取表面点",
     "webmcp.set_view": "设置显示选项",
+    "webmcp.get_timeline": "检查时间线",
+    "webmcp.set_timeline": "设置时间线",
+    "webmcp.set_keyframes": "设置关键帧",
+    "webmcp.move_keyframe": "移动关键帧",
+    "webmcp.delete_keyframes": "删除关键帧",
     "webmcp.import_url": "从 URL 导入",
     "webmcp.export_scene": "导出场景"
 }

@@ -27,6 +27,7 @@ import {
 import type { CommandOptions, EditScope } from './editor-command';
 import { checkCancelled, EditorError } from './editor-command';
 import { createEditorSession } from './editor-session';
+import { createEditorTimeline } from './editor-timeline';
 import type { Element } from './element';
 import { ElementType } from './element';
 import type { Events } from './events';
@@ -205,6 +206,7 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
         return scope === undefined && !count ? splat.instances.count - splat.instances.numLocked : count;
     };
     const session = createEditorSession(events, scene, commandQueue, { allSplats, layerById, layerInfo, historyInfo });
+    const timeline = createEditorTimeline(events, scene, commandQueue, session, historyInfo);
     const propertyMode = (splat: Splat, property: string) => {
         const mode = propModeFor(property);
         const rest = /^f_rest_(\d+)$/.exec(property);
@@ -346,6 +348,7 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
                     options
                 );
             },
+            timeline: timeline.inspect,
             properties: (shBands = 0) => [
                 ...Object.keys(PROP_MODE),
                 ...Array.from({ length: SH_NUM_COEFFS[shBands] * 3 }, (_, i) => `f_rest_${i}`)
@@ -645,6 +648,12 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
                     settings
                 );
             }
+        },
+        timeline: {
+            update: timeline.update,
+            setKeys: timeline.setKeys,
+            moveKey: timeline.moveKey,
+            deleteKeys: timeline.deleteKeys
         },
         files: session.files,
         on: (event: ChangeEvent, fn: (detail: ChangeDetail) => void) => {

@@ -17,8 +17,8 @@ type TimelineSettings = {
     frame?: number;
     playing?: boolean;
 };
-// omitted pose fields are captured from the camera when the command runs
-type KeyInput = { frame: number; position?: Vec3; target?: Vec3; fov?: number };
+// omitted fields come from the playhead and camera when the command runs
+type KeyInput = { frame?: number; position?: Vec3; target?: Vec3; fov?: number };
 type KeyInfo = { frame: number; position: Vec3; target: Vec3; fov: number; inRange: boolean };
 
 // the timeline panel's choices; other rates would leave its select blank
@@ -116,6 +116,8 @@ const createEditorTimeline = (
         });
 
     return {
+        // for get_scene, which reads it inside its own queue slot
+        summary: state,
         inspect: (options?: CommandOptions) =>
             queue.enqueue(() => {
                 checkCancelled(options);
@@ -151,25 +153,30 @@ const createEditorTimeline = (
                 if (c.smoothness !== undefined) events.fire('timeline.setSmoothness', c.smoothness);
                 if (c.loop !== undefined) events.fire('timeline.setLoop', c.loop);
                 if (c.frame !== undefined) events.fire('timeline.setFrame', c.frame);
+                // a seek to the current frame fires nothing, and playback leaves the camera
+                // between frames: evaluate so a manually moved camera returns to the path
+                if (c.frame !== undefined || (before.playing && c.playing === false))
+                    track().evaluate(events.invoke('timeline.frame'));
                 if (c.playing ?? before.playing) events.fire('timeline.setPlaying', true);
-                // playback leaves the camera between frames; snap it to the reported one
-                else if (before.playing) track().evaluate(events.invoke('timeline.frame'));
                 const after = state();
                 const fields = ['frames', 'frameRate', 'smoothness', 'loop', 'frame', 'playing'] as const;
                 return await settle(fields.filter((f) => c[f] !== undefined && before[f] !== after[f]).length);
             });
         },
         setKeys: async (keys: KeyInput[], options?: CommandOptions) => {
-            const input = keys.map((k) => ({ ...k, position: k.position?.clone(), target: k.target?.clone() }));
-            if (!input.length) invalid('Provide at least one key.');
-            for (const k of input) {
-                checkFrame(k.frame);
+            const requested = keys.map((k) => ({ ...k, position: k.position?.clone(), target: k.target?.clone() }));
+            if (!requested.length) invalid('Provide at least one key.');
+            for (const k of requested) {
+                if (k.frame !== undefined) checkFrame(k.frame);
                 if (!!k.position !== !!k.target) invalid('position and target must be supplied together.');
                 if (k.position?.equals(k.target)) invalid('Camera position and target must differ.');
                 if (k.fov !== undefined && !(k.fov > 0 && k.fov < 180)) invalid('fov must be between 0 and 180.');
             }
-            checkUnique(input.map((k) => k.frame));
             return await editKeys(options, (poses) => {
+                // an omitted frame is the playhead when the command runs, like Add Key
+                const playhead = events.invoke('timeline.frame');
+                const input = requested.map((k) => ({ ...k, frame: k.frame ?? playhead }));
+                checkUnique(input.map((k) => k.frame));
                 input.forEach((k) => checkInRange(k.frame));
                 const capture = input.some((k) => !k.position || k.fov === undefined);
                 if (capture && events.invoke('timeline.playing'))
@@ -199,7 +206,12 @@ const createEditorTimeline = (
                 return { name: 'setKeys', poses, affected, report: input.map((k) => k.frame), extra: {} };
             });
         },
-        moveKey: async (from: number, to: number, copy = false, options?: CommandOptions) => {
+        moveKey: async (
+            from: number,
+            to: number,
+            { copy = false, overwrite = false }: { copy?: boolean; overwrite?: boolean } = {},
+            options?: CommandOptions
+        ) => {
             checkFrame(from, 'from');
             checkFrame(to, 'to');
             if (from === to) invalid('from and to must differ.');
@@ -209,6 +221,12 @@ const createEditorTimeline = (
                 // keys stranded beyond the end can be moved back, but never out
                 checkInRange(to);
                 const replaced = poses.some((p) => p.frame === to);
+                // agents can't see the destination the way a dragging user can
+                if (replaced && !overwrite)
+                    throw new EditorError(
+                        'key_exists',
+                        `Frame ${to} already has a key. Pass overwrite: true to replace it.`
+                    );
                 const next = poses.filter((p) => p.frame !== to && (copy || p !== source));
                 next.push({ ...source, name: copy ? `camera_${next.length}` : source.name, frame: to });
                 return {

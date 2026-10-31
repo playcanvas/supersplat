@@ -215,7 +215,7 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
     };
     add(
         'get_scene',
-        'Inspect the shared editor: document, layers, active layer, camera, viewport, display settings and global undo/redo. World axes are Y-up, right-handed; units come from the file. Rotations in results are quaternions [x,y,z,w]. Screen coordinates are normalized within viewport.rect, origin top-left. Layer IDs last for this session. total counts live instances; deleted counts removed instances.',
+        'Inspect the shared editor: document, layers, active layer, camera, viewport, display settings, timeline summary and global undo/redo. World axes are Y-up, right-handed; units come from the file. Rotations in results are quaternions [x,y,z,w]. Screen coordinates are normalized within viewport.rect, origin top-left. Layer IDs last for this session. total counts live instances; deleted counts removed instances.',
         {
             offset: integer('First layer to return.', 0),
             limit: integer('Maximum layers to return; default 32.', 1, 128)
@@ -675,26 +675,23 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
     );
     add(
         'set_keyframes',
-        "Add or replace camera keyframes as one undoable edit. Give position with target, and fov in degrees; omitted fields are captured from the current camera, like the panel's Add Key. Frames must be below the timeline length; unchanged keys are skipped. The camera then follows the animation at the playhead, so this returns the resulting camera and viewToken.",
+        "Add or replace camera keyframes as one undoable edit. Give position with target, and fov in degrees; omitted fields are captured from the current camera and an omitted frame is the playhead, like the panel's Add Key. Frames must be below the timeline length; unchanged keys are skipped. The camera then follows the animation at the playhead, so this returns the resulting camera and viewToken.",
         {
             keys: {
                 type: 'array',
-                items: object(
-                    {
-                        frame: integer('Key frame, below the timeline length.', 0, 9999),
-                        position: vector('Camera world position; requires target.'),
-                        target: vector('World look-at point; requires position.'),
-                        fov: number('Field of view in degrees.', 5, 170)
-                    },
-                    ['frame']
-                ),
+                items: object({
+                    frame: integer('Key frame below the timeline length; default the playhead.', 0, 9999),
+                    position: vector('Camera world position; requires target.'),
+                    target: vector('World look-at point; requires position.'),
+                    fov: number('Field of view in degrees.', 5, 170)
+                }),
                 minItems: 1,
                 maxItems: 1024,
                 description: 'Keys to write; each frame at most once.'
             }
         },
         ['keys'],
-        (i: { keys: { frame: number; position?: number[]; target?: number[]; fov?: number }[] }, o) =>
+        (i: { keys: { frame?: number; position?: number[]; target?: number[]; fov?: number }[] }, o) =>
             editor.timeline.setKeys(
                 i.keys.map((k) => ({
                     frame: k.frame,
@@ -707,14 +704,16 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
     );
     add(
         'move_keyframe',
-        'Move or copy one camera keyframe to another frame, replacing any key there (reported as replaced). Keys stranded beyond the timeline end can be moved back into range. Undoable.',
+        'Move or copy one camera keyframe to another frame. An occupied destination fails with key_exists unless overwrite is true (then reported as replaced). Keys stranded beyond the timeline end can be moved back into range. Undoable.',
         {
             from: integer('Frame of the existing key.'),
             to: integer('Destination frame, below the timeline length.', 0, 9999),
-            copy: boolean('Keep the original key; default false.')
+            copy: boolean('Keep the original key; default false.'),
+            overwrite: boolean('Replace a key at the destination; default false.')
         },
         ['from', 'to'],
-        (i: { from: number; to: number; copy?: boolean }, o) => editor.timeline.moveKey(i.from, i.to, i.copy, o)
+        (i: { from: number; to: number; copy?: boolean; overwrite?: boolean }, o) =>
+            editor.timeline.moveKey(i.from, i.to, { copy: i.copy, overwrite: i.overwrite }, o)
     );
     add(
         'delete_keyframes',

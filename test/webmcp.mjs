@@ -36,7 +36,9 @@ const useTimeline = fn => use(async (state) => {
         camera.target.copy(pose.target);
         if (pose.fov !== undefined) camera.fov = pose.fov;
     });
-    events.function('sequence.idle', () => Promise.resolve());
+    // replaceable so a test can hold back a PLY sequence frame swap
+    let sequenceIdle = () => Promise.resolve();
+    events.function('sequence.idle', () => sequenceIdle());
     scene.camera = {
         azim: 0, elevation: 0, distance: 1,
         onUpdate() {},
@@ -48,7 +50,11 @@ const useTimeline = fn => use(async (state) => {
     scene.canvas = { getBoundingClientRect: () => ({ x: 0, y: 0, width: 1, height: 1 }) };
     registerTimelineEvents(events);
     registerCameraPosesEvents(events);
-    await fn({ ...state, camera });
+    try {
+        await fn({ ...state, camera, holdSequence: idle => { sequenceIdle = idle; } });
+    } finally {
+        events.fire('timeline.setPlaying', false);
+    }
 });
 const close = (a, b) => a.length === b.length && a.every((v, i) => Math.abs(v - b[i]) < 1e-6);
 const frames = async call => (await call('get_timeline')).keys.map(k => k.frame);
@@ -282,7 +288,10 @@ const checks = {
     async 'move, copy and delete keyframes, each one undo step'() {
         await useTimeline(async ({ call, history }) => {
             await call('set_keyframes', { keys: [0, 30, 60].map(frame => ({ frame, position: [frame, 0, 1], target: [frame, 0, 0] })) });
-            const moved = await call('move_keyframe', { from: 30, to: 60 });
+            const cursorBefore = history.cursor;
+            assert.equal((await call('move_keyframe', { from: 30, to: 60 })).error.code, 'key_exists');
+            assert.equal(history.cursor, cursorBefore);
+            const moved = await call('move_keyframe', { from: 30, to: 60, overwrite: true });
             assert.equal(moved.replaced, true);
             assert.deepEqual(moved.keys[0].position, [30, 0, 1]);
             assert.deepEqual(await frames(call), [0, 60]);
@@ -318,6 +327,85 @@ const checks = {
             assert.deepEqual([moved.timeline.frame, moved.timeline.playing], [5, true]);
             const paused = await call('set_timeline', { playing: false });
             assert.deepEqual([paused.affected, paused.timeline.playing], [1, false]);
+        });
+    },
+
+    async 'seeking the current frame returns a moved camera to the path'() {
+        await useTimeline(async ({ call, camera }) => {
+            // without keys a seek leaves the camera alone
+            camera.position.set(7, 7, 7);
+            assert(close((await call('set_timeline', { frame: 30 })).camera.position, [7, 7, 7]));
+            await call('set_keyframes', { keys: [{ frame: 0, position: [0, 0, 4], target: [0, 0, 0] }, { frame: 60, position: [4, 0, 0], target: [0, 0, 0] }] });
+            const onPath = (await call('set_timeline', { frame: 30 })).camera.position;
+            camera.position.set(9, 9, 9);
+            const restored = await call('set_timeline', { frame: 30 });
+            assert.equal(restored.affected, 0);
+            assert(close(restored.camera.position, onPath), JSON.stringify(restored.camera));
+        });
+    },
+
+    async 'an omitted key frame is the playhead when the command runs'() {
+        await useTimeline(async ({ call, camera }) => {
+            await call('set_timeline', { frame: 20 });
+            camera.position.set(1, 2, 3);
+            const added = await call('set_keyframes', { keys: [{}] });
+            assert.deepEqual([added.keys[0].frame, added.keys[0].position], [20, [1, 2, 3]]);
+            assert.equal((await call('set_keyframes', { keys: [{}, { frame: 20 }] })).error.code, 'invalid_input');
+        });
+    },
+
+    async 'timeline commands snapshot inputs and commit before a queued UI undo'() {
+        await useTimeline(async ({ api, queue, history }) => {
+            const gate = barrier();
+            queue.enqueue(() => gate.promise);
+            const position = new Vec3(2, 3, 4);
+            const pending = api.timeline.setKeys([{ frame: 0, position, target: new Vec3(), fov: 65 }]);
+            const undo = history.undo();
+            position.set(100, 100, 100);
+            gate.release();
+            const result = await pending;
+            await undo;
+            assert.deepEqual([result.keys[0].position.x, result.timeline.totalKeys], [2, 1]);
+            assert.equal((await api.inspect.timeline()).totalKeys, 0);
+            assert.equal(history.canRedo(), true);
+        });
+    },
+
+    async 'cancelled or busy timeline commands change nothing'() {
+        await quietly(() => useTimeline(async ({ api, events, queue, history, scene }) => {
+            await api.timeline.update({ playing: true });
+            const key = { frame: 0, position: new Vec3(0, 0, 1), target: new Vec3() };
+            const gate = barrier();
+            queue.enqueue(() => gate.promise);
+            const controller = new AbortController();
+            const keyed = api.timeline.setKeys([key], { signal: controller.signal });
+            const seek = api.timeline.update({ frame: 10, playing: false }, { signal: controller.signal });
+            controller.abort();
+            gate.release();
+            await assert.rejects(keyed, error => error.code === 'cancelled');
+            await assert.rejects(seek, error => error.code === 'cancelled');
+            scene.lockedRenderMode = 'video';
+            await assert.rejects(api.timeline.setKeys([key]), error => error.code === 'busy');
+            await assert.rejects(api.timeline.update({ playing: false }), error => error.code === 'busy');
+            scene.lockedRenderMode = null;
+            assert.deepEqual([history.cursor, events.invoke('timeline.playing'), events.invoke('timeline.frame')], [0, true, 0]);
+        }));
+    },
+
+    async 'a playhead move waits for the PLY sequence frame unless playing'() {
+        await useTimeline(async ({ call, holdSequence }) => {
+            const swap = barrier();
+            holdSequence(() => swap.promise);
+            let settled = false;
+            const seek = call('set_timeline', { frame: 10 }).then(result => { settled = true; return result; });
+            await tick();
+            assert.equal(settled, false);
+            swap.release();
+            assert.equal((await seek).timeline.frame, 10);
+            // playback keeps changing frames, so there is no single swap to wait for
+            holdSequence(() => new Promise(() => {}));
+            assert.equal((await call('set_timeline', { playing: true })).timeline.playing, true);
+            holdSequence(() => Promise.resolve());
         });
     }
 };

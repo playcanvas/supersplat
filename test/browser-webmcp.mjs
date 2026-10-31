@@ -325,6 +325,11 @@ async function browserChecks(url, enabled) {
     const pose = halfway.camera;
     check(Math.abs(pose.position[0] - 2) < 0.01 && Math.abs(pose.position[2] - 2) < 0.01 && Math.abs(pose.fov - 55) < 0.01 &&
         halfway.viewport.viewToken !== keyed.viewport.viewToken, 'playhead evaluates the camera path with a fresh viewToken', pose);
+    await call('set_camera', { position: [0, 3, 3], target: [0, 0, 0] });
+    const restored = (await call('set_timeline', { frame: 45 })).camera;
+    check(Math.abs(restored.position[0] - 2) < 0.01 && Math.abs(restored.position[2] - 2) < 0.01, 'seeking the current frame returns a moved camera to the path', restored);
+    check((await call('get_scene')).timeline.totalKeys === 2, 'scene inspection includes the timeline summary');
+    await call('move_keyframe', { from: 0, to: 90 }, 'key_exists');
     const movedKey = await call('move_keyframe', { from: 90, to: 120 });
     check(movedKey.keys[0].frame === 120 && !movedKey.replaced, 'move keyframe', movedKey);
     await call('undo');
@@ -332,11 +337,14 @@ async function browserChecks(url, enabled) {
     await call('undo');
     check((await call('get_timeline')).keys.map(k => k.frame).join() === '0,90', 'keyframe edits undo exactly');
     const playing = await call('set_timeline', { playing: true });
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const advanced = (await call('get_timeline')).frame;
+    let advanced = 45;
+    for (let i = 0; i < 100 && advanced === 45; i++) {
+        await new Promise(resolve => setTimeout(resolve, 30));
+        advanced = (await call('get_timeline')).frame;
+    }
     const paused = await call('set_timeline', { playing: false });
-    check(playing.timeline.playing && advanced > 45 && !paused.timeline.playing, 'playback advances the playhead until paused', { advanced });
-    const language =document.querySelector('#settings-panel .settings-panel-row-select').ui;
+    check(playing.timeline.playing && advanced !== 45 && !paused.timeline.playing, 'playback advances the playhead until paused', { advanced });
+    const language = document.querySelector('#settings-panel .settings-panel-row-select').ui;
     language.value = 'fr';
     let localized;
     for (let i = 0; i < 100; i++) {

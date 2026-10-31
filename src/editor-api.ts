@@ -320,6 +320,7 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
                     checkCancelled(options);
                     return {
                         ...session.read(),
+                        timeline: timeline.summary(),
                         layers: allSplats().map(layerInfo),
                         activeLayer: (events.invoke('selection') as Splat | null)?.uid ?? null,
                         history: historyInfo()

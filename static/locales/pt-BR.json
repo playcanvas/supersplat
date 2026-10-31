@@ -428,6 +428,11 @@
     "webmcp.focus_camera": "Enquadrar câmera",
     "webmcp.pick_points": "Obter pontos da superfície",
     "webmcp.set_view": "Definir exibição",
+    "webmcp.get_timeline": "Inspecionar linha do tempo",
+    "webmcp.set_timeline": "Definir linha do tempo",
+    "webmcp.set_keyframes": "Definir quadros-chave",
+    "webmcp.move_keyframe": "Mover quadro-chave",
+    "webmcp.delete_keyframes": "Excluir quadros-chave",
     "webmcp.import_url": "Importar de URL",
     "webmcp.export_scene": "Exportar cena"
 }

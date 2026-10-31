@@ -48,7 +48,7 @@ When changes to the source are detected, SuperSplat is rebuilt automatically. Si
 
 ## WebMCP
 
-SuperSplat exposes native browser WebMCP tools for scene inspection, selection, editing, camera control and import/export. See [WebMCP](docs/webmcp.md) for the tool contract, browser requirements and verification commands.
+SuperSplat exposes native browser WebMCP tools for scene inspection, selection, editing, camera control, timeline and camera keyframe authoring, and import/export. See [WebMCP](docs/webmcp.md) for the tool contract, browser requirements and verification commands.
 
 ## Localizing the SuperSplat Editor
 

@@ -162,6 +162,7 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
     return {
         read,
         checkView,
+        camera: cameraInfo,
         viewport: {
             assertIdle,
             ready,
@@ -343,5 +344,7 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
     };
 };
 
+type EditorSession = ReturnType<typeof createEditorSession>;
+
 export { createEditorSession };
-export type { CameraSettings, ViewSettings, ExportRequest };
+export type { CameraSettings, ViewSettings, ExportRequest, EditorSession };

@@ -504,16 +504,18 @@ fn main(
     // survivor: claim a slot in the compact list. Only surviving threads contend,
     // which is 0.1-10% of the dispatch in practice
     let slot = atomicAdd(&splatCounter[0], 1u);
-    // depth sort key, back-to-front: linearly normalize view depth to [0,1] over
-    // the clip range and invert so the farthest splat gets the smallest key and
-    // composites first. Linear in both projections (ortho's clip.z is this same
-    // ratio; perspective's clip.z would be hyperbolic, so we normalize the raw
-    // view depth instead). near may be negative in ortho (the camera sits inside
-    // the bound); the subtraction handles that with no sign special-case.
+    // depth sort key, back-to-front: the farthest splat gets the smallest key. Perspective
+    // is logarithmic, so a key step is a fixed fraction of the depth however far the
+    // far plane is. Ortho is linear, and near may be negative there (camera inside the bound).
     // Radial sorting keys on the distance to the camera instead, so the order
     // does not change as the camera turns in place
     let sortDepth = select(depth, length(viewCenter.xyz), uniforms.radialSort != 0u);
-    let normDepth = saturate((sortDepth - uniforms.near) / (uniforms.far - uniforms.near));
+    var normDepth: f32;
+    if (uniforms.isOrtho == 0u) {
+        normDepth = saturate(log(sortDepth / uniforms.near) / log(uniforms.far / uniforms.near));
+    } else {
+        normDepth = saturate((sortDepth - uniforms.near) / (uniforms.far - uniforms.near));
+    }
     sortKeys[slot] = u32((1.0 - normDepth) * f32((1u << 20u) - 1u));
     compactEntries[slot] = entry;
 }

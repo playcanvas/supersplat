@@ -1,9 +1,10 @@
-import { BooleanInput, Button, Container, Label } from '@playcanvas/pcui';
+import { BooleanInput, Button, Container, Label, SelectInput, SliderInput } from '@playcanvas/pcui';
 
 import type { Events } from '../events';
 import type { GridPlane } from '../infinite-grid';
 import type { ShortcutManager } from '../shortcut-manager';
 
+import { createDepthControls } from './depth-controls';
 import { i18n } from './localization';
 import overlaysSvg from './svg/overlays.svg';
 import resetSvg from './svg/reset.svg';
@@ -257,25 +258,61 @@ class OverlaysPanel extends Container {
         perfOverlayRow.append(perfOverlayLabel);
         perfOverlayRow.append(perfOverlayToggle);
 
-        // overdraw heat map
+        // render mode: normal shading, or a diagnostic replacement. Session-only,
+        // like the frame timing overlay
 
-        const overdrawRow = new Container({
+        const renderModeRow = new Container({
             class: 'settings-panel-row'
         });
 
-        const overdrawLabel = new Label({
+        const renderModeLabel = new Label({
             class: 'settings-panel-row-label'
         });
-        i18n.bindText(overdrawLabel, 'panel.overlays.overdraw');
+        i18n.bindText(renderModeLabel, 'panel.overlays.render-mode');
 
-        const overdrawToggle = new BooleanInput({
-            type: 'toggle',
-            class: 'settings-panel-row-toggle',
-            value: false
+        const renderModeSelect = new SelectInput({
+            class: 'settings-panel-row-select',
+            defaultValue: 'normal',
+            options: [
+                { v: 'normal', t: i18n.t('panel.overlays.mode.normal') },
+                { v: 'depth', t: i18n.t('panel.overlays.depth') },
+                { v: 'normals', t: i18n.t('panel.overlays.mode.normals') },
+                { v: 'alpha', t: i18n.t('panel.overlays.mode.alpha') },
+                { v: 'curvature', t: i18n.t('panel.overlays.mode.curvature') },
+                { v: 'edge', t: i18n.t('panel.overlays.mode.edge') },
+                { v: 'overdraw', t: i18n.t('panel.overlays.overdraw') }
+            ]
         });
 
-        overdrawRow.append(overdrawLabel);
-        overdrawRow.append(overdrawToggle);
+        renderModeRow.append(renderModeLabel);
+        renderModeRow.append(renderModeSelect);
+        const depthControls = createDepthControls(events, () => renderModeSelect.value, true);
+
+        // minimum splat opacity kept by the depth view. Nearly transparent
+        // gaussians would otherwise write opaque depth over the real surface
+        const opacityRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const opacityLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(opacityLabel, 'panel.overlays.min-opacity');
+
+        const opacitySlider = new SliderInput({
+            class: 'settings-panel-row-slider',
+            min: 0,
+            max: 1,
+            precision: 2,
+            value: 0.2
+        });
+
+        opacityRow.append(opacityLabel);
+        opacityRow.append(opacitySlider);
+
+        const syncOpacityRow = () => {
+            opacityRow.hidden = !['depth', 'normals', 'curvature'].includes(renderModeSelect.value);
+        };
 
         rowToggles(showGridRow, showGridToggle);
         rowToggles(showBoundRow, showBoundToggle);
@@ -283,7 +320,6 @@ class OverlaysPanel extends Container {
         rowToggles(showCameraPosesRow, showCameraPosesToggle);
         rowToggles(showCameraInfoRow, showCameraInfoToggle);
         rowToggles(perfOverlayRow, perfOverlayToggle);
-        rowToggles(overdrawRow, overdrawToggle);
 
         this.append(header);
         this.append(sectionHeader('panel.overlays.section-helpers'));
@@ -293,9 +329,12 @@ class OverlaysPanel extends Container {
         this.append(showBoundDimensionsRow);
         this.append(showCameraPosesRow);
         this.append(showCameraInfoRow);
+        this.append(sectionHeader('panel.overlays.section-render-mode'));
+        this.append(renderModeRow);
+        this.append(depthControls.container);
+        this.append(opacityRow);
         this.append(sectionHeader('panel.overlays.section-diagnostics'));
         this.append(perfOverlayRow);
-        this.append(overdrawRow);
 
         // the panel is constructed before the editor registers its state, and
         // the notify events only fire on change - so a value initialized from
@@ -315,7 +354,10 @@ class OverlaysPanel extends Container {
             showCameraPosesToggle.value = events.invoke('camera.showPoses');
             showCameraInfoToggle.value = events.invoke('camera.showInfo');
             perfOverlayToggle.value = events.invoke('view.perfOverlay');
-            overdrawToggle.value = events.invoke('view.overdraw');
+            renderModeSelect.value = events.invoke('view.renderMode');
+            opacitySlider.value = events.invoke('view.minOpacity');
+            syncOpacityRow();
+            depthControls.sync();
         };
 
         // handle panel visibility
@@ -356,6 +398,8 @@ class OverlaysPanel extends Container {
 
         resetButton.on('click', () => {
             events.fire('preferences.reset', 'overlays');
+            // "Restore defaults" also leaves the diagnostic render mode
+            events.fire('view.setRenderMode', 'normal');
         });
 
         // show grid
@@ -424,14 +468,26 @@ class OverlaysPanel extends Container {
             events.fire('view.setPerfOverlay', value);
         });
 
-        // overdraw heat map
+        // render mode
 
-        events.on('view.overdraw', (value: boolean) => {
-            overdrawToggle.value = value;
+        events.on('view.renderMode', (mode: string) => {
+            renderModeSelect.value = mode;
+            syncOpacityRow();
+            depthControls.sync();
         });
 
-        overdrawToggle.on('change', (value: boolean) => {
-            events.fire('view.setOverdraw', value);
+        renderModeSelect.on('change', () => {
+            events.fire('view.setRenderMode', renderModeSelect.value);
+            syncOpacityRow();
+            depthControls.sync();
+        });
+
+        events.on('view.minOpacity', (value: number) => {
+            opacitySlider.value = value;
+        });
+
+        opacitySlider.on('change', (value: number) => {
+            events.fire('view.setMinOpacity', value);
         });
 
         // tooltips

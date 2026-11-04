@@ -1,9 +1,12 @@
 import { BooleanInput, Button, Container, Element, Label, SelectInput, VectorInput } from '@playcanvas/pcui';
 
 import type { Events } from '../events';
+import { isRenderMode } from '../render-mode';
+import type { RenderMode } from '../render-mode';
 import type { VideoCodecChoice, VideoSettings } from '../video-config';
 import { buildVideoEncoderConfig } from '../video-config';
 
+import { createDepthControls } from './depth-controls';
 import { i18n } from './localization';
 import sceneExport from './svg/export.svg';
 
@@ -160,6 +163,28 @@ class VideoSettingsDialog extends Container {
         const projectionRow = new Container({ class: 'row' });
         projectionRow.append(projectionLabel);
         projectionRow.append(projectionSelect);
+
+        // render mode
+
+        const renderModeLabel = new Label({ class: 'label' });
+        i18n.bindText(renderModeLabel, 'panel.overlays.render-mode');
+        const renderModeSelect = new SelectInput({
+            class: 'select',
+            defaultValue: 'normal',
+            options: [
+                { v: 'normal', t: i18n.t('panel.overlays.mode.normal') },
+                { v: 'depth', t: i18n.t('panel.overlays.depth') },
+                { v: 'normals', t: i18n.t('panel.overlays.mode.normals') },
+                { v: 'alpha', t: i18n.t('panel.overlays.mode.alpha') },
+                { v: 'curvature', t: i18n.t('panel.overlays.mode.curvature') },
+                { v: 'edge', t: i18n.t('panel.overlays.mode.edge') },
+                { v: 'overdraw', t: i18n.t('panel.overlays.overdraw') }
+            ]
+        });
+        const renderModeRow = new Container({ class: 'row' });
+        renderModeRow.append(renderModeLabel);
+        renderModeRow.append(renderModeSelect);
+        const depthControls = createDepthControls(events, () => renderModeSelect.value, false);
 
         // resolution
 
@@ -358,18 +383,31 @@ class VideoSettingsDialog extends Container {
         // sync the ui to the selected projection: 360 renders are 2:1
         // equirectangular without portrait mode or debug overlays
         const syncProjection = () => {
+            depthControls.sync();
             const is360 = projectionSelect.value === 'equirect';
-            resolutionSelect.options = is360 ? equirectResolutions : standardResolutions;
-            resolutionSelect.value = is360 ? '360-4k' : '1080';
+            const diagnostic = renderModeSelect.value !== 'normal';
+            const options = is360 ? equirectResolutions : standardResolutions;
+            const previous = resolutionSelect.value;
+            resolutionSelect.options = options;
+            // preserve the chosen resolution across mode changes; only fall back
+            // when the new projection does not offer it
+            resolutionSelect.value = options.some((option) => option.v === previous)
+                ? previous
+                : is360
+                  ? '360-4k'
+                  : '1080';
+            projectionRow.enabled = !diagnostic;
             portraitRow.hidden = is360;
-            showDebugRow.hidden = is360;
-            levelHorizonRow.hidden = !is360;
+            showDebugRow.hidden = diagnostic || is360;
+            levelHorizonRow.hidden = diagnostic || !is360;
         };
 
         // content
 
         const content = new Container({ id: 'content' });
         content.append(projectionRow);
+        content.append(renderModeRow);
+        content.append(depthControls.container);
         content.append(resolutionRow);
         content.append(formatRow);
         content.append(codecRow);
@@ -646,6 +684,14 @@ class VideoSettingsDialog extends Container {
             syncProjection();
             requestEncoderSupportRefresh();
         });
+
+        renderModeSelect.on('change', () => {
+            if (renderModeSelect.value !== 'normal' && projectionSelect.value === 'equirect') {
+                projectionSelect.value = 'standard';
+            }
+            syncProjection();
+            requestEncoderSupportRefresh();
+        });
         formatSelect.on('change', () => {
             syncFormat();
             requestEncoderSupportRefresh();
@@ -687,6 +733,12 @@ class VideoSettingsDialog extends Container {
         this.show = () => {
             reset();
 
+            // WYSIWYG: match the viewport's current render mode
+            const viewMode = events.invoke('view.renderMode');
+            if (isRenderMode(viewMode)) {
+                renderModeSelect.value = viewMode;
+            }
+
             this.hidden = false;
             document.addEventListener('keydown', keydown);
             this.dom.focus();
@@ -702,7 +754,9 @@ class VideoSettingsDialog extends Container {
                         return;
                     }
 
-                    const is360 = projectionSelect.value === 'equirect';
+                    const renderMode = renderModeSelect.value as RenderMode;
+                    const diagnostic = renderMode !== 'normal';
+                    const is360 = !diagnostic && projectionSelect.value === 'equirect';
                     const encodingSettings = encodingSettingsFor(resolutionSelect.value);
                     const frameRange = frameRangeInput.value as number[];
 
@@ -711,10 +765,12 @@ class VideoSettingsDialog extends Container {
                         endFrame: frameRange[1],
                         ...encodingSettings,
                         transparentBg: transparentBgBoolean.value,
-                        showDebug: !is360 && showDebugBoolean.value,
+                        showDebug: !diagnostic && !is360 && showDebugBoolean.value,
                         format: formatSelect.value as 'mp4' | 'webm' | 'mov' | 'mkv',
                         projection: (is360 ? 'equirect' : 'standard') as 'standard' | 'equirect',
-                        levelHorizon: is360 && levelHorizonBoolean.value
+                        levelHorizon: !diagnostic && is360 && levelHorizonBoolean.value,
+                        renderMode,
+                        depthMethod: depthControls.method()
                     };
 
                     resolve(videoSettings);

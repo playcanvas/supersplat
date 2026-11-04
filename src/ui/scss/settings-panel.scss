@@ -43,12 +43,19 @@
         }
     }
 
-    & > .settings-panel-row {
+    & > .settings-panel-row,
+    & > .depth-controls > .settings-panel-row {
         display: flex;
         flex-direction: row;
         align-items: center;
         padding: 2px 10px;
         height: 28px;
+
+        // the generic .pcui-element.pcui-hidden rule ties with our display:flex
+        // on specificity and can lose the cascade, leaving "hidden" rows visible
+        &.pcui-hidden {
+            display: none;
+        }
 
         &:hover {
             background-color: rgba(255, 255, 255, 0.03);

@@ -1,3 +1,6 @@
+import type { DepthMethod } from './depth-renderer';
+import type { RenderMode } from './render-mode';
+
 type VideoCodecChoice = 'h264' | 'h265' | 'vp9' | 'av1';
 
 type VideoSettings = {
@@ -13,6 +16,10 @@ type VideoSettings = {
     codec: VideoCodecChoice;
     projection?: 'standard' | 'equirect';
     levelHorizon?: boolean;
+    // diagnostic render mode captured into the video (depth is 8-bit grayscale;
+    // the video codec cannot carry 16-bit samples)
+    renderMode?: RenderMode;
+    depthMethod?: DepthMethod;
 };
 
 type MuxerVideoCodec = 'avc' | 'hevc' | 'vp9' | 'av1';

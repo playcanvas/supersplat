@@ -118,7 +118,6 @@ struct ProjectorUniforms {
     colorRow0: vec4f,
     colorRow1: vec4f,
     colorRow2: vec4f,
-    lockedColor: vec4f,
     visible: u32,
     selectionEnabled: u32,
     pickOp: i32,
@@ -454,9 +453,9 @@ fn main(
 
     let selected = (state & 1u) != 0u && uniforms.selectionEnabled != 0u;
     let locked = (state & 2u) != 0u;
-    if (locked) {
-        color *= uniforms.lockedColor;
-    }
+    // The editor's locked tint is applied by the splat shader, not baked into
+    // the cache: depth/normals/curvature read the cache alpha, and a visual lock
+    // must not remove real geometry from the diagnostics
     // the cache colour stays untinted: the render shader's vertex stage applies
     // the gaussian selection blends, so the ring path can blend from the
     // splat's own colour independently of them

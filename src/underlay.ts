@@ -48,7 +48,8 @@ class Underlay extends Element {
                 srcTexture: camera.workTarget.colorBuffer,
                 // 1:1 copy - source and destination are both targetSize
                 blitScale: [1, 1],
-                overdraw: 0
+                overdraw: 0,
+                alphaMode: 0
             });
         });
     }

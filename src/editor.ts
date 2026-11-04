@@ -5,6 +5,7 @@ import type { CameraFrame } from './camera';
 import type { GradeParams } from './color-grade';
 import type { CommandContext } from './command-queue';
 import type { IntersectOptions } from './data-processor/intersect';
+import { DEPTH_METHODS } from './depth-renderer';
 import type { EditHistory } from './edit-history';
 import { SelectOp, SetLocalFrameOp } from './edit-ops';
 import { intersectSelect, PUBLIC_OP } from './editor-api';
@@ -14,6 +15,8 @@ import type { Element } from './element';
 import { ElementType } from './element';
 import type { Events } from './events';
 import type { GridPlane } from './infinite-grid';
+import { isRenderMode } from './render-mode';
+import type { RenderMode } from './render-mode';
 import type { Scene } from './scene';
 import { runSelectionGesture } from './selection-gesture';
 import { packRegion, emptyRegion, rectRegion } from './selection-rectangle';
@@ -117,7 +120,17 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         'view.stochastic',
         'view.sortMode',
         'view.perfOverlay',
-        'view.overdraw',
+        'view.renderMode',
+        'view.minOpacity',
+        'view.depthMethod',
+        'view.depthContribution',
+        'view.depthCoverage',
+        'view.depthQuantile',
+        'view.curvatureGain',
+        'view.edgeGain',
+        'view.depthRangeMode',
+        'view.depthRangeNear',
+        'view.depthRangeFar',
         'camera.bound',
         'camera.boundDimensions',
         'camera.showPoses',
@@ -1347,21 +1360,70 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     });
 
-    // overdraw heat map. Session-only: it replaces the scene with a fill count,
-    // so unlike the frame timings it is never stored as a preference
+    // diagnostic render mode. Session-only: it replaces the scene with a depth
+    // map or a fill count, so unlike the frame timings it is never stored as a
+    // preference
 
-    let overdraw = false;
+    let renderMode: RenderMode = 'normal';
 
-    events.function('view.overdraw', () => {
-        return overdraw;
+    events.function('view.renderMode', () => {
+        return renderMode;
     });
 
-    events.on('view.setOverdraw', (value: boolean) => {
-        if (value !== overdraw) {
-            overdraw = value;
-            events.fire('view.overdraw', value);
+    events.on('view.setRenderMode', (value: RenderMode) => {
+        if (!isRenderMode(value)) return;
+        if (value !== renderMode) {
+            renderMode = value;
+            events.fire('view.renderMode', value);
         }
     });
+
+    // minimum splat opacity kept by the depth view. Session-only: it depends on
+    // the source data's opacity distribution
+    let minOpacity = 0.2;
+
+    events.function('view.minOpacity', () => {
+        return minOpacity;
+    });
+
+    events.on('view.setMinOpacity', (value: number) => {
+        const clamped = Math.min(1, Math.max(0, value));
+        if (clamped !== minOpacity) {
+            minOpacity = clamped;
+            events.fire('view.minOpacity', clamped);
+        }
+    });
+
+    for (const [name, initial] of Object.entries({
+        depthMethod: 'mean',
+        depthContribution: 0.02,
+        depthCoverage: 0.05,
+        depthQuantile: 0.5,
+        curvatureGain: 0.5,
+        edgeGain: 1,
+        depthRangeMode: 'auto',
+        depthRangeNear: 0,
+        depthRangeFar: 10
+    })) {
+        let value: string | number = initial;
+        events.function(`view.${name}`, () => value);
+        events.on(`view.set${name[0].toUpperCase()}${name.slice(1)}`, (next: string | number) => {
+            if (typeof initial === 'number') {
+                if (typeof next !== 'number' || !Number.isFinite(next)) return;
+                if (name === 'depthQuantile') next = Math.min(0.99, Math.max(0.01, next));
+                else if (name === 'curvatureGain' || name === 'edgeGain') next = Math.min(10, Math.max(0.1, next));
+                else if (name === 'depthContribution' || name === 'depthCoverage')
+                    next = Math.min(1, Math.max(0, next));
+            } else if (name.endsWith('Method')) {
+                if (next === 'nearest') next = 'mean';
+                if (!DEPTH_METHODS.some((method) => method === next)) return;
+            } else if (name === 'depthRangeMode' && !['auto', 'scene', 'fixed'].includes(String(next))) return;
+            if (next !== value) {
+                value = next;
+                events.fire(`view.${name}`, value);
+            }
+        });
+    }
 
     events.function('camera.getPose', () => {
         const camera = scene.camera;

@@ -198,6 +198,8 @@ class ProjectedSplatRenderer {
     private submissionCpuMs = 0;
     private stochastic = false;
     private overdraw = false;
+    private alphaView = false;
+    private edgeView = false;
     // contribution cull on stochastic frames, adapted from each stochastic
     // frame's gpu span toward motionBudgetMs: raised while frames run over the
     // budget, relaxed toward zero when they have headroom. It is a lossy motion
@@ -428,6 +430,20 @@ class ProjectedSplatRenderer {
         this.material.update();
     }
 
+    private setAlphaView(value: boolean) {
+        if (value === this.alphaView) return;
+        this.alphaView = value;
+        this.material.setDefine('ALPHA_VIEW', value ? '' : undefined);
+        this.material.update();
+    }
+
+    private setEdgeView(value: boolean) {
+        if (value === this.edgeView) return;
+        this.edgeView = value;
+        this.material.setDefine('EDGE_VIEW', value ? '' : undefined);
+        this.material.update();
+    }
+
     private getVariant(bands: number) {
         let variant = this.variants.get(bands);
         if (variant) {
@@ -485,7 +501,6 @@ class ProjectedSplatRenderer {
             new UniformFormat('colorRow0', UNIFORMTYPE_VEC4),
             new UniformFormat('colorRow1', UNIFORMTYPE_VEC4),
             new UniformFormat('colorRow2', UNIFORMTYPE_VEC4),
-            new UniformFormat('lockedColor', UNIFORMTYPE_VEC4),
             new UniformFormat('visible', UNIFORMTYPE_UINT),
             new UniformFormat('selectionEnabled', UNIFORMTYPE_UINT),
             new UniformFormat('pickOp', UNIFORMTYPE_INT),
@@ -545,6 +560,18 @@ class ProjectedSplatRenderer {
             placement.bands = bands;
         }
         return placement.compute;
+    }
+
+    getDepthInputs() {
+        if (!this.cacheA || !this.cacheB || !this.compactEntries || !this.splatCounter) return null;
+        return {
+            cacheA: this.cacheA,
+            cacheB: this.cacheB,
+            entries: this.compactEntries,
+            splatCount: this.splatCounter,
+            cacheWidth: this.cacheWidth,
+            capacity: this.capacity
+        };
     }
 
     // gpu-driven arguments: one workgroup turns the projector's survivor count into
@@ -855,7 +882,7 @@ class ProjectedSplatRenderer {
         const start = performance.now();
         const { camera, events } = this.scene;
         // a footprint pick lays the projection out for its gesture's target size
-        const targetSize = size ?? this.scene.targetSize;
+        const targetSize = size ?? camera.targetSize;
         const cameraComponent = camera.camera;
         const view = cameraComponent.viewMatrix;
         // match the depth convention of engine-drawn meshes: the forward
@@ -881,8 +908,14 @@ class ProjectedSplatRenderer {
         const unselectedColor = events.invoke('unselectedClr');
         const lockedColor = events.invoke('lockedClr');
         const viewBands = events.invoke('view.bands') as number;
-        // Size culling is visual only: selection and depth queries need every footprint.
-        const minPixelSize = forPick ? 0 : ((events.invoke('view.minPixelSize') as number) ?? 0);
+        // Size culling is visual only: selection, alpha and the geometry
+        // diagnostics (depth/normals/curvature) need every footprint, otherwise
+        // the visual size threshold punches holes in the exported geometry
+        const geometryDiagnostic = this.scene.depthRender || this.scene.normalRender || this.scene.curvatureRender;
+        const minPixelSize =
+            forPick || this.scene.alphaRender || geometryDiagnostic
+                ? 0
+                : ((events.invoke('view.minPixelSize') as number) ?? 0);
 
         // the centres overlay draws the selected layer's centres from this
         // frame's projection: all of them in the edit view with centres on,
@@ -899,6 +932,8 @@ class ProjectedSplatRenderer {
             camera.renderOverlays &&
             centerSize > 0 &&
             !this.scene.overdrawRender &&
+            !this.scene.alphaRender &&
+            !this.scene.edgeRender &&
             (showAllCenters || showSelectedCenters);
         // rings likewise: every ring in the edit view with rings on, otherwise
         // the selection's alone. Decided here because the projector exempts
@@ -906,7 +941,7 @@ class ProjectedSplatRenderer {
         const showAllRings = events.invoke('view.rings') && editView;
         const showSelectedRings =
             events.invoke('view.selectionRings') && (selectedSplat?.instances.numSelected ?? 0) > 0;
-        const showRings = showAllRings || showSelectedRings;
+        const showRings = !this.scene.alphaRender && !this.scene.edgeRender && (showAllRings || showSelectedRings);
 
         // the colour panel's uncommitted grade, previewed on the layer it targets.
         // Packed once per frame: it is the same for every placement, only the
@@ -919,8 +954,10 @@ class ProjectedSplatRenderer {
 
         // motion-adaptive: fast stochastic while interacting, clean sorted &
         // blended when the scene settles (driven by Scene.onUpdate)
-        this.setStochastic(this.scene.movingRender && !forPick);
-        this.setOverdraw(this.scene.overdrawRender);
+        this.setStochastic(this.scene.movingRender && !forPick && !this.scene.depthRender && !this.scene.normalRender);
+        this.setOverdraw(!this.scene.depthRender && !this.scene.normalRender && this.scene.overdrawRender);
+        this.setAlphaView(!forPick && this.scene.alphaRender);
+        this.setEdgeView(!forPick && this.scene.edgeRender);
         this.material.setParameter(
             'warpStrength',
             this.scene.warpedRender ? this.scene.stochastic.warpStrength - 1 : 0
@@ -933,7 +970,7 @@ class ProjectedSplatRenderer {
         // and a projection switch changes its depth mapping; both skip the
         // cull, and the frame writes a fresh map
         // the live size: a pick-size projection must not reallocate the map
-        this.updateDepthMap(this.scene.targetSize.width, this.scene.targetSize.height);
+        this.updateDepthMap(targetSize.width, targetSize.height);
         const isOrtho = cameraComponent.projection === 1;
         const occlusion =
             this.stochastic &&
@@ -1020,7 +1057,6 @@ class ProjectedSplatRenderer {
             compute.setParameter('colorRow0', this.previewRows.subarray(0, 4));
             compute.setParameter('colorRow1', this.previewRows.subarray(4, 8));
             compute.setParameter('colorRow2', this.previewRows.subarray(8, 12));
-            compute.setParameter('lockedColor', [lockedColor.r, lockedColor.g, lockedColor.b, lockedColor.a]);
             compute.setParameter('visible', splat.visible ? 1 : 0);
             compute.setParameter('selectionEnabled', selectionEnabled ? 1 : 0);
             compute.setParameter('pickOp', -1);
@@ -1082,10 +1118,19 @@ class ProjectedSplatRenderer {
         this.meshInstance.setIndirect(null, drawSlot, 1);
         this.material.setParameter('splatCount', this.splatCounter);
 
-        if (this.stochastic) {
-            // no sort: the draw is opaque and depth tested, so it reads the
-            // compact list in the projector's append order. Both lists carry
-            // cache entry indices, so gaussian ids mean the same on either path
+        if (
+            this.stochastic ||
+            (!forPick &&
+                (this.scene.depthRender ||
+                    this.scene.normalRender ||
+                    this.scene.curvatureRender ||
+                    this.scene.alphaRender ||
+                    this.scene.overdrawRender))
+        ) {
+            // Depth/normals build their own ordered tile lists. Alpha's product,
+            // overdraw's fragment count and stochastic depth tests are all
+            // independent of draw order, so they consume the compact list
+            // directly without paying for a radix sort.
             this.material.setParameter('sortedIndices', this.compactEntries);
         } else {
             // the sort requires numBits to be a multiple of the active backend's
@@ -1117,14 +1162,25 @@ class ProjectedSplatRenderer {
         this.finishPick();
         const viewportParams = [targetSize.width, targetSize.height, 2 / targetSize.width, 2 / targetSize.height];
         this.material.setParameter('viewportSize', viewportParams);
-        this.material.setParameter('outlineMode', outlineSelection ? 1 : 0);
+        this.material.setParameter('outlineMode', !this.scene.edgeRender && outlineSelection ? 1 : 0);
         // the selection's 80/20 split only pays off if the Underlay pass adds
         // the 20% back this frame; the transform handler disables that pass
         // for the length of a drag
-        this.material.setParameter('selectionUnderlay', this.scene.underlay.enabled ? 1 : 0);
+        // Underlay re-adds the split-off selected share after the splat pass. It
+        // only runs on the centers layer, so captures that disable that layer
+        // must composite the selection in place instead of losing 20% of it.
+        this.material.setParameter(
+            'selectionUnderlay',
+            this.scene.underlay.enabled && this.scene.centersLayer.enabled ? 1 : 0
+        );
         // the edit view switch (tab) shows the raw scene: gaussians render
         // regardless of the profile flag and the non-selection rings hide
-        this.material.setParameter('showGaussians', events.invoke('view.gaussians') || !editView || pending ? 1 : 0);
+        this.material.setParameter(
+            'showGaussians',
+            this.scene.alphaRender || this.scene.edgeRender || events.invoke('view.gaussians') || !editView || pending
+                ? 1
+                : 0
+        );
         this.material.setParameter('showSelectedGaussians', events.invoke('view.selectionColor') && !pending ? 1 : 0);
         this.material.setParameter('ringSize', showRings ? events.invoke('view.ringSize') * 0.01 : 0);
         this.material.setParameter('ringSelectionOnly', showAllRings ? 0 : 1);
@@ -1151,6 +1207,7 @@ class ProjectedSplatRenderer {
                 ? [unselectedColor.r, unselectedColor.g, unselectedColor.b, events.invoke('view.splatsColorBlend')]
                 : [0, 0, 0, 0]
         );
+        this.material.setParameter('lockedColor', [lockedColor.r, lockedColor.g, lockedColor.b, lockedColor.a]);
         // the ring blends start from the splat's own colour too, so they stay
         // independent of the gaussian tints
         this.material.setParameter('ringColor', [
@@ -1226,7 +1283,7 @@ class ProjectedSplatRenderer {
     }
 
     get stats(): ProjectedRendererStats {
-        const cacheBytes = this.cacheWidth * this.cacheHeight * 20 * (this.capacity > 0 ? 1 : 0);
+        const cacheBytes = this.cacheWidth * this.cacheHeight * 24 * (this.capacity > 0 ? 1 : 0);
         // 4 bytes of sort key plus 4 of compacted entry index, per slot
         const keyBytes = this.capacity * 8;
         const estimatedRadixBytes = this.capacity * 12;

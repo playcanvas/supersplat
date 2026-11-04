@@ -62,8 +62,8 @@ class OverdrawLegend extends Container {
             ctx.fillText(`${count}`, x, BAR_HEIGHT + 3);
         });
 
-        events.on('view.overdraw', (value: boolean) => {
-            this.hidden = !value;
+        events.on('view.renderMode', (mode: string) => {
+            this.hidden = mode !== 'overdraw';
         });
     }
 }

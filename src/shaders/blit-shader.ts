@@ -12,10 +12,11 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 const fragmentShader = /* wgsl */ `
 var srcTexture: texture_2d<f32>;
 // every pass that draws with this shader (final blit, Underlay, DataProcessor.copyRt)
-// must set both: uniforms resolve through the shared device scope, so one left
+// must set every mode flag: uniforms resolve through the shared device scope, so one left
 // unset holds whatever the last pass wrote
 uniform blitScale: vec2f;
 uniform overdraw: u32;
+uniform alphaMode: u32;
 
 fn ld(p: vec2i) -> vec4f {
     let dims = vec2i(textureDimensions(srcTexture));
@@ -56,6 +57,12 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
     // map backbuffer pixel → source pixel so a smaller (lower-res) render target
     // upscales to fill the backbuffer (nearest). blitScale = srcSize / dstSize; = 1 at full res
     let src = vec2i(vec2f(pcPosition.xy) * uniform.blitScale);
+
+    if (uniform.alphaMode != 0u) {
+        let alpha = clamp(ld(src).a, 0.0, 1.0);
+        output.color = vec4f(vec3f(alpha), 1.0);
+        return output;
+    }
 
     if (uniform.overdraw != 0u) {
         output.color = vec4f(overdrawColor(ld(src).r), 1.0);

@@ -11,6 +11,26 @@
         transform: none;
     }
 
+    // the expanded appearance panel can be taller than the window: keep it
+    // inside and scroll, with the title bar pinned. It has no select inputs,
+    // so the overflow: visible below isn't needed for it
+    &#appearance-panel {
+        // 73px top, 8px bottom padding, 8px gap above the 33px status bar
+        max-height: calc(100vh - 122px);
+        overflow-y: auto;
+
+        // overflow, don't squash the sections into the capped height
+        & > * {
+            flex-shrink: 0;
+        }
+
+        & > .panel-header:first-child {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+    }
+
     // a collapsible section's header carries an arrow that turns when open
     & > .options-panel-section.options-panel-collapsible {
         cursor: pointer;

@@ -163,6 +163,11 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
             other.selectionCenters = !!profile[3];
             other.selectionRings = !!profile[4];
         }
+        // the selected gaussians were filled when either the gaussians or the
+        // selection tint was on; they now have their own flag
+        [active, other].forEach((target) => {
+            target.selectionGaussians = target.gaussians || target.selectionColor;
+        });
         stored['view.mode'] = activeMode;
         stored[`view.${activeMode}Settings`] = active;
         stored[`view.${otherMode}Settings`] = other;

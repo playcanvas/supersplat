@@ -35,20 +35,21 @@ type SessionQueries = {
 };
 
 const VIEW_ANGLES = { front: [0, 0], back: [180, 0], left: [270, 0], right: [90, 0], top: [0, -90], bottom: [0, 90] };
-// mode first: the per-mode settings that follow apply to the mode just set
+// mode first: the per-mode settings that follow apply to the mode just set.
+// Markers last: setting the mode or a visibility switches them back on
 const VIEW_EVENTS = {
     showGrid: 'grid.setVisible',
     shBands: 'view.setBands',
     tonemapping: 'camera.setTonemapping',
     mode: 'view.setMode',
-    showMarkers: 'view.setEditView',
     showGaussians: 'view.setGaussians',
     showCenters: 'view.setCenters',
     showRings: 'view.setRings',
     selectionGaussians: 'view.setSelectionGaussians',
     selectionColor: 'view.setSelectionColor',
     selectionCenters: 'view.setSelectionCenters',
-    selectionRings: 'view.setSelectionRings'
+    selectionRings: 'view.setSelectionRings',
+    showMarkers: 'view.setEditView'
 };
 const VIEW_QUERIES = {
     showGrid: 'grid.visible',

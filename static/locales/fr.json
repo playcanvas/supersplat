@@ -425,6 +425,7 @@
     "webmcp.undo": "Annuler",
     "webmcp.redo": "Rétablir",
     "webmcp.set_camera": "Régler la caméra",
+    "webmcp.render_view": "Rendre la vue",
     "webmcp.focus_camera": "Cadrer la caméra",
     "webmcp.pick_points": "Repérer des points de surface",
     "webmcp.set_view": "Régler l’affichage",

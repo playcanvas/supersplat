@@ -140,9 +140,15 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
             const info = await editor.inspect.layer(i.layer, o);
             return { layer: info, properties: editor.inspect.properties(info.shBands) };
         }, { readOnlyHint: true, untrustedContentHint: true });
-    add('get_histogram', 'Read a property distribution without editing. x/y/z and distance are world-space (distance from origin); camera-depth is along the current view. opacity is graded alpha (0-1 normally); scale_0/1/2 are source-axis scales, volume their product, surface-area the sum of their squares. RGB/HSV include committed grades and view-dependent SH; hue is degrees. f_dc_N and f_rest_N are raw source coefficients.',
-        { layer, property: string('Data panel property name from get_layer.', 32) }, ['layer', 'property'],
-        (i, o) => editor.inspect.histogram(i.layer, i.property, o), { readOnlyHint: true });
+    add('get_histogram', 'Read a property distribution without editing. Returns equal-width bins over [min, max], split into selected and unselected counts, plus stats (count, mean and p1/p5/p25/p50/p75/p95/p99, accurate to one bin width) for all splats and for the selection. Use the percentiles to choose select_property thresholds, and range to zoom into a tail (values outside it are excluded). Hidden splats are excluded. x/y/z and distance are world-space (distance from origin); camera-depth is along the current view. opacity is graded alpha (0-1 normally); scale_0/1/2 are source-axis scales, volume their product, surface-area the sum of their squares. RGB/HSV include committed grades and view-dependent SH; hue is degrees. f_dc_N and f_rest_N are raw source coefficients.',
+        { layer,
+            property: string('Data panel property name from get_layer.', 32),
+            range: array(number('Bound'), 2, '[min, max] to bin instead of the measured range; min < max.'),
+            bins: integer('Number of bins: 8, 16, 32, 64, 128 or 256 (default).', 8, 256) }, ['layer', 'property'],
+        (i, o) => {
+            if (i.bins !== undefined && 256 % i.bins) throw new EditorError('invalid_input', 'bins must be 8, 16, 32, 64, 128 or 256.');
+            return editor.inspect.histogram(i.layer, i.property, { ...o, range: i.range, bins: i.bins });
+        }, { readOnlyHint: true });
     add('set_selection', 'Select all, clear selection or invert it on the named layer. Hidden splats are excluded. Undoable.',
         { layer, mode: enumeration(['all', 'none', 'invert'], 'Selection operation.') }, ['layer', 'mode'],
         (i, o) => editor.selection[i.mode as 'all' | 'none' | 'invert'](i.layer, o));
@@ -231,6 +237,21 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
             requireChange(i, ['position', 'view', 'azimuth', 'elevation', 'distance', 'fov', 'orthographic']);
             return editor.viewport.setCamera({ ...i, position: i.position && xyz(i.position), target: i.target && xyz(i.target) }, o);
         });
+    add('render_view', 'Render an image of the scene to check your work, without moving the user\'s view: the camera is restored afterwards. Camera parameters work as in set_camera and default to the current view. No grid, gizmos or markers are drawn. Returns image { type: "image", mimeType, data (base64), width, height } and the camera used; pass that camera to set_camera before screen-space selection. Default size is 512 px on the longest side at the viewport aspect; keep images small, as the result is returned as text.',
+        { position: vector('World position; requires target.'),
+            target: vector('World look-at point; requires position.'),
+            view: enumeration(['front', 'back', 'left', 'right', 'top', 'bottom'], 'Named view around the current target.'),
+            azimuth: number('Orbit azimuth in degrees.', -360000, 360000),
+            elevation: number('Orbit elevation in degrees.', -90, 90),
+            distance: number('Orbit distance relative to scene size.', 1e-6, 10),
+            fov: number('Field of view in degrees.', 5, 170),
+            orthographic: boolean('Orthographic projection.'),
+            width: integer('Image width in pixels.', 16, 2048),
+            height: integer('Image height in pixels.', 16, 2048),
+            format: enumeration(['jpeg', 'png'], 'Image format; default jpeg.'),
+            quality: number('JPEG quality; default 0.85.', 0.1, 1) }, [],
+        (i, o) => editor.viewport.render({ ...i, position: i.position && xyz(i.position), target: i.target && xyz(i.target) }, o),
+        { readOnlyHint: true });
     add('focus_camera', 'Frame a selection, a layer, or the scene. Switches to orbit control and moves instantly. Returns the resulting camera and viewToken.',
         { scope: enumeration(['selection', 'layer', 'scene'], 'What to frame.'), layer }, ['scope'], (i, o) => {
             if (i.scope !== 'scene' && i.layer === undefined) throw new EditorError('invalid_input', 'layer is required for this scope.');

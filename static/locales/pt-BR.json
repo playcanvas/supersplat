@@ -425,6 +425,7 @@
     "webmcp.undo": "Desfazer",
     "webmcp.redo": "Refazer",
     "webmcp.set_camera": "Definir câmera",
+    "webmcp.render_view": "Renderizar vista",
     "webmcp.focus_camera": "Enquadrar câmera",
     "webmcp.pick_points": "Obter pontos da superfície",
     "webmcp.set_view": "Definir exibição",

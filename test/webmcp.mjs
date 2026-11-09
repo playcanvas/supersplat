@@ -3,6 +3,7 @@ import { BoundingBox, Color, Mat4, Quat, Vec3 } from 'playcanvas';
 
 import { SH_C0 } from './.build/src/color-grade.js';
 import { samplePrimitives, toColumns } from './.build/src/generate-splats.js';
+import { histogramStats, mergeBins } from './.build/src/histogram-stats.js';
 import { createWebMCPTools, registerWebMCP } from './.build/src/webmcp.js';
 import { setup } from './editor-commands.mjs';
 
@@ -199,8 +200,8 @@ const checks = {
             const registered = [];
             const dispose = registerWebMCP(api, { registerTool: (tool, options) => registered.push({ tool, options }) });
             await tick();
-            assert.equal(registered.length, 27);
-            assert.equal(new Set(registered.map(r => r.tool.name)).size, 27);
+            assert.equal(registered.length, 28);
+            assert.equal(new Set(registered.map(r => r.tool.name)).size, 28);
             assert.equal(registered.find(r => r.tool.name === 'get_scene').tool.annotations.readOnlyHint, true);
             dispose();
             assert(registered.every(r => r.options.signal.aborted));
@@ -299,6 +300,47 @@ const checks = {
         assert.deepEqual(Array.from(data.colors.subarray(0, 3)), [1, 0, 0]);
         assert.deepEqual(Array.from(data.colors.subarray(100 * 3, 100 * 3 + 3)), [0, 0, 1]);
         assert(data.positions[100 * 3] > 4);
+    },
+
+    async 'histogram stats interpolate percentiles within bins'() {
+        // 100 values spread evenly over [0, 10): one per 0.1
+        const counts = new Array(10).fill(10);
+        const stats = histogramStats(counts, 0, 10);
+        assert.equal(stats.count, 100);
+        assert(Math.abs(stats.mean - 5) < 1e-9);
+        assert(Math.abs(stats.percentiles.p50 - 5) < 1e-9);
+        assert(Math.abs(stats.percentiles.p5 - 0.5) < 1e-9);
+        assert(Math.abs(stats.percentiles.p99 - 9.9) < 1e-9);
+        // a single populated bin bounds every percentile to that bin
+        const spike = histogramStats([0, 0, 40, 0], 0, 4);
+        assert(Object.values(spike.percentiles).every(p => p >= 2 && p <= 3));
+        assert.equal(histogramStats([0, 0], 0, 1), null);
+        assert.deepEqual(mergeBins([1, 2, 3, 4, 5, 6, 7, 8], 2), [10, 26]);
+    },
+
+    async 'histogram and render tools validate and map their arguments'() {
+        await use(async ({ call, api }) => {
+            const calls = [];
+            api.inspect.histogram = (...args) => { calls.push(['histogram', ...args]); return {}; };
+            api.viewport.render = (...args) => { calls.push(['render', ...args]); return {}; };
+            for (const [name, input] of [
+                ['get_histogram', { layer: 0, property: 'opacity', bins: 24 }],
+                ['get_histogram', { layer: 0, property: 'opacity', bins: '16' }],
+                ['get_histogram', { layer: 0, property: 'opacity', bins: 512 }],
+                ['get_histogram', { layer: 0, property: 'opacity', range: [0] }],
+                ['render_view', { width: 8 }],
+                ['render_view', { format: 'gif' }],
+                ['render_view', { quality: 0 }]
+            ]) {
+                assert.equal((await call(name, input)).error?.code, 'invalid_input', `${name} ${JSON.stringify(input)}`);
+            }
+            assert.equal(calls.length, 0);
+            await call('get_histogram', { layer: 0, property: 'opacity', bins: 16, range: [0, 0.1] });
+            assert.deepEqual([calls[0][1], calls[0][2], calls[0][3].bins, calls[0][3].range], [0, 'opacity', 16, [0, 0.1]]);
+            await call('render_view', { position: [0, 1, 5], target: [0, 1, 0], width: 320, format: 'png' });
+            const [, settings] = calls[1];
+            assert.deepEqual([settings.position.z, settings.target.y, settings.width, settings.format], [5, 1, 320, 'png']);
+        });
     },
 
     async 'primitives sample exact counts on their surface or within their volume'() {

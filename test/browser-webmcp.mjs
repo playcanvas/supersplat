@@ -165,7 +165,7 @@ async function browserChecks(url, enabled) {
         return result;
     };
     const near = (a, b) => Math.abs(a - b) < 0.001;
-    check(tools.length === 27 && tools.every(t => t.title && !t.title.startsWith('webmcp.')), 'native discovery exposes 27 titled tools');
+    check(tools.length === 28 && tools.every(t => t.title && !t.title.startsWith('webmcp.')), 'native discovery exposes 28 titled tools');
     const initial = await call('get_scene');
     check(initial.totalLayers === 0, 'empty scene inspection', initial);
     await call('set_selection', { layer: 99, mode: 'all' }, 'layer_not_found');
@@ -326,6 +326,16 @@ async function browserChecks(url, enabled) {
         within([[bounds.min[0], 4], [bounds.max[0], 8.5], [bounds.min[1], -1], [bounds.max[2], 1]]), 'create_primitives combines parts into one layer at their world positions', shapes);
     const red = await call('get_histogram', { layer: shapes.createdLayer, property: 'red' });
     check(red.ok, 'created layer reads back through the data panel', red);
+    // the sphere part spans x 4..6 and the box 7.5..8.5; zooming to the sphere excludes the box
+    const xs = await call('get_histogram', { layer: shapes.createdLayer, property: 'x', range: [4, 6], bins: 16 });
+    check(xs.numValues === 3000 && xs.unselected.length === 16 && within([[xs.stats.all.percentiles.p50, 5]]) && xs.stats.selected === null,
+        'histogram range zooms in and reports percentiles', xs);
+    const cameraBefore = (await call('get_scene')).camera;
+    const shot = await call('render_view', { azimuth: 30, elevation: 20, width: 200, height: 120 });
+    const cameraAfter = (await call('get_scene')).camera;
+    const decoded = await createImageBitmap(await (await fetch(`data:${shot.image.mimeType};base64,${shot.image.data}`)).blob());
+    check(shot.image.type === 'image' && shot.image.mimeType === 'image/jpeg' && decoded.width === 200 && decoded.height === 120 && shot.camera.azimuth === 30 &&
+        cameraBefore.position.every((v, i) => Math.abs(v - cameraAfter.position[i]) < 1e-4), 'render_view returns an image and restores the user camera', { ...shot, image: { ...shot.image, data: shot.image.data.length } });
     const copies = await call('instance_layer', { layer: shapes.createdLayer, copies: [{ translate: [0, 3, 0] }, { translate: [0, 0, 4], rotate: [0, 90, 0], scale: 0.5 }] });
     const sameData = copies.createdLayers.every(id => window.scene.elements.find(e => e.uid === id).resource === window.scene.elements.find(e => e.uid === shapes.createdLayer).resource);
     const firstCopy = copies.layers[0].bounds;
@@ -360,13 +370,13 @@ async function browserChecks(url, enabled) {
     let localized;
     for (let i = 0; i < 100; i++) {
         localized = await provider.getTools();
-        if (localized.length === 27 && localized.find(t => t.name === 'get_scene').title !== tools.find(t => t.name === 'get_scene').title) break;
+        if (localized.length === 28 && localized.find(t => t.name === 'get_scene').title !== tools.find(t => t.name === 'get_scene').title) break;
         await new Promise(resolve => setTimeout(resolve, 20));
     }
-    check(localized.length === 27 && new Set(localized.map(t => t.name)).size === 27 && localized.find(t => t.name === 'get_scene').title !== tools.find(t => t.name === 'get_scene').title, 'live language change replaces tool titles without duplicates');
+    check(localized.length === 28 && new Set(localized.map(t => t.name)).size === 28 && localized.find(t => t.name === 'get_scene').title !== tools.find(t => t.name === 'get_scene').title, 'live language change replaces tool titles without duplicates');
     const localizedScene = JSON.parse(await provider.executeTool(localized.find(t => t.name === 'get_scene'), {}));
     check(localizedScene.ok && localizedScene.totalLayers === 1, 'localized native tools retain the scene');
     language.value = 'en';
-    check(used.size === 27, 'all 27 native tools were executed', [...used]);
+    check(used.size === 28, 'all 28 native tools were executed', [...used]);
     return { checks, used: [...used] };
 }

@@ -425,6 +425,7 @@
     "webmcp.undo": "元に戻す",
     "webmcp.redo": "やり直す",
     "webmcp.set_camera": "カメラを設定",
+    "webmcp.render_view": "ビューをレンダリング",
     "webmcp.focus_camera": "カメラを合わせる",
     "webmcp.pick_points": "表面上の点を取得",
     "webmcp.set_view": "表示設定を変更",

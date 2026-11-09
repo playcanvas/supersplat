@@ -425,6 +425,7 @@
     "webmcp.undo": "Отменить",
     "webmcp.redo": "Повторить",
     "webmcp.set_camera": "Настроить камеру",
+    "webmcp.render_view": "Отрисовать вид",
     "webmcp.focus_camera": "Навести камеру",
     "webmcp.pick_points": "Определить точки поверхности",
     "webmcp.set_view": "Настроить отображение",

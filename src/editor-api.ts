@@ -3,12 +3,14 @@ import { BoundingBox, EventHandler, Mat4, Quat, Vec3 } from 'playcanvas';
 import type { CameraFrame } from './camera';
 import { createGradeTerms, gradeTerms, type GradeParams } from './color-grade';
 import type { CommandContext, CommandQueue } from './command-queue';
+import { NUM_BINS } from './data-processor/histogram-config';
 import { EditHistory } from './edit-history';
 import { AddSplatOp, EditOp, EntityTransformOp, HideSelectionOp, MultiOp, RemoveInstancesOp, RestoreMissingInstancesOp, SelectAllOp, SelectInvertOp, SelectNoneOp, SelectOp, SplatRenameOp, SplatsColorOp, SplatsTransformOp, UnhideAllOp, selectedRanges } from './edit-ops';
 import { checkCancelled, CommandOptions, EditScope, EditorError } from './editor-command';
 import { createEditorSession } from './editor-session';
 import { Element, ElementType } from './element';
 import { Events } from './events';
+import { histogramStats, mergeBins } from './histogram-stats';
 import { IndexRanges } from './index-ranges';
 import { Scene } from './scene';
 import { rectangleOp } from './selection-rectangle';
@@ -231,17 +233,35 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
                 return { ...session.read(), layers: allSplats().map(layerInfo), activeLayer: (events.invoke('selection') as Splat | null)?.uid ?? null, history: historyInfo() };
             }),
             layer: async (id: LayerId, options?: CommandOptions) => await run(layerById(id), () => layerInfo(layerById(id)), options, false),
-            histogram: async (id: LayerId, property: string, options?: CommandOptions) => {
+            // `range` zooms into [min, max] (values outside are excluded);
+            // `bins` merges the 256 GPU bins down to a divisor of 256.
+            histogram: async (id: LayerId, property: string, options: CommandOptions & { range?: [number, number], bins?: number } = {}) => {
                 const splat = layerById(id);
                 const frame = scene.camera.captureFrame();
                 const viewToken = session.viewport.info().viewToken;
+                const range = options.range && [options.range[0], options.range[1]] as [number, number];
+                const bins = options.bins ?? NUM_BINS;
+                if (range && !(Number.isFinite(range[0]) && Number.isFinite(range[1]) && range[0] < range[1])) throw new EditorError('invalid_input', 'range must be finite with min < max.');
+                if (!Number.isInteger(bins) || bins < 1 || NUM_BINS % bins) throw new EditorError('invalid_input', `bins must divide ${NUM_BINS}.`);
                 return await run(splat, async () => {
                     const mode = propertyMode(splat, property);
                     const viewDependent = mode === 4 || isFinalColorMode(mode);
-                    const data = await scene.dataProcessor.calcHistogram(splat, mode, propertyOptions(splat, frame));
+                    const data = await scene.dataProcessor.calcHistogram(splat, mode, propertyOptions(splat, frame), range);
                     checkCancelled(options);
                     if (viewDependent) session.checkView(viewToken);
-                    return { layer: id, property, ...data, viewDependent, ...(viewDependent ? { viewToken } : {}) };
+                    const all = data.selected.map((n, i) => n + data.unselected[i]);
+                    return {
+                        layer: id,
+                        property,
+                        min: data.min,
+                        max: data.max,
+                        numValues: data.numValues,
+                        selected: mergeBins(data.selected, bins),
+                        unselected: mergeBins(data.unselected, bins),
+                        stats: { all: histogramStats(all, data.min, data.max), selected: histogramStats(data.selected, data.min, data.max) },
+                        viewDependent,
+                        ...(viewDependent ? { viewToken } : {})
+                    };
                 }, options);
             },
             properties: (shBands = 0) => [...Object.keys(PROP_MODE), ...Array.from({ length: SH_NUM_COEFFS[shBands] * 3 }, (_, i) => `f_rest_${i}`)]

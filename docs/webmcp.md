@@ -1,6 +1,6 @@
 # WebMCP
 
-SuperSplat registers 27 tools with the browser's native [WebMCP API](https://webmachinelearning.github.io/webmcp/). They operate on the open editor tab and share its selection, layers and undo history. There is no separate server, network listener or MCP bridge, and no tool runs code in the editor page: `create_from_generator` runs agent-supplied generator modules in an isolated sandbox (see below). Browsers without WebMCP continue to run the editor normally.
+SuperSplat registers 28 tools with the browser's native [WebMCP API](https://webmachinelearning.github.io/webmcp/). They operate on the open editor tab and share its selection, layers and undo history. There is no separate server, network listener or MCP bridge, and no tool runs code in the editor page: `create_from_generator` runs agent-supplied generator modules in an isolated sandbox (see below). Browsers without WebMCP continue to run the editor normally.
 
 The adapter uses `document.modelContext`, with feature detection for preview browsers that expose `navigator.modelContext`. Tool titles follow the editor language. WebMCP is experimental: browser availability and agent integration depend on the browser version. Native discovery and execution are covered by the browser tests described below.
 
@@ -9,7 +9,7 @@ The adapter uses `document.modelContext`, with feature detection for preview bro
 | Tools | Purpose |
 | --- | --- |
 | `get_scene`, `get_layer` | Inspect document, paginated layers, counts, bounds, properties, camera, viewport and history. |
-| `get_histogram` | Read a GPU property distribution using the same values as the Data panel. |
+| `get_histogram` | Read a GPU property distribution using the same values as the Data panel: selected and unselected bins plus count, mean and percentiles, optionally zoomed to a range. |
 | `set_selection` | Select all, clear or invert on an explicit layer. |
 | `select_region` | Select or preview a world-space box, sphere or ellipsoid, including its outside. |
 | `select_rectangle` | Select visible splats or through all depths within a viewport rectangle. |
@@ -21,6 +21,7 @@ The adapter uses `document.modelContext`, with feature detection for preview bro
 | `apply_color`, `reset_color` | Compose or reset colour adjustments on an explicit scope. |
 | `undo`, `redo` | Step through the shared editor history, including user edits. |
 | `set_camera`, `focus_camera`, `pick_points` | Position the camera, frame content or find world positions under viewport points. |
+| `render_view` | Render an image from any camera pose without moving the user's view. |
 | `set_view` | Change display preferences without changing splat data. |
 | `import_url` | Add a CORS-accessible PLY, SPLAT, SOG, SPZ or KSPLAT URL as an undoable layer. |
 | `create_primitives`, `create_from_generator` | Create a new layer from primitive shapes sampled in the editor, or from a sandboxed splat-transform generator module. |
@@ -51,9 +52,19 @@ Preview reports the number and world bounds of the matches without changing sele
 
 Call `select_region` with these arguments to inspect the proposed removal, call it again with `preview: false` to select, then call `delete_selection` with `{"layer":10}`. `size` gives full extents. `footprint: 0` tests splat centres; `footprint: 1` tests the full footprint. Property previews support the same `outside` option.
 
+### Histograms
+
+`get_histogram` returns equal-width bins over `[min, max]`, split into `selected` and `unselected` counts, and `stats` for all splats and for the selection: `count`, `mean` and percentiles `p1`, `p5`, `p25`, `p50`, `p75`, `p95` and `p99`. Statistics come from the bins, so they are accurate to one bin width. Hidden splats are excluded. `bins` merges the 256 GPU bins down to 8–128. `range` bins an explicit `[min, max]` instead of the measured range and excludes values outside it, which zooms into a tail. For example, to find faint floaters, read the `opacity` histogram, then zoom with `{"property":"opacity","range":[0,0.1]}` before choosing a `select_property` threshold.
+
+### Rendering
+
+`render_view` renders an offscreen image from any camera pose, then restores the user's camera, so checking work does not disturb the view. Camera parameters work as in `set_camera` and default to the current view. The grid, gizmos and markers are not drawn. The result contains `image` as `{ "type": "image", "mimeType", "data", "width", "height" }`, with base64 `data` and no `data:` prefix, plus the `camera` used. The default size is 512 pixels on the longest side at the viewport aspect, as JPEG; sizes up to 2048 and PNG are available.
+
+WebMCP returns every tool result as a JSON string; the specification defines no image result type. A client or MCP bridge that recognises the MCP image block shape can present the image to the model; others receive it as text, so keep images small. To act on what an image shows with screen-space tools, pass the returned `camera` to `set_camera` first.
+
 ### View-dependent operations
 
-`get_scene` and camera commands return `viewport.viewToken`, the canvas CSS rectangle and render dimensions. Screen coordinates are normalized to that rectangle, with `(0,0)` at the top left and `(1,1)` at the bottom right. The agent obtains screenshots through its browser integration.
+`get_scene` and camera commands return `viewport.viewToken`, the canvas CSS rectangle and render dimensions. Screen coordinates are normalized to that rectangle, with `(0,0)` at the top left and `(1,1)` at the bottom right. Agents can check their work with `render_view` or through their own browser integration.
 
 Rectangle selection and point picking require `viewToken`. Camera-dependent property selection (`camera-depth`, RGB and HSV) also requires it; `get_histogram` supplies a token for these properties. A changed camera or viewport produces `stale_view`, so the agent can inspect again instead of editing from outdated coordinates. These tokens describe the view, not a version of the model data.
 

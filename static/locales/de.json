@@ -425,6 +425,7 @@
     "webmcp.undo": "Rückgängig",
     "webmcp.redo": "Wiederholen",
     "webmcp.set_camera": "Kamera einstellen",
+    "webmcp.render_view": "Ansicht rendern",
     "webmcp.focus_camera": "Kamera fokussieren",
     "webmcp.pick_points": "Oberflächenpunkte bestimmen",
     "webmcp.set_view": "Anzeigeoptionen festlegen",

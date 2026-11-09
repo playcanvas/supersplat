@@ -425,6 +425,7 @@
     "webmcp.undo": "撤销",
     "webmcp.redo": "重做",
     "webmcp.set_camera": "设置相机",
+    "webmcp.render_view": "渲染视图",
     "webmcp.focus_camera": "聚焦相机",
     "webmcp.pick_points": "拾取表面点",
     "webmcp.set_view": "设置显示选项",

@@ -425,6 +425,7 @@
     "webmcp.undo": "Undo",
     "webmcp.redo": "Redo",
     "webmcp.set_camera": "Set camera",
+    "webmcp.render_view": "Render view",
     "webmcp.focus_camera": "Focus camera",
     "webmcp.pick_points": "Pick surface points",
     "webmcp.set_view": "Set display options",

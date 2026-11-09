@@ -21,6 +21,29 @@ type CameraSettings = {
     azimuth?: number; elevation?: number; distance?: number;
     fov?: number; orthographic?: boolean;
 };
+type RenderSettings = { width?: number; height?: number; format?: 'jpeg' | 'png'; quality?: number };
+
+// Encode top-down RGBA render pixels over the background colour, as an
+// MCP-style image block (base64 data, no data: prefix).
+const encodeImage = async (pixels: Uint8Array, width: number, height: number, background: Color, format: 'jpeg' | 'png', quality: number) => {
+    const out = new Uint8ClampedArray(pixels.length);
+    const bg = [background.r * 255, background.g * 255, background.b * 255];
+    for (let i = 0; i < pixels.length; i += 4) {
+        // the render target holds premultiplied colour
+        const t = 1 - pixels[i + 3] / 255;
+        out[i] = pixels[i] + bg[0] * t;
+        out[i + 1] = pixels[i + 1] + bg[1] * t;
+        out[i + 2] = pixels[i + 2] + bg[2] * t;
+        out[i + 3] = 255;
+    }
+    const canvas = new OffscreenCanvas(width, height);
+    canvas.getContext('2d').putImageData(new ImageData(out, width, height), 0, 0);
+    const mimeType = `image/${format}`;
+    const bytes = new Uint8Array(await (await canvas.convertToBlob({ type: mimeType, quality })).arrayBuffer());
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return { type: 'image' as const, mimeType, data: btoa(binary), width, height };
+};
 type ViewSettings = {
     background?: Color; showGrid?: boolean; shBands?: number; tonemapping?: string;
     showGaussians?: boolean; showCenters?: boolean; showRings?: boolean;
@@ -114,6 +137,29 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
     const assertIdle = () => {
         if (busy || scene.lockedRenderMode) throw new EditorError('busy', 'The editor is loading or rendering. Wait for it to finish.');
     };
+    // Validate and snapshot camera settings before they are queued.
+    const cameraSettings = (settings: CameraSettings) => {
+        const s = { ...settings, position: settings.position?.clone(), target: settings.target?.clone() };
+        if (!!s.position !== !!s.target) throw new EditorError('invalid_input', 'position and target must be supplied together.');
+        if (s.position && (s.view || s.azimuth !== undefined || s.elevation !== undefined || s.distance !== undefined)) {
+            throw new EditorError('invalid_input', 'Use position/target or orbit parameters in one command.');
+        }
+        if (s.position?.equals(s.target)) throw new EditorError('invalid_input', 'Camera position and target must differ.');
+        return s;
+    };
+    const applyCamera = (s: CameraSettings) => {
+        const camera = scene.camera;
+        if (s.fov !== undefined) events.fire('camera.setFov', s.fov);
+        if (s.position) {
+            events.fire('camera.setPose', { position: s.position, target: s.target }, 0);
+        } else if (s.view || s.azimuth !== undefined || s.elevation !== undefined) {
+            const [azimuth, elevation] = s.view ? VIEW_ANGLES[s.view] : [camera.azim, camera.elevation];
+            camera.setAzimElev(s.azimuth ?? azimuth, s.elevation === undefined ? elevation : -s.elevation, 0);
+        }
+        if (s.distance !== undefined) camera.setDistance(s.distance, 0);
+        if (s.orthographic !== undefined) camera.ortho = s.orthographic;
+        camera.onUpdate(0);
+    };
     const read = () => ({
         document: { name: events.invoke('doc.name') ?? null, unsavedChanges: !!events.invoke('scene.dirty') },
         camera: cameraInfo(),
@@ -178,28 +224,44 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
             ready,
             info: viewportInfo,
             setCamera: async (settings: CameraSettings, options?: CommandOptions) => {
-                const s = { ...settings, position: settings.position?.clone(), target: settings.target?.clone() };
-                if (!!s.position !== !!s.target) throw new EditorError('invalid_input', 'position and target must be supplied together.');
-                if (s.position && (s.view || s.azimuth !== undefined || s.elevation !== undefined || s.distance !== undefined)) {
-                    throw new EditorError('invalid_input', 'Use position/target or orbit parameters in one command.');
-                }
-                if (s.position?.equals(s.target)) throw new EditorError('invalid_input', 'Camera position and target must differ.');
+                const s = cameraSettings(settings);
                 return await queue.enqueue(() => {
                     checkCancelled(options);
                     assertIdle();
-                    const camera = scene.camera;
-                    if (s.fov !== undefined) events.fire('camera.setFov', s.fov);
-                    if (s.position) {
-                        events.fire('camera.setPose', { position: s.position, target: s.target }, 0);
-                    } else if (s.view || s.azimuth !== undefined || s.elevation !== undefined) {
-                        const [azimuth, elevation] = s.view ? VIEW_ANGLES[s.view] : [camera.azim, camera.elevation];
-                        camera.setAzimElev(s.azimuth ?? azimuth, s.elevation === undefined ? elevation : -s.elevation, 0);
-                    }
-                    if (s.distance !== undefined) camera.setDistance(s.distance, 0);
-                    if (s.orthographic !== undefined) camera.ortho = s.orthographic;
-                    camera.onUpdate(0);
+                    applyCamera(s);
                     scene.forceRender = true;
                     return { camera: cameraInfo(), viewport: viewportInfo() };
+                });
+            },
+            // Render offscreen from an optional pose without moving the user's
+            // view: the camera is restored afterwards. Overlays are not drawn.
+            render: async (settings: CameraSettings & RenderSettings = {}, options?: CommandOptions) => {
+                const s = cameraSettings(settings);
+                const rect = scene.canvas.getBoundingClientRect();
+                const aspect = rect.width && rect.height ? rect.width / rect.height : 1;
+                const width = settings.width ?? (settings.height ? Math.round(settings.height * aspect) : Math.round(aspect >= 1 ? 512 : 512 * aspect));
+                const height = settings.height ?? Math.round(width / aspect);
+                if (![width, height].every(v => Number.isInteger(v) && v >= 16 && v <= 2048)) throw new EditorError('invalid_input', 'width and height must be 16 to 2048 pixels.');
+                return await queue.enqueue(async () => {
+                    checkCancelled(options);
+                    assertIdle();
+                    const camera = scene.camera;
+                    const pose = events.invoke('camera.getPose');
+                    const saved = { position: new Vec3(pose.position.x, pose.position.y, pose.position.z), target: new Vec3(pose.target.x, pose.target.y, pose.target.z), fov: camera.fov, ortho: camera.ortho };
+                    try {
+                        applyCamera(s);
+                        const used = cameraInfo();
+                        const pixels = await events.invoke('render.offscreen', width, height) as Uint8Array;
+                        checkCancelled(options);
+                        const image = await encodeImage(pixels, width, height, events.invoke('bgClr') as Color, settings.format ?? 'jpeg', settings.quality ?? 0.85);
+                        return { camera: used, image };
+                    } finally {
+                        events.fire('camera.setFov', saved.fov);
+                        events.fire('camera.setPose', { position: saved.position, target: saved.target }, 0);
+                        camera.ortho = saved.ortho;
+                        camera.onUpdate(0);
+                        scene.forceRender = true;
+                    }
                 });
             },
             focus: async (scope: 'selection' | 'layer' | 'scene', layer?: number, options?: CommandOptions) => {

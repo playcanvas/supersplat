@@ -147,6 +147,7 @@
     "mode-toolbar.markers": "マーカー",
     "mode-toolbar.markers.tooltip": "非選択ガウシアンのマーカーと着色の表示を切り替えます。選択のマーカーはどちらでも表示されます。",
     "mode-toolbar.visible-only": "表面のみ",
+    "mode-toolbar.through-all": "すべての深度",
     "mode-toolbar.visible-only.tooltip": "範囲内で最前面の表面だけを選択します。オフにするとすべての深度を通して選択します。モードごとに記憶されます。",
     "panel.overlays": "オーバーレイ",
     "panel.overlays.section-helpers": "補助表示",

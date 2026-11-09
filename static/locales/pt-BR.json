@@ -147,6 +147,7 @@
     "mode-toolbar.markers": "Marcadores",
     "mode-toolbar.markers.tooltip": "Mostrar ou ocultar os marcadores e a tonalidade das gaussianas não selecionadas. A seleção permanece marcada em ambos os casos.",
     "mode-toolbar.visible-only": "Apenas visível",
+    "mode-toolbar.through-all": "Todas as profundidades",
     "mode-toolbar.visible-only.tooltip": "Selecionar apenas a superfície mais próxima sob a região. Desligado, a seleção atravessa todas as profundidades. Lembrado por modo.",
     "panel.overlays": "Sobreposições",
     "panel.overlays.section-helpers": "Auxiliares",

@@ -1,39 +1,121 @@
 @use 'colors.scss' as *;
 
-// the active segment: a step above the pill, well short of the orange fill the
+// the active segment: a step above the bar, well short of the orange fill the
 // tool toolbars use for the active tool. The mode is state, not a tool, and
-// the pill should read as one quiet control
+// the bar should read as one quiet control
 $segment-active: #3a3a3a;
+$segment-track: $bcg-darkest;
 
-// the mode toolbar: a slim pill at the right end of the header row, beside
-// the view cube (which owns the top-right 140px), vertically centred on the
-// menu bar. Right-anchored rather than centred so it never lands on the menu
-// bar at narrow widths
+// the mode toolbar: a slim bar at the right end of the header row, beside the
+// view cube (which owns the top-right 140px), vertically centred on the menu
+// bar. It takes the height, corner radius and colour of the option panels'
+// title bars (see settings-panel.scss), since the appearance and overlays
+// panels drop down from it and the two should read as one piece of chrome.
+// Right-anchored rather than centred so it never lands on the menu bar at
+// narrow widths
 #mode-toolbar {
     position: absolute;
     right: 164px;
     top: 33px;
     height: 32px;
-    padding: 0px 3px;
-    border-radius: 16px;
+    padding: 0px 4px;
+    border-radius: 8px;
 
-    background-color: $bcg-dark;
+    background-color: $bcg-darker;
 
     display: flex;
     flex-direction: row;
     align-items: center;
+    gap: 2px;
 
-    // icon + text segments: the two modes, the markers switch, the depth switch
+    // the mode: one two-state switch. An inset track holds the two halves and
+    // a highlight that slides to the active one (positioned from script, as
+    // the halves are as wide as their text); a click anywhere flips it
+    .mode-toolbar-group {
+        position: relative;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        height: 24px;
+        padding: 0px 2px;
+        border-radius: 4px;
+        background-color: $segment-track;
+        cursor: pointer;
+
+        .mode-toolbar-thumb {
+            position: absolute;
+            top: 2px;
+            height: 20px;
+            border-radius: 3px;
+            background-color: $segment-active;
+            pointer-events: none;
+
+            // the first placement is instant (see mode-toolbar.ts); later
+            // ones slide
+            &.mode-toolbar-thumb-animated {
+                transition: left 0.15s ease-out, width 0.15s ease-out, border-radius 0.15s ease-out;
+            }
+        }
+
+        // flat inner edge: the highlight keeps its outer curve and meets the
+        // other half with a straight side, so the two read as one control
+        &.mode-toolbar-group-flat.mode-toolbar-group-left .mode-toolbar-thumb {
+            border-radius: 3px 0px 0px 3px;
+        }
+
+        &.mode-toolbar-group-flat.mode-toolbar-group-right .mode-toolbar-thumb {
+            border-radius: 0px 3px 3px 0px;
+        }
+
+        .mode-toolbar-mode {
+            position: relative;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 6px;
+            height: 20px;
+            margin: 0px;
+            padding: 0px 10px 0px 8px;
+
+            svg {
+                display: block;
+                flex-shrink: 0;
+                width: 12px;
+                height: 12px;
+                color: $clr-default;
+                transition: color 0.15s ease-out;
+            }
+
+            .mode-toolbar-label {
+                margin: 0;
+                color: $text-secondary;
+                white-space: nowrap;
+                transition: color 0.15s ease-out;
+            }
+
+            &.active {
+                svg {
+                    color: $clr-hilight;
+                }
+
+                .mode-toolbar-label {
+                    color: $clr-active;
+                }
+            }
+        }
+    }
+
+    // icon + text segments: the depth switch and the markers switch
     .mode-toolbar-labelled {
         display: flex;
         flex-direction: row;
         align-items: center;
         gap: 6px;
-        height: 26px;
+        height: 24px;
         margin: 0px;
-        padding: 0px 11px 0px 9px;
+        padding: 0px 10px 0px 8px;
         border: 0px;
-        border-radius: 13px;
+        border-radius: 4px;
         background-color: transparent;
 
         svg {
@@ -46,9 +128,22 @@ $segment-active: #3a3a3a;
 
         .mode-toolbar-label {
             margin: 0;
-            font-size: 11px;
             color: $text-secondary;
             white-space: nowrap;
+        }
+
+        // a segment whose text changes with its state lays both texts out in
+        // one cell, the inactive one invisible, so it keeps the wider width
+        .mode-toolbar-label-stack {
+            display: grid;
+
+            & > .mode-toolbar-label {
+                grid-area: 1 / 1;
+            }
+
+            & > .mode-toolbar-label-inactive {
+                visibility: hidden;
+            }
         }
 
         &.active {
@@ -69,22 +164,29 @@ $segment-active: #3a3a3a;
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 26px;
-        height: 26px;
+        width: 24px;
+        height: 24px;
         margin: 0px;
         padding: 0px;
         border: 0px;
-        border-radius: 13px;
+        border-radius: 4px;
 
         svg {
             display: block;
-            width: 26px;
-            height: 26px;
+            width: 24px;
+            height: 24px;
             color: $clr-default;
         }
 
         &.active svg {
             color: $clr-hilight;
+        }
+
+        // the appearance glyph sits inside a padded 32-unit box; render it
+        // larger so the visible mark matches the eye
+        &.mode-toolbar-button-appearance svg {
+            width: 34px;
+            height: 34px;
         }
     }
 
@@ -93,5 +195,30 @@ $segment-active: #3a3a3a;
         height: 16px;
         margin: 0px 4px;
         background-color: $bcg-lighter;
+    }
+}
+
+// the header row holds the menu bar (400px from the left), this bar and the
+// view cube (140px on the right). Below the width that fits all three with
+// text, the bar sheds labels in two steps, the mode's last since it matters
+// most: the depth and markers switches keep their icons, then the mode halves
+// do. The tooltips still name every control
+@media (max-width: 1100px) {
+    #mode-toolbar .mode-toolbar-labelled {
+        padding: 0px 6px;
+
+        .mode-toolbar-label-stack {
+            display: none;
+        }
+    }
+}
+
+@media (max-width: 960px) {
+    #mode-toolbar .mode-toolbar-group .mode-toolbar-mode {
+        padding: 0px 8px;
+
+        .mode-toolbar-label {
+            display: none;
+        }
     }
 }

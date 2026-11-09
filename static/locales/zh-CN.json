@@ -147,6 +147,7 @@
     "mode-toolbar.markers": "标记",
     "mode-toolbar.markers.tooltip": "显示或隐藏未选中高斯的标记和着色。无论如何,选中内容都会保持标识。",
     "mode-toolbar.visible-only": "仅可见",
+    "mode-toolbar.through-all": "所有深度",
     "mode-toolbar.visible-only.tooltip": "仅选取区域下最前面的表面。关闭后,选取穿透所有深度。按模式分别记忆。",
     "panel.overlays": "叠加层",
     "panel.overlays.section-helpers": "辅助项",

@@ -147,6 +147,7 @@
     "mode-toolbar.markers": "Markers",
     "mode-toolbar.markers.tooltip": "Show or hide the markers and tint of unselected gaussians. The selection stays marked either way.",
     "mode-toolbar.visible-only": "Visible only",
+    "mode-toolbar.through-all": "Through all",
     "mode-toolbar.visible-only.tooltip": "Pick only the frontmost surface under the region. Off, picks go through all depths. Remembered per mode.",
     "panel.overlays": "Overlays",
     "panel.overlays.section-helpers": "Helpers",

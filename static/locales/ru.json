@@ -147,6 +147,7 @@
     "mode-toolbar.markers": "Маркеры",
     "mode-toolbar.markers.tooltip": "Показать или скрыть маркеры и оттенок невыбранных гауссиан. Выделение остаётся отмеченным в любом случае.",
     "mode-toolbar.visible-only": "Только видимое",
+    "mode-toolbar.through-all": "Все глубины",
     "mode-toolbar.visible-only.tooltip": "Выбирать только ближайшую поверхность под областью. Выключено: выбор сквозь все глубины. Запоминается для каждого режима.",
     "panel.overlays": "Наложения",
     "panel.overlays.section-helpers": "Вспомогательные элементы",

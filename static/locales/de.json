@@ -147,6 +147,7 @@
     "mode-toolbar.markers": "Marker",
     "mode-toolbar.markers.tooltip": "Marker und Tönung nicht ausgewählter Gaussians ein- oder ausblenden. Die Auswahl bleibt in jedem Fall markiert.",
     "mode-toolbar.visible-only": "Nur Sichtbares",
+    "mode-toolbar.through-all": "Alle Tiefen",
     "mode-toolbar.visible-only.tooltip": "Nur die vorderste Oberfläche unter dem Bereich auswählen. Aus: Auswahl durch alle Tiefen. Wird pro Modus gemerkt.",
     "panel.overlays": "Überlagerungen",
     "panel.overlays.section-helpers": "Hilfen",

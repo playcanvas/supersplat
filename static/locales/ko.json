@@ -147,6 +147,7 @@
     "mode-toolbar.markers": "마커",
     "mode-toolbar.markers.tooltip": "선택되지 않은 가우시안의 마커와 색조를 표시하거나 숨깁니다. 선택 항목은 어느 경우에도 표시됩니다.",
     "mode-toolbar.visible-only": "보이는 것만",
+    "mode-toolbar.through-all": "모든 깊이",
     "mode-toolbar.visible-only.tooltip": "영역 아래 가장 앞쪽 표면만 선택합니다. 끄면 모든 깊이를 통과하여 선택합니다. 모드별로 기억됩니다.",
     "panel.overlays": "오버레이",
     "panel.overlays.section-helpers": "도우미",

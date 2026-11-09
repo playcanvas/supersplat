@@ -184,6 +184,7 @@
     "popup.error": "エラー",
     "popup.error-loading": "ファイルの読み込みエラー",
     "popup.webgpu-unavailable": "このエクスポートにはWebGPUが必要ですが、このブラウザでは利用できません。Chrome、Edge、Safariの最新バージョンをお試しください。",
+    "popup.gpu-device-lost": "圧縮中にGPUが応答しなくなりました。大きなシーンを低速なグラフィックハードウェアで処理すると発生することがあります。もう一度エクスポートしてください。",
     "popup.overwrite-source": "このファイルは現在のシーンで使用中のため上書きできません。別のファイル名を選択してください。",
     "popup.save-as": "名前を付けて保存",
     "startup.failed": "SuperSplatを起動できませんでした。詳細はブラウザのコンソールをご覧ください。",

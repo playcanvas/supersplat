@@ -1,12 +1,17 @@
-import { Color, Vec3 } from 'playcanvas';
+import { Column, DataTable, dataTableToChunkSource } from '@playcanvas/splat-transform';
+import { Color, Quat, Vec3 } from 'playcanvas';
 
 import type { CommandQueue } from './command-queue';
 import { AddSplatOp } from './edit-ops';
 import type { LayerInfo } from './editor-api';
 import { checkCancelled, CommandOptions, EditorError } from './editor-command';
+import { EditorSplatResource } from './editor-splat-resource';
 import { Events } from './events';
 import { buildExportOptions, ExportChoices, ExportType } from './export-options';
 import type { FileType } from './file-handler';
+import { GaussianColumn, GaussianData, PrimitiveSpec, samplePrimitives, toColumns } from './generate-splats';
+import { GeneratorParam, runGenerator } from './generator-sandbox';
+import { validateSplatSource } from './io';
 import { Scene } from './scene';
 import { Splat } from './splat';
 
@@ -130,6 +135,41 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
             scene.forceRender = true;
         });
     };
+    // Attach a loaded or created layer as one undoable edit.
+    const attachLayer = async (splat: Splat, name: string, options?: CommandOptions) => {
+        try {
+            return await queue.enqueue(async (ctx) => {
+                checkCancelled(options);
+                await ctx.apply(new AddSplatOp(scene, splat));
+                splat.name = name;
+                return { affected: splat.instances.count, layers: [layerInfo(splat)], createdLayer: splat.uid, history: historyInfo() };
+            });
+        } catch (error) {
+            if (!splat.scene) splat.destroy();
+            throw error;
+        }
+    };
+    // Build a new static resource from columns in memory. The data is world
+    // space, so the layer keeps an identity transform.
+    const createLayer = async (columns: GaussianColumn[], name: string, options?: CommandOptions) => {
+        checkCancelled(options);
+        assertIdle();
+        for (const { name: column, data } of columns) {
+            for (let i = 0; i < data.length; i++) {
+                if (!Number.isFinite(data[i])) throw new EditorError('invalid_input', `Column '${column}' contains a non-finite value at row ${i}.`);
+            }
+        }
+        const source = dataTableToChunkSource(new DataTable(columns.map(c => new Column(c.name, c.data))));
+        try {
+            validateSplatSource(source);
+        } catch (error) {
+            await source.close();
+            throw new EditorError('invalid_input', error.message);
+        }
+        const resource = await EditorSplatResource.create(scene.app.graphicsDevice, source, true);
+        const splat = new Splat(scene.assetLoader.createGSplatAsset(resource, name), new Quat());
+        return await attachLayer(splat, name, options);
+    };
     return {
         read,
         checkView,
@@ -194,6 +234,20 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
                 });
             }
         },
+        create: {
+            gaussians: (data: GaussianData, name = 'Gaussians', options?: CommandOptions) => createLayer(toColumns(data), name, options),
+            primitives: async (parts: PrimitiveSpec[], name: string = parts.length === 1 ? parts[0].shape : 'Primitives', options?: CommandOptions) => {
+                checkCancelled(options);
+                assertIdle();
+                return await createLayer(toColumns(samplePrimitives(parts)), name, options);
+            },
+            // Run a splat-transform Generator module in an isolated sandbox.
+            generator: async (source: string, params: GeneratorParam[] = [], name = 'Generated', options?: CommandOptions) => {
+                checkCancelled(options);
+                assertIdle();
+                return await createLayer(await runGenerator(source, params, options), name, options);
+            }
+        },
         files: {
             importUrl: async (url: string, filename?: string, options?: CommandOptions & { lod?: number }) => {
                 checkCancelled(options);
@@ -209,19 +263,8 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
                 if (!/\.(?:ply|splat|sog|spz|ksplat)$/i.test(name)) throw new EditorError('unsupported_format', 'URL import supports PLY, SPLAT, SOG, SPZ and KSPLAT.');
                 const loaded = await events.invoke('import', [{ url: parsed.href, filename: name }], false,
                     { ...options, throwOnError: true, attach: false }) as Splat[];
-                const splat = loaded?.[0];
-                if (!splat) throw new EditorError('cancelled', 'Import was cancelled.');
-                try {
-                    return await queue.enqueue(async (ctx) => {
-                        checkCancelled(options);
-                        await ctx.apply(new AddSplatOp(scene, splat));
-                        splat.name = name;
-                        return { affected: splat.instances.count, layers: [layerInfo(splat)], createdLayer: splat.uid, history: historyInfo() };
-                    });
-                } catch (error) {
-                    if (!splat.scene) splat.destroy();
-                    throw error;
-                }
+                if (!loaded?.[0]) throw new EditorError('cancelled', 'Import was cancelled.');
+                return await attachLayer(loaded[0], name, options);
             },
             export: async (request: ExportRequest, options?: CommandOptions) => {
                 const r = { ...request };

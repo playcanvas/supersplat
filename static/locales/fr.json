@@ -429,5 +429,8 @@
     "webmcp.pick_points": "Repérer des points de surface",
     "webmcp.set_view": "Régler l’affichage",
     "webmcp.import_url": "Importer depuis une URL",
+    "webmcp.create_primitives": "Créer des primitives",
+    "webmcp.create_from_generator": "Créer depuis un générateur",
+    "webmcp.instance_layer": "Instancier le calque",
     "webmcp.export_scene": "Exporter la scène"
 }

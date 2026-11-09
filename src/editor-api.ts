@@ -9,6 +9,7 @@ import { checkCancelled, CommandOptions, EditScope, EditorError } from './editor
 import { createEditorSession } from './editor-session';
 import { Element, ElementType } from './element';
 import { Events } from './events';
+import { IndexRanges } from './index-ranges';
 import { Scene } from './scene';
 import { rectangleOp } from './selection-rectangle';
 import { Splat } from './splat';
@@ -178,6 +179,18 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
             return { ...result([splat, copy], ranges.count), createdLayer: copy.uid };
         }, options);
     };
+    // World-space rotate/scale about `origin`, then translate.
+    const deltaMatrix = (origin: Vec3, translation: Vec3, rotation: Quat, factor: number) => {
+        const position = rotation.transformVector(origin.clone().mulScalar(-factor)).add(origin).add(translation);
+        return new Mat4().setTRS(position, rotation, new Vec3(factor, factor, factor));
+    };
+    // The entity transform that applies a world-space matrix to a whole layer.
+    const movedLayer = (splat: Splat, matrix: Mat4) => {
+        const world = new Mat4().mul2(matrix, splat.worldTransform);
+        const parent = splat.entity.parent;
+        if (parent) world.mul2(new Mat4().invert(parent.getWorldTransform()), world);
+        return new Transform(world.getTranslation(), new Quat().setFromMat4(world), world.getScale());
+    };
     const colorEdit = async (params: GradeParams | null, layer?: LayerId, scope?: EditScope, options?: CommandOptions) => {
         const splat = target(layer);
         if (params && !(params.whitePoint > params.blackPoint)) throw new EditorError('invalid_input', 'whitePoint must be greater than blackPoint.');
@@ -271,6 +284,37 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
                     }
                     return result([splat], affected);
                 }, options, false);
+            },
+            // Place copies of a layer that share its static data: each costs only
+            // its instance list. Every copy is moved from the source by its own
+            // world-space delta, about the source bounds centre unless given.
+            instance: async (id: LayerId, copies: TransformOptions[], name?: string, options?: CommandOptions) => {
+                const splat = layerById(id);
+                const deltas = copies.map(c => ({ translate: c.translate?.clone() ?? new Vec3(), rotate: c.rotate?.clone() ?? new Quat(), scale: c.scale ?? 1, center: c.center?.clone() }));
+                if (!deltas.length) throw new EditorError('invalid_input', 'Provide at least one copy.');
+                if (deltas.some(d => !Number.isFinite(d.scale) || d.scale <= 0)) throw new EditorError('invalid_input', 'Scale must be positive.');
+                return await run(splat, async (ctx) => {
+                    const ranges = IndexRanges.fromPredicate(splat.instances.count, () => true);
+                    const prefix = name ?? splat.name;
+                    const created = deltas.map((d, i) => {
+                        const copy = splat.createLayer(ranges, `${prefix} ${i + 1}`);
+                        // copies start unselected
+                        const flags = copy.instances.flags;
+                        for (let j = 0; j < copy.instances.count; j++) flags[j] &= ~State.selected;
+                        const t = movedLayer(splat, deltaMatrix(d.center ?? splat.worldBound.center.clone(), d.translate, d.rotate, d.scale));
+                        copy.entity.setLocalPosition(t.position);
+                        copy.entity.setLocalRotation(t.rotation);
+                        copy.entity.setLocalScale(t.scale);
+                        return copy;
+                    });
+                    try {
+                        await ctx.apply(new MultiOp(created.map(copy => new AddSplatOp(scene, copy))));
+                    } catch (error) {
+                        created.forEach(copy => !copy.scene && copy.destroy());
+                        throw error;
+                    }
+                    return { ...result(created, ranges.count * created.length), createdLayers: created.map(c => c.uid) };
+                }, options, false);
             }
         },
         selection: {
@@ -347,15 +391,10 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
                 const affected = scope === 'layer' ? splat.instances.count : scopeCount(splat, scope);
                 if (!affected || (translation.lengthSq() === 0 && rotation.equals(Quat.IDENTITY) && factor === 1)) return result([splat], 0);
                 const origin = center ?? (scope === 'selection' ? splat.worldTransform.transformPoint(splat.selectionBound.center, new Vec3()) : splat.worldBound.center.clone());
-                const position = rotation.transformVector(origin.clone().mulScalar(-factor)).add(origin).add(translation);
-                const matrix = new Mat4().setTRS(position, rotation, new Vec3(factor, factor, factor));
+                const matrix = deltaMatrix(origin, translation, rotation, factor);
                 if (scope === 'layer') {
                     const oldt = new Transform(splat.entity.getLocalPosition(), splat.entity.getLocalRotation(), splat.entity.getLocalScale());
-                    const world = new Mat4().mul2(matrix, splat.worldTransform);
-                    const parent = splat.entity.parent;
-                    if (parent) world.mul2(new Mat4().invert(parent.getWorldTransform()), world);
-                    const newt = new Transform(world.getTranslation(), new Quat().setFromMat4(world), world.getScale());
-                    await ctx.apply(new EntityTransformOp({ splat, oldt, newt }));
+                    await ctx.apply(new EntityTransformOp({ splat, oldt, newt: movedLayer(splat, matrix) }));
                 } else {
                     const local = new Mat4().mul2(new Mat4().invert(splat.worldTransform), matrix).mul(splat.worldTransform);
                     const paletteMap = new Map<number, number>();
@@ -411,6 +450,7 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
                 }, settings);
             }
         },
+        create: session.create,
         files: session.files,
         on: (event: ChangeEvent, fn: (detail: ChangeDetail) => void) => {
             const handle = changes.on(event, fn);

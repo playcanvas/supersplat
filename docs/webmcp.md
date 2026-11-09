@@ -1,6 +1,6 @@
 # WebMCP
 
-SuperSplat registers 24 tools with the browser's native [WebMCP API](https://webmachinelearning.github.io/webmcp/). They operate on the open editor tab and share its selection, layers and undo history. There is no separate server, network listener, MCP bridge or arbitrary JavaScript execution tool. Browsers without WebMCP continue to run the editor normally.
+SuperSplat registers 27 tools with the browser's native [WebMCP API](https://webmachinelearning.github.io/webmcp/). They operate on the open editor tab and share its selection, layers and undo history. There is no separate server, network listener or MCP bridge, and no tool runs code in the editor page: `create_from_generator` runs agent-supplied generator modules in an isolated sandbox (see below). Browsers without WebMCP continue to run the editor normally.
 
 The adapter uses `document.modelContext`, with feature detection for preview browsers that expose `navigator.modelContext`. Tool titles follow the editor language. WebMCP is experimental: browser availability and agent integration depend on the browser version. Native discovery and execution are covered by the browser tests described below.
 
@@ -23,6 +23,8 @@ The adapter uses `document.modelContext`, with feature detection for preview bro
 | `set_camera`, `focus_camera`, `pick_points` | Position the camera, frame content or find world positions under viewport points. |
 | `set_view` | Change display preferences without changing splat data. |
 | `import_url` | Add a CORS-accessible PLY, SPLAT, SOG, SPZ or KSPLAT URL as an undoable layer. |
+| `create_primitives`, `create_from_generator` | Create a new layer from primitive shapes sampled in the editor, or from a sandboxed splat-transform generator module. |
+| `instance_layer` | Place copies of a layer that share its gaussian data. |
 | `export_scene` | Download PLY, compressed PLY, SPLAT, SOG, SPZ, or a standalone HTML/ZIP viewer. |
 
 The registered JSON schemas describe required arguments, ranges and defaults. Unknown arguments and invalid values produce errors rather than being silently coerced. `get_layer` lists the properties available on that layer, including its SH coefficients.
@@ -57,6 +59,43 @@ Rectangle selection and point picking require `viewToken`. Camera-dependent prop
 
 Selection with `visibility: "visible"` uses the editor's depth picking and peeling behaviour on the named layer. `pick_points` returns composited Gaussian depth, which need not equal a splat centre or a solid mesh surface.
 
+### Creating and instancing gaussians
+
+Gaussian data is generated inside the editor rather than sent through tool calls. Each creation tool builds one new static resource in memory and adds it as a new layer in one undo entry; neither appends to an existing layer. Created layers have an identity transform, so the data is stored exactly as generated, in world space. Standard deviations (`splatSize`, and the exponent of `scale_N`) are in world units, so a splat's visible footprint is roughly three times larger.
+
+`create_primitives` combines up to 64 parts into one layer, so a multi-part object such as a tree (trunk cylinder plus cone canopy) is one piece of data. Each part is a sphere, box, plane, cylinder or cone, sampled evenly and deterministically over its surface or volume, with its own colour and transform. `size` gives full extents. Cylinders and cones run along local Y, with the cone apex at +Y. Planes lie in local XZ. Surface fill uses flat splats facing outward, sized from the sample spacing; volume fill uses round splats. Colours are flat and unlit.
+
+```json
+{"name":"tree","parts":[
+  {"shape":"cylinder","center":[0,0.35,0],"size":[0.14,0.7,0.14],"color":[0.36,0.22,0.12],"count":1500},
+  {"shape":"cone","center":[0,1.2,0],"size":[1.5,1.5,1.5],"color":[0.1,0.45,0.18]}
+]}
+```
+
+`create_from_generator` runs a [splat-transform generator module](https://github.com/playcanvas/splat-transform#generators-beta), so the same script works in the CLI and the editor. The module exports `class Generator` whose static `create(params)` (optionally async) returns `{ count, columnNames, getRow(index, row) }`. `params` arrive as `[{ name, value }]` with string values, as in the CLI. Columns use the standard 3DGS PLY convention in world space: `x`, `y`, `z`; `scale_0..2` = ln(standard deviation); `rot_0..3` = quaternion `w, x, y, z`; `f_dc_0..2` = `(rgb - 0.5) / 0.28209479177387814`; `opacity` = logit(alpha). Optional `f_rest_*` columns add SH.
+
+```js
+export class Generator {
+    static create(params) {
+        const n = Number(params.find(p => p.name === 'n')?.value ?? 1000);
+        const columnNames = ['x', 'y', 'z', 'scale_0', 'scale_1', 'scale_2', 'rot_0', 'rot_1', 'rot_2', 'rot_3', 'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity'];
+        return {
+            count: n,
+            columnNames,
+            getRow(i, row) {
+                const a = i * 0.1;
+                Object.assign(row, { x: Math.cos(a), y: i / n, z: Math.sin(a), scale_0: -4, scale_1: -4, scale_2: -4,
+                    rot_0: 1, rot_1: 0, rot_2: 0, rot_3: 0, f_dc_0: 1.7, f_dc_1: 0, f_dc_2: 0, opacity: 4 });
+            }
+        };
+    }
+}
+```
+
+Generator code runs in a module worker inside a sandboxed iframe without `allow-same-origin`, so it has an opaque origin and no access to the editor page, its DOM, storage or file handles. A content security policy blocks network access. A generator must finish within 10 seconds and produce at most 2000000 gaussians and 64 columns. Errors thrown by the module return `generator_failed`, and overrunning the time limit returns `timeout`. Non-finite values and missing required columns are rejected with `invalid_input`.
+
+`instance_layer` places up to 128 copies of a layer in one undo entry. Copies share the source's gaussian data, so each costs only a small instance list rather than new data. Each copy applies its own world-space translation, Euler rotation (degrees) and uniform scale to the source, about the source bounds centre unless `center` is given. Build a repeated object once, then instance it. Copies are currently separate layers; rely on the returned `createdLayers` IDs rather than on that layout.
+
 ### Files and cancellation
 
 URL import accepts HTTP(S) URLs without embedded credentials. Supply `filename` when a signed or extensionless URL does not identify its format. Cross-origin servers must permit browser access. The recommended LOD is used unless `lod` is specified, so automated imports do not open a LOD dialog.
@@ -65,7 +104,7 @@ Export requires an explicit filename, format and scope (`selection`, `layer` or 
 
 The native invocation signal is checked before queued mutations and again after asynchronous GPU queries. Cancellation before a commit leaves the edit unapplied. Once committed, an edit remains in history and can be undone. Loading and compression may finish their current work before cancellation is observed; a cancelled import is not attached, and the signal is checked again before an export requests its download. Native browser cancellation can reject its caller before the tool callback has finished cleaning up.
 
-Successful tools return `{ "ok": true, ... }`. Failures return `{ "ok": false, "error": { "code": "...", "message": "..." } }`, including `invalid_input`, `layer_not_found`, `layer_removed`, `layer_hidden`, `empty_selection`, `stale_view`, `busy`, `cancelled` and `operation_failed`. Visual commands also report whether a subsequent frame rendered; `rendered: false` does not mean the edit failed.
+Successful tools return `{ "ok": true, ... }`. Failures return `{ "ok": false, "error": { "code": "...", "message": "..." } }`, including `invalid_input`, `layer_not_found`, `layer_removed`, `layer_hidden`, `empty_selection`, `stale_view`, `busy`, `cancelled`, `generator_failed`, `timeout` and `operation_failed`. Visual commands also report whether a subsequent frame rendered; `rendered: false` does not mean the edit failed.
 
 ## Development and verification
 

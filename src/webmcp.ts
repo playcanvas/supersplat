@@ -2,6 +2,7 @@ import { BoundingBox, Color, Mat4, Quat, Vec3 } from 'playcanvas';
 
 import type { EditorAPI } from './editor-api';
 import { checkCancelled, EditorError } from './editor-command';
+import { GENERATOR_MAX_COUNT, GENERATOR_TIMEOUT_MS } from './generator-sandbox';
 import { isFinalColorMode, propModeFor } from './splat-properties';
 import { i18n } from './ui/localization';
 
@@ -256,6 +257,59 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
     add('import_url', 'Import a model from a CORS-enabled HTTP(S) URL as a new layer. Existing layers are kept. Supports PLY, SPLAT, SOG, SPZ and KSPLAT. Optional LOD index; otherwise uses the loader recommended LOD. Import is undoable.',
         { url: string('Absolute HTTP(S) model URL.', 4096), filename: string('Filename with format extension; defaults to URL path.', 256), lod: integer('LOD index, if the source has multiple LODs.', 0, 255) }, ['url'],
         (i, o) => editor.files.importUrl(i.url, i.filename, { ...o, lod: i.lod }), { untrustedContentHint: true });
+    const rgb = (description: string) => array(number('Channel', 0, 1), 3, description);
+    const layerName = string('Layer name.', 128);
+    const reuse = 'To place an object several times, create it once and use instance_layer.';
+    const part = object({ shape: enumeration(['sphere', 'box', 'plane', 'cylinder', 'cone'], 'Primitive shape.'),
+        center: vector('World-space centre.'),
+        size: array(number('Positive extent.', 1e-6, 1e6), 3, 'Full extents.'),
+        rotate: vector('Euler rotation in degrees; default zero.'),
+        fill: enumeration(['surface', 'volume'], 'Sample the surface or the interior; default surface. Planes are surface only.'),
+        count: integer('Number of gaussians; default 20000.', 1, 1000000),
+        color: rgb('RGB colour; default [1,1,1].'),
+        opacity: number('Opacity; default 1.', 0, 1),
+        splatSize: number('Gaussian standard deviation in world units; derived from sample spacing when omitted.', 1e-9, 1e9) }, ['shape', 'center', 'size']);
+    add('create_primitives', `Create one new layer from one or more primitive shapes sampled evenly in the editor, so a multi-part object (e.g. a tree: trunk cylinder plus cone canopy) is a single layer. size is the full extent along local X/Y/Z; cylinders and cones run along local Y with the cone apex at +Y; planes lie in local XZ (size Y is ignored). Surface fill uses flat splats facing outward; volume fill uses round splats. Colour is flat and unlit. ${reuse} Undoable; returns createdLayer.`,
+        { parts: { type: 'array', items: part, minItems: 1, maxItems: 64, description: 'Shapes to combine; at most 2000000 gaussians in total.' }, name: layerName }, ['parts'], (i, o) => {
+            const parts = (i.parts as Input[]).map((p, index) => {
+                if (p.shape === 'plane' && p.fill === 'volume') throw new EditorError('invalid_input', `input.parts[${index}]: a plane has no volume; use fill surface.`);
+                return {
+                    shape: p.shape,
+                    center: xyz(p.center),
+                    size: xyz(p.size),
+                    rotation: p.rotate ? new Quat().setFromEulerAngles(...p.rotate as [number, number, number]) : new Quat(),
+                    fill: p.fill ?? 'surface',
+                    count: p.count ?? 20000,
+                    color: p.color ?? [1, 1, 1],
+                    opacity: p.opacity ?? 1,
+                    splatSize: p.splatSize
+                };
+            });
+            if (parts.reduce((n, p) => n + p.count, 0) > GENERATOR_MAX_COUNT) throw new EditorError('invalid_input', `At most ${GENERATOR_MAX_COUNT} gaussians in total.`);
+            return editor.create.primitives(parts, i.name, o);
+        });
+    add('create_from_generator', `Create one new layer by running a splat-transform generator module in the editor. Use this for procedural or computed content instead of sending gaussians as data. source is an ES module exporting class Generator with static create(params) (may be async) returning { count, columnNames, getRow(index, row) }; getRow fills row[name] for every column. params arrive as [{name, value}] with string values, as in the splat-transform CLI. Required columns, in world space: x, y, z; scale_0..2 = ln(standard deviation); rot_0..3 = quaternion w, x, y, z; f_dc_0..2 = (rgb - 0.5) / 0.28209479177387814; opacity = logit(alpha). Optional f_rest_* add SH. The module runs in an isolated sandbox with no DOM, storage or network, a ${GENERATOR_TIMEOUT_MS / 1000}s limit and at most ${GENERATOR_MAX_COUNT} gaussians and 64 columns. ${reuse} Undoable; returns createdLayer.`,
+        { source: string('ES module source code.', 200000),
+            params: { type: 'array', items: object({ name: string('Parameter name.', 64), value: { type: 'string', description: 'Parameter value.', maxLength: 4096 } }, ['name', 'value']), minItems: 0, maxItems: 64, description: 'Parameters passed to Generator.create.' },
+            name: layerName }, ['source'],
+        (i, o) => editor.create.generator(i.source, i.params ?? [], i.name, o));
+    add('instance_layer', 'Place copies of a layer that share its gaussian data, so each copy costs only a small instance list instead of new data. Use for repeated objects (trees, rocks, props). Each copy applies its own world-space translation, Euler rotation (degrees) and uniform scale to the source layer, rotating and scaling about the source bounds centre unless center is given. Copies are separate layers today. All copies are one undoable edit; returns createdLayers.',
+        { layer,
+            copies: { type: 'array',
+                items: object({ translate: vector('World-space offset from the source.'),
+                    rotate: vector('World X/Y/Z Euler angles in degrees.'),
+                    scale: number('Uniform scale multiplier.', 1e-6, 1e6),
+                    center: vector('World-space rotation/scaling centre.') }),
+                minItems: 1,
+                maxItems: 128,
+                description: 'One entry per copy.' },
+            name: string('Name prefix for the copies; defaults to the source name.', 128) }, ['layer', 'copies'],
+        (i, o) => editor.layers.instance(i.layer, (i.copies as Input[]).map(c => ({
+            translate: c.translate && xyz(c.translate),
+            rotate: c.rotate && new Quat().setFromEulerAngles(...c.rotate as [number, number, number]),
+            scale: c.scale,
+            center: c.center && xyz(c.center)
+        })), i.name, o));
     add('export_scene', 'Export selected splats, one layer, or all visible layers through the editor exporters. Hidden splats are included; deleted splats are excluded. Requests a browser download, not a guaranteed filesystem save. Source SH bands are preserved unless shBands is specified.',
         { format: enumeration(['ply', 'compressed-ply', 'splat', 'sog', 'spz', 'viewer-html', 'viewer-zip'], 'Output format.'),
             filename: string('Download filename with matching extension.', 256),

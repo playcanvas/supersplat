@@ -24,6 +24,7 @@ import { InfiniteGrid as Grid } from './infinite-grid';
 import { Outline } from './outline';
 import { PCApp } from './pc-app';
 import { ProjectedSplatRenderer } from './projected-splat-renderer';
+import type { RenderMode } from './render-mode';
 import { SceneConfig } from './scene-config';
 import { SceneState } from './scene-state';
 import type { Splat } from './splat';
@@ -107,13 +108,24 @@ class Scene {
     // frame is still owed after motion ends.
     movingRender = false;
 
-    // the overdraw diagnostic view (view.overdraw): the splat pass counts
-    // fragments per pixel and the final blit maps the count through a heat
-    // ramp. Always the sorted path - the count needs blending, not the
+    // the overdraw diagnostic view (view.renderMode === 'overdraw'): the splat
+    // pass counts fragments per pixel and the final blit maps the count through
+    // a heat ramp. Always the sorted path - the count needs blending, not the
     // stochastic depth test. It is a debug overlay, so it follows the camera's
     // overlay flag: always in the viewport, in captures only with Show Debug
     // Overlays, never for flood selection's offscreen read or 360 captures
     overdrawRender = false;
+    // diagnostic render modes (view.renderMode): 'depth' displays linear depth,
+    // 'normals' the world-space surface normal, 'overdraw' a
+    // fragment count. All are debug views and follow the camera's overlay flag.
+    // captureRenderMode overrides the viewport's mode for an offscreen capture
+    depthRender = false;
+    normalRender = false;
+    curvatureRender = false;
+    // Alpha coverage A = 1 - product(1 - alpha_i), displayed as grayscale.
+    alphaRender = false;
+    edgeRender = false;
+    captureRenderMode: RenderMode | null = null;
     pendingResolve = false;
     // anything but the camera changed this frame: the projected renderer's
     // occlusion cull skips a frame whose previous depth no longer describes
@@ -585,9 +597,26 @@ class Scene {
         const auto = stochastic === 'auto';
         this.autoSampling = auto && this.frameTimings.gpuSupported;
         const adaptive = stochastic === 'movement' || (auto && (this.autoEngaged || !this.frameTimings.gpuSupported));
-        this.overdrawRender = this.camera.renderOverlays && !!this.events.invoke('view.overdraw');
+        const renderMode = this.captureRenderMode ?? (this.events.invoke('view.renderMode') as RenderMode);
+        // diagnostic modes only replace the frame when overlays are allowed (a
+        // capture without debug overlays stays normal), unless the capture asked
+        // for the mode explicitly
+        const modeVisible = this.camera.renderOverlays || this.captureRenderMode !== null;
+        this.depthRender = modeVisible && renderMode === 'depth';
+        this.normalRender = modeVisible && renderMode === 'normals';
+        this.curvatureRender = modeVisible && renderMode === 'curvature';
+        this.alphaRender = modeVisible && renderMode === 'alpha';
+        this.edgeRender = modeVisible && renderMode === 'edge';
+        this.overdrawRender = modeVisible && renderMode === 'overdraw';
         this.movingRender =
-            !this.lockedRenderMode && !this.overdrawRender && (stochastic === 'enabled' || (adaptive && interacting));
+            !this.depthRender &&
+            !this.normalRender &&
+            !this.curvatureRender &&
+            !this.alphaRender &&
+            !this.edgeRender &&
+            !this.lockedRenderMode &&
+            !this.overdrawRender &&
+            (stochastic === 'enabled' || (adaptive && interacting));
 
         // timestamp queries cost a per-frame staging-buffer map and a resolve,
         // so run the profiler only while something consumes it: the

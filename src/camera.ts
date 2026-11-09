@@ -21,6 +21,7 @@ import {
     TONEMAP_NEUTRAL,
     BlendState,
     Color,
+    Camera as EngineCamera,
     Entity,
     Mat4,
     Ray,
@@ -34,10 +35,18 @@ import {
 
 import type { CommandContext } from './command-queue';
 import { PointerController } from './controllers';
+import type { DepthMethod } from './depth-renderer';
+import { DepthRenderer } from './depth-renderer';
 import { Element, ElementType } from './element';
 import { Picker } from './picker';
 import type { Serializer } from './serializer';
 import { vertexShader, fragmentShader } from './shaders/blit-shader';
+import {
+    curvatureFragmentShader,
+    depthDisplayShader,
+    edgeFragmentShader,
+    normalFragmentShader
+} from './shaders/diagnostic-shaders';
 import { fragmentShader as stochasticResolveShader } from './shaders/stochastic-warp-resolve-shader';
 import type { Splat } from './splat';
 import { TweenValue } from './tween-value';
@@ -143,6 +152,20 @@ class Camera extends Element {
     gizmoPass: RenderPassForward;
     depthReducePass: RenderPass;
     finalPass: SimpleRenderPass;
+    normalPass: SimpleRenderPass;
+    curvaturePass: SimpleRenderPass;
+    edgePass: SimpleRenderPass;
+    depthRenderer: DepthRenderer;
+    captureDepthMethod: DepthMethod | null = null;
+    // fixed display range for multi-frame depth captures (video): auto range
+    // would renormalize every frame and make the video flicker
+    captureDepthRange: [number, number] | null = null;
+    // hold camera tweens/controller while a single-frame capture settles so the
+    // pixels and exported camera metadata describe the same pose
+    captureFreeze = false;
+    depthComputePass: RenderPass;
+    depthDisplayPass: SimpleRenderPass;
+    normalCopyPass: SimpleRenderPass;
 
     // overridden target size
     targetSizeOverride: { width: number; height: number } = null;
@@ -405,6 +428,75 @@ class Camera extends Element {
         this.depthReducePass = new RenderPass(device);
         this.depthReducePass.name = 'depthReduce';
         this.depthReducePass.execute = () => scene.projectedSplatRenderer.reduceDepth();
+        this.depthRenderer = new DepthRenderer(scene);
+        this.depthComputePass = new RenderPass(device);
+        this.depthComputePass.name = 'linearDepth32';
+        this.depthComputePass.execute = () => {
+            const { width, height } = this.targetSize;
+            const method: DepthMethod =
+                scene.normalRender || scene.curvatureRender
+                    ? 'mean'
+                    : (this.captureDepthMethod ?? scene.events.invoke('view.depthMethod'));
+            this.depthRenderer.render(scene.projectedSplatRenderer.getDepthInputs(), width, height, method);
+        };
+        this.depthDisplayPass = new SimpleRenderPass(
+            device,
+            new ShaderQuad(device, vertexShader, depthDisplayShader, 'depth-display'),
+            {
+                vars: () => ({ rawDepth: this.depthRenderer.texture, displayStats: this.depthRenderer.stats })
+            }
+        );
+        const normalProjection = new Mat4();
+        const normalInverse = new Mat4();
+        const surfaceUniforms = () => {
+            const projection = EngineCamera.applyShaderProjectionTransform(
+                this.camera.projectionMatrix,
+                normalProjection,
+                false,
+                device.isWebGPU
+            );
+            normalInverse.mul2(projection, this.camera.viewMatrix).invert();
+            return {
+                normalDepth: this.depthRenderer.normalTexture ?? this.depthRenderer.texture,
+                normalProjectionParams: [-projection.data[10], projection.data[14], this.ortho ? 1 : 0],
+                normalInverseViewProjection: normalInverse.data
+            };
+        };
+        this.normalPass = new SimpleRenderPass(
+            device,
+            new ShaderQuad(device, vertexShader, normalFragmentShader, 'normal-from-depth'),
+            {
+                vars: surfaceUniforms
+            }
+        );
+        this.curvaturePass = new SimpleRenderPass(
+            device,
+            new ShaderQuad(device, vertexShader, curvatureFragmentShader, 'curvature-from-depth'),
+            {
+                vars: () => ({ ...surfaceUniforms(), curvatureGain: scene.events.invoke('view.curvatureGain') })
+            }
+        );
+        this.edgePass = new SimpleRenderPass(
+            device,
+            new ShaderQuad(device, vertexShader, edgeFragmentShader, 'rgb-edge'),
+            {
+                vars: () => ({ edgeColor: this.mainTarget.colorBuffer, edgeGain: scene.events.invoke('view.edgeGain') })
+            }
+        );
+        // Copy the resolved diagnostic back to the shared colour buffer so viewport
+        // and offscreen image/video captures consume exactly the same result.
+        this.normalCopyPass = new SimpleRenderPass(
+            device,
+            new ShaderQuad(device, vertexShader, fragmentShader, 'normal-copy'),
+            {
+                vars: () => ({
+                    srcTexture: this.workTarget.colorBuffer,
+                    blitScale: [1, 1],
+                    overdraw: 0,
+                    alphaMode: 0
+                })
+            }
+        );
         this.finalPass = new SimpleRenderPass(
             device,
             new ShaderQuad(device, vertexShader, fragmentShader, 'final-blit'),
@@ -416,7 +508,8 @@ class Camera extends Element {
                         srcTexture: this.mainTarget.colorBuffer,
                         // upscale the (possibly lower-res) target to the backbuffer
                         blitScale: [ts.width / gd.width, ts.height / gd.height],
-                        overdraw: this.scene.overdrawRender ? 1 : 0
+                        overdraw: this.scene.overdrawRender ? 1 : 0,
+                        alphaMode: this.scene.alphaRender ? 1 : 0
                     };
                 }
             }
@@ -536,6 +629,18 @@ class Camera extends Element {
         this.warpTarget?.destroy();
         this.gizmoPass?.destroy();
         this.depthReducePass?.destroy();
+        (this.normalPass?.renderable as ShaderQuad)?.destroy();
+        this.normalPass?.destroy();
+        (this.curvaturePass?.renderable as ShaderQuad)?.destroy();
+        this.curvaturePass?.destroy();
+        (this.edgePass?.renderable as ShaderQuad)?.destroy();
+        this.edgePass?.destroy();
+        (this.normalCopyPass?.renderable as ShaderQuad)?.destroy();
+        this.normalCopyPass?.destroy();
+        this.depthRenderer?.destroy();
+        this.depthComputePass?.destroy();
+        (this.depthDisplayPass?.renderable as ShaderQuad)?.destroy();
+        this.depthDisplayPass?.destroy();
         this.finalPass?.destroy();
         this.camera.framePasses = null;
 
@@ -672,6 +777,11 @@ class Camera extends Element {
             this.gizmoPass.addLayer(this.camera, scene.gizmoLayer, false, true);
             this.gizmoPass.addLayer(this.camera, scene.gizmoLayer, true, false);
 
+            this.depthDisplayPass.init(this.colorTarget);
+            this.normalPass.init(this.workTarget);
+            this.curvaturePass.init(this.workTarget);
+            this.edgePass.init(this.workTarget);
+            this.normalCopyPass.init(this.colorTarget);
             this.finalPass.init(null);
 
             // assign render passes to camera
@@ -686,6 +796,12 @@ class Camera extends Element {
                 this.depthReducePass,
                 this.stochasticResolvePass,
                 this.gizmoPass,
+                this.depthComputePass,
+                this.depthDisplayPass,
+                this.normalPass,
+                this.curvaturePass,
+                this.edgePass,
+                this.normalCopyPass,
                 this.finalPass
             ];
         } else {
@@ -706,6 +822,8 @@ class Camera extends Element {
     }
 
     onUpdate(deltaTime: number) {
+        if (this.captureFreeze && !this.poseOverride) return;
+
         // controller update
         this.controller.update(deltaTime);
 
@@ -809,13 +927,40 @@ class Camera extends Element {
             this.warpSplatPass.addLayer(this.camera, scene.splatLayer, false, false);
             this.warpSplatPass.addLayer(this.camera, scene.splatLayer, true, false);
         }
-        this.splatPass.enabled = !this.scene.movingRender;
-        this.stochasticClearPass.enabled = this.scene.movingRender;
-        this.stochasticSplatPass.enabled = this.scene.movingRender && !this.scene.warpedRender;
-        this.warpClearPass.enabled = this.scene.warpedRender;
-        this.warpSplatPass.enabled = this.scene.warpedRender;
-        this.stochasticResolvePass.enabled = this.scene.movingRender;
+        // Diagnostics use the projected splats through the float32 tiled depth
+        // renderer. Skip colour/world/gizmo draws so their data stays separate.
+        const depthView = this.scene.depthRender;
+        const diagnosticView = depthView || this.scene.normalRender || this.scene.curvatureRender;
+        const overdrawView = this.scene.overdrawRender;
+        // a diagnostic capture wants a clean frame: no grid and no gizmos either
+        const diagnosticCapture = this.scene.captureRenderMode !== null && this.scene.captureRenderMode !== 'normal';
+        this.splatPass.enabled = !diagnosticView && !this.scene.movingRender;
+        this.stochasticClearPass.enabled = !diagnosticView && this.scene.movingRender;
+        this.stochasticSplatPass.enabled = !diagnosticView && this.scene.movingRender && !this.scene.warpedRender;
+        this.warpClearPass.enabled = !diagnosticView && this.scene.warpedRender;
+        this.warpSplatPass.enabled = !diagnosticView && this.scene.warpedRender;
+        this.stochasticResolvePass.enabled = !diagnosticView && this.scene.movingRender;
+        this.mainPass.enabled =
+            !diagnosticView && !this.scene.alphaRender && !this.scene.edgeRender && !overdrawView && !diagnosticCapture;
+        this.gizmoPass.enabled =
+            !diagnosticView && !this.scene.alphaRender && !this.scene.edgeRender && !overdrawView && !diagnosticCapture;
+        this.depthComputePass.enabled = diagnosticView;
+        this.depthDisplayPass.enabled = depthView;
+        this.normalPass.enabled = this.scene.normalRender;
+        this.curvaturePass.enabled = this.scene.curvatureRender;
+        this.edgePass.enabled = this.scene.edgeRender;
+        this.normalCopyPass.enabled = this.scene.normalRender || this.scene.curvatureRender || this.scene.edgeRender;
         this.updateCameraUniforms();
+    }
+
+    // Match the splat shader's scene-relative depth encoding.
+    depthDisplayRange(): [number, number] {
+        const bound = this.scene.bound;
+        const radius = bound.halfExtents.length();
+        vec.sub2(bound.center, this.mainCamera.getPosition());
+        const center = vec.dot(this.mainCamera.forward);
+        const near = Math.max(center - radius, this.near);
+        return [near, Math.max(center + radius, near + 1e-3)];
     }
 
     onPostRender() {

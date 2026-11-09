@@ -11,7 +11,10 @@ import {
 
 import type { Events } from '../events';
 import type { ImageSettings } from '../render';
+import { isRenderMode } from '../render-mode';
+import type { RenderMode } from '../render-mode';
 
+import { createDepthControls } from './depth-controls';
 import { i18n } from './localization';
 import sceneExport from './svg/export.svg';
 
@@ -183,12 +186,44 @@ class ImageSettingsDialog extends Container {
         showDebugRow.append(showDebugLabel);
         showDebugRow.append(showDebugBoolean);
 
+        // render mode
+
+        const renderModeLabel = new Label({ class: 'label' });
+        i18n.bindText(renderModeLabel, 'panel.overlays.render-mode');
+        const renderModeSelect = new SelectInput({
+            class: 'select',
+            defaultValue: 'normal',
+            options: [
+                { v: 'normal', t: i18n.t('panel.overlays.mode.normal') },
+                { v: 'depth', t: i18n.t('panel.overlays.depth') },
+                { v: 'normals', t: i18n.t('panel.overlays.mode.normals') },
+                { v: 'alpha', t: i18n.t('panel.overlays.mode.alpha') },
+                { v: 'curvature', t: i18n.t('panel.overlays.mode.curvature') },
+                { v: 'edge', t: i18n.t('panel.overlays.mode.edge') },
+                { v: 'overdraw', t: i18n.t('panel.overlays.overdraw') }
+            ]
+        });
+        const renderModeRow = new Container({ class: 'row' });
+        renderModeRow.append(renderModeLabel);
+        renderModeRow.append(renderModeSelect);
+        const depthControls = createDepthControls(events, () => renderModeSelect.value, false);
+
+        const depthDataRow = new Container({ class: 'row' });
+        const depthDataLabel = new Label({ class: 'label' });
+        i18n.bindText(depthDataLabel, 'panel.overlays.depth-data');
+        const depthData = new BooleanInput({ value: false });
+        depthDataRow.append(depthDataLabel);
+        depthDataRow.append(depthData);
+
         // content
 
         const content = new Container({ id: 'content' });
         content.append(projectionRow);
         content.append(presetRow);
         content.append(resolutionRow);
+        content.append(renderModeRow);
+        content.append(depthControls.container);
+        content.append(depthDataRow);
         content.append(formatRow);
         content.append(qualityRow);
         content.append(transparentBgRow);
@@ -271,18 +306,46 @@ class ImageSettingsDialog extends Container {
             presetSelect.value = is360 ? '360-4k' : 'viewport';
             resolutionRow.enabled = presetSelect.value === 'custom';
             updateResolution();
-            showDebugRow.hidden = is360;
-            levelHorizonRow.hidden = !is360;
+            syncFormat();
+        };
+
+        // depth maps are always standard-projection 16-bit pngs, and diagnostic
+        // modes ignore the colour options: hide what would change that
+        const syncFormat = () => {
+            depthControls.sync();
+            depthDataRow.hidden = renderModeSelect.value !== 'depth';
+            const mode = renderModeSelect.value as RenderMode;
+            const depth = mode === 'depth';
+            const diagnostic = mode !== 'normal';
+            const isJpeg = formatSelect.value === 'jpeg';
+            const is360 = projectionSelect.value === 'equirect';
+            formatRow.enabled = !depth;
+            projectionRow.enabled = !diagnostic;
+            qualityRow.hidden = depth || !isJpeg;
+            transparentBgRow.hidden = diagnostic || isJpeg;
+            showDebugRow.hidden = diagnostic || is360;
+            levelHorizonRow.hidden = diagnostic || !is360;
         };
 
         projectionSelect.on('change', syncProjection);
 
         // jpeg has no alpha channel: hide the transparent background toggle
         // and show the quality slider instead
-        formatSelect.on('change', () => {
-            const isJpeg = formatSelect.value === 'jpeg';
-            transparentBgRow.hidden = isJpeg;
-            qualityRow.hidden = !isJpeg;
+        formatSelect.on('change', syncFormat);
+
+        // diagnostic render modes force standard projection; depth also pins png
+        renderModeSelect.on('change', () => {
+            if (renderModeSelect.value !== 'normal') {
+                if (renderModeSelect.value === 'depth') {
+                    formatSelect.value = 'png';
+                }
+                if (projectionSelect.value === 'equirect') {
+                    projectionSelect.value = 'standard';
+                    syncProjection();
+                    return;
+                }
+            }
+            syncFormat();
         });
 
         // handle key bindings for enter and escape
@@ -304,12 +367,21 @@ class ImageSettingsDialog extends Container {
         // reset UI and configure for current state
         const reset = () => {
             updateResolution();
+            syncFormat();
         };
 
         // function implementations
 
         this.show = () => {
             targetSize = events.invoke('targetSize');
+
+            // WYSIWYG: default the export mode to what the viewport is showing.
+            // Depth parameters live in the shared view events, so what was tuned
+            // in the viewport is already what this dialog will render.
+            const viewMode = events.invoke('view.renderMode');
+            if (isRenderMode(viewMode)) {
+                renderModeSelect.value = viewMode;
+            }
 
             reset();
 
@@ -323,19 +395,30 @@ class ImageSettingsDialog extends Container {
                 };
 
                 onOK = () => {
-                    const [width, height] = resolutionValue.value;
-                    const is360 = projectionSelect.value === 'equirect';
-                    const format = formatSelect.value as 'png' | 'jpeg' | 'webp';
+                    const [requestedWidth, requestedHeight] = resolutionValue.value;
+                    // Never request an offscreen texture larger than the device
+                    // supports; custom presets allow arbitrary numbers.
+                    const maxSize = (events.invoke('render.maxTextureSize') as number) ?? 16384;
+                    const width = Math.min(requestedWidth, maxSize);
+                    const height = Math.min(requestedHeight, maxSize);
+                    const renderMode = renderModeSelect.value as RenderMode;
+                    const depth = renderMode === 'depth';
+                    const diagnostic = renderMode !== 'normal';
+                    const is360 = !diagnostic && projectionSelect.value === 'equirect';
+                    const format = depth ? 'png' : (formatSelect.value as 'png' | 'jpeg' | 'webp');
 
                     const imageSettings = {
                         width,
                         height,
-                        transparentBg: format !== 'jpeg' && transparentBgBoolean.value,
-                        showDebug: !is360 && showDebugBoolean.value,
+                        transparentBg: !diagnostic && format !== 'jpeg' && transparentBgBoolean.value,
+                        showDebug: !diagnostic && !is360 && showDebugBoolean.value,
                         format,
-                        quality: format === 'jpeg' ? qualitySlider.value / 100 : undefined,
+                        quality: !depth && format === 'jpeg' ? qualitySlider.value / 100 : undefined,
                         projection: (is360 ? 'equirect' : 'standard') as 'standard' | 'equirect',
-                        levelHorizon: is360 && levelHorizonBoolean.value
+                        levelHorizon: !diagnostic && is360 && levelHorizonBoolean.value,
+                        renderMode,
+                        depthMethod: depthControls.method(),
+                        depthData: depth && depthData.value
                     };
 
                     resolve(imageSettings);

@@ -26,6 +26,7 @@ uniform ringColor: vec4f;
 uniform selectedRingColor: vec4f;
 uniform unselectedColor: vec4f;
 uniform selectedColor: vec4f;
+uniform lockedColor: vec4f;
 uniform ringSize: f32;
 uniform ringSelectionOnly: u32;
 uniform ringsBase: u32;
@@ -131,12 +132,14 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     let color = vec3f(vec3u(rgbBits, rgbBits >> 10u, rgbBits >> 20u) & vec3u(1023u))
         * (f32(1u << (rgbBits >> 30u)) / 1023.0);
     var gaussianRgb = color;
+    #ifndef EDGE_VIEW
     if (entry >= uniform.ringsBase && entry < uniform.ringsBase + uniform.ringsCount && (flags & 2u) == 0u) {
         gaussianRgb = mix(gaussianRgb, uniform.unselectedColor.rgb, uniform.unselectedColor.a);
         if ((flags & 1u) != 0u) {
             gaussianRgb = mix(gaussianRgb, uniform.selectedColor.rgb, uniform.selectedColor.a);
         }
     }
+    #endif
     // ring band colours, resolved here from the untinted base: gaussian colour
     // -> flat unselected colour -> selection colour
     let ringRgb = mix(color, uniform.ringColor.rgb, uniform.ringColor.a);
@@ -248,6 +251,13 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
             output.color = vec4f(vec4u(id, id >> 8u, id >> 16u, id >> 24u) & vec4u(255u)) / 255.0;
         }
     #else
+      #ifdef ALPHA_VIEW
+        // Premultiplied blending accumulates A = 1 - product(1 - alpha_i).
+        // Ignore editing tints, rings and underlays so they cannot change coverage.
+        let alpha = clamp(normExp(radius) * opacity, 0.0, 1.0);
+        output.color = vec4f(0.0, 0.0, 0.0, alpha);
+        output.color1 = vec4f(0.0);
+      #else
       #ifdef OVERDRAW
         // overdraw view: every fragment past the ellipse discard is one unit of
         // fill, whatever its alpha. Red 1 with alpha 0 turns the premultiplied
@@ -256,7 +266,11 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         output.color = vec4f(1.0, 0.0, 0.0, 0.0);
         output.color1 = vec4f(0.0);
       #else
-        let selected = (gaussianFlags & 1u) != 0u;
+        #ifdef EDGE_VIEW
+            let selected = false;
+        #else
+            let selected = (gaussianFlags & 1u) != 0u;
+        #endif
         let norm = normExp(radius);
         let showGaussian = uniform.showGaussians != 0u || (selected && uniform.showSelectedGaussians != 0u);
         var alpha = select(0.0, norm * opacity, showGaussian);
@@ -284,6 +298,15 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
                 #endif
             }
         }
+        // The editor's locked tint lives here, not in the cache: the projector
+        // stores the source alpha so depth/normals/curvature are unaffected by a
+        // visual lock. Edge has its own un-tinted view.
+        #ifndef EDGE_VIEW
+        if ((gaussianFlags & 2u) != 0u) {
+            color *= uniform.lockedColor.rgb;
+            alpha *= uniform.lockedColor.a;
+        }
+        #endif
       #ifdef STOCHASTIC
         // 1 spp stochastic transparency (StochasticSplats, Listing 1): keep this
         // fragment with raw probability alpha, write it opaque; the depth test
@@ -326,6 +349,7 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
             output.color = vec4f(color * alpha, alpha);
             output.color1 = vec4f(0.0);
         }
+      #endif
       #endif
       #endif
     #endif

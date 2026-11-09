@@ -299,21 +299,47 @@ class EditorUI {
                         },
                         webp: { description: 'WebP Image', accept: { 'image/webp': ['.webp'] }, extension: '.webp' }
                     };
-                    const imageFileType = imageFileTypes[imageSettings.format];
+                    const imageFileType =
+                        imageSettings.depthData && imageSettings.renderMode === 'depth'
+                            ? {
+                                  description: 'Raw depth package',
+                                  accept: { 'application/zip': ['.zip' as const] },
+                                  extension: '.zip'
+                              }
+                            : imageFileTypes[imageSettings.format];
 
                     if (window.showSaveFilePicker) {
-                        fileHandle = await window.showSaveFilePicker({
-                            id: 'SuperSplatImageFileExport',
-                            types: [
-                                {
-                                    description: imageFileType.description,
-                                    accept: imageFileType.accept
-                                }
-                            ],
-                            suggestedName: `${events.invoke('render.baseFilename')}${imageFileType.extension}`
-                        });
+                        try {
+                            fileHandle = await window.showSaveFilePicker({
+                                id: 'SuperSplatImageFileExport',
+                                types: [
+                                    {
+                                        description: imageFileType.description,
+                                        accept: imageFileType.accept
+                                    }
+                                ],
+                                suggestedName: `${events.invoke('render.baseFilename')}${imageFileType.extension}`
+                            });
 
-                        writable = await fileHandle.createWritable();
+                            writable = await fileHandle.createWritable();
+                        } catch (error) {
+                            if (error instanceof DOMException && error.name === 'AbortError') {
+                                // user cancelled save dialog
+                                return;
+                            }
+
+                            // Embedded browsers and webviews can expose the File
+                            // System Access API but deny write permission here.
+                            // Fall back to a normal download instead of failing
+                            // the export, and drop any empty file the picker made.
+                            try {
+                                await fileHandle?.remove?.();
+                            } catch {
+                                // ignore: removal is best-effort
+                            }
+                            fileHandle = undefined;
+                            writable = undefined;
+                        }
                     }
 
                     const result = await events.invoke('render.image', imageSettings, writable);
@@ -395,13 +421,30 @@ class EditorUI {
                     let fileHandle: FileSystemFileHandle | undefined;
 
                     if (window.showSaveFilePicker) {
-                        fileHandle = await window.showSaveFilePicker({
-                            id: 'SuperSplatVideoFileExport',
-                            types: filePickerTypes,
-                            suggestedName: suggested
-                        });
+                        try {
+                            fileHandle = await window.showSaveFilePicker({
+                                id: 'SuperSplatVideoFileExport',
+                                types: filePickerTypes,
+                                suggestedName: suggested
+                            });
 
-                        writable = await fileHandle.createWritable();
+                            writable = await fileHandle.createWritable();
+                        } catch (error) {
+                            if (error instanceof DOMException && error.name === 'AbortError') {
+                                // user cancelled save dialog
+                                return;
+                            }
+
+                            // See the image export above: an embedder can expose
+                            // the picker but deny writes. Fall back to a download.
+                            try {
+                                await fileHandle?.remove?.();
+                            } catch {
+                                // ignore: removal is best-effort
+                            }
+                            fileHandle = undefined;
+                            writable = undefined;
+                        }
                     }
 
                     const result = await events.invoke('render.video', videoSettings, writable);

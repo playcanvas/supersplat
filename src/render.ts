@@ -12,16 +12,20 @@ import {
 } from 'mediabunny';
 import { Color, path, Quat, Vec3 } from 'playcanvas';
 
+import type { DepthMethod } from './depth-renderer';
+import { normalizeDepthMethod } from './depth-renderer';
 import { ElementType } from './element';
 import { EquirectRenderer } from './equirect-renderer';
 import type { Events } from './events';
-import { encodePng } from './png-writer';
+import { encodePng, encodePngGray16 } from './png-writer';
+import type { RenderMode } from './render-mode';
 import type { Scene } from './scene';
 import { injectSphericalMetadata } from './spherical-metadata';
 import type { Splat } from './splat';
 import { i18n } from './ui/localization';
 import type { VideoSettings } from './video-config';
 import { buildVideoEncoderConfig, getVideoCodecType } from './video-config';
+import { encodeZip } from './zip-writer';
 
 const nullClr = new Color(0, 0, 0, 0);
 
@@ -57,6 +61,11 @@ type ImageSettings = {
     quality?: number; // 0..1, jpeg only
     projection?: 'standard' | 'equirect';
     levelHorizon?: boolean;
+    // diagnostic render mode: depth exports a 16-bit grayscale png, overdraw a
+    // heat map of the fragment counts. 'normal' (or omitted) exports colour
+    renderMode?: RenderMode;
+    depthMethod?: DepthMethod;
+    depthData?: boolean;
 };
 
 const removeExtension = (filename: string) => {
@@ -125,10 +134,16 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
     events.function('render.maxTextureSize', () => scene.graphicsDevice.maxTextureSize);
 
     // wait for postrender to fire
-    const postRender = () => {
+    const waitPostRender = () => {
         return new Promise<boolean>((resolve, reject) => {
-            const handle = scene.events.on('postrender', () => {
-                handle.off();
+            let handle: { off: () => void } | null = null;
+            const timer = setTimeout(() => {
+                handle?.off();
+                reject(new Error('Timed out waiting for a rendered frame'));
+            }, 60_000);
+            handle = scene.events.on('postrender', () => {
+                clearTimeout(timer);
+                handle?.off();
                 try {
                     resolve(true);
                 } catch (error) {
@@ -138,7 +153,31 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
         });
     };
 
+    const postRender = async () => {
+        await waitPostRender();
+        while (scene.depthRender || scene.normalRender || scene.curvatureRender) {
+            // Keep this frame's depth stable during its asynchronous capacity
+            // check. A live performance overlay otherwise renders newer
+            // versions continuously and prevents a capture from ever settling.
+            scene.renderHold++;
+            let settled: boolean;
+            try {
+                settled = await scene.camera.depthRenderer.settle();
+            } finally {
+                scene.renderHold--;
+            }
+            if (settled) break;
+            scene.forceRender = true;
+            if (scene.lockedRenderMode) scene.lockedRender = true;
+            await waitPostRender();
+        }
+        return true;
+    };
+
     events.function('render.offscreen', async (width: number, height: number): Promise<Uint8Array> => {
+        const prevOverlays = scene.camera.renderOverlays;
+        const prevGizmo = scene.gizmoLayer.enabled;
+        const prevCenters = scene.centersLayer.enabled;
         try {
             // start rendering to offscreen buffer only
             scene.camera.startOffscreenMode(width, height);
@@ -169,9 +208,10 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             return data;
         } finally {
             scene.camera.endOffscreenMode();
-            scene.camera.renderOverlays = true;
-            scene.gizmoLayer.enabled = true;
-            scene.centersLayer.enabled = true;
+            scene.camera.depthRenderer.shrink();
+            scene.camera.renderOverlays = prevOverlays;
+            scene.gizmoLayer.enabled = prevGizmo;
+            scene.centersLayer.enabled = prevCenters;
             scene.camera.camera.clearColor.set(0, 0, 0, 0);
             scene.forceRender = true; // repaint the viewport with normal rendering
         }
@@ -183,11 +223,22 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
         let equirect: EquirectRenderer | null = null;
         let savedFov = 0;
         let savedOrtho = false;
+        let wasPlaying = false;
+        const prevGizmo = scene.gizmoLayer.enabled;
+        const prevCenters = scene.centersLayer.enabled;
+        const prevOverlays = scene.camera.renderOverlays;
 
         try {
             const { width, height, transparentBg, showDebug, format, quality, projection, levelHorizon } =
                 imageSettings;
-            const is360 = projection === 'equirect';
+            // Freeze playback so the frame that is rendered is the frame whose
+            // camera matrices we snapshot for the export metadata
+            wasPlaying = !!events.invoke('timeline.playing');
+            if (wasPlaying) events.fire('timeline.setPlaying', false);
+            const renderMode = imageSettings.renderMode ?? 'normal';
+            const depth = renderMode === 'depth';
+            const diagnostic = renderMode !== 'normal';
+            const is360 = !diagnostic && projection === 'equirect';
 
             // in 360 mode the offscreen target is a square cube face; the
             // equirect target holds the output-sized frame
@@ -195,15 +246,31 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
             // start rendering to offscreen buffer only
             scene.camera.startOffscreenMode(is360 ? faceSize : width, is360 ? faceSize : height);
-            scene.camera.renderOverlays = is360 ? false : showDebug;
+            // Freeze the pose while the capture settles so camera tweens cannot
+            // advance between the rendered depth and the metadata snapshot
+            scene.camera.captureFreeze = true;
+            // depth is a replacement view rather than an overlay: force overlays
+            // on so scene.depthRender engages, and the camera's pass gating hides
+            // the gizmo/centers layers anyway
+            // Pin the capture's mode even for 'normal': otherwise a viewport left
+            // in depth/normals/edge would leak into a colour export whenever the
+            // dialog's Show Debug Overlays kept renderOverlays on
+            scene.camera.renderOverlays = diagnostic ? true : is360 ? false : showDebug;
+            scene.captureRenderMode = renderMode;
+            scene.camera.captureDepthMethod =
+                imageSettings.depthMethod === undefined ? null : normalizeDepthMethod(imageSettings.depthMethod);
             scene.gizmoLayer.enabled = false;
             scene.centersLayer.enabled = false;
-            if (!transparentBg) {
+            if (!transparentBg && !diagnostic) {
                 scene.camera.clearPass.setClearColor(events.invoke('bgClr'));
             }
 
             // cpu-side buffer to read pixels into
             const data = new Uint8Array(width * height * 4);
+
+            let bytes: Uint8Array<ArrayBuffer>;
+            let extension: string;
+            let mimeType: string;
 
             if (is360) {
                 savedFov = scene.camera.fov;
@@ -263,84 +330,189 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 // for render to finish
                 await postRender();
 
-                const { mainTarget, workTarget } = scene.camera;
+                // Snapshot the frame's camera before the async depth readback and
+                // PNG/ZIP encoding: reading it afterwards can describe a later
+                // pose than the pixels.
+                const camera = scene.camera.camera;
+                const cameraMetadata = {
+                    worldToView: Array.from(camera.viewMatrix.data),
+                    projection: Array.from(camera.projectionMatrix.data),
+                    nearClip: camera.nearClip,
+                    farClip: camera.farClip,
+                    projectionType: scene.camera.ortho ? 'orthographic' : 'perspective'
+                };
 
-                scene.dataProcessor.copyRt(mainTarget, workTarget, scene.overdrawRender);
-
-                // read the rendered frame (immediate: see render.offscreen)
-                await workTarget.colorBuffer.read(0, 0, width, height, {
-                    renderTarget: workTarget,
-                    data,
-                    immediate: true
-                });
-            }
-
-            let bytes: Uint8Array<ArrayBuffer>;
-            let extension: string;
-            let mimeType: string;
-
-            if (format === 'png') {
-                bytes = await encodePng(data, width, height);
-                extension = 'png';
-                mimeType = 'image/png';
-            } else if (format === 'jpeg') {
-                // jpeg has no alpha channel and canvas encoding flattens
-                // transparent pixels toward black, so force full opacity
-                for (let i = 3; i < data.length; i += 4) {
-                    data[i] = 255;
-                }
-
-                const imageData = new ImageData(
-                    new Uint8ClampedArray(data.buffer, data.byteOffset, data.length),
-                    width,
-                    height
-                );
-                let blob: Blob;
-                if (typeof OffscreenCanvas !== 'undefined') {
-                    const canvas = new OffscreenCanvas(width, height);
-                    const context = canvas.getContext('2d');
-                    if (!context) {
-                        throw new Error('failed to create 2d context');
+                if (depth) {
+                    const depthRenderer = scene.camera.depthRenderer;
+                    const texture = depthRenderer.texture;
+                    const raw = (await texture.read(0, 0, width, height, { immediate: true })) as Uint32Array;
+                    const floats = new Float32Array(raw.buffer, raw.byteOffset, raw.length);
+                    const samples = new Uint16Array(width * height);
+                    const pack = imageSettings.depthData === true;
+                    // Raw package buffers are only allocated when requested; a
+                    // plain depth PNG should not pay ~12 extra bytes/pixel at 8K.
+                    const depthValues = pack ? new Uint8Array(width * height * 4) : null;
+                    const coverageValues = pack ? new Uint8Array(width * height * 4) : null;
+                    const depths = depthValues ? new DataView(depthValues.buffer) : null;
+                    const coverage = coverageValues ? new DataView(coverageValues.buffer) : null;
+                    const mask = pack ? new Uint8Array(width * height * 4) : null;
+                    const [near, far] = depthRenderer.displayRange;
+                    for (let i = 0; i < samples.length; i++) {
+                        const valid = raw[i * 4 + 3] !== 0;
+                        const z = valid ? floats[i * 4] : 0;
+                        samples[i] = valid
+                            ? Math.round(Math.min(1, Math.max(0, (z - near) / (far - near))) * 65535)
+                            : 65535;
+                        if (pack) {
+                            depths.setFloat32(i * 4, z, true);
+                            coverage.setFloat32(i * 4, floats[i * 4 + 1], true);
+                            mask[i * 4] = mask[i * 4 + 1] = mask[i * 4 + 2] = valid ? 255 : 0;
+                            mask[i * 4 + 3] = 255;
+                        }
                     }
-                    context.putImageData(imageData, 0, 0);
-                    blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: quality ?? 0.9 });
+                    const png = await encodePngGray16(samples, width, height);
+                    if (pack) {
+                        const metadata = {
+                            version: 1,
+                            width,
+                            height,
+                            depthFile: 'depth.f32',
+                            coverageFile: 'coverage.f32',
+                            maskFile: 'valid-mask.png',
+                            previewFile: 'depth.png',
+                            dtype: 'float32',
+                            byteOrder: 'little-endian',
+                            layout: 'row-major, top-left origin',
+                            shape: [height, width],
+                            channels: 1,
+                            strideBytes: 4,
+                            depthDefinition: 'linear camera-space Z, positive forward',
+                            coverageDefinition: 'accumulated alpha in [0, 1] after the contribution/coverage filters',
+                            units: 'scene units; metric scale is not assumed',
+                            invalidDepth: 0,
+                            validMask: '255=valid, 0=invalid',
+                            preview:
+                                'depth.png is 16-bit grayscale normalized to displayRange; depths outside it clamp, invalid pixels are white',
+                            previewTransfer: 'linear normalized (no sRGB encoding)',
+                            viewportDisplayTransfer: 'pow(depth01, 1 / 2.2)',
+                            method: scene.camera.captureDepthMethod ?? events.invoke('view.depthMethod'),
+                            minOpacity: events.invoke('view.minOpacity'),
+                            minPixelContribution: events.invoke('view.depthContribution'),
+                            minCoverage: events.invoke('view.depthCoverage'),
+                            quantile: events.invoke('view.depthQuantile'),
+                            displayRange: { mode: events.invoke('view.depthRangeMode'), near, far },
+                            projection: cameraMetadata.projectionType,
+                            nearClip: cameraMetadata.nearClip,
+                            farClip: cameraMetadata.farClip,
+                            matrices: {
+                                layout: 'column-major',
+                                projectionClipSpace: 'OpenGL (-1 to 1)',
+                                worldToView: cameraMetadata.worldToView,
+                                projection: cameraMetadata.projection
+                            }
+                        };
+                        bytes = encodeZip([
+                            { name: 'depth.f32', data: depthValues! },
+                            { name: 'coverage.f32', data: coverageValues! },
+                            { name: 'valid-mask.png', data: await encodePng(mask!, width, height) },
+                            { name: 'depth.png', data: png },
+                            { name: 'metadata.json', data: new TextEncoder().encode(JSON.stringify(metadata, null, 2)) }
+                        ]);
+                        extension = 'zip';
+                        mimeType = 'application/zip';
+                    } else {
+                        bytes = png;
+                        extension = 'png';
+                        mimeType = 'image/png';
+                    }
                 } else {
-                    // fallback for browsers without OffscreenCanvas
-                    const canvas = document.createElement('canvas');
-                    canvas.width = width;
-                    canvas.height = height;
-                    const context = canvas.getContext('2d');
-                    if (!context) {
-                        throw new Error('failed to create 2d context');
-                    }
-                    context.putImageData(imageData, 0, 0);
-                    blob = await new Promise<Blob>((resolve, reject) => {
-                        canvas.toBlob(
-                            (b) => (b ? resolve(b) : reject(new Error('failed to encode jpeg'))),
-                            'image/jpeg',
-                            quality ?? 0.9
-                        );
+                    const { mainTarget, workTarget } = scene.camera;
+
+                    scene.dataProcessor.copyRt(mainTarget, workTarget, scene.overdrawRender, scene.alphaRender);
+
+                    // read the rendered frame (immediate: see render.offscreen)
+                    await workTarget.colorBuffer.read(0, 0, width, height, {
+                        renderTarget: workTarget,
+                        data,
+                        immediate: true
                     });
                 }
-                bytes = new Uint8Array(await blob.arrayBuffer());
-                extension = 'jpg';
-                mimeType = 'image/jpeg';
-            } else {
-                // construct the webp codec
-                if (!webpCodec) {
-                    webpCodec = await WebPCodec.create();
-                }
+            }
 
-                bytes = webpCodec.encodeLosslessRGBA(data, width, height);
-                extension = 'webp';
-                mimeType = 'image/webp';
+            if (!depth) {
+                if (format === 'png') {
+                    bytes = await encodePng(data, width, height);
+                    extension = 'png';
+                    mimeType = 'image/png';
+                } else if (format === 'jpeg') {
+                    // jpeg has no alpha channel and canvas encoding flattens
+                    // transparent pixels toward black, so force full opacity
+                    for (let i = 3; i < data.length; i += 4) {
+                        data[i] = 255;
+                    }
+
+                    const imageData = new ImageData(
+                        new Uint8ClampedArray(data.buffer, data.byteOffset, data.length),
+                        width,
+                        height
+                    );
+                    let blob: Blob;
+                    if (typeof OffscreenCanvas !== 'undefined') {
+                        const canvas = new OffscreenCanvas(width, height);
+                        const context = canvas.getContext('2d');
+                        if (!context) {
+                            throw new Error('failed to create 2d context');
+                        }
+                        context.putImageData(imageData, 0, 0);
+                        blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: quality ?? 0.9 });
+                    } else {
+                        // fallback for browsers without OffscreenCanvas
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const context = canvas.getContext('2d');
+                        if (!context) {
+                            throw new Error('failed to create 2d context');
+                        }
+                        context.putImageData(imageData, 0, 0);
+                        blob = await new Promise<Blob>((resolve, reject) => {
+                            canvas.toBlob(
+                                (b) => (b ? resolve(b) : reject(new Error('failed to encode jpeg'))),
+                                'image/jpeg',
+                                quality ?? 0.9
+                            );
+                        });
+                    }
+                    bytes = new Uint8Array(await blob.arrayBuffer());
+                    extension = 'jpg';
+                    mimeType = 'image/jpeg';
+                } else {
+                    // construct the webp codec
+                    if (!webpCodec) {
+                        webpCodec = await WebPCodec.create();
+                    }
+
+                    bytes = webpCodec.encodeLosslessRGBA(data, width, height);
+                    extension = 'webp';
+                    mimeType = 'image/webp';
+                }
             }
 
             if (fileStream) {
                 await fileStream.write(bytes);
                 await fileStream.close();
             } else {
-                downloadFile(bytes, `${baseFilename()}.${extension}`, mimeType);
+                const suffix =
+                    {
+                        normal: '',
+                        depth: '-depth',
+                        overdraw: '-overdraw',
+                        normals: '-normals',
+                        alpha: '-alpha',
+                        curvature: '-curvature',
+                        edge: '-edge'
+                    }[renderMode] ?? '';
+                downloadFile(bytes, `${baseFilename()}${suffix}.${extension}`, mimeType);
             }
 
             return true;
@@ -371,13 +543,19 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 equirect = null;
             }
 
+            scene.camera.captureFreeze = false;
             scene.camera.endOffscreenMode();
-            scene.camera.renderOverlays = true;
-            scene.gizmoLayer.enabled = true;
-            scene.centersLayer.enabled = true;
+            scene.camera.depthRenderer.shrink();
+            scene.camera.renderOverlays = prevOverlays;
+            scene.captureRenderMode = null;
+            scene.camera.captureDepthMethod = null;
+            scene.camera.captureDepthRange = null;
+            scene.gizmoLayer.enabled = prevGizmo;
+            scene.centersLayer.enabled = prevCenters;
             scene.camera.clearPass.setClearColor(nullClr);
             scene.forceRender = true; // repaint the viewport with normal rendering
 
+            if (wasPlaying) events.fire('timeline.setPlaying', true);
             events.fire('stopSpinner');
         }
     });
@@ -390,6 +568,12 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             const cancelHandler = events.on('progressCancel', () => {
                 cancelled = true;
             });
+            let wasPlaying = false;
+            let depthRangeLocked = false;
+            const prevGizmo = scene.gizmoLayer.enabled;
+            const prevCenters = scene.centersLayer.enabled;
+            const prevOverlays = scene.camera.renderOverlays;
+            let prevLocked = scene.lockedRenderMode;
 
             let encoder: VideoEncoder | null = null;
             let equirect: EquirectRenderer | null = null;
@@ -413,7 +597,14 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     levelHorizon
                 } = videoSettings;
 
-                const is360 = projection === 'equirect';
+                const renderMode = videoSettings.renderMode ?? 'normal';
+                const diagnostic = renderMode !== 'normal';
+                const is360 = !diagnostic && projection === 'equirect';
+
+                // Stop playback: the exporter drives timeline.time itself, and a
+                // competing playback update would encode the wrong camera pose.
+                wasPlaying = !!events.invoke('timeline.playing');
+                if (wasPlaying) events.fire('timeline.setPlaying', false);
 
                 // 360 mp4/mov exports have spherical metadata patched into the
                 // finished buffer, so they render to memory with moov written
@@ -499,12 +690,16 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
                 // start rendering to offscreen buffer only
                 scene.camera.startOffscreenMode(is360 ? faceSize : width, is360 ? faceSize : height);
-                scene.camera.renderOverlays = is360 ? false : showDebug;
+                scene.camera.renderOverlays = diagnostic ? true : is360 ? false : showDebug;
+                scene.captureRenderMode = renderMode;
+                scene.camera.captureDepthMethod =
+                    videoSettings.depthMethod === undefined ? null : normalizeDepthMethod(videoSettings.depthMethod);
                 scene.gizmoLayer.enabled = false;
                 scene.centersLayer.enabled = false;
-                if (!transparentBg) {
+                if (!transparentBg && !diagnostic) {
                     scene.camera.clearPass.setClearColor(events.invoke('bgClr'));
                 }
+                prevLocked = scene.lockedRenderMode;
                 scene.lockedRenderMode = true;
 
                 if (is360) {
@@ -529,10 +724,12 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     // Fire timeline.time for camera animation interpolation
                     events.fire('timeline.time', frameTime);
 
-                    // Wait for PLY sequence to load the frame if present
+                    // PLY sequences are discrete; choose the nearest timeline
+                    // frame so float accumulation cannot select the frame before
+                    // the intended one
                     const newSplat = (await events.invoke(
                         'plysequence.setFrameAsync',
-                        Math.floor(frameTime)
+                        Math.round(frameTime)
                     )) as Splat | null;
 
                     // manually update the camera so position and rotation are correct
@@ -610,7 +807,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 const captureFrame = async (frameTime: number) => {
                     const { mainTarget, workTarget } = scene.camera;
 
-                    scene.dataProcessor.copyRt(mainTarget, workTarget, scene.overdrawRender);
+                    scene.dataProcessor.copyRt(mainTarget, workTarget, scene.overdrawRender, scene.alphaRender);
 
                     // read the rendered frame (immediate: see render.offscreen)
                     await workTarget.colorBuffer.read(0, 0, width, height, {
@@ -695,7 +892,8 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     await encodeFrame(frameTime);
                 };
 
-                for (let frameTime = 0; frameTime <= duration; frameTime += 1.0 / frameRate) {
+                for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
+                    const frameTime = frameIndex / frameRate;
                     // check for cancellation
                     if (cancelled) break;
 
@@ -718,6 +916,29 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
                         // wait for render to finish
                         await postRender();
+
+                        // Freeze the first settled frame's auto range for the rest
+                        // of the video. This keeps the still-image 2-98% histogram
+                        // semantics while preventing per-frame renormalization.
+                        if (
+                            !depthRangeLocked &&
+                            renderMode === 'depth' &&
+                            events.invoke('view.depthRangeMode') === 'auto'
+                        ) {
+                            const depthRenderer = scene.camera.depthRenderer;
+                            const range = depthRenderer.displayRange;
+                            // An empty/stale first frame leaves [0, 1]; keep auto
+                            // until a valid frame provides a real range.
+                            if (
+                                depthRenderer.ready &&
+                                depthRenderer.validPixels > 0 &&
+                                range[1] > range[0] &&
+                                !(range[0] === 0 && range[1] === 1)
+                            ) {
+                                scene.camera.captureDepthRange = [range[0], range[1]];
+                                depthRangeLocked = true;
+                            }
+                        }
 
                         // wait for capture
                         await captureFrame(frameTime);
@@ -819,13 +1040,18 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 }
 
                 scene.camera.endOffscreenMode();
-                scene.camera.renderOverlays = true;
-                scene.gizmoLayer.enabled = true;
-                scene.centersLayer.enabled = true;
+                scene.camera.depthRenderer.shrink();
+                scene.camera.renderOverlays = prevOverlays;
+                scene.captureRenderMode = null;
+                scene.camera.captureDepthMethod = null;
+                scene.camera.captureDepthRange = null;
+                scene.gizmoLayer.enabled = prevGizmo;
+                scene.centersLayer.enabled = prevCenters;
                 scene.camera.clearPass.setClearColor(nullClr);
-                scene.lockedRenderMode = false;
+                scene.lockedRenderMode = prevLocked;
                 scene.forceRender = true; // camera likely moved, finish with normal render
 
+                if (wasPlaying) events.fire('timeline.setPlaying', true);
                 events.fire('progressEnd');
             }
         };

@@ -124,17 +124,18 @@ class DataProcessor {
         this.bufferPool.release(mask);
     }
 
-    // overdraw: the source holds an overdraw frame's fragment counts, so resolve
-    // them through the heat ramp as the final blit would have (captures run
-    // with the final blit disabled)
-    copyRt(source: RenderTarget, dest: RenderTarget, overdraw = false) {
+    // Diagnostic sources hold fragment counts or alpha coverage. Resolve the
+    // same display mapping as the final blit would have (captures run with the
+    // final blit disabled)
+    copyRt(source: RenderTarget, dest: RenderTarget, overdraw = false, alpha = false) {
         const { device } = this;
 
         resolve(device.scope, {
             srcTexture: source.colorBuffer,
             // straight 1:1 copy, no upscale
             blitScale: [1, 1],
-            overdraw: overdraw ? 1 : 0
+            overdraw: overdraw ? 1 : 0,
+            alphaMode: alpha ? 1 : 0
         });
 
         device.setBlendState(BlendState.NOBLEND);

@@ -430,8 +430,6 @@
     "webmcp.pick_points": "Определить точки поверхности",
     "webmcp.set_view": "Настроить отображение",
     "webmcp.import_url": "Импортировать по URL",
-    "webmcp.create_primitives": "Создать примитивы",
-    "webmcp.create_sdf": "Создать SDF-форму",
     "webmcp.create_from_generator": "Создать генератором",
     "webmcp.instance_layer": "Инстанцировать слой",
     "webmcp.export_scene": "Экспортировать сцену"

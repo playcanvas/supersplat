@@ -150,7 +150,7 @@ struct ProjectorUniforms {
     occlusionEnabled: u32,
     // analysis views for render_view: 0 off, 1 colour by property (viewProp
     // uses the histogram's property modes, mapped over viewRange), 2 selection
-    // highlight, 3 flat layer colour (viewColor)
+    // highlight, 3 flat layer colour (viewColor), 4 shaded by splat normal
     viewMode: u32,
     viewProp: u32,
     viewRange: vec2f,
@@ -503,8 +503,22 @@ fn main(
             } else {
                 color = vec4f(vec3f(0.12 + 0.3 * luma), color.a);
             }
-        } else {
+        } else if (uniforms.viewMode == 3u) {
             color = vec4f(uniforms.viewColor.rgb * (0.55 + 0.45 * luma), color.a);
+        } else {
+            // clay: a flat splat's normal is its shortest axis; light it two-sided
+            // from above left with a little colour kept, so curvature, creases
+            // and bumps show regardless of paint
+            let axes = linear * rotationMatrix(rotation);
+            var normal = axes[2];
+            if (b.x <= b.y && b.x <= b.z) {
+                normal = axes[0];
+            } else if (b.y <= b.z) {
+                normal = axes[1];
+            }
+            let lambert = abs(dot(normalize(normal), normalize(vec3f(-0.6, 0.65, 0.45))));
+            let clay = mix(vec3f(0.78, 0.76, 0.72), clamp(color.rgb, vec3f(0.0), vec3f(1.0)), 0.25);
+            color = vec4f(clay * (0.12 + 0.88 * lambert * lambert), color.a);
         }
     }
 

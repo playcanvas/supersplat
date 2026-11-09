@@ -40,7 +40,7 @@ type ChangeDetail = { layer?: LayerId };
 type SelectionOptions = CommandOptions & { preview?: boolean, outside?: boolean, footprint?: number, viewToken?: string };
 type RectangleOptions = CommandOptions & { layer?: LayerId, depth?: boolean, footprint?: number, viewToken?: string };
 type TransformOptions = { translate?: Vec3, rotate?: Quat, scale?: number, center?: Vec3 };
-type RenderMode = { mode?: 'color' | 'selection' | 'property' | 'layers', property?: string, range?: [number, number] };
+type RenderMode = { mode?: 'color' | 'selection' | 'property' | 'layers' | 'shaded', property?: string, range?: [number, number] };
 
 // distinct flat colours for the layers analysis view: golden-ratio hue steps
 // never repeat, alternating brightness separates neighbours
@@ -451,8 +451,9 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
             // render_view with an analysis mode: 'property' colours splats by a
             // histogram property over range (measured from visible layers when
             // omitted), 'selection' highlights the selection on every layer and
-            // dims the rest, 'layers' gives each layer a flat colour. Returns a
-            // legend that ties the colours back to values or layer IDs.
+            // dims the rest, 'layers' gives each layer a flat colour, 'shaded'
+            // lights splats by their normals. Returns a legend that ties the
+            // colours back to values or layer IDs.
             render: async (settings: Parameters<typeof session.viewport.render>[0] & RenderMode = {}, options?: CommandOptions) => {
                 const { mode = 'color', property, range, ...rest } = settings;
                 const visible = allSplats().filter(s => s.visible);
@@ -482,6 +483,10 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
                     const layerColors = new Map(visible.map((s, i) => [s.uid, layerColor(i)]));
                     const out = await session.viewport.render({ ...rest, viewOverride: { mode: 'layers', layerColors } }, options);
                     return { ...out, legend: { mode, layers: visible.map(s => ({ layer: s.uid, name: s.name, color: layerColors.get(s.uid).slice(0, 3) })) } };
+                }
+                if (mode === 'shaded') {
+                    const out = await session.viewport.render({ ...rest, viewOverride: { mode: 'shaded' } }, options);
+                    return { ...out, legend: { mode, colors: 'clay with a quarter of the splat colour, lit from above left of the camera by each splat\'s normal (its shortest axis): bright faces the light, dark turns away' } };
                 }
                 return await session.viewport.render(rest, options);
             },

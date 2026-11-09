@@ -1,6 +1,6 @@
 # WebMCP
 
-SuperSplat registers 29 tools with the browser's native [WebMCP API](https://webmachinelearning.github.io/webmcp/). They operate on the open editor tab and share its selection, layers and undo history. There is no separate server, network listener or MCP bridge, and no tool runs code in the editor page: `create_from_generator` runs agent-supplied generator modules in an isolated sandbox (see below). Browsers without WebMCP continue to run the editor normally.
+SuperSplat registers 27 tools with the browser's native [WebMCP API](https://webmachinelearning.github.io/webmcp/). They operate on the open editor tab and share its selection, layers and undo history. There is no separate server, network listener or MCP bridge, and no tool runs code in the editor page: `create_from_generator` runs agent-supplied generator modules in an isolated sandbox (see below). Browsers without WebMCP continue to run the editor normally.
 
 The adapter uses `document.modelContext`, with feature detection for preview browsers that expose `navigator.modelContext`. Tool titles follow the editor language. WebMCP is experimental: browser availability and agent integration depend on the browser version. Native discovery and execution are covered by the browser tests described below.
 
@@ -21,10 +21,10 @@ The adapter uses `document.modelContext`, with feature detection for preview bro
 | `apply_color`, `reset_color` | Compose or reset colour adjustments on an explicit scope. |
 | `undo`, `redo` | Step through the shared editor history, including user edits. |
 | `set_camera`, `focus_camera`, `pick_points` | Position the camera, frame content or find world positions under viewport points. |
-| `render_view` | Render an image from any camera pose without moving the user's view, optionally showing the selection, a property heatmap or layer colours, from up to four angles. |
+| `render_view` | Render an image from any camera pose without moving the user's view, optionally showing the selection, a property heatmap, layer colours or normal shading, from up to four angles. |
 | `set_view` | Change display preferences without changing splat data. |
 | `import_url` | Add a CORS-accessible PLY, SPLAT, SOG, SPZ or KSPLAT URL as an undoable layer. |
-| `create_primitives`, `create_sdf`, `create_from_generator` | Create a new layer from primitive shapes, from smooth-combined signed distance field shapes, or from a sandboxed splat-transform generator module. |
+| `create_from_generator` | Create a new layer from a sandboxed splat-transform generator module. |
 | `instance_layer` | Place copies of a layer that share its gaussian data. |
 | `export_scene` | Download PLY, compressed PLY, SPLAT, SOG, SPZ, or a standalone HTML/ZIP viewer. |
 
@@ -68,10 +68,11 @@ Call `select_region` with these arguments to inspect the proposed removal, call 
 | `selection` | Selected splats on every layer in orange, everything else grey. The legend lists selected counts per layer. | Confirm a selection before deleting it. |
 | `property` | Splats coloured by a histogram `property` over `range` (Turbo: blue at the minimum, red at the maximum), with values outside the range in dim grey. Faint splats are drawn at least half opaque so they show. Without `range`, the measured range of the visible layers is used. | See where faint floaters, oversized splats or outliers are, using `get_histogram` percentiles as the range. |
 | `layers` | Each visible layer in its own flat colour, listed in the legend. | Tell layers and instances apart. |
+| `shaded` | Clay with a quarter of the splat colour, lit from above left of the camera by each splat's normal (its shortest axis). | Judge surface shape: bumps, holes, creases and uneven floors show regardless of colour. Splats in captures are less flat than generated ones, so shading is noisier there. |
 
 Supported properties are `x`, `y`, `z`, `distance`, `camera-depth`, `red`, `green`, `blue`, `opacity`, `scale_0`–`scale_2`, `volume` and `surface-area`, with the same values as `get_histogram`. For example, `{"mode":"property","property":"opacity","range":[0,0.1]}` shows only faint splats in colour.
 
-`views` renders up to four labelled views into one image, two per row, to judge 3D layout from a single result: `current` uses the camera parameters, and named views orbit its target at the same distance. `width` and `height` size the whole grid. A multi-view result returns `cameras`, one per view, instead of `camera`.
+`views` renders up to four labelled views into one image, two per row, to judge 3D layout from a single result: `current` uses the camera parameters, and named views orbit its target at the same distance. `width` and `height` size the whole grid. A multi-view result returns `cameras`, one per view, instead of `camera`. With `orthographic: true`, every view is orthographic, so named views are true elevations for comparing silhouettes and proportions; `distance` sets the framed size.
 
 WebMCP returns every tool result as a JSON string; the specification defines no image result type. A client or MCP bridge that recognises the MCP image block shape can present the image to the model; others receive it as text, so keep images small. To act on what an image shows with screen-space tools, pass the returned `camera` to `set_camera` first.
 
@@ -85,41 +86,7 @@ Selection with `visibility: "visible"` uses the editor's depth picking and peeli
 
 ### Creating and instancing gaussians
 
-Gaussian data is generated inside the editor rather than sent through tool calls. Each creation tool builds one new static resource in memory and adds it as a new layer in one undo entry; neither appends to an existing layer. Created layers have an identity transform, so the data is stored exactly as generated, in world space. Standard deviations (`splatSize`, and the exponent of `scale_N`) are in world units, so a splat's visible footprint is roughly three times larger.
-
-`create_primitives` combines up to 64 parts into one layer, so a multi-part object such as a tree (trunk cylinder plus cone canopy) is one piece of data. Each part is a sphere, box, plane, cylinder or cone, sampled evenly and deterministically over its surface or volume, with its own colour and transform. `size` gives full extents. Cylinders and cones run along local Y, with the cone apex at +Y. Planes lie in local XZ. Surface fill uses flat splats facing outward, sized from the sample spacing; volume fill uses round splats. Colours are flat and unlit.
-
-```json
-{"name":"tree","parts":[
-  {"shape":"cylinder","center":[0,0.35,0],"size":[0.14,0.7,0.14],"color":[0.36,0.22,0.12],"count":1500},
-  {"shape":"cone","center":[0,1.2,0],"size":[1.5,1.5,1.5],"color":[0.1,0.45,0.18]}
-]}
-```
-
-`create_sdf` models a solid as a signed distance field and samples its surface evenly, so rounded and organic forms come out as one continuous surface instead of stacked primitives. Nodes are boxes and cylinders with an optional corner radius, ellipsoids, capsules and tori, each with its own transform and colour. They combine in list order by `union`, `subtract` or `intersect`, each with an optional `smooth` blend radius, and colours blend over the same radius. A subtracted node's colour marks the surface it cuts, which gives recesses such as windows their own colour. Splats lie flat along the surface. For example, a rounded box with a cylindrical bore through it:
-
-```json
-{"nodes":[
-  {"shape":"box","center":[0,0.5,0],"size":[2,1,1],"round":0.15,"color":[0.8,0.1,0.1]},
-  {"shape":"cylinder","center":[0,0.5,0],"size":[0.5,1.2,0.5],"rotate":[90,0,0],"op":"subtract","smooth":0.05,"color":[0.1,0.1,0.1]}
-]}
-```
-
-An `extrusion` node takes a closed `profile` of `[x, y]` points in its local XY plane and extrudes it along local Z by `depth`; `round` rounds both the outline corners and the extruded edges. With `rotate`, the same shape serves as a side, plan or front view. `taper` scales a node's local X and Z across its height, from `[1, 1]` at the bottom to the given values at the top. `mirror` reflects a node across a world plane through the origin, so one node models both sides of a symmetric object.
-
-Designed objects are best modelled from views. For a car body, extrude the side silhouette (hood, windscreen, roof, rear window, boot) across the width, taper it so the cabin leans in, and intersect it with a smooth radius with the plan outline extruded vertically (`rotate: [90, 0, 0]`, profile drawn as `[x, z]`). Then cut mirrored wheel arches and recesses, and add mirrored details. The four-view `render_view` grid shows each silhouette for comparison.
-
-```json
-{"nodes":[
-  {"shape":"extrusion","center":[0,0,0],"depth":1.8,"round":0.06,"taper":[1,0.82],
-   "profile":[[-2.2,0.3],[2.2,0.3],[2.25,0.75],[1.0,0.95],[0.45,1.4],[-0.9,1.42],[-1.6,1.0],[-2.25,0.9]],"color":[0.7,0.06,0.08]},
-  {"shape":"extrusion","center":[0,0.9,0],"depth":2,"rotate":[90,0,0],"op":"intersect","smooth":0.12,
-   "profile":[[-2.25,-0.75],[1.8,-0.9],[2.3,-0.6],[2.3,0.6],[1.8,0.9],[-2.25,0.75]]},
-  {"shape":"cylinder","center":[1.35,0.36,0.9],"size":[0.96,0.6,0.96],"rotate":[90,0,0],"mirror":"z","op":"subtract","smooth":0.04}
-]}
-```
-
-Sampling runs in the editor and takes about a second per 70000 gaussians for a model of around 20 nodes.
+Gaussian data is generated inside the editor rather than sent through tool calls. `create_from_generator` builds one new static resource in memory and adds it as a new layer in one undo entry; it never appends to an existing layer. Created layers have an identity transform, so the data is stored exactly as generated, in world space.
 
 `create_from_generator` runs a [splat-transform generator module](https://github.com/playcanvas/splat-transform#generators-beta), so the same script works in the CLI and the editor. The module exports `class Generator` whose static `create(params)` (optionally async) returns `{ count, columnNames, getRow(index, row) }`. `params` arrive as `[{ name, value }]` with string values, as in the CLI. Columns use the standard 3DGS PLY convention in world space: `x`, `y`, `z`; `scale_0..2` = ln(standard deviation); `rot_0..3` = quaternion `w, x, y, z`; `f_dc_0..2` = `(rgb - 0.5) / 0.28209479177387814`; `opacity` = logit(alpha). Optional `f_rest_*` columns add SH.
 
@@ -141,7 +108,7 @@ export class Generator {
 }
 ```
 
-Generator code runs in a module worker inside a sandboxed iframe without `allow-same-origin`, so it has an opaque origin and no access to the editor page, its DOM, storage or file handles. A content security policy blocks network access. A generator must finish within 10 seconds and produce at most 2000000 gaussians and 64 columns. Errors thrown by the module return `generator_failed`, and overrunning the time limit returns `timeout`. Non-finite values and missing required columns are rejected with `invalid_input`.
+Generator code runs in a worker inside a sandboxed iframe without `allow-same-origin`, so it has an opaque origin and no access to the editor page, its DOM, storage or file handles. A content security policy blocks network access. A generator must finish within 10 seconds and produce at most 2000000 gaussians and 64 columns. Errors thrown by the module return `generator_failed`, and overrunning the time limit returns `timeout`. Non-finite values and missing required columns are rejected with `invalid_input`.
 
 `instance_layer` places up to 128 copies of a layer in one undo entry. Copies share the source's gaussian data, so each costs only a small instance list rather than new data. Each copy applies its own world-space translation, Euler rotation (degrees) and uniform scale to the source, about the source bounds centre unless `center` is given. Build a repeated object once, then instance it. Copies are currently separate layers; rely on the returned `createdLayers` IDs rather than on that layout.
 

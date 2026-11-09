@@ -87,7 +87,7 @@ const OCCLUSION_BLOCK = 8;
 const roundUp = (value: number, alignment: number) => Math.ceil(value / alignment) * alignment;
 
 // projector viewMode values for Scene.viewOverride
-const VIEW_MODES = { property: 1, selection: 2, layers: 3 };
+const VIEW_MODES = { property: 1, selection: 2, layers: 3, shaded: 4 };
 
 type ProjectorVariant = {
     shader: Shader;

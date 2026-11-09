@@ -9,8 +9,7 @@ import { EditorSplatResource } from './editor-splat-resource';
 import { Events } from './events';
 import { buildExportOptions, ExportChoices, ExportType } from './export-options';
 import type { FileType } from './file-handler';
-import { GaussianColumn, GaussianData, PrimitiveSpec, samplePrimitives, sampleSdf, SdfSpec, toColumns } from './generate-splats';
-import { GeneratorParam, runGenerator } from './generator-sandbox';
+import { GaussianColumn, GeneratorParam, runGenerator } from './generator-sandbox';
 import { validateSplatSource } from './io';
 import { Scene, type ViewOverride } from './scene';
 import { Splat } from './splat';
@@ -288,6 +287,8 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
                         applyCamera(s);
                         const basePose = events.invoke('camera.getPose');
                         const base = { position: new Vec3(basePose.position.x, basePose.position.y, basePose.position.z), target: new Vec3(basePose.target.x, basePose.target.y, basePose.target.z) };
+                        // changing the pose leaves orthographic projection, so every tile restores it
+                        const ortho = camera.ortho;
                         scene.viewOverride = viewOverride ?? null;
                         const tiles: RenderTile[] = [];
                         const cameras = [];
@@ -296,6 +297,7 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
                             // distance; the first tile already has the requested pose
                             if (i > 0) events.fire('camera.setPose', base, 0);
                             if (views[i] !== 'current') applyCamera({ view: views[i] as CameraSettings['view'] });
+                            camera.ortho = ortho;
                             camera.onUpdate(0);
                             cameras.push({ view: views[i], camera: cameraInfo() });
                             const pixels = await events.invoke('render.offscreen', tileWidth, tileHeight) as Uint8Array;
@@ -347,20 +349,6 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
             }
         },
         create: {
-            gaussians: (data: GaussianData, name = 'Gaussians', options?: CommandOptions) => createLayer(toColumns(data), name, options),
-            primitives: async (parts: PrimitiveSpec[], name: string = parts.length === 1 ? parts[0].shape : 'Primitives', options?: CommandOptions) => {
-                checkCancelled(options);
-                assertIdle();
-                return await createLayer(toColumns(samplePrimitives(parts)), name, options);
-            },
-            // Sample a signed distance field built from smooth-combined shapes.
-            sdf: async (spec: SdfSpec, name = 'SDF', options?: CommandOptions) => {
-                checkCancelled(options);
-                assertIdle();
-                const data = sampleSdf(spec);
-                if (!data.opacities.length) throw new EditorError('invalid_input', 'The SDF has no surface inside its bounds.');
-                return await createLayer(toColumns(data), name, options);
-            },
             // Run a splat-transform Generator module in an isolated sandbox.
             generator: async (source: string, params: GeneratorParam[] = [], name = 'Generated', options?: CommandOptions) => {
                 checkCancelled(options);

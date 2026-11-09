@@ -1,8 +1,10 @@
 import { checkCancelled, CommandOptions, EditorError } from './editor-command';
-import type { GaussianColumn } from './generate-splats';
 
 // splat-transform passes generator parameters as name/value strings.
 type GeneratorParam = { name: string, value: string };
+
+// One named column of gaussian data, in the 3DGS PLY convention.
+type GaussianColumn = { name: string, data: Float32Array };
 
 const MAX_COUNT = 2_000_000;
 const MAX_COLUMNS = 64;
@@ -101,4 +103,4 @@ const runGenerator = (source: string, params: GeneratorParam[], options?: Comman
 };
 
 export { runGenerator, MAX_COUNT as GENERATOR_MAX_COUNT, TIMEOUT_MS as GENERATOR_TIMEOUT_MS };
-export type { GeneratorParam };
+export type { GaussianColumn, GeneratorParam };

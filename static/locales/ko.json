@@ -430,8 +430,6 @@
     "webmcp.pick_points": "표면 점 선택",
     "webmcp.set_view": "표시 옵션 설정",
     "webmcp.import_url": "URL에서 가져오기",
-    "webmcp.create_primitives": "기본 도형 생성",
-    "webmcp.create_sdf": "SDF 도형 생성",
     "webmcp.create_from_generator": "생성기로 만들기",
     "webmcp.instance_layer": "레이어 인스턴스",
     "webmcp.export_scene": "장면 내보내기"

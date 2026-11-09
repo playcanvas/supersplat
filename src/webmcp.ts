@@ -237,7 +237,7 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
             requireChange(i, ['position', 'view', 'azimuth', 'elevation', 'distance', 'fov', 'orthographic']);
             return editor.viewport.setCamera({ ...i, position: i.position && xyz(i.position), target: i.target && xyz(i.target) }, o);
         });
-    add('render_view', 'Render an image of the scene to check your work, without moving the user\'s view: the camera is restored afterwards. Camera parameters work as in set_camera and default to the current view. No grid, gizmos or markers are drawn. mode "selection" shows the selection on every layer in orange with everything else grey: check it before deleting. mode "property" colours splats by a histogram property (blue = range min, red = max, grey = outside range; faint splats are boosted so they show), defaulting to the measured range: use it to see where floaters or oversized splats are. mode "layers" gives each layer a flat colour. views renders up to four labelled views in one 2x2 image (e.g. ["current","front","right","top"]) to judge 3D layout. Returns image { type: "image", mimeType, data (base64), width, height }, the camera (or cameras per view) and, for analysis modes, a legend; pass a camera to set_camera before screen-space selection. Default size is 512 px on the longest side at the viewport aspect; keep images small, as the result is returned as text.',
+    add('render_view', 'Render an image of the scene to check your work, without moving the user\'s view: the camera is restored afterwards. Camera parameters work as in set_camera and default to the current view. No grid, gizmos or markers are drawn. mode "selection" shows the selection on every layer in orange with everything else grey: check it before deleting. mode "property" colours splats by a histogram property (blue = range min, red = max, grey = outside range; faint splats are boosted so they show), defaulting to the measured range: use it to see where floaters or oversized splats are. mode "layers" gives each layer a flat colour. mode "shaded" lights splats by their surface normals in clay, so bumps, holes and creases show regardless of colour: use it to judge surface shape. views renders up to four labelled views in one 2x2 image (e.g. ["current","front","right","top"]) to judge 3D layout; with orthographic true, named views are true elevations for comparing silhouettes and proportions. Returns image { type: "image", mimeType, data (base64), width, height }, the camera (or cameras per view) and, for analysis modes, a legend; pass a camera to set_camera before screen-space selection. Default size is 512 px on the longest side at the viewport aspect; keep images small, as the result is returned as text.',
         { position: vector('World position; requires target.'),
             target: vector('World look-at point; requires position.'),
             view: enumeration(['front', 'back', 'left', 'right', 'top', 'bottom'], 'Named view around the current target.'),
@@ -250,7 +250,7 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
             height: integer('Image height in pixels.', 16, 2048),
             format: enumeration(['jpeg', 'png'], 'Image format; default jpeg.'),
             quality: number('JPEG quality; default 0.85.', 0.1, 1),
-            mode: enumeration(['color', 'selection', 'property', 'layers'], 'What to show; default color.'),
+            mode: enumeration(['color', 'selection', 'property', 'layers', 'shaded'], 'What to show; default color.'),
             property: string('Property for mode property: x, y, z, distance, camera-depth, red, green, blue, opacity, scale_0..2, volume or surface-area.', 32),
             range: array(number('Bound'), 2, '[min, max] for mode property; default the measured range of visible layers.'),
             views: { type: 'array', items: enumeration(['current', 'front', 'back', 'left', 'right', 'top', 'bottom'], 'View: current uses the camera parameters; named views orbit its target.'), minItems: 1, maxItems: 4, description: 'Views to render into one labelled grid; default ["current"]. width and height size the whole grid.' } }, [],
@@ -282,79 +282,8 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
     add('import_url', 'Import a model from a CORS-enabled HTTP(S) URL as a new layer. Existing layers are kept. Supports PLY, SPLAT, SOG, SPZ and KSPLAT. Optional LOD index; otherwise uses the loader recommended LOD. Import is undoable.',
         { url: string('Absolute HTTP(S) model URL.', 4096), filename: string('Filename with format extension; defaults to URL path.', 256), lod: integer('LOD index, if the source has multiple LODs.', 0, 255) }, ['url'],
         (i, o) => editor.files.importUrl(i.url, i.filename, { ...o, lod: i.lod }), { untrustedContentHint: true });
-    const rgb = (description: string) => array(number('Channel', 0, 1), 3, description);
     const layerName = string('Layer name.', 128);
     const reuse = 'To place an object several times, create it once and use instance_layer.';
-    const part = object({ shape: enumeration(['sphere', 'box', 'plane', 'cylinder', 'cone'], 'Primitive shape.'),
-        center: vector('World-space centre.'),
-        size: array(number('Positive extent.', 1e-6, 1e6), 3, 'Full extents.'),
-        rotate: vector('Euler rotation in degrees; default zero.'),
-        fill: enumeration(['surface', 'volume'], 'Sample the surface or the interior; default surface. Planes are surface only.'),
-        count: integer('Number of gaussians; default 20000.', 1, 1000000),
-        color: rgb('RGB colour; default [1,1,1].'),
-        opacity: number('Opacity; default 1.', 0, 1),
-        splatSize: number('Gaussian standard deviation in world units; derived from sample spacing when omitted.', 1e-9, 1e9) }, ['shape', 'center', 'size']);
-    add('create_primitives', `Create one new layer from one or more primitive shapes sampled evenly in the editor, so a multi-part object (e.g. a tree: trunk cylinder plus cone canopy) is a single layer. size is the full extent along local X/Y/Z; cylinders and cones run along local Y with the cone apex at +Y; planes lie in local XZ (size Y is ignored). Surface fill uses flat splats facing outward; volume fill uses round splats. Colour is flat and unlit. ${reuse} Undoable; returns createdLayer.`,
-        { parts: { type: 'array', items: part, minItems: 1, maxItems: 64, description: 'Shapes to combine; at most 2000000 gaussians in total.' }, name: layerName }, ['parts'], (i, o) => {
-            const parts = (i.parts as Input[]).map((p, index) => {
-                if (p.shape === 'plane' && p.fill === 'volume') throw new EditorError('invalid_input', `input.parts[${index}]: a plane has no volume; use fill surface.`);
-                return {
-                    shape: p.shape,
-                    center: xyz(p.center),
-                    size: xyz(p.size),
-                    rotation: p.rotate ? new Quat().setFromEulerAngles(...p.rotate as [number, number, number]) : new Quat(),
-                    fill: p.fill ?? 'surface',
-                    count: p.count ?? 20000,
-                    color: p.color ?? [1, 1, 1],
-                    opacity: p.opacity ?? 1,
-                    splatSize: p.splatSize
-                };
-            });
-            if (parts.reduce((n, p) => n + p.count, 0) > GENERATOR_MAX_COUNT) throw new EditorError('invalid_input', `At most ${GENERATOR_MAX_COUNT} gaussians in total.`);
-            return editor.create.primitives(parts, i.name, o);
-        });
-    const sdfNode = object({ shape: enumeration(['box', 'ellipsoid', 'cylinder', 'capsule', 'torus', 'extrusion'], 'Shape. Cylinders, capsules and tori run along local Y; a torus\'s tube thickness is size Y. An extrusion is a closed profile in local XY extruded along local Z.'),
-        center: vector('World-space centre.'),
-        size: array(number('Positive extent.', 1e-6, 1e6), 3, 'Full extents; required except for extrusions.'),
-        profile: { type: 'array', items: array(number('Coordinate'), 2, '[x, y] in metres, relative to center.'), minItems: 3, maxItems: 128, description: 'Extrusion outline in local XY, in order around the shape (either direction); required for extrusions.' },
-        depth: number('Extrusion length along local Z, centred; required for extrusions.', 1e-6, 1e6),
-        rotate: vector('Euler rotation in degrees; default zero. [90, 0, 0] turns a profile drawn as [x, z] into a plan view extruded vertically.'),
-        round: number('Corner radius for box, cylinder and extrusion; default 0.', 0, 1e6),
-        taper: array(number('Scale', 0.05, 20), 2, 'Local [x, z] scale at the top (+Y) of the shape relative to its bottom; default [1, 1]. Use for tumblehome and narrowing ends.'),
-        mirror: enumeration(['x', 'y', 'z'], 'Reflect across the world plane through the origin normal to this axis, so one node models both sides of a symmetric object.'),
-        op: enumeration(['union', 'subtract', 'intersect'], 'How this shape combines with the shapes before it; default union. Ignored on the first node.'),
-        smooth: number('Blend radius with the shapes before it; 0 = sharp. Colours blend over the same radius.', 0, 1e6),
-        color: rgb('RGB colour. A subtract or intersect node without a colour keeps the colour of the surface it cuts.') }, ['shape', 'center']);
-    add('create_sdf', `Create one new layer by modelling a solid as a signed distance field and sampling its surface evenly. Shapes combine in order with union, subtract or intersect, each with an optional smooth blend radius, so rounded and organic forms (car bodies, characters, rocks, terrain) come out as one continuous surface rather than stacked boxes. For designed objects, model from views: extrude a side-view profile across the width, intersect it smoothly with a plan-view profile extruded vertically (rotate [90, 0, 0]), taper for tumblehome, then add or cut details; mirror symmetric details. Flat splats face along the surface normal; colours blend where shapes meet. Colour is flat and unlit. ${reuse} Undoable; returns createdLayer.`,
-        { nodes: { type: 'array', items: sdfNode, minItems: 1, maxItems: 64, description: 'Shapes in combination order.' },
-            count: integer('Number of gaussians; default 100000.', 1, 1000000),
-            opacity: number('Opacity; default 1.', 0, 1),
-            splatSize: number('Gaussian standard deviation in world units; derived from sample spacing when omitted.', 1e-9, 1e9),
-            name: layerName }, ['nodes'],
-        (i, o) => editor.create.sdf({
-            nodes: (i.nodes as Input[]).map((n, index) => {
-                if (n.shape === 'extrusion' ? !(n.profile && n.depth) : !n.size) {
-                    throw new EditorError('invalid_input', `input.nodes[${index}]: ${n.shape === 'extrusion' ? 'an extrusion needs profile and depth' : 'size is required'}.`);
-                }
-                return {
-                    shape: n.shape,
-                    center: xyz(n.center),
-                    size: n.size && xyz(n.size),
-                    profile: n.profile,
-                    depth: n.depth,
-                    rotation: n.rotate ? new Quat().setFromEulerAngles(...n.rotate as [number, number, number]) : new Quat(),
-                    round: n.round,
-                    taper: n.taper,
-                    mirror: n.mirror,
-                    op: n.op,
-                    smooth: n.smooth,
-                    color: n.color
-                };
-            }),
-            count: i.count ?? 100000,
-            opacity: i.opacity ?? 1,
-            splatSize: i.splatSize
-        }, i.name, o));
     add('create_from_generator', `Create one new layer by running a splat-transform generator module in the editor. Use this for procedural or computed content instead of sending gaussians as data. source is an ES module exporting class Generator with static create(params) (may be async) returning { count, columnNames, getRow(index, row) }; getRow fills row[name] for every column. params arrive as [{name, value}] with string values, as in the splat-transform CLI. Required columns, in world space: x, y, z; scale_0..2 = ln(standard deviation); rot_0..3 = quaternion w, x, y, z; f_dc_0..2 = (rgb - 0.5) / 0.28209479177387814; opacity = logit(alpha). Optional f_rest_* add SH. The module runs in an isolated sandbox with no DOM, storage or network, a ${GENERATOR_TIMEOUT_MS / 1000}s limit and at most ${GENERATOR_MAX_COUNT} gaussians and 64 columns. ${reuse} Undoable; returns createdLayer.`,
         { source: string('ES module source code.', 200000),
             params: { type: 'array', items: object({ name: string('Parameter name.', 64), value: { type: 'string', description: 'Parameter value.', maxLength: 4096 } }, ['name', 'value']), minItems: 0, maxItems: 64, description: 'Parameters passed to Generator.create.' },

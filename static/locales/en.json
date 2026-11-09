@@ -430,8 +430,6 @@
     "webmcp.pick_points": "Pick surface points",
     "webmcp.set_view": "Set display options",
     "webmcp.import_url": "Import from URL",
-    "webmcp.create_primitives": "Create primitives",
-    "webmcp.create_sdf": "Create SDF shape",
     "webmcp.create_from_generator": "Create from generator",
     "webmcp.instance_layer": "Instance layer",
     "webmcp.export_scene": "Export scene"

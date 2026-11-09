@@ -75,9 +75,10 @@ const specialSort = (instances: MeshInstance[], numInstances: number, cameraPos:
 const FRAME_TIMING_WINDOW = 180;
 
 // render_view analysis views: colour by property (a histogram property mode
-// mapped over range), highlight the selection, or flat colour per layer
+// mapped over range), highlight the selection, flat colour per layer, or
+// shade by splat normal
 type ViewOverride = {
-    mode: 'property' | 'selection' | 'layers';
+    mode: 'property' | 'selection' | 'layers' | 'shaded';
     prop?: number;
     range?: [number, number];
     color?: [number, number, number, number];

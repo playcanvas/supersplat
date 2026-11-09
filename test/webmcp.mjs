@@ -1,8 +1,6 @@
 import assert from 'node:assert/strict';
-import { BoundingBox, Color, Mat4, Quat, Vec3 } from 'playcanvas';
+import { BoundingBox, Color, Mat4, Quat } from 'playcanvas';
 
-import { SH_C0 } from './.build/src/color-grade.js';
-import { samplePrimitives, sampleSdf, toColumns } from './.build/src/generate-splats.js';
 import { histogramStats, mergeBins } from './.build/src/histogram-stats.js';
 import { createWebMCPTools, registerWebMCP } from './.build/src/webmcp.js';
 import { setup } from './editor-commands.mjs';
@@ -200,50 +198,19 @@ const checks = {
             const registered = [];
             const dispose = registerWebMCP(api, { registerTool: (tool, options) => registered.push({ tool, options }) });
             await tick();
-            assert.equal(registered.length, 29);
-            assert.equal(new Set(registered.map(r => r.tool.name)).size, 29);
+            assert.equal(registered.length, 27);
+            assert.equal(new Set(registered.map(r => r.tool.name)).size, 27);
             assert.equal(registered.find(r => r.tool.name === 'get_scene').tool.annotations.readOnlyHint, true);
             dispose();
             assert(registered.every(r => r.options.signal.aborted));
         });
     },
 
-    async 'created data uses the 3DGS column convention in world space'() {
-        const s = Math.SQRT1_2;
-        const columns = toColumns({
-            positions: new Float32Array([1, 2, 3, -1, 0, 0]),
-            scales: new Float32Array([0.1, 0.2, 0.3, 1, 1, 1]),
-            rotations: new Float32Array([0, s, 0, s, 0, 0, 0, 1]),
-            colors: new Float32Array([1, 0, 0.5, 0, 1, 0]),
-            opacities: new Float32Array([0.25, 1])
-        });
-        const col = Object.fromEntries(columns.map(c => [c.name, c.data]));
-        const row = i => Object.fromEntries(Object.entries(col).map(([k, v]) => [k, v[i]]));
-        const near = (a, b) => a.forEach((v, i) => assert(Math.abs(v - b[i]) < 1e-5, `${a} != ${b}`));
-        const first = row(0);
-        near([first.x, first.y, first.z], [1, 2, 3]);
-        near([first.f_dc_0, first.f_dc_1, first.f_dc_2].map(v => v * SH_C0 + 0.5), [1, 0, 0.5]);
-        near([1 / (1 + Math.exp(-first.opacity))], [0.25]);
-        near([first.scale_0, first.scale_1, first.scale_2].map(Math.exp), [0.1, 0.2, 0.3]);
-        // rot_0 is w; 90 degrees about Y takes +X to -Z
-        const x = new Quat(first.rot_1, first.rot_2, first.rot_3, first.rot_0).transformVector(Vec3.RIGHT);
-        near([x.x, x.y, x.z], [0, 0, -1]);
-        near([row(1).rot_0, row(1).opacity > 10 ? 1 : 0], [1, 1]);
-    },
-
     async 'creation tools reject invalid input before creating anything'() {
         await use(async ({ call, api, history }) => {
             let created = 0;
-            api.create.primitives = api.create.generator = api.layers.instance = () => { created++; return {}; };
-            const box = { shape: 'box', center: [0, 0, 0], size: [1, 1, 1] };
+            api.create.generator = api.layers.instance = () => { created++; return {}; };
             for (const [name, input] of [
-                ['create_primitives', { parts: [] }],
-                ['create_primitives', { parts: [{ ...box, shape: 'plane', fill: 'volume' }] }],
-                ['create_primitives', { parts: [{ ...box, size: [1, 0, 1] }] }],
-                ['create_primitives', { parts: [{ ...box, shape: 'torus' }] }],
-                ['create_primitives', { parts: [{ ...box, count: 0 }] }],
-                ['create_primitives', { parts: [{ ...box, count: 1000000 }, { ...box, count: 1000000 }, { ...box, count: 1 }] }],
-                ['create_primitives', box],
                 ['create_from_generator', {}],
                 ['create_from_generator', { source: ' ' }],
                 ['create_from_generator', { source: 'x', params: [{ name: 'n' }] }],
@@ -264,147 +231,19 @@ const checks = {
     async 'creation tools pass world-space arguments to the editor API'() {
         await use(async ({ call, api }) => {
             const calls = [];
-            api.create.primitives = (...args) => { calls.push(['primitives', ...args]); return {}; };
             api.create.generator = (...args) => { calls.push(['generator', ...args]); return {}; };
             api.layers.instance = (...args) => { calls.push(['instance', ...args]); return {}; };
-            assert.equal((await call('create_primitives', { name: 'tree', parts: [
-                { shape: 'cylinder', center: [0, 0.35, 0], size: [0.1, 0.7, 0.1], count: 10 },
-                { shape: 'cone', center: [0, 1, 0], size: [1, 1, 1], rotate: [0, 90, 0], fill: 'volume', color: [0, 1, 0], opacity: 0.5, splatSize: 0.02 }
-            ] })).ok, true);
-            const [, parts, name] = calls[0];
-            assert.equal(name, 'tree');
-            assert.equal(parts[0].count, 10);
-            assert.equal(parts[0].fill, 'surface');
-            assert.deepEqual(parts[0].color, [1, 1, 1]);
-            assert.equal(parts[1].count, 20000);
-            assert(parts[1].rotation.equals(new Quat().setFromEulerAngles(0, 90, 0)));
-            assert.deepEqual([parts[1].center.y, parts[1].fill, parts[1].opacity, parts[1].splatSize], [1, 'volume', 0.5, 0.02]);
-
             await call('create_from_generator', { source: 'export class Generator {}', params: [{ name: 'n', value: '5' }] });
-            assert.deepEqual(calls[1].slice(0, 4), ['generator', 'export class Generator {}', [{ name: 'n', value: '5' }], undefined]);
+            assert.deepEqual(calls[0].slice(0, 4), ['generator', 'export class Generator {}', [{ name: 'n', value: '5' }], undefined]);
 
             await call('instance_layer', { layer: 1, copies: [{ translate: [1, 0, 0] }, { rotate: [0, 45, 0], scale: 2, center: [0, 0, 0] }], name: 'tree' });
-            const [, layer, copies, prefix] = calls[2];
+            const [, layer, copies, prefix] = calls[1];
             assert.deepEqual([layer, prefix, copies.length], [1, 'tree', 2]);
             assert.equal(copies[0].translate.x, 1);
             assert.equal(copies[0].rotate, undefined);
             assert(copies[1].rotate.equals(new Quat().setFromEulerAngles(0, 45, 0)));
             assert.deepEqual([copies[1].scale, copies[1].center.x], [2, 0]);
         });
-    },
-
-    async 'sdf samples lie on the combined surface with blended colours'() {
-        const node = (shape, center, size, extra = {}) => ({ shape, center: new Vec3(...center), size: new Vec3(...size), rotation: new Quat(), ...extra });
-        // a unit sphere with a box bite taken out of its +x side
-        const bitten = sampleSdf({ count: 4000, opacity: 1, nodes: [
-            node('ellipsoid', [0, 0, 0], [2, 2, 2], { color: [1, 0, 0] }),
-            node('box', [1, 0, 0], [1, 1, 1], { op: 'subtract', color: [0, 0, 1] })
-        ] });
-        assert.equal(bitten.opacities.length, 4000);
-        let cut = 0;
-        for (let i = 0; i < 4000; i++) {
-            const [x, y, z] = bitten.positions.subarray(i * 3, i * 3 + 3);
-            const inCutter = Math.abs(x - 1) < 0.49 && Math.abs(y) < 0.49 && Math.abs(z) < 0.49;
-            assert(!inCutter, `sample ${i} inside the subtracted box`);
-            const onSphere = Math.abs(Math.hypot(x, y, z) - 1) < 0.02;
-            const onCut = Math.abs(x - 0.5) < 0.02 || Math.abs(Math.abs(y) - 0.5) < 0.02 || Math.abs(Math.abs(z) - 0.5) < 0.02;
-            assert(onSphere || onCut, `sample ${i} off the surface: ${x}, ${y}, ${z}`);
-            // the cut faces take the cutter's colour
-            if (!onSphere) {
-                cut++;
-                assert(bitten.colors[i * 3 + 2] > 0.9, 'cut face colour');
-            }
-            // splats are flat and face along the surface
-            assert(bitten.scales[i * 3 + 2] < bitten.scales[i * 3]);
-        }
-        assert(cut > 100, `only ${cut} samples on the cut`);
-
-        // a smooth union blends colour across the seam and stays deterministic
-        const spec = { count: 2000, opacity: 1, nodes: [
-            node('box', [-0.5, 0, 0], [1, 1, 1], { color: [1, 0, 0] }),
-            node('box', [0.5, 0, 0], [1, 1, 1], { color: [0, 0, 1], smooth: 0.3 })
-        ] };
-        const blended = sampleSdf(spec);
-        let mixed = 0;
-        for (let i = 0; i < 2000; i++) if (blended.colors[i * 3] > 0.2 && blended.colors[i * 3 + 2] > 0.2) mixed++;
-        assert(mixed > 20, `only ${mixed} blended samples`);
-        assert.deepEqual(sampleSdf(spec).positions, blended.positions);
-
-        // nothing to sample: a subtraction that removes everything
-        const empty = sampleSdf({ count: 100, opacity: 1, nodes: [node('box', [0, 0, 0], [1, 1, 1]), node('box', [0, 0, 0], [2, 2, 2], { op: 'subtract' })] });
-        assert.equal(empty.opacities.length, 0);
-    },
-
-    async 'sdf extrusions, tapers and mirrors shape the surface'() {
-        const node = (shape, center, extra = {}) => ({ shape, center: new Vec3(...center), rotation: new Quat(), ...extra });
-        // a right-triangle prism: profile in XY, extruded 2 along Z
-        const prism = sampleSdf({ count: 3000, opacity: 1, nodes: [node('extrusion', [0, 0, 0], { profile: [[0, 0], [2, 0], [0, 1]], depth: 2 })] });
-        assert.equal(prism.opacities.length, 3000);
-        for (let i = 0; i < 3000; i++) {
-            const [x, y, z] = prism.positions.subarray(i * 3, i * 3 + 3);
-            const onCap = Math.abs(Math.abs(z) - 1) < 0.02 && x >= -0.02 && y >= -0.02 && x / 2 + y <= 1.02;
-            const onSide = Math.abs(z) <= 1.02 && (Math.abs(x) < 0.02 || Math.abs(y) < 0.02 || Math.abs((x / 2 + y - 1) / Math.hypot(0.5, 1)) < 0.02);
-            assert(onCap || onSide, `prism sample ${i} off the surface: ${x}, ${y}, ${z}`);
-        }
-        // a plan-view profile drawn as [x, z] and rotated [90, 0, 0] extrudes vertically
-        const plan = sampleSdf({ count: 1000, opacity: 1, nodes: [{ ...node('extrusion', [0, 0, 0], { profile: [[-1, -0.5], [1, -0.5], [1, 0.5], [-1, 0.5]], depth: 0.4 }), rotation: new Quat().setFromEulerAngles(90, 0, 0) }] });
-        for (let i = 0; i < 1000; i++) {
-            const [x, y, z] = plan.positions.subarray(i * 3, i * 3 + 3);
-            assert(Math.abs(x) < 1.02 && Math.abs(z) < 0.52 && Math.abs(y) < 0.22, `plan sample ${i}: ${x}, ${y}, ${z}`);
-        }
-        // a box tapered to half width in z at its top
-        const tapered = sampleSdf({ count: 3000, opacity: 1, nodes: [node('box', [0, 0, 0], { size: new Vec3(1, 2, 1), taper: [1, 0.5] })] });
-        let topWidth = 0, bottomWidth = 0;
-        for (let i = 0; i < 3000; i++) {
-            const [, y, z] = tapered.positions.subarray(i * 3, i * 3 + 3);
-            if (y > 0.9) topWidth = Math.max(topWidth, Math.abs(z));
-            if (y < -0.9) bottomWidth = Math.max(bottomWidth, Math.abs(z));
-        }
-        assert(Math.abs(topWidth - 0.25) < 0.04 && Math.abs(bottomWidth - 0.5) < 0.04, `taper widths ${topWidth}, ${bottomWidth}`);
-        // a sphere at z = 1 mirrored across z appears on both sides in equal measure
-        const mirrored = sampleSdf({ count: 2000, opacity: 1, nodes: [
-            node('box', [0, 0, 0], { size: new Vec3(0.2, 0.2, 0.2) }),
-            node('ellipsoid', [0, 0, 1], { size: new Vec3(0.5, 0.5, 0.5), mirror: 'z' })
-        ] });
-        let front = 0, back = 0;
-        for (let i = 0; i < mirrored.opacities.length; i++) {
-            const z = mirrored.positions[i * 3 + 2];
-            if (z > 0.7) front++;
-            if (z < -0.7) back++;
-        }
-        assert(front > 500 && back > 500 && Math.abs(front - back) < 0.2 * front, `mirror counts ${front}, ${back}`);
-    },
-
-    async 'create_sdf validates and maps its arguments'() {
-        await use(async ({ call, api }) => {
-            const calls = [];
-            api.create.sdf = (...args) => { calls.push(args); return {}; };
-            const box = { shape: 'box', center: [0, 0, 0], size: [1, 1, 1] };
-            for (const input of [
-                { nodes: [] }, { nodes: [{ ...box, shape: 'cone' }] }, { nodes: [{ ...box, op: 'xor' }] }, { nodes: [{ ...box, smooth: -1 }] }, { nodes: [box], count: 0 },
-                { nodes: [{ shape: 'box', center: [0, 0, 0] }] },
-                { nodes: [{ shape: 'extrusion', center: [0, 0, 0], depth: 1 }] },
-                { nodes: [{ shape: 'extrusion', center: [0, 0, 0], depth: 1, profile: [[0, 0], [1, 0]] }] },
-                { nodes: [{ ...box, taper: [1] }] },
-                { nodes: [{ ...box, mirror: 'w' }] }
-            ]) {
-                assert.equal((await call('create_sdf', input)).error?.code, 'invalid_input', JSON.stringify(input));
-            }
-            assert.equal(calls.length, 0);
-            await call('create_sdf', { name: 'car', nodes: [{ ...box, round: 0.1 }, { shape: 'cylinder', center: [1, 0, 0], size: [0.5, 2, 0.5], rotate: [90, 0, 0], op: 'subtract', smooth: 0.05 }] });
-            const [spec, name] = calls[0];
-            assert.deepEqual([name, spec.count, spec.opacity, spec.nodes[0].round, spec.nodes[1].op, spec.nodes[1].smooth], ['car', 100000, 1, 0.1, 'subtract', 0.05]);
-            assert(spec.nodes[1].rotation.equals(new Quat().setFromEulerAngles(90, 0, 0)));
-        });
-    },
-
-    async 'multi-part primitives concatenate their parts in order'() {
-        const base = { center: new Vec3(), size: new Vec3(1, 1, 1), rotation: new Quat(), fill: 'surface', color: [1, 0, 0], opacity: 1 };
-        const data = samplePrimitives([{ ...base, shape: 'sphere', count: 100 }, { ...base, shape: 'box', count: 50, color: [0, 0, 1], center: new Vec3(5, 0, 0) }]);
-        assert.equal(data.opacities.length, 150);
-        assert.deepEqual(Array.from(data.colors.subarray(0, 3)), [1, 0, 0]);
-        assert.deepEqual(Array.from(data.colors.subarray(100 * 3, 100 * 3 + 3)), [0, 0, 1]);
-        assert(data.positions[100 * 3] > 4);
     },
 
     async 'histogram stats interpolate percentiles within bins'() {
@@ -454,66 +293,6 @@ const checks = {
             const [, analysis] = calls[2];
             assert.deepEqual([analysis.mode, analysis.property, analysis.range, analysis.views], ['property', 'opacity', [0, 0.1], ['current', 'top']]);
         });
-    },
-
-    async 'primitives sample exact counts on their surface or within their volume'() {
-        const rotation = new Quat().setFromEulerAngles(30, 45, 60);
-        const inverse = rotation.clone().invert();
-        const center = new Vec3(1, -2, 3);
-        const size = new Vec3(2, 3, 4);
-        const local = (data, i) => {
-            const p = new Vec3(data.positions[i * 3], data.positions[i * 3 + 1], data.positions[i * 3 + 2]).sub(center);
-            inverse.transformVector(p, p);
-            return new Vec3(p.x / size.x, p.y / size.y, p.z / size.z);
-        };
-        const N = 20001; // leaves a remainder for every multi-part surface
-        const spec = { center, size, rotation, count: N, color: [1, 1, 1], opacity: 1 };
-        for (const shape of ['sphere', 'box', 'plane', 'cylinder', 'cone']) {
-            for (const fill of shape === 'plane' ? ['surface'] : ['surface', 'volume']) {
-                const data = samplePrimitives([{ ...spec, shape, fill }]);
-                assert.equal(data.opacities.length, N);
-                assert(data.scales.every(v => Number.isFinite(v) && v > 0), `${shape} ${fill} scales`);
-                const mean = new Vec3();
-                for (let i = 0; i < N; i++) {
-                    const p = local(data, i);
-                    mean.add(p);
-                    const r = Math.hypot(p.x, p.z);
-                    const inside = {
-                        sphere: p.length() <= 0.5 + 1e-4,
-                        box: Math.max(Math.abs(p.x), Math.abs(p.y), Math.abs(p.z)) <= 0.5 + 1e-4,
-                        plane: Math.abs(p.y) < 1e-4 && Math.max(Math.abs(p.x), Math.abs(p.z)) <= 0.5 + 1e-4,
-                        cylinder: r <= 0.5 + 1e-4 && Math.abs(p.y) <= 0.5 + 1e-4,
-                        cone: Math.abs(p.y) <= 0.5 + 1e-4 && r <= (0.5 - p.y) / 2 + 1e-4
-                    }[shape];
-                    assert(inside, `${shape} ${fill} sample ${i} outside: ${p}`);
-                    if (fill === 'surface') {
-                        const onSurface = {
-                            sphere: Math.abs(p.length() - 0.5) < 1e-4,
-                            box: Math.abs(Math.max(Math.abs(p.x), Math.abs(p.y), Math.abs(p.z)) - 0.5) < 1e-4,
-                            plane: true,
-                            cylinder: Math.abs(r - 0.5) < 1e-4 || Math.abs(Math.abs(p.y) - 0.5) < 1e-4,
-                            cone: Math.abs(r - (0.5 - p.y) / 2) < 1e-4 || Math.abs(p.y + 0.5) < 1e-4
-                        }[shape];
-                        assert(onSurface, `${shape} sample ${i} off surface: ${p}`);
-                    }
-                }
-                mean.mulScalar(1 / N);
-                // even coverage: the centroid of symmetric shapes stays near the centre
-                if (shape !== 'cone') assert(mean.length() < 0.02, `${shape} ${fill} centroid ${mean}`);
-            }
-        }
-
-        // surface splats are flat and their thin axis faces outward
-        const sphere = samplePrimitives([{ ...spec, shape: 'sphere', fill: 'surface', size: new Vec3(2, 2, 2) }]);
-        for (let i = 0; i < N; i++) {
-            const q = new Quat(...sphere.rotations.subarray(i * 4, i * 4 + 4));
-            const normal = q.transformVector(Vec3.BACK);
-            const radial = new Vec3(...sphere.positions.subarray(i * 3, i * 3 + 3)).sub(center).normalize();
-            assert(normal.dot(radial) > 0.999, `sphere normal ${i}`);
-            assert(sphere.scales[i * 3 + 2] < sphere.scales[i * 3]);
-        }
-        assert.deepEqual(samplePrimitives([{ ...spec, shape: 'box', fill: 'volume' }]).positions,
-            samplePrimitives([{ ...spec, shape: 'box', fill: 'volume' }]).positions);
     }
 };
 

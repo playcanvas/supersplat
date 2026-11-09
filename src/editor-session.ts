@@ -9,7 +9,7 @@ import { EditorSplatResource } from './editor-splat-resource';
 import { Events } from './events';
 import { buildExportOptions, ExportChoices, ExportType } from './export-options';
 import type { FileType } from './file-handler';
-import { GaussianColumn, GaussianData, PrimitiveSpec, samplePrimitives, toColumns } from './generate-splats';
+import { GaussianColumn, GaussianData, PrimitiveSpec, samplePrimitives, sampleSdf, SdfSpec, toColumns } from './generate-splats';
 import { GeneratorParam, runGenerator } from './generator-sandbox';
 import { validateSplatSource } from './io';
 import { Scene, type ViewOverride } from './scene';
@@ -352,6 +352,14 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
                 checkCancelled(options);
                 assertIdle();
                 return await createLayer(toColumns(samplePrimitives(parts)), name, options);
+            },
+            // Sample a signed distance field built from smooth-combined shapes.
+            sdf: async (spec: SdfSpec, name = 'SDF', options?: CommandOptions) => {
+                checkCancelled(options);
+                assertIdle();
+                const data = sampleSdf(spec);
+                if (!data.opacities.length) throw new EditorError('invalid_input', 'The SDF has no surface inside its bounds.');
+                return await createLayer(toColumns(data), name, options);
             },
             // Run a splat-transform Generator module in an isolated sandbox.
             generator: async (source: string, params: GeneratorParam[] = [], name = 'Generated', options?: CommandOptions) => {

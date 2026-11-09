@@ -313,6 +313,35 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
             if (parts.reduce((n, p) => n + p.count, 0) > GENERATOR_MAX_COUNT) throw new EditorError('invalid_input', `At most ${GENERATOR_MAX_COUNT} gaussians in total.`);
             return editor.create.primitives(parts, i.name, o);
         });
+    const sdfNode = object({ shape: enumeration(['box', 'ellipsoid', 'cylinder', 'capsule', 'torus'], 'Shape. Cylinders, capsules and tori run along local Y; a torus\'s tube thickness is size Y.'),
+        center: vector('World-space centre.'),
+        size: array(number('Positive extent.', 1e-6, 1e6), 3, 'Full extents.'),
+        rotate: vector('Euler rotation in degrees; default zero.'),
+        round: number('Corner radius for box and cylinder; default 0.', 0, 1e6),
+        op: enumeration(['union', 'subtract', 'intersect'], 'How this shape combines with the shapes before it; default union. Ignored on the first node.'),
+        smooth: number('Blend radius with the shapes before it; 0 = sharp. Colours blend over the same radius.', 0, 1e6),
+        color: rgb('RGB colour. A subtract or intersect node without a colour keeps the colour of the surface it cuts.') }, ['shape', 'center', 'size']);
+    add('create_sdf', `Create one new layer by modelling a solid as a signed distance field and sampling its surface evenly. Shapes combine in order with union, subtract or intersect, each with an optional smooth blend radius, so rounded and organic forms (car bodies, characters, rocks, terrain) come out as one continuous surface rather than stacked boxes. Flat splats face along the surface normal; colours blend where shapes meet. Colour is flat and unlit. ${reuse} Undoable; returns createdLayer.`,
+        { nodes: { type: 'array', items: sdfNode, minItems: 1, maxItems: 64, description: 'Shapes in combination order.' },
+            count: integer('Number of gaussians; default 100000.', 1, 1000000),
+            opacity: number('Opacity; default 1.', 0, 1),
+            splatSize: number('Gaussian standard deviation in world units; derived from sample spacing when omitted.', 1e-9, 1e9),
+            name: layerName }, ['nodes'],
+        (i, o) => editor.create.sdf({
+            nodes: (i.nodes as Input[]).map(n => ({
+                shape: n.shape,
+                center: xyz(n.center),
+                size: xyz(n.size),
+                rotation: n.rotate ? new Quat().setFromEulerAngles(...n.rotate as [number, number, number]) : new Quat(),
+                round: n.round,
+                op: n.op,
+                smooth: n.smooth,
+                color: n.color
+            })),
+            count: i.count ?? 100000,
+            opacity: i.opacity ?? 1,
+            splatSize: i.splatSize
+        }, i.name, o));
     add('create_from_generator', `Create one new layer by running a splat-transform generator module in the editor. Use this for procedural or computed content instead of sending gaussians as data. source is an ES module exporting class Generator with static create(params) (may be async) returning { count, columnNames, getRow(index, row) }; getRow fills row[name] for every column. params arrive as [{name, value}] with string values, as in the splat-transform CLI. Required columns, in world space: x, y, z; scale_0..2 = ln(standard deviation); rot_0..3 = quaternion w, x, y, z; f_dc_0..2 = (rgb - 0.5) / 0.28209479177387814; opacity = logit(alpha). Optional f_rest_* add SH. The module runs in an isolated sandbox with no DOM, storage or network, a ${GENERATOR_TIMEOUT_MS / 1000}s limit and at most ${GENERATOR_MAX_COUNT} gaussians and 64 columns. ${reuse} Undoable; returns createdLayer.`,
         { source: string('ES module source code.', 200000),
             params: { type: 'array', items: object({ name: string('Parameter name.', 64), value: { type: 'string', description: 'Parameter value.', maxLength: 4096 } }, ['name', 'value']), minItems: 0, maxItems: 64, description: 'Parameters passed to Generator.create.' },

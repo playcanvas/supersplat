@@ -431,6 +431,7 @@
     "webmcp.set_view": "表示設定を変更",
     "webmcp.import_url": "URLからインポート",
     "webmcp.create_primitives": "プリミティブを作成",
+    "webmcp.create_sdf": "SDF形状を作成",
     "webmcp.create_from_generator": "ジェネレーターから作成",
     "webmcp.instance_layer": "レイヤーをインスタンス化",
     "webmcp.export_scene": "シーンをエクスポート"

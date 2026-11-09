@@ -165,7 +165,7 @@ async function browserChecks(url, enabled) {
         return result;
     };
     const near = (a, b) => Math.abs(a - b) < 0.001;
-    check(tools.length === 28 && tools.every(t => t.title && !t.title.startsWith('webmcp.')), 'native discovery exposes 28 titled tools');
+    check(tools.length === 29 && tools.every(t => t.title && !t.title.startsWith('webmcp.')), 'native discovery exposes 29 titled tools');
     const initial = await call('get_scene');
     check(initial.totalLayers === 0, 'empty scene inspection', initial);
     await call('set_selection', { layer: 99, mode: 'all' }, 'layer_not_found');
@@ -385,6 +385,14 @@ async function browserChecks(url, enabled) {
     const gb = generated.layers[0].bounds;
     check(generated.layers[0].total === 2 && generated.layers[0].name === 'points' && within([[gb.min[0], -1], [gb.max[1], 2], [gb.min[2], -3]]),
         'create_from_generator runs a splat-transform generator module in world space', generated);
+    const sdf = await call('create_sdf', { name: 'bored', count: 5000, nodes: [
+        { shape: 'box', center: [0, 3, 0], size: [2, 1, 1], round: 0.15, color: [0.8, 0.1, 0.1] },
+        { shape: 'cylinder', center: [0, 3, 0], size: [0.5, 1.2, 0.5], rotate: [90, 0, 0], op: 'subtract', smooth: 0.05, color: [0.1, 0.1, 0.1] }
+    ] });
+    const sb = sdf.layers[0].bounds;
+    check(sdf.layers[0].total === 5000 && sdf.layers[0].name === 'bored' && within([[sb.min[0], -1], [sb.max[0], 1], [sb.min[1], 2.5], [sb.max[2], 0.5]]),
+        'create_sdf samples a combined surface in world space', sdf);
+    await call('undo');
     await call('export_scene', { format: 'ply', filename: 'generated.ply', scope: 'layer', layer: generated.createdLayer });
     for (let i = 0; i < 100 && !(await fetch(`${url}downloads/generated.ply`)).ok; i++) await new Promise(resolve => setTimeout(resolve, 50));
     const reloaded = await call('import_url', { url: `${url}downloads/generated.ply` });
@@ -399,13 +407,13 @@ async function browserChecks(url, enabled) {
     let localized;
     for (let i = 0; i < 100; i++) {
         localized = await provider.getTools();
-        if (localized.length === 28 && localized.find(t => t.name === 'get_scene').title !== tools.find(t => t.name === 'get_scene').title) break;
+        if (localized.length === 29 && localized.find(t => t.name === 'get_scene').title !== tools.find(t => t.name === 'get_scene').title) break;
         await new Promise(resolve => setTimeout(resolve, 20));
     }
-    check(localized.length === 28 && new Set(localized.map(t => t.name)).size === 28 && localized.find(t => t.name === 'get_scene').title !== tools.find(t => t.name === 'get_scene').title, 'live language change replaces tool titles without duplicates');
+    check(localized.length === 29 && new Set(localized.map(t => t.name)).size === 29 && localized.find(t => t.name === 'get_scene').title !== tools.find(t => t.name === 'get_scene').title, 'live language change replaces tool titles without duplicates');
     const localizedScene = JSON.parse(await provider.executeTool(localized.find(t => t.name === 'get_scene'), {}));
     check(localizedScene.ok && localizedScene.totalLayers === 1, 'localized native tools retain the scene');
     language.value = 'en';
-    check(used.size === 28, 'all 28 native tools were executed', [...used]);
+    check(used.size === 29, 'all 29 native tools were executed', [...used]);
     return { checks, used: [...used] };
 }

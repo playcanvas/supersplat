@@ -431,6 +431,7 @@
     "webmcp.set_view": "Configurar visualización",
     "webmcp.import_url": "Importar desde URL",
     "webmcp.create_primitives": "Crear primitivas",
+    "webmcp.create_sdf": "Crear forma SDF",
     "webmcp.create_from_generator": "Crear desde generador",
     "webmcp.instance_layer": "Instanciar capa",
     "webmcp.export_scene": "Exportar escena"

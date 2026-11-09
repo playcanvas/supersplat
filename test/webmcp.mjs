@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { BoundingBox, Color, Mat4, Quat, Vec3 } from 'playcanvas';
 
 import { SH_C0 } from './.build/src/color-grade.js';
-import { samplePrimitives, toColumns } from './.build/src/generate-splats.js';
+import { samplePrimitives, sampleSdf, toColumns } from './.build/src/generate-splats.js';
 import { histogramStats, mergeBins } from './.build/src/histogram-stats.js';
 import { createWebMCPTools, registerWebMCP } from './.build/src/webmcp.js';
 import { setup } from './editor-commands.mjs';
@@ -200,8 +200,8 @@ const checks = {
             const registered = [];
             const dispose = registerWebMCP(api, { registerTool: (tool, options) => registered.push({ tool, options }) });
             await tick();
-            assert.equal(registered.length, 28);
-            assert.equal(new Set(registered.map(r => r.tool.name)).size, 28);
+            assert.equal(registered.length, 29);
+            assert.equal(new Set(registered.map(r => r.tool.name)).size, 29);
             assert.equal(registered.find(r => r.tool.name === 'get_scene').tool.annotations.readOnlyHint, true);
             dispose();
             assert(registered.every(r => r.options.signal.aborted));
@@ -290,6 +290,64 @@ const checks = {
             assert.equal(copies[0].rotate, undefined);
             assert(copies[1].rotate.equals(new Quat().setFromEulerAngles(0, 45, 0)));
             assert.deepEqual([copies[1].scale, copies[1].center.x], [2, 0]);
+        });
+    },
+
+    async 'sdf samples lie on the combined surface with blended colours'() {
+        const node = (shape, center, size, extra = {}) => ({ shape, center: new Vec3(...center), size: new Vec3(...size), rotation: new Quat(), ...extra });
+        // a unit sphere with a box bite taken out of its +x side
+        const bitten = sampleSdf({ count: 4000, opacity: 1, nodes: [
+            node('ellipsoid', [0, 0, 0], [2, 2, 2], { color: [1, 0, 0] }),
+            node('box', [1, 0, 0], [1, 1, 1], { op: 'subtract', color: [0, 0, 1] })
+        ] });
+        assert.equal(bitten.opacities.length, 4000);
+        let cut = 0;
+        for (let i = 0; i < 4000; i++) {
+            const [x, y, z] = bitten.positions.subarray(i * 3, i * 3 + 3);
+            const inCutter = Math.abs(x - 1) < 0.49 && Math.abs(y) < 0.49 && Math.abs(z) < 0.49;
+            assert(!inCutter, `sample ${i} inside the subtracted box`);
+            const onSphere = Math.abs(Math.hypot(x, y, z) - 1) < 0.02;
+            const onCut = Math.abs(x - 0.5) < 0.02 || Math.abs(Math.abs(y) - 0.5) < 0.02 || Math.abs(Math.abs(z) - 0.5) < 0.02;
+            assert(onSphere || onCut, `sample ${i} off the surface: ${x}, ${y}, ${z}`);
+            // the cut faces take the cutter's colour
+            if (!onSphere) {
+                cut++;
+                assert(bitten.colors[i * 3 + 2] > 0.9, 'cut face colour');
+            }
+            // splats are flat and face along the surface
+            assert(bitten.scales[i * 3 + 2] < bitten.scales[i * 3]);
+        }
+        assert(cut > 100, `only ${cut} samples on the cut`);
+
+        // a smooth union blends colour across the seam and stays deterministic
+        const spec = { count: 2000, opacity: 1, nodes: [
+            node('box', [-0.5, 0, 0], [1, 1, 1], { color: [1, 0, 0] }),
+            node('box', [0.5, 0, 0], [1, 1, 1], { color: [0, 0, 1], smooth: 0.3 })
+        ] };
+        const blended = sampleSdf(spec);
+        let mixed = 0;
+        for (let i = 0; i < 2000; i++) if (blended.colors[i * 3] > 0.2 && blended.colors[i * 3 + 2] > 0.2) mixed++;
+        assert(mixed > 20, `only ${mixed} blended samples`);
+        assert.deepEqual(sampleSdf(spec).positions, blended.positions);
+
+        // nothing to sample: a subtraction that removes everything
+        const empty = sampleSdf({ count: 100, opacity: 1, nodes: [node('box', [0, 0, 0], [1, 1, 1]), node('box', [0, 0, 0], [2, 2, 2], { op: 'subtract' })] });
+        assert.equal(empty.opacities.length, 0);
+    },
+
+    async 'create_sdf validates and maps its arguments'() {
+        await use(async ({ call, api }) => {
+            const calls = [];
+            api.create.sdf = (...args) => { calls.push(args); return {}; };
+            const box = { shape: 'box', center: [0, 0, 0], size: [1, 1, 1] };
+            for (const input of [{ nodes: [] }, { nodes: [{ ...box, shape: 'cone' }] }, { nodes: [{ ...box, op: 'xor' }] }, { nodes: [{ ...box, smooth: -1 }] }, { nodes: [box], count: 0 }]) {
+                assert.equal((await call('create_sdf', input)).error?.code, 'invalid_input', JSON.stringify(input));
+            }
+            assert.equal(calls.length, 0);
+            await call('create_sdf', { name: 'car', nodes: [{ ...box, round: 0.1 }, { shape: 'cylinder', center: [1, 0, 0], size: [0.5, 2, 0.5], rotate: [90, 0, 0], op: 'subtract', smooth: 0.05 }] });
+            const [spec, name] = calls[0];
+            assert.deepEqual([name, spec.count, spec.opacity, spec.nodes[0].round, spec.nodes[1].op, spec.nodes[1].smooth], ['car', 100000, 1, 0.1, 'subtract', 0.05]);
+            assert(spec.nodes[1].rotation.equals(new Quat().setFromEulerAngles(90, 0, 0)));
         });
     },
 

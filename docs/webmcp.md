@@ -1,6 +1,6 @@
 # WebMCP
 
-SuperSplat registers 28 tools with the browser's native [WebMCP API](https://webmachinelearning.github.io/webmcp/). They operate on the open editor tab and share its selection, layers and undo history. There is no separate server, network listener or MCP bridge, and no tool runs code in the editor page: `create_from_generator` runs agent-supplied generator modules in an isolated sandbox (see below). Browsers without WebMCP continue to run the editor normally.
+SuperSplat registers 29 tools with the browser's native [WebMCP API](https://webmachinelearning.github.io/webmcp/). They operate on the open editor tab and share its selection, layers and undo history. There is no separate server, network listener or MCP bridge, and no tool runs code in the editor page: `create_from_generator` runs agent-supplied generator modules in an isolated sandbox (see below). Browsers without WebMCP continue to run the editor normally.
 
 The adapter uses `document.modelContext`, with feature detection for preview browsers that expose `navigator.modelContext`. Tool titles follow the editor language. WebMCP is experimental: browser availability and agent integration depend on the browser version. Native discovery and execution are covered by the browser tests described below.
 
@@ -24,7 +24,7 @@ The adapter uses `document.modelContext`, with feature detection for preview bro
 | `render_view` | Render an image from any camera pose without moving the user's view, optionally showing the selection, a property heatmap or layer colours, from up to four angles. |
 | `set_view` | Change display preferences without changing splat data. |
 | `import_url` | Add a CORS-accessible PLY, SPLAT, SOG, SPZ or KSPLAT URL as an undoable layer. |
-| `create_primitives`, `create_from_generator` | Create a new layer from primitive shapes sampled in the editor, or from a sandboxed splat-transform generator module. |
+| `create_primitives`, `create_sdf`, `create_from_generator` | Create a new layer from primitive shapes, from smooth-combined signed distance field shapes, or from a sandboxed splat-transform generator module. |
 | `instance_layer` | Place copies of a layer that share its gaussian data. |
 | `export_scene` | Download PLY, compressed PLY, SPLAT, SOG, SPZ, or a standalone HTML/ZIP viewer. |
 
@@ -95,6 +95,17 @@ Gaussian data is generated inside the editor rather than sent through tool calls
   {"shape":"cone","center":[0,1.2,0],"size":[1.5,1.5,1.5],"color":[0.1,0.45,0.18]}
 ]}
 ```
+
+`create_sdf` models a solid as a signed distance field and samples its surface evenly, so rounded and organic forms come out as one continuous surface instead of stacked primitives. Nodes are boxes and cylinders with an optional corner radius, ellipsoids, capsules and tori, each with its own transform and colour. They combine in list order by `union`, `subtract` or `intersect`, each with an optional `smooth` blend radius, and colours blend over the same radius. A subtracted node's colour marks the surface it cuts, which gives recesses such as windows their own colour. Splats lie flat along the surface. For example, a rounded box with a cylindrical bore through it:
+
+```json
+{"nodes":[
+  {"shape":"box","center":[0,0.5,0],"size":[2,1,1],"round":0.15,"color":[0.8,0.1,0.1]},
+  {"shape":"cylinder","center":[0,0.5,0],"size":[0.5,1.2,0.5],"rotate":[90,0,0],"op":"subtract","smooth":0.05,"color":[0.1,0.1,0.1]}
+]}
+```
+
+Sampling runs in the editor and takes about a second per 70000 gaussians for a model of around 20 nodes.
 
 `create_from_generator` runs a [splat-transform generator module](https://github.com/playcanvas/splat-transform#generators-beta), so the same script works in the CLI and the editor. The module exports `class Generator` whose static `create(params)` (optionally async) returns `{ count, columnNames, getRow(index, row) }`. `params` arrive as `[{ name, value }]` with string values, as in the CLI. Columns use the standard 3DGS PLY convention in world space: `x`, `y`, `z`; `scale_0..2` = ln(standard deviation); `rot_0..3` = quaternion `w, x, y, z`; `f_dc_0..2` = `(rgb - 0.5) / 0.28209479177387814`; `opacity` = logit(alpha). Optional `f_rest_*` columns add SH.
 

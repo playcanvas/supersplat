@@ -431,6 +431,7 @@
     "webmcp.set_view": "设置显示选项",
     "webmcp.import_url": "从 URL 导入",
     "webmcp.create_primitives": "创建基本形状",
+    "webmcp.create_sdf": "创建 SDF 形状",
     "webmcp.create_from_generator": "通过生成器创建",
     "webmcp.instance_layer": "实例化图层",
     "webmcp.export_scene": "导出场景"

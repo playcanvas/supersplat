@@ -431,6 +431,7 @@
     "webmcp.set_view": "Anzeigeoptionen festlegen",
     "webmcp.import_url": "Von URL importieren",
     "webmcp.create_primitives": "Grundformen erstellen",
+    "webmcp.create_sdf": "SDF-Form erstellen",
     "webmcp.create_from_generator": "Aus Generator erstellen",
     "webmcp.instance_layer": "Ebene instanziieren",
     "webmcp.export_scene": "Szene exportieren"

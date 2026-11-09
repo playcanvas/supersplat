@@ -147,7 +147,26 @@ struct ProjectorUniforms {
     occlusionBlocksX: u32,
     occlusionBlocksY: u32,
     occlusionBlock: f32,
-    occlusionEnabled: u32
+    occlusionEnabled: u32,
+    // analysis views for render_view: 0 off, 1 colour by property (viewProp
+    // uses the histogram's property modes, mapped over viewRange), 2 selection
+    // highlight, 3 flat layer colour (viewColor)
+    viewMode: u32,
+    viewProp: u32,
+    viewRange: vec2f,
+    viewColor: vec4f
+}
+
+// Turbo colour map (polynomial fit): blue at 0, red at 1
+fn turbo(x: f32) -> vec3f {
+    let t = clamp(x, 0.0, 1.0);
+    let v4 = vec4f(1.0, t, t * t, t * t * t);
+    let v2 = v4.zw * v4.z;
+    return clamp(vec3f(
+        dot(v4, vec4f(0.13572138, 4.61539260, -42.66032258, 132.13108234)) + dot(v2, vec2f(-152.94239396, 59.28637943)),
+        dot(v4, vec4f(0.09140261, 2.19418839, 4.84296658, -14.18503333)) + dot(v2, vec2f(4.27729857, 2.82956604)),
+        dot(v4, vec4f(0.10667330, 12.64194608, -60.58204836, 110.36276771)) + dot(v2, vec2f(-89.90310912, 27.34824973))
+    ), vec3f(0.0), vec3f(1.0));
 }
 
 // compaction output: surviving splats are appended to a dense list, so the sort
@@ -445,6 +464,49 @@ fn main(
         graded = applyColorGrade(graded, uniforms.colorRow0, uniforms.colorRow1, uniforms.colorRow2);
     }
     color = vec4f(graded, gradedAlpha);
+
+    // analysis views keep a little of the splat's own brightness so form still
+    // reads; property values mirror the histogram shader's property modes
+    if (uniforms.viewMode != 0u) {
+        let luma = dot(clamp(color.rgb, vec3f(0.0), vec3f(1.0)), vec3f(0.299, 0.587, 0.114));
+        if (uniforms.viewMode == 1u) {
+            let p = uniforms.viewProp;
+            var value = 0.0;
+            if (p <= 2u) {
+                value = worldCenter[p];
+            } else if (p == 3u) {
+                value = length(worldCenter.xyz);
+            } else if (p == 4u) {
+                value = depth;
+            } else if (p <= 7u) {
+                value = color[p - 5u];
+            } else if (p == 8u) {
+                value = gradedAlpha;
+            } else if (p <= 11u) {
+                value = b[p - 9u];
+            } else if (p == 12u) {
+                value = b.x * b.y * b.z;
+            } else {
+                value = dot(b.xyz, b.xyz);
+            }
+            let t = (value - uniforms.viewRange.x) / max(uniforms.viewRange.y - uniforms.viewRange.x, 1e-20);
+            if (t < 0.0 || t > 1.0) {
+                // outside the range: dim grey, so in-range splats stand out
+                color = vec4f(vec3f(0.12 + 0.2 * luma), color.a);
+            } else {
+                // faint splats get enough opacity to be seen
+                color = vec4f(turbo(t), max(color.a, 0.5));
+            }
+        } else if (uniforms.viewMode == 2u) {
+            if ((state & 1u) != 0u) {
+                color = vec4f(uniforms.viewColor.rgb * (0.6 + 0.4 * luma), max(color.a, 0.5));
+            } else {
+                color = vec4f(vec3f(0.12 + 0.3 * luma), color.a);
+            }
+        } else {
+            color = vec4f(uniforms.viewColor.rgb * (0.55 + 0.45 * luma), color.a);
+        }
+    }
 
     let selected = (state & 1u) != 0u && uniforms.selectionEnabled != 0u;
     let locked = (state & 2u) != 0u;

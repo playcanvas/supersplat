@@ -12,7 +12,7 @@ import type { FileType } from './file-handler';
 import { GaussianColumn, GaussianData, PrimitiveSpec, samplePrimitives, toColumns } from './generate-splats';
 import { GeneratorParam, runGenerator } from './generator-sandbox';
 import { validateSplatSource } from './io';
-import { Scene } from './scene';
+import { Scene, type ViewOverride } from './scene';
 import { Splat } from './splat';
 
 type CameraSettings = {
@@ -21,23 +21,52 @@ type CameraSettings = {
     azimuth?: number; elevation?: number; distance?: number;
     fov?: number; orthographic?: boolean;
 };
-type RenderSettings = { width?: number; height?: number; format?: 'jpeg' | 'png'; quality?: number };
+type RenderView = 'current' | 'front' | 'back' | 'left' | 'right' | 'top' | 'bottom';
+type RenderSettings = {
+    width?: number; height?: number; format?: 'jpeg' | 'png'; quality?: number;
+    // up to four views composited into one labelled grid; 'current' uses the
+    // camera parameters (or the current view), named views orbit its target
+    views?: RenderView[];
+    // analysis view applied while rendering
+    viewOverride?: ViewOverride;
+};
+type RenderTile = { pixels: Uint8Array, x: number, y: number, width: number, height: number, label?: string };
 
-// Encode top-down RGBA render pixels over the background colour, as an
+// Encode top-down RGBA render tiles over the background colour, as an
 // MCP-style image block (base64 data, no data: prefix).
-const encodeImage = async (pixels: Uint8Array, width: number, height: number, background: Color, format: 'jpeg' | 'png', quality: number) => {
-    const out = new Uint8ClampedArray(pixels.length);
-    const bg = [background.r * 255, background.g * 255, background.b * 255];
-    for (let i = 0; i < pixels.length; i += 4) {
-        // the render target holds premultiplied colour
-        const t = 1 - pixels[i + 3] / 255;
-        out[i] = pixels[i] + bg[0] * t;
-        out[i + 1] = pixels[i + 1] + bg[1] * t;
-        out[i + 2] = pixels[i + 2] + bg[2] * t;
-        out[i + 3] = 255;
-    }
+const encodeImage = async (tiles: RenderTile[], width: number, height: number, background: Color, format: 'jpeg' | 'png', quality: number) => {
     const canvas = new OffscreenCanvas(width, height);
-    canvas.getContext('2d').putImageData(new ImageData(out, width, height), 0, 0);
+    const context = canvas.getContext('2d');
+    const bg = [background.r * 255, background.g * 255, background.b * 255];
+    for (const tile of tiles) {
+        const { pixels } = tile;
+        const out = new Uint8ClampedArray(pixels.length);
+        for (let i = 0; i < pixels.length; i += 4) {
+            // the render target holds premultiplied colour
+            const t = 1 - pixels[i + 3] / 255;
+            out[i] = pixels[i] + bg[0] * t;
+            out[i + 1] = pixels[i + 1] + bg[1] * t;
+            out[i + 2] = pixels[i + 2] + bg[2] * t;
+            out[i + 3] = 255;
+        }
+        context.putImageData(new ImageData(out, tile.width, tile.height), tile.x, tile.y);
+        if (tile.label) {
+            const size = Math.max(10, Math.round(tile.height / 18));
+            context.font = `${size}px sans-serif`;
+            context.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            context.fillRect(tile.x, tile.y, context.measureText(tile.label).width + size, size * 1.6);
+            context.fillStyle = '#fff';
+            context.fillText(tile.label, tile.x + size / 2, tile.y + size * 1.15);
+        }
+    }
+    if (tiles.length > 1) {
+        // separate the tiles
+        context.fillStyle = '#888';
+        for (const tile of tiles) {
+            if (tile.x) context.fillRect(tile.x, tile.y, 1, tile.height);
+            if (tile.y) context.fillRect(tile.x, tile.y, tile.width, 1);
+        }
+    }
     const mimeType = `image/${format}`;
     const bytes = new Uint8Array(await (await canvas.convertToBlob({ type: mimeType, quality })).arrayBuffer());
     let binary = '';
@@ -242,6 +271,13 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
                 const width = settings.width ?? (settings.height ? Math.round(settings.height * aspect) : Math.round(aspect >= 1 ? 512 : 512 * aspect));
                 const height = settings.height ?? Math.round(width / aspect);
                 if (![width, height].every(v => Number.isInteger(v) && v >= 16 && v <= 2048)) throw new EditorError('invalid_input', 'width and height must be 16 to 2048 pixels.');
+                const views = settings.views?.length ? [...settings.views] : ['current' as const];
+                if (views.length > 4) throw new EditorError('invalid_input', 'At most four views.');
+                const cols = views.length > 1 ? 2 : 1;
+                const rows = views.length > 2 ? 2 : 1;
+                const tileWidth = Math.floor(width / cols);
+                const tileHeight = Math.floor(height / rows);
+                const viewOverride = settings.viewOverride;
                 return await queue.enqueue(async () => {
                     checkCancelled(options);
                     assertIdle();
@@ -250,12 +286,26 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
                     const saved = { position: new Vec3(pose.position.x, pose.position.y, pose.position.z), target: new Vec3(pose.target.x, pose.target.y, pose.target.z), fov: camera.fov, ortho: camera.ortho };
                     try {
                         applyCamera(s);
-                        const used = cameraInfo();
-                        const pixels = await events.invoke('render.offscreen', width, height) as Uint8Array;
-                        checkCancelled(options);
-                        const image = await encodeImage(pixels, width, height, events.invoke('bgClr') as Color, settings.format ?? 'jpeg', settings.quality ?? 0.85);
-                        return { camera: used, image };
+                        const basePose = events.invoke('camera.getPose');
+                        const base = { position: new Vec3(basePose.position.x, basePose.position.y, basePose.position.z), target: new Vec3(basePose.target.x, basePose.target.y, basePose.target.z) };
+                        scene.viewOverride = viewOverride ?? null;
+                        const tiles: RenderTile[] = [];
+                        const cameras = [];
+                        for (let i = 0; i < views.length; i++) {
+                            // named views orbit the requested view's target at its
+                            // distance; the first tile already has the requested pose
+                            if (i > 0) events.fire('camera.setPose', base, 0);
+                            if (views[i] !== 'current') applyCamera({ view: views[i] as CameraSettings['view'] });
+                            camera.onUpdate(0);
+                            cameras.push({ view: views[i], camera: cameraInfo() });
+                            const pixels = await events.invoke('render.offscreen', tileWidth, tileHeight) as Uint8Array;
+                            checkCancelled(options);
+                            tiles.push({ pixels, x: (i % cols) * tileWidth, y: Math.floor(i / cols) * tileHeight, width: tileWidth, height: tileHeight, label: views.length > 1 ? views[i] : undefined });
+                        }
+                        const image = await encodeImage(tiles, tileWidth * cols, tileHeight * rows, events.invoke('bgClr') as Color, settings.format ?? 'jpeg', settings.quality ?? 0.85);
+                        return views.length > 1 ? { cameras, image } : { camera: cameras[0].camera, image };
                     } finally {
+                        scene.viewOverride = null;
                         events.fire('camera.setFov', saved.fov);
                         events.fire('camera.setPose', { position: saved.position, target: saved.target }, 0);
                         camera.ortho = saved.ortho;

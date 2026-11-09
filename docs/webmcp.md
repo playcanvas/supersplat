@@ -21,7 +21,7 @@ The adapter uses `document.modelContext`, with feature detection for preview bro
 | `apply_color`, `reset_color` | Compose or reset colour adjustments on an explicit scope. |
 | `undo`, `redo` | Step through the shared editor history, including user edits. |
 | `set_camera`, `focus_camera`, `pick_points` | Position the camera, frame content or find world positions under viewport points. |
-| `render_view` | Render an image from any camera pose without moving the user's view. |
+| `render_view` | Render an image from any camera pose without moving the user's view, optionally showing the selection, a property heatmap or layer colours, from up to four angles. |
 | `set_view` | Change display preferences without changing splat data. |
 | `import_url` | Add a CORS-accessible PLY, SPLAT, SOG, SPZ or KSPLAT URL as an undoable layer. |
 | `create_primitives`, `create_from_generator` | Create a new layer from primitive shapes sampled in the editor, or from a sandboxed splat-transform generator module. |
@@ -59,6 +59,19 @@ Call `select_region` with these arguments to inspect the proposed removal, call 
 ### Rendering
 
 `render_view` renders an offscreen image from any camera pose, then restores the user's camera, so checking work does not disturb the view. Camera parameters work as in `set_camera` and default to the current view. The grid, gizmos and markers are not drawn. The result contains `image` as `{ "type": "image", "mimeType", "data", "width", "height" }`, with base64 `data` and no `data:` prefix, plus the `camera` used. The default size is 512 pixels on the longest side at the viewport aspect, as JPEG; sizes up to 2048 and PNG are available.
+
+`mode` selects what the image shows. Analysis modes return a `legend` that ties colours back to values or layer IDs.
+
+| `mode` | Shows | Use it to |
+| --- | --- | --- |
+| `color` (default) | The scene as rendered. | Check overall results. |
+| `selection` | Selected splats on every layer in orange, everything else grey. The legend lists selected counts per layer. | Confirm a selection before deleting it. |
+| `property` | Splats coloured by a histogram `property` over `range` (Turbo: blue at the minimum, red at the maximum), with values outside the range in dim grey. Faint splats are drawn at least half opaque so they show. Without `range`, the measured range of the visible layers is used. | See where faint floaters, oversized splats or outliers are, using `get_histogram` percentiles as the range. |
+| `layers` | Each visible layer in its own flat colour, listed in the legend. | Tell layers and instances apart. |
+
+Supported properties are `x`, `y`, `z`, `distance`, `camera-depth`, `red`, `green`, `blue`, `opacity`, `scale_0`–`scale_2`, `volume` and `surface-area`, with the same values as `get_histogram`. For example, `{"mode":"property","property":"opacity","range":[0,0.1]}` shows only faint splats in colour.
+
+`views` renders up to four labelled views into one image, two per row, to judge 3D layout from a single result: `current` uses the camera parameters, and named views orbit its target at the same distance. `width` and `height` size the whole grid. A multi-view result returns `cameras`, one per view, instead of `camera`.
 
 WebMCP returns every tool result as a JSON string; the specification defines no image result type. A client or MCP bridge that recognises the MCP image block shape can present the image to the model; others receive it as text, so keep images small. To act on what an image shows with screen-space tools, pass the returned `camera` to `set_camera` first.
 

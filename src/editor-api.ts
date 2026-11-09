@@ -40,6 +40,18 @@ type ChangeDetail = { layer?: LayerId };
 type SelectionOptions = CommandOptions & { preview?: boolean, outside?: boolean, footprint?: number, viewToken?: string };
 type RectangleOptions = CommandOptions & { layer?: LayerId, depth?: boolean, footprint?: number, viewToken?: string };
 type TransformOptions = { translate?: Vec3, rotate?: Quat, scale?: number, center?: Vec3 };
+type RenderMode = { mode?: 'color' | 'selection' | 'property' | 'layers', property?: string, range?: [number, number] };
+
+// distinct flat colours for the layers analysis view: golden-ratio hue steps
+// never repeat, alternating brightness separates neighbours
+const layerColor = (i: number): [number, number, number, number] => {
+    const h = (i * 0.618034) % 1 * 6, v = i % 2 ? 0.75 : 0.95, s = 0.7;
+    const f = (n: number) => {
+        const k = (n + h) % 6;
+        return Math.round((v - v * s * Math.max(0, Math.min(k, 4 - k, 1))) * 100) / 100;
+    };
+    return [f(5), f(3), f(1), 1];
+};
 
 // in-slot GPU intersect followed by the SelectOp it produces, in the same
 // slot. Shared with the screen-space gestures in editor.ts
@@ -225,6 +237,37 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
     // fired once per history mutation (alongside edit.canRedo)
     events.on('edit.canUndo', () => changed('historyChanged'));
 
+    // `range` zooms into [min, max] (values outside are excluded);
+    // `bins` merges the 256 GPU bins down to a divisor of 256.
+    const histogram = async (id: LayerId, property: string, options: CommandOptions & { range?: [number, number], bins?: number } = {}) => {
+        const splat = layerById(id);
+        const frame = scene.camera.captureFrame();
+        const viewToken = session.viewport.info().viewToken;
+        const range = options.range && [options.range[0], options.range[1]] as [number, number];
+        const bins = options.bins ?? NUM_BINS;
+        if (range && !(Number.isFinite(range[0]) && Number.isFinite(range[1]) && range[0] < range[1])) throw new EditorError('invalid_input', 'range must be finite with min < max.');
+        if (!Number.isInteger(bins) || bins < 1 || NUM_BINS % bins) throw new EditorError('invalid_input', `bins must divide ${NUM_BINS}.`);
+        return await run(splat, async () => {
+            const mode = propertyMode(splat, property);
+            const viewDependent = mode === 4 || isFinalColorMode(mode);
+            const data = await scene.dataProcessor.calcHistogram(splat, mode, propertyOptions(splat, frame), range);
+            checkCancelled(options);
+            if (viewDependent) session.checkView(viewToken);
+            const all = data.selected.map((n, i) => n + data.unselected[i]);
+            return {
+                layer: id,
+                property,
+                min: data.min,
+                max: data.max,
+                numValues: data.numValues,
+                selected: mergeBins(data.selected, bins),
+                unselected: mergeBins(data.unselected, bins),
+                stats: { all: histogramStats(all, data.min, data.max), selected: histogramStats(data.selected, data.min, data.max) },
+                viewDependent,
+                ...(viewDependent ? { viewToken } : {})
+            };
+        }, options);
+    };
 
     return {
         inspect: {
@@ -233,37 +276,7 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
                 return { ...session.read(), layers: allSplats().map(layerInfo), activeLayer: (events.invoke('selection') as Splat | null)?.uid ?? null, history: historyInfo() };
             }),
             layer: async (id: LayerId, options?: CommandOptions) => await run(layerById(id), () => layerInfo(layerById(id)), options, false),
-            // `range` zooms into [min, max] (values outside are excluded);
-            // `bins` merges the 256 GPU bins down to a divisor of 256.
-            histogram: async (id: LayerId, property: string, options: CommandOptions & { range?: [number, number], bins?: number } = {}) => {
-                const splat = layerById(id);
-                const frame = scene.camera.captureFrame();
-                const viewToken = session.viewport.info().viewToken;
-                const range = options.range && [options.range[0], options.range[1]] as [number, number];
-                const bins = options.bins ?? NUM_BINS;
-                if (range && !(Number.isFinite(range[0]) && Number.isFinite(range[1]) && range[0] < range[1])) throw new EditorError('invalid_input', 'range must be finite with min < max.');
-                if (!Number.isInteger(bins) || bins < 1 || NUM_BINS % bins) throw new EditorError('invalid_input', `bins must divide ${NUM_BINS}.`);
-                return await run(splat, async () => {
-                    const mode = propertyMode(splat, property);
-                    const viewDependent = mode === 4 || isFinalColorMode(mode);
-                    const data = await scene.dataProcessor.calcHistogram(splat, mode, propertyOptions(splat, frame), range);
-                    checkCancelled(options);
-                    if (viewDependent) session.checkView(viewToken);
-                    const all = data.selected.map((n, i) => n + data.unselected[i]);
-                    return {
-                        layer: id,
-                        property,
-                        min: data.min,
-                        max: data.max,
-                        numValues: data.numValues,
-                        selected: mergeBins(data.selected, bins),
-                        unselected: mergeBins(data.unselected, bins),
-                        stats: { all: histogramStats(all, data.min, data.max), selected: histogramStats(data.selected, data.min, data.max) },
-                        viewDependent,
-                        ...(viewDependent ? { viewToken } : {})
-                    };
-                }, options);
-            },
+            histogram,
             properties: (shBands = 0) => [...Object.keys(PROP_MODE), ...Array.from({ length: SH_NUM_COEFFS[shBands] * 3 }, (_, i) => `f_rest_${i}`)]
         },
         layers: {
@@ -435,6 +448,43 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
         },
         viewport: {
             ...session.viewport,
+            // render_view with an analysis mode: 'property' colours splats by a
+            // histogram property over range (measured from visible layers when
+            // omitted), 'selection' highlights the selection on every layer and
+            // dims the rest, 'layers' gives each layer a flat colour. Returns a
+            // legend that ties the colours back to values or layer IDs.
+            render: async (settings: Parameters<typeof session.viewport.render>[0] & RenderMode = {}, options?: CommandOptions) => {
+                const { mode = 'color', property, range, ...rest } = settings;
+                const visible = allSplats().filter(s => s.visible);
+                if (mode === 'property') {
+                    if (!property) throw new EditorError('invalid_input', 'property is required for property mode.');
+                    const prop = propModeFor(property);
+                    if (prop === undefined || prop > 13) throw new EditorError('unsupported_property', `Property '${property}' cannot be visualised; use x, y, z, distance, camera-depth, red, green, blue, opacity, scale_0..2, volume or surface-area.`);
+                    let span = range && [range[0], range[1]] as [number, number];
+                    if (span && !(span[0] < span[1])) throw new EditorError('invalid_input', 'range must have min < max.');
+                    if (!span) {
+                        span = [Infinity, -Infinity];
+                        for (const splat of visible) {
+                            const h = await histogram(splat.uid, property, options);
+                            if (h.numValues) span = [Math.min(span[0], h.min), Math.max(span[1], h.max)];
+                        }
+                        if (!(span[0] <= span[1])) throw new EditorError('empty_scene', 'There are no visible splats to measure.');
+                        if (span[0] === span[1]) span[1] = span[0] + 1e-6;
+                    }
+                    const out = await session.viewport.render({ ...rest, viewOverride: { mode: 'property', prop, range: span } }, options);
+                    return { ...out, legend: { mode, property, range: span, colors: 'turbo: blue = range min, green = middle, red = range max; dim grey = outside the range' } };
+                }
+                if (mode === 'selection') {
+                    const out = await session.viewport.render({ ...rest, viewOverride: { mode: 'selection', color: [1, 0.55, 0.05, 1] } }, options);
+                    return { ...out, legend: { mode, colors: 'orange = selected, grey = unselected', selected: visible.filter(s => s.instances.numSelected).map(s => ({ layer: s.uid, selected: s.instances.numSelected })) } };
+                }
+                if (mode === 'layers') {
+                    const layerColors = new Map(visible.map((s, i) => [s.uid, layerColor(i)]));
+                    const out = await session.viewport.render({ ...rest, viewOverride: { mode: 'layers', layerColors } }, options);
+                    return { ...out, legend: { mode, layers: visible.map(s => ({ layer: s.uid, name: s.name, color: layerColors.get(s.uid).slice(0, 3) })) } };
+                }
+                return await session.viewport.render(rest, options);
+            },
             captureFrame: () => scene.camera.captureFrame(),
             pickDepth: async (points: ScreenPoint[], layers?: LayerId[], options: CommandOptions & { viewToken?: string } = {}) => {
                 const frame = scene.camera.captureFrame();

@@ -237,7 +237,7 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
             requireChange(i, ['position', 'view', 'azimuth', 'elevation', 'distance', 'fov', 'orthographic']);
             return editor.viewport.setCamera({ ...i, position: i.position && xyz(i.position), target: i.target && xyz(i.target) }, o);
         });
-    add('render_view', 'Render an image of the scene to check your work, without moving the user\'s view: the camera is restored afterwards. Camera parameters work as in set_camera and default to the current view. No grid, gizmos or markers are drawn. Returns image { type: "image", mimeType, data (base64), width, height } and the camera used; pass that camera to set_camera before screen-space selection. Default size is 512 px on the longest side at the viewport aspect; keep images small, as the result is returned as text.',
+    add('render_view', 'Render an image of the scene to check your work, without moving the user\'s view: the camera is restored afterwards. Camera parameters work as in set_camera and default to the current view. No grid, gizmos or markers are drawn. mode "selection" shows the selection on every layer in orange with everything else grey: check it before deleting. mode "property" colours splats by a histogram property (blue = range min, red = max, grey = outside range; faint splats are boosted so they show), defaulting to the measured range: use it to see where floaters or oversized splats are. mode "layers" gives each layer a flat colour. views renders up to four labelled views in one 2x2 image (e.g. ["current","front","right","top"]) to judge 3D layout. Returns image { type: "image", mimeType, data (base64), width, height }, the camera (or cameras per view) and, for analysis modes, a legend; pass a camera to set_camera before screen-space selection. Default size is 512 px on the longest side at the viewport aspect; keep images small, as the result is returned as text.',
         { position: vector('World position; requires target.'),
             target: vector('World look-at point; requires position.'),
             view: enumeration(['front', 'back', 'left', 'right', 'top', 'bottom'], 'Named view around the current target.'),
@@ -249,7 +249,11 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
             width: integer('Image width in pixels.', 16, 2048),
             height: integer('Image height in pixels.', 16, 2048),
             format: enumeration(['jpeg', 'png'], 'Image format; default jpeg.'),
-            quality: number('JPEG quality; default 0.85.', 0.1, 1) }, [],
+            quality: number('JPEG quality; default 0.85.', 0.1, 1),
+            mode: enumeration(['color', 'selection', 'property', 'layers'], 'What to show; default color.'),
+            property: string('Property for mode property: x, y, z, distance, camera-depth, red, green, blue, opacity, scale_0..2, volume or surface-area.', 32),
+            range: array(number('Bound'), 2, '[min, max] for mode property; default the measured range of visible layers.'),
+            views: { type: 'array', items: enumeration(['current', 'front', 'back', 'left', 'right', 'top', 'bottom'], 'View: current uses the camera parameters; named views orbit its target.'), minItems: 1, maxItems: 4, description: 'Views to render into one labelled grid; default ["current"]. width and height size the whole grid.' } }, [],
         (i, o) => editor.viewport.render({ ...i, position: i.position && xyz(i.position), target: i.target && xyz(i.target) }, o),
         { readOnlyHint: true });
     add('focus_camera', 'Frame a selection, a layer, or the scene. Switches to orbit control and moves instantly. Returns the resulting camera and viewToken.',

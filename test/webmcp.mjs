@@ -330,7 +330,12 @@ const checks = {
                 ['get_histogram', { layer: 0, property: 'opacity', range: [0] }],
                 ['render_view', { width: 8 }],
                 ['render_view', { format: 'gif' }],
-                ['render_view', { quality: 0 }]
+                ['render_view', { quality: 0 }],
+                ['render_view', { mode: 'heat' }],
+                ['render_view', { views: [] }],
+                ['render_view', { views: ['front', 'back', 'left', 'right', 'top'] }],
+                ['render_view', { views: ['side'] }],
+                ['render_view', { mode: 'property', property: 'opacity', range: [0] }]
             ]) {
                 assert.equal((await call(name, input)).error?.code, 'invalid_input', `${name} ${JSON.stringify(input)}`);
             }
@@ -340,6 +345,9 @@ const checks = {
             await call('render_view', { position: [0, 1, 5], target: [0, 1, 0], width: 320, format: 'png' });
             const [, settings] = calls[1];
             assert.deepEqual([settings.position.z, settings.target.y, settings.width, settings.format], [5, 1, 320, 'png']);
+            await call('render_view', { mode: 'property', property: 'opacity', range: [0, 0.1], views: ['current', 'top'] });
+            const [, analysis] = calls[2];
+            assert.deepEqual([analysis.mode, analysis.property, analysis.range, analysis.views], ['property', 'opacity', [0, 0.1], ['current', 'top']]);
         });
     },
 

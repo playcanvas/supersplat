@@ -336,6 +336,35 @@ async function browserChecks(url, enabled) {
     const decoded = await createImageBitmap(await (await fetch(`data:${shot.image.mimeType};base64,${shot.image.data}`)).blob());
     check(shot.image.type === 'image' && shot.image.mimeType === 'image/jpeg' && decoded.width === 200 && decoded.height === 120 && shot.camera.azimuth === 30 &&
         cameraBefore.position.every((v, i) => Math.abs(v - cameraAfter.position[i]) < 1e-4), 'render_view returns an image and restores the user camera', { ...shot, image: { ...shot.image, data: shot.image.data.length } });
+    // count pixels matching a colour test in a returned image
+    const countPixels = async (result, test) => {
+        const bitmap = await createImageBitmap(await (await fetch(`data:${result.image.mimeType};base64,${result.image.data}`)).blob());
+        const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+        const context = canvas.getContext('2d');
+        context.drawImage(bitmap, 0, 0);
+        const { data } = context.getImageData(0, 0, bitmap.width, bitmap.height);
+        let n = 0;
+        for (let i = 0; i < data.length; i += 4) if (test(data[i], data[i + 1], data[i + 2])) n++;
+        return n;
+    };
+    const orange = (r, g, b) => r > 150 && g > 50 && g < 160 && b < 60;
+    const framing = { position: [6, 2, 6], target: [6.25, 0, 0], width: 240, height: 160 };
+    const unselected = await call('render_view', { ...framing, mode: 'selection' });
+    await call('select_region', { layer: shapes.createdLayer, shape: 'sphere', center: [5, 0, 0], radius: 1.2 });
+    const highlighted = await call('render_view', { ...framing, mode: 'selection' });
+    check(await countPixels(unselected, orange) === 0 && await countPixels(highlighted, orange) > 200 &&
+        highlighted.legend.selected.some(s => s.layer === shapes.createdLayer && s.selected === 3000), 'render_view selection mode highlights only the selection', highlighted.legend);
+    await call('set_selection', { layer: shapes.createdLayer, mode: 'none' });
+    const heat = await call('render_view', { ...framing, mode: 'property', property: 'x', range: [7.5, 8.5] });
+    check(heat.legend.property === 'x' && heat.legend.range.join() === '7.5,8.5' && await countPixels(heat, (r, g, b) => Math.max(r, g, b) - Math.min(r, g, b) > 80) > 200,
+        'render_view property mode colours the in-range splats', heat.legend);
+    const layered = await call('render_view', { ...framing, mode: 'layers' });
+    check(layered.legend.layers.some(l => l.layer === shapes.createdLayer && l.color.length === 3), 'render_view layers mode returns a layer legend', layered.legend);
+    const grid = await call('render_view', { width: 240, height: 160, views: ['current', 'front', 'right', 'top'] });
+    check(grid.image.width === 240 && grid.image.height === 160 && grid.cameras.map(c => c.view).join() === 'current,front,right,top', 'render_view composes four labelled views', grid.cameras);
+    // drop the two selection edits so the undo sequence below is unchanged
+    await call('undo');
+    await call('undo');
     const copies = await call('instance_layer', { layer: shapes.createdLayer, copies: [{ translate: [0, 3, 0] }, { translate: [0, 0, 4], rotate: [0, 90, 0], scale: 0.5 }] });
     const sameData = copies.createdLayers.every(id => window.scene.elements.find(e => e.uid === id).resource === window.scene.elements.find(e => e.uid === shapes.createdLayer).resource);
     const firstCopy = copies.layers[0].bounds;

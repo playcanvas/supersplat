@@ -4,7 +4,7 @@ import { SelectOp } from './edit-ops';
 import type { Scene } from './scene';
 import type { Splat } from './splat';
 
-type SelectRegion = { y0: number, y1: number, intervals: Uint32Array };
+type SelectRegion = { y0: number; y1: number; intervals: Uint32Array };
 
 // per-row x-interval tables in render-target pixels for the footprint
 // pass: (rowCount + 1) offsets into the same buffer, then (x0, x1) pairs,
@@ -48,12 +48,18 @@ const rectRegion = (frame: CameraFrame, x0: number, y0: number, x1: number, y1: 
     return packRegion(py0, py1, rowRuns);
 };
 
-
 // Produce the op in the caller's slot. Applying it is the caller's commit
 // point, so cancellation and stale-view checks can run after GPU readback.
-const rectangleOp = async (scene: Scene, ctx: CommandContext, splat: Splat, frame: CameraFrame,
-    rect: { start: { x: number, y: number }, end: { x: number, y: number } },
-    op: 'add' | 'remove' | 'set' | 'intersect', depth: boolean, footprint: number) => {
+const rectangleOp = async (
+    scene: Scene,
+    ctx: CommandContext,
+    splat: Splat,
+    frame: CameraFrame,
+    rect: { start: { x: number; y: number }; end: { x: number; y: number } },
+    op: 'add' | 'remove' | 'set' | 'intersect',
+    depth: boolean,
+    footprint: number
+) => {
     const x1 = Math.min(rect.start.x, rect.end.x);
     const y1 = Math.min(rect.start.y, rect.end.y);
     const x2 = Math.max(rect.start.x, rect.end.x);
@@ -64,7 +70,12 @@ const rectangleOp = async (scene: Scene, ctx: CommandContext, splat: Splat, fram
         visible = new Set(ids);
         if (footprint > 0) return new SelectOp(splat, op, new Uint32Array(visible).sort());
     } else if (footprint > 0) {
-        const data = await scene.projectedSplatRenderer.footprintIntersect(splat, rectRegion(frame, x1, y1, x2, y2), footprint, frame);
+        const data = await scene.projectedSplatRenderer.footprintIntersect(
+            splat,
+            rectRegion(frame, x1, y1, x2, y2),
+            footprint,
+            frame
+        );
         return new SelectOp(splat, op, data ?? new Uint32Array());
     }
     const mask = await scene.dataProcessor.intersect({ rect: { x1, y1, x2, y2 } }, splat, frame);

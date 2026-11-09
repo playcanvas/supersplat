@@ -1,4 +1,5 @@
-import { Container, Element, Label } from '@playcanvas/pcui';
+import type { Element } from '@playcanvas/pcui';
+import { Container, Label } from '@playcanvas/pcui';
 
 import { i18n } from './localization';
 
@@ -14,15 +15,15 @@ type MenuItem = {
 
     isEnabled?: () => boolean | Promise<boolean>;
     isVisible?: () => boolean | Promise<boolean>;
-    onSelect?: () => any;
+    onSelect?: () => unknown;
 };
 
-const offsetParent = (elem: HTMLElement) : HTMLElement => {
+const offsetParent = (elem: HTMLElement): HTMLElement => {
     const parent = elem.parentNode as HTMLElement;
 
-    return (parent.tagName === 'BODY' || window.getComputedStyle(parent).position !== 'static') ?
-        parent :
-        offsetParent(parent);
+    return parent.tagName === 'BODY' || window.getComputedStyle(parent).position !== 'static'
+        ? parent
+        : offsetParent(parent);
 };
 
 const arrange = (element: HTMLElement, target: HTMLElement, direction: Direction, padding: number) => {
@@ -49,14 +50,14 @@ const arrange = (element: HTMLElement, target: HTMLElement, direction: Direction
     }
 };
 
-const isString = (value: any) => {
+const isString = (value: unknown) => {
     return !value || typeof value === 'string' || value instanceof String;
 };
 
 const createIcon = (icon: string | Element) => {
-    return isString(icon) ?
-        new Label({ class: 'menu-row-icon', text: icon && String.fromCodePoint(parseInt(icon as string, 16)) }) :
-        icon;
+    return isString(icon)
+        ? new Label({ class: 'menu-row-icon', text: icon && String.fromCodePoint(parseInt(icon as string, 16)) })
+        : icon;
 };
 
 // create the row text label; if `text` is a resolver, bind it so the row
@@ -127,7 +128,9 @@ class MenuPanel extends Container {
                     const icon = createIcon(menuItem.icon);
                     const text = createTextLabel(menuItem.text);
                     this.textLabels.set(menuItem, text);
-                    const postscript = isString(menuItem.extra) ? new Label({ class: 'menu-row-postscript', text: menuItem.extra as string }) : menuItem.extra;
+                    const postscript = isString(menuItem.extra)
+                        ? new Label({ class: 'menu-row-postscript', text: menuItem.extra as string })
+                        : menuItem.extra;
                     row.append(icon);
                     row.append(text);
                     row.append(postscript);

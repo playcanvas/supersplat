@@ -1,4 +1,5 @@
-import { Container, Element, Label } from '@playcanvas/pcui';
+import type { Element } from '@playcanvas/pcui';
+import { Container, Label } from '@playcanvas/pcui';
 
 import { i18n } from './localization';
 import arrowSvg from './svg/arrow.svg';

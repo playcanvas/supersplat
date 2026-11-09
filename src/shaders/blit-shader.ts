@@ -1,4 +1,4 @@
-const vertexShader = /* wgsl */`
+const vertexShader = /* wgsl */ `
 attribute vertex_position: vec2f;
 
 @vertex
@@ -9,7 +9,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 }
 `;
 
-const fragmentShader = /* wgsl */`
+const fragmentShader = /* wgsl */ `
 var srcTexture: texture_2d<f32>;
 // every pass that draws with this shader (final blit, Underlay, DataProcessor.copyRt)
 // must set both: uniforms resolve through the shared device scope, so one left

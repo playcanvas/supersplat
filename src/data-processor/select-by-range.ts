@@ -1,3 +1,4 @@
+import type { GraphicsDevice, WebgpuGraphicsDevice } from 'playcanvas';
 import {
     BUFFERUSAGE_COPY_DST,
     BUFFERUSAGE_COPY_SRC,
@@ -7,22 +8,22 @@ import {
     BindStorageBufferFormat,
     BindUniformBufferFormat,
     Compute,
-    GraphicsDevice,
     Shader,
     StorageBuffer,
     Vec2
 } from 'playcanvas';
 
-import { BufferPool } from './buffer-pool';
+import { computeSplatValueWGSL } from '../shaders/splat-value-shader';
+import type { Splat } from '../splat';
+
+import type { BufferPool } from './buffer-pool';
 import { maskByteSize } from './histogram-config';
+import type { SplatValueOptions } from './splat-value-compute';
 import {
     createSplatValueTextureFormats,
     createSplatValueUniformFormat,
-    setSplatValueParameters,
-    SplatValueOptions
+    setSplatValueParameters
 } from './splat-value-compute';
-import { computeSplatValueWGSL } from '../shaders/splat-value-shader';
-import { Splat } from '../splat';
 
 type SelectByRangeOptions = SplatValueOptions & {
     min: number;
@@ -63,7 +64,7 @@ class SelectByRange {
         const shader = new Shader(this.device, {
             name: `SelectByRangeCompute-${bands}`,
             shaderLanguage: SHADERLANGUAGE_WGSL,
-            cshader: /* wgsl */`
+            cshader: /* wgsl */ `
 @group(0) @binding(0) var<storage, read_write> result: array<u32>;
 ${common.code}
 
@@ -98,7 +99,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(num_workgroups) numW
 }`,
             computeBindGroupFormat: bindGroupFormat,
             computeUniformBufferFormats: { uniforms }
-        } as any);
+        });
         const compute = new Compute(this.device, shader, `SelectByRangeCompute-${bands}`);
         variant = { compute, bindGroupFormat };
         this.variants.set(bands, variant);
@@ -132,8 +133,8 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(num_workgroups) numW
         this.device.computeDispatch([variant.compute], 'select-by-range');
         const data = bufferPool.acquire(byteSize);
         const readback = this.output.read(0, byteSize, data, false);
-        (this.device as any).submit();
-        return await readback as Uint8Array;
+        (this.device as WebgpuGraphicsDevice).submit();
+        return (await readback) as Uint8Array;
     }
 }
 

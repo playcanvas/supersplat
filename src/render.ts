@@ -1,24 +1,47 @@
 import { WebPCodec } from '@playcanvas/splat-transform';
-import { BufferTarget, EncodedPacket, EncodedVideoPacketSource, MkvOutputFormat, MovOutputFormat, Mp4OutputFormat, Output, StreamTarget, WebMOutputFormat } from 'mediabunny';
+import {
+    BufferTarget,
+    EncodedPacket,
+    EncodedVideoPacketSource,
+    MkvOutputFormat,
+    MovOutputFormat,
+    Mp4OutputFormat,
+    Output,
+    StreamTarget,
+    WebMOutputFormat
+} from 'mediabunny';
 import { Color, path, Quat, Vec3 } from 'playcanvas';
 
 import { ElementType } from './element';
 import { EquirectRenderer } from './equirect-renderer';
-import { Events } from './events';
+import type { Events } from './events';
 import { encodePng } from './png-writer';
-import { Scene } from './scene';
+import type { Scene } from './scene';
 import { injectSphericalMetadata } from './spherical-metadata';
-import { Splat } from './splat';
+import type { Splat } from './splat';
 import { i18n } from './ui/localization';
-import { buildVideoEncoderConfig, getVideoCodecType, VideoSettings } from './video-config';
+import type { VideoSettings } from './video-config';
+import { buildVideoEncoderConfig, getVideoCodecType } from './video-config';
 
 const nullClr = new Color(0, 0, 0, 0);
 
 // Lookup maps for video output format and codec configuration
-const FORMAT_CONFIG: Record<string, { create: (streaming: boolean) => Mp4OutputFormat | MovOutputFormat | MkvOutputFormat | WebMOutputFormat; extension: string }> = {
-    mp4: { create: streaming => new Mp4OutputFormat({ fastStart: streaming ? false : 'in-memory' }), extension: 'mp4' },
+const FORMAT_CONFIG: Record<
+    string,
+    {
+        create: (streaming: boolean) => Mp4OutputFormat | MovOutputFormat | MkvOutputFormat | WebMOutputFormat;
+        extension: string;
+    }
+> = {
+    mp4: {
+        create: (streaming) => new Mp4OutputFormat({ fastStart: streaming ? false : 'in-memory' }),
+        extension: 'mp4'
+    },
     webm: { create: () => new WebMOutputFormat(), extension: 'webm' },
-    mov: { create: streaming => new MovOutputFormat({ fastStart: streaming ? false : 'in-memory' }), extension: 'mov' },
+    mov: {
+        create: (streaming) => new MovOutputFormat({ fastStart: streaming ? false : 'in-memory' }),
+        extension: 'mov'
+    },
     mkv: { create: () => new MkvOutputFormat(), extension: 'mkv' }
 };
 
@@ -31,7 +54,7 @@ type ImageSettings = {
     transparentBg: boolean;
     showDebug: boolean;
     format: 'png' | 'jpeg' | 'webp';
-    quality?: number;           // 0..1, jpeg only
+    quality?: number; // 0..1, jpeg only
     projection?: 'standard' | 'equirect';
     levelHorizon?: boolean;
 };
@@ -45,7 +68,9 @@ const isInvalidFilenameChar = (char: string) => {
 };
 
 const sanitizeFilename = (filename: string) => {
-    const sanitized = Array.from(filename, char => (isInvalidFilenameChar(char) ? '_' : char)).join('').trim();
+    const sanitized = Array.from(filename, (char) => (isInvalidFilenameChar(char) ? '_' : char))
+        .join('')
+        .trim();
     return sanitized.length > 0 ? sanitized : 'supersplat';
 };
 
@@ -67,7 +92,11 @@ const getImportedFilename = (filename: string) => {
 // sorting is submitted on the GPU immediately before each render
 const sortSplatsAndWait = (_scene: Scene, _splats: Splat[]) => Promise.resolve();
 
-const downloadFile = (data: ArrayBuffer | Uint8Array<ArrayBuffer>, filename: string, type = 'application/octet-stream') => {
+const downloadFile = (
+    data: ArrayBuffer | Uint8Array<ArrayBuffer>,
+    filename: string,
+    type = 'application/octet-stream'
+) => {
     const blob = new Blob([data], { type });
     const url = window.URL.createObjectURL(blob);
     const el = document.createElement('a');
@@ -84,7 +113,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
     // set, otherwise the first visible splat's name
     const baseFilename = () => {
         const docName = events.invoke('doc.name');
-        const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
+        const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter((splat) => splat.visible);
         const source = docName || (splats[0]?.name ?? 'supersplat');
         return sanitizeFilename(removeExtension(getImportedFilename(source)));
     };
@@ -144,7 +173,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             scene.gizmoLayer.enabled = true;
             scene.centersLayer.enabled = true;
             scene.camera.camera.clearColor.set(0, 0, 0, 0);
-            scene.forceRender = true;       // repaint the viewport with normal rendering
+            scene.forceRender = true; // repaint the viewport with normal rendering
         }
     });
 
@@ -156,7 +185,8 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
         let savedOrtho = false;
 
         try {
-            const { width, height, transparentBg, showDebug, format, quality, projection, levelHorizon } = imageSettings;
+            const { width, height, transparentBg, showDebug, format, quality, projection, levelHorizon } =
+                imageSettings;
             const is360 = projection === 'equirect';
 
             // in 360 mode the offscreen target is a square cube face; the
@@ -199,12 +229,18 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 const far = dist + boundRadius;
                 const near = Math.max(1e-6, dist < boundRadius ? far / (1024 * 16) : dist - boundRadius);
 
-                const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
+                const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter((splat) => splat.visible);
                 const qWorld = new Quat();
 
                 for (let face = 0; face < 6; face++) {
                     qWorld.mul2(qCapture, EquirectRenderer.faceRotations[face]);
-                    scene.camera.setPoseOverride({ position: camPos, rotation: qWorld, fov: EquirectRenderer.faceFov, near, far });
+                    scene.camera.setPoseOverride({
+                        position: camPos,
+                        rotation: qWorld,
+                        fov: EquirectRenderer.faceFov,
+                        near,
+                        far
+                    });
 
                     // faces view different directions, so each render must
                     // wait for its own sort
@@ -232,7 +268,11 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 scene.dataProcessor.copyRt(mainTarget, workTarget, scene.overdrawRender);
 
                 // read the rendered frame (immediate: see render.offscreen)
-                await workTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workTarget, data, immediate: true });
+                await workTarget.colorBuffer.read(0, 0, width, height, {
+                    renderTarget: workTarget,
+                    data,
+                    immediate: true
+                });
             }
 
             let bytes: Uint8Array<ArrayBuffer>;
@@ -250,7 +290,11 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     data[i] = 255;
                 }
 
-                const imageData = new ImageData(new Uint8ClampedArray(data.buffer, data.byteOffset, data.length), width, height);
+                const imageData = new ImageData(
+                    new Uint8ClampedArray(data.buffer, data.byteOffset, data.length),
+                    width,
+                    height
+                );
                 let blob: Blob;
                 if (typeof OffscreenCanvas !== 'undefined') {
                     const canvas = new OffscreenCanvas(width, height);
@@ -271,7 +315,11 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     }
                     context.putImageData(imageData, 0, 0);
                     blob = await new Promise<Blob>((resolve, reject) => {
-                        canvas.toBlob(b => (b ? resolve(b) : reject(new Error('failed to encode jpeg'))), 'image/jpeg', quality ?? 0.9);
+                        canvas.toBlob(
+                            (b) => (b ? resolve(b) : reject(new Error('failed to encode jpeg'))),
+                            'image/jpeg',
+                            quality ?? 0.9
+                        );
                     });
                 }
                 bytes = new Uint8Array(await blob.arrayBuffer());
@@ -328,7 +376,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             scene.gizmoLayer.enabled = true;
             scene.centersLayer.enabled = true;
             scene.camera.clearPass.setClearColor(nullClr);
-            scene.forceRender = true;       // repaint the viewport with normal rendering
+            scene.forceRender = true; // repaint the viewport with normal rendering
 
             events.fire('stopSpinner');
         }
@@ -351,7 +399,19 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             let muxerWrites = Promise.resolve();
 
             try {
-                const { startFrame, endFrame, frameRate, width, height, bitrate, transparentBg, showDebug, format, codec: codecChoice, projection, levelHorizon } = videoSettings;
+                const {
+                    startFrame,
+                    endFrame,
+                    frameRate,
+                    width,
+                    height,
+                    transparentBg,
+                    showDebug,
+                    format,
+                    codec: codecChoice,
+                    projection,
+                    levelHorizon
+                } = videoSettings;
 
                 const is360 = projection === 'equirect';
 
@@ -360,7 +420,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 // last (fastStart false) instead of streaming to disk
                 const taggable = is360 && (format === 'mp4' || format === 'mov');
 
-                const target = (fileStream && !taggable) ? new StreamTarget(fileStream) : new BufferTarget();
+                const target = fileStream && !taggable ? new StreamTarget(fileStream) : new BufferTarget();
 
                 // Configure output format and codec from lookup maps (default to mp4/h264)
                 const formatConfig = FORMAT_CONFIG[format] ?? FORMAT_CONFIG.mp4;
@@ -404,17 +464,17 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                             // drives backpressure in the encode loop, and every
                             // write has settled before output.finalize().
                             muxerWrites = muxerWrites
-                            .then(async () => {
-                                if (!muxerError) {
-                                    await videoSource.add(encodedPacket, meta);
-                                }
-                            })
-                            .catch((error) => {
-                                muxerError = error instanceof Error ? error : new Error(String(error));
-                            })
-                            .finally(() => {
-                                muxerQueueSize--;
-                            });
+                                .then(async () => {
+                                    if (!muxerError) {
+                                        await videoSource.add(encodedPacket, meta);
+                                    }
+                                })
+                                .catch((error) => {
+                                    muxerError = error instanceof Error ? error : new Error(String(error));
+                                })
+                                .finally(() => {
+                                    muxerQueueSize--;
+                                });
                         },
                         error: (error) => {
                             encoderError = error;
@@ -470,7 +530,10 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     events.fire('timeline.time', frameTime);
 
                     // Wait for PLY sequence to load the frame if present
-                    const newSplat = await events.invoke('plysequence.setFrameAsync', Math.floor(frameTime)) as Splat | null;
+                    const newSplat = (await events.invoke(
+                        'plysequence.setFrameAsync',
+                        Math.floor(frameTime)
+                    )) as Splat | null;
 
                     // manually update the camera so position and rotation are correct
                     scene.camera.onUpdate(0);
@@ -491,7 +554,9 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                             last_pos.copy(pos);
                             last_forward.copy(forward);
 
-                            const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
+                            const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(
+                                (splat) => splat.visible
+                            );
                             await sortAndWait(splats);
                         }
                     }
@@ -518,7 +583,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     }
                     // muxerQueueSize is decremented by the write chain settling
                     // during the await
-                    // eslint-disable-next-line no-unmodified-loop-condition
+
                     while (muxerQueueSize > MAX_QUEUE_SIZE) {
                         await muxerWrites;
                     }
@@ -548,7 +613,11 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     scene.dataProcessor.copyRt(mainTarget, workTarget, scene.overdrawRender);
 
                     // read the rendered frame (immediate: see render.offscreen)
-                    await workTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workTarget, data, immediate: true });
+                    await workTarget.colorBuffer.read(0, 0, width, height, {
+                        renderTarget: workTarget,
+                        data,
+                        immediate: true
+                    });
 
                     await encodeFrame(frameTime);
                 };
@@ -584,14 +653,22 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     const far = dist + boundRadius;
                     const near = Math.max(1e-6, dist < boundRadius ? far / (1024 * 16) : dist - boundRadius);
 
-                    const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
+                    const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(
+                        (splat) => splat.visible
+                    );
 
                     for (let face = 0; face < 6; face++) {
                         // check for cancellation
                         if (cancelled) return;
 
                         qWorld.mul2(qCapture, EquirectRenderer.faceRotations[face]);
-                        scene.camera.setPoseOverride({ position: camPos, rotation: qWorld, fov: EquirectRenderer.faceFov, near, far });
+                        scene.camera.setPoseOverride({
+                            position: camPos,
+                            rotation: qWorld,
+                            fov: EquirectRenderer.faceFov,
+                            near,
+                            far
+                        });
 
                         // faces view different directions, so each render must
                         // wait for its own sort
@@ -608,7 +685,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                         const frameIndex = Math.round(frameTime * frameRate);
                         events.fire('progressUpdate', {
                             text: i18n.t('panel.render.rendering', { ellipsis: true }),
-                            progress: 100 * (frameIndex + (face + 1) / 6) / totalFrames
+                            progress: (100 * (frameIndex + (face + 1) / 6)) / totalFrames
                         });
                     }
 
@@ -647,7 +724,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
                         events.fire('progressUpdate', {
                             text: i18n.t('panel.render.rendering', { ellipsis: true }),
-                            progress: 100 * frameTime / duration
+                            progress: (100 * frameTime) / duration
                         });
                     }
                 }
@@ -724,7 +801,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 await events.invoke('showPopup', {
                     type: 'error',
                     header: i18n.t('panel.render.failed'),
-                    message: `'${(error as any).message ?? error}'`
+                    message: `'${(error as Error).message ?? error}'`
                 });
                 return false;
             } finally {
@@ -747,7 +824,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 scene.centersLayer.enabled = true;
                 scene.camera.clearPass.setClearColor(nullClr);
                 scene.lockedRenderMode = false;
-                scene.forceRender = true;       // camera likely moved, finish with normal render
+                scene.forceRender = true; // camera likely moved, finish with normal render
 
                 events.fire('progressEnd');
             }

@@ -7,7 +7,7 @@ const crcTable = new Uint32Array(256);
 for (let n = 0; n < 256; n++) {
     let c = n;
     for (let k = 0; k < 8; k++) {
-        c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+        c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
     }
     crcTable[n] = c;
 }
@@ -40,8 +40,8 @@ const encodePng = async (rgba: Uint8Array, width: number, height: number): Promi
     const ihdrView = new DataView(ihdr.buffer);
     ihdrView.setUint32(0, width);
     ihdrView.setUint32(4, height);
-    ihdr[8] = 8;    // bit depth
-    ihdr[9] = 6;    // color type: rgba (compression, filter and interlace bytes stay 0)
+    ihdr[8] = 8; // bit depth
+    ihdr[9] = 6; // color type: rgba (compression, filter and interlace bytes stay 0)
 
     // raw scanlines: a filter-type byte (0 = none) followed by the row's pixels
     const rowBytes = width * 4;
@@ -51,9 +51,9 @@ const encodePng = async (rgba: Uint8Array, width: number, height: number): Promi
     }
 
     // 'deflate' is the zlib wrapper (rfc 1950) that idat requires
-    const compressed = new Uint8Array(await new Response(
-        new Blob([raw]).stream().pipeThrough(new CompressionStream('deflate'))
-    ).arrayBuffer());
+    const compressed = new Uint8Array(
+        await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream('deflate'))).arrayBuffer()
+    );
 
     const signature = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
     const chunks = [signature, chunk('IHDR', ihdr), chunk('IDAT', compressed), chunk('IEND', new Uint8Array(0))];

@@ -15,11 +15,11 @@ class DroppedFile {
     }
 }
 
-type DropHandlerFunc = (files: Array<DroppedFile>, resetScene: boolean) => void;
+type DropHandlerFunc = (files: DroppedFile[], resetScene: boolean) => void;
 
-const resolveDirectories = (entries: Array<FileSystemEntry>): Promise<Array<FileSystemFileEntry>> => {
-    const promises: Promise<Array<FileSystemFileEntry>>[] = [];
-    const result: Array<FileSystemFileEntry> = [];
+const resolveDirectories = (entries: FileSystemEntry[]): Promise<FileSystemFileEntry[]> => {
+    const promises: Promise<FileSystemFileEntry[]>[] = [];
+    const result: FileSystemFileEntry[] = [];
 
     entries.forEach((entry) => {
         if (entry.name === '.DS_Store') {
@@ -30,18 +30,18 @@ const resolveDirectories = (entries: Array<FileSystemEntry>): Promise<Array<File
             result.push(entry as FileSystemFileEntry);
         } else if (entry.isDirectory) {
             promises.push(
-                new Promise<any>((resolve, reject) => {
+                new Promise<FileSystemFileEntry[]>((resolve) => {
                     const reader = (entry as FileSystemDirectoryEntry).createReader();
 
-                    const p: Promise<any>[] = [];
+                    const p: Promise<FileSystemFileEntry[]>[] = [];
 
                     const read = () => {
-                        reader.readEntries((children: Array<FileSystemEntry>) => {
+                        reader.readEntries((children: FileSystemEntry[]) => {
                             if (children.length > 0) {
                                 p.push(resolveDirectories(children));
                                 read();
                             } else {
-                                Promise.all(p).then((children: Array<Array<FileSystemFileEntry>>) => {
+                                Promise.all(p).then((children: FileSystemFileEntry[][]) => {
                                     resolve(children.flat());
                                 });
                             }
@@ -53,14 +53,19 @@ const resolveDirectories = (entries: Array<FileSystemEntry>): Promise<Array<File
         }
     });
 
-    return Promise.all(promises).then((children: Array<Array<FileSystemFileEntry>>) => {
+    return Promise.all(promises).then((children: FileSystemFileEntry[][]) => {
         return result.concat(...children);
     });
 };
 
 // collect the files under a dropped handle, named by their path relative to the
 // drop (so a dropped folder 'foo' yields 'foo/a.ply', matching resolveDirectories)
-const resolveHandles = async (handle: FileSystemHandle, prefix: string, result: Array<DroppedFile>, root: FileSystemHandle) => {
+const resolveHandles = async (
+    handle: FileSystemHandle,
+    prefix: string,
+    result: DroppedFile[],
+    root: FileSystemHandle
+) => {
     if (handle.name === '.DS_Store') {
         return;
     }
@@ -75,7 +80,7 @@ const resolveHandles = async (handle: FileSystemHandle, prefix: string, result: 
     }
 };
 
-const removeCommonPrefix = (urls: Array<DroppedFile>) => {
+const removeCommonPrefix = (urls: DroppedFile[]) => {
     const split = (pathname: string) => {
         const parts = pathname.split(path.delimiter);
         const base = parts[0];
@@ -101,7 +106,7 @@ const removeCommonPrefix = (urls: Array<DroppedFile>) => {
 
 // expand picked or dropped handles into files, descending into folders
 const resolveHandleFiles = async (handles: FileSystemHandle[]) => {
-    const files: Array<DroppedFile> = [];
+    const files: DroppedFile[] = [];
     for (const handle of handles) {
         await resolveHandles(handle, '', files, handle);
     }
@@ -115,7 +120,6 @@ const resolveHandleFiles = async (handles: FileSystemHandle[]) => {
 
 // configure drag and drop
 const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) => {
-
     const dragstart = (ev: DragEvent) => {
         ev.preventDefault();
         ev.stopPropagation();
@@ -138,24 +142,22 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
         // keeps one so a save can recognise a file the scene still reads from.
         // The handles must be requested before the handler first yields, after
         // which the items are no longer readable.
-        if (items.every(item => item.getAsFileSystemHandle)) {
-            const handles = await Promise.all(items.map(item => item.getAsFileSystemHandle()));
-            dropHandler(await resolveHandleFiles(handles.filter(handle => handle)), ev.shiftKey);
+        if (items.every((item) => item.getAsFileSystemHandle)) {
+            const handles = await Promise.all(items.map((item) => item.getAsFileSystemHandle()));
+            dropHandler(await resolveHandleFiles(handles.filter((handle) => handle)), ev.shiftKey);
             return;
         }
 
         // Map to entries first
-        const entries = items
-        .map(item => item.webkitGetAsEntry())
-        .filter(v => v);
+        const entries = items.map((item) => item.webkitGetAsEntry()).filter((v) => v);
 
         // resolve directories to files
         const resolvedEntries = await resolveDirectories(entries);
 
         const files = await Promise.all(
             resolvedEntries.map((entry) => {
-                return new Promise<DroppedFile>((resolve, reject) => {
-                    entry.file((entryFile: any) => {
+                return new Promise<DroppedFile>((resolve) => {
+                    entry.file((entryFile: File) => {
                         resolve(new DroppedFile(entry.fullPath.substring(1), entryFile));
                     });
                 });

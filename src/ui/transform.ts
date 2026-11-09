@@ -1,10 +1,12 @@
 import { NumericInput, VectorInput } from '@playcanvas/pcui';
 import { Quat, Vec3 } from 'playcanvas';
 
-import { Events } from '../events';
-import { ClipboardMenu, ClipboardSource, numberField, vectorField } from './clipboard-menu';
+import type { Events } from '../events';
+import type { Pivot } from '../pivot';
+
+import type { ClipboardMenu, ClipboardSource } from './clipboard-menu';
+import { numberField, vectorField } from './clipboard-menu';
 import { PanelSection } from './panel-section';
-import { Pivot } from '../pivot';
 
 const v = new Vec3();
 

@@ -165,7 +165,7 @@ async function browserChecks(url, enabled) {
         return result;
     };
     const near = (a, b) => Math.abs(a - b) < 0.001;
-    check(tools.length === 27 && tools.every(t => t.title && !t.title.startsWith('webmcp.')), 'native discovery exposes 27 titled tools');
+    check(tools.length === 32 && tools.every(t => t.title && !t.title.startsWith('webmcp.')), 'native discovery exposes 32 titled tools');
     const initial = await call('get_scene');
     check(initial.totalLayers === 0, 'empty scene inspection', initial);
     await call('set_selection', { layer: 99, mode: 'all' }, 'layer_not_found');
@@ -414,18 +414,46 @@ async function browserChecks(url, enabled) {
     await call('create_from_generator', { source: 'export class Generator { static create() { return { count: 1, columnNames: ["x"], getRow() { indexedDB.open("supersplat"); } }; } }' }, 'generator_failed');
     await call('create_from_generator', { source: ' ' }, 'invalid_input');
     check((await call('get_scene')).totalLayers === 1, 'create undo removes created layers');
+    const timeline = await call('get_timeline');
+    check(timeline.totalKeys === 0 && timeline.frames === 180 && timeline.frameRate === 30 && timeline.frame === 0, 'empty timeline inspection', timeline);
+    await call('set_camera', { position: [0, 0, 4], target: [0, 0, 0], fov: 60 });
+    const keyed = await call('set_keyframes', { keys: [{ frame: 0 }, { frame: 90, position: [4, 0, 0], target: [0, 0, 0], fov: 50 }] });
+    check(keyed.affected === 2 && near(keyed.keys[0].position[2], 4) && keyed.keys[1].fov === 50 && keyed.rendered, 'keyframes capture the camera and take explicit poses', keyed);
+    const halfway = await call('set_timeline', { frame: 45, smoothness: 0, loop: false });
+    const pose = halfway.camera;
+    check(Math.abs(pose.position[0] - 2) < 0.01 && Math.abs(pose.position[2] - 2) < 0.01 && Math.abs(pose.fov - 55) < 0.01 &&
+        halfway.viewport.viewToken !== keyed.viewport.viewToken, 'playhead evaluates the camera path with a fresh viewToken', pose);
+    await call('set_camera', { position: [0, 3, 3], target: [0, 0, 0] });
+    const restored = (await call('set_timeline', { frame: 45 })).camera;
+    check(Math.abs(restored.position[0] - 2) < 0.01 && Math.abs(restored.position[2] - 2) < 0.01, 'seeking the current frame returns a moved camera to the path', restored);
+    check((await call('get_scene')).timeline.totalKeys === 2, 'scene inspection includes the timeline summary');
+    await call('move_keyframe', { from: 0, to: 90 }, 'key_exists');
+    const movedKey = await call('move_keyframe', { from: 90, to: 120 });
+    check(movedKey.keys[0].frame === 120 && !movedKey.replaced, 'move keyframe', movedKey);
+    await call('undo');
+    check((await call('delete_keyframes', { frames: [0, 90] })).timeline.totalKeys === 0, 'delete keyframes');
+    await call('undo');
+    check((await call('get_timeline')).keys.map(k => k.frame).join() === '0,90', 'keyframe edits undo exactly');
+    const playing = await call('set_timeline', { playing: true });
+    let advanced = 45;
+    for (let i = 0; i < 100 && advanced === 45; i++) {
+        await new Promise(resolve => setTimeout(resolve, 30));
+        advanced = (await call('get_timeline')).frame;
+    }
+    const paused = await call('set_timeline', { playing: false });
+    check(playing.timeline.playing && advanced !== 45 && !paused.timeline.playing, 'playback advances the playhead until paused', { advanced });
     const language = document.querySelector('#settings-panel .settings-panel-row-select').ui;
     language.value = 'fr';
     let localized;
     for (let i = 0; i < 100; i++) {
         localized = await provider.getTools();
-        if (localized.length === 27 && localized.find(t => t.name === 'get_scene').title !== tools.find(t => t.name === 'get_scene').title) break;
+        if (localized.length === 32 && localized.find(t => t.name === 'get_scene').title !== tools.find(t => t.name === 'get_scene').title) break;
         await new Promise(resolve => setTimeout(resolve, 20));
     }
-    check(localized.length === 27 && new Set(localized.map(t => t.name)).size === 27 && localized.find(t => t.name === 'get_scene').title !== tools.find(t => t.name === 'get_scene').title, 'live language change replaces tool titles without duplicates');
+    check(localized.length === 32 && new Set(localized.map(t => t.name)).size === 32 && localized.find(t => t.name === 'get_scene').title !== tools.find(t => t.name === 'get_scene').title, 'live language change replaces tool titles without duplicates');
     const localizedScene = JSON.parse(await provider.executeTool(localized.find(t => t.name === 'get_scene'), {}));
     check(localizedScene.ok && localizedScene.totalLayers === 1, 'localized native tools retain the scene');
     language.value = 'en';
-    check(used.size === 27, 'all 27 native tools were executed', [...used]);
+    check(used.size === 32, 'all 32 native tools were executed', [...used]);
     return { checks, used: [...used] };
 }

@@ -19,7 +19,7 @@ const histogramStats = (counts: ArrayLike<number>, min: number, max: number): Hi
     let bin = 0;
     let below = 0;
     for (const p of PERCENTILES) {
-        const target = count * p / 100;
+        const target = (count * p) / 100;
         while (bin < counts.length - 1 && below + counts[bin] < target) below += counts[bin++];
         const within = counts[bin] ? (target - below) / counts[bin] : 0;
         percentiles[`p${p}`] = min + (bin + Math.min(1, Math.max(0, within))) * width;

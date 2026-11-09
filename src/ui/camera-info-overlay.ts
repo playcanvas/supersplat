@@ -1,16 +1,20 @@
 import { Container, Label } from '@playcanvas/pcui';
 import { Vec3 } from 'playcanvas';
 
-import { Events } from '../events';
+import type { Events } from '../events';
+
 import { i18n } from './localization';
-import { Tooltips } from './tooltips';
+import type { Tooltips } from './tooltips';
 
 // Accepts "1,2,3", "1, 2, 3", "1 2 3", with or without trailing whitespace.
 const parseVector = (text: string): [number, number, number] | null => {
-    const parts = text.trim().split(/[\s,]+/).filter(p => p.length > 0);
+    const parts = text
+        .trim()
+        .split(/[\s,]+/)
+        .filter((p) => p.length > 0);
     if (parts.length !== 3) return null;
     const nums = parts.map(Number);
-    if (nums.some(n => !Number.isFinite(n))) return null;
+    if (nums.some((n) => !Number.isFinite(n))) return null;
     return [nums[0], nums[1], nums[2]];
 };
 

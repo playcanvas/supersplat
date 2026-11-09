@@ -1,14 +1,15 @@
 import { Container, Label } from '@playcanvas/pcui';
 
-import { Events } from '../events';
-import { ClipboardMenu } from './clipboard-menu';
+import type { Events } from '../events';
+
+import type { ClipboardMenu } from './clipboard-menu';
 import { ColorPanel } from './color-panel';
 import { i18n } from './localization';
 import { SplatList } from './splat-list';
 import sceneImportSvg from './svg/import.svg';
 import sceneNewSvg from './svg/new.svg';
 import soloSvg from './svg/solo.svg';
-import { Tooltips } from './tooltips';
+import type { Tooltips } from './tooltips';
 import { Transform } from './transform';
 
 const createSvg = (svgString: string) => {

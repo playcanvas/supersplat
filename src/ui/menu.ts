@@ -1,12 +1,15 @@
 import { Container, Element, Label } from '@playcanvas/pcui';
 
-import { Events } from '../events';
-import { ExportChoices } from '../export-options';
+import type { Events } from '../events';
+import type { ExportChoices } from '../export-options';
 import { requestNavigateHome } from '../iframe-api';
-import { recentFiles, recentImports, RecentStore } from '../recent-files';
-import { ShortcutManager } from '../shortcut-manager';
+import type { RecentStore } from '../recent-files';
+import { recentFiles, recentImports } from '../recent-files';
+import type { ShortcutManager } from '../shortcut-manager';
+
 import { i18n } from './localization';
-import { MenuPanel, MenuItem } from './menu-panel';
+import type { MenuItem } from './menu-panel';
+import { MenuPanel } from './menu-panel';
 import arrowSvg from './svg/arrow.svg';
 import collapseSvg from './svg/collapse.svg';
 import selectDelete from './svg/delete.svg';
@@ -36,7 +39,12 @@ const createSvg = (svgString: string) => {
 
 // Rebuild a recent-entries submenu (one row per entry, then a clear action)
 // when its parent menu opens. Returns whether there are any entries.
-const refreshRecentMenu = async <T extends { name: string }>(panel: MenuPanel, store: RecentStore<T & { date: number }>, onSelect: (entry: T) => void, clearKey: string) => {
+const refreshRecentMenu = async <T extends { name: string }>(
+    panel: MenuPanel,
+    store: RecentStore<T & { date: number }>,
+    onSelect: (entry: T) => void,
+    clearKey: string
+) => {
     try {
         const entries = await store.get();
         const items: MenuItem[] = entries.map((entry) => {
@@ -177,103 +185,137 @@ class Menu extends Container {
             lastExport = value;
         });
 
-        const exportMenuPanel = new MenuPanel([{
-            text: 'PLY (.ply)...',
-            icon: createSvg(sceneExport),
-            isEnabled: () => !events.invoke('scene.empty'),
-            onSelect: () => events.invoke('scene.export', 'ply')
-        }, {
-            text: 'SOG (.sog)...',
-            icon: createSvg(sceneExport),
-            isEnabled: () => !events.invoke('scene.empty'),
-            onSelect: () => events.invoke('scene.export', 'sog')
-        }, {
-            text: 'SPZ (.spz)...',
-            icon: createSvg(sceneExport),
-            isEnabled: () => !events.invoke('scene.empty'),
-            onSelect: () => events.invoke('scene.export', 'spz')
-        }, {
-            text: 'Splat (.splat)...',
-            icon: createSvg(sceneExport),
-            isEnabled: () => !events.invoke('scene.empty'),
-            onSelect: () => events.invoke('scene.export', 'splat')
-        }, {
-            // separator
-        }, {
-            text: () => i18n.t('menu.file.export.viewer', { ellipsis: true }),
-            icon: createSvg(sceneExport),
-            isEnabled: () => !events.invoke('scene.empty'),
-            onSelect: () => events.invoke('scene.export', 'viewer')
-        }]);
+        const exportMenuPanel = new MenuPanel([
+            {
+                text: 'PLY (.ply)...',
+                icon: createSvg(sceneExport),
+                isEnabled: () => !events.invoke('scene.empty'),
+                onSelect: () => events.invoke('scene.export', 'ply')
+            },
+            {
+                text: 'SOG (.sog)...',
+                icon: createSvg(sceneExport),
+                isEnabled: () => !events.invoke('scene.empty'),
+                onSelect: () => events.invoke('scene.export', 'sog')
+            },
+            {
+                text: 'SPZ (.spz)...',
+                icon: createSvg(sceneExport),
+                isEnabled: () => !events.invoke('scene.empty'),
+                onSelect: () => events.invoke('scene.export', 'spz')
+            },
+            {
+                text: 'Splat (.splat)...',
+                icon: createSvg(sceneExport),
+                isEnabled: () => !events.invoke('scene.empty'),
+                onSelect: () => events.invoke('scene.export', 'splat')
+            },
+            {
+                // separator
+            },
+            {
+                text: () => i18n.t('menu.file.export.viewer', { ellipsis: true }),
+                icon: createSvg(sceneExport),
+                isEnabled: () => !events.invoke('scene.empty'),
+                onSelect: () => events.invoke('scene.export', 'viewer')
+            }
+        ]);
 
         const openRecentMenuPanel = new MenuPanel([]);
         const importRecentMenuPanel = new MenuPanel([]);
 
-        const fileMenuPanel = new MenuPanel([{
-            text: () => i18n.t('menu.file.new'),
-            icon: createSvg(sceneNew),
-            isEnabled: () => !events.invoke('scene.empty'),
-            onSelect: () => events.invoke('doc.new')
-        }, {
-            text: () => i18n.t('menu.file.open', { ellipsis: true }),
-            icon: createSvg(sceneOpen),
-            onSelect: async () => {
-                await events.invoke('doc.open');
-            }
-        }, {
-            text: () => i18n.t('menu.file.open-recent'),
-            icon: createSvg(sceneOpen),
-            subMenu: openRecentMenuPanel,
-            isEnabled: () => refreshRecentMenu(openRecentMenuPanel, recentFiles, file => events.invoke('doc.openRecent', file.handle), 'menu.file.open-recent.clear')
-        }, {
-            // separator
-        }, {
-            text: () => i18n.t('menu.file.save'),
-            icon: createSvg(sceneSave),
-            isEnabled: () => events.invoke('doc.name'),
-            onSelect: async () => await events.invoke('doc.save')
-        }, {
-            text: () => i18n.t('menu.file.save-as', { ellipsis: true }),
-            icon: createSvg(sceneSave),
-            isEnabled: () => !events.invoke('scene.empty'),
-            onSelect: async () => await events.invoke('doc.saveAs')
-        }, {
-            // separator
-        }, {
-            text: () => i18n.t('menu.file.import', { ellipsis: true }),
-            icon: createSvg(sceneImport),
-            onSelect: async () => {
-                await events.invoke('scene.import');
-            }
-        }, {
-            text: () => i18n.t('menu.file.import-recent'),
-            icon: createSvg(sceneImport),
-            subMenu: importRecentMenuPanel,
-            isEnabled: () => refreshRecentMenu(importRecentMenuPanel, recentImports, entry => events.invoke('scene.importRecent', entry), 'menu.file.import-recent.clear')
-        }, {
-            // separator
-        }, {
-            text: () => i18n.t('menu.file.export'),
-            icon: createSvg(sceneExport),
-            subMenu: exportMenuPanel
-        }, {
-            text: () => {
-                return lastExport ?
-                    i18n.t('menu.file.reexport-to', { filename: lastExport.choices.filename }) :
-                    i18n.t('menu.file.reexport');
+        const fileMenuPanel = new MenuPanel([
+            {
+                text: () => i18n.t('menu.file.new'),
+                icon: createSvg(sceneNew),
+                isEnabled: () => !events.invoke('scene.empty'),
+                onSelect: () => events.invoke('doc.new')
             },
-            icon: createSvg(sceneExport),
-            extra: shortcutManager.formatShortcut('scene.reexport'),
-            isEnabled: () => !!lastExport && !events.invoke('scene.empty'),
-            onSelect: () => events.fire('scene.reexport')
-        }, {
-            // separator
-        }, {
-            text: () => i18n.t('menu.file.publish', { ellipsis: true }),
-            icon: createSvg(scenePublish),
-            isEnabled: () => !events.invoke('scene.empty'),
-            onSelect: async () => await events.invoke('show.publishSettingsDialog')
-        }]);
+            {
+                text: () => i18n.t('menu.file.open', { ellipsis: true }),
+                icon: createSvg(sceneOpen),
+                onSelect: async () => {
+                    await events.invoke('doc.open');
+                }
+            },
+            {
+                text: () => i18n.t('menu.file.open-recent'),
+                icon: createSvg(sceneOpen),
+                subMenu: openRecentMenuPanel,
+                isEnabled: () =>
+                    refreshRecentMenu(
+                        openRecentMenuPanel,
+                        recentFiles,
+                        (file) => events.invoke('doc.openRecent', file.handle),
+                        'menu.file.open-recent.clear'
+                    )
+            },
+            {
+                // separator
+            },
+            {
+                text: () => i18n.t('menu.file.save'),
+                icon: createSvg(sceneSave),
+                isEnabled: () => !!events.invoke('doc.name'),
+                onSelect: async () => await events.invoke('doc.save')
+            },
+            {
+                text: () => i18n.t('menu.file.save-as', { ellipsis: true }),
+                icon: createSvg(sceneSave),
+                isEnabled: () => !events.invoke('scene.empty'),
+                onSelect: async () => await events.invoke('doc.saveAs')
+            },
+            {
+                // separator
+            },
+            {
+                text: () => i18n.t('menu.file.import', { ellipsis: true }),
+                icon: createSvg(sceneImport),
+                onSelect: async () => {
+                    await events.invoke('scene.import');
+                }
+            },
+            {
+                text: () => i18n.t('menu.file.import-recent'),
+                icon: createSvg(sceneImport),
+                subMenu: importRecentMenuPanel,
+                isEnabled: () =>
+                    refreshRecentMenu(
+                        importRecentMenuPanel,
+                        recentImports,
+                        (entry) => events.invoke('scene.importRecent', entry),
+                        'menu.file.import-recent.clear'
+                    )
+            },
+            {
+                // separator
+            },
+            {
+                text: () => i18n.t('menu.file.export'),
+                icon: createSvg(sceneExport),
+                subMenu: exportMenuPanel
+            },
+            {
+                text: () => {
+                    return lastExport
+                        ? i18n.t('menu.file.reexport-to', { filename: lastExport.choices.filename })
+                        : i18n.t('menu.file.reexport');
+                },
+                icon: createSvg(sceneExport),
+                extra: shortcutManager.formatShortcut('scene.reexport'),
+                isEnabled: () => !!lastExport && !events.invoke('scene.empty'),
+                onSelect: () => events.fire('scene.reexport')
+            },
+            {
+                // separator
+            },
+            {
+                text: () => i18n.t('menu.file.publish', { ellipsis: true }),
+                icon: createSvg(scenePublish),
+                isEnabled: () => !events.invoke('scene.empty'),
+                onSelect: async () => await events.invoke('show.publishSettingsDialog')
+            }
+        ]);
 
         // track undo/redo availability for menu item enablement
         let canUndo = false;
@@ -285,138 +327,179 @@ class Menu extends Container {
             canRedo = value;
         });
 
-        const editMenuPanel = new MenuPanel([{
-            text: () => i18n.t('menu.edit.undo'),
-            icon: createSvg(editUndo),
-            extra: shortcutManager.formatShortcut('edit.undo'),
-            isEnabled: () => canUndo,
-            onSelect: () => events.fire('edit.undo')
-        }, {
-            text: () => i18n.t('menu.edit.redo'),
-            icon: createSvg(editRedo),
-            extra: shortcutManager.formatShortcut('edit.redo'),
-            isEnabled: () => canRedo,
-            onSelect: () => events.fire('edit.redo')
-        }, {
-            // separator
-        }, {
-            text: () => i18n.t('menu.edit.duplicate'),
-            icon: createSvg(selectDuplicate),
-            isEnabled: () => events.invoke('selection.splats'),
-            onSelect: () => events.fire('edit.duplicate')
-        }, {
-            text: () => i18n.t('menu.edit.separate'),
-            icon: createSvg(selectSeparate),
-            isEnabled: () => events.invoke('selection.splats'),
-            onSelect: () => events.fire('edit.separate')
-        }]);
+        const editMenuPanel = new MenuPanel([
+            {
+                text: () => i18n.t('menu.edit.undo'),
+                icon: createSvg(editUndo),
+                extra: shortcutManager.formatShortcut('edit.undo'),
+                isEnabled: () => canUndo,
+                onSelect: () => events.fire('edit.undo')
+            },
+            {
+                text: () => i18n.t('menu.edit.redo'),
+                icon: createSvg(editRedo),
+                extra: shortcutManager.formatShortcut('edit.redo'),
+                isEnabled: () => canRedo,
+                onSelect: () => events.fire('edit.redo')
+            },
+            {
+                // separator
+            },
+            {
+                text: () => i18n.t('menu.edit.duplicate'),
+                icon: createSvg(selectDuplicate),
+                isEnabled: () => events.invoke('selection.splats'),
+                onSelect: () => events.fire('edit.duplicate')
+            },
+            {
+                text: () => i18n.t('menu.edit.separate'),
+                icon: createSvg(selectSeparate),
+                isEnabled: () => events.invoke('selection.splats'),
+                onSelect: () => events.fire('edit.separate')
+            }
+        ]);
 
-        const selectionMenuPanel = new MenuPanel([{
-            text: () => i18n.t('menu.select.all'),
-            icon: createSvg(selectAll),
-            extra: shortcutManager.formatShortcut('select.all'),
-            onSelect: () => events.fire('select.all')
-        }, {
-            text: () => i18n.t('menu.select.none'),
-            icon: createSvg(selectNone),
-            extra: shortcutManager.formatShortcut('select.none'),
-            onSelect: () => events.fire('select.none')
-        }, {
-            text: () => i18n.t('menu.select.invert'),
-            icon: createSvg(selectInverse),
-            extra: shortcutManager.formatShortcut('select.invert'),
-            onSelect: () => events.fire('select.invert')
-        }, {
-            // separator
-        }, {
-            text: () => i18n.t('menu.select.lock'),
-            icon: createSvg(selectLock),
-            extra: shortcutManager.formatShortcut('select.hide'),
-            isEnabled: () => events.invoke('selection.splats'),
-            onSelect: () => events.fire('select.hide')
-        }, {
-            text: () => i18n.t('menu.select.unlock'),
-            icon: createSvg(selectUnlock),
-            extra: shortcutManager.formatShortcut('select.unhide'),
-            onSelect: () => events.fire('select.unhide')
-        }, {
-            text: () => i18n.t('menu.select.delete'),
-            icon: createSvg(selectDelete),
-            extra: shortcutManager.formatShortcut('select.delete'),
-            isEnabled: () => events.invoke('selection.splats'),
-            onSelect: () => events.fire('select.delete')
-        }, {
-            text: () => i18n.t('menu.select.reset'),
-            onSelect: () => events.fire('scene.reset')
-        }]);
+        const selectionMenuPanel = new MenuPanel([
+            {
+                text: () => i18n.t('menu.select.all'),
+                icon: createSvg(selectAll),
+                extra: shortcutManager.formatShortcut('select.all'),
+                onSelect: () => events.fire('select.all')
+            },
+            {
+                text: () => i18n.t('menu.select.none'),
+                icon: createSvg(selectNone),
+                extra: shortcutManager.formatShortcut('select.none'),
+                onSelect: () => events.fire('select.none')
+            },
+            {
+                text: () => i18n.t('menu.select.invert'),
+                icon: createSvg(selectInverse),
+                extra: shortcutManager.formatShortcut('select.invert'),
+                onSelect: () => events.fire('select.invert')
+            },
+            {
+                // separator
+            },
+            {
+                text: () => i18n.t('menu.select.lock'),
+                icon: createSvg(selectLock),
+                extra: shortcutManager.formatShortcut('select.hide'),
+                isEnabled: () => events.invoke('selection.splats'),
+                onSelect: () => events.fire('select.hide')
+            },
+            {
+                text: () => i18n.t('menu.select.unlock'),
+                icon: createSvg(selectUnlock),
+                extra: shortcutManager.formatShortcut('select.unhide'),
+                onSelect: () => events.fire('select.unhide')
+            },
+            {
+                text: () => i18n.t('menu.select.delete'),
+                icon: createSvg(selectDelete),
+                extra: shortcutManager.formatShortcut('select.delete'),
+                isEnabled: () => events.invoke('selection.splats'),
+                onSelect: () => events.fire('select.delete')
+            },
+            {
+                text: () => i18n.t('menu.select.reset'),
+                onSelect: () => events.fire('scene.reset')
+            }
+        ]);
 
-        const renderMenuPanel = new MenuPanel([{
-            text: () => i18n.t('menu.render.image', { ellipsis: true }),
-            icon: createSvg(sceneExport),
-            onSelect: async () => await events.invoke('show.imageSettingsDialog')
-        }, {
-            text: () => i18n.t('menu.render.video', { ellipsis: true }),
-            icon: createSvg(sceneExport),
-            onSelect: async () => await events.invoke('show.videoSettingsDialog')
-        }]);
+        const renderMenuPanel = new MenuPanel([
+            {
+                text: () => i18n.t('menu.render.image', { ellipsis: true }),
+                icon: createSvg(sceneExport),
+                onSelect: async () => await events.invoke('show.imageSettingsDialog')
+            },
+            {
+                text: () => i18n.t('menu.render.video', { ellipsis: true }),
+                icon: createSvg(sceneExport),
+                onSelect: async () => await events.invoke('show.videoSettingsDialog')
+            }
+        ]);
 
-        const videoTutorialsMenuPanel = new MenuPanel([{
-            text: () => i18n.t('menu.help.video-tutorials.basics'),
-            icon: 'E261',
-            onSelect: () => window.open('https://youtu.be/MwzaEM2I55I', '_blank')?.focus()
-        }, {
-            text: () => i18n.t('menu.help.video-tutorials.in-depth'),
-            icon: 'E261',
-            onSelect: () => window.open('https://youtu.be/J37rTieKgJ8', '_blank')?.focus()
-        }, {
-            text: () => i18n.t('menu.help.video-tutorials.deleting-floaters'),
-            icon: 'E261',
-            onSelect: () => window.open('https://youtu.be/8qaLfwkkSdU', '_blank')?.focus()
-        }, {
-            text: () => i18n.t('menu.help.video-tutorials.scaling'),
-            icon: 'E261',
-            onSelect: () => window.open('https://youtu.be/fRK1vVMg_EU', '_blank')?.focus()
-        }]);
+        const videoTutorialsMenuPanel = new MenuPanel([
+            {
+                text: () => i18n.t('menu.help.video-tutorials.basics'),
+                icon: 'E261',
+                onSelect: () => window.open('https://youtu.be/MwzaEM2I55I', '_blank')?.focus()
+            },
+            {
+                text: () => i18n.t('menu.help.video-tutorials.in-depth'),
+                icon: 'E261',
+                onSelect: () => window.open('https://youtu.be/J37rTieKgJ8', '_blank')?.focus()
+            },
+            {
+                text: () => i18n.t('menu.help.video-tutorials.deleting-floaters'),
+                icon: 'E261',
+                onSelect: () => window.open('https://youtu.be/8qaLfwkkSdU', '_blank')?.focus()
+            },
+            {
+                text: () => i18n.t('menu.help.video-tutorials.scaling'),
+                icon: 'E261',
+                onSelect: () => window.open('https://youtu.be/fRK1vVMg_EU', '_blank')?.focus()
+            }
+        ]);
 
-        const helpMenuPanel = new MenuPanel([{
-            text: () => i18n.t('menu.help.video-tutorials'),
-            icon: 'E261',
-            subMenu: videoTutorialsMenuPanel
-        }, {
-            text: () => i18n.t('menu.help.user-guide'),
-            icon: 'E232',
-            onSelect: () => window.open('https://developer.playcanvas.com/user-manual/gaussian-splatting/editing/supersplat/', '_blank')?.focus()
-        }, {
-            text: () => i18n.t('menu.help.shortcuts'),
-            icon: 'E136',
-            onSelect: () => events.fire('show.shortcuts')
-        }, {
-            // separator
-        }, {
-            text: () => i18n.t('menu.help.discord'),
-            icon: 'E233',
-            onSelect: () => window.open('https://discord.gg/T3pnhRTTAY', '_blank')?.focus()
-        }, {
-            text: () => i18n.t('menu.help.forum'),
-            icon: 'E432',
-            onSelect: () => window.open('https://forum.playcanvas.com', '_blank')?.focus()
-        }, {
-            // separator
-        }, {
-            text: () => i18n.t('menu.help.github-repo'),
-            icon: 'E259',
-            onSelect: () => window.open('https://github.com/playcanvas/supersplat', '_blank')?.focus()
-        }, {
-            text: () => i18n.t('menu.help.log-issue'),
-            icon: 'E336',
-            onSelect: () => window.open('https://github.com/playcanvas/supersplat/issues', '_blank')?.focus()
-        }, {
-            // separator
-        }, {
-            text: () => i18n.t('menu.help.about'),
-            icon: 'E138',
-            onSelect: () => events.fire('show.about')
-        }]);
+        const helpMenuPanel = new MenuPanel([
+            {
+                text: () => i18n.t('menu.help.video-tutorials'),
+                icon: 'E261',
+                subMenu: videoTutorialsMenuPanel
+            },
+            {
+                text: () => i18n.t('menu.help.user-guide'),
+                icon: 'E232',
+                onSelect: () =>
+                    window
+                        .open(
+                            'https://developer.playcanvas.com/user-manual/gaussian-splatting/editing/supersplat/',
+                            '_blank'
+                        )
+                        ?.focus()
+            },
+            {
+                text: () => i18n.t('menu.help.shortcuts'),
+                icon: 'E136',
+                onSelect: () => events.fire('show.shortcuts')
+            },
+            {
+                // separator
+            },
+            {
+                text: () => i18n.t('menu.help.discord'),
+                icon: 'E233',
+                onSelect: () => window.open('https://discord.gg/T3pnhRTTAY', '_blank')?.focus()
+            },
+            {
+                text: () => i18n.t('menu.help.forum'),
+                icon: 'E432',
+                onSelect: () => window.open('https://forum.playcanvas.com', '_blank')?.focus()
+            },
+            {
+                // separator
+            },
+            {
+                text: () => i18n.t('menu.help.github-repo'),
+                icon: 'E259',
+                onSelect: () => window.open('https://github.com/playcanvas/supersplat', '_blank')?.focus()
+            },
+            {
+                text: () => i18n.t('menu.help.log-issue'),
+                icon: 'E336',
+                onSelect: () => window.open('https://github.com/playcanvas/supersplat/issues', '_blank')?.focus()
+            },
+            {
+                // separator
+            },
+            {
+                text: () => i18n.t('menu.help.about'),
+                icon: 'E138',
+                onSelect: () => events.fire('show.about')
+            }
+        ]);
 
         this.append(menubar);
         this.append(fileMenuPanel);
@@ -429,22 +512,28 @@ class Menu extends Container {
         this.append(videoTutorialsMenuPanel);
         this.append(helpMenuPanel);
 
-        const options: { dom: HTMLElement, menuPanel: MenuPanel }[] = [{
-            dom: scene.dom,
-            menuPanel: fileMenuPanel
-        }, {
-            dom: edit.dom,
-            menuPanel: editMenuPanel
-        }, {
-            dom: selection.dom,
-            menuPanel: selectionMenuPanel
-        }, {
-            dom: render.dom,
-            menuPanel: renderMenuPanel
-        }, {
-            dom: help.dom,
-            menuPanel: helpMenuPanel
-        }];
+        const options: { dom: HTMLElement; menuPanel: MenuPanel }[] = [
+            {
+                dom: scene.dom,
+                menuPanel: fileMenuPanel
+            },
+            {
+                dom: edit.dom,
+                menuPanel: editMenuPanel
+            },
+            {
+                dom: selection.dom,
+                menuPanel: selectionMenuPanel
+            },
+            {
+                dom: render.dom,
+                menuPanel: renderMenuPanel
+            },
+            {
+                dom: help.dom,
+                menuPanel: helpMenuPanel
+            }
+        ];
 
         options.forEach((option) => {
             const activate = () => {
@@ -454,7 +543,7 @@ class Menu extends Container {
                 });
             };
 
-            option.dom.addEventListener('pointerdown', (event: PointerEvent) => {
+            option.dom.addEventListener('pointerdown', () => {
                 if (!option.menuPanel.hidden) {
                     option.menuPanel.hidden = true;
                 } else {
@@ -462,8 +551,8 @@ class Menu extends Container {
                 }
             });
 
-            option.dom.addEventListener('pointerenter', (event: PointerEvent) => {
-                if (!options.every(opt => opt.menuPanel.hidden)) {
+            option.dom.addEventListener('pointerenter', () => {
+                if (!options.every((opt) => opt.menuPanel.hidden)) {
                     activate();
                 }
             });

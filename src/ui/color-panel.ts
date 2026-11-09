@@ -1,11 +1,13 @@
 import { Button, ColorPicker, Container, SliderInput } from '@playcanvas/pcui';
 import { Color } from 'playcanvas';
 
-import { Events } from '../events';
-import { ClipboardMenu, ClipboardSource, colorField, numberField } from './clipboard-menu';
+import type { Events } from '../events';
+import type { Splat } from '../splat';
+
+import type { ClipboardMenu, ClipboardSource } from './clipboard-menu';
+import { colorField, numberField } from './clipboard-menu';
 import { i18n } from './localization';
 import { PanelSection } from './panel-section';
-import { Splat } from '../splat';
 import checkSvg from './svg/check.svg';
 import colorsSvg from './svg/colors.svg';
 import editUndoSvg from './svg/edit-undo.svg';
@@ -137,7 +139,7 @@ class ColorPanel extends PanelSection {
             brightness: 0,
             blackPoint: 0,
             whitePoint: 1,
-            transparency: 0     // slider is log space, so 0 means a factor of 1
+            transparency: 0 // slider is log space, so 0 means a factor of 1
         };
 
         // the pending grade in the form gradeTerms expects
@@ -151,7 +153,7 @@ class ColorPanel extends PanelSection {
             transparency: Math.exp(transparencySlider.value)
         });
 
-        const isNeutral = () => (
+        const isNeutral = () =>
             tintPicker.value[0] === NEUTRAL.tint[0] &&
             tintPicker.value[1] === NEUTRAL.tint[1] &&
             tintPicker.value[2] === NEUTRAL.tint[2] &&
@@ -160,12 +162,11 @@ class ColorPanel extends PanelSection {
             brightnessSlider.value === NEUTRAL.brightness &&
             blackPointSlider.value === NEUTRAL.blackPoint &&
             whitePointSlider.value === NEUTRAL.whitePoint &&
-            transparencySlider.value === NEUTRAL.transparency
-        );
+            transparencySlider.value === NEUTRAL.transparency;
 
         // the renderer asks for this every frame; null means nothing to preview
         events.function('colorPanel.pending', () => {
-            return (selected && !isNeutral()) ? pendingParams() : null;
+            return selected && !isNeutral() ? pendingParams() : null;
         });
 
         const setControls = (values: typeof NEUTRAL) => {
@@ -198,25 +199,31 @@ class ColorPanel extends PanelSection {
         // the end of the range, where the other can't move, it stops a step short
         const POINT_STEP = 0.01;
 
-        const separatePoints = (points: { blackPoint: number, whitePoint: number }, moved: 'blackPoint' | 'whitePoint') => {
+        const separatePoints = (
+            points: { blackPoint: number; whitePoint: number },
+            moved: 'blackPoint' | 'whitePoint'
+        ) => {
             const { blackPoint, whitePoint } = points;
             if (blackPoint < whitePoint) {
                 return { blackPoint, whitePoint };
             }
             if (moved === 'blackPoint') {
-                return blackPoint + POINT_STEP <= 1 ?
-                    { blackPoint, whitePoint: blackPoint + POINT_STEP } :
-                    { blackPoint: 1 - POINT_STEP, whitePoint: 1 };
+                return blackPoint + POINT_STEP <= 1
+                    ? { blackPoint, whitePoint: blackPoint + POINT_STEP }
+                    : { blackPoint: 1 - POINT_STEP, whitePoint: 1 };
             }
-            return whitePoint - POINT_STEP >= 0 ?
-                { blackPoint: whitePoint - POINT_STEP, whitePoint } :
-                { blackPoint: 0, whitePoint: POINT_STEP };
+            return whitePoint - POINT_STEP >= 0
+                ? { blackPoint: whitePoint - POINT_STEP, whitePoint }
+                : { blackPoint: 0, whitePoint: POINT_STEP };
         };
 
         // the sliders round to their step and only fire on a real change, so
         // the nested change this triggers settles at once
         const keepPointsApart = (moved: 'blackPoint' | 'whitePoint') => {
-            const points = separatePoints({ blackPoint: blackPointSlider.value, whitePoint: whitePointSlider.value }, moved);
+            const points = separatePoints(
+                { blackPoint: blackPointSlider.value, whitePoint: whitePointSlider.value },
+                moved
+            );
             blackPointSlider.value = points.blackPoint;
             whitePointSlider.value = points.whitePoint;
             changed();
@@ -269,7 +276,10 @@ class ColorPanel extends PanelSection {
                 const merged = { ...controlValues(), ...values } as typeof NEUTRAL;
                 // resolve a crossing up front, as the sliders would: the pasted
                 // point wins and pushes the other one along
-                setControls({ ...merged, ...separatePoints(merged, 'whitePoint' in values ? 'whitePoint' : 'blackPoint') });
+                setControls({
+                    ...merged,
+                    ...separatePoints(merged, 'whitePoint' in values ? 'whitePoint' : 'blackPoint')
+                });
             },
             enabled: () => !!selected
         };
@@ -283,7 +293,6 @@ class ColorPanel extends PanelSection {
             // across a selection change would silently retarget it
             setControls(NEUTRAL);
         });
-
     }
 }
 

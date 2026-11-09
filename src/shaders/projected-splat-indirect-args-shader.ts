@@ -7,7 +7,7 @@
 // ComputeRadixSort#prepareIndirect(): [slotCount, g0, g1, g2] where each g is the
 // elements-per-workgroup granularity of one slot, and each slot occupies three
 // consecutive u32 (workgroup counts x, y, z).
-const projectedSplatIndirectArgs = (instanceSize: number) => /* wgsl */`
+const projectedSplatIndirectArgs = (instanceSize: number) => /* wgsl */ `
 struct DrawIndexedIndirectArgs {
     indexCount: u32,
     instanceCount: u32,

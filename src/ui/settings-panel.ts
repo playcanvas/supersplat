@@ -1,9 +1,10 @@
 import { BooleanInput, Container, Label, SelectInput, SliderInput } from '@playcanvas/pcui';
 
-import { Events } from '../events';
+import type { Events } from '../events';
+
 import { i18n } from './localization';
 import resetSvg from './svg/reset.svg';
-import { Tooltips } from './tooltips';
+import type { Tooltips } from './tooltips';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -106,7 +107,7 @@ class SettingsPanel extends Container {
         // their native form so they're recognisable regardless of current UI lang
         i18n.bindOptions(languageSelection, () => [
             { v: 'auto', t: i18n.t('panel.settings.language.auto') },
-            ...i18n.languages.map(l => ({ v: l.code, t: l.name }))
+            ...i18n.languages.map((l) => ({ v: l.code, t: l.name }))
         ]);
 
         // switch language live (no reload). a stored choice persists across

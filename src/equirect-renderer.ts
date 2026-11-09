@@ -1,3 +1,4 @@
+import type { GraphicsDevice, Shader } from 'playcanvas';
 import {
     ADDRESS_CLAMP_TO_EDGE,
     FILTER_LINEAR,
@@ -6,10 +7,8 @@ import {
     SEMANTIC_POSITION,
     drawQuadWithShader,
     BlendState,
-    GraphicsDevice,
     Quat,
     RenderTarget,
-    Shader,
     ShaderUtils,
     Texture
 } from 'playcanvas';
@@ -62,11 +61,13 @@ class EquirectRenderer {
 
         this.faceTargets = [];
         for (let i = 0; i < 6; ++i) {
-            this.faceTargets.push(new RenderTarget({
-                colorBuffer: createTexture(`equirectFace${i}`, faceSize, faceSize, FILTER_LINEAR),
-                depth: false,
-                autoResolve: false
-            }));
+            this.faceTargets.push(
+                new RenderTarget({
+                    colorBuffer: createTexture(`equirectFace${i}`, faceSize, faceSize, FILTER_LINEAR),
+                    depth: false,
+                    autoResolve: false
+                })
+            );
         }
 
         this.equirectTarget = new RenderTarget({

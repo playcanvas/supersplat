@@ -1,39 +1,57 @@
 import { Column, DataTable, dataTableToChunkSource } from '@playcanvas/splat-transform';
-import { Color, Quat, Vec3 } from 'playcanvas';
+import type { Color } from 'playcanvas';
+import { Quat, Vec3 } from 'playcanvas';
 
 import type { CommandQueue } from './command-queue';
 import { AddSplatOp } from './edit-ops';
 import type { LayerInfo } from './editor-api';
-import { checkCancelled, CommandOptions, EditorError } from './editor-command';
+import type { CommandOptions } from './editor-command';
+import { checkCancelled, EditorError } from './editor-command';
 import { EditorSplatResource } from './editor-splat-resource';
-import { Events } from './events';
-import { buildExportOptions, ExportChoices, ExportType } from './export-options';
+import type { Events } from './events';
+import type { ExportChoices, ExportType } from './export-options';
+import { buildExportOptions } from './export-options';
 import type { FileType } from './file-handler';
-import { GaussianColumn, GeneratorParam, runGenerator } from './generator-sandbox';
+import type { GaussianColumn, GeneratorParam } from './generator-sandbox';
+import { runGenerator } from './generator-sandbox';
 import { validateSplatSource } from './io';
-import { Scene, type ViewOverride } from './scene';
+import type { Scene, ViewOverride } from './scene';
 import { Splat } from './splat';
 
 type CameraSettings = {
-    position?: Vec3; target?: Vec3;
+    position?: Vec3;
+    target?: Vec3;
     view?: 'front' | 'back' | 'left' | 'right' | 'top' | 'bottom';
-    azimuth?: number; elevation?: number; distance?: number;
-    fov?: number; orthographic?: boolean;
+    azimuth?: number;
+    elevation?: number;
+    distance?: number;
+    fov?: number;
+    orthographic?: boolean;
 };
 type RenderView = 'current' | 'front' | 'back' | 'left' | 'right' | 'top' | 'bottom';
 type RenderSettings = {
-    width?: number; height?: number; format?: 'jpeg' | 'png'; quality?: number;
+    width?: number;
+    height?: number;
+    format?: 'jpeg' | 'png';
+    quality?: number;
     // up to four views composited into one labelled grid; 'current' uses the
     // camera parameters (or the current view), named views orbit its target
     views?: RenderView[];
     // analysis view applied while rendering
     viewOverride?: ViewOverride;
 };
-type RenderTile = { pixels: Uint8Array, x: number, y: number, width: number, height: number, label?: string };
+type RenderTile = { pixels: Uint8Array; x: number; y: number; width: number; height: number; label?: string };
 
 // Encode top-down RGBA render tiles over the background colour, as an
 // MCP-style image block (base64 data, no data: prefix).
-const encodeImage = async (tiles: RenderTile[], width: number, height: number, background: Color, format: 'jpeg' | 'png', quality: number) => {
+const encodeImage = async (
+    tiles: RenderTile[],
+    width: number,
+    height: number,
+    background: Color,
+    format: 'jpeg' | 'png',
+    quality: number
+) => {
     const canvas = new OffscreenCanvas(width, height);
     const context = canvas.getContext('2d');
     const bg = [background.r * 255, background.g * 255, background.b * 255];
@@ -73,9 +91,16 @@ const encodeImage = async (tiles: RenderTile[], width: number, height: number, b
     return { type: 'image' as const, mimeType, data: btoa(binary), width, height };
 };
 type ViewSettings = {
-    background?: Color; showGrid?: boolean; shBands?: number; tonemapping?: string;
-    showGaussians?: boolean; showCenters?: boolean; showRings?: boolean;
-    selectionColor?: boolean; selectionCenters?: boolean; selectionRings?: boolean;
+    background?: Color;
+    showGrid?: boolean;
+    shBands?: number;
+    tonemapping?: string;
+    showGaussians?: boolean;
+    showCenters?: boolean;
+    showRings?: boolean;
+    selectionColor?: boolean;
+    selectionCenters?: boolean;
+    selectionRings?: boolean;
 };
 type ExportRequest = ExportChoices & {
     format: 'ply' | 'compressed-ply' | 'splat' | 'sog' | 'spz' | 'viewer-html' | 'viewer-zip';
@@ -86,7 +111,7 @@ type SessionQueries = {
     allSplats(): Splat[];
     layerById(id: number): Splat;
     layerInfo(splat: Splat): LayerInfo;
-    historyInfo(): { canUndo: boolean, canRedo: boolean };
+    historyInfo(): { canUndo: boolean; canRedo: boolean };
 };
 
 const VIEW_ANGLES = { front: [0, 0], back: [180, 0], left: [270, 0], right: [90, 0], top: [0, -90], bottom: [0, 90] };
@@ -149,8 +174,16 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
         const rect = scene.canvas.getBoundingClientRect();
         // Token describes the displayed camera and coordinate system, including
         // CSS offsets. Moving panels can invalidate screen coordinates too.
-        const signature = JSON.stringify([Array.from(frame.view.data), Array.from(frame.projection.data),
-            rect.x, rect.y, rect.width, rect.height, frame.target.width, frame.target.height]);
+        const signature = JSON.stringify([
+            Array.from(frame.view.data),
+            Array.from(frame.projection.data),
+            rect.x,
+            rect.y,
+            rect.width,
+            rect.height,
+            frame.target.width,
+            frame.target.height
+        ]);
         let hash = 2166136261;
         for (let i = 0; i < signature.length; i++) hash = Math.imul(hash ^ signature.charCodeAt(i), 16777619);
         return {
@@ -160,19 +193,29 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
         };
     };
     const checkView = (token: string) => {
-        if (viewportInfo().viewToken !== token) throw new EditorError('stale_view', 'The camera or viewport changed. Inspect the scene and use its new viewToken.');
+        if (viewportInfo().viewToken !== token)
+            throw new EditorError(
+                'stale_view',
+                'The camera or viewport changed. Inspect the scene and use its new viewToken.'
+            );
     };
     const assertIdle = () => {
-        if (busy || scene.lockedRenderMode) throw new EditorError('busy', 'The editor is loading or rendering. Wait for it to finish.');
+        if (busy || scene.lockedRenderMode)
+            throw new EditorError('busy', 'The editor is loading or rendering. Wait for it to finish.');
     };
     // Validate and snapshot camera settings before they are queued.
     const cameraSettings = (settings: CameraSettings) => {
         const s = { ...settings, position: settings.position?.clone(), target: settings.target?.clone() };
-        if (!!s.position !== !!s.target) throw new EditorError('invalid_input', 'position and target must be supplied together.');
-        if (s.position && (s.view || s.azimuth !== undefined || s.elevation !== undefined || s.distance !== undefined)) {
+        if (!!s.position !== !!s.target)
+            throw new EditorError('invalid_input', 'position and target must be supplied together.');
+        if (
+            s.position &&
+            (s.view || s.azimuth !== undefined || s.elevation !== undefined || s.distance !== undefined)
+        ) {
             throw new EditorError('invalid_input', 'Use position/target or orbit parameters in one command.');
         }
-        if (s.position?.equals(s.target)) throw new EditorError('invalid_input', 'Camera position and target must differ.');
+        if (s.position?.equals(s.target))
+            throw new EditorError('invalid_input', 'Camera position and target must differ.');
         return s;
     };
     const applyCamera = (s: CameraSettings) => {
@@ -202,7 +245,9 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
             let handle: ReturnType<Events['on']> = null;
             let timer: ReturnType<typeof setTimeout> = null;
             const finish = (rendered: boolean) => {
-                handle.off(); clearTimeout(timer); resolve(rendered);
+                handle.off();
+                clearTimeout(timer);
+                resolve(rendered);
             };
             handle = events.on('postrender', () => finish(true));
             timer = setTimeout(() => finish(false), 3000);
@@ -216,7 +261,12 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
                 checkCancelled(options);
                 await ctx.apply(new AddSplatOp(scene, splat));
                 splat.name = name;
-                return { affected: splat.instances.count, layers: [layerInfo(splat)], createdLayer: splat.uid, history: historyInfo() };
+                return {
+                    affected: splat.instances.count,
+                    layers: [layerInfo(splat)],
+                    createdLayer: splat.uid,
+                    history: historyInfo()
+                };
             });
         } catch (error) {
             if (!splat.scene) splat.destroy();
@@ -230,10 +280,14 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
         assertIdle();
         for (const { name: column, data } of columns) {
             for (let i = 0; i < data.length; i++) {
-                if (!Number.isFinite(data[i])) throw new EditorError('invalid_input', `Column '${column}' contains a non-finite value at row ${i}.`);
+                if (!Number.isFinite(data[i]))
+                    throw new EditorError(
+                        'invalid_input',
+                        `Column '${column}' contains a non-finite value at row ${i}.`
+                    );
             }
         }
-        const source = dataTableToChunkSource(new DataTable(columns.map(c => new Column(c.name, c.data))));
+        const source = dataTableToChunkSource(new DataTable(columns.map((c) => new Column(c.name, c.data))));
         try {
             validateSplatSource(source);
         } catch (error) {
@@ -247,6 +301,7 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
     return {
         read,
         checkView,
+        camera: cameraInfo,
         viewport: {
             assertIdle,
             ready,
@@ -267,9 +322,14 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
                 const s = cameraSettings(settings);
                 const rect = scene.canvas.getBoundingClientRect();
                 const aspect = rect.width && rect.height ? rect.width / rect.height : 1;
-                const width = settings.width ?? (settings.height ? Math.round(settings.height * aspect) : Math.round(aspect >= 1 ? 512 : 512 * aspect));
+                const width =
+                    settings.width ??
+                    (settings.height
+                        ? Math.round(settings.height * aspect)
+                        : Math.round(aspect >= 1 ? 512 : 512 * aspect));
                 const height = settings.height ?? Math.round(width / aspect);
-                if (![width, height].every(v => Number.isInteger(v) && v >= 16 && v <= 2048)) throw new EditorError('invalid_input', 'width and height must be 16 to 2048 pixels.');
+                if (![width, height].every((v) => Number.isInteger(v) && v >= 16 && v <= 2048))
+                    throw new EditorError('invalid_input', 'width and height must be 16 to 2048 pixels.');
                 const views = settings.views?.length ? [...settings.views] : ['current' as const];
                 if (views.length > 4) throw new EditorError('invalid_input', 'At most four views.');
                 const cols = views.length > 1 ? 2 : 1;
@@ -282,11 +342,19 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
                     assertIdle();
                     const camera = scene.camera;
                     const pose = events.invoke('camera.getPose');
-                    const saved = { position: new Vec3(pose.position.x, pose.position.y, pose.position.z), target: new Vec3(pose.target.x, pose.target.y, pose.target.z), fov: camera.fov, ortho: camera.ortho };
+                    const saved = {
+                        position: new Vec3(pose.position.x, pose.position.y, pose.position.z),
+                        target: new Vec3(pose.target.x, pose.target.y, pose.target.z),
+                        fov: camera.fov,
+                        ortho: camera.ortho
+                    };
                     try {
                         applyCamera(s);
                         const basePose = events.invoke('camera.getPose');
-                        const base = { position: new Vec3(basePose.position.x, basePose.position.y, basePose.position.z), target: new Vec3(basePose.target.x, basePose.target.y, basePose.target.z) };
+                        const base = {
+                            position: new Vec3(basePose.position.x, basePose.position.y, basePose.position.z),
+                            target: new Vec3(basePose.target.x, basePose.target.y, basePose.target.z)
+                        };
                         // changing the pose leaves orthographic projection, so every tile restores it
                         const ortho = camera.ortho;
                         scene.viewOverride = viewOverride ?? null;
@@ -300,11 +368,29 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
                             camera.ortho = ortho;
                             camera.onUpdate(0);
                             cameras.push({ view: views[i], camera: cameraInfo() });
-                            const pixels = await events.invoke('render.offscreen', tileWidth, tileHeight) as Uint8Array;
+                            const pixels = (await events.invoke(
+                                'render.offscreen',
+                                tileWidth,
+                                tileHeight
+                            )) as Uint8Array;
                             checkCancelled(options);
-                            tiles.push({ pixels, x: (i % cols) * tileWidth, y: Math.floor(i / cols) * tileHeight, width: tileWidth, height: tileHeight, label: views.length > 1 ? views[i] : undefined });
+                            tiles.push({
+                                pixels,
+                                x: (i % cols) * tileWidth,
+                                y: Math.floor(i / cols) * tileHeight,
+                                width: tileWidth,
+                                height: tileHeight,
+                                label: views.length > 1 ? views[i] : undefined
+                            });
                         }
-                        const image = await encodeImage(tiles, tileWidth * cols, tileHeight * rows, events.invoke('bgClr') as Color, settings.format ?? 'jpeg', settings.quality ?? 0.85);
+                        const image = await encodeImage(
+                            tiles,
+                            tileWidth * cols,
+                            tileHeight * rows,
+                            events.invoke('bgClr') as Color,
+                            settings.format ?? 'jpeg',
+                            settings.quality ?? 0.85
+                        );
                         return views.length > 1 ? { cameras, image } : { camera: cameras[0].camera, image };
                     } finally {
                         scene.viewOverride = null;
@@ -321,13 +407,22 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
                 return await queue.enqueue(() => {
                     checkCancelled(options);
                     assertIdle();
-                    if (splat && splat.scene !== scene) throw new EditorError('layer_removed', 'The target layer was removed.');
+                    if (splat && splat.scene !== scene)
+                        throw new EditorError('layer_removed', 'The target layer was removed.');
                     if (!allSplats().length) throw new EditorError('empty_scene', 'There are no layers to frame.');
-                    if (scope === 'selection' && !splat.instances.numSelected) throw new EditorError('empty_selection', 'No splats are selected.');
-                    const bound = !splat ? scene.bound : scope === 'layer' ? splat.worldBound :
-                        layerInfo(splat).selectionBounds;
+                    if (scope === 'selection' && !splat.instances.numSelected)
+                        throw new EditorError('empty_selection', 'No splats are selected.');
+                    const bound = !splat
+                        ? scene.bound
+                        : scope === 'layer'
+                          ? splat.worldBound
+                          : layerInfo(splat).selectionBounds;
                     events.fire('camera.setControlMode', 'orbit');
-                    scene.camera.focus({ focalPoint: bound.center.clone(), radius: Math.max(0.01, bound.halfExtents.length()), speed: 0 });
+                    scene.camera.focus({
+                        focalPoint: bound.center.clone(),
+                        radius: Math.max(0.01, bound.halfExtents.length()),
+                        speed: 0
+                    });
                     scene.camera.onUpdate(0);
                     scene.forceRender = true;
                     return { camera: cameraInfo(), viewport: viewportInfo() };
@@ -350,7 +445,12 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
         },
         create: {
             // Run a splat-transform Generator module in an isolated sandbox.
-            generator: async (source: string, params: GeneratorParam[] = [], name = 'Generated', options?: CommandOptions) => {
+            generator: async (
+                source: string,
+                params: GeneratorParam[] = [],
+                name = 'Generated',
+                options?: CommandOptions
+            ) => {
                 checkCancelled(options);
                 assertIdle();
                 return await createLayer(await runGenerator(source, params, options), name, options);
@@ -366,48 +466,83 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
                 } catch {
                     throw new EditorError('invalid_input', 'An absolute HTTP(S) URL is required.');
                 }
-                if (!['https:', 'http:'].includes(parsed.protocol) || parsed.username || parsed.password) throw new EditorError('invalid_input', 'Use an HTTP(S) URL without embedded credentials.');
+                if (!['https:', 'http:'].includes(parsed.protocol) || parsed.username || parsed.password)
+                    throw new EditorError('invalid_input', 'Use an HTTP(S) URL without embedded credentials.');
                 const name = filename ?? decodeURIComponent(parsed.pathname.split('/').pop());
-                if (!/\.(?:ply|splat|sog|spz|ksplat)$/i.test(name)) throw new EditorError('unsupported_format', 'URL import supports PLY, SPLAT, SOG, SPZ and KSPLAT.');
-                const loaded = await events.invoke('import', [{ url: parsed.href, filename: name }], false,
-                    { ...options, throwOnError: true, attach: false }) as Splat[];
+                if (!/\.(?:ply|splat|sog|spz|ksplat)$/i.test(name))
+                    throw new EditorError('unsupported_format', 'URL import supports PLY, SPLAT, SOG, SPZ and KSPLAT.');
+                const loaded = (await events.invoke('import', [{ url: parsed.href, filename: name }], false, {
+                    ...options,
+                    throwOnError: true,
+                    attach: false
+                })) as Splat[];
                 if (!loaded?.[0]) throw new EditorError('cancelled', 'Import was cancelled.');
                 return await attachLayer(loaded[0], name, options);
             },
             export: async (request: ExportRequest, options?: CommandOptions) => {
                 const r = { ...request };
-                const targets = r.scope === 'visible_layers' ? allSplats().filter(s => s.visible) : [layerById(r.layer)];
+                const targets =
+                    r.scope === 'visible_layers' ? allSplats().filter((s) => s.visible) : [layerById(r.layer)];
                 return await queue.enqueue(async () => {
                     checkCancelled(options);
                     assertIdle();
                     if (!targets.length) throw new EditorError('empty_scene', 'There are no layers to export.');
                     for (const splat of targets) {
-                        if (splat.scene !== scene) throw new EditorError('layer_removed', 'An export layer was removed.');
+                        if (splat.scene !== scene)
+                            throw new EditorError('layer_removed', 'An export layer was removed.');
                         if (!splat.visible) throw new EditorError('layer_hidden', 'Show the export layer first.');
                     }
-                    const count = targets.reduce((n, s) => n + (r.scope === 'selection' ? s.instances.numSelected : s.instances.count), 0);
-                    if (!count) throw new EditorError(r.scope === 'selection' ? 'empty_selection' : 'empty_scene', 'There are no splats to export.');
+                    const count = targets.reduce(
+                        (n, s) => n + (r.scope === 'selection' ? s.instances.numSelected : s.instances.count),
+                        0
+                    );
+                    if (!count)
+                        throw new EditorError(
+                            r.scope === 'selection' ? 'empty_selection' : 'empty_scene',
+                            'There are no splats to export.'
+                        );
                     const viewer = r.format.startsWith('viewer-');
-                    const exportType = (viewer ? 'viewer' : r.format === 'compressed-ply' ? 'ply' : r.format) as ExportType;
-                    const fileType = (viewer ? r.format === 'viewer-html' ? 'htmlViewer' : 'packageViewer' :
-                        r.format === 'compressed-ply' ? 'compressedPly' : r.format) as FileType;
+                    const exportType = (
+                        viewer ? 'viewer' : r.format === 'compressed-ply' ? 'ply' : r.format
+                    ) as ExportType;
+                    const fileType = (
+                        viewer
+                            ? r.format === 'viewer-html'
+                                ? 'htmlViewer'
+                                : 'packageViewer'
+                            : r.format === 'compressed-ply'
+                              ? 'compressedPly'
+                              : r.format
+                    ) as FileType;
                     const background = events.invoke('bgClr') as Color;
                     const choices = {
                         ...r,
                         compressedPly: r.format === 'compressed-ply',
-                        viewerType: r.format === 'viewer-html' ? 'html' as const : 'zip' as const,
+                        viewerType: r.format === 'viewer-html' ? ('html' as const) : ('zip' as const),
                         fov: scene.camera.fov,
                         backgroundColor: [background.r, background.g, background.b] as [number, number, number]
                     };
                     const settings = buildExportOptions(events, exportType, choices);
                     settings.serializeSettings.selected = r.scope === 'selection';
-                    await events.invoke('scene.write', fileType, settings, undefined, { ...options, throwOnError: true, splats: targets });
-                    return { filename: r.filename, format: r.format, layers: targets.map(s => s.uid), splats: count, status: 'download_requested' };
+                    await events.invoke('scene.write', fileType, settings, undefined, {
+                        ...options,
+                        throwOnError: true,
+                        splats: targets
+                    });
+                    return {
+                        filename: r.filename,
+                        format: r.format,
+                        layers: targets.map((s) => s.uid),
+                        splats: count,
+                        status: 'download_requested'
+                    };
                 });
             }
         }
     };
 };
 
+type EditorSession = ReturnType<typeof createEditorSession>;
+
 export { createEditorSession };
-export type { CameraSettings, ViewSettings, ExportRequest };
+export type { CameraSettings, ViewSettings, ExportRequest, EditorSession };

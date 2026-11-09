@@ -1,10 +1,11 @@
-import { checkCancelled, CommandOptions, EditorError } from './editor-command';
+import type { CommandOptions } from './editor-command';
+import { checkCancelled, EditorError } from './editor-command';
 
 // splat-transform passes generator parameters as name/value strings.
-type GeneratorParam = { name: string, value: string };
+type GeneratorParam = { name: string; value: string };
 
 // One named column of gaussian data, in the 3DGS PLY convention.
-type GaussianColumn = { name: string, data: Float32Array };
+type GaussianColumn = { name: string; data: Float32Array };
 
 const MAX_COUNT = 2_000_000;
 const MAX_COLUMNS = 64;
@@ -56,7 +57,11 @@ addEventListener('message', (event) => {
 parent.postMessage({ ready: true }, '*');
 </script></body></html>`;
 
-const runGenerator = (source: string, params: GeneratorParam[], options?: CommandOptions): Promise<GaussianColumn[]> => {
+const runGenerator = (
+    source: string,
+    params: GeneratorParam[],
+    options?: CommandOptions
+): Promise<GaussianColumn[]> => {
     checkCancelled(options);
     return new Promise((resolve, reject) => {
         const frame = document.createElement('iframe');
@@ -71,31 +76,57 @@ const runGenerator = (source: string, params: GeneratorParam[], options?: Comman
             if (error) reject(error);
             else resolve(columns);
         };
-        window.addEventListener('message', (event: MessageEvent) => {
-            if (event.source !== frame.contentWindow) return;
-            const data = event.data;
-            if (data?.ready) {
-                frame.contentWindow.postMessage({ source, params, maxCount: MAX_COUNT, maxColumns: MAX_COLUMNS }, '*');
-                return;
-            }
-            if (!data?.ok) {
-                finish(new EditorError('generator_failed', String(data?.message ?? 'The generator failed.')));
-                return;
-            }
-            // the sandbox runs untrusted code, so check its reply too
-            const { columnNames, columns } = data;
-            const count = columns?.[0]?.length;
-            if (!Array.isArray(columnNames) || !columnNames.every((n: unknown) => typeof n === 'string') || new Set(columnNames).size !== columnNames.length) {
-                finish(new EditorError('generator_failed', 'columnNames must be unique strings.'));
-            } else if (!Array.isArray(columns) || columns.length !== columnNames.length || !(count > 0 && count <= MAX_COUNT) ||
-                !columns.every((c: unknown) => c instanceof Float32Array && c.length === count)) {
-                finish(new EditorError('generator_failed', 'The generator returned malformed columns.'));
-            } else {
-                finish(null, columnNames.map((name: string, i: number) => ({ name, data: columns[i] })));
-            }
-        }, { signal: done.signal });
-        options?.signal?.addEventListener('abort', () => finish(new EditorError('cancelled', 'The command was cancelled before it committed.')), { signal: done.signal });
-        const timer = setTimeout(() => finish(new EditorError('timeout', `The generator did not finish within ${TIMEOUT_MS / 1000} seconds.`)), TIMEOUT_MS);
+        window.addEventListener(
+            'message',
+            (event: MessageEvent) => {
+                if (event.source !== frame.contentWindow) return;
+                const data = event.data;
+                if (data?.ready) {
+                    frame.contentWindow.postMessage(
+                        { source, params, maxCount: MAX_COUNT, maxColumns: MAX_COLUMNS },
+                        '*'
+                    );
+                    return;
+                }
+                if (!data?.ok) {
+                    finish(new EditorError('generator_failed', String(data?.message ?? 'The generator failed.')));
+                    return;
+                }
+                // the sandbox runs untrusted code, so check its reply too
+                const { columnNames, columns } = data;
+                const count = columns?.[0]?.length;
+                if (
+                    !Array.isArray(columnNames) ||
+                    !columnNames.every((n: unknown) => typeof n === 'string') ||
+                    new Set(columnNames).size !== columnNames.length
+                ) {
+                    finish(new EditorError('generator_failed', 'columnNames must be unique strings.'));
+                } else if (
+                    !Array.isArray(columns) ||
+                    columns.length !== columnNames.length ||
+                    !(count > 0 && count <= MAX_COUNT) ||
+                    !columns.every((c: unknown) => c instanceof Float32Array && c.length === count)
+                ) {
+                    finish(new EditorError('generator_failed', 'The generator returned malformed columns.'));
+                } else {
+                    finish(
+                        null,
+                        columnNames.map((name: string, i: number) => ({ name, data: columns[i] }))
+                    );
+                }
+            },
+            { signal: done.signal }
+        );
+        options?.signal?.addEventListener(
+            'abort',
+            () => finish(new EditorError('cancelled', 'The command was cancelled before it committed.')),
+            { signal: done.signal }
+        );
+        const timer = setTimeout(
+            () =>
+                finish(new EditorError('timeout', `The generator did not finish within ${TIMEOUT_MS / 1000} seconds.`)),
+            TIMEOUT_MS
+        );
         done.signal.addEventListener('abort', () => clearTimeout(timer));
         frame.srcdoc = FRAME;
         document.body.appendChild(frame);

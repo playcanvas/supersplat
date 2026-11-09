@@ -10,7 +10,7 @@
 // this same buffer, so a row holds any number of runs and the region is
 // represented exactly
 
-const footprintIntersect = /* wgsl */`
+const footprintIntersect = /* wgsl */ `
 struct Uniforms {
     cacheWidth: u32,
     viewport: vec2f,

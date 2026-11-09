@@ -589,9 +589,22 @@ class WebGPUUnavailableError extends Error {
     }
 }
 
+// Thrown when the compression device is lost mid-export, typically because the
+// OS GPU watchdog killed a long-running compute job.
+class GpuDeviceLostError extends Error {
+    constructor() {
+        super('The GPU device was lost');
+        this.name = 'GpuDeviceLostError';
+    }
+}
+
 // Cached WebGPU device for SOG compression
 let cachedGpuDevice: WebgpuGraphicsDevice | null = null;
 let cachedBackbuffer: Texture | null = null;
+
+// Number of compression devices lost so far, so a failed export can tell
+// whether a device loss caused the failure
+let gpuDeviceLostCount = 0;
 
 const createGpuDevice = async (): Promise<WebgpuGraphicsDevice> => {
     if (cachedGpuDevice) {
@@ -640,6 +653,19 @@ const createGpuDevice = async (): Promise<WebgpuGraphicsDevice> => {
 
     graphicsDevice.externalBackbuffer = cachedBackbuffer;
 
+    // Left alone, the engine restores a lost device in place, re-creating every
+    // Compute ever made on it - splat-transform never destroys its k-means
+    // kernels, so each restore rebuilds stale pipelines. Discard the device
+    // instead; the next export creates a fresh one.
+    graphicsDevice.once('devicelost', () => {
+        gpuDeviceLostCount++;
+        if (cachedGpuDevice === graphicsDevice) {
+            cachedGpuDevice = null;
+            cachedBackbuffer = null;
+        }
+        graphicsDevice.destroy();
+    });
+
     cachedGpuDevice = graphicsDevice;
     return graphicsDevice;
 };
@@ -662,8 +688,16 @@ const writeSplatFile = async (
         return;
     }
     const { source, pool } = built;
+    const lostCount = gpuDeviceLostCount;
     try {
         await writeSource({ filename, outputFormat, source, pool, options, createDevice: createGpuDevice }, fs);
+    } catch (err) {
+        // the device's lost promise can settle just after the rejection that
+        // brought us here, so give it a task to land before checking
+        await new Promise<void>((resolve) => {
+            setTimeout(resolve);
+        });
+        throw gpuDeviceLostCount !== lostCount ? new GpuDeviceLostError() : err;
     } finally {
         await source.close();
         pool.destroy();
@@ -892,6 +926,7 @@ export {
     Camera,
     defaultPostEffectSettings,
     ExperienceSettings,
+    GpuDeviceLostError,
     SerializeSettings,
     SogSettings,
     SpzSettings,

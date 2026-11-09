@@ -184,6 +184,7 @@
     "popup.error": "Error",
     "popup.error-loading": "Error Loading File",
     "popup.webgpu-unavailable": "This export requires WebGPU, which is not available in this browser. Please try a recent version of Chrome, Edge or Safari.",
+    "popup.gpu-device-lost": "The GPU stopped responding during compression, which can happen on slower graphics hardware with large scenes. Please try exporting again.",
     "popup.overwrite-source": "This file is in use by the current scene and can't be overwritten. Choose a different filename.",
     "popup.save-as": "Save As",
     "startup.failed": "SuperSplat failed to start. See the browser console for details.",

@@ -313,31 +313,44 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
             if (parts.reduce((n, p) => n + p.count, 0) > GENERATOR_MAX_COUNT) throw new EditorError('invalid_input', `At most ${GENERATOR_MAX_COUNT} gaussians in total.`);
             return editor.create.primitives(parts, i.name, o);
         });
-    const sdfNode = object({ shape: enumeration(['box', 'ellipsoid', 'cylinder', 'capsule', 'torus'], 'Shape. Cylinders, capsules and tori run along local Y; a torus\'s tube thickness is size Y.'),
+    const sdfNode = object({ shape: enumeration(['box', 'ellipsoid', 'cylinder', 'capsule', 'torus', 'extrusion'], 'Shape. Cylinders, capsules and tori run along local Y; a torus\'s tube thickness is size Y. An extrusion is a closed profile in local XY extruded along local Z.'),
         center: vector('World-space centre.'),
-        size: array(number('Positive extent.', 1e-6, 1e6), 3, 'Full extents.'),
-        rotate: vector('Euler rotation in degrees; default zero.'),
-        round: number('Corner radius for box and cylinder; default 0.', 0, 1e6),
+        size: array(number('Positive extent.', 1e-6, 1e6), 3, 'Full extents; required except for extrusions.'),
+        profile: { type: 'array', items: array(number('Coordinate'), 2, '[x, y] in metres, relative to center.'), minItems: 3, maxItems: 128, description: 'Extrusion outline in local XY, in order around the shape (either direction); required for extrusions.' },
+        depth: number('Extrusion length along local Z, centred; required for extrusions.', 1e-6, 1e6),
+        rotate: vector('Euler rotation in degrees; default zero. [90, 0, 0] turns a profile drawn as [x, z] into a plan view extruded vertically.'),
+        round: number('Corner radius for box, cylinder and extrusion; default 0.', 0, 1e6),
+        taper: array(number('Scale', 0.05, 20), 2, 'Local [x, z] scale at the top (+Y) of the shape relative to its bottom; default [1, 1]. Use for tumblehome and narrowing ends.'),
+        mirror: enumeration(['x', 'y', 'z'], 'Reflect across the world plane through the origin normal to this axis, so one node models both sides of a symmetric object.'),
         op: enumeration(['union', 'subtract', 'intersect'], 'How this shape combines with the shapes before it; default union. Ignored on the first node.'),
         smooth: number('Blend radius with the shapes before it; 0 = sharp. Colours blend over the same radius.', 0, 1e6),
-        color: rgb('RGB colour. A subtract or intersect node without a colour keeps the colour of the surface it cuts.') }, ['shape', 'center', 'size']);
-    add('create_sdf', `Create one new layer by modelling a solid as a signed distance field and sampling its surface evenly. Shapes combine in order with union, subtract or intersect, each with an optional smooth blend radius, so rounded and organic forms (car bodies, characters, rocks, terrain) come out as one continuous surface rather than stacked boxes. Flat splats face along the surface normal; colours blend where shapes meet. Colour is flat and unlit. ${reuse} Undoable; returns createdLayer.`,
+        color: rgb('RGB colour. A subtract or intersect node without a colour keeps the colour of the surface it cuts.') }, ['shape', 'center']);
+    add('create_sdf', `Create one new layer by modelling a solid as a signed distance field and sampling its surface evenly. Shapes combine in order with union, subtract or intersect, each with an optional smooth blend radius, so rounded and organic forms (car bodies, characters, rocks, terrain) come out as one continuous surface rather than stacked boxes. For designed objects, model from views: extrude a side-view profile across the width, intersect it smoothly with a plan-view profile extruded vertically (rotate [90, 0, 0]), taper for tumblehome, then add or cut details; mirror symmetric details. Flat splats face along the surface normal; colours blend where shapes meet. Colour is flat and unlit. ${reuse} Undoable; returns createdLayer.`,
         { nodes: { type: 'array', items: sdfNode, minItems: 1, maxItems: 64, description: 'Shapes in combination order.' },
             count: integer('Number of gaussians; default 100000.', 1, 1000000),
             opacity: number('Opacity; default 1.', 0, 1),
             splatSize: number('Gaussian standard deviation in world units; derived from sample spacing when omitted.', 1e-9, 1e9),
             name: layerName }, ['nodes'],
         (i, o) => editor.create.sdf({
-            nodes: (i.nodes as Input[]).map(n => ({
-                shape: n.shape,
-                center: xyz(n.center),
-                size: xyz(n.size),
-                rotation: n.rotate ? new Quat().setFromEulerAngles(...n.rotate as [number, number, number]) : new Quat(),
-                round: n.round,
-                op: n.op,
-                smooth: n.smooth,
-                color: n.color
-            })),
+            nodes: (i.nodes as Input[]).map((n, index) => {
+                if (n.shape === 'extrusion' ? !(n.profile && n.depth) : !n.size) {
+                    throw new EditorError('invalid_input', `input.nodes[${index}]: ${n.shape === 'extrusion' ? 'an extrusion needs profile and depth' : 'size is required'}.`);
+                }
+                return {
+                    shape: n.shape,
+                    center: xyz(n.center),
+                    size: n.size && xyz(n.size),
+                    profile: n.profile,
+                    depth: n.depth,
+                    rotation: n.rotate ? new Quat().setFromEulerAngles(...n.rotate as [number, number, number]) : new Quat(),
+                    round: n.round,
+                    taper: n.taper,
+                    mirror: n.mirror,
+                    op: n.op,
+                    smooth: n.smooth,
+                    color: n.color
+                };
+            }),
             count: i.count ?? 100000,
             opacity: i.opacity ?? 1,
             splatSize: i.splatSize

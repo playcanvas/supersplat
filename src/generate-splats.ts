@@ -265,17 +265,24 @@ const samplePrimitives = (parts: PrimitiveSpec[]): GaussianData => {
 
 // --- signed distance fields ---
 
-type SdfShape = 'box' | 'ellipsoid' | 'cylinder' | 'capsule' | 'torus';
+type SdfShape = 'box' | 'ellipsoid' | 'cylinder' | 'capsule' | 'torus' | 'extrusion';
 
 type SdfNode = {
     shape: SdfShape;
     center: Vec3;
-    size: Vec3;                 // full extents; cylinders, capsules and tori run along local Y
+    size?: Vec3;                // full extents; cylinders, capsules and tori run along local Y
     rotation: Quat;
-    round?: number;             // corner radius for boxes and cylinders
+    round?: number;             // corner radius for boxes, cylinders and extrusions
     op?: 'union' | 'subtract' | 'intersect';
     smooth?: number;            // blend radius with the shapes before it
     color?: [number, number, number];
+    // extrusion: a closed outline in local XY, extruded along local Z by depth
+    profile?: [number, number][];
+    depth?: number;
+    // local X and Z scale at the shape's top (+Y) relative to its bottom
+    taper?: [number, number];
+    // reflect across the world plane through the origin normal to this axis
+    mirror?: 'x' | 'y' | 'z';
 };
 
 type SdfSpec = {
@@ -287,9 +294,33 @@ type SdfSpec = {
 
 type SdfColor = [number, number, number];
 
+// Signed distance to a closed 2D polygon (Quilez): negative inside.
+const polygonDistance = (v: [number, number][], px: number, py: number) => {
+    let d = (px - v[0][0]) ** 2 + (py - v[0][1]) ** 2;
+    let s = 1;
+    for (let i = 0, j = v.length - 1; i < v.length; j = i, i++) {
+        const ex = v[j][0] - v[i][0], ey = v[j][1] - v[i][1];
+        const wx = px - v[i][0], wy = py - v[i][1];
+        const t = Math.max(0, Math.min(1, (wx * ex + wy * ey) / (ex * ex + ey * ey)));
+        const bx = wx - ex * t, by = wy - ey * t;
+        d = Math.min(d, bx * bx + by * by);
+        const c1 = py >= v[i][1], c2 = py < v[j][1], c3 = ex * wy > ey * wx;
+        if ((c1 && c2 && c3) || (!c1 && !c2 && !c3)) s = -s;
+    }
+    return s * Math.sqrt(d);
+};
+
 // Distance from a local point to a shape centred at the origin.
-const shapeDistance = (shape: SdfShape, x: number, y: number, z: number, hx: number, hy: number, hz: number, round: number) => {
+const shapeDistance = (shape: SdfShape, x: number, y: number, z: number, hx: number, hy: number, hz: number, round: number, profile?: [number, number][]) => {
     switch (shape) {
+        case 'extrusion': {
+            // shrink the outline by the corner radius, then round it back out, so
+            // outline corners and extruded edges share the radius
+            const r = Math.min(round, hz);
+            const d2 = polygonDistance(profile, x, y) + r;
+            const dz = Math.abs(z) - (hz - r);
+            return Math.min(Math.max(d2, dz), 0) + Math.hypot(Math.max(d2, 0), Math.max(dz, 0)) - r;
+        }
         case 'box': {
             const r = Math.min(round, hx, hy, hz);
             const qx = Math.abs(x) - (hx - r), qy = Math.abs(y) - (hy - r), qz = Math.abs(z) - (hz - r);
@@ -325,12 +356,60 @@ const createSdf = (nodes: SdfNode[]) => {
     const prepared = nodes.map((node) => {
         const inverse = node.rotation.clone().invert();
         const m = new Mat4().setTRS(Vec3.ZERO, inverse, Vec3.ONE).data;
-        return { ...node, m, hx: node.size.x / 2, hy: node.size.y / 2, hz: node.size.z / 2, k: node.smooth ?? 0, cx: node.center.x, cy: node.center.y, cz: node.center.z, reach: node.size.length() / 2 };
+        // half extents about the node centre; an extrusion's come from its outline
+        let hx: number, hy: number, hz: number, yMin: number, yMax: number;
+        if (node.shape === 'extrusion') {
+            hx = Math.max(...node.profile.map(p => Math.abs(p[0])));
+            hy = Math.max(...node.profile.map(p => Math.abs(p[1])));
+            hz = node.depth / 2;
+            yMin = Math.min(...node.profile.map(p => p[1]));
+            yMax = Math.max(...node.profile.map(p => p[1]));
+        } else {
+            hx = node.size.x / 2; hy = node.size.y / 2; hz = node.size.z / 2;
+            yMin = -hy; yMax = hy;
+        }
+        const [tx, tz] = node.taper ?? [1, 1];
+        const grow = Math.max(1, tx, tz);
+        return {
+            ...node,
+            m,
+            hx,
+            hy,
+            hz,
+            yMin,
+            yMax,
+            tx,
+            tz,
+            tapered: tx !== 1 || tz !== 1,
+            mx: node.mirror === 'x',
+            my: node.mirror === 'y',
+            mz: node.mirror === 'z',
+            k: node.smooth ?? 0,
+            cx: node.center.x,
+            cy: node.center.y,
+            cz: node.center.z,
+            // bounding radius, enlarged by any taper above 1
+            reach: Math.hypot(hx * grow, hy, hz * grow)
+        };
     });
     const local = (n: typeof prepared[number], x: number, y: number, z: number) => {
         const px = x - n.cx, py = y - n.cy, pz = z - n.cz, m = n.m;
-        return shapeDistance(n.shape, m[0] * px + m[4] * py + m[8] * pz, m[1] * px + m[5] * py + m[9] * pz, m[2] * px + m[6] * py + m[10] * pz, n.hx, n.hy, n.hz, n.round ?? 0);
+        let lx = m[0] * px + m[4] * py + m[8] * pz;
+        const ly = m[1] * px + m[5] * py + m[9] * pz;
+        let lz = m[2] * px + m[6] * py + m[10] * pz;
+        if (!n.tapered) return shapeDistance(n.shape, lx, ly, lz, n.hx, n.hy, n.hz, n.round ?? 0, n.profile);
+        // taper scales the cross-section with height; the zero set stays exact and
+        // the smaller scale keeps the distance a usable bound for projection
+        const t = Math.max(0, Math.min(1, (ly - n.yMin) / (n.yMax - n.yMin)));
+        const sx = 1 + (n.tx - 1) * t, sz = 1 + (n.tz - 1) * t;
+        lx /= sx;
+        lz /= sz;
+        return shapeDistance(n.shape, lx, ly, lz, n.hx, n.hy, n.hz, n.round ?? 0, n.profile) * Math.min(sx, sz, 1);
     };
+    // a mirrored node sees the point folded onto its side of the plane
+    const foldX = (n: typeof prepared[number], x: number) => (n.mx ? Math.abs(x) : x);
+    const foldY = (n: typeof prepared[number], y: number) => (n.my ? Math.abs(y) : y);
+    const foldZ = (n: typeof prepared[number], z: number) => (n.mz ? Math.abs(z) : z);
     // combine d (so far) with b (this node); returns [distance, weight of b]
     const combine = (op: SdfNode['op'], d: number, b: number, k: number): [number, number] => {
         if (op === 'subtract') {
@@ -347,27 +426,29 @@ const createSdf = (nodes: SdfNode[]) => {
         const h = Math.max(0, Math.min(1, 0.5 + 0.5 * (d - b) / k));
         return [d + (b - d) * h - k * h * (1 - h), h];
     };
+    const first = prepared[0];
     const distance = (x: number, y: number, z: number) => {
-        let d = local(prepared[0], x, y, z);
+        let d = local(first, foldX(first, x), foldY(first, y), foldZ(first, z));
         for (let i = 1; i < prepared.length; i++) {
             const n = prepared[i];
+            const fx = foldX(n, x), fy = foldY(n, y), fz = foldZ(n, z);
             // the distance to a node's bounding sphere is a lower bound on its
             // distance, so skip nodes too far away to change the result: a
             // union needs b < d + k, a subtraction b < k - d
             if (n.op !== 'intersect') {
-                const bound = Math.hypot(x - n.cx, y - n.cy, z - n.cz) - n.reach;
+                const bound = Math.hypot(fx - n.cx, fy - n.cy, fz - n.cz) - n.reach;
                 if (bound >= (n.op === 'subtract' ? n.k - d : d + n.k)) continue;
             }
-            d = combine(n.op, d, local(n, x, y, z), n.k)[0];
+            d = combine(n.op, d, local(n, fx, fy, fz), n.k)[0];
         }
         return d;
     };
     const color = (x: number, y: number, z: number): SdfColor => {
-        let d = local(prepared[0], x, y, z);
-        const c: SdfColor = [...(prepared[0].color ?? [1, 1, 1])];
+        let d = local(first, foldX(first, x), foldY(first, y), foldZ(first, z));
+        const c: SdfColor = [...(first.color ?? [1, 1, 1])];
         for (let i = 1; i < prepared.length; i++) {
             const n = prepared[i];
-            const [next, w] = combine(n.op, d, local(n, x, y, z), n.k);
+            const [next, w] = combine(n.op, d, local(n, foldX(n, x), foldY(n, y), foldZ(n, z)), n.k);
             if (n.color) for (let j = 0; j < 3; j++) c[j] += (n.color[j] - c[j]) * w;
             d = next;
         }
@@ -379,12 +460,17 @@ const createSdf = (nodes: SdfNode[]) => {
     prepared.forEach((n, i) => {
         if (i > 0 && n.op === 'subtract') return;
         r.setTRS(Vec3.ZERO, n.rotation, Vec3.ONE);
-        const e = r.data, pad = n.k;
-        const ex = Math.abs(e[0]) * n.hx + Math.abs(e[4]) * n.hy + Math.abs(e[8]) * n.hz + pad;
-        const ey = Math.abs(e[1]) * n.hx + Math.abs(e[5]) * n.hy + Math.abs(e[9]) * n.hz + pad;
-        const ez = Math.abs(e[2]) * n.hx + Math.abs(e[6]) * n.hy + Math.abs(e[10]) * n.hz + pad;
-        min.set(Math.min(min.x, n.cx - ex), Math.min(min.y, n.cy - ey), Math.min(min.z, n.cz - ez));
-        max.set(Math.max(max.x, n.cx + ex), Math.max(max.y, n.cy + ey), Math.max(max.z, n.cz + ez));
+        const e = r.data, pad = n.k, gx = n.hx * Math.max(1, n.tx), gz = n.hz * Math.max(1, n.tz);
+        const ex = Math.abs(e[0]) * gx + Math.abs(e[4]) * n.hy + Math.abs(e[8]) * gz + pad;
+        const ey = Math.abs(e[1]) * gx + Math.abs(e[5]) * n.hy + Math.abs(e[9]) * gz + pad;
+        const ez = Math.abs(e[2]) * gx + Math.abs(e[6]) * n.hy + Math.abs(e[10]) * gz + pad;
+        // a mirrored node also occupies its reflection
+        for (const s of [1, -1]) {
+            if (s < 0 && !(n.mx || n.my || n.mz)) continue;
+            const cx = n.mx ? s * n.cx : n.cx, cy = n.my ? s * n.cy : n.cy, cz = n.mz ? s * n.cz : n.cz;
+            min.set(Math.min(min.x, cx - ex), Math.min(min.y, cy - ey), Math.min(min.z, cz - ez));
+            max.set(Math.max(max.x, cx + ex), Math.max(max.y, cy + ey), Math.max(max.z, cz + ez));
+        }
     });
     return { distance, color, min, max };
 };

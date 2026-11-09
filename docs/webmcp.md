@@ -105,6 +105,20 @@ Gaussian data is generated inside the editor rather than sent through tool calls
 ]}
 ```
 
+An `extrusion` node takes a closed `profile` of `[x, y]` points in its local XY plane and extrudes it along local Z by `depth`; `round` rounds both the outline corners and the extruded edges. With `rotate`, the same shape serves as a side, plan or front view. `taper` scales a node's local X and Z across its height, from `[1, 1]` at the bottom to the given values at the top. `mirror` reflects a node across a world plane through the origin, so one node models both sides of a symmetric object.
+
+Designed objects are best modelled from views. For a car body, extrude the side silhouette (hood, windscreen, roof, rear window, boot) across the width, taper it so the cabin leans in, and intersect it with a smooth radius with the plan outline extruded vertically (`rotate: [90, 0, 0]`, profile drawn as `[x, z]`). Then cut mirrored wheel arches and recesses, and add mirrored details. The four-view `render_view` grid shows each silhouette for comparison.
+
+```json
+{"nodes":[
+  {"shape":"extrusion","center":[0,0,0],"depth":1.8,"round":0.06,"taper":[1,0.82],
+   "profile":[[-2.2,0.3],[2.2,0.3],[2.25,0.75],[1.0,0.95],[0.45,1.4],[-0.9,1.42],[-1.6,1.0],[-2.25,0.9]],"color":[0.7,0.06,0.08]},
+  {"shape":"extrusion","center":[0,0.9,0],"depth":2,"rotate":[90,0,0],"op":"intersect","smooth":0.12,
+   "profile":[[-2.25,-0.75],[1.8,-0.9],[2.3,-0.6],[2.3,0.6],[1.8,0.9],[-2.25,0.75]]},
+  {"shape":"cylinder","center":[1.35,0.36,0.9],"size":[0.96,0.6,0.96],"rotate":[90,0,0],"mirror":"z","op":"subtract","smooth":0.04}
+]}
+```
+
 Sampling runs in the editor and takes about a second per 70000 gaussians for a model of around 20 nodes.
 
 `create_from_generator` runs a [splat-transform generator module](https://github.com/playcanvas/splat-transform#generators-beta), so the same script works in the CLI and the editor. The module exports `class Generator` whose static `create(params)` (optionally async) returns `{ count, columnNames, getRow(index, row) }`. `params` arrive as `[{ name, value }]` with string values, as in the CLI. Columns use the standard 3DGS PLY convention in world space: `x`, `y`, `z`; `scale_0..2` = ln(standard deviation); `rot_0..3` = quaternion `w, x, y, z`; `f_dc_0..2` = `(rgb - 0.5) / 0.28209479177387814`; `opacity` = logit(alpha). Optional `f_rest_*` columns add SH.

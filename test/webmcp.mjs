@@ -335,12 +335,59 @@ const checks = {
         assert.equal(empty.opacities.length, 0);
     },
 
+    async 'sdf extrusions, tapers and mirrors shape the surface'() {
+        const node = (shape, center, extra = {}) => ({ shape, center: new Vec3(...center), rotation: new Quat(), ...extra });
+        // a right-triangle prism: profile in XY, extruded 2 along Z
+        const prism = sampleSdf({ count: 3000, opacity: 1, nodes: [node('extrusion', [0, 0, 0], { profile: [[0, 0], [2, 0], [0, 1]], depth: 2 })] });
+        assert.equal(prism.opacities.length, 3000);
+        for (let i = 0; i < 3000; i++) {
+            const [x, y, z] = prism.positions.subarray(i * 3, i * 3 + 3);
+            const onCap = Math.abs(Math.abs(z) - 1) < 0.02 && x >= -0.02 && y >= -0.02 && x / 2 + y <= 1.02;
+            const onSide = Math.abs(z) <= 1.02 && (Math.abs(x) < 0.02 || Math.abs(y) < 0.02 || Math.abs((x / 2 + y - 1) / Math.hypot(0.5, 1)) < 0.02);
+            assert(onCap || onSide, `prism sample ${i} off the surface: ${x}, ${y}, ${z}`);
+        }
+        // a plan-view profile drawn as [x, z] and rotated [90, 0, 0] extrudes vertically
+        const plan = sampleSdf({ count: 1000, opacity: 1, nodes: [{ ...node('extrusion', [0, 0, 0], { profile: [[-1, -0.5], [1, -0.5], [1, 0.5], [-1, 0.5]], depth: 0.4 }), rotation: new Quat().setFromEulerAngles(90, 0, 0) }] });
+        for (let i = 0; i < 1000; i++) {
+            const [x, y, z] = plan.positions.subarray(i * 3, i * 3 + 3);
+            assert(Math.abs(x) < 1.02 && Math.abs(z) < 0.52 && Math.abs(y) < 0.22, `plan sample ${i}: ${x}, ${y}, ${z}`);
+        }
+        // a box tapered to half width in z at its top
+        const tapered = sampleSdf({ count: 3000, opacity: 1, nodes: [node('box', [0, 0, 0], { size: new Vec3(1, 2, 1), taper: [1, 0.5] })] });
+        let topWidth = 0, bottomWidth = 0;
+        for (let i = 0; i < 3000; i++) {
+            const [, y, z] = tapered.positions.subarray(i * 3, i * 3 + 3);
+            if (y > 0.9) topWidth = Math.max(topWidth, Math.abs(z));
+            if (y < -0.9) bottomWidth = Math.max(bottomWidth, Math.abs(z));
+        }
+        assert(Math.abs(topWidth - 0.25) < 0.04 && Math.abs(bottomWidth - 0.5) < 0.04, `taper widths ${topWidth}, ${bottomWidth}`);
+        // a sphere at z = 1 mirrored across z appears on both sides in equal measure
+        const mirrored = sampleSdf({ count: 2000, opacity: 1, nodes: [
+            node('box', [0, 0, 0], { size: new Vec3(0.2, 0.2, 0.2) }),
+            node('ellipsoid', [0, 0, 1], { size: new Vec3(0.5, 0.5, 0.5), mirror: 'z' })
+        ] });
+        let front = 0, back = 0;
+        for (let i = 0; i < mirrored.opacities.length; i++) {
+            const z = mirrored.positions[i * 3 + 2];
+            if (z > 0.7) front++;
+            if (z < -0.7) back++;
+        }
+        assert(front > 500 && back > 500 && Math.abs(front - back) < 0.2 * front, `mirror counts ${front}, ${back}`);
+    },
+
     async 'create_sdf validates and maps its arguments'() {
         await use(async ({ call, api }) => {
             const calls = [];
             api.create.sdf = (...args) => { calls.push(args); return {}; };
             const box = { shape: 'box', center: [0, 0, 0], size: [1, 1, 1] };
-            for (const input of [{ nodes: [] }, { nodes: [{ ...box, shape: 'cone' }] }, { nodes: [{ ...box, op: 'xor' }] }, { nodes: [{ ...box, smooth: -1 }] }, { nodes: [box], count: 0 }]) {
+            for (const input of [
+                { nodes: [] }, { nodes: [{ ...box, shape: 'cone' }] }, { nodes: [{ ...box, op: 'xor' }] }, { nodes: [{ ...box, smooth: -1 }] }, { nodes: [box], count: 0 },
+                { nodes: [{ shape: 'box', center: [0, 0, 0] }] },
+                { nodes: [{ shape: 'extrusion', center: [0, 0, 0], depth: 1 }] },
+                { nodes: [{ shape: 'extrusion', center: [0, 0, 0], depth: 1, profile: [[0, 0], [1, 0]] }] },
+                { nodes: [{ ...box, taper: [1] }] },
+                { nodes: [{ ...box, mirror: 'w' }] }
+            ]) {
                 assert.equal((await call('create_sdf', input)).error?.code, 'invalid_input', JSON.stringify(input));
             }
             assert.equal(calls.length, 0);

@@ -138,44 +138,78 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
         });
     };
 
-    events.function('render.offscreen', async (width: number, height: number): Promise<Uint8Array> => {
-        try {
-            // start rendering to offscreen buffer only
-            scene.camera.startOffscreenMode(width, height);
-            scene.camera.renderOverlays = false;
-            scene.gizmoLayer.enabled = false;
-            scene.centersLayer.enabled = false;
+    // wait for postrender, giving up on abort or after timeout ms (a hidden
+    // tab stops rendering, so the frame may never come)
+    const postRenderWithin = (signal: AbortSignal | undefined, timeout: number) => {
+        return new Promise<void>((resolve, reject) => {
+            let timer: ReturnType<typeof setTimeout> = null;
+            const done = (error?: Error) => {
+                handle.off();
+                clearTimeout(timer);
+                signal?.removeEventListener('abort', onAbort);
+                if (error) reject(error);
+                else resolve();
+            };
+            const onAbort = () => done(new DOMException('The render was cancelled.', 'AbortError'));
+            const handle = scene.events.on('postrender', () => done());
+            if (Number.isFinite(timeout)) timer = setTimeout(() => done(new Error('render_timeout')), timeout);
+            if (signal?.aborted) onAbort();
+            else signal?.addEventListener('abort', onAbort);
+        });
+    };
 
-            // render the next frame
-            scene.forceRender = true;
+    // options.signal and options.timeout bound the wait for the frame; without
+    // them it waits for the next frame however long that takes
+    events.function(
+        'render.offscreen',
+        async (
+            width: number,
+            height: number,
+            options?: { signal?: AbortSignal; timeout?: number }
+        ): Promise<Uint8Array> => {
+            try {
+                // start rendering to offscreen buffer only
+                scene.camera.startOffscreenMode(width, height);
+                scene.camera.renderOverlays = false;
+                scene.gizmoLayer.enabled = false;
+                scene.centersLayer.enabled = false;
 
-            // for render to finish
-            await postRender();
+                // render the next frame
+                scene.forceRender = true;
 
-            // cpu-side buffer to read pixels into
-            const data = new Uint8Array(width * height * 4);
+                // for render to finish
+                if (options) await postRenderWithin(options.signal, options.timeout ?? Infinity);
+                else await postRender();
 
-            const { mainTarget, workTarget } = scene.camera;
+                // cpu-side buffer to read pixels into
+                const data = new Uint8Array(width * height * 4);
 
-            scene.dataProcessor.copyRt(mainTarget, workTarget);
+                const { mainTarget, workTarget } = scene.camera;
 
-            // read the rendered frame. the read must be immediate: nothing
-            // submits the shared command encoder outside the frame, so a
-            // deferred read maps the staging buffer before the copy above has
-            // run and returns zeros.
-            await workTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workTarget, data, immediate: true });
+                scene.dataProcessor.copyRt(mainTarget, workTarget);
 
-            // rows are read back top-down (0,0 at the top)
-            return data;
-        } finally {
-            scene.camera.endOffscreenMode();
-            scene.camera.renderOverlays = true;
-            scene.gizmoLayer.enabled = true;
-            scene.centersLayer.enabled = true;
-            scene.camera.camera.clearColor.set(0, 0, 0, 0);
-            scene.forceRender = true; // repaint the viewport with normal rendering
+                // read the rendered frame. the read must be immediate: nothing
+                // submits the shared command encoder outside the frame, so a
+                // deferred read maps the staging buffer before the copy above has
+                // run and returns zeros.
+                await workTarget.colorBuffer.read(0, 0, width, height, {
+                    renderTarget: workTarget,
+                    data,
+                    immediate: true
+                });
+
+                // rows are read back top-down (0,0 at the top)
+                return data;
+            } finally {
+                scene.camera.endOffscreenMode();
+                scene.camera.renderOverlays = true;
+                scene.gizmoLayer.enabled = true;
+                scene.centersLayer.enabled = true;
+                scene.camera.camera.clearColor.set(0, 0, 0, 0);
+                scene.forceRender = true; // repaint the viewport with normal rendering
+            }
         }
-    });
+    );
 
     events.function('render.image', async (imageSettings: ImageSettings, fileStream?: FileSystemWritableFileStream) => {
         events.fire('startSpinner');

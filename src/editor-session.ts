@@ -39,7 +39,14 @@ type RenderSettings = {
     views?: RenderView[];
     // analysis view applied while rendering
     viewOverride?: ViewOverride;
+    // measures [min, max] of the analysed property from the camera as posed for
+    // a tile, or null when nothing is visible; the property range when the
+    // override gives none is the union over every tile
+    measureRange?: () => Promise<[number, number] | null>;
 };
+// longest render_view waits for one offscreen frame before giving up
+const RENDER_TIMEOUT_MS = 5000;
+
 type RenderTile = { pixels: Uint8Array; x: number; y: number; width: number; height: number; label?: string };
 
 // Encode top-down RGBA render tiles over the background colour, as an
@@ -340,6 +347,8 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
                 return await queue.enqueue(async () => {
                     checkCancelled(options);
                     assertIdle();
+                    if (events.invoke('timeline.playing'))
+                        throw new EditorError('timeline_playing', 'Pause timeline playback before rendering.');
                     const camera = scene.camera;
                     const pose = events.invoke('camera.getPose');
                     const saved = {
@@ -357,23 +366,60 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
                         };
                         // changing the pose leaves orthographic projection, so every tile restores it
                         const ortho = camera.ortho;
-                        scene.viewOverride = viewOverride ?? null;
-                        const tiles: RenderTile[] = [];
-                        const cameras = [];
-                        for (let i = 0; i < views.length; i++) {
-                            // named views orbit the requested view's target at its
-                            // distance; the first tile already has the requested pose
-                            if (i > 0) events.fire('camera.setPose', base, 0);
+                        // named views orbit the requested view's target at its
+                        // distance; the base pose is the requested one
+                        let posed = -1; // the tile the camera is posed for; -1 is the base pose
+                        const poseTile = (i: number) => {
+                            if (posed === i) return;
+                            if (posed !== -1) events.fire('camera.setPose', base, 0);
+                            posed = i;
                             if (views[i] !== 'current') applyCamera({ view: views[i] as CameraSettings['view'] });
                             camera.ortho = ortho;
                             camera.onUpdate(0);
+                        };
+                        // timeline playback moves the camera every tick, which would
+                        // change the pose between posing and rendering a tile
+                        const checkStill = () => {
+                            if (events.invoke('timeline.playing'))
+                                throw new EditorError('timeline_playing', 'Pause timeline playback before rendering.');
+                        };
+                        let override = viewOverride ?? null;
+                        if (override?.mode === 'property' && !override.range && settings.measureRange) {
+                            let range: [number, number] = [Infinity, -Infinity];
+                            for (let i = 0; i < views.length; i++) {
+                                poseTile(i);
+                                const r = await settings.measureRange();
+                                checkCancelled(options);
+                                if (r) range = [Math.min(range[0], r[0]), Math.max(range[1], r[1])];
+                            }
+                            if (!(range[0] <= range[1]))
+                                throw new EditorError('empty_scene', 'There are no visible splats to measure.');
+                            if (range[0] === range[1]) range[1] = range[0] + 1e-6;
+                            override = { ...override, range };
+                        }
+                        scene.viewOverride = override;
+                        const tiles: RenderTile[] = [];
+                        const cameras = [];
+                        for (let i = 0; i < views.length; i++) {
+                            poseTile(i);
                             cameras.push({ view: views[i], camera: cameraInfo() });
-                            const pixels = (await events.invoke(
-                                'render.offscreen',
-                                tileWidth,
-                                tileHeight
-                            )) as Uint8Array;
+                            let pixels: Uint8Array;
+                            try {
+                                pixels = (await events.invoke('render.offscreen', tileWidth, tileHeight, {
+                                    signal: options?.signal,
+                                    timeout: RENDER_TIMEOUT_MS
+                                })) as Uint8Array;
+                            } catch (error) {
+                                checkCancelled(options);
+                                if (error?.message === 'render_timeout')
+                                    throw new EditorError(
+                                        'operation_failed',
+                                        'The viewport did not render a frame; the editor tab may be hidden or in the background.'
+                                    );
+                                throw error;
+                            }
                             checkCancelled(options);
+                            checkStill();
                             tiles.push({
                                 pixels,
                                 x: (i % cols) * tileWidth,
@@ -391,7 +437,10 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
                             settings.format ?? 'jpeg',
                             settings.quality ?? 0.85
                         );
-                        return views.length > 1 ? { cameras, image } : { camera: cameras[0].camera, image };
+                        const range = override?.mode === 'property' ? { range: override.range } : {};
+                        return views.length > 1
+                            ? { cameras, image, ...range }
+                            : { camera: cameras[0].camera, image, ...range };
                     } finally {
                         scene.viewOverride = null;
                         events.fire('camera.setFov', saved.fov);

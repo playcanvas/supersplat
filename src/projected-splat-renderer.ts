@@ -977,8 +977,14 @@ class ProjectedSplatRenderer {
             const compute = this.getCompute(placement, bands);
             const selectionEnabled = selectedSplat === splat && camera.renderOverlays;
             // only the layer the panel is editing previews, and an empty selection
-            // means the whole layer - the rule SplatsColorOp applies
-            const previewMode = pending && selectedSplat === splat ? (instances.numSelected === 0 ? 2 : 1) : 0;
+            // means the whole layer - the rule SplatsColorOp applies. Analysis
+            // views show committed data only, the values get_histogram measures
+            const previewMode =
+                pending && selectedSplat === splat && !this.scene.viewOverride
+                    ? instances.numSelected === 0
+                        ? 2
+                        : 1
+                    : 0;
 
             if (selectionEnabled) {
                 ringsBase = placement.entryBase;

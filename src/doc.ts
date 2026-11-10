@@ -453,10 +453,12 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     };
 
     // load a document read by readDocument; only one read through its handle
-    // keeps that handle for saves and recent files, as with the file selector
+    // keeps that handle for saves and recent files. Without one it keeps its
+    // name, so a save suggests it, but saving asks where to write
     const openDocument = async (doc: { file: File; handle: FileSystemFileHandle | null }) => {
         if (!doc.handle) {
             await loadDocument(doc.file);
+            events.fire('doc.setName', doc.file.name);
             return;
         }
         await loadDocument(doc.file, doc.handle);

@@ -4,12 +4,13 @@ import { FileReadBlockedError, readHandle } from './file-read';
 
 class DroppedFile {
     filename: string;
-    file: File;
+    // null when the browser blocked reading it (see resolveHandleFiles)
+    file: File | null;
     handle?: FileSystemFileHandle;
     // the dropped item this file came from: the file itself or an enclosing folder
     root?: FileSystemHandle;
 
-    constructor(filename: string, file: File, handle?: FileSystemFileHandle, root?: FileSystemHandle) {
+    constructor(filename: string, file: File | null, handle?: FileSystemFileHandle, root?: FileSystemHandle) {
         this.filename = filename;
         this.file = file;
         this.handle = handle;
@@ -66,7 +67,8 @@ const resolveHandles = async (
     handle: FileSystemHandle,
     prefix: string,
     result: DroppedFile[],
-    root: FileSystemHandle
+    root: FileSystemHandle,
+    keepBlocked: boolean
 ) => {
     if (handle.name === '.DS_Store') {
         return;
@@ -74,10 +76,17 @@ const resolveHandles = async (
 
     if (handle.kind === 'file') {
         const fileHandle = handle as FileSystemFileHandle;
-        result.push(new DroppedFile(prefix + handle.name, await readHandle(fileHandle), fileHandle, root));
+        let file: File | null;
+        try {
+            file = await readHandle(fileHandle);
+        } catch (error) {
+            if (!keepBlocked || !(error instanceof FileReadBlockedError)) throw error;
+            file = null;
+        }
+        result.push(new DroppedFile(prefix + handle.name, file, fileHandle, root));
     } else {
         for await (const child of (handle as FileSystemDirectoryHandle).values()) {
-            await resolveHandles(child, `${prefix}${handle.name}${path.delimiter}`, result, root);
+            await resolveHandles(child, `${prefix}${handle.name}${path.delimiter}`, result, root, keepBlocked);
         }
     }
 };
@@ -106,11 +115,13 @@ const removeCommonPrefix = (urls: DroppedFile[]) => {
     }
 };
 
-// expand picked or dropped handles into files, descending into folders
-const resolveHandleFiles = async (handles: FileSystemHandle[]) => {
+// expand picked or dropped handles into files, descending into folders. A read
+// the browser blocks throws FileReadBlockedError, or with keepBlocked yields the
+// file with a null file so the rest of the set is still read
+const resolveHandleFiles = async (handles: FileSystemHandle[], keepBlocked = false) => {
     const files: DroppedFile[] = [];
     for (const handle of handles) {
-        await resolveHandles(handle, '', files, handle);
+        await resolveHandles(handle, '', files, handle, keepBlocked);
     }
 
     if (files.length > 1) {

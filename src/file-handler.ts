@@ -471,6 +471,30 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         });
     };
 
+    // A blocked read leaves a file without contents. Offer just those files again
+    // through a plain file input and fill them in by name, keeping the rest of
+    // the set in place so a multi-file model keeps its companions. Files picked
+    // under other names are added. Resolves [] if the user declines.
+    const recoverBlocked = async (files: ImportFile[]) => {
+        const blocked = files.filter((f) => !f.contents);
+        if (!blocked.length) return files;
+
+        const names = blocked.map((f) => path.getBasename(f.filename));
+        const picked = await repickBlocked(events, names.join("', '"), importAccept, true);
+        if (!picked.length) return [];
+
+        const byName = new Map(picked.map((file) => [file.name, file]));
+        const recovered = files.flatMap((f) => {
+            if (f.contents) return [f];
+            const file = byName.get(path.getBasename(f.filename));
+            if (!file) return [];
+            byName.delete(file.name);
+            // the handle cannot be read, so the file is not kept for Import Recent
+            return [{ filename: f.filename, contents: file }];
+        });
+        return recovered.concat(Array.from(byName.values(), (file) => ({ filename: file.name, contents: file })));
+    };
+
     // create a file selector element as fallback when showOpenFilePicker isn't available
     let fileSelector: HTMLInputElement;
     if (!window.showOpenFilePicker) {
@@ -588,24 +612,19 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                     ]
                 });
 
-                let files: ImportFile[] = [];
-                try {
-                    for (let i = 0; i < handles.length; i++) {
-                        files.push({
-                            filename: handles[i].name,
-                            contents: await readHandle(handles[i]),
-                            handle: handles[i]
-                        });
+                // read every picked file; a blocked one stays without contents
+                const files: ImportFile[] = [];
+                for (const handle of handles) {
+                    try {
+                        files.push({ filename: handle.name, contents: await readHandle(handle), handle });
+                    } catch (error) {
+                        if (!(error instanceof FileReadBlockedError)) throw error;
+                        files.push({ filename: handle.name, handle });
                     }
-                } catch (error) {
-                    if (!(error instanceof FileReadBlockedError)) throw error;
-                    files = (await repickBlocked(events, error.filename, importAccept, true)).map((file) => ({
-                        filename: file.name,
-                        contents: file
-                    }));
                 }
 
-                if (files.length) await importFiles(files);
+                const readable = await recoverBlocked(files);
+                if (readable.length) await importFiles(readable);
             } catch (error) {
                 if (error.name !== 'AbortError') {
                     await showImportError(error);
@@ -626,24 +645,16 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                 }
             }
 
-            let files: ImportFile[];
-            try {
-                files = (await resolveHandleFiles(entry.handles)).map((f) => {
-                    return {
-                        filename: f.filename,
-                        contents: f.file,
-                        handle: f.handle,
-                        root: f.root
-                    };
-                });
-            } catch (error) {
-                if (!(error instanceof FileReadBlockedError)) throw error;
-                files = (await repickBlocked(events, error.filename, importAccept, true)).map((file) => ({
-                    filename: file.name,
-                    contents: file
-                }));
-            }
-            if (files.length) await importFiles(files);
+            const files = (await resolveHandleFiles(entry.handles, true)).map((f) => {
+                return {
+                    filename: f.filename,
+                    contents: f.file,
+                    handle: f.handle,
+                    root: f.root
+                };
+            });
+            const readable = await recoverBlocked(files);
+            if (readable.length) await importFiles(readable);
         } catch (error) {
             if (error.name !== 'AbortError') {
                 await showLoadError(error.message ?? error, entry.name);

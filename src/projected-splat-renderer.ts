@@ -90,6 +90,9 @@ const OCCLUSION_BLOCK = 8;
 
 const roundUp = (value: number, alignment: number) => Math.ceil(value / alignment) * alignment;
 
+// projector viewMode values for Scene.viewOverride
+const VIEW_MODES = { property: 1, selection: 2, layers: 3, shaded: 4 };
+
 type ProjectorVariant = {
     shader: Shader;
     bindGroupFormat: BindGroupFormat;
@@ -505,7 +508,11 @@ class ProjectedSplatRenderer {
             new UniformFormat('occlusionBlocksX', UNIFORMTYPE_UINT),
             new UniformFormat('occlusionBlocksY', UNIFORMTYPE_UINT),
             new UniformFormat('occlusionBlock', UNIFORMTYPE_FLOAT),
-            new UniformFormat('occlusionEnabled', UNIFORMTYPE_UINT)
+            new UniformFormat('occlusionEnabled', UNIFORMTYPE_UINT),
+            new UniformFormat('viewMode', UNIFORMTYPE_UINT),
+            new UniformFormat('viewProp', UNIFORMTYPE_UINT),
+            new UniformFormat('viewRange', UNIFORMTYPE_VEC2),
+            new UniformFormat('viewColor', UNIFORMTYPE_VEC4)
         ]);
         const bindGroupFormat = new BindGroupFormat(this.device, [
             new BindStorageBufferFormat('sortKeys', SHADERSTAGE_COMPUTE),
@@ -1043,6 +1050,15 @@ class ProjectedSplatRenderer {
                 keepRings = 1;
             }
             compute.setParameter('keepRings', keepRings);
+            // render_view's analysis views
+            const viewOverride = this.scene.viewOverride;
+            compute.setParameter('viewMode', viewOverride ? VIEW_MODES[viewOverride.mode] : 0);
+            compute.setParameter('viewProp', viewOverride?.prop ?? 0);
+            compute.setParameter('viewRange', viewOverride?.range ?? [0, 1]);
+            compute.setParameter(
+                'viewColor',
+                viewOverride?.layerColors?.get(splat.uid) ?? viewOverride?.color ?? [1, 1, 1, 1]
+            );
             compute.setParameter('prevDepthMax', this.depthMax);
             compute.setParameter('prevViewProj', this.prevViewProjection.data);
             compute.setParameter('prevView', this.prevView.data);

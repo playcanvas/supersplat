@@ -100,8 +100,8 @@ class DataProcessor {
     }
 
     // calculate histogram (bin counts + min/max) entirely on GPU
-    calcHistogram(splat: Splat, mode: number, options?: CalcHistogramOptions) {
-        return this.calcHistogramImpl.run(splat, mode, options);
+    calcHistogram(splat: Splat, mode: number, options?: CalcHistogramOptions, range?: [number, number]) {
+        return this.calcHistogramImpl.run(splat, mode, options, range);
     }
 
     // compute a per-splat byte mask (255 = in range and visible, 0 = not) for

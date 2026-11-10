@@ -4,6 +4,7 @@ import type { CameraFrame } from './camera';
 import { createGradeTerms, gradeTerms } from './color-grade';
 import type { GradeParams } from './color-grade';
 import type { CommandContext, CommandQueue } from './command-queue';
+import { NUM_BINS } from './data-processor/histogram-config';
 import type { IntersectOptions } from './data-processor/intersect';
 import type { EditHistory } from './edit-history';
 import type { EditOp } from './edit-ops';
@@ -31,6 +32,8 @@ import { createEditorTimeline } from './editor-timeline';
 import type { Element } from './element';
 import { ElementType } from './element';
 import type { Events } from './events';
+import { histogramStats, mergeBins } from './histogram-stats';
+import { IndexRanges } from './index-ranges';
 import type { Scene } from './scene';
 import { rectangleOp } from './selection-rectangle';
 import type { Splat } from './splat';
@@ -82,6 +85,24 @@ type SelectionOptions = CommandOptions & {
 };
 type RectangleOptions = CommandOptions & { layer?: LayerId; depth?: boolean; footprint?: number; viewToken?: string };
 type TransformOptions = { translate?: Vec3; rotate?: Quat; scale?: number; center?: Vec3 };
+type RenderMode = {
+    mode?: 'color' | 'selection' | 'property' | 'layers' | 'shaded';
+    property?: string;
+    range?: [number, number];
+};
+
+// distinct flat colours for the layers analysis view: golden-ratio hue steps
+// never repeat, alternating brightness separates neighbours
+const layerColor = (i: number): [number, number, number, number] => {
+    const h = ((i * 0.618034) % 1) * 6,
+        v = i % 2 ? 0.75 : 0.95,
+        s = 0.7;
+    const f = (n: number) => {
+        const k = (n + h) % 6;
+        return Math.round((v - v * s * Math.max(0, Math.min(k, 4 - k, 1))) * 100) / 100;
+    };
+    return [f(5), f(3), f(1), 1];
+};
 
 // in-slot GPU intersect followed by the SelectOp it produces, in the same
 // slot. Shared with the screen-space gestures in editor.ts
@@ -271,6 +292,18 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
             options
         );
     };
+    // World-space rotate/scale about `origin`, then translate.
+    const deltaMatrix = (origin: Vec3, translation: Vec3, rotation: Quat, factor: number) => {
+        const position = rotation.transformVector(origin.clone().mulScalar(-factor)).add(origin).add(translation);
+        return new Mat4().setTRS(position, rotation, new Vec3(factor, factor, factor));
+    };
+    // The entity transform that applies a world-space matrix to a whole layer.
+    const movedLayer = (splat: Splat, matrix: Mat4) => {
+        const world = new Mat4().mul2(matrix, splat.worldTransform);
+        const parent = splat.entity.parent;
+        if (parent) world.mul2(new Mat4().invert(parent.getWorldTransform()), world);
+        return new Transform(world.getTranslation(), new Quat().setFromMat4(world), world.getScale());
+    };
     const colorEdit = async (
         params: GradeParams | null,
         layer?: LayerId,
@@ -313,6 +346,51 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
     // fired once per history mutation (alongside edit.canRedo)
     events.on('edit.canUndo', () => changed('historyChanged'));
 
+    // `range` zooms into [min, max] (values outside are excluded);
+    // `bins` merges the 256 GPU bins down to a divisor of 256.
+    const histogram = async (
+        id: LayerId,
+        property: string,
+        options: CommandOptions & { range?: [number, number]; bins?: number } = {}
+    ) => {
+        const splat = layerById(id);
+        const frame = scene.camera.captureFrame();
+        const viewToken = session.viewport.info().viewToken;
+        const range = options.range && ([options.range[0], options.range[1]] as [number, number]);
+        const bins = options.bins ?? NUM_BINS;
+        if (range && !(Number.isFinite(range[0]) && Number.isFinite(range[1]) && range[0] < range[1]))
+            throw new EditorError('invalid_input', 'range must be finite with min < max.');
+        if (!Number.isInteger(bins) || bins < 1 || NUM_BINS % bins)
+            throw new EditorError('invalid_input', `bins must divide ${NUM_BINS}.`);
+        return await run(
+            splat,
+            async () => {
+                const mode = propertyMode(splat, property);
+                const viewDependent = mode === 4 || isFinalColorMode(mode);
+                const data = await scene.dataProcessor.calcHistogram(splat, mode, propertyOptions(splat, frame), range);
+                checkCancelled(options);
+                if (viewDependent) session.checkView(viewToken);
+                const all = data.selected.map((n, i) => n + data.unselected[i]);
+                return {
+                    layer: id,
+                    property,
+                    min: data.min,
+                    max: data.max,
+                    numValues: data.numValues,
+                    selected: mergeBins(data.selected, bins),
+                    unselected: mergeBins(data.unselected, bins),
+                    stats: {
+                        all: histogramStats(all, data.min, data.max),
+                        selected: histogramStats(data.selected, data.min, data.max)
+                    },
+                    viewDependent,
+                    ...(viewDependent ? { viewToken } : {})
+                };
+            },
+            options
+        );
+    };
+
     return {
         inspect: {
             scene: (options?: CommandOptions) =>
@@ -328,27 +406,7 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
                 }),
             layer: async (id: LayerId, options?: CommandOptions) =>
                 await run(layerById(id), () => layerInfo(layerById(id)), options, false),
-            histogram: async (id: LayerId, property: string, options?: CommandOptions) => {
-                const splat = layerById(id);
-                const frame = scene.camera.captureFrame();
-                const viewToken = session.viewport.info().viewToken;
-                return await run(
-                    splat,
-                    async () => {
-                        const mode = propertyMode(splat, property);
-                        const viewDependent = mode === 4 || isFinalColorMode(mode);
-                        const data = await scene.dataProcessor.calcHistogram(
-                            splat,
-                            mode,
-                            propertyOptions(splat, frame)
-                        );
-                        checkCancelled(options);
-                        if (viewDependent) session.checkView(viewToken);
-                        return { layer: id, property, ...data, viewDependent, ...(viewDependent ? { viewToken } : {}) };
-                    },
-                    options
-                );
-            },
+            histogram,
             timeline: timeline.inspect,
             properties: (shBands = 0) => [
                 ...Object.keys(PROP_MODE),
@@ -406,6 +464,54 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
                             affected++;
                         }
                         return result([splat], affected);
+                    },
+                    options,
+                    false
+                );
+            },
+            // Place copies of a layer that share its static data: each costs only
+            // its instance list. Every copy is moved from the source by its own
+            // world-space delta, about the source bounds centre unless given.
+            instance: async (id: LayerId, copies: TransformOptions[], name?: string, options?: CommandOptions) => {
+                const splat = layerById(id);
+                const deltas = copies.map((c) => ({
+                    translate: c.translate?.clone() ?? new Vec3(),
+                    rotate: c.rotate?.clone() ?? new Quat(),
+                    scale: c.scale ?? 1,
+                    center: c.center?.clone()
+                }));
+                if (!deltas.length) throw new EditorError('invalid_input', 'Provide at least one copy.');
+                if (deltas.some((d) => !Number.isFinite(d.scale) || d.scale <= 0))
+                    throw new EditorError('invalid_input', 'Scale must be positive.');
+                return await run(
+                    splat,
+                    async (ctx) => {
+                        const ranges = IndexRanges.fromPredicate(splat.instances.count, () => true);
+                        const prefix = name ?? splat.name;
+                        const created = deltas.map((d, i) => {
+                            const copy = splat.createLayer(ranges, `${prefix} ${i + 1}`);
+                            // copies start unselected
+                            const flags = copy.instances.flags;
+                            for (let j = 0; j < copy.instances.count; j++) flags[j] &= ~State.selected;
+                            const t = movedLayer(
+                                splat,
+                                deltaMatrix(d.center ?? splat.worldBound.center.clone(), d.translate, d.rotate, d.scale)
+                            );
+                            copy.entity.setLocalPosition(t.position);
+                            copy.entity.setLocalRotation(t.rotation);
+                            copy.entity.setLocalScale(t.scale);
+                            return copy;
+                        });
+                        try {
+                            await ctx.apply(new MultiOp(created.map((copy) => new AddSplatOp(scene, copy))));
+                        } catch (error) {
+                            created.forEach((copy) => !copy.scene && copy.destroy());
+                            throw error;
+                        }
+                        return {
+                            ...result(created, ranges.count * created.length),
+                            createdLayers: created.map((c) => c.uid)
+                        };
                     },
                     options,
                     false
@@ -544,26 +650,14 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
                         (scope === 'selection'
                             ? splat.worldTransform.transformPoint(splat.selectionBound.center, new Vec3())
                             : splat.worldBound.center.clone());
-                    const position = rotation
-                        .transformVector(origin.clone().mulScalar(-factor))
-                        .add(origin)
-                        .add(translation);
-                    const matrix = new Mat4().setTRS(position, rotation, new Vec3(factor, factor, factor));
+                    const matrix = deltaMatrix(origin, translation, rotation, factor);
                     if (scope === 'layer') {
                         const oldt = new Transform(
                             splat.entity.getLocalPosition(),
                             splat.entity.getLocalRotation(),
                             splat.entity.getLocalScale()
                         );
-                        const world = new Mat4().mul2(matrix, splat.worldTransform);
-                        const parent = splat.entity.parent;
-                        if (parent) world.mul2(new Mat4().invert(parent.getWorldTransform()), world);
-                        const newt = new Transform(
-                            world.getTranslation(),
-                            new Quat().setFromMat4(world),
-                            world.getScale()
-                        );
-                        await ctx.apply(new EntityTransformOp({ splat, oldt, newt }));
+                        await ctx.apply(new EntityTransformOp({ splat, oldt, newt: movedLayer(splat, matrix) }));
                     } else {
                         const local = new Mat4()
                             .mul2(new Mat4().invert(splat.worldTransform), matrix)
@@ -589,6 +683,99 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
         },
         viewport: {
             ...session.viewport,
+            // render_view with an analysis mode: 'property' colours splats by a
+            // histogram property over range (measured from visible layers when
+            // omitted), 'selection' highlights the selection on every layer and
+            // dims the rest, 'layers' gives each layer a flat colour, 'shaded'
+            // lights splats by their normals. Returns a legend that ties the
+            // colours back to values or layer IDs.
+            render: async (
+                settings: Parameters<typeof session.viewport.render>[0] & RenderMode = {},
+                options?: CommandOptions
+            ) => {
+                const { mode = 'color', property, range, ...rest } = settings;
+                const visible = allSplats().filter((s) => s.visible);
+                if (mode === 'property') {
+                    if (!property) throw new EditorError('invalid_input', 'property is required for property mode.');
+                    const prop = propModeFor(property);
+                    if (prop === undefined || prop > 13)
+                        throw new EditorError(
+                            'unsupported_property',
+                            `Property '${property}' cannot be visualised; use x, y, z, distance, camera-depth, red, green, blue, opacity, scale_0..2, volume or surface-area.`
+                        );
+                    let span = range && ([range[0], range[1]] as [number, number]);
+                    if (span && !(span[0] < span[1]))
+                        throw new EditorError('invalid_input', 'range must have min < max.');
+                    if (!span) {
+                        span = [Infinity, -Infinity];
+                        for (const splat of visible) {
+                            const h = await histogram(splat.uid, property, options);
+                            if (h.numValues) span = [Math.min(span[0], h.min), Math.max(span[1], h.max)];
+                        }
+                        if (!(span[0] <= span[1]))
+                            throw new EditorError('empty_scene', 'There are no visible splats to measure.');
+                        if (span[0] === span[1]) span[1] = span[0] + 1e-6;
+                    }
+                    const out = await session.viewport.render(
+                        { ...rest, viewOverride: { mode: 'property', prop, range: span } },
+                        options
+                    );
+                    return {
+                        ...out,
+                        legend: {
+                            mode,
+                            property,
+                            range: span,
+                            colors: 'turbo: blue = range min, green = middle, red = range max; dim grey = outside the range'
+                        }
+                    };
+                }
+                if (mode === 'selection') {
+                    const out = await session.viewport.render(
+                        { ...rest, viewOverride: { mode: 'selection', color: [1, 0.55, 0.05, 1] } },
+                        options
+                    );
+                    return {
+                        ...out,
+                        legend: {
+                            mode,
+                            colors: 'orange = selected, grey = unselected',
+                            selected: visible
+                                .filter((s) => s.instances.numSelected)
+                                .map((s) => ({ layer: s.uid, selected: s.instances.numSelected }))
+                        }
+                    };
+                }
+                if (mode === 'layers') {
+                    const layerColors = new Map(visible.map((s, i) => [s.uid, layerColor(i)]));
+                    const out = await session.viewport.render(
+                        { ...rest, viewOverride: { mode: 'layers', layerColors } },
+                        options
+                    );
+                    return {
+                        ...out,
+                        legend: {
+                            mode,
+                            layers: visible.map((s) => ({
+                                layer: s.uid,
+                                name: s.name,
+                                color: layerColors.get(s.uid).slice(0, 3)
+                            }))
+                        }
+                    };
+                }
+                if (mode === 'shaded') {
+                    const out = await session.viewport.render({ ...rest, viewOverride: { mode: 'shaded' } }, options);
+                    return {
+                        ...out,
+                        legend: {
+                            mode,
+                            colors: "clay with a quarter of the splat colour, lit from above left of the camera by each splat's normal (its shortest axis): bright faces the light, dark turns away"
+                        }
+                    };
+                }
+                return await session.viewport.render(rest, options);
+            },
             captureFrame: () => scene.camera.captureFrame(),
             pickDepth: async (
                 points: ScreenPoint[],
@@ -650,6 +837,7 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
                 );
             }
         },
+        create: session.create,
         timeline: {
             update: timeline.update,
             setKeys: timeline.setKeys,

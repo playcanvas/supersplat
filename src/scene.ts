@@ -74,6 +74,17 @@ const specialSort = (instances: MeshInstance[], numInstances: number, cameraPos:
 // so this is graph history rather than the averaging window.
 const FRAME_TIMING_WINDOW = 180;
 
+// render_view analysis views: colour by property (a histogram property mode
+// mapped over range), highlight the selection, flat colour per layer, or
+// shade by splat normal
+type ViewOverride = {
+    mode: 'property' | 'selection' | 'layers' | 'shaded';
+    prop?: number;
+    range?: [number, number];
+    color?: [number, number, number, number];
+    layerColors?: Map<number, [number, number, number, number]>;
+};
+
 class Scene {
     events: Events;
     config: SceneConfig;
@@ -90,6 +101,8 @@ class Scene {
     boundStorage = new BoundingBox();
     boundDirty = true;
     forceRender = false;
+    // analysis view applied while render_view renders; null for normal rendering
+    viewOverride: ViewOverride | null = null;
 
     // True while the user is dragging in the viewport. The element-state diff below
     // only sees what elements serialize, so edits that live outside it - a
@@ -728,3 +741,4 @@ class Scene {
 }
 
 export { SceneConfig, Scene };
+export type { ViewOverride };

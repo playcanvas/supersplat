@@ -1,6 +1,6 @@
 # WebMCP
 
-SuperSplat registers 29 tools with the browser's native [WebMCP API](https://webmachinelearning.github.io/webmcp/). They operate on the open editor tab and share its selection, layers and undo history. There is no separate server, network listener, MCP bridge or arbitrary JavaScript execution tool. Browsers without WebMCP continue to run the editor normally.
+SuperSplat registers 32 tools with the browser's native [WebMCP API](https://webmachinelearning.github.io/webmcp/). They operate on the open editor tab and share its selection, layers and undo history. There is no separate server, network listener, MCP bridge or arbitrary JavaScript execution tool: `create_from_generator` runs agent-supplied generator modules in an isolated sandbox, not in the editor page (see below). Browsers without WebMCP continue to run the editor normally.
 
 The adapter uses `document.modelContext`, with feature detection for preview browsers that expose `navigator.modelContext`. Tool titles follow the editor language. WebMCP is experimental: browser availability and agent integration depend on the browser version. Native discovery and execution are covered by the browser tests described below.
 
@@ -9,7 +9,7 @@ The adapter uses `document.modelContext`, with feature detection for preview bro
 | Tools | Purpose |
 | --- | --- |
 | `get_scene`, `get_layer` | Inspect document, paginated layers, counts, bounds, properties, camera, viewport and history. |
-| `get_histogram` | Read a GPU property distribution using the same values as the Data panel. |
+| `get_histogram` | Read a GPU property distribution using the same values as the Data panel: selected and unselected bins plus count, mean and percentiles, optionally zoomed to a range. |
 | `set_selection` | Select all, clear or invert on an explicit layer. |
 | `select_region` | Select or preview a world-space box, sphere or ellipsoid, including its outside. |
 | `select_rectangle` | Select visible splats or through all depths within a viewport rectangle. |
@@ -21,10 +21,13 @@ The adapter uses `document.modelContext`, with feature detection for preview bro
 | `apply_color`, `reset_color` | Compose or reset colour adjustments on an explicit scope. |
 | `undo`, `redo` | Step through the shared editor history, including user edits. |
 | `set_camera`, `focus_camera`, `pick_points` | Position the camera, frame content or find world positions under viewport points. |
+| `render_view` | Render an image from any camera pose without moving the user's view, optionally showing the selection, a property heatmap, layer colours or normal shading, from up to four angles. |
 | `set_view` | Change display preferences without changing splat data. |
 | `get_timeline`, `set_timeline` | Inspect or set the timeline length, frame rate, playhead, playback, smoothness and looping. |
 | `set_keyframes`, `move_keyframe`, `delete_keyframes` | Add, replace, move, copy or delete camera keyframes; each call is one undo entry. |
 | `import_url` | Add a CORS-accessible PLY, SPLAT, SOG, SPZ or KSPLAT URL as an undoable layer. |
+| `create_from_generator` | Create a new layer from a sandboxed splat-transform generator module. |
+| `instance_layer` | Place copies of a layer that share its gaussian data. |
 | `export_scene` | Download PLY, compressed PLY, SPLAT, SOG, SPZ, or a standalone HTML/ZIP viewer. |
 
 The registered JSON schemas describe required arguments, ranges and defaults. Unknown arguments and invalid values produce errors rather than being silently coerced. `get_layer` lists the properties available on that layer, including its SH coefficients.
@@ -51,9 +54,33 @@ Preview reports the number and world bounds of the matches without changing sele
 
 Call `select_region` with these arguments to inspect the proposed removal, call it again with `preview: false` to select, then call `delete_selection` with `{"layer":10}`. `size` gives full extents. `footprint: 0` tests splat centres; `footprint: 1` tests the full footprint. Property previews support the same `outside` option.
 
+### Histograms
+
+`get_histogram` returns equal-width bins over `[min, max]`, split into `selected` and `unselected` counts, and `stats` for all splats and for the selection: `count`, `mean` and percentiles `p1`, `p5`, `p25`, `p50`, `p75`, `p95` and `p99`. Statistics come from the bins, so they are accurate to one bin width. Hidden splats are excluded. `bins` merges the 256 GPU bins down to 8–128. `range` bins an explicit `[min, max]` instead of the measured range and excludes values outside it, which zooms into a tail. For example, to find faint floaters, read the `opacity` histogram, then zoom with `{"property":"opacity","range":[0,0.1]}` before choosing a `select_property` threshold.
+
+### Rendering
+
+`render_view` renders an offscreen image from any camera pose, then restores the user's camera, so checking work does not disturb the view. Camera parameters work as in `set_camera` and default to the current view. The grid, gizmos and markers are not drawn. The result contains `image` as `{ "type": "image", "mimeType", "data", "width", "height" }`, with base64 `data` and no `data:` prefix, plus the `camera` used. The default size is 512 pixels on the longest side at the viewport aspect, as JPEG; sizes up to 2048 and PNG are available.
+
+`mode` selects what the image shows. Analysis modes return a `legend` that ties colours back to values or layer IDs.
+
+| `mode` | Shows | Use it to |
+| --- | --- | --- |
+| `color` (default) | The scene as rendered. | Check overall results. |
+| `selection` | Selected splats on every layer in orange, everything else grey. The legend lists selected counts per layer. | Confirm a selection before deleting it. |
+| `property` | Splats coloured by a histogram `property` over `range` (Turbo: blue at the minimum, red at the maximum), with values outside the range in dim grey. Faint splats are drawn at least half opaque so they show. Without `range`, the measured range of the visible layers is used. | See where faint floaters, oversized splats or outliers are, using `get_histogram` percentiles as the range. |
+| `layers` | Each visible layer in its own flat colour, listed in the legend. | Tell layers and instances apart. |
+| `shaded` | Clay with a quarter of the splat colour, lit from above left of the camera by each splat's normal (its shortest axis). | Judge surface shape: bumps, holes, creases and uneven floors show regardless of colour. Splats in captures are less flat than generated ones, so shading is noisier there. |
+
+Supported properties are `x`, `y`, `z`, `distance`, `camera-depth`, `red`, `green`, `blue`, `opacity`, `scale_0`–`scale_2`, `volume` and `surface-area`, with the same values as `get_histogram`. For example, `{"mode":"property","property":"opacity","range":[0,0.1]}` shows only faint splats in colour.
+
+`views` renders up to four labelled views into one image, two per row, to judge 3D layout from a single result: `current` uses the camera parameters, and named views orbit its target at the same distance. `width` and `height` size the whole grid. A multi-view result returns `cameras`, one per view, instead of `camera`. With `orthographic: true`, every view is orthographic, so named views are true elevations for comparing silhouettes and proportions; `distance` sets the framed size.
+
+WebMCP returns every tool result as a JSON string; the specification defines no image result type. A client or MCP bridge that recognises the MCP image block shape can present the image to the model; others receive it as text, so keep images small. To act on what an image shows with screen-space tools, pass the returned `camera` to `set_camera` first.
+
 ### View-dependent operations
 
-`get_scene` and camera commands return `viewport.viewToken`, the canvas CSS rectangle and render dimensions. Screen coordinates are normalized to that rectangle, with `(0,0)` at the top left and `(1,1)` at the bottom right. The agent obtains screenshots through its browser integration.
+`get_scene` and camera commands return `viewport.viewToken`, the canvas CSS rectangle and render dimensions. Screen coordinates are normalized to that rectangle, with `(0,0)` at the top left and `(1,1)` at the bottom right. Agents can check their work with `render_view` or through their own browser integration.
 
 Rectangle selection and point picking require `viewToken`. Camera-dependent property selection (`camera-depth`, RGB and HSV) also requires it; `get_histogram` supplies a token for these properties. A changed camera or viewport produces `stale_view`, so the agent can inspect again instead of editing from outdated coordinates. These tokens describe the view, not a version of the model data.
 
@@ -83,15 +110,43 @@ then `set_keyframes` with:
 
 and preview it with `set_timeline` and `{"frame":0,"playing":true}`.
 
+### Creating and instancing gaussians
+
+Gaussian data is generated inside the editor rather than sent through tool calls. `create_from_generator` builds one new static resource in memory and adds it as a new layer in one undo entry; it never appends to an existing layer. Created layers have an identity transform, so the data is stored exactly as generated, in world space.
+
+`create_from_generator` runs a [splat-transform generator module](https://github.com/playcanvas/splat-transform#generators-beta), so the same script works in the CLI and the editor. The module exports `class Generator` whose static `create(params)` (optionally async) returns `{ count, columnNames, getRow(index, row) }`. `params` arrive as `[{ name, value }]` with string values, as in the CLI. Columns use the standard 3DGS PLY convention in world space: `x`, `y`, `z`; `scale_0..2` = ln(standard deviation); `rot_0..3` = quaternion `w, x, y, z`; `f_dc_0..2` = `(rgb - 0.5) / 0.28209479177387814`; `opacity` = logit(alpha). Optional `f_rest_*` columns add SH.
+
+```js
+export class Generator {
+    static create(params) {
+        const n = Number(params.find(p => p.name === 'n')?.value ?? 1000);
+        const columnNames = ['x', 'y', 'z', 'scale_0', 'scale_1', 'scale_2', 'rot_0', 'rot_1', 'rot_2', 'rot_3', 'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity'];
+        return {
+            count: n,
+            columnNames,
+            getRow(i, row) {
+                const a = i * 0.1;
+                Object.assign(row, { x: Math.cos(a), y: i / n, z: Math.sin(a), scale_0: -4, scale_1: -4, scale_2: -4,
+                    rot_0: 1, rot_1: 0, rot_2: 0, rot_3: 0, f_dc_0: 1.7, f_dc_1: 0, f_dc_2: 0, opacity: 4 });
+            }
+        };
+    }
+}
+```
+
+Generator code runs in a worker inside a sandboxed iframe without `allow-same-origin`, so it has an opaque origin and no access to the editor page, its DOM, storage or file handles. A content security policy blocks network access. A generator must finish within 10 seconds and produce at most 2000000 gaussians and 64 columns. Errors thrown by the module return `generator_failed`, and overrunning the time limit returns `timeout`. Non-finite values and missing required columns are rejected with `invalid_input`.
+
+`instance_layer` places up to 128 copies of a layer in one undo entry. Copies share the source's gaussian data, so each costs only a small instance list rather than new data. Each copy applies its own world-space translation, Euler rotation (degrees) and uniform scale to the source, about the source bounds centre unless `center` is given. Build a repeated object once, then instance it. Copies are currently separate layers; rely on the returned `createdLayers` IDs rather than on that layout.
+
 ### Files and cancellation
 
 URL import accepts HTTP(S) URLs without embedded credentials. Supply `filename` when a signed or extensionless URL does not identify its format. Cross-origin servers must permit browser access. The recommended LOD is used unless `lod` is specified, so automated imports do not open a LOD dialog.
 
-Export requires an explicit filename, format and scope (`selection`, `layer` or `visible_layers`). It uses the existing editor exporters and preserves source SH bands unless requested otherwise. Viewer exports use the current camera and background. A successful export reports `download_requested`; browser download settings determine where or whether the file is saved. It does not grant access to arbitrary local paths. Project replacement, publishing, image and video rendering, and local file pickers are outside this tool set.
+Export requires an explicit filename, format and scope (`selection`, `layer` or `visible_layers`). It uses the existing editor exporters and preserves source SH bands unless requested otherwise. Viewer exports use the current camera and background. A successful export reports `download_requested`; browser download settings determine where or whether the file is saved. It does not grant access to arbitrary local paths. Project replacement, publishing, image and video export, and local file pickers are outside this tool set.
 
 The native invocation signal is checked before queued mutations and again after asynchronous GPU queries. Cancellation before a commit leaves the edit unapplied. Once committed, an edit remains in history and can be undone. Loading and compression may finish their current work before cancellation is observed; a cancelled import is not attached, and the signal is checked again before an export requests its download. Native browser cancellation can reject its caller before the tool callback has finished cleaning up.
 
-Successful tools return `{ "ok": true, ... }`. Failures return `{ "ok": false, "error": { "code": "...", "message": "..." } }`, including `invalid_input`, `layer_not_found`, `layer_removed`, `layer_hidden`, `empty_selection`, `stale_view`, `key_not_found`, `key_exists`, `timeline_playing`, `busy`, `cancelled` and `operation_failed`. Visual commands also report whether a subsequent frame rendered; `rendered: false` does not mean the edit failed.
+Successful tools return `{ "ok": true, ... }`. Failures return `{ "ok": false, "error": { "code": "...", "message": "..." } }`, including `invalid_input`, `layer_not_found`, `layer_removed`, `layer_hidden`, `empty_selection`, `stale_view`, `key_not_found`, `key_exists`, `timeline_playing`, `busy`, `cancelled`, `generator_failed`, `timeout` and `operation_failed`. Visual commands also report whether a subsequent frame rendered; `rendered: false` does not mean the edit failed.
 
 ## Development and verification
 

@@ -1,17 +1,22 @@
+import { Column, DataTable, dataTableToChunkSource } from '@playcanvas/splat-transform';
 import type { Color } from 'playcanvas';
-import { Vec3 } from 'playcanvas';
+import { Quat, Vec3 } from 'playcanvas';
 
 import type { CommandQueue } from './command-queue';
 import { AddSplatOp } from './edit-ops';
 import type { LayerInfo } from './editor-api';
 import type { CommandOptions } from './editor-command';
 import { checkCancelled, EditorError } from './editor-command';
+import { EditorSplatResource } from './editor-splat-resource';
 import type { Events } from './events';
 import type { ExportChoices, ExportType } from './export-options';
 import { buildExportOptions } from './export-options';
 import type { FileType } from './file-handler';
-import type { Scene } from './scene';
-import type { Splat } from './splat';
+import type { GaussianColumn, GeneratorParam } from './generator-sandbox';
+import { runGenerator } from './generator-sandbox';
+import { validateSplatSource } from './io';
+import type { Scene, ViewOverride } from './scene';
+import { Splat } from './splat';
 
 type CameraSettings = {
     position?: Vec3;
@@ -22,6 +27,68 @@ type CameraSettings = {
     distance?: number;
     fov?: number;
     orthographic?: boolean;
+};
+type RenderView = 'current' | 'front' | 'back' | 'left' | 'right' | 'top' | 'bottom';
+type RenderSettings = {
+    width?: number;
+    height?: number;
+    format?: 'jpeg' | 'png';
+    quality?: number;
+    // up to four views composited into one labelled grid; 'current' uses the
+    // camera parameters (or the current view), named views orbit its target
+    views?: RenderView[];
+    // analysis view applied while rendering
+    viewOverride?: ViewOverride;
+};
+type RenderTile = { pixels: Uint8Array; x: number; y: number; width: number; height: number; label?: string };
+
+// Encode top-down RGBA render tiles over the background colour, as an
+// MCP-style image block (base64 data, no data: prefix).
+const encodeImage = async (
+    tiles: RenderTile[],
+    width: number,
+    height: number,
+    background: Color,
+    format: 'jpeg' | 'png',
+    quality: number
+) => {
+    const canvas = new OffscreenCanvas(width, height);
+    const context = canvas.getContext('2d');
+    const bg = [background.r * 255, background.g * 255, background.b * 255];
+    for (const tile of tiles) {
+        const { pixels } = tile;
+        const out = new Uint8ClampedArray(pixels.length);
+        for (let i = 0; i < pixels.length; i += 4) {
+            // the render target holds premultiplied colour
+            const t = 1 - pixels[i + 3] / 255;
+            out[i] = pixels[i] + bg[0] * t;
+            out[i + 1] = pixels[i + 1] + bg[1] * t;
+            out[i + 2] = pixels[i + 2] + bg[2] * t;
+            out[i + 3] = 255;
+        }
+        context.putImageData(new ImageData(out, tile.width, tile.height), tile.x, tile.y);
+        if (tile.label) {
+            const size = Math.max(10, Math.round(tile.height / 18));
+            context.font = `${size}px sans-serif`;
+            context.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            context.fillRect(tile.x, tile.y, context.measureText(tile.label).width + size, size * 1.6);
+            context.fillStyle = '#fff';
+            context.fillText(tile.label, tile.x + size / 2, tile.y + size * 1.15);
+        }
+    }
+    if (tiles.length > 1) {
+        // separate the tiles
+        context.fillStyle = '#888';
+        for (const tile of tiles) {
+            if (tile.x) context.fillRect(tile.x, tile.y, 1, tile.height);
+            if (tile.y) context.fillRect(tile.x, tile.y, tile.width, 1);
+        }
+    }
+    const mimeType = `image/${format}`;
+    const bytes = new Uint8Array(await (await canvas.convertToBlob({ type: mimeType, quality })).arrayBuffer());
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return { type: 'image' as const, mimeType, data: btoa(binary), width, height };
 };
 type ViewSettings = {
     background?: Color;
@@ -136,6 +203,34 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
         if (busy || scene.lockedRenderMode)
             throw new EditorError('busy', 'The editor is loading or rendering. Wait for it to finish.');
     };
+    // Validate and snapshot camera settings before they are queued.
+    const cameraSettings = (settings: CameraSettings) => {
+        const s = { ...settings, position: settings.position?.clone(), target: settings.target?.clone() };
+        if (!!s.position !== !!s.target)
+            throw new EditorError('invalid_input', 'position and target must be supplied together.');
+        if (
+            s.position &&
+            (s.view || s.azimuth !== undefined || s.elevation !== undefined || s.distance !== undefined)
+        ) {
+            throw new EditorError('invalid_input', 'Use position/target or orbit parameters in one command.');
+        }
+        if (s.position?.equals(s.target))
+            throw new EditorError('invalid_input', 'Camera position and target must differ.');
+        return s;
+    };
+    const applyCamera = (s: CameraSettings) => {
+        const camera = scene.camera;
+        if (s.fov !== undefined) events.fire('camera.setFov', s.fov);
+        if (s.position) {
+            events.fire('camera.setPose', { position: s.position, target: s.target }, 0);
+        } else if (s.view || s.azimuth !== undefined || s.elevation !== undefined) {
+            const [azimuth, elevation] = s.view ? VIEW_ANGLES[s.view] : [camera.azim, camera.elevation];
+            camera.setAzimElev(s.azimuth ?? azimuth, s.elevation === undefined ? elevation : -s.elevation, 0);
+        }
+        if (s.distance !== undefined) camera.setDistance(s.distance, 0);
+        if (s.orthographic !== undefined) camera.ortho = s.orthographic;
+        camera.onUpdate(0);
+    };
     const read = () => ({
         document: { name: events.invoke('doc.name') ?? null, unsavedChanges: !!events.invoke('scene.dirty') },
         camera: cameraInfo(),
@@ -159,6 +254,50 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
             scene.forceRender = true;
         });
     };
+    // Attach a loaded or created layer as one undoable edit.
+    const attachLayer = async (splat: Splat, name: string, options?: CommandOptions) => {
+        try {
+            return await queue.enqueue(async (ctx) => {
+                checkCancelled(options);
+                await ctx.apply(new AddSplatOp(scene, splat));
+                splat.name = name;
+                return {
+                    affected: splat.instances.count,
+                    layers: [layerInfo(splat)],
+                    createdLayer: splat.uid,
+                    history: historyInfo()
+                };
+            });
+        } catch (error) {
+            if (!splat.scene) splat.destroy();
+            throw error;
+        }
+    };
+    // Build a new static resource from columns in memory. The data is world
+    // space, so the layer keeps an identity transform.
+    const createLayer = async (columns: GaussianColumn[], name: string, options?: CommandOptions) => {
+        checkCancelled(options);
+        assertIdle();
+        for (const { name: column, data } of columns) {
+            for (let i = 0; i < data.length; i++) {
+                if (!Number.isFinite(data[i]))
+                    throw new EditorError(
+                        'invalid_input',
+                        `Column '${column}' contains a non-finite value at row ${i}.`
+                    );
+            }
+        }
+        const source = dataTableToChunkSource(new DataTable(columns.map((c) => new Column(c.name, c.data))));
+        try {
+            validateSplatSource(source);
+        } catch (error) {
+            await source.close();
+            throw new EditorError('invalid_input', error.message);
+        }
+        const resource = await EditorSplatResource.create(scene.app.graphicsDevice, source, true);
+        const splat = new Splat(scene.assetLoader.createGSplatAsset(resource, name), new Quat());
+        return await attachLayer(splat, name, options);
+    };
     return {
         read,
         checkView,
@@ -168,37 +307,99 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
             ready,
             info: viewportInfo,
             setCamera: async (settings: CameraSettings, options?: CommandOptions) => {
-                const s = { ...settings, position: settings.position?.clone(), target: settings.target?.clone() };
-                if (!!s.position !== !!s.target)
-                    throw new EditorError('invalid_input', 'position and target must be supplied together.');
-                if (
-                    s.position &&
-                    (s.view || s.azimuth !== undefined || s.elevation !== undefined || s.distance !== undefined)
-                ) {
-                    throw new EditorError('invalid_input', 'Use position/target or orbit parameters in one command.');
-                }
-                if (s.position?.equals(s.target))
-                    throw new EditorError('invalid_input', 'Camera position and target must differ.');
+                const s = cameraSettings(settings);
                 return await queue.enqueue(() => {
                     checkCancelled(options);
                     assertIdle();
-                    const camera = scene.camera;
-                    if (s.fov !== undefined) events.fire('camera.setFov', s.fov);
-                    if (s.position) {
-                        events.fire('camera.setPose', { position: s.position, target: s.target }, 0);
-                    } else if (s.view || s.azimuth !== undefined || s.elevation !== undefined) {
-                        const [azimuth, elevation] = s.view ? VIEW_ANGLES[s.view] : [camera.azim, camera.elevation];
-                        camera.setAzimElev(
-                            s.azimuth ?? azimuth,
-                            s.elevation === undefined ? elevation : -s.elevation,
-                            0
-                        );
-                    }
-                    if (s.distance !== undefined) camera.setDistance(s.distance, 0);
-                    if (s.orthographic !== undefined) camera.ortho = s.orthographic;
-                    camera.onUpdate(0);
+                    applyCamera(s);
                     scene.forceRender = true;
                     return { camera: cameraInfo(), viewport: viewportInfo() };
+                });
+            },
+            // Render offscreen from an optional pose without moving the user's
+            // view: the camera is restored afterwards. Overlays are not drawn.
+            render: async (settings: CameraSettings & RenderSettings = {}, options?: CommandOptions) => {
+                const s = cameraSettings(settings);
+                const rect = scene.canvas.getBoundingClientRect();
+                const aspect = rect.width && rect.height ? rect.width / rect.height : 1;
+                const width =
+                    settings.width ??
+                    (settings.height
+                        ? Math.round(settings.height * aspect)
+                        : Math.round(aspect >= 1 ? 512 : 512 * aspect));
+                const height = settings.height ?? Math.round(width / aspect);
+                if (![width, height].every((v) => Number.isInteger(v) && v >= 16 && v <= 2048))
+                    throw new EditorError('invalid_input', 'width and height must be 16 to 2048 pixels.');
+                const views = settings.views?.length ? [...settings.views] : ['current' as const];
+                if (views.length > 4) throw new EditorError('invalid_input', 'At most four views.');
+                const cols = views.length > 1 ? 2 : 1;
+                const rows = views.length > 2 ? 2 : 1;
+                const tileWidth = Math.floor(width / cols);
+                const tileHeight = Math.floor(height / rows);
+                const viewOverride = settings.viewOverride;
+                return await queue.enqueue(async () => {
+                    checkCancelled(options);
+                    assertIdle();
+                    const camera = scene.camera;
+                    const pose = events.invoke('camera.getPose');
+                    const saved = {
+                        position: new Vec3(pose.position.x, pose.position.y, pose.position.z),
+                        target: new Vec3(pose.target.x, pose.target.y, pose.target.z),
+                        fov: camera.fov,
+                        ortho: camera.ortho
+                    };
+                    try {
+                        applyCamera(s);
+                        const basePose = events.invoke('camera.getPose');
+                        const base = {
+                            position: new Vec3(basePose.position.x, basePose.position.y, basePose.position.z),
+                            target: new Vec3(basePose.target.x, basePose.target.y, basePose.target.z)
+                        };
+                        // changing the pose leaves orthographic projection, so every tile restores it
+                        const ortho = camera.ortho;
+                        scene.viewOverride = viewOverride ?? null;
+                        const tiles: RenderTile[] = [];
+                        const cameras = [];
+                        for (let i = 0; i < views.length; i++) {
+                            // named views orbit the requested view's target at its
+                            // distance; the first tile already has the requested pose
+                            if (i > 0) events.fire('camera.setPose', base, 0);
+                            if (views[i] !== 'current') applyCamera({ view: views[i] as CameraSettings['view'] });
+                            camera.ortho = ortho;
+                            camera.onUpdate(0);
+                            cameras.push({ view: views[i], camera: cameraInfo() });
+                            const pixels = (await events.invoke(
+                                'render.offscreen',
+                                tileWidth,
+                                tileHeight
+                            )) as Uint8Array;
+                            checkCancelled(options);
+                            tiles.push({
+                                pixels,
+                                x: (i % cols) * tileWidth,
+                                y: Math.floor(i / cols) * tileHeight,
+                                width: tileWidth,
+                                height: tileHeight,
+                                label: views.length > 1 ? views[i] : undefined
+                            });
+                        }
+                        const image = await encodeImage(
+                            tiles,
+                            tileWidth * cols,
+                            tileHeight * rows,
+                            events.invoke('bgClr') as Color,
+                            settings.format ?? 'jpeg',
+                            settings.quality ?? 0.85
+                        );
+                        return views.length > 1 ? { cameras, image } : { camera: cameras[0].camera, image };
+                    } finally {
+                        scene.viewOverride = null;
+                        events.fire('camera.setFov', saved.fov);
+                        events.fire('camera.setPose', { position: saved.position, target: saved.target }, 0);
+                        camera.ortho = saved.ortho;
+                        camera.onUpdate(0);
+                        scene.forceRender = true;
+                    }
                 });
             },
             focus: async (scope: 'selection' | 'layer' | 'scene', layer?: number, options?: CommandOptions) => {
@@ -242,6 +443,19 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
                 });
             }
         },
+        create: {
+            // Run a splat-transform Generator module in an isolated sandbox.
+            generator: async (
+                source: string,
+                params: GeneratorParam[] = [],
+                name = 'Generated',
+                options?: CommandOptions
+            ) => {
+                checkCancelled(options);
+                assertIdle();
+                return await createLayer(await runGenerator(source, params, options), name, options);
+            }
+        },
         files: {
             importUrl: async (url: string, filename?: string, options?: CommandOptions & { lod?: number }) => {
                 checkCancelled(options);
@@ -262,24 +476,8 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
                     throwOnError: true,
                     attach: false
                 })) as Splat[];
-                const splat = loaded?.[0];
-                if (!splat) throw new EditorError('cancelled', 'Import was cancelled.');
-                try {
-                    return await queue.enqueue(async (ctx) => {
-                        checkCancelled(options);
-                        await ctx.apply(new AddSplatOp(scene, splat));
-                        splat.name = name;
-                        return {
-                            affected: splat.instances.count,
-                            layers: [layerInfo(splat)],
-                            createdLayer: splat.uid,
-                            history: historyInfo()
-                        };
-                    });
-                } catch (error) {
-                    if (!splat.scene) splat.destroy();
-                    throw error;
-                }
+                if (!loaded?.[0]) throw new EditorError('cancelled', 'Import was cancelled.');
+                return await attachLayer(loaded[0], name, options);
             },
             export: async (request: ExportRequest, options?: CommandOptions) => {
                 const r = { ...request };

@@ -142,6 +142,8 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(num_workgroups) numW
     if (!computeSplatValue(thread, &value, &selected, &visible) || !visible) { return; }
     let minValue = orderedToFloat(minMax[0]);
     let maxValue = orderedToFloat(minMax[1]);
+    // only an explicit range can exclude values; a measured one contains them all
+    if (value < minValue || value > maxValue) { return; }
     var normalized = 0.0;
     if (maxValue != minValue) { normalized = (value - minValue) / (maxValue - minValue); }
     let bin = u32(clamp(i32(normalized * f32(${NUM_BINS})), 0, ${NUM_BINS - 1}));
@@ -158,17 +160,31 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(num_workgroups) numW
         return variant;
     }
 
-    async run(splat: Splat, mode: number, options?: CalcHistogramOptions): Promise<CalcHistogramResult> {
+    // `range` bins an explicit [min, max] and excludes values outside it;
+    // otherwise the range is measured from the data first.
+    async run(
+        splat: Splat,
+        mode: number,
+        options?: CalcHistogramOptions,
+        range?: [number, number]
+    ): Promise<CalcHistogramResult> {
         const count = splat.instances.count;
         const variant = this.getVariant(splat.resource.shBands);
-        this.minMax.write(0, this.minMaxInit, 0, 2);
+        this.minMax.write(
+            0,
+            range ? new Uint32Array([floatToOrdered(range[0]), floatToOrdered(range[1])]) : this.minMaxInit,
+            0,
+            2
+        );
         this.bins.write(0, this.binInit, 0, this.binInit.length);
-
-        variant.minMaxCompute.setParameter('minMax', this.minMax);
-        setSplatValueParameters(variant.minMaxCompute, splat, mode, options);
         Compute.calcDispatchSize(Math.ceil(count / WORKGROUP_SIZE), this.dispatchSize);
-        variant.minMaxCompute.setupDispatch(this.dispatchSize.x, this.dispatchSize.y);
-        this.device.computeDispatch([variant.minMaxCompute], 'histogram-min-max');
+
+        if (!range) {
+            variant.minMaxCompute.setParameter('minMax', this.minMax);
+            setSplatValueParameters(variant.minMaxCompute, splat, mode, options);
+            variant.minMaxCompute.setupDispatch(this.dispatchSize.x, this.dispatchSize.y);
+            this.device.computeDispatch([variant.minMaxCompute], 'histogram-min-max');
+        }
 
         variant.binCompute.setParameter('minMax', this.minMax);
         variant.binCompute.setParameter('bins', this.bins);

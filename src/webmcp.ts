@@ -5,6 +5,7 @@ import type { EditScope } from './editor-command';
 import { checkCancelled, EditorError } from './editor-command';
 import type { CameraSettings } from './editor-session';
 import type { TimelineSettings } from './editor-timeline';
+import { GENERATOR_MAX_COUNT, GENERATOR_TIMEOUT_MS } from './generator-sandbox';
 import { isFinalColorMode, propModeFor } from './splat-properties';
 import { i18n } from './ui/localization';
 
@@ -24,6 +25,18 @@ type Schema = {
     enum?: readonly (string | number)[];
 };
 type Input = Record<string, unknown>;
+type RenderInput = Omit<CameraSettings, 'position' | 'target'> & {
+    position?: number[];
+    target?: number[];
+    width?: number;
+    height?: number;
+    format?: 'jpeg' | 'png';
+    quality?: number;
+    mode?: 'color' | 'selection' | 'property' | 'layers' | 'shaded';
+    property?: string;
+    range?: [number, number];
+    views?: ('current' | 'front' | 'back' | 'left' | 'right' | 'top' | 'bottom')[];
+};
 type Tool = {
     name: string;
     description: string;
@@ -247,10 +260,19 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
     );
     add(
         'get_histogram',
-        'Read a property distribution without editing. x/y/z and distance are world-space (distance from origin); camera-depth is along the current view. opacity is graded alpha (0-1 normally); scale_0/1/2 are source-axis scales, volume their product, surface-area the sum of their squares. RGB/HSV include committed grades and view-dependent SH; hue is degrees. f_dc_N and f_rest_N are raw source coefficients.',
-        { layer, property: string('Data panel property name from get_layer.', 32) },
+        'Read a property distribution without editing. Returns equal-width bins over [min, max], split into selected and unselected counts, plus stats (count, mean and p1/p5/p25/p50/p75/p95/p99, accurate to one bin width) for all splats and for the selection. Use the percentiles to choose select_property thresholds, and range to zoom into a tail (values outside it are excluded). Hidden splats are excluded. x/y/z and distance are world-space (distance from origin); camera-depth is along the current view. opacity is graded alpha (0-1 normally); scale_0/1/2 are source-axis scales, volume their product, surface-area the sum of their squares. RGB/HSV include committed grades and view-dependent SH; hue is degrees. f_dc_N and f_rest_N are raw source coefficients.',
+        {
+            layer,
+            property: string('Data panel property name from get_layer.', 32),
+            range: array(number('Bound'), 2, '[min, max] to bin instead of the measured range; min < max.'),
+            bins: integer('Number of bins: 8, 16, 32, 64, 128 or 256 (default).', 8, 256)
+        },
         ['layer', 'property'],
-        (i: { layer: number; property: string }, o) => editor.inspect.histogram(i.layer, i.property, o),
+        (i: { layer: number; property: string; range?: [number, number]; bins?: number }, o) => {
+            if (i.bins !== undefined && 256 % i.bins)
+                throw new EditorError('invalid_input', 'bins must be 8, 16, 32, 64, 128 or 256.');
+            return editor.inspect.histogram(i.layer, i.property, { ...o, range: i.range, bins: i.bins });
+        },
         { readOnlyHint: true }
     );
     add(
@@ -577,6 +599,55 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
         }
     );
     add(
+        'render_view',
+        'Render an image of the scene to check your work, without moving the user\'s view: the camera is restored afterwards. Camera parameters work as in set_camera and default to the current view. No grid, gizmos or markers are drawn. mode "selection" shows the selection on every layer in orange with everything else grey: check it before deleting. mode "property" colours splats by a histogram property (blue = range min, red = max, grey = outside range; faint splats are boosted so they show), defaulting to the measured range: use it to see where floaters or oversized splats are. mode "layers" gives each layer a flat colour. mode "shaded" lights splats by their surface normals in clay, so bumps, holes and creases show regardless of colour: use it to judge surface shape. views renders up to four labelled views in one 2x2 image (e.g. ["current","front","right","top"]) to judge 3D layout; with orthographic true, named views are true elevations for comparing silhouettes and proportions. Returns image { type: "image", mimeType, data (base64), width, height }, the camera (or cameras per view) and, for analysis modes, a legend; pass a camera to set_camera before screen-space selection. Default size is 512 px on the longest side at the viewport aspect; keep images small, as the result is returned as text.',
+        {
+            position: vector('World position; requires target.'),
+            target: vector('World look-at point; requires position.'),
+            view: enumeration(
+                ['front', 'back', 'left', 'right', 'top', 'bottom'],
+                'Named view around the current target.'
+            ),
+            azimuth: number('Orbit azimuth in degrees.', -360000, 360000),
+            elevation: number('Orbit elevation in degrees.', -90, 90),
+            distance: number('Orbit distance relative to scene size.', 1e-6, 10),
+            fov: number('Field of view in degrees.', 5, 170),
+            orthographic: boolean('Orthographic projection.'),
+            width: integer('Image width in pixels.', 16, 2048),
+            height: integer('Image height in pixels.', 16, 2048),
+            format: enumeration(['jpeg', 'png'], 'Image format; default jpeg.'),
+            quality: number('JPEG quality; default 0.85.', 0.1, 1),
+            mode: enumeration(['color', 'selection', 'property', 'layers', 'shaded'], 'What to show; default color.'),
+            property: string(
+                'Property for mode property: x, y, z, distance, camera-depth, red, green, blue, opacity, scale_0..2, volume or surface-area.',
+                32
+            ),
+            range: array(
+                number('Bound'),
+                2,
+                '[min, max] for mode property; default the measured range of visible layers.'
+            ),
+            views: {
+                type: 'array',
+                items: enumeration(
+                    ['current', 'front', 'back', 'left', 'right', 'top', 'bottom'],
+                    'View: current uses the camera parameters; named views orbit its target.'
+                ),
+                minItems: 1,
+                maxItems: 4,
+                description:
+                    'Views to render into one labelled grid; default ["current"]. width and height size the whole grid.'
+            }
+        },
+        [],
+        (i: RenderInput, o) =>
+            editor.viewport.render(
+                { ...i, position: i.position && xyz(i.position), target: i.target && xyz(i.target) },
+                o
+            ),
+        { readOnlyHint: true }
+    );
+    add(
         'focus_camera',
         'Frame a selection, a layer, or the scene. Switches to orbit control and moves instantly. Returns the resulting camera and viewToken.',
         { scope: enumeration(['selection', 'layer', 'scene'], 'What to frame.'), layer },
@@ -734,6 +805,72 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
         (i: { url: string; filename?: string; lod?: number }, o) =>
             editor.files.importUrl(i.url, i.filename, { ...o, lod: i.lod }),
         { untrustedContentHint: true }
+    );
+    const layerName = string('Layer name.', 128);
+    const reuse = 'To place an object several times, create it once and use instance_layer.';
+    add(
+        'create_from_generator',
+        `Create one new layer by running a splat-transform generator module in the editor. Use this for procedural or computed content instead of sending gaussians as data. source is an ES module exporting class Generator with static create(params) (may be async) returning { count, columnNames, getRow(index, row) }; getRow fills row[name] for every column. params arrive as [{name, value}] with string values, as in the splat-transform CLI. Required columns, in world space: x, y, z; scale_0..2 = ln(standard deviation); rot_0..3 = quaternion w, x, y, z; f_dc_0..2 = (rgb - 0.5) / 0.28209479177387814; opacity = logit(alpha). Optional f_rest_* add SH. The module runs in an isolated sandbox with no DOM, storage or network, a ${GENERATOR_TIMEOUT_MS / 1000}s limit and at most ${GENERATOR_MAX_COUNT} gaussians and 64 columns. ${reuse} Undoable; returns createdLayer.`,
+        {
+            source: string('ES module source code.', 200000),
+            params: {
+                type: 'array',
+                items: object(
+                    {
+                        name: string('Parameter name.', 64),
+                        value: { type: 'string', description: 'Parameter value.', maxLength: 4096 }
+                    },
+                    ['name', 'value']
+                ),
+                minItems: 0,
+                maxItems: 64,
+                description: 'Parameters passed to Generator.create.'
+            },
+            name: layerName
+        },
+        ['source'],
+        (i: { source: string; params?: { name: string; value: string }[]; name?: string }, o) =>
+            editor.create.generator(i.source, i.params ?? [], i.name, o)
+    );
+    add(
+        'instance_layer',
+        'Place copies of a layer that share its gaussian data, so each copy costs only a small instance list instead of new data. Use for repeated objects (trees, rocks, props). Each copy applies its own world-space translation, Euler rotation (degrees) and uniform scale to the source layer, rotating and scaling about the source bounds centre unless center is given. Copies are separate layers today. All copies are one undoable edit; returns createdLayers.',
+        {
+            layer,
+            copies: {
+                type: 'array',
+                items: object({
+                    translate: vector('World-space offset from the source.'),
+                    rotate: vector('World X/Y/Z Euler angles in degrees.'),
+                    scale: number('Uniform scale multiplier.', 1e-6, 1e6),
+                    center: vector('World-space rotation/scaling centre.')
+                }),
+                minItems: 1,
+                maxItems: 128,
+                description: 'One entry per copy.'
+            },
+            name: string('Name prefix for the copies; defaults to the source name.', 128)
+        },
+        ['layer', 'copies'],
+        (
+            i: {
+                layer: number;
+                copies: { translate?: number[]; rotate?: number[]; scale?: number; center?: number[] }[];
+                name?: string;
+            },
+            o
+        ) =>
+            editor.layers.instance(
+                i.layer,
+                i.copies.map((c) => ({
+                    translate: c.translate && xyz(c.translate),
+                    rotate: c.rotate && new Quat().setFromEulerAngles(...(c.rotate as [number, number, number])),
+                    scale: c.scale,
+                    center: c.center && xyz(c.center)
+                })),
+                i.name,
+                o
+            )
     );
     add(
         'export_scene',

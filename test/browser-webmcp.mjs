@@ -165,7 +165,7 @@ async function browserChecks(url, enabled) {
         return result;
     };
     const near = (a, b) => Math.abs(a - b) < 0.001;
-    check(tools.length === 29 && tools.every(t => t.title && !t.title.startsWith('webmcp.')), 'native discovery exposes 29 titled tools');
+    check(tools.length === 32 && tools.every(t => t.title && !t.title.startsWith('webmcp.')), 'native discovery exposes 32 titled tools');
     const initial = await call('get_scene');
     check(initial.totalLayers === 0, 'empty scene inspection', initial);
     await call('set_selection', { layer: 99, mode: 'all' }, 'layer_not_found');
@@ -288,8 +288,10 @@ async function browserChecks(url, enabled) {
     await call('undo');
     const waitDownload = async filename => {
         for (let i = 0; i < 100; i++) {
+            // Chrome creates the file before writing it, so wait for data
             const response = await fetch(`${url}downloads/${filename}`);
-            if (response.ok) return response.arrayBuffer();
+            const bytes = response.ok && await response.arrayBuffer();
+            if (bytes?.byteLength) return bytes;
             await new Promise(resolve => setTimeout(resolve, 50));
         }
         throw new Error(`Download missing: ${filename}`);
@@ -316,6 +318,102 @@ async function browserChecks(url, enabled) {
     // Native cancellation may settle before the callback has finished loading.
     await call('get_scene');
     check((await call('get_scene')).totalLayers === 1, 'cancelled native import does not attach a layer');
+    const within = (pairs) => pairs.every(([a, b]) => Math.abs(a - b) < 0.01);
+    // a red unit sphere surface at x = 5 (3000 Fibonacci points) and a blue unit
+    // cube at x = 8 (a 10 x 10 x 20 grid that includes its faces)
+    const shapes = await call('create_from_generator', { name: 'shapes', source: `export class Generator {
+        static create() {
+            const names = ['x', 'y', 'z', 'scale_0', 'scale_1', 'scale_2', 'rot_0', 'rot_1', 'rot_2', 'rot_3', 'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity'];
+            const c = 0.5 / 0.28209479177387814;
+            return { count: 5000, columnNames: names, getRow(i, row) {
+                Object.assign(row, { scale_0: -3.5, scale_1: -3.5, scale_2: -3.5, rot_0: 1, rot_1: 0, rot_2: 0, rot_3: 0, opacity: 5 });
+                if (i < 3000) {
+                    const y = 1 - 2 * (i + 0.5) / 3000, r = Math.sqrt(1 - y * y), a = i * 2.399963229728653;
+                    Object.assign(row, { x: 5 + r * Math.cos(a), y, z: r * Math.sin(a), f_dc_0: c, f_dc_1: -c, f_dc_2: -c });
+                } else {
+                    const j = i - 3000;
+                    Object.assign(row, { x: 7.5 + (j % 10) / 9, y: -0.5 + (Math.floor(j / 10) % 10) / 9, z: -0.5 + Math.floor(j / 100) / 19, f_dc_0: -c, f_dc_1: -c, f_dc_2: c });
+                }
+            } };
+        }
+    }` });
+    const bounds = shapes.layers[0].bounds;
+    check(shapes.layers[0].total === 5000 && shapes.layers[0].name === 'shapes' && shapes.rendered && shapes.layers[0].rotation.join() === '0,0,0,1' &&
+        within([[bounds.min[0], 4], [bounds.max[0], 8.5], [bounds.min[1], -1], [bounds.max[2], 1]]), 'create_from_generator builds one layer at its world positions', shapes);
+    const red = await call('get_histogram', { layer: shapes.createdLayer, property: 'red' });
+    check(red.ok, 'created layer reads back through the data panel', red);
+    // the sphere part spans x 4..6 and the box 7.5..8.5; zooming to the sphere excludes the box
+    const xs = await call('get_histogram', { layer: shapes.createdLayer, property: 'x', range: [4, 6], bins: 16 });
+    check(xs.numValues === 3000 && xs.unselected.length === 16 && within([[xs.stats.all.percentiles.p50, 5]]) && xs.stats.selected === null,
+        'histogram range zooms in and reports percentiles', xs);
+    const cameraBefore = (await call('get_scene')).camera;
+    const shot = await call('render_view', { azimuth: 30, elevation: 20, width: 200, height: 120 });
+    const cameraAfter = (await call('get_scene')).camera;
+    const decoded = await createImageBitmap(await (await fetch(`data:${shot.image.mimeType};base64,${shot.image.data}`)).blob());
+    check(shot.image.type === 'image' && shot.image.mimeType === 'image/jpeg' && decoded.width === 200 && decoded.height === 120 && shot.camera.azimuth === 30 &&
+        cameraBefore.position.every((v, i) => Math.abs(v - cameraAfter.position[i]) < 1e-4), 'render_view returns an image and restores the user camera', { ...shot, image: { ...shot.image, data: shot.image.data.length } });
+    // count pixels matching a colour test in a returned image
+    const countPixels = async (result, test) => {
+        const bitmap = await createImageBitmap(await (await fetch(`data:${result.image.mimeType};base64,${result.image.data}`)).blob());
+        const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+        const context = canvas.getContext('2d');
+        context.drawImage(bitmap, 0, 0);
+        const { data } = context.getImageData(0, 0, bitmap.width, bitmap.height);
+        let n = 0;
+        for (let i = 0; i < data.length; i += 4) if (test(data[i], data[i + 1], data[i + 2])) n++;
+        return n;
+    };
+    const orange = (r, g, b) => r > 150 && g > 50 && g < 160 && b < 60;
+    const framing = { position: [6, 2, 6], target: [6.25, 0, 0], width: 240, height: 160 };
+    const unselected = await call('render_view', { ...framing, mode: 'selection' });
+    await call('select_region', { layer: shapes.createdLayer, shape: 'sphere', center: [5, 0, 0], radius: 1.2 });
+    const highlighted = await call('render_view', { ...framing, mode: 'selection' });
+    check(await countPixels(unselected, orange) === 0 && await countPixels(highlighted, orange) > 200 &&
+        highlighted.legend.selected.some(s => s.layer === shapes.createdLayer && s.selected === 3000), 'render_view selection mode highlights only the selection', highlighted.legend);
+    await call('set_selection', { layer: shapes.createdLayer, mode: 'none' });
+    const heat = await call('render_view', { ...framing, mode: 'property', property: 'x', range: [7.5, 8.5] });
+    check(heat.legend.property === 'x' && heat.legend.range.join() === '7.5,8.5' && await countPixels(heat, (r, g, b) => Math.max(r, g, b) - Math.min(r, g, b) > 80) > 200,
+        'render_view property mode colours the in-range splats', heat.legend);
+    const layered = await call('render_view', { ...framing, mode: 'layers' });
+    check(layered.legend.layers.some(l => l.layer === shapes.createdLayer && l.color.length === 3), 'render_view layers mode returns a layer legend', layered.legend);
+    const grid = await call('render_view', { width: 240, height: 160, views: ['current', 'front', 'right', 'top'] });
+    check(grid.image.width === 240 && grid.image.height === 160 && grid.cameras.map(c => c.view).join() === 'current,front,right,top', 'render_view composes four labelled views', grid.cameras);
+    const orthoGrid = await call('render_view', { width: 240, height: 160, orthographic: true, views: ['current', 'front', 'top'] });
+    check(orthoGrid.cameras.every(c => c.camera.orthographic) && !(await call('get_scene')).camera.orthographic, 'orthographic views stay orthographic and restore the user camera', orthoGrid.cameras);
+    const shaded = await call('render_view', { ...framing, mode: 'shaded' });
+    check(shaded.legend.mode === 'shaded' && await countPixels(shaded, (r, g, b) => Math.max(r, g, b) > 60) > 200, 'render_view shaded mode renders the splats', shaded.legend);
+    // drop the two selection edits so the undo sequence below is unchanged
+    await call('undo');
+    await call('undo');
+    const copies = await call('instance_layer', { layer: shapes.createdLayer, copies: [{ translate: [0, 3, 0] }, { translate: [0, 0, 4], rotate: [0, 90, 0], scale: 0.5 }] });
+    const sameData = copies.createdLayers.every(id => window.scene.elements.find(e => e.uid === id).resource === window.scene.elements.find(e => e.uid === shapes.createdLayer).resource);
+    const firstCopy = copies.layers[0].bounds;
+    check(copies.createdLayers.length === 2 && sameData && copies.layers.every(l => l.total === 5000) && within([[firstCopy.min[1], 2], [firstCopy.max[0], 8.5]]),
+        'instance_layer places copies that share the source data', copies);
+    await call('undo');
+    check((await call('get_scene')).totalLayers === 2, 'one undo removes every instance copy');
+    await call('undo');
+    const columns = "['x','y','z','scale_0','scale_1','scale_2','rot_0','rot_1','rot_2','rot_3','f_dc_0','f_dc_1','f_dc_2','opacity']";
+    const generated = await call('create_from_generator', { name: 'points', params: [{ name: 'y', value: '2' }], source: `export class Generator {
+        static create(params) {
+            const y = Number(params.find(p => p.name === 'y').value);
+            return { count: 2, columnNames: ${columns}, getRow(i, row) {
+                Object.assign(row, { x: i ? -1 : 1, y: i ? -y : y, z: i ? -3 : 3, scale_0: -2, scale_1: -2, scale_2: -2, rot_0: 1, rot_1: 0, rot_2: 0, rot_3: 0, f_dc_0: 0, f_dc_1: 1, f_dc_2: 0, opacity: 3 });
+            } };
+        }
+    }` });
+    const gb = generated.layers[0].bounds;
+    check(generated.layers[0].total === 2 && generated.layers[0].name === 'points' && within([[gb.min[0], -1], [gb.max[1], 2], [gb.min[2], -3]]),
+        'create_from_generator runs a splat-transform generator module in world space', generated);
+    await call('export_scene', { format: 'ply', filename: 'generated.ply', scope: 'layer', layer: generated.createdLayer });
+    for (let i = 0; i < 100 && !(await fetch(`${url}downloads/generated.ply`)).ok; i++) await new Promise(resolve => setTimeout(resolve, 50));
+    const reloaded = await call('import_url', { url: `${url}downloads/generated.ply` });
+    check(reloaded.layers[0].total === 2 && within([[reloaded.layers[0].bounds.max[1], 2], [reloaded.layers[0].bounds.min[2], -3]]), 'generated layer exports and reimports at the same positions', reloaded);
+    await call('undo');
+    await call('undo');
+    await call('create_from_generator', { source: 'export class Generator { static create() { return { count: 1, columnNames: ["x"], getRow() { indexedDB.open("supersplat"); } }; } }' }, 'generator_failed');
+    await call('create_from_generator', { source: ' ' }, 'invalid_input');
+    check((await call('get_scene')).totalLayers === 1, 'create undo removes created layers');
     const timeline = await call('get_timeline');
     check(timeline.totalKeys === 0 && timeline.frames === 180 && timeline.frameRate === 30 && timeline.frame === 0, 'empty timeline inspection', timeline);
     await call('set_camera', { position: [0, 0, 4], target: [0, 0, 0], fov: 60 });
@@ -349,13 +447,13 @@ async function browserChecks(url, enabled) {
     let localized;
     for (let i = 0; i < 100; i++) {
         localized = await provider.getTools();
-        if (localized.length === 29 && localized.find(t => t.name === 'get_scene').title !== tools.find(t => t.name === 'get_scene').title) break;
+        if (localized.length === 32 && localized.find(t => t.name === 'get_scene').title !== tools.find(t => t.name === 'get_scene').title) break;
         await new Promise(resolve => setTimeout(resolve, 20));
     }
-    check(localized.length === 29 && new Set(localized.map(t => t.name)).size === 29 && localized.find(t => t.name === 'get_scene').title !== tools.find(t => t.name === 'get_scene').title, 'live language change replaces tool titles without duplicates');
+    check(localized.length === 32 && new Set(localized.map(t => t.name)).size === 32 && localized.find(t => t.name === 'get_scene').title !== tools.find(t => t.name === 'get_scene').title, 'live language change replaces tool titles without duplicates');
     const localizedScene = JSON.parse(await provider.executeTool(localized.find(t => t.name === 'get_scene'), {}));
     check(localizedScene.ok && localizedScene.totalLayers === 1, 'localized native tools retain the scene');
     language.value = 'en';
-    check(used.size === 29, 'all 29 native tools were executed', [...used]);
+    check(used.size === 32, 'all 32 native tools were executed', [...used]);
     return { checks, used: [...used] };
 }

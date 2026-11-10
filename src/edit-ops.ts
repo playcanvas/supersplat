@@ -621,6 +621,11 @@ class MultiOp {
             await op.undo();
         }
     }
+
+    // release what the nested ops hold when history drops this entry
+    destroy() {
+        this.ops.forEach((op) => op.destroy?.());
+    }
 }
 
 class AddSplatOp {

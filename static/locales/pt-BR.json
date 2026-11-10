@@ -426,6 +426,7 @@
     "webmcp.undo": "Desfazer",
     "webmcp.redo": "Refazer",
     "webmcp.set_camera": "Definir câmera",
+    "webmcp.render_view": "Renderizar vista",
     "webmcp.focus_camera": "Enquadrar câmera",
     "webmcp.pick_points": "Obter pontos da superfície",
     "webmcp.set_view": "Definir exibição",
@@ -435,5 +436,7 @@
     "webmcp.move_keyframe": "Mover quadro-chave",
     "webmcp.delete_keyframes": "Excluir quadros-chave",
     "webmcp.import_url": "Importar de URL",
+    "webmcp.create_from_generator": "Criar a partir de gerador",
+    "webmcp.instance_layer": "Instanciar camada",
     "webmcp.export_scene": "Exportar cena"
 }

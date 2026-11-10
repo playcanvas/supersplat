@@ -426,6 +426,7 @@
     "webmcp.undo": "Отменить",
     "webmcp.redo": "Повторить",
     "webmcp.set_camera": "Настроить камеру",
+    "webmcp.render_view": "Отрисовать вид",
     "webmcp.focus_camera": "Навести камеру",
     "webmcp.pick_points": "Определить точки поверхности",
     "webmcp.set_view": "Настроить отображение",
@@ -435,5 +436,7 @@
     "webmcp.move_keyframe": "Переместить ключ",
     "webmcp.delete_keyframes": "Удалить ключи",
     "webmcp.import_url": "Импортировать по URL",
+    "webmcp.create_from_generator": "Создать генератором",
+    "webmcp.instance_layer": "Инстанцировать слой",
     "webmcp.export_scene": "Экспортировать сцену"
 }

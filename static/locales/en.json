@@ -426,6 +426,7 @@
     "webmcp.undo": "Undo",
     "webmcp.redo": "Redo",
     "webmcp.set_camera": "Set camera",
+    "webmcp.render_view": "Render view",
     "webmcp.focus_camera": "Focus camera",
     "webmcp.pick_points": "Pick surface points",
     "webmcp.set_view": "Set display options",
@@ -435,5 +436,7 @@
     "webmcp.move_keyframe": "Move keyframe",
     "webmcp.delete_keyframes": "Delete keyframes",
     "webmcp.import_url": "Import from URL",
+    "webmcp.create_from_generator": "Create from generator",
+    "webmcp.instance_layer": "Instance layer",
     "webmcp.export_scene": "Export scene"
 }

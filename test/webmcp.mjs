@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
-import { BoundingBox, Color, Mat4, Vec3 } from 'playcanvas';
+import { BoundingBox, Color, Mat4, Quat, Vec3 } from 'playcanvas';
 
 import { registerCameraPosesEvents } from './.build/src/camera-poses.js';
+import { histogramStats, mergeBins } from './.build/src/histogram-stats.js';
 import { registerTimelineEvents } from './.build/src/timeline.js';
 import { createWebMCPTools, registerWebMCP } from './.build/src/webmcp.js';
 import { setup } from './editor-commands.mjs';
@@ -233,11 +234,100 @@ const checks = {
             const registered = [];
             const dispose = registerWebMCP(api, { registerTool: (tool, options) => registered.push({ tool, options }) });
             await tick();
-            assert.equal(registered.length, 29);
-            assert.equal(new Set(registered.map(r => r.tool.name)).size, 29);
+            assert.equal(registered.length, 32);
+            assert.equal(new Set(registered.map(r => r.tool.name)).size, 32);
             assert.equal(registered.find(r => r.tool.name === 'get_scene').tool.annotations.readOnlyHint, true);
             dispose();
             assert(registered.every(r => r.options.signal.aborted));
+        });
+    },
+
+    async 'creation tools reject invalid input before creating anything'() {
+        await use(async ({ call, api, history }) => {
+            let created = 0;
+            api.create.generator = api.layers.instance = () => { created++; return {}; };
+            for (const [name, input] of [
+                ['create_from_generator', {}],
+                ['create_from_generator', { source: ' ' }],
+                ['create_from_generator', { source: 'x', params: [{ name: 'n' }] }],
+                ['create_from_generator', { source: 'x', params: [{ name: 'n', value: 3 }] }],
+                ['instance_layer', { layer: 0, copies: [] }],
+                ['instance_layer', { layer: 0, copies: [{ scale: 0 }] }],
+                ['instance_layer', { layer: 0, copies: new Array(129).fill({}) }],
+                ['instance_layer', { layer: 0, copies: [{ translate: [1, 2] }] }]
+            ]) {
+                const result = await call(name, input);
+                assert.equal(result.error?.code, 'invalid_input', `${name} ${JSON.stringify(input).slice(0, 80)}`);
+            }
+            assert.equal(created, 0);
+            assert.equal(history.history.length, 0);
+        });
+    },
+
+    async 'creation tools pass world-space arguments to the editor API'() {
+        await use(async ({ call, api }) => {
+            const calls = [];
+            api.create.generator = (...args) => { calls.push(['generator', ...args]); return {}; };
+            api.layers.instance = (...args) => { calls.push(['instance', ...args]); return {}; };
+            await call('create_from_generator', { source: 'export class Generator {}', params: [{ name: 'n', value: '5' }] });
+            assert.deepEqual(calls[0].slice(0, 4), ['generator', 'export class Generator {}', [{ name: 'n', value: '5' }], undefined]);
+
+            await call('instance_layer', { layer: 1, copies: [{ translate: [1, 0, 0] }, { rotate: [0, 45, 0], scale: 2, center: [0, 0, 0] }], name: 'tree' });
+            const [, layer, copies, prefix] = calls[1];
+            assert.deepEqual([layer, prefix, copies.length], [1, 'tree', 2]);
+            assert.equal(copies[0].translate.x, 1);
+            assert.equal(copies[0].rotate, undefined);
+            assert(copies[1].rotate.equals(new Quat().setFromEulerAngles(0, 45, 0)));
+            assert.deepEqual([copies[1].scale, copies[1].center.x], [2, 0]);
+        });
+    },
+
+    async 'histogram stats interpolate percentiles within bins'() {
+        // 100 values spread evenly over [0, 10): one per 0.1
+        const counts = new Array(10).fill(10);
+        const stats = histogramStats(counts, 0, 10);
+        assert.equal(stats.count, 100);
+        assert(Math.abs(stats.mean - 5) < 1e-9);
+        assert(Math.abs(stats.percentiles.p50 - 5) < 1e-9);
+        assert(Math.abs(stats.percentiles.p5 - 0.5) < 1e-9);
+        assert(Math.abs(stats.percentiles.p99 - 9.9) < 1e-9);
+        // a single populated bin bounds every percentile to that bin
+        const spike = histogramStats([0, 0, 40, 0], 0, 4);
+        assert(Object.values(spike.percentiles).every(p => p >= 2 && p <= 3));
+        assert.equal(histogramStats([0, 0], 0, 1), null);
+        assert.deepEqual(mergeBins([1, 2, 3, 4, 5, 6, 7, 8], 2), [10, 26]);
+    },
+
+    async 'histogram and render tools validate and map their arguments'() {
+        await use(async ({ call, api }) => {
+            const calls = [];
+            api.inspect.histogram = (...args) => { calls.push(['histogram', ...args]); return {}; };
+            api.viewport.render = (...args) => { calls.push(['render', ...args]); return {}; };
+            for (const [name, input] of [
+                ['get_histogram', { layer: 0, property: 'opacity', bins: 24 }],
+                ['get_histogram', { layer: 0, property: 'opacity', bins: '16' }],
+                ['get_histogram', { layer: 0, property: 'opacity', bins: 512 }],
+                ['get_histogram', { layer: 0, property: 'opacity', range: [0] }],
+                ['render_view', { width: 8 }],
+                ['render_view', { format: 'gif' }],
+                ['render_view', { quality: 0 }],
+                ['render_view', { mode: 'heat' }],
+                ['render_view', { views: [] }],
+                ['render_view', { views: ['front', 'back', 'left', 'right', 'top'] }],
+                ['render_view', { views: ['side'] }],
+                ['render_view', { mode: 'property', property: 'opacity', range: [0] }]
+            ]) {
+                assert.equal((await call(name, input)).error?.code, 'invalid_input', `${name} ${JSON.stringify(input)}`);
+            }
+            assert.equal(calls.length, 0);
+            await call('get_histogram', { layer: 0, property: 'opacity', bins: 16, range: [0, 0.1] });
+            assert.deepEqual([calls[0][1], calls[0][2], calls[0][3].bins, calls[0][3].range], [0, 'opacity', 16, [0, 0.1]]);
+            await call('render_view', { position: [0, 1, 5], target: [0, 1, 0], width: 320, format: 'png' });
+            const [, settings] = calls[1];
+            assert.deepEqual([settings.position.z, settings.target.y, settings.width, settings.format], [5, 1, 320, 'png']);
+            await call('render_view', { mode: 'property', property: 'opacity', range: [0, 0.1], views: ['current', 'top'] });
+            const [, analysis] = calls[2];
+            assert.deepEqual([analysis.mode, analysis.property, analysis.range, analysis.views], ['property', 'opacity', [0, 0.1], ['current', 'top']]);
         });
     },
 

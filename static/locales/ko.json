@@ -426,6 +426,7 @@
     "webmcp.undo": "실행 취소",
     "webmcp.redo": "다시 실행",
     "webmcp.set_camera": "카메라 설정",
+    "webmcp.render_view": "뷰 렌더링",
     "webmcp.focus_camera": "카메라 초점 맞추기",
     "webmcp.pick_points": "표면 점 선택",
     "webmcp.set_view": "표시 옵션 설정",
@@ -435,5 +436,7 @@
     "webmcp.move_keyframe": "키 이동",
     "webmcp.delete_keyframes": "키 삭제",
     "webmcp.import_url": "URL에서 가져오기",
+    "webmcp.create_from_generator": "생성기로 만들기",
+    "webmcp.instance_layer": "레이어 인스턴스",
     "webmcp.export_scene": "장면 내보내기"
 }

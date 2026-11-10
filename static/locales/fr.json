@@ -183,6 +183,8 @@
     "popup.no": "Non",
     "popup.error": "Erreur",
     "popup.error-loading": "Erreur de chargement du fichier",
+    "popup.file-blocked": "Accès au fichier bloqué",
+    "popup.file-blocked-message": "Votre navigateur a bloqué la lecture de « {{filename}} » via le sélecteur de fichiers. Choisissez-le à nouveau avec la boîte de dialogue de fichiers du navigateur pour continuer.",
     "popup.webgpu-unavailable": "Cette exportation nécessite WebGPU, qui n'est pas disponible dans ce navigateur. Veuillez essayer une version récente de Chrome, Edge ou Safari.",
     "popup.gpu-device-lost": "Le GPU a cessé de répondre pendant la compression, ce qui peut arriver avec de grandes scènes sur du matériel graphique plus lent. Veuillez réessayer l'exportation.",
     "popup.overwrite-source": "Ce fichier est utilisé par la scène actuelle et ne peut pas être écrasé. Choisissez un autre nom de fichier.",

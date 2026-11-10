@@ -88,12 +88,42 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     });
 
+    // antialiasing compensation (see AntiAliasMode). Scene state, saved with
+    // the document rather than as a preference: whether splats were trained
+    // with antialiasing belongs to the capture, so a new scene starts at 'auto'.
+    // It isn't an edit, so it counts as unsaved against the value last saved
+    // or loaded (savedAntiAlias) rather than through the edit history
+
+    let antiAlias: AntiAliasMode = 'auto';
+    let savedAntiAlias: AntiAliasMode = 'auto';
+
+    const setAntiAlias = (value: AntiAliasMode) => {
+        if (value !== antiAlias) {
+            antiAlias = value;
+            events.fire('view.antiAlias', value);
+        }
+    };
+
+    events.function('view.antiAlias', () => {
+        return antiAlias;
+    });
+
+    events.on('view.setAntiAlias', (value: AntiAliasMode) => {
+        setAntiAlias(value);
+    });
+
+    events.on('scene.clear', () => {
+        setAntiAlias('auto');
+        savedAntiAlias = 'auto';
+    });
+
     events.function('scene.dirty', () => {
-        return editHistory.cursor !== lastExportCursor;
+        return editHistory.cursor !== lastExportCursor || antiAlias !== savedAntiAlias;
     });
 
     events.on('doc.saved', () => {
         lastExportCursor = editHistory.cursor;
+        savedAntiAlias = antiAlias;
     });
 
     // force render on some events
@@ -1336,31 +1366,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     });
 
-    // antialiasing compensation (see AntiAliasMode). Scene state, saved with
-    // the document rather than as a preference: whether splats were trained
-    // with antialiasing belongs to the capture, so a new scene starts at 'auto'
-
-    let antiAlias: AntiAliasMode = 'auto';
-
-    const setAntiAlias = (value: AntiAliasMode) => {
-        if (value !== antiAlias) {
-            antiAlias = value;
-            events.fire('view.antiAlias', value);
-        }
-    };
-
-    events.function('view.antiAlias', () => {
-        return antiAlias;
-    });
-
-    events.on('view.setAntiAlias', (value: AntiAliasMode) => {
-        setAntiAlias(value);
-    });
-
-    events.on('scene.clear', () => {
-        setAntiAlias('auto');
-    });
-
     // gpu/cpu frame timing overlay
 
     let perfOverlay = false;
@@ -1471,6 +1476,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         events.fire('camera.setFlySpeed', docView.flySpeed);
         events.fire('camera.setFovDolly', docView.fovDolly ?? false);
         events.fire('view.setAntiAlias', docView.antiAlias ?? 'auto');
+        // the loaded value is the saved one: loading leaves the document clean
+        savedAntiAlias = antiAlias;
     });
 };
 

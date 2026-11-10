@@ -1064,7 +1064,10 @@ class ProjectedSplatRenderer {
             compute.setParameter('selectionEnabled', selectionEnabled ? 1 : 0);
             compute.setParameter('pickOp', -1);
             compute.setParameter('minPixelSize', minPixelSize);
-            compute.setParameter('antiAlias', effectiveModel(splat.resource.model, antiAlias) === 'antialiased' ? 1 : 0);
+            compute.setParameter(
+                'antiAlias',
+                effectiveModel(splat.resource.model, antiAlias) === 'antialiased' ? 1 : 0
+            );
             compute.setParameter('near', cameraComponent.nearClip);
             compute.setParameter('far', sortFar);
             compute.setParameter('radialSort', radialSort ? 1 : 0);

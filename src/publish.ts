@@ -471,7 +471,10 @@ const registerPublishEvents = (events: Events) => {
                 // serialize using WriterFileSystem wrapper (close is managed by caller)
                 const fs = new WriterFileSystem(gzipWriter);
                 // tagged with the model the view renders
-                const serializeSettings = { ...publishSettings.serializeSettings, antiAlias: events.invoke('view.antiAlias') };
+                const serializeSettings = {
+                    ...publishSettings.serializeSettings,
+                    antiAlias: events.invoke('view.antiAlias')
+                };
                 await writeSplatFile(splats, serializeSettings, 'ply', 'output.ply', {}, fs);
 
                 await gzipWriter.close();

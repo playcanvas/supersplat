@@ -703,21 +703,34 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
                             'unsupported_property',
                             `Property '${property}' cannot be visualised; use x, y, z, distance, camera-depth, red, green, blue, opacity, scale_0..2, volume or surface-area.`
                         );
-                    let span = range && ([range[0], range[1]] as [number, number]);
+                    const span = range && ([range[0], range[1]] as [number, number]);
                     if (span && !(span[0] < span[1]))
                         throw new EditorError('invalid_input', 'range must have min < max.');
-                    if (!span) {
-                        span = [Infinity, -Infinity];
-                        for (const splat of visible) {
-                            const h = await histogram(splat.uid, property, options);
-                            if (h.numValues) span = [Math.min(span[0], h.min), Math.max(span[1], h.max)];
-                        }
-                        if (!(span[0] <= span[1]))
-                            throw new EditorError('empty_scene', 'There are no visible splats to measure.');
-                        if (span[0] === span[1]) span[1] = span[0] + 1e-6;
-                    }
-                    const out = await session.viewport.render(
-                        { ...rest, viewOverride: { mode: 'property', prop, range: span } },
+                    // measured inside the render slot from each tile's camera, so
+                    // camera-depth and view-dependent colour match what is drawn;
+                    // other properties do not depend on the camera, so measure once
+                    const viewDependent = prop === 4 || isFinalColorMode(prop);
+                    let measured: Promise<[number, number] | null> = null;
+                    const measureRange = () => {
+                        if (measured && !viewDependent) return measured;
+                        measured = (async () => {
+                            const frame = scene.camera.captureFrame();
+                            let r: [number, number] = null;
+                            for (const splat of allSplats().filter((s) => s.visible)) {
+                                const h = await scene.dataProcessor.calcHistogram(
+                                    splat,
+                                    propertyMode(splat, property),
+                                    propertyOptions(splat, frame)
+                                );
+                                if (h.numValues)
+                                    r = r ? [Math.min(r[0], h.min), Math.max(r[1], h.max)] : [h.min, h.max];
+                            }
+                            return r;
+                        })();
+                        return measured;
+                    };
+                    const { range: used, ...out } = await session.viewport.render(
+                        { ...rest, viewOverride: { mode: 'property', prop, range: span }, measureRange },
                         options
                     );
                     return {
@@ -725,7 +738,7 @@ const createEditorAPI = (events: Events, scene: Scene, editHistory: EditHistory,
                         legend: {
                             mode,
                             property,
-                            range: span,
+                            range: used,
                             colors: 'turbo: blue = range min, green = middle, red = range max; dim grey = outside the range'
                         }
                     };

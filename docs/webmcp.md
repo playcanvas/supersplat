@@ -68,7 +68,7 @@ Call `select_region` with these arguments to inspect the proposed removal, call 
 | --- | --- | --- |
 | `color` (default) | The scene as rendered. | Check overall results. |
 | `selection` | Selected splats on every layer in orange, everything else grey. The legend lists selected counts per layer. | Confirm a selection before deleting it. |
-| `property` | Splats coloured by a histogram `property` over `range` (Turbo: blue at the minimum, red at the maximum), with values outside the range in dim grey. Faint splats are drawn at least half opaque so they show. Without `range`, the measured range of the visible layers is used. | See where faint floaters, oversized splats or outliers are, using `get_histogram` percentiles as the range. |
+| `property` | Splats coloured by a histogram `property` over `range` (Turbo: blue at the minimum, red at the maximum), with values outside the range in dim grey. Faint splats are drawn at least half opaque so they show. Without `range`, the range is measured over the visible layers from the requested camera, across every view in a grid, so `camera-depth` and view-dependent colours match the image. Analysis modes show committed data only, ignoring an unapplied colour panel preview, as `get_histogram` does. | See where faint floaters, oversized splats or outliers are, using `get_histogram` percentiles as the range. |
 | `layers` | Each visible layer in its own flat colour, listed in the legend. | Tell layers and instances apart. |
 | `shaded` | Clay with a quarter of the splat colour, lit from above left of the camera by each splat's normal (its shortest axis). | Judge surface shape: bumps, holes, creases and uneven floors show regardless of colour. Splats in captures are less flat than generated ones, so shading is noisier there. |
 
@@ -77,6 +77,8 @@ Supported properties are `x`, `y`, `z`, `distance`, `camera-depth`, `red`, `gree
 `views` renders up to four labelled views into one image, two per row, to judge 3D layout from a single result: `current` uses the camera parameters, and named views orbit its target at the same distance. `width` and `height` size the whole grid. A multi-view result returns `cameras`, one per view, instead of `camera`. With `orthographic: true`, every view is orthographic, so named views are true elevations for comparing silhouettes and proportions; `distance` sets the framed size.
 
 WebMCP returns every tool result as a JSON string; the specification defines no image result type. A client or MCP bridge that recognises the MCP image block shape can present the image to the model; others receive it as text, so keep images small. To act on what an image shows with screen-space tools, pass the returned `camera` to `set_camera` first.
+
+Timeline playback moves the camera every frame, so `render_view` fails with `timeline_playing` while it plays. If the editor does not render a frame within 5 seconds, for example because its tab is in the background, `render_view` fails with `operation_failed` and leaves the camera and history unchanged. Cancellation is observed while waiting for each frame.
 
 ### View-dependent operations
 

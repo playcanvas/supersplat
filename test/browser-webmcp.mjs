@@ -374,6 +374,17 @@ async function browserChecks(url, enabled) {
     const heat = await call('render_view', { ...framing, mode: 'property', property: 'x', range: [7.5, 8.5] });
     check(heat.legend.property === 'x' && heat.legend.range.join() === '7.5,8.5' && await countPixels(heat, (r, g, b) => Math.max(r, g, b) - Math.min(r, g, b) > 80) > 200,
         'render_view property mode colours the in-range splats', heat.legend);
+    // an automatic range comes from the requested camera, not the user's
+    const farDepth = await call('render_view', { position: [6, 2, 30], target: [6.25, 0, 0], width: 240, height: 160, mode: 'property', property: 'camera-depth' });
+    check(farDepth.legend.range[0] > 20 && !('range' in farDepth) && await countPixels(farDepth, (r, g, b) => Math.max(r, g, b) - Math.min(r, g, b) > 80) > 100,
+        'render_view measures an automatic range from the requested camera', farDepth.legend);
+    // the offscreen wait gives up on timeout or abort and restores normal rendering
+    const offscreen = (options) => window.scene.events.invoke('render.offscreen', 32, 32, options).then(() => 'rendered', e => e.name === 'AbortError' ? 'aborted' : e.message);
+    const timedOut = await offscreen({ timeout: 0 });
+    const aborted = await offscreen({ signal: AbortSignal.abort() });
+    const afterwards = await call('render_view', { width: 64, height: 64 });
+    check(timedOut === 'render_timeout' && aborted === 'aborted' && afterwards.image.width === 64 && (await call('get_scene')).viewport.renderSize.width > 64,
+        'offscreen renders give up on timeout or abort and clean up', { timedOut, aborted });
     const layered = await call('render_view', { ...framing, mode: 'layers' });
     check(layered.legend.layers.some(l => l.layer === shapes.createdLayer && l.color.length === 3), 'render_view layers mode returns a layer legend', layered.legend);
     const grid = await call('render_view', { width: 240, height: 160, views: ['current', 'front', 'right', 'top'] });
@@ -435,6 +446,7 @@ async function browserChecks(url, enabled) {
     await call('undo');
     check((await call('get_timeline')).keys.map(k => k.frame).join() === '0,90', 'keyframe edits undo exactly');
     const playing = await call('set_timeline', { playing: true });
+    await call('render_view', { width: 64, height: 64 }, 'timeline_playing');
     let advanced = 45;
     for (let i = 0; i < 100 && advanced === 45; i++) {
         await new Promise(resolve => setTimeout(resolve, 30));

@@ -852,6 +852,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                 });
 
                 const { filename, splatIdx, serializeSettings, viewerExportSettings } = options;
+                // exports are tagged with the model the view renders
+                serializeSettings.antiAlias = events.invoke('view.antiAlias');
 
                 // Create FileSystem for output
                 const fs = new BrowserFileSystem(filename, stream, operation?.signal);

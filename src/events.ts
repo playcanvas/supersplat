@@ -2,6 +2,7 @@ import { EventHandler } from 'playcanvas';
 import type { Color, Vec3 } from 'playcanvas';
 
 import type { CameraAnimTrack, Pose } from './camera-poses';
+import type { AntiAliasMode } from './editor-splat-resource';
 import type { ExportDialogResult } from './export-options';
 import type { WriteTarget } from './io';
 import type { Pivot } from './pivot';
@@ -65,6 +66,7 @@ type Results = {
     'tool.focus': { position: Vec3; radius: number };
     'track.keys': readonly number[];
     unselectedClr: Color;
+    'view.antiAlias': AntiAliasMode;
     'view.bands': number;
     'view.centerSize': number;
     'view.centers': boolean;

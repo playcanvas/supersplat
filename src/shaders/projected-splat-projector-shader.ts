@@ -123,11 +123,17 @@ struct ProjectorUniforms {
     selectionEnabled: u32,
     pickOp: i32,
     minPixelSize: f32,
-    // the sort key's range: the camera clip planes, with far raised to the scene
-    // bound's farthest distance when radialSort keys on the distance to the camera
+    // the layer was trained with antialiasing (Mip-Splatting style): draw it
+    // with its training filter and opacity compensation, see AA_FILTER
+    antiAlias: u32,
+    // the orthographic sort key's linear range: the camera clip planes
     near: f32,
     far: f32,
     radialSort: u32,
+    // the perspective sort key's log range (logSortKey): the bit pattern of the
+    // nearest distance it spans, and keys per unit of bit pattern
+    sortKeyMinBits: i32,
+    sortKeyScale: f32,
     // total cache entries: the culled tail of the compact list grows down from
     // here (compactTailSlot)
     capacity: u32,
@@ -227,6 +233,27 @@ fn rotationMatrix(qIn: vec4f) -> mat3x3f {
     );
 }
 
+const MAX_SORT_KEY = (1u << 20u) - 1u;
+
+// screen-space filters added to the projected covariance, in pixels squared:
+// the standard 3DGS dilation, and the smaller filter splats trained with
+// antialiasing were trained with - 0.1 for most trainers, including
+// Mip-Splatting and Brush's mip mode, as the engine's antiAliasFilterSize
+const LOWPASS = 0.3;
+const AA_FILTER = 0.1;
+
+// sort key spaced by log distance, as in the engine's projector. A positive
+// float's bit pattern grows with its value almost exactly as its log2, so keys
+// taken from the bits give every doubling of distance the same number of keys,
+// and stray far splats cost no precision near the camera. The bits are
+// measured from those of a distance ten doublings inside the near clip, and
+// inverted so far splats sort first
+fn logSortKey(value: f32) -> u32 {
+    let bits = bitcast<i32>(value) - uniforms.sortKeyMinBits;
+    let keyFromNear = clamp(f32(bits) * uniforms.sortKeyScale, 0.0, f32(MAX_SORT_KEY));
+    return MAX_SORT_KEY - u32(keyFromNear);
+}
+
 // per-instance editor state, packed 4 bytes to a word
 fn instanceFlagByte(instance: u32) -> u32 {
     return (instanceFlags[instance >> 2u] >> ((instance & 3u) * 8u)) & 0xffu;
@@ -323,12 +350,24 @@ fn main(
         cov11 = u11 * jy1 + u12 * jy2;
     }
 
-    cov00 += 0.3;
-    cov11 += 0.3;
+    // splats trained with antialiasing are drawn with their training filter, and
+    // their opacity scaled by the ratio of the footprint's determinant before
+    // and after it (aaFactor, the engine's GSPLAT_AA compensation); without it
+    // small and distant splats draw too bright
+    let lowpass = select(LOWPASS, AA_FILTER, uniforms.antiAlias != 0u);
+    let rawDeterminant = cov00 * cov11 - cov01 * cov01;
+    cov00 += lowpass;
+    cov11 += lowpass;
     let determinant = cov00 * cov11 - cov01 * cov01;
     if (determinant <= 0.0) {
         return;
     }
+    let aaFactor = select(1.0, sqrt(max(rawDeterminant / determinant, 0.0)), uniforms.antiAlias != 0u);
+    // the culls measure the standard footprint whatever the filter, so an
+    // antialiased layer culls the splats a standard one would. Adding the
+    // shift to the covariance adds it to both eigenvalues
+    let cullShift = LOWPASS - lowpass;
+    let cullDeterminant = determinant + cullShift * (cov00 + cov11) + cullShift * cullShift;
 
     let mid = 0.5 * (cov00 + cov11);
     let radius = length(vec2f(0.5 * (cov00 - cov11), cov01));
@@ -338,7 +377,7 @@ fn main(
     // skip splats whose projected size falls below the cull threshold. With the
     // centres overlay up they are projected anyway - their centre still draws -
     // but land in the tail list below instead of among the survivors
-    let sizeCulled = 2.0 * sqrt(2.0 * lambda1) < uniforms.minPixelSize;
+    let sizeCulled = 2.0 * sqrt(2.0 * (lambda1 + cullShift)) < uniforms.minPixelSize;
     if (sizeCulled && uniforms.keepCulled == 0u) {
         return;
     }
@@ -456,7 +495,7 @@ fn main(
     // size-culled one. A splat whose ring would show is exempt; otherwise it
     // is routed like a size-culled one - dropped, or kept for its centre
     let contributionCulled = !ringKept
-        && gradedAlpha * 6.283185 * sqrt(determinant) < uniforms.minContribution;
+        && gradedAlpha * 6.283185 * sqrt(cullDeterminant) < uniforms.minContribution;
     if (contributionCulled && uniforms.keepCulled == 0u) {
         return;
     }
@@ -469,7 +508,7 @@ fn main(
     if (previewed) {
         graded = applyColorGrade(graded, uniforms.colorRow0, uniforms.colorRow1, uniforms.colorRow2);
     }
-    color = vec4f(graded, gradedAlpha);
+    color = vec4f(graded, gradedAlpha * aaFactor);
 
     // analysis views keep a little of the splat's own brightness so form still
     // reads; property values mirror the histogram shader's property modes
@@ -580,17 +619,21 @@ fn main(
     // survivor: claim a slot in the compact list. Only surviving threads contend,
     // which is 0.1-10% of the dispatch in practice
     let slot = atomicAdd(&splatCounter[0], 1u);
-    // depth sort key, back-to-front: linearly normalize view depth to [0,1] over
-    // the clip range and invert so the farthest splat gets the smallest key and
-    // composites first. Linear in both projections (ortho's clip.z is this same
-    // ratio; perspective's clip.z would be hyperbolic, so we normalize the raw
-    // view depth instead). near may be negative in ortho (the camera sits inside
-    // the bound); the subtraction handles that with no sign special-case.
-    // Radial sorting keys on the distance to the camera instead, so the order
-    // does not change as the camera turns in place
-    let sortDepth = select(depth, length(viewCenter.xyz), uniforms.radialSort != 0u);
-    let normDepth = saturate((sortDepth - uniforms.near) / (uniforms.far - uniforms.near));
-    sortKeys[slot] = u32((1.0 - normDepth) * f32((1u << 20u) - 1u));
+    // sort key, back-to-front: the farthest splat gets the smallest key and
+    // composites first. Perspective keys are log-spaced (logSortKey) on the
+    // view depth, or on the squared distance to the camera when sorting
+    // radially, so the order does not change as the camera turns in place; the
+    // squared distance's bits follow log2 as well. Orthographic keys linearly
+    // normalize view depth over the clip range: near may be negative there (the
+    // camera sits inside the bound), and the subtraction handles that with no
+    // sign special-case
+    if (uniforms.isOrtho != 0u) {
+        let normDepth = saturate((depth - uniforms.near) / (uniforms.far - uniforms.near));
+        sortKeys[slot] = u32((1.0 - normDepth) * f32(MAX_SORT_KEY));
+    } else {
+        let sortValue = select(depth, dot(viewCenter.xyz, viewCenter.xyz), uniforms.radialSort != 0u);
+        sortKeys[slot] = logSortKey(sortValue);
+    }
     compactEntries[slot] = entry;
 }
 `;

@@ -4,7 +4,8 @@ import type {
     ChunkField,
     ChunkLayer,
     ChunkSource,
-    SHBands
+    SHBands,
+    SplatModel
 } from '@playcanvas/splat-transform';
 import { createChunkDataPool, sortMortonInterleaved } from '@playcanvas/splat-transform';
 import type { GraphicsDevice } from 'playcanvas';
@@ -54,6 +55,18 @@ const acquire = (pool: ChunkDataPool, source: ChunkSource, layer: ChunkLayer, co
     return pool.acquire(layer, source.meta.layouts[layer], count);
 };
 
+// the view.antiAlias setting: 'auto' follows each layer's trained-model tag,
+// 'on' and 'off' override it for files whose tag is missing or wrong
+type AntiAliasMode = 'auto' | 'on' | 'off';
+
+// the model a layer renders and exports as under the view.antiAlias setting.
+// 'off' only clears the antialiased tag, so other models are kept
+const effectiveModel = (model: SplatModel, antiAlias: AntiAliasMode): SplatModel => {
+    if (antiAlias === 'on') return 'antialiased';
+    if (antiAlias === 'off' && model === 'antialiased') return 'default';
+    return model;
+};
+
 class EditorSplatResource extends GSplatContainer {
     // the lazily-read static data. replaced only by rebind()
     source: ChunkSource;
@@ -62,6 +75,9 @@ class EditorSplatResource extends GSplatContainer {
     fileSources: BlobReadSource[] = [];
     readonly sourcePool: ChunkDataPool;
     readonly shBands: SHBands;
+    // how the gaussians were trained, from the file's tag: the renderer draws
+    // 'antialiased' ones with their training filter, and exports keep the tag
+    readonly model: SplatModel;
     // the state column as loaded from file. read-only after upload: the live
     // editor state belongs to the instance list, not to the static resource
     readonly initialState: Uint8Array;
@@ -111,6 +127,7 @@ class EditorSplatResource extends GSplatContainer {
             maxPooledBytes: pooledBytes
         });
         this.shBands = shBands;
+        this.model = source.meta.model;
         this.initialState = new Uint8Array(source.meta.numGaussians);
 
         const properties = new Set([
@@ -485,4 +502,5 @@ class EditorSplatResource extends GSplatContainer {
     }
 }
 
-export { EditorSplatResource };
+export { EditorSplatResource, effectiveModel };
+export type { AntiAliasMode };

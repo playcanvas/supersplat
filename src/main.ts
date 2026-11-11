@@ -138,6 +138,20 @@ const main = async () => {
         powerPreference: 'high-performance'
     });
 
+    // The rendering stack (projected splats, depth diagnostics, the splat data
+    // pipeline) runs on gpu compute, which only the webgpu backend provides.
+    // When webgpu is unavailable the engine silently falls back to webgl2 and
+    // the editor would crash later at DepthRenderer construction, so stop here
+    // and let the startup handler explain the requirement instead.
+    if (!graphicsDevice.isWebGPU) {
+        try {
+            graphicsDevice.destroy();
+        } catch {
+            // the device never rendered a frame; cleanup failures don't matter
+        }
+        throw new Error('this build requires a WebGPU-capable browser');
+    }
+
     events.function('scene.gpu', () => {
         // Use the renderer's adapter, rather than requesting another GPU.
         const device = graphicsDevice as unknown as {

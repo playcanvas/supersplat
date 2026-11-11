@@ -14,13 +14,23 @@ console.log(
     `SuperSplat v${appVersion} | SplatTransform v${stVersion} (${stRevision}) | Engine v${engineVersion} (${engineRevision}) | PCUI v${pcuiVersion} (${pcuiRevision})`
 );
 
-// the graphics device requests webgpu only, so the most likely startup failure
-// is a browser without it. Without this the rejection is an unhandled promise
-// and the user is left looking at a blank page.
-main().catch((err) => {
+// the graphics device requires webgpu compute, so the most likely startup
+// failure is a browser without it. Without this the rejection is an unhandled
+// promise and the user is left looking at a blank page.
+main().catch(async (err) => {
     console.error(err);
 
-    const [key, fallback] = window.navigator.gpu
+    // a browser can expose navigator.gpu and still have no adapter (headless
+    // shells, some linux/vm setups), so probe for one rather than trust the
+    // property - in that case the engine fell back to webgl2 and failed later
+    let adapter = null;
+    try {
+        adapter = (await window.navigator.gpu?.requestAdapter()) ?? null;
+    } catch {
+        // treat a failed probe as webgpu unavailable
+    }
+
+    const [key, fallback] = adapter
         ? ['startup.failed', 'SuperSplat failed to start. See the browser console for details.']
         : [
               'startup.webgpu-unavailable',

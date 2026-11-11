@@ -350,7 +350,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             const fileSystem = new MappedReadFileSystem(baseUrl);
             files.forEach((f) => {
                 if (f.contents) fileSystem.addFile(f.filename, f.contents, f.handle ?? null);
-                else if (f.url) fileSystem.addUrl(f.filename, f.url);
+                // resolve against the page so relative URLs don't resolve against baseUrl again
+                else if (f.url) fileSystem.addUrl(f.filename, new URL(f.url, window.location.href).href);
             });
 
             // Load by the supplied filename (mapped to its URL above) so it names

@@ -10,6 +10,7 @@ import { createEditorAPI } from './editor-api';
 import type { EditorAPI } from './editor-api';
 import { Events } from './events';
 import { initFileHandler } from './file-handler';
+import { FileReadBlockedError, readHandle, repickBlocked } from './file-read';
 import { registerIframeApi } from './iframe-api';
 import { registerPreferences } from './preferences';
 import { registerPublishEvents } from './publish';
@@ -335,13 +336,34 @@ const main = async () => {
     if ('launchQueue' in window) {
         window.launchQueue.setConsumer(async (launchParams: LaunchParams) => {
             for (const file of launchParams.files) {
-                await events.invoke('import', [
-                    {
-                        filename: file.name,
-                        contents: await file.getFile(),
-                        handle: file
+                try {
+                    await events.invoke('import', [
+                        {
+                            filename: file.name,
+                            contents: await readHandle(file),
+                            handle: file
+                        }
+                    ]);
+                } catch (error) {
+                    if (error instanceof FileReadBlockedError) {
+                        // offer the file again through a plain file input
+                        const extension = file.name.includes('.') ? `.${file.name.split('.').pop()}` : '';
+                        const picked = await repickBlocked(events, error.filename, extension);
+                        if (picked.length) {
+                            await events.invoke(
+                                'import',
+                                picked.map((f) => ({ filename: f.name, contents: f }))
+                            );
+                        }
+                    } else {
+                        console.error(error);
+                        await events.invoke('showPopup', {
+                            type: 'error',
+                            header: i18n.t('popup.error-loading'),
+                            message: `${error.message ?? error} while loading '${file.name}'`
+                        });
                     }
-                ]);
+                }
             }
         });
     }

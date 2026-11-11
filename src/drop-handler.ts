@@ -1,13 +1,16 @@
 import { path } from 'playcanvas';
 
+import { FileReadBlockedError, readHandle } from './file-read';
+
 class DroppedFile {
     filename: string;
-    file: File;
+    // null when the browser blocked reading it (see resolveHandleFiles)
+    file: File | null;
     handle?: FileSystemFileHandle;
     // the dropped item this file came from: the file itself or an enclosing folder
     root?: FileSystemHandle;
 
-    constructor(filename: string, file: File, handle?: FileSystemFileHandle, root?: FileSystemHandle) {
+    constructor(filename: string, file: File | null, handle?: FileSystemFileHandle, root?: FileSystemHandle) {
         this.filename = filename;
         this.file = file;
         this.handle = handle;
@@ -64,7 +67,8 @@ const resolveHandles = async (
     handle: FileSystemHandle,
     prefix: string,
     result: DroppedFile[],
-    root: FileSystemHandle
+    root: FileSystemHandle,
+    keepBlocked: boolean
 ) => {
     if (handle.name === '.DS_Store') {
         return;
@@ -72,10 +76,17 @@ const resolveHandles = async (
 
     if (handle.kind === 'file') {
         const fileHandle = handle as FileSystemFileHandle;
-        result.push(new DroppedFile(prefix + handle.name, await fileHandle.getFile(), fileHandle, root));
+        let file: File | null;
+        try {
+            file = await readHandle(fileHandle);
+        } catch (error) {
+            if (!keepBlocked || !(error instanceof FileReadBlockedError)) throw error;
+            file = null;
+        }
+        result.push(new DroppedFile(prefix + handle.name, file, fileHandle, root));
     } else {
         for await (const child of (handle as FileSystemDirectoryHandle).values()) {
-            await resolveHandles(child, `${prefix}${handle.name}${path.delimiter}`, result, root);
+            await resolveHandles(child, `${prefix}${handle.name}${path.delimiter}`, result, root, keepBlocked);
         }
     }
 };
@@ -104,11 +115,13 @@ const removeCommonPrefix = (urls: DroppedFile[]) => {
     }
 };
 
-// expand picked or dropped handles into files, descending into folders
-const resolveHandleFiles = async (handles: FileSystemHandle[]) => {
+// expand picked or dropped handles into files, descending into folders. A read
+// the browser blocks throws FileReadBlockedError, or with keepBlocked yields the
+// file with a null file so the rest of the set is still read
+const resolveHandleFiles = async (handles: FileSystemHandle[], keepBlocked = false) => {
     const files: DroppedFile[] = [];
     for (const handle of handles) {
-        await resolveHandles(handle, '', files, handle);
+        await resolveHandles(handle, '', files, handle, keepBlocked);
     }
 
     if (files.length > 1) {
@@ -137,19 +150,24 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
 
         const items = Array.from(ev.dataTransfer.items);
 
+        // Entries and handles must be requested before the handler first yields,
+        // after which the items are no longer readable. The entries are the
+        // fallback when the browser refuses to read through a handle.
+        const entries = items.map((item) => item.webkitGetAsEntry()).filter((v) => v);
+
         // Prefer file system handles where the browser provides them (Chromium):
         // a document keeps its handle for later saves, and every imported file
         // keeps one so a save can recognise a file the scene still reads from.
-        // The handles must be requested before the handler first yields, after
-        // which the items are no longer readable.
         if (items.every((item) => item.getAsFileSystemHandle)) {
             const handles = await Promise.all(items.map((item) => item.getAsFileSystemHandle()));
-            dropHandler(await resolveHandleFiles(handles.filter((handle) => handle)), ev.shiftKey);
-            return;
+            try {
+                dropHandler(await resolveHandleFiles(handles.filter((handle) => handle)), ev.shiftKey);
+                return;
+            } catch (error) {
+                if (!(error instanceof FileReadBlockedError)) throw error;
+                console.warn(`${error.message}; reading the dropped items without their handles`);
+            }
         }
-
-        // Map to entries first
-        const entries = items.map((item) => item.webkitGetAsEntry()).filter((v) => v);
 
         // resolve directories to files
         const resolvedEntries = await resolveDirectories(entries);

@@ -188,6 +188,8 @@
     "popup.no": "No",
     "popup.error": "Error",
     "popup.error-loading": "Error Loading File",
+    "popup.file-blocked": "File Access Blocked",
+    "popup.file-blocked-message": "Your browser blocked reading '{{filename}}' through the file picker. Choose it again with the browser's file dialog to continue.",
     "popup.webgpu-unavailable": "This export requires WebGPU, which is not available in this browser. Please try a recent version of Chrome, Edge or Safari.",
     "popup.gpu-device-lost": "The GPU stopped responding during compression, which can happen on slower graphics hardware with large scenes. Please try exporting again.",
     "popup.overwrite-source": "This file is in use by the current scene and can't be overwritten. Choose a different filename.",

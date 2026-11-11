@@ -188,6 +188,8 @@
     "popup.no": "否",
     "popup.error": "错误",
     "popup.error-loading": "加载文件错误",
+    "popup.file-blocked": "文件访问被阻止",
+    "popup.file-blocked-message": "浏览器阻止了通过文件选择器读取“{{filename}}”。请在浏览器的文件对话框中重新选择该文件以继续。",
     "popup.webgpu-unavailable": "此导出需要 WebGPU，但当前浏览器不支持。请尝试使用最新版本的 Chrome、Edge 或 Safari。",
     "popup.gpu-device-lost": "压缩过程中 GPU 停止响应，在较慢的图形硬件上处理大型场景时可能会发生这种情况。请重新尝试导出。",
     "popup.overwrite-source": "该文件正被当前场景使用，无法覆盖。请选择其他文件名。",

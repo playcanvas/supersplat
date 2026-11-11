@@ -4,6 +4,7 @@ import type { Asset, Quat } from 'playcanvas';
 import { decodeInstances, encodeInstances, restorePalettes } from './doc-instances';
 import type { EditorSplatResource } from './editor-splat-resource';
 import type { Events } from './events';
+import { FileReadBlockedError, readHandle, repickBlocked } from './file-read';
 import { GaussianInstances } from './gaussian-instances';
 import { BrowserFileSystem, BlobReadSource, loadSplatSource, sourcesOf } from './io';
 import { recentFiles } from './recent-files';
@@ -439,6 +440,35 @@ const registerDocEvents = (scene: Scene, events: Events) => {
         }
     });
 
+    // read a document through its handle; if the browser blocks the read, offer
+    // it again through a plain file input, which yields a file without a handle
+    const readDocument = async (fileHandle: FileSystemFileHandle) => {
+        try {
+            return { file: await readHandle(fileHandle), handle: fileHandle };
+        } catch (error) {
+            if (!(error instanceof FileReadBlockedError)) throw error;
+            const [file] = await repickBlocked(events, error.filename, '.ssproj');
+            return file ? { file, handle: null as FileSystemFileHandle | null } : null;
+        }
+    };
+
+    // load a document read by readDocument; only one read through its handle
+    // keeps that handle for saves and recent files. Without one it keeps its
+    // name, so a save suggests it, but saving asks where to write
+    const openDocument = async (doc: { file: File; handle: FileSystemFileHandle | null }) => {
+        if (!doc.handle) {
+            await loadDocument(doc.file);
+            events.fire('doc.setName', doc.file.name);
+            return;
+        }
+        await loadDocument(doc.file, doc.handle);
+
+        // store file handle for subsequent saves
+        documentFileHandle = doc.handle;
+        events.fire('doc.setName', doc.handle.name);
+        recentFiles.add({ handle: doc.handle, name: doc.handle.name });
+    };
+
     events.function('doc.open', async () => {
         if (!events.invoke('scene.empty') && !(await getResetConfirmation())) {
             return false;
@@ -459,15 +489,8 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 });
 
                 if (fileHandles?.length === 1) {
-                    const fileHandle = fileHandles[0];
-
-                    // null file handle incase loadDocument fails
-                    await loadDocument(await fileHandle.getFile(), fileHandle);
-
-                    // store file handle for subsequent saves
-                    documentFileHandle = fileHandle;
-                    events.fire('doc.setName', fileHandle.name);
-                    recentFiles.add({ handle: fileHandle, name: fileHandle.name });
+                    const doc = await readDocument(fileHandles[0]);
+                    if (doc) await openDocument(doc);
                 }
             } catch (error) {
                 if (error.name !== 'AbortError') {
@@ -489,12 +512,8 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 }
             }
 
-            await loadDocument(await fileHandle.getFile(), fileHandle);
-
-            // store file handle for subsequent saves
-            documentFileHandle = fileHandle;
-            events.fire('doc.setName', fileHandle.name);
-            recentFiles.add({ handle: fileHandle, name: fileHandle.name });
+            const doc = await readDocument(fileHandle);
+            if (doc) await openDocument(doc);
         } catch (error) {
             if (error.name !== 'AbortError') {
                 console.error(error);

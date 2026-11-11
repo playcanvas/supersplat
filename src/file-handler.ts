@@ -10,6 +10,7 @@ import type { ExportChoices, ExportDialogResult, ExportType, SceneExportOptions 
 import { buildExportOptions } from './export-options';
 import type { ExportSettings } from './export-settings';
 import { loadExportSettings, saveExportSettings } from './export-settings';
+import { FileReadBlockedError, readHandle, repickBlocked } from './file-read';
 import type { BlobReadSource, WriteTarget } from './io';
 import { BrowserFileSystem, MappedReadFileSystem, pickWriteTarget, sourcesOf } from './io';
 import type { RecentImport } from './recent-files';
@@ -114,6 +115,9 @@ const allImportTypes = {
     }
 };
 
+// the same types for a plain file input
+const importAccept = '.ply,.splat,meta.json,.json,.webp,.ssproj,.sog,.lcc,.lcc2,.bin,.txt,.ksplat,.spz';
+
 // determine if all files share a common filename prefix followed by
 // a frame number, e.g. "frame0001.ply", "frame0002.ply", etc.
 const isPlySequence = (filenames: string[]) => {
@@ -172,20 +176,29 @@ type ImportFile = {
 // from one dropped folder share a root and count once; several files picked
 // together that make up one model (unbundled SOG, LCC, PLY sequence) count once.
 // Documents are tracked by Open Recent instead.
+// only real handles can be stored: script-made stand-ins (objects with their own
+// getFile function) cannot be cloned into IndexedDB
+const isStorableHandle = (handle: FileSystemHandle) =>
+    typeof FileSystemHandle !== 'undefined' && handle instanceof FileSystemHandle;
+
+const addRecentImport = (entry: Omit<RecentImport, 'date'>) => {
+    recentImports.add(entry).catch((error) => console.warn('Failed to record recent import', error));
+};
+
 const recordImports = (files: ImportFile[]) => {
     const roots = Array.from(new Set(files.map((f) => f.root ?? f.handle)));
-    if (roots.length === 0 || roots.some((root) => !root)) {
-        // url loads and document layers have no handles
+    if (roots.length === 0 || roots.some((root) => !root || !isStorableHandle(root))) {
+        // url loads, document layers and fallback reads have no handles
         return;
     }
 
     const filenames = files.map((f) => f.filename.toLowerCase());
     if (roots.length > 1 && (isPlySequence(filenames) || isSog(filenames) || isLcc(filenames))) {
-        recentImports.add({ name: files[findMainIndex(filenames)].filename, handles: roots });
+        addRecentImport({ name: files[findMainIndex(filenames)].filename, handles: roots });
     } else {
         roots
             .filter((root) => !root.name.toLowerCase().endsWith('.ssproj'))
-            .forEach((root) => recentImports.add({ name: root.name, handles: [root] }));
+            .forEach((root) => addRecentImport({ name: root.name, handles: [root] }));
     }
 };
 
@@ -447,16 +460,48 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         return importFiles(files, animationFrame, operation);
     });
 
+    // import errors otherwise go unseen: the picker closes and nothing happens
+    const showImportError = async (error: Error | string, filename?: string) => {
+        console.error(error);
+        const message = typeof error === 'string' ? error : (error.message ?? String(error));
+        await events.invoke('showPopup', {
+            type: 'error',
+            header: i18n.t('popup.error-loading'),
+            message: filename ? `${message} while loading '${filename}'` : message
+        });
+    };
+
+    // A blocked read leaves a file without contents. Offer just those files again
+    // through a plain file input and fill them in by name, keeping the rest of
+    // the set in place so a multi-file model keeps its companions. Files picked
+    // under other names are added. Resolves [] if the user declines.
+    const recoverBlocked = async (files: ImportFile[]) => {
+        const blocked = files.filter((f) => !f.contents);
+        if (!blocked.length) return files;
+
+        const names = blocked.map((f) => path.getBasename(f.filename));
+        const picked = await repickBlocked(events, names.join("', '"), importAccept, true);
+        if (!picked.length) return [];
+
+        const byName = new Map(picked.map((file) => [file.name, file]));
+        const recovered = files.flatMap((f) => {
+            if (f.contents) return [f];
+            const file = byName.get(path.getBasename(f.filename));
+            if (!file) return [];
+            byName.delete(file.name);
+            // the handle cannot be read, so the file is not kept for Import Recent
+            return [{ filename: f.filename, contents: file }];
+        });
+        return recovered.concat(Array.from(byName.values(), (file) => ({ filename: file.name, contents: file })));
+    };
+
     // create a file selector element as fallback when showOpenFilePicker isn't available
     let fileSelector: HTMLInputElement;
     if (!window.showOpenFilePicker) {
         fileSelector = document.createElement('input');
         fileSelector.setAttribute('id', 'file-selector');
         fileSelector.setAttribute('type', 'file');
-        fileSelector.setAttribute(
-            'accept',
-            '.ply,.splat,meta.json,.json,.webp,.ssproj,.sog,.lcc,.lcc2,.bin,.txt,.ksplat,.spz'
-        );
+        fileSelector.setAttribute('accept', importAccept);
         fileSelector.setAttribute('multiple', 'true');
 
         fileSelector.onchange = () => {
@@ -567,19 +612,22 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                     ]
                 });
 
-                const files = [];
-                for (let i = 0; i < handles.length; i++) {
-                    files.push({
-                        filename: handles[i].name,
-                        contents: await handles[i].getFile(),
-                        handle: handles[i]
-                    });
+                // read every picked file; a blocked one stays without contents
+                const files: ImportFile[] = [];
+                for (const handle of handles) {
+                    try {
+                        files.push({ filename: handle.name, contents: await readHandle(handle), handle });
+                    } catch (error) {
+                        if (!(error instanceof FileReadBlockedError)) throw error;
+                        files.push({ filename: handle.name, handle });
+                    }
                 }
 
-                importFiles(files);
+                const readable = await recoverBlocked(files);
+                if (readable.length) await importFiles(readable);
             } catch (error) {
                 if (error.name !== 'AbortError') {
-                    console.error(error);
+                    await showImportError(error);
                 }
             }
         }
@@ -597,7 +645,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                 }
             }
 
-            const files = (await resolveHandleFiles(entry.handles)).map((f) => {
+            const files = (await resolveHandleFiles(entry.handles, true)).map((f) => {
                 return {
                     filename: f.filename,
                     contents: f.file,
@@ -605,7 +653,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                     root: f.root
                 };
             });
-            await importFiles(files);
+            const readable = await recoverBlocked(files);
+            if (readable.length) await importFiles(readable);
         } catch (error) {
             if (error.name !== 'AbortError') {
                 await showLoadError(error.message ?? error, entry.name);

@@ -383,6 +383,7 @@
     "tooltip.timeline.next-frame": "Nächstes Bild",
     "tooltip.timeline.add-key": "Key hinzufügen",
     "tooltip.timeline.remove-key": "Key entfernen",
+    "tooltip.timeline.clear-keys": "Alle Keyframes löschen",
     "tooltip.timeline.record": "Kamerapfad aufnehmen",
     "tooltip.timeline.sample-interval": "Aufnahmeabstand (Frames)",
     "tooltip.timeline.key": "Ziehen zum Verschieben. Umschalt+Ziehen zum Kopieren. Strg+Klick übernimmt die aktuelle Ansicht.",

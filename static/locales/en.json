@@ -383,6 +383,7 @@
     "tooltip.timeline.next-frame": "Next Frame",
     "tooltip.timeline.add-key": "Add Key",
     "tooltip.timeline.remove-key": "Remove Key",
+    "tooltip.timeline.clear-keys": "Clear All Keys",
     "tooltip.timeline.record": "Record Camera Path",
     "tooltip.timeline.sample-interval": "Record Sample Interval (frames)",
     "tooltip.timeline.key": "Drag to move. Shift+drag to copy. Ctrl+click to set to current view.",

@@ -383,6 +383,7 @@
     "tooltip.timeline.next-frame": "Próximo Quadro",
     "tooltip.timeline.add-key": "Adicionar Quadro",
     "tooltip.timeline.remove-key": "Remover Quadro",
+    "tooltip.timeline.clear-keys": "Remover todos os quadros",
     "tooltip.timeline.record": "Gravar trajetória da câmera",
     "tooltip.timeline.sample-interval": "Intervalo de amostragem da gravação (frames)",
     "tooltip.timeline.key": "Arraste para mover. Shift+arrastar para copiar. Ctrl+clique para definir a visão atual.",

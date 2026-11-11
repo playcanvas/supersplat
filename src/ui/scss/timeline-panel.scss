@@ -53,19 +53,30 @@
                     box-shadow: none;
                     border-color: #ff990088;
                 }
+
+                &.active {
+                    color: $clr-hilight;
+                }
             }
 
             > #record {
                 // record control: css-drawn dot that squares into a stop
-                // symbol while recording (the pc-icon font has no glyphs for these)
+                // symbol while recording (the pc-icon font has no glyphs for these).
+                // flex centers the ::before exactly; inline-block + vertical-align
+                // middle sits on the text baseline and lands a pixel low
+                display: flex;
+                align-items: center;
+                justify-content: center;
+
                 &::before {
                     content: '';
-                    display: inline-block;
-                    width: 9px;
-                    height: 9px;
+                    display: block;
+                    // even size inside the 34x22 content box (36x24 minus the
+                    // 1px border) so the dot lands on whole pixels
+                    width: 10px;
+                    height: 10px;
                     border-radius: 50%;
                     background-color: $error;
-                    vertical-align: middle;
                     transition: border-radius 0.15s ease;
                 }
 
@@ -105,35 +116,6 @@
                 > #smoothness {
                     margin: 0;
                     width: 60px;
-                }
-
-                > #loop {
-                    font-family: pc-icon;
-                    font-weight: bold;
-                    font-size: 13px;
-
-                    width: 36px;
-                    height: 24px;
-                    margin: 0;
-                    padding: 0;
-                    flex-grow: 0;
-                    flex-shrink: 0;
-
-                    border-radius: 4px;
-
-                    text-align: center;
-                    line-height: 24px;
-
-                    &:hover {
-                        color: #ff9900;
-                        cursor: pointer;
-                        box-shadow: none;
-                        border-color: #ff990088;
-                    }
-
-                    &.active {
-                        color: $clr-hilight;
-                    }
                 }
             }
         }

@@ -8,14 +8,21 @@ import type { Events } from './events';
 /**
  * Camera path recorder.
  *
- * While recording, the playhead advances in real time and the camera pose is
- * sampled at fixed frame intervals into a buffer. The user keeps full control
- * of the camera; the camera track's spline evaluation is suspended for the
- * duration (see CameraAnimTrack).
+ * While recording, the playhead advances in real time from wherever it was and
+ * the camera pose is sampled at fixed frame intervals into a buffer. The user
+ * keeps full control of the camera; the camera track's spline evaluation is
+ * suspended for the duration (see CameraAnimTrack).
+ *
+ * A take is a punch-in: it starts at the playhead, keys before it are left
+ * untouched and everything from there on is replaced by the new samples.
+ *
+ * The timeline is not a hard limit: when the take outgrows it, the recorder
+ * extends the frame count by a second at a time and keeps recording, so a take
+ * runs as long as the user keeps it running.
  *
  * Stopping commits the whole take as a single undoable AnimTrackEditOp that
- * replaces the previous track contents, resizes the timeline to the take and
- * starts playback from frame 0.
+ * merges the samples into the previous track, sizes the timeline to fit the
+ * result and starts playback.
  */
 const registerCameraRecorderEvents = (events: Events) => {
     let recording = false;
@@ -28,7 +35,19 @@ const registerCameraRecorderEvents = (events: Events) => {
     // playhead position in (fractional) frames while recording
     let time = 0;
 
+    // frame the take starts at, and the frame the next sample lands on
+    let startFrame = 0;
+    let nextSample = 0;
+
+    // timeline length when the take started, so a discarded take can give
+    // back the frames the recorder added while it ran
+    let framesAtStart = 0;
+
     events.function('recorder.recording', () => recording);
+
+    // first frame of the running take (-1 when idle), so the strip can show
+    // which keys the take is about to replace
+    events.function('recorder.startFrame', () => (recording ? startFrame : -1));
 
     // frames captured so far, for live display on the timeline
     events.function('recorder.samples', () => poses.map((p) => p.frame));
@@ -57,8 +76,14 @@ const registerCameraRecorderEvents = (events: Events) => {
         recording = false;
         events.fire('recorder.recording', false);
 
-        // a discarded take leaves the track untouched
-        if (!commit) return;
+        // a discarded take leaves the track untouched, but the timeline length
+        // growth it caused is undone
+        if (!commit) {
+            if (events.invoke('timeline.frames') !== framesAtStart) {
+                events.fire('timeline.setFrames', framesAtStart);
+            }
+            return;
+        }
 
         // capture the pose where the take ended, unless a sample just landed there
         if (finalFrame >= 0 && finalFrame !== lastSampledFrame) {
@@ -67,15 +92,19 @@ const registerCameraRecorderEvents = (events: Events) => {
 
         if (poses.length === 0) return;
 
-        // replace the whole track in a single undo step, like track.addKey
+        // punch the take into the track in a single undo step, like
+        // track.addKey: keys before the take are kept, and everything from the
+        // take's start is replaced by the new samples
+        const lastCovered = poses[poses.length - 1].frame;
         const track = events.invoke('camera.animTrack');
         const before = track.snapshot();
-        const after = poses.slice().sort((a, b) => a.frame - b.frame);
+        const kept = (before as Pose[]).filter((p) => p.frame < startFrame);
+        const after = [...kept, ...poses].sort((a, b) => a.frame - b.frame);
         track.restore(after);
         events.fire('edit.add', new AnimTrackEditOp('recordTake', track, before, after), true);
 
-        // size the timeline to the take, then replay it from the start
-        const takeFrames = after[after.length - 1].frame + 1;
+        // the take now defines the end of the animation
+        const takeFrames = lastCovered + 1;
         if (takeFrames !== frames) {
             events.fire('timeline.setFrames', takeFrames);
         }
@@ -88,36 +117,46 @@ const registerCameraRecorderEvents = (events: Events) => {
 
         poses = [];
         lastSampledFrame = -1;
-        time = 0;
+        framesAtStart = events.invoke('timeline.frames');
+
+        // continue from the playhead: a take started mid-timeline punches in
+        // instead of wiping the track and restarting from frame 0
+        startFrame = Math.max(0, Math.min(events.invoke('timeline.frame'), framesAtStart - 1));
+        time = startFrame;
 
         // recording drives the playhead, so pause playback first
         if (events.invoke('timeline.playing')) {
             events.fire('timeline.setPlaying', false);
         }
-        events.fire('timeline.setFrame', 0);
+        events.fire('timeline.setFrame', startFrame);
 
         recording = true;
         events.fire('recorder.recording', true);
 
+        // the pose at the playhead is the take's first key
+        capture(startFrame);
+        nextSample = startFrame + interval;
+
         animHandle = events.on('update', (dt: number) => {
             time += dt * events.invoke('timeline.frameRate');
-            const frames = events.invoke('timeline.frames');
+            let frames = events.invoke('timeline.frames');
             const frame = Math.floor(time);
 
-            // the take has filled the timeline: commit it
+            // the take has outgrown the timeline: extend it by a second and
+            // keep recording instead of committing, so a take runs past the
+            // total frames it started with until the user stops it
             if (frame >= frames) {
-                stop(true);
-                return;
+                frames = frame + events.invoke('timeline.frameRate');
+                events.fire('timeline.setFrames', frames);
             }
 
             events.fire('timeline.setFrame', frame);
 
-            // sample at fixed frame boundaries, catching up over any skipped
-            // frames after a stall (e.g. a backgrounded tab)
-            let next = Math.ceil((lastSampledFrame + 1) / interval) * interval;
-            while (next <= frame && next < frames) {
-                capture(next);
-                next += interval;
+            // sample every `interval` frames from the take's start, catching
+            // up over any skipped frames after a stall (e.g. a backgrounded tab)
+            while (nextSample <= frame) {
+                capture(nextSample);
+                nextSample += interval;
             }
         });
     };

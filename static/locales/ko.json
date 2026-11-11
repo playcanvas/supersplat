@@ -383,6 +383,7 @@
     "tooltip.timeline.next-frame": "다음 프레임",
     "tooltip.timeline.add-key": "키 추가",
     "tooltip.timeline.remove-key": "키 제거",
+    "tooltip.timeline.clear-keys": "모든 키프레임 삭제",
     "tooltip.timeline.record": "카메라 경로 기록",
     "tooltip.timeline.sample-interval": "기록 샘플 간격(프레임)",
     "tooltip.timeline.key": "드래그하여 이동. Shift+드래그로 복사. Ctrl+클릭으로 현재 뷰 설정.",

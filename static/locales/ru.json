@@ -383,6 +383,7 @@
     "tooltip.timeline.next-frame": "Следующий кадр",
     "tooltip.timeline.add-key": "Добавить ключ",
     "tooltip.timeline.remove-key": "Удалить ключ",
+    "tooltip.timeline.clear-keys": "Удалить все ключи",
     "tooltip.timeline.record": "Записать траекторию камеры",
     "tooltip.timeline.sample-interval": "Интервал записи (кадры)",
     "tooltip.timeline.key": "Перетащите для перемещения. Shift+перетаскивание — копировать. Ctrl+клик — задать текущий вид.",

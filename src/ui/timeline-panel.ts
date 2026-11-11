@@ -81,12 +81,15 @@ class Ticks extends Container {
                 }
             }
 
-            // keys - while recording, show the frames captured so far (the
-            // track's own keys are about to be replaced by the take)
+            // keys - while recording, show the frames captured so far plus the
+            // keys before the take. the take starts at the playhead and replaces
+            // everything from there on, so later keys are not drawn.
             const recording = events.invoke('recorder.recording');
-            const keys = recording
-                ? ((events.invoke('recorder.samples') as number[]) ?? [])
-                : ((events.invoke('track.keys') as number[]) ?? []);
+            const trackKeys = (events.invoke('track.keys') as number[]) ?? [];
+            const samples = recording ? ((events.invoke('recorder.samples') as number[]) ?? []) : [];
+            const takeStart = recording ? ((events.invoke('recorder.startFrame') as number) ?? 0) : 0;
+            const takeEnd = samples.length > 0 ? samples[samples.length - 1] : takeStart;
+            const keys = recording ? [...trackKeys.filter((k) => k < takeStart), ...samples] : trackKeys;
 
             // keys at frame >= numFrames don't play (the spline ignores them);
             // pin them just past the right end of the strip instead of hiding them
@@ -107,8 +110,9 @@ class Ticks extends Container {
                 label.classList.add('time-label', 'key');
                 if (outOfRange) {
                     label.classList.add('out-of-range');
-                } else if (recording) {
-                    // recorded samples are pure display, not editable keys
+                } else if (recording && keyFrame >= takeStart && keyFrame <= takeEnd) {
+                    // recorded samples are pure display, not editable keys; keys
+                    // outside the take are ordinary keys waiting to be reached
                     label.classList.add('recorded');
                 }
                 label.style.left = `${outOfRange ? pinnedOffset(pinnedIndex) : offsetFromFrame(keyFrame)}px`;
@@ -236,6 +240,13 @@ class Ticks extends Container {
 
         workArea.dom.addEventListener('pointerdown', (event: PointerEvent) => {
             if (!scrubbing && canScrub() && event.isPrimary) {
+                // manual playhead control wins: stop playback first, otherwise
+                // the playback tick keeps overwriting the drag and the cursor
+                // flickers between the two
+                if (events.invoke('timeline.playing')) {
+                    events.fire('timeline.setPlaying', false);
+                }
+
                 scrubbing = true;
                 workArea.dom.setPointerCapture(event.pointerId);
                 events.fire('timeline.setFrame', frameFromOffset(event.offsetX));
@@ -376,20 +387,51 @@ class TimelinePanel extends Container {
             enabled: false
         });
 
+        // clear all keyframes (one-click wipe of the recorded path)
+
+        const clearKeys = new Button({
+            class: 'button',
+            text: '\uE124',
+            enabled: false
+        });
+
         // record controls (icon drawn in css: circle while idle, square while recording)
 
         const record = new Button({
+            class: 'button',
             id: 'record'
         });
+
+        // loop
+
+        const loop = new Button({
+            class: 'button',
+            id: 'loop',
+            text: '\uE128'
+        });
+
+        loop.on('click', () => {
+            events.fire('timeline.setLoop', !events.invoke('timeline.loop'));
+        });
+
+        events.on('timeline.loop', (loopIn: boolean) => {
+            loop.class[loopIn ? 'add' : 'remove']('active');
+        });
+
+        if (events.invoke('timeline.loop')) {
+            loop.class.add('active');
+        }
 
         const buttonControls = new Container({
             id: 'button-controls'
         });
+        buttonControls.append(loop);
         buttonControls.append(prev);
         buttonControls.append(play);
         buttonControls.append(next);
         buttonControls.append(addKey);
         buttonControls.append(removeKey);
+        buttonControls.append(clearKeys);
         buttonControls.append(record);
 
         // settings
@@ -415,11 +457,14 @@ class TimelinePanel extends Container {
             speed.value = frameRate.toString();
         });
 
+        // the recorder grows the timeline past its current length, so keep the
+        // cap well above what a take is likely to need (100000 frames is ~55
+        // minutes at 30 fps) instead of clamping the number while it climbs
         const frames = new NumericInput({
             id: 'totalFrames',
             value: 180,
             min: 1,
-            max: 10000,
+            max: 100000,
             precision: 0
         });
 
@@ -459,25 +504,6 @@ class TimelinePanel extends Container {
             value: 3
         });
 
-        // loop
-
-        const loop = new Button({
-            id: 'loop',
-            text: '\uE128'
-        });
-
-        loop.on('click', () => {
-            events.fire('timeline.setLoop', !events.invoke('timeline.loop'));
-        });
-
-        events.on('timeline.loop', (loopIn: boolean) => {
-            loop.class[loopIn ? 'add' : 'remove']('active');
-        });
-
-        if (events.invoke('timeline.loop')) {
-            loop.class.add('active');
-        }
-
         const settingsControls = new Container({
             id: 'settings-controls'
         });
@@ -485,7 +511,6 @@ class TimelinePanel extends Container {
         settingsControls.append(frames);
         settingsControls.append(smoothness);
         settingsControls.append(sampleInterval);
-        settingsControls.append(loop);
 
         // append control groups
 
@@ -551,6 +576,10 @@ class TimelinePanel extends Container {
             events.fire('track.removeKey', frame);
         });
 
+        clearKeys.on('click', () => {
+            events.fire('track.clearAll');
+        });
+
         record.on('click', () => {
             if (events.invoke('recorder.recording')) {
                 events.fire('recorder.stop');
@@ -566,9 +595,17 @@ class TimelinePanel extends Container {
             return keys.includes(frame);
         };
 
+        // Helper to check whether the track has any keys to clear
+        const canClearKeys = () => {
+            const keys = (events.invoke('track.keys') as number[]) ?? [];
+            return keys.length > 0;
+        };
+
         // Update key button states
         const updateKeyButtonStates = () => {
-            removeKey.enabled = !events.invoke('recorder.recording') && canDeleteKey();
+            const recording = events.invoke('recorder.recording');
+            removeKey.enabled = !recording && canDeleteKey();
+            clearKeys.enabled = !recording && canClearKeys();
         };
 
         // While recording the camera belongs to the user: lock the transport,
@@ -581,6 +618,7 @@ class TimelinePanel extends Container {
             next.enabled = !recording;
             addKey.enabled = !recording;
             removeKey.enabled = !recording && canDeleteKey();
+            clearKeys.enabled = !recording && canClearKeys();
             speed.enabled = !recording;
             frames.enabled = !recording;
             smoothness.enabled = !recording;
@@ -647,6 +685,7 @@ class TimelinePanel extends Container {
         tooltips.register(next, tooltip('tooltip.timeline.next-frame', 'timeline.nextFrame'), 'top');
         tooltips.register(addKey, tooltip('tooltip.timeline.add-key', 'track.addKey'), 'top');
         tooltips.register(removeKey, tooltip('tooltip.timeline.remove-key', 'track.removeKey'), 'top');
+        tooltips.register(clearKeys, () => i18n.t('tooltip.timeline.clear-keys'), 'top');
         tooltips.register(record, () => i18n.t('tooltip.timeline.record'), 'top');
         tooltips.register(speed, () => i18n.t('tooltip.timeline.frame-rate'), 'top');
         tooltips.register(frames, () => i18n.t('tooltip.timeline.total-frames'), 'top');

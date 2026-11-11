@@ -132,6 +132,13 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: objec
             group: 'preferences'
         },
         {
+            key: 'view.minPixelSize',
+            setCommand: 'view.setMinPixelSize',
+            getDefault: () => 2,
+            validate: isNumber(0, 5),
+            group: 'preferences'
+        },
+        {
             key: 'camera.flySpeed',
             setCommand: 'camera.setFlySpeed',
             getDefault: () => 1,

@@ -210,6 +210,30 @@ class SettingsPanel extends Container {
         shBandsRow.append(shBandsLabel);
         shBandsRow.append(shBandsSlider);
 
+        // minimum projected splat size
+
+        const minSplatSizeRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const minSplatSizeLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(minSplatSizeLabel, 'panel.settings.min-splat-size');
+
+        // the projector's 0.3px² low-pass floor keeps every splat at least
+        // ~1.55px across, so values up to there cull nothing
+        const minSplatSizeSlider = new SliderInput({
+            class: 'settings-panel-row-slider',
+            min: 0,
+            max: 5,
+            precision: 1,
+            value: 2
+        });
+
+        minSplatSizeRow.append(minSplatSizeLabel);
+        minSplatSizeRow.append(minSplatSizeSlider);
+
         // camera fly speed
 
         const cameraFlySpeedRow = new Container({
@@ -311,6 +335,7 @@ class SettingsPanel extends Container {
         this.append(sectionHeader('panel.settings.section-rendering'));
         this.append(tonemappingRow);
         this.append(shBandsRow);
+        this.append(minSplatSizeRow);
         this.append(antiAliasRow);
         this.append(sortModeRow);
         this.append(stochasticRow);
@@ -360,6 +385,16 @@ class SettingsPanel extends Container {
 
         shBandsSlider.on('change', (value: number) => {
             events.fire('view.setBands', value);
+        });
+
+        // minimum projected splat size
+
+        events.on('view.minPixelSize', (value: number) => {
+            minSplatSizeSlider.value = value;
+        });
+
+        minSplatSizeSlider.on('change', (value: number) => {
+            events.fire('view.setMinPixelSize', value);
         });
 
         // camera speed
@@ -454,6 +489,7 @@ class SettingsPanel extends Container {
         tooltips.register(languageLabel, help('panel.settings.language.tooltip'), 'top');
         tooltips.register(tonemappingLabel, help('panel.settings.tone-mapping.tooltip'), 'top');
         tooltips.register(shBandsLabel, help('panel.settings.sh-bands.tooltip'), 'top');
+        tooltips.register(minSplatSizeLabel, help('panel.settings.min-splat-size.tooltip'), 'top');
         tooltips.register(antiAliasLabel, help('panel.settings.anti-alias.tooltip'), 'top');
         tooltips.register(sortModeLabel, help('panel.settings.sort-mode.tooltip'), 'top');
         tooltips.register(stochasticLabel, help('panel.settings.stochastic-alpha.tooltip'), 'top');

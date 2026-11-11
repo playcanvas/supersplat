@@ -50,6 +50,10 @@ When changes to the source are detected, SuperSplat is rebuilt automatically. Si
 
 SuperSplat exposes native browser WebMCP tools for scene inspection, selection, editing, camera control, timeline and camera keyframe authoring, and import/export. See [WebMCP](docs/webmcp.md) for the tool contract, browser requirements and verification commands.
 
+## Developing with AI
+
+Coding agents: start from the [SuperSplat guides index](https://developer.playcanvas.com/user-manual/supersplat/llms.txt), which links a Markdown version of every page.
+
 ## Localizing the SuperSplat Editor
 
 The currently supported languages are available here:

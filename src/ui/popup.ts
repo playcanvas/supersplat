@@ -206,7 +206,7 @@ class Popup extends Container {
                     this.hide();
                     resolve({
                         action: 'ok',
-                        value: select ? selectInput.value : undefined
+                        value: select ? (selectInput.value as string) : undefined
                     });
                 };
                 cancelFn = () => {

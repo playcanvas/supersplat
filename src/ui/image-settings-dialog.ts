@@ -250,8 +250,8 @@ class ImageSettingsDialog extends Container {
             };
 
             resolutionValue.value = [
-                widths[presetSelect.value] ?? resolutionValue.value[0],
-                heights[presetSelect.value] ?? resolutionValue.value[1]
+                widths[presetSelect.value as string] ?? resolutionValue.value[0],
+                heights[presetSelect.value as string] ?? resolutionValue.value[1]
             ];
         };
 

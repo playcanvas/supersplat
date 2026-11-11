@@ -350,27 +350,14 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             const fileSystem = new MappedReadFileSystem(baseUrl);
             files.forEach((f) => {
                 if (f.contents) fileSystem.addFile(f.filename, f.contents, f.handle ?? null);
-                else if (operation && f.url) fileSystem.addUrl(f.filename, f.url);
+                // resolve against the page so relative URLs don't resolve against baseUrl again
+                else if (f.url) fileSystem.addUrl(f.filename, new URL(f.url, window.location.href).href);
             });
 
-            // Multi-file container formats must load by their relative name so the
-            // library resolves sibling files against the file system's baseUrl
-            // (path-joining a full URL corrupts the 'http://' prefix)
-            const lowerMainFilename = mainFile.filename.toLowerCase();
-            const isContainer =
-                lowerMainFilename === 'meta.json' ||
-                lowerMainFilename === 'lod-meta.json' ||
-                lowerMainFilename.endsWith('.lcc') ||
-                lowerMainFilename.endsWith('.lcc2');
-
-            // For URL-only single file, use full URL as filename
-            const filename =
-                !operation && files.length === 1 && !mainFile.contents && mainFile.url && !isContainer
-                    ? mainFile.url
-                    : mainFile.filename;
-
+            // Load by the supplied filename (mapped to its URL above) so it names
+            // the splat, and multi-file containers resolve siblings against baseUrl
             const model = await scene.assetLoader.load(
-                filename,
+                mainFile.filename,
                 fileSystem,
                 animationFrame,
                 false,
